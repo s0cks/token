@@ -174,10 +174,10 @@
       </method>
     </configuration>
     <list>
-      <item itemvalue="Google Test.token-tests" />
       <item itemvalue="Application.token-node" />
       <item itemvalue="Application.token-protos" />
       <item itemvalue="Application.token" />
+      <item itemvalue="Google Test.token-tests" />
     </list>
   </component>
   <component name="TestHistory">
