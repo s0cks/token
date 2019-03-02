@@ -1,4 +1,6 @@
 #include "block.h"
+#include <sstream>
+#include <fstream>
 
 namespace Token{
     static Byte* NewByteArray(size_t size){
@@ -48,10 +50,9 @@ namespace Token{
     }
 
     void Block::Write(const std::string &filename){
-        std::fstream output(filename, std::ios::out|std::ios::trunc|std::ios::binary);
-        if(!GetRaw()->SerializeToOstream(&output)){
-            std::cerr << "Failed to write to file " << filename << std::endl;
-        }
+        std::fstream out(filename, std::ios::binary|std::ios::out);
+        GetRaw()->SerializeToOstream(&out);
+        out.close();
     }
 
     class BlockMerkleRootCalculator : public BlockVisitor{
@@ -111,5 +112,35 @@ namespace Token{
     std::ostream& operator<<(std::ostream& stream, const Block& block){
         block.GetRaw()->SerializePartialToOstream(&stream);
         return stream;
+    }
+
+    bool operator==(Block& lhs, Block& rhs){
+        return lhs.GetHash() == rhs.GetHash();
+    }
+
+    static std::string
+    GetGenesisPreviousHash(){
+        std::stringstream stream;
+        for(size_t i = 0; i <= 64; i++) stream << "F";
+        return stream.str();
+    }
+
+    Block::Block():
+        raw_(new Messages::Block()){
+        std::string prev_hash = GetGenesisPreviousHash();
+        GetRaw()->set_prev_hash(prev_hash);
+        GetRaw()->set_height(0);
+    }
+
+    Block::Block(std::string prev_hash, int height):
+        raw_(new Messages::Block()){
+        GetRaw()->set_prev_hash(prev_hash);
+        GetRaw()->set_height(height);
+    }
+
+    Block::Block(Block* parent):
+        raw_(new Messages::Block()){
+        GetRaw()->set_prev_hash(parent->GetHash());
+        GetRaw()->set_height(parent->GetHeight() + 1);
     }
 }

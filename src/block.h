@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "merkle.h"
+#include "user.h"
 #include "blockchain.pb.h"
 
 namespace Token{
@@ -39,9 +40,9 @@ namespace Token{
             input->set_output_index(output_idx);
         }
 
-        void AddOutput(const std::string& token){
+        void AddOutput(const std::string& userid, std::string tokenid){
             Messages::Output* output = GetRaw()->add_outputs();
-            output->set_token(token);
+            output->set_user(userid);
         }
 
         const Messages::Input&
@@ -99,12 +100,9 @@ namespace Token{
         std::string ComputeMerkleRoot();
         std::string ComputeHash();
     public:
-        Block(std::string prev_hash, std::string token):
-            raw_(new Messages::Block()){
-            GetRaw()->set_prev_hash(prev_hash);
-            Transaction* tx = CreateTransaction();
-            tx->AddOutput(token);
-        }
+        Block();
+        Block(std::string prev_hash, int height);
+        Block(Block* parent);
 
         std::string GetPreviousHash() const{
             return GetRaw()->prev_hash();
@@ -118,16 +116,21 @@ namespace Token{
             return new Transaction(GetRaw()->mutable_transactions(index), index);
         }
 
-        Transaction* GetGenesisTransaction() const{
+        Transaction* GetCoinbaseTransaction() const{
             return GetTransactionAt(0);
+        }
+
+        int GetHeight() const{
+            return GetRaw()->height();
         }
 
         Transaction* CreateTransaction();
         std::string GetHash();
         std::string GetMerkleRoot();
         void Accept(BlockVisitor* vis);
-        void Write(const std::string& filepath);
+        void Write(const std::string& filename);
 
+        friend bool operator==(Block& lhs, Block& rhs);
         friend std::ostream& operator<<(std::ostream&, const Block&);
     };
 }
