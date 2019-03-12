@@ -27,7 +27,7 @@ namespace Token{
         BlockChainNode(BlockChainNode* parent, Block* block, UnclaimedTransactionPool* utxpool):
             parent_(parent),
             block_(block),
-            height_(0),
+            height_(1),
             utxpool_(utxpool),
             children_(0xA){
             if(parent_ != nullptr){
@@ -91,7 +91,7 @@ namespace Token{
         }
 
         UnclaimedTransactionPool* GetHeadUnclaimedTransactionPool() const{
-            return head_->GetUnclaimedTransactionPool();
+            return (*heads_)[height_]->GetUnclaimedTransactionPool();
         }
 
         unsigned int GetHeight() const{

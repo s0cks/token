@@ -16,7 +16,12 @@ include_directories(include)
 include_directories(src)
 
 set(PROTO_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protos")
-file(GLOB_RECURSE TOKEN_SOURCES include/*.h src/*.h src/*.cc)
+
+
+file(GLOB TOKEN_SOURCES include/*.h src/*.cc)
+file(GLOB_RECURSE TOKEN_NODE_SOURCES include/service/*.h src/service/*.cc)
+file(GLOB_RECURSE TOKEN_CLIENT_SOURCES include/client/*.h src/client/*.cc)
+
 file(GLOB_RECURSE TOKEN_PROTO_SOURCES protos/*.proto)
 file(GLOB_RECURSE TOKEN_RPC_SOURCES protos/service.proto)
 file(GLOB_RECURSE TOKEN_TEST_SOURCES test/*.h test/*.cc)
@@ -30,8 +35,8 @@ target_link_libraries("${PROJECT_NAME}" ${CRYPTO++_LIBRARIES} ${PROTOBUF_LIBRARY
 add_executable("${PROJECT_NAME}-tests" ${TOKEN_TEST_SOURCES})
 target_link_libraries("${PROJECT_NAME}-tests" ${GTEST_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME})
 
-add_executable("${PROJECT_NAME}-node" main.cc ${GRPC_SRCS} ${GRPC_HDRS})
+add_executable("${PROJECT_NAME}-node" main.cc ${TOKEN_NODE_SOURCES} ${GRPC_SRCS} ${GRPC_HDRS})
 target_link_libraries("${PROJECT_NAME}-node" ${PROJECT_NAME} gRPC::grpc++_reflection)
 
-add_executable("${PROJECT_NAME}-client" client.cc ${GRPC_SRCS} ${GRPC_HDRS})
+add_executable("${PROJECT_NAME}-client" client.cc ${TOKEN_CLIENT_SOURCES} ${GRPC_SRCS} ${GRPC_HDRS})
 target_link_libraries("${PROJECT_NAME}-client" ${PROJECT_NAME} gRPC::grpc++_reflection)

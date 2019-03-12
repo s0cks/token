@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "token.h"
-#include "../src/array.h"
+#include "array.h"
 
 TEST(ArrayTests, TestEq){
     Token::Array<int> a(0xA);

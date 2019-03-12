@@ -68,7 +68,7 @@ namespace Token{
     }
 
     MerkleTree::MerkleTree(std::vector<MerkleNodeItem*> items){
-        size_t height = std::ceil(std::log2(items.size())) + 1;
+        size_t height = std::ceil(log2(items.size())) + 1;
         head_ = ConstructMerkleTree(height, items);
     }
 

@@ -1,34 +1,22 @@
-#include <grpc++/grpc++.h>
-#include "service.grpc.pb.h"
+#include "client/client.h"
 
-class TokenServiceClient{
-private:
-    std::unique_ptr<TokenService::Stub> stub_;
-public:
-    TokenServiceClient(std::shared_ptr<grpc::Channel> channel):
-        stub_(TokenService::NewStub(channel)){}
-        
-    void ListBlocks(){
-        EmptyBlockHeader header;
-        
-        BlockHeaderList list;
-        grpc::ClientContext ctx;
-        stub_->List(&ctx, header, &list);
-        
-        for(int i = 0; i < list.blocks_size(); i++){
-                BlockHeader blockHeader = list.blocks(i);
-                std::cout << blockHeader.height() << std::endl;
-                std::cout << blockHeader.merkle_root() << std::endl;
-                std::cout << blockHeader.hash() << std::endl;
-        }
-    }
-};
+static void
+DumpBlock(Token::Messages::BlockHeader* block){
+    std::cout << "Block #" << block->height() << std::endl;
+    std::cout << "\t+ Block Hash := " << block->hash() << std::endl;
+    std::cout << "\t+ Block Merkle Root := " << block->merkle_root() << std::endl;
+}
 
 int main(int argc, char** argv){
-        TokenServiceClient client(grpc::CreateChannel(
+        Token::TokenServiceClient client(grpc::CreateChannel(
                         "localhost:50051",
                         grpc::InsecureChannelCredentials()
                 ));
-        client.ListBlocks();
+
+        Token::Messages::BlockHeader head;
+        client.GetHead(&head);
+
+        std::cout << "<HEAD>" << std::endl;
+        DumpBlock(&head);
         return 0;
 }

@@ -4,9 +4,7 @@ namespace Token{
     Block* BlockChain::CreateBlock(Token::User* user){
         Block* parent = GetHead();
         Block* current = new Block(parent);
-        UnclaimedTransactionPool* utxpool = GetHeadUnclaimedTransactionPool();
-        TransactionPool* txpool = GetTransactionPool();
-
+        return current;
     }
 
     bool BlockChain::AddBlock(Token::Block* block){
@@ -16,7 +14,10 @@ namespace Token{
         UnclaimedTransactionPool* utxpool = parent->GetNewUnclaimedTransactionPool();
         BlockChainNode* current = new BlockChainNode(parent, block, utxpool);
         nodes_.insert(std::make_pair(block->GetHash(), current));
-        if(current->GetHeight() > GetHeight()) height_ = current->GetHeight();
+        if(current->GetHeight() > GetHeight()) {
+            height_ = current->GetHeight();
+            head_ = current;
+        }
         if(GetHeight() - (*heads_)[0]->GetHeight() > 0xA){
             Array<BlockChainNode*>* newHeads = new Array<BlockChainNode*>(0xA);
             for(size_t i = 0; i < heads_->Length(); i++){
