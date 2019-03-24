@@ -4,13 +4,6 @@
 namespace Token{
     static const size_t DIGEST_SIZE = CryptoPP::SHA256::DIGESTSIZE;
 
-    static HashArray ItemHash(MerkleNodeItem* item){
-        HashArray digest;
-        HashFunction func;
-        CryptoPP::ArraySource source(item->GetData(), item->GetDataSize(), true, new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(digest.data(), DIGEST_SIZE)));
-        return digest;
-    }
-
     static HashArray ConcatHash(const HashArray& first, const HashArray& second){
         const size_t source_len = DIGEST_SIZE * 2;
         std::array<Byte, source_len> source;
@@ -49,7 +42,7 @@ namespace Token{
         if(height == 1 && !items.empty()){
             MerkleNodeItem* item = items.front();
             items.erase(items.begin());
-            return new MerkleNode(ItemHash(item));
+            return new MerkleNode(item->GetHashArray());
         } else if(height > 1){
             MerkleNode* lchild = ConstructMerkleTree(height - 1, items);
             MerkleNode* rchild;
@@ -80,15 +73,13 @@ namespace Token{
     }
 
     bool MerkleTree::ItemExists(MerkleNodeItem* item){
-        HashArray digest = ItemHash(item);
         std::vector<HashArray> stack;
-        return GetHead()->FindItem(digest, stack);
+        return GetHead()->FindItem(item->GetHashArray(), stack);
     }
 
     std::vector<HashArray> MerkleTree::GetMerklePath(MerkleNodeItem* item){
         std::vector<HashArray> stack;
-        HashArray digest = ItemHash(item);
-        GetHead()->FindItem(digest, stack);
+        GetHead()->FindItem(item->GetHashArray(), stack);
         return stack;
     }
 

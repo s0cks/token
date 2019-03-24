@@ -5,7 +5,6 @@
 #include "array.h"
 #include "block.h"
 #include "tx_pool.h"
-#include "utx_pool.h"
 #include "user.h"
 
 namespace Token{
@@ -14,7 +13,6 @@ namespace Token{
         Block* block_;
         BlockChainNode* parent_;
         Array<BlockChainNode*> children_;
-        UnclaimedTransactionPool* utxpool_;
         unsigned int height_;
 
         inline void
@@ -24,11 +22,10 @@ namespace Token{
 
         friend class BlockChain;
     public:
-        BlockChainNode(BlockChainNode* parent, Block* block, UnclaimedTransactionPool* utxpool):
+        BlockChainNode(BlockChainNode* parent, Block* block):
             parent_(parent),
             block_(block),
             height_(1),
-            utxpool_(utxpool),
             children_(0xA){
             if(parent_ != nullptr){
                 height_ = parent->GetHeight() + 1;
@@ -47,14 +44,6 @@ namespace Token{
         unsigned int GetHeight() const{
             return height_;
         }
-
-        UnclaimedTransactionPool* GetUnclaimedTransactionPool() const{
-            return utxpool_;
-        }
-
-        UnclaimedTransactionPool* GetNewUnclaimedTransactionPool() const{
-            return new UnclaimedTransactionPool(*utxpool_);
-        }
     };
 
     class BlockChain{
@@ -64,34 +53,43 @@ namespace Token{
         std::map<std::string, BlockChainNode*> nodes_;
         unsigned int height_;
         TransactionPool* txpool_;
-    public:
-        BlockChain(Block* genesis):
+        User* owner_;
+        std::string root_;
+
+        bool AppendGenesis(Block* block);
+
+        BlockChain(User* owner, std::string root=""):
+            root_(),
+            owner_(owner),
             heads_(new Array<BlockChainNode*>(0xA)),
             nodes_(),
-            height_(0){
+            height_(0){}
+    public:
+        static BlockChain* CreateInstance(User* user);
+        static BlockChain* CreateInstance(User* user, const std::string& root);
+        static BlockChain* LoadInstance(User* user, const std::string& root);
 
-            UnclaimedTransactionPool* utxpool = new UnclaimedTransactionPool(this);
-            Transaction* cbtx = genesis->CreateTransaction();
-            BlockChainNode* node = new BlockChainNode(nullptr, genesis, utxpool);
-            heads_->Add(node);
-            nodes_.insert(std::make_pair(genesis->GetHash(), node));
-            height_ = 1;
-            head_ = node;
-            txpool_ = new TransactionPool();
+        User* GetOwner() const{
+            return owner_;
         }
 
-        Block* CreateBlock(User* user);
+        Block* CreateBlock() const{
+            return new Block(GetHead());
+        }
 
-        Block* GetBlockFromHash(const std::string& hash){
-            return nodes_[hash]->GetBlock();
+        Block* GetBlockFromHash(const std::string& hash) const{
+            return nodes_.find(hash)->second->GetBlock();
         }
 
         Block* GetHead() const{
             return head_->GetBlock();
         }
 
-        UnclaimedTransactionPool* GetHeadUnclaimedTransactionPool() const{
-            return (*heads_)[height_]->GetUnclaimedTransactionPool();
+        Block* GetBlockAt(int height) const{
+            if(height > GetHeight()) return nullptr;
+            Block* head = GetHead();
+            while(head && head->GetHeight() > height) head = GetBlockFromHash(head->GetPreviousHash());
+            return head;
         }
 
         unsigned int GetHeight() const{
@@ -102,11 +100,8 @@ namespace Token{
             return txpool_;
         }
 
-        void AddTransaction(Transaction* tx){
-            GetTransactionPool()->AddTransaction(tx);
-        }
-
-        bool AddBlock(Block* block);
+        bool Append(Block* block);
+        void Write(const std::string& root);
     };
 }
 

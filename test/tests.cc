@@ -1,26 +1,162 @@
 #include <gtest/gtest.h>
+#include <sstream>
+#include <string>
 #include "token.h"
-#include "array.h"
+#include "block.h"
 
-TEST(ArrayTests, TestEq){
-    Token::Array<int> a(0xA);
-    a.Add(0xA);
-    a.Add(0xB);
-    a.Add(0xC);
-
-    Token::Array<int> b(0xA);
-    b.Add(0xA);
-    b.Add(0xB);
-    b.Add(0xC);
-    
-    Token::Array<int> c(a);
-
-    ASSERT_EQ(a, b);
-    ASSERT_EQ(c, b);
+std::string GetGenesisPreviousHash(){
+    std::stringstream stream;
+    for(int i = 0; i <= 64; i++) stream << "F";
+    return stream.str();
 }
 
-TEST(SqRootTest, PositiveNos){
-    ASSERT_EQ(true, true);
+TEST(InputEq, TestEq){
+    Token::Input in1(GetGenesisPreviousHash(), 0);
+    std::cout << in1 << std::endl;
+    Token::Input in2(GetGenesisPreviousHash(), 1);
+    std::cout << in2 << std::endl;
+
+    ASSERT_TRUE(in1 == in1);
+    ASSERT_TRUE(in2 == in2);
+    ASSERT_FALSE(in1 == in2);
+}
+
+TEST(OutputEq, TestEq){
+    Token::Output out1("TestToken", "TestUser", 0);
+    std::cout << out1 << std::endl;
+    Token::Output out2("TestToken2", "TestUser2", 0);
+    std::cout << out2 << std::endl;
+
+    ASSERT_TRUE(out1 == out1);
+    ASSERT_TRUE(out2 == out2);
+    ASSERT_FALSE(out1 == out2);
+}
+
+TEST(InputEncodeDecode, TestEq){
+    Token::Input in1(GetGenesisPreviousHash(), 0);
+    std::cout << in1 << std::endl;
+    Token::Input in2(GetGenesisPreviousHash(), 1);
+    std::cout << in2 << std::endl;
+
+    Token::ByteBuffer bb;
+    in1.Encode(&bb);
+
+    Token::Input* in3 = Token::Input::Decode(&bb);
+    std::cout << (*in3) << std::endl;
+    ASSERT_TRUE(in1 == in1);
+    ASSERT_TRUE(in2 == in2);
+    ASSERT_FALSE(in1 == in2);
+    ASSERT_TRUE(in1 == (*in3));
+    ASSERT_FALSE((*in3) == in2);
+}
+
+TEST(OutputEncodeDecode, TestEq){
+    Token::Output out1("TestToken", "TestUser", 0);
+    std::cout << out1 << std::endl;
+    Token::Output out2("TestToken2", "TestUser2", 0);
+    std::cout << out2 << std::endl;
+
+    Token::ByteBuffer bb;
+    out1.Encode(&bb);
+
+    Token::Output* out3 = Token::Output::Decode(&bb);
+    std::cout << (*out3) << std::endl;
+
+    ASSERT_TRUE(out1 == out1);
+    ASSERT_TRUE(out2 == out2);
+    ASSERT_FALSE(out1 == out2);
+    ASSERT_TRUE(out1 == (*out3));
+    ASSERT_FALSE((*out3) == out2);
+}
+
+TEST(TransactionEq, TestEq){
+    Token::Transaction tx1(0);
+    tx1.AddInput(GetGenesisPreviousHash(), 0);
+    tx1.AddOutput("TestUser", "TestToken1");
+    std::cout << tx1 << std::endl;
+
+    Token::Transaction tx2(0);
+    tx2.AddInput(GetGenesisPreviousHash(), 1);
+    tx2.AddOutput("TestUser2", "TestToken2");
+    std::cout << tx2 << std::endl;
+
+    ASSERT_TRUE(tx1 == tx1);
+    ASSERT_TRUE(tx2 == tx2);
+    ASSERT_FALSE(tx1 == tx2);
+}
+
+TEST(TransactionEncodeDecode, TestEq){
+    Token::Transaction tx1(0);
+    tx1.AddInput(GetGenesisPreviousHash(), 0);
+    tx1.AddOutput("TestUser", "TestToken1");
+    std::cout << tx1 << std::endl;
+
+    Token::Transaction tx2(0);
+    tx2.AddInput(GetGenesisPreviousHash(), 1);
+    tx2.AddOutput("TestUser2", "TestToken2");
+    std::cout << tx2 << std::endl;
+
+    ASSERT_TRUE(tx1 == tx1);
+    ASSERT_TRUE(tx2 == tx2);
+    ASSERT_FALSE(tx1 == tx2);
+
+    Token::ByteBuffer bb;
+    tx1.Encode(&bb);
+    Token::Transaction* tx3 = Token::Transaction::Decode(&bb);
+    ASSERT_TRUE((*tx3) == tx1);
+    ASSERT_FALSE((*tx3) == tx2);
+}
+
+TEST(TransactionHash, TestEq){
+    Token::Transaction tx1(0);
+    tx1.AddInput(GetGenesisPreviousHash(), 0);
+    tx1.AddOutput("TestUser", "TestToken");
+    std::cout << tx1 << std::endl;
+
+    Token::Transaction tx2(0);
+    tx2.AddInput(GetGenesisPreviousHash(), 0);
+    tx2.AddOutput("TestUser2", "TestToken2");
+    std::cout << tx2 << std::endl;
+
+    std::cout << "Transaction #1: " << tx1.GetHash() << std::endl;
+    std::cout << "Transaction #2: " << tx2.GetHash() << std::endl;
+    ASSERT_TRUE(tx1.GetHash() == tx1.GetHash());
+    ASSERT_FALSE(tx1.GetHash() == tx2.GetHash());
+
+    Token::ByteBuffer bb;
+    tx1.Encode(&bb);
+    Token::Transaction* tx3 = Token::Transaction::Decode(&bb);
+    std::cout << (*tx3) << std::endl;
+
+    std::cout << "Transaction #3: " << tx3->GetHash() << std::endl;
+    ASSERT_TRUE(tx3->GetHash() == tx1.GetHash());
+    ASSERT_FALSE(tx3->GetHash() == tx2.GetHash());
+}
+
+TEST(BlockEq, TestEq){
+    Token::Block block1(GetGenesisPreviousHash(), 0);
+    Token::Transaction* b1tx1 = block1.CreateTransaction();
+    b1tx1->AddInput(GetGenesisPreviousHash(), 0);
+    b1tx1->AddOutput("TestUser", "TestToken");
+    std::cout << block1 << std::endl;
+
+    Token::Block block2(GetGenesisPreviousHash(), 1);
+    Token::Transaction* b2tx1 = block2.CreateTransaction();
+    b2tx1->AddInput(GetGenesisPreviousHash(), 0);
+    b2tx1->AddOutput("TestUser2", "TestToken2");
+    std::cout << block2 << std::endl;
+
+    ASSERT_TRUE(block1 == block1);
+    ASSERT_TRUE(block2 == block2);
+    ASSERT_FALSE(block1 == block2);
+
+    Token::ByteBuffer bb;
+    block1.Encode(&bb);
+    Token::Block* block3 = Token::Block::Decode(&bb);
+    std::cout << (*block3) << std::endl;
+
+    ASSERT_TRUE((*block3) == block1);
+    ASSERT_FALSE((*block3) == block2);
 }
 
 int

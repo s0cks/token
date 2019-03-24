@@ -64,12 +64,12 @@ namespace Token{
 
     class MerkleNodeItem{
     protected:
+        static const size_t DIGEST_SIZE = CryptoPP::SHA256::DIGESTSIZE;
+
         MerkleNodeItem(){}
     public:
         virtual ~MerkleNodeItem(){}
-
-        virtual Byte* GetData() const = 0;
-        virtual size_t GetDataSize() const = 0;
+        virtual HashArray GetHashArray() const = 0;
     };
 
     class MerkleTree{

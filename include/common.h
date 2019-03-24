@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <vector>
 
 #include <cryptopp/sha.h>
 #include <cryptopp/hex.h>
@@ -11,6 +12,8 @@
 #include <cryptopp/osrng.h>
 
 namespace Token{
+    typedef std::vector<char> Buffer;
+
 #if defined(_M_X64) || defined(__x86_64__)
 #define ARCHITECTURE_IS_X64 1
 #elif defined(_M_IX86) || defined(__i386__)
