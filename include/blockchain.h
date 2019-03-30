@@ -6,6 +6,7 @@
 #include "block.h"
 #include "tx_pool.h"
 #include "user.h"
+#include "utxo.h"
 
 namespace Token{
     class BlockChainNode{
@@ -14,6 +15,7 @@ namespace Token{
         BlockChainNode* parent_;
         Array<BlockChainNode*> children_;
         unsigned int height_;
+        UnclaimedTransactionPool utxo_pool_;
 
         inline void
         AddChild(BlockChainNode* node){
@@ -24,8 +26,19 @@ namespace Token{
     public:
         BlockChainNode(BlockChainNode* parent, Block* block):
             parent_(parent),
+            utxo_pool_(),
             block_(block),
-            height_(1),
+            height_(0),
+            children_(0xA){
+            if(parent_ != nullptr){
+                height_ = parent->GetHeight() + 1;
+                parent->AddChild(this);
+            }
+        }
+        BlockChainNode(BlockChainNode* parent, Block* block, UnclaimedTransactionPool utxo_pool):
+            parent_(parent),
+            utxo_pool_(utxo_pool),
+            block_(block),
             children_(0xA){
             if(parent_ != nullptr){
                 height_ = parent->GetHeight() + 1;
@@ -42,7 +55,11 @@ namespace Token{
         }
 
         unsigned int GetHeight() const{
-            return height_;
+            return block_->GetHeight();
+        }
+
+        UnclaimedTransactionPool* GetUnclainedTransactionPool(){
+            return &utxo_pool_;
         }
     };
 
@@ -57,6 +74,14 @@ namespace Token{
         std::string root_;
 
         bool AppendGenesis(Block* block);
+
+        inline BlockChainNode*
+        GetBlockParent(Block* block){
+            std::string target = block->GetPreviousHash();
+            auto found = nodes_.find(target);
+            if(found == nodes_.end()) return nullptr;
+            return found->second;
+        }
 
         BlockChain(User* owner, std::string root=""):
             root_(),
@@ -85,6 +110,10 @@ namespace Token{
             return head_->GetBlock();
         }
 
+        UnclaimedTransactionPool* GetHeadUnclaimedTransactionPool(){
+            return head_->GetUnclainedTransactionPool();
+        }
+
         Block* GetBlockAt(int height) const{
             if(height > GetHeight()) return nullptr;
             Block* head = GetHead();
@@ -93,11 +122,18 @@ namespace Token{
         }
 
         unsigned int GetHeight() const{
-            return height_;
+            return GetHead()->GetHeight();
         }
 
         TransactionPool* GetTransactionPool() const{
             return txpool_;
+        }
+
+        void SetHead(Block* block){
+            nodes_.clear();
+            heads_->Clear();
+            height_ = 0;
+            AppendGenesis(block);
         }
 
         bool Append(Block* block);

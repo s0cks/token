@@ -6,6 +6,8 @@
 #include <map>
 #include "bytes.h"
 #include "session.h"
+#include "peer.h"
+#include "blockchain.h"
 
 namespace Token{
     namespace Node{
@@ -20,6 +22,9 @@ namespace Token{
             ByteBuffer read_buff_;
             bool running_;
             SessionMap sessions_;
+            User user_;
+            BlockChain* chain_;
+            std::vector<Peer*> peers_;
 
             void OnNewConnection(uv_stream_t* server, int status);
             void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
@@ -31,6 +36,8 @@ namespace Token{
             }
 
             Server():
+                user_("TestUser"),
+                chain_(BlockChain::CreateInstance(&user_)),
                 sessions_(),
                 running_(false),
                 server_(),
@@ -39,10 +46,22 @@ namespace Token{
             ~Server(){}
         public:
             static Server* GetInstance();
+            static void AddPeer(const std::string& addr, int port);
             static int Initialize(int port);
+            static int Initialize(int port, const std::string& paddr, int pport);
+
+            void Broadcast(uv_stream_t* from, Message* msg);
 
             ByteBuffer* GetReadBuffer(){
                 return &read_buff_;
+            }
+
+            BlockChain* GetBlockChain() const{
+                return chain_;
+            }
+
+            Block* GetHead() const{
+                return GetBlockChain()->GetHead();
             }
 
             bool IsRunning() const{

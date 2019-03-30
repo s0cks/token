@@ -220,6 +220,13 @@ namespace Token{
         virtual void VisitOutput(Output* out){}
     };
 
+    class BlockVisitor{
+    public:
+        BlockVisitor(){}
+        virtual ~BlockVisitor(){}
+        virtual void VisitTransaction(Transaction* tx){}
+    };
+
     class Block{
     private:
         std::string prev_hash_;
@@ -275,6 +282,13 @@ namespace Token{
 
         Transaction* GetCoinbaseTransaction() const{
             return GetTransactionAt(0);
+        }
+
+        void Accept(BlockVisitor* vis){
+            int i;
+            for(i = 0; i < GetNumberOfTransactions(); i++){
+                vis->VisitTransaction(GetTransactionAt(i));
+            }
         }
 
         void Encode(ByteBuffer* bb) const;

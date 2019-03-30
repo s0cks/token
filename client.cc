@@ -3,7 +3,6 @@
 
 int main(int argc, char** argv){
     using namespace Token;
-    
-    Client::Session::Initialize(5051, "127.0.0.1");
+    Client::Session::Initialize(atoi(argv[1]), "127.0.0.1");
     return EXIT_SUCCESS;
 }

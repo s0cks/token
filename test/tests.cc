@@ -2,7 +2,8 @@
 #include <sstream>
 #include <string>
 #include "token.h"
-#include "block.h"
+#include "user.h"
+#include "blockchain.h"
 
 std::string GetGenesisPreviousHash(){
     std::stringstream stream;
@@ -157,6 +158,61 @@ TEST(BlockEq, TestEq){
 
     ASSERT_TRUE((*block3) == block1);
     ASSERT_FALSE((*block3) == block2);
+}
+
+TEST(BlockChainTest, TestBlockChain){
+    Token::User user("TestUser");
+    Token::BlockChain* chain = Token::BlockChain::CreateInstance(&user);
+
+    Token::Block* nblock = chain->CreateBlock();
+    Token::UnclaimedTransactionPool* utxos = chain->GetHeadUnclaimedTransactionPool();
+    std::cout << (*utxos) << std::endl;
+
+    Token::Transaction* tx = nblock->CreateTransaction();
+    std::string unspent = chain->GetHead()->GetCoinbaseTransaction()->GetHash();
+    std::cout << "Spending unspent transaction: " << unspent << std::endl;
+    tx->AddInput(unspent, 0);
+    tx->AddOutput("TestUser2", "TestToken");
+
+    ASSERT_TRUE(chain->Append(nblock));
+
+    nblock = chain->CreateBlock();
+    tx = nblock->CreateTransaction();
+    tx->AddInput(nblock->GetHash(), 0);
+    tx->AddOutput("TestUser2", "TestToken");
+    ASSERT_FALSE(chain->Append(nblock));
+}
+
+TEST(BlockChainSpendTest, TestBlockChain){
+    Token::User user2("TestUser2");
+    Token::User user("TestUser");
+    Token::BlockChain* chain = Token::BlockChain::CreateInstance(&user);
+    // Genesis := 0-128 Unspent Tokens
+
+    Token::Block* valid_block = chain->CreateBlock();
+    Token::Transaction* valid_tx = valid_block->CreateTransaction();
+    valid_tx->AddInput(chain->GetHead()->GetCoinbaseTransaction()->GetHash(), 100);
+    valid_tx->AddInput(chain->GetHead()->GetCoinbaseTransaction()->GetHash(), 17);
+    valid_tx->AddOutput(user2.GetUserId(), "TestToken");
+
+    ASSERT_TRUE(chain->Append(valid_block));
+
+    std::cout << "<HEAD>" << std::endl;
+    std::cout << (*chain->GetHead()) << std::endl;
+    std::cout << (*chain->GetHeadUnclaimedTransactionPool()) << std::endl;
+
+    valid_block = chain->CreateBlock();
+    valid_tx = valid_block->CreateTransaction();
+    valid_tx->AddInput(chain->GetBlockAt(0)->GetCoinbaseTransaction()->GetHash(), 25);
+    valid_tx->AddInput(chain->GetBlockAt(0)->GetCoinbaseTransaction()->GetHash(), 10);
+    valid_tx->AddOutput(user2.GetUserId(), "TestToken25");
+    valid_tx->AddOutput(user2.GetUserId(), "TestToken10");
+
+    ASSERT_TRUE(chain->Append(valid_block));
+
+    std::cout << "<HEAD>" << std::endl;
+    std::cout << (*chain->GetHead()) << std::endl;
+    std::cout << (*chain->GetHeadUnclaimedTransactionPool()) << std::endl;
 }
 
 int

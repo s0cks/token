@@ -7,7 +7,12 @@
 namespace Token{
 #define FOR_EACH_MESSAGE(V) \
     V(GetHead) \
-    V(Block)
+    V(GetBlock) \
+    V(AppendBlock) \
+    V(Block) \
+    V(Connect) \
+    V(SyncRequest) \
+    V(SyncResponse)
 
 #define FORWARD_DECLARE(Name) \
     class Name##Message;
@@ -84,6 +89,90 @@ namespace Token{
         }
     };
 
+    class AppendBlockMessage : public Message{
+    private:
+        Block* block_;
+    protected:
+        bool GetRaw(ByteBuffer* bb){
+            GetBlock()->Encode(bb);
+            return true;
+        }
+
+        uint32_t GetSize() const{
+            ByteBuffer bb;
+            GetBlock()->Encode(&bb);
+            return bb.WrittenBytes();
+        }
+    public:
+        AppendBlockMessage(Block* block):
+            block_(block){}
+        ~AppendBlockMessage(){}
+
+        Block* GetBlock() const{
+            return block_;
+        }
+
+        DECLARE_MESSAGE(AppendBlock);
+
+        static AppendBlockMessage* Decode(ByteBuffer* bb){
+            uint32_t size = bb->GetInt();
+            return new AppendBlockMessage(Block::Decode(bb));
+        }
+    };
+
+    class GetBlockMessage : public Message{
+    private:
+        std::string hash_;
+    protected:
+        bool GetRaw(ByteBuffer* bb);
+
+        uint32_t GetSize() const{
+            return sizeof(uint32_t) + hash_.size();
+        }
+    public:
+        GetBlockMessage(const std::string& hash):
+            hash_(hash){}
+        ~GetBlockMessage(){}
+
+        std::string GetHash() const{
+            return hash_;
+        }
+
+        DECLARE_MESSAGE(GetBlock);
+
+        static GetBlockMessage* Decode(ByteBuffer* bb);
+    };
+
+    class ConnectMessage : public Message{
+    private:
+        std::string address_;
+        uint32_t port_;
+    protected:
+        bool GetRaw(ByteBuffer* bb);
+
+        uint32_t GetSize() const{
+            return sizeof(uint32_t) + address_.size();
+        }
+    public:
+        ConnectMessage(const std::string& addr, uint32_t port):
+            address_(addr),
+            port_(port){
+        }
+        ~ConnectMessage(){}
+
+        std::string GetAddress() const{
+            return address_;
+        }
+
+        uint32_t GetPort() const{
+            return port_;
+        }
+
+        DECLARE_MESSAGE(Connect);
+
+        static ConnectMessage* Decode(ByteBuffer* bb);
+    };
+
     class GetHeadMessage : public Message{
     protected:
         bool GetRaw(ByteBuffer* bb){
@@ -103,6 +192,58 @@ namespace Token{
 
         static GetHeadMessage* Decode(ByteBuffer* bb){
             return new GetHeadMessage;
+        }
+    };
+
+    class SyncRequestMessage : public Message{
+    protected:
+        bool GetRaw(ByteBuffer* bb){
+            return true;
+        }
+
+        uint32_t GetSize() const{
+            return 0;
+        }
+    public:
+        SyncRequestMessage(): Message(){}
+        ~SyncRequestMessage(){}
+
+        DECLARE_MESSAGE(SyncRequest);
+
+        static SyncRequestMessage* Decode(ByteBuffer* bb){
+            uint32_t size = bb->GetInt();
+            return new SyncRequestMessage;
+        }
+    };
+
+    class SyncResponseMessage : public Message{
+    private:
+        Block* block_;
+    protected:
+        bool GetRaw(ByteBuffer* bb){
+            GetBlock()->Encode(bb);
+            return true;
+        }
+
+        uint32_t GetSize() const{
+            ByteBuffer bb;
+            GetBlock()->Encode(&bb);
+            return bb.WrittenBytes();
+        }
+    public:
+        SyncResponseMessage(Block* block):
+            block_(block){}
+        ~SyncResponseMessage(){}
+
+        Block* GetBlock() const{
+            return block_;
+        }
+
+        DECLARE_MESSAGE(SyncResponse);
+
+        static SyncResponseMessage* Decode(ByteBuffer* bb){
+            uint32_t size = bb->GetInt();
+            return new SyncResponseMessage(Block::Decode(bb));
         }
     };
 }

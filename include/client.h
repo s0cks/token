@@ -14,6 +14,7 @@ namespace Token{
             uv_tcp_t stream_;
             uv_connect_t conn_;
             uv_stream_t* handle_;
+            uv_pipe_t user_in_;
             struct sockaddr_in addr_;
             ByteBuffer read_buff_;
             bool running_;
@@ -22,6 +23,7 @@ namespace Token{
             void OnConnect(uv_connect_t* connection, int status);
             void OnMessageRead(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
             void OnMessageSend(uv_write_t* request, int status);
+            void ReadInput(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
 
             Session():
                 running_(false),
@@ -29,6 +31,7 @@ namespace Token{
                 read_buff_(4096),
                 addr_(),
                 conn_(),
+                user_in_(),
                 stream_(){
                 uv_loop_init(&loop_);
             }

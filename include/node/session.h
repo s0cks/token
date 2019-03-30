@@ -25,7 +25,6 @@ namespace Token{
 
             inline void
             Append(const char* buff, size_t len){
-                std::cout << "Len: " << len << std::endl;
                 GetReadBuffer()->PutBytes((uint8_t*)buff, len);
             }
 
@@ -38,7 +37,9 @@ namespace Token{
 
             Message* GetMessage(){
                 uint32_t type = GetReadBuffer()->GetInt();
-                return Message::Decode(type, GetReadBuffer());
+                Message* msg = Message::Decode(type, GetReadBuffer());
+                GetReadBuffer()->Clear();
+                return msg;
             }
         };
     }
