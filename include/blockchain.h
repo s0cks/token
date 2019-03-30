@@ -70,8 +70,6 @@ namespace Token{
         std::map<std::string, BlockChainNode*> nodes_;
         unsigned int height_;
         TransactionPool* txpool_;
-        User* owner_;
-        std::string root_;
 
         bool AppendGenesis(Block* block);
 
@@ -83,20 +81,12 @@ namespace Token{
             return found->second;
         }
 
-        BlockChain(User* owner, std::string root=""):
-            root_(),
-            owner_(owner),
+        BlockChain():
             heads_(new Array<BlockChainNode*>(0xA)),
             nodes_(),
             height_(0){}
     public:
-        static BlockChain* CreateInstance(User* user);
-        static BlockChain* CreateInstance(User* user, const std::string& root);
-        static BlockChain* LoadInstance(User* user, const std::string& root);
-
-        User* GetOwner() const{
-            return owner_;
-        }
+        static BlockChain* GetInstance();
 
         Block* CreateBlock() const{
             return new Block(GetHead());
@@ -137,7 +127,8 @@ namespace Token{
         }
 
         bool Append(Block* block);
-        void Write(const std::string& root);
+        bool Load(const std::string& root);
+        bool Save(const std::string& root);
     };
 }
 

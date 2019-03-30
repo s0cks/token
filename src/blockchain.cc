@@ -4,30 +4,6 @@
 #include "block_validator.h"
 
 namespace Token{
-    BlockChain*
-    BlockChain::CreateInstance(Token::User *user, const std::string &root){
-        Block* genesis = new Block();
-        Transaction* tx = genesis->CreateTransaction();
-        tx->AddOutput(user->GetUserId(), "TestToken");
-        BlockChain* chain = new BlockChain(user, root);
-        chain->AppendGenesis(genesis);
-        return chain;
-    }
-
-    BlockChain*
-    BlockChain::CreateInstance(User* user){
-        Block* genesis = new Block();
-        Transaction* tx = genesis->CreateTransaction();
-        for(int i = 0; i <= 128; i++){
-            std::stringstream stream;
-            stream << "TestToken" << i;
-            tx->AddOutput(user->GetUserId(), stream.str());
-        }
-        BlockChain* chain = new BlockChain(user);
-        chain->AppendGenesis(genesis);
-        return chain;
-    }
-
     bool
     BlockChain::AppendGenesis(Token::Block* genesis){
         Transaction* cb = genesis->GetCoinbaseTransaction();
@@ -50,29 +26,32 @@ namespace Token{
     }
 
     BlockChain*
-    BlockChain::LoadInstance(User* user, const std::string& root){
-        BlockChain* chain = new BlockChain(user, root);
+    BlockChain::GetInstance(){
+        static BlockChain instance;
+        return &instance;
+    }
+
+    bool
+    BlockChain::Load(const std::string& root){
         Block* genesis = nullptr;
-        std::string genesis_filename = root + "/blk0.dat";
-        if(FileExists(genesis_filename)){
-            genesis = Block::Load(genesis_filename);
+        std::string gen_filename = root + "/blk0.dat";
+        if(FileExists(gen_filename)){
+            genesis = Block::Load(gen_filename);
         } else{
-            return BlockChain::CreateInstance(user, root);
+            genesis = new Block();
+            AppendGenesis(genesis);
+            return false;
         }
-        chain->AppendGenesis(genesis);
         for(int idx = 1; idx < 1000; idx++){
             std::stringstream blk_filename;
-            blk_filename << root;
-            blk_filename << "/blk" << idx << ".dat";
+            blk_filename << root << "/blk" << idx << ".dat";
             if(FileExists(blk_filename.str())){
-                Block* block = Block::Load(blk_filename.str());
-                chain->Append(block);
-
+                Append(Block::Load(blk_filename.str()));
             } else{
-                return chain;
+                break;
             }
         }
-        return chain;
+        return true;
     }
 
     static inline std::string
@@ -83,12 +62,13 @@ namespace Token{
         return ss.str();
     }
 
-    void
-    BlockChain::Write(const std::string &root){
+    bool
+    BlockChain::Save(const std::string& root){
         for(int idx = 0; idx <= GetHeight(); idx++){
             Block* blk = GetBlockAt(idx);
             blk->Write(GetBlockFilename(root, idx));
         }
+        return true;
     }
 
     bool BlockChain::Append(Token::Block* block){
@@ -98,7 +78,7 @@ namespace Token{
         BlockChainNode* parent = GetBlockParent(block);
         if(parent == nullptr) return false;
 
-        
+
         UnclaimedTransactionPool utxo_pool = *parent->GetUnclainedTransactionPool();
         /*
         BlockValidator validator(utxo_pool);
@@ -134,9 +114,6 @@ namespace Token{
                 nodes_.erase(oldHead->GetBlock()->GetHash());
             }
             heads_ = newHeads;
-        }
-        if(!root_.empty()){
-            block->Write(GetBlockFilename(root_, block->GetHeight()));
         }
         return true;
     }
