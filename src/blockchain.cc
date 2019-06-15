@@ -154,9 +154,6 @@ namespace Token{
     }
 
     void BlockChain::Server::AddPeer(const std::string &addr, int port){
-        BlockChain::Server* instance = GetServerInstance();
-        PeerSession* peer = new PeerSession(&instance->loop_, addr, port);
-        instance->sessions_.insert({ peer->GetStream(), peer });
     }
 
     int BlockChain::Server::Initialize(int port, const std::string &paddr, int pport){
@@ -189,7 +186,7 @@ namespace Token{
     void BlockChain::Server::OnNewConnection(uv_stream_t* server, int status){
         std::cout << "Attempting connection..." << std::endl;
         if(status == 0){
-            ClientSession* session = new ClientSession(std::make_shared<uv_tcp_t>());
+            Session* session = new Session(std::make_shared<uv_tcp_t>());
             uv_tcp_init(&loop_, session->GetConnection());
             if(uv_accept(server, (uv_stream_t*)session->GetConnection()) == 0){
                 std::cout << "Accepted!" << std::endl;
@@ -210,11 +207,6 @@ namespace Token{
     }
 
     void BlockChain::Server::Broadcast(uv_stream_t* stream, Message* msg){
-        for(auto& it : sessions_){
-            if(it.second->IsPeerSession() && it.first != stream){
-                it.second->Send(msg);
-            }
-        }
     }
 
     void BlockChain::Server::Send(uv_stream_t* target, Message* msg){
@@ -242,7 +234,6 @@ namespace Token{
             if(request->IsGetHeadRequest()){
                 Block* head = BlockChain::GetInstance()->GetHead();
                 GetHeadResponse response((*request->AsGetHeadRequest()), head);
-                session->Send(&response);
                 return true;
             }
         }
@@ -263,7 +254,7 @@ namespace Token{
             } else if(nread > 0){
                 Session* session = pos->second;
                 if(nread < 4096){
-                    session->Append(buff);
+                    session->Append(buff->base, buff->len);
                     if(!Handle(session, session->GetNextMessage())){
                         std::cerr << "BlockChain::Server couldn't handle message from: " << session << std::endl;
                     }
@@ -278,8 +269,4 @@ namespace Token{
             std::cerr << "Unrecognized client. Disconnecting" << std::endl;
         }
     }
-
-    class Session{
-
-    };
 }
