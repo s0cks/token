@@ -278,4 +278,8 @@ namespace Token{
             std::cerr << "Unrecognized client. Disconnecting" << std::endl;
         }
     }
+
+    class Session{
+
+    };
 }

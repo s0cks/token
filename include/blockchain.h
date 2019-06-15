@@ -4,14 +4,15 @@
 #include <uv.h>
 #include <memory>
 #include <map>
-#include "bytes.h"
-#include "session.h"
 #include "common.h"
 #include "array.h"
+#include "bytes.h"
+#include "message.h"
 #include "block.h"
 #include "tx_pool.h"
 #include "user.h"
 #include "utxo.h"
+#include "session.h"
 
 namespace Token{
     class GetHeadResponse;
@@ -161,24 +162,6 @@ namespace Token{
 
             void RemoveClient(uv_stream_t* client){
                 //TODO: Implement
-            }
-
-            inline void
-            GetPeers(std::vector<PeerSession*>& peers){
-                for(auto& it : sessions_){
-                    if(it.second->IsPeerSession()){
-                        peers.push_back(it.second->AsPeerSession());
-                    }
-                }
-            }
-
-            inline void
-            GetClients(std::vector<ClientSession*>& clients){
-                for(auto& it : sessions_){
-                    if(it.second->IsClientSession()){
-                        clients.push_back(it.second->AsClientSession());
-                    }
-                }
             }
 
             bool Handle(Session* session, Message* msg);
