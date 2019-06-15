@@ -32,6 +32,6 @@ int main(int argc, char** argv){
         new_tx_1->AddOutput("TestUser", "TestToken");
         BlockChain::GetInstance()->Append(new_block);
     }
-    Node::Server::Initialize(port);
+    BlockChain::GetServerInstance()->Initialize(port);
     return EXIT_SUCCESS;
 }

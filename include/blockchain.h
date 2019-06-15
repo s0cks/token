@@ -1,6 +1,11 @@
 #ifndef TOKEN_BLOCKCHAIN_H
 #define TOKEN_BLOCKCHAIN_H
 
+#include <uv.h>
+#include <memory>
+#include <map>
+#include "bytes.h"
+#include "session.h"
 #include "common.h"
 #include "array.h"
 #include "block.h"
@@ -65,8 +70,6 @@ namespace Token{
         }
     };
 
-    class Client;
-
     class BlockChain{
     private:
         Array<BlockChainNode*>* heads_;
@@ -85,14 +88,15 @@ namespace Token{
             return found->second;
         }
 
-        static bool HandleGetHead(Client* client, GetHeadResponse* response);
-
         BlockChain():
             heads_(new Array<BlockChainNode*>(0xA)),
             nodes_(),
             height_(0){}
     public:
+        class Server;
+
         static BlockChain* GetInstance();
+        static Server* GetServerInstance();
 
         Block* CreateBlock() const{
             return new Block(GetHead());
@@ -137,6 +141,72 @@ namespace Token{
         bool Load(const std::string& root);
         bool Load(const std::string& root, const std::string& addr, int port);
         bool Save(const std::string& root);
+
+        class Server{
+        private:
+            static const size_t MAX_BUFF_SIZE = 4096;
+
+            uv_loop_t loop_;
+            uv_tcp_t server_;
+            ByteBuffer read_buff_;
+            bool running_;
+            User user_;
+            BlockChain* chain_;
+            std::map<uv_stream_t*, Session*> sessions_;
+
+            void OnNewConnection(uv_stream_t* server, int status);
+            void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
+            void OnMessageSent(uv_write_t* stream, int status);
+            void Send(uv_stream_t* conn, Message* msg);
+
+            void RemoveClient(uv_stream_t* client){
+                //TODO: Implement
+            }
+
+            inline void
+            GetPeers(std::vector<PeerSession*>& peers){
+                for(auto& it : sessions_){
+                    if(it.second->IsPeerSession()){
+                        peers.push_back(it.second->AsPeerSession());
+                    }
+                }
+            }
+
+            inline void
+            GetClients(std::vector<ClientSession*>& clients){
+                for(auto& it : sessions_){
+                    if(it.second->IsClientSession()){
+                        clients.push_back(it.second->AsClientSession());
+                    }
+                }
+            }
+
+            bool Handle(Session* session, Message* msg);
+
+            Server():
+                    user_("TestUser"),
+                    sessions_(),
+                    running_(false),
+                    server_(),
+                    loop_(),
+                    read_buff_(MAX_BUFF_SIZE){}
+            friend class BlockChain;
+        public:
+            static void AddPeer(const std::string& addr, int port);
+            static int Initialize(int port);
+            static int Initialize(int port, const std::string& paddr, int pport);
+            ~Server(){}
+
+            void Broadcast(uv_stream_t* from, Message* msg);
+
+            ByteBuffer* GetReadBuffer(){
+                return &read_buff_;
+            }
+
+            bool IsRunning() const{
+                return running_;
+            }
+        };
     };
 }
 
