@@ -11,8 +11,11 @@ namespace Token{
         std::string hash_;
         uint32_t index_;
     public:
+        UnclaimedTransaction(const UnclaimedTransaction& other):
+            hash_(other.hash_),
+            index_(other.index_){}
         UnclaimedTransaction(const std::string& hash, uint32_t idx):
-            hash_(hash),
+            hash_(std::string(hash)),
             index_(idx){}
         ~UnclaimedTransaction(){}
 
@@ -79,6 +82,17 @@ namespace Token{
             for(auto& it : utxos_){
                 UnclaimedTransaction utxo = it.first;
                 utxos.push_back(&utxo);
+            }
+            return true;
+        }
+
+        bool GetUnclaimedTransactionsFor(std::vector<UnclaimedTransaction*>* utxos, const std::string& user) const{
+            for(auto& it : utxos_){
+                std::cout << "Comparing " << it.second->GetUser() << " == " << user << ": " << (it.second->GetUser() == user) << std::endl;
+                if(it.second->GetUser() == user){
+                    UnclaimedTransaction utxo = it.first;
+                    utxos->push_back(new UnclaimedTransaction(utxo));
+                }
             }
             return true;
         }

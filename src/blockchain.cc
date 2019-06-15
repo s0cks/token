@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include "block_validator.h"
+#include "client.h"
 
 namespace Token{
     bool
@@ -9,6 +10,7 @@ namespace Token{
         Transaction* cb = genesis->GetCoinbaseTransaction();
         BlockChainNode* node = new BlockChainNode(nullptr, genesis);
         for(int i = 0; i < cb->GetNumberOfOutputs(); i++){
+            std::cout << "Creating unclaimed transaction for " << i << std::endl;
             node->GetUnclainedTransactionPool()->Insert(UnclaimedTransaction(cb->GetHash(), i), cb->GetOutputAt(i));
         }
         heads_->Add(node);
@@ -32,13 +34,44 @@ namespace Token{
     }
 
     bool
+    BlockChain::HandleGetHead(Client* client, GetHeadResponse* response){
+        Block* head = response->Get();
+        std::cout << "Head is null?: " << (head == nullptr ? "true" : "false") << std::endl;
+        if(head == nullptr) return false;
+        std::cout << "Setting head to:" << std::endl;
+        std::cout << (*head) << std::endl;
+        BlockChain::GetInstance()->SetHead(head);
+        client->Disconnect();
+        return true;
+    }
+
+    bool
+    BlockChain::Load(const std::string& root, const std::string& addr, int port){
+        Load(root);
+        std::cout << "Fetching head from " << addr << ":" << port << std::endl;
+        Client* client = Client::Connect(addr, port, [](Client* instance){
+            instance->GetHead(HandleGetHead);
+        });
+        delete client;
+        return true;
+    }
+
+    bool
     BlockChain::Load(const std::string& root){
         Block* genesis = nullptr;
+
         std::string gen_filename = root + "/blk0.dat";
         if(FileExists(gen_filename)){
             genesis = Block::Load(gen_filename);
+            AppendGenesis(genesis);
         } else{
             genesis = new Block();
+            Transaction* tx = genesis->CreateTransaction();
+            for(int idx = 0; idx < 128; idx++){
+                std::stringstream token_name;
+                token_name << "Token" << idx;
+                tx->AddOutput("TestUser", token_name.str());
+            }
             AppendGenesis(genesis);
             return false;
         }
@@ -72,13 +105,16 @@ namespace Token{
     }
 
     bool BlockChain::Append(Token::Block* block){
-        if(nodes_.find(block->GetHash()) != nodes_.end()) return false;
+        if(nodes_.find(block->GetHash()) != nodes_.end()){
+            std::cout << "Duplicate block found" << std::endl;
+            return false;
+        }
         if(block->GetHeight() == 0) return AppendGenesis(block);
-        if(nodes_.find(block->GetPreviousHash()) == nodes_.end()) return false;
+        if(nodes_.find(block->GetPreviousHash()) == nodes_.end()){
+            std::cout << "Cannot find parent" << std::endl;
+            return false;
+        }
         BlockChainNode* parent = GetBlockParent(block);
-        if(parent == nullptr) return false;
-
-
         UnclaimedTransactionPool utxo_pool = *parent->GetUnclainedTransactionPool();
         /*
         BlockValidator validator(utxo_pool);
@@ -86,10 +122,12 @@ namespace Token{
         std::vector<Transaction*> valid = validator.GetValidTransactions();
         std::vector<Transaction*> invalid = validator.GetInvalidTransactions();
         if(valid.size() != block->GetNumberOfTransactions()){
+            std::cerr << "Not all transactions valid" << std::endl;
             return false;
         }
         utxo_pool = validator.GetUnclaimedTransactionPool();
         if(utxo_pool.IsEmpty()) {
+            std::cout << "No Unclaimed transactions" << std::endl;
             return false;
         }
         */

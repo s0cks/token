@@ -6,25 +6,21 @@
 #include <map>
 #include "bytes.h"
 #include "session.h"
-#include "peer.h"
 #include "blockchain.h"
 
 namespace Token{
     namespace Node{
         class Server{
         private:
-            typedef std::map<uv_stream_t*, Session> SessionMap;
-
             static const size_t MAX_BUFF_SIZE = 4096;
 
             uv_loop_t loop_;
             uv_tcp_t server_;
             ByteBuffer read_buff_;
             bool running_;
-            SessionMap sessions_;
             User user_;
             BlockChain* chain_;
-            std::vector<Peer*> peers_;
+            std::map<uv_stream_t*, Session*> sessions_;
 
             void OnNewConnection(uv_stream_t* server, int status);
             void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
@@ -35,9 +31,28 @@ namespace Token{
                 //TODO: Implement
             }
 
+            inline void
+            GetPeers(std::vector<PeerSession*>& peers){
+                for(auto& it : sessions_){
+                    if(it.second->IsPeerSession()){
+                        peers.push_back(it.second->AsPeerSession());
+                    }
+                }
+            }
+
+            inline void
+            GetClients(std::vector<ClientSession*>& clients){
+                for(auto& it : sessions_){
+                    if(it.second->IsClientSession()){
+                        clients.push_back(it.second->AsClientSession());
+                    }
+                }
+            }
+
+            bool Handle(Session* session, Message* msg);
+
             Server():
                 user_("TestUser"),
-                chain_(BlockChain::CreateInstance(&user_)),
                 sessions_(),
                 running_(false),
                 server_(),
@@ -54,14 +69,6 @@ namespace Token{
 
             ByteBuffer* GetReadBuffer(){
                 return &read_buff_;
-            }
-
-            BlockChain* GetBlockChain() const{
-                return chain_;
-            }
-
-            Block* GetHead() const{
-                return GetBlockChain()->GetHead();
             }
 
             bool IsRunning() const{

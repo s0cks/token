@@ -155,7 +155,7 @@ namespace Token{
         }
 
         void AddOutput(const std::string& user, const std::string& token){
-            Output* out = new Output(user, token, 0);
+            Output* out = new Output(token, user, 0);
             outputs_.push_back(out);
         }
 

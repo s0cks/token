@@ -9,6 +9,8 @@
 #include "utxo.h"
 
 namespace Token{
+    class GetHeadResponse;
+
     class BlockChainNode{
     private:
         Block* block_;
@@ -63,6 +65,8 @@ namespace Token{
         }
     };
 
+    class Client;
+
     class BlockChain{
     private:
         Array<BlockChainNode*>* heads_;
@@ -80,6 +84,8 @@ namespace Token{
             if(found == nodes_.end()) return nullptr;
             return found->second;
         }
+
+        static bool HandleGetHead(Client* client, GetHeadResponse* response);
 
         BlockChain():
             heads_(new Array<BlockChainNode*>(0xA)),
@@ -119,6 +125,7 @@ namespace Token{
             return txpool_;
         }
 
+        //TODO: Remove this
         void SetHead(Block* block){
             nodes_.clear();
             heads_->Clear();
@@ -128,6 +135,7 @@ namespace Token{
 
         bool Append(Block* block);
         bool Load(const std::string& root);
+        bool Load(const std::string& root, const std::string& addr, int port);
         bool Save(const std::string& root);
     };
 }

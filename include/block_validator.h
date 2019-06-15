@@ -19,6 +19,7 @@ namespace Token{
 
         bool IsValid(Transaction* tx){
             if(tx->GetNumberOfInputs() == 0 || tx->GetNumberOfOutputs() == 0){
+                std::cerr << "Inputs or outputs are 0" << std::endl;
                 return false;
             }
 
@@ -27,10 +28,12 @@ namespace Token{
                 Input* in = tx->GetInputAt(i);
                 UnclaimedTransaction ut(in->GetPreviousHash(), in->GetIndex());
                 if(!utxo_pool_.Contains(ut)){
+                    std::cout << "No unclaimed transaction: " << ut << std::endl;
                     return false;
                 }
                 Output* out = utxo_pool_.Get(ut);
                 if(out == nullptr) {
+                    std::cerr << "No output" << std::endl;
                     return false;
                 }
             }

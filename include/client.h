@@ -1,59 +1,69 @@
 #ifndef TOKEN_CLIENT_H
 #define TOKEN_CLIENT_H
 
-#include <uv.h>
-#include <memory.h>
+#include <pthread.h>
+#include <mutex>
+#include <shared_mutex>
+#include <condition_variable>
+#include <queue>
 #include "bytes.h"
 #include "message.h"
 
 namespace Token{
-    namespace Client{
-        class Session{
+    class Client{
+    private:
+        template<typename Type>
+        class WorkQueue{
         private:
-            uv_loop_t loop_;
-            uv_tcp_t stream_;
-            uv_connect_t conn_;
-            uv_stream_t* handle_;
-            uv_pipe_t user_in_;
-            struct sockaddr_in addr_;
-            ByteBuffer read_buff_;
-            bool running_;
-
-            Message* GetMessage();
-            void OnConnect(uv_connect_t* connection, int status);
-            void OnMessageRead(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
-            void OnMessageSend(uv_write_t* request, int status);
-            void ReadInput(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
-
-            Session():
-                running_(false),
-                handle_(nullptr),
-                read_buff_(4096),
-                addr_(),
-                conn_(),
-                user_in_(),
-                stream_(){
-                uv_loop_init(&loop_);
-            }
-            ~Session(){
-                uv_loop_close(&loop_);
-            }
+            std::queue<Type> queue_;
+            std::mutex mutex_;
+            std::condition_variable cv_;
         public:
-            static Session* GetInstance();
-            static void Initialize(int port, const std::string& addr);
+            WorkQueue():
+                queue_(),
+                mutex_(),
+                cv_(){
 
-            ByteBuffer*
-            GetReadBuffer() {
-                return &read_buff_;
+            }
+            ~WorkQueue(){}
+
+            void Enqueue(Type& value){
+                std::lock_guard<std::mutex> lock(mutex_);
+                queue_.push(value);
+                cv_.notify_one();
             }
 
-            void Send(Message* msg);
-
-            bool IsRunning() const{
-                return running_;
+            Type& Dequeue(){
+                std::unique_lock<std::mutex> lock(mutex_);
+                cv_.wait(lock, [&]{
+                    return !queue_.empty();
+                });
+                Type& value = queue_.front();
+                queue_.pop();
+                return value;
             }
         };
-    }
+
+        int socket_;
+        std::string address_;
+        int port_;
+        pthread_t thread_id_;
+        ByteBuffer read_buffer_;
+        WorkQueue<Message*> queue_;
+
+        static void* ClientThread(void* args);
+    public:
+        Client():
+            queue_(),
+            socket_(-1),
+            read_buffer_(4096){
+        }
+        ~Client(){
+
+        }
+
+        void Connect(const std::string& addr, int port);
+    };
 }
 
 #endif //TOKEN_CLIENT_H

@@ -20,44 +20,99 @@ namespace Token{
     }
 
 #define DEFINE_MESSAGE_TYPECHECK(Name) \
-    Name##Message* Name##Message::As##Name(){ return this; }
+    Name* Name::As##Name(){ return this; }
     FOR_EACH_MESSAGE(DEFINE_MESSAGE_TYPECHECK)
 #undef DEFINE_MESSAGE_TYPECHECK
 
     Message* Message::Decode(uint32_t type, Token::ByteBuffer *buff){
-        switch(type){
-            case kIllegalMessage: return nullptr;
+        std::cout << "Decoding type: " << type << std::endl;
+        switch(static_cast<Type>(type)){
 #define DECLARE_DECODE(Name) \
-    case k##Name##Message: return Name##Message::Decode(buff);
-    FOR_EACH_MESSAGE(DECLARE_DECODE)
+    case Type::k##Name##Type: return Name::Decode(buff);
+    FOR_EACH_MESSAGE(DECLARE_DECODE);
 #undef DECLARE_DECODE
+            case Type::kIllegalType:
             default: return nullptr;
         }
     }
 
-    bool ConnectMessage::GetRaw(Token::ByteBuffer *bb){
-        EncodeString(bb, GetAddress());
-        bb->PutInt(GetPort());
+    Request* Message::AsRequest(){
+        if(!IsRequest()) return nullptr;
+        return static_cast<Request*>(this);
+    }
+
+    Response* Message::AsResponse(){
+        if(!IsResponse()) return nullptr;
+        return static_cast<Response*>(this);
+    }
+
+    uint32_t Request::GetSize() const{
+        return (sizeof(uint32_t) * 2) + GetId().size();
+    }
+
+    uint32_t Response::GetSize() const{
+        return (sizeof(uint32_t) * 2) + GetId().size();
+    }
+
+    uint32_t GetHeadRequest::GetSize() const{
+        return GetHeadRequest::Request::GetSize();
+    }
+
+    bool Request::GetRaw(Token::ByteBuffer* bb){
+        EncodeString(bb, GetId());
         return true;
     }
 
-    ConnectMessage* ConnectMessage::Decode(Token::ByteBuffer *bb){
-        uint32_t size = bb->GetInt();
-        std::string address;
-        DecodeString(bb, &address);
-        return new ConnectMessage(address, bb->GetInt());
-    }
-
-    bool GetBlockMessage::GetRaw(Token::ByteBuffer* bb){
-        EncodeString(bb, GetHash());
+    bool Response::GetRaw(Token::ByteBuffer* bb){
+        EncodeString(bb, GetId());
         return true;
     }
 
-    GetBlockMessage* GetBlockMessage::Decode(Token::ByteBuffer* bb){
+    bool GetHeadRequest::GetRaw(Token::ByteBuffer* bb){
+        return Request::GetRaw(bb);
+    }
+
+    uint32_t GetHeadResponse::GetSize() const{
+        return GetHeadResponse::Response::GetSize();
+    }
+
+    bool GetHeadResponse::GetRaw(Token::ByteBuffer* bb){
+        EncodeString(bb, GetId());
+        Get()->Encode(bb);
+        return true;
+    }
+
+    GetHeadRequest* GetHeadRequest::Decode(Token::ByteBuffer* bb){
         uint32_t size = bb->GetInt();
-        std::string hash;
-        DecodeString(bb, &hash);
-        std::cout << "Decoded string: " << hash << std::endl;
-        return new GetBlockMessage(hash);
+        std::string id;
+        DecodeString(bb, &id);
+        return new GetHeadRequest(id);
+    }
+
+    bool GetHeadRequest::Handle(Client* client, Response* response){
+        if(!response->IsGetHeadResponse()){
+            std::cerr << "Invalid response from request: " << response->GetId() << std::endl;
+            return false;
+        }
+        if(!HasResponseHandler()){
+            std::cerr << "No response handler attached for request: " << response->GetId() << std::endl;
+            return false;
+        }
+        return GetResponseHandler()(client, response->AsGetHeadResponse());
+    }
+
+    GetHeadResponse* GetHeadResponse::Decode(Token::ByteBuffer* bb){
+        uint32_t size = bb->GetInt();
+        std::string id;
+        DecodeString(bb, &id);
+        std::cout << "Decoding block" << std::endl;
+        try{
+            Block* block = Block::Decode(bb);
+            std::cout << "Block: " << (*block) << std::endl;
+            return new GetHeadResponse(id, block);
+        } catch(const std::exception& err){
+            std::cerr << "Error: " << err.what() << std::endl;
+        }
+        return nullptr;
     }
 }

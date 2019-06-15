@@ -18,7 +18,8 @@ namespace Token{
 
         void Server::AddPeer(const std::string &addr, int port){
             Server* instance = GetInstance();
-            instance->peers_.push_back(new Peer(&instance->loop_, addr, port));
+            PeerSession* peer = new PeerSession(&instance->loop_, addr, port);
+            instance->sessions_.insert({ peer->GetStream(), peer });
         }
 
         int Server::Initialize(int port, const std::string &paddr, int pport){
@@ -41,9 +42,6 @@ namespace Token{
                 Server::GetInstance()->OnNewConnection(server, status);
             });
             if(err == 0){
-                std::cout << "Connecting to " << instance->peers_.size() << " peers" << std::endl;
-                for(auto& it : instance->peers_) it->Connect();
-                
                 std::cout << "Listening @ localhost:" << port << std::endl;
                 uv_run(&instance->loop_, UV_RUN_DEFAULT);
                 instance->running_ = true;
@@ -54,12 +52,12 @@ namespace Token{
         void Server::OnNewConnection(uv_stream_t *server, int status){
             std::cout << "Attempting connection..." << std::endl;
             if(status == 0){
-                Session session(std::make_shared<uv_tcp_t>());
-                uv_tcp_init(&loop_, session.GetConnection());
-                if(uv_accept(server, (uv_stream_t*)session.GetConnection()) == 0){
+                ClientSession* session = new ClientSession(std::make_shared<uv_tcp_t>());
+                uv_tcp_init(&loop_, session->GetConnection());
+                if(uv_accept(server, (uv_stream_t*)session->GetConnection()) == 0){
                     std::cout << "Accepted!" << std::endl;
-                    uv_stream_t* key = (uv_stream_t*)session.GetConnection();
-                    uv_read_start((uv_stream_t*) session.GetConnection(),
+                    uv_stream_t* key = (uv_stream_t*)session->GetConnection();
+                    uv_read_start((uv_stream_t*) session->GetConnection(),
                             AllocBuffer,
                             [](uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
                         Server::GetInstance()->OnMessageReceived(stream, nread, buff);
@@ -67,7 +65,7 @@ namespace Token{
                     sessions_.insert({ key, session });
                 } else{
                     std::cerr << "Error accepting connection: " << std::string(uv_strerror(status));
-                    uv_read_stop((uv_stream_t*) session.GetConnection());
+                    uv_read_stop((uv_stream_t*) session->GetConnection());
                 }
             } else{
                 std::cerr << "Connection error: " << std::string(uv_strerror(status));
@@ -75,9 +73,9 @@ namespace Token{
         }
 
         void Server::Broadcast(uv_stream_t* stream, Message* msg){
-            for(auto& it : peers_){
-                if(it->GetStream() != stream){
-                    it->Send(msg);
+            for(auto& it : sessions_){
+                if(it.second->IsPeerSession() && it.first != stream){
+                    it.second->Send(msg);
                 }
             }
         }
@@ -101,56 +99,36 @@ namespace Token{
             }
         }
 
+        bool Server::Handle(Session* session, Token::Message* msg){
+            if(msg->IsRequest()){
+                Request* request = msg->AsRequest();
+                if(request->IsGetHeadRequest()){
+                    Block* head = BlockChain::GetInstance()->GetHead();
+                    GetHeadResponse response((*request->AsGetHeadRequest()), head);
+                    session->Send(&response);
+                    return true;
+                }
+            }
+            return false;
+        }
+
         void Server::OnMessageReceived(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buff){
+            if(nread == UV_EOF){
+                RemoveClient(stream);
+                std::cout << "Disconnected" << std::endl;
+            }
+
             auto pos = sessions_.find(stream);
             if(pos != sessions_.end()){
                 if(nread == UV_EOF){
                     RemoveClient(stream);
                     std::cout << "Disconnected" << std::endl;
                 } else if(nread > 0){
-                    const char* charbuf = buff->base;
-                    int n = nread;
-                    while(n > 0){
-                        std::cout << n << std::endl;
-                        if(n < 4096){
-                            Session* s = &pos->second;
-                            s->Append(charbuf, n);
-                            Message* msg = s->GetMessage();
-                            std::cout << "Found Message: " << msg->GetName() << std::endl;
-                            if(msg->IsGetHead()){
-                                std::cout << "Sending Head" << std::endl;
-                                BlockMessage m(GetHead());
-                                Send((uv_stream_t*) s->GetConnection(), &m);
-                            } else if(msg->IsAppendBlock()){
-                                Block* b = msg->AsAppendBlock()->GetBlock();
-                                std::cout << "Appending Block:" << std::endl;
-                                std::cout << (*b) << std::endl;
-                                if(GetBlockChain()->Append(b)){
-                                    std::cout << "Broadcasting new block" << std::endl;
-                                    Broadcast(stream, msg);
-                                }
-                            } else if(msg->IsGetBlock()){
-                                std::string hash = msg->AsGetBlock()->GetHash();
-                                std::cout << "Finding block: " << hash << std::endl;
-                                Block* b = GetBlockChain()->GetBlockFromHash(hash);
-                                std::cout << "Found:" << std::endl;
-                                std::cout << (*b) << std::endl;
-                                BlockMessage m(b);
-                                std::cout << "Sending found block" << std::endl;
-                                Send((uv_stream_t*) s->GetConnection(),  &m);
-                            } else if(msg->IsConnect()){
-                                std::cout << "Connecting to: " << msg->AsConnect()->GetAddress() << ":" << msg->AsConnect()->GetPort() << std::endl;
-                                Peer* peer = new Peer(&loop_, msg->AsConnect()->GetAddress(), msg->AsConnect()->GetPort());
-                                peers_.push_back(peer);
-                                peer->Connect();
-                            } else if(msg->IsSyncRequest()){
-                                SyncResponseMessage m(GetHead());
-                                Send((uv_stream_t*) s->GetConnection(), &m);
-                            } else if(msg->IsSyncResponse()){
-                                Block* block = msg->AsSyncResponse()->GetBlock();
-                                GetBlockChain()->SetHead(block);
-                            }
-                            n = 0;
+                    Session* session = pos->second;
+                    if(nread < 4096){
+                        session->Append(buff);
+                        if(!Handle(session, session->GetNextMessage())){
+                            std::cerr << "Server couldn't handle message from: " << session << std::endl;
                         }
                     }
                 } else if(nread < 0){

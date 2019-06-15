@@ -3,47 +3,58 @@
 
 #include "bytes.h"
 #include "block.h"
+#include "utxo.h"
 
 namespace Token{
+#define FOR_EACH_REQUEST_MESSAGE(V) \
+    V(GetHeadRequest)
+
+#define FOR_EACH_RESPONSE_MESSAGE(V) \
+    V(GetHeadResponse)
+
 #define FOR_EACH_MESSAGE(V) \
-    V(GetHead) \
-    V(GetBlock) \
-    V(AppendBlock) \
-    V(Block) \
-    V(Connect) \
-    V(SyncRequest) \
-    V(SyncResponse)
+    FOR_EACH_REQUEST_MESSAGE(V) \
+    FOR_EACH_RESPONSE_MESSAGE(V)
 
 #define FORWARD_DECLARE(Name) \
-    class Name##Message;
+    class Name;
     FOR_EACH_MESSAGE(FORWARD_DECLARE)
 #undef FORWARD_DECLARE
 
-
 #define DECLARE_MESSAGE(Name) \
-    virtual const char* GetName() const{ return #Name; } \
-    virtual Type GetType() const{ return Type::k##Name##Message; } \
-    virtual Name##Message* As##Name();
+    protected: \
+        bool GetRaw(ByteBuffer* bb); \
+        uint32_t GetSize() const; \
+    public: \
+        const char* GetName() const{ return #Name; } \
+        Name* As##Name(); \
+        Type GetType() const{ return Type::k##Name##Type; } \
+        static Name* Decode(ByteBuffer* bb);
+
+    class Request;
+    class Response;
 
     class Message{
     public:
-        enum Type{
-            kIllegalMessage = 0,
-#define DECLARE_TYPE(Name) k##Name##Message,
-            FOR_EACH_MESSAGE(DECLARE_TYPE)
-#undef DECLARE_TYPE
+        enum class Type{
+            kIllegalType = 0,
+#define DECLARE_MESSAGE_TYPE(Name) k##Name##Type,
+        FOR_EACH_MESSAGE(DECLARE_MESSAGE_TYPE)
+#undef DECLARE_MESSAGE_TYPE
         };
+    private:
+        Type type_;
     protected:
         virtual Type GetType() const = 0;
         virtual bool GetRaw(ByteBuffer* bb) = 0;
         virtual uint32_t GetSize() const = 0;
     public:
-        Message(){}
+        Message(Type type){}
         virtual ~Message(){}
 
 #define DECLARE_MESSAGE_TYPECHECK(Name) \
-        bool Is##Name() { return As##Name() != nullptr; } \
-        virtual Name##Message* As##Name() { return nullptr; }
+        bool Is##Name(){ return As##Name() != nullptr; } \
+        virtual Name* As##Name(){ return nullptr; }
         FOR_EACH_MESSAGE(DECLARE_MESSAGE_TYPECHECK)
 #undef DECLARE_MESSAGE_TYPECHECK
 
@@ -53,197 +64,103 @@ namespace Token{
             GetRaw(bb);
         }
 
+        virtual Request* AsRequest();
+        virtual Response* AsResponse();
+        virtual bool IsRequest() const = 0;
+        virtual bool IsResponse() const = 0;
         virtual const char* GetName() const = 0;
 
         static Message* Decode(uint32_t type, ByteBuffer* buff);
     };
 
-    class BlockMessage : public Message{
+    class Client;
+    class Request : public Message{
+    private:
+        std::string id_;
+    protected:
+        virtual uint32_t GetSize() const;
+        virtual bool GetRaw(ByteBuffer* bb) = 0;
+    public:
+        Request(Type type, const std::string& id):
+            id_(id),
+            Message(type){}
+        virtual ~Request(){}
+
+        bool IsRequest() const{
+            return true;
+        }
+
+        bool IsResponse() const{
+            return false;
+        }
+
+        std::string GetId() const{
+            return id_;
+        }
+
+        virtual bool Handle(Client* client, Response* response) = 0;
+    };
+
+#define DECLARE_REQUEST(Name, ResponseType) \
+    DECLARE_MESSAGE(Name); \
+    typedef bool (ResponseHandler)(Client* client, ResponseType* response); \
+    private: \
+        ResponseHandler* handler_; \
+    public: \
+        ResponseHandler* GetResponseHandler() const{ return handler_; } \
+        void SetResponseHandler(ResponseHandler* handler){ handler_ = handler; } \
+        bool HasResponseHandler() const{ return GetResponseHandler() != nullptr; } \
+        bool Handle(Client* client, Response* response);
+
+    class GetHeadRequest : public Request{
+        DECLARE_REQUEST(GetHeadRequest, GetHeadResponse);
+    public:
+        GetHeadRequest(const std::string& id):
+            Request(Type::kGetHeadRequestType, id){}
+        ~GetHeadRequest(){}
+    };
+
+    class Response : public Message{
+    private:
+        std::string id_;
+    protected:
+        uint32_t GetSize() const;
+        virtual bool GetRaw(ByteBuffer* bb) = 0;
+    public:
+        Response(Type type, std::string id):
+            id_(id),
+            Message(type){
+        }
+        ~Response(){}
+
+        std::string GetId() const{
+            return id_;
+        }
+
+        bool IsRequest() const{
+            return false;
+        }
+
+        bool IsResponse() const{
+            return true;
+        }
+    };
+
+    class GetHeadResponse : public Response{
+        DECLARE_MESSAGE(GetHeadResponse);
     private:
         Block* block_;
-    protected:
-        bool GetRaw(ByteBuffer* bb){
-            GetBlock()->Encode(bb);
-            return true;
-        }
-
-        uint32_t GetSize() const{
-            ByteBuffer bb;
-            GetBlock()->Encode(&bb);
-            return bb.WrittenBytes();
-        }
     public:
-        BlockMessage(Block* block):
-            block_(block){}
-        ~BlockMessage(){}
+        GetHeadResponse(const std::string& id, Block* block):
+            block_(block),
+            Response(Type::kGetHeadResponseType, id){}
+        GetHeadResponse(const GetHeadRequest& request, Block* block):
+            block_(block),
+            Response(Type::kGetHeadResponseType, request.GetId()){}
+        ~GetHeadResponse(){}
 
-        Block* GetBlock() const{
+        Block* Get() const{
             return block_;
-        }
-
-        DECLARE_MESSAGE(Block);
-
-        static BlockMessage* Decode(ByteBuffer* bb){
-            uint32_t size = bb->GetInt();
-            return new BlockMessage(Block::Decode(bb));
-        }
-    };
-
-    class AppendBlockMessage : public Message{
-    private:
-        Block* block_;
-    protected:
-        bool GetRaw(ByteBuffer* bb){
-            GetBlock()->Encode(bb);
-            return true;
-        }
-
-        uint32_t GetSize() const{
-            ByteBuffer bb;
-            GetBlock()->Encode(&bb);
-            return bb.WrittenBytes();
-        }
-    public:
-        AppendBlockMessage(Block* block):
-            block_(block){}
-        ~AppendBlockMessage(){}
-
-        Block* GetBlock() const{
-            return block_;
-        }
-
-        DECLARE_MESSAGE(AppendBlock);
-
-        static AppendBlockMessage* Decode(ByteBuffer* bb){
-            uint32_t size = bb->GetInt();
-            return new AppendBlockMessage(Block::Decode(bb));
-        }
-    };
-
-    class GetBlockMessage : public Message{
-    private:
-        std::string hash_;
-    protected:
-        bool GetRaw(ByteBuffer* bb);
-
-        uint32_t GetSize() const{
-            return sizeof(uint32_t) + hash_.size();
-        }
-    public:
-        GetBlockMessage(const std::string& hash):
-            hash_(hash){}
-        ~GetBlockMessage(){}
-
-        std::string GetHash() const{
-            return hash_;
-        }
-
-        DECLARE_MESSAGE(GetBlock);
-
-        static GetBlockMessage* Decode(ByteBuffer* bb);
-    };
-
-    class ConnectMessage : public Message{
-    private:
-        std::string address_;
-        uint32_t port_;
-    protected:
-        bool GetRaw(ByteBuffer* bb);
-
-        uint32_t GetSize() const{
-            return sizeof(uint32_t) + address_.size();
-        }
-    public:
-        ConnectMessage(const std::string& addr, uint32_t port):
-            address_(addr),
-            port_(port){
-        }
-        ~ConnectMessage(){}
-
-        std::string GetAddress() const{
-            return address_;
-        }
-
-        uint32_t GetPort() const{
-            return port_;
-        }
-
-        DECLARE_MESSAGE(Connect);
-
-        static ConnectMessage* Decode(ByteBuffer* bb);
-    };
-
-    class GetHeadMessage : public Message{
-    protected:
-        bool GetRaw(ByteBuffer* bb){
-            //Nothing
-            return true;
-        }
-
-        uint32_t GetSize() const{
-            return 0;
-        }
-    public:
-        GetHeadMessage():
-            Message(){}
-        ~GetHeadMessage(){}
-
-        DECLARE_MESSAGE(GetHead);
-
-        static GetHeadMessage* Decode(ByteBuffer* bb){
-            return new GetHeadMessage;
-        }
-    };
-
-    class SyncRequestMessage : public Message{
-    protected:
-        bool GetRaw(ByteBuffer* bb){
-            return true;
-        }
-
-        uint32_t GetSize() const{
-            return 0;
-        }
-    public:
-        SyncRequestMessage(): Message(){}
-        ~SyncRequestMessage(){}
-
-        DECLARE_MESSAGE(SyncRequest);
-
-        static SyncRequestMessage* Decode(ByteBuffer* bb){
-            uint32_t size = bb->GetInt();
-            return new SyncRequestMessage;
-        }
-    };
-
-    class SyncResponseMessage : public Message{
-    private:
-        Block* block_;
-    protected:
-        bool GetRaw(ByteBuffer* bb){
-            GetBlock()->Encode(bb);
-            return true;
-        }
-
-        uint32_t GetSize() const{
-            ByteBuffer bb;
-            GetBlock()->Encode(&bb);
-            return bb.WrittenBytes();
-        }
-    public:
-        SyncResponseMessage(Block* block):
-            block_(block){}
-        ~SyncResponseMessage(){}
-
-        Block* GetBlock() const{
-            return block_;
-        }
-
-        DECLARE_MESSAGE(SyncResponse);
-
-        static SyncResponseMessage* Decode(ByteBuffer* bb){
-            uint32_t size = bb->GetInt();
-            return new SyncResponseMessage(Block::Decode(bb));
         }
     };
 }
