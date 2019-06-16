@@ -1,0 +1,34 @@
+/*
+syntax="proto3";
+package Token.Messages;
+
+message Input{
+    string previous_hash = 1;
+    int32 output_index = 2;
+}
+
+message Output{
+    string token = 1;
+}
+
+message Transaction{
+    repeated Input inputs = 1;
+    repeated Output outputs = 2;
+    int32 index = 3;
+    bool is_origin = 4;
+}
+
+message Block{
+    string prev_hash = 1;
+    string hash = 2;
+    string merkle_root = 3;
+    Transaction origin = 4;
+    repeated Transaction transactions = 5;
+}
+*/
+syntax="proto3";
+package Token.Messages;
+
+message Block{
+
+}
