@@ -14,7 +14,7 @@ namespace Token{
             node->GetUnclainedTransactionPool()->Insert(UnclaimedTransaction(cb->GetHash(), i), cb->GetOutputAt(i));
         }
         heads_->Add(node);
-        nodes_.insert(std::make_pair(genesis->GetHash(), node));
+        nodes_.insert({ genesis->GetHash(), node });
         height_ = 1;
         head_ = node;
         txpool_ = new TransactionPool();

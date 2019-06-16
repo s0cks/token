@@ -10,6 +10,7 @@ FileExists(const std::string& name){
 }
 
 int main(int argc, char** argv){
+
     using namespace Token;
     if(argc < 2) return EXIT_FAILURE;
     std::string path(argv[1]);
@@ -17,6 +18,7 @@ int main(int argc, char** argv){
         std::cout << "Root path '" << path << "' doesn't exist" << std::endl;
         return EXIT_FAILURE;
     }
+    /**
     int port = atoi(argv[2]);
     if(argc > 3){
         int peer_port = atoi(argv[3]);
@@ -32,5 +34,18 @@ int main(int argc, char** argv){
         BlockChain::GetInstance()->Append(new_block);
     }
     BlockChain::GetServerInstance()->Initialize(port);
+    **/
+    Block* genesis = new Block();
+    Transaction* ocbtx = genesis->CreateTransaction();
+    ocbtx->AddOutput("TestUser", "TestToken");
+    BlockChain::GetInstance()->SetHead(genesis);
+    Block* nblock = new Block(genesis);
+    Transaction* ncbtx = nblock->CreateTransaction();
+    ncbtx->AddInput(ocbtx->GetHash(), 0);
+    ncbtx->AddOutput("TestUser", "TestToken");
+    if(!BlockChain::GetInstance()->Append(nblock)){
+        std::cerr << "Cannot append new block" << std::endl;
+        return EXIT_FAILURE;
+    }
     return EXIT_SUCCESS;
 }
