@@ -69,7 +69,7 @@ namespace Token{
         MerkleNodeItem(){}
     public:
         virtual ~MerkleNodeItem(){}
-        virtual HashArray GetHashArray() const = 0;
+        virtual HashArray GetHashArray() = 0;
     };
 
     class MerkleTree{

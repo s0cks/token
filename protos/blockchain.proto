@@ -29,6 +29,30 @@ message Block{
 syntax="proto3";
 package Token.Messages;
 
-message Block{
+message Input{
+    uint32 index = 1;
+    string previous_hash = 2;
+}
 
+message Output{
+    uint32 index = 1;
+    string user = 2;
+    string token = 3;
+}
+
+message Transaction{
+    uint32 index = 1;
+    repeated Input inputs = 2;
+    repeated Output outputs = 3;
+}
+
+message Block{
+    string previous_hash = 1;
+    uint32 height = 2;
+    repeated Transaction transactions = 3;
+}
+
+message UnclaimedTransaction{
+    string hash = 1;
+    uint32 index = 2;
 }

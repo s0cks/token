@@ -2,7 +2,6 @@
 #include <fstream>
 #include <sstream>
 #include "block_validator.h"
-#include "message.h"
 
 namespace Token{
     bool
@@ -49,7 +48,7 @@ namespace Token{
             genesis = Block::Load(gen_filename);
             AppendGenesis(genesis);
         } else{
-            genesis = new Block();
+            genesis = new Block(true);
             Transaction* tx = genesis->CreateTransaction();
             for(int idx = 0; idx < 128; idx++){
                 std::stringstream token_name;

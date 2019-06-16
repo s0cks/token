@@ -5,16 +5,12 @@
 #include "common.h"
 #include "array.h"
 #include "bytes.h"
-#include "message.h"
 #include "block.h"
 #include "tx_pool.h"
 #include "user.h"
 #include "utxo.h"
-#include "session.h"
 
 namespace Token{
-    class GetHeadResponse;
-
     class BlockChainNode{
     private:
         Block* block_;

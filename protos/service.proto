@@ -2,6 +2,46 @@ syntax="proto3";
 import "blockchain.proto";
 package Token.Messages; // TODO: Fixme
 
-service TokenService{
+message EmptyRequest{}
+message EmptyResponse{}
 
+message BlockHash{
+    string hash = 1;
+}
+
+message BlockIndex{
+    uint32 index = 1;
+}
+
+message GetTransactionRequest{
+    string hash = 1;
+    uint32 index = 2;
+}
+
+message BlockHeader{
+    string previous_hash = 1;
+    string hash = 2;
+    string merkle_root = 3;
+    uint32 height = 4;
+}
+
+message BlockData{
+    repeated Transaction transactions = 1;
+}
+
+message TransactionList{
+    repeated Transaction transactions = 1;
+}
+
+message UnclaimedTransactionsList{
+    repeated UnclaimedTransaction transactions = 1;
+}
+
+service TokenService {
+    rpc GetBlock (BlockHash) returns (BlockHeader){}
+    rpc GetBlockAt (BlockIndex) returns (BlockHeader){}
+    rpc GetHead (EmptyRequest) returns (BlockHeader){}
+    rpc GetTransaction (GetTransactionRequest) returns (Transaction){}
+    rpc GetTransactions (BlockHash) returns (BlockData){}
+    rpc AppendBlock (Block) returns (BlockHeader){}
 }

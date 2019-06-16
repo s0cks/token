@@ -17,21 +17,21 @@ include_directories(src)
 
 set(PROTO_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protos")
 file(GLOB_RECURSE TOKEN_LIB_SOURCES include/*.h src/*.cc)
-file(GLOB_RECURSE TOKEN_PROTO_SOURCES protos/blockchain.proto)
-file(GLOB_RECURSE TOKEN_SERVICE_SOURCES protos/*.proto)
+file(GLOB_RECURSE TOKEN_PROTO_SOURCES protos/*.proto)
+file(GLOB_RECURSE TOKEN_SERVICE_PROTO_SOURCES protos/*.proto)
 file(GLOB_RECURSE TOKEN_TEST_SOURCES test/*.cc)
 
 protobuf_generate_cpp(PROTO_SRC PROTO_HEADER ${TOKEN_PROTO_SOURCES})
-grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${CMAKE_BINARY_DIR} ${TOKEN_SERVICE_SOURCES})
+grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${CMAKE_BINARY_DIR} ${TOKEN_SERVICE_PROTO_SOURCES})
 
-add_library("${PROJECT_NAME}" STATIC ${TOKEN_LIB_SOURCES} ${PROTO_HEADER} ${PROTO_SRC})
+add_library("${PROJECT_NAME}" STATIC ${TOKEN_LIB_SOURCES} ${PROTO_HEADER} ${PROTO_SRC} ${GRPC_HDRS} ${GRPC_SRCS})
 target_link_libraries("${PROJECT_NAME}" ${CRYPTO++_LIBRARIES} ${PROTOBUF_LIBRARY})
 
-add_executable("${PROJECT_NAME}-node" main.cc ${GRPC_SRCS} ${GRPC_HDRS})
+add_executable("${PROJECT_NAME}-node" main.cc)
 target_link_libraries("${PROJECT_NAME}-node" ${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT} gRPC::grpc++_reflection)
 
 add_executable("${PROJECT_NAME}-client" client.cc)
-target_link_libraries("${PROJECT_NAME}-client" ${PROJECT_NAME})
+target_link_libraries("${PROJECT_NAME}-client" ${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT} gRPC::grpc++_reflection)
 
 add_executable("${PROJECT_NAME}-tests" ${TOKEN_TEST_SOURCES})
 target_link_libraries("${PROJECT_NAME}-tests" ${GTEST_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME})
