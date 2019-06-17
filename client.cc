@@ -56,20 +56,5 @@ int main(int argc, char** argv){
         return EXIT_FAILURE;
     }
     PrintBlock(&block);
-
-    Messages::BlockHeader b0;
-    if(!client.GetBlockAt(0, &b0)){
-        std::cerr << "Couldn't get block #0" << std::endl;
-        return EXIT_FAILURE;
-    }
-    PrintBlock(&b0);
-
-    Messages::BlockHeader b1;
-    if(!client.GetBlockAt(1, &b1)){
-        std::cerr << "Couldn't get block #1" << std::endl;
-        return EXIT_FAILURE;
-    }
-    PrintBlock(&b1);
-
     return EXIT_SUCCESS;
 }

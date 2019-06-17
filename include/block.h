@@ -193,6 +193,7 @@ namespace Token{
             raw_(raw){}
         friend class BlockChainService;
         friend class TokenServiceClient;
+        friend class BlockMessage;
     public:
         Block(bool genesis):
             raw_(new Messages::Block()){
@@ -258,6 +259,7 @@ namespace Token{
         }
 
         static Block* Load(const std::string& filename);
+        static Block* Load(ByteBuffer* bb);
     };
 }
 

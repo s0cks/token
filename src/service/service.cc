@@ -1,4 +1,5 @@
 #include "service/service.h"
+#include "node/node.h"
 
 namespace Token{
     grpc::Status BlockChainService::GetHead(grpc::ServerContext *ctx,
@@ -52,10 +53,15 @@ namespace Token{
         Messages::Block* bdata = new Messages::Block();
         bdata->CopyFrom(*request);
         Block* nblock = new Block(bdata);
-        std::cout << "Append block w/ " << nblock->GetNumberOfTransactions() << " transactions" << std::endl;
+        std::cout << "Appending block w/ " << nblock->GetNumberOfTransactions() << " transactions" << std::endl;
         if(!BlockChain::GetInstance()->Append(nblock)){
             return grpc::Status::CANCELLED;
         }
+
+        BlockMessage msg(nblock);
+        std::cout << "Broadcasting Block: " << (*nblock) << " to " << BlockChainServer::GetInstance()->GetNumberOfPeers() << " peers" << std::endl;
+        BlockChainServer::GetInstance()->Broadcast(nullptr, &msg);
+
         SetBlockHeader(BlockChain::GetInstance()->GetHead(), response);
         return grpc::Status::OK;
     }
