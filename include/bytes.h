@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <fstream>
+#include <cstring>
 #include <cstdint>
 
 namespace Token{

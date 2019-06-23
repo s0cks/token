@@ -1,5 +1,6 @@
 #include "merkle.h"
 #include <sstream>
+#include <cmath>
 
 namespace Token{
     static const size_t DIGEST_SIZE = CryptoPP::SHA256::DIGESTSIZE;
