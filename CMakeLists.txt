@@ -24,10 +24,10 @@ protobuf_generate_cpp(PROTO_SRC PROTO_HEADER ${TOKEN_PROTO_SOURCES})
 grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${CMAKE_BINARY_DIR} ${TOKEN_SERVICE_PROTO_SOURCES})
 
 add_library("${PROJECT_NAME}" STATIC ${TOKEN_LIB_SOURCES} ${PROTO_HEADER} ${PROTO_SRC} ${GRPC_HDRS} ${GRPC_SRCS})
-target_link_libraries("${PROJECT_NAME}" ${CRYPTO++_LIBRARIES} ${PROTOBUF_LIBRARY} ${LIBUV_LIBRARIES})
+target_link_libraries("${PROJECT_NAME}" ${PROTOBUF_LIBRARY} ${LIBUV_LIBRARIES} cryptopp-static)
 
 add_executable("${PROJECT_NAME}-node" main.cc)
-target_link_libraries("${PROJECT_NAME}-node" ${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT} gRPC::grpc++_reflection)
+target_link_libraries("${PROJECT_NAME}-node" ${PROJECT_NAME}  ${CMAKE_THREAD_LIBS_INIT} gRPC::grpc++_reflection)
 
 add_executable("${PROJECT_NAME}-client" client.cc)
 target_link_libraries("${PROJECT_NAME}-client" ${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT} gRPC::grpc++_reflection)
