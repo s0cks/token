@@ -26,7 +26,7 @@ namespace Token{
 #error "Cannot determine CPU architecture"
 #endif
 
-    typedef byte Byte;
+    typedef CryptoPP::byte Byte;
 
     static inline uintptr_t
     RoundUpPowTwo(uintptr_t x){

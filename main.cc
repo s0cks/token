@@ -25,6 +25,23 @@ int main(int argc, char** argv){
 
     int port = atoi(argv[2]);
     BlockChain::GetInstance()->Load(path);
+
+    std::string genhash = BlockChain::GetInstance()->GetHead()->GetCoinbaseTransaction()->GetHash();
+
+    Block* nblock = new Block(BlockChain::GetInstance()->GetHead());
+    Transaction* ntx = nblock->CreateTransaction();
+    ntx->AddInput(genhash, 0);
+    ntx->AddOutput("TestUser2", "TestToken0");
+    ntx->AddInput(genhash, 1);
+    ntx->AddOutput("TestUser2", "TestToken1");
+
+    if(!BlockChain::GetInstance()->Append(nblock)){
+        std::cerr << "Couldn't append new block" << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    std::cout << "Unclaimed Transactions:" << std::endl << (*BlockChain::GetInstance()->GetHeadUnclaimedTransactionPool()) << std::endl;
+
     BlockChainService::Start("127.0.0.1", port);
     BlockChainServer::GetInstance()->Initialize(port + 1);
     if(argc > 3){
