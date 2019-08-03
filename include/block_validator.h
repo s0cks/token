@@ -7,14 +7,14 @@
 namespace Token{
     class BlockValidator : public BlockVisitor{
     private:
-        UnclaimedTransactionPool utxo_pool_;
+        UnclaimedTransactionPool* utxo_pool_;
         std::vector<Transaction*> valid_txs_;
         std::vector<Transaction*> invalid_txs_;
     public:
-        BlockValidator(UnclaimedTransactionPool utxo_pool_):
+        BlockValidator(UnclaimedTransactionPool* utxo_pool):
             valid_txs_(),
             invalid_txs_(),
-            utxo_pool_(utxo_pool_){}
+            utxo_pool_(new UnclaimedTransactionPool(utxo_pool)){}
         ~BlockValidator(){}
 
         bool IsValid(Transaction* tx){
@@ -27,11 +27,11 @@ namespace Token{
             for(i = 0; i < tx->GetNumberOfInputs(); i++){
                 Input* in = tx->GetInputAt(i);
                 UnclaimedTransaction ut(in->GetPreviousHash(), in->GetIndex());
-                if(!utxo_pool_.Contains(ut)){
+                if(!utxo_pool_->Contains(ut)){
                     std::cout << "No unclaimed transaction: " << ut << std::endl;
                     return false;
                 }
-                Output* out = utxo_pool_.Get(ut);
+                Output* out = utxo_pool_->Get(ut);
                 if(out == nullptr) {
                     std::cerr << "No output" << std::endl;
                     return false;
@@ -56,13 +56,12 @@ namespace Token{
             if(IsValid(tx)){
                 int i;
                 for(i = 0; i < tx->GetNumberOfOutputs(); i++){
-                    UnclaimedTransaction utx(tx->GetHash(), static_cast<uint32_t>(i));
-                    utxo_pool_.Insert(utx, tx->GetOutputAt(i));
+                    utxo_pool_->Insert(tx->GetHash(), static_cast<uint32_t>(i), tx->GetOutputAt(i));
                 }
                 for(i = 0; i < tx->GetNumberOfInputs(); i++){
                     Input* in = tx->GetInputAt(i);
                     UnclaimedTransaction ut(in->GetPreviousHash(), in->GetIndex());
-                    utxo_pool_.Remove(ut);
+                    utxo_pool_->Remove(ut);
                 }
                 valid_txs_.push_back(tx);
             } else{
@@ -78,7 +77,7 @@ namespace Token{
             return invalid_txs_;
         }
 
-        UnclaimedTransactionPool GetUnclaimedTransactionPool(){
+        UnclaimedTransactionPool* GetUnclaimedTransactionPool(){
             return utxo_pool_;
         }
     };
