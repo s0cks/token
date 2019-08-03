@@ -120,9 +120,13 @@ namespace Token{
         */
         std::cout << "Processing transactions" << std::endl;
         Transaction* cb = block->GetCoinbaseTransaction();
+        std::cout << "Creating CB UTXO" << std::endl;
         utxo_pool.Insert(cb->GetHash(), 0, cb->GetOutputAt(0));
+        std::cout << "Creating BlockNode" << std::endl;
         BlockChainNode* current = new BlockChainNode(parent, block, utxo_pool);
+        std::cout << "Inserting BlockNode" << std::endl;
         nodes_.insert(std::make_pair(block->GetHash(), current));
+        std::cout << "Checking Height" << std::endl;
         if(current->GetHeight() > GetHeight()) {
             height_ = current->GetHeight();
             head_ = current;
