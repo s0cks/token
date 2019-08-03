@@ -28,7 +28,7 @@ namespace Token{
     public:
         BlockChainNode(BlockChainNode* parent, Block* block):
             parent_(parent),
-            utxo_pool_(),
+            utxo_pool_(new UnclaimedTransactionPool()),
             block_(block),
             height_(0),
             children_(0xA){
