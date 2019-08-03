@@ -11,6 +11,7 @@ namespace Token{
         for(int i = 0; i < cb->GetNumberOfOutputs(); i++){
             node->GetUnclainedTransactionPool()->Insert(cb->GetHash(), i, cb->GetOutputAt(i));
         }
+        std::cout << "Setting genesis: " << genesis->GetHash() << std::endl;
         heads_->Add(node);
         nodes_.insert({ genesis->GetHash(), node });
         height_ = 1;
@@ -95,7 +96,8 @@ namespace Token{
         std::cout << "Checking height" << std::endl;
         if(block->GetHeight() == 0) return AppendGenesis(block);
         std::cout << "Finding parent" << std::endl;
-        if(nodes_.find(block->GetPreviousHash()) == nodes_.end()){
+        auto parent_node = nodes_.find(block->GetPreviousHash());
+        if(parent_node == nodes_.end()){
             std::cout << "Cannot find parent" << std::endl;
             return false;
         }
