@@ -3,6 +3,7 @@ project("token" CXX)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 find_package(GRPC REQUIRED)
 find_package(Protobuf REQUIRED)
