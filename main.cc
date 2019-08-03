@@ -24,17 +24,25 @@ int main(int argc, char** argv){
     }
 
     int port = atoi(argv[2]);
-    BlockChain::GetInstance()->Load(path);
 
-    std::string genhash = BlockChain::GetInstance()->GetHead()->GetCoinbaseTransaction()->GetHash();
-
-    Block* nblock = new Block(BlockChain::GetInstance()->GetHead());
+    Block* nblock = new Block(true);
     Transaction* ntx = nblock->CreateTransaction();
-    ntx->AddInput(genhash, 0);
-    ntx->AddOutput("TestUser2", "TestToken0");
-    ntx->AddInput(genhash, 1);
-    ntx->AddOutput("TestUser2", "TestToken1");
+    for(int i = 0; i < 128; i++){
+        std::stringstream tk_name;
+        tk_name << "Token" << i;
+        ntx->AddOutput("TestUser", tk_name.str());
+    }
+    if(!BlockChain::GetInstance()->Append(nblock)){
+        std::cerr << "Couldn't append new block" << std::endl;
+        return EXIT_FAILURE;
+    }
 
+    nblock = BlockChain::GetInstance()->CreateBlock();
+    Transaction* nntx = nblock->CreateTransaction();
+    nntx->AddInput(ntx->GetHash(), 0);
+    nntx->AddInput(ntx->GetHash(), 1);
+    nntx->AddOutput("TestUser2", "Token0");
+    nntx->AddOutput("TestUser2", "Token1");
     if(!BlockChain::GetInstance()->Append(nblock)){
         std::cerr << "Couldn't append new block" << std::endl;
         return EXIT_FAILURE;

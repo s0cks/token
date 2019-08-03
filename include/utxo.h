@@ -88,7 +88,6 @@ namespace Token{
 
         bool GetUnclaimedTransactionsFor(std::vector<UnclaimedTransaction*>* utxos, const std::string& user) const{
             for(auto& it : utxos_){
-                std::cout << "Comparing " << it.second->GetUser() << " == " << user << ": " << (it.second->GetUser() == user) << std::endl;
                 if(it.second->GetUser() == user){
                     UnclaimedTransaction utxo = it.first;
                     utxos->push_back(new UnclaimedTransaction(utxo));

@@ -88,16 +88,20 @@ namespace Token{
     }
 
     bool BlockChain::Append(Token::Block* block){
+        std::cout << "Finding duplicates" << std::endl;
         if(nodes_.find(block->GetHash()) != nodes_.end()){
             std::cout << "Duplicate block found" << std::endl;
             return false;
         }
+        std::cout << "Checking height" << std::endl;
         if(block->GetHeight() == 0) return AppendGenesis(block);
+        std::cout << "Finding parent" << std::endl;
         if(nodes_.find(block->GetPreviousHash()) == nodes_.end()){
             std::cout << "Cannot find parent" << std::endl;
             return false;
         }
         BlockChainNode* parent = GetBlockParent(block);
+        std::cout << "Getting parent's UTXOs" << std::endl;
         UnclaimedTransactionPool utxo_pool = *parent->GetUnclainedTransactionPool();
         /*
         BlockValidator validator(utxo_pool);
@@ -114,7 +118,7 @@ namespace Token{
             return false;
         }
         */
-
+        std::cout << "Processing transactions" << std::endl;
         Transaction* cb = block->GetCoinbaseTransaction();
         utxo_pool.Insert(UnclaimedTransaction(cb->GetHash(), 0), cb->GetOutputAt(0));
         BlockChainNode* current = new BlockChainNode(parent, block, utxo_pool);
@@ -123,6 +127,7 @@ namespace Token{
             height_ = current->GetHeight();
             head_ = current;
         }
+        std::cout << "Checking heights" << std::endl;
         if(GetHeight() - (*heads_)[0]->GetHeight() > 0xA){
             Array<BlockChainNode*>* newHeads = new Array<BlockChainNode*>(0xA);
             for(size_t i = 0; i < heads_->Length(); i++){
@@ -136,6 +141,7 @@ namespace Token{
             }
             heads_ = newHeads;
         }
+        std::cout << "Done" << std::endl;
         return true;
     }
 }
