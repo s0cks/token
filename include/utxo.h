@@ -67,7 +67,9 @@ namespace Token{
         }
 
         void Insert(const std::string& hash, int index, Output* out){
-            utxos_.insert({ new UnclaimedTransaction(hash, index), out });
+            UnclaimedTransaction* utxo = new UnclaimedTransaction(hash, index);
+            std::cout << "New UTXO: " << (*utxo) << std::endl;
+            utxos_.insert({ utxo, out });
         }
 
         void Remove(UnclaimedTransaction& tx){
