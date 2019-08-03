@@ -78,10 +78,10 @@ namespace Token{
             return utxos_.find(tx) != utxos_.end();
         }
 
-        bool GetUnclaimedTransactions(std::vector<UnclaimedTransaction*> utxos) const {
+        bool GetUnclaimedTransactions(std::vector<UnclaimedTransaction*>* utxos) const {
             for(auto& it : utxos_){
                 UnclaimedTransaction utxo = it.first;
-                utxos.push_back(&utxo);
+                utxos->push_back(new UnclaimedTransaction(utxo));
             }
             return true;
         }
