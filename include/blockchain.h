@@ -17,7 +17,7 @@ namespace Token{
         BlockChainNode* parent_;
         Array<BlockChainNode*> children_;
         unsigned int height_;
-        UnclaimedTransactionPool utxo_pool_;
+        UnclaimedTransactionPool* utxo_pool_;
 
         inline void
         AddChild(BlockChainNode* node){
@@ -39,7 +39,7 @@ namespace Token{
         }
         BlockChainNode(BlockChainNode* parent, Block* block, UnclaimedTransactionPool* utxo_pool):
             parent_(parent),
-            utxo_pool_(*utxo_pool),
+            utxo_pool_(utxo_pool),
             block_(block),
             children_(0xA){
             if(parent_ != nullptr){
@@ -61,7 +61,7 @@ namespace Token{
         }
 
         UnclaimedTransactionPool* GetUnclainedTransactionPool(){
-            return &utxo_pool_;
+            return utxo_pool_;
         }
     };
 

@@ -7,7 +7,7 @@ namespace Token{
     bool
     BlockChain::AppendGenesis(Token::Block* genesis){
         Transaction* cb = genesis->GetCoinbaseTransaction();
-        BlockChainNode* node = new BlockChainNode(nullptr, genesis);
+        BlockChainNode* node = new BlockChainNode(nullptr, genesis, new UnclaimedTransactionPool());
         for(int i = 0; i < cb->GetNumberOfOutputs(); i++){
             std::cout << "Creating unclaimed transaction for " << i << std::endl;
             node->GetUnclainedTransactionPool()->Insert(cb->GetHash(), i, cb->GetOutputAt(i));
@@ -121,9 +121,9 @@ namespace Token{
         std::cout << "Processing transactions" << std::endl;
         Transaction* cb = block->GetCoinbaseTransaction();
         std::cout << "Creating CB UTXO" << std::endl;
-        utxo_pool.Insert(cb->GetHash(), 0, cb->GetOutputAt(0));
+        utxo_pool->Insert(cb->GetHash(), 0, cb->GetOutputAt(0));
         std::cout << "Creating BlockNode" << std::endl;
-        BlockChainNode* current = new BlockChainNode(parent, block, utxo_pool);
+        BlockChainNode* current = new BlockChainNode(parent, block, new UnclaimedTransactionPool(*utxo_pool));
         std::cout << "Inserting BlockNode" << std::endl;
         nodes_.insert(std::make_pair(block->GetHash(), current));
         std::cout << "Checking Height" << std::endl;
