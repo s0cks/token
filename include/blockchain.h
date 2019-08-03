@@ -109,6 +109,14 @@ namespace Token{
             return head_->GetUnclainedTransactionPool();
         }
 
+        UnclaimedTransactionPool* GetUnclaimedTransactionPool(const std::string& block_hash){
+            auto node = nodes_.find(block_hash);
+            if(node != nodes_.end()){
+                return node->second->GetUnclainedTransactionPool();
+            }
+            return nullptr;
+        }
+
         Block* GetBlockAt(int height) const{
             if(height > GetHeight()) return nullptr;
             Block* head = GetHead();
