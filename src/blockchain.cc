@@ -102,7 +102,7 @@ namespace Token{
         }
         BlockChainNode* parent = GetBlockParent(block);
         std::cout << "Getting parent's UTXOs" << std::endl;
-        UnclaimedTransactionPool utxo_pool = *parent->GetUnclainedTransactionPool();
+        UnclaimedTransactionPool* utxo_pool = parent->GetUnclainedTransactionPool();
         /*
         BlockValidator validator(utxo_pool);
         block->Accept(&validator);
