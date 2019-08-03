@@ -10,7 +10,7 @@ namespace Token{
         BlockChainNode* node = new BlockChainNode(nullptr, genesis);
         for(int i = 0; i < cb->GetNumberOfOutputs(); i++){
             std::cout << "Creating unclaimed transaction for " << i << std::endl;
-            node->GetUnclainedTransactionPool()->Insert(UnclaimedTransaction(cb->GetHash(), i), cb->GetOutputAt(i));
+            node->GetUnclainedTransactionPool()->Insert(cb->GetHash(), i, cb->GetOutputAt(i));
         }
         heads_->Add(node);
         nodes_.insert({ genesis->GetHash(), node });
@@ -120,7 +120,7 @@ namespace Token{
         */
         std::cout << "Processing transactions" << std::endl;
         Transaction* cb = block->GetCoinbaseTransaction();
-        utxo_pool.Insert(UnclaimedTransaction(cb->GetHash(), 0), cb->GetOutputAt(0));
+        utxo_pool.Insert(cb->GetHash(), 0, cb->GetOutputAt(0));
         BlockChainNode* current = new BlockChainNode(parent, block, utxo_pool);
         nodes_.insert(std::make_pair(block->GetHash(), current));
         if(current->GetHeight() > GetHeight()) {
