@@ -77,6 +77,23 @@ namespace Token{
         return grpc::Status::OK;
     }
 
+    grpc::Status BlockChainService::GetUnclaimedTransactions(grpc::ServerContext *ctx,
+                                                             const Token::Messages::GetUnclaimedTransactionsRequest *request,
+                                                             Token::Messages::UnclaimedTransactionsList *response){
+        if(request->user().empty()){
+            UnclaimedTransactionPool* utxos = BlockChain::GetInstance()->GetHeadUnclaimedTransactionPool();
+            utxos->ToMessage(response);
+        } else{
+            UnclaimedTransactionPool* utxos = BlockChain::GetInstance()->GetHeadUnclaimedTransactionPool();
+            UnclaimedTransactionPool user_utxos;
+            if(!utxos->GetUnclaimedTransactionsFor(&user_utxos, request->user())){
+                return grpc::Status::CANCELLED;
+            }
+            user_utxos.ToMessage(response);
+        }
+        return grpc::Status::OK;
+    }
+
     BlockChainService* BlockChainService::GetInstance(){
         static BlockChainService instance;
         return &instance;
@@ -91,6 +108,12 @@ namespace Token{
         builder.RegisterService(instance);
         instance->server_ = std::unique_ptr<grpc::Server>(builder.BuildAndStart());
         std::cout << "Started Service: " << ss.str() << std::endl;
+    }
+
+    grpc::Status BlockChainService::Save(grpc::ServerContext *ctx, const Token::Messages::EmptyRequest *request,
+                                            Token::Messages::EmptyResponse *response){
+        BlockChain::GetInstance()->Save();
+        return grpc::Status::OK;
     }
 
     void BlockChainService::WaitForShutdown(){

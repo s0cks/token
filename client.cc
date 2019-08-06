@@ -32,29 +32,91 @@ int main(int argc, char** argv){
     std::string host(argv[1]);
 
     std::cout << "Connecting to: " << host << ":" << 5051 << std::endl;
-    TokenServiceClient client(host, 5051);
+    TokenServiceClient client(host, 8080);
 
-    Messages::BlockHeader block;
-    if(!client.GetHead(&block)){
-        std::cerr << "Cannot fetch <HEAD>!" << std::endl;
-        return EXIT_FAILURE;
-    }
-    PrintBlock(&block);
+    std::string input;
+    do{
+        std::cin >> input;
+        if(input == "discon"){
+            return EXIT_FAILURE;
+        } else if(input == "append"){
+            Messages::BlockHeader head;
+            client.GetHead(&head);
 
-    Transaction* ocbtx;
-    if(!client.GetTransaction(block.hash(), 0, &ocbtx)){
-        std::cerr << "Couldn't fetch genesis's coinbase transaction";
-        return EXIT_FAILURE;
-    }
+            Block* nblock = new Block(head.previous_hash(), head.height() + 1);
+            std::cout << "Create Transactions (y/n)?:";
+            std::cin >> input;
+            if(input == "y" || input == "Y"){
+                do{
+                    std::string hash;
+                    std::string user;
+                    std::string token;
+                    int index;
 
-    Block* nblock = new Block(block.hash(), block.height() + 1);
-    Transaction* ncbtx = nblock->CreateTransaction();
-    ncbtx->AddInput(ocbtx->GetHash(), 0);
-    ncbtx->AddOutput("TestToken", "TestUser");
-    if(!client.Append(nblock, &block)){
-        std::cerr << "Couldn't append new block" << std::endl;
-        return EXIT_FAILURE;
-    }
-    PrintBlock(&block);
-    return EXIT_SUCCESS;
+                    std::cout << "Create Transaction: " << std::endl;
+                    std::cout << "Transaction Hash: ";
+                    std::cin >> hash;
+                    std::cout << "Output Index: ";
+                    std::cin >> index;
+                    std::cout << "User: ";
+                    std::cin >> user;
+                    std::cout << "Token: ";
+                    std::cin >> token;
+
+                    std::cout << "Creating Transaction...." << std::endl;
+
+                    Transaction* tx = nblock->CreateTransaction();
+                    tx->AddInput(hash, index);
+                    tx->AddOutput(user, token);
+
+                    bool another;
+                    std::cout << "Add Another Transaction (y/n)?:";
+                    std::cin >> another;
+                    if(!another){
+                        break;
+                    }
+                } while(true);
+            }
+
+            if(!client.Append(nblock, &head)){
+                std::cerr << "Cannot append new block" << std::endl;
+                return EXIT_FAILURE;
+            }
+            std::cout << "Appended!" << std::endl;
+            std::cout << "New <HEAD>:" << std::endl;
+            PrintBlock(&head);
+        } else if(input == "gethead"){
+            Messages::BlockHeader head;
+            client.GetHead(&head);
+            PrintBlock(&head);
+        } else if(input == "lsutxo"){
+            std::string target;
+            std::cout << "User [Default is empty]?:";
+            std::cin >> target;
+
+            if(target == "None"){
+                UnclaimedTransactionPool utxos;
+                if(!client.GetUnclaimedTransactions(&utxos)){
+                    std::cerr << "Couldn't get unclaimed transactions" << std::endl;
+                    return EXIT_FAILURE;
+                }
+                std::cout << "Unclaimed Transactions: " << std::endl;
+                std::cout << (utxos);
+            } else{
+                UnclaimedTransactionPool utxos;
+                if(!client.GetUnclaimedTransactions(target, &utxos)){
+                    std::cerr << "Couldn't get unclaimed transactions" << std::endl;
+                    return EXIT_FAILURE;
+                }
+                std::cout << "Unclaimed Transactions for " << target << ": " << std::endl;
+                std::cout << (utxos);
+            }
+        } else if(input == "save"){
+            if(!client.Save()){
+                std::cerr << "Couldn't shutdown" << std::endl;
+                return EXIT_FAILURE;
+            }
+            std::cout << "Shutting down" << std::endl;
+        }
+    } while(true);
 }

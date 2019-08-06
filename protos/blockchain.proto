@@ -55,4 +55,6 @@ message Block{
 message UnclaimedTransaction{
     string hash = 1;
     uint32 index = 2;
+    string user = 3;
+    string token = 4;
 }

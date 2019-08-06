@@ -42,6 +42,7 @@ namespace Token{
     bool
     BlockChain::Load(const std::string& root){
         Block* genesis = nullptr;
+        SetRoot(root);
 
         std::string gen_filename = root + "/blk0.dat";
         if(FileExists(gen_filename)){
@@ -80,11 +81,20 @@ namespace Token{
 
     bool
     BlockChain::Save(const std::string& root){
+        std::cout << "Saving BlockChain to" << root << "...." << std::endl;
         for(int idx = 0; idx <= GetHeight(); idx++){
             Block* blk = GetBlockAt(idx);
             blk->Write(GetBlockFilename(root, idx));
         }
         return true;
+    }
+
+    bool
+    BlockChain::Save(){
+        if(!HasRoot()){
+            return false;
+        }
+        return Save(GetRoot());
     }
 
     bool BlockChain::Append(Token::Block* block){
@@ -124,7 +134,7 @@ namespace Token{
         std::cout << "Creating CB UTXO" << std::endl;
         utxo_pool->Insert(cb->GetHash(), 0, cb->GetOutputAt(0));
         std::cout << "Creating BlockNode" << std::endl;
-        BlockChainNode* current = new BlockChainNode(parent, block, new UnclaimedTransactionPool(utxo_pool));
+        BlockChainNode* current = new BlockChainNode(parent, block, utxo_pool);
         std::cout << "Inserting BlockNode" << std::endl;
         nodes_.insert(std::make_pair(block->GetHash(), current));
         std::cout << "Checking Height" << std::endl;

@@ -42,27 +42,27 @@ namespace Token{
 
     class Output{
     private:
-        const Messages::Output& raw_;
-
-        inline const Messages::Output&
-        GetRaw() const{
-            return raw_;
-        }
+        std::string user_;
+        std::string token_;
 
         Output(const Messages::Output& raw):
-            raw_(raw){}
+            user_(raw.user()),
+            token_(raw.token()){}
         friend class Transaction;
     public:
+        Output(const std::string& user, const std::string& token):
+            user_(user),
+            token_(token){}
         ~Output(){}
 
         std::string
         GetUser() const{
-            return GetRaw().user();
+            return user_;
         }
 
         std::string
-        GetToken() const{
-            return GetRaw().token();
+        GetToken() const {
+            return token_;
         }
 
         friend std::ostream& operator<<(std::ostream& stream, const Output& output){

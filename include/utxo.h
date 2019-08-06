@@ -3,6 +3,7 @@
 
 #include <string>
 #include <map>
+#include <service.pb.h>
 #include "common.h"
 
 namespace Token{
@@ -57,18 +58,13 @@ namespace Token{
         UnclaimedTransactionPool():
             utxos_(){}
         UnclaimedTransactionPool(UnclaimedTransactionPool* parent):
-            utxos_(){
-            utxos_ = parent->utxos_;
-        }
+            utxos_(parent->utxos_){}
         UnclaimedTransactionPool(const UnclaimedTransactionPool& other):
-            utxos_() {
-            utxos_ = other.utxos_;
-        }
+            utxos_(other.utxos_){}
         ~UnclaimedTransactionPool(){}
 
         void Insert(const std::string& hash, int index, Output* out){
             UnclaimedTransaction utxo = UnclaimedTransaction(hash, index);
-            std::cout << "New UTXO: " << (utxo) << std::endl;
             utxos_.insert({ utxo, out });
         }
 
@@ -92,12 +88,12 @@ namespace Token{
             return true;
         }
 
-        bool GetUnclaimedTransactionsFor(std::vector<UnclaimedTransaction*>* utxos, const std::string& user) const{
+        bool GetUnclaimedTransactionsFor(UnclaimedTransactionPool* utxos, const std::string& user) const{
+            if(!utxos->IsEmpty()) utxos->Clear();
             for(auto& it : utxos_){
                 std::cout << it.second->GetUser() << " == " << user << std::endl;
                 if(it.second->GetUser() == user){
-                    UnclaimedTransaction utxo = it.first;
-                    utxos->push_back(new UnclaimedTransaction(utxo));
+                    utxos->utxos_.insert({ it.first, it.second });
                 }
             }
             return true;
@@ -111,8 +107,11 @@ namespace Token{
             return utxos_.empty();
         }
 
+        void Clear(){
+            utxos_.clear();
+        }
+
         friend std::ostream& operator<<(std::ostream& stream, const UnclaimedTransactionPool& rhs) {
-            stream << "Unclaimed Transactions:" << std::endl;
             for (auto it : rhs.utxos_) {
                 stream << "\t+ " << it.first.GetHash() << "[" << it.first.GetIndex() << "]" << " => " << it.second->GetUser() << "#" << it.second->GetToken()
                        << std::endl;
@@ -123,6 +122,16 @@ namespace Token{
         UnclaimedTransactionPool& operator=(const UnclaimedTransactionPool& other){
             utxos_ = other.utxos_;
             return *this;
+        }
+
+        void ToMessage(Messages::UnclaimedTransactionsList* msg){
+            for(auto it : utxos_){
+                Messages::UnclaimedTransaction* utxo = msg->add_transactions();
+                utxo->set_hash(it.first.GetHash());
+                utxo->set_index(it.first.GetIndex());
+                utxo->set_user(it.second->GetUser());
+                utxo->set_token(it.second->GetToken());
+            }
         }
     };
 }

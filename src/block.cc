@@ -56,10 +56,9 @@ namespace Token{
 
     void Block::Write(const std::string& filename){
         std::fstream fd(filename, std::ios::binary|std::ios::out|std::ios::trunc);
-        Token::ByteBuffer bb;
-        Encode(&bb);
-        fd.write(reinterpret_cast<char*>(bb.GetBytes()), bb.WrittenBytes());
+        GetRaw()->SerializeToOstream(&fd);
         fd.flush();
+        fd.close();
     }
 
     std::string Block::GetHash(){

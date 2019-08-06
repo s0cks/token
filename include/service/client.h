@@ -23,7 +23,10 @@ namespace Token{
         bool GetBlockAt(int index, Messages::BlockHeader* response);
         bool GetTransaction(const std::string& hash, int index, Transaction** response);
         bool GetTransactions(const std::string& hash, std::vector<Transaction*>& transactions);
+        bool GetUnclaimedTransactions(const std::string& user, UnclaimedTransactionPool* utxos);
+        bool GetUnclaimedTransactions(UnclaimedTransactionPool* utxos);
         bool Append(Block* block, Messages::BlockHeader* response);
+        bool Save();
 
         bool GetCoinbase(const std::string& hash, Transaction** response){
             return GetTransaction(hash, 0, response);

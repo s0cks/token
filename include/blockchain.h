@@ -39,7 +39,7 @@ namespace Token{
         }
         BlockChainNode(BlockChainNode* parent, Block* block, UnclaimedTransactionPool* utxo_pool):
             parent_(parent),
-            utxo_pool_(utxo_pool),
+            utxo_pool_(new UnclaimedTransactionPool(utxo_pool)),
             block_(block),
             children_(0xA){
             if(parent_ != nullptr){
@@ -72,6 +72,7 @@ namespace Token{
         std::map<std::string, BlockChainNode*> nodes_;
         unsigned int height_;
         TransactionPool* txpool_;
+        std::string root_;
 
         bool AppendGenesis(Block* block);
 
@@ -85,6 +86,7 @@ namespace Token{
 
         BlockChain():
             heads_(new Array<BlockChainNode*>(0xA)),
+            root_(),
             nodes_(),
             height_(0){}
     public:
@@ -140,10 +142,23 @@ namespace Token{
             AppendGenesis(block);
         }
 
+        void SetRoot(const std::string& root){
+            root_ = root;
+        }
+
+        std::string GetRoot(){
+            return root_;
+        }
+
+        bool HasRoot(){
+            return !GetRoot().empty();
+        }
+
         bool Append(Block* block);
         bool Load(const std::string& root);
         bool Load(const std::string& root, const std::string& addr, int port);
         bool Save(const std::string& root);
+        bool Save();
     };
 }
 

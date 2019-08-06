@@ -71,4 +71,44 @@ namespace Token{
         request.CopyFrom(*block->GetRaw());
         return GetStub()->AppendBlock(&ctx, request, response).ok();
     }
+
+    bool TokenServiceClient::Save(){
+        grpc::ClientContext ctx;
+        Messages::EmptyRequest request;
+        Messages::EmptyResponse response;
+        return GetStub()->Save(&ctx, request, &response).ok();
+    }
+
+    bool TokenServiceClient::GetUnclaimedTransactions(const std::string &user, UnclaimedTransactionPool* utxos){
+        grpc::ClientContext ctx;
+        Messages::GetUnclaimedTransactionsRequest request;
+        request.set_user(user);
+        Messages::UnclaimedTransactionsList response;
+        if(!GetStub()->GetUnclaimedTransactions(&ctx, request, &response).ok()) {
+            utxos->Clear();
+            return false;
+        }
+        utxos->Clear();
+        for(int i = 0; i < response.transactions_size(); i++){
+            Messages::UnclaimedTransaction utxo = response.transactions(i);
+            utxos->Insert(utxo.hash(), utxo.index(), new Output(utxo.user(), utxo.token()));
+        }
+        return true;
+    }
+
+    bool TokenServiceClient::GetUnclaimedTransactions(UnclaimedTransactionPool* utxos){
+        grpc::ClientContext ctx;
+        Messages::GetUnclaimedTransactionsRequest request;
+        Messages::UnclaimedTransactionsList response;
+        if(!GetStub()->GetUnclaimedTransactions(&ctx, request, &response).ok()){
+            utxos->Clear();
+            return false;
+        }
+        utxos->Clear();
+        for(int i = 0; i < response.transactions().size(); i++){
+            Messages::UnclaimedTransaction utxo = response.transactions(i);
+            utxos->Insert(utxo.hash(), utxo.index(), new Output(utxo.user(), utxo.token()));
+        }
+        return true;
+    }
 }
