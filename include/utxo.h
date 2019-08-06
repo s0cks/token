@@ -4,24 +4,39 @@
 #include <string>
 #include <map>
 #include <service.pb.h>
+#include <sqlite3.h>
 #include "common.h"
 
 namespace Token{
     class UnclaimedTransaction{
     private:
-        std::string hash_;
         uint32_t index_;
+        std::string hash_;
+        std::string user_;
+        std::string token_;
     public:
         UnclaimedTransaction(const UnclaimedTransaction& other):
-            hash_(other.hash_),
-            index_(other.index_){}
-        UnclaimedTransaction(const std::string& hash, uint32_t idx):
-            hash_(std::string(hash)),
-            index_(idx){}
+            index_(other.GetIndex()),
+            hash_(other.GetHash()),
+            user_(other.GetUser()),
+            token_(other.GetToken()){}
+        UnclaimedTransaction(const std::string& hash, uint32_t idx, const std::string& user, const std::string& token):
+            hash_(hash),
+            index_(idx),
+            user_(user),
+            token_(token){}
         ~UnclaimedTransaction(){}
 
         std::string GetHash() const{
             return hash_;
+        }
+
+        std::string GetUser() const{
+            return user_;
+        }
+
+        std::string GetToken() const{
+            return token_;
         }
 
         uint32_t GetIndex() const{
@@ -51,6 +66,23 @@ namespace Token{
 
     class Output;
 
+    class UnclaimedTransactionPool{
+    private:
+        std::string db_path_;
+        sqlite3* database_;
+
+        UnclaimedTransactionPool();
+    public:
+        ~UnclaimedTransactionPool();
+
+        bool GetUnclaimedTransactions(const std::string& user, std::vector<UnclaimedTransaction>& utxos);
+        bool AddUnclaimedTransaction(UnclaimedTransaction* utxo);
+
+        static UnclaimedTransactionPool* GetInstance();
+        static bool LoadUnclaimedTransactionPool(const std::string& filename);
+    };
+
+    /*
     class UnclaimedTransactionPool{
     private:
         std::map<UnclaimedTransaction, Output*> utxos_;
@@ -134,6 +166,7 @@ namespace Token{
             }
         }
     };
+    */
 }
 
 #endif //TOKEN_UTXO_H

@@ -85,13 +85,13 @@ namespace Token{
         request.set_user(user);
         Messages::UnclaimedTransactionsList response;
         if(!GetStub()->GetUnclaimedTransactions(&ctx, request, &response).ok()) {
-            utxos->Clear();
+            //utxos->Clear();
             return false;
         }
-        utxos->Clear();
+        //utxos->Clear();
         for(int i = 0; i < response.transactions_size(); i++){
             Messages::UnclaimedTransaction utxo = response.transactions(i);
-            utxos->Insert(utxo.hash(), utxo.index(), new Output(utxo.user(), utxo.token()));
+            //utxos->Insert(utxo.hash(), utxo.index(), new Output(utxo.user(), utxo.token()));
         }
         return true;
     }
@@ -101,13 +101,13 @@ namespace Token{
         Messages::GetUnclaimedTransactionsRequest request;
         Messages::UnclaimedTransactionsList response;
         if(!GetStub()->GetUnclaimedTransactions(&ctx, request, &response).ok()){
-            utxos->Clear();
+            //utxos->Clear();
             return false;
         }
-        utxos->Clear();
+        //utxos->Clear();
         for(int i = 0; i < response.transactions().size(); i++){
             Messages::UnclaimedTransaction utxo = response.transactions(i);
-            utxos->Insert(utxo.hash(), utxo.index(), new Output(utxo.user(), utxo.token()));
+            //utxos->Insert(utxo.hash(), utxo.index(), new Output(utxo.user(), utxo.token()));
         }
         return true;
     }

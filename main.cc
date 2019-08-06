@@ -26,6 +26,23 @@ int main(int argc, char** argv){
 
     BlockChain::GetInstance()->SetRoot(path);
 
+    UnclaimedTransactionPool* utxos = UnclaimedTransactionPool::GetInstance();
+
+    std::stringstream filename;
+    filename << path << "/utxos.db";
+    UnclaimedTransactionPool::LoadUnclaimedTransactionPool(filename.str());
+    utxos->AddUnclaimedTransaction(new UnclaimedTransaction("04B14998792F19576386B4E75AE284B527325144E7FE9EB3E8ED7A826B33FC5C", 127, "TestUser1", "TestToken127"));
+
+    std::vector<UnclaimedTransaction> unclaimed;
+    if(utxos->GetUnclaimedTransactions("TestUser1", unclaimed)){
+        std::cout << "Unclaimed Transactions:" << std::endl;
+        for(auto it : unclaimed){
+            std::cout << (it) << std::endl;
+        }
+    }
+
+
+    /*
     std::stringstream genblk;
     genblk << path << "/blk0.dat";
     if(!FileExists(genblk.str())){
@@ -66,4 +83,5 @@ int main(int argc, char** argv){
     BlockChainServer::GetInstance()->Start();
     BlockChainService::WaitForShutdown();
     return EXIT_SUCCESS;
+    */
 }

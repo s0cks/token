@@ -95,6 +95,7 @@ int main(int argc, char** argv){
             std::cin >> target;
 
             if(target == "None"){
+                /*
                 UnclaimedTransactionPool utxos;
                 if(!client.GetUnclaimedTransactions(&utxos)){
                     std::cerr << "Couldn't get unclaimed transactions" << std::endl;
@@ -102,7 +103,9 @@ int main(int argc, char** argv){
                 }
                 std::cout << "Unclaimed Transactions: " << std::endl;
                 std::cout << (utxos);
+                 */
             } else{
+                /*
                 UnclaimedTransactionPool utxos;
                 if(!client.GetUnclaimedTransactions(target, &utxos)){
                     std::cerr << "Couldn't get unclaimed transactions" << std::endl;
@@ -110,6 +113,7 @@ int main(int argc, char** argv){
                 }
                 std::cout << "Unclaimed Transactions for " << target << ": " << std::endl;
                 std::cout << (utxos);
+                 */
             }
         } else if(input == "save"){
             if(!client.Save()){

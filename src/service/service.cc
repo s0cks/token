@@ -82,14 +82,16 @@ namespace Token{
                                                              Token::Messages::UnclaimedTransactionsList *response){
         if(request->user().empty()){
             UnclaimedTransactionPool* utxos = BlockChain::GetInstance()->GetHeadUnclaimedTransactionPool();
-            utxos->ToMessage(response);
+            //utxos->ToMessage(response);
         } else{
+            /*
             UnclaimedTransactionPool* utxos = BlockChain::GetInstance()->GetHeadUnclaimedTransactionPool();
             UnclaimedTransactionPool user_utxos;
             if(!utxos->GetUnclaimedTransactionsFor(&user_utxos, request->user())){
                 return grpc::Status::CANCELLED;
             }
-            user_utxos.ToMessage(response);
+            user_utxos.ToMessage(response
+             */
         }
         return grpc::Status::OK;
     }

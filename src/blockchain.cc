@@ -7,9 +7,9 @@ namespace Token{
     bool
     BlockChain::AppendGenesis(Token::Block* genesis){
         Transaction* cb = genesis->GetCoinbaseTransaction();
-        BlockChainNode* node = new BlockChainNode(nullptr, genesis, new UnclaimedTransactionPool());
+        BlockChainNode* node = new BlockChainNode(nullptr, genesis, nullptr);
         for(int i = 0; i < cb->GetNumberOfOutputs(); i++){
-            node->GetUnclainedTransactionPool()->Insert(cb->GetHash(), i, cb->GetOutputAt(i));
+            // node->GetUnclainedTransactionPool()->Insert(cb->GetHash(), i, cb->GetOutputAt(i));
         }
         std::cout << "Setting genesis: " << genesis->GetHash() << std::endl;
         heads_->Add(node);
@@ -115,6 +115,7 @@ namespace Token{
         std::cout << "Getting parent's UTXOs" << std::endl;
         UnclaimedTransactionPool* utxo_pool = parent->GetUnclainedTransactionPool();
 
+        /*
         BlockValidator validator(utxo_pool);
         block->Accept(&validator);
         std::vector<Transaction*> valid = validator.GetValidTransactions();
@@ -128,11 +129,12 @@ namespace Token{
             std::cout << "No Unclaimed transactions" << std::endl;
             return false;
         }
+         */
 
         std::cout << "Processing transactions" << std::endl;
         Transaction* cb = block->GetCoinbaseTransaction();
         std::cout << "Creating CB UTXO" << std::endl;
-        utxo_pool->Insert(cb->GetHash(), 0, cb->GetOutputAt(0));
+        //utxo_pool->Insert(cb->GetHash(), 0, cb->GetOutputAt(0));
         std::cout << "Creating BlockNode" << std::endl;
         BlockChainNode* current = new BlockChainNode(parent, block, utxo_pool);
         std::cout << "Inserting BlockNode" << std::endl;

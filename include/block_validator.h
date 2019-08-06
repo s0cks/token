@@ -5,6 +5,7 @@
 #include "utxo.h"
 
 namespace Token{
+    /*
     class BlockValidator : public BlockVisitor{
     private:
         UnclaimedTransactionPool* utxo_pool_;
@@ -13,8 +14,7 @@ namespace Token{
     public:
         BlockValidator(UnclaimedTransactionPool* utxo_pool):
             valid_txs_(),
-            invalid_txs_(),
-            utxo_pool_(new UnclaimedTransactionPool(utxo_pool)){}
+            invalid_txs_(),)){}
         ~BlockValidator(){}
 
         bool IsValid(Transaction* tx){
@@ -81,6 +81,7 @@ namespace Token{
             return utxo_pool_;
         }
     };
+     */
 }
 
 #endif //TOKEN_BLOCK_VALIDATOR_H
