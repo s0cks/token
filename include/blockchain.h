@@ -150,6 +150,24 @@ namespace Token{
             return root_;
         }
 
+        std::string GetLedgerRoot(){
+            std::stringstream stream;
+            stream << GetRoot() << "/ledger";
+            return stream.str();
+        }
+
+        std::string GetLedgerFile(const std::string& filename){
+            std::stringstream stream;
+            stream << GetLedgerRoot() << filename;
+            return stream.str();
+        }
+
+        std::string GetUnclaimedTransactionDatabase(){
+            std::stringstream stream;
+            stream << GetRoot() << "/utxos.db";
+            return stream.str();
+        }
+
         bool HasRoot(){
             return !GetRoot().empty();
         }

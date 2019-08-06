@@ -44,7 +44,7 @@ namespace Token{
         Block* genesis = nullptr;
         SetRoot(root);
 
-        std::string gen_filename = root + "/blk0.dat";
+        std::string gen_filename = GetLedgerFile("blk0.dat");
         if(FileExists(gen_filename)){
             genesis = Block::Load(gen_filename);
             AppendGenesis(genesis);
@@ -61,8 +61,8 @@ namespace Token{
         }
         for(int idx = 1; idx < 1000; idx++){
             std::stringstream blk_filename;
-            blk_filename << root << "/blk" << idx << ".dat";
-            if(FileExists(blk_filename.str())){
+            blk_filename << "blk" << idx << ".dat";
+            if(FileExists(GetLedgerFile(blk_filename.str()))){
                 Append(Block::Load(blk_filename.str()));
             } else{
                 break;
