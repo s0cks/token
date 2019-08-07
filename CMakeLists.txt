@@ -14,7 +14,7 @@ find_package(SQLite3 REQUIRED)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${LIBUV_INCLUDE_DIRS})
-include_directories(${SQLITE_INCLUDE_DIRS})
+include_directories(${SQLite3_INCLUDE_DIRS})
 include_directories(include)
 include_directories(src)
 
@@ -27,7 +27,7 @@ protobuf_generate_cpp(PROTO_SRC PROTO_HEADER ${TOKEN_PROTO_SOURCES})
 grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${CMAKE_BINARY_DIR} ${TOKEN_SERVICE_PROTO_SOURCES})
 
 add_library("${PROJECT_NAME}" STATIC ${TOKEN_LIB_SOURCES} ${PROTO_HEADER} ${PROTO_SRC} ${GRPC_HDRS} ${GRPC_SRCS})
-target_link_libraries("${PROJECT_NAME}" ${PROTOBUF_LIBRARY} ${LIBUV_LIBRARIES} ${SQLite3_LIBRARY} cryptopp-static)
+target_link_libraries("${PROJECT_NAME}" ${PROTOBUF_LIBRARY} ${LIBUV_LIBRARIES} ${SQLite3_LIBRARIES} cryptopp-static)
 
 add_executable("${PROJECT_NAME}-node" main.cc)
 target_link_libraries("${PROJECT_NAME}-node" ${PROJECT_NAME}  ${CMAKE_THREAD_LIBS_INIT} gRPC::grpc++_reflection)
