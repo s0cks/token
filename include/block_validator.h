@@ -38,6 +38,7 @@ namespace Token{
                 int i;
                 for(i = 0; i < tx->GetNumberOfOutputs(); i++){
                     UnclaimedTransaction* utxo = new UnclaimedTransaction(tx->GetHash(), i, tx->GetOutputAt(i));
+                    std::cout << "Inserting: " << (*utxo) << std::endl;
                     if(!UnclaimedTransactionPool::GetInstance()->AddUnclaimedTransaction(utxo)){
                         std::cerr << "Cannot insert unclaimed transaction" << std::endl;
                     }

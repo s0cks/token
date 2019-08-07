@@ -22,16 +22,22 @@ namespace Token{
         SetTransaction(Transaction* tx, Messages::Transaction* msg){
             msg->CopyFrom(*tx->GetRaw());
         }
+
+        inline void
+        SetBlockData(Block* block, Messages::BlockData* data){
+            SetBlockHeader(block, data->mutable_header());
+            for(int i = 0; i < block->GetNumberOfTransactions(); i++){
+                SetTransaction(block->GetTransactionAt(i), data->add_transactions());
+            }
+        }
     public:
         explicit BlockChainService():
             server_(){}
         ~BlockChainService(){}
 
         grpc::Status GetHead(grpc::ServerContext* ctx, const Messages::EmptyRequest* request, Messages::BlockHeader* response);
-        grpc::Status GetBlock(grpc::ServerContext* ctx, const Messages::BlockHash* request, Messages::BlockHeader* response);
-        grpc::Status GetBlockAt(grpc::ServerContext* ctx, const Messages::BlockIndex* request, Messages::BlockHeader* response);
-        grpc::Status GetTransaction(grpc::ServerContext* ctx, const Messages::GetTransactionRequest* request, Messages::Transaction* response);
-        grpc::Status GetTransactions(grpc::ServerContext* ctx, const Messages::BlockHash* request, Messages::BlockData* response);
+        grpc::Status GetBlock(grpc::ServerContext* ctx, const Messages::GetBlockRequest* request, Messages::BlockHeader* response);
+        grpc::Status GetBlockData(grpc::ServerContext* ctx, const Messages::GetBlockRequest* request, Messages::BlockData* response);
         grpc::Status GetUnclaimedTransactions(grpc::ServerContext* ctx, const Messages::GetUnclaimedTransactionsRequest* request, Messages::UnclaimedTransactionsList* response);
         grpc::Status AppendBlock(grpc::ServerContext* ctx, const Messages::Block* request, Messages::BlockHeader* response);
         grpc::Status Save(grpc::ServerContext* ctx, const Messages::EmptyRequest* request, Messages::EmptyResponse* response);

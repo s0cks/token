@@ -21,16 +21,12 @@ namespace Token{
         bool GetHead(Messages::BlockHeader* response);
         bool GetBlock(const std::string& hash, Messages::BlockHeader* response);
         bool GetBlockAt(int index, Messages::BlockHeader* response);
-        bool GetTransaction(const std::string& hash, int index, Transaction** response);
-        bool GetTransactions(const std::string& hash, std::vector<Transaction*>& transactions);
-        bool GetUnclaimedTransactions(const std::string& user, UnclaimedTransactionPool* utxos);
-        bool GetUnclaimedTransactions(UnclaimedTransactionPool* utxos);
+        bool GetBlockData(const std::string& hash, Messages::BlockData* response);
+        bool GetBlockData(int index, Messages::BlockData* response);
+        bool GetUnclaimedTransactions(const std::string& user, Messages::UnclaimedTransactionsList* utxos);
+        bool GetUnclaimedTransactions(Messages::UnclaimedTransactionsList* utxos);
         bool Append(Block* block, Messages::BlockHeader* response);
         bool Save();
-
-        bool GetCoinbase(const std::string& hash, Transaction** response){
-            return GetTransaction(hash, 0, response);
-        }
     };
 }
 

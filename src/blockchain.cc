@@ -9,8 +9,8 @@ namespace Token{
         BlockChainNode* node = new BlockChainNode(nullptr, genesis);
         std::string hash = cb->GetHash();
         for(int i = 0; i < cb->GetNumberOfOutputs(); i++){
-            std::cout << "Appending: " << hash << "[" << i << "]" << std::endl;
-            UnclaimedTransaction utxo(hash, i, cb->GetOutputAt(i));
+            std::cout << "Appending: " << cb->GetHash() << "[" << i << "]" << std::endl;
+            UnclaimedTransaction utxo(cb->GetHash(), i, cb->GetOutputAt(i));
             if(!UnclaimedTransactionPool::GetInstance()->AddUnclaimedTransaction(&utxo)){
                 std::cerr << "Cannot append unclaimed transaction" << std::endl;
             }
@@ -64,9 +64,9 @@ namespace Token{
             genesis = new Block(true);
             Transaction* tx = genesis->CreateTransaction();
             for(int idx = 0; idx < 128; idx++){
-                std::stringstream token_name;
-                token_name << "Token" << idx;
-                tx->AddOutput("TestUser", token_name.str());
+                std::stringstream tk_name;
+                tk_name << "TestToken" << idx;
+                tx->AddOutput(tk_name.str(), "TestUser");
             }
             AppendGenesis(genesis);
             return false;

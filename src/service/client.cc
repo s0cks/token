@@ -18,51 +18,31 @@ namespace Token{
     }
 
     bool TokenServiceClient::GetBlock(const std::string &hash, Token::Messages::BlockHeader *response){
-        Messages::BlockHash bhash;
-        bhash.set_hash(hash);
+        Messages::GetBlockRequest request;
+        request.set_hash(hash);
         grpc::ClientContext ctx;
-        return GetStub()->GetBlock(&ctx, bhash, response).ok();
+        return GetStub()->GetBlock(&ctx, request, response).ok();
     }
 
     bool TokenServiceClient::GetBlockAt(int index, Token::Messages::BlockHeader *response){
-        Messages::BlockIndex bindex;
-        bindex.set_index(index);
+        Messages::GetBlockRequest request;
+        request.set_index(index);
         grpc::ClientContext ctx;
-        return GetStub()->GetBlockAt(&ctx, bindex, response).ok();
+        return GetStub()->GetBlock(&ctx, request, response).ok();
     }
 
-    bool TokenServiceClient::GetTransaction(const std::string &hash, int index, Transaction** response){
-        Messages::GetTransactionRequest request;
+    bool TokenServiceClient::GetBlockData(const std::string &hash, Token::Messages::BlockData *response){
+        Messages::GetBlockRequest request;
         request.set_hash(hash);
-        request.set_index(static_cast<google::protobuf::uint32>(index));
-
-        Messages::Transaction* raw = new Messages::Transaction();
         grpc::ClientContext ctx;
-        grpc::Status resp = GetStub()->GetTransaction(&ctx, request, raw);
-        if(resp.ok()){
-            *response = new Transaction(raw);
-        } else{
-            *response = nullptr;
-        }
-        return resp.ok();
+        return GetStub()->GetBlockData(&ctx, request, response).ok();
     }
 
-    bool TokenServiceClient::GetTransactions(const std::string &hash, std::vector<Token::Transaction*>& transactions){
-        Messages::BlockHash bhash;
-        bhash.set_hash(hash);
-
-        Messages::BlockData data;
+    bool TokenServiceClient::GetBlockData(int index, Messages::BlockData* response){
+        Messages::GetBlockRequest request;
+        request.set_index(index);
         grpc::ClientContext ctx;
-        if(!GetStub()->GetTransactions(&ctx, bhash, &data).ok()){
-            return false;
-        }
-        std::cout << "Collected " << data.transactions_size() << " transactions" << std::endl;
-        for(int i = 0; i < data.transactions_size(); i++){
-            Messages::Transaction* tx = new Messages::Transaction();
-            tx->CopyFrom(data.transactions(i));
-            transactions.push_back(new Transaction(tx));
-        }
-        return true;
+        return GetStub()->GetBlockData(&ctx, request, response).ok();
     }
 
     bool TokenServiceClient::Append(Token::Block* block, Messages::BlockHeader* response){
@@ -79,36 +59,17 @@ namespace Token{
         return GetStub()->Save(&ctx, request, &response).ok();
     }
 
-    bool TokenServiceClient::GetUnclaimedTransactions(const std::string &user, UnclaimedTransactionPool* utxos){
+    bool TokenServiceClient::GetUnclaimedTransactions(const std::string &user, Messages::UnclaimedTransactionsList* utxos){
         grpc::ClientContext ctx;
         Messages::GetUnclaimedTransactionsRequest request;
         request.set_user(user);
         Messages::UnclaimedTransactionsList response;
-        if(!GetStub()->GetUnclaimedTransactions(&ctx, request, &response).ok()) {
-            //utxos->Clear();
-            return false;
-        }
-        //utxos->Clear();
-        for(int i = 0; i < response.transactions_size(); i++){
-            Messages::UnclaimedTransaction utxo = response.transactions(i);
-            //utxos->Insert(utxo.hash(), utxo.index(), new Output(utxo.user(), utxo.token()));
-        }
-        return true;
+        return GetStub()->GetUnclaimedTransactions(&ctx, request, utxos).ok();
     }
 
-    bool TokenServiceClient::GetUnclaimedTransactions(UnclaimedTransactionPool* utxos){
+    bool TokenServiceClient::GetUnclaimedTransactions(Messages::UnclaimedTransactionsList* utxos){
         grpc::ClientContext ctx;
         Messages::GetUnclaimedTransactionsRequest request;
-        Messages::UnclaimedTransactionsList response;
-        if(!GetStub()->GetUnclaimedTransactions(&ctx, request, &response).ok()){
-            //utxos->Clear();
-            return false;
-        }
-        //utxos->Clear();
-        for(int i = 0; i < response.transactions().size(); i++){
-            Messages::UnclaimedTransaction utxo = response.transactions(i);
-            //utxos->Insert(utxo.hash(), utxo.index(), new Output(utxo.user(), utxo.token()));
-        }
-        return true;
+        return GetStub()->GetUnclaimedTransactions(&ctx, request, utxos).ok();
     }
 }

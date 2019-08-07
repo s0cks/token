@@ -5,17 +5,9 @@ package Token.Messages; // TODO: Fixme
 message EmptyRequest{}
 message EmptyResponse{}
 
-message BlockHash{
-    string hash = 1;
-}
-
-message BlockIndex{
+message GetBlockRequest{
     uint32 index = 1;
-}
-
-message GetTransactionRequest{
-    string hash = 1;
-    uint32 index = 2;
+    string hash = 2;
 }
 
 message BlockHeader{
@@ -26,11 +18,8 @@ message BlockHeader{
 }
 
 message BlockData{
-    repeated Transaction transactions = 1;
-}
-
-message TransactionList{
-    repeated Transaction transactions = 1;
+    BlockHeader header = 1;
+    repeated Transaction transactions = 2;
 }
 
 message UnclaimedTransactionsList{
@@ -42,11 +31,9 @@ message GetUnclaimedTransactionsRequest{
 }
 
 service TokenService {
-    rpc GetBlock (BlockHash) returns (BlockHeader){}
-    rpc GetBlockAt (BlockIndex) returns (BlockHeader){}
     rpc GetHead (EmptyRequest) returns (BlockHeader){}
-    rpc GetTransaction (GetTransactionRequest) returns (Transaction){}
-    rpc GetTransactions (BlockHash) returns (BlockData){}
+    rpc GetBlock (GetBlockRequest) returns (BlockHeader) {}
+    rpc GetBlockData (GetBlockRequest) returns (BlockData){}
     rpc GetUnclaimedTransactions (GetUnclaimedTransactionsRequest) returns (UnclaimedTransactionsList){}
     rpc AppendBlock (Block) returns (BlockHeader){}
     rpc Save (EmptyRequest) returns (EmptyResponse) {}

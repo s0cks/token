@@ -7,6 +7,7 @@
 #include <sqlite3.h>
 #include "common.h"
 #include "transaction.h"
+#include "pthread.h"
 
 namespace Token{
     class UnclaimedTransaction{
@@ -69,7 +70,8 @@ namespace Token{
         }
 
         friend bool operator==(const UnclaimedTransaction& lhs, const UnclaimedTransaction& rhs){
-            return lhs.GetHash() == rhs.GetHash();
+            return lhs.GetTransactionHash() == rhs.GetTransactionHash() &&
+                    lhs.GetIndex() == rhs.GetIndex();
         }
 
         bool operator<(const UnclaimedTransaction& other) const{
@@ -96,12 +98,16 @@ namespace Token{
     private:
         std::string db_path_;
         sqlite3* database_;
+        pthread_rwlock_t rwlock_;
 
         UnclaimedTransactionPool();
     public:
         ~UnclaimedTransactionPool();
 
+        bool GetUnclaimedTransactions(const std::string& user, std::vector<UnclaimedTransaction*>& utxos);
         bool GetUnclaimedTransactions(std::vector<UnclaimedTransaction*>& utxos);
+        bool GetUnclaimedTransactions(const std::string& user, Messages::UnclaimedTransactionsList* utxos);
+        bool GetUnclaimedTransactions(Messages::UnclaimedTransactionsList* utxos);
         bool GetUnclaimedTransaction(const std::string& tx_hash, int index, UnclaimedTransaction* result);
         bool RemoveUnclaimedTransaction(UnclaimedTransaction* utxo);
         bool AddUnclaimedTransaction(UnclaimedTransaction* utxo);

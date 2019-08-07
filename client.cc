@@ -11,6 +11,18 @@ PrintBlock(Token::Messages::BlockHeader* block){
 }
 
 static inline void
+PrintUnclaimedTransaction(Token::Messages::UnclaimedTransaction* utxo){
+    std::cout << "Unclaimed Transaction from " << utxo->tx_hash() << "[" << utxo->index() << "] => " << utxo->user() << "(" << utxo->token() << ")" << std::endl;
+}
+
+static inline void
+PrintUnclaimedTransactionList(Token::Messages::UnclaimedTransactionsList* utxos){
+    for(int i = 0; i < utxos->transactions_size(); i++){
+        PrintUnclaimedTransaction(utxos->mutable_transactions(i));
+    }
+}
+
+static inline void
 PrintTransaction(Token::Transaction* tx){
     std::cout << "\t+ #" << tx->GetIndex() << "(" << tx->GetHash() << ")" << std::endl;
     int idx;
@@ -26,13 +38,23 @@ PrintTransaction(Token::Transaction* tx){
     }
 }
 
+static inline void
+PrintBlockData(Token::Messages::BlockData* blk){
+    PrintBlock(blk->mutable_header());
+    for(int i = 0; i < blk->transactions_size(); i++){
+        Token::Transaction tx(blk->mutable_transactions(i));
+        PrintTransaction(&tx);
+    }
+}
+
 int main(int argc, char** argv){
     using namespace Token;
     if(argc < 2) return EXIT_FAILURE;
     std::string host(argv[1]);
+    int port = atoi(argv[2]);
 
-    std::cout << "Connecting to: " << host << ":" << 5051 << std::endl;
-    TokenServiceClient client(host, 8080);
+    std::cout << "Connecting to: " << host << ":" << port << std::endl;
+    TokenServiceClient client(host, port);
 
     std::string input;
     do{
@@ -67,7 +89,7 @@ int main(int argc, char** argv){
 
                     Transaction* tx = nblock->CreateTransaction();
                     tx->AddInput(hash, index);
-                    tx->AddOutput(user, token);
+                    tx->AddOutput(token, user);
 
                     bool another;
                     std::cout << "Add Another Transaction (y/n)?:";
@@ -89,31 +111,37 @@ int main(int argc, char** argv){
             Messages::BlockHeader head;
             client.GetHead(&head);
             PrintBlock(&head);
+        } else if(input == "getblock"){
+            std::string target;
+            std::cout << "Block Hash?:";
+            std::cin >> target;
+
+            Messages::BlockData data;
+            if(!client.GetBlockData(target, &data)){
+                std::cerr << "Cannot get block " << target << std::endl;
+                return EXIT_FAILURE;
+            }
+            PrintBlockData(&data);
         } else if(input == "lsutxo"){
             std::string target;
             std::cout << "User [Default is empty]?:";
             std::cin >> target;
 
             if(target == "None"){
-                /*
-                UnclaimedTransactionPool utxos;
+                Messages::UnclaimedTransactionsList utxos;
                 if(!client.GetUnclaimedTransactions(&utxos)){
                     std::cerr << "Couldn't get unclaimed transactions" << std::endl;
                     return EXIT_FAILURE;
                 }
-                std::cout << "Unclaimed Transactions: " << std::endl;
-                std::cout << (utxos);
-                 */
+                PrintUnclaimedTransactionList(&utxos);
             } else{
-                /*
-                UnclaimedTransactionPool utxos;
+                Messages::UnclaimedTransactionsList utxos;
                 if(!client.GetUnclaimedTransactions(target, &utxos)){
                     std::cerr << "Couldn't get unclaimed transactions" << std::endl;
                     return EXIT_FAILURE;
                 }
-                std::cout << "Unclaimed Transactions for " << target << ": " << std::endl;
-                std::cout << (utxos);
-                 */
+                std::cout << "Unclaimed Transactions for " << target << std::endl;
+                PrintUnclaimedTransactionList(&utxos);
             }
         } else if(input == "save"){
             if(!client.Save()){
