@@ -101,6 +101,10 @@ namespace Token{
             stream << "\tPrevious Hash: " << block.GetPreviousHash() << std::endl;
             stream << "\tHash: " << const_cast<Block&>(block).GetHash() << std::endl;
             stream << "\tMerkle: " << const_cast<Block&>(block).GetMerkleRoot() << std::endl;
+            stream << "\tTransactions (" << block.GetNumberOfTransactions() << "):" << std::endl;
+            for(int i = 0; i < block.GetNumberOfTransactions(); i++){
+                stream << "\t  + Transaction " << block.GetTransactionAt(i)->GetHash() << " #" << i << ":" << std::endl << (*block.GetTransactionAt(i)) << std::endl;
+            }
             return stream;
         }
 

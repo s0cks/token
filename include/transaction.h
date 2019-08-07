@@ -14,11 +14,11 @@ namespace Token{
         GetRaw() const{
             return raw_;
         }
+
+        void Encode(ByteBuffer* bb) const;
     public:
         Input(Messages::Input* raw):
-            raw_(raw){
-
-        }
+            raw_(raw){}
         Input(const Messages::Input& raw):
             raw_(new Messages::Input()){
             GetRaw()->CopyFrom(raw);
@@ -28,6 +28,7 @@ namespace Token{
             GetRaw()->set_previous_hash(previous_hash);
             GetRaw()->set_index(index);
         }
+        ~Input(){}
 
         std::string GetPreviousHash() const{
             return GetRaw()->previous_hash();
@@ -36,6 +37,8 @@ namespace Token{
         int GetIndex() const{
             return GetRaw()->index();
         }
+
+        std::string GetHash() const;
 
         friend std::ostream& operator<<(std::ostream& stream, const Input& input){
             stream << "Input(" << input.GetPreviousHash() << "[" << input.GetIndex() << "])";
@@ -51,11 +54,11 @@ namespace Token{
         GetRaw() const{
             return raw_;
         }
+
+        void Encode(ByteBuffer* bb) const;
     public:
         Output(Messages::Output* raw):
-            raw_(raw){
-
-        }
+            raw_(raw){}
         Output(const Messages::Output& raw):
             raw_(new Messages::Output()){
             GetRaw()->CopyFrom(raw);
@@ -65,6 +68,7 @@ namespace Token{
             GetRaw()->set_user(user);
             GetRaw()->set_token(token);
         }
+        ~Output(){}
 
         std::string GetUser() const{
             return GetRaw()->user();
@@ -73,6 +77,8 @@ namespace Token{
         std::string GetToken() const{
             return GetRaw()->token();
         }
+
+        std::string GetHash() const;
 
         friend std::ostream& operator<<(std::ostream& stream, const Output& out){
             stream << "Output(" << out.GetUser() << "+" << out.GetToken() << ")";
@@ -94,8 +100,7 @@ namespace Token{
         friend class BlockChainService;
     public:
         Transaction(Messages::Transaction* raw):
-            raw_(raw){
-        }
+            raw_(raw){}
         ~Transaction(){}
 
         Input* AddInput(const std::string& previous_hash, uint32_t idx){
@@ -118,6 +123,16 @@ namespace Token{
 
         Output* GetOutputAt(int idx) const{
             return new Output(GetRaw()->outputs(idx));
+        }
+
+        Output* GetOutput(const std::string& user, const std::string& token) const{
+            for(int i = 0; i < GetRaw()->outputs_size(); i++){
+                Messages::Output out = GetRaw()->outputs(i);
+                if(out.user() == user && out.token() == token){
+                    return new Output(out);
+                }
+            }
+            return nullptr;
         }
 
         int GetNumberOfInputs() const{
@@ -146,7 +161,6 @@ namespace Token{
         }
 
         friend std::ostream& operator<<(std::ostream& stream, const Transaction& tx){
-            stream << "Transaction" << std::endl;
             stream << "\tIndex: " << tx.GetIndex() << std::endl;
             stream << "\tInputs (" << tx.GetNumberOfInputs() << "):" << std::endl;
             int idx;
@@ -168,6 +182,31 @@ namespace Token{
         virtual ~TransactionVisitor(){}
         virtual void VisitInput(Input* in){}
         virtual void VisitOutput(Output* out){}
+    };
+
+    class TransactionPool{
+    private:
+        std::map<std::string, Transaction*> transactions_;
+    public:
+        TransactionPool():
+                transactions_(){}
+        TransactionPool(const TransactionPool& other):
+                transactions_(){
+            transactions_.insert(other.transactions_.begin(), other.transactions_.end());
+        }
+        ~TransactionPool(){}
+
+        void AddTransaction(Transaction* tx){
+            transactions_.insert(std::make_pair(tx->GetHash(), tx));
+        }
+
+        void RemoveTransaction(std::string hash) {
+            transactions_.erase(hash);
+        }
+
+        Transaction* GetTransaction(std::string hash) const{
+            return transactions_.find(hash)->second;
+        }
     };
 }
 

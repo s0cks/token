@@ -6,7 +6,6 @@
 #include "array.h"
 #include "bytes.h"
 #include "block.h"
-#include "tx_pool.h"
 #include "user.h"
 #include "utxo.h"
 
@@ -17,7 +16,6 @@ namespace Token{
         BlockChainNode* parent_;
         Array<BlockChainNode*> children_;
         unsigned int height_;
-        UnclaimedTransactionPool* utxo_pool_;
 
         inline void
         AddChild(BlockChainNode* node){
@@ -28,19 +26,8 @@ namespace Token{
     public:
         BlockChainNode(BlockChainNode* parent, Block* block):
             parent_(parent),
-            // utxo_pool_(new UnclaimedTransactionPool()),
             block_(block),
             height_(0),
-            children_(0xA){
-            if(parent_ != nullptr){
-                height_ = parent->GetHeight() + 1;
-                parent->AddChild(this);
-            }
-        }
-        BlockChainNode(BlockChainNode* parent, Block* block, UnclaimedTransactionPool* utxo_pool):
-            parent_(parent),
-            //utxo_pool_(new UnclaimedTransactionPool(utxo_pool)),
-            block_(block),
             children_(0xA){
             if(parent_ != nullptr){
                 height_ = parent->GetHeight() + 1;
@@ -59,10 +46,6 @@ namespace Token{
         unsigned int GetHeight() const{
             return block_->GetHeight();
         }
-
-        UnclaimedTransactionPool* GetUnclainedTransactionPool(){
-            return utxo_pool_;
-        }
     };
 
     class BlockChain{
@@ -71,7 +54,7 @@ namespace Token{
         BlockChainNode* head_;
         std::map<std::string, BlockChainNode*> nodes_;
         unsigned int height_;
-        TransactionPool* txpool_;
+        TransactionPool tx_pool_;
         std::string root_;
 
         bool AppendGenesis(Block* block);
@@ -84,20 +67,37 @@ namespace Token{
             return found->second;
         }
 
+        inline std::string
+        GetLedgerRoot(){
+            std::stringstream stream;
+            stream << GetRootFileSystem() << "/ledger";
+            return stream.str();
+        }
+
+        std::string GetLedgerFile(const std::string& filename){
+            std::stringstream stream;
+            stream << GetLedgerRoot() << filename;
+            return stream.str();
+        }
+
+        std::string GetUnclaimedTransactionDatabase(){
+            std::stringstream stream;
+            stream << GetRootFileSystem() << "/unclaimed.db";
+            return stream.str();
+        }
+
         BlockChain():
             heads_(new Array<BlockChainNode*>(0xA)),
             root_(),
+            tx_pool_(),
             nodes_(),
             height_(0){}
     public:
         class Server;
 
         static BlockChain* GetInstance();
+        static bool Initialize(const std::string& path, Block* genesis);
         static Server* GetServerInstance();
-
-        Block* CreateBlock() const{
-            return new Block(GetHead());
-        }
 
         Block* GetBlockFromHash(const std::string& hash) const{
             return nodes_.find(hash)->second->GetBlock();
@@ -105,18 +105,6 @@ namespace Token{
 
         Block* GetHead() const{
             return head_->GetBlock();
-        }
-
-        UnclaimedTransactionPool* GetHeadUnclaimedTransactionPool(){
-            return head_->GetUnclainedTransactionPool();
-        }
-
-        UnclaimedTransactionPool* GetUnclaimedTransactionPool(const std::string& block_hash){
-            auto node = nodes_.find(block_hash);
-            if(node != nodes_.end()){
-                return node->second->GetUnclainedTransactionPool();
-            }
-            return nullptr;
         }
 
         Block* GetBlockAt(int height) const{
@@ -130,8 +118,12 @@ namespace Token{
             return GetHead()->GetHeight();
         }
 
-        TransactionPool* GetTransactionPool() const{
-            return txpool_;
+        TransactionPool* GetTransactionPool(){
+            return &tx_pool_;
+        }
+
+        void AddTransaction(Transaction* tx){
+            return GetTransactionPool()->AddTransaction(tx);
         }
 
         //TODO: Remove this
@@ -146,32 +138,15 @@ namespace Token{
             root_ = root;
         }
 
-        std::string GetRoot(){
+        std::string GetRootFileSystem(){
             return root_;
         }
 
-        std::string GetLedgerRoot(){
-            std::stringstream stream;
-            stream << GetRoot() << "/ledger";
-            return stream.str();
-        }
-
-        std::string GetLedgerFile(const std::string& filename){
-            std::stringstream stream;
-            stream << GetLedgerRoot() << filename;
-            return stream.str();
-        }
-
-        std::string GetUnclaimedTransactionDatabase(){
-            std::stringstream stream;
-            stream << GetRoot() << "/utxos.db";
-            return stream.str();
-        }
-
         bool HasRoot(){
-            return !GetRoot().empty();
+            return !GetRootFileSystem().empty();
         }
 
+        Block* CreateBlock();
         bool Append(Block* block);
         bool Load(const std::string& root);
         bool Load(const std::string& root, const std::string& addr, int port);

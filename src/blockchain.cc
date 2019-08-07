@@ -4,19 +4,22 @@
 #include "block_validator.h"
 
 namespace Token{
-    bool
-    BlockChain::AppendGenesis(Token::Block* genesis){
+    bool BlockChain::AppendGenesis(Token::Block* genesis){
         Transaction* cb = genesis->GetCoinbaseTransaction();
-        BlockChainNode* node = new BlockChainNode(nullptr, genesis, nullptr);
+        BlockChainNode* node = new BlockChainNode(nullptr, genesis);
+        std::string hash = cb->GetHash();
         for(int i = 0; i < cb->GetNumberOfOutputs(); i++){
-            // node->GetUnclainedTransactionPool()->Insert(cb->GetHash(), i, cb->GetOutputAt(i));
+            std::cout << "Appending: " << hash << "[" << i << "]" << std::endl;
+            UnclaimedTransaction utxo(hash, i, cb->GetOutputAt(i));
+            if(!UnclaimedTransactionPool::GetInstance()->AddUnclaimedTransaction(&utxo)){
+                std::cerr << "Cannot append unclaimed transaction" << std::endl;
+            }
         }
         std::cout << "Setting genesis: " << genesis->GetHash() << std::endl;
         heads_->Add(node);
         nodes_.insert({ genesis->GetHash(), node });
         height_ = 1;
         head_ = node;
-        txpool_ = new TransactionPool();
         return true;
     }
 
@@ -32,6 +35,14 @@ namespace Token{
         return &instance;
     }
 
+    bool BlockChain::Initialize(const std::string &path, Token::Block *genesis){
+        BlockChain* instance = BlockChain::GetInstance();
+        instance->SetRoot(path);
+        UnclaimedTransactionPool::LoadUnclaimedTransactionPool(instance->GetUnclaimedTransactionDatabase());
+        instance->SetHead(genesis);
+        return instance->Save();
+    }
+
     bool
     BlockChain::Load(const std::string& root, const std::string& addr, int port){
         Load(root);
@@ -43,6 +54,7 @@ namespace Token{
     BlockChain::Load(const std::string& root){
         Block* genesis = nullptr;
         SetRoot(root);
+        UnclaimedTransactionPool::LoadUnclaimedTransactionPool(GetUnclaimedTransactionDatabase());
 
         std::string gen_filename = GetLedgerFile("blk0.dat");
         if(FileExists(gen_filename)){
@@ -94,7 +106,7 @@ namespace Token{
         if(!HasRoot()){
             return false;
         }
-        return Save(GetRoot());
+        return Save(GetRootFileSystem());
     }
 
     bool BlockChain::Append(Token::Block* block){
@@ -113,10 +125,8 @@ namespace Token{
         }
         BlockChainNode* parent = GetBlockParent(block);
         std::cout << "Getting parent's UTXOs" << std::endl;
-        UnclaimedTransactionPool* utxo_pool = parent->GetUnclainedTransactionPool();
 
-        /*
-        BlockValidator validator(utxo_pool);
+        BlockValidator validator;
         block->Accept(&validator);
         std::vector<Transaction*> valid = validator.GetValidTransactions();
         std::vector<Transaction*> invalid = validator.GetInvalidTransactions();
@@ -124,19 +134,13 @@ namespace Token{
             std::cerr << "Not all transactions valid" << std::endl;
             return false;
         }
-        utxo_pool = validator.GetUnclaimedTransactionPool();
-        if(utxo_pool->IsEmpty()) {
-            std::cout << "No Unclaimed transactions" << std::endl;
-            return false;
-        }
-         */
 
         std::cout << "Processing transactions" << std::endl;
         Transaction* cb = block->GetCoinbaseTransaction();
         std::cout << "Creating CB UTXO" << std::endl;
         //utxo_pool->Insert(cb->GetHash(), 0, cb->GetOutputAt(0));
         std::cout << "Creating BlockNode" << std::endl;
-        BlockChainNode* current = new BlockChainNode(parent, block, utxo_pool);
+        BlockChainNode* current = new BlockChainNode(parent, block);
         std::cout << "Inserting BlockNode" << std::endl;
         nodes_.insert(std::make_pair(block->GetHash(), current));
         std::cout << "Checking Height" << std::endl;
@@ -160,5 +164,10 @@ namespace Token{
         }
         std::cout << "Done" << std::endl;
         return true;
+    }
+
+    Block* BlockChain::CreateBlock(){
+        Block* parent = GetHead();
+        return new Block(parent);
     }
 }

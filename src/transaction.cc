@@ -35,5 +35,33 @@ namespace Token{
         return result;
     }
 
+    void Input::Encode(ByteBuffer* bb) const{
+        uint32_t size = static_cast<uint32_t>(GetRaw()->ByteSizeLong());
+        bb->Resize(size);
+        GetRaw()->SerializeToArray(bb->GetBytes(), size);
+    }
 
+    std::string Input::GetHash() const{
+        CryptoPP::SHA256 func;
+        std::string digest;
+        ByteBuffer bb;
+        Encode(&bb);
+        CryptoPP::ArraySource source(bb.GetBytes(), bb.Size(), true, new CryptoPP::HashFilter(func, new CryptoPP::HexEncoder(new CryptoPP::StringSink(digest))));
+        return digest;
+    }
+
+    void Output::Encode(Token::ByteBuffer *bb) const{
+        uint32_t size = static_cast<uint32_t>(GetRaw()->ByteSizeLong());
+        bb->Resize(size);
+        GetRaw()->SerializeToArray(bb->GetBytes(), size);
+    }
+
+    std::string Output::GetHash() const{
+        CryptoPP::SHA256 func;
+        std::string digest;
+        ByteBuffer bb;
+        Encode(&bb);
+        CryptoPP::ArraySource source(bb.GetBytes(), bb.Size(), true, new CryptoPP::HashFilter(func, new CryptoPP::HexEncoder(new CryptoPP::StringSink(digest))));
+        return digest;
+    }
 }

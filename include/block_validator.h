@@ -5,16 +5,14 @@
 #include "utxo.h"
 
 namespace Token{
-    /*
     class BlockValidator : public BlockVisitor{
     private:
-        UnclaimedTransactionPool* utxo_pool_;
         std::vector<Transaction*> valid_txs_;
         std::vector<Transaction*> invalid_txs_;
     public:
-        BlockValidator(UnclaimedTransactionPool* utxo_pool):
+        BlockValidator():
             valid_txs_(),
-            invalid_txs_(),)){}
+            invalid_txs_(){}
         ~BlockValidator(){}
 
         bool IsValid(Transaction* tx){
@@ -26,27 +24,10 @@ namespace Token{
             int i;
             for(i = 0; i < tx->GetNumberOfInputs(); i++){
                 Input* in = tx->GetInputAt(i);
-                UnclaimedTransaction ut(in->GetPreviousHash(), in->GetIndex());
-                if(!utxo_pool_->Contains(ut)){
-                    std::cout << "No unclaimed transaction: " << ut << std::endl;
+                UnclaimedTransaction ut;
+                if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransaction(in->GetPreviousHash(), in->GetIndex(), &ut)){
+                    std::cerr << "No unclaimed transaction for: " << in->GetPreviousHash();
                     return false;
-                }
-                Output* out = utxo_pool_->Get(ut);
-                if(out == nullptr) {
-                    std::cerr << "No output" << std::endl;
-                    return false;
-                }
-            }
-
-            for(i = 0; i < tx->GetNumberOfInputs() - 1; i++){
-                Input* in = tx->GetInputAt(i);
-                UnclaimedTransaction ut(in->GetPreviousHash(), in->GetIndex());
-                for(int j = i + 1; j < tx->GetNumberOfInputs(); j++){
-                    Input* next = tx->GetInputAt(j);
-                    UnclaimedTransaction utx(next->GetPreviousHash(), next->GetIndex());
-                    if(ut == utx){
-                        return false;
-                    }
                 }
             }
             return true;
@@ -56,12 +37,17 @@ namespace Token{
             if(IsValid(tx)){
                 int i;
                 for(i = 0; i < tx->GetNumberOfOutputs(); i++){
-                    utxo_pool_->Insert(tx->GetHash(), static_cast<uint32_t>(i), tx->GetOutputAt(i));
+                    UnclaimedTransaction* utxo = new UnclaimedTransaction(tx->GetHash(), i, tx->GetOutputAt(i));
+                    if(!UnclaimedTransactionPool::GetInstance()->AddUnclaimedTransaction(utxo)){
+                        std::cerr << "Cannot insert unclaimed transaction" << std::endl;
+                    }
                 }
                 for(i = 0; i < tx->GetNumberOfInputs(); i++){
                     Input* in = tx->GetInputAt(i);
-                    UnclaimedTransaction ut(in->GetPreviousHash(), in->GetIndex());
-                    utxo_pool_->Remove(ut);
+                    UnclaimedTransaction utxo(in->GetPreviousHash(), in->GetIndex());
+                    if(!UnclaimedTransactionPool::GetInstance()->RemoveUnclaimedTransaction(&utxo)){
+                        std::cerr << "Cannot remove unclaimed transaction" << std::endl;
+                    }
                 }
                 valid_txs_.push_back(tx);
             } else{
@@ -76,12 +62,7 @@ namespace Token{
         std::vector<Transaction*> GetInvalidTransactions(){
             return invalid_txs_;
         }
-
-        UnclaimedTransactionPool* GetUnclaimedTransactionPool(){
-            return utxo_pool_;
-        }
     };
-     */
 }
 
 #endif //TOKEN_BLOCK_VALIDATOR_H

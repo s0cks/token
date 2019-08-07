@@ -1,6 +1,5 @@
 #include <sstream>
 #include <string>
-#include <fstream>
 #include "blockchain.h"
 #include "service/service.h"
 #include "node/node.h"
@@ -22,27 +21,7 @@ int main(int argc, char** argv){
         std::cout << "Root path '" << path << "' doesn't exist" << std::endl;
         return EXIT_FAILURE;
     }
-    int port = atoi(argv[2]);
 
-    BlockChain::GetInstance()->SetRoot(path);
-
-    UnclaimedTransactionPool* utxos = UnclaimedTransactionPool::GetInstance();
-
-    std::stringstream filename;
-    filename << path << "/utxos.db";
-    UnclaimedTransactionPool::LoadUnclaimedTransactionPool(filename.str());
-    utxos->AddUnclaimedTransaction(new UnclaimedTransaction("04B14998792F19576386B4E75AE284B527325144E7FE9EB3E8ED7A826B33FC5C", 127, "TestUser1", "TestToken127"));
-
-    std::vector<UnclaimedTransaction> unclaimed;
-    if(utxos->GetUnclaimedTransactions("TestUser1", unclaimed)){
-        std::cout << "Unclaimed Transactions:" << std::endl;
-        for(auto it : unclaimed){
-            std::cout << (it) << std::endl;
-        }
-    }
-
-
-    /*
     std::stringstream genblk;
     genblk << path << "/blk0.dat";
     if(!FileExists(genblk.str())){
@@ -53,35 +32,44 @@ int main(int argc, char** argv){
             tk_name << "Token" << i;
             ntx->AddOutput("TestUser", tk_name.str());
         }
-        if(!BlockChain::GetInstance()->Append(nblock)){
-            std::cerr << "Couldn't append new block" << std::endl;
-            return EXIT_FAILURE;
-        }
-
-        nblock = BlockChain::GetInstance()->CreateBlock();
-        Transaction* nntx = nblock->CreateTransaction();
-        nntx->AddInput(ntx->GetHash(), 0);
-        nntx->AddInput(ntx->GetHash(), 1);
-        nntx->AddOutput("TestUser2", "Token0");
-        nntx->AddOutput("TestUser2", "Token1");
-        if(!BlockChain::GetInstance()->Append(nblock)){
-            std::cerr << "Couldn't append new block" << std::endl;
+        if(!BlockChain::Initialize(path, nblock)){
+            std::cerr << "Cannot initialize block chain @ " << path << std::endl;
             return EXIT_FAILURE;
         }
     } else{
         BlockChain::GetInstance()->Load(path);
     }
 
-    std::cout << "Unclaimed Transactions:" << std::endl << (*BlockChain::GetInstance()->GetHeadUnclaimedTransactionPool()) << std::endl;
+    std::cout << (*BlockChain::GetInstance()->GetHead()) << std::endl;
 
-    BlockChainService::Start("127.0.0.1", port);
-    BlockChainServer::GetInstance()->Initialize(port + 1);
-    if(argc > 3){
-        int pport = atoi(argv[3]);
-        BlockChainServer::GetInstance()->ConnectTo("127.0.0.1", pport);
+    std::vector<UnclaimedTransaction*> utxos;
+    if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransactions(utxos)){
+        std::cerr << "Couldn't get unclaimed transactions" << std::endl;
+        return EXIT_FAILURE;
     }
-    BlockChainServer::GetInstance()->Start();
-    BlockChainService::WaitForShutdown();
+    std::cout << "Unclaimed Transactions:" << std::endl;
+    for(auto& it : utxos){
+        std::cout << (*it) << std::endl;
+    }
+
+    Block* nblock = BlockChain::GetInstance()->CreateBlock();
+    Transaction* ntx = nblock->CreateTransaction();
+    ntx->AddInput(utxos[10]->GetTransactionHash(), utxos[10]->GetIndex());
+    ntx->AddOutput("TestUser2", utxos[10]->GetToken());
+
+    if(!BlockChain::GetInstance()->Append(nblock)){
+        std::cerr << "Couldn't append block: " << std::endl;
+        std::cerr << (*nblock) << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransactions(utxos)){
+        std::cerr << "Couldn't get unclaimed transactions" << std::endl;
+        return EXIT_FAILURE;
+    }
+    std::cout << "Unclaimed Transactions:" << std::endl;
+    for(auto& it : utxos){
+        std::cout << (*it) << std::endl;
+    }
     return EXIT_SUCCESS;
-    */
 }

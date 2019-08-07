@@ -81,7 +81,6 @@ namespace Token{
                                                              const Token::Messages::GetUnclaimedTransactionsRequest *request,
                                                              Token::Messages::UnclaimedTransactionsList *response){
         if(request->user().empty()){
-            UnclaimedTransactionPool* utxos = BlockChain::GetInstance()->GetHeadUnclaimedTransactionPool();
             //utxos->ToMessage(response);
         } else{
             /*
