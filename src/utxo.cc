@@ -31,7 +31,6 @@ namespace Token{
         if((rc = sqlite3_prepare_v2(database_, sql.c_str(), -1, &stmt, NULL)) != SQLITE_OK){
             std::cerr << "Couldn't prepare statement: " << err_msg << std::endl;
             pthread_rwlock_unlock(&rwlock_);
-            pthread_rwlock_unlock(&rwlock_);
             return false;
         }
 
@@ -56,6 +55,7 @@ namespace Token{
     }
 
     bool UnclaimedTransactionPool::GetUnclaimedTransactions(const std::string& user, std::vector<UnclaimedTransaction*>& utxos){
+        pthread_rwlock_rdlock(&rwlock_);
         utxos.clear();
         std::string sql = "SELECT UTxHash,TxHash,TxIndex,User,Token FROM UnclaimedTransactions WHERE User=@User;";
         char* err_msg = NULL;
@@ -64,12 +64,14 @@ namespace Token{
         int rc;
         if((rc = sqlite3_prepare_v2(database_, sql.c_str(), -1, &stmt, NULL)) != SQLITE_OK){
             std::cerr << "Couldn't prepare statement: " << err_msg << std::endl;
+            pthread_rwlock_unlock(&rwlock_);
             return false;
         }
 
         int param_idx = sqlite3_bind_parameter_index(stmt, "@User");
         if((rc = sqlite3_bind_text(stmt, param_idx, user.c_str(), -1, SQLITE_TRANSIENT)) != SQLITE_OK){
             std::cerr << "Couldn't bind User" << std::endl;
+            pthread_rwlock_unlock(&rwlock_);
             return false;
         }
 
@@ -83,10 +85,12 @@ namespace Token{
             utxos.push_back(new UnclaimedTransaction(tx_hash, index, u, token));
         }
         sqlite3_finalize(stmt);
+        pthread_rwlock_unlock(&rwlock_);
         return utxos.size() > 0;
     }
 
     bool UnclaimedTransactionPool::GetUnclaimedTransactions(std::vector<UnclaimedTransaction*>& utxos){
+        pthread_rwlock_rdlock(&rwlock_);
         utxos.clear();
         std::string sql = "SELECT UTxHash,TxHash,TxIndex,User,Token FROM UnclaimedTransactions;";
         char* err_msg = NULL;
@@ -95,6 +99,7 @@ namespace Token{
         int rc;
         if((rc = sqlite3_prepare_v2(database_, sql.c_str(), -1, &stmt, NULL)) != SQLITE_OK){
             std::cerr << "Couldn't prepare statement: " << err_msg << std::endl;
+            pthread_rwlock_unlock(&rwlock_);
             return false;
         }
         while((rc = sqlite3_step(stmt)) == SQLITE_ROW){
@@ -106,6 +111,7 @@ namespace Token{
             utxos.push_back(new UnclaimedTransaction(tx_hash, index, user, token));
         }
         sqlite3_finalize(stmt);
+        pthread_rwlock_unlock(&rwlock_);
         return utxos.size() > 0;
     }
 
