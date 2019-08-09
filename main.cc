@@ -64,6 +64,20 @@ int main(int argc, char** argv){
         std::cerr << "Couldn't get unclaimed transactions" << std::endl;
         return EXIT_FAILURE;
     }
+
+    Block* b = BlockChain::GetInstance()->CreateBlock();
+    Transaction* t = b->CreateTransaction();
+    t->AddInput(utxos[1]->GetTransactionHash(), utxos[1]->GetIndex());
+    t->AddOutput(utxos[1]->GetToken(), "TestUser5");
+    if(!BlockChain::GetInstance()->Append(b)){
+        std::cerr << "Couldn't append" << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransactions(utxos)){
+        std::cerr << "Couldn't get unclaimed transactions" << std::endl;
+        return EXIT_FAILURE;
+    }
     std::cout << "All unclaimed transactions:" << std::endl;
     for(auto& it : utxos){
         std::cout << (*it) << std::endl;

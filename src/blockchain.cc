@@ -92,6 +92,13 @@ namespace Token{
         return true;
     }
 
+    Block* BlockChain::GetHead(){
+        pthread_rwlock_rdlock(&rwlock_);
+        Block* head = head_->GetBlock();
+        pthread_rwlock_unlock(&rwlock_);
+        return head;
+    }
+
     bool BlockChain::Append(Token::Block* block){
         pthread_rwlock_wrlock(&rwlock_);
         if(nodes_.find(block->GetHash()) != nodes_.end()){

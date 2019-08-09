@@ -108,11 +108,9 @@ namespace Token{
             return nodes_.find(hash)->second->GetBlock();
         }
 
-        Block* GetHead() const{
-            return head_->GetBlock();
-        }
+        Block* GetHead();
 
-        Block* GetBlockAt(int height) const{
+        Block* GetBlockAt(int height){
             if(height > GetHeight()) return nullptr;
             Block* head = GetHead();
             while(head && head->GetHeight() > height) head = GetBlockFromHash(head->GetPreviousHash());
