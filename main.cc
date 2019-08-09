@@ -23,7 +23,10 @@ int main(int argc, char** argv){
     }
     int port = atoi(argv[2]);
 
-    BlockChain::GetInstance()->Load(path);
+    if(!BlockChain::GetInstance()->Load(path)){
+        std::cerr << "cannot load: " << path << std::endl;
+        return EXIT_FAILURE;
+    }
     std::cout << (*BlockChain::GetInstance()->GetHead()) << std::endl;
 
     std::vector<UnclaimedTransaction*> utxos;
