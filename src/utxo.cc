@@ -246,12 +246,12 @@ namespace Token{
             std::cout << "Unable to remove value:" << sqlite3_errmsg(database_) << std::endl;
             sqlite3_free(stmt);
             pthread_rwlock_unlock(&rwlock_);
-            return true;
+            return false;
         }
         sqlite3_finalize(stmt);
         sqlite3_free(stmt);
         pthread_rwlock_unlock(&rwlock_);
-        return false;
+        return true;
     }
 
     bool UnclaimedTransactionPool::AddUnclaimedTransaction(Token::UnclaimedTransaction* utxo){
