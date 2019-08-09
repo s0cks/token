@@ -140,6 +140,39 @@ namespace Token{
         return true;
     }
 
+    bool UnclaimedTransactionPool::GetUnclaimedTransaction(const std::string& hash, UnclaimedTransaction** result){
+        pthread_rwlock_rdlock(&rwlock_);
+        std::string sql = "SELECT UTxHash,TxHash,TxIndex,User,Token FROM UnclaimedTransactions WHERE UTxHash=@UTxHash;";
+        char* err_msg = NULL;
+
+        sqlite3_stmt* stmt;
+        int rc;
+        if((rc = sqlite3_prepare_v2(database_, sql.c_str(), -1, &stmt, NULL)) != SQLITE_OK){
+            std::cout << "Couldn't prepare statement: " << err_msg << std::endl;
+            pthread_rwlock_unlock(&rwlock_);
+            return false;
+        }
+        int param_idx = sqlite3_bind_parameter_index(stmt, "@UTxIndex");
+        if((rc = sqlite3_bind_text(stmt, param_idx, hash.c_str(), -1, SQLITE_TRANSIENT)) != SQLITE_OK){
+            std::cout << "Couldn't bind TxIndex" << std::endl;
+            pthread_rwlock_unlock(&rwlock_);
+            return false;
+        }
+        while((rc = sqlite3_step(stmt)) == SQLITE_ROW){
+            std::string utx_hash = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
+            std::string tx_hash = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
+            int index = sqlite3_column_int(stmt, 2);
+            std::string user = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3)));
+            std::string token = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4)));
+            *result = new UnclaimedTransaction(tx_hash, index, user, token);
+            pthread_rwlock_unlock(&rwlock_);
+            return true;
+        }
+        sqlite3_finalize(stmt);
+        pthread_rwlock_unlock(&rwlock_);
+        return false;
+    }
+
     bool UnclaimedTransactionPool::GetUnclaimedTransaction(const std::string& tx_hash, int index, UnclaimedTransaction** result){
         pthread_rwlock_rdlock(&rwlock_);
         std::string sql = "SELECT UTxHash,TxHash,TxIndex,User,Token FROM UnclaimedTransactions WHERE TxHash=@TxHash AND TxIndex=@TxIndex;";
