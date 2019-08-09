@@ -214,34 +214,44 @@ namespace Token{
     }
 
     bool UnclaimedTransactionPool::RemoveUnclaimedTransaction(Token::UnclaimedTransaction* utxo){
+        pthread_rwlock_wrlock(&rwlock_);
         std::string sql = "DELETE FROM UnclaimedTransactions WHERE TxHash=@TxHash AND TxIndex=@TxIndex;";
 
         sqlite3_stmt* stmt;
         int rc;
         if((rc = sqlite3_prepare_v2(database_, sql.c_str(), -1, &stmt, NULL)) != SQLITE_OK){
-            std::cerr << "Couldn't prepare statement: " << sqlite3_errmsg(database_) << std::endl;
+            std::cout << "Couldn't prepare statement: " << sqlite3_errmsg(database_) << std::endl;
+            sqlite3_free(stmt);
+            pthread_rwlock_unlock(&rwlock_);
             return false;
         }
 
         int param_idx = sqlite3_bind_parameter_index(stmt, "@TxHash");
         if((rc = sqlite3_bind_text(stmt, param_idx, utxo->GetTransactionHash().c_str(), -1, SQLITE_TRANSIENT)) != SQLITE_OK){
-            std::cerr << "Couldn't bind TxHash" << std::endl;
+            std::cout << "Couldn't bind TxHash" << std::endl;
+            sqlite3_free(stmt);
+            pthread_rwlock_unlock(&rwlock_);
             return false;
         }
 
         param_idx = sqlite3_bind_parameter_index(stmt, "@TxIndex");
         if((rc = sqlite3_bind_int(stmt, param_idx, utxo->GetIndex())) != SQLITE_OK){
-            std::cerr << "Couldn't bind TxIndex" << std::endl;
+            std::cout << "Couldn't bind TxIndex" << std::endl;
+            sqlite3_free(stmt);
+            pthread_rwlock_unlock(&rwlock_);
             return false;
         }
 
         if((rc = sqlite3_step(stmt)) != SQLITE_DONE){
-            std::cerr << "Unable to remove value:" << sqlite3_errmsg(database_) << std::endl;
+            std::cout << "Unable to remove value:" << sqlite3_errmsg(database_) << std::endl;
             sqlite3_free(stmt);
+            pthread_rwlock_unlock(&rwlock_);
             return false;
         }
         sqlite3_finalize(stmt);
-        return true;
+        sqlite3_free(stmt);
+        pthread_rwlock_unlock(&rwlock_);
+        return false;
     }
 
     bool UnclaimedTransactionPool::AddUnclaimedTransaction(Token::UnclaimedTransaction* utxo){
