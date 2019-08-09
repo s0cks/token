@@ -9,17 +9,15 @@ namespace Token{
         BlockChainNode* node = new BlockChainNode(nullptr, genesis);
         std::string hash = cb->GetHash();
         for(int i = 0; i < cb->GetNumberOfOutputs(); i++){
-            std::cout << "Appending: " << cb->GetHash() << "[" << i << "]" << std::endl;
             UnclaimedTransaction utxo(cb->GetHash(), i, cb->GetOutputAt(i));
             if(!UnclaimedTransactionPool::GetInstance()->AddUnclaimedTransaction(&utxo)){
                 std::cerr << "Cannot append unclaimed transaction" << std::endl;
             }
         }
-        std::cout << "Setting genesis: " << genesis->GetHash() << std::endl;
         heads_->Add(node);
         nodes_.insert({ genesis->GetHash(), node });
-        height_ = 1;
         head_ = node;
+        GetState()->SetHeight(genesis->GetHeight());
         return true;
     }
 
@@ -37,94 +35,75 @@ namespace Token{
 
     bool BlockChain::Initialize(const std::string &path, Token::Block *genesis){
         BlockChain* instance = BlockChain::GetInstance();
-        instance->SetRoot(path);
-        UnclaimedTransactionPool::LoadUnclaimedTransactionPool(instance->GetUnclaimedTransactionDatabase());
-        instance->SetHead(genesis);
+        instance->SetState(new BlockChainState(path));
+        if(!UnclaimedTransactionPool::LoadUnclaimedTransactionPool(instance->GetState()->GetUnclaimedTransactionPoolFile())){
+            std::cerr << "Cannot load unclaimed transaction pool" << std::endl;
+            return false;
+        }
+
+        if(!instance->AppendGenesis(genesis)){
+            std::cerr << "Cannot set head" << std::endl;
+            return false;
+        }
         return instance->Save();
     }
 
     bool
-    BlockChain::Load(const std::string& root, const std::string& addr, int port){
-        Load(root);
-        std::cout << "Fetching head from " << addr << ":" << port << std::endl;
-        return true;
-    }
-
-    bool
     BlockChain::Load(const std::string& root){
-        Block* genesis = nullptr;
-        SetRoot(root);
-        UnclaimedTransactionPool::LoadUnclaimedTransactionPool(GetUnclaimedTransactionDatabase());
-
-        std::string gen_filename = GetLedgerFile("blk0.dat");
-        if(FileExists(gen_filename)){
-            genesis = Block::Load(gen_filename);
-            AppendGenesis(genesis);
-        } else{
-            genesis = new Block(true);
-            Transaction* tx = genesis->CreateTransaction();
-            for(int idx = 0; idx < 128; idx++){
-                std::stringstream tk_name;
-                tk_name << "TestToken" << idx;
-                tx->AddOutput(tk_name.str(), "TestUser");
+        if(BlockChainState::CanLoadStateFrom(root)){
+            SetState(BlockChainState::LoadState(root));
+            if(!UnclaimedTransactionPool::LoadUnclaimedTransactionPool(GetState()->GetUnclaimedTransactionPoolFile())){
+                std::cerr << "Cannot load unclaimed transaction pool" << std::endl;
+                return false;
             }
-            AppendGenesis(genesis);
-            return false;
-        }
-        for(int idx = 1; idx < 1000; idx++){
-            std::stringstream blk_filename;
-            blk_filename << "blk" << idx << ".dat";
-            if(FileExists(GetLedgerFile(blk_filename.str()))){
-                Append(Block::Load(blk_filename.str()));
-            } else{
-                break;
+
+            int height = GetHeight();
+            for(int i = 0; i <= height; i++){
+                std::string blk_filename = GetBlockDataFile(i);
+                if(!FileExists(blk_filename)){
+                    std::cerr << "Cannot load block " << i << std::endl;
+                    return false;
+                }
+                std::cout << "Loading block: " << blk_filename << std::endl;
+                Block* nblock = Block::Load(blk_filename);
+                if(!Append(nblock)){
+                    std::cerr << "Cannot append block" << std::endl;
+                    return false;
+                }
             }
+            return true;
         }
-        return true;
-    }
-
-    static inline std::string
-    GetBlockFilename(const std::string& root, int idx) {
-        std::stringstream ss;
-        ss << root;
-        ss << "/blk" << idx << ".dat";
-        return ss.str();
-    }
-
-    bool
-    BlockChain::Save(const std::string& root){
-        std::cout << "Saving BlockChain to" << root << "...." << std::endl;
-        for(int idx = 0; idx <= GetHeight(); idx++){
-            Block* blk = GetBlockAt(idx);
-            blk->Write(GetBlockFilename(root, idx));
+        Block* genesis = new Block(true);
+        Transaction* cbtx = genesis->CreateTransaction();
+        for(int i = 0; i < 128; i++){
+            std::stringstream stream;
+            stream << "Token" << i;
+            cbtx->AddOutput(stream.str(), "TestUser");
         }
-        return true;
+        return Initialize(root, genesis);
     }
 
     bool
     BlockChain::Save(){
-        if(!HasRoot()){
-            return false;
+        GetState()->SaveState();
+        for(int idx = 0; idx <= GetHeight(); idx++){
+            GetBlockAt(idx)->Write(GetBlockDataFile(idx));
         }
-        return Save(GetRootFileSystem());
+        return true;
     }
 
     bool BlockChain::Append(Token::Block* block){
-        std::cout << "Finding duplicates" << std::endl;
         if(nodes_.find(block->GetHash()) != nodes_.end()){
             std::cout << "Duplicate block found" << std::endl;
             return false;
         }
-        std::cout << "Checking height" << std::endl;
         if(block->GetHeight() == 0) return AppendGenesis(block);
-        std::cout << "Finding parent" << std::endl;
         auto parent_node = nodes_.find(block->GetPreviousHash());
         if(parent_node == nodes_.end()){
             std::cout << "Cannot find parent" << std::endl;
             return false;
         }
         BlockChainNode* parent = GetBlockParent(block);
-        std::cout << "Getting parent's UTXOs" << std::endl;
 
         BlockValidator validator;
         block->Accept(&validator);
@@ -135,20 +114,12 @@ namespace Token{
             return false;
         }
 
-        std::cout << "Processing transactions" << std::endl;
-        Transaction* cb = block->GetCoinbaseTransaction();
-        std::cout << "Creating CB UTXO" << std::endl;
-        //utxo_pool->Insert(cb->GetHash(), 0, cb->GetOutputAt(0));
-        std::cout << "Creating BlockNode" << std::endl;
         BlockChainNode* current = new BlockChainNode(parent, block);
-        std::cout << "Inserting BlockNode" << std::endl;
         nodes_.insert(std::make_pair(block->GetHash(), current));
-        std::cout << "Checking Height" << std::endl;
         if(current->GetHeight() > GetHeight()) {
-            height_ = current->GetHeight();
+            GetState()->SetHeight(current->GetHeight());
             head_ = current;
         }
-        std::cout << "Checking heights" << std::endl;
         if(GetHeight() - (*heads_)[0]->GetHeight() > 0xA){
             Array<BlockChainNode*>* newHeads = new Array<BlockChainNode*>(0xA);
             for(size_t i = 0; i < heads_->Length(); i++){
@@ -162,7 +133,6 @@ namespace Token{
             }
             heads_ = newHeads;
         }
-        std::cout << "Done" << std::endl;
         return true;
     }
 

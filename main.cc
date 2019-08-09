@@ -23,24 +23,7 @@ int main(int argc, char** argv){
     }
     int port = atoi(argv[2]);
 
-    std::stringstream genblk;
-    genblk << path << "/blk0.dat";
-    if(!FileExists(genblk.str())){
-        Block* nblock = new Block(true);
-        Transaction* ntx = nblock->CreateTransaction();
-        for(int i = 0; i < 128; i++){
-            std::stringstream tk_name;
-            tk_name << "Token" << i;
-            ntx->AddOutput(tk_name.str(), "TestUser");
-        }
-        if(!BlockChain::Initialize(path, nblock)){
-            std::cerr << "Cannot initialize block chain @ " << path << std::endl;
-            return EXIT_FAILURE;
-        }
-    } else{
-        BlockChain::GetInstance()->Load(path);
-    }
-
+    BlockChain::GetInstance()->Load(path);
     std::cout << (*BlockChain::GetInstance()->GetHead()) << std::endl;
 
     std::vector<UnclaimedTransaction*> utxos;
@@ -69,11 +52,21 @@ int main(int argc, char** argv){
         std::cerr << "Couldn't get unclaimed transactions" << std::endl;
         return EXIT_FAILURE;
     }
-    std::cout << "Unclaimed Transactions:" << std::endl;
+    std::cout << "Unclaimed Transactions for TestUser2:" << std::endl;
     for(auto& it : utxos){
         std::cout << (*it) << std::endl;
     }
-    BlockChainService::GetInstance()->Start("127.0.0.1", port);
-    BlockChainService::GetInstance()->WaitForShutdown();
+
+    if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransactions(utxos)){
+        std::cerr << "Couldn't get unclaimed transactions" << std::endl;
+        return EXIT_FAILURE;
+    }
+    std::cout << "All unclaimed transactions:" << std::endl;
+    for(auto& it : utxos){
+        std::cout << (*it) << std::endl;
+    }
+
+    // BlockChainService::GetInstance()->Start("127.0.0.1", port);
+    // BlockChainService::GetInstance()->WaitForShutdown();
     return EXIT_SUCCESS;
 }

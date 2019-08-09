@@ -200,6 +200,8 @@ namespace Token{
     }
 
     bool UnclaimedTransactionPool::AddUnclaimedTransaction(Token::UnclaimedTransaction* utxo){
+        std::cout << "Appending UnclaimedTransaction: " << utxo->GetHash() << std::endl;
+        std::cout << "\t" << (*utxo) << std::endl;
         pthread_rwlock_wrlock(&rwlock_);
         std::string sql = "INSERT OR IGNORE INTO UnclaimedTransactions (UTxHash, TxHash, TxIndex, User, Token) VALUES (@UTxHash, @TxHash, @TxIndex, @User, @Token);";
 
@@ -257,8 +259,32 @@ namespace Token{
         return true;
     }
 
+    bool UnclaimedTransactionPool::ClearUnclaimedTransactions(){
+        pthread_rwlock_wrlock(&rwlock_);
+        std::string sql = "DELETE FROM UnclaimedTransactions;";
+
+        sqlite3_stmt* stmt;
+        int rc;
+        if((rc = sqlite3_prepare_v2(database_, sql.c_str(), -1, &stmt, NULL)) != SQLITE_OK) {
+            std::cerr << "Couldn't prepare statement: " << sqlite3_errmsg(database_) << std::endl;
+            pthread_rwlock_unlock(&rwlock_);
+            return false;
+        }
+
+        if((rc = sqlite3_step(stmt)) != SQLITE_DONE){
+            std::cerr << "Unable to clear unclaimed transactions" << sqlite3_errmsg(database_) << std::endl;
+            sqlite3_free(stmt);
+            pthread_rwlock_unlock(&rwlock_);
+            return false;
+        }
+        sqlite3_finalize(stmt);
+        pthread_rwlock_unlock(&rwlock_);
+        return true;
+    }
+
     bool UnclaimedTransactionPool::LoadUnclaimedTransactionPool(const std::string &filename) {
         UnclaimedTransactionPool *instance = GetInstance();
+        std::cout << "Loading utxo pool: " << filename << std::endl;
         int rc;
         if ((rc = sqlite3_open(filename.c_str(), &instance->database_)) != SQLITE_OK) {
             std::cerr << "Unable to open UnclaimedTransactionPool @" << filename << std::endl;
@@ -283,9 +309,12 @@ namespace Token{
     }
 
     void UnclaimedTransaction::Encode(Token::ByteBuffer *bb) const{
-        uint32_t size = static_cast<uint32_t>(GetRaw()->ByteSizeLong());
+        Messages::UnclaimedTransaction utxo;
+        utxo.set_tx_hash(GetTransactionHash());
+        utxo.set_index(GetIndex());
+        uint32_t size = static_cast<uint32_t>(utxo.ByteSizeLong());
         bb->Resize(size);
-        GetRaw()->SerializeToArray(bb->GetBytes(), size);
+        utxo.SerializeToArray(bb->GetBytes(), size);
     }
 
     std::string UnclaimedTransaction::GetHash() const{

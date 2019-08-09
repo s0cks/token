@@ -111,6 +111,7 @@ namespace Token{
         bool GetUnclaimedTransaction(const std::string& tx_hash, int index, UnclaimedTransaction* result);
         bool RemoveUnclaimedTransaction(UnclaimedTransaction* utxo);
         bool AddUnclaimedTransaction(UnclaimedTransaction* utxo);
+        bool ClearUnclaimedTransactions();
 
         static UnclaimedTransactionPool* GetInstance();
         static bool LoadUnclaimedTransactionPool(const std::string& filename);

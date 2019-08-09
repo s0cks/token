@@ -11,10 +11,12 @@ find_package(Crypto++ REQUIRED)
 find_package(Threads)
 find_package(Libuv REQUIRED)
 find_package(SQLite3 REQUIRED)
+find_package(RapidJSON REQUIRED)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${LIBUV_INCLUDE_DIRS})
 include_directories(${SQLite3_INCLUDE_DIRS})
+include_directories(${RapidJSON_INCLUDE_DIRS})
 include_directories(include)
 include_directories(src)
 

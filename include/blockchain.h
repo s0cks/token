@@ -5,6 +5,7 @@
 #include "common.h"
 #include "array.h"
 #include "bytes.h"
+#include "blockchain_state.h"
 #include "block.h"
 #include "user.h"
 #include "utxo.h"
@@ -50,12 +51,11 @@ namespace Token{
 
     class BlockChain{
     private:
+        BlockChainState* state_;
         Array<BlockChainNode*>* heads_;
         BlockChainNode* head_;
         std::map<std::string, BlockChainNode*> nodes_;
-        unsigned int height_;
         TransactionPool tx_pool_;
-        std::string root_;
 
         bool AppendGenesis(Block* block);
 
@@ -67,31 +67,32 @@ namespace Token{
             return found->second;
         }
 
+        inline bool
+        HasState(){
+            return state_ != nullptr;
+        }
+
+        inline void
+        SetState(BlockChainState* state){
+            if(HasState()) return;
+            state_ = state;
+        }
+
+        inline BlockChainState*
+        GetState() const{
+            return state_;
+        }
+
         inline std::string
-        GetLedgerRoot(){
-            std::stringstream stream;
-            stream << GetRootFileSystem() << "/ledger";
-            return stream.str();
-        }
-
-        std::string GetLedgerFile(const std::string& filename){
-            std::stringstream stream;
-            stream << GetLedgerRoot() << filename;
-            return stream.str();
-        }
-
-        std::string GetUnclaimedTransactionDatabase(){
-            std::stringstream stream;
-            stream << GetRootFileSystem() << "/unclaimed.db";
-            return stream.str();
+        GetBlockDataFile(int idx){
+            return GetState()->GetBlockFile(idx);
         }
 
         BlockChain():
+            state_(nullptr),
             heads_(new Array<BlockChainNode*>(0xA)),
-            root_(),
             tx_pool_(),
-            nodes_(),
-            height_(0){}
+            nodes_(){}
     public:
         class Server;
 
@@ -114,8 +115,8 @@ namespace Token{
             return head;
         }
 
-        unsigned int GetHeight() const{
-            return GetHead()->GetHeight();
+        int GetHeight() const{
+            return GetState()->GetHeight();
         }
 
         TransactionPool* GetTransactionPool(){
@@ -126,31 +127,13 @@ namespace Token{
             return GetTransactionPool()->AddTransaction(tx);
         }
 
-        //TODO: Remove this
-        void SetHead(Block* block){
-            nodes_.clear();
-            heads_->Clear();
-            height_ = 0;
-            AppendGenesis(block);
-        }
-
-        void SetRoot(const std::string& root){
-            root_ = root;
-        }
-
-        std::string GetRootFileSystem(){
-            return root_;
-        }
-
-        bool HasRoot(){
-            return !GetRootFileSystem().empty();
+        bool HasHead() const{
+            return head_ != nullptr;
         }
 
         Block* CreateBlock();
         bool Append(Block* block);
         bool Load(const std::string& root);
-        bool Load(const std::string& root, const std::string& addr, int port);
-        bool Save(const std::string& root);
         bool Save();
     };
 }
