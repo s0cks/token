@@ -152,7 +152,7 @@ namespace Token{
             pthread_rwlock_unlock(&rwlock_);
             return false;
         }
-        int param_idx = sqlite3_bind_parameter_index(stmt, "@UTxIndex");
+        int param_idx = sqlite3_bind_parameter_index(stmt, "@UTxHash");
         if((rc = sqlite3_bind_text(stmt, param_idx, hash.c_str(), -1, SQLITE_TRANSIENT)) != SQLITE_OK){
             std::cout << "Couldn't bind TxIndex" << std::endl;
             pthread_rwlock_unlock(&rwlock_);
