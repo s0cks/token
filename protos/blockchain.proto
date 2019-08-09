@@ -30,3 +30,18 @@ message UnclaimedTransaction{
     string user = 4;
     string token = 5;
 }
+
+message UnclaimedTransactionList{
+    repeated UnclaimedTransaction transactions = 1;
+}
+
+message BlockHeader{
+    uint32 height = 1;
+    string hash = 2;
+    string previous_hash = 3;
+    string merkle_root = 4;
+}
+
+message TransactionList{
+    repeated string transactions = 1;
+}

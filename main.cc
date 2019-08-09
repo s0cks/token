@@ -1,8 +1,6 @@
 #include <sstream>
 #include <string>
 #include "blockchain.h"
-#include "service/service.h"
-#include "node/node.h"
 
 static inline bool
 FileExists(const std::string& name){

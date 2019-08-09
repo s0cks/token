@@ -1,40 +1,13 @@
 syntax="proto3";
+package Token.Service;
+
+import "messages.proto";
 import "blockchain.proto";
-package Token.Messages; // TODO: Fixme
 
-message EmptyRequest{}
-message EmptyResponse{}
-
-message GetBlockRequest{
-    uint32 index = 1;
-    string hash = 2;
-}
-
-message BlockHeader{
-    string previous_hash = 1;
-    string hash = 2;
-    string merkle_root = 3;
-    uint32 height = 4;
-}
-
-message BlockData{
-    BlockHeader header = 1;
-    repeated Transaction transactions = 2;
-}
-
-message UnclaimedTransactionsList{
-    repeated UnclaimedTransaction transactions = 1;
-}
-
-message GetUnclaimedTransactionsRequest{
-    string user = 1;
-}
-
-service TokenService {
-    rpc GetHead (EmptyRequest) returns (BlockHeader){}
-    rpc GetBlock (GetBlockRequest) returns (BlockHeader) {}
-    rpc GetBlockData (GetBlockRequest) returns (BlockData){}
-    rpc GetUnclaimedTransactions (GetUnclaimedTransactionsRequest) returns (UnclaimedTransactionsList){}
-    rpc AppendBlock (Block) returns (BlockHeader){}
-    rpc Save (EmptyRequest) returns (EmptyResponse) {}
+service BlockChainService{
+    rpc GetHead (EmptyRequest) returns (Token.Messages.BlockHeader) {}
+    rpc GetBlock (GetBlockRequest) returns (Token.Messages.BlockHeader) {}
+    rpc GetTransactions (GetTransactionsRequest) returns (Token.Messages.TransactionList) {}
+    rpc GetUnclaimedTransactions (GetUnclaimedTransactionsRequest) returns (Token.Messages.UnclaimedTransactionList);
+    rpc AppendBlock (Token.Messages.Block) returns (Token.Messages.BlockHeader){}
 }

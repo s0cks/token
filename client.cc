@@ -1,5 +1,6 @@
 #include "blockchain.h"
-#include "service/client.h"
+
+/*#include "service/client.h"
 
 static inline void
 PrintBlock(Token::Messages::BlockHeader* block){
@@ -151,4 +152,9 @@ int main(int argc, char** argv){
             std::cout << "Shutting down" << std::endl;
         }
     } while(true);
+}
+ */
+
+int main(int argc, char** argv){
+    return EXIT_SUCCESS;
 }
