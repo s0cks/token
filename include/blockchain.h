@@ -56,6 +56,7 @@ namespace Token{
         BlockChainNode* head_;
         std::map<std::string, BlockChainNode*> nodes_;
         TransactionPool tx_pool_;
+        pthread_rwlock_t rwlock_;
 
         bool AppendGenesis(Block* block);
 
@@ -89,10 +90,13 @@ namespace Token{
         }
 
         BlockChain():
+            rwlock_(),
             state_(nullptr),
             heads_(new Array<BlockChainNode*>(0xA)),
             tx_pool_(),
-            nodes_(){}
+            nodes_(){
+            pthread_rwlock_init(&rwlock_, NULL);
+        }
     public:
         class Server;
 

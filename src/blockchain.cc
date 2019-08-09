@@ -93,14 +93,17 @@ namespace Token{
     }
 
     bool BlockChain::Append(Token::Block* block){
+        pthread_rwlock_wrlock(&rwlock_);
         if(nodes_.find(block->GetHash()) != nodes_.end()){
             std::cout << "Duplicate block found" << std::endl;
+            pthread_rwlock_unlock(&rwlock_);
             return false;
         }
         if(block->GetHeight() == 0) return AppendGenesis(block);
         auto parent_node = nodes_.find(block->GetPreviousHash());
         if(parent_node == nodes_.end()){
             std::cout << "Cannot find parent" << std::endl;
+            pthread_rwlock_unlock(&rwlock_);
             return false;
         }
         BlockChainNode* parent = GetBlockParent(block);
@@ -111,6 +114,7 @@ namespace Token{
         std::vector<Transaction*> invalid = validator.GetInvalidTransactions();
         if(valid.size() != block->GetNumberOfTransactions()){
             std::cerr << "Not all transactions valid" << std::endl;
+            pthread_rwlock_unlock(&rwlock_);
             return false;
         }
 
@@ -133,6 +137,7 @@ namespace Token{
             }
             heads_ = newHeads;
         }
+        pthread_rwlock_unlock(&rwlock_);
         return true;
     }
 
