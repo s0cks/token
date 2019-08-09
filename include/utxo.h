@@ -108,7 +108,7 @@ namespace Token{
         bool GetUnclaimedTransactions(std::vector<UnclaimedTransaction*>& utxos);
         bool GetUnclaimedTransactions(const std::string& user, Messages::UnclaimedTransactionsList* utxos);
         bool GetUnclaimedTransactions(Messages::UnclaimedTransactionsList* utxos);
-        bool GetUnclaimedTransaction(const std::string& tx_hash, int index, UnclaimedTransaction* result);
+        bool GetUnclaimedTransaction(const std::string& tx_hash, int index, UnclaimedTransaction** result);
         bool RemoveUnclaimedTransaction(UnclaimedTransaction* utxo);
         bool AddUnclaimedTransaction(UnclaimedTransaction* utxo);
         bool ClearUnclaimedTransactions();

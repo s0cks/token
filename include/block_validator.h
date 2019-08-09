@@ -24,7 +24,7 @@ namespace Token{
             int i;
             for(i = 0; i < tx->GetNumberOfInputs(); i++){
                 Input* in = tx->GetInputAt(i);
-                UnclaimedTransaction ut;
+                UnclaimedTransaction* ut;
                 if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransaction(in->GetPreviousHash(), in->GetIndex(), &ut)){
                     std::cerr << "No unclaimed transaction for: " << in->GetPreviousHash();
                     return false;
