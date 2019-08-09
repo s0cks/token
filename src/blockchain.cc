@@ -57,21 +57,19 @@ namespace Token{
                 return false;
             }
 
-            int height = GetHeight();
-            for(int i = 0; i <= height; i++){
-                std::string blk_filename = GetBlockDataFile(i);
-                if(!FileExists(blk_filename)){
-                    std::cout << "Cannot load block " << i << std::endl;
-                    return false;
-                }
-                std::cout << "Loading block: " << blk_filename << std::endl;
-                Block* nblock = Block::Load(blk_filename);
-                if(!Append(nblock)){
-                    std::cout << "Cannot append block" << std::endl;
-                    return false;
-                }
+            int height = GetHeight() - 1;
+            std::string blk_filename = GetBlockDataFile(height);
+            if(!FileExists(blk_filename)){
+                std::cout << "Cannot load block: " << height << std::endl;
+                return false;
             }
-            return true;
+            std::cout << "Loading block " << height << " from " << blk_filename << std::endl;
+            Block* nblock = Block::Load(blk_filename);
+            if(!AppendGenesis(nblock)){
+                std::cout << "Cannot append block" << std::endl;
+                return false;
+            }
+            return Save();
         }
         Block* genesis = new Block(true);
         Transaction* cbtx = genesis->CreateTransaction();
@@ -86,8 +84,10 @@ namespace Token{
     bool
     BlockChain::Save(){
         GetState()->SaveState();
-        for(int idx = 0; idx <= GetHeight(); idx++){
-            GetBlockAt(idx)->Write(GetBlockDataFile(idx));
+        BlockChainNode* current = head_;
+        while(current){
+            current->GetBlock()->Write(GetBlockDataFile(current->GetHeight()));
+            current = current->parent_;
         }
         return true;
     }
@@ -120,7 +120,7 @@ namespace Token{
         std::vector<Transaction*> valid = validator.GetValidTransactions();
         std::vector<Transaction*> invalid = validator.GetInvalidTransactions();
         if(valid.size() != block->GetNumberOfTransactions()){
-            std::cerr << "Not all transactions valid" << std::endl;
+            std::cout << "Not all transactions valid" << std::endl;
             pthread_rwlock_unlock(&rwlock_);
             return false;
         }

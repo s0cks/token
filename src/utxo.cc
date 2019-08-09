@@ -255,8 +255,6 @@ namespace Token{
     }
 
     bool UnclaimedTransactionPool::AddUnclaimedTransaction(Token::UnclaimedTransaction* utxo){
-        std::cout << "Appending UnclaimedTransaction: " << utxo->GetHash() << std::endl;
-        std::cout << "\t" << (*utxo) << std::endl;
         pthread_rwlock_wrlock(&rwlock_);
         std::string sql = "INSERT OR IGNORE INTO UnclaimedTransactions (UTxHash, TxHash, TxIndex, User, Token) VALUES (@UTxHash, @TxHash, @TxIndex, @User, @Token);";
 

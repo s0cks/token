@@ -13,7 +13,7 @@ namespace Token{
         unsigned int height_;
 
         BlockChainState(const std::string& root):
-            height_(-1),
+            height_(0),
             doc_(rapidjson::kObjectType),
             root_(root){}
 

@@ -46,6 +46,7 @@ namespace Token{
                 for(i = 0; i < tx->GetNumberOfInputs(); i++){
                     Input* in = tx->GetInputAt(i);
                     UnclaimedTransaction utxo(in->GetPreviousHash(), in->GetIndex());
+                    std::cout << "removing " << (utxo) << std::endl;
                     if(!UnclaimedTransactionPool::GetInstance()->RemoveUnclaimedTransaction(&utxo)){
                         std::cerr << "Cannot remove unclaimed transaction" << std::endl;
                     }
