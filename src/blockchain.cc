@@ -37,12 +37,12 @@ namespace Token{
         BlockChain* instance = BlockChain::GetInstance();
         instance->SetState(new BlockChainState(path));
         if(!UnclaimedTransactionPool::LoadUnclaimedTransactionPool(instance->GetState()->GetUnclaimedTransactionPoolFile())){
-            std::cerr << "Cannot load unclaimed transaction pool" << std::endl;
+            std::cout << "Cannot load unclaimed transaction pool" << std::endl;
             return false;
         }
 
         if(!instance->AppendGenesis(genesis)){
-            std::cerr << "Cannot set head" << std::endl;
+            std::cout << "Cannot set head" << std::endl;
             return false;
         }
         return instance->Save();
@@ -53,7 +53,7 @@ namespace Token{
         if(BlockChainState::CanLoadStateFrom(root)){
             SetState(BlockChainState::LoadState(root));
             if(!UnclaimedTransactionPool::LoadUnclaimedTransactionPool(GetState()->GetUnclaimedTransactionPoolFile())){
-                std::cerr << "Cannot load unclaimed transaction pool" << std::endl;
+                std::cout << "Cannot load unclaimed transaction pool" << std::endl;
                 return false;
             }
 
@@ -61,13 +61,13 @@ namespace Token{
             for(int i = 0; i <= height; i++){
                 std::string blk_filename = GetBlockDataFile(i);
                 if(!FileExists(blk_filename)){
-                    std::cerr << "Cannot load block " << i << std::endl;
+                    std::cout << "Cannot load block " << i << std::endl;
                     return false;
                 }
                 std::cout << "Loading block: " << blk_filename << std::endl;
                 Block* nblock = Block::Load(blk_filename);
                 if(!Append(nblock)){
-                    std::cerr << "Cannot append block" << std::endl;
+                    std::cout << "Cannot append block" << std::endl;
                     return false;
                 }
             }
