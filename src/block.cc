@@ -30,9 +30,10 @@ namespace Token{
     std::string Block::GetHash(){
         CryptoPP::SHA256 func;
         std::string digest;
-        ByteBuffer bb;
-        Encode(&bb);
-        CryptoPP::ArraySource source(bb.GetBytes(), bb.Size(), true, new CryptoPP::HashFilter(func, new CryptoPP::HexEncoder(new CryptoPP::StringSink(digest))));
+        size_t size = GetRaw()->ByteSizeLong();
+        uint8_t bytes[size];
+        GetRaw()->SerializeToArray(bytes, size);
+        CryptoPP::ArraySource source(bytes, size, true, new CryptoPP::HashFilter(func, new CryptoPP::HexEncoder(new CryptoPP::StringSink(digest))));
         return digest;
     }
 
@@ -41,5 +42,11 @@ namespace Token{
         for(size_t i = 0; i < GetNumberOfTransactions(); i++) items.push_back(GetTransactionAt(i));
         MerkleTree mktree(items);
         return mktree.GetMerkleRoot();
+    }
+
+    Token::Messages::Block* Block::GetAsMessage(){
+        Token::Messages::Block* msg = new Token::Messages::Block();
+        msg->CopyFrom(*raw_);
+        return msg;
     }
 }

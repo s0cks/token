@@ -33,6 +33,43 @@ namespace Token{
         return &instance;
     }
 
+    BlockChainServer*
+    BlockChain::GetServerInstance(){
+        static BlockChainServer instance;
+        return &instance;
+    }
+
+    static void*
+    BlockChainServerThread(void* data){
+        char* result = (char*) malloc(sizeof(char*) * 128);
+        BlockChainServer* server = (BlockChainServer*) data;
+        int rc;
+        if((rc = server->Start()) < 0){
+            strcpy(result, uv_strerror(rc));
+        }
+        pthread_exit(result);
+    }
+
+    void BlockChain::StartServer(int port){
+        if(BlockChain::GetServerInstance()->IsRunning()) return;
+        BlockChain::GetServerInstance()->SetPort(port);
+        pthread_create(&server_thread_, NULL, &BlockChainServerThread, BlockChain::GetServerInstance());
+    }
+
+    void BlockChain::StopServer(){
+        BlockChain::GetServerInstance()->Shutdown();
+        WaitForServerShutdown();
+    }
+
+    void BlockChain::WaitForServerShutdown(){
+        void* result;
+        if(pthread_join(server_thread_, &result) != 0){
+            std::cerr << "Unable to join server thread" << std::endl;
+            return;
+        }
+        printf("Server shutdown with: %s\n", result);
+    }
+
     bool BlockChain::Initialize(const std::string &path, Token::Block *genesis){
         BlockChain* instance = BlockChain::GetInstance();
         instance->SetState(new BlockChainState(path));
@@ -57,7 +94,7 @@ namespace Token{
                 return false;
             }
 
-            int height = GetHeight() - 1;
+            int height = GetHeight();
             std::string blk_filename = GetBlockDataFile(height);
             if(!FileExists(blk_filename)){
                 std::cout << "Cannot load block: " << height << std::endl;
@@ -144,6 +181,9 @@ namespace Token{
             }
             heads_ = newHeads;
         }
+        Save();
+        Message m(Message::Type::kBlockMessage, block->GetAsMessage());
+        BlockChain::GetServerInstance()->Broadcast(nullptr, &m);
         pthread_rwlock_unlock(&rwlock_);
         return true;
     }

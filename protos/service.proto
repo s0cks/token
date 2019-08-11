@@ -5,9 +5,9 @@ import "messages.proto";
 import "blockchain.proto";
 
 service BlockChainService{
-    rpc GetHead (EmptyRequest) returns (Token.Messages.BlockHeader) {}
-    rpc GetBlock (GetBlockRequest) returns (Token.Messages.BlockHeader) {}
-    rpc GetTransactions (GetTransactionsRequest) returns (Token.Messages.TransactionList) {}
-    rpc GetUnclaimedTransactions (GetUnclaimedTransactionsRequest) returns (Token.Messages.UnclaimedTransactionList);
+    rpc GetHead (Messages.EmptyRequest) returns (Token.Messages.BlockHeader) {}
+    rpc GetBlock (Messages.GetBlockRequest) returns (Token.Messages.BlockHeader) {}
+    rpc GetTransactions (Messages.GetTransactionsRequest) returns (Token.Messages.TransactionList) {}
+    rpc GetUnclaimedTransactions (Messages.GetUnclaimedTransactionsRequest) returns (Token.Messages.UnclaimedTransactionList);
     rpc AppendBlock (Token.Messages.Block) returns (Token.Messages.BlockHeader){}
 }

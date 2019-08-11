@@ -1,5 +1,7 @@
 #include <sstream>
 #include <string>
+#include <zconf.h>
+#include <service/service.h>
 #include "blockchain.h"
 
 static inline bool
@@ -21,67 +23,22 @@ int main(int argc, char** argv){
     }
     int port = atoi(argv[2]);
 
+    int pport = -1;
+    if(argc > 3){
+        pport = atoi(argv[3]);
+    }
+
     if(!BlockChain::GetInstance()->Load(path)){
         std::cerr << "cannot load: " << path << std::endl;
         return EXIT_FAILURE;
     }
+
     std::cout << (*BlockChain::GetInstance()->GetHead()) << std::endl;
-
-    std::vector<UnclaimedTransaction*> utxos;
-    if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransactions(utxos)){
-        std::cerr << "Couldn't get unclaimed transactions" << std::endl;
-        return EXIT_FAILURE;
-    }
-    std::cout << "Unclaimed Transactions:" << std::endl;
-    for(auto& it : utxos){
-        std::cout << (*it) << std::endl;
-    }
-
-    Block* nblock = BlockChain::GetInstance()->CreateBlock();
-    Transaction* ntx = nblock->CreateTransaction();
-    ntx->AddInput(utxos[10]->GetTransactionHash(), utxos[10]->GetIndex());
-    ntx->AddOutput(utxos[10]->GetToken(), "TestUser2");
-
-    if(!BlockChain::GetInstance()->Append(nblock)){
-        std::cerr << "Couldn't append block: " << std::endl;
-        std::cerr << (*nblock) << std::endl;
-        return EXIT_FAILURE;
-    }
-    BlockChain::GetInstance()->Save();
-
-    if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransactions("TestUser2", utxos)){
-        std::cerr << "Couldn't get unclaimed transactions" << std::endl;
-        return EXIT_FAILURE;
-    }
-    std::cout << "Unclaimed Transactions for TestUser2:" << std::endl;
-    for(auto& it : utxos){
-        std::cout << (*it) << std::endl;
-    }
-
-    if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransactions(utxos)){
-        std::cerr << "Couldn't get unclaimed transactions" << std::endl;
-        return EXIT_FAILURE;
-    }
-
-    Block* b = BlockChain::GetInstance()->CreateBlock();
-    Transaction* t = b->CreateTransaction();
-    t->AddInput(utxos[1]->GetTransactionHash(), utxos[1]->GetIndex());
-    t->AddOutput(utxos[1]->GetToken(), "TestUser5");
-    if(!BlockChain::GetInstance()->Append(b)){
-        std::cerr << "Couldn't append" << std::endl;
-        return EXIT_FAILURE;
-    }
-
-    if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransactions(utxos)){
-        std::cerr << "Couldn't get unclaimed transactions" << std::endl;
-        return EXIT_FAILURE;
-    }
-    std::cout << "All unclaimed transactions:" << std::endl;
-    for(auto& it : utxos){
-        std::cout << (*it) << std::endl;
-    }
-
-    // BlockChainService::GetInstance()->Start("127.0.0.1", port);
-    // BlockChainService::GetInstance()->WaitForShutdown();
+    BlockChainService::GetInstance()->Start("127.0.0.1", port + 1);
+    BlockChain::GetServerInstance()->AddPeer("127.0.0.1", pport);
+    BlockChain::GetInstance()->StartServer(port);
+    while(BlockChain::GetServerInstance()->IsRunning());
+    BlockChain::GetInstance()->WaitForServerShutdown();
+    BlockChainService::GetInstance()->WaitForShutdown();
     return EXIT_SUCCESS;
 }

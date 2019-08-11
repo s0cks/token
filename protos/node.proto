@@ -1,0 +1,6 @@
+syntax="proto3";
+package Token.Node.Messages;
+
+message BlockMessage{
+
+}

@@ -5,6 +5,8 @@
 #include <fstream>
 #include <cstring>
 #include <cstdint>
+#include <bitset>
+#include <google/protobuf/message.h>
 
 namespace Token{
     class ByteBuffer{
@@ -79,7 +81,7 @@ namespace Token{
             wpos_(other.wpos_),
             rpos_(other.rpos_),
             buff_(other.buff_){}
-        ~ByteBuffer() = default;
+        ~ByteBuffer(){}
 
         uint8_t* GetBytes() {
             return buff_.data();
@@ -91,6 +93,10 @@ namespace Token{
 
         uint32_t BytesRemaining(){
             return Size() - rpos_;
+        }
+
+        uint8_t* GetRemainingBytes(){
+            return &buff_.data()[rpos_];
         }
 
         uint32_t WrittenBytes(){
@@ -118,8 +124,12 @@ namespace Token{
         }
 
         void GetBytes(uint8_t* buff, uint32_t len) {
-            for(uint32_t idx = 0; idx < len; idx++){
-                buff[idx] = Read<uint8_t>();
+            memcpy(buff, GetBytes(), len);
+        }
+
+        void GetBytes(uint8_t* buff, uint32_t offset, uint32_t len) {
+            for(int i = 0; i < len; i++){
+                buff[i] = Get(offset + i);
             }
         }
 
@@ -209,6 +219,20 @@ namespace Token{
 
         void PutLong(uint64_t val, uint32_t idx){
             Insert<uint64_t>(val, idx);
+        }
+
+        void PutMessage(google::protobuf::Message* msg){
+            uint8_t bytes[msg->ByteSizeLong()];
+            msg->SerializeToArray(bytes, msg->ByteSizeLong());
+            PutBytes(bytes, msg->ByteSizeLong());
+        }
+
+        friend std::ostream& operator<<(std::ostream& stream, const ByteBuffer& bb){
+            stream << "ByteBuffer(";
+            for(uint8_t byte : bb.buff_){
+                stream << byte << std::endl;
+            }
+            return stream;
         }
     };
 }

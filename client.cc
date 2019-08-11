@@ -1,6 +1,8 @@
 #include "blockchain.h"
+#include <zconf.h>
+#include <shell.h>
 
-/*#include "service/client.h"
+#include "service/client.h"
 
 static inline void
 PrintBlock(Token::Messages::BlockHeader* block){
@@ -14,13 +16,6 @@ PrintBlock(Token::Messages::BlockHeader* block){
 static inline void
 PrintUnclaimedTransaction(Token::Messages::UnclaimedTransaction* utxo){
     std::cout << "Unclaimed Transaction from " << utxo->tx_hash() << "[" << utxo->index() << "] => " << utxo->user() << "(" << utxo->token() << ")" << std::endl;
-}
-
-static inline void
-PrintUnclaimedTransactionList(Token::Messages::UnclaimedTransactionsList* utxos){
-    for(int i = 0; i < utxos->transactions_size(); i++){
-        PrintUnclaimedTransaction(utxos->mutable_transactions(i));
-    }
 }
 
 static inline void
@@ -39,15 +34,6 @@ PrintTransaction(Token::Transaction* tx){
     }
 }
 
-static inline void
-PrintBlockData(Token::Messages::BlockData* blk){
-    PrintBlock(blk->mutable_header());
-    for(int i = 0; i < blk->transactions_size(); i++){
-        Token::Transaction tx(blk->mutable_transactions(i));
-        PrintTransaction(&tx);
-    }
-}
-
 int main(int argc, char** argv){
     using namespace Token;
     if(argc < 2) return EXIT_FAILURE;
@@ -59,6 +45,8 @@ int main(int argc, char** argv){
 
     std::string input;
     do{
+        std::cout << "?> ";
+        input.clear();
         std::cin >> input;
         if(input == "discon"){
             return EXIT_FAILURE;
@@ -66,11 +54,14 @@ int main(int argc, char** argv){
             Messages::BlockHeader head;
             client.GetHead(&head);
 
-            Block* nblock = new Block(head.previous_hash(), head.height() + 1);
+            std::cout << "Previous Hash: " << head.hash() << std::endl;
+
+            Block* nblock = new Block(head.hash(), head.height() + 1);
             std::cout << "Create Transactions (y/n)?:";
-            std::cin >> input;
-            if(input == "y" || input == "Y"){
-                do{
+            std::string prompt;
+            std::cin >> prompt;
+            if(prompt == "y" || prompt == "Y"){
+                query:
                     std::string hash;
                     std::string user;
                     std::string token;
@@ -92,69 +83,39 @@ int main(int argc, char** argv){
                     tx->AddInput(hash, index);
                     tx->AddOutput(token, user);
 
-                    bool another;
+                    std::string another;
                     std::cout << "Add Another Transaction (y/n)?:";
                     std::cin >> another;
-                    if(!another){
-                        break;
+                    if(another == "Y" || another == "y"){
+                        goto query;
                     }
-                } while(true);
             }
 
-            if(!client.Append(nblock, &head)){
+            Token::Messages::BlockHeader nhead;
+            if(!client.Append(nblock, &nhead)){
                 std::cerr << "Cannot append new block" << std::endl;
                 return EXIT_FAILURE;
             }
             std::cout << "Appended!" << std::endl;
             std::cout << "New <HEAD>:" << std::endl;
-            PrintBlock(&head);
+            PrintBlock(&nhead);
         } else if(input == "gethead"){
             Messages::BlockHeader head;
             client.GetHead(&head);
             PrintBlock(&head);
-        } else if(input == "getblock"){
-            std::string target;
-            std::cout << "Block Hash?:";
-            std::cin >> target;
-
-            Messages::BlockData data;
-            if(!client.GetBlockData(target, &data)){
-                std::cerr << "Cannot get block " << target << std::endl;
-                return EXIT_FAILURE;
-            }
-            PrintBlockData(&data);
-        } else if(input == "lsutxo"){
-            std::string target;
-            std::cout << "User [Default is empty]?:";
-            std::cin >> target;
-
-            if(target == "None"){
-                Messages::UnclaimedTransactionsList utxos;
-                if(!client.GetUnclaimedTransactions(&utxos)){
-                    std::cerr << "Couldn't get unclaimed transactions" << std::endl;
-                    return EXIT_FAILURE;
-                }
-                PrintUnclaimedTransactionList(&utxos);
-            } else{
-                Messages::UnclaimedTransactionsList utxos;
-                if(!client.GetUnclaimedTransactions(target, &utxos)){
-                    std::cerr << "Couldn't get unclaimed transactions" << std::endl;
-                    return EXIT_FAILURE;
-                }
-                std::cout << "Unclaimed Transactions for " << target << std::endl;
-                PrintUnclaimedTransactionList(&utxos);
-            }
-        } else if(input == "save"){
-            if(!client.Save()){
-                std::cerr << "Couldn't shutdown" << std::endl;
-                return EXIT_FAILURE;
-            }
-            std::cout << "Shutting down" << std::endl;
         }
     } while(true);
 }
- */
 
+/*
 int main(int argc, char** argv){
+    if(argc < 2) return EXIT_FAILURE;
+    std::string address(argv[1]);
+    int port = atoi(argv[2]);
+    uv_loop_t* loop = uv_default_loop();
+    Token::PeerSession* peer = new Token::PeerSession(loop, address, port);
+    Token::BlockChainServerShell shell(loop, peer);
+    uv_run(loop, UV_RUN_DEFAULT);
     return EXIT_SUCCESS;
 }
+*/

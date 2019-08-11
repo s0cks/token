@@ -36,10 +36,14 @@ namespace Token{
         }
 
         explicit Block(Messages::Block* raw):
-            raw_(raw){}
+            raw_(new Messages::Block()){
+            GetRaw()->CopyFrom(*raw);
+        }
         friend class BlockChainService;
         friend class TokenServiceClient;
-        friend class BlockMessage;
+        friend class ClientSession;
+        friend class PeerSession;
+        friend class BlockChainServer;
     public:
         Block(bool genesis):
             raw_(new Messages::Block()){
@@ -90,6 +94,7 @@ namespace Token{
         void Write(const std::string& filename);
         std::string GetHash();
         std::string GetMerkleRoot();
+        Token::Messages::Block* GetAsMessage();
 
         friend bool operator==(const Block& lhs, const Block& rhs){
             return const_cast<Block&>(lhs).GetHash() == const_cast<Block&>(rhs).GetHash();
@@ -101,15 +106,20 @@ namespace Token{
             stream << "\tPrevious Hash: " << block.GetPreviousHash() << std::endl;
             stream << "\tHash: " << const_cast<Block&>(block).GetHash() << std::endl;
             stream << "\tMerkle: " << const_cast<Block&>(block).GetMerkleRoot() << std::endl;
-            stream << "\tTransactions (" << block.GetNumberOfTransactions() << "):" << std::endl;
+            stream << "\tNumber of Transactions: " << block.GetNumberOfTransactions() << std::endl;
+            stream << "\tTransactions:" << std::endl;
             for(int i = 0; i < block.GetNumberOfTransactions(); i++){
-                stream << "\t  + Transaction " << block.GetTransactionAt(i)->GetHash() << " #" << i << ":" << std::endl << (*block.GetTransactionAt(i)) << std::endl;
+                std::cout << "\t  - #" << i << " " << block.GetTransactionAt(i)->GetHash() << std::endl;
             }
             return stream;
         }
 
         static Block* Load(const std::string& filename);
         static Block* Load(ByteBuffer* bb);
+
+        static Block* Load(Token::Messages::Block* block){
+            return new Block(block);
+        }
     };
 }
 

@@ -9,6 +9,7 @@
 #include "block.h"
 #include "user.h"
 #include "utxo.h"
+#include "node/node.h"
 
 namespace Token{
     class BlockChainNode{
@@ -56,6 +57,7 @@ namespace Token{
         BlockChainNode* head_;
         std::map<std::string, BlockChainNode*> nodes_;
         TransactionPool tx_pool_;
+        pthread_t server_thread_;
         pthread_rwlock_t rwlock_;
 
         bool AppendGenesis(Block* block);
@@ -98,11 +100,9 @@ namespace Token{
             pthread_rwlock_init(&rwlock_, NULL);
         }
     public:
-        class Server;
-
         static BlockChain* GetInstance();
         static bool Initialize(const std::string& path, Block* genesis);
-        static Server* GetServerInstance();
+        static BlockChainServer* GetServerInstance();
 
         Block* GetBlockFromHash(const std::string& hash) const{
             return nodes_.find(hash)->second->GetBlock();
@@ -118,7 +118,9 @@ namespace Token{
         }
 
         int GetHeight() const{
-            return GetState()->GetHeight();
+            int height = GetState()->GetHeight();
+            if(height < 0) return 0;
+            return height;
         }
 
         TransactionPool* GetTransactionPool(){
@@ -137,6 +139,9 @@ namespace Token{
         bool Append(Block* block);
         bool Load(const std::string& root);
         bool Save();
+        void StartServer(int port);
+        void StopServer();
+        void WaitForServerShutdown();
     };
 }
 

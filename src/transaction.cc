@@ -20,18 +20,20 @@ namespace Token{
     std::string Transaction::GetHash(){
         CryptoPP::SHA256 func;
         std::string digest;
-        ByteBuffer bb;
-        Encode(&bb);
-        CryptoPP::ArraySource source(bb.GetBytes(), bb.Size(), true, new CryptoPP::HashFilter(func, new CryptoPP::HexEncoder(new CryptoPP::StringSink(digest))));
+        size_t size = GetRaw()->ByteSizeLong();
+        uint8_t bytes[size];
+        GetRaw()->SerializeToArray(bytes, size);
+        CryptoPP::ArraySource source(bytes, size, true, new CryptoPP::HashFilter(func, new CryptoPP::HexEncoder(new CryptoPP::StringSink(digest))));
         return digest;
     }
 
     HashArray Transaction::GetHashArray(){
         HashArray result;
         CryptoPP::SHA256 func;
-        ByteBuffer bb;
-        Encode(&bb);
-        CryptoPP::ArraySource source(bb.GetBytes(), bb.Size(), true, new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(result.data(), DIGEST_SIZE)));
+        size_t size = GetRaw()->ByteSizeLong();
+        uint8_t bytes[size];
+        GetRaw()->SerializeToArray(bytes, size);
+        CryptoPP::ArraySource source(bytes, size, true, new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(result.data(), DIGEST_SIZE)));
         return result;
     }
 
