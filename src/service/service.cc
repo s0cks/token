@@ -74,7 +74,6 @@ namespace Token{
                                                              Token::Messages::UnclaimedTransactionList *response){
         if(request->user().empty()){
             std::cout << "Getting unclaimed transactions for all" << std::endl;
-            /*
             return UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransactions(response) ?
                    grpc::Status::OK :
                    grpc::Status::CANCELLED;
@@ -83,7 +82,6 @@ namespace Token{
             return UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransactions(request->user(), response) ?
                    grpc::Status::OK :
                    grpc::Status::CANCELLED;
-            */
         }
     }
 

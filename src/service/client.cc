@@ -45,6 +45,18 @@ namespace Token{
         return GetStub()->GetBlockData(&ctx, request, response).ok();
     }
 
+    bool TokenServiceClient::GetUnclaimedTransactions(Token::Messages::UnclaimedTransactionList *response){
+        Token::Service::Messages::GetUnclaimedTransactionsRequest request;
+        grpc::ClientContext ctx;
+        return GetStub()->GetUnclaimedTransactions(&ctx, request, response).ok();
+    }
+
+    bool TokenServiceClient::GetUnclaimedTransactions(const std::string& user, Token::Messages::UnclaimedTransactionList *response){
+        Token::Service::Messages::GetUnclaimedTransactionsRequest request;
+        grpc::ClientContext ctx;
+        return GetStub()->GetUnclaimedTransactions(&ctx, request, response).ok();
+    }
+
     bool TokenServiceClient::Append(Token::Block* block, Messages::BlockHeader* response){
         grpc::ClientContext ctx;
         Token::Messages::Block* blk = block->GetAsMessage();

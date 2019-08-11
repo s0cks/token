@@ -19,8 +19,7 @@ namespace Token{
         return &instance;
     }
 
-    /*
-    bool UnclaimedTransactionPool::GetUnclaimedTransactions(const std::string& user, Messages::UnclaimedTransactionsList* utxos){
+    bool UnclaimedTransactionPool::GetUnclaimedTransactions(const std::string& user, Messages::UnclaimedTransactionList* utxos){
         pthread_rwlock_rdlock(&rwlock_);
         std::string sql = "SELECT UTxHash,TxHash,TxIndex,User,Token FROM UnclaimedTransactions WHERE User=@User;";
         char* err_msg = NULL;
@@ -54,7 +53,6 @@ namespace Token{
         pthread_rwlock_unlock(&rwlock_);
         return true;
     }
-    */
 
     bool UnclaimedTransactionPool::GetUnclaimedTransactions(const std::string& user, std::vector<UnclaimedTransaction*>& utxos){
         pthread_rwlock_rdlock(&rwlock_);
@@ -117,8 +115,7 @@ namespace Token{
         return utxos.size() > 0;
     }
 
-    /*
-    bool UnclaimedTransactionPool::GetUnclaimedTransactions(Messages::UnclaimedTransactionsList* utxos){
+    bool UnclaimedTransactionPool::GetUnclaimedTransactions(Messages::UnclaimedTransactionList* utxos){
         pthread_rwlock_rdlock(&rwlock_);
         std::string sql = "SELECT UTxHash,TxHash,TxIndex,User,Token FROM UnclaimedTransactions;";
         char* err_msg = NULL;
@@ -142,7 +139,6 @@ namespace Token{
         pthread_rwlock_unlock(&rwlock_);
         return true;
     }
-    */
 
     bool UnclaimedTransactionPool::GetUnclaimedTransaction(const std::string& hash, UnclaimedTransaction** result){
         pthread_rwlock_rdlock(&rwlock_);
