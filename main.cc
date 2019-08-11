@@ -1,6 +1,5 @@
 #include <sstream>
 #include <string>
-#include <zconf.h>
 #include <service/service.h>
 #include "blockchain.h"
 
