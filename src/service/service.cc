@@ -32,6 +32,29 @@ namespace Token{
         return grpc::Status::CANCELLED;
     }
 
+    grpc::Status BlockChainService::GetBlockData(grpc::ServerContext *ctx,
+                                                 const Token::Service::Messages::GetBlockRequest *request,
+                                                 Token::Messages::Block *response){
+        if(!request->hash().empty()){
+            Block* block = BlockChain::GetInstance()->GetBlockFromHash(request->hash());
+            if(block){
+                Messages::Block* resp = block->GetAsMessage();
+                response->CopyFrom(*resp);
+                delete resp;
+                return grpc::Status::OK;
+            }
+        } else{
+            Block* block = BlockChain::GetInstance()->GetBlockAt(request->index());
+            if(block){
+                Messages::Block* resp = block->GetAsMessage();
+                response->CopyFrom(*resp);
+                delete resp;
+                return grpc::Status::OK;
+            }
+        }
+        return grpc::Status::CANCELLED;
+    }
+
     grpc::Status BlockChainService::AppendBlock(grpc::ServerContext *ctx,
                                                 const Messages::Block *request,
                                                 Token::Messages::BlockHeader *response){

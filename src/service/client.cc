@@ -31,6 +31,20 @@ namespace Token{
         return GetStub()->GetBlock(&ctx, request, response).ok();
     }
 
+    bool TokenServiceClient::GetBlockData(const std::string &hash, Token::Messages::Block *response){
+        Token::Service::Messages::GetBlockRequest request;
+        request.set_hash(hash);
+        grpc::ClientContext ctx;
+        return GetStub()->GetBlockData(&ctx, request, response).ok();
+    }
+
+    bool TokenServiceClient::GetBlockDataAt(int index, Token::Messages::Block *response){
+        Token::Service::Messages::GetBlockRequest request;
+        request.set_index(index);
+        grpc::ClientContext ctx;
+        return GetStub()->GetBlockData(&ctx, request, response).ok();
+    }
+
     bool TokenServiceClient::Append(Token::Block* block, Messages::BlockHeader* response){
         grpc::ClientContext ctx;
         Token::Messages::Block* blk = block->GetAsMessage();

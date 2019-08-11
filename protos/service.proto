@@ -7,7 +7,7 @@ import "blockchain.proto";
 service BlockChainService{
     rpc GetHead (Messages.EmptyRequest) returns (Token.Messages.BlockHeader) {}
     rpc GetBlock (Messages.GetBlockRequest) returns (Token.Messages.BlockHeader) {}
-    rpc GetTransactions (Messages.GetTransactionsRequest) returns (Token.Messages.TransactionList) {}
+    rpc GetBlockData (Messages.GetBlockRequest) returns (Token.Messages.Block) {}
     rpc GetUnclaimedTransactions (Messages.GetUnclaimedTransactionsRequest) returns (Token.Messages.UnclaimedTransactionList);
     rpc AppendBlock (Token.Messages.Block) returns (Token.Messages.BlockHeader){}
 }

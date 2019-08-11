@@ -22,6 +22,8 @@ namespace Token{
         bool GetHead(Messages::BlockHeader* response);
         bool GetBlock(const std::string& hash, Messages::BlockHeader* response);
         bool GetBlockAt(int index, Messages::BlockHeader* response);
+        bool GetBlockData(const std::string& hash, Messages::Block* response);
+        bool GetBlockDataAt(int index, Messages::Block* response);
         bool Append(Block* block, Messages::BlockHeader* response);
     };
 }
