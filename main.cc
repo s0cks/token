@@ -1,6 +1,7 @@
 #include <sstream>
 #include <string>
 #include <service/service.h>
+#include <alloc.h>
 #include "blockchain.h"
 
 static inline bool
@@ -27,6 +28,7 @@ int main(int argc, char** argv){
         pport = atoi(argv[3]);
     }
 
+    /*
     if(!BlockChain::GetInstance()->Load(path)){
         std::cerr << "cannot load: " << path << std::endl;
         return EXIT_FAILURE;
@@ -39,5 +41,36 @@ int main(int argc, char** argv){
     while(BlockChain::GetServerInstance()->IsRunning());
     BlockChain::GetInstance()->WaitForServerShutdown();
     BlockChainService::GetInstance()->WaitForShutdown();
+    */
+
+    int* i = (int*) Allocator::Alloc(sizeof(int));
+    Allocator::AddReference(reinterpret_cast<void**>(&i));
+    (*i) = 10;
+    int* j = (int*) Allocator::Alloc(sizeof(int));
+    (*j) = 100;
+
+    Allocator::GetInstance()->PrintMinor(std::cout);
+    Allocator::GetInstance()->PrintMajor(std::cout);
+
+    int* k = (int*) Allocator::Alloc(sizeof(int));
+    (*k) = 1000;
+
+    int* l = (int*) Allocator::Alloc(sizeof(int));
+    (*l) = 10000;
+
+    if(!Allocator::GetInstance()->CollectMinor()){
+        std::cerr << "Couldn't collect minor" << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    std::cout << std::endl;
+    Allocator::GetInstance()->PrintMinor(std::cout);
+    Allocator::GetInstance()->PrintMajor(std::cout);
+    std::cout << "i := " << (*i) << " - Should be live" << std::endl;
+    std::cout << "j := " << (*j) << " - Shouldn't be live" << std::endl;
+    std::cout << "k := " << (*k) << " - Should be live" << std::endl;
+    std::cout << "l := " << (*l) << " - Shouldn't be live" << std::endl;
+    std::cout << std::endl;
+
     return EXIT_SUCCESS;
 }
