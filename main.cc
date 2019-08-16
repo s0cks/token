@@ -1,14 +1,27 @@
 #include <sstream>
 #include <string>
-#include <service/service.h>
 #include <alloc.h>
-#include "blockchain.h"
+#include <heap.h>
 
 static inline bool
 FileExists(const std::string& name){
     std::ifstream f(name.c_str());
     return f.good();
 }
+
+class HeapPrinter : Token::HeapVisitor{
+private:
+    unsigned int counter_;
+public:
+    HeapPrinter():
+        counter_(0){}
+    ~HeapPrinter(){}
+
+    bool VisitChunk(void* ptr, size_t size){
+        std::cout << "  - #" << (counter_++) << " Chunk " << (*((int*)ptr)) << "; Size := " << size << std::endl;
+        return true;
+    }
+};
 
 // <local file storage path>
 // <local listening port>
@@ -43,34 +56,17 @@ int main(int argc, char** argv){
     BlockChainService::GetInstance()->WaitForShutdown();
     */
 
-    int* i = (int*) Allocator::Alloc(sizeof(int));
-    Allocator::AddReference(reinterpret_cast<void**>(&i));
-    (*i) = 10;
-    int* j = (int*) Allocator::Alloc(sizeof(int));
-    (*j) = 100;
+    Heap heap(4096 * 32);
+    int* i = reinterpret_cast<int*>(heap.Alloc(sizeof(int)));
+    (*i) = 200;
 
-    Allocator::GetInstance()->PrintMinor(std::cout);
-    Allocator::GetInstance()->PrintMajor(std::cout);
+    int* j = reinterpret_cast<int*>(heap.Alloc(sizeof(int)));
+    (*j) = 300;
 
-    int* k = (int*) Allocator::Alloc(sizeof(int));
-    (*k) = 1000;
+    std::cout << "i := " << (*i) << std::endl;
+    std::cout << "j := " << (*j) << std::endl;
 
-    int* l = (int*) Allocator::Alloc(sizeof(int));
-    (*l) = 10000;
-
-    if(!Allocator::GetInstance()->CollectMinor()){
-        std::cerr << "Couldn't collect minor" << std::endl;
-        return EXIT_FAILURE;
-    }
-
-    std::cout << std::endl;
-    Allocator::GetInstance()->PrintMinor(std::cout);
-    Allocator::GetInstance()->PrintMajor(std::cout);
-    std::cout << "i := " << (*i) << " - Should be live" << std::endl;
-    std::cout << "j := " << (*j) << " - Shouldn't be live" << std::endl;
-    std::cout << "k := " << (*k) << " - Should be live" << std::endl;
-    std::cout << "l := " << (*l) << " - Shouldn't be live" << std::endl;
-    std::cout << std::endl;
-
+    HeapPrinter printer;
+    heap.Accept(reinterpret_cast<HeapVisitor*>(&printer));
     return EXIT_SUCCESS;
 }
