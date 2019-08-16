@@ -12,7 +12,6 @@ find_package(Threads)
 find_package(Libuv REQUIRED)
 find_package(SQLite3 REQUIRED)
 find_package(RapidJSON REQUIRED)
-find_package(glog REQUIRED)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${LIBUV_INCLUDE_DIRS})
@@ -30,7 +29,7 @@ protobuf_generate_cpp(PROTO_SRC PROTO_HEADER ${TOKEN_PROTO_SOURCES})
 grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${CMAKE_BINARY_DIR} ${TOKEN_SERVICE_PROTO_SOURCES})
 
 add_library("${PROJECT_NAME}" STATIC ${TOKEN_LIB_SOURCES} ${PROTO_HEADER} ${PROTO_SRC} ${GRPC_HDRS} ${GRPC_SRCS})
-target_link_libraries("${PROJECT_NAME}" ${PROTOBUF_LIBRARY} glog::glog ${LIBUV_LIBRARIES} ${SQLite3_LIBRARIES} cryptopp-static)
+target_link_libraries("${PROJECT_NAME}" ${PROTOBUF_LIBRARY} ${LIBUV_LIBRARIES} ${SQLite3_LIBRARIES} cryptopp-static)
 
 add_executable("${PROJECT_NAME}-node" main.cc)
 target_link_libraries("${PROJECT_NAME}-node" ${PROJECT_NAME}  ${CMAKE_THREAD_LIBS_INIT} gRPC::grpc++_reflection)
