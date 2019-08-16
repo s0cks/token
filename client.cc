@@ -1,5 +1,4 @@
 #include "blockchain.h"
-#include <zconf.h>
 #include <shell.h>
 
 #include "service/client.h"
