@@ -52,34 +52,25 @@ int main(int argc, char** argv){
         return EXIT_FAILURE;
     }
 
-    leveldb::DB* db;
-    leveldb::Options options;
-    options.create_if_missing = true;
-
-    leveldb::Status status = leveldb::DB::Open(options, (path + "/state.db"), &db);
-    if(!status.ok()){
-        LOG(ERROR) << "Cannot open state.db";
+    if(!UnclaimedTransactionPool::LoadUnclaimedTransactionPool((path + "/unclaimed.db"))){
+        LOG(ERROR) << "Cannot load unclaimed transaction pool from path '" << (path + "/unclaimed.db") << "'";
+        return EXIT_FAILURE;
+    }
+    if(!BlockChain::Initialize(path)){
         return EXIT_FAILURE;
     }
 
-    leveldb::WriteOptions writeOpts;
-    db->Put(writeOpts, "Height", "1");
-
-    leveldb::ReadOptions readOpts;
-
-    std::string value;
-    if(!db->Get(readOpts, "Height", &value).ok()){
-        LOG(ERROR) << "Cannot get height";
+    Block* block = BlockChain::GetInstance()->CreateBlock();
+    Block* genesis = BlockChain::GetInstance()->GetBlockFromHash(block->GetPreviousHash());
+    Transaction* tx = block->CreateTransaction();
+    tx->AddInput(genesis->GetCoinbaseTransaction()->GetHash(), 0);
+    tx->AddOutput("TestToken0", "TestUser2");
+    if(!BlockChain::GetInstance()->Append(block)){
+        LOG(WARNING) << "Couldn't append new block";
         return EXIT_FAILURE;
     }
-
-    LOG(INFO) << "Height: " << value;
 
     /*
-    if(!BlockChain::GetInstance()->Load(path)){
-        LOG(ERROR) << "Cannot load BlockChain from path '" << path << "'" << std::endl;
-        return EXIT_FAILURE;
-    }
     BlockChainService::GetInstance()->Start("127.0.0.1", port + 1);
     BlockChain::GetServerInstance()->AddPeer("127.0.0.1", pport);
     BlockChain::GetInstance()->StartServer(port);

@@ -1,11 +1,11 @@
 #ifndef TOKEN_BLOCKCHAIN_H
 #define TOKEN_BLOCKCHAIN_H
 
+#include <leveldb/db.h>
 #include <map>
 #include "common.h"
 #include "array.h"
 #include "bytes.h"
-#include "blockchain_state.h"
 #include "block.h"
 #include "user.h"
 #include "utxo.h"
@@ -52,7 +52,9 @@ namespace Token{
 
     class BlockChain{
     private:
-        BlockChainState* state_;
+        leveldb::DB* state_;
+        std::string root_;
+
         Array<BlockChainNode*>* heads_;
         BlockChainNode* head_;
         std::map<std::string, BlockChainNode*> nodes_;
@@ -70,26 +72,18 @@ namespace Token{
             return found->second;
         }
 
-        inline bool
-        HasState(){
-            return state_ != nullptr;
-        }
+        void SetHeight(int height);
 
-        inline void
-        SetState(BlockChainState* state){
-            if(HasState()) return;
-            state_ = state;
-        }
-
-        inline BlockChainState*
+        inline leveldb::DB*
         GetState() const{
             return state_;
         }
 
-        inline std::string
-        GetBlockDataFile(int idx){
-            return GetState()->GetBlockFile(idx);
-        }
+        std::string GetBlockDataFile(int height);
+        Block* LoadBlock(int height);
+        bool SaveChain();
+        bool InitializeChainHead();
+        bool InitializeChainState(const std::string& root);
 
         BlockChain():
             rwlock_(),
@@ -101,7 +95,6 @@ namespace Token{
         }
     public:
         static BlockChain* GetInstance();
-        static bool Initialize(const std::string& path, Block* genesis);
         static BlockChainServer* GetServerInstance();
 
         Block* GetBlockFromHash(const std::string& hash) const{
@@ -117,11 +110,7 @@ namespace Token{
             return head;
         }
 
-        int GetHeight() const{
-            int height = GetState()->GetHeight();
-            if(height < 0) return 0;
-            return height;
-        }
+        int GetHeight() const;
 
         TransactionPool* GetTransactionPool(){
             return &tx_pool_;
@@ -137,11 +126,12 @@ namespace Token{
 
         Block* CreateBlock();
         bool Append(Block* block);
-        bool Load(const std::string& root);
-        bool Save();
+
         void StartServer(int port);
         void StopServer();
         void WaitForServerShutdown();
+
+        static bool Initialize(const std::string& path);
     };
 }
 

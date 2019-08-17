@@ -17,7 +17,7 @@ namespace Token{
         heads_->Add(node);
         nodes_.insert({ genesis->GetHash(), node });
         head_ = node;
-        GetState()->SetHeight(genesis->GetHeight());
+        SetHeight(genesis->GetHeight());
         return true;
     }
 
@@ -70,67 +70,24 @@ namespace Token{
         printf("Server shutdown with: %s\n", result);
     }
 
-    bool BlockChain::Initialize(const std::string &path, Token::Block *genesis){
-        BlockChain* instance = BlockChain::GetInstance();
-        instance->SetState(new BlockChainState(path));
-        if(!UnclaimedTransactionPool::LoadUnclaimedTransactionPool(instance->GetState()->GetUnclaimedTransactionPoolFile())){
-            std::cout << "Cannot load unclaimed transaction pool" << std::endl;
-            return false;
+    void BlockChain::SetHeight(int height){
+        std::stringstream value;
+        value << height;
+        leveldb::WriteOptions writeOpts;
+        if(!GetState()->Put(writeOpts, "Height", value.str()).ok()){
+            LOG(ERROR) << "Couldn't set BlockChain's height in state to " << value.str();
+            return;
         }
-
-        if(!instance->AppendGenesis(genesis)){
-            std::cout << "Cannot set head" << std::endl;
-            return false;
-        }
-        return instance->Save();
     }
 
-    bool
-    BlockChain::Load(const std::string& root){
-        if(BlockChainState::CanLoadStateFrom(root)){
-            LOG(INFO) << "Loading BlockChain from '" << root << "'...";
-            SetState(BlockChainState::LoadState(root));
-            if(!UnclaimedTransactionPool::LoadUnclaimedTransactionPool(GetState()->GetUnclaimedTransactionPoolFile())){
-                std::cout << "Cannot load unclaimed transaction pool" << std::endl;
-                return false;
-            }
-
-            int height = GetHeight();
-            std::string blk_filename = GetBlockDataFile(height);
-            if(!FileExists(blk_filename)){
-                std::cout << "Cannot load block: " << height << std::endl;
-                return false;
-            }
-            std::cout << "Loading block " << height << " from " << blk_filename << std::endl;
-            Block* nblock = Block::Load(blk_filename);
-            if(!AppendGenesis(nblock)){
-                std::cout << "Cannot append block" << std::endl;
-                return false;
-            }
-            return Save();
+    int BlockChain::GetHeight() const{
+        std::string height;
+        leveldb::ReadOptions readOpts;
+        if(!GetState()->Get(readOpts, "Height", &height).ok()){
+            LOG(ERROR) << "Couldn't get BlockChain's height in state";
+            return -1;
         }
-        LOG(WARNING) << "Cannot load BlockChain from path '" << root << "'; Creating genesis block...";
-        LOG(WARNING) << "*** This functionality will be removed in future versions";
-        LOG(WARNING) << "*** Genesis contains 128 base transactions for initialization";
-        Block* genesis = new Block(true);
-        Transaction* cbtx = genesis->CreateTransaction();
-        for(int i = 0; i < 128; i++){
-            std::stringstream stream;
-            stream << "Token" << i;
-            cbtx->AddOutput(stream.str(), "TestUser");
-        }
-        return Initialize(root, genesis);
-    }
-
-    bool
-    BlockChain::Save(){
-        GetState()->SaveState();
-        BlockChainNode* current = head_;
-        while(current){
-            current->GetBlock()->Write(GetBlockDataFile(current->GetHeight()));
-            current = current->parent_;
-        }
-        return true;
+        return atoi(height.c_str());
     }
 
     Block* BlockChain::GetHead(){
@@ -169,7 +126,7 @@ namespace Token{
         BlockChainNode* current = new BlockChainNode(parent, block);
         nodes_.insert(std::make_pair(block->GetHash(), current));
         if(current->GetHeight() > GetHeight()) {
-            GetState()->SetHeight(current->GetHeight());
+            SetHeight(current->GetHeight());
             head_ = current;
         }
         if(GetHeight() - (*heads_)[0]->GetHeight() > 0xA){
@@ -185,7 +142,7 @@ namespace Token{
             }
             heads_ = newHeads;
         }
-        Save();
+        SaveChain();
         Message m(Message::Type::kBlockMessage, block->GetAsMessage());
         BlockChain::GetServerInstance()->Broadcast(nullptr, &m);
         pthread_rwlock_unlock(&rwlock_);
@@ -195,5 +152,82 @@ namespace Token{
     Block* BlockChain::CreateBlock(){
         Block* parent = GetHead();
         return new Block(parent);
+    }
+
+    std::string BlockChain::GetBlockDataFile(int height){
+        std::stringstream stream;
+        stream << root_ << "/blk" << height << ".dat";
+        return stream.str();
+    }
+
+    Block* BlockChain::LoadBlock(int height){
+        std::string blkf = GetBlockDataFile(height);
+        if(!FileExists(blkf)){
+            LOG(WARNING) << "block file '" << blkf << "' doesn't exist";
+            return nullptr;
+        }
+        return Block::Load(blkf);
+    }
+
+    bool BlockChain::SaveChain(){
+        BlockChainNode* current = head_;
+        while(current){
+            current->GetBlock()->Write(GetBlockDataFile(current->GetHeight()));
+            current = current->parent_;
+        }
+        return true;
+    }
+
+    bool BlockChain::InitializeChainHead(){
+        int height = GetHeight();
+        if(height != -1){
+            Block* head;
+            if((head = LoadBlock(height)) == nullptr){
+                LOG(ERROR) << "cannot load head from height: " << height;
+                LOG(ERROR) << "*** Fixme";
+                return false;
+            }
+            if(!AppendGenesis(head)){
+                LOG(ERROR) << "cannot append head as genesis";
+                LOG(ERROR) << "*** Fixme";
+                return false;
+            }
+            return SaveChain();
+        }
+        LOG(WARNING) << "Creating genesis block...";
+        LOG(WARNING) << "*** This functionality will be removed in future versions";
+        LOG(WARNING) << "*** Genesis contains 128 base transactions for initialization";
+        Block* genesis = new Block(true);
+        Transaction* cbtx = genesis->CreateTransaction();
+        for(int i = 0; i < 128; i++){
+            std::stringstream stream;
+            stream << "Token" << i;
+            cbtx->AddOutput(stream.str(), "TestUser");
+        }
+        if(!AppendGenesis(genesis)){
+            LOG(ERROR) << "cannot append head as genesis";
+            LOG(ERROR) << "*** Fixme";
+            return false;
+        }
+        return SaveChain();
+    }
+
+    bool BlockChain::InitializeChainState(const std::string& root){
+        root_ = root;
+        leveldb::Options options;
+        options.create_if_missing = true;
+        if(!leveldb::DB::Open(options, (root + "/state"), &state_).ok()){
+            LOG(ERROR) << "couldn't load chain state from '" << (root + "/state") << "'";
+            return false;
+        }
+        LOG(INFO) << "loaded chain state from '" << (root + "/state") << "'";
+        return true;
+    }
+
+    bool BlockChain::Initialize(const std::string& path){
+        if(!BlockChain::GetInstance()->InitializeChainState(path)){
+            return false;
+        }
+        return BlockChain::GetInstance()->InitializeChainHead();
     }
 }
