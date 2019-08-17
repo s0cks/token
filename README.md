@@ -1,8 +1,14 @@
 # Dependencies
 
+- crypto++
 - Google's Protocol Buffers
-- cryptopp
 - gRPC
+- glog
+- libuv
+- leveldb
+- sqlite3
+- rapidjson <--- Removing
+
 
 # Building
 
