@@ -1,6 +1,6 @@
-#include "blockchain.h"
-#include <fstream>
 #include <sstream>
+#include <glog/logging.h>
+#include "blockchain.h"
 #include "block_validator.h"
 
 namespace Token{
@@ -88,6 +88,7 @@ namespace Token{
     bool
     BlockChain::Load(const std::string& root){
         if(BlockChainState::CanLoadStateFrom(root)){
+            LOG(INFO) << "Loading BlockChain from '" << root << "'...";
             SetState(BlockChainState::LoadState(root));
             if(!UnclaimedTransactionPool::LoadUnclaimedTransactionPool(GetState()->GetUnclaimedTransactionPoolFile())){
                 std::cout << "Cannot load unclaimed transaction pool" << std::endl;
@@ -108,6 +109,9 @@ namespace Token{
             }
             return Save();
         }
+        LOG(WARNING) << "Cannot load BlockChain from path '" << root << "'; Creating genesis block...";
+        LOG(WARNING) << "*** This functionality will be removed in future versions";
+        LOG(WARNING) << "*** Genesis contains 128 base transactions for initialization";
         Block* genesis = new Block(true);
         Transaction* cbtx = genesis->CreateTransaction();
         for(int i = 0; i < 128; i++){

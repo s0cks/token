@@ -3,10 +3,31 @@
 #include <service/service.h>
 #include "blockchain.h"
 
+#include <glog/logging.h>
+#include <sys/stat.h>
+
 static inline bool
 FileExists(const std::string& name){
     std::ifstream f(name.c_str());
     return f.good();
+}
+
+static inline bool
+InitializeLogging(char* arg0, const std::string& path){
+    std::string logdir = (path + "/logs/");
+    if(!FileExists(logdir)){
+        int rc;
+        if((rc = mkdir(logdir.c_str(), S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)) == -1){
+            std::cerr << "Couldn't initialize logging directory '" << logdir << "'..." << std::endl;
+            return false;
+        }
+    }
+    google::SetLogDestination(google::INFO, logdir.c_str());
+    google::SetLogDestination(google::WARNING, logdir.c_str());
+    google::SetLogDestination(google::ERROR, logdir.c_str());
+    google::SetStderrLogging(google::INFO);
+    google::InitGoogleLogging(arg0);
+    return true;
 }
 
 // <local file storage path>
@@ -27,12 +48,14 @@ int main(int argc, char** argv){
         pport = atoi(argv[3]);
     }
 
-    if(!BlockChain::GetInstance()->Load(path)){
-        std::cerr << "cannot load: " << path << std::endl;
+    if(!InitializeLogging(argv[0], path)){
         return EXIT_FAILURE;
     }
-
-    std::cout << (*BlockChain::GetInstance()->GetHead()) << std::endl;
+    
+    if(!BlockChain::GetInstance()->Load(path)){
+        LOG(ERROR) << "Cannot load BlockChain from path '" << path << "'" << std::endl;
+        return EXIT_FAILURE;
+    }
     BlockChainService::GetInstance()->Start("127.0.0.1", port + 1);
     BlockChain::GetServerInstance()->AddPeer("127.0.0.1", pport);
     BlockChain::GetInstance()->StartServer(port);
