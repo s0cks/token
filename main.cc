@@ -2,7 +2,7 @@
 #include <string>
 #include <service/service.h>
 #include "blockchain.h"
-
+#include <leveldb/db.h>
 #include <glog/logging.h>
 #include <sys/stat.h>
 
@@ -51,7 +51,31 @@ int main(int argc, char** argv){
     if(!InitializeLogging(argv[0], path)){
         return EXIT_FAILURE;
     }
-    
+
+    leveldb::DB* db;
+    leveldb::Options options;
+    options.create_if_missing = true;
+
+    leveldb::Status status = leveldb::DB::Open(options, (path + "/state.db"), &db);
+    if(!status.ok()){
+        LOG(ERROR) << "Cannot open state.db";
+        return EXIT_FAILURE;
+    }
+
+    leveldb::WriteOptions writeOpts;
+    db->Put(writeOpts, "Height", "1");
+
+    leveldb::ReadOptions readOpts;
+
+    std::string value;
+    if(!db->Get(readOpts, "Height", &value).ok()){
+        LOG(ERROR) << "Cannot get height";
+        return EXIT_FAILURE;
+    }
+
+    LOG(INFO) << "Height: " << value;
+
+    /*
     if(!BlockChain::GetInstance()->Load(path)){
         LOG(ERROR) << "Cannot load BlockChain from path '" << path << "'" << std::endl;
         return EXIT_FAILURE;
@@ -62,5 +86,6 @@ int main(int argc, char** argv){
     while(BlockChain::GetServerInstance()->IsRunning());
     BlockChain::GetInstance()->WaitForServerShutdown();
     BlockChainService::GetInstance()->WaitForShutdown();
+    */
     return EXIT_SUCCESS;
 }
