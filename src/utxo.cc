@@ -68,21 +68,20 @@ namespace Token{
         sqlite3_stmt* stmt;
         int rc;
         if((rc = sqlite3_prepare_v2(database_, sql.c_str(), -1, &stmt, NULL)) != SQLITE_OK){
-            std::cout << "Couldn't prepare statement: " << err_msg << std::endl;
-            pthread_rwlock_unlock(&rwlock_);
+            LOG(ERROR) << "couldn't prepare sqlite3 statement: " << err_msg;
+            UNLOCK;
             return false;
         }
 
         int param_idx = sqlite3_bind_parameter_index(stmt, "@User");
         if((rc = sqlite3_bind_text(stmt, param_idx, user.c_str(), -1, SQLITE_TRANSIENT)) != SQLITE_OK){
-            std::cout << "Couldn't bind User" << std::endl;
-            pthread_rwlock_unlock(&rwlock_);
+            LOG(ERROR) << "couldn't bind user parameter for statement";
+            UNLOCK;
             return false;
         }
 
         while((rc = sqlite3_step(stmt)) == SQLITE_ROW){
             std::string utx_hash = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
-            std::cout << "Retrieved: " << utx_hash << std::endl;
             std::string tx_hash = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
             int index = sqlite3_column_int(stmt, 2);
             std::string u = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3)));
@@ -90,7 +89,7 @@ namespace Token{
             utxos.push_back(new UnclaimedTransaction(tx_hash, index, u, token));
         }
         sqlite3_finalize(stmt);
-        pthread_rwlock_unlock(&rwlock_);
+        UNLOCK;
         return utxos.size() > 0;
     }
 
@@ -103,8 +102,8 @@ namespace Token{
         sqlite3_stmt* stmt;
         int rc;
         if((rc = sqlite3_prepare_v2(database_, sql.c_str(), -1, &stmt, NULL)) != SQLITE_OK){
-            std::cout << "Couldn't prepare statement: " << err_msg << std::endl;
-            pthread_rwlock_unlock(&rwlock_);
+            LOG(ERROR) << "couldn't prepare sqlite3 statement: " << err_msg;
+            UNLOCK;
             return false;
         }
         while((rc = sqlite3_step(stmt)) == SQLITE_ROW){
@@ -116,7 +115,7 @@ namespace Token{
             utxos.push_back(new UnclaimedTransaction(tx_hash, index, user, token));
         }
         sqlite3_finalize(stmt);
-        pthread_rwlock_unlock(&rwlock_);
+        UNLOCK;
         return utxos.size() > 0;
     }
 
@@ -128,8 +127,8 @@ namespace Token{
         sqlite3_stmt* stmt;
         int rc;
         if((rc = sqlite3_prepare_v2(database_, sql.c_str(), -1, &stmt, NULL)) != SQLITE_OK){
-            std::cout << "Couldn't prepare statement: " << err_msg << std::endl;
-            pthread_rwlock_unlock(&rwlock_);
+            LOG(ERROR) << "couldn't prepare sqlite3 statement: " << err_msg;
+            UNLOCK;
             return false;
         }
         while((rc = sqlite3_step(stmt)) == SQLITE_ROW){
@@ -141,8 +140,8 @@ namespace Token{
             utxo->set_token(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4)));
         }
         sqlite3_finalize(stmt);
-        pthread_rwlock_unlock(&rwlock_);
-        return true;
+        UNLOCK;
+        return utxos->transactions_size() > 0;
     }
 
     bool UnclaimedTransactionPool::GetUnclaimedTransaction(const std::string& hash, UnclaimedTransaction** result){
@@ -153,14 +152,14 @@ namespace Token{
         sqlite3_stmt* stmt;
         int rc;
         if((rc = sqlite3_prepare_v2(database_, sql.c_str(), -1, &stmt, NULL)) != SQLITE_OK){
-            std::cout << "Couldn't prepare statement: " << err_msg << std::endl;
-            pthread_rwlock_unlock(&rwlock_);
+            LOG(ERROR) << "couldn't prepare sqlite3 statement: " << err_msg;
+            UNLOCK;
             return false;
         }
         int param_idx = sqlite3_bind_parameter_index(stmt, "@UTxHash");
         if((rc = sqlite3_bind_text(stmt, param_idx, hash.c_str(), -1, SQLITE_TRANSIENT)) != SQLITE_OK){
-            std::cout << "Couldn't bind TxIndex" << std::endl;
-            pthread_rwlock_unlock(&rwlock_);
+            LOG(ERROR) << "couldn't bind UTxHash parameter for statement";
+            UNLOCK;
             return false;
         }
         while((rc = sqlite3_step(stmt)) == SQLITE_ROW){
@@ -170,11 +169,11 @@ namespace Token{
             std::string user = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3)));
             std::string token = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4)));
             *result = new UnclaimedTransaction(tx_hash, index, user, token);
-            pthread_rwlock_unlock(&rwlock_);
+            UNLOCK;
             return true;
         }
         sqlite3_finalize(stmt);
-        pthread_rwlock_unlock(&rwlock_);
+        UNLOCK;
         return false;
     }
 
