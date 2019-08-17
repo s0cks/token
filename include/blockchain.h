@@ -52,13 +52,15 @@ namespace Token{
 
     class BlockChain{
     private:
-        leveldb::DB* state_;
         std::string root_;
+        leveldb::DB* state_;
 
         Array<BlockChainNode*>* heads_;
         BlockChainNode* head_;
         std::map<std::string, BlockChainNode*> nodes_;
+
         TransactionPool tx_pool_;
+
         pthread_t server_thread_;
         pthread_rwlock_t rwlock_;
 
