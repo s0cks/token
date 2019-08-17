@@ -1,7 +1,12 @@
-#include "utxo.h"
 #include <cstring>
+#include <glog/logging.h>
+#include "utxo.h"
 
 namespace Token{
+#define READ_LOCK pthread_rwlock_rdlock(&rwlock_)
+#define WRITE_LOCK pthread_rwlock_wrlock(&rwlock_)
+#define UNLOCK pthread_rwlock_unlock(&rwlock_)
+
     UnclaimedTransactionPool::UnclaimedTransactionPool():
         db_path_(),
         rwlock_(),
@@ -20,7 +25,7 @@ namespace Token{
     }
 
     bool UnclaimedTransactionPool::GetUnclaimedTransactions(const std::string& user, Messages::UnclaimedTransactionList* utxos){
-        pthread_rwlock_rdlock(&rwlock_);
+        READ_LOCK;
         std::string sql = "SELECT UTxHash,TxHash,TxIndex,User,Token FROM UnclaimedTransactions WHERE User=@User;";
         char* err_msg = NULL;
 
@@ -29,15 +34,15 @@ namespace Token{
         sqlite3_stmt* stmt;
         int rc;
         if((rc = sqlite3_prepare_v2(database_, sql.c_str(), -1, &stmt, NULL)) != SQLITE_OK){
-            std::cout << "Couldn't prepare statement: " << err_msg << std::endl;
-            pthread_rwlock_unlock(&rwlock_);
+            LOG(ERROR) << "couldn't prepare sqlite3 statement: " << err_msg;
+            UNLOCK;
             return false;
         }
 
         int param_idx = sqlite3_bind_parameter_index(stmt, "@User");
         if((rc = sqlite3_bind_text(stmt, param_idx, user.c_str(), -1, SQLITE_TRANSIENT)) != SQLITE_OK){
-            std::cout << "Couldn't bind User" << std::endl;
-            pthread_rwlock_unlock(&rwlock_);
+            LOG(ERROR) << "couldn't bind user parameter for statement";
+            UNLOCK;
             return false;
         }
 
@@ -50,12 +55,12 @@ namespace Token{
             utxo->set_token(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4)));
         }
         sqlite3_finalize(stmt);
-        pthread_rwlock_unlock(&rwlock_);
+        UNLOCK;
         return true;
     }
 
     bool UnclaimedTransactionPool::GetUnclaimedTransactions(const std::string& user, std::vector<UnclaimedTransaction*>& utxos){
-        pthread_rwlock_rdlock(&rwlock_);
+        READ_LOCK;
         utxos.clear();
         std::string sql = "SELECT UTxHash,TxHash,TxIndex,User,Token FROM UnclaimedTransactions WHERE User=@User;";
         char* err_msg = NULL;
@@ -335,7 +340,7 @@ namespace Token{
         return true;
     }
 
-    bool UnclaimedTransactionPool::LoadUnclaimedTransactionPool(const std::string &filename) {
+    bool UnclaimedTransactionPool::LoadUnclaimedTransactionPool(const std::string &filename){
         UnclaimedTransactionPool *instance = GetInstance();
         std::cout << "Loading utxo pool: " << filename << std::endl;
         int rc;
@@ -377,5 +382,20 @@ namespace Token{
         Encode(&bb);
         CryptoPP::ArraySource source(bb.GetBytes(), bb.Size(), true, new CryptoPP::HashFilter(func, new CryptoPP::HexEncoder(new CryptoPP::StringSink(digest))));
         return digest;
+    }
+
+    void UnclaimedTransactionPoolPrinter::Print(){
+        std::vector<UnclaimedTransaction*> utxos;
+        if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransactions(utxos)){
+            LOG(ERROR) << "can't get any unclaimed transactions";
+            return;
+        }
+        LOG(INFO) << "*** Unclaimed Transactions:";
+        int counter = 0;
+        for(auto& it : utxos){
+            LOG(INFO) << "***  + UnclaimedTransaction #" << (counter++) << "(" << it->GetHash() << ") := "
+                    << it->GetTransactionHash() << "[" << it->GetIndex() << "]; "
+                    << it->GetToken() << "(" << it->GetToken() << ")";
+        }
     }
 }

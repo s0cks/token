@@ -117,6 +117,15 @@ namespace Token{
         static UnclaimedTransactionPool* GetInstance();
         static bool LoadUnclaimedTransactionPool(const std::string& filename);
     };
+
+    class UnclaimedTransactionPoolPrinter{
+    private:
+        UnclaimedTransactionPoolPrinter(){}
+    public:
+        ~UnclaimedTransactionPoolPrinter(){}
+
+        static void Print();
+    };
 }
 
 #endif //TOKEN_UTXO_H

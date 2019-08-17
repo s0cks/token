@@ -12,77 +12,84 @@
 #include "node/node.h"
 
 namespace Token{
-    class BlockChainNode{
-    private:
-        Block* block_;
-        BlockChainNode* parent_;
-        Array<BlockChainNode*> children_;
-        unsigned int height_;
-
-        inline void
-        AddChild(BlockChainNode* node){
-            children_.Add(node);
-        }
-
-        friend class BlockChain;
+    class BlockChainVisitor{
     public:
-        BlockChainNode(BlockChainNode* parent, Block* block):
-            parent_(parent),
-            block_(block),
-            height_(0),
-            children_(0xA){
-            if(parent_ != nullptr){
-                height_ = parent->GetHeight() + 1;
-                parent->AddChild(this);
-            }
-        }
-
-        Block* GetBlock() const{
-            return block_;
-        }
-
-        Array<BlockChainNode*> GetChildren() const{
-            return children_;
-        }
-
-        unsigned int GetHeight() const{
-            return block_->GetHeight();
-        }
+        BlockChainVisitor(){}
+        virtual ~BlockChainVisitor() = default;
+        virtual void Visit(Block* block) = 0;
     };
 
     class BlockChain{
+    public:
+        class Node{
+        private:
+            Node* parent_;
+            std::vector<Node*> children_;
+            Block* block_;
+
+            inline void
+            AddChild(Node* child){
+                children_.push_back(child);
+            }
+        public:
+            Node(Node* parent, Block* block):
+                parent_(parent),
+                children_(),
+                block_(block){
+                if(!IsRoot()) GetParent()->AddChild(this);
+            }
+            Node(Block* block): Node(nullptr, block){}
+            ~Node(){}
+
+            Node* GetParent() const{
+                return parent_;
+            }
+
+            Block* GetBlock() const{
+                return block_;
+            }
+
+            bool IsRoot() const{
+                return GetParent() == nullptr;
+            }
+
+            size_t GetNumberOfChildren() const{
+                return children_.size();
+            }
+
+            Node* GetChildAt(int idx) const{
+                return children_[idx];
+            }
+
+            void Accept(BlockChainVisitor* vis);
+        };
     private:
         std::string root_;
         leveldb::DB* state_;
-
-        Array<BlockChainNode*>* heads_;
-        BlockChainNode* head_;
-        std::map<std::string, BlockChainNode*> nodes_;
-
-        TransactionPool tx_pool_;
-
-        pthread_t server_thread_;
+        Node* head_;
         pthread_rwlock_t rwlock_;
+        TransactionPool tx_pool_;
+        pthread_t server_thread_;
 
-        bool AppendGenesis(Block* block);
-
-        inline BlockChainNode*
-        GetBlockParent(Block* block){
-            std::string target = block->GetPreviousHash();
-            auto found = nodes_.find(target);
-            if(found == nodes_.end()) return nullptr;
-            return found->second;
-        }
-
+        void RegisterBlock(const std::string& hash, int height);
         void SetHeight(int height);
+        void SetGenesisHash(const std::string& hash);
+        bool SetHead(Block* block);
 
         inline leveldb::DB*
         GetState() const{
             return state_;
         }
 
-        std::string GetBlockDataFile(int height);
-        Block* LoadBlock(int height);
+        inline Node*
+        GetHeadNode() const{
+            return head_;
+        }
+
+        std::string GetGenesisHash() const;
+        std::string GetBlockDataFile(int height) const;
+        int GetBlockHeightFromHash(const std::string& hash) const;
+        Block* LoadBlock(int height) const;
         bool SaveChain();
         bool InitializeChainHead();
         bool InitializeChainState(const std::string& root);
@@ -90,21 +97,18 @@ namespace Token{
         BlockChain():
             rwlock_(),
             state_(nullptr),
-            heads_(new Array<BlockChainNode*>(0xA)),
             tx_pool_(),
-            nodes_(){
+            head_(nullptr){
             pthread_rwlock_init(&rwlock_, NULL);
         }
     public:
         static BlockChain* GetInstance();
         static BlockChainServer* GetServerInstance();
 
-        Block* GetBlockFromHash(const std::string& hash) const{
-            return nodes_.find(hash)->second->GetBlock();
-        }
-
+        void Accept(BlockChainVisitor* vis) const;
         Block* GetHead();
-
+        Block* GetGenesis() const;
+        Block* GetBlockFromHash(const std::string& hash) const;
         Block* GetBlockAt(int height){
             if(height > GetHeight()) return nullptr;
             Block* head = GetHead();
@@ -127,6 +131,7 @@ namespace Token{
         }
 
         Block* CreateBlock();
+        bool HasBlock(const std::string& hash) const;
         bool Append(Block* block);
 
         void StartServer(int port);

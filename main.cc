@@ -56,14 +56,16 @@ int main(int argc, char** argv){
         LOG(ERROR) << "Cannot load unclaimed transaction pool from path '" << (path + "/unclaimed.db") << "'";
         return EXIT_FAILURE;
     }
+    UnclaimedTransactionPoolPrinter::Print();
+
     if(!BlockChain::Initialize(path)){
         return EXIT_FAILURE;
     }
 
     Block* block = BlockChain::GetInstance()->CreateBlock();
-    Block* genesis = BlockChain::GetInstance()->GetBlockFromHash(block->GetPreviousHash());
+    Block* genesis = BlockChain::GetInstance()->GetGenesis();
     Transaction* tx = block->CreateTransaction();
-    tx->AddInput(genesis->GetCoinbaseTransaction()->GetHash(), 0);
+    tx->AddInput(genesis->GetCoinbaseTransaction()->GetHash(), 12);
     tx->AddOutput("TestToken0", "TestUser2");
     if(!BlockChain::GetInstance()->Append(block)){
         LOG(WARNING) << "Couldn't append new block";
