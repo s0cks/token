@@ -64,7 +64,7 @@ int main(int argc, char** argv){
     Block* block = BlockChain::GetInstance()->CreateBlock();
     Block* genesis = BlockChain::GetInstance()->GetGenesis();
     Transaction* tx = block->CreateTransaction();
-    tx->AddInput(genesis->GetCoinbaseTransaction()->GetHash(), 12);
+    tx->AddInput(genesis->GetCoinbaseTransaction()->GetHash(), 10);
     tx->AddOutput("TestToken0", "TestUser2");
     if(!BlockChain::GetInstance()->Append(block)){
         LOG(WARNING) << "Couldn't append new block";

@@ -16,6 +16,7 @@ namespace Token{
 })
 #define BIND_SQLITE_PARAMETER_TEXT(Param, Value) ({ \
     int pidx = sqlite3_bind_parameter_index(stmt, Param); \
+    LOG(INFO) << "binding parameter " << (Param) << "@" << pidx << " := " << (Value); \
     int rc; \
     if((rc = sqlite3_bind_text(stmt, pidx, (Value).c_str(), -1, SQLITE_TRANSIENT)) != SQLITE_OK){ \
         LOG(ERROR) << "couldn't bind parameter " << (Param) << " for statement"; \
@@ -168,29 +169,8 @@ namespace Token{
     }
 
     bool UnclaimedTransactionPool::GetUnclaimedTransaction(const std::string& tx_hash, int index, UnclaimedTransaction** result){
-        READ_LOCK;
-        std::string sql = "SELECT UTxHash,TxHash,TxIndex,User,Token FROM UnclaimedTransactions WHERE TxHash=@TxHash AND TxIndex=@TxIndex;";
-
-        sqlite3_stmt* stmt;
-        PREPARE_SQLITE_STATEMENT;
-        BIND_SQLITE_PARAMETER_TEXT("@TxHash", tx_hash);
-        BIND_SQLITE_PARAMETER_INT("@TxIndex", index);
-
-        int rc;
-        while((rc = sqlite3_step(stmt)) == SQLITE_ROW){
-            std::string utx_hash = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
-            std::string thash = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
-            int idx = sqlite3_column_int(stmt, 2);
-            std::string user = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3)));
-            std::string token = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4)));
-            *result = new UnclaimedTransaction(thash, idx, user, token);
-            UNLOCK;
-            return true;
-        }
-
-        sqlite3_finalize(stmt);
-        UNLOCK;
-        return false;
+        UnclaimedTransaction utxo(tx_hash, index);
+        return GetUnclaimedTransaction(utxo.GetHash(), result);
     }
 
     bool UnclaimedTransactionPool::RemoveUnclaimedTransaction(Token::UnclaimedTransaction* utxo){
