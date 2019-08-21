@@ -2,7 +2,6 @@
 #include <string>
 #include <service/service.h>
 #include "blockchain.h"
-#include <leveldb/db.h>
 #include <glog/logging.h>
 #include <sys/stat.h>
 
