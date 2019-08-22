@@ -1,4 +1,4 @@
-#include "node/message.h"
+#include "message.h"
 
 namespace Token{
     bool Message::Encode(uint8_t* bytes, size_t size){

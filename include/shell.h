@@ -3,7 +3,7 @@
 
 #include <uv.h>
 #include "bytes.h"
-#include "node/session.h"
+#include "session.h"
 
 namespace Token{
     class BlockChainServerShell{

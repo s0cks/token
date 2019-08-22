@@ -21,7 +21,7 @@ include_directories(include)
 include_directories(src)
 
 set(PROTO_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protos")
-file(GLOB_RECURSE TOKEN_LIB_SOURCES include/*.h src/*.cc src/*.h)
+file(GLOB TOKEN_LIB_SOURCES include/*.h src/*.cc src/*.h)
 file(GLOB_RECURSE TOKEN_PROTO_SOURCES protos/*.proto)
 file(GLOB_RECURSE TOKEN_SERVICE_PROTO_SOURCES protos/*.proto)
 

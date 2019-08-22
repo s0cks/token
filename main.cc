@@ -73,11 +73,11 @@ int main(int argc, char** argv){
 
     /*
     BlockChainService::GetInstance()->Start("127.0.0.1", port + 1);
+    BlockChainService::GetInstance()->WaitForShutdown();
+
     BlockChain::GetServerInstance()->AddPeer("127.0.0.1", pport);
     BlockChain::GetInstance()->StartServer(port);
-    while(BlockChain::GetServerInstance()->IsRunning());
     BlockChain::GetInstance()->WaitForServerShutdown();
-    BlockChainService::GetInstance()->WaitForShutdown();
     */
     return EXIT_SUCCESS;
 }

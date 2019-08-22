@@ -1,4 +1,4 @@
-#include "node/session.h"
+#include "session.h"
 #include "blockchain.h"
 
 namespace Token {
