@@ -1,6 +1,5 @@
+#include <glog/logging.h>
 #include "blockchain.h"
-#include <shell.h>
-
 #include "service/client.h"
 
 static inline void
@@ -100,7 +99,10 @@ int main(int argc, char** argv){
             PrintBlock(&nhead);
         } else if(input == "gethead"){
             Messages::BlockHeader head;
-            client.GetHead(&head);
+            if(!client.GetHead(&head)){
+                LOG(ERROR) << "couldn't get <HEAD> from service";
+                return EXIT_FAILURE;
+            }
             PrintBlock(&head);
         }
     } while(true);

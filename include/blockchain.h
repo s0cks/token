@@ -9,7 +9,6 @@
 #include "block.h"
 #include "user.h"
 #include "utxo.h"
-#include "node/node.h"
 
 namespace Token{
     class BlockChainVisitor{
@@ -103,7 +102,6 @@ namespace Token{
         }
     public:
         static BlockChain* GetInstance();
-        static BlockChainServer* GetServerInstance();
 
         void Accept(BlockChainVisitor* vis) const;
         Block* GetHead();
@@ -133,10 +131,6 @@ namespace Token{
         Block* CreateBlock();
         bool HasBlock(const std::string& hash) const;
         bool Append(Block* block);
-
-        void StartServer(int port);
-        void StopServer();
-        void WaitForServerShutdown();
 
         static bool Initialize(const std::string& path);
     };

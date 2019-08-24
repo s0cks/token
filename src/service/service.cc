@@ -1,16 +1,21 @@
 #include "service/service.h"
+#include <glog/logging.h>
+#include <server.h>
 
 namespace Token{
     grpc::Status BlockChainService::GetHead(grpc::ServerContext *ctx,
                                             const Token::Service::Messages::EmptyRequest *request,
                                             Token::Messages::BlockHeader *response){
-        std::cout << "Processing GetHead..." << std::endl;
-        Block* head = BlockChain::GetInstance()->GetHead();
-        if(head){
-            SetBlockHeader(head, response);
-            return grpc::Status::OK;
+        LOG(INFO) << "getting head";
+        Block* head;
+        if(!(head = BlockChain::GetInstance()->GetHead())){
+            LOG(ERROR) << "couldn't get BlockChain <HEAD>";
+            return grpc::Status::CANCELLED;
         }
-        return grpc::Status::CANCELLED;
+        LOG(INFO) << "<HEAD>:";
+        LOG(INFO) << (*head);
+        SetBlockHeader(head, response);
+        return grpc::Status::OK;
     }
 
     grpc::Status BlockChainService::GetBlock(grpc::ServerContext *ctx,
@@ -58,13 +63,23 @@ namespace Token{
     grpc::Status BlockChainService::AppendBlock(grpc::ServerContext *ctx,
                                                 const Messages::Block *request,
                                                 Token::Messages::BlockHeader *response){
+        //TODO: Refactor this copy
         Messages::Block bdata;
         bdata.CopyFrom(*request);
         Block* nblock = new Block(&bdata);
-        std::cout << "Appending block w/ " << nblock->GetNumberOfTransactions() << " transactions" << std::endl;
+        LOG(INFO) << "appending new block: " << nblock->GetHash();
         if(!BlockChain::GetInstance()->Append(nblock)){
+            LOG(ERROR) << "couldn't append new block";
             return grpc::Status::CANCELLED;
         }
+
+        LOG(WARNING) << "appended, broadcasting...";
+        Message msg(Message::Type::kBlockMessage, nblock->GetRaw());
+        if(!BlockChainServer::Broadcast(nullptr, &msg)){
+            LOG(ERROR) << "couldn't broadcast to peers";
+            return grpc::Status::CANCELLED;
+        }
+        LOG(INFO) << "done!";
         SetBlockHeader(nblock, response);
         return grpc::Status::OK;
     }
@@ -73,12 +88,10 @@ namespace Token{
                                                              const Token::Service::Messages::GetUnclaimedTransactionsRequest *request,
                                                              Token::Messages::UnclaimedTransactionList *response){
         if(request->user().empty()){
-            std::cout << "Getting unclaimed transactions for all" << std::endl;
             return UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransactions(response) ?
                    grpc::Status::OK :
                    grpc::Status::CANCELLED;
         } else{
-            std::cout << "Getting unclaimed transactions for " << request->user() << std::endl;
             return UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransactions(request->user(), response) ?
                    grpc::Status::OK :
                    grpc::Status::CANCELLED;
@@ -98,7 +111,6 @@ namespace Token{
         builder.AddListeningPort(ss.str(), grpc::InsecureServerCredentials());
         builder.RegisterService(instance);
         instance->server_ = std::unique_ptr<grpc::Server>(builder.BuildAndStart());
-        std::cout << "Started Service: " << ss.str() << std::endl;
     }
 
     void BlockChainService::WaitForShutdown(){

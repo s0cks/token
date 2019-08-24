@@ -33,7 +33,7 @@ namespace Token {
         static const size_t kReadBufferMax = 4096;
     protected:
         BlockChainServer* parent_;
-        ByteBuffer read_buffer_;
+        ByteBuffer* read_buffer_;
         State state_;
 
         void OnMessageSent(uv_write_t *req, int status);
@@ -42,12 +42,15 @@ namespace Token {
 
         ByteBuffer *
         GetReadBuffer() {
-            return &read_buffer_;
+            return read_buffer_;
         }
 
         inline void
-        Append(const uv_buf_t *buff, ssize_t nread) {
-            GetReadBuffer()->PutBytes((uint8_t *) buff->base, static_cast<uint32_t>(nread));
+        Append(const uv_buf_t* buff, ssize_t nread) {
+            uint8_t bytes[nread + 1];
+            memcpy(bytes, buff->base, nread);
+            bytes[nread + 1] = '\0';
+            GetReadBuffer()->PutBytes(bytes, nread + 1);
         }
 
         inline void
@@ -58,7 +61,7 @@ namespace Token {
         Session(BlockChainServer* parent=nullptr):
             parent_(parent),
             state_(State::kDisconnected),
-            read_buffer_(kReadBufferMax){}
+            read_buffer_(new ByteBuffer(kReadBufferMax)){}
         friend class BlockChainServer;
     public:
         ~Session() {}
@@ -144,6 +147,8 @@ namespace Token {
         std::shared_ptr<uv_tcp_t> connection_;
 
         bool Handle(uv_stream_t* stream, Message *msg);
+
+        friend class BlockChainServer;
     public:
         ClientSession(std::shared_ptr<uv_tcp_t> conn) :
                 connection_(conn) {}

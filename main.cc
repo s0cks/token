@@ -1,9 +1,10 @@
 #include <sstream>
 #include <string>
-#include <service/service.h>
-#include "blockchain.h"
 #include <glog/logging.h>
 #include <sys/stat.h>
+#include <service/service.h>
+#include "blockchain.h"
+#include "server.h"
 
 static inline bool
 FileExists(const std::string& name){
@@ -61,23 +62,21 @@ int main(int argc, char** argv){
         return EXIT_FAILURE;
     }
 
-    Block* block = BlockChain::GetInstance()->CreateBlock();
-    Block* genesis = BlockChain::GetInstance()->GetGenesis();
-    Transaction* tx = block->CreateTransaction();
-    tx->AddInput(genesis->GetCoinbaseTransaction()->GetHash(), 10);
-    tx->AddOutput("TestToken0", "TestUser2");
-    if(!BlockChain::GetInstance()->Append(block)){
-        LOG(WARNING) << "Couldn't append new block";
+    if(pport > 0){
+        BlockChainServer::AddPeer("127.0.0.1", pport);
+    }
+    if(!BlockChainServer::Initialize(port)){
+        LOG(ERROR) << "Couldn't initialize the BlockChain server";
         return EXIT_FAILURE;
     }
 
-    /*
-    BlockChainService::GetInstance()->Start("127.0.0.1", port + 1);
-    BlockChainService::GetInstance()->WaitForShutdown();
+    BlockChainService::Start("0.0.0.0", port + 1);
+    LOG(INFO) << "BlockChainService started @ localhost:" << (port + 1);
+    BlockChainService::WaitForShutdown();
 
-    BlockChain::GetServerInstance()->AddPeer("127.0.0.1", pport);
-    BlockChain::GetInstance()->StartServer(port);
-    BlockChain::GetInstance()->WaitForServerShutdown();
-    */
+    if(!BlockChainServer::ShutdownAndWait()){
+        LOG(ERROR) << "couldn't shutdown the server";
+        return EXIT_FAILURE;
+    }
     return EXIT_SUCCESS;
 }

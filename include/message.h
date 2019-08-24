@@ -40,10 +40,13 @@ namespace Token{
     public:
         Message(Type type, google::protobuf::Message* data):
             type_(type),
-            msg_(data){}
+            msg_(data->New()){
+            GetRaw()->CopyFrom(*data);
+        }
         Message(Type type=Type::kUnknownType):
             type_(type),
             msg_(nullptr){}
+        Message(const Message& other);
         ~Message(){}
 
         Type GetType() const{
@@ -51,7 +54,7 @@ namespace Token{
         }
 
         bool Encode(uint8_t* bytes, size_t size);
-        bool Decode(ByteBuffer* bb);
+        bool Decode(uint8_t* bytes, size_t size);
 
 #define DECLARE_AS(Name, MType) \
         MType* GetAs##Name##Message();
@@ -64,6 +67,8 @@ namespace Token{
                    GetRaw()->ByteSizeLong() :
                    0;
         }
+
+        std::string ToString() const;
     };
 }
 

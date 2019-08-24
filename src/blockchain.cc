@@ -17,43 +17,6 @@ namespace Token{
         return &instance;
     }
 
-    BlockChainServer*
-    BlockChain::GetServerInstance(){
-        static BlockChainServer instance;
-        return &instance;
-    }
-
-    static void*
-    BlockChainServerThread(void* data){
-        char* result = (char*) malloc(sizeof(char*) * 128);
-        BlockChainServer* server = (BlockChainServer*) data;
-        int rc;
-        if((rc = server->Start()) < 0){
-            strcpy(result, uv_strerror(rc));
-        }
-        pthread_exit(result);
-    }
-
-    void BlockChain::StartServer(int port){
-        if(BlockChain::GetServerInstance()->IsRunning()) return;
-        BlockChain::GetServerInstance()->SetPort(port);
-        pthread_create(&server_thread_, NULL, &BlockChainServerThread, BlockChain::GetServerInstance());
-    }
-
-    void BlockChain::StopServer(){
-        BlockChain::GetServerInstance()->Shutdown();
-        WaitForServerShutdown();
-    }
-
-    void BlockChain::WaitForServerShutdown(){
-        void* result;
-        if(pthread_join(server_thread_, &result) != 0){
-            std::cerr << "Unable to join server thread" << std::endl;
-            return;
-        }
-        printf("Server shutdown with: %s\n", result);
-    }
-
     void BlockChain::SetHeight(int height){
         std::stringstream value;
         value << height;
@@ -282,8 +245,8 @@ namespace Token{
 
         LOG(INFO) << "new <HEAD>: " << block->GetHash();
         //TODO: Migrate BroadCast logic
-        Message m(Message::Type::kBlockMessage, block->GetAsMessage());
-        BlockChain::GetServerInstance()->Broadcast(nullptr, &m);
+        // Message m(Message::Type::kBlockMessage, block->GetAsMessage());
+        // BlockChain::GetServerInstance()->Broadcast(nullptr, &m);
         UNLOCK;
         return true;
     }

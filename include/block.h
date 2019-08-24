@@ -39,6 +39,7 @@ namespace Token{
             raw_(new Messages::Block()){
             GetRaw()->CopyFrom(*raw);
         }
+
         friend class BlockChainService;
         friend class TokenServiceClient;
         friend class ClientSession;
