@@ -88,11 +88,18 @@ namespace Token {
 
     void PeerSession::OnConnect(uv_connect_t *conn, int status) {
         if (status == 0) {
-            LOG(INFO) << "connected!";
-            GetParent()->Register(this);
-            state_ = State::kConnected;
+            LOG(INFO) << "connected to peer!";
+            LOG(INFO) << "doing handshake...";
+            state_ = State::kHandshake;
             handle_ = conn->handle;
             handle_->data = conn->data;
+            Message msg(Message::Type::kGetIdentMessage);
+            if(!Send(handle_, &msg)){
+                LOG(ERROR) << "cannot send message: " << msg.ToString();
+                state_ = State::kDisconnected;
+                Disconnect();
+                return;
+            }
             uv_read_start(handle_, AllocBuffer, [](uv_stream_t *stream, ssize_t nread, const uv_buf_t *buff) {
                 PeerSession *peer = (PeerSession*) stream->data;
                 peer->OnMessageRead(stream, nread, buff);
@@ -126,8 +133,22 @@ namespace Token {
         if(msg->GetType() == Message::Type::kBlockMessage){
             Token::Block* block = Token::Block::Load(msg->GetAsBlockMessage());
             LOG(INFO) << "received block: " << block->GetHash();
+            return true;
+        } else if(msg->GetType() == Message::Type::kGetIdentMessage){
+            if(GetState() != State::kHandshake){
+                LOG(ERROR) << "peer is not in handshake state";
+                return false;
+            }
+            Messages::PeerIdentity* ident = msg->GetAsIdentMessage();
+            Messages::BlockHeader phead = ident->head();
+            if(!BlockChain::GetInstance()->GetHead()->Equals(phead)){
+                LOG(ERROR) << "incompatible <HEAD>";
+                return false;
+            }
+            state_ = State::kConnected;
+            LOG(INFO) << "peer connected";
+            return true;
         }
-        return true;
     }
 
     PeerSession::PeerSession(BlockChainServer* parent, std::string addr, int port) :
@@ -139,7 +160,9 @@ namespace Token {
             handle_(nullptr),
             address_(),
             thread_(),
-            Session(parent){}
+            Session(parent){
+
+    }
 
     bool ClientSession::Handle(uv_stream_t* stream, Token::Message *msg){
         if(msg->GetType() == Message::Type::kBlockMessage){
@@ -157,6 +180,17 @@ namespace Token {
             LOG(INFO) << "sending head: " << block->GetHash();
             Message response(Message::Type::kBlockMessage, block->GetAsMessage());
             Send(stream, &response);
+        } else if(msg->GetType() == Message::Type::kGetIdentMessage){
+            LOG(INFO) << "client requested identity, sending...";
+            Token::Messages::PeerIdentity* ident = new Token::Messages::PeerIdentity();
+            Block* head = BlockChain::GetInstance()->GetHead();
+            Messages::BlockHeader ih = ident->head();
+            ih.set_previous_hash(head->GetPreviousHash());
+            ih.set_hash(head->GetHash());
+            ih.set_merkle_root(head->GetMerkleRoot());
+            ih.set_height(head->GetHeight());
+            Message resp(Message::Type::kIdentMessage, ident);
+            Send(stream, &resp);
         } else{
             LOG(ERROR) << "unknown message type: " << static_cast<int>(msg->GetType());
         }

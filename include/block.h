@@ -91,6 +91,7 @@ namespace Token{
             }
         }
 
+        bool Equals(const Messages::BlockHeader& head);
         void Encode(ByteBuffer* bb);
         void Write(const std::string& filename);
         std::string GetHash();

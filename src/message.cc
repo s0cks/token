@@ -36,6 +36,15 @@ namespace Token{
                 LOG(INFO) << "decoding GetHeadMessage";
                 return true;
             }
+            case Type::kGetIdentMessage:{
+                LOG(INFO) << "decoding GetIdentMessage";
+                return true;
+            }
+            case Type::kIdentMessage:{
+                LOG(INFO) << "decoding IdentMessage";
+                msg_ = new Token::Messages::PeerIdentity();
+                return GetRaw()->ParseFromArray(&bytes[(sizeof(uint32_t) * 2)], msg_size);
+            }
             case Type::kBlockMessage:{
                 LOG(INFO) << "decoding block message";
                 msg_ = new Token::Messages::Block();
@@ -79,6 +88,7 @@ namespace Token{
                 stream << "Block(" << blk->GetHash() << ")";
                 return stream.str();
             }
+            case Type::kGetIdentMessage: return "GetIdent()";
             case Type::kGetHeadMessage: return "GetHead()";
         }
     }

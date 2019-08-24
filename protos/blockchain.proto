@@ -41,3 +41,7 @@ message BlockHeader{
     string previous_hash = 3;
     string merkle_root = 4;
 }
+
+message PeerIdentity{
+    BlockHeader head = 1;
+}

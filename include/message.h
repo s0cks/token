@@ -9,7 +9,9 @@
 namespace Token{
 #define FOR_EACH_TYPE(V) \
     V(Block, Token::Messages::Block) \
-    V(GetHead, Token::Service::Messages::EmptyRequest)
+    V(GetHead, Token::Service::Messages::EmptyRequest) \
+    V(GetIdent, Token::Service::Messages::EmptyRequest) \
+    V(Ident, Token::Messages::PeerIdentity)
 
     class Message{
     public:

@@ -1,3 +1,4 @@
+#include <glog/logging.h>
 #include "block.h"
 
 namespace Token{
@@ -5,6 +6,26 @@ namespace Token{
         uint32_t size = static_cast<uint32_t>(GetRaw()->ByteSizeLong());
         bb->Resize(size);
         GetRaw()->SerializeToArray(bb->GetBytes(), size);
+    }
+
+    bool Block::Equals(const Token::Messages::BlockHeader &head){
+        if(GetHeight() != head.height()){
+            LOG(WARNING) << "block heights don't match";
+            return false;
+        }
+        if(GetHash() != head.hash()){
+            LOG(WARNING) << "block hashes don't match";
+            return false;
+        }
+        if(GetPreviousHash() != head.previous_hash()){
+            LOG(WARNING) << "block previous hashes don't match";
+            return false;
+        }
+        if(GetMerkleRoot() != head.merkle_root()){
+            LOG(WARNING) << "block merkle roots don't match";
+            return false;
+        }
+        return true;
     }
 
     Block* Block::Load(const std::string& filename){

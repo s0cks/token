@@ -27,6 +27,7 @@ namespace Token {
     public:
         enum class State {
             kConnected,
+            kHandshake,
             kDisconnected
         };
 
