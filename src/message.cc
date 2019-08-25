@@ -24,6 +24,7 @@ namespace Token{
         uint32_t type;
         memcpy(&type, bytes, sizeof(uint32_t));
         LOG(INFO) << "decoded type: " << type;
+        SetType(static_cast<Type>(type));
 
         uint32_t msg_size;
         memcpy(&msg_size, &bytes[sizeof(uint32_t)], sizeof(uint32_t));
@@ -31,23 +32,29 @@ namespace Token{
 
         if(msg_size < 0) return false;
         if(msg_size == 0) return true;
-        switch((type_ = static_cast<Type>(type))){
+        switch(GetType()){
             case Type::kGetHeadMessage:{
                 LOG(INFO) << "decoding GetHeadMessage";
                 return true;
             }
-            case Type::kGetIdentMessage:{
-                LOG(INFO) << "decoding GetIdentMessage";
-                return true;
-            }
-            case Type::kIdentMessage:{
-                LOG(INFO) << "decoding IdentMessage";
-                msg_ = new Token::Messages::PeerIdentity();
-                return GetRaw()->ParseFromArray(&bytes[(sizeof(uint32_t) * 2)], msg_size);
-            }
             case Type::kBlockMessage:{
                 LOG(INFO) << "decoding block message";
                 msg_ = new Token::Messages::Block();
+                return GetRaw()->ParseFromArray(&bytes[(sizeof(uint32_t) * 2)], msg_size);
+            }
+            case Type::kPeerIdentMessage:{
+                LOG(INFO) << "decoding peer identity message";
+                msg_ = new Node::Messages::PeerIdentity();
+                return GetRaw()->ParseFromArray(&bytes[(sizeof(uint32_t) * 2)], msg_size);
+            }
+            case Type::kPeerIdentAckMessage:{
+                LOG(INFO) << "decoding PeerIdentAck";
+                msg_ = new Node::Messages::PeerIdentAck();
+                return GetRaw()->ParseFromArray(&bytes[(sizeof(uint32_t) * 2)], msg_size);
+            }
+            case Type::kGetBlockMessage:{
+                LOG(INFO) << "decoding GetBlock";
+                msg_ = new Node::Messages::GetBlockRequest();
                 return GetRaw()->ParseFromArray(&bytes[(sizeof(uint32_t) * 2)], msg_size);
             }
             case Type::kUnknownType: {
@@ -86,10 +93,34 @@ namespace Token{
             case Type::kBlockMessage:{
                 Block* blk = new Block(msg_);
                 stream << "Block(" << blk->GetHash() << ")";
-                return stream.str();
+                break;
             }
-            case Type::kGetIdentMessage: return "GetIdent()";
             case Type::kGetHeadMessage: return "GetHead()";
+            case Type::kPeerIdentMessage:{
+                Node::Messages::PeerIdentity* pident = (Node::Messages::PeerIdentity*)GetRaw();
+                stream << "PeerIdentity(v" << pident->version() << "," << pident->block_count() << " blocks)";
+                break;
+            }
+            case Type::kGetBlockMessage:{
+                Node::Messages::GetBlockRequest* gblock = (Node::Messages::GetBlockRequest*)GetRaw();
+                stream << "GetBlock(" << gblock->hash() << ")";
+                break;
+            }
+            case Type::kPeerIdentAckMessage:{
+                Node::Messages::PeerIdentAck* ack = (Node::Messages::PeerIdentAck*)GetRaw();
+                if(ack && ack->blocks_size() > 0){
+                    stream << "PeerIdentAck(";
+                    for(int idx = 0;
+                        idx < ack->blocks_size();
+                        idx++){
+                        stream << ack->blocks(idx);
+                        if(idx < (ack->blocks_size() - 1)) stream << ",";
+                    }
+                    stream << ")";
+                }
+                return "PeerIdentAck()";
+            }
         }
+        return stream.str();
     }
 }

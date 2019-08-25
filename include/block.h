@@ -42,8 +42,8 @@ namespace Token{
 
         friend class BlockChainService;
         friend class TokenServiceClient;
-        friend class ClientSession;
         friend class PeerSession;
+        friend class PeerClient;
         friend class BlockChainServer;
     public:
         Block(bool genesis):

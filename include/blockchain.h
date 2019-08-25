@@ -63,6 +63,10 @@ namespace Token{
             void Accept(BlockChainVisitor* vis);
         };
     private:
+        friend class BlockChainServer;
+        friend class PeerSession;
+        friend class PeerClient;
+
         std::string root_;
         leveldb::DB* state_;
         Node* head_;

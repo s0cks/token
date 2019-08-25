@@ -9,9 +9,17 @@
 namespace Token{
 #define FOR_EACH_TYPE(V) \
     V(Block, Token::Messages::Block) \
-    V(GetHead, Token::Service::Messages::EmptyRequest) \
-    V(GetIdent, Token::Service::Messages::EmptyRequest) \
-    V(Ident, Token::Messages::PeerIdentity)
+    V(GetHead, Token::Node::Messages::EmptyRequest) \
+    V(PeerIdent, Token::Node::Messages::PeerIdentity) \
+    V(PeerIdentAck, Token::Node::Messages::PeerIdentAck) \
+    V(GetBlock, Token::Node::Messages::GetBlockRequest) \
+
+    /**
+     * Block := Contains block information
+     * GetHead := Request the head from the peer
+     * PeerIdent := Send identity to peer
+     * PeerIdentAck := Acknowledge that the peer is good
+     */
 
     class Message{
     public:

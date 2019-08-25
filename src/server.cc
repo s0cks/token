@@ -1,5 +1,6 @@
 #include <glog/logging.h>
 #include "server.h"
+#include "peer.h"
 
 namespace Token{
     BlockChainServer::BlockChainServer():
@@ -36,11 +37,10 @@ namespace Token{
 
         auto pos = instance->sessions_.find(stream);
         if(pos == instance->sessions_.end()){
-            LOG(ERROR) << "unrecognized client";
             return;
         }
 
-        ClientSession* session = (ClientSession*)pos->second;
+        PeerSession* session = (PeerSession*)pos->second;
         if(nread > 0){
             LOG(INFO) << "read " << nread << "bytes from client";
 
@@ -51,7 +51,6 @@ namespace Token{
                 return;
             }
 
-            session->ClearReadBuffer();
             if(!session->Handle(stream, &msg)){
                 LOG(ERROR) << "couldn't handle message from session";
                 Disconnect(session);
@@ -67,12 +66,12 @@ namespace Token{
         }
     }
 
-    void BlockChainServer::Disconnect(Token::Session* session){
+    void BlockChainServer::Disconnect(Token::PeerSession* session){
 
     }
 
-    void BlockChainServer::Register(Token::Session* session){
-        GetInstance()->sessions_.insert({ session->GetStream(), session });
+    void BlockChainServer::Register(Token::PeerSession* session){
+        GetInstance()->sessions_.insert({ (uv_stream_t*)session->GetConnection(), session });
     }
 
     void BlockChainServer::OnNewConnection(uv_stream_t* stream, int status){
@@ -84,12 +83,20 @@ namespace Token{
 
         BlockChainServer* instance = (BlockChainServer*) stream->data;
         std::shared_ptr<uv_tcp_t> key = std::make_shared<uv_tcp_t>();
-        ClientSession* client = new ClientSession(key);
+        PeerSession* client = new PeerSession(instance->loop_, key);
         uv_tcp_init(instance->loop_, key.get());
 
         int rc;
         if((rc = uv_accept(stream, (uv_stream_t*)key.get())) == 0){
             LOG(INFO) << "client accepted!";
+            LOG(WARNING) << "performing handshake....";
+
+            if(!client->PerformHandshake()){
+                LOG(ERROR) << "handshake failed!";
+                Disconnect(client);
+                return;
+            }
+
             instance->sessions_.insert({ (uv_stream_t*)key.get(), client });
             if((rc = uv_read_start((uv_stream_t*)key.get(), AllocBuffer, OnRead)) < 0){
                 LOG(ERROR) << "error reading from client: " << std::string(uv_strerror(rc));
@@ -138,7 +145,7 @@ namespace Token{
     }
 
     int BlockChainServer::AddPeer(const std::string &address, int port){
-        return (new PeerSession(GetInstance(), address, port))->Connect();
+        return (new PeerClient(address, port))->Connect();
     }
 
     int BlockChainServer::Initialize(int port){
@@ -166,10 +173,8 @@ namespace Token{
         LOG(INFO) << "broadcasting " << dup->ToString() << " to " << GetInstance()->sessions_.size() << " peers";
         int idx = 0;
         for(auto& it : GetInstance()->sessions_){
-            if(it.second->IsPeerSession()){
-                if(!it.second->Send(it.first, dup)){
-                    LOG(ERROR) << "couldn't send to peer " << idx;
-                }
+            if(!it.second->Send(dup)){
+                LOG(ERROR) << "couldn't send to peer " << idx;
             }
             idx++;
         }

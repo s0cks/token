@@ -11,13 +11,13 @@ namespace Token{
 
         uv_loop_t* loop_;
         uv_tcp_t server_;
-        std::map<uv_stream_t*, Session*> sessions_;
+        std::map<uv_stream_t*, PeerSession*> sessions_;
 
         //Async Stuffs?
         uv_async_t broadcast_;
 
-        static void Register(Session* session);
-        static void Disconnect(Session* session);
+        static void Register(PeerSession* session);
+        static void Disconnect(PeerSession* session);
         static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
         static void OnNewConnection(uv_stream_t* stream, int status);
         static void OnRead(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buff);
@@ -27,7 +27,7 @@ namespace Token{
 
         BlockChainServer();
 
-        friend class PeerSession;
+        friend class PeerClient;
     public:
         ~BlockChainServer();
 
