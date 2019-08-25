@@ -28,6 +28,8 @@ namespace Token{
         int port_;
         State state_;
 
+        uv_async_t async_send_;
+
         inline void
         SetState(State state){
             state_ = state;
@@ -53,6 +55,7 @@ namespace Token{
             return address_;
         }
 
+        void AsyncSend(Message* msg);
         bool Send(Message *msg);
         bool Connect();
         bool Disconnect();

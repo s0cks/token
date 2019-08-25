@@ -36,7 +36,8 @@ namespace Token {
     }
 
     bool PeerSession::AcceptsIdentity(Node::Messages::PeerIdentity* ident){
-        return BlockChain::GetInstance()->GetHeight() == ident->block_count();
+        LOG(INFO) << "peer count: " << ident->peer_count();
+        return false;
     }
 
     bool PeerSession::Handle(uv_stream_t* stream, Token::Message *msg){
@@ -64,22 +65,23 @@ namespace Token {
             Node::Messages::PeerIdentAck ack;
             if(!AcceptsIdentity(pident)){
                 SetState(State::kAuthenticating);
-                LOG(WARNING) << "sending connecting peer heads";
-
-                std::vector<std::string> peers;
-                if(!BlockChainServer::GetPeers(peers)){
-                    LOG(WARNING) << "couldn't get peer list";
-                    return false;
+                if(pident->peer_count() < BlockChainServer::GetPeerCount() + 1){
+                    LOG(INFO) << "sending connecting peer connected peers";
+                    std::vector<std::string> peers;
+                    if(!BlockChainServer::GetPeers(peers)){
+                        LOG(INFO) << "couldn't get peer list";
+                        return false;
+                    }
+                    LOG(INFO) << "peers (" << peers.size() << ": ";
+                    for(auto& it : peers){
+                        LOG(INFO) << "  - " << it;
+                        ack.add_peers()->set_address(it);
+                    }
                 }
-
-                LOG(WARNING) << "peers (" << peers.size() << ": ";
-                for(auto& it : peers){
-                    LOG(WARNING) << "  - " << it;
-                    ack.add_peers()->set_address(it);
-                }
-
+                LOG(INFO) << "sending <HEAD>";
                 ack.add_blocks(BlockChain::GetInstance()->GetHead()->GetHash());
             } else{
+                LOG(INFO) << "peer connected";
                 SetState(State::kConnected);
             }
 

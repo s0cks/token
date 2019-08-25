@@ -10,6 +10,18 @@ namespace Token{
         *buff = uv_buf_init(base, suggested_size);
     }
 
+    struct SendCommand{
+        PeerClient* peer;
+        Message* message;
+    };
+
+    static void OnAsyncSend(uv_async_t* handle){
+        SendCommand* cmd = (SendCommand*) handle->data;
+        LOG(INFO) << "AsyncSend";
+        cmd->peer->Send(cmd->message);
+        free(cmd);
+    }
+
     PeerClient::PeerClient(const std::string &addr, int port):
         loop_(uv_loop_new()),
         address_(addr),
@@ -17,7 +29,8 @@ namespace Token{
         stream_(),
         connection_(),
         state_(State::kConnecting),
-        handle_(nullptr){}
+        handle_(nullptr){
+    }
 
     PeerClient::~PeerClient(){}
 
@@ -27,6 +40,7 @@ namespace Token{
 
     void PeerClient::OnConnect(uv_connect_t *conn, int status) {
         if (status == 0) {
+            uv_async_init(loop_, &async_send_, OnAsyncSend);
             BlockChainServer::Register(this);
             state_ = State::kConnecting;
             handle_ = conn->handle;
@@ -56,6 +70,7 @@ namespace Token{
             Node::Messages::PeerIdentity mident;
             mident.set_version("1.0.0");
             mident.set_block_count(BlockChain::GetInstance()->GetHead()->GetHeight());
+            mident.set_peer_count(BlockChainServer::GetPeerCount());
             Message m(Message::Type::kPeerIdentMessage, &mident);
             Send(&m);
             return true;
@@ -69,12 +84,11 @@ namespace Token{
             Node::Messages::PeerIdentAck* ack = msg->GetAsPeerIdentAckMessage();
             if(ack && ack->blocks_size() > 0){
                 SetState(State::kAuthenticating);
-                LOG(WARNING) << "peer responded with a boostrap";
-                LOG(WARNING) << "adding peers";
+                LOG(INFO) << "peer responded with a boostrap";
+                LOG(INFO) << "adding " << ack->peers_size() << " peers";
 
                 for(auto& it : ack->peers()){
                     std::string peer = it.address();
-                    LOG(WARNING) << "adding peer: " << peer;
                     if(peer.find(":") != std::string::npos){
                         std::string addr = peer.substr(0, peer.find(":"));
                         std::string p = peer.substr(peer.find(":") + 1);
@@ -94,6 +108,7 @@ namespace Token{
                 Node::Messages::PeerIdentity ident;
                 ident.set_version("1.0.0");
                 ident.set_block_count(BlockChain::GetInstance()->GetHeight());
+                ident.set_peer_count(BlockChainServer::GetPeerCount());
                 Message done(Message::Type::kPeerIdentMessage, &ident);
                 Send(&done);
                 return true;
@@ -194,6 +209,17 @@ namespace Token{
         }
         LOG(WARNING) << "peer disconnected with: " << (char*)result;
         return true;
+    }
+
+    void
+    PeerClient::AsyncSend(Token::Message *msg){
+        SendCommand cmd = {
+                .peer = this,
+                .message = new Token::Message(*msg),
+        };
+        async_send_.data = malloc(sizeof(SendCommand));
+        memcpy(async_send_.data, &cmd, sizeof(SendCommand));
+        uv_async_send(&async_send_);
     }
 
     bool

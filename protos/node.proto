@@ -7,6 +7,7 @@ message EmptyResponse{}
 message PeerIdentity{
     string version = 1;
     uint32 block_count = 2;
+    uint32 peer_count = 3;
 }
 
 message Peer{

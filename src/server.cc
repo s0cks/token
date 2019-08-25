@@ -147,12 +147,12 @@ namespace Token{
     int BlockChainServer::AddPeer(const std::string &address, int port){
         std::stringstream key;
         key << address << ":" << port;
-
         BlockChainServer* instance = GetInstance();
         if(instance->HasPeer(key.str())){
-            LOG(ERROR) << "peer '" << key.str() << "' already conntected!";
+            LOG(ERROR) << "peer '" << key.str() << "' already connected!";
             return -1;
         }
+        LOG(INFO) << "adding peer: " << key.str();
         return (new PeerClient(address, port))->Connect();
     }
 
@@ -178,9 +178,9 @@ namespace Token{
         Message* msg = (Message*) handle->data;
         Message* dup = new Message(*msg);
 
-        LOG(INFO) << "broadcasting " << dup->ToString() << " to " << GetInstance()->sessions_.size() << " peers";
+        LOG(INFO) << "broadcasting " << dup->ToString() << " to " << GetInstance()->peers_.size() << " peers";
         int idx = 0;
-        for(auto& it : GetInstance()->sessions_){
+        for(auto& it : GetInstance()->peers_){
             if(!it.second->Send(dup)){
                 LOG(ERROR) << "couldn't send to peer " << idx;
             }
@@ -189,7 +189,11 @@ namespace Token{
 
         delete dup;
     }
-    
+
+    int BlockChainServer::GetPeerCount(){
+        return GetInstance()->peers_.size();
+    }
+
     bool BlockChainServer::HasPeer(std::string key){
         BlockChainServer* instance = GetInstance();
         return instance->peers_.find(key) != instance->peers_.end();
@@ -204,8 +208,9 @@ namespace Token{
     }
 
     bool BlockChainServer::Broadcast(uv_stream_t *stream, Token::Message *msg){
-        GetInstance()->broadcast_.data = msg;
-        uv_async_send(&GetInstance()->broadcast_);
+        for(auto& it : GetInstance()->peers_){
+            it.second->AsyncSend(msg);
+        }
         return true;
     }
 }
