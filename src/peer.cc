@@ -1,6 +1,7 @@
 #include <glog/logging.h>
 #include "peer.h"
 #include "blockchain.h"
+#include "server.h"
 
 namespace Token{
     static void
@@ -26,6 +27,7 @@ namespace Token{
 
     void PeerClient::OnConnect(uv_connect_t *conn, int status) {
         if (status == 0) {
+            BlockChainServer::Register(this);
             state_ = State::kConnecting;
             handle_ = conn->handle;
             handle_->data = conn->data;
@@ -67,7 +69,20 @@ namespace Token{
             Node::Messages::PeerIdentAck* ack = msg->GetAsPeerIdentAckMessage();
             if(ack && ack->blocks_size() > 0){
                 SetState(State::kAuthenticating);
-                LOG(WARNING) << "peer sent head list, downloading heads...";
+                LOG(WARNING) << "peer responded with a boostrap";
+                LOG(WARNING) << "adding peers";
+
+                for(auto& it : ack->peers()){
+                    std::string peer = it.address();
+                    LOG(WARNING) << "adding peer: " << peer;
+                    if(peer.find(":") != std::string::npos){
+                        std::string addr = peer.substr(0, peer.find(":"));
+                        std::string p = peer.substr(peer.find(":") + 1);
+                        BlockChainServer::AddPeer(addr, atoi(p.c_str()));
+                    }
+                }
+
+                LOG(WARNING) << "downloading <HEAD>s.....";
                 for(auto& it : ack->blocks()){
                     Node::Messages::GetBlockRequest req;
                     req.set_hash(it);
@@ -102,7 +117,7 @@ namespace Token{
                     return false;
                 }
                 Message m(Message::Type::kBlockMessage, block->GetAsMessage());
-                //TODO: BlockChainServer::Broadcast(stream, &m);
+                BlockChainServer::GetInstance()->Broadcast(nullptr, &m);
                 return true;
             }
             LOG(ERROR) << "invalid state to receive block";
@@ -205,5 +220,11 @@ namespace Token{
             return;
         }
         if (req) free(req);
+    }
+
+    std::string PeerClient::ToString() const{
+        std::stringstream stream;
+        stream << GetAddress() << ":" << GetPort();
+        return stream.str();
     }
 }

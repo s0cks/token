@@ -53,8 +53,10 @@ namespace Token{
             return address_;
         }
 
+        bool Send(Message *msg);
         bool Connect();
         bool Disconnect();
+        std::string ToString() const;
 
         State GetState() const{
             return state_;
@@ -72,8 +74,6 @@ namespace Token{
             return GetState() == State::kConnecting ||
                    GetState() == State::kAuthenticating;
         }
-
-        bool Send(Message *msg);
     };
 }
 

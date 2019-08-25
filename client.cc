@@ -104,6 +104,16 @@ int main(int argc, char** argv){
                 return EXIT_FAILURE;
             }
             PrintBlock(&head);
+        } else if(input == "lspeers"){
+            std::vector<std::string> peers;
+            if(!client.GetPeers(peers)){
+                LOG(ERROR) << "couldn't get peers from service";
+                return EXIT_FAILURE;
+            }
+            LOG(INFO) << "Peers:";
+            for(auto& it : peers){
+                LOG(INFO) << "  - " << it;
+            }
         }
     } while(true);
 }

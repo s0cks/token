@@ -65,6 +65,19 @@ namespace Token {
             if(!AcceptsIdentity(pident)){
                 SetState(State::kAuthenticating);
                 LOG(WARNING) << "sending connecting peer heads";
+
+                std::vector<std::string> peers;
+                if(!BlockChainServer::GetPeers(peers)){
+                    LOG(WARNING) << "couldn't get peer list";
+                    return false;
+                }
+
+                LOG(WARNING) << "peers (" << peers.size() << ": ";
+                for(auto& it : peers){
+                    LOG(WARNING) << "  - " << it;
+                    ack.add_peers()->set_address(it);
+                }
+
                 ack.add_blocks(BlockChain::GetInstance()->GetHead()->GetHash());
             } else{
                 SetState(State::kConnected);

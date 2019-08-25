@@ -57,6 +57,19 @@ namespace Token{
         return GetStub()->GetUnclaimedTransactions(&ctx, request, response).ok();
     }
 
+    bool TokenServiceClient::GetPeers(std::vector<std::string> &peers){
+        Token::Service::Messages::EmptyRequest request;
+        Token::Messages::PeerList response;
+        grpc::ClientContext ctx;
+        if(!GetStub()->GetPeers(&ctx, request, &response).ok()){
+            return false;
+        }
+        for(auto& it : response.peers()){
+            peers.push_back(it.address());
+        }
+        return true;
+    }
+
     bool TokenServiceClient::Append(Token::Block* block, Messages::BlockHeader* response){
         grpc::ClientContext ctx;
         Token::Messages::Block* blk = block->GetAsMessage();

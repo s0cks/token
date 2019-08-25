@@ -70,8 +70,8 @@ namespace Token{
 
     }
 
-    void BlockChainServer::Register(Token::PeerSession* session){
-        GetInstance()->sessions_.insert({ (uv_stream_t*)session->GetConnection(), session });
+    void BlockChainServer::Register(Token::PeerClient* session){
+        GetInstance()->peers_.insert({ session->ToString(), session });
     }
 
     void BlockChainServer::OnNewConnection(uv_stream_t* stream, int status){
@@ -145,6 +145,14 @@ namespace Token{
     }
 
     int BlockChainServer::AddPeer(const std::string &address, int port){
+        std::stringstream key;
+        key << address << ":" << port;
+
+        BlockChainServer* instance = GetInstance();
+        if(instance->HasPeer(key.str())){
+            LOG(ERROR) << "peer '" << key.str() << "' already conntected!";
+            return -1;
+        }
         return (new PeerClient(address, port))->Connect();
     }
 
@@ -180,6 +188,19 @@ namespace Token{
         }
 
         delete dup;
+    }
+    
+    bool BlockChainServer::HasPeer(std::string key){
+        BlockChainServer* instance = GetInstance();
+        return instance->peers_.find(key) != instance->peers_.end();
+    }
+
+    bool BlockChainServer::GetPeers(std::vector<std::string> &peers){
+        BlockChainServer* instance = GetInstance();
+        for(auto& it : instance->peers_){
+            peers.push_back(it.first);
+        }
+        return true;
     }
 
     bool BlockChainServer::Broadcast(uv_stream_t *stream, Token::Message *msg){

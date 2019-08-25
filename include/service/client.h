@@ -26,6 +26,7 @@ namespace Token{
         bool GetBlockDataAt(int index, Messages::Block* response);
         bool GetUnclaimedTransactions(Messages::UnclaimedTransactionList* response);
         bool GetUnclaimedTransactions(const std::string& hash, Messages::UnclaimedTransactionList* response);
+        bool GetPeers(std::vector<std::string>& peers);
         bool Append(Block* block, Messages::BlockHeader* response);
     };
 }

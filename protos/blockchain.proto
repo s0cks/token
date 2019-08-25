@@ -45,3 +45,11 @@ message BlockHeader{
 message PeerIdentity{
     BlockHeader head = 1;
 }
+
+message Peer{
+    string address = 1;
+}
+
+message PeerList{
+    repeated Peer peers = 1;
+}
