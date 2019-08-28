@@ -137,7 +137,7 @@ namespace Token{
                     return false;
                 }
                 Message m(Message::Type::kBlockMessage, block->GetAsMessage());
-                BlockChainServer::GetInstance()->Broadcast(nullptr, &m);
+                BlockChainServer::GetInstance()->AsyncBroadcast(&m);
                 return true;
             }
             LOG(ERROR) << "invalid state to receive block";
