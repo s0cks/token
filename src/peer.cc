@@ -120,8 +120,13 @@ namespace Token{
             Token::Block* block = Token::Block::Load(msg->GetAsBlockMessage());
             if(GetState() == State::kAuthenticating){
                 LOG(WARNING) << "downloaded block: " << block->GetHash();
+                LOG(WARNING) << (*block);
                 if(!BlockChain::GetInstance()->SetHead(block)){
                     LOG(ERROR) << "couldn't set head to: " << block->GetHash();
+                    return false;
+                }
+                if(!BlockChain::GetInstance()->SaveChain()){
+                    LOG(ERROR) << "couldn't save chain";
                     return false;
                 }
                 return true;
