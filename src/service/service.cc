@@ -75,7 +75,7 @@ namespace Token{
 
         LOG(WARNING) << "appended, broadcasting...";
         Message msg(Message::Type::kBlockMessage, nblock->GetRaw());
-        if(!BlockChainServer::Broadcast(nullptr, &msg)){
+        if(!BlockChainServer::AsyncBroadcast(&msg)){
             LOG(ERROR) << "couldn't broadcast to peers";
             return grpc::Status::CANCELLED;
         }

@@ -37,7 +37,8 @@ namespace Token{
 
         static bool HasPeer(std::string key);
         static bool GetPeers(std::vector<std::string>& peers);
-        static bool Broadcast(uv_stream_t* stream, Message* msg);
+        static bool Broadcast(Message* msg);
+        static bool AsyncBroadcast(Message* msg);
         static BlockChainServer* GetInstance();
         static int GetPeerCount();
         static int AddPeer(const std::string& address, int port);

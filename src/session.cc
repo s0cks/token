@@ -49,7 +49,7 @@ namespace Token {
                 return false;
             }
             Message m(Message::Type::kBlockMessage, block->GetAsMessage());
-            BlockChainServer::Broadcast(stream, &m);
+            BlockChainServer::Broadcast(&m);
         } else if(msg->GetType() == Message::Type::kGetHeadMessage){
             Token::Block* block = BlockChain::GetInstance()->GetHead();
             LOG(INFO) << "sending head: " << block->GetHash();

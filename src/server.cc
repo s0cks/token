@@ -207,10 +207,13 @@ namespace Token{
         return true;
     }
 
-    bool BlockChainServer::Broadcast(uv_stream_t *stream, Token::Message *msg){
-        for(auto& it : GetInstance()->peers_){
-            it.second->AsyncSend(msg);
-        }
+    bool BlockChainServer::Broadcast(Token::Message *msg){
+        for(auto& it : GetInstance()->peers_) it.second->Send(msg);
+        return true;
+    }
+
+    bool BlockChainServer::AsyncBroadcast(Token::Message* msg){
+        for(auto& it : GetInstance()->peers_) it.second->AsyncSend(msg);
         return true;
     }
 }
