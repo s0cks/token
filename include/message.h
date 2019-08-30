@@ -13,6 +13,8 @@ namespace Token{
     V(PeerIdent, Token::Node::Messages::PeerIdentity) \
     V(PeerIdentAck, Token::Node::Messages::PeerIdentAck) \
     V(GetBlock, Token::Node::Messages::GetBlockRequest) \
+    V(Heartbeat, Token::Node::Messages::Heartbeat) \
+    V(HeartbeatAck, Token::Node::Messages::Heartbeat)
 
     /**
      * Block := Contains block information

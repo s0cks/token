@@ -78,8 +78,18 @@ namespace Token {
                         ack.add_peers()->set_address(it);
                     }
                 }
-                LOG(INFO) << "sending <HEAD>";
-                ack.add_blocks(BlockChain::GetInstance()->GetHead()->GetHash());
+
+                std::vector<std::string> blocks;
+                if(!BlockChain::GetBlockList(blocks)){
+                    LOG(ERROR) << "couldn't get block list";
+                    return false;
+                }
+                
+                LOG(INFO) << "sending " << blocks.size() << " blocks:";
+                for(auto& it : blocks){
+                    LOG(INFO) << "  - " << it;
+                    ack.add_blocks(it);
+                }
             } else{
                 LOG(INFO) << "peer connected";
                 SetState(State::kConnected);

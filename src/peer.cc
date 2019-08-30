@@ -29,14 +29,23 @@ namespace Token{
         stream_(),
         connection_(),
         state_(State::kConnecting),
-        handle_(nullptr){
-    }
+        async_send_(),
+        handle_(nullptr){}
 
     PeerClient::~PeerClient(){}
 
     bool PeerClient::AcceptsIdentity(Token::Node::Messages::PeerIdentity* pident){
         return true;
     }
+
+    /*
+    uint32_t PeerClient::GetTime(){
+        struct timeval time;
+        gettimeofday(&time, NULL);
+        uint32_t curr_time = ((uint32_t)time.tv_sec * 1000 + time.tv_usec / 1000);
+        return (last_time_ = curr_time);
+    }
+     */
 
     void PeerClient::OnConnect(uv_connect_t *conn, int status) {
         if (status == 0) {
@@ -69,7 +78,7 @@ namespace Token{
             LOG(INFO) << "connection attempt started, sending identity";
             Node::Messages::PeerIdentity mident;
             mident.set_version("1.0.0");
-            mident.set_block_count(BlockChain::GetInstance()->GetHead()->GetHeight());
+            mident.set_block_count(BlockChain::GetInstance()->GetHeight());
             mident.set_peer_count(BlockChainServer::GetPeerCount());
             Message m(Message::Type::kPeerIdentMessage, &mident);
             Send(&m);
@@ -96,11 +105,10 @@ namespace Token{
                     }
                 }
 
-                LOG(WARNING) << "downloading <HEAD>s.....";
+                LOG(WARNING) << "downloading " << ack->blocks_size() << " blocks";
                 for(auto& it : ack->blocks()){
                     Node::Messages::GetBlockRequest req;
                     req.set_hash(it);
-
                     Message request(Message::Type::kGetBlockMessage, &req);
                     Send(&request);
                 }
@@ -122,7 +130,7 @@ namespace Token{
                 LOG(WARNING) << "downloaded block: " << block->GetHash();
                 LOG(WARNING) << (*block);
                 if(!BlockChain::GetInstance()->SetHead(block)){
-                    LOG(ERROR) << "couldn't set head to: " << block->GetHash();
+                    LOG(ERROR) << "couldn't set the head";
                     return false;
                 }
                 if(!BlockChain::GetInstance()->SaveChain()){

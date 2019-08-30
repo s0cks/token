@@ -27,7 +27,6 @@ namespace Token{
         std::string address_;
         int port_;
         State state_;
-
         uv_async_t async_send_;
 
         inline void

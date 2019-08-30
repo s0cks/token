@@ -26,3 +26,7 @@ message PeerIdentAck{
 message GetBlockRequest{
     string hash = 1;
 }
+
+message Heartbeat{
+    uint32 time = 1;
+}

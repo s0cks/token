@@ -15,7 +15,7 @@ namespace Token{
     public:
         BlockChainVisitor(){}
         virtual ~BlockChainVisitor() = default;
-        virtual void Visit(Block* block) = 0;
+        virtual bool Visit(Block* block) = 0;
     };
 
     class BlockChain{
@@ -66,6 +66,8 @@ namespace Token{
         friend class BlockChainServer;
         friend class PeerSession;
         friend class PeerClient;
+        friend class PeerBlockResolver;
+        friend class LocalBlockResolver;
 
         std::string root_;
         leveldb::DB* state_;
@@ -74,6 +76,7 @@ namespace Token{
         TransactionPool tx_pool_;
         pthread_t server_thread_;
 
+        Node* GetNodeAt(int height) const;
         void RegisterBlock(const std::string& hash, int height);
         void SetHeight(int height);
         void SetGenesisHash(const std::string& hash);
@@ -111,13 +114,7 @@ namespace Token{
         Block* GetHead();
         Block* GetGenesis() const;
         Block* GetBlockFromHash(const std::string& hash) const;
-        Block* GetBlockAt(int height){
-            if(height > GetHeight()) return nullptr;
-            Block* head = GetHead();
-            while(head && head->GetHeight() > height) head = GetBlockFromHash(head->GetPreviousHash());
-            return head;
-        }
-
+        Block* GetBlockAt(int height) const;
         int GetHeight() const;
 
         TransactionPool* GetTransactionPool(){
@@ -137,6 +134,7 @@ namespace Token{
         bool Append(Block* block);
 
         static bool Initialize(const std::string& path);
+        static bool GetBlockList(std::vector<std::string>& blocks);
     };
 }
 

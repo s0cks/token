@@ -207,6 +207,14 @@ namespace Token{
         return true;
     }
 
+    bool BlockChainServer::GetPeerList(std::vector<PeerClient *> &peers){
+        BlockChainServer* instance = GetInstance();
+        for(auto& it : instance->peers_){
+            peers.push_back(it.second);
+        }
+        return true;
+    }
+
     bool BlockChainServer::Broadcast(Token::Message *msg){
         for(auto& it : GetInstance()->peers_) it.second->Send(msg);
         return true;

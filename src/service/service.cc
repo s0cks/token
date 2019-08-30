@@ -22,12 +22,14 @@ namespace Token{
                                              const Token::Service::Messages::GetBlockRequest* request,
                                              Token::Messages::BlockHeader *response){
         if(!request->hash().empty()){
+            LOG(INFO) << "getting block: " << request->hash();
             Block* block = BlockChain::GetInstance()->GetBlockFromHash(request->hash());
             if(block){
                 SetBlockHeader(block, response);
                 return grpc::Status::OK;
             }
         } else{
+            LOG(INFO) << "getting block @" << request->index();
             Block* block = BlockChain::GetInstance()->GetBlockAt(request->index());
             if(block){
                 SetBlockHeader(block, response);

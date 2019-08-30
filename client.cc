@@ -114,6 +114,27 @@ int main(int argc, char** argv){
             for(auto& it : peers){
                 LOG(INFO) << "  - " << it;
             }
+        } else if(input == "getblock"){
+            std::string target;
+            std::cout << "target := ";
+            std::cin >> target;
+            if(target.length() == 64){
+                LOG(INFO) << "fetching block from hash: " << target;
+                Messages::BlockHeader blk;
+                if(!client.GetBlock(target, &blk)){
+                    LOG(ERROR) << "couldn't fetch block: " << target;
+                    return EXIT_FAILURE;
+                }
+                PrintBlock(&blk);
+            } else{
+                LOG(INFO) << "fetching block @" << target;
+                Messages::BlockHeader blk;
+                if(!client.GetBlockAt(atoi(target.c_str()), &blk)){
+                    LOG(ERROR) << "couldn't fetch block: " << target;
+                    return EXIT_FAILURE;
+                }
+                PrintBlock(&blk);
+            }
         }
     } while(true);
 }
