@@ -38,7 +38,11 @@ namespace Token{
                 if(!IsRoot()) GetParent()->AddChild(this);
             }
             Node(Block* block): Node(nullptr, block){}
-            ~Node(){}
+            ~Node(){
+                for(auto& it : children_){
+                    delete it;
+                }
+            }
 
             Node* GetParent() const{
                 return parent_;
@@ -81,6 +85,7 @@ namespace Token{
         void SetHeight(int height);
         void SetGenesisHash(const std::string& hash);
         bool SetHead(Block* block);
+        bool SetHead(const std::string& hash);
 
         inline leveldb::DB*
         GetState() const{
@@ -134,6 +139,7 @@ namespace Token{
         bool Append(Block* block);
 
         static bool Initialize(const std::string& path);
+        static bool Save(Block* block);
         static bool GetBlockList(std::vector<std::string>& blocks);
     };
 }

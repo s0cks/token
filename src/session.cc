@@ -21,28 +21,53 @@ namespace Token {
         return true;
     }
 
-    bool PeerSession::PerformHandshake(){
-        if(GetState() != State::kConnecting){
-            LOG(WARNING) << "state != connecting";
-            return false;
-        }
-
+    void PeerSession::SendIdentity(){
         Node::Messages::PeerIdentity ident;
         ident.set_version("1.0.0");
-        ident.set_block_count(BlockChain::GetInstance()->GetHeight());
-        Message pck(Message::Type::kPeerIdentMessage, &ident);
-        Send(&pck);
-        return true;
+        if(BlockChain::GetInstance()->HasHead()){
+            ident.set_head(BlockChain::GetInstance()->GetHead()->GetHash());
+        }
+        // Set peers
+        std::vector<PeerClient*> peers;
+        if(!BlockChainServer::GetPeerList(peers)){
+            LOG(ERROR) << "couldn't get peer list";
+            return;
+        }
+
+        for(auto& it : peers){
+            ident.add_peers()->set_address(it->ToString());
+        }
+
+        // Set blocks
+        std::vector<std::string> blocks;
+        if(!BlockChain::GetBlockList(blocks)){
+            LOG(ERROR) << "couldn't get block list";
+            return;
+        }
+
+        for(auto& it : blocks){
+            ident.add_blocks(it);
+        }
+
+        Message msg(Message::Type::kPeerIdentityMessage, &ident);
+        Send(&msg);
     }
 
     bool PeerSession::AcceptsIdentity(Node::Messages::PeerIdentity* ident){
-        LOG(INFO) << "peer count: " << ident->peer_count();
+        return false;
+    }
+
+    static inline bool
+    HasBlock(Node::Messages::PeerIdentity* ident, const std::string& hash){
+        for(auto& it : ident->blocks()){
+            if(it == hash) return true;
+        }
         return false;
     }
 
     bool PeerSession::Handle(uv_stream_t* stream, Token::Message *msg){
         if(msg->GetType() == Message::Type::kBlockMessage){
-            Token::Block* block = Token::Block::Load(msg->GetAsBlockMessage());
+            Token::Block* block = Token::Block::Load(msg->GetAsBlock());
             LOG(INFO) << "received block: " << block->GetHash();
             if(!BlockChain::GetInstance()->Append(block)){
                 LOG(ERROR) << "couldn't append block: " << block->GetHash();
@@ -50,56 +75,15 @@ namespace Token {
             }
             Message m(Message::Type::kBlockMessage, block->GetAsMessage());
             BlockChainServer::Broadcast(&m);
+            return true;
         } else if(msg->GetType() == Message::Type::kGetHeadMessage){
             Token::Block* block = BlockChain::GetInstance()->GetHead();
             LOG(INFO) << "sending head: " << block->GetHash();
             Message response(Message::Type::kBlockMessage, block->GetAsMessage());
             Send(&response);
-        } else if(msg->GetType() == Message::Type::kPeerIdentMessage){
-            if(GetState() != State::kAuthenticating && GetState() != State::kConnecting){
-                LOG(ERROR) << "peer already connected?";
-                return false;
-            }
-            Node::Messages::PeerIdentity* pident = msg->GetAsPeerIdentMessage();
-
-            Node::Messages::PeerIdentAck ack;
-            if(!AcceptsIdentity(pident)){
-                SetState(State::kAuthenticating);
-                if(pident->peer_count() < BlockChainServer::GetPeerCount() + 1){
-                    LOG(INFO) << "sending connecting peer connected peers";
-                    std::vector<std::string> peers;
-                    if(!BlockChainServer::GetPeers(peers)){
-                        LOG(INFO) << "couldn't get peer list";
-                        return false;
-                    }
-                    LOG(INFO) << "peers (" << peers.size() << ": ";
-                    for(auto& it : peers){
-                        LOG(INFO) << "  - " << it;
-                        ack.add_peers()->set_address(it);
-                    }
-                }
-
-                std::vector<std::string> blocks;
-                if(!BlockChain::GetBlockList(blocks)){
-                    LOG(ERROR) << "couldn't get block list";
-                    return false;
-                }
-                
-                LOG(INFO) << "sending " << blocks.size() << " blocks:";
-                for(auto& it : blocks){
-                    LOG(INFO) << "  - " << it;
-                    ack.add_blocks(it);
-                }
-            } else{
-                LOG(INFO) << "peer connected";
-                SetState(State::kConnected);
-            }
-
-            Message resp(Message::Type::kPeerIdentAckMessage, &ack);
-            Send(&resp);
             return true;
         } else if(msg->GetType() == Message::Type::kGetBlockMessage){
-            Node::Messages::GetBlockRequest* req = msg->GetAsGetBlockMessage();
+            Node::Messages::GetBlockRequest* req = msg->GetAsGetBlock();
 
             Block* blk;
             if(!(blk = BlockChain::GetInstance()->GetBlockFromHash(req->hash()))){
@@ -110,10 +94,30 @@ namespace Token {
             LOG(INFO) << "found peer's block, returning: " << blk->GetHash();
             Message m(Message::Type::kBlockMessage, blk->GetAsMessage());
             Send(&m);
-        } else{
-            LOG(ERROR) << "unknown message type: " << static_cast<int>(msg->GetType());
+            return true;
+        } else if(msg->IsPeerIdentityMessage()){
+            Node::Messages::PeerIdentity* ident = msg->GetAsPeerIdentity();
+
+            std::vector<std::string> blocks;
+            if(!BlockChain::GetBlockList(blocks)){
+                LOG(ERROR) << "unable to get block list";
+                return false;
+            }
+
+            Node::Messages::PeerIdentity ack;
+            for(auto& it : blocks){
+                if(!HasBlock(ident, it)){
+                    ack.add_blocks(it);
+                }
+            }
+
+            Message ack_msg(Message::Type::kPeerIdentityMessage, &ack);
+            Send(&ack_msg);
+            return true;
         }
-        return true;
+
+        LOG(ERROR) << "unknown message type: " << static_cast<int>(msg->GetType());
+        return false;
     }
 
     void PeerSession::OnMessageSent(uv_write_t* req, int status) {

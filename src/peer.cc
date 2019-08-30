@@ -47,6 +47,46 @@ namespace Token{
     }
      */
 
+    void PeerClient::DownloadBlock(const std::string &hash){
+        LOG(INFO) << "downloading block: " << hash;
+        Node::Messages::GetBlockRequest getblock;
+        getblock.set_hash(hash);
+        Message msg(Message::Type::kGetBlockMessage, &getblock);
+        Send(&msg);
+    }
+
+    void PeerClient::SendIdentity(){
+        Node::Messages::PeerIdentity ident;
+        ident.set_version("1.0.0");
+        if(BlockChain::GetInstance()->HasHead()){
+            ident.set_head(BlockChain::GetInstance()->GetHead()->GetHash());
+        }
+        // Set peers
+        std::vector<PeerClient*> peers;
+        if(!BlockChainServer::GetPeerList(peers)){
+            LOG(ERROR) << "couldn't get peer list";
+            return;
+        }
+
+        for(auto& it : peers){
+            ident.add_peers()->set_address(it->ToString());
+        }
+
+        // Set blocks
+        std::vector<std::string> blocks;
+        if(!BlockChain::GetBlockList(blocks)){
+            LOG(ERROR) << "couldn't get block list";
+            return;
+        }
+
+        for(auto& it : blocks){
+            ident.add_blocks(it);
+        }
+
+        Message msg(Message::Type::kPeerIdentityMessage, &ident);
+        Send(&msg);
+    }
+
     void PeerClient::OnConnect(uv_connect_t *conn, int status) {
         if (status == 0) {
             uv_async_init(loop_, &async_send_, OnAsyncSend);
@@ -54,6 +94,7 @@ namespace Token{
             state_ = State::kConnecting;
             handle_ = conn->handle;
             handle_->data = conn->data;
+            SendIdentity();
             uv_read_start(handle_, AllocBuffer, [](uv_stream_t *stream, ssize_t nread, const uv_buf_t *buff) {
                 PeerClient *peer = (PeerClient*)stream->data;
                 peer->OnMessageRead(stream, nread, buff);
@@ -63,82 +104,14 @@ namespace Token{
 
     bool PeerClient::Handle(uv_stream_t* stream, Token::Message* msg) {
         LOG(INFO) << "handling: " << msg->ToString() << "...";
-        if(msg->GetType() == Message::Type::kPeerIdentMessage){
-            if(GetState() != State::kConnecting && GetState() != State::kAuthenticating){
-                LOG(ERROR) << "peer state is not connecting and we received a peer identity pkt...";
-                LOG(ERROR) << "discarding..";
-                return false;
-            }
-            Node::Messages::PeerIdentity* pident = msg->GetAsPeerIdentMessage();
-            if(!AcceptsIdentity(pident)){
-                LOG(ERROR) << "connection from weird peer: " << msg->ToString();
-                return false;
-            }
-
-            LOG(INFO) << "connection attempt started, sending identity";
-            Node::Messages::PeerIdentity mident;
-            mident.set_version("1.0.0");
-            mident.set_block_count(BlockChain::GetInstance()->GetHeight());
-            mident.set_peer_count(BlockChainServer::GetPeerCount());
-            Message m(Message::Type::kPeerIdentMessage, &mident);
-            Send(&m);
-            return true;
-        } else if(msg->GetType() == Message::Type::kPeerIdentAckMessage){
-            LOG(INFO) << "peer identity acknowledged";
-            if(GetState() != State::kConnecting && GetState() != State::kAuthenticating){
-                LOG(ERROR) << "peer not in connecting state";
-                return false;
-            }
-
-            Node::Messages::PeerIdentAck* ack = msg->GetAsPeerIdentAckMessage();
-            if(ack && ack->blocks_size() > 0){
-                SetState(State::kAuthenticating);
-                LOG(INFO) << "peer responded with a boostrap";
-                LOG(INFO) << "adding " << ack->peers_size() << " peers";
-
-                for(auto& it : ack->peers()){
-                    std::string peer = it.address();
-                    if(peer.find(":") != std::string::npos){
-                        std::string addr = peer.substr(0, peer.find(":"));
-                        std::string p = peer.substr(peer.find(":") + 1);
-                        BlockChainServer::AddPeer(addr, atoi(p.c_str()));
-                    }
-                }
-
-                LOG(WARNING) << "downloading " << ack->blocks_size() << " blocks";
-                for(auto& it : ack->blocks()){
-                    Node::Messages::GetBlockRequest req;
-                    req.set_hash(it);
-                    Message request(Message::Type::kGetBlockMessage, &req);
-                    Send(&request);
-                }
-
-                Node::Messages::PeerIdentity ident;
-                ident.set_version("1.0.0");
-                ident.set_block_count(BlockChain::GetInstance()->GetHeight());
-                ident.set_peer_count(BlockChainServer::GetPeerCount());
-                Message done(Message::Type::kPeerIdentMessage, &ident);
-                Send(&done);
-                return true;
-            }
-            LOG(INFO) << "connected";
-            SetState(State::kConnected);
-            return true;
-        } else if(msg->GetType() == Message::Type::kBlockMessage){
-            Token::Block* block = Token::Block::Load(msg->GetAsBlockMessage());
-            if(GetState() == State::kAuthenticating){
+        if(msg->IsBlockMessage()){
+            Token::Block* block = Token::Block::Load(msg->GetAsBlock());
+            if(IsSynchronizing()){
                 LOG(WARNING) << "downloaded block: " << block->GetHash();
                 LOG(WARNING) << (*block);
-                if(!BlockChain::GetInstance()->SetHead(block)){
-                    LOG(ERROR) << "couldn't set the head";
-                    return false;
-                }
-                if(!BlockChain::GetInstance()->SaveChain()){
-                    LOG(ERROR) << "couldn't save chain";
-                    return false;
-                }
+                BlockChain::Save(block);
                 return true;
-            } else if(GetState() == State::kConnected){
+            } else if(IsConnected()){
                 LOG(INFO) << "received block: " << block->GetHash();
                 if(!BlockChain::GetInstance()->Append(block)){
                     LOG(ERROR) << "couldn't append block: " << block->GetHash();
@@ -150,6 +123,43 @@ namespace Token{
             }
             LOG(ERROR) << "invalid state to receive block";
             return false;
+        } else if(msg->IsPeerIdentityMessage()){
+            Node::Messages::PeerIdentity* ident = msg->GetAsPeerIdentity();
+            //TODO: Connect to peers
+            if(IsConnecting()){
+                SetState(State::kSynchronizing);
+                for(auto& it : ident->blocks()){
+                    if(!BlockChain::GetInstance()->HasBlock(it)){
+                        DownloadBlock(it);
+                        sleep(5);
+                    }
+                }
+                SendIdentity();
+                return true;
+            } else if(IsSynchronizing()){
+                bool synced = true;
+                for(auto& it : ident->blocks()){
+                    if(!BlockChain::GetInstance()->HasBlock(it)){
+                        synced = false;
+                        DownloadBlock(it);
+                    }
+                }
+
+                if(!synced){
+                    LOG(INFO) << "sending identity";
+                    SendIdentity();
+                    return true;
+                }
+
+                if(!BlockChain::GetInstance()->SetHead(ident->head())){
+                    LOG(ERROR) << "couldn't set head";
+                    return false;
+                }
+
+                LOG(INFO) << "connected!";
+                SetState(State::kConnected);
+                return true;
+            }
         }
     }
 

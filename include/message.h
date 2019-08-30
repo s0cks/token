@@ -10,8 +10,7 @@ namespace Token{
 #define FOR_EACH_TYPE(V) \
     V(Block, Token::Messages::Block) \
     V(GetHead, Token::Node::Messages::EmptyRequest) \
-    V(PeerIdent, Token::Node::Messages::PeerIdentity) \
-    V(PeerIdentAck, Token::Node::Messages::PeerIdentAck) \
+    V(PeerIdentity, Token::Node::Messages::PeerIdentity) \
     V(GetBlock, Token::Node::Messages::GetBlockRequest) \
     V(Heartbeat, Token::Node::Messages::Heartbeat) \
     V(HeartbeatAck, Token::Node::Messages::Heartbeat)
@@ -69,9 +68,14 @@ namespace Token{
         bool Decode(uint8_t* bytes, size_t size);
 
 #define DECLARE_AS(Name, MType) \
-        MType* GetAs##Name##Message();
+        MType* GetAs##Name();
         FOR_EACH_TYPE(DECLARE_AS)
 #undef DECLARE_AS
+
+#define DECLARE_IS(Name, MType) \
+        bool Is##Name##Message();
+        FOR_EACH_TYPE(DECLARE_IS)
+#undef DECLARE_IS
 
         size_t
         GetMessageSize() const{

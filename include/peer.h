@@ -15,7 +15,7 @@ namespace Token{
         enum class State{
             kDisconnected = 0,
             kConnecting,
-            kAuthenticating,
+            kSynchronizing,
             kConnected,
         };
     private:
@@ -33,6 +33,9 @@ namespace Token{
         SetState(State state){
             state_ = state;
         }
+
+        void SendIdentity();
+        void DownloadBlock(const std::string& hash);
 
         int ConnectToPeer();
         bool AcceptsIdentity(Node::Messages::PeerIdentity* pident);
@@ -73,8 +76,11 @@ namespace Token{
         }
 
         bool IsConnecting() const{
-            return GetState() == State::kConnecting ||
-                   GetState() == State::kAuthenticating;
+            return GetState() == State::kConnecting;
+        }
+
+        bool IsSynchronizing() const{
+            return GetState() == State::kSynchronizing;
         }
     };
 }

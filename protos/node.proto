@@ -4,12 +4,6 @@ package Token.Node.Messages;
 message EmptyRequest{}
 message EmptyResponse{}
 
-message PeerIdentity{
-    string version = 1;
-    uint32 block_count = 2;
-    uint32 peer_count = 3;
-}
-
 message Peer{
     string address = 1;
 }
@@ -18,15 +12,17 @@ message PeerList{
     repeated Peer peers = 1;
 }
 
-message PeerIdentAck{
-    repeated string blocks = 1;
-    repeated Peer peers = 2;
-}
-
 message GetBlockRequest{
     string hash = 1;
 }
 
 message Heartbeat{
     uint32 time = 1;
+}
+
+message PeerIdentity{
+    string version = 1;
+    string head = 2;
+    repeated Peer peers = 3;
+    repeated string blocks = 4;
 }

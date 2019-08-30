@@ -89,14 +89,6 @@ namespace Token{
         int rc;
         if((rc = uv_accept(stream, (uv_stream_t*)key.get())) == 0){
             LOG(INFO) << "client accepted!";
-            LOG(WARNING) << "performing handshake....";
-
-            if(!client->PerformHandshake()){
-                LOG(ERROR) << "handshake failed!";
-                Disconnect(client);
-                return;
-            }
-
             instance->sessions_.insert({ (uv_stream_t*)key.get(), client });
             if((rc = uv_read_start((uv_stream_t*)key.get(), AllocBuffer, OnRead)) < 0){
                 LOG(ERROR) << "error reading from client: " << std::string(uv_strerror(rc));

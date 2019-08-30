@@ -38,6 +38,7 @@ namespace Token {
 
         bool AcceptsIdentity(Node::Messages::PeerIdentity* ident);
         void OnMessageSent(uv_write_t* req, int status);
+        void SendIdentity();
 
         friend class BlockChainServer;
     public:
@@ -66,7 +67,6 @@ namespace Token {
 
         bool Send(Message* msg);
         bool Handle(uv_stream_t* stream, Token::Message* msg);
-        bool PerformHandshake();
     };
 }
 

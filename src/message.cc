@@ -42,14 +42,9 @@ namespace Token{
                 msg_ = new Token::Messages::Block();
                 return GetRaw()->ParseFromArray(&bytes[(sizeof(uint32_t) * 2)], msg_size);
             }
-            case Type::kPeerIdentMessage:{
+            case Type::kPeerIdentityMessage:{
                 LOG(INFO) << "decoding peer identity message";
                 msg_ = new Node::Messages::PeerIdentity();
-                return GetRaw()->ParseFromArray(&bytes[(sizeof(uint32_t) * 2)], msg_size);
-            }
-            case Type::kPeerIdentAckMessage:{
-                LOG(INFO) << "decoding PeerIdentAck";
-                msg_ = new Node::Messages::PeerIdentAck();
                 return GetRaw()->ParseFromArray(&bytes[(sizeof(uint32_t) * 2)], msg_size);
             }
             case Type::kGetBlockMessage:{
@@ -74,11 +69,18 @@ namespace Token{
     }
 
 #define DEFINE_AS(Name, MType) \
-    MType* Message::GetAs##Name##Message(){ \
+    MType* Message::GetAs##Name(){ \
         return reinterpret_cast<MType*>(GetRaw()); \
     }
     FOR_EACH_TYPE(DEFINE_AS)
 #undef DEFINE_AS
+
+#define DEFINE_IS(Name, MType) \
+    bool Message::Is##Name##Message(){ \
+        return GetType() == Message::Type::k##Name##Message; \
+    }
+    FOR_EACH_TYPE(DEFINE_IS)
+#undef DEFINE_IS
 
     Message::Message(const Message& other):
         type_(other.GetType()),
@@ -96,29 +98,15 @@ namespace Token{
                 break;
             }
             case Type::kGetHeadMessage: return "GetHead()";
-            case Type::kPeerIdentMessage:{
+            case Type::kPeerIdentityMessage:{
                 Node::Messages::PeerIdentity* pident = (Node::Messages::PeerIdentity*)GetRaw();
-                stream << "PeerIdentity(v" << pident->version() << "," << pident->block_count() << " blocks)";
+                stream << "PeerIdentity(v" << pident->version() << "," << pident->blocks_size() << " blocks)";
                 break;
             }
             case Type::kGetBlockMessage:{
                 Node::Messages::GetBlockRequest* gblock = (Node::Messages::GetBlockRequest*)GetRaw();
                 stream << "GetBlock(" << gblock->hash() << ")";
                 break;
-            }
-            case Type::kPeerIdentAckMessage:{
-                Node::Messages::PeerIdentAck* ack = (Node::Messages::PeerIdentAck*)GetRaw();
-                if(ack && ack->blocks_size() > 0){
-                    stream << "PeerIdentAck(";
-                    for(int idx = 0;
-                        idx < ack->blocks_size();
-                        idx++){
-                        stream << ack->blocks(idx);
-                        if(idx < (ack->blocks_size() - 1)) stream << ",";
-                    }
-                    stream << ")";
-                }
-                return "PeerIdentAck()";
             }
         }
         return stream.str();

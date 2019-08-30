@@ -365,6 +365,15 @@ namespace Token{
         return true;
     }
 
+    bool BlockChain::SetHead(const std::string &hash){
+        SaveChain();
+        delete head_;
+        uint32_t height = GetBlockHeightFromHash(hash);
+        if(height >= 0){
+            SetHead(LoadBlock(height));
+        }
+    }
+
     bool BlockChain::SetHead(Token::Block* block){
         RegisterBlock(block->GetHash(), block->GetHeight());
         SetHeight(block->GetHeight());
@@ -396,5 +405,9 @@ namespace Token{
             }
         }while(true);
         return true;
+    }
+
+    bool BlockChain::Save(Token::Block *block){
+        block->Write(GetInstance()->GetBlockDataFile(block->GetHeight()));
     }
 }
