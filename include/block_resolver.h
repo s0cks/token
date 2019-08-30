@@ -73,17 +73,14 @@ namespace Token{
         bool Resolve();
     };
 
-    class BlockChainResolver : public BlockResolver, public BlockChainVisitor{
+    class BlockChainResolver : public BlockResolver{
     public:
         BlockChainResolver(const std::string& target):
-            BlockResolver(target),
-            BlockChainVisitor(){}
+            BlockResolver(target){}
         BlockChainResolver(uint32_t target):
-            BlockResolver(target),
-            BlockChainVisitor(){}
+            BlockResolver(target){}
         ~BlockChainResolver(){}
 
-        bool Visit(Block* block);
         bool Resolve();
     };
 

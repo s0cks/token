@@ -25,7 +25,7 @@ namespace Token {
         Node::Messages::PeerIdentity ident;
         ident.set_version("1.0.0");
         if(BlockChain::GetInstance()->HasHead()){
-            ident.set_head(BlockChain::GetInstance()->GetHead()->GetHash());
+            ident.add_heads(BlockChain::GetInstance()->GetHead()->GetHash());
         }
         // Set peers
         std::vector<PeerClient*> peers;
@@ -38,30 +38,11 @@ namespace Token {
             ident.add_peers()->set_address(it->ToString());
         }
 
-        // Set blocks
-        std::vector<std::string> blocks;
-        if(!BlockChain::GetBlockList(blocks)){
-            LOG(ERROR) << "couldn't get block list";
-            return;
-        }
-
-        for(auto& it : blocks){
-            ident.add_blocks(it);
-        }
-
         Message msg(Message::Type::kPeerIdentityMessage, &ident);
         Send(&msg);
     }
 
     bool PeerSession::AcceptsIdentity(Node::Messages::PeerIdentity* ident){
-        return false;
-    }
-
-    static inline bool
-    HasBlock(Node::Messages::PeerIdentity* ident, const std::string& hash){
-        for(auto& it : ident->blocks()){
-            if(it == hash) return true;
-        }
         return false;
     }
 
@@ -86,8 +67,18 @@ namespace Token {
             Node::Messages::GetBlockRequest* req = msg->GetAsGetBlock();
 
             Block* blk;
-            if(!(blk = BlockChain::GetInstance()->GetBlockFromHash(req->hash()))){
-                LOG(ERROR) << "peer requested block: " << req->hash() << ", which was not found";
+            if(!req->hash().empty()){
+                if(!(blk = BlockChain::GetInstance()->GetBlockFromHash(req->hash()))){
+                    LOG(ERROR) << "peer requested block: " << req->hash() << ", which was not found";
+                    return false;
+                }
+            } else if(req->height() > 0){
+                if(!(blk = BlockChain::GetInstance()->GetBlockAt(req->height()))){
+                    LOG(ERROR) << "peer requested block: @" << req->height() << ", which was not found";
+                    return false;
+                }
+            } else{
+                LOG(ERROR) << "invalid request";
                 return false;
             }
 
@@ -97,22 +88,29 @@ namespace Token {
             return true;
         } else if(msg->IsPeerIdentityMessage()){
             Node::Messages::PeerIdentity* ident = msg->GetAsPeerIdentity();
-
-            std::vector<std::string> blocks;
-            if(!BlockChain::GetBlockList(blocks)){
-                LOG(ERROR) << "unable to get block list";
+            if(IsConnected()){
+                LOG(ERROR) << "already connected";
                 return false;
             }
 
-            Node::Messages::PeerIdentity ack;
-            for(auto& it : blocks){
-                if(!HasBlock(ident, it)){
-                    ack.add_blocks(it);
-                }
+            if(ident->version() != "1.0.0"){
+                LOG(ERROR) << "invalid version"; // TODO: Fixme
+                return false;
             }
 
-            Message ack_msg(Message::Type::kPeerIdentityMessage, &ack);
-            Send(&ack_msg);
+            std::string head = ident->heads(0);
+            if(!head.empty() && head != BlockChain::GetInstance()->GetHead()->GetHash()) {
+                LOG(ERROR) << "remote/<HEAD> != local/<HEAD>";
+                SendIdentity();
+                return true;
+            } else if(head.empty()){
+                LOG(INFO) << "sending <HEAD>";
+                SendIdentity();
+                return true;
+            }
+
+            LOG(INFO) << "connected";
+            SetState(State::kConnected);
             return true;
         }
 

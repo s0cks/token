@@ -14,6 +14,7 @@ message PeerList{
 
 message GetBlockRequest{
     string hash = 1;
+    uint32 height = 2;
 }
 
 message Heartbeat{
@@ -22,7 +23,6 @@ message Heartbeat{
 
 message PeerIdentity{
     string version = 1;
-    string head = 2;
-    repeated Peer peers = 3;
-    repeated string blocks = 4;
+    repeated Peer peers = 2;
+    repeated string heads = 3;
 }

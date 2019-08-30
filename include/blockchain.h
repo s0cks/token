@@ -72,6 +72,7 @@ namespace Token{
         friend class PeerClient;
         friend class PeerBlockResolver;
         friend class LocalBlockResolver;
+        friend class BlockChainResolver;
 
         std::string root_;
         leveldb::DB* state_;
@@ -139,8 +140,8 @@ namespace Token{
         bool Append(Block* block);
 
         static bool Initialize(const std::string& path);
-        static bool Save(Block* block);
-        static bool GetBlockList(std::vector<std::string>& blocks);
+        static bool Save(Block* block); // TODO: Remove
+        static bool GetBlockList(std::vector<std::string>& blocks); // TODO: Refactor
     };
 }
 

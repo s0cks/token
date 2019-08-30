@@ -100,7 +100,7 @@ namespace Token{
             case Type::kGetHeadMessage: return "GetHead()";
             case Type::kPeerIdentityMessage:{
                 Node::Messages::PeerIdentity* pident = (Node::Messages::PeerIdentity*)GetRaw();
-                stream << "PeerIdentity(v" << pident->version() << "," << pident->blocks_size() << " blocks)";
+                stream << "PeerIdentity(v" << pident->version() << "," << pident->heads_size() << " blocks)";
                 break;
             }
             case Type::kGetBlockMessage:{

@@ -59,7 +59,7 @@ namespace Token{
         Node::Messages::PeerIdentity ident;
         ident.set_version("1.0.0");
         if(BlockChain::GetInstance()->HasHead()){
-            ident.set_head(BlockChain::GetInstance()->GetHead()->GetHash());
+            ident.add_heads(BlockChain::GetInstance()->GetHead()->GetHash());
         }
         // Set peers
         std::vector<PeerClient*> peers;
@@ -72,15 +72,8 @@ namespace Token{
             ident.add_peers()->set_address(it->ToString());
         }
 
-        // Set blocks
-        std::vector<std::string> blocks;
-        if(!BlockChain::GetBlockList(blocks)){
-            LOG(ERROR) << "couldn't get block list";
-            return;
-        }
-
-        for(auto& it : blocks){
-            ident.add_blocks(it);
+        if(BlockChain::GetInstance()->HasHead()){
+            ident.add_heads(BlockChain::GetInstance()->GetHead()->GetHash());
         }
 
         Message msg(Message::Type::kPeerIdentityMessage, &ident);
@@ -110,7 +103,7 @@ namespace Token{
                 LOG(WARNING) << "downloaded block: " << block->GetHash();
                 LOG(WARNING) << (*block);
                 BlockChain::Save(block);
-                return true;
+                return BlockChain::GetInstance()->SetHead(block);
             } else if(IsConnected()){
                 LOG(INFO) << "received block: " << block->GetHash();
                 if(!BlockChain::GetInstance()->Append(block)){
@@ -125,41 +118,30 @@ namespace Token{
             return false;
         } else if(msg->IsPeerIdentityMessage()){
             Node::Messages::PeerIdentity* ident = msg->GetAsPeerIdentity();
-            //TODO: Connect to peers
             if(IsConnecting()){
                 SetState(State::kSynchronizing);
-                for(auto& it : ident->blocks()){
-                    if(!BlockChain::GetInstance()->HasBlock(it)){
-                        DownloadBlock(it);
-                        sleep(5);
-                    }
+                for(auto& it : ident->heads()){
+                    DownloadBlock(it);
                 }
                 SendIdentity();
-                return true;
             } else if(IsSynchronizing()){
                 bool synced = true;
-                for(auto& it : ident->blocks()){
+                for(auto& it : ident->heads()){
                     if(!BlockChain::GetInstance()->HasBlock(it)){
                         synced = false;
                         DownloadBlock(it);
                     }
                 }
-
-                if(!synced){
-                    LOG(INFO) << "sending identity";
-                    SendIdentity();
-                    return true;
+                if(synced){
+                    if(!BlockChain::GetInstance()->SetHead(ident->heads(0))){
+                        LOG(ERROR) << "couldn't set <HEAD>";
+                        return false;
+                    }
+                    SetState(State::kConnected);
                 }
-
-                if(!BlockChain::GetInstance()->SetHead(ident->head())){
-                    LOG(ERROR) << "couldn't set head";
-                    return false;
-                }
-
-                LOG(INFO) << "connected!";
-                SetState(State::kConnected);
-                return true;
+                SendIdentity();
             }
+            return true;
         }
     }
 
