@@ -9,7 +9,7 @@ namespace Token{
 #define PREPARE_SQLITE_STATEMENT ({ \
     int rc; \
     if((rc = sqlite3_prepare_v2(database_, sql.c_str(), -1, &stmt, NULL)) != SQLITE_OK){ \
-        LOG(ERROR) << "couldn't prepare sqlite3 statement '" << sql << "'"; \
+        LOG(ERROR) << "couldn't prepare sqlite3 statement '" << sql << "': " << sqlite3_errstr(rc); \
         UNLOCK; \
         return false; \
     } \
