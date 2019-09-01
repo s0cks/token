@@ -11,7 +11,7 @@ find_package(Crypto++ REQUIRED)
 find_package(Threads)
 find_package(glog REQUIRED)
 find_package(Libuv REQUIRED)
-find_package(leveldb REQUIRED)
+find_package(LevelDB REQUIRED)
 find_package(SQLite3 REQUIRED)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -29,7 +29,7 @@ protobuf_generate_cpp(PROTO_SRC PROTO_HEADER ${TOKEN_PROTO_SOURCES})
 grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${CMAKE_BINARY_DIR} ${TOKEN_SERVICE_PROTO_SOURCES})
 
 add_library("${PROJECT_NAME}" STATIC ${TOKEN_LIB_SOURCES} ${PROTO_HEADER} ${PROTO_SRC} ${GRPC_HDRS} ${GRPC_SRCS})
-target_link_libraries("${PROJECT_NAME}" ${PROTOBUF_LIBRARY} ${LIBUV_LIBRARIES} ${SQLite3_LIBRARIES} glog::glog leveldb::leveldb cryptopp-static)
+target_link_libraries("${PROJECT_NAME}" ${PROTOBUF_LIBRARY} ${LIBUV_LIBRARIES} ${SQLite3_LIBRARIES} glog::glog ${LevelDB_LIBRARY}disc cryptopp-static)
 
 add_executable("${PROJECT_NAME}-node" main.cc)
 target_link_libraries("${PROJECT_NAME}-node" ${PROJECT_NAME}  ${CMAKE_THREAD_LIBS_INIT} gRPC::grpc++_reflection)
