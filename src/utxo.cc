@@ -100,7 +100,7 @@ namespace Token{
 
     bool UnclaimedTransactionPool::GetUnclaimedTransactions(std::vector<UnclaimedTransaction*>& utxos){
         READ_LOCK;
-        std::string sql = "SELECT UTxHash,TxHash,TxIndex,User,Token FROM UnclaimedTransactions;";
+        std::string sql = "SELECT * FROM UnclaimedTransactions;";
 
         sqlite3_stmt* stmt;
         PREPARE_SQLITE_STATEMENT;
