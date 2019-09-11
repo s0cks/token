@@ -13,6 +13,7 @@ find_package(glog REQUIRED)
 find_package(Libuv REQUIRED)
 find_package(LevelDB REQUIRED)
 find_package(SQLite3 REQUIRED)
+find_package(gflags REQUIRED)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${LIBUV_INCLUDE_DIRS})
@@ -32,7 +33,7 @@ add_library("${PROJECT_NAME}" STATIC ${TOKEN_LIB_SOURCES} ${PROTO_HEADER} ${PROT
 target_link_libraries("${PROJECT_NAME}" ${PROTOBUF_LIBRARY} ${LIBUV_LIBRARIES} ${SQLite3_LIBRARIES} glog::glog ${LevelDB_LIBRARY} cryptopp-static)
 
 add_executable("${PROJECT_NAME}-node" main.cc)
-target_link_libraries("${PROJECT_NAME}-node" ${PROJECT_NAME}  ${CMAKE_THREAD_LIBS_INIT} gRPC::grpc++_reflection)
+target_link_libraries("${PROJECT_NAME}-node" ${PROJECT_NAME}  ${CMAKE_THREAD_LIBS_INIT} gRPC::grpc++_reflection gflags)
 
 add_executable("${PROJECT_NAME}-client" client.cc)
 target_link_libraries("${PROJECT_NAME}-client" ${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT} gRPC::grpc++_reflection)
