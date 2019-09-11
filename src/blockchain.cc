@@ -49,6 +49,72 @@ namespace Token{
         return n;
     }
 
+    int BlockChain::GetPeerCount(){
+        leveldb::ReadOptions readOpts;
+        std::string result;
+        if(!GetState()->Get(readOpts, "PeerCount", &result).ok()){
+            LOG(ERROR) << "couldn't get 'PeerCount' field";
+            return -1;
+        }
+    }
+
+    void BlockChain::SetPeerCount(int n){
+        leveldb::WriteOptions writeOpts;
+        std::stringstream val;
+        val << n;
+        if(!GetState()->Put(writeOpts, "PeerCount", val.str()).ok()){
+            LOG(ERROR) << "couldn't set 'PeerCount' field";
+        }
+    }
+
+    void BlockChain::RegisterPeer(Token::PeerClient* p){
+        if(IsPeerRegistered(p)) return;
+
+        int pidx = GetPeerCount() + 1;
+
+        std::stringstream k;
+        k << "peer_" << pidx;
+
+        std::stringstream v;
+        v << p->GetAddress() << ":" << p->GetPort();
+
+        leveldb::WriteOptions writeOpts;
+        if(!GetState()->Put(writeOpts, k.str(), v.str()).ok()){
+            LOG(ERROR) << "couldn't register peer #" << pidx << " := " << v.str();
+        }
+    }
+
+    std::string BlockChain::GetPeer(int n){
+        if(n > GetPeerCount()) return "";
+        std::stringstream k;
+        k << "peer_" << n;
+
+        std::string result;
+        leveldb::ReadOptions readOpts;
+        if(!GetState()->Get(readOpts, k.str(), &result).ok()){
+            LOG(ERROR) << "couldn't get peer @ " << n;
+            return "";
+        }
+        return result;
+    }
+
+    bool BlockChain::IsPeerRegistered(Token::PeerClient* p){
+        std::stringstream target;
+        target << p->GetAddress() << ":" << p->GetPort();
+        int pcount = GetPeerCount();
+        for(int i = 0; i < pcount; i++){
+            std::string peer = GetPeer(i);
+            if(target.str() == peer){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void BlockChain::DeregisterPeer(Token::PeerClient* p){
+        //TODO: Implement
+    }
+
     void BlockChain::RegisterBlock(const std::string& hash, int height){
         leveldb::WriteOptions writeOpts;
         if(!GetState()->Put(writeOpts, hash, GetBlockDataFile(height)).ok()){

@@ -9,6 +9,7 @@
 #include "block.h"
 #include "user.h"
 #include "utxo.h"
+#include "peer.h"
 
 namespace Token{
     class BlockChainVisitor{
@@ -82,6 +83,14 @@ namespace Token{
         pthread_t server_thread_;
 
         Node* GetNodeAt(int height) const;
+
+        int GetPeerCount();
+        bool IsPeerRegistered(PeerClient* p);
+        std::string GetPeer(int n);
+        void SetPeerCount(int n);
+        void RegisterPeer(PeerClient* p);
+        void DeregisterPeer(PeerClient* p);
+
         void RegisterBlock(const std::string& hash, int height);
         void SetHeight(int height);
         void SetGenesisHash(const std::string& hash);
