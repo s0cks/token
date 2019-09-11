@@ -7,7 +7,7 @@
 #include "blockchain.h"
 
 namespace Token{
-    class BlockChainService final : public Service::BlockChainService::Service{
+    class BlockChainService final : public Service::Messages::BlockChainService::Service{
     private:
         std::unique_ptr<grpc::Server> server_;
 
@@ -32,7 +32,7 @@ namespace Token{
         grpc::Status GetBlock(grpc::ServerContext* ctx, const Token::Service::Messages::GetBlockRequest* request, Messages::BlockHeader* response);
         grpc::Status GetBlockData(grpc::ServerContext* ctx, const Token::Service::Messages::GetBlockRequest* request, Messages::Block* response);
         grpc::Status GetUnclaimedTransactions(grpc::ServerContext* ctx, const Token::Service::Messages::GetUnclaimedTransactionsRequest* request, Messages::UnclaimedTransactionList* response);
-        grpc::Status GetPeers(grpc::ServerContext* ctx, const Token::Service::Messages::EmptyRequest* request, Messages::PeerList* response);
+        grpc::Status GetPeers(grpc::ServerContext* ctx, const Token::Service::Messages::EmptyRequest* request, Token::Service::Messages::PeerList* response);
         grpc::Status AppendBlock(grpc::ServerContext* ctx, const Messages::Block* request, Messages::BlockHeader* response);
 
         static BlockChainService* GetInstance();

@@ -9,9 +9,9 @@ namespace Token{
     class TokenServiceClient{
     private:
         std::shared_ptr<grpc::Channel> channel_;
-        std::unique_ptr<Token::Service::BlockChainService::Stub> stub_;
+        std::unique_ptr<Token::Service::Messages::BlockChainService::Stub> stub_;
 
-        inline Token::Service::BlockChainService::Stub*
+        inline Token::Service::Messages::BlockChainService::Stub*
         GetStub(){
             return stub_.get();
         }

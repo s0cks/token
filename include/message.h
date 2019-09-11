@@ -11,9 +11,7 @@ namespace Token{
     V(Block, Token::Messages::Block) \
     V(GetHead, Token::Node::Messages::EmptyRequest) \
     V(PeerIdentity, Token::Node::Messages::PeerIdentity) \
-    V(GetBlock, Token::Node::Messages::GetBlockRequest) \
-    V(Heartbeat, Token::Node::Messages::Heartbeat) \
-    V(HeartbeatAck, Token::Node::Messages::Heartbeat)
+    V(GetBlock, Token::Node::Messages::GetBlockRequest)
 
     /**
      * Block := Contains block information

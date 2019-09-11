@@ -1,14 +1,37 @@
 syntax="proto3";
-package Token.Service;
+package Token.Service.Messages;
 
-import "messages.proto";
 import "blockchain.proto";
+
+message EmptyRequest{}
+message EmptyResponse{}
+
+message GetBlockRequest{
+    uint32 index = 1;
+    string hash = 2;
+}
+
+message GetUnclaimedTransactionsRequest{
+    string user = 1;
+}
+
+message GetTransactionsRequest{
+    string user = 1;
+}
+
+message Peer{
+    string address = 1;
+}
+
+message PeerList{
+    repeated Peer peers = 1;
+}
 
 service BlockChainService{
     rpc GetHead (Messages.EmptyRequest) returns (Token.Messages.BlockHeader) {}
     rpc GetBlock (Messages.GetBlockRequest) returns (Token.Messages.BlockHeader) {}
     rpc GetBlockData (Messages.GetBlockRequest) returns (Token.Messages.Block) {}
     rpc GetUnclaimedTransactions (Messages.GetUnclaimedTransactionsRequest) returns (Token.Messages.UnclaimedTransactionList);
-    rpc GetPeers(Messages.EmptyRequest) returns (Token.Messages.PeerList) {}
+    rpc GetPeers(Messages.EmptyRequest) returns (PeerList) {}
     rpc AppendBlock (Token.Messages.Block) returns (Token.Messages.BlockHeader){}
 }

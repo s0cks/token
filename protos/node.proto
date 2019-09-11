@@ -17,10 +17,6 @@ message GetBlockRequest{
     uint32 height = 2;
 }
 
-message Heartbeat{
-    uint32 time = 1;
-}
-
 message PeerIdentity{
     string version = 1;
     repeated Peer peers = 2;

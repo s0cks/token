@@ -102,7 +102,7 @@ namespace Token{
 
     grpc::Status BlockChainService::GetPeers(grpc::ServerContext *ctx,
                                              const Token::Service::Messages::EmptyRequest *request,
-                                             Token::Messages::PeerList *response){
+                                             Token::Service::Messages::PeerList *response){
         std::vector<std::string> peers;
         if(!BlockChainServer::GetPeers(peers)){
             LOG(ERROR) << "couldn't get peers";

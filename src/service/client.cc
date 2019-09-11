@@ -8,7 +8,7 @@ namespace Token{
         std::stringstream ss;
         ss << address << ":" << port;
         channel_ = grpc::CreateChannel(ss.str(), grpc::InsecureChannelCredentials());
-        stub_ = Token::Service::BlockChainService::NewStub(channel_);
+        stub_ = Token::Service::Messages::BlockChainService::NewStub(channel_);
     }
 
     bool TokenServiceClient::GetHead(Token::Messages::BlockHeader* response){
@@ -59,7 +59,7 @@ namespace Token{
 
     bool TokenServiceClient::GetPeers(std::vector<std::string> &peers){
         Token::Service::Messages::EmptyRequest request;
-        Token::Messages::PeerList response;
+        Token::Service::Messages::PeerList response;
         grpc::ClientContext ctx;
         if(!GetStub()->GetPeers(&ctx, request, &response).ok()){
             return false;

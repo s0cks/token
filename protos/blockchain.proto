@@ -41,15 +41,3 @@ message BlockHeader{
     string previous_hash = 3;
     string merkle_root = 4;
 }
-
-message PeerIdentity{
-    BlockHeader head = 1;
-}
-
-message Peer{
-    string address = 1;
-}
-
-message PeerList{
-    repeated Peer peers = 1;
-}
