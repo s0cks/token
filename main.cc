@@ -41,16 +41,12 @@ DEFINE_uint32(service_port, 0, "The port used for the RPC service");
 // Server Flags
 DEFINE_uint32(server_port, 0, "The port used for the BlockChain server");
 
-// <local file storage path>
-// <local listening port>
-// <peer port>
 int main(int argc, char** argv){
     using namespace Token;
-    gflags::ParseCommandLineFlags(&argc, &argv, true);
-
     if(!InitializeLogging(argv[0], FLAGS_root)){
         return EXIT_FAILURE;
     }
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     std::string utxopool_path = (FLAGS_root + "/unclaimed.db");
     if(!UnclaimedTransactionPool::LoadUnclaimedTransactionPool(utxopool_path)){
