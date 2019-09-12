@@ -3,6 +3,7 @@
 
 #include <string>
 #include <sstream>
+
 #include <vector>
 #include "bytes.h"
 #include "merkle.h"
@@ -39,10 +40,11 @@ namespace Token{
             raw_(new Messages::Block()){
             GetRaw()->CopyFrom(*raw);
         }
+
         friend class BlockChainService;
         friend class TokenServiceClient;
-        friend class ClientSession;
         friend class PeerSession;
+        friend class PeerClient;
         friend class BlockChainServer;
     public:
         Block(bool genesis):
@@ -90,6 +92,7 @@ namespace Token{
             }
         }
 
+        bool Equals(const Messages::BlockHeader& head);
         void Encode(ByteBuffer* bb);
         void Write(const std::string& filename);
         std::string GetHash();

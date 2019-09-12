@@ -1,6 +1,24 @@
 syntax="proto3";
 package Token.Node.Messages;
 
-message BlockMessage{
+message EmptyRequest{}
+message EmptyResponse{}
 
+message Peer{
+    string address = 1;
+}
+
+message PeerList{
+    repeated Peer peers = 1;
+}
+
+message GetBlockRequest{
+    string hash = 1;
+    uint32 height = 2;
+}
+
+message PeerIdentity{
+    string version = 1;
+    repeated Peer peers = 2;
+    repeated string heads = 3;
 }

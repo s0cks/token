@@ -9,7 +9,16 @@
 namespace Token{
 #define FOR_EACH_TYPE(V) \
     V(Block, Token::Messages::Block) \
-    V(GetHead, Token::Service::Messages::EmptyRequest)
+    V(GetHead, Token::Node::Messages::EmptyRequest) \
+    V(PeerIdentity, Token::Node::Messages::PeerIdentity) \
+    V(GetBlock, Token::Node::Messages::GetBlockRequest)
+
+    /**
+     * Block := Contains block information
+     * GetHead := Request the head from the peer
+     * PeerIdent := Send identity to peer
+     * PeerIdentAck := Acknowledge that the peer is good
+     */
 
     class Message{
     public:
@@ -40,10 +49,13 @@ namespace Token{
     public:
         Message(Type type, google::protobuf::Message* data):
             type_(type),
-            msg_(data){}
+            msg_(data->New()){
+            GetRaw()->CopyFrom(*data);
+        }
         Message(Type type=Type::kUnknownType):
             type_(type),
             msg_(nullptr){}
+        Message(const Message& other);
         ~Message(){}
 
         Type GetType() const{
@@ -51,12 +63,17 @@ namespace Token{
         }
 
         bool Encode(uint8_t* bytes, size_t size);
-        bool Decode(ByteBuffer* bb);
+        bool Decode(uint8_t* bytes, size_t size);
 
 #define DECLARE_AS(Name, MType) \
-        MType* GetAs##Name##Message();
+        MType* GetAs##Name();
         FOR_EACH_TYPE(DECLARE_AS)
 #undef DECLARE_AS
+
+#define DECLARE_IS(Name, MType) \
+        bool Is##Name##Message();
+        FOR_EACH_TYPE(DECLARE_IS)
+#undef DECLARE_IS
 
         size_t
         GetMessageSize() const{
@@ -64,6 +81,8 @@ namespace Token{
                    GetRaw()->ByteSizeLong() :
                    0;
         }
+
+        std::string ToString() const;
     };
 }
 
