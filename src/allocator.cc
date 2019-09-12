@@ -1,5 +1,6 @@
 #include <cstring>
 #include <cstdio>
+#include <glog/logging.h>
 #include "allocator.h"
 
 #define WITH_HEADER(size) ((size)+sizeof(int))
@@ -7,7 +8,7 @@
 #define ALIGN(ptr) (((ptr)+3)&~3)
 #define CHUNK_AT(idx) (&minor_[(idx)*GC_MINCHUNK_SIZE])
 #define BITS(ch) (WITH_HEADER(ch))
-#define FLAGS(ch) (*((unsigned int*)(ch)))
+#define FLAGS(ch) (*((uint32_t*)(ch)))
 #define MARK_CHUNK(ch, c) ((FLAGS(ch)) = CHUNK_SIZE(ch)|c)
 #define CHUNK_SIZE(ch) (FLAGS((ch))&(~3))
 #define CHUNK_FLAGS(ch) (static_cast<Allocator::Color>((FLAGS((ch))&(3))))
@@ -27,12 +28,8 @@
 #define FOR_EACH_REFERENCE(ref, counter) \
     int counter; \
     for(counter=0; counter<refs_count_; counter++){ \
-        void** ref; \
-        for(ref=references_[counter][0]; \
-            ref<references_[counter][1]; \
-            ref++){ \
-            if(ref != 0){
-#define END_FOR_EACH_REFERENCE() }}}
+        void** ref = references_[counter][0];
+#define END_FOR_EACH_REFERENCE() }
 
 namespace Token{
     Allocator::Allocator():
@@ -172,8 +169,10 @@ namespace Token{
         memset(backpatch_, 0, sizeof(backpatch_));
         FOR_EACH_REFERENCE(ref, i);
         {
+            LOG(INFO) << "visiting reference: " << i << " (" << (void*)ref << ")";
             if(REF_PTR(*ref)){
                 Byte* ch = MINOR_CHUNK(*ref);
+                LOG(INFO) << "marking chunk: " << (void*)ch;
                 MarkChunk(ch);
             }
         }
@@ -190,14 +189,17 @@ namespace Token{
     }
 
     void Allocator::VisitMinor(Token::HeapVisitor* vis){
+        vis->VisitStart();
         int i;
         FOR_EACH_MINCH(ch);
             if(CHUNK_SIZE(ch) == 0) return;
             vis->VisitChunk(CHUNK_OFFSET(ch), CHUNK_SIZE(ch), ch);
         END_FOR_EACH_MINCH();
+        vis->VisitEnd();
     }
 
     void Allocator::VisitMajor(Token::HeapVisitor* vis){
+        vis->VisitStart();
         int i = 0;
         Byte* curr;
         for(curr = &major_[0];
@@ -206,22 +208,54 @@ namespace Token{
             if(CHUNK_SIZE(curr) == 0) return;
             vis->VisitChunk(i++, CHUNK_SIZE(curr), curr);
         }
+        vis->VisitEnd();
+    }
+
+    bool HeapPrinter::VisitStart(){
+        std::stringstream msg;
+
+        int total = HeapPrinter::BANNER_SIZE;
+        std::string title = space_ == kEden ?
+                " Eden " :
+                " Survivor ";
+
+        total = (total - title.length()) / 2;
+        for(int i = 0; i < total; i++){
+            msg << "*";
+        }
+        msg << title;
+        for(int i = 0; i < total; i++){
+            msg << "*";
+        }
+        LOG(INFO) << msg.str();
+    }
+
+    bool HeapPrinter::VisitEnd(){
+        std::stringstream msg;
+        for(int i = 0; i < HeapPrinter::BANNER_SIZE; i++){
+            msg << "*";
+        }
+        LOG(INFO) << msg.str();
     }
 
     bool HeapPrinter::VisitChunk(int chunk, size_t size, void* ptr){
-        printf("\tChunk %0.4d\tSize: %0.3d\tMarked %c\n", chunk, CHUNK_SIZE(ptr), (MARKED(ptr) ? 'Y' : 'N'));
+        char c[4];
+        snprintf(c, 4, "%0.4d", chunk);
+        char s[3];
+        snprintf(s, 3, "%0.3d", CHUNK_SIZE(ptr));
+        std::stringstream msg;
+        msg << "\tChunk " << c << "\tSize " << s << "\tMarked: " << (MARKED(ptr) ? 'Y' : 'N');
+        LOG(INFO) << msg.str();
         return true;
     }
 
     void Allocator::PrintMinorHeap(){
-        HeapPrinter printer;
-        printf("**** Minor Heap\n");
+        HeapPrinter printer(HeapPrinter::kEden);
         GetInstance()->VisitMinor(&printer);
     }
 
     void Allocator::PrintMajorHeap(){
-        HeapPrinter printer;
-        printf("**** Major Heap\n");
+        HeapPrinter printer(HeapPrinter::kSurvivor);
         GetInstance()->VisitMajor(&printer);
     }
 
@@ -249,11 +283,10 @@ namespace Token{
                 return;
             }
         }
-
         SetReference(refs_count_++, begin, end);
     }
 
     void Allocator::AddReference(void* ref){
-        GetInstance()->AddReference((void**)ref, (void**)ref + sizeof(void*));
+        GetInstance()->AddReference((void**)ref, (void**)ref+sizeof(void*));
     }
 }

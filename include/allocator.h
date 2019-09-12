@@ -73,14 +73,29 @@ namespace Token{
     public:
         HeapVisitor(){}
         virtual ~HeapVisitor(){}
+
+        virtual bool VisitStart() = 0;
+        virtual bool VisitEnd() = 0;
         virtual bool VisitChunk(int chunk, size_t size, void* ptr) = 0;
     };
 
     class HeapPrinter : public HeapVisitor{
     public:
-        HeapPrinter(){}
+        static const int BANNER_SIZE = 64;
+
+        enum HeapSpace{
+            kEden,
+            kSurvivor
+        };
+    private:
+        HeapSpace space_;
+    public:
+        HeapPrinter(HeapSpace space):
+            space_(space){}
         ~HeapPrinter(){}
 
+        bool VisitStart();
+        bool VisitEnd();
         bool VisitChunk(int chunk, size_t size, void* ptr);
     };
 }

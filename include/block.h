@@ -20,11 +20,11 @@ namespace Token{
 
     class Block{
     private:
-        Messages::Block* raw_;
+        Messages::Block raw_;
 
         Messages::Block*
         GetRaw(){
-            return raw_;
+            return &raw_;
         }
 
         static inline std::string
@@ -37,7 +37,7 @@ namespace Token{
         }
 
         explicit Block(Messages::Block* raw):
-            raw_(new Messages::Block()){
+            raw_(){
             GetRaw()->CopyFrom(*raw);
         }
 
@@ -48,12 +48,12 @@ namespace Token{
         friend class BlockChainServer;
     public:
         Block(bool genesis):
-            raw_(new Messages::Block()){
+            raw_(){
             GetRaw()->set_previous_hash(GetGenesisPreviousHash());
             GetRaw()->set_height(0);
         }
         Block(std::string prev_hash, uint32_t height):
-            raw_(new Messages::Block()){
+            raw_(){
             GetRaw()->set_previous_hash(prev_hash);
             GetRaw()->set_height(height);
         }
@@ -62,15 +62,15 @@ namespace Token{
         ~Block(){}
 
         std::string GetPreviousHash() const{
-            return raw_->previous_hash();
+            return raw_.previous_hash();
         }
 
         uint32_t GetHeight() const{
-            return raw_->height();
+            return raw_.height();
         }
 
         size_t GetNumberOfTransactions() const{
-            return raw_->transactions_size();
+            return raw_.transactions_size();
         }
 
         Transaction* CreateTransaction(){
@@ -78,7 +78,9 @@ namespace Token{
         }
 
         Transaction* GetTransactionAt(size_t idx) const {
-            return new Transaction(raw_->mutable_transactions(idx));
+            //TODO: Fixme
+            //return new Transaction(raw_.mutable_transactions(idx));
+            return nullptr;
         }
 
         Transaction* GetCoinbaseTransaction() {
@@ -92,9 +94,10 @@ namespace Token{
             }
         }
 
-        bool Equals(const Messages::BlockHeader& head);
-        void Encode(ByteBuffer* bb);
-        void Write(const std::string& filename);
+        bool Equals(const Messages::BlockHeader& head); //TODO: Refactor
+
+        void Encode(ByteBuffer* bb); //TODO: Remove
+        void Write(const std::string& filename); //TODO: Refactor
         std::string GetHash();
         std::string GetMerkleRoot();
         Token::Messages::Block* GetAsMessage();
@@ -117,9 +120,13 @@ namespace Token{
             return stream;
         }
 
-        static Block* Load(const std::string& filename);
-        static Block* Load(ByteBuffer* bb);
+        void* operator new(size_t size);
+        void operator delete(void* ptr);
 
+        static Block* Load(const std::string& filename); //TODO: Refactor
+        static Block* Load(ByteBuffer* bb); //TODO Refactor
+
+        //TODO: Refactor
         static Block* Load(Token::Messages::Block* block){
             return new Block(block);
         }

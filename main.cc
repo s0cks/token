@@ -82,25 +82,20 @@ int main(int argc, char** argv){
     }
     */
 
-    int* i = (int*)Allocator::Allocate(sizeof(int));
-    int* j = (int*)Allocator::Allocate(sizeof(int));
-    (*i) = 10;
-    (*j) = 100;
+    Allocator::PrintMinorHeap();
+    Allocator::PrintMajorHeap();
 
-    assert((*i) == 10);
-    assert((*j) == 100);
+    Block* b1 = new Block(true);
+
+    Block* b2 = new Block(true);
 
     Allocator::PrintMinorHeap();
     Allocator::PrintMajorHeap();
-    Allocator::AddReference(&i);
+
+    assert((*b1) == (*b2));
+
+    Allocator::AddReference(&b2);
     Allocator::CollectMinor();
-
-    int* k = (int*)Allocator::Allocate(sizeof(int));
-    (*k) = 1000;
-
-    assert((*i) == 10);
-    assert((*j) == 100);
-    assert((*k) == 1000);
 
     Allocator::PrintMinorHeap();
     Allocator::PrintMajorHeap();

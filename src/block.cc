@@ -1,4 +1,5 @@
 #include <glog/logging.h>
+#include <allocator.h>
 #include "block.h"
 
 namespace Token{
@@ -67,7 +68,15 @@ namespace Token{
 
     Token::Messages::Block* Block::GetAsMessage(){
         Token::Messages::Block* msg = new Token::Messages::Block();
-        msg->CopyFrom(*raw_);
+        msg->CopyFrom(raw_);
         return msg;
+    }
+
+    void* Block::operator new(size_t size){
+        return reinterpret_cast<Block*>(Allocator::Allocate(size));
+    }
+
+    void Block::operator delete(void* ptr){
+        //TODO: Implement
     }
 }
