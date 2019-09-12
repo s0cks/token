@@ -86,13 +86,14 @@ int main(int argc, char** argv){
     Allocator::PrintMajorHeap();
 
     Block* b1 = new Block(true);
+    Transaction* b1tx1 = b1->CreateTransaction();
+    b1tx1->AddOutput("TestUser2", "Token10");
+    b1tx1->AddOutput("TestUser2", "Token11");
 
     Block* b2 = new Block(true);
 
     Allocator::PrintMinorHeap();
     Allocator::PrintMajorHeap();
-
-    assert((*b1) == (*b2));
 
     Allocator::AddReference(&b2);
     Allocator::CollectMinor();

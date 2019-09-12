@@ -239,12 +239,8 @@ namespace Token{
     }
 
     bool HeapPrinter::VisitChunk(int chunk, size_t size, void* ptr){
-        char c[4];
-        snprintf(c, 4, "%0.4d", chunk);
-        char s[3];
-        snprintf(s, 3, "%0.3d", CHUNK_SIZE(ptr));
         std::stringstream msg;
-        msg << "\tChunk " << c << "\tSize " << s << "\tMarked: " << (MARKED(ptr) ? 'Y' : 'N');
+        msg << "\tChunk " << chunk << "\tSize " << size << "\tMarked: " << (MARKED(ptr) ? 'Y' : 'N');
         LOG(INFO) << msg.str();
         return true;
     }
