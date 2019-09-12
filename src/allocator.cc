@@ -209,7 +209,7 @@ namespace Token{
     }
 
     bool HeapPrinter::VisitChunk(int chunk, size_t size, void* ptr){
-        printf("\tChunk %0.4d\tSize: %0.3d\tMarked %c: %d\n", chunk, CHUNK_SIZE(ptr), (MARKED(ptr) ? 'Y' : 'N'), (*((int*)WITH_HEADER(ptr))));
+        printf("\tChunk %0.4d\tSize: %0.3d\tMarked %c\n", chunk, CHUNK_SIZE(ptr), (MARKED(ptr) ? 'Y' : 'N'));
         return true;
     }
 

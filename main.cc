@@ -98,6 +98,7 @@ int main(int argc, char** argv){
     int* k = (int*)Allocator::Allocate(sizeof(int));
     (*k) = 1000;
 
+    assert((*i) == 10);
     assert((*j) == 100);
     assert((*k) == 1000);
 

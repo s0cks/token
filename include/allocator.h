@@ -66,7 +66,6 @@ namespace Token{
         static void CollectMajor();
         static void PrintMinorHeap();
         static void PrintMajorHeap();
-        // static void PrintReferences();
         static void* Allocate(size_t size);
     };
 
