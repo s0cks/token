@@ -6,22 +6,22 @@
 #define WITH_HEADER(size) ((size)+sizeof(int))
 #define WITHOUT_HEADER(size) ((size)-sizeof(int))
 #define ALIGN(ptr) (((ptr)+3)&~3)
-#define CHUNK_AT(idx) (&minor_[(idx)*GC_MINCHUNK_SIZE])
+#define CHUNK_AT(idx) (&minor_[(idx)*kMinChunkSize])
 #define BITS(ch) (WITH_HEADER(ch))
 #define FLAGS(ch) (*((uint32_t*)(ch)))
 #define MARK_CHUNK(ch, c) ((FLAGS(ch)) = CHUNK_SIZE(ch)|static_cast<uint32_t>((c)))
 #define CHUNK_SIZE(ch) (FLAGS((ch))&(~3))
 #define CHUNK_FLAGS(ch) (static_cast<Allocator::Color>((FLAGS((ch))&(3))))
 #define MEM_TAG(ptr) (!(((uint64_t)(ptr))&1))
-#define POINTS_MINOR(ptr) (((Byte*)(ptr))>=&minor_[0] && ((Byte*)(ptr))<&minor_[GC_MINHEAP_SIZE])
-#define POINTS_MAJOR(ptr) (((Byte*)(ptr))>=&major_[0] && ((Byte*)(ptr))<&major_[GC_MAJHEAP_SIZE])
+#define POINTS_MINOR(ptr) (((Byte*)(ptr))>=&minor_[0] && ((Byte*)(ptr))<&minor_[minor_size_])
+#define POINTS_MAJOR(ptr) (((Byte*)(ptr))>=&major_[0] && ((Byte*)(ptr))<&major_[major_size_])
 #define REF_PTR(ptr) (MEM_TAG((ptr))&&POINTS_MINOR((ptr)))
-#define MINOR_CHUNK(ptr) (((((Byte*)(ptr)-&minor_[0])/GC_MINCHUNK_SIZE)*GC_MINCHUNK_SIZE)+&minor_[0])
+#define MINOR_CHUNK(ptr) (((((Byte*)(ptr)-&minor_[0])/kMinChunkSize)*kMinChunkSize)+&minor_[0])
 #define PTR_INDEX(ofs) ((ofs)/sizeof(void*))
 #define BITS(ch) (WITH_HEADER(ch))
 #define BITS_AT(ch, idx) ((((void**)(BITS((ch))+(idx)*sizeof(void*)))))
 #define MARKED(ch) (FLAGS(ch)&1)
-#define CHUNK_OFFSET(ch) ((((ch))-&minor_[0])/GC_MINCHUNK_SIZE)
+#define CHUNK_OFFSET(ch) ((((ch))-&minor_[0])/kMinChunkSize)
 #define REF_PTR_MJ(ptr) (MEM_TAG((ptr)) && POINTS_MAJOR((ptr)))
 
 #define FOR_EACH_MINCH(ch) for(i=0; i<free_chunk_; i++){ \
@@ -37,14 +37,10 @@ namespace Token{
     Allocator::Allocator():
         free_chunk_(0),
         refs_count_(0),
-        minor_(),
-        major_(),
-        backpatch_(),
+        minor_(nullptr),
+        major_(nullptr),
+        backpatch_(nullptr),
         references_(){
-        memset(backpatch_, 0, sizeof(backpatch_));
-        memset(minor_, 0, sizeof(minor_));
-        memset(major_, 0, sizeof(major_));
-        FLAGS(&major_[0]) = GC_MAJHEAP_SIZE;
     }
 
     Allocator::~Allocator(){}
@@ -60,9 +56,9 @@ namespace Token{
         Byte* curr;
         for(curr = &major_[0];
             (CHUNK_FLAGS(curr) != Color::kFree || size > CHUNK_SIZE(curr)) &&
-            curr < &major_[GC_MAJHEAP_SIZE];
+            curr < &major_[major_size_];
             curr = curr + CHUNK_SIZE(curr));
-        if(curr >= &major_[GC_MAJHEAP_SIZE]) return NULL;
+        if(curr >= &major_[major_size_]) return NULL;
         Byte* fchunk = curr;
         unsigned int prev_size = CHUNK_SIZE(fchunk);
         FLAGS(fchunk) = size;
@@ -75,8 +71,8 @@ namespace Token{
     void* Allocator::MinorAlloc(size_t size){
         if(size == 0) return NULL;
         size = (size_t)WITH_HEADER(ALIGN(size));
-        if(size > GC_MINCHUNK_SIZE) return NULL;
-        if(GetFreeChunk() >= GC_MINCHUNKS){
+        if(size > kMinChunkSize) return NULL;
+        if(GetFreeChunk() >= (minor_size_ / kMinChunkSize)){
             CollectMinor();
             return MinorAlloc(WITHOUT_HEADER(size));
         }
@@ -138,6 +134,22 @@ namespace Token{
         END_FOR_EACH_REFERENCE();
     }
 
+    bool Allocator::Initialize(uint64_t minheap_size, uint64_t maxheap_size){
+        GetInstance()->minor_size_ = minheap_size;
+        GetInstance()->major_size_ = maxheap_size;
+
+        Allocator* alloc = Allocator::GetInstance();
+        alloc->minor_ = (Byte*)malloc(sizeof(Byte) * minheap_size);
+        alloc->major_ = (Byte*)malloc(sizeof(Byte) * maxheap_size);
+        alloc->backpatch_ = (void**)malloc(sizeof(void*) * (GetInstance()->minor_size_ / kMinChunkSize));
+
+        memset(alloc->backpatch_, 0, sizeof(backpatch_));
+        memset(alloc->minor_, 0, sizeof(minor_));
+        memset(alloc->major_, 0, sizeof(major_));
+        FLAGS(&alloc->major_[0]) = maxheap_size;
+        return true;
+    }
+
     void Allocator::CopyMinorHeap(){
         int i;
         FOR_EACH_MINCH(ch);
@@ -188,9 +200,9 @@ namespace Token{
         Byte* curr;
         for(curr = &major_[0];
             !(ptr >= curr && (ptr < (curr + CHUNK_SIZE(curr))))
-            && curr < &major_[GC_MAJHEAP_SIZE];
+            && curr < &major_[major_size_];
             curr += CHUNK_SIZE(curr)){
-            if(curr < &major_[GC_MAJHEAP_SIZE]) return curr;
+            if(curr < &major_[major_size_]) return curr;
         }
         return NULL;
     }
@@ -219,7 +231,7 @@ namespace Token{
     void Allocator::DarkenMajor(){
         Byte* curr;
         for(curr = &major_[0];
-            curr < &major_[GC_MAJHEAP_SIZE];
+            curr < &major_[major_size_];
             curr += CHUNK_SIZE(curr)){
             switch(CHUNK_FLAGS(curr)){
                 case Color::kGray:
@@ -244,7 +256,7 @@ namespace Token{
 
         Byte* curr;
         for(curr = &GetInstance()->major_[0];
-            curr < &GetInstance()->major_[GC_MAJHEAP_SIZE];
+            curr < &GetInstance()->major_[GetInstance()->major_size_];
             curr += CHUNK_SIZE(curr)){
             switch(CHUNK_FLAGS(curr)){
                 case Color::kWhite:
@@ -270,7 +282,7 @@ namespace Token{
         int i = 0;
         Byte* curr;
         for(curr = &major_[0];
-            curr < &major_[GC_MAJHEAP_SIZE];
+            curr < &major_[major_size_];
             curr = curr + CHUNK_SIZE(curr)){
             if(CHUNK_SIZE(curr) == 0) return;
             vis->VisitChunk(i++, CHUNK_SIZE(curr), curr);

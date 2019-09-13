@@ -97,10 +97,20 @@ namespace Token{
             return raw_;
         }
 
+        void SetIndex(int idx){
+            GetRaw()->set_index(idx);
+        }
+
+        friend class Block;
+        friend class TransactionPool;
         friend class BlockChainService;
     public:
         Transaction(Messages::Transaction* raw):
             raw_(raw){}
+        Transaction(int idx = 0):
+            raw_(new Messages::Transaction()){
+            SetIndex(idx);
+        }
         ~Transaction(){}
 
         Input* AddInput(const std::string& previous_hash, uint32_t idx){
@@ -184,29 +194,27 @@ namespace Token{
         virtual void VisitOutput(Output* out){}
     };
 
+    class Block;
+
     class TransactionPool{
-    private:
-        std::map<std::string, Transaction*> transactions_;
     public:
-        TransactionPool():
-                transactions_(){}
-        TransactionPool(const TransactionPool& other):
-                transactions_(){
-            transactions_.insert(other.transactions_.begin(), other.transactions_.end());
-        }
+        static const size_t kTransactionPoolMaxSize = 64;
+    private:
+        static uint32_t counter_;
+        static std::string root_;
+
+        static Transaction* LoadTransaction(const std::string& filename);
+        static bool SaveTransaction(const std::string& filename, Transaction* tx);
+        static bool GetTransactions(std::vector<Transaction*>& txs);
+
+        TransactionPool(){}
+    public:
         ~TransactionPool(){}
 
-        void AddTransaction(Transaction* tx){
-            transactions_.insert(std::make_pair(tx->GetHash(), tx));
-        }
-
-        void RemoveTransaction(std::string hash) {
-            transactions_.erase(hash);
-        }
-
-        Transaction* GetTransaction(std::string hash) const{
-            return transactions_.find(hash)->second;
-        }
+        static Block* CreateBlock();
+        static bool AddTransaction(Transaction* tx);
+        static bool IsInitialized();
+        static bool Initialize(const std::string& path);
     };
 }
 

@@ -79,8 +79,6 @@ namespace Token{
         leveldb::DB* state_;
         Node* head_;
         pthread_rwlock_t rwlock_;
-        TransactionPool tx_pool_;
-        pthread_t server_thread_;
 
         Node* GetNodeAt(int height) const;
 
@@ -118,7 +116,6 @@ namespace Token{
         BlockChain():
             rwlock_(),
             state_(nullptr),
-            tx_pool_(),
             head_(nullptr){
             pthread_rwlock_init(&rwlock_, NULL);
         }
@@ -126,19 +123,13 @@ namespace Token{
         static BlockChain* GetInstance();
 
         void Accept(BlockChainVisitor* vis) const;
+
         Block* GetHead();
         Block* GetGenesis() const;
         Block* GetBlockFromHash(const std::string& hash) const;
         Block* GetBlockAt(int height) const;
+
         int GetHeight() const;
-
-        TransactionPool* GetTransactionPool(){
-            return &tx_pool_;
-        }
-
-        void AddTransaction(Transaction* tx){
-            return GetTransactionPool()->AddTransaction(tx);
-        }
 
         bool HasHead() const{
             return head_ != nullptr;
@@ -149,8 +140,8 @@ namespace Token{
         bool Append(Block* block);
 
         static bool Initialize(const std::string& path);
+
         static bool Save(Block* block); // TODO: Remove
-        static bool GetBlockList(std::vector<std::string>& blocks); // TODO: Refactor
     };
 }
 

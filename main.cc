@@ -11,6 +11,8 @@
 
 // BlockChain flags
 DEFINE_string(path, "", "The FS path for the BlockChain");
+DEFINE_uint32(minheap_size, 4096 * 32, "The size of the minor heap");
+DEFINE_uint32(maxheap_size, 4096 * 32 * 4, "The size of the major heap");
 
 // RPC Service Flags
 DEFINE_uint32(service_port, 0, "The port used for the RPC service");
@@ -26,7 +28,7 @@ FileExists(const std::string& name){
 
 static inline bool
 InitializeLogging(char* arg0){
-    std::string path = (FLAGS_path + "/logs");
+    std::string path = (FLAGS_path + "/logs/");
     if(!FileExists(path)){
         int rc;
         if((rc = mkdir(path.c_str(), S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)) == -1){
@@ -58,14 +60,51 @@ main(int argc, char** argv){
         return EXIT_FAILURE;
     }
 
+    if(!Allocator::Initialize(FLAGS_minheap_size, FLAGS_maxheap_size)){
+        LOG(ERROR) << "couldn't initialize allocator";
+        return EXIT_FAILURE;
+    }
+
     if(!InitializeUnclaimedTransactionPool()){
         LOG(ERROR) << "couldn't initialize UnclaimedTransactionPool";
+        return EXIT_FAILURE;
+    }
+
+    if(!TransactionPool::Initialize(FLAGS_path)){
+        LOG(ERROR) << "couldn't initialize the transaction pool";
         return EXIT_FAILURE;
     }
 
     if(!BlockChain::Initialize(FLAGS_path)){
         return EXIT_FAILURE;
     }
+
+    Block* head = BlockChain::GetInstance()->GetHead();
+
+    std::vector<UnclaimedTransaction*> utxos;
+    if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransactions(utxos)){
+        LOG(ERROR) << "couldn't get unclaimed transactions";
+        return EXIT_FAILURE;
+    }
+
+    /*
+    Transaction* tx = new Transaction();
+    tx->AddInput(utxos[100]->GetTransactionHash(), utxos[100]->GetIndex());
+    tx->AddOutput("TestUser2", utxos[100]->GetToken());
+    if(!TransactionPool::AddTransaction(tx)){
+        LOG(ERROR) << "couldn't add transaction: " << tx->GetHash();
+        return EXIT_FAILURE;
+    }
+    Block* nblock = nullptr;
+    if(!(nblock = TransactionPool::CreateBlock())){
+        LOG(ERROR) << "couldn't create new block";
+        return EXIT_FAILURE;
+    }
+    if(!BlockChain::GetInstance()->Append(nblock)){
+        LOG(ERROR) << "couldn't append new block";
+        return EXIT_FAILURE;
+    }
+    */
 
     if(FLAGS_server_port > 0){
         if(!BlockChainServer::Initialize(FLAGS_server_port)){
@@ -80,7 +119,11 @@ main(int argc, char** argv){
         BlockChainService::WaitForShutdown();
     }
 
-    Allocator::PrintMinorHeap();
-    Allocator::PrintMajorHeap();
+    if(FLAGS_server_port > 0){
+        if(!BlockChainServer::ShutdownAndWait()){
+            LOG(ERROR) << "Couldn't shutdown the BlockChain server";
+            return EXIT_FAILURE;
+        }
+    }
     return EXIT_SUCCESS;
 }

@@ -5,16 +5,14 @@
 #include <cstdint>
 
 #define GC_MAX_REFS 65536
-#define GC_MINCHUNK_SIZE 256
-#define GC_MINHEAP_SIZE (4096 * 128)
-#define GC_MAJHEAP_SIZE (GC_MINHEAP_SIZE * 4)
-#define GC_MINCHUNKS (GC_MINHEAP_SIZE / GC_MINCHUNK_SIZE)
 
 namespace Token{
     class HeapVisitor;
 
     class Allocator{
     public:
+        static const uint64_t kMinChunkSize = 4096;
+
         typedef uint8_t Byte;
 
         enum class Color{
@@ -25,11 +23,13 @@ namespace Token{
             kMarked = kWhite,
         };
     private:
-        Byte minor_[GC_MINHEAP_SIZE];
-        Byte major_[GC_MAJHEAP_SIZE];
+        uint64_t minor_size_;
+        uint64_t major_size_;
+        Byte* minor_;
+        Byte* major_;
         int free_chunk_;
         int refs_count_;
-        void* backpatch_[GC_MINCHUNKS];
+        void** backpatch_;
         void** references_[GC_MAX_REFS][2];
 
         inline int
@@ -69,6 +69,7 @@ namespace Token{
     public:
         ~Allocator();
 
+        static bool Initialize(uint64_t minheap_size, uint64_t maxheap_size);
         static void AddReference(void* ref);
         static void CollectMinor();
         static void CollectMajor();

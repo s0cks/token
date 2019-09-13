@@ -77,10 +77,14 @@ namespace Token{
             return new Transaction(GetRaw()->add_transactions());
         }
 
-        Transaction* GetTransactionAt(size_t idx) const {
-            //TODO: Fixme
-            //return new Transaction(raw_.mutable_transactions(idx));
-            return nullptr;
+        bool AppendTransaction(Transaction* tx){
+            Messages::Transaction* ntx = GetRaw()->add_transactions();
+            ntx->CopyFrom(*tx->GetRaw());
+            return true;
+        }
+
+        Transaction* GetTransactionAt(size_t idx){
+            return new Transaction(GetRaw()->mutable_transactions(idx));
         }
 
         Transaction* GetCoinbaseTransaction() {
@@ -115,7 +119,7 @@ namespace Token{
             stream << "\tNumber of Transactions: " << block.GetNumberOfTransactions() << std::endl;
             stream << "\tTransactions:" << std::endl;
             for(int i = 0; i < block.GetNumberOfTransactions(); i++){
-                std::cout << "\t  - #" << i << " " << block.GetTransactionAt(i)->GetHash() << std::endl;
+                std::cout << "\t  - #" << i << " " << const_cast<Block&>(block).GetTransactionAt(i)->GetHash() << std::endl;
             }
             return stream;
         }

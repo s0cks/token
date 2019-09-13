@@ -403,6 +403,8 @@ namespace Token{
             std::vector<Transaction*> invalid = validator.GetInvalidTransactions();
             if(valid.size() != block->GetNumberOfTransactions()){
                 LOG(ERROR) << "block '" << block->GetHash() << "' is invalid";
+                LOG(ERROR) << "block information:";
+                LOG(ERROR) << (*block);
                 UNLOCK;
                 return false;
             }
@@ -454,23 +456,6 @@ namespace Token{
             current->GetBlock()->Write(GetBlockDataFile(current->GetBlock()->GetHeight()));
             current = current->GetParent();
         }
-        return true;
-    }
-
-    bool BlockChain::GetBlockList(std::vector<std::string>& blocks){
-        int height = GetInstance()->GetHeight();
-        do{
-            Block* blk = GetInstance()->LoadBlock(height);
-            if(blk == nullptr){
-                return false;
-            }
-            blocks.push_back(blk->GetHash());
-            delete blk;
-            height--;
-            if(height < 0){
-                break;
-            }
-        }while(true);
         return true;
     }
 
