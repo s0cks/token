@@ -9,11 +9,12 @@
 #define CHUNK_AT(idx) (&minor_[(idx)*GC_MINCHUNK_SIZE])
 #define BITS(ch) (WITH_HEADER(ch))
 #define FLAGS(ch) (*((uint32_t*)(ch)))
-#define MARK_CHUNK(ch, c) ((FLAGS(ch)) = CHUNK_SIZE(ch)|c)
+#define MARK_CHUNK(ch, c) ((FLAGS(ch)) = CHUNK_SIZE(ch)|static_cast<uint32_t>((c)))
 #define CHUNK_SIZE(ch) (FLAGS((ch))&(~3))
 #define CHUNK_FLAGS(ch) (static_cast<Allocator::Color>((FLAGS((ch))&(3))))
 #define MEM_TAG(ptr) (!(((uint64_t)(ptr))&1))
 #define POINTS_MINOR(ptr) (((Byte*)(ptr))>=&minor_[0] && ((Byte*)(ptr))<&minor_[GC_MINHEAP_SIZE])
+#define POINTS_MAJOR(ptr) (((Byte*)(ptr))>=&major_[0] && ((Byte*)(ptr))<&major_[GC_MAJHEAP_SIZE])
 #define REF_PTR(ptr) (MEM_TAG((ptr))&&POINTS_MINOR((ptr)))
 #define MINOR_CHUNK(ptr) (((((Byte*)(ptr)-&minor_[0])/GC_MINCHUNK_SIZE)*GC_MINCHUNK_SIZE)+&minor_[0])
 #define PTR_INDEX(ofs) ((ofs)/sizeof(void*))
@@ -21,6 +22,7 @@
 #define BITS_AT(ch, idx) ((((void**)(BITS((ch))+(idx)*sizeof(void*)))))
 #define MARKED(ch) (FLAGS(ch)&1)
 #define CHUNK_OFFSET(ch) ((((ch))-&minor_[0])/GC_MINCHUNK_SIZE)
+#define REF_PTR_MJ(ptr) (MEM_TAG((ptr)) && POINTS_MAJOR((ptr)))
 
 #define FOR_EACH_MINCH(ch) for(i=0; i<free_chunk_; i++){ \
     Byte* ch = CHUNK_AT(i); do{}while(0)
@@ -45,9 +47,7 @@ namespace Token{
         FLAGS(&major_[0]) = GC_MAJHEAP_SIZE;
     }
 
-    Allocator::~Allocator(){
-
-    }
+    Allocator::~Allocator(){}
 
     Allocator* Allocator::GetInstance(){
         static Allocator instance;
@@ -66,7 +66,7 @@ namespace Token{
         Byte* fchunk = curr;
         unsigned int prev_size = CHUNK_SIZE(fchunk);
         FLAGS(fchunk) = size;
-        MARK_CHUNK(fchunk, static_cast<unsigned int>(Color::kWhite));
+        MARK_CHUNK(fchunk, Color::kWhite);
         Byte* next_chunk = (curr + size);
         FLAGS(next_chunk) = prev_size - size;
         return (void*)WITH_HEADER(fchunk);
@@ -92,7 +92,7 @@ namespace Token{
     }
 
     void Allocator::MarkChunk(Token::Allocator::Byte* ch){
-        MARK_CHUNK(ch, static_cast<unsigned int>(Color::kMarked));
+        MARK_CHUNK(ch, Color::kMarked);
         int i;
         for(i = 0; i < PTR_INDEX(CHUNK_SIZE(ch)); i++){
             if(REF_PTR(*BITS_AT(ch, i))){
@@ -184,8 +184,75 @@ namespace Token{
         GetInstance()->CopyMinorHeap();
     }
 
-    void Allocator::CollectMajor(){
+    Allocator::Byte* Allocator::FindMajorChunk(Token::Allocator::Byte* ptr){
+        Byte* curr;
+        for(curr = &major_[0];
+            !(ptr >= curr && (ptr < (curr + CHUNK_SIZE(curr))))
+            && curr < &major_[GC_MAJHEAP_SIZE];
+            curr += CHUNK_SIZE(curr)){
+            if(curr < &major_[GC_MAJHEAP_SIZE]) return curr;
+        }
+        return NULL;
+    }
 
+    void Allocator::DarkenChunk(Token::Allocator::Byte* ch){
+        Byte* curr = FindMajorChunk(ch);
+        if(curr != 0 && CHUNK_FLAGS(curr) == Color::kWhite){
+            MARK_CHUNK(curr, Color::kGray);
+        }
+    }
+
+    void Allocator::MarkMajorChunk(Token::Allocator::Byte* ch){
+        if(CHUNK_FLAGS(ch) != Color::kBlack){
+            MARK_CHUNK(ch, static_cast<Allocator::Color>(static_cast<int>(CHUNK_FLAGS(ch)) + 1));
+            int i;
+            for(i = 0; i < PTR_INDEX(CHUNK_SIZE(ch)); i++){
+                if(REF_PTR_MJ(*BITS_AT(ch, i))){
+                    Byte* ptr = reinterpret_cast<Byte*>(*BITS_AT(ch, i));
+                    Byte* ref = FindMajorChunk(ptr);
+                    MarkMajorChunk(ref);
+                }
+            }
+        }
+    }
+
+    void Allocator::DarkenMajor(){
+        Byte* curr;
+        for(curr = &major_[0];
+            curr < &major_[GC_MAJHEAP_SIZE];
+            curr += CHUNK_SIZE(curr)){
+            switch(CHUNK_FLAGS(curr)){
+                case Color::kGray:
+                    MarkMajorChunk(curr);
+                    break;
+                default: break;
+            }
+        }
+    }
+
+    void Allocator::DarkenRoots(){
+        FOR_EACH_REFERENCE(ptr, i)
+            {
+                DarkenChunk((Byte*)*ptr);
+            }
+        END_FOR_EACH_REFERENCE();
+    }
+
+    void Allocator::CollectMajor(){
+        GetInstance()->DarkenRoots();
+        GetInstance()->DarkenMajor();
+
+        Byte* curr;
+        for(curr = &GetInstance()->major_[0];
+            curr < &GetInstance()->major_[GC_MAJHEAP_SIZE];
+            curr += CHUNK_SIZE(curr)){
+            switch(CHUNK_FLAGS(curr)){
+                case Color::kWhite:
+                    MARK_CHUNK(curr, Color::kFree);
+                    break;
+                default: break;
+            }
+        }
     }
 
     void Allocator::VisitMinor(Token::HeapVisitor* vis){

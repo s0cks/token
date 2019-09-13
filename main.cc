@@ -9,6 +9,15 @@
 #include "server.h"
 #include "service/service.h"
 
+// BlockChain flags
+DEFINE_string(path, "", "The FS path for the BlockChain");
+
+// RPC Service Flags
+DEFINE_uint32(service_port, 0, "The port used for the RPC service");
+
+// Server Flags
+DEFINE_uint32(server_port, 0, "The port used for the BlockChain server");
+
 static inline bool
 FileExists(const std::string& name){
     std::ifstream f(name.c_str());
@@ -16,7 +25,8 @@ FileExists(const std::string& name){
 }
 
 static inline bool
-InitializeLogging(char* arg0, const std::string path){
+InitializeLogging(char* arg0){
+    std::string path = (FLAGS_path + "/logs");
     if(!FileExists(path)){
         int rc;
         if((rc = mkdir(path.c_str(), S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)) == -1){
@@ -32,32 +42,23 @@ InitializeLogging(char* arg0, const std::string path){
     return true;
 }
 
-// BlockChain flags
-DEFINE_string(path, "blah", "The FS path for the BlockChain");
-
-// RPC Service Flags
-DEFINE_uint32(service_port, 0, "The port used for the RPC service");
-
-// Server Flags
-DEFINE_uint32(server_port, 0, "The port used for the BlockChain server");
-
-int main(int argc, char** argv){
+int
+main(int argc, char** argv){
     using namespace Token;
     gflags::ParseCommandLineFlags(&argc, &argv, true);
-    std::string logdir = (FLAGS_path + "/logs");
-    if(!InitializeLogging(argv[0], logdir)){
+
+    if(!InitializeLogging(argv[0])){
         return EXIT_FAILURE;
     }
 
-    /*
-    std::string utxopool_path = (FLAGS_root + "/unclaimed.db");
+    std::string utxopool_path = (FLAGS_path + "/unclaimed.db");
     if(!UnclaimedTransactionPool::LoadUnclaimedTransactionPool(utxopool_path)){
         LOG(ERROR) << "Couldn't load unclaimed transaction pool from path: " << utxopool_path;
         return EXIT_FAILURE;
     }
 
-    if(!BlockChain::Initialize(FLAGS_root)){
-        LOG(ERROR) << "Couldn't load BlockChain from path: " << FLAGS_root;
+    if(!BlockChain::Initialize(FLAGS_path)){
+        LOG(ERROR) << "Couldn't load BlockChain from path: " << FLAGS_path;
         return EXIT_FAILURE;
     }
 
@@ -80,25 +81,5 @@ int main(int argc, char** argv){
             return EXIT_FAILURE;
         }
     }
-    */
-
-    Allocator::PrintMinorHeap();
-    Allocator::PrintMajorHeap();
-
-    Block* b1 = new Block(true);
-    Transaction* b1tx1 = b1->CreateTransaction();
-    b1tx1->AddOutput("TestUser2", "Token10");
-    b1tx1->AddOutput("TestUser2", "Token11");
-
-    Block* b2 = new Block(true);
-
-    Allocator::PrintMinorHeap();
-    Allocator::PrintMajorHeap();
-
-    Allocator::AddReference(&b2);
-    Allocator::CollectMinor();
-
-    Allocator::PrintMinorHeap();
-    Allocator::PrintMajorHeap();
     return EXIT_SUCCESS;
 }

@@ -6,8 +6,8 @@
 
 #define GC_MAX_REFS 65536
 #define GC_MINCHUNK_SIZE 256
-#define GC_MINHEAP_SIZE (1024 * 64)
-#define GC_MAJHEAP_SIZE (1024 * 1024 * 32)
+#define GC_MINHEAP_SIZE (4096 * 128)
+#define GC_MAJHEAP_SIZE (GC_MINHEAP_SIZE * 4)
 #define GC_MINCHUNKS (GC_MINHEAP_SIZE / GC_MINCHUNK_SIZE)
 
 namespace Token{
@@ -45,10 +45,18 @@ namespace Token{
         void SetReference(int idx, void* start, void* end);
         void AddReference(void** begin, void** end);
         void MarkChunk(Byte* ch);
+
         void BackpatchReferences();
         void BackpatchChunk(Byte* ch);
         void CopyMinorHeap();
         void MarkMinor();
+
+        Byte* FindMajorChunk(Byte* ptr);
+        void DarkenChunk(Byte* ptr);
+        void DarkenRoots();
+        void MarkMajorChunk(Byte* ch);
+        void DarkenMajor();
+
         void VisitMinor(HeapVisitor* vis);
         void VisitMajor(HeapVisitor* vis);
         void* MinorAlloc(size_t size);
