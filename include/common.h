@@ -41,49 +41,6 @@ namespace Token{
 #endif
         return x + 1;
     }
-
-    namespace Bytes{
-        static inline Byte*
-        ArrayNew(size_t size){
-            Byte* bytes = reinterpret_cast<Byte*>(malloc(sizeof(Byte) * size));
-            return bytes;
-        }
-
-        static inline size_t
-        ArrayLength(Byte* bytes){
-            return sizeof(bytes) / sizeof(Byte);
-        }
-
-        static inline int
-        ArrayCompare(Byte* bytes1, Byte* bytes2){
-            if(ArrayLength(bytes1) > ArrayLength(bytes2)) return 1;
-            else if(ArrayLength(bytes1) < ArrayLength(bytes2)) return -1;
-            return std::memcmp(bytes1, bytes2, ArrayLength(bytes1));
-        }
-
-        static inline uint32_t
-        ArrayHashCode(Byte* bytes){
-            uint32_t hash = 1;
-            for(size_t i = 0; i < ArrayLength(bytes); i++) hash = 31 * hash + bytes[i];
-            return hash;
-        }
-    }
-
-    static inline std::string
-    Hash(const std::string& value){
-        std::string digest;
-        CryptoPP::SHA256 hash;
-        CryptoPP::StringSource source(value, true, new CryptoPP::HashFilter(hash, new CryptoPP::HexEncoder(new CryptoPP::StringSink(digest))));
-        return digest;
-    }
-
-    static inline std::string
-    Hash(Byte* value){
-        std::string digest;
-        CryptoPP::SHA256 hash;
-        CryptoPP::ArraySource source(value, sizeof(value), true, new CryptoPP::HashFilter(hash, new CryptoPP::HexEncoder(new CryptoPP::StringSink(digest))));
-        return digest;
-    }
 }
 
 #endif //TOKEN_COMMON_H

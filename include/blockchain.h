@@ -144,7 +144,7 @@ namespace Token{
             return head_ != nullptr;
         }
 
-        Block* CreateBlock();
+        Block* CreateBlock(); //TODO: Refactor
         bool HasBlock(const std::string& hash) const;
         bool Append(Block* block);
 

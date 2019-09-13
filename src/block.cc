@@ -36,12 +36,6 @@ namespace Token{
         return new Block(raw);
     }
 
-    Block* Block::Load(ByteBuffer* bb){
-        Messages::Block* raw = new Messages::Block();
-        raw->ParseFromArray((char*)bb->GetBytes(), bb->WrittenBytes());
-        return new Block(raw);
-    }
-
     void Block::Write(const std::string& filename){
         std::fstream fd(filename, std::ios::binary|std::ios::out|std::ios::trunc);
         GetRaw()->SerializeToOstream(&fd);

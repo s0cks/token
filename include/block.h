@@ -124,7 +124,6 @@ namespace Token{
         void operator delete(void* ptr);
 
         static Block* Load(const std::string& filename); //TODO: Refactor
-        static Block* Load(ByteBuffer* bb); //TODO Refactor
 
         //TODO: Refactor
         static Block* Load(Token::Messages::Block* block){

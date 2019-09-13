@@ -42,23 +42,28 @@ InitializeLogging(char* arg0){
     return true;
 }
 
+static inline bool
+InitializeUnclaimedTransactionPool(){
+    std::string path = (FLAGS_path + "/unclaimed.db");
+    return Token::UnclaimedTransactionPool::LoadUnclaimedTransactionPool(path);
+}
+
 int
 main(int argc, char** argv){
     using namespace Token;
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     if(!InitializeLogging(argv[0])){
+        fprintf(stderr, "Couldn't initialize logging!");
         return EXIT_FAILURE;
     }
 
-    std::string utxopool_path = (FLAGS_path + "/unclaimed.db");
-    if(!UnclaimedTransactionPool::LoadUnclaimedTransactionPool(utxopool_path)){
-        LOG(ERROR) << "Couldn't load unclaimed transaction pool from path: " << utxopool_path;
+    if(!InitializeUnclaimedTransactionPool()){
+        LOG(ERROR) << "couldn't initialize UnclaimedTransactionPool";
         return EXIT_FAILURE;
     }
 
     if(!BlockChain::Initialize(FLAGS_path)){
-        LOG(ERROR) << "Couldn't load BlockChain from path: " << FLAGS_path;
         return EXIT_FAILURE;
     }
 
@@ -75,11 +80,7 @@ main(int argc, char** argv){
         BlockChainService::WaitForShutdown();
     }
 
-    if(FLAGS_server_port > 0){
-        if(!BlockChainServer::ShutdownAndWait()){
-            LOG(ERROR) << "Couldn't shutdown the BlockChain server";
-            return EXIT_FAILURE;
-        }
-    }
+    Allocator::PrintMinorHeap();
+    Allocator::PrintMajorHeap();
     return EXIT_SUCCESS;
 }

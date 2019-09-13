@@ -212,6 +212,7 @@ namespace Token{
 
     bool BlockChain::Initialize(const std::string& path){
         if(!BlockChain::GetInstance()->InitializeChainState(path)){
+            LOG(ERROR) << "error initializing chain state";
             return false;
         }
         return BlockChain::GetInstance()->InitializeChainHead();

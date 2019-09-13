@@ -220,39 +220,17 @@ namespace Token{
         return true;
     }
 
-    /*
-     * TODO: Implement this function
-    bool UnclaimedTransactionPool::ClearUnclaimedTransactions(){
-        pthread_rwlock_wrlock(&rwlock_);
-        std::string sql = "DELETE FROM UnclaimedTransactions;";
-
-        sqlite3_stmt* stmt;
-        int rc;
-        if((rc = sqlite3_prepare_v2(database_, sql.c_str(), -1, &stmt, NULL)) != SQLITE_OK) {
-            std::cerr << "Couldn't prepare statement: " << sqlite3_errmsg(database_) << std::endl;
-            pthread_rwlock_unlock(&rwlock_);
-            return false;
-        }
-
-        if((rc = sqlite3_step(stmt)) != SQLITE_DONE){
-            std::cerr << "Unable to clear unclaimed transactions" << sqlite3_errmsg(database_) << std::endl;
-            sqlite3_free(stmt);
-            pthread_rwlock_unlock(&rwlock_);
-            return false;
-        }
-        sqlite3_finalize(stmt);
-        pthread_rwlock_unlock(&rwlock_);
-        return true;
-    }
-    */
-
     bool UnclaimedTransactionPool::LoadPool(const std::string& filename){
+        LOG(INFO) << "loading utxo pool from: " << filename << "...";
         int rc;
         if((rc = sqlite3_open(filename.c_str(), &database_)) != SQLITE_OK){
-            LOG(ERROR) << "cannot open unclaimed transaction pool: " << filename;
             sqlite3_close(database_);
+            LOG(ERROR) << "*** error opening utxo '" << filename << "':";
+            LOG(ERROR) << "***   - SQL Error: " << sqlite3_errstr(rc);
+            LOG(ERROR) << "************************";
             return false;
         }
+
         std::string sql = "CREATE TABLE IF NOT EXISTS UnclaimedTransactions ("
                               "UTxHash CHAR(64) PRIMARY KEY NOT NULL,"
                               "TxHash CHAR(64) NOT NULL,"
@@ -262,11 +240,14 @@ namespace Token{
                           ");";
         char* err;
         if((rc = sqlite3_exec(database_, sql.c_str(), NULL, NULL, &err)) != SQLITE_OK){
-            LOG(ERROR) << "couldn't create the unclaimed transactions table in database: " << err;
+            LOG(ERROR) << "*** error loading utxo pool '" << filename << "':";
+            LOG(ERROR) << "***   - SQL Error: " << err;
+            LOG(ERROR) << "************************";
             sqlite3_free(err);
             sqlite3_close(database_);
             return false;
         }
+        LOG(INFO) << "done loading utxo pool!";
         return true;
     }
 
