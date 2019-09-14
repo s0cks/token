@@ -79,38 +79,7 @@ main(int argc, char** argv){
         return EXIT_FAILURE;
     }
 
-   std::vector<UnclaimedTransaction*> utxos;
-   if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransactions(utxos)){
-       LOG(ERROR) << "couldn't get unclaimed transactions";
-       return EXIT_FAILURE;
-   }
-
-    Transaction* tx = new Transaction();
-    tx->AddInput(utxos[100]->GetTransactionHash(), utxos[100]->GetIndex());
-    tx->AddOutput("TestUser2", utxos[100]->GetToken());
-    if(!TransactionPool::AddTransaction(tx)){
-       LOG(ERROR) << "couldn't add transaction: " << tx->GetHash();
-       return EXIT_FAILURE;
-    }
-
-    Transaction* tx2 = new Transaction();
-    tx2->SetIndex(1);
-    tx2->AddInput(utxos[101]->GetTransactionHash(), utxos[101]->GetIndex());
-    tx2->AddOutput("TestUser2", utxos[101]->GetToken());
-    if(!TransactionPool::AddTransaction(tx2)){
-        LOG(ERROR) << "couldn't add transaction: " << tx2->GetHash();
-        return EXIT_FAILURE;
-    }
-
-    Block* nblock = nullptr;
-    if(!(nblock = TransactionPool::CreateBlock())){
-       LOG(ERROR) << "couldn't create new block";
-       return EXIT_FAILURE;
-    }
-    if(!BlockChain::GetInstance()->AppendBlock(nblock)){
-       LOG(ERROR) << "couldn't append new block";
-       return EXIT_FAILURE;
-    }
+    BlockChainPrinter::PrintBlockChain();
 
     if(FLAGS_server_port > 0){
         if(!BlockChainServer::Initialize(FLAGS_server_port)){

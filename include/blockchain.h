@@ -140,6 +140,16 @@ namespace Token{
         static bool AppendBlock(Block* block);
         static bool Initialize(const std::string& path);
     };
+
+    class BlockChainPrinter : public BlockChainVisitor{
+    public:
+        BlockChainPrinter(){}
+        ~BlockChainPrinter(){}
+
+        bool Visit(Block* block);
+
+        static void PrintBlockChain();
+    };
 }
 
 #endif //TOKEN_BLOCKCHAIN_H

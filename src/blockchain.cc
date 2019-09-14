@@ -146,7 +146,7 @@ namespace Token{
             LOG(ERROR) << "couldn't get chain height from state";
             return -1;
         }
-        return static_cast<uint32_t>(atoi(height.c_str()));
+        return static_cast<uint32_t>(atoll(height.c_str()));
     }
 
     Block* BlockChain::CreateBlock(){
@@ -204,6 +204,7 @@ namespace Token{
     }
 
     Block* BlockChain::GetBlock(uint32_t height){
+        if(height > GetHeight() || height < 0) return nullptr;
         {
             // Search the in memory block chain first
             LOG(INFO) << "searching in-memory for block: " << height;
@@ -253,23 +254,12 @@ namespace Token{
     }
 
     void BlockChain::Accept(Token::BlockChainVisitor* vis){
-        int idx = GetHeight();
+        uint32_t height = GetHeight();
+        Block* block;
         do{
-            Node* n = GetNodeAt(idx);
-            Block* blk;
-            if(n){
-                blk = n->GetBlock();
-            } else{
-                blk = LoadBlock(idx);
-            }
-            if(blk){
-                vis->Visit(blk);
-                if(blk->GetHeight() == 0) return; // Visited last block in chain!
-                idx--;
-            } else{
-                LOG(ERROR) << "block @" << idx << " doesn't exist locally";
-            }
-        } while(true);
+            block = GetBlock(height--);
+            if(block) if(!vis->Visit(block)) return;
+        } while(block);
     }
 
 #define READ_LOCK pthread_rwlock_rdlock(&GetInstance()->rwlock_)
@@ -471,5 +461,16 @@ namespace Token{
 
     Block* BlockChain::LoadBlock(uint32_t height){
         return new Block(GetInstance()->GetBlockLocation(height));
+    }
+
+    bool BlockChainPrinter::Visit(Token::Block* block){
+        LOG(INFO) << "  - #" << block->GetHeight() << ": " << block->GetHash();
+        return true;
+    }
+
+    void BlockChainPrinter::PrintBlockChain(){
+        LOG(INFO) << "BlockChain (" << BlockChain::GetHeight() << " blocks):";
+        BlockChainPrinter instance;
+        BlockChain::Accept(&instance);
     }
 }
