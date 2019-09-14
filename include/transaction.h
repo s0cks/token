@@ -97,10 +97,6 @@ namespace Token{
             return raw_;
         }
 
-        void SetIndex(int idx){
-            GetRaw()->set_index(idx);
-        }
-
         friend class Block;
         friend class TransactionPool;
         friend class BlockChainService;
@@ -159,6 +155,10 @@ namespace Token{
 
         bool IsCoinbase() const{
             return GetIndex() == 0;
+        }
+
+        void SetIndex(int idx){
+            GetRaw()->set_index(idx);
         }
 
         void Accept(TransactionVisitor* visitor) const;

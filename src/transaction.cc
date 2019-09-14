@@ -127,12 +127,28 @@ namespace Token{
         return true;
     }
 
+    static inline bool
+    DeleteTransactionFile(const std::string& filename){
+        int rc;
+        if((rc = remove(filename.c_str())) == 0){
+            return true;
+        }
+        LOG(WARNING) << "unable to delete file: " << filename;
+        return false;
+    }
+
     Transaction* TransactionPool::LoadTransaction(const std::string& filename){
         std::fstream fd(filename, std::ios::binary|std::ios::in);
         Transaction* tx = new Transaction();
-        tx->GetRaw()->ParseFromIstream(&fd);
-        LOG(INFO) << "loaded transaction from: " << filename << ": " << (*tx);
+        if(!tx->GetRaw()->ParseFromIstream(&fd)){
+            LOG(ERROR) << "couldn't parse transaction from file: " << filename;
+            return nullptr;
+        }
         fd.close();
+        if(!DeleteTransactionFile(filename)){
+            LOG(ERROR) << "couldn't delete transaction pool file: " << filename;
+            return nullptr;
+        }
         return tx;
     }
 
