@@ -23,14 +23,14 @@ namespace Token{
                                              Token::Messages::BlockHeader *response){
         if(!request->hash().empty()){
             LOG(INFO) << "getting block: " << request->hash();
-            Block* block = BlockChain::GetInstance()->GetBlockFromHash(request->hash());
+            Block* block = BlockChain::GetInstance()->GetBlock(request->hash());
             if(block){
                 SetBlockHeader(block, response);
                 return grpc::Status::OK;
             }
         } else{
             LOG(INFO) << "getting block @" << request->index();
-            Block* block = BlockChain::GetInstance()->GetBlockAt(request->index());
+            Block* block = BlockChain::GetInstance()->GetBlock(request->index());
             if(block){
                 SetBlockHeader(block, response);
                 return grpc::Status::OK;
@@ -43,7 +43,7 @@ namespace Token{
                                                  const Token::Service::Messages::GetBlockRequest *request,
                                                  Token::Messages::Block *response){
         if(!request->hash().empty()){
-            Block* block = BlockChain::GetInstance()->GetBlockFromHash(request->hash());
+            Block* block = BlockChain::GetInstance()->GetBlock(request->hash());
             if(block){
                 Messages::Block* resp = block->GetAsMessage();
                 response->CopyFrom(*resp);
@@ -51,7 +51,7 @@ namespace Token{
                 return grpc::Status::OK;
             }
         } else{
-            Block* block = BlockChain::GetInstance()->GetBlockAt(request->index());
+            Block* block = BlockChain::GetInstance()->GetBlock(request->index());
             if(block){
                 Messages::Block* resp = block->GetAsMessage();
                 response->CopyFrom(*resp);
@@ -71,7 +71,7 @@ namespace Token{
         Block* nblock = new Block(&bdata);
 
         LOG(INFO) << "appending new block: " << nblock->GetHash();
-        if(!BlockChain::GetInstance()->Append(nblock)){
+        if(!BlockChain::GetInstance()->AppendBlock(nblock)){
             LOG(ERROR) << "couldn't append new block";
             return grpc::Status::CANCELLED;
         }

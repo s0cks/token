@@ -102,11 +102,11 @@ namespace Token{
             if(IsSynchronizing()){
                 LOG(WARNING) << "downloaded block: " << block->GetHash();
                 LOG(WARNING) << (*block);
-                BlockChain::Save(block);
+                //TODO: BlockChain::Save(block);
                 return BlockChain::GetInstance()->SetHead(block);
             } else if(IsConnected()){
                 LOG(INFO) << "received block: " << block->GetHash();
-                if(!BlockChain::GetInstance()->Append(block)){
+                if(!BlockChain::GetInstance()->AppendBlock(block)){
                     LOG(ERROR) << "couldn't append block: " << block->GetHash();
                     return false;
                 }
@@ -127,7 +127,7 @@ namespace Token{
             } else if(IsSynchronizing()){
                 bool synced = true;
                 for(auto& it : ident->heads()){
-                    if(!BlockChain::GetInstance()->HasBlock(it)){
+                    if(!BlockChain::ContainsBlock(it)){
                         synced = false;
                         DownloadBlock(it);
                     }

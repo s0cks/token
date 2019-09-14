@@ -107,7 +107,7 @@ main(int argc, char** argv){
        LOG(ERROR) << "couldn't create new block";
        return EXIT_FAILURE;
     }
-    if(!BlockChain::GetInstance()->Append(nblock)){
+    if(!BlockChain::GetInstance()->AppendBlock(nblock)){
        LOG(ERROR) << "couldn't append new block";
        return EXIT_FAILURE;
     }

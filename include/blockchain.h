@@ -81,8 +81,6 @@ namespace Token{
         Node* head_;
         pthread_rwlock_t rwlock_;
 
-        Node* GetNodeAt(int height) const;
-
         int GetPeerCount();
         bool IsPeerRegistered(PeerClient* p);
         std::string GetPeer(int n);
@@ -90,30 +88,35 @@ namespace Token{
         void RegisterPeer(PeerClient* p);
         void DeregisterPeer(PeerClient* p);
 
-        void RegisterBlock(const std::string& hash, int height);
-        void SetHeight(int height);
-        void SetGenesisHash(const std::string& hash);
+        std::string GetBlockLocation(const std::string& hash);
+        std::string GetBlockLocation(Block* block);
+        std::string GetBlockLocation(uint32_t height);
+        bool SetBlockLocation(Block* block, const std::string& filename);
+        bool SetHeight(int height);
+
+        static inline leveldb::DB*
+        GetState(){
+            return GetInstance()->state_;
+        }
+
+        static inline std::string
+        GetBlockFile(Block* block){
+            std::stringstream stream;
+            stream << GetRootDirectory() << "/blk" << block->GetHeight() << ".dat";
+            return stream.str();
+        }
+
+        static Node* GetNodeAt(uint32_t height);
+
+        bool InitializeChainHead();
+        bool InitializeChainState(const std::string& root);
         bool SetHead(Block* block);
         bool SetHead(const std::string& hash);
 
-        inline leveldb::DB*
-        GetState() const{
-            return state_;
-        }
-
-        inline Node*
-        GetHeadNode() const{
-            return head_;
-        }
-
-        std::string GetGenesisHash() const;
-        std::string GetBlockDataFile(int height) const;
-        int GetBlockHeightFromHash(const std::string& hash) const;
-        Block* LoadBlock(int height) const;
-        bool SaveChain();
-        bool InitializeChainHead();
-        bool InitializeChainState(const std::string& root);
-        Block* CreateBlock();
+        static bool SaveBlock(Block* block);
+        static Block* LoadBlock(uint32_t height);
+        static Block* LoadBlock(const std::string& hash);
+        Block* CreateBlock(); //TODO: Remove
 
         BlockChain():
             rwlock_(),
@@ -124,25 +127,18 @@ namespace Token{
     public:
         static BlockChain* GetInstance();
 
-        void Accept(BlockChainVisitor* vis) const;
-
-        Block* GetHead();
-        Block* GetGenesis() const;
-        Block* GetBlockFromHash(const std::string& hash) const;
-        Block* GetBlockAt(int height) const;
-
-        int GetHeight() const;
-
-        bool HasHead() const{
-            return head_ != nullptr;
-        }
-
-        bool HasBlock(const std::string& hash) const;
-        bool Append(Block* block);
-
+        static std::string GetRootDirectory();
+        static void Accept(BlockChainVisitor* vis);
+        static Block* GetHead();
+        static Block* GetGenesis();
+        static Block* GetBlock(const std::string& hash);
+        static Block* GetBlock(uint32_t height);
+        static uint32_t GetHeight();
+        static bool HasHead();
+        static bool ContainsBlock(const std::string& hash);
+        static bool ContainsBlock(Block* block);
+        static bool AppendBlock(Block* block);
         static bool Initialize(const std::string& path);
-
-        static bool Save(Block* block); // TODO: Remove
     };
 }
 

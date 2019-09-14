@@ -38,7 +38,7 @@ namespace Token{
     }
 
     bool BlockChainResolver::Resolve(){
-        BlockChain::Node* n = BlockChain::GetInstance()->GetHeadNode();
+        BlockChain::Node* n = BlockChain::GetInstance()->GetNodeAt(BlockChain::GetHeight());
         do{
             if(MatchesTarget(n->GetBlock())){
                 SetResult(n->GetBlock());
@@ -51,7 +51,7 @@ namespace Token{
     }
 
     bool PeerBlockResolver::BlockExistsLocally(uint32_t height){
-        std::string filename = BlockChain::GetInstance()->GetBlockDataFile(height);
+        std::string filename = BlockChain::GetInstance()->GetBlockLocation(height);
         return FileExists(filename);
     }
 

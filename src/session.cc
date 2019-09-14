@@ -50,7 +50,7 @@ namespace Token {
         if(msg->GetType() == Message::Type::kBlockMessage){
             Token::Block* block = Token::Block::Load(msg->GetAsBlock());
             LOG(INFO) << "received block: " << block->GetHash();
-            if(!BlockChain::GetInstance()->Append(block)){
+            if(!BlockChain::GetInstance()->AppendBlock(block)){
                 LOG(ERROR) << "couldn't append block: " << block->GetHash();
                 return false;
             }
@@ -68,12 +68,12 @@ namespace Token {
 
             Block* blk;
             if(!req->hash().empty()){
-                if(!(blk = BlockChain::GetInstance()->GetBlockFromHash(req->hash()))){
+                if(!(blk = BlockChain::GetInstance()->GetBlock(req->hash()))){
                     LOG(ERROR) << "peer requested block: " << req->hash() << ", which was not found";
                     return false;
                 }
             } else if(req->height() > 0){
-                if(!(blk = BlockChain::GetInstance()->GetBlockAt(req->height()))){
+                if(!(blk = BlockChain::GetInstance()->GetBlock(req->height()))){
                     LOG(ERROR) << "peer requested block: @" << req->height() << ", which was not found";
                     return false;
                 }
