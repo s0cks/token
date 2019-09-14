@@ -21,6 +21,8 @@ namespace Token{
 
     class BlockChain{
     public:
+        static const size_t kKeypairSize = 4096;
+
         class Node{
         private:
             Node* parent_;
@@ -79,6 +81,8 @@ namespace Token{
         leveldb::DB* state_;
         Node* head_;
         pthread_rwlock_t rwlock_;
+        CryptoPP::RSA::PublicKey pubkey_;
+        CryptoPP::RSA::PrivateKey privkey_;
 
         int GetPeerCount();
         bool IsPeerRegistered(PeerClient* p);
@@ -108,6 +112,8 @@ namespace Token{
         static Node* GetNodeAt(uint32_t height);
 
         bool InitializeChainHead();
+        bool GenerateChainKeys(const std::string& pubkey, const std::string& privkey);
+        bool InitializeChainKeys(const std::string& path);
         bool InitializeChainState(const std::string& root);
         bool SetHead(Block* block);
         bool SetHead(const std::string& hash);

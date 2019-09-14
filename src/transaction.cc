@@ -185,7 +185,7 @@ namespace Token{
             return nullptr;
         }
         LOG(INFO) << "creating block from " << transactions.size() << " transactions...";
-        Block* block = BlockChain::GetInstance()->CreateBlock();
+        Block* block = new Block(BlockChain::GetHead());
         for(int i = 0; i < transactions.size(); i++){
             Transaction* tx = transactions[i];
             LOG(INFO) << "appending transaction: " << (*tx);

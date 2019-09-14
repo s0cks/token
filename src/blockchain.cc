@@ -191,7 +191,77 @@ namespace Token{
         return true;
     }
 
+    static inline void
+    Encode(const std::string& filename, CryptoPP::BufferedTransformation& bt){
+        CryptoPP::FileSink file(filename.c_str());
+        bt.CopyTo(file);
+        file.MessageEnd();
+    }
+
+    static inline void
+    EncodePrivateKey(const std::string& filename, const CryptoPP::RSA::PrivateKey& key){
+        CryptoPP::ByteQueue queue;
+        key.DEREncodePrivateKey(queue);
+        Encode(filename, queue);
+    }
+
+    static inline void
+    EncodePublicKey(const std::string& filename, const CryptoPP::RSA::PublicKey& key){
+        CryptoPP::ByteQueue queue;
+        key.DEREncodePublicKey(queue);
+        Encode(filename, queue);
+    }
+
+    static inline void
+    Decode(const std::string& filename, CryptoPP::BufferedTransformation& bt){
+        CryptoPP::FileSource file(filename.c_str(), true);
+        file.TransferTo(bt);
+        bt.MessageEnd();
+    }
+
+    static inline void
+    DecodePrivateKey(const std::string& filename, CryptoPP::RSA::PrivateKey& key){
+        CryptoPP::ByteQueue queue;
+        Decode(filename, queue);
+        key.BERDecodePrivateKey(queue, false, queue.MaxRetrievable());
+    }
+
+    static inline void
+    DecodePublicKey(const std::string& filename, CryptoPP::RSA::PublicKey& key){
+        CryptoPP::ByteQueue queue;
+        Decode(filename, queue);
+        key.BERDecodePublicKey(queue, false, queue.MaxRetrievable());
+    }
+
+    bool BlockChain::GenerateChainKeys(const std::string &pubkey, const std::string &privkey){
+        CryptoPP::AutoSeededRandomPool rng;
+        CryptoPP::InvertibleRSAFunction params;
+        params.GenerateRandomWithKeySize(rng, BlockChain::kKeypairSize);
+        privkey_ = CryptoPP::RSA::PrivateKey(params);
+        pubkey_ = CryptoPP::RSA::PublicKey(params);
+        EncodePublicKey(pubkey, pubkey_);
+        EncodePrivateKey(privkey, privkey_);
+    }
+
+    bool BlockChain::InitializeChainKeys(const std::string& path){
+        std::string pubkey = (path + "/chain.pub");
+        std::string privkey = (path + "/chain.priv");
+        if(!FileExists(privkey)){
+            LOG(INFO) << "generating chain keys in path: " << path;
+            GenerateChainKeys(pubkey, privkey);
+        } else{
+            LOG(INFO) << "loading chain keys in path: " << path;
+            DecodePublicKey(pubkey, pubkey_);
+            DecodePrivateKey(privkey, privkey_);
+        }
+        return true;
+    }
+
     bool BlockChain::Initialize(const std::string& path){
+        if(!BlockChain::GetInstance()->InitializeChainKeys(path)){
+            LOG(ERROR) << "error initializing chain keys";
+            return false;
+        }
         if(!BlockChain::GetInstance()->InitializeChainState(path)){
             LOG(ERROR) << "error initializing chain state";
             return false;
