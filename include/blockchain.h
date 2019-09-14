@@ -68,7 +68,6 @@ namespace Token{
             void Accept(BlockChainVisitor* vis);
         };
     private:
-        friend class TransactionPool;
         friend class BlockChainServer;
         friend class PeerSession;
         friend class PeerClient;

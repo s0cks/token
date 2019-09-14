@@ -9,7 +9,6 @@
 #include <google/protobuf/message.h>
 
 namespace Token{
-    //TODO: Remove/Refactor Class
     class ByteBuffer{
     public:
         static const uint32_t DEFAULT_SIZE = 4096;
