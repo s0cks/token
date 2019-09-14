@@ -70,7 +70,36 @@ namespace Token{
         return reinterpret_cast<Block*>(Allocator::Allocate(size));
     }
 
-    void Block::operator delete(void* ptr){
-        //TODO: Implement
+    Block::Block():
+        raw_(){
+        GetRaw()->set_height(0);
+        GetRaw()->set_previous_hash(GetGenesisPreviousHash());
+    }
+
+    Block::Block(const std::string& path):
+        raw_(){
+        if(!LoadBlockFromFile(path)){
+            LOG(ERROR) << "couldn't load block from file: " << path << ", nullifying block";
+            GetRaw()->Clear();
+        }
+    }
+
+    Block::Block(Token::Block* parent):
+        raw_(){
+        GetRaw()->set_height(parent->GetHeight() + 1);
+        GetRaw()->set_previous_hash(parent->GetHash());
+    }
+
+    Block::Block(uint32_t height, const std::string &previous_hash):
+        raw_(){
+        GetRaw()->set_previous_hash(previous_hash);
+        GetRaw()->set_height(height);
+    }
+
+    Block::~Block(){}
+
+    bool Block::LoadBlockFromFile(const std::string& filename){
+        std::fstream fd(filename, std::ios::binary|std::ios::in);
+        return GetRaw()->ParseFromIstream(&fd);
     }
 }

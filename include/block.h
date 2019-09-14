@@ -36,10 +36,13 @@ namespace Token{
             return stream.str();
         }
 
+        //TODO: Remove this constructor
         explicit Block(Messages::Block* raw):
             raw_(){
             GetRaw()->CopyFrom(*raw);
         }
+
+        bool LoadBlockFromFile(const std::string& filename);
 
         friend class BlockChainService;
         friend class TokenServiceClient;
@@ -47,19 +50,11 @@ namespace Token{
         friend class PeerClient;
         friend class BlockChainServer;
     public:
-        Block(bool genesis):
-            raw_(){
-            GetRaw()->set_previous_hash(GetGenesisPreviousHash());
-            GetRaw()->set_height(0);
-        }
-        Block(std::string prev_hash, uint32_t height):
-            raw_(){
-            GetRaw()->set_previous_hash(prev_hash);
-            GetRaw()->set_height(height);
-        }
-        Block(Block* parent):
-            Block(parent->GetHash(), parent->GetHeight() + 1){}
-        ~Block(){}
+        Block();
+        Block(const std::string& path);
+        Block(uint32_t height, const std::string& previous_hash);
+        Block(Block* parent);
+        ~Block();
 
         std::string GetPreviousHash() const{
             return raw_.previous_hash();
@@ -99,9 +94,6 @@ namespace Token{
         }
 
         bool Equals(const Messages::BlockHeader& head); //TODO: Refactor
-
-        void Encode(ByteBuffer* bb); //TODO: Remove
-        void Write(const std::string& filename); //TODO: Refactor
         std::string GetHash();
         std::string GetMerkleRoot();
         Token::Messages::Block* GetAsMessage();
@@ -124,8 +116,8 @@ namespace Token{
             return stream;
         }
 
-        void* operator new(size_t size);
-        void operator delete(void* ptr);
+        void Encode(ByteBuffer* bb); //TODO: Remove
+        void Write(const std::string& filename); //TODO: Refactor
 
         static Block* Load(const std::string& filename); //TODO: Refactor
 
@@ -133,6 +125,8 @@ namespace Token{
         static Block* Load(Token::Messages::Block* block){
             return new Block(block);
         }
+
+        void* operator new(size_t size);
     };
 }
 

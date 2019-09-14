@@ -69,6 +69,7 @@ namespace Token{
         Messages::Block bdata;
         bdata.CopyFrom(*request);
         Block* nblock = new Block(&bdata);
+
         LOG(INFO) << "appending new block: " << nblock->GetHash();
         if(!BlockChain::GetInstance()->Append(nblock)){
             LOG(ERROR) << "couldn't append new block";

@@ -54,7 +54,7 @@ int main(int argc, char** argv){
 
             std::cout << "Previous Hash: " << head.hash() << std::endl;
 
-            Block* nblock = new Block(head.hash(), head.height() + 1);
+            Block* nblock = new Block(head.height() + 1, head.hash());
             std::cout << "Create Transactions (y/n)?:";
             std::string prompt;
             std::cin >> prompt;

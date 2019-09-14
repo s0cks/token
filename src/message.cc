@@ -93,7 +93,7 @@ namespace Token{
         switch(GetType()){
             case Type::kUnknownType: return "Unknown";
             case Type::kBlockMessage:{
-                Block* blk = new Block(msg_);
+                Block* blk = Block::Load(static_cast<Messages::Block*>(msg_));
                 stream << "Block(" << blk->GetHash() << ")";
                 break;
             }

@@ -188,7 +188,7 @@ namespace Token{
         LOG(WARNING) << "Creating genesis block...";
         LOG(WARNING) << "*** This functionality will be removed in future versions";
         LOG(WARNING) << "*** Genesis contains 128 base transactions for initialization";
-        Block* genesis = new Block(true);
+        Block* genesis = new Block();
         Transaction* cbtx = genesis->CreateTransaction();
         for(int i = 0; i < 128; i++){
             std::stringstream stream;

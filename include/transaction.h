@@ -213,7 +213,6 @@ namespace Token{
 
         static Block* CreateBlock();
         static bool AddTransaction(Transaction* tx);
-        static bool IsInitialized();
         static bool Initialize(const std::string& path);
     };
 }

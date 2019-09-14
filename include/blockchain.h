@@ -68,6 +68,7 @@ namespace Token{
             void Accept(BlockChainVisitor* vis);
         };
     private:
+        friend class TransactionPool;
         friend class BlockChainServer;
         friend class PeerSession;
         friend class PeerClient;
@@ -112,6 +113,7 @@ namespace Token{
         bool SaveChain();
         bool InitializeChainHead();
         bool InitializeChainState(const std::string& root);
+        Block* CreateBlock();
 
         BlockChain():
             rwlock_(),
@@ -135,7 +137,6 @@ namespace Token{
             return head_ != nullptr;
         }
 
-        Block* CreateBlock(); //TODO: Refactor
         bool HasBlock(const std::string& hash) const;
         bool Append(Block* block);
 
