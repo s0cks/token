@@ -37,21 +37,29 @@ namespace Token{
         }
     }
 
-    bool BlockChainResolver::Resolve(){
-        BlockChain::Node* n = BlockChain::GetInstance()->GetNodeAt(BlockChain::GetHeight());
-        do{
-            if(MatchesTarget(n->GetBlock())){
-                SetResult(n->GetBlock());
+    bool BlockChainResolver::Visit(Token::Block* block){
+        if(HasTargetHeight()){
+            if(GetTargetHeight() == block->GetHeight()){
+                SetResult(block);
                 return true;
             }
-            if(!(n = n->GetParent())){
-                return false;
+        } else if(HasTargetHash()){
+            if(GetTargetHash() == block->GetHash()){
+                SetResult(block);
+                return true;
             }
-        }while(true);
+        }
+        return false;
+    }
+
+    bool BlockChainResolver::Resolve(){
+        BlockChain::Accept(this);
+        return HasResult();
     }
 
     bool PeerBlockResolver::BlockExistsLocally(uint32_t height){
-        std::string filename = BlockChain::GetInstance()->GetBlockLocation(height);
+        std::string filename;
+        //TODO: std::string filename = BlockChain::GetInstance()->GetBlockLocation(height);
         return FileExists(filename);
     }
 

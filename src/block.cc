@@ -29,13 +29,6 @@ namespace Token{
         return true;
     }
 
-    Block* Block::Load(const std::string& filename){
-        std::fstream fd(filename, std::ios::binary|std::ios::in);
-        Messages::Block* raw = new Messages::Block();
-        raw->ParseFromIstream(&fd);
-        return new Block(raw);
-    }
-
     void Block::Write(const std::string& filename){
         std::fstream fd(filename, std::ios::binary|std::ios::out|std::ios::trunc);
         GetRaw()->SerializeToOstream(&fd);
@@ -76,14 +69,6 @@ namespace Token{
         GetRaw()->set_previous_hash(GetGenesisPreviousHash());
     }
 
-    Block::Block(const std::string& path):
-        raw_(){
-        if(!LoadBlockFromFile(path)){
-            LOG(ERROR) << "couldn't load block from file: " << path << ", nullifying block";
-            GetRaw()->Clear();
-        }
-    }
-
     Block::Block(Token::Block* parent):
         raw_(){
         GetRaw()->set_height(parent->GetHeight() + 1);
@@ -101,5 +86,10 @@ namespace Token{
     bool Block::LoadBlockFromFile(const std::string& filename){
         std::fstream fd(filename, std::ios::binary|std::ios::in);
         return GetRaw()->ParseFromIstream(&fd);
+    }
+
+    Block* Block::Decode(Messages::Block* msg){
+        //TODO: Implement
+        return nullptr;
     }
 }

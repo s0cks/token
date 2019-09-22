@@ -48,7 +48,7 @@ namespace Token {
 
     bool PeerSession::Handle(uv_stream_t* stream, Token::Message *msg){
         if(msg->GetType() == Message::Type::kBlockMessage){
-            Token::Block* block = Token::Block::Load(msg->GetAsBlock());
+            Token::Block* block = Token::Block::Decode(msg->GetAsBlock());
             LOG(INFO) << "received block: " << block->GetHash();
             if(!BlockChain::GetInstance()->AppendBlock(block)){
                 LOG(ERROR) << "couldn't append block: " << block->GetHash();

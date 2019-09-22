@@ -68,7 +68,7 @@ namespace Token{
         //TODO: Refactor this copy
         Messages::Block bdata;
         bdata.CopyFrom(*request);
-        Block* nblock = new Block(&bdata);
+        Block* nblock = Block::Decode(&bdata);
 
         LOG(INFO) << "appending new block: " << nblock->GetHash();
         if(!BlockChain::GetInstance()->AppendBlock(nblock)){
@@ -77,7 +77,7 @@ namespace Token{
         }
 
         LOG(WARNING) << "appended, broadcasting...";
-        Message msg(Message::Type::kBlockMessage, nblock->GetRaw());
+        Message msg(Message::Type::kBlockMessage, nblock->GetAsMessage());
         if(!BlockChainServer::AsyncBroadcast(&msg)){
             LOG(ERROR) << "couldn't broadcast to peers";
             return grpc::Status::CANCELLED;

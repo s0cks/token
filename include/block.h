@@ -36,24 +36,21 @@ namespace Token{
             return stream.str();
         }
 
+        bool LoadBlockFromFile(const std::string& filename);
+
         //TODO: Remove this constructor
         explicit Block(Messages::Block* raw):
-            raw_(){
+                raw_(){
             GetRaw()->CopyFrom(*raw);
         }
 
-        bool LoadBlockFromFile(const std::string& filename);
-
-        friend class BlockChainService;
-        friend class TokenServiceClient;
-        friend class PeerSession;
-        friend class PeerClient;
-        friend class BlockChainServer;
-    public:
         Block();
-        Block(const std::string& path);
         Block(uint32_t height, const std::string& previous_hash);
         Block(Block* parent);
+
+        friend class TransactionPool;
+        friend class BlockChain;
+    public:
         ~Block();
 
         std::string GetPreviousHash() const{
@@ -96,12 +93,19 @@ namespace Token{
         bool Equals(const Messages::BlockHeader& head); //TODO: Refactor
         std::string GetHash();
         std::string GetMerkleRoot();
-        Token::Messages::Block* GetAsMessage();
+        Token::Messages::Block* GetAsMessage(); //TODO: Remove
+        void Encode(ByteBuffer* bb); //TODO: Remove
+        void Write(const std::string& filename); //TODO: Remove
+
+        static Block* Decode(Messages::Block* msg);
+
+        void* operator new(size_t size);
 
         friend bool operator==(const Block& lhs, const Block& rhs){
             return const_cast<Block&>(lhs).GetHash() == const_cast<Block&>(rhs).GetHash();
         }
 
+        //TODO: Remove
         friend std::ostream& operator<<(std::ostream& stream, const Block& block){
             stream << "Block" << std::endl;
             stream << "\tHeight: " << block.GetHeight() << std::endl;
@@ -115,18 +119,6 @@ namespace Token{
             }
             return stream;
         }
-
-        void Encode(ByteBuffer* bb); //TODO: Remove
-        void Write(const std::string& filename); //TODO: Refactor
-
-        static Block* Load(const std::string& filename); //TODO: Refactor
-
-        //TODO: Refactor
-        static Block* Load(Token::Messages::Block* block){
-            return new Block(block);
-        }
-
-        void* operator new(size_t size);
     };
 }
 

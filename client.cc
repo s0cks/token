@@ -54,6 +54,8 @@ int main(int argc, char** argv){
 
             std::cout << "Previous Hash: " << head.hash() << std::endl;
 
+            /*
+             * TODO: Refactor
             Block* nblock = new Block(head.height() + 1, head.hash());
             std::cout << "Create Transactions (y/n)?:";
             std::string prompt;
@@ -94,9 +96,11 @@ int main(int argc, char** argv){
                 std::cerr << "Cannot append new block" << std::endl;
                 return EXIT_FAILURE;
             }
+
             std::cout << "Appended!" << std::endl;
             std::cout << "New <HEAD>:" << std::endl;
             PrintBlock(&nhead);
+            */
         } else if(input == "gethead"){
             Messages::BlockHeader head;
             if(!client.GetHead(&head)){

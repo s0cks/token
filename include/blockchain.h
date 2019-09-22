@@ -3,6 +3,7 @@
 
 #include <leveldb/db.h>
 #include <map>
+
 #include "common.h"
 #include "array.h"
 #include "bytes.h"
@@ -12,6 +13,50 @@
 #include "peer.h"
 
 namespace Token{
+    class ChainNode{
+    private:
+        ChainNode* prev_;
+        ChainNode* next_;
+        Block* block_;
+
+        void SetPrevious(ChainNode* node){
+            prev_ = node;
+        }
+
+        void SetNext(ChainNode* node){
+            next_ = node;
+        }
+
+        ChainNode(Block* block):
+            prev_(nullptr),
+            next_(nullptr),
+            block_(block){}
+
+        friend class BlockChain;
+    public:
+        ~ChainNode(){}
+
+        ChainNode* GetPrevious() const{
+            return prev_;
+        }
+
+        ChainNode* GetNext() const{
+            return next_;
+        }
+
+        Block* GetBlock() const{
+            return block_;
+        }
+
+        std::string GetHash() const{
+            return GetBlock()->GetHash();
+        }
+
+        uint32_t GetHeight() const {
+            return GetBlock()->GetHeight();
+        }
+    };
+
     class BlockChainVisitor{
     public:
         BlockChainVisitor(){}
@@ -22,53 +67,6 @@ namespace Token{
     class BlockChain{
     public:
         static const size_t kKeypairSize = 4096;
-
-        class Node{
-        private:
-            Node* parent_;
-            std::vector<Node*> children_;
-            Block* block_;
-
-            inline void
-            AddChild(Node* child){
-                children_.push_back(child);
-            }
-        public:
-            Node(Node* parent, Block* block):
-                parent_(parent),
-                children_(),
-                block_(block){
-                if(!IsRoot()) GetParent()->AddChild(this);
-            }
-            Node(Block* block): Node(nullptr, block){}
-            ~Node(){
-                for(auto& it : children_){
-                    delete it;
-                }
-            }
-
-            Node* GetParent() const{
-                return parent_;
-            }
-
-            Block* GetBlock() const{
-                return block_;
-            }
-
-            bool IsRoot() const{
-                return GetParent() == nullptr;
-            }
-
-            size_t GetNumberOfChildren() const{
-                return children_.size();
-            }
-
-            Node* GetChildAt(int idx) const{
-                return children_[idx];
-            }
-
-            void Accept(BlockChainVisitor* vis);
-        };
     private:
         friend class BlockChainServer;
         friend class PeerSession;
@@ -77,12 +75,19 @@ namespace Token{
         friend class LocalBlockResolver;
         friend class BlockChainResolver;
 
-        std::string root_;
+        std::string path_;
         leveldb::DB* state_;
-        Node* head_;
         pthread_rwlock_t rwlock_;
         CryptoPP::RSA::PublicKey pubkey_;
         CryptoPP::RSA::PrivateKey privkey_;
+
+        ChainNode* genesis_;
+        ChainNode* head_;
+
+        static inline leveldb::DB*
+        GetState(){
+            return GetInstance()->state_;
+        }
 
         int GetPeerCount();
         bool IsPeerRegistered(PeerClient* p);
@@ -91,53 +96,62 @@ namespace Token{
         void RegisterPeer(PeerClient* p);
         void DeregisterPeer(PeerClient* p);
 
-        std::string GetBlockLocation(const std::string& hash);
-        std::string GetBlockLocation(Block* block);
-        std::string GetBlockLocation(uint32_t height);
-        bool SetBlockLocation(Block* block, const std::string& filename);
-        bool SetHeight(int height);
-
-        static inline leveldb::DB*
-        GetState(){
-            return GetInstance()->state_;
-        }
-
-        static inline std::string
-        GetBlockFile(Block* block){
-            std::stringstream stream;
-            stream << GetRootDirectory() << "/blk" << block->GetHeight() << ".dat";
-            return stream.str();
-        }
-
-        static Node* GetNodeAt(uint32_t height);
-
-        bool InitializeChainHead();
+        bool CreateGenesis(); //TODO: Remove
+        bool LoadBlockChain(const std::string& path); //TODO: Remove
         bool GenerateChainKeys(const std::string& pubkey, const std::string& privkey);
         bool InitializeChainKeys(const std::string& path);
         bool InitializeChainState(const std::string& root);
-        bool SetHead(Block* block);
-        bool SetHead(const std::string& hash);
+        bool GetReference(const std::string& ref, uint32_t* height);
+        bool SetReference(const std::string& ref, uint32_t height);
+        bool AppendNode(Block* block);
+        std::string GetBlockFile(uint32_t height);
+        std::string GetBlockFile(const std::string& hash);
 
-        static bool SaveBlock(Block* block);
-        static Block* LoadBlock(uint32_t height);
-        static Block* LoadBlock(const std::string& hash);
-        Block* CreateBlock(); //TODO: Remove
+        void SetGenesisNode(ChainNode* node){
+            genesis_ = node;
+        }
+
+        void SetHeadNode(ChainNode* node){
+            head_ = node;
+        }
+
+        ChainNode* GetGenesisNode() const{
+            return genesis_;
+        }
+
+        ChainNode* GetHeadNode() const{
+            return head_;
+        }
+
+        static bool SaveBlock(Block* block); // TODO: Refactor
+        static Block* LoadBlock(uint32_t height); //TODO: Refactor
+        static Block* LoadBlock(const std::string& hash); //TODO: Refactor
 
         BlockChain():
             rwlock_(),
-            state_(nullptr),
-            head_(nullptr){
+            path_(),
+            genesis_(nullptr),
+            head_(nullptr),
+            state_(nullptr){
             pthread_rwlock_init(&rwlock_, NULL);
         }
     public:
         static BlockChain* GetInstance();
 
+        static CryptoPP::PublicKey* GetPublicKey(){
+            return &GetInstance()->pubkey_;
+        }
+
+        static CryptoPP::PrivateKey* GetPrivateKey(){
+            return &GetInstance()->privkey_;
+        }
+
         static std::string GetRootDirectory();
         static void Accept(BlockChainVisitor* vis);
         static Block* GetHead();
         static Block* GetGenesis();
-        static Block* GetBlock(const std::string& hash);
-        static Block* GetBlock(uint32_t height);
+        static Block* GetBlock(const std::string& hash); //TODO: Refactor
+        static Block* GetBlock(uint32_t height); //TODO: Refactor
         static uint32_t GetHeight();
         static bool HasHead();
         static bool ContainsBlock(const std::string& hash);

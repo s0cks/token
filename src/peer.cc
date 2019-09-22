@@ -98,12 +98,13 @@ namespace Token{
     bool PeerClient::Handle(uv_stream_t* stream, Token::Message* msg) {
         LOG(INFO) << "handling: " << msg->ToString() << "...";
         if(msg->IsBlockMessage()){
-            Token::Block* block = Token::Block::Load(msg->GetAsBlock());
+            Token::Block* block = Token::Block::Decode(msg->GetAsBlock());
             if(IsSynchronizing()){
                 LOG(WARNING) << "downloaded block: " << block->GetHash();
                 LOG(WARNING) << (*block);
                 //TODO: BlockChain::Save(block);
-                return BlockChain::GetInstance()->SetHead(block);
+                //TODO: return BlockChain::GetInstance()->SetHead(block);
+                return false;
             } else if(IsConnected()){
                 LOG(INFO) << "received block: " << block->GetHash();
                 if(!BlockChain::GetInstance()->AppendBlock(block)){
@@ -133,10 +134,13 @@ namespace Token{
                     }
                 }
                 if(synced){
+                    /*
+                     * TODO: Refactor
                     if(!BlockChain::GetInstance()->SetHead(ident->heads(0))){
                         LOG(ERROR) << "couldn't set <HEAD>";
                         return false;
                     }
+                     */
                     SetState(State::kConnected);
                 }
                 SendIdentity();
