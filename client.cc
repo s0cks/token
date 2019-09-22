@@ -1,4 +1,5 @@
 #include <glog/logging.h>
+#include "allocator.h"
 #include "blockchain.h"
 #include "service/client.h"
 
@@ -38,6 +39,11 @@ int main(int argc, char** argv){
     std::string host(argv[1]);
     int port = atoi(argv[2]);
 
+    if(!Allocator::Initialize(4096 * 32, 4096 * 32 * 4)){
+        LOG(ERROR) << "couldn't initialize allocator";
+        return EXIT_FAILURE;
+    }
+
     std::cout << "Connecting to: " << host << ":" << port << std::endl;
     TokenServiceClient client(host, port);
 
@@ -53,10 +59,8 @@ int main(int argc, char** argv){
             client.GetHead(&head);
 
             std::cout << "Previous Hash: " << head.hash() << std::endl;
-
-            /*
-             * TODO: Refactor
             Block* nblock = new Block(head.height() + 1, head.hash());
+
             std::cout << "Create Transactions (y/n)?:";
             std::string prompt;
             std::cin >> prompt;
@@ -100,7 +104,6 @@ int main(int argc, char** argv){
             std::cout << "Appended!" << std::endl;
             std::cout << "New <HEAD>:" << std::endl;
             PrintBlock(&nhead);
-            */
         } else if(input == "gethead"){
             Messages::BlockHeader head;
             if(!client.GetHead(&head)){

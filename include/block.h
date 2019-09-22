@@ -45,12 +45,12 @@ namespace Token{
         }
 
         Block();
-        Block(uint32_t height, const std::string& previous_hash);
         Block(Block* parent);
 
         friend class TransactionPool;
         friend class BlockChain;
     public:
+        Block(uint32_t height, const std::string& previous_hash);
         ~Block();
 
         std::string GetPreviousHash() const{

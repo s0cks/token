@@ -8,16 +8,25 @@
 
 namespace Token{
 #define FOR_EACH_TYPE(V) \
+    V(Ping, Token::Node::Messages::Nonce) \
+    V(Pong, Token::Node::Messages::Nonce) \
+    V(Version, Token::Node::Messages::Version) \
+    V(Verack, Token::Node::Messages::EmptyResponse) \
+    V(BlockList, Token::Node::Messages::BlockList) \
     V(Block, Token::Messages::Block) \
     V(GetHead, Token::Node::Messages::EmptyRequest) \
-    V(PeerIdentity, Token::Node::Messages::PeerIdentity) \
     V(GetBlock, Token::Node::Messages::GetBlockRequest)
 
     /**
-     * Block := Contains block information
-     * GetHead := Request the head from the peer
-     * PeerIdent := Send identity to peer
-     * PeerIdentAck := Acknowledge that the peer is good
+     * .ping
+     *      - PongMessage
+     * .version
+     *      - Verack
+     *      - BlockList
+     * .getblock
+     *      - Block
+     * .gethead
+     *      - Block
      */
 
     class Message{
@@ -41,11 +50,6 @@ namespace Token{
         GetRaw() const{
             return msg_;
         }
-
-#define DECLARE_DECODE_MESSAGE(Name, Type) \
-        bool Decode##Name##Message(uint8_t* bytes, size_t size);
-        FOR_EACH_TYPE(DECLARE_DECODE_MESSAGE)
-#undef DECLARE_DECODE_MESSAGE
     public:
         Message(Type type, google::protobuf::Message* data):
             type_(type),

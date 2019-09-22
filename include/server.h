@@ -12,13 +12,13 @@ namespace Token{
         uv_loop_t* loop_;
         uv_tcp_t server_;
         std::map<uv_stream_t*, PeerSession*> sessions_;
-        std::map<std::string, PeerClient*> peers_;
+        std::vector<PeerClient*> peers_;
 
         //Async Stuffs?
         uv_async_t broadcast_;
 
-        static void Register(PeerClient* session);
-        static void Disconnect(PeerSession* session);
+        static void Register(PeerClient* session); //TODO: Refactor
+        static void Disconnect(PeerSession* session); //TODO: Refactor
         static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
         static void OnNewConnection(uv_stream_t* stream, int status);
         static void OnRead(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buff);
@@ -34,14 +34,10 @@ namespace Token{
 
         int Start(int port);
 
-        static bool HasPeer(std::string key);
-        static bool GetPeers(std::vector<std::string>& peers);
-        static bool GetPeerList(std::vector<PeerClient*>& peers);
+        static BlockChainServer* GetInstance();
         static bool Broadcast(Message* msg);
         static bool AsyncBroadcast(Message* msg);
-        static BlockChainServer* GetInstance();
-        static int GetPeerCount();
-        static int AddPeer(const std::string& address, int port);
+        static bool ConnectToPeer(const std::string& address, uint32_t port);
         static int Initialize(int port);
         static int ShutdownAndWait();
     };

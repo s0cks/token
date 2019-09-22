@@ -89,7 +89,6 @@ namespace Token{
     }
 
     Block* Block::Decode(Messages::Block* msg){
-        //TODO: Implement
-        return nullptr;
+        return new Block(msg);
     }
 }

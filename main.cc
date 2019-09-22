@@ -19,6 +19,7 @@ DEFINE_uint32(service_port, 0, "The port used for the RPC service");
 
 // Server Flags
 DEFINE_uint32(server_port, 0, "The port used for the BlockChain server");
+DEFINE_uint32(peer_port, 0, "The port to connect to a peer with");
 
 static inline bool
 FileExists(const std::string& name){
@@ -84,6 +85,13 @@ main(int argc, char** argv){
     if(FLAGS_server_port > 0){
         if(!BlockChainServer::Initialize(FLAGS_server_port)){
             LOG(ERROR) << "Couldn't initialize the BlockChain server";
+            return EXIT_FAILURE;
+        }
+    }
+
+    if(FLAGS_server_port > 0 && FLAGS_peer_port > 0){
+        if(!BlockChainServer::ConnectToPeer("127.0.0.1", FLAGS_peer_port)){
+            LOG(ERROR) << "Couldn't connect to peer on port: " << FLAGS_peer_port;
             return EXIT_FAILURE;
         }
     }

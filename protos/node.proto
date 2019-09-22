@@ -1,15 +1,13 @@
 syntax="proto3";
 package Token.Node.Messages;
 
+import "blockchain.proto";
+
 message EmptyRequest{}
 message EmptyResponse{}
 
-message Peer{
-    string address = 1;
-}
-
-message PeerList{
-    repeated Peer peers = 1;
+message Nonce{
+    string data = 1;
 }
 
 message GetBlockRequest{
@@ -17,8 +15,29 @@ message GetBlockRequest{
     uint32 height = 2;
 }
 
-message PeerIdentity{
-    string version = 1;
-    repeated Peer peers = 2;
-    repeated string heads = 3;
+message Version{
+    uint32 time = 1;
+    string version = 2;
+    uint32 height = 3;
+    Token.Messages.BlockHeader head = 4;
+}
+
+message BlockList{
+    repeated Token.Messages.BlockHeader blocks = 1;
+}
+
+message Verack{
+    uint32 time = 1;
+    string version = 2;
+}
+
+//TODO: Refactor Below
+
+message Peer{
+    string address = 1;
+    uint32 port = 2;
+}
+
+message PeerList{
+    repeated Peer peers = 1;
 }

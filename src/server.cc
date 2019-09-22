@@ -4,6 +4,13 @@
 #include "peer.h"
 
 namespace Token{
+    static inline bool
+    FileExists(const std::string& name){
+        std::ifstream f(name.c_str());
+        return f.good();
+    }
+
+
     BlockChainServer::BlockChainServer():
         loop_(uv_loop_new()),
         server_(),
@@ -137,18 +144,6 @@ namespace Token{
         pthread_exit(result);
     }
 
-    int BlockChainServer::AddPeer(const std::string &address, int port){
-        std::stringstream key;
-        key << address << ":" << port;
-        BlockChainServer* instance = GetInstance();
-        if(instance->HasPeer(key.str())){
-            LOG(ERROR) << "peer '" << key.str() << "' already connected!";
-            return -1;
-        }
-        LOG(INFO) << "adding peer: " << key.str();
-        return (new PeerClient(address, port))->Connect();
-    }
-
     int BlockChainServer::Initialize(int port){
         StartCommand* cmd = new StartCommand();
         cmd->port = port;
@@ -174,7 +169,7 @@ namespace Token{
         LOG(INFO) << "broadcasting " << dup->ToString() << " to " << GetInstance()->peers_.size() << " peers";
         int idx = 0;
         for(auto& it : GetInstance()->peers_){
-            if(!it.second->Send(dup)){
+            if(!it->Send(dup)){
                 LOG(ERROR) << "couldn't send to peer " << idx;
             }
             idx++;
@@ -183,38 +178,18 @@ namespace Token{
         delete dup;
     }
 
-    int BlockChainServer::GetPeerCount(){
-        return GetInstance()->peers_.size();
-    }
-
-    bool BlockChainServer::HasPeer(std::string key){
-        BlockChainServer* instance = GetInstance();
-        return instance->peers_.find(key) != instance->peers_.end();
-    }
-
-    bool BlockChainServer::GetPeers(std::vector<std::string> &peers){
-        BlockChainServer* instance = GetInstance();
-        for(auto& it : instance->peers_){
-            peers.push_back(it.first);
-        }
-        return true;
-    }
-
-    bool BlockChainServer::GetPeerList(std::vector<PeerClient *> &peers){
-        BlockChainServer* instance = GetInstance();
-        for(auto& it : instance->peers_){
-            peers.push_back(it.second);
-        }
-        return true;
-    }
-
     bool BlockChainServer::Broadcast(Token::Message *msg){
-        for(auto& it : GetInstance()->peers_) it.second->Send(msg);
+        for(auto& it : GetInstance()->peers_) it->Send(msg);
         return true;
     }
 
     bool BlockChainServer::AsyncBroadcast(Token::Message* msg){
-        for(auto& it : GetInstance()->peers_) it.second->AsyncSend(msg);
+        for(auto& it : GetInstance()->peers_) it->AsyncSend(msg);
         return true;
+    }
+
+    bool BlockChainServer::ConnectToPeer(const std::string &address, uint32_t port){
+        PeerClient* client = new PeerClient(address, port);
+        return client->Connect();
     }
 }

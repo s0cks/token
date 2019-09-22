@@ -18,7 +18,6 @@ namespace Token {
         enum class State{
             kDisconnected = 0,
             kConnecting,
-            kAuthenticating,
             kConnected,
         };
     private:
@@ -36,9 +35,7 @@ namespace Token {
             state_ = state;
         }
 
-        bool AcceptsIdentity(Node::Messages::PeerIdentity* ident);
         void OnMessageSent(uv_write_t* req, int status);
-        void SendIdentity();
 
         friend class BlockChainServer;
     public:
@@ -57,8 +54,7 @@ namespace Token {
         }
 
         bool IsConnecting() const{
-            return GetState() == State::kConnecting ||
-                    GetState() == State::kAuthenticating;
+            return GetState() == State::kConnecting;
         }
 
         bool IsConnected() const{

@@ -362,7 +362,7 @@ namespace Token{
     bool BlockChain::SaveBlock(Token::Block* block){
         std::string blkfilename = GetInstance()->GetBlockFile(block->GetHeight());
         if(FileExists(blkfilename)){
-            LOG(WARNING) << "block already written, won't overwrite block";
+            LOG(WARNING) << "block already written, won't overwrite block: " << blkfilename;
             return false;
         }
         LOG(INFO) << "writing block '" << block->GetHash() << "' to file: " << blkfilename << "...";
@@ -416,5 +416,28 @@ namespace Token{
             return false;
         }
         return height >= 0 && height <= GetHeight();
+    }
+
+    bool BlockChain::GetBlockList(std::vector<std::string>& blocks){
+        ChainNode* n = GetInstance()->GetGenesisNode();
+        while(n){
+            blocks.push_back(n->GetHash());
+            n = n->GetNext();
+        }
+        return blocks.size() == GetHeight();
+    }
+
+    bool BlockChain::GetBlockList(Token::Node::Messages::BlockList *blocks){
+        ChainNode* n = GetInstance()->GetGenesisNode();
+        while(n){
+            Block* block = n->GetBlock();
+            Messages::BlockHeader* header = blocks->add_blocks();
+            header->set_height(block->GetHeight());
+            header->set_hash(block->GetHash());
+            header->set_previous_hash(block->GetPreviousHash());
+            header->set_merkle_root(block->GetMerkleRoot());
+            n = n->GetNext();
+        }
+        return (blocks->blocks_size() - 1) == GetHeight();
     }
 }

@@ -104,6 +104,8 @@ namespace Token{
     grpc::Status BlockChainService::GetPeers(grpc::ServerContext *ctx,
                                              const Token::Service::Messages::EmptyRequest *request,
                                              Token::Service::Messages::PeerList *response){
+        /*
+         * TODO: Set peers
         std::vector<std::string> peers;
         if(!BlockChainServer::GetPeers(peers)){
             LOG(ERROR) << "couldn't get peers";
@@ -112,6 +114,7 @@ namespace Token{
         for(auto& it : peers){
             response->add_peers()->set_address(it);
         }
+        */
         return grpc::Status::OK;
     }
 
