@@ -4,7 +4,6 @@
 #include "allocator.h"
 #include "blockchain.h"
 #include "block_validator.h"
-#include "block_resolver.h"
 #include "server.h"
 
 namespace Token{
@@ -18,72 +17,6 @@ namespace Token{
     BlockChain::GetInstance(){
         static BlockChain instance;
         return &instance;
-    }
-
-    int BlockChain::GetPeerCount(){
-        leveldb::ReadOptions readOpts;
-        std::string result;
-        if(!GetState()->Get(readOpts, "PeerCount", &result).ok()){
-            LOG(ERROR) << "couldn't get 'PeerCount' field";
-            return -1;
-        }
-    }
-
-    void BlockChain::SetPeerCount(int n){
-        leveldb::WriteOptions writeOpts;
-        std::stringstream val;
-        val << n;
-        if(!GetState()->Put(writeOpts, "PeerCount", val.str()).ok()){
-            LOG(ERROR) << "couldn't set 'PeerCount' field";
-        }
-    }
-
-    void BlockChain::RegisterPeer(Token::PeerClient* p){
-        if(IsPeerRegistered(p)) return;
-
-        int pidx = GetPeerCount() + 1;
-
-        std::stringstream k;
-        k << "peer_" << pidx;
-
-        std::stringstream v;
-        v << p->GetAddress() << ":" << p->GetPort();
-
-        leveldb::WriteOptions writeOpts;
-        if(!GetState()->Put(writeOpts, k.str(), v.str()).ok()){
-            LOG(ERROR) << "couldn't register peer #" << pidx << " := " << v.str();
-        }
-    }
-
-    std::string BlockChain::GetPeer(int n){
-        if(n > GetPeerCount()) return "";
-        std::stringstream k;
-        k << "peer_" << n;
-
-        std::string result;
-        leveldb::ReadOptions readOpts;
-        if(!GetState()->Get(readOpts, k.str(), &result).ok()){
-            LOG(ERROR) << "couldn't get peer @ " << n;
-            return "";
-        }
-        return result;
-    }
-
-    bool BlockChain::IsPeerRegistered(Token::PeerClient* p){
-        std::stringstream target;
-        target << p->GetAddress() << ":" << p->GetPort();
-        int pcount = GetPeerCount();
-        for(int i = 0; i < pcount; i++){
-            std::string peer = GetPeer(i);
-            if(target.str() == peer){
-                return true;
-            }
-        }
-        return false;
-    }
-
-    void BlockChain::DeregisterPeer(Token::PeerClient* p){
-        //TODO: Implement
     }
 
     uint32_t BlockChain::GetHeight(){
@@ -117,7 +50,7 @@ namespace Token{
         while(height <= head){
             LOG(INFO) << "loading block #" << height << "...";
             Block* blk;
-            if(!(blk = GetInstance()->LoadBlock(height))){
+            if(!GetInstance()->LoadBlock(height, &blk)){
                 LOG(ERROR) << "cannot load block from height: " << height;
                 LOG(ERROR) << "*** fixme";
                 return false;
@@ -241,56 +174,6 @@ namespace Token{
         return true;
     }
 
-    Block* BlockChain::GetBlock(uint32_t height){
-        if(height > GetHeight() || height < 0) return nullptr;
-        {
-            // Search the in memory block chain first
-            LOG(INFO) << "searching in-memory for block: " << height;
-            BlockChainResolver resolver(height);
-            resolver.Resolve();
-            if(resolver.HasResult()){
-                LOG(INFO) << "block " << height << " found!";
-                return resolver.GetResult();
-            }
-            LOG(INFO) << "couldn't find block " << height << " in-memory, attempting to find it in the filesystem";
-        }
-
-        {
-            // Now search the file system for the block
-            LOG(INFO) << "searching the file system for block: " << height;
-            LocalBlockResolver resolver(height);
-            resolver.Resolve();
-            if(resolver.HasResult()){
-                LOG(INFO) << "block " << height << " found!";
-                return resolver.GetResult();
-            }
-            LOG(INFO) << "couldn't find block " << height << " in the file system, attempting to find from the peers";
-        }
-
-        {
-            // Now search peers for the block
-            LOG(INFO) << "searching peers for block: " << height;
-            std::vector<PeerClient*> peers;
-            if(!BlockChainServer::GetPeerList(peers)){
-                LOG(ERROR) << "couldn't get peer list";
-                return nullptr;
-            }
-            int idx = 0;
-            for(auto& it : peers){
-                PeerBlockResolver resolver(it, height);
-                resolver.Resolve();
-                if(resolver.HasResult()){
-                    LOG(INFO) << "block " << height << " found!";
-                    return resolver.GetResult();
-                }
-                LOG(INFO) << "couldn't find block " << height << " in peer " << ((idx++) + 1) << "/" << peers.size();
-            }
-            LOG(INFO) << "couldn't find block " << height << " from peer list";
-        }
-        LOG(ERROR) << "couldn't find block: " << height;
-        return nullptr;
-    }
-
     void BlockChain::Accept(Token::BlockChainVisitor* vis){
         ChainNode* node = GetInstance()->GetGenesisNode();
         while(node){
@@ -310,54 +193,6 @@ namespace Token{
         return head;
     }
 
-    Block* BlockChain::GetBlock(const std::string& hash){
-        {
-            // Search the in memory block chain first
-            LOG(INFO) << "searching in-memory for block: " << hash;
-            BlockChainResolver resolver(hash);
-            if(resolver.Resolve()){
-                LOG(INFO) << "block " << hash << " found!";
-                return resolver.GetResult();
-            }
-            LOG(INFO) << "couldn't find block " << hash << " in-memory, attempting to find it in the filesystem";
-        }
-
-        {
-            // Now search the file system for the block
-            LOG(INFO) << "searching the file system for block: " << hash;
-            LocalBlockResolver resolver(hash);
-            resolver.Resolve();
-            if(resolver.HasResult()){
-                LOG(INFO) << "block " << hash << " found!";
-                return resolver.GetResult();
-            }
-            LOG(INFO) << "couldn't find block " << hash << " in the file system, attempting to find from the peers";
-        }
-
-        {
-            // Now search peers for the block
-            LOG(INFO) << "searching peers for block: " << hash;
-            std::vector<PeerClient*> peers;
-            if(!BlockChainServer::GetPeerList(peers)){
-                LOG(ERROR) << "couldn't get peer list";
-                return nullptr;
-            }
-            int idx = 0;
-            for(auto& it : peers){
-                PeerBlockResolver resolver(it, hash);
-                resolver.Resolve();
-                if(resolver.HasResult()){
-                    LOG(INFO) << "block " << hash << " found!";
-                    return resolver.GetResult();
-                }
-                LOG(INFO) << "couldn't find block " << hash << " in peer " << ((idx++) + 1) << "/" << peers.size();
-            }
-            LOG(INFO) << "couldn't find block " << hash << " from peer list";
-        }
-        LOG(ERROR) << "couldn't find block: " << hash;
-        return nullptr;
-    }
-
     Block* BlockChain::GetGenesis(){
         READ_LOCK;
         Block* blk = GetInstance()->GetGenesisNode()->GetBlock();
@@ -365,19 +200,10 @@ namespace Token{
         return blk;
     }
 
-    bool BlockChain::ContainsBlock(const std::string& hash){
-        BlockChainResolver resolver(hash);
-        return resolver.Resolve() && resolver.HasResult();
-    }
-
-    bool BlockChain::ContainsBlock(Token::Block* block){
-        return ContainsBlock(block->GetHash());
-    }
-
     bool BlockChain::AppendBlock(Token::Block* block){
         WRITE_LOCK;
         LOG(INFO) << "appending block: " << block->GetHash();
-        if(ContainsBlock(block)){
+        if(ContainsBlock(block->GetHash())){
             LOG(ERROR) << "duplicate block found for: " << block->GetHash();
             UNLOCK;
             return false;
@@ -425,7 +251,7 @@ namespace Token{
             return false;
         }
 
-        if(!SaveBlock(block)){
+        if(!GetInstance()->SaveBlock(block)){
             LOG(ERROR) << "couldn't save block: " << block->GetHash();
             UNLOCK;
             return false;
@@ -451,17 +277,6 @@ namespace Token{
 
     std::string BlockChain::GetRootDirectory(){
         return GetInstance()->path_;
-    }
-
-    bool BlockChain::SaveBlock(Token::Block* block){
-        std::string blkfilename = GetInstance()->GetBlockFile(block->GetHeight());
-        if(FileExists(blkfilename)){
-            LOG(WARNING) << "block already written, won't overwrite block";
-            return false;
-        }
-        LOG(INFO) << "writing block '" << block->GetHash() << "' to file: " << blkfilename << "...";
-        block->Write(blkfilename);
-        return GetInstance()->SetReference(block->GetHash(), block->GetHeight());
     }
 
     bool BlockChain::HasHead(){
@@ -520,24 +335,39 @@ namespace Token{
         return GetBlockFile(height);
     }
 
-    Block* BlockChain::LoadBlock(const std::string& hash){
-        std::string filename = GetInstance()->GetBlockFile(hash);
-        Block* blk = new Block();
-        if(!blk->LoadBlockFromFile(filename)){
-            LOG(ERROR) << "cannot load block '" << hash << "' from file: " << filename;
-            return nullptr;
+    bool BlockChain::LoadBlock(uint32_t height, Token::Block **result){
+        if(height < 0 || height > GetHeight()){
+            *result = nullptr;
+            return false;
         }
-        return blk;
+        std::string filename = GetBlockFile(height);
+        (*result) = new Block();
+        if(!(*result)->LoadBlockFromFile(filename)){
+            LOG(ERROR) << "cannot load block #" << height << " from file: " << filename;
+            return false;
+        }
+        return true;
     }
 
-    Block* BlockChain::LoadBlock(uint32_t height){
-        std::string filename = GetInstance()->GetBlockFile(height);
-        Block* blk = new Block();
-        if(!blk->LoadBlockFromFile(filename)){
-            LOG(ERROR) << "cannot load block #" << height << " from file: " << filename;
-            return nullptr;
+    bool BlockChain::LoadBlock(const std::string &hash, Token::Block **result){
+        uint32_t height;
+        if(!GetReference(hash, &height)){
+            LOG(ERROR) << "cannot find block: " << hash;
+            *result = nullptr;
+            return false;
         }
-        return blk;
+        return LoadBlock(height, result);
+    }
+
+    bool BlockChain::SaveBlock(Token::Block* block){
+        std::string blkfilename = GetInstance()->GetBlockFile(block->GetHeight());
+        if(FileExists(blkfilename)){
+            LOG(WARNING) << "block already written, won't overwrite block";
+            return false;
+        }
+        LOG(INFO) << "writing block '" << block->GetHash() << "' to file: " << blkfilename << "...";
+        block->Write(blkfilename);
+        return GetInstance()->SetReference(block->GetHash(), block->GetHeight());
     }
 
     bool BlockChain::AppendNode(Token::Block* block){
@@ -552,5 +382,39 @@ namespace Token{
         node->SetPrevious(head);
         GetInstance()->SetHeadNode(node);
         return true;
+    }
+
+    ChainNode* BlockChain::GetNode(uint32_t height){
+        if(height < 0 || height > GetHeight()) return nullptr;
+        uint32_t idx = 0;
+        ChainNode* c = GetGenesisNode();
+        while(idx < height && c){
+            idx++;
+            c = c->GetNext();
+        }
+        return c;
+    }
+
+    Block* BlockChain::GetBlock(uint32_t height){
+        if(height < 0 || height > GetHeight()) return nullptr;
+        return GetInstance()->GetNode(height)->GetBlock();
+    }
+
+    Block* BlockChain::GetBlock(const std::string &hash){
+        uint32_t height;
+        if(!GetInstance()->GetReference(hash, &height)){
+            LOG(ERROR) << "cannot find block: " << hash;
+            return nullptr;
+        }
+        return GetInstance()->GetNode(height)->GetBlock();
+    }
+
+    bool BlockChain::ContainsBlock(const std::string &hash){
+        uint32_t height;
+        if(!GetInstance()->GetReference(hash, &height)){
+            LOG(ERROR) << "cannot find block: " << hash;
+            return false;
+        }
+        return height >= 0 && height <= GetHeight();
     }
 }

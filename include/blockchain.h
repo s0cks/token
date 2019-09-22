@@ -71,16 +71,12 @@ namespace Token{
         friend class BlockChainServer;
         friend class PeerSession;
         friend class PeerClient;
-        friend class PeerBlockResolver;
-        friend class LocalBlockResolver;
-        friend class BlockChainResolver;
 
         std::string path_;
         leveldb::DB* state_;
         pthread_rwlock_t rwlock_;
         CryptoPP::RSA::PublicKey pubkey_;
         CryptoPP::RSA::PrivateKey privkey_;
-
         ChainNode* genesis_;
         ChainNode* head_;
 
@@ -88,13 +84,6 @@ namespace Token{
         GetState(){
             return GetInstance()->state_;
         }
-
-        int GetPeerCount();
-        bool IsPeerRegistered(PeerClient* p);
-        std::string GetPeer(int n);
-        void SetPeerCount(int n);
-        void RegisterPeer(PeerClient* p);
-        void DeregisterPeer(PeerClient* p);
 
         bool CreateGenesis(); //TODO: Remove
         bool LoadBlockChain(const std::string& path); //TODO: Remove
@@ -104,8 +93,12 @@ namespace Token{
         bool GetReference(const std::string& ref, uint32_t* height);
         bool SetReference(const std::string& ref, uint32_t height);
         bool AppendNode(Block* block);
+        bool SaveBlock(Block* block);
+        bool LoadBlock(const std::string& hash, Block** result);
+        bool LoadBlock(uint32_t height, Block** result);
         std::string GetBlockFile(uint32_t height);
         std::string GetBlockFile(const std::string& hash);
+        ChainNode* GetNode(uint32_t height);
 
         void SetGenesisNode(ChainNode* node){
             genesis_ = node;
@@ -122,10 +115,6 @@ namespace Token{
         ChainNode* GetHeadNode() const{
             return head_;
         }
-
-        static bool SaveBlock(Block* block); // TODO: Refactor
-        static Block* LoadBlock(uint32_t height); //TODO: Refactor
-        static Block* LoadBlock(const std::string& hash); //TODO: Refactor
 
         BlockChain():
             rwlock_(),
@@ -150,12 +139,11 @@ namespace Token{
         static void Accept(BlockChainVisitor* vis);
         static Block* GetHead();
         static Block* GetGenesis();
-        static Block* GetBlock(const std::string& hash); //TODO: Refactor
-        static Block* GetBlock(uint32_t height); //TODO: Refactor
+        static Block* GetBlock(const std::string& hash);
+        static Block* GetBlock(uint32_t height);
         static uint32_t GetHeight();
         static bool HasHead();
         static bool ContainsBlock(const std::string& hash);
-        static bool ContainsBlock(Block* block);
         static bool AppendBlock(Block* block);
         static bool Initialize(const std::string& path);
     };

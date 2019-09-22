@@ -9,7 +9,6 @@ namespace Token{
     class BlockChainServer{
     private:
         pthread_t thread_;
-
         uv_loop_t* loop_;
         uv_tcp_t server_;
         std::map<uv_stream_t*, PeerSession*> sessions_;

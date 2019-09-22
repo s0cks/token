@@ -72,10 +72,7 @@ namespace Token{
     }
 
     void BlockChainServer::Register(Token::PeerClient* session){
-        if(!BlockChain::GetInstance()->IsPeerRegistered(session)){
-            BlockChain::GetInstance()->RegisterPeer(session);
-            GetInstance()->peers_.insert({ session->ToString(), session });
-        }
+
     }
 
     void BlockChainServer::OnNewConnection(uv_stream_t* stream, int status){
