@@ -38,6 +38,7 @@ namespace Token{
         }
 
         void VisitTransaction(Transaction* tx){
+            LOG(INFO) << "validating transaction: " << tx->GetHash();
             if(IsValid(tx)){
                 int i;
                 for(i = 0; i < tx->GetNumberOfOutputs(); i++){
@@ -50,9 +51,6 @@ namespace Token{
                         return;
                     }
                     LOG(INFO) << "added new unclaimed transaction: " << utxo->GetHash();
-                    LOG(WARNING) << "*** Unclaimed Transaction: ";
-                    LOG(WARNING) << "***   + Input: " << utxo->GetTransactionHash() << "[" << utxo->GetIndex() << "]";
-                    LOG(WARNING) << "***   + Output: " << utxo->GetToken() << "(" << utxo->GetUser() << ")";
                 }
                 for(i = 0; i < tx->GetNumberOfInputs(); i++){
                     Input* in = tx->GetInputAt(i);
@@ -65,9 +63,6 @@ namespace Token{
                         return;
                     }
                     LOG(INFO) << "removed spent unclaimed transaction: " << utxo.GetHash();
-                    LOG(WARNING) << "*** Unclaimed Transaction: ";
-                    LOG(WARNING) << "***   + Input: " << utxo.GetTransactionHash() << "[" << utxo.GetIndex() << "]";
-                    LOG(WARNING) << "***   + Output: " << utxo.GetToken() << "(" << utxo.GetUser() << ")";
                 }
                 valid_txs_.push_back(tx);
             } else{

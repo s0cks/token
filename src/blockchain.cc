@@ -34,12 +34,14 @@ namespace Token{
         LOG(WARNING) << "*** This functionality will be removed in future versions";
         LOG(WARNING) << "*** Genesis contains 128 base transactions for initialization";
         Block* genesis = new Block();
-        Transaction* cbtx = genesis->CreateTransaction();
+        Transaction* cbtx = new Transaction();
         for(int i = 0; i < 128; i++){
             std::stringstream stream;
             stream << "Token" << i;
             cbtx->AddOutput(stream.str(), "TestUser");
         }
+        genesis->AppendTransaction(cbtx); //TODO This needs to be here
+        Allocator::AddReference(genesis);
         return AppendBlock(genesis);
     }
 
@@ -55,6 +57,7 @@ namespace Token{
                 LOG(ERROR) << "*** fixme";
                 return false;
             }
+            Allocator::AddReference(blk);
             if(!AppendNode(blk)){
                 LOG(ERROR) << "cannot append block node from height: " << height;
                 LOG(ERROR) << "*** fixme";
@@ -203,35 +206,50 @@ namespace Token{
     bool BlockChain::AppendBlock(Token::Block* block){
         WRITE_LOCK;
         LOG(INFO) << "appending block: " << block->GetHash();
+        LOG(INFO) << "checking for duplicate block...";
         if(ContainsBlock(block->GetHash())){
             LOG(ERROR) << "duplicate block found for: " << block->GetHash();
             UNLOCK;
             return false;
         }
 
-        if(block->GetHeight() == 0){
-            Transaction* cb = block->GetCoinbaseTransaction();
-            std::string hash = cb->GetHash();
-            for(int i = 0; i < cb->GetNumberOfOutputs(); i++){
-                UnclaimedTransaction utxo(cb->GetHash(), i, cb->GetOutputAt(i));
-                if(!UnclaimedTransactionPool::GetInstance()->AddUnclaimedTransaction(&utxo)){
-                    LOG(ERROR) << "cannot append new unclaimed transaction: " << utxo.GetHash();
-                    LOG(WARNING) << "*** Unclaimed Transaction: ";
-                    LOG(WARNING) << "***   + Input: " << utxo.GetTransactionHash() << "[" << utxo.GetIndex() << "]";
-                    LOG(WARNING) << "***   + Output: " << utxo.GetToken() << "(" << utxo.GetUser() << ")";
-                    UNLOCK;
-                    return false;
+        if(block->IsGenesis() && HasHead()){
+            LOG(ERROR) << "cannot append genesis block:";
+            LOG(ERROR) << (*block);
+            UNLOCK;
+            return false;
+        }
+
+        if(block->IsGenesis()){
+            LOG(INFO) << "registering genesis's " << block->GetNumberOfTransactions() << " transactions...";
+
+            int i;
+            for(i = 0; i < block->GetNumberOfTransactions(); i++){
+                Transaction* tx = block->GetTransactionAt(i);
+                LOG(INFO) << "registering " << tx->GetNumberOfOutputs() << " unclaimed transactions...";
+                int j;
+                for(j = 0; j < tx->GetNumberOfOutputs(); j++) {
+                    UnclaimedTransaction *utxo = new UnclaimedTransaction(tx->GetHash(), j, tx->GetOutputAt(j)); //TODO: Fix
+                    if (!UnclaimedTransactionPool::GetInstance()->AddUnclaimedTransaction(utxo)) {
+                        LOG(WARNING) << "couldn't create new unclaimed transaction: " << utxo->GetHash();
+                        LOG(WARNING) << "*** Unclaimed Transaction: ";
+                        LOG(WARNING) << "***   + Input: " << utxo->GetTransactionHash() << "[" << utxo->GetIndex()
+                                     << "]";
+                        LOG(WARNING) << "***   + Output: " << utxo->GetToken() << "(" << utxo->GetUser() << ")";
+                        return false;
+                    }
+                    LOG(INFO) << "added new unclaimed transaction: " << utxo->GetHash();
                 }
             }
-        } else if(block->GetHeight() > 0){
+        } else{
+            LOG(INFO) << "finding parent block";
             Block* parent;
             if(!(parent = GetBlock(block->GetPreviousHash()))){
                 LOG(ERROR) << "cannot find parent block: " << block->GetPreviousHash();
                 UNLOCK;
                 return false;
             }
-
-            LOG(INFO) << "resolved parent: " << parent->GetHash();
+            LOG(INFO) << "found parent: " << parent->GetHash();
 
             //TODO: Migrate validation logic
             BlockValidator validator;
@@ -245,10 +263,6 @@ namespace Token{
                 UNLOCK;
                 return false;
             }
-        } else{
-            LOG(ERROR) << "invalid block height of " << block->GetHeight();
-            UNLOCK;
-            return false;
         }
 
         if(!GetInstance()->SaveBlock(block)){
@@ -262,6 +276,7 @@ namespace Token{
             return false;
         }
 
+        Allocator::AddReference(block);
         if(!GetInstance()->AppendNode(block)){
             LOG(ERROR) << "couldn't append node for new <HEAD> := " << block->GetHash();
             return false;
@@ -280,17 +295,21 @@ namespace Token{
     }
 
     bool BlockChain::HasHead(){
-        return GetHeight() >= 0;
+        return GetInstance()->GetHeadNode() != nullptr;
     }
 
     bool BlockChainPrinter::Visit(Token::Block* block){
         LOG(INFO) << "  - #" << block->GetHeight() << ": " << block->GetHash();
+        if(ShouldPrintInfo()){
+            LOG(INFO) << " - Info:";
+            LOG(INFO) << "\t" << (*block);
+        }
         return true;
     }
 
-    void BlockChainPrinter::PrintBlockChain(){
+    void BlockChainPrinter::PrintBlockChain(bool info){
         LOG(INFO) << "BlockChain (" << BlockChain::GetHeight() << " blocks):";
-        BlockChainPrinter instance;
+        BlockChainPrinter instance(info);
         BlockChain::Accept(&instance);
     }
 
@@ -319,31 +338,17 @@ namespace Token{
         return true;
     }
 
-    std::string BlockChain::GetBlockFile(uint32_t height){
-        std::stringstream stream;
-        stream << GetRootDirectory() << "/blocks";
-        stream << "/blk" << height << ".dat";
-        return stream.str();
-    }
-
-    std::string BlockChain::GetBlockFile(const std::string& hash){
-        uint32_t height;
-        if(!GetReference(hash, &height)){
-            LOG(ERROR) << "cannot get height for block: " << hash;
-            return "";
-        }
-        return GetBlockFile(height);
-    }
-
     bool BlockChain::LoadBlock(uint32_t height, Token::Block **result){
         if(height < 0 || height > GetHeight()){
             *result = nullptr;
             return false;
         }
-        std::string filename = GetBlockFile(height);
+
+        std::stringstream stream;
+        stream << GetRootDirectory() << "/blocks/blk" << height << ".dat";
         (*result) = new Block();
-        if(!(*result)->LoadBlockFromFile(filename)){
-            LOG(ERROR) << "cannot load block #" << height << " from file: " << filename;
+        if(!(*result)->LoadBlockFromFile(stream.str())){
+            LOG(ERROR) << "cannot load block #" << height;
             return false;
         }
         return true;
@@ -360,7 +365,10 @@ namespace Token{
     }
 
     bool BlockChain::SaveBlock(Token::Block* block){
-        std::string blkfilename = GetInstance()->GetBlockFile(block->GetHeight());
+        std::stringstream filename;
+        filename << GetRootDirectory() << "/blocks";
+        filename << "/blk" << block->GetHeight() << ".dat";
+        std::string blkfilename = filename.str();
         if(FileExists(blkfilename)){
             LOG(WARNING) << "block already written, won't overwrite block: " << blkfilename;
             return false;

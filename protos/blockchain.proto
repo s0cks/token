@@ -12,9 +12,11 @@ message Output{
 }
 
 message Transaction{
-    uint32 index = 1;
-    repeated Input inputs = 2;
-    repeated Output outputs = 3;
+    uint64 timestamp = 1;
+    uint32 index = 2;
+    repeated Input inputs = 3;
+    repeated Output outputs = 4;
+    string signature = 5;
 }
 
 message Block{

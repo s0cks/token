@@ -11,8 +11,8 @@
 
 // BlockChain flags
 DEFINE_string(path, "", "The FS path for the BlockChain");
-DEFINE_uint32(minheap_size, 4096 * 32, "The size of the minor heap");
-DEFINE_uint32(maxheap_size, 4096 * 32 * 4, "The size of the major heap");
+DEFINE_uint32(minheap_size, 128 * 20, "The size of the minor heap");
+DEFINE_uint32(maxheap_size, 128 * 32 * 5, "The size of the major heap");
 
 // RPC Service Flags
 DEFINE_uint32(service_port, 0, "The port used for the RPC service");
@@ -95,6 +95,38 @@ main(int argc, char** argv){
             return EXIT_FAILURE;
         }
     }
+
+    LOG(INFO) << "Min Chunk Size: " << Allocator::kMinChunkSize;
+    LOG(INFO) << "Transaction Size: " << (sizeof(Transaction) + sizeof(int));
+    LOG(INFO) << "Block Size :" << (sizeof(Block) + sizeof(int));
+
+    BlockChainPrinter::PrintBlockChain(true);
+
+    Allocator::PrintMinorHeap();
+    Allocator::PrintMajorHeap();
+
+    Block* head = BlockChain::GetHead();
+    Transaction* tx1 = new Transaction();
+    tx1->AddInput(head->GetCoinbaseTransaction()->GetHash(), 0);
+    tx1->AddOutput("Token0", "TestUser5");
+    if(!TransactionPool::AddTransaction(tx1)){
+        LOG(ERROR) << "Couldn't add new transaction to tx pool";
+        return EXIT_FAILURE;
+    }
+
+    Block* nhead;
+    if(!(nhead = TransactionPool::CreateBlock())){
+        LOG(ERROR) << "Couldn't create new block from tx pool";
+        return EXIT_FAILURE;
+    }
+
+    if(!BlockChain::AppendBlock(nhead)){
+        LOG(ERROR) << "Couldn't append new head to block chain";
+        return EXIT_FAILURE;
+    }
+
+    Allocator::PrintMinorHeap();
+    Allocator::PrintMajorHeap();
 
     if(FLAGS_service_port > 0){
         BlockChainService::Start("0.0.0.0", FLAGS_service_port);

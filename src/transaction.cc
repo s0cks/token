@@ -1,12 +1,23 @@
 #include <glog/logging.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <stdio.h>
 #include <dirent.h>
-#include <blockchain.h>
+
+#include "allocator.h"
+#include "blockchain.h"
 #include "transaction.h"
 
 namespace Token{
-    void Transaction::Accept(Token::TransactionVisitor* vis) const{
+    static uint64_t
+    GetCurrentTime(){
+        struct timeval time;
+        gettimeofday(&time, NULL);
+        uint64_t curr_time = ((uint64_t)time.tv_sec * 1000 + time.tv_usec / 1000);
+        return curr_time;
+    }
+
+    void Transaction::Accept(Token::TransactionVisitor* vis){
         int i;
         for(i = 0; i < GetNumberOfInputs(); i++){
             vis->VisitInput(GetInputAt(i));
@@ -14,6 +25,10 @@ namespace Token{
         for(i = 0; i < GetNumberOfOutputs(); i++){
             vis->VisitOutput(GetOutputAt(i));
         }
+    }
+
+    void Transaction::SetTimestamp(){
+        GetRaw()->set_timestamp(GetCurrentTime());
     }
 
     void Transaction::Encode(Token::ByteBuffer *bb){
@@ -32,6 +47,12 @@ namespace Token{
         return digest;
     }
 
+    std::string Transaction::ToString(){
+        std::stringstream stream;
+        stream << "Transaction(" << GetHash() << ")";
+        return stream.str();
+    }
+
     HashArray Transaction::GetHashArray(){
         HashArray result;
         CryptoPP::SHA256 func;
@@ -40,6 +61,10 @@ namespace Token{
         GetRaw()->SerializeToArray(bytes, size);
         CryptoPP::ArraySource source(bytes, size, true, new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(result.data(), DIGEST_SIZE)));
         return result;
+    }
+
+    void* Transaction::operator new(size_t size){
+        return reinterpret_cast<Transaction*>(Allocator::Allocate(size));
     }
 
     void Input::Encode(ByteBuffer* bb) const{
@@ -192,7 +217,6 @@ namespace Token{
             if(!block->AppendTransaction(tx)){
                 LOG(ERROR) << "couldn't append transaction: " << tx->GetHash();
             }
-            delete tx;
         }
         LOG(INFO) << "created new block: " << block->GetHash();
         return block;

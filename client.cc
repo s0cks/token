@@ -83,7 +83,7 @@ int main(int argc, char** argv){
 
                     std::cout << "Creating Transaction...." << std::endl;
 
-                    Transaction* tx = nblock->CreateTransaction();
+                    Transaction* tx = new Transaction();
                     tx->AddInput(hash, index);
                     tx->AddOutput(token, user);
 

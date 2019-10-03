@@ -16,7 +16,6 @@ namespace Token{
 })
 #define BIND_SQLITE_PARAMETER_TEXT(Param, Value) ({ \
     int pidx = sqlite3_bind_parameter_index(stmt, Param); \
-    LOG(INFO) << "binding parameter " << (Param) << "@" << pidx << " := " << (Value); \
     int rc; \
     if((rc = sqlite3_bind_text(stmt, pidx, (Value).c_str(), -1, SQLITE_TRANSIENT)) != SQLITE_OK){ \
         LOG(ERROR) << "couldn't bind parameter " << (Param) << " for statement"; \

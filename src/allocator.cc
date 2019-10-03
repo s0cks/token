@@ -1,6 +1,7 @@
 #include <cstring>
 #include <cstdio>
 #include <glog/logging.h>
+#include "common.h"
 #include "allocator.h"
 
 #define WITH_HEADER(size) ((size)+sizeof(int))
@@ -12,9 +13,9 @@
 #define MARK_CHUNK(ch, c) ((FLAGS(ch)) = CHUNK_SIZE(ch)|static_cast<uint32_t>((c)))
 #define CHUNK_SIZE(ch) (FLAGS((ch))&(~3))
 #define CHUNK_FLAGS(ch) (static_cast<Allocator::Color>((FLAGS((ch))&(3))))
-#define MEM_TAG(ptr) (!(((uint64_t)(ptr))&1))
-#define POINTS_MINOR(ptr) (((Byte*)(ptr))>=&minor_[0] && ((Byte*)(ptr))<&minor_[minor_size_])
-#define POINTS_MAJOR(ptr) (((Byte*)(ptr))>=&major_[0] && ((Byte*)(ptr))<&major_[major_size_])
+#define MEM_TAG(ptr) (!(((uintptr_t)(ptr))&1))
+#define POINTS_MINOR(ptr) (((ptr))>=&minor_[0] && ((ptr))<=&minor_[minor_size_])
+#define POINTS_MAJOR(ptr) (((Byte*)(ptr))>=&major_[0] && ((Byte*)(ptr))<=&major_[major_size_])
 #define REF_PTR(ptr) (MEM_TAG((ptr))&&POINTS_MINOR((ptr)))
 #define MINOR_CHUNK(ptr) (((((Byte*)(ptr)-&minor_[0])/kMinChunkSize)*kMinChunkSize)+&minor_[0])
 #define PTR_INDEX(ofs) ((ofs)/sizeof(void*))
@@ -30,7 +31,7 @@
 #define FOR_EACH_REFERENCE(ref, counter) \
     int counter; \
     for(counter=0; counter<refs_count_; counter++){ \
-        void** ref = references_[counter][0];
+        void* ref = references_[counter];
 #define END_FOR_EACH_REFERENCE() }
 
 namespace Token{
@@ -58,7 +59,10 @@ namespace Token{
             (CHUNK_FLAGS(curr) != Color::kFree || size > CHUNK_SIZE(curr)) &&
             curr < &major_[major_size_];
             curr = curr + CHUNK_SIZE(curr));
-        if(curr >= &major_[major_size_]) return NULL;
+        if(curr >= &major_[major_size_]){
+            CollectMajor();
+            return MajorAlloc(size);
+        }
         Byte* fchunk = curr;
         unsigned int prev_size = CHUNK_SIZE(fchunk);
         FLAGS(fchunk) = size;
@@ -120,13 +124,13 @@ namespace Token{
     void Allocator::BackpatchReferences(){
         FOR_EACH_REFERENCE(ptr, i)
         {
-            if(POINTS_MINOR(*ptr)){
-                Byte* ch = MINOR_CHUNK(*ptr);
+            if(POINTS_MINOR(ptr)){
+                Byte* ch = MINOR_CHUNK(ptr);
                 if(MARKED(ch)){
                     Byte* nptr = (Byte*)backpatch_[CHUNK_OFFSET(ch)];
                     if(nptr){
                         int delta = nptr - ch;
-                        *ptr += delta;
+                        ptr += delta;
                     }
                 }
             }
@@ -134,13 +138,24 @@ namespace Token{
         END_FOR_EACH_REFERENCE();
     }
 
+    uint64_t Allocator::GetMinorHeapSize(){
+        return GetInstance()->minor_size_;
+    }
+
+    uint64_t Allocator::GetMajorHeapSize(){
+        return GetInstance()->major_size_;
+    }
+
     bool Allocator::Initialize(uint64_t minheap_size, uint64_t maxheap_size){
-        GetInstance()->minor_size_ = minheap_size;
-        GetInstance()->major_size_ = maxheap_size;
+        GetInstance()->minor_size_ = RoundUpPowTwo(minheap_size);
+        GetInstance()->major_size_ = RoundUpPowTwo(maxheap_size);
+
+        LOG(WARNING) << "Minor Heap Size: " << GetMinorHeapSize();
+        LOG(WARNING) << "Major Heap Size: " << GetMajorHeapSize();
 
         Allocator* alloc = Allocator::GetInstance();
-        alloc->minor_ = (Byte*)malloc(sizeof(Byte) * minheap_size);
-        alloc->major_ = (Byte*)malloc(sizeof(Byte) * maxheap_size);
+        alloc->minor_ = (Byte*)malloc(sizeof(Byte) * GetMinorHeapSize());
+        alloc->major_ = (Byte*)malloc(sizeof(Byte) * GetMajorHeapSize());
         alloc->backpatch_ = (void**)malloc(sizeof(void*) * (GetInstance()->minor_size_ / kMinChunkSize));
 
         memset(alloc->backpatch_, 0, sizeof(backpatch_));
@@ -155,6 +170,7 @@ namespace Token{
         FOR_EACH_MINCH(ch);
             {
                 if(MARKED(ch)){
+                    LOG(WARNING) << "copying reference: " << ch;
                     void* ptr = WITHOUT_HEADER(MajorAlloc(WITHOUT_HEADER(CHUNK_SIZE(ch))));
                     backpatch_[i] = ptr;
                 }
@@ -182,8 +198,8 @@ namespace Token{
         FOR_EACH_REFERENCE(ref, i);
         {
             LOG(INFO) << "visiting reference: " << i << " (" << (void*)ref << ")";
-            if(REF_PTR(*ref)){
-                Byte* ch = MINOR_CHUNK(*ref);
+            if(POINTS_MINOR(ref)){
+                Byte* ch = MINOR_CHUNK(ref);
                 LOG(INFO) << "marking chunk: " << (void*)ch;
                 MarkChunk(ch);
             }
@@ -192,8 +208,10 @@ namespace Token{
     }
 
     void Allocator::CollectMinor(){
+        LOG(WARNING) << "collecting minor...";
         GetInstance()->MarkMinor();
         GetInstance()->CopyMinorHeap();
+        LOG(WARNING) << "done";
     }
 
     Allocator::Byte* Allocator::FindMajorChunk(Token::Allocator::Byte* ptr){
@@ -245,7 +263,7 @@ namespace Token{
     void Allocator::DarkenRoots(){
         FOR_EACH_REFERENCE(ptr, i)
             {
-                DarkenChunk((Byte*)*ptr);
+                DarkenChunk((Byte*)ptr);
             }
         END_FOR_EACH_REFERENCE();
     }
@@ -284,7 +302,7 @@ namespace Token{
         for(curr = &major_[0];
             curr < &major_[major_size_];
             curr = curr + CHUNK_SIZE(curr)){
-            if(CHUNK_SIZE(curr) == 0) return;
+            if(CHUNK_SIZE(curr) == 0 || CHUNK_FLAGS(curr) == Color::kFree) break;
             vis->VisitChunk(i++, CHUNK_SIZE(curr), curr);
         }
         vis->VisitEnd();
@@ -319,7 +337,16 @@ namespace Token{
 
     bool HeapPrinter::VisitChunk(int chunk, size_t size, void* ptr){
         std::stringstream msg;
-        msg << "\tChunk " << chunk << "\tSize " << size << "\tMarked: " << (MARKED(ptr) ? 'Y' : 'N');
+        try{
+            AllocatorObject* obj = reinterpret_cast<AllocatorObject*>(BITS(ptr));
+            if(obj){
+                msg << obj->ToString();
+            } else{
+                msg << "\tChunk " << chunk << "\tSize " << size << "\tMarked: " << (MARKED(ptr) ? 'Y' : 'N');
+            }
+        } catch(std::exception& exc){
+            msg << "\tChunk " << chunk << "\tSize " << size << "\tMarked: " << (MARKED(ptr) ? 'Y' : 'N');
+        }
         LOG(INFO) << msg.str();
         return true;
     }
@@ -334,34 +361,60 @@ namespace Token{
         GetInstance()->VisitMajor(&printer);
     }
 
-    void Allocator::SetReference(int idx, void *start, void *end){
-        references_[idx][0] = (void**)start;
-        references_[idx][1] = (void**)end;
-    }
-
-    void Allocator::AddReference(void **begin, void **end){
-        if(begin == end) return;
-        if(begin > end){
-            void** tmp = begin;
-            begin = end;
-            end = tmp;
-        }
-
-        int i;
-        for(i = 0; i < refs_count_; i++){
-            if(begin >= references_[i][0] && end <= references_[i][0]) return;
-        }
-
-        for(i = 0; i < refs_count_; i++){
-            if(references_[i][0] == 0){
-                SetReference(i, begin, end);
-                return;
-            }
-        }
-        SetReference(refs_count_++, begin, end);
+    void Allocator::SetReference(int idx, void* ref){
+        references_[idx] = ref;
     }
 
     void Allocator::AddReference(void* ref){
-        GetInstance()->AddReference((void**)ref, (void**)ref+sizeof(void*));
+        int i;
+        for(i = 0; i < GetInstance()->refs_count_; i++){
+            if(GetInstance()->references_[i] == ref) return;
+        }
+        GetInstance()->SetReference(GetInstance()->refs_count_++, ref);
     }
+
+    void Allocator::RemoveReference(void *ref){
+        //TODO: Implement
+    }
+
+    class RawAllocatorObject : public AllocatorObject{
+    private:
+        size_t chunk_size_;
+        size_t chunk_offset_;
+        void* chunk_ptr_;
+    public:
+        RawAllocatorObject(size_t offset, size_t size, void* raw):
+                chunk_offset_(offset),
+                chunk_size_(size),
+                chunk_ptr_(raw){}
+        RawAllocatorObject(size_t offset, void* raw):
+            RawAllocatorObject(offset, CHUNK_SIZE(raw), raw){}
+        RawAllocatorObject(size_t offset, size_t size):
+            RawAllocatorObject(offset, size, nullptr){}
+        ~RawAllocatorObject(){}
+
+        void* GetRawChunk(){
+            return chunk_ptr_;
+        }
+
+        size_t GetChunkOffset(){
+            return chunk_offset_;
+        }
+
+        size_t GetChunkSize(){
+            return chunk_size_;
+        }
+
+        std::string ToString(){
+            std::stringstream msg;
+            msg << "\tChunk " << GetChunkOffset() << "\tSize " << GetChunkSize() << "\tMarked: " << (MARKED(GetRawChunk()) ? 'Y' : 'N');
+            return msg.str();
+        }
+
+        RawAllocatorObject& operator=(const RawAllocatorObject& other){
+            this->chunk_offset_ = other.chunk_offset_;
+            this->chunk_size_ = other.chunk_size_;
+            return (*this);
+        }
+    };
 }

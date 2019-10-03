@@ -1,6 +1,7 @@
 #ifndef TOKEN_TRANSACTION_H
 #define TOKEN_TRANSACTION_H
 
+#include "allocator.h"
 #include "blockchain.pb.h"
 #include "merkle.h"
 #include "bytes.h"
@@ -88,24 +89,24 @@ namespace Token{
 
     class TransactionVisitor;
 
-    class Transaction : public MerkleNodeItem{
+    class Transaction : public MerkleNodeItem, public AllocatorObject{
     private:
-        Messages::Transaction* raw_;
+        Messages::Transaction raw_;
 
         Messages::Transaction*
-        GetRaw() const{
-            return raw_;
+        GetRaw(){
+            return &raw_;
         }
+
+        void SetTimestamp();
 
         friend class Block;
         friend class TransactionPool;
         friend class BlockChainService;
     public:
-        Transaction(Messages::Transaction* raw):
-            raw_(raw){}
-        Transaction(int idx = 0):
-            raw_(new Messages::Transaction()){
-            SetIndex(idx);
+        Transaction():
+                raw_(){
+            SetTimestamp();
         }
         ~Transaction(){}
 
@@ -123,15 +124,15 @@ namespace Token{
             return new Output(out);
         }
 
-        Input* GetInputAt(int idx) const{
+        Input* GetInputAt(int idx){
             return new Input(GetRaw()->inputs(idx));
         }
 
-        Output* GetOutputAt(int idx) const{
+        Output* GetOutputAt(int idx){
             return new Output(GetRaw()->outputs(idx));
         }
 
-        Output* GetOutput(const std::string& user, const std::string& token) const{
+        Output* GetOutput(const std::string& user, const std::string& token){
             for(int i = 0; i < GetRaw()->outputs_size(); i++){
                 Messages::Output out = GetRaw()->outputs(i);
                 if(out.user() == user && out.token() == token){
@@ -141,19 +142,19 @@ namespace Token{
             return nullptr;
         }
 
-        int GetNumberOfInputs() const{
+        int GetNumberOfInputs(){
             return GetRaw()->inputs_size();
         }
 
-        int GetNumberOfOutputs() const{
+        int GetNumberOfOutputs(){
             return GetRaw()->outputs_size();
         }
 
-        uint32_t GetIndex() const{
+        uint32_t GetIndex(){
             return GetRaw()->index();
         }
 
-        bool IsCoinbase() const{
+        bool IsCoinbase(){
             return GetIndex() == 0;
         }
 
@@ -161,16 +162,19 @@ namespace Token{
             GetRaw()->set_index(idx);
         }
 
-        void Accept(TransactionVisitor* visitor) const;
+        void Accept(TransactionVisitor* visitor);
         void Encode(ByteBuffer* bb);
         std::string GetHash();
+        std::string ToString();
         HashArray GetHashArray();
+
+        void* operator new(size_t size);
 
         friend bool operator==(const Transaction& lhs, const Transaction& rhs){
             return const_cast<Transaction&>(lhs).GetHash() == const_cast<Transaction&>(rhs).GetHash();
         }
 
-        friend std::ostream& operator<<(std::ostream& stream, const Transaction& tx){
+        friend std::ostream& operator<<(std::ostream& stream, Transaction& tx){
             stream << "\tIndex: " << tx.GetIndex() << std::endl;
             stream << "\tInputs (" << tx.GetNumberOfInputs() << "):" << std::endl;
             int idx;

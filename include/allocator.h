@@ -9,9 +9,23 @@
 namespace Token{
     class HeapVisitor;
 
+    class AllocatorObject{
+    public:
+        AllocatorObject(){}
+        virtual ~AllocatorObject(){}
+
+        virtual void* GetRawChunk(){
+            return nullptr;
+        }
+
+        virtual std::string ToString(){
+            return "AllocatorObject()";
+        }
+    };
+
     class Allocator{
     public:
-        static const uint64_t kMinChunkSize = 4096;
+        static const uint64_t kMinChunkSize = 128;
 
         typedef uint8_t Byte;
 
@@ -30,7 +44,7 @@ namespace Token{
         int free_chunk_;
         int refs_count_;
         void** backpatch_;
-        void** references_[GC_MAX_REFS][2];
+        void* references_[GC_MAX_REFS];
 
         inline int
         GetFreeChunk() const{
@@ -42,8 +56,7 @@ namespace Token{
             return refs_count_;
         }
 
-        void SetReference(int idx, void* start, void* end);
-        void AddReference(void** begin, void** end);
+        void SetReference(int idx, void* ref);
         void MarkChunk(Byte* ch);
 
         void BackpatchReferences();
@@ -69,8 +82,12 @@ namespace Token{
     public:
         ~Allocator();
 
+        static uint64_t GetMinorHeapSize();
+        static uint64_t GetMajorHeapSize();
+
         static bool Initialize(uint64_t minheap_size, uint64_t maxheap_size);
         static void AddReference(void* ref);
+        static void RemoveReference(void* ref);
         static void CollectMinor();
         static void CollectMajor();
         static void PrintMinorHeap();

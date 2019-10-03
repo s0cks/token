@@ -5,6 +5,7 @@
 #include <sstream>
 
 #include <vector>
+#include "allocator.h"
 #include "bytes.h"
 #include "merkle.h"
 #include "blockchain.pb.h"
@@ -18,7 +19,7 @@ namespace Token{
         virtual void VisitTransaction(Transaction* tx){}
     };
 
-    class Block{
+    class Block : public AllocatorObject{
     private:
         Messages::Block raw_;
 
@@ -65,21 +66,15 @@ namespace Token{
             return raw_.transactions_size();
         }
 
-        Transaction* CreateTransaction(){
-            return new Transaction(GetRaw()->add_transactions());
-        }
-
         bool AppendTransaction(Transaction* tx){
             Messages::Transaction* ntx = GetRaw()->add_transactions();
             ntx->CopyFrom(*tx->GetRaw());
             return true;
         }
 
-        Transaction* GetTransactionAt(size_t idx){
-            return new Transaction(GetRaw()->mutable_transactions(idx));
-        }
+        Transaction* GetTransactionAt(size_t idx);
 
-        Transaction* GetCoinbaseTransaction() {
+        Transaction* GetCoinbaseTransaction(){
             return GetTransactionAt(0);
         }
 
@@ -90,9 +85,15 @@ namespace Token{
             }
         }
 
+        bool IsGenesis(){
+            return GetHeight() == 0;
+        }
+
         bool Equals(const Messages::BlockHeader& head); //TODO: Refactor
         std::string GetHash();
         std::string GetMerkleRoot();
+        std::string ToString();
+        std::string GetFilename();
         Token::Messages::Block* GetAsMessage(); //TODO: Remove
         void Encode(ByteBuffer* bb); //TODO: Remove
         void Write(const std::string& filename); //TODO: Remove
@@ -115,7 +116,8 @@ namespace Token{
             stream << "\tNumber of Transactions: " << block.GetNumberOfTransactions() << std::endl;
             stream << "\tTransactions:" << std::endl;
             for(int i = 0; i < block.GetNumberOfTransactions(); i++){
-                std::cout << "\t  - #" << i << " " << const_cast<Block&>(block).GetTransactionAt(i)->GetHash() << std::endl;
+                Transaction* tx = const_cast<Block&>(block).GetTransactionAt(i);
+                std::cout << "\t  - #" << i << " " << tx->GetHash() << std::endl;
             }
             return stream;
         }

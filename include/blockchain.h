@@ -96,8 +96,6 @@ namespace Token{
         bool SaveBlock(Block* block);
         bool LoadBlock(const std::string& hash, Block** result);
         bool LoadBlock(uint32_t height, Block** result);
-        std::string GetBlockFile(uint32_t height);
-        std::string GetBlockFile(const std::string& hash);
         ChainNode* GetNode(uint32_t height);
 
         void SetGenesisNode(ChainNode* node){
@@ -151,13 +149,21 @@ namespace Token{
     };
 
     class BlockChainPrinter : public BlockChainVisitor{
+    private:
+        bool info_;
+
+        bool ShouldPrintInfo(){
+            return info_;
+        }
+
+        BlockChainPrinter(bool info):
+                info_(info){}
     public:
-        BlockChainPrinter(){}
         ~BlockChainPrinter(){}
 
         bool Visit(Block* block);
 
-        static void PrintBlockChain();
+        static void PrintBlockChain(bool info=false);
     };
 }
 

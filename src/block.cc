@@ -1,5 +1,6 @@
 #include <glog/logging.h>
-#include <allocator.h>
+#include "allocator.h"
+#include "blockchain.h"
 #include "block.h"
 
 namespace Token{
@@ -46,9 +47,21 @@ namespace Token{
         return digest;
     }
 
+    std::string Block::ToString(){
+        return "Block(" + GetHash() + ")";
+    }
+
+    std::string Block::GetFilename(){
+        std::stringstream stream;
+        stream << BlockChain::GetRootDirectory() << "/blocks";
+        stream << "/blk" << GetHeight() << ".dat";
+    }
+
     std::string Block::GetMerkleRoot(){
         std::vector<MerkleNodeItem*> items;
-        for(size_t i = 0; i < GetNumberOfTransactions(); i++) items.push_back(GetTransactionAt(i));
+        for(size_t i = 0; i < GetNumberOfTransactions(); i++){
+            items.push_back(GetTransactionAt(0));
+        }
         MerkleTree mktree(items);
         return mktree.GetMerkleRoot();
     }
@@ -60,7 +73,7 @@ namespace Token{
     }
 
     void* Block::operator new(size_t size){
-        return reinterpret_cast<Block*>(Allocator::Allocate(size));
+        return (Block*)Allocator::Allocate(size);
     }
 
     Block::Block():
@@ -90,5 +103,12 @@ namespace Token{
 
     Block* Block::Decode(Messages::Block* msg){
         return new Block(msg);
+    }
+
+    Transaction* Block::GetTransactionAt(size_t idx){
+        if(idx < 0 || idx > GetNumberOfTransactions()) return nullptr;
+        Transaction* tx = new Transaction();
+        tx->GetRaw()->CopyFrom(GetRaw()->transactions(idx));
+        return tx;
     }
 }
