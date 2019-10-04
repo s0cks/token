@@ -30,11 +30,6 @@ namespace Token{
         return &instance;
     }
 
-    ByteBuffer* BlockChainServer::GetReadBuffer(){
-        static ByteBuffer instance;
-        return &instance;
-    }
-
     void BlockChainServer::AllocBuffer(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buff){
         buff->base = (char*)malloc(suggested_size);
         buff->len = suggested_size;

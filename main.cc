@@ -100,6 +100,8 @@ main(int argc, char** argv){
     LOG(INFO) << "Transaction Size: " << (sizeof(Transaction) + sizeof(int));
     LOG(INFO) << "Block Size :" << (sizeof(Block) + sizeof(int));
 
+    UnclaimedTransactionPoolPrinter::Print();
+
     BlockChainPrinter::PrintBlockChain(true);
 
     Allocator::PrintMinorHeap();

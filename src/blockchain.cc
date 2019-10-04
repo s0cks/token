@@ -226,19 +226,20 @@ namespace Token{
             int i;
             for(i = 0; i < block->GetNumberOfTransactions(); i++){
                 Transaction* tx = block->GetTransactionAt(i);
+                Allocator::AddReference(tx);
                 LOG(INFO) << "registering " << tx->GetNumberOfOutputs() << " unclaimed transactions...";
                 int j;
                 for(j = 0; j < tx->GetNumberOfOutputs(); j++) {
-                    UnclaimedTransaction *utxo = new UnclaimedTransaction(tx->GetHash(), j, tx->GetOutputAt(j)); //TODO: Fix
-                    if (!UnclaimedTransactionPool::GetInstance()->AddUnclaimedTransaction(utxo)) {
-                        LOG(WARNING) << "couldn't create new unclaimed transaction: " << utxo->GetHash();
+                    UnclaimedTransaction utxo(tx->GetHash(), j, tx->GetOutputAt(j));
+                    if (!UnclaimedTransactionPool::GetInstance()->AddUnclaimedTransaction(&utxo)) {
+                        LOG(WARNING) << "couldn't create new unclaimed transaction: " << utxo.GetHash();
                         LOG(WARNING) << "*** Unclaimed Transaction: ";
-                        LOG(WARNING) << "***   + Input: " << utxo->GetTransactionHash() << "[" << utxo->GetIndex()
+                        LOG(WARNING) << "***   + Input: " << utxo.GetTransactionHash() << "[" << utxo.GetIndex()
                                      << "]";
-                        LOG(WARNING) << "***   + Output: " << utxo->GetToken() << "(" << utxo->GetUser() << ")";
+                        LOG(WARNING) << "***   + Output: " << utxo.GetToken() << "(" << utxo.GetUser() << ")";
                         return false;
                     }
-                    LOG(INFO) << "added new unclaimed transaction: " << utxo->GetHash();
+                    LOG(INFO) << "added new unclaimed transaction: " << utxo.GetHash();
                 }
             }
         } else{

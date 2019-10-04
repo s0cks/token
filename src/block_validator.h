@@ -28,7 +28,7 @@ namespace Token{
             int i;
             for(i = 0; i < tx->GetNumberOfInputs(); i++){
                 Input* in = tx->GetInputAt(i);
-                UnclaimedTransaction* ut;
+                UnclaimedTransaction ut;
                 if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransaction(in->GetPreviousHash(), in->GetIndex(), &ut)){
                     LOG(WARNING) << "no unclaimed transaction for: " << in->GetPreviousHash() << "[" << in->GetIndex() << "]";
                     return false;
@@ -42,15 +42,15 @@ namespace Token{
             if(IsValid(tx)){
                 int i;
                 for(i = 0; i < tx->GetNumberOfOutputs(); i++){
-                    UnclaimedTransaction* utxo = new UnclaimedTransaction(tx->GetHash(), i, tx->GetOutputAt(i));
-                    if(!UnclaimedTransactionPool::GetInstance()->AddUnclaimedTransaction(utxo)){
-                        LOG(WARNING) << "couldn't create new unclaimed transaction: " << utxo->GetHash();
+                    UnclaimedTransaction utxo(tx->GetHash(), i, tx->GetOutputAt(i));
+                    if(!UnclaimedTransactionPool::GetInstance()->AddUnclaimedTransaction(&utxo)){
+                        LOG(WARNING) << "couldn't create new unclaimed transaction: " << utxo.GetHash();
                         LOG(WARNING) << "*** Unclaimed Transaction: ";
-                        LOG(WARNING) << "***   + Input: " << utxo->GetTransactionHash() << "[" << utxo->GetIndex() << "]";
-                        LOG(WARNING) << "***   + Output: " << utxo->GetToken() << "(" << utxo->GetUser() << ")";
+                        LOG(WARNING) << "***   + Input: " << utxo.GetTransactionHash() << "[" << utxo.GetIndex() << "]";
+                        LOG(WARNING) << "***   + Output: " << utxo.GetToken() << "(" << utxo.GetUser() << ")";
                         return;
                     }
-                    LOG(INFO) << "added new unclaimed transaction: " << utxo->GetHash();
+                    LOG(INFO) << "added new unclaimed transaction: " << utxo.GetHash();
                 }
                 for(i = 0; i < tx->GetNumberOfInputs(); i++){
                     Input* in = tx->GetInputAt(i);

@@ -4,7 +4,6 @@
 #include "allocator.h"
 #include "blockchain.pb.h"
 #include "merkle.h"
-#include "bytes.h"
 
 namespace Token{
     class Input{
@@ -15,8 +14,6 @@ namespace Token{
         GetRaw() const{
             return raw_;
         }
-
-        void Encode(ByteBuffer* bb) const;
     public:
         Input(Messages::Input* raw):
             raw_(raw){}
@@ -55,8 +52,6 @@ namespace Token{
         GetRaw() const{
             return raw_;
         }
-
-        void Encode(ByteBuffer* bb) const;
     public:
         Output(Messages::Output* raw):
             raw_(raw){}
@@ -163,17 +158,20 @@ namespace Token{
         }
 
         void Accept(TransactionVisitor* visitor);
-        void Encode(ByteBuffer* bb);
         std::string GetHash();
         std::string ToString();
         HashArray GetHashArray();
 
-        void* operator new(size_t size);
+        void* operator new(size_t size){
+            return Allocator::Allocate(size);
+        }
 
+        //TODO: Remove
         friend bool operator==(const Transaction& lhs, const Transaction& rhs){
             return const_cast<Transaction&>(lhs).GetHash() == const_cast<Transaction&>(rhs).GetHash();
         }
 
+        //TODO: Remove
         friend std::ostream& operator<<(std::ostream& stream, Transaction& tx){
             stream << "\tIndex: " << tx.GetIndex() << std::endl;
             stream << "\tInputs (" << tx.GetNumberOfInputs() << "):" << std::endl;

@@ -10,80 +10,81 @@
 #include "pthread.h"
 
 namespace Token{
-    class UnclaimedTransaction{
+    class UnclaimedTransaction : public AllocatorObject{
     private:
-        Messages::UnclaimedTransaction* raw_;
+        Messages::UnclaimedTransaction raw_;
 
-        inline Messages::UnclaimedTransaction*
-        GetRaw() const{
-            return raw_;
+        Messages::UnclaimedTransaction*
+        GetRaw(){
+            return &raw_;
         }
-
-        void Encode(ByteBuffer* bb) const;
     public:
-        UnclaimedTransaction(const UnclaimedTransaction& other):
-            raw_(new Messages::UnclaimedTransaction()){
+        UnclaimedTransaction(UnclaimedTransaction& other):
+            raw_(){
             GetRaw()->set_tx_hash(other.GetTransactionHash());
             GetRaw()->set_index(other.GetIndex());
             GetRaw()->set_user(other.GetUser());
             GetRaw()->set_token(other.GetToken());
         }
         UnclaimedTransaction(const std::string& hash, uint32_t idx, const std::string& user, const std::string& token):
-            raw_(new Messages::UnclaimedTransaction()){
+            raw_(){
             GetRaw()->set_tx_hash(hash);
             GetRaw()->set_index(idx);
             GetRaw()->set_user(user);
             GetRaw()->set_token(token);
         }
         UnclaimedTransaction(const std::string& hash, uint32_t idx, Output* out):
-            raw_(new Messages::UnclaimedTransaction()){
+            raw_(){
             GetRaw()->set_tx_hash(hash);
             GetRaw()->set_index(idx);
             GetRaw()->set_user(out->GetUser());
             GetRaw()->set_token(out->GetToken());
         }
         UnclaimedTransaction(const std::string& hash, uint32_t idx):
-            raw_(new Messages::UnclaimedTransaction()){
+            raw_(){
             GetRaw()->set_tx_hash(hash);
             GetRaw()->set_index(idx);
         }
         UnclaimedTransaction():
-            raw_(new Messages::UnclaimedTransaction()){}
+            raw_(){}
         ~UnclaimedTransaction(){}
 
-        std::string GetHash() const;
+        std::string ToString();
+        std::string GetHash();
 
-        std::string GetTransactionHash() const{
+        std::string GetTransactionHash(){
             return GetRaw()->tx_hash();
         }
 
-        std::string GetUser() const{
+        std::string GetUser(){
             return GetRaw()->user();
         }
 
-        std::string GetToken() const{
+        std::string GetToken(){
             return GetRaw()->token();
         }
 
-        uint32_t GetIndex() const{
+        uint32_t GetIndex(){
             return GetRaw()->index();
         }
 
-        friend bool operator==(const UnclaimedTransaction& lhs, const UnclaimedTransaction& rhs){
+        void* operator new(size_t size);
+
+        friend bool operator==(UnclaimedTransaction& lhs, UnclaimedTransaction& rhs){
             return lhs.GetTransactionHash() == rhs.GetTransactionHash() &&
                     lhs.GetIndex() == rhs.GetIndex();
         }
 
-        bool operator<(const UnclaimedTransaction& other) const{
+        bool operator<(UnclaimedTransaction& other){
             return GetHash() < other.GetHash() || (GetHash() == other.GetHash() && GetIndex() < other.GetIndex());
         }
 
-        friend std::ostream& operator<<(std::ostream& stream, const UnclaimedTransaction& rhs){
+        friend std::ostream& operator<<(std::ostream& stream, UnclaimedTransaction& rhs){
             stream << rhs.GetTransactionHash() << "[" << rhs.GetIndex() << "] => " << rhs.GetToken() << "(" << rhs.GetUser() << ")";
             return stream;
         }
 
-        UnclaimedTransaction& operator=(const UnclaimedTransaction& other){
+        UnclaimedTransaction operator=(UnclaimedTransaction other){
             GetRaw()->set_tx_hash(other.GetTransactionHash());
             GetRaw()->set_index(other.GetIndex());
             GetRaw()->set_user(other.GetUser());
@@ -106,12 +107,12 @@ namespace Token{
     public:
         ~UnclaimedTransactionPool();
 
-        bool GetUnclaimedTransactions(const std::string& user, std::vector<UnclaimedTransaction*>& utxos);
-        bool GetUnclaimedTransactions(std::vector<UnclaimedTransaction*>& utxos);
+        bool GetUnclaimedTransactions(const std::string& user, std::vector<std::string>& utxos);
+        bool GetUnclaimedTransactions(std::vector<std::string>& utxos);
         bool GetUnclaimedTransactions(const std::string& user, Messages::UnclaimedTransactionList* utxos);
         bool GetUnclaimedTransactions(Messages::UnclaimedTransactionList* utxos);
-        bool GetUnclaimedTransaction(const std::string& tx_hash, int index, UnclaimedTransaction** result);
-        bool GetUnclaimedTransaction(const std::string& hash, UnclaimedTransaction** result);
+        bool GetUnclaimedTransaction(const std::string& tx_hash, int index, UnclaimedTransaction* result);
+        bool GetUnclaimedTransaction(const std::string& hash, UnclaimedTransaction* result);
         bool RemoveUnclaimedTransaction(UnclaimedTransaction* utxo);
         bool AddUnclaimedTransaction(UnclaimedTransaction* utxo);
         // bool ClearUnclaimedTransactions();

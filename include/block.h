@@ -6,7 +6,6 @@
 
 #include <vector>
 #include "allocator.h"
-#include "bytes.h"
 #include "merkle.h"
 #include "blockchain.pb.h"
 #include "transaction.h"
@@ -89,19 +88,20 @@ namespace Token{
             return GetHeight() == 0;
         }
 
+        Token::Messages::Block* GetAsMessage(); //TODO: Remove
+        void Write(const std::string& filename); //TODO: Remove
         bool Equals(const Messages::BlockHeader& head); //TODO: Refactor
+
         std::string GetHash();
         std::string GetMerkleRoot();
         std::string ToString();
         std::string GetFilename();
-        Token::Messages::Block* GetAsMessage(); //TODO: Remove
-        void Encode(ByteBuffer* bb); //TODO: Remove
-        void Write(const std::string& filename); //TODO: Remove
 
-        static Block* Decode(Messages::Block* msg);
+        static Block* Decode(Messages::Block* msg); //TODO: Remove
 
         void* operator new(size_t size);
 
+        //TODO: Remove
         friend bool operator==(const Block& lhs, const Block& rhs){
             return const_cast<Block&>(lhs).GetHash() == const_cast<Block&>(rhs).GetHash();
         }

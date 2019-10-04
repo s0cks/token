@@ -23,7 +23,6 @@ namespace Token{
         static void OnNewConnection(uv_stream_t* stream, int status);
         static void OnRead(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buff);
         static void OnBroadcast(uv_async_t* handle);
-        static ByteBuffer* GetReadBuffer();
         static void* ServerThread(void* data);
 
         BlockChainServer();

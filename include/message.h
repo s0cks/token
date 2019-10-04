@@ -4,7 +4,6 @@
 #include "node.grpc.pb.h"
 #include "blockchain.pb.h"
 #include "service.grpc.pb.h"
-#include "bytes.h"
 
 namespace Token{
 #define FOR_EACH_TYPE(V) \

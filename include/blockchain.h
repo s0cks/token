@@ -5,8 +5,6 @@
 #include <map>
 
 #include "common.h"
-#include "array.h"
-#include "bytes.h"
 #include "block.h"
 #include "user.h"
 #include "utxo.h"
@@ -90,8 +88,8 @@ namespace Token{
         bool GenerateChainKeys(const std::string& pubkey, const std::string& privkey);
         bool InitializeChainKeys(const std::string& path);
         bool InitializeChainState(const std::string& root);
-        bool GetReference(const std::string& ref, uint32_t* height);
-        bool SetReference(const std::string& ref, uint32_t height);
+        bool GetReference(const std::string& ref, uint32_t* height); //TODO: Remove
+        bool SetReference(const std::string& ref, uint32_t height); //TODO: Remove
         bool AppendNode(Block* block);
         bool SaveBlock(Block* block);
         bool LoadBlock(const std::string& hash, Block** result);

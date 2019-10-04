@@ -4,12 +4,6 @@
 #include "block.h"
 
 namespace Token{
-    void Block::Encode(Token::ByteBuffer* bb){
-        uint32_t size = static_cast<uint32_t>(GetRaw()->ByteSizeLong());
-        bb->Resize(size);
-        GetRaw()->SerializeToArray(bb->GetBytes(), size);
-    }
-
     bool Block::Equals(const Token::Messages::BlockHeader &head){
         if(GetHeight() != head.height()){
             LOG(WARNING) << "block heights don't match";

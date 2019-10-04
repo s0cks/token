@@ -73,7 +73,7 @@ namespace Token{
         return true;
     }
 
-    bool UnclaimedTransactionPool::GetUnclaimedTransactions(const std::string& user, std::vector<UnclaimedTransaction*>& utxos){
+    bool UnclaimedTransactionPool::GetUnclaimedTransactions(const std::string& user, std::vector<std::string>& utxos){
         READ_LOCK;
         std::string sql = "SELECT UTxHash,TxHash,TxIndex,User,Token FROM UnclaimedTransactions WHERE User=@User;";
 
@@ -89,7 +89,7 @@ namespace Token{
             int index = sqlite3_column_int(stmt, 2);
             std::string u = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3)));
             std::string token = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4)));
-            utxos.push_back(new UnclaimedTransaction(tx_hash, index, u, token));
+            utxos.push_back(utx_hash);
         }
 
         sqlite3_finalize(stmt);
@@ -97,7 +97,7 @@ namespace Token{
         return utxos.size() > 0;
     }
 
-    bool UnclaimedTransactionPool::GetUnclaimedTransactions(std::vector<UnclaimedTransaction*>& utxos){
+    bool UnclaimedTransactionPool::GetUnclaimedTransactions(std::vector<std::string>& utxos){
         READ_LOCK;
         std::string sql = "SELECT * FROM UnclaimedTransactions;";
 
@@ -112,7 +112,7 @@ namespace Token{
             int index = sqlite3_column_int(stmt, 2);
             std::string user = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3)));
             std::string token = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4)));
-            utxos.push_back(new UnclaimedTransaction(tx_hash, index, user, token));
+            utxos.push_back(utx_hash);
         }
 
         sqlite3_finalize(stmt);
@@ -142,7 +142,7 @@ namespace Token{
         return utxos->transactions_size() > 0;
     }
 
-    bool UnclaimedTransactionPool::GetUnclaimedTransaction(const std::string& hash, UnclaimedTransaction** result){
+    bool UnclaimedTransactionPool::GetUnclaimedTransaction(const std::string& hash, UnclaimedTransaction* result){
         READ_LOCK;
         std::string sql = "SELECT UTxHash,TxHash,TxIndex,User,Token FROM UnclaimedTransactions WHERE UTxHash=@UTxHash;";
 
@@ -157,7 +157,8 @@ namespace Token{
             int index = sqlite3_column_int(stmt, 2);
             std::string user = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3)));
             std::string token = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4)));
-            *result = new UnclaimedTransaction(tx_hash, index, user, token);
+            UnclaimedTransaction utxo(tx_hash, index, user, token);
+            (*result) = utxo;
             UNLOCK;
             return true;
         }
@@ -167,9 +168,31 @@ namespace Token{
         return false;
     }
 
-    bool UnclaimedTransactionPool::GetUnclaimedTransaction(const std::string& tx_hash, int index, UnclaimedTransaction** result){
-        UnclaimedTransaction utxo(tx_hash, index);
-        return GetUnclaimedTransaction(utxo.GetHash(), result);
+    bool UnclaimedTransactionPool::GetUnclaimedTransaction(const std::string& txhash, int index, UnclaimedTransaction* result){
+        READ_LOCK;
+        std::string sql = "SELECT UTxHash,TxHash,TxIndex,User,Token FROM UnclaimedTransactions WHERE TxHash=@TxHash AND TxIndex=@TxIndex;";
+
+        sqlite3_stmt* stmt;
+        PREPARE_SQLITE_STATEMENT;
+        BIND_SQLITE_PARAMETER_TEXT("@TxHash", txhash);
+        BIND_SQLITE_PARAMETER_INT("@TxIndex", index);
+
+        int rc;
+        while((rc = sqlite3_step(stmt)) == SQLITE_ROW){
+            std::string utx_hash = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
+            std::string tx_hash = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
+            int idx = sqlite3_column_int(stmt, 2);
+            std::string user = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3)));
+            std::string token = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4)));
+            UnclaimedTransaction utxo(tx_hash, idx, user, token);
+            (*result) = utxo;
+            UNLOCK;
+            return true;
+        }
+
+        sqlite3_finalize(stmt);
+        UNLOCK;
+        return false;
     }
 
     bool UnclaimedTransactionPool::RemoveUnclaimedTransaction(Token::UnclaimedTransaction* utxo){
@@ -195,7 +218,7 @@ namespace Token{
     }
 
     bool UnclaimedTransactionPool::AddUnclaimedTransaction(Token::UnclaimedTransaction* utxo){
-        pthread_rwlock_wrlock(&rwlock_);
+        WRITE_LOCK;
         std::string sql = "INSERT OR IGNORE INTO UnclaimedTransactions (UTxHash, TxHash, TxIndex, User, Token) VALUES (@UTxHash, @TxHash, @TxIndex, @User, @Token);";
 
         sqlite3_stmt* stmt;
@@ -254,36 +277,37 @@ namespace Token{
         return GetInstance()->LoadPool(filename);
     }
 
-    void UnclaimedTransaction::Encode(Token::ByteBuffer *bb) const{
-        Messages::UnclaimedTransaction utxo;
-        utxo.set_tx_hash(GetTransactionHash());
-        utxo.set_index(GetIndex());
-        uint32_t size = static_cast<uint32_t>(utxo.ByteSizeLong());
-        bb->Resize(size);
-        utxo.SerializeToArray(bb->GetBytes(), size);
+    void UnclaimedTransactionPoolPrinter::Print(){
+        std::vector<std::string> utxos;
+        if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransactions(utxos)){
+            LOG(ERROR) << "cannot get unclaimed transactions from pool";
+            return;
+        }
+
+        LOG(INFO) << "Unclaimed Transaction Pool (" << utxos.size() << ":";
+        size_t idx = 0;
+        for(auto& it : utxos){
+            LOG(INFO) << "  - #" << (idx++) << ": " << it;
+        }
     }
 
-    std::string UnclaimedTransaction::GetHash() const{
+    std::string UnclaimedTransaction::GetHash(){
         CryptoPP::SHA256 func;
         std::string digest;
-        ByteBuffer bb;
-        Encode(&bb);
-        CryptoPP::ArraySource source(bb.GetBytes(), bb.Size(), true, new CryptoPP::HashFilter(func, new CryptoPP::HexEncoder(new CryptoPP::StringSink(digest))));
+        uint32_t size = GetRaw()->ByteSizeLong();
+        uint8_t bytes[size];
+        GetRaw()->SerializeToArray(bytes, size);
+        CryptoPP::ArraySource source(bytes, size, true, new CryptoPP::HashFilter(func, new CryptoPP::HexEncoder(new CryptoPP::StringSink(digest))));
         return digest;
     }
 
-    void UnclaimedTransactionPoolPrinter::Print(){
-        std::vector<UnclaimedTransaction*> utxos;
-        if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransactions(utxos)){
-            LOG(ERROR) << "can't get any unclaimed transactions";
-            return;
-        }
-        LOG(INFO) << "*** Unclaimed Transactions:";
-        int counter = 0;
-        for(auto& it : utxos){
-            LOG(INFO) << "***  + UnclaimedTransaction #" << (counter++) << "(" << it->GetHash() << ") := "
-                    << it->GetTransactionHash() << "[" << it->GetIndex() << "]; "
-                    << it->GetToken() << "(" << it->GetToken() << ")";
-        }
+    void* UnclaimedTransaction::operator new(size_t size){
+        return Allocator::Allocate(size);
+    }
+
+    std::string UnclaimedTransaction::ToString(){
+        std::stringstream stream;
+        stream << "UnclaimedTransaction(" << GetHash() << ")";
+        return stream.str();
     }
 }
