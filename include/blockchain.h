@@ -11,50 +11,6 @@
 #include "peer.h"
 
 namespace Token{
-    class ChainNode{
-    private:
-        ChainNode* prev_;
-        ChainNode* next_;
-        Block* block_;
-
-        void SetPrevious(ChainNode* node){
-            prev_ = node;
-        }
-
-        void SetNext(ChainNode* node){
-            next_ = node;
-        }
-
-        ChainNode(Block* block):
-            prev_(nullptr),
-            next_(nullptr),
-            block_(block){}
-
-        friend class BlockChain;
-    public:
-        ~ChainNode(){}
-
-        ChainNode* GetPrevious() const{
-            return prev_;
-        }
-
-        ChainNode* GetNext() const{
-            return next_;
-        }
-
-        Block* GetBlock() const{
-            return block_;
-        }
-
-        std::string GetHash() const{
-            return GetBlock()->GetHash();
-        }
-
-        uint32_t GetHeight() const {
-            return GetBlock()->GetHeight();
-        }
-    };
-
     class BlockChainVisitor{
     public:
         BlockChainVisitor(){}
@@ -65,6 +21,7 @@ namespace Token{
     class BlockChain{
     public:
         static const size_t kKeypairSize = 1024;
+        static const uintptr_t kBlockChainInitSize = 1024;
     private:
         friend class BlockChainServer;
         friend class PeerSession;
@@ -75,8 +32,10 @@ namespace Token{
         pthread_rwlock_t rwlock_;
         CryptoPP::RSA::PublicKey pubkey_;
         CryptoPP::RSA::PrivateKey privkey_;
-        ChainNode* genesis_;
-        ChainNode* head_;
+
+        Block** blocks_;
+        uintptr_t blocks_caps_;
+        uintptr_t blocks_size_;
 
         static inline leveldb::DB*
         GetState(){
@@ -84,40 +43,54 @@ namespace Token{
         }
 
         bool CreateGenesis(); //TODO: Remove
-        bool LoadBlockChain(const std::string& path); //TODO: Remove
+
+        bool LoadBlockChain(const std::string& path);
         bool GenerateChainKeys(const std::string& pubkey, const std::string& privkey);
         bool InitializeChainKeys(const std::string& path);
         bool InitializeChainState(const std::string& root);
+
         bool GetReference(const std::string& ref, uint32_t* height); //TODO: Remove
         bool SetReference(const std::string& ref, uint32_t height); //TODO: Remove
+
         bool AppendNode(Block* block);
         bool SaveBlock(Block* block);
-        bool LoadBlock(const std::string& hash, Block** result);
         bool LoadBlock(uint32_t height, Block** result);
-        ChainNode* GetNode(uint32_t height);
 
-        void SetGenesisNode(ChainNode* node){
-            genesis_ = node;
+        void Resize(uintptr_t nlen){
+            if(nlen > blocks_caps_){
+                uintptr_t ncaps = RoundUpPowTwo(nlen);
+                Block** ndata = (Block**)realloc(blocks_, ncaps);
+                blocks_ = ndata;
+                blocks_caps_ = ncaps;
+            }
+            blocks_size_ = nlen;
         }
 
-        void SetHeadNode(ChainNode* node){
-            head_ = node;
+        uintptr_t Length() const{
+            return blocks_size_;
         }
 
-        ChainNode* GetGenesisNode() const{
-            return genesis_;
+        uintptr_t Capacity() const{
+            return blocks_caps_;
         }
 
-        ChainNode* GetHeadNode() const{
-            return head_;
+        Block*& operator[](size_t idx) const{
+            return blocks_[idx];
+        }
+
+        Block*& Last() const{
+            return operator[](Length() - 1);
         }
 
         BlockChain():
             rwlock_(),
             path_(),
-            genesis_(nullptr),
-            head_(nullptr),
+            blocks_(nullptr),
+            blocks_size_(0),
+            blocks_caps_(RoundUpPowTwo(kBlockChainInitSize)),
             state_(nullptr){
+            blocks_ = (Block**)(malloc(sizeof(Block*) * blocks_caps_));
+            memset(blocks_, 0, sizeof(Block*) * blocks_caps_);
             pthread_rwlock_init(&rwlock_, NULL);
         }
     public:

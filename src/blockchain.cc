@@ -40,12 +40,6 @@ namespace Token{
             stream << "Token" << i;
             cbtx->AddOutput(stream.str(), "TestUser");
         }
-
-        if(!cbtx->Sign(privkey_)){
-            LOG(ERROR) << "couldn't sign coinbase transaction!";
-            return false;
-        }
-
         genesis->AppendTransaction(cbtx); //TODO This needs to be here
         Allocator::AddReference(genesis);
         return AppendBlock(genesis);
@@ -53,7 +47,7 @@ namespace Token{
 
     bool BlockChain::LoadBlockChain(const std::string& path){
         uint32_t head = GetHeight();
-        if(head == -1) return CreateGenesis(); //TODO: Remove
+        if(!HasHead()) return CreateGenesis(); //TODO: Remove
         uint32_t height = 0;
         while(height <= head){
             LOG(INFO) << "loading block #" << height << "...";
@@ -184,10 +178,10 @@ namespace Token{
     }
 
     void BlockChain::Accept(Token::BlockChainVisitor* vis){
-        ChainNode* node = GetInstance()->GetGenesisNode();
-        while(node){
-            vis->Visit(node->GetBlock());
-            node = node->GetNext();
+        uint32_t idx;
+        for(idx = 0; idx < GetHeight(); idx++) {
+            Block* blk = GetInstance()->operator[](idx);
+            vis->Visit(blk);
         }
     }
 
@@ -197,14 +191,14 @@ namespace Token{
 
     Block* BlockChain::GetHead(){
         READ_LOCK;
-        Block* head = GetInstance()->GetHeadNode()->GetBlock();
+        Block* head = GetInstance()->operator[](GetHeight());
         UNLOCK;
         return head;
     }
 
     Block* BlockChain::GetGenesis(){
         READ_LOCK;
-        Block* blk = GetInstance()->GetGenesisNode()->GetBlock();
+        Block* blk = GetInstance()->operator[](0);
         UNLOCK;
         return blk;
     }
@@ -302,7 +296,12 @@ namespace Token{
     }
 
     bool BlockChain::HasHead(){
-        return GetInstance()->GetHeadNode() != nullptr;
+        uint32_t height;
+        if(!GetInstance()->GetReference("<HEAD>", &height)){
+            LOG(ERROR) << "no <HEAD> reference";
+            return false;
+        }
+        return true;
     }
 
     bool BlockChainPrinter::Visit(Token::Block* block){
@@ -386,42 +385,38 @@ namespace Token{
     }
 
     bool BlockChain::AppendNode(Token::Block* block){
-        ChainNode* node = new ChainNode(block);
-        ChainNode* head = GetInstance()->GetHeadNode();
-        if(!head){
-            GetInstance()->SetHeadNode(node);
-            GetInstance()->SetGenesisNode(node);
-            return true;
-        }
-        head->SetNext(node);
-        node->SetPrevious(head);
-        GetInstance()->SetHeadNode(node);
+        Resize(Length() + 1);
+        Last() = block;
         return true;
-    }
-
-    ChainNode* BlockChain::GetNode(uint32_t height){
-        if(height < 0 || height > GetHeight()) return nullptr;
-        uint32_t idx = 0;
-        ChainNode* c = GetGenesisNode();
-        while(idx < height && c){
-            idx++;
-            c = c->GetNext();
-        }
-        return c;
     }
 
     Block* BlockChain::GetBlock(uint32_t height){
         if(height < 0 || height > GetHeight()) return nullptr;
-        return GetInstance()->GetNode(height)->GetBlock();
+        return GetInstance()->operator[](height);
     }
 
     Block* BlockChain::GetBlock(const std::string &hash){
-        uint32_t height;
-        if(!GetInstance()->GetReference(hash, &height)){
-            LOG(ERROR) << "cannot find block: " << hash;
+        READ_LOCK;
+        if(!HasHead()){
+            LOG(ERROR) << "no <HEAD> found";
+            UNLOCK;
             return nullptr;
         }
-        return GetInstance()->GetNode(height)->GetBlock();
+
+        uint32_t max = GetHeight() + 1;
+        LOG(WARNING) << "searching " << max << " blocks for: " << hash << "....";
+
+        for(uint32_t idx = 0; idx < max; idx++){
+            Block* blk = GetInstance()->blocks_[idx];
+            if(blk->GetHash() == hash){
+                UNLOCK;
+                return blk;
+            }
+        }
+
+        LOG(ERROR) << "no block found for: " << hash;
+        UNLOCK;
+        return nullptr;
     }
 
     bool BlockChain::ContainsBlock(const std::string &hash){
@@ -434,24 +429,23 @@ namespace Token{
     }
 
     bool BlockChain::GetBlockList(std::vector<std::string>& blocks){
-        ChainNode* n = GetInstance()->GetGenesisNode();
-        while(n){
-            blocks.push_back(n->GetHash());
-            n = n->GetNext();
+        uint32_t idx;
+        for(idx = 0; idx < GetHeight(); idx++){
+            Block* blk = GetInstance()->operator[](idx);
+            blocks.push_back(blk->GetHash());
         }
-        return blocks.size() == GetHeight();
+        return (blocks.size() - 1) == GetHeight(); //TODO: Check
     }
 
     bool BlockChain::GetBlockList(Token::Node::Messages::BlockList *blocks){
-        ChainNode* n = GetInstance()->GetGenesisNode();
-        while(n){
-            Block* block = n->GetBlock();
+        uint32_t idx;
+        for(idx = 0; idx < GetHeight(); idx++){
+            Block* blk = GetInstance()->operator[](idx);
             Messages::BlockHeader* header = blocks->add_blocks();
-            header->set_height(block->GetHeight());
-            header->set_hash(block->GetHash());
-            header->set_previous_hash(block->GetPreviousHash());
-            header->set_merkle_root(block->GetMerkleRoot());
-            n = n->GetNext();
+            header->set_height(blk->GetHeight());
+            header->set_hash(blk->GetHash());
+            header->set_previous_hash(blk->GetPreviousHash());
+            header->set_merkle_root(blk->GetMerkleRoot());
         }
         return (blocks->blocks_size() - 1) == GetHeight();
     }

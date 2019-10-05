@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <cryptopp/pssr.h>
-#include <cryptopp/whirlpool.h>
+#include <cryptopp/whrlpool.h>
 
 #include "allocator.h"
 #include "blockchain.h"
