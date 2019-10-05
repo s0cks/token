@@ -62,31 +62,6 @@ namespace Token{
         return grpc::Status::CANCELLED;
     }
 
-    grpc::Status BlockChainService::AppendBlock(grpc::ServerContext *ctx,
-                                                const Messages::Block *request,
-                                                Token::Messages::BlockHeader *response){
-        //TODO: Refactor this copy
-        Messages::Block bdata;
-        bdata.CopyFrom(*request);
-        Block* nblock = Block::Decode(&bdata);
-
-        LOG(INFO) << "appending new block: " << nblock->GetHash();
-        if(!BlockChain::GetInstance()->AppendBlock(nblock)){
-            LOG(ERROR) << "couldn't append new block";
-            return grpc::Status::CANCELLED;
-        }
-
-        LOG(WARNING) << "appended, broadcasting...";
-        Message msg(Message::Type::kBlockMessage, nblock->GetAsMessage());
-        if(!BlockChainServer::AsyncBroadcast(&msg)){
-            LOG(ERROR) << "couldn't broadcast to peers";
-            return grpc::Status::CANCELLED;
-        }
-        LOG(INFO) << "done!";
-        SetBlockHeader(nblock, response);
-        return grpc::Status::OK;
-    }
-
     grpc::Status BlockChainService::GetUnclaimedTransactions(grpc::ServerContext *ctx,
                                                              const Token::Service::Messages::GetUnclaimedTransactionsRequest *request,
                                                              Token::Messages::UnclaimedTransactionList *response){
@@ -115,6 +90,25 @@ namespace Token{
             response->add_peers()->set_address(it);
         }
         */
+        return grpc::Status::OK;
+    }
+
+    grpc::Status BlockChainService::Spend(grpc::ServerContext *ctx,
+                                          const Token::Service::Messages::SpendTokenRequest *request,
+                                          Token::Service::Messages::EmptyResponse* response){
+        UnclaimedTransaction utxo;
+        if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransaction(request->token(), &utxo)){
+            LOG(ERROR) << "cannot get unclaimed transaction: " << request->token();
+            return grpc::Status::CANCELLED;
+        }
+
+        Transaction* tx = new Transaction();
+        tx->AddInput(utxo.GetTransactionHash(), utxo.GetIndex());
+        tx->AddOutput(utxo.GetHash(), request->to_user());
+        if(!TransactionPool::AddTransaction(tx)){
+            LOG(ERROR) << "cannot add transaction to transaction pool";
+            return grpc::Status::CANCELLED;
+        }
         return grpc::Status::OK;
     }
 

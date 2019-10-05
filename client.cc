@@ -54,56 +54,6 @@ int main(int argc, char** argv){
         std::cin >> input;
         if(input == "discon"){
             return EXIT_FAILURE;
-        } else if(input == "append"){
-            Messages::BlockHeader head;
-            client.GetHead(&head);
-
-            std::cout << "Previous Hash: " << head.hash() << std::endl;
-            Block* nblock = new Block(head.height() + 1, head.hash());
-
-            std::cout << "Create Transactions (y/n)?:";
-            std::string prompt;
-            std::cin >> prompt;
-            if(prompt == "y" || prompt == "Y"){
-                query:
-                    std::string hash;
-                    std::string user;
-                    std::string token;
-                    int index;
-
-                    std::cout << "Create Transaction: " << std::endl;
-                    std::cout << "Transaction Hash: ";
-                    std::cin >> hash;
-                    std::cout << "Output Index: ";
-                    std::cin >> index;
-                    std::cout << "User: ";
-                    std::cin >> user;
-                    std::cout << "Token: ";
-                    std::cin >> token;
-
-                    std::cout << "Creating Transaction...." << std::endl;
-
-                    Transaction* tx = new Transaction();
-                    tx->AddInput(hash, index);
-                    tx->AddOutput(token, user);
-
-                    std::string another;
-                    std::cout << "Add Another Transaction (y/n)?:";
-                    std::cin >> another;
-                    if(another == "Y" || another == "y"){
-                        goto query;
-                    }
-            }
-
-            Token::Messages::BlockHeader nhead;
-            if(!client.Append(nblock, &nhead)){
-                std::cerr << "Cannot append new block" << std::endl;
-                return EXIT_FAILURE;
-            }
-
-            std::cout << "Appended!" << std::endl;
-            std::cout << "New <HEAD>:" << std::endl;
-            PrintBlock(&nhead);
         } else if(input == "gethead"){
             Messages::BlockHeader head;
             if(!client.GetHead(&head)){
@@ -141,6 +91,25 @@ int main(int argc, char** argv){
                     return EXIT_FAILURE;
                 }
                 PrintBlock(&blk);
+            }
+        } else if(input == "spend"){
+            std::string token;
+            std::cout << "target := ";
+            std::cin >> token;
+            if(token.length() != 64){
+                LOG(ERROR) << "please enter a valid hash for a token";
+                return EXIT_FAILURE;
+            }
+            std::string from_user;
+            std::cout << "from := ";
+            std::cin >> from_user;
+
+            std::string to_user;
+            std::cout << "to := ";
+            std::cin >> to_user;
+            if(!client.Spend(token, from_user, to_user)){
+                LOG(ERROR) << "couldn't spend token: " << token;
+                return EXIT_FAILURE;
             }
         }
     } while(true);

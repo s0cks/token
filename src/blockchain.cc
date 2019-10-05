@@ -40,6 +40,12 @@ namespace Token{
             stream << "Token" << i;
             cbtx->AddOutput(stream.str(), "TestUser");
         }
+
+        if(!cbtx->Sign(privkey_)){
+            LOG(ERROR) << "couldn't sign coinbase transaction!";
+            return false;
+        }
+
         genesis->AppendTransaction(cbtx); //TODO This needs to be here
         Allocator::AddReference(genesis);
         return AppendBlock(genesis);

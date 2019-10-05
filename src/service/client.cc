@@ -70,11 +70,11 @@ namespace Token{
         return true;
     }
 
-    bool TokenServiceClient::Append(Token::Block* block, Messages::BlockHeader* response){
+    bool TokenServiceClient::Spend(const std::string &token, const std::string &from_user,
+                                   const std::string &to_user){
+        Token::Service::Messages::SpendTokenRequest request;
+        Token::Service::Messages::EmptyResponse response;
         grpc::ClientContext ctx;
-        Token::Messages::Block* blk = block->GetAsMessage();
-        bool status = GetStub()->AppendBlock(&ctx, *blk, response).ok();
-        delete blk;
-        return status;
+        return GetStub()->Spend(&ctx, request, &response).ok();
     }
 }

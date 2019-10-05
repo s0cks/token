@@ -310,4 +310,15 @@ namespace Token{
         stream << "UnclaimedTransaction(" << GetHash() << ")";
         return stream.str();
     }
+
+    UnclaimedTransaction::UnclaimedTransaction(const std::string &utxo_hash):
+        raw_(){
+        UnclaimedTransaction utxo;
+        if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransaction(utxo_hash, &utxo)){
+            LOG(ERROR) << "cannot get unclaimed transaction: " << utxo_hash;
+            GetRaw()->Clear();
+            return;
+        }
+        GetRaw()->CopyFrom(utxo.raw_);
+    }
 }

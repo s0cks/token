@@ -33,7 +33,7 @@ namespace Token{
         grpc::Status GetBlockData(grpc::ServerContext* ctx, const Token::Service::Messages::GetBlockRequest* request, Messages::Block* response);
         grpc::Status GetUnclaimedTransactions(grpc::ServerContext* ctx, const Token::Service::Messages::GetUnclaimedTransactionsRequest* request, Messages::UnclaimedTransactionList* response);
         grpc::Status GetPeers(grpc::ServerContext* ctx, const Token::Service::Messages::EmptyRequest* request, Token::Service::Messages::PeerList* response);
-        grpc::Status AppendBlock(grpc::ServerContext* ctx, const Messages::Block* request, Messages::BlockHeader* response);
+        grpc::Status Spend(grpc::ServerContext* ctx, const Token::Service::Messages::SpendTokenRequest* request, Token::Service::Messages::EmptyResponse* response);
 
         static BlockChainService* GetInstance();
         static void Start(const std::string address, int port);

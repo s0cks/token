@@ -64,7 +64,7 @@ namespace Token{
 
     class BlockChain{
     public:
-        static const size_t kKeypairSize = 4096;
+        static const size_t kKeypairSize = 1024;
     private:
         friend class BlockChainServer;
         friend class PeerSession;

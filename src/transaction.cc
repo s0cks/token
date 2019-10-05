@@ -3,6 +3,8 @@
 #include <sys/time.h>
 #include <stdio.h>
 #include <dirent.h>
+#include <cryptopp/pssr.h>
+#include <cryptopp/whirlpool.h>
 
 #include "allocator.h"
 #include "blockchain.h"
@@ -29,6 +31,25 @@ namespace Token{
 
     void Transaction::SetTimestamp(){
         GetRaw()->set_timestamp(GetCurrentTime());
+    }
+
+    typedef CryptoPP::RSASS<CryptoPP::PSSR, CryptoPP::Whirlpool>::Signer Signer;
+    typedef CryptoPP::RSASS<CryptoPP::PSSR, CryptoPP::Whirlpool>::Verifier Verifier;
+
+    bool Transaction::Sign(CryptoPP::RSA::PrivateKey key){
+        size_t size = GetRaw()->ByteSizeLong();
+        uint8_t bytes[size];
+        GetRaw()->SerializeToArray(bytes, size);
+        std::string digest;
+        Signer signer(key);
+        CryptoPP::AutoSeededRandomPool prng;
+        CryptoPP::ArraySource source(bytes, size, true, new CryptoPP::SignerFilter(prng, signer, new CryptoPP::HexEncoder(new CryptoPP::StringSink(digest))));
+        GetRaw()->set_signature(digest);
+        return true;
+    }
+
+    std::string Transaction::GetSignature(){
+        return GetRaw()->signature();
     }
 
     std::string Transaction::GetHash(){

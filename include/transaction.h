@@ -157,7 +157,10 @@ namespace Token{
             GetRaw()->set_index(idx);
         }
 
+        //TODO: bool SignatureMatches(CryptoPP::RSA::PublicKey key);
+        bool Sign(CryptoPP::RSA::PrivateKey key);
         void Accept(TransactionVisitor* visitor);
+        std::string GetSignature();
         std::string GetHash();
         std::string ToString();
         HashArray GetHashArray();

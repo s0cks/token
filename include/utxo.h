@@ -45,6 +45,7 @@ namespace Token{
             GetRaw()->set_tx_hash(hash);
             GetRaw()->set_index(idx);
         }
+        UnclaimedTransaction(const std::string& utxo_hash);
         UnclaimedTransaction():
             raw_(){}
         ~UnclaimedTransaction(){}
