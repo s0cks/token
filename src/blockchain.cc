@@ -46,8 +46,8 @@ namespace Token{
     }
 
     bool BlockChain::LoadBlockChain(const std::string& path){
-        uint32_t head = GetHeight();
         if(!HasHead()) return CreateGenesis(); //TODO: Remove
+        uint32_t head = GetHeight();
         uint32_t height = 0;
         while(height <= head){
             LOG(INFO) << "loading block #" << height << "...";
@@ -274,12 +274,14 @@ namespace Token{
 
         if(!GetInstance()->SetReference("<HEAD>", block->GetHeight())){
             LOG(ERROR) << "couldn't set <HEAD> reference";
+            UNLOCK;
             return false;
         }
 
         Allocator::AddReference(block);
         if(!GetInstance()->AppendNode(block)){
             LOG(ERROR) << "couldn't append node for new <HEAD> := " << block->GetHash();
+            UNLOCK;
             return false;
         }
 
@@ -298,7 +300,7 @@ namespace Token{
     bool BlockChain::HasHead(){
         uint32_t height;
         if(!GetInstance()->GetReference("<HEAD>", &height)){
-            LOG(ERROR) << "no <HEAD> reference";
+            LOG(ERROR) << "couldn't get <HEAD>";
             return false;
         }
         return true;
@@ -314,7 +316,7 @@ namespace Token{
     }
 
     void BlockChainPrinter::PrintBlockChain(bool info){
-        LOG(INFO) << "BlockChain (" << BlockChain::GetHeight() << " blocks):";
+        LOG(INFO) << "BlockChain (" << (BlockChain::GetHeight() + 1) << " blocks):";
         BlockChainPrinter instance(info);
         BlockChain::Accept(&instance);
     }
@@ -360,16 +362,6 @@ namespace Token{
         return true;
     }
 
-    bool BlockChain::LoadBlock(const std::string &hash, Token::Block **result){
-        uint32_t height;
-        if(!GetReference(hash, &height)){
-            LOG(ERROR) << "cannot find block: " << hash;
-            *result = nullptr;
-            return false;
-        }
-        return LoadBlock(height, result);
-    }
-
     bool BlockChain::SaveBlock(Token::Block* block){
         std::stringstream filename;
         filename << GetRootDirectory() << "/blocks";
@@ -391,8 +383,14 @@ namespace Token{
     }
 
     Block* BlockChain::GetBlock(uint32_t height){
-        if(height < 0 || height > GetHeight()) return nullptr;
-        return GetInstance()->operator[](height);
+        READ_LOCK;
+        if(height < 0 || height > GetHeight()){
+            UNLOCK;
+            return nullptr;
+        }
+        Block* blk = GetInstance()->operator[](height);
+        UNLOCK;
+        return blk;
     }
 
     Block* BlockChain::GetBlock(const std::string &hash){

@@ -140,8 +140,13 @@ namespace Token{
 
     bool TransactionPool::AddTransaction(Token::Transaction* tx){
         if((counter_ + 1) > TransactionPool::kTransactionPoolMaxSize){
-            LOG(WARNING) << "transaction pool full";
-            return false;
+            LOG(WARNING) << "transaction pool full, creating block...";
+            Block* block = CreateBlock();
+            if(!BlockChain::AppendBlock(block)){
+                LOG(ERROR) << "couldn't append new block: " << block->GetHash();
+                return false;
+            }
+            return true;
         }
         std::stringstream txfile;
         txfile << root_ << "/tx" << counter_ << ".dat";
@@ -219,6 +224,7 @@ namespace Token{
                 LOG(ERROR) << "couldn't append transaction: " << tx->GetHash();
             }
         }
+        counter_ = 0;
         LOG(INFO) << "created new block: " << block->GetHash();
         return block;
     }

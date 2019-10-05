@@ -80,6 +80,7 @@ main(int argc, char** argv){
         return EXIT_FAILURE;
     }
 
+    UnclaimedTransactionPoolPrinter::Print();
     BlockChainPrinter::PrintBlockChain();
 
     if(FLAGS_server_port > 0){
@@ -95,40 +96,6 @@ main(int argc, char** argv){
             return EXIT_FAILURE;
         }
     }
-
-    LOG(INFO) << "Min Chunk Size: " << Allocator::kMinChunkSize;
-    LOG(INFO) << "Transaction Size: " << (sizeof(Transaction) + sizeof(int));
-    LOG(INFO) << "Block Size :" << (sizeof(Block) + sizeof(int));
-
-    UnclaimedTransactionPoolPrinter::Print();
-
-    BlockChainPrinter::PrintBlockChain(true);
-
-    Allocator::PrintMinorHeap();
-    Allocator::PrintMajorHeap();
-
-    Block* head = BlockChain::GetHead();
-    Transaction* tx1 = new Transaction();
-    tx1->AddInput(head->GetCoinbaseTransaction()->GetHash(), 0);
-    tx1->AddOutput("Token0", "TestUser5");
-    if(!TransactionPool::AddTransaction(tx1)){
-        LOG(ERROR) << "Couldn't add new transaction to tx pool";
-        return EXIT_FAILURE;
-    }
-
-    Block* nhead;
-    if(!(nhead = TransactionPool::CreateBlock())){
-        LOG(ERROR) << "Couldn't create new block from tx pool";
-        return EXIT_FAILURE;
-    }
-
-    if(!BlockChain::AppendBlock(nhead)){
-        LOG(ERROR) << "Couldn't append new head to block chain";
-        return EXIT_FAILURE;
-    }
-
-    Allocator::PrintMinorHeap();
-    Allocator::PrintMajorHeap();
 
     if(FLAGS_service_port > 0){
         BlockChainService::Start("0.0.0.0", FLAGS_service_port);

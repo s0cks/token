@@ -73,6 +73,10 @@ namespace Token{
     bool TokenServiceClient::Spend(const std::string &token, const std::string &from_user,
                                    const std::string &to_user){
         Token::Service::Messages::SpendTokenRequest request;
+        request.set_token(token);
+        request.set_from_user(from_user);
+        request.set_to_user(to_user);
+        
         Token::Service::Messages::EmptyResponse response;
         grpc::ClientContext ctx;
         return GetStub()->Spend(&ctx, request, &response).ok();

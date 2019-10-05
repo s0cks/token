@@ -203,11 +203,12 @@ namespace Token{
 
     class TransactionPool{
     public:
-        static const size_t kTransactionPoolMaxSize = 64;
+        static const size_t kTransactionPoolMaxSize = 1;
     private:
         static uint32_t counter_;
         static std::string root_;
 
+        static Block* CreateBlock();
         static Transaction* LoadTransaction(const std::string& filename);
         static bool SaveTransaction(const std::string& filename, Transaction* tx);
         static bool GetTransactions(std::vector<Transaction*>& txs);
@@ -216,7 +217,6 @@ namespace Token{
     public:
         ~TransactionPool(){}
 
-        static Block* CreateBlock();
         static bool AddTransaction(Transaction* tx);
         static bool Initialize(const std::string& path);
     };
