@@ -111,6 +111,18 @@ int main(int argc, char** argv){
                 LOG(ERROR) << "couldn't spend token: " << token;
                 return EXIT_FAILURE;
             }
+        } else if(input == "connect"){
+            std::string address;
+            std::cout << "address := ";
+            std::cin >> address;
+
+            std::string pport;
+            std::cout << "port := ";
+            std::cin >> pport;
+            if(!client.ConnectTo(address, atoi(pport.c_str()))){
+                LOG(ERROR) << "couldn't connect to peer: " << address << ":" << pport;
+                return EXIT_FAILURE;
+            }
         }
     } while(true);
 }

@@ -4,7 +4,7 @@
 #include "allocator.h"
 #include "blockchain.h"
 #include "block_validator.h"
-#include "server.h"
+#include "node/server.h"
 
 namespace Token{
     static inline bool
@@ -433,18 +433,5 @@ namespace Token{
             blocks.push_back(blk->GetHash());
         }
         return (blocks.size() - 1) == GetHeight(); //TODO: Check
-    }
-
-    bool BlockChain::GetBlockList(Token::Node::Messages::BlockList *blocks){
-        uint32_t idx;
-        for(idx = 0; idx < GetHeight(); idx++){
-            Block* blk = GetInstance()->operator[](idx);
-            Messages::BlockHeader* header = blocks->add_blocks();
-            header->set_height(blk->GetHeight());
-            header->set_hash(blk->GetHash());
-            header->set_previous_hash(blk->GetPreviousHash());
-            header->set_merkle_root(blk->GetMerkleRoot());
-        }
-        return (blocks->blocks_size() - 1) == GetHeight();
     }
 }

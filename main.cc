@@ -6,7 +6,7 @@
 
 #include "allocator.h"
 #include "blockchain.h"
-#include "server.h"
+#include "node/server.h"
 #include "service/service.h"
 
 // BlockChain flags

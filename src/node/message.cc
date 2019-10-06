@@ -1,5 +1,5 @@
 #include <glog/logging.h>
-#include "message.h"
+#include "node/message.h"
 #include "block.h"
 
 namespace Token{
@@ -42,27 +42,17 @@ namespace Token{
         switch(GetType()){
             case Type::kPingMessage:{
                 LOG(INFO) << "decoding PingMessage";
-                msg_ = new Token::Node::Messages::Nonce();
+                msg_ = new Token::Messages::Node::Nonce();
                 return GetRaw()->ParseFromArray(&bytes[msg_off], msg_size);
             }
             case Type::kPongMessage:{
                 LOG(INFO) << "decoding PongMessage";
-                msg_ = new Token::Node::Messages::Nonce();
+                msg_ = new Token::Messages::Node::Nonce();
                 return GetRaw()->ParseFromArray(&bytes[msg_off], msg_size);
             }
             case Type::kVersionMessage:{
                 LOG(INFO) << "decoding VersionMessage";
-                msg_ = new Token::Node::Messages::Version();
-                return GetRaw()->ParseFromArray(&bytes[msg_off], msg_size);
-            }
-            case Type::kVerackMessage:{
-                LOG(INFO) << "decoding VerackMessage";
-                msg_ = new Token::Node::Messages::Verack();
-                return GetRaw()->ParseFromArray(&bytes[msg_off], msg_size);
-            }
-            case Type::kBlockListMessage:{
-                LOG(INFO) << "decoding BlockListMessage";
-                msg_ = new Token::Node::Messages::BlockList();
+                msg_ = new Token::Messages::Node::Version();
                 return GetRaw()->ParseFromArray(&bytes[msg_off], msg_size);
             }
             case Type::kGetHeadMessage:{
@@ -76,7 +66,7 @@ namespace Token{
             }
             case Type::kGetBlockMessage:{
                 LOG(INFO) << "decoding GetBlock";
-                msg_ = new Node::Messages::GetBlockRequest();
+                msg_ = new Token::Messages::Service::GetBlockRequest();
                 return GetRaw()->ParseFromArray(&bytes[msg_off], msg_size);
             }
             case Type::kUnknownType: {
@@ -91,12 +81,12 @@ namespace Token{
         switch(GetType()){
             case Type::kUnknownType: return "Unknown";
             case Type::kPingMessage:{
-                Node::Messages::Nonce* nonce = (Node::Messages::Nonce*)GetRaw();
+                Messages::Node::Nonce* nonce = (Messages::Node::Nonce*)GetRaw();
                 stream << "Ping(" << nonce->data() << ")";
                 break;
             }
             case Type::kPongMessage:{
-                Node::Messages::Nonce* nonce = (Node::Messages::Nonce*)GetRaw();
+                Messages::Node::Nonce* nonce = (Messages::Node::Nonce*)GetRaw();
                 stream << "Pong(" << nonce->data() << ")";
                 break;
             }
@@ -105,13 +95,9 @@ namespace Token{
                 stream << "Block(" << blk->GetHash() << ")";
                 break;
             }
-            case Type::kBlockListMessage:{
-                stream << "BlockList()";
-                break;
-            }
             case Type::kGetHeadMessage: return "GetHead()";
             case Type::kGetBlockMessage:{
-                Node::Messages::GetBlockRequest* gblock = (Node::Messages::GetBlockRequest*)GetRaw();
+                Messages::Service::GetBlockRequest* gblock = (Messages::Service::GetBlockRequest*)GetRaw();
                 stream << "GetBlock(" << gblock->hash() << ")";
                 break;
             }

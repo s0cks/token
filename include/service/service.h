@@ -7,7 +7,7 @@
 #include "blockchain.h"
 
 namespace Token{
-    class BlockChainService final : public Service::Messages::BlockChainService::Service{
+    class BlockChainService final : public Messages::Service::BlockChainService::Service{
     private:
         std::unique_ptr<grpc::Server> server_;
 
@@ -28,12 +28,13 @@ namespace Token{
                 server_(){}
         ~BlockChainService(){}
 
-        grpc::Status GetHead(grpc::ServerContext* ctx, const Token::Service::Messages::EmptyRequest* request, Messages::BlockHeader* response);
-        grpc::Status GetBlock(grpc::ServerContext* ctx, const Token::Service::Messages::GetBlockRequest* request, Messages::BlockHeader* response);
-        grpc::Status GetBlockData(grpc::ServerContext* ctx, const Token::Service::Messages::GetBlockRequest* request, Messages::Block* response);
-        grpc::Status GetUnclaimedTransactions(grpc::ServerContext* ctx, const Token::Service::Messages::GetUnclaimedTransactionsRequest* request, Messages::UnclaimedTransactionList* response);
-        grpc::Status GetPeers(grpc::ServerContext* ctx, const Token::Service::Messages::EmptyRequest* request, Token::Service::Messages::PeerList* response);
-        grpc::Status Spend(grpc::ServerContext* ctx, const Token::Service::Messages::SpendTokenRequest* request, Token::Service::Messages::EmptyResponse* response);
+        grpc::Status GetHead(grpc::ServerContext* ctx, const Token::Messages::EmptyRequest* request, Messages::BlockHeader* response);
+        grpc::Status GetBlock(grpc::ServerContext* ctx, const Token::Messages::Service::GetBlockRequest* request, Messages::BlockHeader* response);
+        grpc::Status GetBlockData(grpc::ServerContext* ctx, const Token::Messages::Service::GetBlockRequest* request, Messages::Block* response);
+        grpc::Status GetUnclaimedTransactions(grpc::ServerContext* ctx, const Token::Messages::Service::GetUnclaimedTransactionsRequest* request, Messages::UnclaimedTransactionList* response);
+        grpc::Status GetPeers(grpc::ServerContext* ctx, const Token::Messages::EmptyRequest* request, Token::Messages::PeerList* response);
+        grpc::Status Spend(grpc::ServerContext* ctx, const Token::Messages::Service::SpendTokenRequest* request, Token::Messages::EmptyResponse* response);
+        grpc::Status ConnectTo(grpc::ServerContext* ctx, const Token::Messages::Peer* request, Token::Messages::EmptyResponse* response);
 
         static BlockChainService* GetInstance();
         static void Start(const std::string address, int port);

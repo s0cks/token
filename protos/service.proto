@@ -1,10 +1,8 @@
 syntax="proto3";
-package Token.Service.Messages;
+package Token.Messages.Service;
 
 import "blockchain.proto";
-
-message EmptyRequest{}
-message EmptyResponse{}
+import "messages.proto";
 
 message GetBlockRequest{
     uint32 index = 1;
@@ -25,19 +23,12 @@ message SpendTokenRequest{
     string to_user = 3;
 }
 
-message Peer{
-    string address = 1;
-}
-
-message PeerList{
-    repeated Peer peers = 1;
-}
-
 service BlockChainService{
-    rpc GetHead (Messages.EmptyRequest) returns (Token.Messages.BlockHeader) {}
-    rpc GetBlock (Messages.GetBlockRequest) returns (Token.Messages.BlockHeader) {}
-    rpc GetBlockData (Messages.GetBlockRequest) returns (Token.Messages.Block) {}
-    rpc GetUnclaimedTransactions (Messages.GetUnclaimedTransactionsRequest) returns (Token.Messages.UnclaimedTransactionList);
+    rpc GetHead (EmptyRequest) returns (BlockHeader) {}
+    rpc GetBlock (GetBlockRequest) returns (BlockHeader) {}
+    rpc GetBlockData (GetBlockRequest) returns (Block) {}
+    rpc GetUnclaimedTransactions (GetUnclaimedTransactionsRequest) returns (UnclaimedTransactionList);
     rpc GetPeers(Messages.EmptyRequest) returns (PeerList) {}
     rpc Spend (SpendTokenRequest) returns (EmptyResponse) {} //TODO: Fixme
+    rpc ConnectTo (Peer) returns (EmptyResponse){} //TODO: Fixme
 }

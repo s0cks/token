@@ -8,7 +8,7 @@
 #include "block.h"
 #include "user.h"
 #include "utxo.h"
-#include "peer.h"
+#include "node/peer.h"
 
 namespace Token{
     class BlockChainVisitor{
@@ -112,7 +112,6 @@ namespace Token{
         static Block* GetBlock(uint32_t height);
         static uint32_t GetHeight();
         static bool GetBlockList(std::vector<std::string>& blocks);
-        static bool GetBlockList(Node::Messages::BlockList* blocks);
         static bool HasHead();
         static bool ContainsBlock(const std::string& hash);
         static bool AppendBlock(Block* block);

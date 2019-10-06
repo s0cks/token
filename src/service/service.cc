@@ -1,10 +1,10 @@
 #include "service/service.h"
 #include <glog/logging.h>
-#include <server.h>
+#include <node/server.h>
 
 namespace Token{
     grpc::Status BlockChainService::GetHead(grpc::ServerContext *ctx,
-                                            const Token::Service::Messages::EmptyRequest *request,
+                                            const Token::Messages::EmptyRequest *request,
                                             Token::Messages::BlockHeader *response){
         LOG(INFO) << "getting head";
         Block* head;
@@ -19,7 +19,7 @@ namespace Token{
     }
 
     grpc::Status BlockChainService::GetBlock(grpc::ServerContext *ctx,
-                                             const Token::Service::Messages::GetBlockRequest* request,
+                                             const Token::Messages::Service::GetBlockRequest* request,
                                              Token::Messages::BlockHeader *response){
         if(!request->hash().empty()){
             LOG(INFO) << "getting block: " << request->hash();
@@ -40,7 +40,7 @@ namespace Token{
     }
 
     grpc::Status BlockChainService::GetBlockData(grpc::ServerContext *ctx,
-                                                 const Token::Service::Messages::GetBlockRequest *request,
+                                                 const Token::Messages::Service::GetBlockRequest *request,
                                                  Token::Messages::Block *response){
         if(!request->hash().empty()){
             Block* block = BlockChain::GetInstance()->GetBlock(request->hash());
@@ -63,7 +63,7 @@ namespace Token{
     }
 
     grpc::Status BlockChainService::GetUnclaimedTransactions(grpc::ServerContext *ctx,
-                                                             const Token::Service::Messages::GetUnclaimedTransactionsRequest *request,
+                                                             const Token::Messages::Service::GetUnclaimedTransactionsRequest *request,
                                                              Token::Messages::UnclaimedTransactionList *response){
         if(request->user().empty()){
             return UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransactions(response) ?
@@ -77,8 +77,8 @@ namespace Token{
     }
 
     grpc::Status BlockChainService::GetPeers(grpc::ServerContext *ctx,
-                                             const Token::Service::Messages::EmptyRequest *request,
-                                             Token::Service::Messages::PeerList *response){
+                                             const Token::Messages::EmptyRequest *request,
+                                             Token::Messages::PeerList *response){
         /*
          * TODO: Set peers
         std::vector<std::string> peers;
@@ -94,8 +94,8 @@ namespace Token{
     }
 
     grpc::Status BlockChainService::Spend(grpc::ServerContext *ctx,
-                                          const Token::Service::Messages::SpendTokenRequest *request,
-                                          Token::Service::Messages::EmptyResponse* response){
+                                          const Token::Messages::Service::SpendTokenRequest *request,
+                                          Token::Messages::EmptyResponse* response){
         UnclaimedTransaction utxo;
         if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransaction(request->token(), &utxo)){
             LOG(ERROR) << "cannot get unclaimed transaction: " << request->token();
@@ -107,6 +107,15 @@ namespace Token{
         tx->AddOutput(utxo.GetHash(), request->to_user());
         if(!TransactionPool::AddTransaction(tx)){
             LOG(ERROR) << "cannot add transaction to transaction pool";
+            return grpc::Status::CANCELLED;
+        }
+        return grpc::Status::OK;
+    }
+
+    grpc::Status BlockChainService::ConnectTo(grpc::ServerContext *ctx, const Token::Messages::Peer *request,
+                                              Token::Messages::EmptyResponse *response){
+        if(!BlockChainServer::ConnectToPeer(request->address(), request->port())){
+            LOG(ERROR) << "couldn't connect to peer";
             return grpc::Status::CANCELLED;
         }
         return grpc::Status::OK;

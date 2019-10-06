@@ -7,14 +7,12 @@
 
 namespace Token{
 #define FOR_EACH_TYPE(V) \
-    V(Ping, Token::Node::Messages::Nonce) \
-    V(Pong, Token::Node::Messages::Nonce) \
-    V(Version, Token::Node::Messages::Version) \
-    V(Verack, Token::Node::Messages::EmptyResponse) \
-    V(BlockList, Token::Node::Messages::BlockList) \
+    V(Ping, Token::Messages::Node::Nonce) \
+    V(Pong, Token::Messages::Node::Nonce) \
+    V(Version, Token::Messages::Node::Version) \
     V(Block, Token::Messages::Block) \
-    V(GetHead, Token::Node::Messages::EmptyRequest) \
-    V(GetBlock, Token::Node::Messages::GetBlockRequest)
+    V(GetHead, Token::Messages::EmptyRequest) \
+    V(GetBlock, Token::Messages::Service::GetBlockRequest)
 
     /**
      * .ping

@@ -2,9 +2,9 @@
 #include <glog/logging.h>
 #include <sys/time.h>
 
-#include "peer.h"
+#include "node/peer.h"
 #include "blockchain.h"
-#include "server.h"
+#include "node/server.h"
 
 namespace Token{
     static uint32_t
@@ -47,10 +47,13 @@ namespace Token{
 
     void PeerClient::DownloadBlock(const std::string &hash){
         LOG(INFO) << "downloading block: " << hash;
+        /*
+        TODO:
         Node::Messages::GetBlockRequest getblock;
         getblock.set_hash(hash);
         Message msg(Message::Type::kGetBlockMessage, &getblock);
         Send(&msg);
+        */
     }
 
     void PeerClient::OnConnect(uv_connect_t *conn, int status) {
@@ -69,23 +72,7 @@ namespace Token{
     }
 
     bool PeerClient::Handle(uv_stream_t* stream, Token::Message* msg) {
-        if(msg->IsVerackMessage()){
-            LOG(INFO) << "connected!";
-            SetState(State::kConnected);
-            return true;
-        } else if(msg->IsBlockListMessage()){
-            Node::Messages::BlockList* blocks = msg->GetAsBlockList();
-            LOG(INFO) << "downloading " << blocks->blocks_size() << " blocks...";
-            std::vector<std::string> block_list;
-            for(auto& it : blocks->blocks()){
-                block_list.push_back(it.hash());
-            }
-            std::reverse(block_list.begin(), block_list.end());
-            for(auto& it : block_list){
-                DownloadBlock(it);
-            }
-            return true;
-        } else if(msg->IsBlockMessage()){
+        if(msg->IsBlockMessage()){
             Token::Block* block = Token::Block::Decode(msg->GetAsBlock());
             if(!BlockChain::ContainsBlock(block->GetHash())){
                 LOG(INFO) << "received block: " << block->GetHash();
@@ -215,24 +202,6 @@ namespace Token{
     }
 
     void PeerClient::SendVersionMessage(){
-        if(!IsConnecting()){
-            LOG(WARNING) << "attempted to send version when not connecting...";
-            return;
-        }
-
-        Node::Messages::Version version;
-        version.set_time(GetCurrentTime());
-        version.set_version("1.0.0");
-        version.set_height(BlockChain::GetHeight());
-        if(BlockChain::GetHeight() >= 0){
-            Block* head = BlockChain::GetHead();
-            version.mutable_head()->set_height(head->GetHeight());
-            version.mutable_head()->set_previous_hash(head->GetPreviousHash());
-            version.mutable_head()->set_hash(head->GetHash());
-            version.mutable_head()->set_merkle_root(head->GetMerkleRoot());
-        }
-
-        Message m(Message::Type::kVersionMessage, &version);
-        Send(&m);
+        //TODO: Implement
     }
 }

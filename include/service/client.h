@@ -9,9 +9,9 @@ namespace Token{
     class TokenServiceClient{
     private:
         std::shared_ptr<grpc::Channel> channel_;
-        std::unique_ptr<Token::Service::Messages::BlockChainService::Stub> stub_;
+        std::unique_ptr<Token::Messages::Service::BlockChainService::Stub> stub_;
 
-        inline Token::Service::Messages::BlockChainService::Stub*
+        inline Token::Messages::Service::BlockChainService::Stub*
         GetStub(){
             return stub_.get();
         }
@@ -27,6 +27,7 @@ namespace Token{
         bool GetUnclaimedTransactions(Messages::UnclaimedTransactionList* response);
         bool GetUnclaimedTransactions(const std::string& hash, Messages::UnclaimedTransactionList* response);
         bool GetPeers(std::vector<std::string>& peers);
+        bool ConnectTo(const std::string& address, int port);
         bool Spend(const std::string& token, const std::string& from_user, const std::string& to_user);
     };
 }
