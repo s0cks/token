@@ -44,6 +44,7 @@ namespace Token{
 
         void DownloadBlock(const std::string& hash);
         void SendVersionMessage(const std::string& nonce);
+        void SendPeerList();
 
         int ConnectToPeer();
         bool Handle(uv_stream_t* stream, Message *msg);

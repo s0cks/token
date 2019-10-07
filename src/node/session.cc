@@ -33,13 +33,23 @@ namespace Token {
         Send(&msg);
     }
 
+    void PeerSession::SendPeerList(){
+        Messages::PeerList peers;
+        if(!BlockChainServer::GetPeerList(peers)){
+            LOG(ERROR) << "couldn't get peer list";
+            return;
+        }
+        Message msg(Message::Type::kPeerListMessage, &peers);
+        Send(&msg);
+    }
+
     void PeerSession::SendInventory(){
         std::vector<std::string> hashes;
         if(!BlockChain::GetBlockList(hashes)){
             LOG(ERROR) << "couldn't get block list";
             return;
         }
-        std::reverse(hashes.begin(), hashes.end());
+        //TODO: std::reverse(hashes.begin(), hashes.end());
         Messages::HashList blocks;
         for(auto& it : hashes){
             blocks.add_hashes(it);
@@ -85,9 +95,12 @@ namespace Token {
                     return true;
                 }
 
+                SendBlock(lhead->GetHash());
+                return true;
+            } else if(msg->IsPeerListMessage()){
                 LOG(INFO) << "connected!";
                 SetState(State::kConnected);
-                SendBlock(lhead->GetHash());
+                SendPeerList();
                 return true;
             } else{
                 LOG(ERROR) << "invalid message type for connecting state: " << msg->ToString();

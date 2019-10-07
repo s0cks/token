@@ -38,6 +38,7 @@ namespace Token {
 
         void SendVersion(const std::string& nonce);
         void SendInventory();
+        void SendPeerList();
         void SendBlock(const std::string& block);
         void OnMessageSent(uv_write_t* req, int status);
 

@@ -84,13 +84,26 @@ namespace Token{
                 Block* lhead = BlockChain::GetHead();
                 Block* rhead = Block::Decode(msg->GetAsBlock());
                 if((*lhead) == (*rhead)){
-                    LOG(INFO) << "connected!";
-                    SetState(State::kConnected);
-                    BlockChainServer::GetInstance()->peers_.push_back(this); //TODO: Fix access
+                    LOG(INFO) << "sending peers...";
+                    SendPeerList();
                     return true;
                 }
                 LOG(ERROR) << "remote/<HEAD> != local/<HEAD>";
                 return false;
+            } else if(msg->IsPeerListMessage()){
+                LOG(INFO) << "connected!";
+                SetState(State::kConnected);
+                BlockChainServer::GetInstance()->peers_.push_back(this); //TODO: Fix access
+
+                Messages::PeerList* peers = msg->GetAsPeerList();
+                if(peers != nullptr && peers->peers_size() > 0){
+                    for(auto& it : msg->GetAsPeerList()->peers()){
+                        if(!BlockChainServer::GetInstance()->ConnectToPeer(it.address(), it.port())){
+                            LOG(ERROR) << "couldn't connect to peer: " << it.address() << ":" << it.port();
+                        }
+                    }
+                }
+                return true;
             } else{
                 LOG(ERROR) << "invalid message type for connecting state: " << msg->ToString();
                 return false;
@@ -238,6 +251,17 @@ namespace Token{
         std::stringstream stream;
         stream << GetAddress() << ":" << GetPort();
         return stream.str();
+    }
+
+    void PeerClient::SendPeerList(){
+        Messages::PeerList peers;
+        if(!BlockChainServer::GetPeerList(peers)){
+            LOG(ERROR) << "couldn't get peer list";
+            return;
+        }
+
+        Message msg(Message::Type::kPeerListMessage, &peers);
+        Send(&msg);
     }
 
     void PeerClient::SendVersionMessage(const std::string& nonce){

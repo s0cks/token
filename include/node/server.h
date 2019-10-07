@@ -37,6 +37,7 @@ namespace Token{
         static bool Broadcast(Message* msg);
         static bool AsyncBroadcast(Message* msg);
         static bool ConnectToPeer(const std::string& address, uint32_t port);
+        static bool GetPeerList(Messages::PeerList& peers);
         static int Initialize(int port);
         static int ShutdownAndWait();
     };

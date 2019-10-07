@@ -70,6 +70,11 @@ namespace Token{
                 msg_ = new Token::Messages::HashList();
                 return GetRaw()->ParseFromArray(&bytes[msg_off], msg_size);
             }
+            case Type::kPeerListMessage:{
+                LOG(INFO) << "decoding peer list message";
+                msg_ = new Token::Messages::PeerList();
+                return GetRaw()->ParseFromArray(&bytes[msg_off], msg_size);
+            }
             case Type::kUnknownType: {
                 LOG(ERROR) << "decoded unknown message type: " << type;
                 return false;
@@ -119,6 +124,10 @@ namespace Token{
                 }
                 stream << ")";
                 break;
+            }
+            case Type::kPeerListMessage:{
+                //TODO: Implement
+                return "PeerList()";
             }
             default: break;
         }

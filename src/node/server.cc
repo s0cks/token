@@ -230,4 +230,13 @@ namespace Token{
         PeerClient* client = new PeerClient(address, port);
         return client->Connect();
     }
+
+    bool BlockChainServer::GetPeerList(Messages::PeerList& peers){
+        for(auto& it : GetInstance()->peers_){
+            Messages::Peer* peer = peers.add_peers();
+            peer->set_address(it->GetAddress());
+            peer->set_port(it->GetPort());
+        }
+        return GetInstance()->peers_.size() == peers.peers_size();
+    }
 }

@@ -13,6 +13,7 @@ namespace Token{
     V(GetData, Token::Messages::HashList) \
     V(Inventory, Token::Messages::HashList) \
     V(Block, Token::Messages::Block) \
+    V(PeerList, Token::Messages::PeerList)
 
     /**
      * .ping
