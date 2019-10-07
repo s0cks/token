@@ -18,6 +18,7 @@ namespace Token {
         enum class State{
             kDisconnected = 0,
             kConnecting,
+            kSynchronizing,
             kConnected,
         };
     private:
@@ -35,6 +36,9 @@ namespace Token {
             state_ = state;
         }
 
+        void SendVersion(const std::string& nonce);
+        void SendInventory();
+        void SendBlock(const std::string& block);
         void OnMessageSent(uv_write_t* req, int status);
 
         friend class BlockChainServer;
@@ -55,6 +59,10 @@ namespace Token {
 
         bool IsConnecting() const{
             return GetState() == State::kConnecting;
+        }
+
+        bool IsSynchronizing() const{
+            return GetState() == State::kSynchronizing;
         }
 
         bool IsConnected() const{

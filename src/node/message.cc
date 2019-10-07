@@ -55,18 +55,19 @@ namespace Token{
                 msg_ = new Token::Messages::Node::Version();
                 return GetRaw()->ParseFromArray(&bytes[msg_off], msg_size);
             }
-            case Type::kGetHeadMessage:{
-                LOG(INFO) << "decoding GetHeadMessage";
-                return true;
-            }
             case Type::kBlockMessage:{
                 LOG(INFO) << "decoding block message";
                 msg_ = new Token::Messages::Block();
                 return GetRaw()->ParseFromArray(&bytes[msg_off], msg_size);
             }
-            case Type::kGetBlockMessage:{
-                LOG(INFO) << "decoding GetBlock";
-                msg_ = new Token::Messages::Service::GetBlockRequest();
+            case Type::kInventoryMessage:{
+                LOG(INFO) << "decoding hash list message";
+                msg_ = new Token::Messages::HashList();
+                return GetRaw()->ParseFromArray(&bytes[msg_off], msg_size);
+            }
+            case Type::kGetDataMessage:{
+                LOG(INFO) << "decoding get data message";
+                msg_ = new Token::Messages::HashList();
                 return GetRaw()->ParseFromArray(&bytes[msg_off], msg_size);
             }
             case Type::kUnknownType: {
@@ -95,12 +96,31 @@ namespace Token{
                 stream << "Block(" << blk->GetHash() << ")";
                 break;
             }
-            case Type::kGetHeadMessage: return "GetHead()";
-            case Type::kGetBlockMessage:{
-                Messages::Service::GetBlockRequest* gblock = (Messages::Service::GetBlockRequest*)GetRaw();
-                stream << "GetBlock(" << gblock->hash() << ")";
+            case Type::kInventoryMessage:{
+                Messages::HashList* hashes = (Messages::HashList*)GetRaw();
+                stream << "HashList(";
+                for(int i = 0; i < hashes->hashes_size(); i++){
+                    stream << hashes->hashes(i);
+                    if(i < hashes->hashes_size() - 1){
+                        stream << ",";
+                    }
+                }
+                stream << ")";
                 break;
             }
+            case Type::kGetDataMessage:{
+                Messages::HashList* getdata = (Messages::HashList*)GetRaw();
+                stream << "GetData(";
+                for(int i = 0; i < getdata->hashes_size(); i++){
+                    stream << getdata->hashes(i);
+                    if(i < getdata->hashes_size() - 1){
+                        stream << ",";
+                    }
+                }
+                stream << ")";
+                break;
+            }
+            default: break;
         }
         return stream.str();
     }

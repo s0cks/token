@@ -7,25 +7,10 @@
 #include "node/server.h"
 
 namespace Token{
-    static inline bool
-    FileExists(const std::string& name){
-        std::ifstream f(name.c_str());
-        return f.good();
-    }
-
     BlockChain*
     BlockChain::GetInstance(){
         static BlockChain instance;
         return &instance;
-    }
-
-    uint32_t BlockChain::GetHeight(){
-        uint32_t height;
-        if(!GetInstance()->GetReference("<HEAD>", &height)){
-            LOG(ERROR) << "cannot get <HEAD>";
-            return -1;
-        }
-        return height;
     }
 
     bool BlockChain::CreateGenesis(){
@@ -179,7 +164,7 @@ namespace Token{
 
     void BlockChain::Accept(Token::BlockChainVisitor* vis){
         uint32_t idx;
-        for(idx = 0; idx < GetHeight(); idx++) {
+        for(idx = 0; idx < GetHeight() + 1; idx++) {
             Block* blk = GetInstance()->operator[](idx);
             vis->Visit(blk);
         }
@@ -188,6 +173,18 @@ namespace Token{
 #define READ_LOCK pthread_rwlock_rdlock(&GetInstance()->rwlock_)
 #define WRITE_LOCK pthread_rwlock_wrlock(&GetInstance()->rwlock_)
 #define UNLOCK pthread_rwlock_unlock(&GetInstance()->rwlock_)
+
+    uint32_t BlockChain::GetHeight(){
+        READ_LOCK;
+        uint32_t height;
+        if(!GetInstance()->GetReference("Head", &height)){
+            LOG(ERROR) << "cannot get <HEAD>";
+            UNLOCK;
+            return -1;
+        }
+        UNLOCK;
+        return height;
+    }
 
     Block* BlockChain::GetHead(){
         READ_LOCK;
@@ -272,7 +269,7 @@ namespace Token{
             return false;
         }
 
-        if(!GetInstance()->SetReference("<HEAD>", block->GetHeight())){
+        if(!GetInstance()->SetReference("Head", block->GetHeight())){
             LOG(ERROR) << "couldn't set <HEAD> reference";
             UNLOCK;
             return false;
@@ -284,10 +281,6 @@ namespace Token{
             UNLOCK;
             return false;
         }
-
-        //TODO: Migrate BroadCast logic
-        // Message m(Message::Type::kBlockMessage, block->GetAsMessage());
-        // BlockChain::GetServerInstance()->Broadcast(nullptr, &m);
         LOG(INFO) << "new <HEAD>: " << block->GetHash();
         UNLOCK;
         return true;
@@ -299,7 +292,7 @@ namespace Token{
 
     bool BlockChain::HasHead(){
         uint32_t height;
-        if(!GetInstance()->GetReference("<HEAD>", &height)){
+        if(!GetInstance()->GetReference("Head", &height)){
             LOG(ERROR) << "couldn't get <HEAD>";
             return false;
         }
@@ -378,6 +371,7 @@ namespace Token{
 
     bool BlockChain::AppendNode(Token::Block* block){
         Resize(Length() + 1);
+        LOG(INFO) << (Length() - 1) << " := " << block->GetHash();
         Last() = block;
         return true;
     }
@@ -427,11 +421,45 @@ namespace Token{
     }
 
     bool BlockChain::GetBlockList(std::vector<std::string>& blocks){
+        size_t nblocks = GetHeight() + 1;
+
         uint32_t idx;
-        for(idx = 0; idx < GetHeight(); idx++){
+        for(idx = 0; idx < nblocks; idx++){
             Block* blk = GetInstance()->operator[](idx);
             blocks.push_back(blk->GetHash());
         }
-        return (blocks.size() - 1) == GetHeight(); //TODO: Check
+        return blocks.size() == nblocks; //TODO: Check
+    }
+
+    bool BlockChain::DeleteBlock(uint32_t height){
+        std::stringstream blkfilename;
+        blkfilename << GetRootDirectory() << "/blocks/blk" << height << ".dat";
+        return remove(blkfilename.str().c_str()) == 0;
+    }
+
+    bool BlockChain::Clear(){
+        WRITE_LOCK;
+        if(!UnclaimedTransactionPool::GetInstance()->ClearUnclaimedTransactions()){
+            LOG(ERROR) << "couldn't clear unclaimed transaction pool";
+            UNLOCK;
+            return false;
+        }
+        memset(GetInstance()->blocks_, 0, sizeof(Block*) * GetInstance()->blocks_caps_);
+        for(uintptr_t idx = 0; idx < GetInstance()->blocks_size_; idx++){
+            if(!GetInstance()->DeleteBlock(idx)){
+                LOG(ERROR) << "couldn't delete block #" << idx;
+                UNLOCK;
+                return false;
+            }
+        }
+        GetInstance()->blocks_size_ = 0;
+        leveldb::WriteOptions writeOpts;
+        if(!GetInstance()->GetState()->Delete(writeOpts, "Head").ok()){
+            LOG(ERROR) << "couldn't remove <HEAD> reference";
+            UNLOCK;
+            return false;
+        }
+        UNLOCK;
+        return true;
     }
 }

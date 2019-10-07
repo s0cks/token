@@ -2,6 +2,7 @@
 #define TOKEN_PEER_H
 
 #include <uv.h>
+#include <queue>
 #include "message.h"
 
 namespace Token{
@@ -15,6 +16,7 @@ namespace Token{
         enum class State{
             kDisconnected = 0,
             kConnecting,
+            kSynchronizing,
             kConnected,
         };
     private:
@@ -27,15 +29,21 @@ namespace Token{
         int port_;
         State state_;
         uv_async_t async_send_;
+        std::string last_nonce_;
+        std::queue<std::string> block_queue_;
 
         inline void
         SetState(State state){
             state_ = state;
         }
 
-        void DownloadBlock(const std::string& hash);
+        inline std::string
+        GetLastNonce(){
+            return last_nonce_;
+        }
 
-        void SendVersionMessage();
+        void DownloadBlock(const std::string& hash);
+        void SendVersionMessage(const std::string& nonce);
 
         int ConnectToPeer();
         bool Handle(uv_stream_t* stream, Message *msg);
@@ -76,6 +84,10 @@ namespace Token{
 
         bool IsConnecting() const{
             return GetState() == State::kConnecting;
+        }
+
+        bool IsSynchronizing() const{
+            return GetState() == State::kSynchronizing;
         }
     };
 }

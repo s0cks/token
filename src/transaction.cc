@@ -9,16 +9,9 @@
 #include "allocator.h"
 #include "blockchain.h"
 #include "transaction.h"
+#include "node/server.h"
 
 namespace Token{
-    static uint64_t
-    GetCurrentTime(){
-        struct timeval time;
-        gettimeofday(&time, NULL);
-        uint64_t curr_time = ((uint64_t)time.tv_sec * 1000 + time.tv_usec / 1000);
-        return curr_time;
-    }
-
     void Transaction::Accept(Token::TransactionVisitor* vis){
         int i;
         for(i = 0; i < GetNumberOfInputs(); i++){
@@ -99,12 +92,6 @@ namespace Token{
     }
 
     static inline bool
-    FileExists(const std::string& name){
-        std::ifstream f(name.c_str());
-        return f.good();
-    }
-
-    static inline bool
     CreateTransactionPoolDirectory(const std::string& path){
         return (mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) != -1;
     }
@@ -146,6 +133,8 @@ namespace Token{
                 LOG(ERROR) << "couldn't append new block: " << block->GetHash();
                 return false;
             }
+            Message msg(Message::Type::kBlockMessage, block->GetAsMessage());
+            BlockChainServer::AsyncBroadcast(&msg); //TODO: Check side, AsyncBroadcast may not work on libuv threads
             return true;
         }
         std::stringstream txfile;

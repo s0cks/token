@@ -12,3 +12,12 @@ message Peer{
 message PeerList{
     repeated Peer peers = 1;
 }
+
+message Range{
+    uint32 start = 1;
+    uint32 end = 2;
+}
+
+message HashList{
+    repeated string hashes = 1;
+}

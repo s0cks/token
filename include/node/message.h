@@ -10,9 +10,9 @@ namespace Token{
     V(Ping, Token::Messages::Node::Nonce) \
     V(Pong, Token::Messages::Node::Nonce) \
     V(Version, Token::Messages::Node::Version) \
+    V(GetData, Token::Messages::HashList) \
+    V(Inventory, Token::Messages::HashList) \
     V(Block, Token::Messages::Block) \
-    V(GetHead, Token::Messages::EmptyRequest) \
-    V(GetBlock, Token::Messages::Service::GetBlockRequest)
 
     /**
      * .ping

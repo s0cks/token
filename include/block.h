@@ -106,6 +106,10 @@ namespace Token{
             return const_cast<Block&>(lhs).GetHash() == const_cast<Block&>(rhs).GetHash();
         }
 
+        friend bool operator!=(const Block& lhs, const Block& rhs){
+            return !operator==(lhs, rhs);
+        }
+
         //TODO: Remove
         friend std::ostream& operator<<(std::ostream& stream, const Block& block){
             stream << "Block" << std::endl;

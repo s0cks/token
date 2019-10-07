@@ -1,20 +1,11 @@
 #include <algorithm>
 #include <glog/logging.h>
-#include <sys/time.h>
 
 #include "node/peer.h"
 #include "blockchain.h"
 #include "node/server.h"
 
 namespace Token{
-    static uint32_t
-    GetCurrentTime(){
-        struct timeval time;
-        gettimeofday(&time, NULL);
-        uint32_t curr_time = ((uint32_t)time.tv_sec * 1000 + time.tv_usec / 1000);
-        return curr_time;
-    }
-
     static void
     AllocBuffer(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buff) {
         char* base = (char*)malloc(suggested_size);
@@ -47,23 +38,21 @@ namespace Token{
 
     void PeerClient::DownloadBlock(const std::string &hash){
         LOG(INFO) << "downloading block: " << hash;
-        /*
-        TODO:
-        Node::Messages::GetBlockRequest getblock;
-        getblock.set_hash(hash);
-        Message msg(Message::Type::kGetBlockMessage, &getblock);
+        Messages::HashList hashes;
+        hashes.add_hashes(hash);
+        Message msg(Message::Type::kGetDataMessage, &hashes);
         Send(&msg);
-        */
     }
 
     void PeerClient::OnConnect(uv_connect_t *conn, int status) {
         if (status == 0) {
             uv_async_init(loop_, &async_send_, OnAsyncSend);
             BlockChainServer::Register(this);
-            state_ = State::kConnecting;
+            SetState(State::kConnecting);
             handle_ = conn->handle;
             handle_->data = conn->data;
-            SendVersionMessage();
+            last_nonce_ = GenerateNonce();
+            SendVersionMessage(last_nonce_);
             uv_read_start(handle_, AllocBuffer, [](uv_stream_t *stream, ssize_t nread, const uv_buf_t *buff) {
                 PeerClient *peer = (PeerClient*)stream->data;
                 peer->OnMessageRead(stream, nread, buff);
@@ -72,18 +61,68 @@ namespace Token{
     }
 
     bool PeerClient::Handle(uv_stream_t* stream, Token::Message* msg) {
-        if(msg->IsBlockMessage()){
-            Token::Block* block = Token::Block::Decode(msg->GetAsBlock());
-            if(!BlockChain::ContainsBlock(block->GetHash())){
-                LOG(INFO) << "received block: " << block->GetHash();
-                if(!BlockChain::AppendBlock(block)){
-                    LOG(ERROR) << "couldn't append new block: " << block->GetHash();
+        if(IsConnecting()){
+            if(msg->IsVersionMessage()){
+                Messages::Node::Version* version = msg->GetAsVersion();
+                if(GetLastNonce() != version->nonce()){
+                    LOG(ERROR) << "mismatch nonces";
                     return false;
                 }
+                LOG(INFO) << "accepted!";
+                DownloadBlock(BlockChain::GetHead()->GetHash());
+                return true;
+            } else if(msg->IsInventoryMessage()){
+                SetState(State::kSynchronizing);
+                BlockChain::Clear();
+                Messages::HashList* inv = msg->GetAsInventory();
+                for(auto& it : inv->hashes()){
+                    block_queue_.push(it);
+                    DownloadBlock(it);
+                }
+                return true;
+            } else if(msg->IsBlockMessage()){
+                Block* lhead = BlockChain::GetHead();
+                Block* rhead = Block::Decode(msg->GetAsBlock());
+                if((*lhead) == (*rhead)){
+                    LOG(INFO) << "connected!";
+                    SetState(State::kConnected);
+                    BlockChainServer::GetInstance()->peers_.push_back(this); //TODO: Fix access
+                    return true;
+                }
+                LOG(ERROR) << "remote/<HEAD> != local/<HEAD>";
+                return false;
+            } else{
+                LOG(ERROR) << "invalid message type for connecting state: " << msg->ToString();
+                return false;
             }
-            Message m(Message::Type::kBlockMessage, block->GetAsMessage());
-            BlockChainServer::GetInstance()->AsyncBroadcast(&m);
-            return true;
+        } else if(IsSynchronizing()){
+            if(msg->IsBlockMessage()){
+                Block* block = Block::Decode(msg->GetAsBlock());
+                LOG(INFO) << "received block: " << block->GetHash();
+                std::string next = block_queue_.front();
+                if(next != block->GetHash()){
+                    LOG(ERROR) << "block '" << block->GetHash() << " != " << next;
+                    return false;
+                }
+                block_queue_.pop();
+                if(!BlockChain::AppendBlock(block)){
+                    LOG(INFO) << "couldn't append block: " << block->GetHash();
+                    return false;
+                }
+                if(block_queue_.empty()){
+                    Block* head = BlockChain::GetHead();
+                    LOG(WARNING) << "sending <HEAD>: " << head->GetHash();
+                    SetState(State::kConnecting);
+                    DownloadBlock(head->GetHash());
+                }
+                return true;
+            } else{
+                LOG(ERROR) << "unknown message type: " << msg->ToString();
+                return false;
+            }
+        } else{
+            LOG(ERROR) << "unknown message type: " << msg->ToString();
+            return false;
         }
     }
 
@@ -201,7 +240,13 @@ namespace Token{
         return stream.str();
     }
 
-    void PeerClient::SendVersionMessage(){
-        //TODO: Implement
+    void PeerClient::SendVersionMessage(const std::string& nonce){
+        Messages::Node::Version version;
+        version.set_time(GetCurrentTime());
+        version.set_version("1.0.0");
+        version.set_nonce(nonce);
+        version.set_blocks(BlockChain::GetHeight());
+        Message msg(Message::Type::kVersionMessage, &version);
+        Send(&msg);
     }
 }

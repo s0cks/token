@@ -4,13 +4,6 @@
 #include "node/peer.h"
 
 namespace Token{
-    static inline bool
-    FileExists(const std::string& name){
-        std::ifstream f(name.c_str());
-        return f.good();
-    }
-
-
     BlockChainServer::BlockChainServer():
         loop_(uv_loop_new()),
         server_(),
@@ -222,11 +215,13 @@ namespace Token{
     }
 
     bool BlockChainServer::Broadcast(Token::Message *msg){
+        LOG(INFO) << "broadcasting: " << msg->ToString() << " to " << GetInstance()->peers_.size() << " peers...";
         for(auto& it : GetInstance()->peers_) it->Send(msg);
         return true;
     }
 
     bool BlockChainServer::AsyncBroadcast(Token::Message* msg){
+        LOG(INFO) << "broadcasting: " << msg->ToString() << " to " << GetInstance()->peers_.size() << " peers...";
         for(auto& it : GetInstance()->peers_) it->AsyncSend(msg);
         return true;
     }

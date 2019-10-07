@@ -55,6 +55,7 @@ namespace Token{
         bool AppendNode(Block* block);
         bool SaveBlock(Block* block);
         bool LoadBlock(uint32_t height, Block** result);
+        bool DeleteBlock(uint32_t height);
 
         void Resize(uintptr_t nlen){
             if(nlen > blocks_caps_){
@@ -116,6 +117,7 @@ namespace Token{
         static bool ContainsBlock(const std::string& hash);
         static bool AppendBlock(Block* block);
         static bool Initialize(const std::string& path);
+        static bool Clear();
     };
 
     class BlockChainPrinter : public BlockChainVisitor{

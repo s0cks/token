@@ -321,4 +321,9 @@ namespace Token{
         }
         GetRaw()->CopyFrom(utxo.raw_);
     }
+
+    bool UnclaimedTransactionPool::ClearUnclaimedTransactions(){
+        //TODO: Implement
+        return true;
+    }
 }

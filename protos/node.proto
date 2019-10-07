@@ -10,15 +10,6 @@ message Nonce{
 message Version {
     uint32 time = 1;
     string version = 2;
-    uint32 height = 3;
-    Token.Messages.BlockHeader head = 4;
-}
-
-message HashList{
-    repeated string hashes = 1;
-}
-
-message Range{
-    uint32 start = 1;
-    uint32 end = 2;
+    string nonce = 3;
+    uint32 blocks = 4;
 }

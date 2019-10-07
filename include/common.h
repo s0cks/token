@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <vector>
+#include <sys/time.h>
 
 #include <cryptopp/sha.h>
 #include <cryptopp/hex.h>
@@ -38,6 +39,31 @@ namespace Token{
         x = x | (x >> 32);
 #endif
         return x + 1;
+    }
+
+    static uint32_t
+    GetCurrentTime(){
+        struct timeval time;
+        gettimeofday(&time, NULL);
+        uint32_t curr_time = ((uint32_t)time.tv_sec * 1000 + time.tv_usec / 1000);
+        return curr_time;
+    }
+
+    static inline std::string
+    GenerateNonce(){
+        CryptoPP::SecByteBlock nonce(64);
+        CryptoPP::AutoSeededRandomPool prng;
+        prng.GenerateBlock(nonce, nonce.size());
+
+        std::string digest;
+        CryptoPP::ArraySource source(nonce, nonce.size(), true, new CryptoPP::HexEncoder(new CryptoPP::StringSink(digest)));
+        return digest;
+    }
+
+    static inline bool
+    FileExists(const std::string& name){
+        std::ifstream f(name.c_str());
+        return f.good();
     }
 }
 
