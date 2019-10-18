@@ -12,16 +12,12 @@ namespace Token{
     bool Message::Encode(uint8_t* bytes, size_t size){
         uint32_t type = static_cast<uint32_t>(GetType());
         uint32_t msg_size = static_cast<uint32_t>(GetMessageSize());
-        LOG(WARNING) << "setting message bytes to 0";
         memset(bytes, 0, size);
-        LOG(WARNING) << "setting message type to " << type;
         memcpy(bytes, &type, sizeof(uint32_t));
-        LOG(WARNING) << "setting message size to " << msg_size;
         memcpy(&bytes[sizeof(uint32_t)], &msg_size, sizeof(uint32_t));
         if(msg_size == 0) return true;
         uint8_t msg_bytes[msg_size];
         GetRaw()->SerializeToArray(msg_bytes, msg_size);
-        LOG(WARNING) << "setting message bytes to raw message";
         memcpy(&bytes[(sizeof(uint32_t) * 2)], msg_bytes, msg_size);
         return true;
     }

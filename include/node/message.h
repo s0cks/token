@@ -54,7 +54,7 @@ namespace Token{
             msg_(data->New()){
             GetRaw()->CopyFrom(*data);
         }
-        Message(Type type=Type::kUnknownType):
+        explicit Message(Type type=Type::kUnknownType):
             type_(type),
             msg_(nullptr){}
         Message(const Message& other);

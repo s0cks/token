@@ -6,11 +6,41 @@
 #include <cstdint>
 
 #include "message.h"
+#include "blockchain.h"
 
 namespace Token{
     class BlockChainNode;
 
-    class NodeServerSession{
+    enum class SessionState{
+        kConnecting,
+        kConnected,
+        kDisconnected
+    };
+
+    class Session{
+    private:
+        SessionState state_;
+    protected:
+        void SetState(SessionState state){
+            state_ = state;
+        }
+
+        Session():
+            state_(SessionState::kDisconnected){
+
+        }
+    public:
+        virtual ~Session(){}
+        virtual void Send(Message* msg) = 0;
+
+        void SendBlock(Block* block);
+
+        SessionState GetState(){
+            return state_;
+        }
+    };
+
+    class NodeServerSession : public Session{
     private:
         BlockChainNode* parent_;
         pthread_t thread_;
@@ -20,23 +50,20 @@ namespace Token{
             return sock_;
         }
 
+        bool Handle(Message* msg);
         void StartThread();
-
         static void* SessionThread(void* data);
 
         friend class BlockChainNode;
 
-        NodeServerSession(BlockChainNode* server, uint32_t sock):
-                thread_(),
-                parent_(server),
-                sock_(sock){}
+        NodeServerSession(BlockChainNode* server, uint32_t sock);
     public:
         ~NodeServerSession();
 
         void Send(Message* msg);
     };
 
-    class NodeClientSession{
+    class NodeClientSession : public Session{
     private:
         pthread_t thread_;
         std::string address_;

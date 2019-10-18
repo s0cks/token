@@ -22,6 +22,14 @@
  */
 
 namespace Token{
+    NodeServerSession::NodeServerSession(BlockChainNode* server, uint32_t sock):
+        thread_(),
+        parent_(server),
+        sock_(sock),
+        Session(){
+
+    }
+
     NodeServerSession::~NodeServerSession(){
         close(GetSocket());
     }
@@ -41,23 +49,26 @@ namespace Token{
                 break;
             }
 
-            if(msg.IsBlockMessage()){
-                Block* blk = Block::Decode(msg.GetAsBlock());
-                LOG(INFO) << "received block: " << blk->GetHash();
-
-                Message resp(Message::Type::kBlockMessage, blk->GetAsMessage()); // Echo
-                session->Send(&resp);
-            } else{
-                LOG(WARNING) << "unknown message type: " << msg.ToString();
+            if(!session->Handle(&msg)){
+                LOG(ERROR) << "couldn't handle message: " << msg.ToString();
                 goto exit;
             }
-
             memset(buffer, 0, sizeof(char) * buffer_len);
         }
 
         exit:
-        char* result = strdup(err_msg.c_str());
-        pthread_exit(result);
+            char* result = strdup(err_msg.c_str());
+            pthread_exit(result);
+    }
+
+    bool NodeServerSession::Handle(Token::Message* msg){
+        if(msg->IsBlockMessage()){
+            Block* blk = Block::Decode(msg->GetAsBlock());
+            LOG(INFO) << "received block: " << blk->GetHash();
+            return true;
+        }
+
+        return false;
     }
 
     void NodeServerSession::Send(Token::Message* msg){
@@ -78,12 +89,18 @@ namespace Token{
             address_(address),
             thread_(),
             sock_(),
-            port_(port){
+            port_(port),
+            Session(){
 
     }
 
     NodeClientSession::~NodeClientSession(){
 
+    }
+
+    void Session::SendBlock(Token::Block* block){
+        Message msg(Message::Type::kBlockMessage, block->GetAsMessage());
+        Send(&msg);
     }
 
     void NodeClientSession::Send(Token::Message* msg){
@@ -99,6 +116,8 @@ namespace Token{
 
     void* NodeClientSession::ClientThread(void* data){
         NodeClientSession* client = (NodeClientSession*)data;
+        LOG(INFO) << "connecting to peer: " << client->GetAddress() << ":" << client->GetPort() << "....";
+        client->SetState(SessionState::kConnecting);
 
         struct sockaddr_in address;
         memset(&address, 0, sizeof(address));
@@ -117,8 +136,9 @@ namespace Token{
             return nullptr; //TODO: Fixme
         }
 
-        Message head(Message::Type::kBlockMessage, BlockChain::GetHead()->GetAsMessage());
-        client->Send(&head);
+        LOG(INFO) << "connected!";
+        client->SetState(SessionState::kConnected);
+        client->SendBlock(BlockChain::GetHead());
 
         uint32_t buffer_len = 4096;
         uint8_t* buffer = (uint8_t*)malloc(sizeof(uint8_t) * buffer_len);

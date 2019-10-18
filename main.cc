@@ -80,7 +80,6 @@ main(int argc, char** argv){
         return EXIT_FAILURE;
     }
 
-    UnclaimedTransactionPoolPrinter::Print();
     BlockChainPrinter::PrintBlockChain();
 
     if(FLAGS_server_port > 0){
