@@ -4,7 +4,6 @@
 #include "allocator.h"
 #include "blockchain.h"
 #include "block_validator.h"
-#include "node/server.h"
 
 namespace Token{
     BlockChain*
@@ -129,11 +128,6 @@ namespace Token{
             DecodePrivateKey(privkey, privkey_);
         }
         return true;
-    }
-
-    static inline bool
-    CreateDirectory(const std::string& path){
-        return (mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) != -1;
     }
 
     bool BlockChain::Initialize(const std::string& path){

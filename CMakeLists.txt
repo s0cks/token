@@ -18,6 +18,7 @@ find_package(gflags REQUIRED)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${LIBUV_INCLUDE_DIRS})
 include_directories(${SQLite3_INCLUDE_DIRS})
+include_directories(${CRYPTO++_INCLUDE_DIR})
 include_directories(include)
 include_directories(src)
 
@@ -29,11 +30,39 @@ file(GLOB_RECURSE TOKEN_SERVICE_PROTO_SOURCES protos/*.proto)
 protobuf_generate_cpp(PROTO_SRC PROTO_HEADER ${TOKEN_PROTO_SOURCES})
 grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${CMAKE_BINARY_DIR} ${TOKEN_SERVICE_PROTO_SOURCES})
 
-add_library("${PROJECT_NAME}" STATIC ${TOKEN_LIB_SOURCES} ${PROTO_HEADER} ${PROTO_SRC} ${GRPC_HDRS} ${GRPC_SRCS})
-target_link_libraries("${PROJECT_NAME}" ${PROTOBUF_LIBRARY} ${LIBUV_LIBRARIES} ${SQLite3_LIBRARIES} glog::glog ${LevelDB_LIBRARY} cryptopp-static)
+#=================================================
+#       Token Ledger Library
+#=================================================
+add_library(
+        "${PROJECT_NAME}-ledger"
+        SHARED
+        ${TOKEN_LIB_SOURCES} ${PROTO_HEADER} ${PROTO_SRC} ${GRPC_HEADERS} ${GRPC_SRCS}
+)
+target_link_libraries(
+        "${PROJECT_NAME}-ledger"
+        ${SQLite3_LIBRARIES} ${Protobuf_LIBRARIES} glog::glog ${LevelDB_LIBRARY}
+)
 
-add_executable("${PROJECT_NAME}-node" main.cc)
-target_link_libraries("${PROJECT_NAME}-node" ${PROJECT_NAME}  ${CMAKE_THREAD_LIBS_INIT} gRPC::grpc++_reflection gflags)
+#=================================================
+#       Token Ledger Node Exe
+#=================================================
+add_executable(
+        "${PROJECT_NAME}-node"
+        main.cc
+)
+target_link_libraries(
+        "${PROJECT_NAME}-node"
+        "${PROJECT_NAME}-ledger" ${CMAKE_THREAD_LIBS_INIT} ${CRYPTO++_LIBRARIES} ${Protobuf_LIBRARIES} ${GRPC_GRPC++_LIBRARY} ${GRPC_GRPC++_REFLECTION_LIBRARY} gflags
+)
 
-add_executable("${PROJECT_NAME}-client" client.cc)
-target_link_libraries("${PROJECT_NAME}-client" ${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT} gRPC::grpc++_reflection)
+#=================================================
+#       Token Ledger RPC Client Exe
+#=================================================
+add_executable(
+        "${PROJECT_NAME}-client"
+        client.cc
+)
+target_link_libraries(
+        "${PROJECT_NAME}-client"
+        "${PROJECT_NAME}-ledger" ${CMAKE_THREAD_LIBS_INIT} ${CRYPTO++_LIBRARIES} ${Protobuf_LIBRARIES} ${GRPC_GRPC++_LIBRARY} ${GRPC_GRPC++_REFLECTION_LIBRARY} gflags
+)

@@ -5,11 +5,11 @@
 #include <dirent.h>
 #include <cryptopp/pssr.h>
 #include <cryptopp/whrlpool.h>
+#include <node/message.h>
 
 #include "allocator.h"
 #include "blockchain.h"
 #include "transaction.h"
-#include "node/server.h"
 
 namespace Token{
     void Transaction::Accept(Token::TransactionVisitor* vis){
@@ -134,7 +134,7 @@ namespace Token{
                 return false;
             }
             Message msg(Message::Type::kBlockMessage, block->GetAsMessage());
-            BlockChainServer::AsyncBroadcast(&msg); //TODO: Check side, AsyncBroadcast may not work on libuv threads
+            //TODO: BlockChainServer::AsyncBroadcast(&msg); //TODO: Check side, AsyncBroadcast may not work on libuv threads
             return true;
         }
         std::stringstream txfile;

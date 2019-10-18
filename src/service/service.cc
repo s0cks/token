@@ -1,6 +1,5 @@
 #include "service/service.h"
 #include <glog/logging.h>
-#include <node/server.h>
 
 namespace Token{
     grpc::Status BlockChainService::GetHead(grpc::ServerContext *ctx,
@@ -79,10 +78,13 @@ namespace Token{
     grpc::Status BlockChainService::GetPeers(grpc::ServerContext *ctx,
                                              const Token::Messages::EmptyRequest *request,
                                              Token::Messages::PeerList *response){
-        if(!BlockChainServer::GetPeerList(*response)){
-            LOG(ERROR) << "couldn't get peer list";
-            return grpc::Status::CANCELLED;
-        }
+        /*
+         * TODO:
+         * if(!BlockChainServer::GetPeerList(*response)){
+         *      LOG(ERROR) << "couldn't get peer list";
+         *      return grpc::Status::CANCELLED;
+         * }
+         */
         return grpc::Status::OK;
     }
 
@@ -107,10 +109,12 @@ namespace Token{
 
     grpc::Status BlockChainService::ConnectTo(grpc::ServerContext *ctx, const Token::Messages::Peer *request,
                                               Token::Messages::EmptyResponse *response){
-        if(!BlockChainServer::ConnectToPeer(request->address(), request->port())){
-            LOG(ERROR) << "couldn't connect to peer";
-            return grpc::Status::CANCELLED;
-        }
+        /*
+         * if(!BlockChainServer::ConnectToPeer(request->address(), request->port())){
+         *     LOG(ERROR) << "couldn't connect to peer";
+         *     return grpc::Status::CANCELLED;
+         * }
+         */
         return grpc::Status::OK;
     }
 

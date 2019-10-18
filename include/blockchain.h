@@ -9,7 +9,6 @@
 #include "block.h"
 #include "user.h"
 #include "utxo.h"
-#include "node/peer.h"
 
 namespace Token{
     class BlockChainVisitor{

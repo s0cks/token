@@ -8,7 +8,6 @@
 
 #include "allocator.h"
 #include "blockchain.h"
-#include "node/server.h"
 #include "service/service.h"
 
 // BlockChain flags
@@ -110,13 +109,6 @@ main(int argc, char** argv){
         BlockChainService::Start("0.0.0.0", FLAGS_service_port);
         LOG(INFO) << "BlockChainService started @ localhost:" << FLAGS_service_port;
         BlockChainService::WaitForShutdown();
-    }
-
-    if(FLAGS_server_port > 0){
-        if(!BlockChainServer::ShutdownAndWait()){
-            LOG(ERROR) << "Couldn't shutdown the BlockChain server";
-            return EXIT_FAILURE;
-        }
     }
     return EXIT_SUCCESS;
 }

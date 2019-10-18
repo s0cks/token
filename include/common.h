@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <vector>
 #include <sys/time.h>
+#include <sys/stat.h>
 
 #include <cryptopp/sha.h>
 #include <cryptopp/hex.h>
@@ -64,6 +65,11 @@ namespace Token{
     FileExists(const std::string& name){
         std::ifstream f(name.c_str());
         return f.good();
+    }
+
+    static inline bool
+    CreateDirectory(const std::string& path){
+        return (mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) != -1;
     }
 }
 
