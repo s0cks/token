@@ -118,7 +118,7 @@ namespace Token{
                     return false;
                 }
                 block_queue_.pop();
-                if(!BlockChain::AppendBlock(block)){
+                if(!BlockChain::Append(block)){
                     LOG(INFO) << "couldn't append block: " << block->GetHash();
                     return false;
                 }

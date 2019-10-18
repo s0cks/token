@@ -5,6 +5,7 @@
 #include <map>
 
 #include "common.h"
+#include "block_queue.h"
 #include "block.h"
 #include "user.h"
 #include "utxo.h"
@@ -36,6 +37,8 @@ namespace Token{
         Block** blocks_;
         uintptr_t blocks_caps_;
         uintptr_t blocks_size_;
+        BlockQueue queue_;
+        pthread_t miner_thread_;
 
         static inline leveldb::DB*
         GetState(){
@@ -56,6 +59,10 @@ namespace Token{
         bool SaveBlock(Block* block);
         bool LoadBlock(uint32_t height, Block** result);
         bool DeleteBlock(uint32_t height);
+        bool StartMinerThread();
+
+        static void* BlockChainMinerThread(void* data); //TODO: Refactor
+        static bool AppendBlock(Block* block); //TODO: Revoke access
 
         void Resize(uintptr_t nlen){
             if(nlen > blocks_caps_){
@@ -83,8 +90,14 @@ namespace Token{
             return operator[](Length() - 1);
         }
 
+        BlockQueue* GetQueue(){
+            return &queue_;
+        }
+
         BlockChain():
             rwlock_(),
+            miner_thread_(),
+            queue_(10),
             path_(),
             blocks_(nullptr),
             blocks_size_(0),
@@ -95,7 +108,7 @@ namespace Token{
             pthread_rwlock_init(&rwlock_, NULL);
         }
     public:
-        static BlockChain* GetInstance();
+        static BlockChain* GetInstance(); //TODO: Revoke access
 
         static CryptoPP::PublicKey* GetPublicKey(){
             return &GetInstance()->pubkey_;
@@ -105,7 +118,6 @@ namespace Token{
             return &GetInstance()->privkey_;
         }
 
-        static std::string GetRootDirectory();
         static void Accept(BlockChainVisitor* vis);
         static Block* GetHead();
         static Block* GetGenesis();
@@ -115,9 +127,11 @@ namespace Token{
         static bool GetBlockList(std::vector<std::string>& blocks);
         static bool HasHead();
         static bool ContainsBlock(const std::string& hash);
-        static bool AppendBlock(Block* block);
         static bool Initialize(const std::string& path);
-        static bool Clear();
+        static bool Append(Block* block); //TODO: Revoke access?
+
+        static std::string GetRootDirectory(); //TODO: Revoke access
+        static bool Clear(); //TODO: Revoke access
     };
 
     class BlockChainPrinter : public BlockChainVisitor{

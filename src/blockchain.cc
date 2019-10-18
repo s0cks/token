@@ -159,7 +159,44 @@ namespace Token{
             LOG(ERROR) << "error loading block chain";
             return false;
         }
+        if(!GetInstance()->StartMinerThread()){
+            LOG(ERROR) << "couldn't start miner thread";
+            return false;
+        }
         return true;
+    }
+
+    void* BlockChain::BlockChainMinerThread(void* data){
+        char* result;
+
+        BlockQueue* queue = (BlockQueue*)data;
+        do{
+            LOG(INFO) << "popping block...";
+            Block* blk;
+            if(!queue->Pop(&blk)){
+                const char* msg = "couldn't pop block from BlockQueue";
+                result = (char*)malloc(sizeof(char) * strlen(msg));
+                strcpy(result, msg);
+                pthread_exit(result);
+            }
+
+            LOG(WARNING) << "mining block: " << blk->GetHash();
+            if(!BlockChain::AppendBlock(blk)){
+                const char* msg = "couldn't append new block";
+                result = (char*)malloc(sizeof(char) * strlen(msg));
+                strcpy(result, msg);
+                pthread_exit(result);
+            }
+        }while(true);
+    }
+
+    bool BlockChain::StartMinerThread(){
+        pthread_create(&miner_thread_, NULL, &BlockChainMinerThread, GetQueue());
+        return true;
+    }
+
+    bool BlockChain::Append(Block* block){
+        GetInstance()->GetQueue()->Push(block);
     }
 
     void BlockChain::Accept(Token::BlockChainVisitor* vis){

@@ -129,7 +129,7 @@ namespace Token{
         if((counter_ + 1) > TransactionPool::kTransactionPoolMaxSize){
             LOG(WARNING) << "transaction pool full, creating block...";
             Block* block = CreateBlock();
-            if(!BlockChain::AppendBlock(block)){
+            if(!BlockChain::Append(block)){
                 LOG(ERROR) << "couldn't append new block: " << block->GetHash();
                 return false;
             }

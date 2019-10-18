@@ -3,6 +3,8 @@
 #include <glog/logging.h>
 #include <sys/stat.h>
 #include <gflags/gflags.h>
+#include <block_queue.h>
+#include <node/node.h>
 
 #include "allocator.h"
 #include "blockchain.h"
@@ -55,7 +57,6 @@ int
 main(int argc, char** argv){
     using namespace Token;
     gflags::ParseCommandLineFlags(&argc, &argv, true);
-
     if(!InitializeLogging(argv[0])){
         fprintf(stderr, "Couldn't initialize logging!");
         return EXIT_FAILURE;
@@ -84,17 +85,25 @@ main(int argc, char** argv){
     BlockChainPrinter::PrintBlockChain();
 
     if(FLAGS_server_port > 0){
+        /*
         if(!BlockChainServer::Initialize(FLAGS_server_port)){
             LOG(ERROR) << "Couldn't initialize the BlockChain server";
             return EXIT_FAILURE;
         }
+        */
+        BlockChainNode::Initialize("localhost", FLAGS_server_port);
     }
 
     if(FLAGS_server_port > 0 && FLAGS_peer_port > 0){
+        /*
         if(!BlockChainServer::ConnectToPeer("127.0.0.1", FLAGS_peer_port)){
             LOG(ERROR) << "Couldn't connect to peer on port: " << FLAGS_peer_port;
             return EXIT_FAILURE;
         }
+        */
+
+        NodeClientSession* session = new NodeClientSession("127.0.0.1", FLAGS_peer_port);
+        session->Connect();
     }
 
     if(FLAGS_service_port > 0){
