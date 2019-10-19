@@ -206,13 +206,11 @@ namespace Token{
         int rc;
         if((rc = sqlite3_step(stmt)) != SQLITE_DONE){
             std::cout << "Unable to remove value:" << sqlite3_errmsg(database_) << std::endl;
-            sqlite3_free(stmt);
             UNLOCK;
             return false;
         }
 
         sqlite3_finalize(stmt);
-        sqlite3_free(stmt);
         UNLOCK;
         return true;
     }
