@@ -419,10 +419,9 @@ namespace Token{
     }
 
     Block* BlockChain::GetBlock(const std::string &hash){
-        READ_LOCK;
+        //TODO: Lock?
         if(!HasHead()){
             LOG(ERROR) << "no <HEAD> found";
-            UNLOCK;
             return nullptr;
         }
 
@@ -433,13 +432,11 @@ namespace Token{
             Block* blk = GetBlock(idx);
             if(blk->GetHash() == hash){
                 LOG(INFO) << "block '" << blk->GetHash() << "' found!";
-                UNLOCK;
                 return blk;
             }
         }
 
         LOG(ERROR) << "no block found for: " << hash;
-        UNLOCK;
         return nullptr;
     }
 
