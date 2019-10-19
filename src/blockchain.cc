@@ -430,7 +430,7 @@ namespace Token{
         LOG(WARNING) << "searching " << max << " blocks for: " << hash << "....";
 
         for(uint32_t idx = 0; idx < max; idx++){
-            Block* blk = GetInstance()->blocks_[idx];
+            Block* blk = GetBlock(idx);
             if(blk->GetHash() == hash){
                 UNLOCK;
                 return blk;
