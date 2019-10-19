@@ -6,10 +6,10 @@
 #include "block_validator.h"
 
 namespace Token{
-    pthread_rwlock_t*
-    BlockChain::GetLock(){
-        static pthread_rwlock_t instance = PTHREAD_RWLOCK_INITIALIZER;
-        return &instance;
+    pthread_mutex_t*
+    BlockChain::GetMutex(){
+        static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+        return &mutex;
     }
 
     BlockChain*
@@ -207,12 +207,11 @@ namespace Token{
         }
     }
 
-#define READ_LOCK pthread_rwlock_rdlock(GetLock())
-#define WRITE_LOCK pthread_rwlock_wrlock(GetLock())
-#define UNLOCK pthread_rwlock_unlock(GetLock())
+#define LOCK pthread_mutex_lock(GetMutex())
+#define UNLOCK pthread_mutex_unlock(GetMutex());
 
     uint32_t BlockChain::GetHeight(){
-        READ_LOCK;
+        LOCK;
         uint32_t height;
         if(!GetInstance()->GetReference("Head", &height)){
             LOG(ERROR) << "cannot get <HEAD>";
@@ -224,21 +223,21 @@ namespace Token{
     }
 
     Block* BlockChain::GetHead(){
-        READ_LOCK;
+        LOCK;
         Block* head = GetInstance()->operator[](GetHeight());
         UNLOCK;
         return head;
     }
 
     Block* BlockChain::GetGenesis(){
-        READ_LOCK;
+        LOCK;
         Block* blk = GetInstance()->operator[](0);
         UNLOCK;
         return blk;
     }
 
     bool BlockChain::AppendBlock(Token::Block* block){
-        WRITE_LOCK;
+        LOCK;
         LOG(INFO) << "appending block: " << block->GetHash();
         LOG(INFO) << "checking for duplicate block...";
         if(ContainsBlock(block->GetHash())){
@@ -416,7 +415,7 @@ namespace Token{
     }
 
     Block* BlockChain::GetBlock(uint32_t height){
-        READ_LOCK;
+        LOCK;
         if(height < 0 || height > GetHeight()){
             UNLOCK;
             return nullptr;
@@ -427,7 +426,7 @@ namespace Token{
     }
 
     Block* BlockChain::GetBlock(const std::string &hash){
-        READ_LOCK;
+        LOCK;
         if(!HasHead()){
             LOG(ERROR) << "no <HEAD> found";
             UNLOCK;
@@ -478,7 +477,7 @@ namespace Token{
     }
 
     bool BlockChain::Clear(){
-        WRITE_LOCK;
+        LOCK;
         if(!UnclaimedTransactionPool::GetInstance()->ClearUnclaimedTransactions()){
             LOG(ERROR) << "couldn't clear unclaimed transaction pool";
             UNLOCK;

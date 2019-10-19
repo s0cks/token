@@ -92,7 +92,7 @@ namespace Token{
             return &queue_;
         }
 
-        static pthread_rwlock_t* GetLock();
+        static pthread_mutex_t* GetMutex();
 
         BlockChain():
             miner_thread_(),
