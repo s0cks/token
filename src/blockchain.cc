@@ -6,12 +6,6 @@
 #include "block_validator.h"
 
 namespace Token{
-    pthread_mutex_t*
-    BlockChain::GetMutex(){
-        static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-        return &mutex;
-    }
-
     BlockChain*
     BlockChain::GetInstance(){
         static BlockChain instance;
@@ -207,11 +201,12 @@ namespace Token{
         }
     }
 
-#define LOCK pthread_mutex_lock(GetMutex())
-#define UNLOCK pthread_mutex_unlock(GetMutex());
+#define READ_LOCK pthread_rwlock_rdlock(&GetInstance()->lock_)
+#define WRITE_LOCK pthread_rwlock_wrlock(&GetInstance()->lock_)
+#define UNLOCK pthread_rwlock_unlock(&GetInstance()->lock_)
 
     uint32_t BlockChain::GetHeight(){
-        LOCK;
+        READ_LOCK;
         uint32_t height;
         if(!GetInstance()->GetReference("Head", &height)){
             LOG(ERROR) << "cannot get <HEAD>";
@@ -223,21 +218,20 @@ namespace Token{
     }
 
     Block* BlockChain::GetHead(){
-        LOCK;
-        Block* head = GetInstance()->operator[](GetHeight());
+        READ_LOCK;
+        Block* head = GetBlock(GetHeight());
         UNLOCK;
         return head;
     }
 
     Block* BlockChain::GetGenesis(){
-        LOCK;
+        READ_LOCK;
         Block* blk = GetInstance()->operator[](0);
         UNLOCK;
         return blk;
     }
 
     bool BlockChain::AppendBlock(Token::Block* block){
-        LOCK;
         LOG(INFO) << "appending block: " << block->GetHash();
         LOG(INFO) << "checking for duplicate block...";
         if(ContainsBlock(block->GetHash())){
@@ -301,6 +295,7 @@ namespace Token{
             }
         }
 
+        WRITE_LOCK; //TODO: This should be here?!
         if(!GetInstance()->SaveBlock(block)){
             LOG(ERROR) << "couldn't save block: " << block->GetHash();
             UNLOCK;
@@ -415,7 +410,7 @@ namespace Token{
     }
 
     Block* BlockChain::GetBlock(uint32_t height){
-        LOCK;
+        READ_LOCK;
         if(height < 0 || height > GetHeight()){
             UNLOCK;
             return nullptr;
@@ -426,7 +421,7 @@ namespace Token{
     }
 
     Block* BlockChain::GetBlock(const std::string &hash){
-        LOCK;
+        READ_LOCK;
         if(!HasHead()){
             LOG(ERROR) << "no <HEAD> found";
             UNLOCK;
@@ -477,7 +472,7 @@ namespace Token{
     }
 
     bool BlockChain::Clear(){
-        LOCK;
+        WRITE_LOCK;
         if(!UnclaimedTransactionPool::GetInstance()->ClearUnclaimedTransactions()){
             LOG(ERROR) << "couldn't clear unclaimed transaction pool";
             UNLOCK;

@@ -28,6 +28,7 @@ namespace Token{
         friend class PeerClient;
 
         std::string path_;
+        pthread_rwlock_t lock_;
         leveldb::DB* state_;
         CryptoPP::RSA::PublicKey pubkey_;
         CryptoPP::RSA::PrivateKey privkey_;
@@ -92,9 +93,8 @@ namespace Token{
             return &queue_;
         }
 
-        static pthread_mutex_t* GetMutex();
-
         BlockChain():
+            lock_(),
             miner_thread_(),
             queue_(10),
             path_(),
