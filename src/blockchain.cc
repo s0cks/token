@@ -432,6 +432,7 @@ namespace Token{
         for(uint32_t idx = 0; idx < max; idx++){
             Block* blk = GetBlock(idx);
             if(blk->GetHash() == hash){
+                LOG(INFO) << "block '" << blk->GetHash() << "' found!";
                 UNLOCK;
                 return blk;
             }
