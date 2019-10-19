@@ -1,4 +1,17 @@
-/cmake-build-debug/
-/.idea/
-/build/
-/.DS_Store
+# Ignore Everything
+/*
+/*/
+
+# Except These
+!/cmake/
+!/include/
+!/protos/
+!/src/
+!/terraform/
+!/test/
+!/.gitignore
+!/.gitmodules
+!/CMakeLists.txt
+!/README.md
+!/main.cc
+!/client.cc
