@@ -4,22 +4,10 @@
 #include <arpa/inet.h>
 
 #include <glog/logging.h>
-#include <cstdlib>
 #include <cstdio>
 
 #include "node/session.h"
 #include "blockchain.h"
-
-
-/*
- * #include <unistd.h>
-#include <stdio.h>
-#include <sys/socket.h>
-#include <stdlib.h>
-#include <netinet/in.h>
-#include <string.h>
- *
- */
 
 namespace Token{
     NodeServerSession::NodeServerSession(BlockChainNode* server, uint32_t sock):
@@ -38,22 +26,17 @@ namespace Token{
         NodeServerSession* session = (NodeServerSession*)data;
         std::string err_msg = "";
 
-        uint32_t buffer_len = 4096;
-        uint8_t* buffer = (uint8_t*)malloc(sizeof(uint8_t) * buffer_len);
+        ByteArray bytes(4096);
         int len;
-        while((len = recv(session->GetSocket(), (char*)buffer, buffer_len, 0)) >= 0){
+        while((len = recv(session->GetSocket(), (char*)bytes.Data(), bytes.Capacity(), 0)) >= 0){
             if(len == 0) continue;
-            Message msg;
-            if(!msg.Decode(buffer, 0)){
-                LOG(ERROR) << "couldn't decode message";
-                break;
-            }
-
+            Message msg(&bytes);
+            LOG(INFO) << "decoded msg: " << msg.ToString();
             if(!session->Handle(&msg)){
                 LOG(ERROR) << "couldn't handle message: " << msg.ToString();
                 goto exit;
             }
-            memset(buffer, 0, sizeof(char) * buffer_len);
+            bytes.Clear();
         }
 
         exit:
@@ -67,16 +50,16 @@ namespace Token{
             LOG(INFO) << "received block: " << blk->GetHash();
             return true;
         }
-
         return false;
     }
 
     void NodeServerSession::Send(Token::Message* msg){
-        LOG(WARNING) << "sending: " << msg->ToString();
-        size_t size = msg->GetMessageSize();
-        uint8_t bytes[size + 1];
-        bytes[size] = '\0';
-        send(sock_, bytes, size, 0);
+        ByteArray bytes(msg->GetMessageSize());
+        if(!msg->Encode(&bytes)){
+            LOG(ERROR) << "couldn't encode message: " << msg->ToString();
+            return;
+        }
+        send(sock_, bytes.Data(), bytes.Length(), 0);
     }
 
     void NodeServerSession::StartThread(){
@@ -99,19 +82,24 @@ namespace Token{
     }
 
     void Session::SendBlock(Token::Block* block){
-        Message msg(Message::Type::kBlockMessage, block->GetAsMessage());
+        Message msg(block);
         Send(&msg);
     }
 
+    bool NodeClientSession::Handle(Token::Message* msg){
+        LOG(INFO) << "received: " << msg->ToString();
+        return true;
+    }
+
     void NodeClientSession::Send(Token::Message* msg){
-        size_t size = msg->GetMessageSize();
-        uint8_t bytes[size + 1];
-        if(!msg->Encode(bytes, size)){
-            LOG(WARNING) << "couldn't encode message: " << msg->ToString();
+        LOG(INFO) << "sending: " << msg->ToString();
+        ByteArray bytes(msg->GetMessageSize() + 1);
+        if(!msg->Encode(&bytes)){
+            LOG(ERROR) << "couldn't encode message: " << msg->ToString();
             return;
         }
-        bytes[size] = '\0';
-        send(sock_, bytes, size, 0);
+        bytes[msg->GetMessageSize()] = '\0';
+        send(sock_, bytes.Data(), bytes.Length(), 0);
     }
 
     void* NodeClientSession::ClientThread(void* data){
@@ -140,22 +128,16 @@ namespace Token{
         client->SetState(SessionState::kConnected);
         client->SendBlock(BlockChain::GetHead());
 
-        uint32_t buffer_len = 4096;
-        uint8_t* buffer = (uint8_t*)malloc(sizeof(uint8_t) * buffer_len);
+        ByteArray bytes(4096);
         int len;
-        while((len = recv(client->sock_, (char*)buffer, buffer_len, 0)) > 0) {
+        while((len = recv(client->sock_, (char*)bytes.Data(), bytes.Capacity(), 0)) > 0) {
             if(len == 0) continue;
-            Message msg;
-            if(!msg.Decode(buffer, 0)){
-                LOG(WARNING) << "couldn't decode message";
-                return nullptr; //TODO: Fixme
+            Message msg(&bytes);
+            if(!client->Handle(&msg)){
+                LOG(ERROR) << "couldn't handle: " << msg.ToString();
+                break;
             }
-
-            if(msg.IsBlockMessage()){
-                Block* blk = Block::Decode(msg.GetAsBlock());
-                LOG(INFO) << "received block: " << blk->GetHash();
-            }
-            memset(buffer, 0, sizeof(uint8_t) * buffer_len);
+            bytes.Clear();
         }
     }
 

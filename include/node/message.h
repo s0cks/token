@@ -1,9 +1,13 @@
 #ifndef TOKEN_MESSAGE_H
 #define TOKEN_MESSAGE_H
 
-#include "node.grpc.pb.h"
 #include "blockchain.pb.h"
-#include "service.grpc.pb.h"
+#include "node.pb.h"
+#include "service.pb.h"
+
+#include "allocator.h"
+#include "bytearray.h"
+#include "blockchain.h"
 
 namespace Token{
 #define FOR_EACH_TYPE(V) \
@@ -15,18 +19,7 @@ namespace Token{
     V(Block, Token::Messages::Block) \
     V(PeerList, Token::Messages::PeerList)
 
-    /**
-     * .ping
-     *      - PongMessage
-     * .version
-     *      - Verack
-     *      - BlockList
-     * .getblock
-     *      - Block
-     * .gethead
-     *      - Block
-     */
-
+    /*
     class Message{
     public:
         enum class Type{
@@ -85,6 +78,48 @@ namespace Token{
         }
 
         std::string ToString() const;
+    };
+    */
+
+    class Message : public AllocatorObject{
+    public:
+        enum class Type{
+            kUnknownType = 0,
+#define DECLARE_TYPE(Name, Type) k##Name##Message,
+            FOR_EACH_TYPE(DECLARE_TYPE)
+#undef DECLARE_TYPE
+        };
+    private:
+        Type type_;
+        google::protobuf::Message* raw_;
+
+        inline google::protobuf::Message*
+        GetRaw(){
+            return raw_;
+        }
+
+        bool Decode(ByteArray* bytes);
+    public:
+        Message(ByteArray* bytes);
+        Message(Block* block);
+        ~Message();
+
+        bool Encode(ByteArray* bytes);
+        std::string ToString();
+
+        uint32_t GetMessageSize(){
+            return GetRaw()->ByteSizeLong();
+        }
+
+#define DECLARE_AS(Name, MType) \
+        MType* GetAs##Name();
+        FOR_EACH_TYPE(DECLARE_AS)
+#undef DECLARE_AS
+
+#define DECLARE_IS(Name, MType) \
+        bool Is##Name##Message();
+        FOR_EACH_TYPE(DECLARE_IS)
+#undef DECLARE_IS
     };
 }
 

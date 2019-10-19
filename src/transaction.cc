@@ -133,7 +133,7 @@ namespace Token{
                 LOG(ERROR) << "couldn't append new block: " << block->GetHash();
                 return false;
             }
-            Message msg(Message::Type::kBlockMessage, block->GetAsMessage());
+            // Message msg(Message::Type::kBlockMessage, block->GetAsMessage());
             //TODO: BlockChainServer::AsyncBroadcast(&msg); //TODO: Check side, AsyncBroadcast may not work on libuv threads
             return true;
         }

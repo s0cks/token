@@ -70,6 +70,8 @@ namespace Token{
         uint32_t sock_;
         uint16_t port_;
 
+        bool Handle(Message* msg);
+
         static void* ClientThread(void* data);
     public:
         NodeClientSession(const std::string& address, uint16_t port);

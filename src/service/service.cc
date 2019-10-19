@@ -91,12 +91,14 @@ namespace Token{
     grpc::Status BlockChainService::Spend(grpc::ServerContext *ctx,
                                           const Token::Messages::Service::SpendTokenRequest *request,
                                           Token::Messages::EmptyResponse* response){
+        LOG(INFO) << "spending: " << request->token();
         UnclaimedTransaction utxo;
         if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransaction(request->token(), &utxo)){
             LOG(ERROR) << "cannot get unclaimed transaction: " << request->token();
             return grpc::Status::CANCELLED;
         }
 
+        LOG(INFO) << "creating transaction...";
         Transaction* tx = new Transaction();
         tx->AddInput(utxo.GetTransactionHash(), utxo.GetIndex());
         tx->AddOutput(utxo.GetHash(), request->to_user());

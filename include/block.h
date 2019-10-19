@@ -49,6 +49,7 @@ namespace Token{
 
         friend class TransactionPool;
         friend class BlockChain;
+        friend class Message;
     public:
         Block(uint32_t height, const std::string& previous_hash);
         ~Block();

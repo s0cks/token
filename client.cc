@@ -1,4 +1,5 @@
 #include <glog/logging.h>
+#include <gflags/gflags.h>
 #include "allocator.h"
 #include "blockchain.h"
 #include "service/client.h"
@@ -33,19 +34,24 @@ PrintTransaction(Token::Transaction* tx){
     }
 }
 
+DEFINE_string(address, "", "The address of the node to connect to");
+DEFINE_uint32(port, 0, "The port to use");
+
 int main(int argc, char** argv){
     using namespace Token;
-    if(argc < 2) return EXIT_FAILURE;
-    std::string host(argv[1]);
-    int port = atoi(argv[2]);
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     if(!Allocator::Initialize(4096 * 32, 4096 * 32 * 4)){
         LOG(ERROR) << "couldn't initialize allocator";
         return EXIT_FAILURE;
     }
 
-    std::cout << "Connecting to: " << host << ":" << port << std::endl;
-    TokenServiceClient client(host, port);
+    TokenServiceClient* client;
+    if(FLAGS_port > 0){
+        client = new TokenServiceClient(FLAGS_address, FLAGS_port);
+    } else{
+        client = new TokenServiceClient(FLAGS_address);
+    }
 
     std::string input;
     do{
@@ -56,14 +62,14 @@ int main(int argc, char** argv){
             return EXIT_FAILURE;
         } else if(input == "gethead"){
             Messages::BlockHeader head;
-            if(!client.GetHead(&head)){
+            if(!client->GetHead(&head)){
                 LOG(ERROR) << "couldn't get <HEAD> from service";
                 return EXIT_FAILURE;
             }
             PrintBlock(&head);
         } else if(input == "lspeers"){
             std::vector<std::string> peers;
-            if(!client.GetPeers(peers)){
+            if(!client->GetPeers(peers)){
                 LOG(ERROR) << "couldn't get peers from service";
                 return EXIT_FAILURE;
             }
@@ -78,7 +84,7 @@ int main(int argc, char** argv){
             if(target.length() == 64){
                 LOG(INFO) << "fetching block from hash: " << target;
                 Messages::BlockHeader blk;
-                if(!client.GetBlock(target, &blk)){
+                if(!client->GetBlock(target, &blk)){
                     LOG(ERROR) << "couldn't fetch block: " << target;
                     return EXIT_FAILURE;
                 }
@@ -86,7 +92,7 @@ int main(int argc, char** argv){
             } else{
                 LOG(INFO) << "fetching block @" << target;
                 Messages::BlockHeader blk;
-                if(!client.GetBlockAt(atoi(target.c_str()), &blk)){
+                if(!client->GetBlockAt(atoi(target.c_str()), &blk)){
                     LOG(ERROR) << "couldn't fetch block: " << target;
                     return EXIT_FAILURE;
                 }
@@ -107,7 +113,7 @@ int main(int argc, char** argv){
             std::string to_user;
             std::cout << "to := ";
             std::cin >> to_user;
-            if(!client.Spend(token, from_user, to_user)){
+            if(!client->Spend(token, from_user, to_user)){
                 LOG(ERROR) << "couldn't spend token: " << token;
                 return EXIT_FAILURE;
             }
@@ -119,7 +125,7 @@ int main(int argc, char** argv){
             std::string pport;
             std::cout << "port := ";
             std::cin >> pport;
-            if(!client.ConnectTo(address, atoi(pport.c_str()))){
+            if(!client->ConnectTo(address, atoi(pport.c_str()))){
                 LOG(ERROR) << "couldn't connect to peer: " << address << ":" << pport;
                 return EXIT_FAILURE;
             }

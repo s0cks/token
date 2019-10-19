@@ -17,6 +17,7 @@ namespace Token{
         }
     public:
         TokenServiceClient(const std::string& address, int port);
+        TokenServiceClient(const std::string& address);
         ~TokenServiceClient(){}
 
         bool GetHead(Messages::BlockHeader* response);

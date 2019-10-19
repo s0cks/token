@@ -11,6 +11,13 @@ namespace Token{
         stub_ = Token::Messages::Service::BlockChainService::NewStub(channel_);
     }
 
+    TokenServiceClient::TokenServiceClient(const std::string &address):
+            stub_(),
+            channel_(){
+        channel_ = grpc::CreateChannel(address, grpc::InsecureChannelCredentials());
+        stub_ = Token::Messages::Service::BlockChainService::NewStub(channel_);
+    }
+
     bool TokenServiceClient::GetHead(Token::Messages::BlockHeader* response){
         Token::Messages::EmptyRequest request;
         grpc::ClientContext ctx;
