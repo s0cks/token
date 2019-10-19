@@ -6,6 +6,12 @@
 #include "block_validator.h"
 
 namespace Token{
+    pthread_rwlock_t*
+    BlockChain::GetLock(){
+        static pthread_rwlock_t instance = PTHREAD_RWLOCK_INITIALIZER;
+        return &instance;
+    }
+
     BlockChain*
     BlockChain::GetInstance(){
         static BlockChain instance;
@@ -201,9 +207,9 @@ namespace Token{
         }
     }
 
-#define READ_LOCK pthread_rwlock_rdlock(&GetInstance()->rwlock_)
-#define WRITE_LOCK pthread_rwlock_wrlock(&GetInstance()->rwlock_)
-#define UNLOCK pthread_rwlock_unlock(&GetInstance()->rwlock_)
+#define READ_LOCK pthread_rwlock_rdlock(GetLock())
+#define WRITE_LOCK pthread_rwlock_wrlock(GetLock())
+#define UNLOCK pthread_rwlock_unlock(GetLock())
 
     uint32_t BlockChain::GetHeight(){
         READ_LOCK;
@@ -273,6 +279,8 @@ namespace Token{
         } else{
             LOG(INFO) << "finding parent block";
             Block* parent;
+            //480EF1FCE654AD4CD62BDA2B4842CEE256CC2BDA88897391D6C43420E00C26F6
+            //B9BA93BD593DAF80EE230C46B50C5257D4F64E188DE636CFEC4C55AF8559DE11
             if(!(parent = GetBlock(block->GetPreviousHash()))){
                 LOG(ERROR) << "cannot find parent block: " << block->GetPreviousHash();
                 UNLOCK;

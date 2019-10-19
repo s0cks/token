@@ -29,7 +29,6 @@ namespace Token{
 
         std::string path_;
         leveldb::DB* state_;
-        pthread_rwlock_t rwlock_;
         CryptoPP::RSA::PublicKey pubkey_;
         CryptoPP::RSA::PrivateKey privkey_;
 
@@ -93,8 +92,9 @@ namespace Token{
             return &queue_;
         }
 
+        static pthread_rwlock_t* GetLock();
+
         BlockChain():
-            rwlock_(),
             miner_thread_(),
             queue_(10),
             path_(),
@@ -104,7 +104,6 @@ namespace Token{
             state_(nullptr){
             blocks_ = (Block**)(malloc(sizeof(Block*) * blocks_caps_));
             memset(blocks_, 0, sizeof(Block*) * blocks_caps_);
-            pthread_rwlock_init(&rwlock_, NULL);
         }
     public:
         static BlockChain* GetInstance(); //TODO: Revoke access
