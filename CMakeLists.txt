@@ -28,7 +28,7 @@ file(GLOB_RECURSE TOKEN_PROTO_SOURCES protos/*.proto)
 file(GLOB_RECURSE TOKEN_SERVICE_PROTO_SOURCES protos/*.proto)
 
 protobuf_generate_cpp(PROTO_SRC PROTO_HEADER ${TOKEN_PROTO_SOURCES})
-grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${CMAKE_BINARY_DIR} ${TOKEN_SERVICE_PROTO_SOURCES})
+# grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${CMAKE_BINARY_DIR} ${TOKEN_SERVICE_PROTO_SOURCES})
 
 #=================================================
 #       Token Ledger Library
@@ -36,7 +36,7 @@ grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${CMAKE_BINARY_DIR} ${TOKEN_SERVICE_PROTO_
 add_library(
         "${PROJECT_NAME}-ledger"
         SHARED
-        ${TOKEN_LIB_SOURCES} ${PROTO_HEADER} ${PROTO_SRC} ${GRPC_HEADERS} ${GRPC_SRCS}
+        ${TOKEN_LIB_SOURCES} ${PROTO_HEADER} ${PROTO_SRC} node.grpc.pb.cc node.grpc.pb.h service.grpc.pb.cc service.grpc.pb.h
 )
 target_link_libraries(
         "${PROJECT_NAME}-ledger"
