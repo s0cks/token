@@ -29,9 +29,15 @@ cmake -DCMAKE_BUILD_TYPE=Debug ..
 cmake --build .
 ```
 
+# Starting the Ledger
+
+```bash
+./token-node --path /your/path/to/ledger --server-port 8000 --service-port 8001
+```
+
 # Other
 
-# Starting the Local Ledger
+## Ledger Help
 
 ```bash
 ./token-node --help
@@ -39,7 +45,6 @@ cmake --build .
   -maxheap_size (The size of the major heap) type: uint32 default: 20480
   -minheap_size (The size of the minor heap) type: uint32 default: 2560
   -path (The FS path for the BlockChain) type: string default: ""
-  -peer_port (The port to connect to a peer with) type: uint32 default: 0
   -server_port (The port used for the BlockChain server) type: uint32
     default: 0
   -service_port (The port used for the RPC service) type: uint32 default: 0
