@@ -60,6 +60,7 @@ namespace Token{
 
     bool TokenServiceClient::GetUnclaimedTransactions(const std::string& user, Token::Messages::UnclaimedTransactionList *response){
         Token::Messages::Service::GetUnclaimedTransactionsRequest request;
+        request.set_user(user);
         grpc::ClientContext ctx;
         return GetStub()->GetUnclaimedTransactions(&ctx, request, response).ok();
     }

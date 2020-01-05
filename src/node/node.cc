@@ -1,10 +1,6 @@
 #include <string.h>
 #include <glog/logging.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
-#include <node/message.h>
-#include <block.h>
-#include <blockchain.h>
 #include "node/node.h"
 
 namespace Token{

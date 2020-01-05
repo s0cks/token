@@ -169,6 +169,7 @@ namespace Token{
             LOG(ERROR) << "couldn't delete transaction pool file: " << filename;
             return nullptr;
         }
+        LOG(INFO) << "loaded transaction: " << tx->ToString();
         return tx;
     }
 

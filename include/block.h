@@ -122,7 +122,7 @@ namespace Token{
             stream << "\tTransactions:" << std::endl;
             for(int i = 0; i < block.GetNumberOfTransactions(); i++){
                 Transaction* tx = const_cast<Block&>(block).GetTransactionAt(i);
-                std::cout << "\t  - #" << i << " " << tx->GetHash() << std::endl;
+                stream << "\t  - #" << i << " " << (*tx) << std::endl;
             }
             return stream;
         }

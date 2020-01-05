@@ -22,7 +22,7 @@ namespace Token{
         for(int i = 0; i < 128; i++){
             std::stringstream stream;
             stream << "Token" << i;
-            cbtx->AddOutput(stream.str(), "TestUser");
+            cbtx->AddOutput("TestUser", stream.str());
         }
         genesis->AppendTransaction(cbtx); //TODO This needs to be here
         Allocator::AddReference(genesis);
@@ -174,7 +174,7 @@ namespace Token{
                 pthread_exit(result);
             }
 
-            LOG(WARNING) << "mining block: " << blk->GetHash();
+            LOG(WARNING) << "processing block: " << blk->GetHash();
             if(!BlockChain::AppendBlock(blk)){
                 const char* msg = "couldn't append new block";
                 result = (char*)malloc(sizeof(char) * strlen(msg));
@@ -272,8 +272,6 @@ namespace Token{
         } else{
             LOG(INFO) << "finding parent block";
             Block* parent;
-            //480EF1FCE654AD4CD62BDA2B4842CEE256CC2BDA88897391D6C43420E00C26F6
-            //B9BA93BD593DAF80EE230C46B50C5257D4F64E188DE636CFEC4C55AF8559DE11
             if(!(parent = GetBlock(block->GetPreviousHash()))){
                 LOG(ERROR) << "cannot find parent block: " << block->GetPreviousHash();
                 UNLOCK;

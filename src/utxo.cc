@@ -305,7 +305,7 @@ namespace Token{
 
     std::string UnclaimedTransaction::ToString(){
         std::stringstream stream;
-        stream << "UnclaimedTransaction(" << GetHash() << ")";
+        stream << "UnclaimedTransaction(" << GetHash() << ",from='" << GetUser() << "')";
         return stream.str();
     }
 

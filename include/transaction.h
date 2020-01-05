@@ -112,11 +112,10 @@ namespace Token{
             return new Input(in);
         }
 
-        Output* AddOutput(const std::string& token, const std::string& user){
+        void AddOutput(const std::string& user, const std::string& token){
             Messages::Output* out = GetRaw()->add_outputs();
-            out->set_token(token);
             out->set_user(user);
-            return new Output(out);
+            out->set_token(token);
         }
 
         Input* GetInputAt(int idx){

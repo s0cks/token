@@ -98,10 +98,11 @@ namespace Token{
             return grpc::Status::CANCELLED;
         }
 
+        LOG(INFO) << request->from_user() << " sent " << request->to_user() << " token: " << request->token();
         LOG(INFO) << "creating transaction...";
         Transaction* tx = new Transaction();
         tx->AddInput(utxo.GetTransactionHash(), utxo.GetIndex());
-        tx->AddOutput(utxo.GetHash(), request->to_user());
+        tx->AddOutput(request->to_user(), utxo.GetToken());
         if(!TransactionPool::AddTransaction(tx)){
             LOG(ERROR) << "cannot add transaction to transaction pool";
             return grpc::Status::CANCELLED;
@@ -109,6 +110,8 @@ namespace Token{
         return grpc::Status::OK;
     }
 
+    /// 5O57b4u7f3uteTEUiEY1
+    
     grpc::Status BlockChainService::ConnectTo(grpc::ServerContext *ctx, const Token::Messages::Peer *request,
                                               Token::Messages::EmptyResponse *response){
         /*

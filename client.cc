@@ -129,6 +129,31 @@ int main(int argc, char** argv){
                 LOG(ERROR) << "couldn't connect to peer: " << address << ":" << pport;
                 return EXIT_FAILURE;
             }
+        } else if(input == "getutxos"){
+            std::string user;
+            std::cout << "User? := ";
+            std::cin >> user;
+
+            Messages::UnclaimedTransactionList utxos;
+            if(user == "None"){
+                LOG(INFO) << "getting all unclaimed transactions";
+                if(!client->GetUnclaimedTransactions(&utxos)){
+                    LOG(ERROR) << "couldn't get all unclaimed transactions";
+                    return EXIT_FAILURE;
+                }
+            } else{
+                LOG(INFO) << "getting unclaimed transactions for: " << user;
+                if(!client->GetUnclaimedTransactions(user, &utxos)){
+                    LOG(ERROR) << "couldn't get unclaimed transactions for: " << user;
+                    return EXIT_FAILURE;
+                }
+            }
+
+            LOG(INFO) << "unclaimed transactions: ";
+            size_t idx = 1;
+            for(auto& it : utxos.transactions()){
+                LOG(INFO) << (idx++) << it.token() << " to: " << it.user();
+            }
         }
     } while(true);
 }

@@ -81,7 +81,7 @@ main(int argc, char** argv){
     }
 
     UnclaimedTransactionPoolPrinter::Print();
-    BlockChainPrinter::PrintBlockChain();
+    BlockChainPrinter::PrintBlockChain(true);
 
     if(FLAGS_server_port > 0){
         /*
@@ -106,7 +106,7 @@ main(int argc, char** argv){
     }
 
     if(FLAGS_service_port > 0){
-        BlockChainService::Start("0.0.0.0", FLAGS_service_port);
+        BlockChainService::Start("127.0.0.1", FLAGS_service_port);
         LOG(INFO) << "BlockChainService started @ localhost:" << FLAGS_service_port;
         BlockChainService::WaitForShutdown();
     }
