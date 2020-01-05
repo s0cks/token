@@ -16,7 +16,7 @@ In order to compile this project, you will need the following libraries availabl
 
 ## Compiling
 
-```text
+```bash
 # Create build directory
 mkdir build && cd build
 
@@ -41,7 +41,8 @@ cmake --build .
 
 ```bash
 ./token-node --help
-
+```
+```text
   -maxheap_size (The size of the major heap) type: uint32 default: 20480
   -minheap_size (The size of the minor heap) type: uint32 default: 2560
   -path (The FS path for the BlockChain) type: string default: ""
