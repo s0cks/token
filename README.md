@@ -16,7 +16,7 @@ In order to compile this project, you will need the following libraries availabl
 
 ## Compiling
 
-```bash
+```text
 # Create build directory
 mkdir build && cd build
 
