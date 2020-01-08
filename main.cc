@@ -2,25 +2,14 @@
 #include <string>
 #include <glog/logging.h>
 #include <sys/stat.h>
-#include <gflags/gflags.h>
 #include <block_queue.h>
 #include <node/node.h>
 
+#include "flags.h"
 #include "allocator.h"
+#include "key.h"
 #include "blockchain.h"
 #include "service/service.h"
-
-// BlockChain flags
-DEFINE_string(path, "", "The FS path for the BlockChain");
-DEFINE_uint32(minheap_size, 128 * 20, "The size of the minor heap");
-DEFINE_uint32(maxheap_size, 128 * 32 * 5, "The size of the major heap");
-
-// RPC Service Flags
-DEFINE_uint32(service_port, 0, "The port used for the RPC service");
-
-// Server Flags
-DEFINE_uint32(server_port, 0, "The port used for the BlockChain server");
-DEFINE_uint32(peer_port, 0, "The port to connect to a peer with");
 
 static inline bool
 FileExists(const std::string& name){
@@ -30,7 +19,7 @@ FileExists(const std::string& name){
 
 static inline bool
 InitializeLogging(char* arg0){
-    std::string path = (FLAGS_path + "/logs/");
+    std::string path = (TOKEN_BLOCKCHAIN_HOME + "/logs/");
     if(!FileExists(path)){
         int rc;
         if((rc = mkdir(path.c_str(), S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH)) == -1){
@@ -48,7 +37,7 @@ InitializeLogging(char* arg0){
 
 static inline bool
 InitializeUnclaimedTransactionPool(){
-    std::string path = (FLAGS_path + "/unclaimed.db");
+    std::string path = (TOKEN_BLOCKCHAIN_HOME + "/unclaimed.db");
     return Token::UnclaimedTransactionPool::LoadUnclaimedTransactionPool(path);
 }
 
@@ -66,43 +55,29 @@ main(int argc, char** argv){
         return EXIT_FAILURE;
     }
 
+    if(!TokenKeychain::InitializeKeys()){
+        LOG(ERROR) << "couldn't initial block chain keychain";
+        return EXIT_FAILURE;
+    }
+
     if(!InitializeUnclaimedTransactionPool()){
         LOG(ERROR) << "couldn't initialize UnclaimedTransactionPool";
         return EXIT_FAILURE;
     }
 
-    if(!TransactionPool::Initialize(FLAGS_path)){
+    if(!TransactionPool::Initialize(TOKEN_BLOCKCHAIN_HOME)){
         LOG(ERROR) << "couldn't initialize the transaction pool";
         return EXIT_FAILURE;
     }
 
-    if(!BlockChain::Initialize(FLAGS_path)){
+    if(!BlockChain::Initialize()){
+        LOG(ERROR) << "couldn't initialize the blockchain";
         return EXIT_FAILURE;
     }
 
-    UnclaimedTransactionPoolPrinter::Print();
-    BlockChainPrinter::PrintBlockChain(true);
-
-    if(FLAGS_server_port > 0){
-        /*
-        if(!BlockChainServer::Initialize(FLAGS_server_port)){
-            LOG(ERROR) << "Couldn't initialize the BlockChain server";
-            return EXIT_FAILURE;
-        }
-        */
-        BlockChainNode::Initialize("localhost", FLAGS_server_port);
-    }
-
-    if(FLAGS_server_port > 0 && FLAGS_peer_port > 0){
-        /*
-        if(!BlockChainServer::ConnectToPeer("127.0.0.1", FLAGS_peer_port)){
-            LOG(ERROR) << "Couldn't connect to peer on port: " << FLAGS_peer_port;
-            return EXIT_FAILURE;
-        }
-        */
-
-        NodeClientSession* session = new NodeClientSession("127.0.0.1", FLAGS_peer_port);
-        session->Connect();
+    if(TOKEN_VERBOSE){
+        UnclaimedTransactionPoolPrinter::Print();
+        BlockChainPrinter::PrintBlockChain(true);
     }
 
     if(FLAGS_service_port > 0){

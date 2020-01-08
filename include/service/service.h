@@ -33,6 +33,7 @@ namespace Token{
         grpc::Status GetBlockData(grpc::ServerContext* ctx, const Token::Messages::Service::GetBlockRequest* request, Messages::Block* response);
         grpc::Status GetUnclaimedTransactions(grpc::ServerContext* ctx, const Token::Messages::Service::GetUnclaimedTransactionsRequest* request, Messages::UnclaimedTransactionList* response);
         grpc::Status GetPeers(grpc::ServerContext* ctx, const Token::Messages::EmptyRequest* request, Token::Messages::PeerList* response);
+        grpc::Status SpendTest(grpc::ServerContext* ctx, const Token::Messages::Service::SpendTokenRequest* request, Token::Messages::EmptyResponse* response);
         grpc::Status Spend(grpc::ServerContext* ctx, const Token::Messages::Service::SpendTokenRequest* request, Token::Messages::EmptyResponse* response);
         grpc::Status ConnectTo(grpc::ServerContext* ctx, const Token::Messages::Peer* request, Token::Messages::EmptyResponse* response);
 

@@ -20,24 +20,19 @@ namespace Token{
 
     class BlockChain{
     public:
-        static const size_t kKeypairSize = 1024;
         static const uintptr_t kBlockChainInitSize = 1024;
     private:
-        friend class BlockChainServer;
-        friend class PeerSession;
-        friend class PeerClient;
-
         std::string path_;
         pthread_rwlock_t lock_;
         leveldb::DB* state_;
-        CryptoPP::RSA::PublicKey pubkey_;
-        CryptoPP::RSA::PrivateKey privkey_;
 
         Block** blocks_;
         uintptr_t blocks_caps_;
         uintptr_t blocks_size_;
         BlockQueue queue_;
         pthread_t miner_thread_;
+
+        static BlockChain* GetInstance(); //TODO: Revoke access
 
         static inline leveldb::DB*
         GetState(){
@@ -47,8 +42,6 @@ namespace Token{
         bool CreateGenesis(); //TODO: Remove
 
         bool LoadBlockChain(const std::string& path);
-        bool GenerateChainKeys(const std::string& pubkey, const std::string& privkey);
-        bool InitializeChainKeys(const std::string& path);
         bool InitializeChainState(const std::string& root);
 
         bool GetReference(const std::string& ref, uint32_t* height); //TODO: Remove
@@ -106,16 +99,6 @@ namespace Token{
             memset(blocks_, 0, sizeof(Block*) * blocks_caps_);
         }
     public:
-        static BlockChain* GetInstance(); //TODO: Revoke access
-
-        static CryptoPP::PublicKey* GetPublicKey(){
-            return &GetInstance()->pubkey_;
-        }
-
-        static CryptoPP::PrivateKey* GetPrivateKey(){
-            return &GetInstance()->privkey_;
-        }
-
         static void Accept(BlockChainVisitor* vis);
         static Block* GetHead();
         static Block* GetGenesis();
@@ -125,7 +108,7 @@ namespace Token{
         static bool GetBlockList(std::vector<std::string>& blocks);
         static bool HasHead();
         static bool ContainsBlock(const std::string& hash);
-        static bool Initialize(const std::string& path);
+        static bool Initialize();
         static bool Append(Block* block); //TODO: Revoke access?
 
         static std::string GetRootDirectory(); //TODO: Revoke access

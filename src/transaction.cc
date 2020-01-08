@@ -3,13 +3,13 @@
 #include <sys/time.h>
 #include <stdio.h>
 #include <dirent.h>
-#include <cryptopp/pssr.h>
-#include <cryptopp/whrlpool.h>
 #include <node/message.h>
 
 #include "allocator.h"
 #include "blockchain.h"
 #include "transaction.h"
+#include "signer.h"
+#include "verifier.h"
 
 namespace Token{
     void Transaction::Accept(Token::TransactionVisitor* vis){
@@ -26,31 +26,35 @@ namespace Token{
         GetRaw()->set_timestamp(GetCurrentTime());
     }
 
-    typedef CryptoPP::RSASS<CryptoPP::PSSR, CryptoPP::Whirlpool>::Signer Signer;
-    typedef CryptoPP::RSASS<CryptoPP::PSSR, CryptoPP::Whirlpool>::Verifier Verifier;
-
-    bool Transaction::Sign(CryptoPP::RSA::PrivateKey key){
-        size_t size = GetRaw()->ByteSizeLong();
-        uint8_t bytes[size];
-        GetRaw()->SerializeToArray(bytes, size);
-        std::string digest;
-        Signer signer(key);
-        CryptoPP::AutoSeededRandomPool prng;
-        CryptoPP::ArraySource source(bytes, size, true, new CryptoPP::SignerFilter(prng, signer, new CryptoPP::HexEncoder(new CryptoPP::StringSink(digest))));
-        GetRaw()->set_signature(digest);
-        return true;
+    void Transaction::SetSignature(std::string signature){
+        GetRaw()->set_signature(signature);
     }
 
     std::string Transaction::GetSignature(){
         return GetRaw()->signature();
     }
 
+    uint64_t Transaction::GetByteSize(){
+        return GetRaw()->ByteSizeLong();
+    }
+
+    bool Transaction::GetBytes(uint8_t** bytes, uint64_t size){
+        (*bytes) = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * size));
+        return GetRaw()->SerializeToArray((*bytes), size);
+    }
+
     std::string Transaction::GetHash(){
         CryptoPP::SHA256 func;
         std::string digest;
-        size_t size = GetRaw()->ByteSizeLong();
-        uint8_t bytes[size];
-        GetRaw()->SerializeToArray(bytes, size);
+
+        uint64_t size = GetByteSize();
+        uint8_t* bytes;
+        if(!GetBytes(&bytes, size)){
+            LOG(ERROR) << "couldn't get bytes for the transaction";
+            free(bytes);
+            return "";
+        }
+        free(bytes);
         CryptoPP::ArraySource source(bytes, size, true, new CryptoPP::HashFilter(func, new CryptoPP::HexEncoder(new CryptoPP::StringSink(digest))));
         return digest;
     }
@@ -135,7 +139,7 @@ namespace Token{
             }
             // Message msg(Message::Type::kBlockMessage, block->GetAsMessage());
             //TODO: BlockChainServer::AsyncBroadcast(&msg); //TODO: Check side, AsyncBroadcast may not work on libuv threads
-            return true;
+            return AddTransaction(tx);
         }
         std::stringstream txfile;
         txfile << root_ << "/tx" << counter_ << ".dat";
@@ -165,6 +169,7 @@ namespace Token{
             return nullptr;
         }
         fd.close();
+
         if(!DeleteTransactionFile(filename)){
             LOG(ERROR) << "couldn't delete transaction pool file: " << filename;
             return nullptr;

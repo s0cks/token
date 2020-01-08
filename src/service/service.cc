@@ -1,5 +1,6 @@
 #include "service/service.h"
 #include <glog/logging.h>
+#include <signer.h>
 
 namespace Token{
     grpc::Status BlockChainService::GetHead(grpc::ServerContext *ctx,
@@ -7,7 +8,7 @@ namespace Token{
                                             Token::Messages::BlockHeader *response){
         LOG(INFO) << "getting head";
         Block* head;
-        if(!(head = BlockChain::GetInstance()->GetHead())){
+        if(!(head = BlockChain::GetHead())){
             LOG(ERROR) << "couldn't get BlockChain <HEAD>";
             return grpc::Status::CANCELLED;
         }
@@ -22,14 +23,14 @@ namespace Token{
                                              Token::Messages::BlockHeader *response){
         if(!request->hash().empty()){
             LOG(INFO) << "getting block: " << request->hash();
-            Block* block = BlockChain::GetInstance()->GetBlock(request->hash());
+            Block* block = BlockChain::GetBlock(request->hash());
             if(block){
                 SetBlockHeader(block, response);
                 return grpc::Status::OK;
             }
         } else{
             LOG(INFO) << "getting block @" << request->index();
-            Block* block = BlockChain::GetInstance()->GetBlock(request->index());
+            Block* block = BlockChain::GetBlock(request->index());
             if(block){
                 SetBlockHeader(block, response);
                 return grpc::Status::OK;
@@ -42,7 +43,7 @@ namespace Token{
                                                  const Token::Messages::Service::GetBlockRequest *request,
                                                  Token::Messages::Block *response){
         if(!request->hash().empty()){
-            Block* block = BlockChain::GetInstance()->GetBlock(request->hash());
+            Block* block = BlockChain::GetBlock(request->hash());
             if(block){
                 Messages::Block* resp = block->GetAsMessage();
                 response->CopyFrom(*resp);
@@ -50,7 +51,7 @@ namespace Token{
                 return grpc::Status::OK;
             }
         } else{
-            Block* block = BlockChain::GetInstance()->GetBlock(request->index());
+            Block* block = BlockChain::GetBlock(request->index());
             if(block){
                 Messages::Block* resp = block->GetAsMessage();
                 response->CopyFrom(*resp);
@@ -88,25 +89,42 @@ namespace Token{
         return grpc::Status::OK;
     }
 
+    grpc::Status BlockChainService::SpendTest(grpc::ServerContext *ctx,
+                                              const Token::Messages::Service::SpendTokenRequest* request,
+                                              Token::Messages::EmptyResponse *response){
+        LOG(INFO) << "spending " << request->token() << " to " << request->user();
+        return grpc::Status::CANCELLED;
+    }
+
     grpc::Status BlockChainService::Spend(grpc::ServerContext *ctx,
                                           const Token::Messages::Service::SpendTokenRequest *request,
                                           Token::Messages::EmptyResponse* response){
-        LOG(INFO) << "spending: " << request->token();
+        LOG(INFO) << "spending " << request->token() << " to " << request->user();
         UnclaimedTransaction utxo;
         if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransaction(request->token(), &utxo)){
             LOG(ERROR) << "cannot get unclaimed transaction: " << request->token();
             return grpc::Status::CANCELLED;
         }
 
-        LOG(INFO) << request->from_user() << " sent " << request->to_user() << " token: " << request->token();
+
+        LOG(INFO) << request->owner()<< " sent " << request->user() << " token: " << request->token();
         LOG(INFO) << "creating transaction...";
         Transaction* tx = new Transaction();
         tx->AddInput(utxo.GetTransactionHash(), utxo.GetIndex());
-        tx->AddOutput(request->to_user(), utxo.GetToken());
-        if(!TransactionPool::AddTransaction(tx)){
+        tx->AddOutput(request->user(), utxo.GetToken());
+
+        TransactionSigner signer(tx);
+        if(!signer.Sign()){
+            LOG(ERROR) << "didn't sign transaction";
+            return grpc::Status::CANCELLED;
+        }
+
+        if(!TransactionPool::AddTransaction(tx)) {
             LOG(ERROR) << "cannot add transaction to transaction pool";
             return grpc::Status::CANCELLED;
         }
+
+        LOG(INFO) << "spent!";
         return grpc::Status::OK;
     }
 

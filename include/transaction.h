@@ -93,10 +93,15 @@ namespace Token{
             return &raw_;
         }
 
+        uint64_t GetByteSize();
+        bool GetBytes(uint8_t** bytes, uint64_t size);
         void SetTimestamp();
+        void SetSignature(std::string signature);
 
         friend class Block;
         friend class TransactionPool;
+        friend class TransactionSigner;
+        friend class TransactionVerifier;
         friend class BlockChainService;
     public:
         Transaction():
@@ -156,8 +161,6 @@ namespace Token{
             GetRaw()->set_index(idx);
         }
 
-        //TODO: bool SignatureMatches(CryptoPP::RSA::PublicKey key);
-        bool Sign(CryptoPP::RSA::PrivateKey key);
         void Accept(TransactionVisitor* visitor);
         std::string GetSignature();
         std::string GetHash();

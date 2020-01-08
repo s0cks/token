@@ -1,6 +1,7 @@
 #include <sstream>
 #include <glog/logging.h>
 
+#include "flags.h"
 #include "allocator.h"
 #include "blockchain.h"
 #include "block_validator.h"
@@ -106,36 +107,9 @@ namespace Token{
         key.BERDecodePublicKey(queue, false, queue.MaxRetrievable());
     }
 
-    bool BlockChain::GenerateChainKeys(const std::string &pubkey, const std::string &privkey){
-        CryptoPP::AutoSeededRandomPool rng;
-        CryptoPP::InvertibleRSAFunction params;
-        params.GenerateRandomWithKeySize(rng, BlockChain::kKeypairSize);
-        privkey_ = CryptoPP::RSA::PrivateKey(params);
-        pubkey_ = CryptoPP::RSA::PublicKey(params);
-        EncodePublicKey(pubkey, pubkey_);
-        EncodePrivateKey(privkey, privkey_);
-    }
-
-    bool BlockChain::InitializeChainKeys(const std::string& path){
-        std::string pubkey = (path + "/chain.pub");
-        std::string privkey = (path + "/chain.priv");
-        if(!FileExists(privkey)){
-            LOG(INFO) << "generating chain keys";
-            GenerateChainKeys(pubkey, privkey);
-        } else{
-            LOG(INFO) << "loading chain keys";
-            DecodePublicKey(pubkey, pubkey_);
-            DecodePrivateKey(privkey, privkey_);
-        }
-        return true;
-    }
-
-    bool BlockChain::Initialize(const std::string& path){
+    bool BlockChain::Initialize(){
+        std::string path = TOKEN_BLOCKCHAIN_HOME;
         LOG(INFO) << "initializing block chain in path: " << path << "...";
-        if(!BlockChain::GetInstance()->InitializeChainKeys(path)){
-            LOG(ERROR) << "error initializing chain keys";
-            return false;
-        }
         if(!BlockChain::GetInstance()->InitializeChainState(path)){
             LOG(ERROR) << "error initializing chain state";
             return false;

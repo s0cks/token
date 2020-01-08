@@ -26,7 +26,7 @@ file(GLOB_RECURSE TOKEN_PROTO_SOURCES protos/*.proto)
 file(GLOB_RECURSE TOKEN_SERVICE_PROTO_SOURCES protos/*.proto)
 
 protobuf_generate_cpp(PROTO_SRC PROTO_HEADER ${TOKEN_PROTO_SOURCES})
-# grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${CMAKE_BINARY_DIR} ${TOKEN_SERVICE_PROTO_SOURCES})
+grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${CMAKE_BINARY_DIR} ${TOKEN_SERVICE_PROTO_SOURCES})
 
 #=================================================
 #       Token Ledger Library

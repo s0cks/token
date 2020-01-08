@@ -91,8 +91,8 @@ namespace Token{
                                    const std::string &to_user){
         Token::Messages::Service::SpendTokenRequest request;
         request.set_token(token);
-        request.set_from_user(from_user);
-        request.set_to_user(to_user);
+        request.set_user(to_user);
+        request.set_owner(from_user);
         
         Token::Messages::EmptyResponse response;
         grpc::ClientContext ctx;
