@@ -37,7 +37,15 @@ namespace Token{
             return true;
         }
 
-        void VisitTransaction(Transaction* tx){
+        bool VisitBlockStart(){
+            return true;
+        }
+
+        bool VisitBlockEnd(){
+            return true;
+        }
+
+        bool VisitTransaction(Transaction* tx){
             LOG(INFO) << "validating transaction: " << tx->GetHash();
             if(IsValid(tx)){
                 int i;
@@ -48,7 +56,7 @@ namespace Token{
                         LOG(WARNING) << "*** Unclaimed Transaction: ";
                         LOG(WARNING) << "***   + Input: " << utxo.GetTransactionHash() << "[" << utxo.GetIndex() << "]";
                         LOG(WARNING) << "***   + Output: " << utxo.GetToken() << "(" << utxo.GetUser() << ")";
-                        return;
+                        return false;
                     }
                     LOG(INFO) << "added new unclaimed transaction: " << utxo.GetHash();
                 }
@@ -60,7 +68,7 @@ namespace Token{
                         LOG(WARNING) << "*** Unclaimed Transaction: ";
                         LOG(WARNING) << "***   + Input: " << utxo.GetTransactionHash() << "[" << utxo.GetIndex() << "]";
                         LOG(WARNING) << "***   + Output: " << utxo.GetToken() << "(" << utxo.GetUser() << ")";
-                        return;
+                        return false;
                     }
                     LOG(INFO) << "removed spent unclaimed transaction: " << utxo.GetHash();
                 }
@@ -68,6 +76,7 @@ namespace Token{
             } else{
                 invalid_txs_.push_back(tx);
             }
+            return true;
         }
 
         std::vector<Transaction*> GetValidTransactions(){

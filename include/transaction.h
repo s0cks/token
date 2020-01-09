@@ -175,30 +175,24 @@ namespace Token{
         friend bool operator==(const Transaction& lhs, const Transaction& rhs){
             return const_cast<Transaction&>(lhs).GetHash() == const_cast<Transaction&>(rhs).GetHash();
         }
-
-        //TODO: Remove
-        friend std::ostream& operator<<(std::ostream& stream, Transaction& tx){
-            stream << "\tIndex: " << tx.GetIndex() << std::endl;
-            stream << "\tInputs (" << tx.GetNumberOfInputs() << "):" << std::endl;
-            int idx;
-            for(idx = 0; idx < tx.GetNumberOfInputs(); idx++){
-                stream << (*tx.GetInputAt(idx)) << std::endl;
-            }
-
-            stream << "\tOutputs (" << tx.GetNumberOfOutputs() << "):" << std::endl;
-            for(idx = 0; idx < tx.GetNumberOfOutputs(); idx++){
-                stream << (*tx.GetOutputAt(idx)) << std::endl;
-            }
-            return stream;
-        }
     };
 
     class TransactionVisitor{
     public:
         TransactionVisitor(){}
         virtual ~TransactionVisitor(){}
-        virtual void VisitInput(Input* in){}
-        virtual void VisitOutput(Output* out){}
+
+        virtual bool VisitStart() = 0;
+
+        virtual bool VisitInputsStart() = 0;
+        virtual bool VisitInput(Input* input) = 0;
+        virtual bool VisitInputsEnd() = 0;
+
+        virtual bool VisitOutputsStart() = 0;
+        virtual bool VisitOutput(Output* out) = 0;
+        virtual bool VisitOutputsEnd() = 0;
+
+        virtual bool VisitEnd() = 0;
     };
 
     class Block;

@@ -10,16 +10,30 @@
 #include "transaction.h"
 #include "signer.h"
 #include "verifier.h"
+#include "printer.h"
 
 namespace Token{
     void Transaction::Accept(Token::TransactionVisitor* vis){
+        if(!vis->VisitStart()) return;
+
+        vis->VisitInputsStart();
         int i;
         for(i = 0; i < GetNumberOfInputs(); i++){
-            vis->VisitInput(GetInputAt(i));
+            if(!vis->VisitInput(GetInputAt(i))){
+                //TODO:
+            }
         }
+        vis->VisitInputsEnd();
+
+        vis->VisitOutputsStart();
         for(i = 0; i < GetNumberOfOutputs(); i++){
-            vis->VisitOutput(GetOutputAt(i));
+            if(!vis->VisitOutput(GetOutputAt(i))){
+                //TODO:
+            }
         }
+        vis->VisitOutputsEnd();
+
+        if(!vis->VisitEnd()) return;
     }
 
     void Transaction::SetTimestamp(){
@@ -124,7 +138,10 @@ namespace Token{
             LOG(ERROR) << "couldn't write transaction to file: " << filename;
             return false;
         }
-        LOG(INFO) << "saved transaction: " << (*tx);
+
+        LOG(INFO) << "saved transaction:";
+        TransactionPrinter::PrintAsInfo(tx);
+
         fd.close();
         return true;
     }
@@ -214,7 +231,8 @@ namespace Token{
         Block* block = new Block(BlockChain::GetHead());
         for(int i = 0; i < transactions.size(); i++){
             Transaction* tx = transactions[i];
-            LOG(INFO) << "appending transaction: " << (*tx);
+            LOG(INFO) << "appending transaction:";
+            TransactionPrinter::PrintAsInfo(tx);
             if(!block->AppendTransaction(tx)){
                 LOG(ERROR) << "couldn't append transaction: " << tx->GetHash();
             }

@@ -15,7 +15,10 @@ namespace Token{
     public:
         BlockVisitor(){}
         virtual ~BlockVisitor(){}
-        virtual void VisitTransaction(Transaction* tx){}
+
+        virtual bool VisitBlockStart() = 0;
+        virtual bool VisitTransaction(Transaction* tx) = 0;
+        virtual bool VisitBlockEnd() = 0;
     };
 
     class Block : public AllocatorObject{
@@ -79,10 +82,14 @@ namespace Token{
         }
 
         void Accept(BlockVisitor* vis){
+            vis->VisitBlockStart();
+
             int i;
             for(i = 0; i < GetNumberOfTransactions(); i++){
                 vis->VisitTransaction(GetTransactionAt(i));
             }
+
+            vis->VisitBlockEnd();
         }
 
         bool IsGenesis(){
@@ -109,22 +116,6 @@ namespace Token{
 
         friend bool operator!=(const Block& lhs, const Block& rhs){
             return !operator==(lhs, rhs);
-        }
-
-        //TODO: Remove
-        friend std::ostream& operator<<(std::ostream& stream, const Block& block){
-            stream << "Block" << std::endl;
-            stream << "\tHeight: " << block.GetHeight() << std::endl;
-            stream << "\tPrevious Hash: " << block.GetPreviousHash() << std::endl;
-            stream << "\tHash: " << const_cast<Block&>(block).GetHash() << std::endl;
-            stream << "\tMerkle: " << const_cast<Block&>(block).GetMerkleRoot() << std::endl;
-            stream << "\tNumber of Transactions: " << block.GetNumberOfTransactions() << std::endl;
-            stream << "\tTransactions:" << std::endl;
-            for(int i = 0; i < block.GetNumberOfTransactions(); i++){
-                Transaction* tx = const_cast<Block&>(block).GetTransactionAt(i);
-                stream << "\t  - #" << i << " " << (*tx) << std::endl;
-            }
-            return stream;
         }
     };
 }

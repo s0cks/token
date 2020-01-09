@@ -3,6 +3,7 @@
 #include <glog/logging.h>
 #include "common.h"
 #include "allocator.h"
+#include "printer.h"
 
 #define WITH_HEADER(size) ((size)+sizeof(int))
 #define WITHOUT_HEADER(size) ((size)-sizeof(int))
@@ -308,59 +309,6 @@ namespace Token{
         vis->VisitEnd();
     }
 
-    bool HeapPrinter::VisitStart(){
-        std::stringstream msg;
-
-        int total = HeapPrinter::BANNER_SIZE;
-        std::string title = space_ == kEden ?
-                " Eden " :
-                " Survivor ";
-
-        total = (total - title.length()) / 2;
-        for(int i = 0; i < total; i++){
-            msg << "*";
-        }
-        msg << title;
-        for(int i = 0; i < total; i++){
-            msg << "*";
-        }
-        LOG(INFO) << msg.str();
-    }
-
-    bool HeapPrinter::VisitEnd(){
-        std::stringstream msg;
-        for(int i = 0; i < HeapPrinter::BANNER_SIZE; i++){
-            msg << "*";
-        }
-        LOG(INFO) << msg.str();
-    }
-
-    bool HeapPrinter::VisitChunk(int chunk, size_t size, void* ptr){
-        std::stringstream msg;
-        try{
-            AllocatorObject* obj = reinterpret_cast<AllocatorObject*>(BITS(ptr));
-            if(obj){
-                msg << obj->ToString();
-            } else{
-                msg << "\tChunk " << chunk << "\tSize " << size << "\tMarked: " << (MARKED(ptr) ? 'Y' : 'N');
-            }
-        } catch(std::exception& exc){
-            msg << "\tChunk " << chunk << "\tSize " << size << "\tMarked: " << (MARKED(ptr) ? 'Y' : 'N');
-        }
-        LOG(INFO) << msg.str();
-        return true;
-    }
-
-    void Allocator::PrintMinorHeap(){
-        HeapPrinter printer(HeapPrinter::kEden);
-        GetInstance()->VisitMinor(&printer);
-    }
-
-    void Allocator::PrintMajorHeap(){
-        HeapPrinter printer(HeapPrinter::kSurvivor);
-        GetInstance()->VisitMajor(&printer);
-    }
-
     void Allocator::SetReference(int idx, void* ref){
         references_[idx] = ref;
     }
@@ -377,44 +325,14 @@ namespace Token{
         //TODO: Implement
     }
 
-    class RawAllocatorObject : public AllocatorObject{
-    private:
-        size_t chunk_size_;
-        size_t chunk_offset_;
-        void* chunk_ptr_;
-    public:
-        RawAllocatorObject(size_t offset, size_t size, void* raw):
-                chunk_offset_(offset),
-                chunk_size_(size),
-                chunk_ptr_(raw){}
-        RawAllocatorObject(size_t offset, void* raw):
-            RawAllocatorObject(offset, CHUNK_SIZE(raw), raw){}
-        RawAllocatorObject(size_t offset, size_t size):
-            RawAllocatorObject(offset, size, nullptr){}
-        ~RawAllocatorObject(){}
 
-        void* GetRawChunk(){
-            return chunk_ptr_;
-        }
+    void Allocator::PrintMinorHeap(){
+        HeapPrinter printer(HeapPrinter::kEden);
+        GetInstance()->VisitMinor(&printer);
+    }
 
-        size_t GetChunkOffset(){
-            return chunk_offset_;
-        }
-
-        size_t GetChunkSize(){
-            return chunk_size_;
-        }
-
-        std::string ToString(){
-            std::stringstream msg;
-            msg << "\tChunk " << GetChunkOffset() << "\tSize " << GetChunkSize() << "\tMarked: " << (MARKED(GetRawChunk()) ? 'Y' : 'N');
-            return msg.str();
-        }
-
-        RawAllocatorObject& operator=(const RawAllocatorObject& other){
-            this->chunk_offset_ = other.chunk_offset_;
-            this->chunk_size_ = other.chunk_size_;
-            return (*this);
-        }
-    };
+    void Allocator::PrintMajorHeap(){
+        HeapPrinter printer(HeapPrinter::kSurvivor);
+        GetInstance()->VisitMajor(&printer);
+    }
 }

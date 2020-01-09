@@ -10,6 +10,7 @@
 #include "key.h"
 #include "blockchain.h"
 #include "service/service.h"
+#include "printer.h"
 
 static inline bool
 FileExists(const std::string& name){
@@ -77,7 +78,7 @@ main(int argc, char** argv){
 
     if(TOKEN_VERBOSE){
         UnclaimedTransactionPoolPrinter::Print();
-        BlockChainPrinter::PrintBlockChain(true);
+        BlockPrinter::PrintAsInfo(BlockChain::GetHead(), true);
     }
 
     if(FLAGS_service_port > 0){

@@ -216,7 +216,7 @@ namespace Token{
 
         if(block->IsGenesis() && HasHead()){
             LOG(ERROR) << "cannot append genesis block:";
-            LOG(ERROR) << (*block);
+            //TODO: LOG(ERROR) << (*block);
             UNLOCK;
             return false;
         }
@@ -256,12 +256,13 @@ namespace Token{
             //TODO: Migrate validation logic
             BlockValidator validator;
             block->Accept(&validator);
+
             std::vector<Transaction*> valid = validator.GetValidTransactions();
             std::vector<Transaction*> invalid = validator.GetInvalidTransactions();
             if(valid.size() != block->GetNumberOfTransactions()){
                 LOG(ERROR) << "block '" << block->GetHash() << "' is invalid";
                 LOG(ERROR) << "block information:";
-                LOG(ERROR) << (*block);
+                //TODO: LOG(ERROR) << (*block);
                 UNLOCK;
                 return false;
             }
@@ -308,7 +309,7 @@ namespace Token{
         LOG(INFO) << "  - #" << block->GetHeight() << ": " << block->GetHash();
         if(ShouldPrintInfo()){
             LOG(INFO) << " - Info:";
-            LOG(INFO) << "\t" << (*block);
+            //TODO: LOG(INFO) << "\t" << (*block);
         }
         return true;
     }

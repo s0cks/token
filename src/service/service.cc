@@ -13,7 +13,7 @@ namespace Token{
             return grpc::Status::CANCELLED;
         }
         LOG(INFO) << "<HEAD>:";
-        LOG(INFO) << (*head);
+        //TODO: LOG(INFO) << (*head);
         SetBlockHeader(head, response);
         return grpc::Status::OK;
     }
