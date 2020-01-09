@@ -96,9 +96,18 @@ namespace Token{
 
     class Output;
 
+    class UnclaimedTransactionPoolVisitor{
+    public:
+        UnclaimedTransactionPoolVisitor(){}
+        virtual ~UnclaimedTransactionPoolVisitor() = default;
+
+        virtual bool VisitStart() = 0;
+        virtual bool VisitUnclaimedTransaction(UnclaimedTransaction* utx) = 0;
+        virtual bool VisitEnd() = 0;
+    };
+
     class UnclaimedTransactionPool{
     private:
-        std::string db_path_;
         sqlite3* database_;
         pthread_rwlock_t rwlock_;
 
@@ -117,18 +126,10 @@ namespace Token{
         bool RemoveUnclaimedTransaction(UnclaimedTransaction* utxo);
         bool AddUnclaimedTransaction(UnclaimedTransaction* utxo);
         bool ClearUnclaimedTransactions();
+        bool Accept(UnclaimedTransactionPoolVisitor* vis);
 
         static UnclaimedTransactionPool* GetInstance();
-        static bool LoadUnclaimedTransactionPool(const std::string& filename);
-    };
-
-    class UnclaimedTransactionPoolPrinter{
-    private:
-        UnclaimedTransactionPoolPrinter(){}
-    public:
-        ~UnclaimedTransactionPoolPrinter(){}
-
-        static void Print();
+        static bool LoadUnclaimedTransactionPool();
     };
 }
 

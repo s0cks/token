@@ -24,13 +24,6 @@ namespace Token{
         return true;
     }
 
-    void Block::Write(const std::string& filename){
-        std::fstream fd(filename, std::ios::binary|std::ios::out|std::ios::trunc);
-        GetRaw()->SerializeToOstream(&fd);
-        fd.flush();
-        fd.close();
-    }
-
     std::string Block::GetHash(){
         CryptoPP::SHA256 func;
         std::string digest;
@@ -45,12 +38,6 @@ namespace Token{
         return "Block(" + GetHash() + ")";
     }
 
-    std::string Block::GetFilename(){
-        std::stringstream stream;
-        stream << BlockChain::GetRootDirectory() << "/blocks";
-        stream << "/blk" << GetHeight() << ".dat";
-    }
-
     std::string Block::GetMerkleRoot(){
         std::vector<MerkleNodeItem*> items;
         for(size_t i = 0; i < GetNumberOfTransactions(); i++){
@@ -58,12 +45,6 @@ namespace Token{
         }
         MerkleTree mktree(items);
         return mktree.GetMerkleRoot();
-    }
-
-    Token::Messages::Block* Block::GetAsMessage(){
-        Token::Messages::Block* msg = new Token::Messages::Block();
-        msg->CopyFrom(raw_);
-        return msg;
     }
 
     void* Block::operator new(size_t size){
@@ -89,15 +70,6 @@ namespace Token{
     }
 
     Block::~Block(){}
-
-    bool Block::LoadBlockFromFile(const std::string& filename){
-        std::fstream fd(filename, std::ios::binary|std::ios::in);
-        return GetRaw()->ParseFromIstream(&fd);
-    }
-
-    Block* Block::Decode(Messages::Block* msg){
-        return new Block(msg);
-    }
 
     Transaction* Block::GetTransactionAt(size_t idx){
         if(idx < 0 || idx > GetNumberOfTransactions()) return nullptr;

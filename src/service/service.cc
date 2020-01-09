@@ -43,17 +43,17 @@ namespace Token{
         if(!request->hash().empty()){
             Block* block = BlockChain::GetBlock(request->hash());
             if(block){
-                Messages::Block* resp = block->GetAsMessage();
-                response->CopyFrom(*resp);
-                delete resp;
+                //TODO Messages::Block* resp = block->GetAsMessage();
+                // response->CopyFrom(*resp);
+                // delete resp;
                 return grpc::Status::OK;
             }
         } else{
             Block* block = BlockChain::GetBlock(request->index());
             if(block){
-                Messages::Block* resp = block->GetAsMessage();
-                response->CopyFrom(*resp);
-                delete resp;
+                //TODO Messages::Block* resp = block->GetAsMessage();
+                // response->CopyFrom(*resp);
+                // delete resp;
                 return grpc::Status::OK;
             }
         }

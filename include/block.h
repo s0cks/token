@@ -39,8 +39,6 @@ namespace Token{
             return stream.str();
         }
 
-        bool LoadBlockFromFile(const std::string& filename);
-
         //TODO: Remove this constructor
         explicit Block(Messages::Block* raw):
                 raw_(){
@@ -96,16 +94,11 @@ namespace Token{
             return GetHeight() == 0;
         }
 
-        Token::Messages::Block* GetAsMessage(); //TODO: Remove
-        void Write(const std::string& filename); //TODO: Remove
         bool Equals(const Messages::BlockHeader& head); //TODO: Refactor
 
         std::string GetHash();
         std::string GetMerkleRoot();
         std::string ToString();
-        std::string GetFilename();
-
-        static Block* Decode(Messages::Block* msg); //TODO: Remove
 
         void* operator new(size_t size);
 

@@ -198,24 +198,34 @@ namespace Token{
 
     class Block;
 
+    class TransactionPoolVisitor{
+    public:
+        TransactionPoolVisitor(){}
+        virtual ~TransactionPoolVisitor() = default;
+
+        virtual bool VisitStart() = 0;
+        virtual bool VisitTransaction(Transaction* tx) = 0;
+        virtual bool VisitEnd() = 0;
+    };
+
     class TransactionPool{
     public:
         static const size_t kTransactionPoolMaxSize = 1;
     private:
         static uint32_t counter_;
-        static std::string root_;
 
         static Block* CreateBlock();
-        static Transaction* LoadTransaction(const std::string& filename);
+        static Transaction* LoadTransaction(const std::string& filename, bool deleteAfter=true);
         static bool SaveTransaction(const std::string& filename, Transaction* tx);
-        static bool GetTransactions(std::vector<Transaction*>& txs);
+        static bool GetTransactions(std::vector<Transaction*>& txs, bool deleteAfter=true);
 
         TransactionPool(){}
     public:
         ~TransactionPool(){}
 
         static bool AddTransaction(Transaction* tx);
-        static bool Initialize(const std::string& path);
+        static bool Initialize();
+        static void Accept(TransactionPoolVisitor* vis);
     };
 }
 

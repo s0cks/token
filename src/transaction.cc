@@ -6,6 +6,7 @@
 #include <node/message.h>
 
 #include "allocator.h"
+#include "flags.h"
 #include "blockchain.h"
 #include "transaction.h"
 #include "signer.h"
@@ -114,21 +115,19 @@ namespace Token{
         return (mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) != -1;
     }
 
-    std::string TransactionPool::root_ = "";
     uint32_t TransactionPool::counter_ = 0;
 
-    bool TransactionPool::Initialize(const std::string& path){
-        std::string txpool = (path + "/txpool");
+    bool TransactionPool::Initialize(){
+        std::string txpool = (TOKEN_BLOCKCHAIN_HOME + "/txpool");
         if(!FileExists(txpool)){
             LOG(WARNING) << "transaction pool directory not found, creating...";
             if(!CreateTransactionPoolDirectory(txpool)){
-                LOG(ERROR) << "cannot create transaction pool in directory: " << path;
+                LOG(ERROR) << "cannot create transaction pool: " << txpool;
                 return false;
             }
             LOG(WARNING) << "done!";
         }
         LOG(INFO) << "initializing transaction pool in: " << txpool;
-        root_ = txpool;
         return true;
     }
 
@@ -159,7 +158,7 @@ namespace Token{
             return AddTransaction(tx);
         }
         std::stringstream txfile;
-        txfile << root_ << "/tx" << counter_ << ".dat";
+        txfile << TOKEN_BLOCKCHAIN_HOME << "/tx" << counter_ << ".dat";
         LOG(INFO) << "saving transaction#" << counter_ << " to " << txfile.str();
         if(!SaveTransaction(txfile.str(), tx)){
             return false;
@@ -178,7 +177,7 @@ namespace Token{
         return false;
     }
 
-    Transaction* TransactionPool::LoadTransaction(const std::string& filename){
+    Transaction* TransactionPool::LoadTransaction(const std::string& filename, bool deleteAfter){
         std::fstream fd(filename, std::ios::binary|std::ios::in);
         Transaction* tx = new Transaction();
         if(!tx->GetRaw()->ParseFromIstream(&fd)){
@@ -187,11 +186,13 @@ namespace Token{
         }
         fd.close();
 
-        if(!DeleteTransactionFile(filename)){
-            LOG(ERROR) << "couldn't delete transaction pool file: " << filename;
-            return nullptr;
+        LOG(INFO) << "loaded transaction: " << tx->GetHash();
+        if(deleteAfter){
+            if (!DeleteTransactionFile(filename)) {
+                LOG(ERROR) << "couldn't delete transaction pool file: " << filename;
+                return nullptr;
+            }
         }
-        LOG(INFO) << "loaded transaction: " << tx->ToString();
         return tx;
     }
 
@@ -204,20 +205,20 @@ namespace Token{
         return EndsWith(txfile, ".dat");
     }
 
-    bool TransactionPool::GetTransactions(std::vector<Transaction*>& txs){
+    bool TransactionPool::GetTransactions(std::vector<Transaction*>& txs, bool deleteAfter){
         struct dirent* entry;
-        DIR* dir = opendir(root_.c_str());
+        DIR* dir = opendir((TOKEN_BLOCKCHAIN_HOME + "/txpool").c_str());
         if(dir == NULL) return false;
         while((entry = readdir(dir)) != NULL){
             std::string txfile(entry->d_name);
-            std::string txfilename = (root_ + "/" + txfile);
+            std::string txfilename = (TOKEN_BLOCKCHAIN_HOME + "/txpool/" + txfile);
             if(ShouldLoadTransaction(txfile)){
                 LOG(INFO) << "loading transaction: " << txfilename;
-                txs.push_back(LoadTransaction(txfilename));
+                txs.push_back(LoadTransaction(txfilename, deleteAfter));
             }
         }
         closedir(dir);
-        return txs.size() > 0;
+        return true;
     }
 
     Block* TransactionPool::CreateBlock(){
@@ -240,5 +241,18 @@ namespace Token{
         counter_ = 0;
         LOG(INFO) << "created new block: " << block->GetHash();
         return block;
+    }
+
+    void TransactionPool::Accept(Token::TransactionPoolVisitor* vis){
+        std::vector<Transaction*> transactions;
+        if(!TransactionPool::GetTransactions(transactions, false)){
+            LOG(ERROR) << "couldn't get transactions from pool";
+            return;
+        }
+        vis->VisitStart();
+        for(auto& it : transactions){
+            vis->VisitTransaction(it);
+        }
+        vis->VisitEnd();
     }
 }

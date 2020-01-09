@@ -46,8 +46,8 @@ namespace Token{
 
     bool NodeServerSession::Handle(Token::Message* msg){
         if(msg->IsBlockMessage()){
-            Block* blk = Block::Decode(msg->GetAsBlock());
-            LOG(INFO) << "received block: " << blk->GetHash();
+            //TODO: Block* blk = Block::Decode(msg->GetAsBlock());
+            // LOG(INFO) << "received block: " << blk->GetHash();
             return true;
         }
         return false;

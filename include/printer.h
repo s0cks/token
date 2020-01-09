@@ -5,6 +5,38 @@
 #include "blockchain.h"
 
 namespace Token{
+    class Printer{
+    public:
+        enum PrinterFlags{
+            kNone = 0,
+            kDetailed = 1 << 1,
+            kNoBanner = 1 << 2,
+        };
+    private:
+        long flags_;
+        google::LogSeverity severity_;
+    protected:
+        Printer(google::LogSeverity severity, long flags):
+            severity_(severity),
+            flags_(flags){
+
+        }
+    public:
+        virtual ~Printer(){}
+
+        bool IsDetailed(){
+            return (flags_ & kDetailed) == kDetailed;
+        }
+
+        bool ShouldPrintBanner(){
+            return !((flags_ & kNoBanner) == kNoBanner);
+        }
+
+        google::LogSeverity GetSeverity(){
+            return severity_;
+        }
+    };
+
     class HeapPrinter : public HeapVisitor{
     public:
         static const int BANNER_SIZE = 64;
@@ -25,23 +57,17 @@ namespace Token{
         bool VisitChunk(int chunk, size_t size, void* ptr);
     };
 
-    class TransactionPrinter : public TransactionVisitor{
+    class TransactionPrinter : public TransactionVisitor, public Printer{
     public:
         static const size_t kBannerSize = 82;
     private:
-        google::LogSeverity severity_;
         Transaction* tx_;
-        bool detailed_;
     public:
-        TransactionPrinter(google::LogSeverity severity, Transaction* tx, bool is_detailed):
+        TransactionPrinter(google::LogSeverity severity, Transaction* tx, long flags):
             tx_(tx),
-            severity_(severity),
-            detailed_(is_detailed){}
+            TransactionVisitor(),
+            Printer(severity, flags){}
         ~TransactionPrinter(){}
-
-        bool IsDetailed(){
-            return detailed_;
-        }
 
         Transaction* GetTransaction(){
             return tx_;
@@ -70,23 +96,17 @@ namespace Token{
         }
     };
 
-    class BlockPrinter : public BlockVisitor{
+    class BlockPrinter : public BlockVisitor, public Printer{
     public:
         static const size_t kBannerSize = 64;
     private:
-        bool detailed_;
-        google::LogSeverity severity_;
         Block* block_;
     public:
-        BlockPrinter(google::LogSeverity severity, Block* block, bool detailed):
-            severity_(severity),
+        BlockPrinter(google::LogSeverity severity, Block* block, long flags):
             block_(block),
-            detailed_(detailed){}
+            BlockVisitor(),
+            Printer(severity, flags){}
         ~BlockPrinter(){}
-
-        bool IsDetailed(){
-            return detailed_;
-        }
 
         Block* GetBlock(){
             return block_;
@@ -96,14 +116,86 @@ namespace Token{
         bool VisitTransaction(Transaction* tx);
         bool VisitBlockEnd();
 
-        static void Print(google::LogSeverity severity, Block* block, bool detailed=false);
+        static void Print(google::LogSeverity severity, Block* block, long flags=Printer::kNone);
 
-        static void PrintAsInfo(Block* block, bool detailed=false){
-            Print(google::INFO, block, detailed);
+        static void PrintAsInfo(Block* block, long flags=Printer::kNone){
+            Print(google::INFO, block, flags);
         }
 
-        static void PrintAsError(Block* block, bool detailed=false){
-            Print(google::ERROR, block, detailed);
+        static void PrintAsError(Block* block, long flags=Printer::kNone){
+            Print(google::ERROR, block, flags);
+        }
+    };
+
+    class BlockChainPrinter : public BlockChainVisitor, public Printer{
+    public:
+        static const size_t kBannerSize = 64;
+
+        BlockChainPrinter(google::LogSeverity severity, long flags):
+            BlockChainVisitor(),
+            Printer(severity, flags){}
+        ~BlockChainPrinter(){}
+
+        bool VisitStart();
+        bool Visit(Block* block);
+        bool VisitEnd();
+
+        static void Print(google::LogSeverity severity, long flags=Printer::kNone);
+
+        static void PrintAsInfo(long flags=Printer::kNone){
+            Print(google::INFO, flags);
+        }
+
+        static void PrintAsError(long flags=Printer::kNone){
+            Print(google::ERROR, flags);
+        }
+    };
+
+    class TransactionPoolPrinter : public TransactionPoolVisitor, public Printer{
+    public:
+        static const size_t kBannerSize = 64;
+
+        TransactionPoolPrinter(google::LogSeverity severity, long flags):
+            TransactionPoolVisitor(),
+            Printer(severity, flags){}
+        ~TransactionPoolPrinter(){}
+
+        bool VisitStart();
+        bool VisitTransaction(Transaction* tx);
+        bool VisitEnd();
+
+        static void Print(google::LogSeverity severity, long flags=Printer::kNone);
+
+        static void PrintAsInfo(long flags=Printer::kNone){
+            Print(google::INFO, flags);
+        }
+
+        static void PrintAsError(long flags=Printer::kNone){
+            Print(google::ERROR, flags);
+        }
+    };
+
+    class UnclaimedTransactionPoolPrinter : public UnclaimedTransactionPoolVisitor, public Printer{
+    public:
+        static const size_t kBannerSize = 64;
+
+        UnclaimedTransactionPoolPrinter(google::LogSeverity severity, long flags):
+            UnclaimedTransactionPoolVisitor(),
+            Printer(severity, flags){}
+        ~UnclaimedTransactionPoolPrinter(){}
+
+        bool VisitStart();
+        bool VisitUnclaimedTransaction(UnclaimedTransaction* utx);
+        bool VisitEnd();
+
+        static void Print(google::LogSeverity severity, long flags=Printer::kNone);
+
+        static void PrintAsInfo(long flags=Printer::kNone){
+            Print(google::INFO, flags);
+        }
+
+        static void PrintAsError(long flags=Printer::kNone){
+            Print(google::ERROR, flags);
         }
     };
 }

@@ -15,7 +15,10 @@ namespace Token{
     public:
         BlockChainVisitor(){}
         virtual ~BlockChainVisitor() = default;
+
+        virtual bool VisitStart() = 0;
         virtual bool Visit(Block* block) = 0;
+        virtual bool VisitEnd() = 0;
     };
 
     class BlockChain{
@@ -54,7 +57,7 @@ namespace Token{
         bool StartMinerThread();
 
         static void* BlockChainMinerThread(void* data); //TODO: Refactor
-        static bool AppendBlock(Block* block); //TODO: Revoke access
+        static bool AppendBlock(Block* block);
 
         void Resize(uintptr_t nlen){
             if(nlen > blocks_caps_){
@@ -109,28 +112,9 @@ namespace Token{
         static bool HasHead();
         static bool ContainsBlock(const std::string& hash);
         static bool Initialize();
-        static bool Append(Block* block); //TODO: Revoke access?
+        static bool Append(Block* block);
 
-        static std::string GetRootDirectory(); //TODO: Revoke access
         static bool Clear(); //TODO: Revoke access
-    };
-
-    class BlockChainPrinter : public BlockChainVisitor{
-    private:
-        bool info_;
-
-        bool ShouldPrintInfo(){
-            return info_;
-        }
-
-        BlockChainPrinter(bool info):
-                info_(info){}
-    public:
-        ~BlockChainPrinter(){}
-
-        bool Visit(Block* block);
-
-        static void PrintBlockChain(bool info=false);
     };
 }
 

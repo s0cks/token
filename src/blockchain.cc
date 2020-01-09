@@ -5,6 +5,7 @@
 #include "allocator.h"
 #include "blockchain.h"
 #include "block_validator.h"
+#include "printer.h"
 
 namespace Token{
     BlockChain*
@@ -167,11 +168,13 @@ namespace Token{
     }
 
     void BlockChain::Accept(Token::BlockChainVisitor* vis){
+        vis->VisitStart();
         uint32_t idx;
         for(idx = 0; idx < GetHeight() + 1; idx++) {
             Block* blk = GetInstance()->operator[](idx);
             vis->Visit(blk);
         }
+        vis->VisitEnd();
     }
 
 #define READ_LOCK pthread_rwlock_rdlock(&GetInstance()->lock_)
@@ -215,7 +218,7 @@ namespace Token{
 
         if(block->IsGenesis() && HasHead()){
             LOG(ERROR) << "cannot append genesis block:";
-            //TODO: LOG(ERROR) << (*block);
+            BlockPrinter::PrintAsError(block, true);
             UNLOCK;
             return false;
         }
@@ -261,7 +264,7 @@ namespace Token{
             if(valid.size() != block->GetNumberOfTransactions()){
                 LOG(ERROR) << "block '" << block->GetHash() << "' is invalid";
                 LOG(ERROR) << "block information:";
-                //TODO: LOG(ERROR) << (*block);
+                BlockPrinter::PrintAsError(block, true);
                 UNLOCK;
                 return false;
             }
@@ -291,10 +294,6 @@ namespace Token{
         return true;
     }
 
-    std::string BlockChain::GetRootDirectory(){
-        return GetInstance()->path_;
-    }
-
     bool BlockChain::HasHead(){
         uint32_t height;
         if(!GetInstance()->GetReference("Head", &height)){
@@ -303,23 +302,6 @@ namespace Token{
         }
         return true;
     }
-
-    bool BlockChainPrinter::Visit(Token::Block* block){
-        LOG(INFO) << "  - #" << block->GetHeight() << ": " << block->GetHash();
-        if(ShouldPrintInfo()){
-            LOG(INFO) << " - Info:";
-            //TODO: LOG(INFO) << "\t" << (*block);
-        }
-        return true;
-    }
-
-    void BlockChainPrinter::PrintBlockChain(bool info){
-        LOG(INFO) << "BlockChain (" << (BlockChain::GetHeight() + 1) << " blocks):";
-        BlockChainPrinter instance(info);
-        BlockChain::Accept(&instance);
-    }
-
-    //TODO: v3
 
     bool BlockChain::SetReference(const std::string &ref, uint32_t height){
         std::stringstream val;
@@ -350,11 +332,12 @@ namespace Token{
             return false;
         }
 
-        std::stringstream stream;
-        stream << GetRootDirectory() << "/blocks/blk" << height << ".dat";
+        std::stringstream filename;
+        filename << TOKEN_BLOCKCHAIN_HOME << "/blocks/blk" << height << ".dat";
+        std::fstream fd(filename.str(), std::ios::binary|std::ios::in);
         (*result) = new Block();
-        if(!(*result)->LoadBlockFromFile(stream.str())){
-            LOG(ERROR) << "cannot load block #" << height;
+        if(!(*result)->GetRaw()->ParseFromIstream(&fd)){
+            LOG(ERROR) << "cannot parse block file: " << filename.str();
             return false;
         }
         return true;
@@ -362,15 +345,22 @@ namespace Token{
 
     bool BlockChain::SaveBlock(Token::Block* block){
         std::stringstream filename;
-        filename << GetRootDirectory() << "/blocks";
-        filename << "/blk" << block->GetHeight() << ".dat";
-        std::string blkfilename = filename.str();
-        if(FileExists(blkfilename)){
-            LOG(WARNING) << "block already written, won't overwrite block: " << blkfilename;
+        filename << TOKEN_BLOCKCHAIN_HOME << "/blocks/blk" << block->GetHeight() << ".dat";
+
+        if(FileExists(filename.str())){
+            LOG(WARNING) << "block already written, won't overwrite block: " << filename.str();
             return false;
         }
-        LOG(INFO) << "writing block '" << block->GetHash() << "' to file: " << blkfilename << "...";
-        block->Write(blkfilename);
+
+        LOG(INFO) << "writing block #" << block->GetHeight();
+        std::fstream fd(filename.str(), std::ios::out|std::ios::binary);
+        if(!block->GetRaw()->SerializeToOstream(&fd)){
+            LOG(ERROR) << "error writing block #" << block->GetHeight() << " to file: " << filename.str();
+            LOG(ERROR) << "block information: ";
+            BlockPrinter::PrintAsError(block, true);
+            return false;
+        }
+
         return GetInstance()->SetReference(block->GetHash(), block->GetHeight());
     }
 
@@ -438,7 +428,7 @@ namespace Token{
 
     bool BlockChain::DeleteBlock(uint32_t height){
         std::stringstream blkfilename;
-        blkfilename << GetRootDirectory() << "/blocks/blk" << height << ".dat";
+        //TODO blkfilename << GetRootDirectory() << "/blocks/blk" << height << ".dat";
         return remove(blkfilename.str().c_str()) == 0;
     }
 

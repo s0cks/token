@@ -36,12 +36,6 @@ InitializeLogging(char* arg0){
     return true;
 }
 
-static inline bool
-InitializeUnclaimedTransactionPool(){
-    std::string path = (TOKEN_BLOCKCHAIN_HOME + "/unclaimed.db");
-    return Token::UnclaimedTransactionPool::LoadUnclaimedTransactionPool(path);
-}
-
 int
 main(int argc, char** argv){
     using namespace Token;
@@ -61,24 +55,37 @@ main(int argc, char** argv){
         return EXIT_FAILURE;
     }
 
-    if(!InitializeUnclaimedTransactionPool()){
-        LOG(ERROR) << "couldn't initialize UnclaimedTransactionPool";
-        return EXIT_FAILURE;
+    {
+        // Load the UnclaimedTransactionPool into memory
+        if(!Token::UnclaimedTransactionPool::LoadUnclaimedTransactionPool()){
+            LOG(ERROR) << "couldn't load the unclaimed transaction pool";
+            return EXIT_FAILURE;
+        }
+        if(TOKEN_VERBOSE){
+            UnclaimedTransactionPoolPrinter::PrintAsInfo();
+        }
     }
 
-    if(!TransactionPool::Initialize(TOKEN_BLOCKCHAIN_HOME)){
-        LOG(ERROR) << "couldn't initialize the transaction pool";
-        return EXIT_FAILURE;
+    {
+        // Load the TransactionPool into memory
+        if(!TransactionPool::Initialize()){
+            LOG(ERROR) << "couldn't initialize the transaction pool";
+            return EXIT_FAILURE;
+        }
+        if(TOKEN_VERBOSE){
+            TransactionPoolPrinter::PrintAsInfo();
+        }
     }
 
-    if(!BlockChain::Initialize()){
-        LOG(ERROR) << "couldn't initialize the blockchain";
-        return EXIT_FAILURE;
-    }
-
-    if(TOKEN_VERBOSE){
-        UnclaimedTransactionPoolPrinter::Print();
-        BlockPrinter::PrintAsInfo(BlockChain::GetHead(), true);
+    {
+        // Load the BlockChain into memory
+        if(!BlockChain::Initialize()){
+            LOG(ERROR) << "couldn't initialize the blockchain";
+            return EXIT_FAILURE;
+        }
+        if(TOKEN_VERBOSE){
+            BlockChainPrinter::PrintAsInfo(Printer::kDetailed);
+        }
     }
 
     if(FLAGS_service_port > 0){

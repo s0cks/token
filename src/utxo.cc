@@ -1,5 +1,7 @@
 #include <cstring>
 #include <glog/logging.h>
+
+#include "flags.h"
 #include "utxo.h"
 
 namespace Token{
@@ -34,7 +36,6 @@ namespace Token{
 })
 
     UnclaimedTransactionPool::UnclaimedTransactionPool():
-        db_path_(),
         rwlock_(),
         database_(nullptr){
         pthread_rwlock_init(&rwlock_, NULL);
@@ -271,22 +272,8 @@ namespace Token{
         return true;
     }
 
-    bool UnclaimedTransactionPool::LoadUnclaimedTransactionPool(const std::string &filename){
-        return GetInstance()->LoadPool(filename);
-    }
-
-    void UnclaimedTransactionPoolPrinter::Print(){
-        std::vector<std::string> utxos;
-        if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransactions(utxos)){
-            LOG(ERROR) << "cannot get unclaimed transactions from pool";
-            return;
-        }
-
-        LOG(INFO) << "Unclaimed Transaction Pool (" << utxos.size() << ":";
-        size_t idx = 0;
-        for(auto& it : utxos){
-            LOG(INFO) << "  - #" << (idx++) << ": " << it;
-        }
+    bool UnclaimedTransactionPool::LoadUnclaimedTransactionPool(){
+        return GetInstance()->LoadPool((TOKEN_BLOCKCHAIN_HOME + "/unclaimed"));
     }
 
     std::string UnclaimedTransaction::GetHash(){
@@ -323,5 +310,20 @@ namespace Token{
     bool UnclaimedTransactionPool::ClearUnclaimedTransactions(){
         //TODO: Implement
         return true;
+    }
+
+    bool UnclaimedTransactionPool::Accept(Token::UnclaimedTransactionPoolVisitor* vis){
+        std::vector<std::string> utxos;
+        if(!GetInstance()->GetUnclaimedTransactions(utxos)){
+            LOG(ERROR) << "cannot get unclaimed transactions from pool";
+            return false;
+        }
+
+        vis->VisitStart();
+        for(auto& it : utxos){
+            UnclaimedTransaction utx(it);
+            vis->VisitUnclaimedTransaction(&utx);
+        }
+        vis->VisitEnd();
     }
 }
