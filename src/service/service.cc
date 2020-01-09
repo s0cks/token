@@ -12,8 +12,6 @@ namespace Token{
             LOG(ERROR) << "couldn't get BlockChain <HEAD>";
             return grpc::Status::CANCELLED;
         }
-        LOG(INFO) << "<HEAD>:";
-        //TODO: LOG(INFO) << (*head);
         SetBlockHeader(head, response);
         return grpc::Status::OK;
     }
@@ -76,29 +74,9 @@ namespace Token{
         }
     }
 
-    grpc::Status BlockChainService::GetPeers(grpc::ServerContext *ctx,
-                                             const Token::Messages::EmptyRequest *request,
-                                             Token::Messages::PeerList *response){
-        /*
-         * TODO:
-         * if(!BlockChainServer::GetPeerList(*response)){
-         *      LOG(ERROR) << "couldn't get peer list";
-         *      return grpc::Status::CANCELLED;
-         * }
-         */
-        return grpc::Status::OK;
-    }
-
-    grpc::Status BlockChainService::SpendTest(grpc::ServerContext *ctx,
-                                              const Token::Messages::Service::SpendTokenRequest* request,
-                                              Token::Messages::EmptyResponse *response){
-        LOG(INFO) << "spending " << request->token() << " to " << request->user();
-        return grpc::Status::CANCELLED;
-    }
-
-    grpc::Status BlockChainService::Spend(grpc::ServerContext *ctx,
+    grpc::Status BlockChainService::SpendToken(grpc::ServerContext *ctx,
                                           const Token::Messages::Service::SpendTokenRequest *request,
-                                          Token::Messages::EmptyResponse* response){
+                                          Token::Messages::Transaction* response){
         LOG(INFO) << "spending " << request->token() << " to " << request->user();
         UnclaimedTransaction utxo;
         if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransaction(request->token(), &utxo)){
@@ -123,21 +101,8 @@ namespace Token{
             LOG(ERROR) << "cannot add transaction to transaction pool";
             return grpc::Status::CANCELLED;
         }
-
+        response->CopyFrom(*tx->GetRaw());
         LOG(INFO) << "spent!";
-        return grpc::Status::OK;
-    }
-
-    /// 5O57b4u7f3uteTEUiEY1
-    
-    grpc::Status BlockChainService::ConnectTo(grpc::ServerContext *ctx, const Token::Messages::Peer *request,
-                                              Token::Messages::EmptyResponse *response){
-        /*
-         * if(!BlockChainServer::ConnectToPeer(request->address(), request->port())){
-         *     LOG(ERROR) << "couldn't connect to peer";
-         *     return grpc::Status::CANCELLED;
-         * }
-         */
         return grpc::Status::OK;
     }
 

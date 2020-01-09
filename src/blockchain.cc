@@ -139,7 +139,6 @@ namespace Token{
 
         BlockQueue* queue = (BlockQueue*)data;
         do{
-            LOG(INFO) << "popping block...";
             Block* blk;
             if(!queue->Pop(&blk)){
                 const char* msg = "couldn't pop block from BlockQueue";
@@ -377,7 +376,6 @@ namespace Token{
 
     bool BlockChain::AppendNode(Token::Block* block){
         Resize(Length() + 1);
-        LOG(INFO) << (Length() - 1) << " := " << block->GetHash();
         Last() = block;
         return true;
     }

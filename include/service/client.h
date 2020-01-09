@@ -22,14 +22,9 @@ namespace Token{
 
         bool GetHead(Messages::BlockHeader* response);
         bool GetBlock(const std::string& hash, Messages::BlockHeader* response);
-        bool GetBlockAt(int index, Messages::BlockHeader* response);
-        bool GetBlockData(const std::string& hash, Messages::Block* response);
-        bool GetBlockDataAt(int index, Messages::Block* response);
         bool GetUnclaimedTransactions(Messages::UnclaimedTransactionList* response);
         bool GetUnclaimedTransactions(const std::string& hash, Messages::UnclaimedTransactionList* response);
-        bool GetPeers(std::vector<std::string>& peers);
-        bool ConnectTo(const std::string& address, int port);
-        bool Spend(const std::string& token, const std::string& from_user, const std::string& to_user);
+        bool SpendToken(const std::string& token, const std::string& from_user, const std::string& to_user, Transaction** response);
     };
 }
 

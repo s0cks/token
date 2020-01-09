@@ -18,11 +18,6 @@ namespace Token{
             header->set_merkle_root(block->GetMerkleRoot());
             header->set_height(block->GetHeight());
         }
-
-        inline void
-        SetTransaction(Transaction* tx, Messages::Transaction* msg){
-            msg->CopyFrom(*tx->GetRaw());
-        }
     public:
         explicit BlockChainService():
                 server_(){}
@@ -32,10 +27,7 @@ namespace Token{
         grpc::Status GetBlock(grpc::ServerContext* ctx, const Token::Messages::Service::GetBlockRequest* request, Messages::BlockHeader* response);
         grpc::Status GetBlockData(grpc::ServerContext* ctx, const Token::Messages::Service::GetBlockRequest* request, Messages::Block* response);
         grpc::Status GetUnclaimedTransactions(grpc::ServerContext* ctx, const Token::Messages::Service::GetUnclaimedTransactionsRequest* request, Messages::UnclaimedTransactionList* response);
-        grpc::Status GetPeers(grpc::ServerContext* ctx, const Token::Messages::EmptyRequest* request, Token::Messages::PeerList* response);
-        grpc::Status SpendTest(grpc::ServerContext* ctx, const Token::Messages::Service::SpendTokenRequest* request, Token::Messages::EmptyResponse* response);
-        grpc::Status Spend(grpc::ServerContext* ctx, const Token::Messages::Service::SpendTokenRequest* request, Token::Messages::EmptyResponse* response);
-        grpc::Status ConnectTo(grpc::ServerContext* ctx, const Token::Messages::Peer* request, Token::Messages::EmptyResponse* response);
+        grpc::Status SpendToken(grpc::ServerContext* ctx, const Token::Messages::Service::SpendTokenRequest* request, Messages::Transaction* response);
 
         static BlockChainService* GetInstance();
         static void Start(const std::string address, int port);

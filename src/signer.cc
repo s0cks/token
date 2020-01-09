@@ -25,7 +25,7 @@ namespace Token{
         }
 
         try{
-            LOG(INFO) << "signing transaction";
+            LOG(INFO) << "signing transaction: " << GetTransaction()->GetHash();
             CryptoPP::RSASS<CryptoPP::PSS, CryptoPP::SHA256>::Signer signer(privateKey);
             CryptoPP::AutoSeededRandomPool rng;
 
@@ -49,7 +49,6 @@ namespace Token{
             LOG(ERROR) << "couldn't generate signature";
             return false;
         }
-        LOG(INFO) << "transaction '" << GetTransaction()->GetHash() << " signature := " << signature;
         GetTransaction()->SetSignature(signature);
         return true;
     }

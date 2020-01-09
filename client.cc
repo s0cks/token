@@ -67,16 +67,6 @@ int main(int argc, char** argv){
                 return EXIT_FAILURE;
             }
             PrintBlock(&head);
-        } else if(input == "lspeers"){
-            std::vector<std::string> peers;
-            if(!client->GetPeers(peers)){
-                LOG(ERROR) << "couldn't get peers from service";
-                return EXIT_FAILURE;
-            }
-            LOG(INFO) << "Peers:";
-            for(auto& it : peers){
-                LOG(INFO) << "  - " << it;
-            }
         } else if(input == "getblock"){
             std::string target;
             std::cout << "target := ";
@@ -89,15 +79,8 @@ int main(int argc, char** argv){
                     return EXIT_FAILURE;
                 }
                 PrintBlock(&blk);
-            } else{
-                LOG(INFO) << "fetching block @" << target;
-                Messages::BlockHeader blk;
-                if(!client->GetBlockAt(atoi(target.c_str()), &blk)){
-                    LOG(ERROR) << "couldn't fetch block: " << target;
-                    return EXIT_FAILURE;
-                }
-                PrintBlock(&blk);
             }
+            return EXIT_FAILURE;
         } else if(input == "spend"){
             std::string token;
             std::cout << "target := ";
@@ -110,25 +93,17 @@ int main(int argc, char** argv){
             std::cout << "from := ";
             std::cin >> from_user;
 
+            Transaction* tx;
+
             std::string to_user;
             std::cout << "to := ";
             std::cin >> to_user;
-            if(!client->Spend(token, from_user, to_user)){
+            if(!client->SpendToken(token, from_user, to_user, &tx)){
                 LOG(ERROR) << "couldn't spend token: " << token;
                 return EXIT_FAILURE;
             }
-        } else if(input == "connect"){
-            std::string address;
-            std::cout << "address := ";
-            std::cin >> address;
 
-            std::string pport;
-            std::cout << "port := ";
-            std::cin >> pport;
-            if(!client->ConnectTo(address, atoi(pport.c_str()))){
-                LOG(ERROR) << "couldn't connect to peer: " << address << ":" << pport;
-                return EXIT_FAILURE;
-            }
+            LOG(INFO) << "spent: " << tx->GetHash();
         } else if(input == "getutxos"){
             std::string user;
             std::cout << "User? := ";

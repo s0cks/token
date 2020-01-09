@@ -103,6 +103,7 @@ namespace Token{
         friend class TransactionSigner;
         friend class TransactionVerifier;
         friend class BlockChainService;
+        friend class TokenServiceClient;//TODO: Revoke
     public:
         Transaction():
                 raw_(){
