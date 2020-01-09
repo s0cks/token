@@ -1,6 +1,7 @@
 #ifndef TOKEN_PRINTER_H
 #define TOKEN_PRINTER_H
 
+#include <glog/logging.h>
 #include "allocator.h"
 #include "blockchain.h"
 
@@ -10,19 +11,38 @@ namespace Token{
         enum PrinterFlags{
             kNone = 0,
             kDetailed = 1 << 1,
-            kNoBanner = 1 << 2,
+            kNoBanner = 1 << 2
         };
     private:
         long flags_;
+        bool is_log_;
+        std::ostream* stream_;
         google::LogSeverity severity_;
     protected:
+        Printer(std::ostream* stream, long flags):
+            flags_(flags),
+            is_log_(false),
+            severity_(0),
+            stream_(stream){}
         Printer(google::LogSeverity severity, long flags):
+            flags_(flags),
             severity_(severity),
-            flags_(flags){
-
-        }
+            stream_(nullptr),
+            is_log_(true){}
     public:
         virtual ~Printer(){}
+
+        google::LogSeverity GetSeverity(){
+            return severity_;
+        }
+
+        std::ostream* GetStream(){
+            return stream_;
+        }
+
+        bool HasStream(){
+            return stream_ != nullptr;
+        }
 
         bool IsDetailed(){
             return (flags_ & kDetailed) == kDetailed;
@@ -31,35 +51,53 @@ namespace Token{
         bool ShouldPrintBanner(){
             return !((flags_ & kNoBanner) == kNoBanner);
         }
-
-        google::LogSeverity GetSeverity(){
-            return severity_;
-        }
     };
 
-    class HeapPrinter : public HeapVisitor{
+    class HeapPrinter : public HeapVisitor, public Printer{
     public:
         static const int BANNER_SIZE = 64;
-
-        enum HeapSpace{
-            kEden,
-            kSurvivor
-        };
     private:
-        HeapSpace space_;
+        Allocator::HeapSpace space_;
     public:
-        HeapPrinter(HeapSpace space):
-                space_(space){}
+        HeapPrinter(std::ostream* stream, Allocator::HeapSpace space, long flags=Printer::kNone):
+            space_(space),
+            HeapVisitor(),
+            Printer(stream, flags){}
+        HeapPrinter(google::LogSeverity severity, Allocator::HeapSpace space, long flags=Printer::kNone):
+            space_(space),
+            HeapVisitor(),
+            Printer(severity, flags){}
         ~HeapPrinter(){}
+
+        Allocator::HeapSpace GetSpace(){
+            return space_;
+        }
 
         bool VisitStart();
         bool VisitEnd();
         bool VisitChunk(int chunk, size_t size, void* ptr);
+
+        static void PrintHeap(std::ostream* stream, Allocator::HeapSpace space, long flags=Printer::kNone){
+            HeapPrinter printer(stream, space, flags);
+            switch(space){
+                case Allocator::kEden:
+                    Allocator::GetInstance()->VisitMinor(&printer);
+                    return;
+                case Allocator::kSurvivor:
+                    Allocator::GetInstance()->VisitMajor(&printer);
+                    return;
+                case Allocator::kAll:
+                default:
+                    Allocator::GetInstance()->VisitMinor(&printer);
+                    Allocator::GetInstance()->VisitMajor(&printer);
+                    return;
+            }
+        }
     };
 
     class TransactionPrinter : public TransactionVisitor, public Printer{
     public:
-        static const size_t kBannerSize = 82;
+        static const size_t kBannerSize = 96;
     private:
         Transaction* tx_;
     public:
@@ -98,7 +136,7 @@ namespace Token{
 
     class BlockPrinter : public BlockVisitor, public Printer{
     public:
-        static const size_t kBannerSize = 64;
+        static const size_t kBannerSize = 96;
     private:
         Block* block_;
     public:
@@ -129,8 +167,11 @@ namespace Token{
 
     class BlockChainPrinter : public BlockChainVisitor, public Printer{
     public:
-        static const size_t kBannerSize = 64;
+        static const size_t kBannerSize = 96;
 
+        BlockChainPrinter(std::ostream* stream, long flags):
+            BlockChainVisitor(),
+            Printer(stream, flags){}
         BlockChainPrinter(google::LogSeverity severity, long flags):
             BlockChainVisitor(),
             Printer(severity, flags){}
@@ -140,6 +181,7 @@ namespace Token{
         bool Visit(Block* block);
         bool VisitEnd();
 
+        static void Print(std::ostream* stream, long flags=Printer::kNone);
         static void Print(google::LogSeverity severity, long flags=Printer::kNone);
 
         static void PrintAsInfo(long flags=Printer::kNone){
@@ -153,7 +195,7 @@ namespace Token{
 
     class TransactionPoolPrinter : public TransactionPoolVisitor, public Printer{
     public:
-        static const size_t kBannerSize = 64;
+        static const size_t kBannerSize = 96;
 
         TransactionPoolPrinter(google::LogSeverity severity, long flags):
             TransactionPoolVisitor(),
@@ -177,8 +219,11 @@ namespace Token{
 
     class UnclaimedTransactionPoolPrinter : public UnclaimedTransactionPoolVisitor, public Printer{
     public:
-        static const size_t kBannerSize = 64;
+        static const size_t kBannerSize = 96;
 
+        UnclaimedTransactionPoolPrinter(std::ostream* stream, long flags):
+            UnclaimedTransactionPoolVisitor(),
+            Printer(stream, flags){}
         UnclaimedTransactionPoolPrinter(google::LogSeverity severity, long flags):
             UnclaimedTransactionPoolVisitor(),
             Printer(severity, flags){}
@@ -188,6 +233,7 @@ namespace Token{
         bool VisitUnclaimedTransaction(UnclaimedTransaction* utx);
         bool VisitEnd();
 
+        static void Print(std::ostream* stream, long flags=Printer::kNone);
         static void Print(google::LogSeverity severity, long flags=Printer::kNone);
 
         static void PrintAsInfo(long flags=Printer::kNone){

@@ -36,7 +36,15 @@ namespace Token{
             kGray,
             kMarked = kWhite,
         };
+
+        enum HeapSpace{
+            kAll = 0,
+            kEden = 1,
+            kSurvivor
+        };
     private:
+        friend class HeapPrinter;
+
         uint64_t minor_size_;
         uint64_t major_size_;
         Byte* minor_;
@@ -90,8 +98,6 @@ namespace Token{
         static void RemoveReference(void* ref);
         static void CollectMinor();
         static void CollectMajor();
-        static void PrintMinorHeap();
-        static void PrintMajorHeap();
         static void* Allocate(size_t size);
     };
 

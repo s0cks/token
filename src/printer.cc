@@ -4,34 +4,50 @@
 #include "printer.h"
 
 namespace Token {
-#define PRINTER (LOG_AT_LEVEL(GetSeverity()))
+
+#define PRINT(Message) ({ \
+    if(HasStream()){ \
+        (*GetStream()) << (Message.str()) << std::endl; \
+    } else{ \
+        LOG_AT_LEVEL(GetSeverity()) << (Message.str()); \
+    } \
+})
 
     bool HeapPrinter::VisitStart() {
         std::stringstream msg;
-
-        int total = HeapPrinter::BANNER_SIZE;
-        std::string title = space_ == kEden ?
-                            " Eden " :
-                            " Survivor ";
-
-        total = (total - title.length()) / 2;
-        for (int i = 0; i < total; i++) {
-            msg << "*";
+        switch(GetSpace()){
+            case Allocator::kEden:
+                msg << "Eden";
+                break;
+            case Allocator::kSurvivor:
+                msg << "Survivor";
+                break;
+            default:
+                msg << "Unknown";
+                break;
         }
-        msg << title;
-        for (int i = 0; i < total; i++) {
-            msg << "*";
+        msg << " Heap";
+        switch(GetSpace()){
+            case Allocator::kEden:
+                msg << " (" << Allocator::GetMinorHeapSize() << " Bytes)";
+                break;
+            case Allocator::kSurvivor:
+                msg << " (" << Allocator::GetMajorHeapSize() << " Bytes)";
+                break;
+            default:
+                msg << " (Unknown Bytes)";
+                break;
         }
-        LOG(INFO) << msg.str();
+
+        if(IsDetailed()){
+            msg << ": ";
+        }
+
+        PRINT(msg);
         return true;
     }
 
     bool HeapPrinter::VisitEnd() {
-        std::stringstream msg;
-        for (int i = 0; i < HeapPrinter::BANNER_SIZE; i++) {
-            msg << "*";
-        }
-        LOG(INFO) << msg.str();
         return true;
     }
 
@@ -41,18 +57,22 @@ namespace Token {
 #define MARKED(ch) (FLAGS(ch)&1)
 
     bool HeapPrinter::VisitChunk(int chunk, size_t size, void *ptr) {
-        std::stringstream msg;
-        try {
-            AllocatorObject *obj = reinterpret_cast<AllocatorObject *>(BITS(ptr));
-            if (obj) {
-                msg << obj->ToString();
-            } else {
+        if(IsDetailed()){
+            std::stringstream msg;
+            try {
+                AllocatorObject *obj = reinterpret_cast<AllocatorObject*>(BITS(ptr));
+                if (obj) {
+                    msg << obj->ToString();
+                } else {
+                    msg << "\tChunk " << chunk << "\tSize " << size << "\tMarked: " << (MARKED(ptr) ? 'Y' : 'N');
+                }
+            } catch (std::exception &exc) {
                 msg << "\tChunk " << chunk << "\tSize " << size << "\tMarked: " << (MARKED(ptr) ? 'Y' : 'N');
             }
-        } catch (std::exception &exc) {
-            msg << "\tChunk " << chunk << "\tSize " << size << "\tMarked: " << (MARKED(ptr) ? 'Y' : 'N');
+
+            PRINT(msg);
+            return true;
         }
-        LOG(INFO) << msg.str();
         return true;
     }
 
@@ -71,7 +91,8 @@ namespace Token {
         } else {
             stream << GetTransaction()->GetHash();
         }
-        PRINTER << stream.str();
+
+        PRINT(stream);
         return true;
     }
 
@@ -80,7 +101,7 @@ namespace Token {
             std::stringstream stream;
             size_t num = GetTransaction()->GetNumberOfInputs();
             stream << "Inputs (" << num << "):";
-            PRINTER << stream.str();
+            PRINT(stream);
         }
         return true;
     }
@@ -89,7 +110,7 @@ namespace Token {
         if(IsDetailed() && ShouldPrintBanner()) {
             std::stringstream stream;
             stream << "  - " << input->GetIndex() << ": " << input->GetHash();
-            PRINTER << stream.str();
+            PRINT(stream);
         }
         return true;
     }
@@ -103,7 +124,7 @@ namespace Token {
             std::stringstream stream;
             size_t num = GetTransaction()->GetNumberOfOutputs();
             stream << "Outputs (" << num << "):";
-            PRINTER << stream.str();
+            PRINT(stream);
         }
         return true;
     }
@@ -112,7 +133,7 @@ namespace Token {
         if(IsDetailed()) {
             std::stringstream stream;
             stream << "  - " << output->GetUser() << " (" << output->GetToken() << ") -> " << output->GetHash();
-            PRINTER << stream.str();
+            PRINT(stream);
         }
         return true;
     }
@@ -127,7 +148,7 @@ namespace Token {
             for(size_t i = 0; i < TransactionPrinter::kBannerSize; i++){
                 msg << "*";
             }
-            PRINTER << msg.str();
+            PRINT(msg);
         }
         return true;
     }
@@ -154,14 +175,14 @@ namespace Token {
         } else{
             stream << GetBlock()->GetHash();
         }
-        PRINTER << stream.str();
+        PRINT(stream);
     }
 
     bool BlockPrinter::VisitTransaction(Token::Transaction* tx){
         if(IsDetailed()){
             std::stringstream stream;
             stream << "  - " << tx->GetIndex() << ": " << tx->GetHash();
-            PRINTER << stream.str();
+            PRINT(stream);
         }
     }
 
@@ -172,7 +193,7 @@ namespace Token {
 
             stream = std::stringstream();
             for(size_t i = 0; i < BlockPrinter::kBannerSize; i++) stream << "*";
-            PRINTER << stream.str();
+            PRINT(stream);
         }
     }
 
@@ -187,7 +208,7 @@ namespace Token {
             size_t total = BlockChainPrinter::kBannerSize;
 
             std::string title = "BlockChain";
-            total = (total - title.length()) / 2;
+            total = (total - title.length() - 2) / 2;
 
             for (size_t i = 0; i < total; i++) stream << "*";
             stream << " " << title << " ";
@@ -195,7 +216,7 @@ namespace Token {
         } else{
             stream << "BlockChain (" << BlockChain::GetHeight() << " Blocks)";
         }
-        PRINTER << stream.str();
+        PRINT(stream);
     }
 
     bool BlockChainPrinter::Visit(Token::Block* block){
@@ -204,7 +225,7 @@ namespace Token {
         if(IsDetailed()){
             stream << " (" << block->GetNumberOfTransactions() << " Transactions)";
         }
-        PRINTER << stream.str();
+        PRINT(stream);
     }
 
     bool BlockChainPrinter::VisitEnd(){
@@ -212,8 +233,13 @@ namespace Token {
             std::stringstream stream;
             stream = std::stringstream();
             for(size_t i = 0; i < BlockChainPrinter::kBannerSize; i++) stream << "*";
-            PRINTER << stream.str();
+            PRINT(stream);
         }
+    }
+
+    void BlockChainPrinter::Print(std::ostream* stream, long flags){
+        BlockChainPrinter printer(stream, flags);
+        BlockChain::Accept(&printer);
     }
 
     void BlockChainPrinter::Print(google::LogSeverity severity, long flags){
@@ -231,7 +257,7 @@ namespace Token {
         for (size_t i = 0; i < total; i++) stream << "*";
         stream << " " << title << " ";
         for (size_t i = 0; i < total; i++) stream << "*";
-        PRINTER << stream.str();
+        PRINT(stream);
     }
 
     bool TransactionPoolPrinter::VisitTransaction(Token::Transaction* tx){
@@ -239,7 +265,9 @@ namespace Token {
             TransactionPrinter printer(GetSeverity(), tx, Printer::kDetailed|Printer::kNoBanner);
             tx->Accept(&printer);
         } else{
-            PRINTER << "  - " << tx->GetHash();
+            std::stringstream stream;
+            stream << "  - " << tx->GetHash();
+            PRINT(stream);
         }
     }
 
@@ -247,7 +275,7 @@ namespace Token {
         std::stringstream stream;
         stream = std::stringstream();
         for(size_t i = 0; i < TransactionPoolPrinter::kBannerSize; i++) stream << "*";
-        PRINTER << stream.str();
+        PRINT(stream);
     }
 
     void TransactionPoolPrinter::Print(google::LogSeverity severity, long flags){
@@ -260,12 +288,13 @@ namespace Token {
         size_t total = UnclaimedTransactionPoolPrinter::kBannerSize;
 
         std::string title = "UnclaimedTransactionPool";
-        total = (total - title.length()) / 2;
+        total = (total - title.length() - 2) / 2;
 
         for (size_t i = 0; i < total; i++) stream << "*";
         stream << " " << title << " ";
         for (size_t i = 0; i < total; i++) stream << "*";
-        PRINTER << stream.str();
+        PRINT(stream);
+        return true;
     }
 
     bool UnclaimedTransactionPoolPrinter::VisitUnclaimedTransaction(Token::UnclaimedTransaction* utx){
@@ -275,14 +304,21 @@ namespace Token {
         } else{
             stream << "  - " << utx->GetHash();
         }
-        PRINTER << stream.str();
+        PRINT(stream);
+        return true;
     }
 
     bool UnclaimedTransactionPoolPrinter::VisitEnd(){
         std::stringstream stream;
         stream = std::stringstream();
         for(size_t i = 0; i < UnclaimedTransactionPoolPrinter::kBannerSize; i++) stream << "*";
-        PRINTER << stream.str();
+        PRINT(stream);
+        return true;
+    }
+
+    void UnclaimedTransactionPoolPrinter::Print(std::ostream *stream, long flags){
+        UnclaimedTransactionPoolPrinter printer(stream, flags);
+        UnclaimedTransactionPool::GetInstance()->Accept(&printer);
     }
 
     void UnclaimedTransactionPoolPrinter::Print(google::LogSeverity severity, long flags){

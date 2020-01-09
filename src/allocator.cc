@@ -324,15 +324,4 @@ namespace Token{
     void Allocator::RemoveReference(void *ref){
         //TODO: Implement
     }
-
-
-    void Allocator::PrintMinorHeap(){
-        HeapPrinter printer(HeapPrinter::kEden);
-        GetInstance()->VisitMinor(&printer);
-    }
-
-    void Allocator::PrintMajorHeap(){
-        HeapPrinter printer(HeapPrinter::kSurvivor);
-        GetInstance()->VisitMajor(&printer);
-    }
 }
