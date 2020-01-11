@@ -90,7 +90,7 @@ namespace Token{
             LOG(ERROR) << "couldn't start miner thread";
             return false;
         }
-        return false;
+        return true;
     }
 
     void* BlockChain::BlockChainMinerThread(void* data){
