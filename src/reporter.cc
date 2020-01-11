@@ -32,4 +32,15 @@ namespace Token{
         }
         return true;
     }
+
+    int CrashReporter::Crash(const std::string &message){
+        CrashReporter crash(message, CrashReporter::kDetailed);
+        LOG(WARNING) << message << ", generating crash report";
+        if(!crash.WriteReport()){
+            LOG(ERROR) << "couldn't write crash report to: " << crash.GetFilename();
+            return EXIT_FAILURE;
+        }
+        LOG(ERROR) << "wrote crash report to: " << crash.GetFilename();
+        return EXIT_FAILURE;
+    }
 }

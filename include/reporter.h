@@ -68,6 +68,8 @@ namespace Token{
         }
 
         bool WriteReport();
+
+        static int Crash(const std::string& message);
     };
 }
 
