@@ -1,6 +1,6 @@
 #include <glog/logging.h>
 #include <gflags/gflags.h>
-#include "blockchain.h"
+#include "block_chain.h"
 #include "service/client.h"
 
 static inline void
@@ -24,12 +24,12 @@ PrintTransaction(Token::Transaction* tx){
     std::cout << "\t\tInputs:" << std::endl;
     for(idx = 0; idx < tx->GetNumberOfInputs(); idx++){
         Token::Input* input = tx->GetInputAt(idx);
-        std::cout << "\t\t  * #" << idx << ": " << (*input) << std::endl;
+        std::cout << "\t\t  * #" << idx << ": " << input->GetHash() << std::endl;
     }
     std::cout << "\t\tOutputs:" << std::endl;
     for(idx = 0; idx < tx->GetNumberOfOutputs(); idx++){
         Token::Output* output = tx->GetOutputAt(idx);
-        std::cout << "\t\t  * #" << idx << ": " << (*output) << std::endl;
+        std::cout << "\t\t  * #" << idx << ": " << output->GetHash() << std::endl;
     }
 }
 
@@ -121,7 +121,7 @@ int main(int argc, char** argv){
             LOG(INFO) << "unclaimed transactions: ";
             size_t idx = 1;
             for(auto& it : utxos.transactions()){
-                LOG(INFO) << (idx++) << it.token() << " to: " << it.user();
+                LOG(INFO) << (idx++) << ": " << it.utx_hash() << " (" << it.user() << ")";
             }
         }
     } while(true);

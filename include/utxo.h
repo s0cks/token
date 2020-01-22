@@ -107,6 +107,9 @@ namespace Token{
     };
 
     class UnclaimedTransactionPool{
+        /*
+         * TODO: Rewrite this & UnclaimedTransaction
+         */
     private:
         sqlite3* database_;
         pthread_rwlock_t rwlock_;

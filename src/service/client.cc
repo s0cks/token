@@ -53,12 +53,12 @@ namespace Token{
         request.set_owner(from_user);
 
         grpc::ClientContext ctx;
-        Token::Messages::Transaction response;
-        if(!GetStub()->SpendToken(&ctx, request, &response).ok()) {
+        Messages::Transaction response;
+        if(!GetStub()->Spend(&ctx, request, &response).ok()) {
             (*tx) = nullptr;
             return false;
         }
-        (*tx = new Transaction())->GetRaw()->CopyFrom(response);
+        //TODO: (*tx) = new Transaction(response);
         return true;
     }
 }

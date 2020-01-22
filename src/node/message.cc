@@ -1,79 +1,73 @@
 #include <glog/logging.h>
+#include <string>
 #include "node/message.h"
-#include "block.h"
 
 namespace Token{
-    Message::Message(Token::ByteArray *bytes):
-        type_(Message::Type::kUnknownType),
-        raw_(nullptr){
-        if(!Decode(bytes)){
-            LOG(ERROR) << "couldn't decode message";
-            type_ = Message::Type::kUnknownType;
-            delete raw_;
-            raw_ = nullptr;
+#define DEFINE_TYPECHECK(Name) \
+    Name##Message* Name##Message::As##Name##Message(){ \
+        return this; \
+    }
+    FOR_EACH_MESSAGE_TYPE(DEFINE_TYPECHECK)
+#undef DEFINE_TYPECHECK
+
+    void PingMessage::Encode(uint8_t* bytes, size_t size){
+        memcpy(bytes, nonce_.data(), size);
+    }
+
+    void PongMessage::Encode(uint8_t* bytes, size_t size){
+        memcpy(bytes, nonce_.data(), size);
+    }
+
+    void TransactionMessage::Encode(uint8_t* bytes, size_t size){
+        if(!GetRaw().SerializeToArray(bytes, size)){
+            LOG(ERROR) << "couldn't serialize transaction to byte array";
         }
     }
 
-    Message::Message(Token::Block* block):
-        type_(Message::Type::kBlockMessage),
-        raw_(new Messages::Block()){
-        GetAsBlock()->CopyFrom(*block->GetRaw());
-    }
-
-    Message::~Message(){
-
-    }
-
-    bool Message::Encode(Token::ByteArray* bytes){
-        bytes->Clear();
-        bytes->Resize(GetMessageSize());
-        bytes->PutUInt32(0, static_cast<uint32_t>(type_));
-        bytes->PutUInt32(sizeof(uint32_t), GetMessageSize());
-        return GetRaw()->SerializeToArray(bytes->data_, GetMessageSize());
-    }
-
-    bool Message::Decode(Token::ByteArray* bytes){
-#define DEFINE_DECODE_MESSAGE(Name, MType) \
-        case Message::Type::k##Name##Message:{ \
-            raw_ = (new MType()); \
-            return raw_->ParseFromArray(&bytes->data_[sizeof(uint32_t) * 2], size); \
+    void BlockMessage::Encode(uint8_t *bytes, size_t size){
+        if(!GetRaw().SerializePartialToArray(bytes, size)){
+            LOG(ERROR) << "couldn't serialize transaction to byte array";
         }
+    }
 
-        uint32_t size = bytes->GetUInt32(sizeof(uint32_t));
-        switch(type_ = static_cast<Type>(bytes->GetUInt32(0))){
-            FOR_EACH_TYPE(DEFINE_DECODE_MESSAGE);
-            case Message::Type::kUnknownType:
+    Message* Message::Decode(Type type, uint8_t* bytes, uint32_t size){
+        switch(type){
+            case Type::kPingMessage:{
+                if(size != 64){
+                    LOG(ERROR) << "ping nonce is " << size << "/64 characters";
+                    return nullptr;
+                }
+                std::string nonce((char*)bytes, size);
+                return new PingMessage(nonce);
+            }
+            case Type::kPongMessage:{
+                if(size != 64){
+                    LOG(ERROR) << "pong nonce is " << size << "/64 characters";
+                    return nullptr;
+                }
+                std::string nonce((char*)bytes, size);
+                return new PongMessage(nonce);
+            }
+            case Type::kTransactionMessage:{
+                Messages::Transaction raw;
+                if(!raw.ParseFromArray(bytes, size)){
+                    LOG(ERROR) << "couldn't deserialize transaction from byte array";
+                    return nullptr;
+                }
+                return new TransactionMessage(raw);
+            }
+            case Type::kBlockMessage:{
+                Messages::Block raw;
+                if(!raw.ParseFromArray(bytes, size)){
+                    LOG(ERROR) << "couldn't deserialize block from byte array";
+                    return nullptr;
+                }
+                return new BlockMessage(raw);
+            }
             default:{
-                LOG(WARNING) << "unknown type";
-                return false;
+                LOG(ERROR) << "invalid message of type " << static_cast<uint8_t>(type) << " w/ size " << size;
+                return nullptr;
             }
         }
     }
-
-    std::string Message::ToString(){
-#define DEFINE_CHECK(Name, MType) \
-        case Message::Type::k##Name##Message:{ \
-            std::stringstream stream; \
-            stream << #Name << "Message()"; \
-            return stream.str(); \
-        }
-        switch(type_){
-            FOR_EACH_TYPE(DEFINE_CHECK);
-            default: return "Unknown Message";
-        }
-    }
-
-#define DEFINE_AS(Name, MType) \
-    MType* Message::GetAs##Name(){ \
-        return reinterpret_cast<MType*>(raw_); \
-    }
-    FOR_EACH_TYPE(DEFINE_AS)
-#undef DEFINE_AS
-
-#define DEFINE_IS(Name, MType) \
-    bool Message::Is##Name##Message(){ \
-        return type_ == Message::Type::k##Name##Message; \
-    }
-    FOR_EACH_TYPE(DEFINE_IS)
-#undef DEFINE_IS
 }

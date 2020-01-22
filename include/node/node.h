@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 #include <cstdint>
-
 #include "session.h"
 
 namespace Token{
@@ -15,7 +14,7 @@ namespace Token{
         std::string address_;
         uint16_t port_;
         uint32_t sock_;
-        std::vector<NodeServerSession*> sessions_;
+        std::vector<Session*> sessions_;
 
         void SetAddress(const std::string& addr){
             address_ = addr;
@@ -45,8 +44,16 @@ namespace Token{
             return port_;
         }
 
+        void Connect(const std::string& address, uint16_t port){
+            LOG(INFO) << "creating client session for: " << address << ":" << port;
+            NodeClientSession* session = new NodeClientSession(address, port);
+            session->Connect();
+            sessions_.push_back(session);
+        }
+
         static BlockChainNode* GetInstance();
         static void Initialize(std::string addr, uint16_t port);
+        static void WaitForShutdown();
     };
 }
 

@@ -1,6 +1,5 @@
 #include "service/service.h"
 #include <glog/logging.h>
-#include <signer.h>
 
 namespace Token{
     grpc::Status BlockChainService::GetHead(grpc::ServerContext *ctx,
@@ -74,7 +73,7 @@ namespace Token{
         }
     }
 
-    grpc::Status BlockChainService::SpendToken(grpc::ServerContext *ctx,
+    grpc::Status BlockChainService::Spend(grpc::ServerContext *ctx,
                                           const Token::Messages::Service::SpendTokenRequest *request,
                                           Token::Messages::Transaction* response){
         LOG(INFO) << "spending " << request->token() << " to " << request->user();
@@ -87,21 +86,28 @@ namespace Token{
 
         LOG(INFO) << request->owner()<< " sent " << request->user() << " token: " << request->token();
         LOG(INFO) << "creating transaction...";
-        Transaction* tx = new Transaction();
-        tx->AddInput(utxo.GetTransactionHash(), utxo.GetIndex());
-        tx->AddOutput(request->user(), utxo.GetToken());
 
+        Messages::Transaction raw;
+        Messages::Input* in = raw.add_inputs();
+        in->set_previous_hash(utxo.GetTransactionHash());
+        in->set_index(utxo.GetIndex());
+
+        Messages::Output* out = raw.add_outputs();
+        out->set_token(utxo.GetToken());
+        out->set_user(request->user());
+
+        Transaction* tx = nullptr; //TODO: new Transaction(raw);
         TransactionSigner signer(tx);
         if(!signer.Sign()){
             LOG(ERROR) << "didn't sign transaction";
             return grpc::Status::CANCELLED;
         }
-
         if(!TransactionPool::AddTransaction(tx)) {
             LOG(ERROR) << "cannot add transaction to transaction pool";
             return grpc::Status::CANCELLED;
         }
-        response->CopyFrom(*tx->GetRaw());
+        //TODO tx->Encode(response);
+        delete tx;
         LOG(INFO) << "spent!";
         return grpc::Status::OK;
     }

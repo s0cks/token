@@ -4,7 +4,7 @@
 
 #include <grpc++/grpc++.h>
 #include "service.grpc.pb.h"
-#include "blockchain.h"
+#include "block_chain.h"
 
 namespace Token{
     class BlockChainService final : public Messages::Service::BlockChainService::Service{
@@ -27,7 +27,7 @@ namespace Token{
         grpc::Status GetBlock(grpc::ServerContext* ctx, const Token::Messages::Service::GetBlockRequest* request, Messages::BlockHeader* response);
         grpc::Status GetBlockData(grpc::ServerContext* ctx, const Token::Messages::Service::GetBlockRequest* request, Messages::Block* response);
         grpc::Status GetUnclaimedTransactions(grpc::ServerContext* ctx, const Token::Messages::Service::GetUnclaimedTransactionsRequest* request, Messages::UnclaimedTransactionList* response);
-        grpc::Status SpendToken(grpc::ServerContext* ctx, const Token::Messages::Service::SpendTokenRequest* request, Messages::Transaction* response);
+        grpc::Status Spend(grpc::ServerContext* ctx, const Token::Messages::Service::SpendTokenRequest* request, Messages::Transaction* response);
 
         static BlockChainService* GetInstance();
         static void Start(const std::string address, int port);

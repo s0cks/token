@@ -1,16 +1,14 @@
 #include <glog/logging.h>
 #include <sys/stat.h>
 #include <sys/time.h>
-#include <stdio.h>
 #include <dirent.h>
-#include <node/message.h>
+#include <cryptopp/pssr.h>
+#include <block_miner.h>
 
-#include "flags.h"
-#include "blockchain.h"
+#include "common.h"
+#include "keychain.h"
+#include "block_chain.h"
 #include "transaction.h"
-#include "signer.h"
-#include "verifier.h"
-#include "printer.h"
 
 namespace Token{
     void Transaction::Accept(Token::TransactionVisitor* vis){
@@ -19,17 +17,17 @@ namespace Token{
         vis->VisitInputsStart();
         int i;
         for(i = 0; i < GetNumberOfInputs(); i++){
-            if(!vis->VisitInput(GetInputAt(i))){
-                //TODO:
-            }
+            Input* in;
+            if(!(in = GetInputAt(i))) return;
+            if(!vis->VisitInput(in)) return;
         }
         vis->VisitInputsEnd();
 
         vis->VisitOutputsStart();
         for(i = 0; i < GetNumberOfOutputs(); i++){
-            if(!vis->VisitOutput(GetOutputAt(i))){
-                //TODO:
-            }
+            Output* out;
+            if(!(out = GetOutputAt(i))) return;
+            if(!vis->VisitOutput(out)) return;
         }
         vis->VisitOutputsEnd();
 
@@ -37,64 +35,48 @@ namespace Token{
     }
 
     void Transaction::SetTimestamp(){
-        GetRaw()->set_timestamp(GetCurrentTime());
+        //TODO: implement
+    }
+
+    void Transaction::SetIndex(uint32_t index){
+        index_ = index;
     }
 
     void Transaction::SetSignature(std::string signature){
-        GetRaw()->set_signature(signature);
+        //TODO: implement
     }
 
-    std::string Transaction::GetSignature(){
-        return GetRaw()->signature();
+    std::string Transaction::GetSignature() const{
+        //TODO: implement
+        return "";
     }
 
-    uint64_t Transaction::GetByteSize(){
-        return GetRaw()->ByteSizeLong();
-    }
-
-    bool Transaction::GetBytes(uint8_t** bytes, uint64_t size){
-        (*bytes) = static_cast<uint8_t*>(malloc(sizeof(uint8_t) * size));
-        return GetRaw()->SerializeToArray((*bytes), size);
-    }
-
-    std::string Transaction::GetHash(){
+    std::string Transaction::GetHash() const{
         CryptoPP::SHA256 func;
         std::string digest;
-
-        uint64_t size = GetByteSize();
-        uint8_t* bytes;
-        if(!GetBytes(&bytes, size)){
-            LOG(ERROR) << "couldn't get bytes for the transaction";
-            free(bytes);
+        Messages::Transaction raw;
+        raw << this;
+        size_t size = raw.ByteSizeLong();
+        uint8_t bytes[size];
+        if(!raw.SerializeToArray(bytes, size)){
+            LOG(WARNING) << "couldn't serialize transaction to byte array";
             return "";
         }
-        free(bytes);
         CryptoPP::ArraySource source(bytes, size, true, new CryptoPP::HashFilter(func, new CryptoPP::HexEncoder(new CryptoPP::StringSink(digest))));
         return digest;
-    }
-
-    std::string Transaction::ToString(){
-        std::stringstream stream;
-        stream << "Transaction(" << GetHash() << ")";
-        return stream.str();
-    }
-
-    HashArray Transaction::GetHashArray(){
-        HashArray result;
-        CryptoPP::SHA256 func;
-        size_t size = GetRaw()->ByteSizeLong();
-        uint8_t bytes[size];
-        GetRaw()->SerializeToArray(bytes, size);
-        CryptoPP::ArraySource source(bytes, size, true, new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(result.data(), DIGEST_SIZE)));
-        return result;
     }
 
     std::string Input::GetHash() const{
         CryptoPP::SHA256 func;
         std::string digest;
-        size_t size = GetRaw()->ByteSizeLong();
+        Messages::Input raw;
+        raw << this;
+        size_t size = raw.ByteSizeLong();
         uint8_t bytes[size];
-        GetRaw()->SerializeToArray(bytes, size);
+        if(!raw.SerializeToArray(bytes, size)) {
+            LOG(WARNING) << "couldn't serialize input to byte array";
+            return "";
+        }
         CryptoPP::ArraySource source(bytes, size, true, new CryptoPP::HashFilter(func, new CryptoPP::HexEncoder(new CryptoPP::StringSink(digest))));
         return digest;
     }
@@ -102,9 +84,14 @@ namespace Token{
     std::string Output::GetHash() const{
         CryptoPP::SHA256 func;
         std::string digest;
-        size_t size = GetRaw()->ByteSizeLong();
+        Messages::Output output;
+        output << this;
+        size_t size = output.ByteSizeLong();
         uint8_t bytes[size];
-        GetRaw()->SerializeToArray(bytes, size);
+        if(!output.SerializePartialToArray(bytes, size)){
+            LOG(WARNING) << "couldn't serialize output to byte array";
+            return "";
+        }
         CryptoPP::ArraySource source(bytes, size, true, new CryptoPP::HashFilter(func, new CryptoPP::HexEncoder(new CryptoPP::StringSink(digest))));
         return digest;
     }
@@ -117,7 +104,7 @@ namespace Token{
     uint32_t TransactionPool::counter_ = 0;
 
     bool TransactionPool::Initialize(){
-        std::string txpool = (TOKEN_BLOCKCHAIN_HOME + "/txpool");
+        std::string txpool = (TOKEN_BLOCKCHAIN_HOME + "/tx");
         if(!FileExists(txpool)){
             LOG(WARNING) << "transaction pool directory not found, creating...";
             if(!CreateTransactionPoolDirectory(txpool)){
@@ -132,14 +119,13 @@ namespace Token{
 
     bool TransactionPool::SaveTransaction(const std::string &filename, Token::Transaction *tx){
         std::fstream fd(filename, std::ios::binary|std::ios::out|std::ios::trunc);
-        if(!tx->GetRaw()->SerializeToOstream(&fd)){
+        Messages::Transaction raw;
+        raw << tx;
+        if(!raw.SerializeToOstream(&fd)){
             LOG(ERROR) << "couldn't write transaction to file: " << filename;
             return false;
         }
-
         LOG(INFO) << "saved transaction:";
-        TransactionPrinter::PrintAsInfo(tx);
-
         fd.close();
         return true;
     }
@@ -147,9 +133,8 @@ namespace Token{
     bool TransactionPool::AddTransaction(Token::Transaction* tx){
         if((counter_ + 1) > TransactionPool::kTransactionPoolMaxSize){
             LOG(WARNING) << "transaction pool full, creating block...";
-            Block* block = CreateBlock();
-            if(!BlockChain::Append(block)){
-                LOG(ERROR) << "couldn't append new block: " << block->GetHash();
+            if(!CreateBlock()){
+                LOG(ERROR) << "couldn't create block from transaction pool transactions";
                 return false;
             }
             // Message msg(Message::Type::kBlockMessage, block->GetAsMessage());
@@ -157,7 +142,7 @@ namespace Token{
             return AddTransaction(tx);
         }
         std::stringstream txfile;
-        txfile << TOKEN_BLOCKCHAIN_HOME << "/tx" << counter_ << ".dat";
+        txfile << TOKEN_BLOCKCHAIN_HOME << "/tx/tx" << counter_ << ".dat";
         LOG(INFO) << "saving transaction#" << counter_ << " to " << txfile.str();
         if(!SaveTransaction(txfile.str(), tx)){
             return false;
@@ -176,82 +161,114 @@ namespace Token{
         return false;
     }
 
-    Transaction* TransactionPool::LoadTransaction(const std::string& filename, bool deleteAfter){
+    bool TransactionPool::LoadTransaction(const std::string &filename, Token::Messages::Transaction *result,
+                                          bool deleteAfter){
         std::fstream fd(filename, std::ios::binary|std::ios::in);
-        Transaction* tx = new Transaction();
-        if(!tx->GetRaw()->ParseFromIstream(&fd)){
+        if(!result->ParseFromIstream(&fd)){
             LOG(ERROR) << "couldn't parse transaction from file: " << filename;
-            return nullptr;
+            return false;
         }
         fd.close();
 
-        LOG(INFO) << "loaded transaction: " << tx->GetHash();
+        LOG(INFO) << "loaded transaction: " << filename;
         if(deleteAfter){
-            if (!DeleteTransactionFile(filename)) {
+            if(!DeleteTransactionFile(filename)){
                 LOG(ERROR) << "couldn't delete transaction pool file: " << filename;
-                return nullptr;
+                return false;
             }
         }
-        return tx;
-    }
-
-    inline bool EndsWith(const std::string& value, const std::string& ending){
-        if (ending.size() > value.size()) return false;
-        return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
-    }
-
-    inline bool ShouldLoadTransaction(const std::string& txfile){
-        return EndsWith(txfile, ".dat");
-    }
-
-    bool TransactionPool::GetTransactions(std::vector<Transaction*>& txs, bool deleteAfter){
-        struct dirent* entry;
-        DIR* dir = opendir((TOKEN_BLOCKCHAIN_HOME + "/txpool").c_str());
-        if(dir == NULL) return false;
-        while((entry = readdir(dir)) != NULL){
-            std::string txfile(entry->d_name);
-            std::string txfilename = (TOKEN_BLOCKCHAIN_HOME + "/txpool/" + txfile);
-            if(ShouldLoadTransaction(txfile)){
-                LOG(INFO) << "loading transaction: " << txfilename;
-                txs.push_back(LoadTransaction(txfilename, deleteAfter));
-            }
-        }
-        closedir(dir);
         return true;
     }
 
-    Block* TransactionPool::CreateBlock(){
-        LOG(INFO) << "getting transactions...";
-        std::vector<Transaction*> transactions;
-        if(!TransactionPool::GetTransactions(transactions)){
-            LOG(ERROR) << "couldn't get transactions from pool";
-            return nullptr;
-        }
-        LOG(INFO) << "creating block from " << transactions.size() << " transactions...";
-        Block* block = new Block(BlockChain::GetHead());
-        for(int i = 0; i < transactions.size(); i++){
-            Transaction* tx = transactions[i];
-            LOG(INFO) << "appending transaction:";
-            TransactionPrinter::PrintAsInfo(tx);
-            if(!block->AppendTransaction(tx)){
-                LOG(ERROR) << "couldn't append transaction: " << tx->GetHash();
+    bool TransactionPool::CreateBlock(){
+        LOG(INFO) << "creating block from " << counter_ << " transactions...";
+        Messages::Block nblock;
+        nblock.set_previous_hash(BlockChain::GetHead()->GetHash());
+        nblock.set_height(BlockChain::GetHead()->GetHeight() + 1);
+        for(size_t idx = 0; idx < counter_; idx++){
+            std::stringstream filename;
+            filename << TOKEN_BLOCKCHAIN_HOME << "/tx/tx" << idx << ".dat";
+            if(!FileExists(filename.str()) || !LoadTransaction(filename.str(), nblock.add_transactions())){
+                return false;
             }
         }
         counter_ = 0;
-        LOG(INFO) << "created new block: " << block->GetHash();
-        return block;
+        return BlockMiner::ScheduleRawBlock(nblock);
     }
 
-    void TransactionPool::Accept(Token::TransactionPoolVisitor* vis){
-        std::vector<Transaction*> transactions;
-        if(!TransactionPool::GetTransactions(transactions, false)){
-            LOG(ERROR) << "couldn't get transactions from pool";
-            return;
+    bool TransactionSigner::GetSignature(std::string* signature){
+        Messages::Transaction raw;
+        raw << GetTransaction();
+        size_t size = raw.ByteSizeLong();
+        uint8_t bytes[size];
+        if(!raw.SerializeToArray(bytes, size)){
+            LOG(ERROR) << "couldn't serialize transaction to byte array";
+            return false;
         }
-        vis->VisitStart();
-        for(auto& it : transactions){
-            vis->VisitTransaction(it);
+        CryptoPP::RSA::PrivateKey privateKey;
+        CryptoPP::RSA::PublicKey publicKey;
+        if(!TokenKeychain::LoadKeys(&privateKey, &publicKey)){
+            LOG(WARNING) << "couldn't load chain keys";
+
+            free(bytes);
+            return false;
         }
-        vis->VisitEnd();
+
+        try{
+            LOG(INFO) << "signing transaction: " << GetTransaction()->GetHash();
+            CryptoPP::RSASS<CryptoPP::PSS, CryptoPP::SHA256>::Signer signer(privateKey);
+            CryptoPP::AutoSeededRandomPool rng;
+
+            CryptoPP::SecByteBlock sigData(signer.MaxSignatureLength());
+            size_t length = signer.SignMessage(rng, bytes, size, sigData);
+            sigData.resize(length);
+
+            CryptoPP::ArraySource source(sigData.data(), sigData.size(), true, new CryptoPP::HexEncoder(new CryptoPP::StringSink(*signature)));
+
+            free(bytes);
+            return true;
+        } catch(CryptoPP::Exception& ex){
+            LOG(ERROR) << "error occurred signing transaction: " << ex.GetWhat();
+            return false;
+        }
+    }
+
+    bool TransactionSigner::Sign(){
+        std::string signature;
+        if(!GetSignature(&signature)){
+            LOG(ERROR) << "couldn't generate signature";
+            return false;
+        }
+        GetTransaction()->SetSignature(signature);
+        return true;
+    }
+
+    bool TransactionVerifier::VerifySignature() {
+        CryptoPP::RSA::PrivateKey privateKey;
+        CryptoPP::RSA::PublicKey publicKey;
+        if (!TokenKeychain::LoadKeys(&privateKey, &publicKey)) {
+            LOG(ERROR) << "couldn't load keys";
+            return false;
+        }
+
+        CryptoPP::RSASS<CryptoPP::PSS, CryptoPP::SHA256>::Signer signer;
+
+        std::string sigstr = GetTransaction()->GetSignature();
+        CryptoPP::SecByteBlock sigData(signer.MaxSignatureLength());
+        CryptoPP::StringSource source(sigstr, true, new CryptoPP::HexDecoder(
+                new CryptoPP::ArraySink(sigData.data(), sigData.size())));
+
+        CryptoPP::RSASS<CryptoPP::PSS, CryptoPP::SHA256>::Verifier verifier(publicKey);
+
+        Messages::Transaction raw;
+        raw << GetTransaction();
+
+        size_t size = raw.ByteSizeLong();
+        uint8_t bytes[size];
+        if(!raw.SerializeToArray(bytes, size)){
+            LOG(ERROR) << "couldn't get transaction bytes";
+            return false;
+        }
+        return verifier.VerifyMessage(bytes, size, sigData, sigData.size());
     }
 }

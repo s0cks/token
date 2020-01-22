@@ -10,102 +10,114 @@
 #include "transaction.h"
 
 namespace Token{
-    class BlockVisitor{
-    public:
-        BlockVisitor(){}
-        virtual ~BlockVisitor(){}
-
-        virtual bool VisitBlockStart() = 0;
-        virtual bool VisitTransaction(Transaction* tx) = 0;
-        virtual bool VisitBlockEnd() = 0;
-    };
-
+    class BlockVisitor;
     class Block{
     private:
-        Messages::Block raw_;
+        uint64_t height_;
+        std::string previous_hash_;
+        std::vector<Transaction*> transactions_;
 
-        Messages::Block*
-        GetRaw(){
-            return &raw_;
-        }
-
-        static inline std::string
-        GetGenesisPreviousHash() {
-            std::stringstream stream;
-            for(int i = 0; i <= 64; i++){
-                stream << "F";
-            }
-            return stream.str();
-        }
-
-        //TODO: Remove this constructor
-        explicit Block(Messages::Block* raw):
-                raw_(){
-            GetRaw()->CopyFrom(*raw);
-        }
-
-        Block();
-        Block(Block* parent);
-
-        friend class TransactionPool;
         friend class BlockChain;
-        friend class Message;
     public:
-        Block(uint32_t height, const std::string& previous_hash);
-        ~Block();
+        Block(uint64_t height, const std::string& previous_hash, const std::vector<Transaction*>& transactions):
+            height_(height),
+            previous_hash_(previous_hash),
+            transactions_(transactions){}
+        Block(): Block(0, "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", {}){} //TODO: generate previous hash
+        Block(Block* parent, const std::vector<Transaction*>& transactions): Block(parent->GetHeight() + 1, parent->GetHash(), transactions){}
+        Block(const Messages::Block& raw):
+            height_(raw.height()),
+            previous_hash_(raw.previous_hash()),
+            transactions_(){
+            for(auto& it : raw.transactions()) transactions_.push_back(new Transaction(it));
+        }
+        Block(const Block& other):
+            height_(other.height_),
+            previous_hash_(other.previous_hash_),
+            transactions_(other.transactions_){}
+        ~Block(){}
 
         std::string GetPreviousHash() const{
-            return raw_.previous_hash();
+            return previous_hash_;
         }
 
-        uint32_t GetHeight() const{
-            return raw_.height();
+        uint64_t GetHeight() const{
+            return height_;
         }
 
-        size_t GetNumberOfTransactions() const{
-            return raw_.transactions_size();
+        uintptr_t GetNumberOfTransactions() const{
+            return transactions_.size();
         }
 
-        bool AppendTransaction(Transaction* tx){
-            Messages::Transaction* ntx = GetRaw()->add_transactions();
-            ntx->CopyFrom(*tx->GetRaw());
-            return true;
+        Transaction* GetTransactionAt(uintptr_t idx) const{
+            if(idx < 0 || idx > GetNumberOfTransactions()) return nullptr;
+            return new Transaction(*transactions_[idx]); //TODO: remove allocation?
         }
 
-        Transaction* GetTransactionAt(size_t idx);
-
-        Transaction* GetCoinbaseTransaction(){
+        Transaction* GetCoinbaseTransaction() const{
             return GetTransactionAt(0);
-        }
-
-        void Accept(BlockVisitor* vis){
-            vis->VisitBlockStart();
-
-            int i;
-            for(i = 0; i < GetNumberOfTransactions(); i++){
-                vis->VisitTransaction(GetTransactionAt(i));
-            }
-
-            vis->VisitBlockEnd();
         }
 
         bool IsGenesis(){
             return GetHeight() == 0;
         }
 
-        bool Equals(const Messages::BlockHeader& head); //TODO: Refactor
-
+        bool Accept(BlockVisitor* vis);
         std::string GetHash();
-        std::string GetMerkleRoot();
-        std::string ToString();
 
-        //TODO: Remove
+        std::string GetMerkleRoot(){
+            return GetBlockMerkleRoot(this);
+        }
+
+        Block& operator=(const Block& other){
+            height_ = other.height_;
+            previous_hash_ = other.previous_hash_;
+            transactions_ = std::vector<Transaction*>(other.transactions_);
+            return (*this);
+        }
+
         friend bool operator==(const Block& lhs, const Block& rhs){
             return const_cast<Block&>(lhs).GetHash() == const_cast<Block&>(rhs).GetHash();
         }
 
         friend bool operator!=(const Block& lhs, const Block& rhs){
             return !operator==(lhs, rhs);
+        }
+
+        friend Messages::Block& operator<<(Messages::Block& stream, const Block& block){
+            stream.set_height(block.GetHeight());
+            stream.set_previous_hash(block.GetPreviousHash());
+            for(size_t idx = 0; idx < block.GetNumberOfTransactions(); idx++){
+                Messages::Transaction* raw = stream.add_transactions();
+                (*raw) << block.transactions_[idx];
+            }
+            return stream;
+        }
+
+        friend Messages::Block& operator<<(Messages::Block& stream, const Block* block){
+            stream.set_height(block->GetHeight());
+            stream.set_previous_hash(block->GetPreviousHash());
+            for(size_t idx = 0; idx < block->GetNumberOfTransactions(); idx++){
+                Messages::Transaction* raw = stream.add_transactions();
+                (*raw) << block->transactions_[idx];
+            }
+            return stream;
+        }
+    };
+
+    class BlockVisitor{
+    public:
+        BlockVisitor(){}
+        virtual ~BlockVisitor(){}
+
+        virtual bool VisitBlockStart(){
+            return true;
+        }
+
+        virtual bool VisitTransaction(Transaction* tx) = 0;
+
+        virtual bool VisitBlockEnd(){
+            return true;
         }
     };
 }

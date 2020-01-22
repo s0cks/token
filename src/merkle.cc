@@ -1,92 +1,44 @@
 #include "merkle.h"
-#include <sstream>
-#include <cmath>
+#include "block.h"
 
 namespace Token{
-    static const size_t DIGEST_SIZE = CryptoPP::SHA256::DIGESTSIZE;
-
-    static HashArray ConcatHash(const HashArray& first, const HashArray& second){
-        const size_t source_len = DIGEST_SIZE * 2;
-        std::array<Byte, source_len> source;
-        std::copy(first.begin(), first.end(), source.begin());
-        std::copy(second.begin(), second.end(), source.begin() + DIGEST_SIZE);
-        HashArray digest;
-        HashFunction func;
-        CryptoPP::ArraySource src(source.data(), source_len, true, new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(digest.data(), DIGEST_SIZE)));
+    std::string ConcatHash(const std::string& first, const std::string& second){
+        std::string hash = first + ":" + second;
+        std::string digest;
+        CryptoPP::SHA256 func;
+        CryptoPP::StringSource source(hash, true, new CryptoPP::HashFilter(func, new CryptoPP::StringSink(digest)));
         return digest;
     }
 
-    bool MerkleNode::FindItem(const HashArray& hash, std::vector<HashArray>& stack) const{
-        if(GetHash() == hash) return true;
-        else if(GetLeft() && GetRight()){
-            if(GetLeft()->FindItem(hash, stack)){
-                stack.push_back(GetRight()->GetHash());
-                return true;
-            } else if(GetRight()->GetHash() != GetLeft()->GetHash() && GetRight()->FindItem(hash, stack)){
-                stack.push_back(GetLeft()->GetHash());
-                return true;
-            }
-        }
-        return false;
-    }
-
-    void MerkleNode::GetHashesAt(size_t level, std::vector<HashArray>& stack) const{
-        if(level == 0){
-            stack.push_back(GetHash());
-        } else{
-            if(GetLeft()) this->GetLeft()->GetHashesAt(level - 1, stack);
-            if(GetRight()) this->GetRight()->GetHashesAt(level - 1, stack);
-        }
-    }
-
-    static MerkleNode* ConstructMerkleTree(size_t height, std::vector<MerkleNodeItem*>& items){
-        if(height == 1 && !items.empty()){
-            MerkleNodeItem* item = items.front();
-            items.erase(items.begin());
-            return new MerkleNode(item->GetHashArray());
+    std::string ConstructMerkleTree(size_t height, std::vector<std::string>& leaves){
+        if(height == 1 && !leaves.empty()){
+            std::string front = leaves.front();
+            leaves.erase(leaves.begin());
+            return front;
         } else if(height > 1){
-            MerkleNode* lchild = ConstructMerkleTree(height - 1, items);
-            MerkleNode* rchild;
-            if(items.empty()){
-                rchild = new MerkleNode(lchild->GetHash());
+            std::string left = ConstructMerkleTree(height - 1, leaves);
+            std::string right;
+            if(leaves.empty()){
+                right = left;
             } else{
-                rchild = ConstructMerkleTree(height - 1, items);
+                right = ConstructMerkleTree(height - 1, leaves);
             }
-            HashArray hash = ConcatHash(lchild->GetHash(), rchild->GetHash());
-            MerkleNode* new_node = new MerkleNode(hash);
-            new_node->SetLeft(lchild);
-            new_node->SetRight(rchild);
-            return new_node;
+            return ConcatHash(left, right);
         }
-        return nullptr;
+        return "";
     }
 
-    MerkleTree::MerkleTree(std::vector<MerkleNodeItem*> items){
-        size_t height = std::ceil(log2(items.size())) + 1;
-        head_ = ConstructMerkleTree(height, items);
+    std::string GetMerkleRoot(std::vector<std::string>& leaves){
+        size_t height = std::ceil(log2(leaves.size())) + 1;
+        return ConstructMerkleTree(height, leaves);
     }
 
-    std::string MerkleTree::GetMerkleRoot() const{
-        std::string result;
-        HashArray hash = GetHead()->GetHash();
-        CryptoPP::ArraySource source(hash.data(), hash.size(), true, new CryptoPP::HexEncoder(new CryptoPP::StringSink(result)));
-        return result;
-    }
-
-    bool MerkleTree::ItemExists(MerkleNodeItem* item){
-        std::vector<HashArray> stack;
-        return GetHead()->FindItem(item->GetHashArray(), stack);
-    }
-
-    std::vector<HashArray> MerkleTree::GetMerklePath(MerkleNodeItem* item){
-        std::vector<HashArray> stack;
-        GetHead()->FindItem(item->GetHashArray(), stack);
-        return stack;
-    }
-
-    std::vector<HashArray> MerkleTree::GetHashesAt(size_t level){
-        std::vector<HashArray> stack;
-        GetHead()->GetHashesAt(level, stack);
-        return stack;
+    std::string GetBlockMerkleRoot(Block* block){
+        std::vector<std::string> transactions;
+        for(size_t idx = 0; idx < block->GetNumberOfTransactions(); idx++){
+            Transaction* tx = block->GetTransactionAt(idx);
+            transactions.push_back(tx->GetHash());
+        }
+        return GetMerkleRoot(transactions);
     }
 }

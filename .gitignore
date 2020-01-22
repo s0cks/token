@@ -9,10 +9,11 @@
 !/src/
 !/scripts/
 !/terraform/
-!/test/
+!/tests/
 !/.gitignore
 !/.gitmodules
 !/CMakeLists.txt
 !/README.md
 !/main.cc
 !/client.cc
+!/tests.cc

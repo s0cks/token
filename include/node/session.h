@@ -6,7 +6,7 @@
 #include <cstdint>
 
 #include "message.h"
-#include "blockchain.h"
+#include "block_chain.h"
 
 namespace Token{
     class BlockChainNode;
@@ -25,15 +25,16 @@ namespace Token{
             state_ = state;
         }
 
-        Session():
-            state_(SessionState::kDisconnected){
+        virtual uint32_t GetSocket() const = 0;
 
-        }
+        Session(): state_(SessionState::kDisconnected){}
     public:
         virtual ~Session(){}
-        virtual void Send(Message* msg) = 0;
-
+        virtual void Send(Token::Message* msg);
+        void SendPing(const std::string& nonce=GenerateNonce());
+        void SendPong(const std::string& nonce=GenerateNonce());
         void SendBlock(Block* block);
+        void SendTransaction(Transaction* tx);
 
         SessionState GetState(){
             return state_;
@@ -46,11 +47,11 @@ namespace Token{
         pthread_t thread_;
         uint32_t sock_;
 
-        uint32_t GetSocket(){
+        uint32_t GetSocket() const{
             return sock_;
         }
 
-        bool Handle(Message* msg);
+        virtual bool Handle(Message* msg);
         void StartThread();
         static void* SessionThread(void* data);
 
@@ -59,8 +60,6 @@ namespace Token{
         NodeServerSession(BlockChainNode* server, uint32_t sock);
     public:
         ~NodeServerSession();
-
-        void Send(Message* msg);
     };
 
     class NodeClientSession : public Session{
@@ -70,7 +69,11 @@ namespace Token{
         uint32_t sock_;
         uint16_t port_;
 
-        bool Handle(Message* msg);
+        virtual uint32_t GetSocket() const{
+            return sock_;
+        }
+
+        virtual bool Handle(Message* msg);
 
         static void* ClientThread(void* data);
     public:
@@ -85,7 +88,6 @@ namespace Token{
             return port_;
         }
 
-        void Send(Message* msg);
         void Connect();
     };
 }

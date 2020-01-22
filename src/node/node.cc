@@ -1,14 +1,15 @@
-#include <string.h>
 #include <glog/logging.h>
+#include <string.h>
 #include <netinet/in.h>
+
 #include "node/node.h"
 
 namespace Token{
     BlockChainNode::BlockChainNode():
-        sessions_(),
-        address_(),
-        port_(0),
-        thread_(){
+            sessions_(),
+            address_(),
+            port_(0),
+            thread_(){
     }
 
     BlockChainNode::~BlockChainNode(){
@@ -60,9 +61,9 @@ namespace Token{
         }
 
         exit:
-            server->CloseSessions();
-            char* result = strdup(err_msg.c_str());
-            pthread_exit(result);
+        server->CloseSessions();
+        char* result = strdup(err_msg.c_str());
+        pthread_exit(result);
     }
 
     void BlockChainNode::CloseSessions(){
@@ -75,5 +76,11 @@ namespace Token{
         GetInstance()->SetAddress(addr);
         GetInstance()->SetPort(port);
         pthread_create(&GetInstance()->thread_, NULL, &ServerThread, GetInstance());
+    }
+
+    void BlockChainNode::WaitForShutdown(){
+        char message[4096];
+        pthread_join(GetInstance()->thread_, (void**)&message);
+        LOG(INFO) << "server exited with: " << message;
     }
 }

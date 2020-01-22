@@ -5,120 +5,168 @@
 #include "node.pb.h"
 #include "service.pb.h"
 
-#include "bytearray.h"
-#include "blockchain.h"
+#include "common.h"
+#include "block_chain.h"
 
 namespace Token{
-#define FOR_EACH_TYPE(V) \
-    V(Ping, Token::Messages::Node::Nonce) \
-    V(Pong, Token::Messages::Node::Nonce) \
-    V(Version, Token::Messages::Node::Version) \
-    V(GetData, Token::Messages::HashList) \
-    V(Inventory, Token::Messages::HashList) \
-    V(Block, Token::Messages::Block) \
-    V(PeerList, Token::Messages::PeerList)
+#define FOR_EACH_MESSAGE_TYPE(V) \
+    V(Ping) \
+    V(Pong) \
+    V(Transaction) \
+    V(Block)
 
-    /*
+#define FORWARD_DECLARE(Name) class Name##Message;
+    FOR_EACH_MESSAGE_TYPE(FORWARD_DECLARE)
+#undef FORWARD_DECLARE
+
     class Message{
     public:
+#define DECLARE_TYPE(Name) k##Name##Message,
         enum class Type{
-            kUnknownType = 0,
-#define DECLARE_TYPE(Name, Type) k##Name##Message,
-            FOR_EACH_TYPE(DECLARE_TYPE)
-#undef DECLARE_TYPE
+            kUnknownMessage = 0,
+            FOR_EACH_MESSAGE_TYPE(DECLARE_TYPE)
         };
-    private:
-        Type type_;
-        google::protobuf::Message* msg_;
-
-        inline void
-        SetType(Type type){
-            type_ = type;
-        }
-
-        inline google::protobuf::Message*
-        GetRaw() const{
-            return msg_;
-        }
+#undef DECLARE_TYPE
     public:
-        Message(Type type, google::protobuf::Message* data):
-            type_(type),
-            msg_(data->New()){
-            GetRaw()->CopyFrom(*data);
-        }
-        explicit Message(Type type=Type::kUnknownType):
-            type_(type),
-            msg_(nullptr){}
-        Message(const Message& other);
-        ~Message(){}
+        virtual ~Message() = default;
+        virtual std::string GetName() const = 0;
+        virtual Type GetType() const = 0;
+        virtual uint64_t GetSize() const = 0;
+        virtual void Encode(uint8_t* bytes, size_t size) = 0;
 
-        Type GetType() const{
-            return type_;
-        }
+#define DECLARE_TYPECHECK(Name) \
+        virtual Name##Message* As##Name##Message(){ return nullptr; } \
+        bool Is##Name##Message(){ return As##Name##Message() != nullptr; }
+        FOR_EACH_MESSAGE_TYPE(DECLARE_TYPECHECK);
+#undef DECLARE_TYPECHECK
 
-        bool Encode(uint8_t* bytes, size_t size);
-        bool Decode(uint8_t* bytes, size_t size);
-
-#define DECLARE_AS(Name, MType) \
-        MType* GetAs##Name();
-        FOR_EACH_TYPE(DECLARE_AS)
-#undef DECLARE_AS
-
-#define DECLARE_IS(Name, MType) \
-        bool Is##Name##Message();
-        FOR_EACH_TYPE(DECLARE_IS)
-#undef DECLARE_IS
-
-        size_t
-        GetMessageSize() const{
-            return GetRaw() ?
-                   GetRaw()->ByteSizeLong() :
-                   0;
-        }
-
-        std::string ToString() const;
+        static Message* Decode(Type type, uint8_t* bytes, uint32_t size);
     };
-    */
 
-    class Message{
-    public:
-        enum class Type{
-            kUnknownType = 0,
-#define DECLARE_TYPE(Name, Type) k##Name##Message,
-            FOR_EACH_TYPE(DECLARE_TYPE)
-#undef DECLARE_TYPE
-        };
+#define DECLARE_MESSAGE(Name) \
+    public: \
+        virtual Name##Message* As##Name##Message(); \
+        virtual std::string GetName() const{ return #Name; } \
+        virtual void Encode(uint8_t* bytes, size_t size); \
+        virtual Type GetType() const{ return Type::k##Name##Message; }
+#define DECLARE_MESSAGE_WITH_SIZE(Name, Size) \
+    DECLARE_MESSAGE(Name); \
+    virtual uint64_t GetSize() const{ return Size; }
+
+    class PingMessage : public Message{
     private:
-        Type type_;
-        google::protobuf::Message* raw_;
+        std::string nonce_;
+    public:
+        PingMessage(const std::string& nonce):
+            nonce_(nonce),
+            Message(){
 
-        inline google::protobuf::Message*
-        GetRaw(){
+        }
+        PingMessage(): PingMessage(GenerateNonce()){}
+        ~PingMessage(){}
+
+        std::string GetNonce() const{
+            return nonce_;
+        }
+
+        friend bool operator==(const PingMessage& a, const PingMessage& b){
+            return a.GetNonce() == b.GetNonce();
+        }
+
+        friend bool operator!=(const PingMessage& a, const PingMessage& b){
+            return !operator==(a, b);
+        }
+
+        DECLARE_MESSAGE_WITH_SIZE(Ping, 64);
+    };
+
+    class PongMessage : public Message{
+    private:
+        std::string nonce_;
+    public:
+        PongMessage(const std::string& nonce):
+            nonce_(nonce),
+            Message(){
+
+        }
+        PongMessage(const PingMessage& ping): PongMessage(ping.GetNonce()){}
+        ~PongMessage(){}
+
+        std::string GetNonce() const{
+            return nonce_;
+        }
+
+        friend bool operator==(const PongMessage& a, const PongMessage& b){
+            return a.GetNonce() == b.GetNonce();
+        }
+
+        friend bool operator==(const PongMessage& a, const PingMessage& b){
+            return a.GetNonce() == b.GetNonce();
+        }
+
+        friend bool operator!=(const PongMessage& a, const PongMessage& b){
+            return !operator==(a, b);
+        }
+
+        friend bool operator!=(const PongMessage& a, const PingMessage& b){
+            return !operator==(a, b);
+        }
+
+        DECLARE_MESSAGE_WITH_SIZE(Pong, 64);
+    };
+
+    class TransactionMessage : public Message{
+    private:
+        Messages::Transaction raw_;
+
+        Messages::Transaction GetRaw() const{
             return raw_;
         }
-
-        bool Decode(ByteArray* bytes);
     public:
-        Message(ByteArray* bytes);
-        Message(Block* block);
-        ~Message();
+        TransactionMessage(Transaction* tx):
+            raw_(),
+            Message(){
+            raw_ << tx;
+        }
+        TransactionMessage(const Messages::Transaction& raw):
+            raw_(raw),
+            Message(){}
+        ~TransactionMessage(){}
 
-        bool Encode(ByteArray* bytes);
-        std::string ToString();
-
-        uint32_t GetMessageSize(){
-            return GetRaw()->ByteSizeLong();
+        Messages::Transaction* GetTransaction(){
+            return &raw_;
         }
 
-#define DECLARE_AS(Name, MType) \
-        MType* GetAs##Name();
-        FOR_EACH_TYPE(DECLARE_AS)
-#undef DECLARE_AS
+        uint64_t GetSize() const{
+            return GetRaw().ByteSizeLong();
+        }
 
-#define DECLARE_IS(Name, MType) \
-        bool Is##Name##Message();
-        FOR_EACH_TYPE(DECLARE_IS)
-#undef DECLARE_IS
+        DECLARE_MESSAGE(Transaction);
+    };
+
+    class BlockMessage : public Message{
+    private:
+        Messages::Block raw_;
+
+        Messages::Block GetRaw() const{
+            return raw_;
+        }
+    public:
+        BlockMessage(Block* block):
+            raw_(),
+            Message(){
+            raw_ << block;
+        }
+        BlockMessage(const Messages::Block& raw):
+            raw_(raw),
+            Message(){}
+        ~BlockMessage(){}
+
+        uint64_t GetSize() const{
+            return GetRaw().ByteSizeLong();
+        }
+
+        DECLARE_MESSAGE(Block);
     };
 }
 

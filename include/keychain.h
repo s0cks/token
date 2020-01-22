@@ -1,8 +1,7 @@
-#ifndef TOKEN_KEY_H
-#define TOKEN_KEY_H
+#ifndef TOKEN_KEYCHAIN_H
+#define TOKEN_KEYCHAIN_H
 
 #include "common.h"
-#include "key.h"
 
 namespace Token{
     class TokenKeychain{
@@ -17,4 +16,4 @@ namespace Token{
     };
 }
 
-#endif //TOKEN_KEY_H
+#endif //TOKEN_KEYCHAIN_H

@@ -7,6 +7,8 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 
+#include <gflags/gflags.h>
+
 #include <cryptopp/sha.h>
 #include <cryptopp/hex.h>
 #include <cryptopp/rsa.h>
@@ -25,8 +27,6 @@ namespace Token{
 #else
 #error "Cannot determine CPU architecture"
 #endif
-
-    typedef uint8_t Byte;
 
     static inline uintptr_t
     RoundUpPowTwo(uintptr_t x){
@@ -72,5 +72,19 @@ namespace Token{
         return (mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) != -1;
     }
 }
+
+// BlockChain Flags
+DECLARE_string(path);
+DECLARE_bool(verbose);
+DECLARE_uint32(minheap_size);
+DECLARE_uint32(maxheap_size);
+DECLARE_uint32(port);
+DECLARE_string(peers);
+
+// RPC Service Flags
+DECLARE_uint32(service_port);
+
+#define TOKEN_VERBOSE (FLAGS_verbose)
+#define TOKEN_BLOCKCHAIN_HOME (FLAGS_path)
 
 #endif //TOKEN_COMMON_H

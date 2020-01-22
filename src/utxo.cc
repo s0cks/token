@@ -1,7 +1,7 @@
 #include <cstring>
 #include <glog/logging.h>
 
-#include "flags.h"
+#include "common.h"
 #include "utxo.h"
 
 namespace Token{
