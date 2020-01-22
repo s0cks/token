@@ -24,6 +24,7 @@ set(PROTO_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protos")
 file(GLOB_RECURSE TOKEN_LIB_SOURCES include/*.h src/*.cc src/*.h)
 file(GLOB_RECURSE TOKEN_PROTO_SOURCES protos/*.proto)
 file(GLOB_RECURSE TOKEN_SERVICE_PROTO_SOURCES protos/*.proto)
+file(GLOB_RECURSE TOKEN_TEST_SOURCES tests/*.h tests/*.cc)
 
 protobuf_generate_cpp(PROTO_SRC PROTO_HEADER ${TOKEN_PROTO_SOURCES})
 grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${CMAKE_BINARY_DIR} ${TOKEN_SERVICE_PROTO_SOURCES})
@@ -63,4 +64,17 @@ add_executable(
 target_link_libraries(
         "${PROJECT_NAME}-client"
         "${PROJECT_NAME}-ledger" ${CMAKE_THREAD_LIBS_INIT} ${CRYPTO++_LIBRARIES} ${Protobuf_LIBRARIES} ${GRPC_GRPC++_LIBRARY} ${GRPC_GRPC++_REFLECTION_LIBRARY} gflags
+)
+
+
+#=================================================
+#       Token Ledger Unit Tests Exe
+#=================================================
+add_executable(
+        "${PROJECT_NAME}-tests"
+        tests.cc ${TOKEN_TEST_SOURCES}
+)
+target_link_libraries(
+        "${PROJECT_NAME}-tests"
+        "${PROJECT_NAME}-ledger" ${CRYPTO++_LIBRARIES} ${Protobuf_LIBRARIES} ${GRPC_GRPC++_LIBRARY} ${GRPC_GRPC++_REFLECTION_LIBRARY} gflags gtest
 )
