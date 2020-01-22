@@ -2,7 +2,6 @@
 #include <glog/logging.h>
 
 #include "flags.h"
-#include "allocator.h"
 #include "blockchain.h"
 #include "block_validator.h"
 #include "printer.h"
@@ -27,7 +26,6 @@ namespace Token{
             cbtx->AddOutput("TestUser", stream.str());
         }
         genesis->AppendTransaction(cbtx); //TODO This needs to be here
-        Allocator::AddReference(genesis);
         return AppendBlock(genesis);
     }
 
@@ -43,7 +41,6 @@ namespace Token{
                 LOG(ERROR) << "*** fixme";
                 return false;
             }
-            Allocator::AddReference(blk);
             if(!AppendNode(blk)){
                 LOG(ERROR) << "cannot append block node from height: " << height;
                 LOG(ERROR) << "*** fixme";
@@ -187,7 +184,6 @@ namespace Token{
             int i;
             for(i = 0; i < block->GetNumberOfTransactions(); i++){
                 Transaction* tx = block->GetTransactionAt(i);
-                Allocator::AddReference(tx);
                 LOG(INFO) << "registering " << tx->GetNumberOfOutputs() << " unclaimed transactions...";
                 int j;
                 for(j = 0; j < tx->GetNumberOfOutputs(); j++) {
@@ -241,7 +237,6 @@ namespace Token{
             return false;
         }
 
-        Allocator::AddReference(block);
         if(!GetInstance()->AppendNode(block)){
             LOG(ERROR) << "couldn't append node for new <HEAD> := " << block->GetHash();
             UNLOCK;

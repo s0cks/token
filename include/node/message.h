@@ -5,7 +5,6 @@
 #include "node.pb.h"
 #include "service.pb.h"
 
-#include "allocator.h"
 #include "bytearray.h"
 #include "blockchain.h"
 
@@ -81,7 +80,7 @@ namespace Token{
     };
     */
 
-    class Message : public AllocatorObject{
+    class Message{
     public:
         enum class Type{
             kUnknownType = 0,

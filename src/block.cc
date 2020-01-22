@@ -1,5 +1,4 @@
 #include <glog/logging.h>
-#include "allocator.h"
 #include "blockchain.h"
 #include "block.h"
 
@@ -45,10 +44,6 @@ namespace Token{
         }
         MerkleTree mktree(items);
         return mktree.GetMerkleRoot();
-    }
-
-    void* Block::operator new(size_t size){
-        return (Block*)Allocator::Allocate(size);
     }
 
     Block::Block():

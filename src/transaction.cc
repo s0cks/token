@@ -5,7 +5,6 @@
 #include <dirent.h>
 #include <node/message.h>
 
-#include "allocator.h"
 #include "flags.h"
 #include "blockchain.h"
 #include "transaction.h"

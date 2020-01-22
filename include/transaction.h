@@ -1,7 +1,6 @@
 #ifndef TOKEN_TRANSACTION_H
 #define TOKEN_TRANSACTION_H
 
-#include "allocator.h"
 #include "blockchain.pb.h"
 #include "merkle.h"
 
@@ -84,7 +83,7 @@ namespace Token{
 
     class TransactionVisitor;
 
-    class Transaction : public MerkleNodeItem, public AllocatorObject{
+    class Transaction : public MerkleNodeItem{
     private:
         Messages::Transaction raw_;
 
@@ -167,10 +166,6 @@ namespace Token{
         std::string GetHash();
         std::string ToString();
         HashArray GetHashArray();
-
-        void* operator new(size_t size){
-            return Allocator::Allocate(size);
-        }
 
         //TODO: Remove
         friend bool operator==(const Transaction& lhs, const Transaction& rhs){

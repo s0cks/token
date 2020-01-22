@@ -286,10 +286,6 @@ namespace Token{
         return digest;
     }
 
-    void* UnclaimedTransaction::operator new(size_t size){
-        return Allocator::Allocate(size);
-    }
-
     std::string UnclaimedTransaction::ToString(){
         std::stringstream stream;
         stream << "UnclaimedTransaction(" << GetHash() << ",from='" << GetUser() << "')";

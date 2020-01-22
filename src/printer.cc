@@ -13,69 +13,6 @@ namespace Token {
     } \
 })
 
-    bool HeapPrinter::VisitStart() {
-        std::stringstream msg;
-        switch(GetSpace()){
-            case Allocator::kEden:
-                msg << "Eden";
-                break;
-            case Allocator::kSurvivor:
-                msg << "Survivor";
-                break;
-            default:
-                msg << "Unknown";
-                break;
-        }
-        msg << " Heap";
-        switch(GetSpace()){
-            case Allocator::kEden:
-                msg << " (" << Allocator::GetMinorHeapSize() << " Bytes)";
-                break;
-            case Allocator::kSurvivor:
-                msg << " (" << Allocator::GetMajorHeapSize() << " Bytes)";
-                break;
-            default:
-                msg << " (Unknown Bytes)";
-                break;
-        }
-
-        if(IsDetailed()){
-            msg << ": ";
-        }
-
-        PRINT(msg);
-        return true;
-    }
-
-    bool HeapPrinter::VisitEnd() {
-        return true;
-    }
-
-#define WITH_HEADER(size) ((size)+sizeof(int))
-#define BITS(ch) (WITH_HEADER(ch))
-#define FLAGS(ch) (*((uint32_t*)(ch)))
-#define MARKED(ch) (FLAGS(ch)&1)
-
-    bool HeapPrinter::VisitChunk(int chunk, size_t size, void *ptr) {
-        if(IsDetailed()){
-            std::stringstream msg;
-            try {
-                AllocatorObject *obj = reinterpret_cast<AllocatorObject*>(BITS(ptr));
-                if (obj) {
-                    msg << obj->ToString();
-                } else {
-                    msg << "\tChunk " << chunk << "\tSize " << size << "\tMarked: " << (MARKED(ptr) ? 'Y' : 'N');
-                }
-            } catch (std::exception &exc) {
-                msg << "\tChunk " << chunk << "\tSize " << size << "\tMarked: " << (MARKED(ptr) ? 'Y' : 'N');
-            }
-
-            PRINT(msg);
-            return true;
-        }
-        return true;
-    }
-
     bool TransactionPrinter::VisitStart() {
         std::stringstream stream;
         if (IsDetailed()) {

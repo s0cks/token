@@ -1,6 +1,5 @@
 #include <glog/logging.h>
 #include <gflags/gflags.h>
-#include "allocator.h"
 #include "blockchain.h"
 #include "service/client.h"
 
@@ -40,11 +39,6 @@ DEFINE_uint32(port, 0, "The port to use");
 int main(int argc, char** argv){
     using namespace Token;
     gflags::ParseCommandLineFlags(&argc, &argv, true);
-
-    if(!Allocator::Initialize(4096 * 32, 4096 * 32 * 4)){
-        LOG(ERROR) << "couldn't initialize allocator";
-        return EXIT_FAILURE;
-    }
 
     TokenServiceClient* client;
     if(FLAGS_port > 0){

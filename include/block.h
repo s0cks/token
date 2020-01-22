@@ -5,7 +5,6 @@
 #include <sstream>
 
 #include <vector>
-#include "allocator.h"
 #include "merkle.h"
 #include "blockchain.pb.h"
 #include "transaction.h"
@@ -21,7 +20,7 @@ namespace Token{
         virtual bool VisitBlockEnd() = 0;
     };
 
-    class Block : public AllocatorObject{
+    class Block{
     private:
         Messages::Block raw_;
 
@@ -99,8 +98,6 @@ namespace Token{
         std::string GetHash();
         std::string GetMerkleRoot();
         std::string ToString();
-
-        void* operator new(size_t size);
 
         //TODO: Remove
         friend bool operator==(const Block& lhs, const Block& rhs){

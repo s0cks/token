@@ -2,7 +2,6 @@
 #define TOKEN_PRINTER_H
 
 #include <glog/logging.h>
-#include "allocator.h"
 #include "blockchain.h"
 
 namespace Token{
@@ -50,48 +49,6 @@ namespace Token{
 
         bool ShouldPrintBanner(){
             return !((flags_ & kNoBanner) == kNoBanner);
-        }
-    };
-
-    class HeapPrinter : public HeapVisitor, public Printer{
-    public:
-        static const int BANNER_SIZE = 64;
-    private:
-        Allocator::HeapSpace space_;
-    public:
-        HeapPrinter(std::ostream* stream, Allocator::HeapSpace space, long flags=Printer::kNone):
-            space_(space),
-            HeapVisitor(),
-            Printer(stream, flags){}
-        HeapPrinter(google::LogSeverity severity, Allocator::HeapSpace space, long flags=Printer::kNone):
-            space_(space),
-            HeapVisitor(),
-            Printer(severity, flags){}
-        ~HeapPrinter(){}
-
-        Allocator::HeapSpace GetSpace(){
-            return space_;
-        }
-
-        bool VisitStart();
-        bool VisitEnd();
-        bool VisitChunk(int chunk, size_t size, void* ptr);
-
-        static void PrintHeap(std::ostream* stream, Allocator::HeapSpace space, long flags=Printer::kNone){
-            HeapPrinter printer(stream, space, flags);
-            switch(space){
-                case Allocator::kEden:
-                    Allocator::GetInstance()->VisitMinor(&printer);
-                    return;
-                case Allocator::kSurvivor:
-                    Allocator::GetInstance()->VisitMajor(&printer);
-                    return;
-                case Allocator::kAll:
-                default:
-                    Allocator::GetInstance()->VisitMinor(&printer);
-                    Allocator::GetInstance()->VisitMajor(&printer);
-                    return;
-            }
         }
     };
 

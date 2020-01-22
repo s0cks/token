@@ -10,7 +10,7 @@
 #include "pthread.h"
 
 namespace Token{
-    class UnclaimedTransaction : public AllocatorObject{
+    class UnclaimedTransaction{
     private:
         Messages::UnclaimedTransaction raw_;
 
