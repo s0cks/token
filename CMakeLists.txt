@@ -8,17 +8,19 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 find_package(GRPC REQUIRED)
 find_package(Protobuf REQUIRED)
-find_package(Crypto++ REQUIRED)
+find_package(Crypto++ REQUIRED) # TODO: change?
 find_package(Threads)
 find_package(glog REQUIRED)
 find_package(LevelDB REQUIRED)
-find_package(SQLite3 REQUIRED)
+find_package(SQLite3 REQUIRED) # TODO: remove
 find_package(gflags REQUIRED)
 find_package(GTest REQUIRED)
+find_package(Libuv REQUIRED)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
-include_directories(${SQLite3_INCLUDE_DIRS}) # TODO: Remove
+include_directories(${SQLite3_INCLUDE_DIRS})
 include_directories(${CRYPTO++_INCLUDE_DIR})
+include_directories(${LIBUV_INCLUDE_DIRS})
 include_directories(include)
 include_directories(src)
 
@@ -41,7 +43,7 @@ add_library(
 )
 target_link_libraries(
         "${PROJECT_NAME}-ledger"
-        ${SQLite3_LIBRARIES} ${Protobuf_LIBRARIES} glog::glog ${LevelDB_LIBRARY}
+        ${SQLite3_LIBRARIES} ${Protobuf_LIBRARIES} glog::glog ${LevelDB_LIBRARY} ${LIBUV_LIBRARIES}
 )
 
 #=================================================

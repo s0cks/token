@@ -3,164 +3,203 @@
 
 #include "common.h"
 #include "block_chain.h"
-#include "block_validator.h"
 #include "block_miner.h"
 
 namespace Token{
+    BlockChain::BlockChain():
+        IndexManagedPool(FLAGS_path + "/blocks"),
+        genesis_(nullptr),
+        head_(nullptr){}
+
     BlockChain*
     BlockChain::GetInstance(){
         static BlockChain instance;
         return &instance;
     }
 
-    static inline std::string
-    GetGenesisPreviousHash() {
-        std::stringstream stream;
-        for(int i = 0; i <= 64; i++){
-            stream << "F";
-        }
-        return stream.str();
+    uint64_t BlockChain::GetHeight(){
+        //TODO: rwlock
+        return GetInstance()->GetHeadNode()->GetHeight();
     }
 
-    bool BlockChain::CreateGenesis(){
-        //TODO: Remove
-        LOG(WARNING) << "Creating genesis block...";
-        LOG(WARNING) << "*** This functionality will be removed in future versions";
-        LOG(WARNING) << "*** Genesis contains 128 base transactions for initialization";
-        Transaction coinbase(0);
-        for(size_t idx = 0; idx < 128; idx++){
-            std::stringstream token;
-            token << "TestToken" << idx;
-            coinbase << Output("TestUser", token.str());
-        }
-        return AppendBlock(new Block(0, GetGenesisPreviousHash(), { new Transaction(coinbase) }));
+    uint256_t BlockChain::GetHead(){
+        //TODO: rwlock
+        return GetInstance()->GetHeadNode()->GetHash();
     }
 
-    bool BlockChain::LoadBlockChain(const std::string& path){
-        //TODO: Refactor
-        if(!HasHead()) return CreateGenesis(); //TODO: Remove
-        uint32_t head = GetHeight();
-        uint32_t height = 0;
-        while(height <= head){
-            LOG(INFO) << "loading block #" << height << "...";
-            Block block;
-            if(!GetInstance()->LoadBlock(height, &block)){
-                LOG(ERROR) << "cannot load block from height: " << height;
-                LOG(ERROR) << "*** fixme";
-                return false;
-            }
-            GetInstance()->blocks_.push_back(new Block(block));
-            height++;
-        }
-        return true;
+    uint256_t BlockChain::GetGenesis(){
+        //TODO: rwlock
+        return GetInstance()->GetGenesisNode()->GetHash();
     }
 
-    bool BlockChain::InitializeChainState(const std::string& root){
-        path_ = root;
-        leveldb::Options options;
-        options.create_if_missing = true;
-        if(!leveldb::DB::Open(options, (root + "/state"), &state_).ok()){
-            LOG(ERROR) << "couldn't load chain state from '" << (root + "/state") << "'";
-            return false;
-        }
-        LOG(INFO) << "loaded chain state from '" << (root + "/state") << "'";
-        return true;
+    uint256_t BlockChain::GetHeadFromIndex(){
+        leveldb::ReadOptions readOpts;
+        std::string key = "<HEAD>";
+        std::string value;
+        if(!GetIndex()->Get(readOpts, key, &value).ok()) return uint256_t();
+        return HashFromHexString(value);
+    }
+
+    bool BlockChain::HasHeadInIndex(){
+        leveldb::ReadOptions readOpts;
+        std::string key = "<HEAD>";
+        std::string value;
+        if(!GetIndex()->Get(readOpts, key, &value).ok()) return false;
+        return value.length() > 0;
+    }
+
+    bool BlockChain::SetHeadInIndex(const Token::uint256_t& hash){
+        leveldb::WriteOptions writeOpts;
+        std::string key = "<HEAD>";
+        std::string value = HexString(hash);
+        return GetIndex()->Put(writeOpts, key, value).ok();
+    }
+
+    static Block*
+    CreateGenesis(){
+        Transaction coinbase(0, 0);
+        coinbase << Output(&coinbase, "TestUser", "TestToken");
+        return new Block(0, uint256_t(), { coinbase }, 0);
     }
 
     bool BlockChain::Initialize(){
-        std::string path = TOKEN_BLOCKCHAIN_HOME;
-        LOG(INFO) << "initializing block chain in path: " << path << "...";
-        if(!BlockChain::GetInstance()->InitializeChainState(path)){
-            LOG(ERROR) << "error initializing chain state";
-            return false;
+        BlockChain* chain = GetInstance();
+        if(!FileExists(chain->GetRoot())){
+            if(!CreateDirectory(chain->GetRoot())) return false;
         }
-        std::string blks = (path + "/blocks");
-        if(!FileExists(blks)){
-            LOG(WARNING) << "blocks cache doesn't exist, creating...";
-            if(!CreateDirectory(blks)){
-                LOG(ERROR) << "cannot create blocks cache directory";
-                return false;
-            }
+        if(!chain->InitializeIndex()) return false;;
+        if(!chain->HasHeadInIndex()){
+            Block* genesis = CreateGenesis();
+            uint256_t hash = genesis->GetHash();
+            std::string filename = chain->GetPath(hash);
+            if(!chain->SaveBlock(filename, genesis)) return false;
+            if(!chain->SetHeadInIndex(hash)) return false;
+            return chain->RegisterPath(hash, filename);
         }
-        LOG(INFO) << "loading block chain....";
-        if(!BlockChain::GetInstance()->LoadBlockChain(path)){
-            LOG(ERROR) << "error loading block chain";
-            return false;
-        }
-        if(!BlockMiner::Initialize()){
-            LOG(ERROR) << "couldn't start miner thread";
-            return false;
-        }
+
+        uint256_t hash = chain->GetHeadFromIndex();
+        Block* block = GetBlock(hash);
+        BlockNode* node = new BlockNode(block);
+        BlockNode* head = node;
+        BlockNode* parent = node;
+        do{
+            LOG(INFO) << "loading block: " << hash << "...";
+            block = GetBlock(hash);
+            node = new BlockNode(block);
+            chain->nodes_.insert(std::make_pair(hash, node));
+            parent->AddChild(node);
+            parent = node;
+            hash = node->GetPreviousHash();
+        } while(!hash.IsNull());
+        chain->head_ = head;
+        chain->genesis_ = node;
         return true;
     }
 
-    void BlockChain::Accept(Token::BlockChainVisitor* vis){
-        vis->VisitStart();
-        for(auto it : GetInstance()->blocks_){
-            if(!vis->Visit(it)) return;
-        }
-        vis->VisitEnd();
+    bool BlockChain::LoadBlock(const std::string& filename, Token::Block* block){
+        if(!FileExists(filename)) return false;
+        std::fstream fd(filename, std::ios::in|std::ios::binary);
+        Proto::BlockChain::Block raw;
+        if(!raw.ParseFromIstream(&fd)) return false;
+        (*block) = Block(raw);
+        return true;
     }
 
-#define READ_LOCK pthread_rwlock_rdlock(&GetInstance()->lock_)
-#define WRITE_LOCK pthread_rwlock_wrlock(&GetInstance()->lock_)
-#define UNLOCK pthread_rwlock_unlock(&GetInstance()->lock_)
-
-    uint32_t BlockChain::GetHeight(){
-        READ_LOCK;
-        uint32_t height;
-        if(!GetInstance()->GetReference("Head", &height)){
-            LOG(ERROR) << "cannot get <HEAD>";
-            UNLOCK;
-            return -1;
-        }
-        UNLOCK;
-        return height;
+    bool BlockChain::SaveBlock(const std::string& filename, Token::Block* block){
+        if(FileExists(filename)) return false;
+        std::fstream fd(filename, std::ios::out|std::ios::binary);
+        Proto::BlockChain::Block raw;
+        raw << (*block);
+        return raw.SerializeToOstream(&fd);
     }
 
-    Block* BlockChain::GetHead(){
-        READ_LOCK;
-        Block* head = GetBlock(GetHeight());
-        UNLOCK;
+    BlockChain::BlockNode* BlockChain::GetHeadNode(){
+        BlockChain* chain = GetInstance();
+        //TODO: rwlock
+        BlockNode* head = chain->head_;
         return head;
     }
 
-    Block* BlockChain::GetGenesis(){
-        return GetBlock(0);
+    BlockChain::BlockNode* BlockChain::GetGenesisNode() {
+        BlockChain* chain = GetInstance();
+        //TODO: rwlock
+        BlockNode* genesis = chain->genesis_;
+        return genesis;
     }
 
+    BlockChain::BlockNode* BlockChain::GetNode(const Token::uint256_t& hash){
+        BlockChain* chain = GetInstance();
+        //TODO: rwlock
+        auto pos = chain->nodes_.find(hash);
+        if(pos == chain->nodes_.end()) return nullptr;
+        return pos->second;
+    }
 
-    bool BlockChain::AppendBlock(Token::Block* block){
-        LOG(INFO) << "appending block: " << block->GetHash();
-        LOG(INFO) << "checking for duplicate block...";
-        if(ContainsBlock(block->GetHash())){
-            LOG(ERROR) << "duplicate block found for: " << block->GetHash();
-            UNLOCK;
+    Block* BlockChain::GetBlock(const uint256_t& hash){
+        BlockChain* chain = GetInstance();
+        //TODO: rwlock
+        std::string filename = chain->GetPath(hash);
+        if(!FileExists(filename)) return nullptr;
+        Block* block = new Block();
+        if(!chain->LoadBlock(filename, block)){
+            delete block;
+            return nullptr;
+        }
+        return block;
+    }
+
+    Transaction* BlockChain::GetTransaction(const uint256_t& hash){
+        return nullptr; //TODO: implement
+    }
+
+    bool BlockChain::ContainsBlock(const uint256_t& hash){
+        BlockChain* chain = GetInstance();
+        //TODO rwlock
+        std::string filename = chain->GetPath(hash);
+        return FileExists(filename);
+    }
+
+    bool BlockChain::ContainsTransaction(const uint256_t& hash){
+        return false; //TODO: implement
+    }
+
+    bool BlockChain::Append(Block* block){
+        /*TODO Move to miner
+        BlockChain* chain = GetInstance();
+        uint256_t phash = block->GetPreviousHash();
+        uint256_t hash = block->GetHash();
+
+        if(BlockChain::ContainsBlock(hash)){
+            LOG(ERROR) << "duplicate block found for: " << hash;
             return false;
         }
 
-        if(block->IsGenesis() && HasHead()){
-            LOG(ERROR) << "cannot append genesis block:";
-            //TODO: BlockPrinter::PrintAsError(block, true);
-            UNLOCK;
+        if(block->IsGenesis() && !chain->IsInitialized() && !GetHead().IsNull()){
+            LOG(ERROR) << "cannot append genesis block: " << block->GetHash();
             return false;
         }
 
         if(block->IsGenesis()){
-            LOG(INFO) << "registering genesis's " << block->GetNumberOfTransactions() << " transactions...";
-
             int i;
             for(i = 0; i < block->GetNumberOfTransactions(); i++){
                 Transaction* tx;
-                if(!(tx = block->GetTransactionAt(i))){
+                if(!(tx = block->GetTransaction(i))){
                     LOG(ERROR) << "couldn't get transaction #" << i << " in block: " << block->GetHash();
                     return false;
                 }
+
                 LOG(INFO) << "registering " << tx->GetNumberOfOutputs() << " unclaimed transactions...";
                 int j;
                 for(j = 0; j < tx->GetNumberOfOutputs(); j++) {
-                    UnclaimedTransaction utxo(tx->GetHash(), j, tx->GetOutputAt(j));
-                    if (!UnclaimedTransactionPool::GetInstance()->AddUnclaimedTransaction(&utxo)) {
+                    Output* out;
+                    if(!(out = tx->GetOutput(j))){
+                        LOG(WARNING) << "couldn't get output #" << j;
+                        return false;
+                    }
+
+                    UnclaimedTransaction utxo(out);
+
+                    if(!UnclaimedTransactionPool::PutUnclaimedTransaction(utxo)){
                         LOG(WARNING) << "couldn't create new unclaimed transaction: " << utxo.GetHash();
                         LOG(WARNING) << "*** Unclaimed Transaction: ";
                         LOG(WARNING) << "***   + Input: " << utxo.GetTransactionHash() << "[" << utxo.GetIndex()
@@ -168,18 +207,16 @@ namespace Token{
                         LOG(WARNING) << "***   + Output: " << utxo.GetToken() << "(" << utxo.GetUser() << ")";
                         return false;
                     }
+
                     LOG(INFO) << "added new unclaimed transaction: " << utxo.GetHash();
                 }
             }
         } else{
-            LOG(INFO) << "finding parent block";
             Block* parent;
             if(!(parent = GetBlock(block->GetPreviousHash()))){
-                LOG(ERROR) << "cannot find parent block: " << block->GetPreviousHash();
-                UNLOCK;
+                LOG(ERROR) << "couldn't find parent block: " << block->GetPreviousHash();
                 return false;
             }
-            LOG(INFO) << "found parent: " << parent->GetHash();
 
             //TODO: Migrate validation logic
             BlockValidator validator;
@@ -190,143 +227,90 @@ namespace Token{
             if(valid.size() != block->GetNumberOfTransactions()){
                 LOG(ERROR) << "block '" << block->GetHash() << "' is invalid";
                 LOG(ERROR) << "block information:";
-                //TODO: BlockPrinter::PrintAsError(block, true);
-                UNLOCK;
                 return false;
             }
         }
+        */
+        //TODO: rwlock
+        BlockChain* chain = GetInstance();
+        uint256_t hash = block->GetHash();
+        uint256_t phash = block->GetPreviousHash();
 
-        WRITE_LOCK; //TODO: This should be here?!
-        if(!GetInstance()->SaveBlock(block)){
-            LOG(ERROR) << "couldn't save block: " << block->GetHash();
-            UNLOCK;
+        std::string filename = chain->GetPath(hash);
+        if(FileExists(filename)){
+            LOG(WARNING) << "block data already exists";
+            return false;
+        }
+        if(!SaveBlock(filename, block)) {
+            LOG(INFO) << "couldn't save block: " << filename;
+            return false;
+        }
+        if(!chain->RegisterPath(hash, filename)) {
+            LOG(INFO) << "couldn't register path: " << hash;
             return false;
         }
 
-        if(!GetInstance()->SetReference("Head", block->GetHeight())){
-            LOG(ERROR) << "couldn't set <HEAD> reference";
-            UNLOCK;
-            return false;
+        LOG(INFO) << "phash := " << phash;
+        BlockNode* parent = GetNode(phash);
+        BlockNode* node = new BlockNode(block);
+        parent->AddChild(node);
+        BlockNode* head = GetHeadNode();
+        if(head->GetHeight() < block->GetHeight()) {
+            chain->SetHeadInIndex(hash);
+            head_ = node;
         }
-
-        GetInstance()->blocks_.push_back(block);
-        LOG(INFO) << "new <HEAD>: " << block->GetHash();
-        UNLOCK;
+        nodes_.insert(std::make_pair(hash, node));
         return true;
     }
 
-    bool BlockChain::HasHead(){
-        uint32_t height;
-        if(!GetInstance()->GetReference("Head", &height)){
-            LOG(ERROR) << "couldn't get <HEAD>";
-            return false;
-        }
-        return true;
-    }
-
-    bool BlockChain::SetReference(const std::string &ref, uint32_t height){
-        std::stringstream val;
-        val << height;
-        leveldb::WriteOptions writeOpts;
-        if(!GetState()->Put(writeOpts, ref, val.str()).ok()){
-            LOG(ERROR) << "error setting reference '" << ref << "' to: " << height;
-            return false;
-        }
-        return true;
-    }
-
-    bool BlockChain::GetReference(const std::string& ref, uint32_t* height){
-        std::string val;
-        leveldb::ReadOptions readOpts;
-        if(!GetState()->Get(readOpts, ref, &val).ok()){
-            LOG(ERROR) << "error getting reference to: " << ref;
-            (*height) = -1;
-            return false;
-        }
-        (*height) = static_cast<uint32_t>(atoll(val.c_str()));
-        return true;
-    }
-
-    bool BlockChain::LoadBlock(uint32_t height, Token::Block* result){
-        if(height < 0 || height > GetHeight()){
-            LOG(WARNING) << "invalid height: " << height;
-            return false;
-        }
-        Messages::Block raw;
-        std::stringstream filename;
-        filename << TOKEN_BLOCKCHAIN_HOME << "/blocks/blk" << height << ".dat";
-        std::fstream fd(filename.str(), std::ios::binary|std::ios::in);
-        if(!(raw.ParseFromIstream(&fd))){
-            LOG(ERROR) << "cannot parse block file: " << filename.str();
-            return false;
-        }
-        (*result) = Block(raw);
-        return true;
-    }
-
-    bool BlockChain::SaveBlock(Token::Block* block){
-        std::stringstream filename;
-        filename << TOKEN_BLOCKCHAIN_HOME << "/blocks/blk" << block->GetHeight() << ".dat";
-
-        if(FileExists(filename.str())){
-            LOG(WARNING) << "block already written, won't overwrite block: " << filename.str();
-            return false;
-        }
-
-        LOG(INFO) << "writing block #" << block->GetHeight();
-        std::fstream fd(filename.str(), std::ios::out|std::ios::binary);
-
-        Messages::Block raw;
-        raw << (*block);
-        if(!raw.SerializeToOstream(&fd)){
-            LOG(ERROR) << "error writing block #" << block->GetHeight() << " to file: " << filename.str();
-            LOG(ERROR) << "block information: ";
-            //TODO: BlockPrinter::PrintAsError(block, true);
-            return false;
-        }
-
-        return GetInstance()->SetReference(block->GetHash(), block->GetHeight());
-    }
-
-    Block* BlockChain::GetBlock(uint32_t height){
-        if(height < 0 || height > GetHeight()) return nullptr;
-        READ_LOCK;
-        Block* block = GetInstance()->blocks_[height];
-        UNLOCK;
-        return block;
-    }
-
-    Block* BlockChain::GetBlock(const std::string &hash){
-        if(GetHeight() == 0) return nullptr;
-        READ_LOCK;
-        for(size_t idx = 0; idx < GetInstance()->GetHeight(); idx++){
-            Block* block = GetInstance()->blocks_[idx];
-            if(block->GetHash() == hash){
-                UNLOCK;
-                return block;
+    bool BlockChain::Accept(BlockChainVisitor* vis){
+        if(!vis->VisitStart()) return false;
+        uint256_t gHash = GetGenesis();
+        uint256_t hash = GetHead();
+        Block* block = nullptr;
+        do{
+            block = GetBlock(hash);
+            if(!vis->VisitBlock(block)){
+                delete block;
+                return false;
             }
-        }
-        UNLOCK;
-        return nullptr;
+
+            hash = block->GetPreviousHash();
+            delete block;
+        } while(!hash.IsNull());
+        return vis->VisitEnd();
     }
 
-    bool BlockChain::ContainsBlock(const std::string &hash){
-        uint32_t height;
-        if(!GetInstance()->GetReference(hash, &height)){
-            LOG(ERROR) << "cannot find block: " << hash;
-            return false;
-        }
-        return height >= 0 && height <= GetHeight();
-    }
+    class BlockChainMerkleTreeBuilder : public BlockChainVisitor,
+                                        public BlockVisitor{
+    private:
+        std::vector<uint256_t> leaves_;
+    public:
+        BlockChainMerkleTreeBuilder():
+            leaves_(){}
+        ~BlockChainMerkleTreeBuilder(){}
 
-    bool BlockChain::GetBlockList(std::vector<std::string>& blocks){
-        size_t nblocks = GetHeight() + 1;
-
-        uint32_t idx;
-        for(idx = 0; idx < nblocks; idx++){
-            Block* blk = GetBlock(idx);
-            blocks.push_back(blk->GetHash());
+        bool VisitBlock(Block* block){
+            return block->Accept(this);
         }
-        return blocks.size() == nblocks; //TODO: Check
+
+        bool VisitTransaction(Transaction* tx){
+            leaves_.push_back(tx->GetHash());
+            return true;
+        }
+
+        bool BuildTree(){
+            return BlockChain::Accept(this);
+        }
+
+        MerkleTree* GetTree(){
+            return new MerkleTree(leaves_);
+        }
+    };
+
+    MerkleTree* BlockChain::GetMerkleTree(){
+        BlockChainMerkleTreeBuilder builder;
+        if(!builder.BuildTree()) return nullptr;
+        return builder.GetTree();
     }
 }

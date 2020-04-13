@@ -1,33 +1,26 @@
 #ifndef TOKEN_SERVICE_H
 #define TOKEN_SERVICE_H
 
-
 #include <grpc++/grpc++.h>
+#include "service.pb.h"
 #include "service.grpc.pb.h"
-#include "block_chain.h"
+
+using namespace Token::Proto::BlockChain;
+using namespace Token::Proto::BlockChainService;
 
 namespace Token{
-    class BlockChainService final : public Messages::Service::BlockChainService::Service{
+    class BlockChainService final : public ::BlockChainService::Service{
     private:
         std::unique_ptr<grpc::Server> server_;
-
-        inline void
-        SetBlockHeader(Block* block, Messages::BlockHeader* header){
-            header->set_previous_hash(block->GetPreviousHash());
-            header->set_hash(block->GetHash());
-            header->set_merkle_root(block->GetMerkleRoot());
-            header->set_height(block->GetHeight());
-        }
     public:
         explicit BlockChainService():
                 server_(){}
         ~BlockChainService(){}
 
-        grpc::Status GetHead(grpc::ServerContext* ctx, const Token::Messages::EmptyRequest* request, Messages::BlockHeader* response);
-        grpc::Status GetBlock(grpc::ServerContext* ctx, const Token::Messages::Service::GetBlockRequest* request, Messages::BlockHeader* response);
-        grpc::Status GetBlockData(grpc::ServerContext* ctx, const Token::Messages::Service::GetBlockRequest* request, Messages::Block* response);
-        grpc::Status GetUnclaimedTransactions(grpc::ServerContext* ctx, const Token::Messages::Service::GetUnclaimedTransactionsRequest* request, Messages::UnclaimedTransactionList* response);
-        grpc::Status Spend(grpc::ServerContext* ctx, const Token::Messages::Service::SpendTokenRequest* request, Messages::Transaction* response);
+        grpc::Status GetHead(grpc::ServerContext* ctx, const ::EmptyRequest* request, ::BlockHeader* response);
+        grpc::Status GetBlock(grpc::ServerContext* ctx, const ::GetBlockRequest* request, ::BlockHeader* response);
+        grpc::Status GetUnclaimedTransactions(grpc::ServerContext* ctx, const Proto::BlockChainService::GetUnclaimedTransactionsRequest* request, Proto::BlockChainService::UnclaimedTransactionList* response);
+        grpc::Status Spend(grpc::ServerContext* ctx, ::UnclaimedTransaction* request, ::EmptyResponse* response);
 
         static BlockChainService* GetInstance();
         static void Start(const std::string address, int port);

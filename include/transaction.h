@@ -2,42 +2,49 @@
 #define TOKEN_TRANSACTION_H
 
 #include <glog/logging.h>
-#include "blockchain.pb.h"
+#include "common.h"
+#include "pool.h"
+#include "binary_object.h"
 #include "merkle.h"
 
 namespace Token{
     class Block;
+    class Transaction;
+    class Output;
 
-    class Input{
+    class Input : public BinaryObject{
     private:
-        std::string phash_;
-        uint32_t index_;
+        Transaction* transaction_;
+        Output* output_;
 
         friend class Transaction;
+    protected:
+        bool GetBytes(CryptoPP::SecByteBlock& bytes) const;
     public:
-        Input(): phash_(), index_(0){}
-        Input(const std::string& previous_hash, uint32_t index):
-            phash_(previous_hash),
-            index_(index){}
-        Input(const Messages::Input& input):
-            phash_(input.previous_hash()),
-            index_(input.index()){}
-        Input(const Input& other): Input(other.phash_, other.index_){}
+        Input(): transaction_(nullptr), output_(nullptr){}
+        Input(const Input& other):
+                transaction_(other.transaction_),
+                output_(other.output_){}
+        Input(Transaction* tx, Output* output):
+            transaction_(tx),
+            output_(output){}
+        Input(Transaction* tx, const Proto::BlockChain::Input& raw){}
         ~Input(){}
 
-        std::string GetPreviousHash() const{
-            return phash_;
+        Transaction* GetTransaction() const{
+            return transaction_;
         }
 
-        int GetIndex() const{
-            return index_;
+        Output* GetOutput() const{
+            return output_;
         }
 
-        std::string GetHash() const;
+        uint32_t GetOutputIndex() const;
+        std::string GetTransactionHash() const;
 
         Input& operator=(const Input& other){
-            phash_ = other.phash_;
-            index_ = other.index_;
+            transaction_ = other.transaction_;
+            output_ = other.output_;
             return (*this);
         }
 
@@ -49,26 +56,43 @@ namespace Token{
             return !operator==(lhs, rhs);
         }
 
-        friend Messages::Input& operator<<(Messages::Input& stream, const Input* input){
-            stream.set_previous_hash(input->phash_);
-            stream.set_index(input->index_);
+        friend Proto::BlockChain::Input& operator<<(Proto::BlockChain::Input& stream, const Input& input){
+            stream.set_previous_hash(input.GetTransactionHash());
+            stream.set_index(input.GetOutputIndex());
             return stream;
         }
     };
 
-    class Output{
+    class Output : public BinaryObject{
     private:
+        Transaction* transaction_;
+        uint32_t index_;
         std::string user_;
         std::string token_;
 
         friend class Transaction;
+    protected:
+        bool GetBytes(CryptoPP::SecByteBlock& bytes) const;
     public:
-        Output(const std::string& user, const std::string& token):
+        Output():
+            transaction_(nullptr),
+            user_(),
+            token_(){}
+        Output(Transaction* transaction, const std::string& user, const std::string& token):
+            transaction_(transaction),
             user_(user),
             token_(token){}
-        Output(const Messages::Output& output): Output(output.user(), output.token()){}
-        Output(const Output& other): Output(other.user_, other.token_){}
+        Output(Transaction* transaction, const Proto::BlockChain::Output& output): Output(transaction, output.user(), output.token()){}
+        Output(const Output& other): Output(other.transaction_, other.user_, other.token_){}
         ~Output(){}
+
+        Transaction* GetTransaction() const{
+            return transaction_;
+        }
+
+        uint32_t GetIndex() const{
+            return index_;
+        }
 
         std::string GetUser() const{
             return user_;
@@ -78,11 +102,10 @@ namespace Token{
             return token_;
         }
 
-        std::string GetHash() const;
-
         Output& operator=(const Output& other){
             user_ = other.user_;
             token_ = other.token_;
+            transaction_ = other.transaction_;
             return (*this);
         }
 
@@ -94,57 +117,74 @@ namespace Token{
             return !operator==(lhs, rhs);
         }
 
-        friend Messages::Output& operator<<(Messages::Output& stream, const Output* output){
-            stream.set_user(output->GetUser());
-            stream.set_token(output->GetToken());
+        friend Proto::BlockChain::Output& operator<<(Proto::BlockChain::Output& stream, const Output& output){
+            stream.set_user(output.GetUser());
+            stream.set_token(output.GetToken());
             return stream;
         }
     };
 
     class TransactionVisitor;
-    class Transaction{
-    public:
-        static const uintptr_t kInputsInitSize = 128;
-        static const uintptr_t kOutputsInitSize = 128;
+    class Transaction : public BinaryObject{
     private:
-        void SetTimestamp();
-        void SetIndex(uint32_t index);
-        void SetSignature(std::string signature);
-
+        uint64_t timestamp_;
         uint64_t index_;
-        std::vector<Input*> inputs_;
-        std::vector<Output*> outputs_;
+        std::vector<Input> inputs_;
+        std::vector<Output> outputs_;
+        std::string signature_;
 
         friend class Block;
         friend class TransactionPool;
-        friend class TransactionSigner;
         friend class TransactionVerifier;
+    protected:
+        bool GetBytes(CryptoPP::SecByteBlock& bytes) const;
     public:
-        Transaction(uint64_t index):
+        Transaction():
+            timestamp_(0),
+            index_(0),
+            inputs_(),
+            outputs_(),
+            signature_(""),
+            BinaryObject(){}
+        Transaction(uint64_t index, uint64_t timestamp=GetCurrentTime()):
+            timestamp_(timestamp),
             index_(index),
             inputs_(),
-            outputs_(){}
-        Transaction(const Messages::Transaction& tx):
-            index_(tx.index()),
+            outputs_(),
+            signature_(),
+            BinaryObject(){}
+        Transaction(const Proto::BlockChain::Transaction& raw):
+            timestamp_(raw.timestamp()),
+            index_(raw.index()),
+            signature_(raw.signature()),
             inputs_(),
-            outputs_(){
-            for(auto& it : tx.inputs()) inputs_.push_back(new Input(it));
-            for(auto& it : tx.outputs()) outputs_.push_back(new Output(it));
+            outputs_(),
+            BinaryObject(){
+            for(auto& it : raw.inputs()) inputs_.push_back(Input(this, it));
+            for(auto& it : raw.outputs()) outputs_.push_back(Output(this, it));
         }
         Transaction(const Transaction& other):
+            timestamp_(other.timestamp_),
+            signature_(other.signature_),
             index_(other.index_),
             inputs_(other.inputs_),
             outputs_(other.outputs_){}
         ~Transaction(){}
 
-        Input* GetInputAt(uintptr_t idx) const{
-            if(idx < 0 || idx > GetNumberOfInputs()) return nullptr;
-            return new Input(*inputs_[idx]); //TODO: remove allocation?
+        void AddInput(Output* output){
+            inputs_.push_back(Input(this, output));
         }
 
-        Output* GetOutputAt(uintptr_t idx) const{
-            if(idx < 0 || idx > GetNumberOfOutputs()) return nullptr;
-            return new Output(*outputs_[idx]); //TODO: remove allocation?
+        void AddOutput(const std::string& user, const std::string& token){
+            outputs_.push_back(Output(this, user, token));
+        }
+
+        Input* GetInput(uint32_t index){
+            return new Input(inputs_[index]);
+        }
+
+        Output* GetOutput(uint32_t index){
+            return new Output(outputs_[index]);
         }
 
         size_t GetNumberOfInputs() const{
@@ -159,18 +199,31 @@ namespace Token{
             return index_;
         }
 
+        uint64_t GetTimestamp() const{
+            return timestamp_;
+        }
+
         bool IsCoinbase() const{
             return GetIndex() == 0;
         }
 
-        void Accept(TransactionVisitor* visitor);
-        std::string GetSignature() const;
-        std::string GetHash() const;
+        bool IsSigned() const{
+            return !signature_.empty();
+        }
+
+        bool Sign();
+        bool Accept(TransactionVisitor* visitor);
+
+        std::string GetSignature() const{
+            return signature_;
+        }
 
         Transaction& operator=(const Transaction& other){
             index_ = other.index_;
-            inputs_ = std::vector<Input*>(other.inputs_);
-            outputs_ = std::vector<Output*>(other.outputs_);
+            timestamp_ = other.timestamp_;
+            signature_ = other.signature_;
+            inputs_ = std::vector<Input>(other.inputs_);
+            outputs_ = std::vector<Output>(other.outputs_);
             return (*this);
         }
 
@@ -183,42 +236,26 @@ namespace Token{
         }
 
         friend Transaction& operator<<(Transaction& stream, const Output& output){
-            stream.outputs_.push_back(new Output(output)); //TODO: remove copy?
+            stream.outputs_.push_back(output);
             return stream;
         }
 
         friend Transaction& operator<<(Transaction& stream, const Input& input){
-            stream.inputs_.push_back(new Input(input)); //TODO: remove copy?
+            stream.inputs_.push_back(input);
             return stream;
         }
 
-        friend Messages::Transaction& operator<<(Messages::Transaction& stream, const Transaction* tx){
-            stream.set_index(tx->GetIndex());
-            //TODO: stream.set_timestamp();
-            //TODO: stream.set_signature();
-            uintptr_t idx;
-            for(idx = 0; idx < tx->GetNumberOfInputs(); idx++){
-                Messages::Input* raw = stream.add_inputs();
-                (*raw) << tx->inputs_[idx];
-            }
-            for(idx = 0; idx < tx->GetNumberOfOutputs(); idx++){
-                Messages::Output* raw = stream.add_outputs();
-                (*raw) << tx->outputs_[idx];
-            }
-            return stream;
-        }
-
-        friend Messages::Transaction& operator<<(Messages::Transaction& stream, const Transaction& tx){
+        friend Proto::BlockChain::Transaction& operator<<(Proto::BlockChain::Transaction& stream, const Transaction& tx){
             stream.set_index(tx.GetIndex());
-            //TODO: stream.set_timestamp();
-            //TODO: stream.set_signature();
+            stream.set_timestamp(tx.GetTimestamp());
+            if(tx.IsSigned()) stream.set_signature(tx.GetSignature());
             uintptr_t idx;
             for(idx = 0; idx < tx.GetNumberOfInputs(); idx++){
-                Messages::Input* raw = stream.add_inputs();
+                Proto::BlockChain::Input* raw = stream.add_inputs();
                 (*raw) << tx.inputs_[idx];
             }
             for(idx = 0; idx < tx.GetNumberOfOutputs(); idx++){
-                Messages::Output* raw = stream.add_outputs();
+                Proto::BlockChain::Output* raw = stream.add_outputs();
                 (*raw) << tx.outputs_[idx];
             }
             return stream;
@@ -229,33 +266,14 @@ namespace Token{
     public:
         virtual ~TransactionVisitor() = default;
 
-        virtual bool VisitStart(){
-            return true;
-        }
-
-        virtual bool VisitInputsStart(){
-            return true;
-        }
-
+        virtual bool VisitStart(){ return true; }
+        virtual bool VisitInputsStart(){ return true; }
         virtual bool VisitInput(Input* input) = 0;
-
-        virtual bool VisitInputsEnd(){
-            return true;
-        }
-
-        virtual bool VisitOutputsStart(){
-            return true;
-        }
-
+        virtual bool VisitInputsEnd(){ return true; }
+        virtual bool VisitOutputsStart(){ return true; }
         virtual bool VisitOutput(Output* out) = 0;
-
-        virtual bool VisitOutputsEnd(){
-            return true;
-        }
-
-        virtual bool VisitEnd(){
-            return true;
-        }
+        virtual bool VisitOutputsEnd(){ return true; }
+        virtual bool VisitEnd(){ return true; }
     };
 
     class TransactionVerifier{
@@ -273,49 +291,21 @@ namespace Token{
         bool VerifySignature();
     };
 
-    class TransactionSigner{
+    class TransactionPool : public IndexManagedPool{
     private:
-        Transaction* tx_;
-    public:
-        TransactionSigner(Transaction* tx):
-                tx_(tx){}
-        ~TransactionSigner(){}
-
-        Transaction* GetTransaction(){
-            return tx_;
-        }
-
-        bool GetSignature(std::string* signature);
-        bool Sign();
-    };
-
-    class TransactionPoolVisitor;
-    class TransactionPool{
-    public:
-        static const size_t kTransactionPoolMaxSize = 1;
-    private:
-        static uint32_t counter_;
-
-        static bool CreateBlock();
-        static bool LoadTransaction(const std::string& filename, Messages::Transaction* result, bool deleteAfter=true);
+        static TransactionPool* GetInstance();
+        static bool LoadTransaction(const std::string& filename, Transaction* tx);
         static bool SaveTransaction(const std::string& filename, Transaction* tx);
 
-        TransactionPool(){}
+        TransactionPool(): IndexManagedPool(FLAGS_path + "/txs"){}
     public:
         ~TransactionPool(){}
 
-        static bool AddTransaction(Transaction* tx);
+        static Transaction* GetTransaction(const uint256_t& hash);
+        static Transaction* RemoveTransaction(const uint256_t& hash);
         static bool Initialize();
-    };
-
-    class TransactionPoolVisitor{
-    public:
-        TransactionPoolVisitor(){}
-        virtual ~TransactionPoolVisitor() = default;
-
-        virtual bool VisitStart() = 0;
-        virtual bool VisitTransaction(Transaction* tx) = 0;
-        virtual bool VisitEnd() = 0;
+        static bool PutTransaction(Transaction* tx);
+        static bool HasTransaction(const uint256_t& hash);
     };
 }
 

@@ -1,6 +1,8 @@
 #include <glog/logging.h>
 #include <string>
 #include "node/message.h"
+#include "node/buffer.h"
+#include "layout.h"
 
 namespace Token{
 #define DEFINE_TYPECHECK(Name) \
@@ -10,60 +12,44 @@ namespace Token{
     FOR_EACH_MESSAGE_TYPE(DEFINE_TYPECHECK)
 #undef DEFINE_TYPECHECK
 
-    void PingMessage::Encode(uint8_t* bytes, size_t size){
-        memcpy(bytes, nonce_.data(), size);
+    Message* Message::Decode(ByteBuffer* bb){
+        Message::Type type = static_cast<Message::Type>(bb->GetInt());
+        uint64_t size = bb->GetLong();
+        uint8_t bytes[size];
+        bb->GetBytes(bytes, size);
+        return Decode(type, bytes, size);
     }
 
-    void PongMessage::Encode(uint8_t* bytes, size_t size){
-        memcpy(bytes, nonce_.data(), size);
+#define DECLARE_HASH_DECODE(Name, ErrorMessage) \
+    case Type::k##Name##Message:{ \
+        if(size != 64){ \
+            LOG(ERROR) << ErrorMessage; \
+            return nullptr; \
+        } \
+        std::string hash((char*)bytes, size); \
+        return new Name##Message(hash); \
     }
-
-    void TransactionMessage::Encode(uint8_t* bytes, size_t size){
-        if(!GetRaw().SerializeToArray(bytes, size)){
-            LOG(ERROR) << "couldn't serialize transaction to byte array";
-        }
-    }
-
-    void BlockMessage::Encode(uint8_t *bytes, size_t size){
-        if(!GetRaw().SerializePartialToArray(bytes, size)){
-            LOG(ERROR) << "couldn't serialize transaction to byte array";
-        }
+#define DECLARE_RAW_DECODE(Name, RawType, ErrorMessage) \
+    case Type::k##Name##Message:{ \
+        RawType raw; \
+        if(!raw.ParseFromArray(bytes, size)){ \
+            LOG(ERROR) << ErrorMessage; \
+            return nullptr; \
+        } \
+        return new Name##Message(raw); \
     }
 
     Message* Message::Decode(Type type, uint8_t* bytes, uint32_t size){
         switch(type){
-            case Type::kPingMessage:{
-                if(size != 64){
-                    LOG(ERROR) << "ping nonce is " << size << "/64 characters";
-                    return nullptr;
-                }
-                std::string nonce((char*)bytes, size);
-                return new PingMessage(nonce);
-            }
-            case Type::kPongMessage:{
-                if(size != 64){
-                    LOG(ERROR) << "pong nonce is " << size << "/64 characters";
-                    return nullptr;
-                }
-                std::string nonce((char*)bytes, size);
-                return new PongMessage(nonce);
-            }
-            case Type::kTransactionMessage:{
-                Messages::Transaction raw;
-                if(!raw.ParseFromArray(bytes, size)){
-                    LOG(ERROR) << "couldn't deserialize transaction from byte array";
-                    return nullptr;
-                }
-                return new TransactionMessage(raw);
-            }
-            case Type::kBlockMessage:{
-                Messages::Block raw;
-                if(!raw.ParseFromArray(bytes, size)){
-                    LOG(ERROR) << "couldn't deserialize block from byte array";
-                    return nullptr;
-                }
-                return new BlockMessage(raw);
-            }
+            DECLARE_HASH_DECODE(Ping, "couldn't deserialize ping from byte array");
+            DECLARE_HASH_DECODE(Pong, "couldn't deserialize pong from byte array");
+            DECLARE_HASH_DECODE(GetData, "couldn't deserialize getdata from byte array");
+            DECLARE_RAW_DECODE(Transaction, Proto::BlockChain::Transaction, "couldn't deserialize transaction from byte array");
+            DECLARE_RAW_DECODE(Block, Proto::BlockChain::Block, "couldn't deserialize block from byte array");
+            DECLARE_RAW_DECODE(Inventory, Proto::BlockChainServer::Inventory, "couldn't deserialize inventory from byte array");
+            DECLARE_RAW_DECODE(GetBlocks, Proto::BlockChainServer::BlockRange, "couldn't deserialize block range from byte array");
+            DECLARE_RAW_DECODE(Version, Proto::BlockChainServer::Version, "couldn't deserialize version from byte array");
+            DECLARE_RAW_DECODE(Verack, Proto::BlockChainServer::Verack, "couldn't deserialize verack from byte array");
             default:{
                 LOG(ERROR) << "invalid message of type " << static_cast<uint8_t>(type) << " w/ size " << size;
                 return nullptr;

@@ -4,7 +4,7 @@
 #include "service/client.h"
 
 static inline void
-PrintBlock(Token::Messages::BlockHeader* block){
+PrintBlock(Token::Proto::BlockChainService::BlockHeader* block){
     std::cout << "-- Block # " << block->height() << " ---" << std::endl;
     std::cout << "\tPrevious Hash: " << block->previous_hash() << std::endl;
     std::cout << "\tHash: " << block->hash() << std::endl;
@@ -13,8 +13,8 @@ PrintBlock(Token::Messages::BlockHeader* block){
 }
 
 static inline void
-PrintUnclaimedTransaction(Token::Messages::UnclaimedTransaction* utxo){
-    std::cout << "Unclaimed Transaction from " << utxo->tx_hash() << "[" << utxo->index() << "] => " << utxo->user() << "(" << utxo->token() << ")" << std::endl;
+PrintUnclaimedTransaction(Token::Proto::BlockChain::UnclaimedTransaction* utxo){
+    std::cout << "Unclaimed Transaction from " << utxo->tx_hash() << "[" << utxo->tx_index() << "] => " << utxo->user() << "(" << utxo->token() << ")" << std::endl;
 }
 
 static inline void
@@ -23,21 +23,24 @@ PrintTransaction(Token::Transaction* tx){
     int idx;
     std::cout << "\t\tInputs:" << std::endl;
     for(idx = 0; idx < tx->GetNumberOfInputs(); idx++){
-        Token::Input* input = tx->GetInputAt(idx);
+        Token::Input* input;
+        if(!(input = tx->GetInput(idx))) return;
         std::cout << "\t\t  * #" << idx << ": " << input->GetHash() << std::endl;
     }
     std::cout << "\t\tOutputs:" << std::endl;
     for(idx = 0; idx < tx->GetNumberOfOutputs(); idx++){
-        Token::Output* output = tx->GetOutputAt(idx);
+        Token::Output* output;
+        if(!(output = tx->GetOutput(idx))) return;
         std::cout << "\t\t  * #" << idx << ": " << output->GetHash() << std::endl;
     }
 }
 
 DEFINE_string(address, "", "The address of the node to connect to");
-DEFINE_uint32(port, 0, "The port to use");
 
 int main(int argc, char** argv){
     using namespace Token;
+    using namespace Token::Proto;
+
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     TokenServiceClient* client;
@@ -55,7 +58,7 @@ int main(int argc, char** argv){
         if(input == "discon"){
             return EXIT_FAILURE;
         } else if(input == "gethead"){
-            Messages::BlockHeader head;
+            ::BlockHeader head;
             if(!client->GetHead(&head)){
                 LOG(ERROR) << "couldn't get <HEAD> from service";
                 return EXIT_FAILURE;
@@ -67,7 +70,7 @@ int main(int argc, char** argv){
             std::cin >> target;
             if(target.length() == 64){
                 LOG(INFO) << "fetching block from hash: " << target;
-                Messages::BlockHeader blk;
+                ::BlockHeader blk;
                 if(!client->GetBlock(target, &blk)){
                     LOG(ERROR) << "couldn't fetch block: " << target;
                     return EXIT_FAILURE;
@@ -75,35 +78,12 @@ int main(int argc, char** argv){
                 PrintBlock(&blk);
             }
             return EXIT_FAILURE;
-        } else if(input == "spend"){
-            std::string token;
-            std::cout << "target := ";
-            std::cin >> token;
-            if(token.length() != 64){
-                LOG(ERROR) << "please enter a valid hash for a token";
-                return EXIT_FAILURE;
-            }
-            std::string from_user;
-            std::cout << "from := ";
-            std::cin >> from_user;
-
-            Transaction* tx;
-
-            std::string to_user;
-            std::cout << "to := ";
-            std::cin >> to_user;
-            if(!client->SpendToken(token, from_user, to_user, &tx)){
-                LOG(ERROR) << "couldn't spend token: " << token;
-                return EXIT_FAILURE;
-            }
-
-            LOG(INFO) << "spent: " << tx->GetHash();
         } else if(input == "getutxos"){
             std::string user;
             std::cout << "User? := ";
             std::cin >> user;
 
-            Messages::UnclaimedTransactionList utxos;
+            ::UnclaimedTransactionList utxos;
             if(user == "None"){
                 LOG(INFO) << "getting all unclaimed transactions";
                 if(!client->GetUnclaimedTransactions(&utxos)){
@@ -120,8 +100,9 @@ int main(int argc, char** argv){
 
             LOG(INFO) << "unclaimed transactions: ";
             size_t idx = 1;
-            for(auto& it : utxos.transactions()){
-                LOG(INFO) << (idx++) << ": " << it.utx_hash() << " (" << it.user() << ")";
+            for(auto& it : utxos.utxos()){
+                Token::UnclaimedTransaction utxo(it);
+                LOG(INFO) << (idx++) << ": " << utxo.GetHash() << "(" << utxo.GetUser() << ")";
             }
         }
     } while(true);

@@ -15,6 +15,8 @@
 #include <cryptopp/files.h>
 #include <cryptopp/osrng.h>
 
+#include "blockchain.pb.h"
+
 namespace Token{
 #if defined(_M_X64) || defined(__x86_64__)
 #define ARCHITECTURE_IS_X64 1
@@ -61,10 +63,21 @@ namespace Token{
         return digest;
     }
 
+    static bool
+    EndsWith(const std::string& str, const std::string& suffix){
+        return str.size() >= suffix.size() &&
+               str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
+    }
+
     static inline bool
     FileExists(const std::string& name){
         std::ifstream f(name.c_str());
         return f.good();
+    }
+
+    static inline bool
+    DeleteFile(const std::string& name){
+        return remove(name.c_str());
     }
 
     static inline bool
@@ -79,7 +92,8 @@ DECLARE_bool(verbose);
 DECLARE_uint32(minheap_size);
 DECLARE_uint32(maxheap_size);
 DECLARE_uint32(port);
-DECLARE_string(peers);
+DECLARE_string(peer_address);
+DECLARE_uint32(peer_port);
 
 // RPC Service Flags
 DECLARE_uint32(service_port);

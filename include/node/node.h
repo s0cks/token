@@ -5,55 +5,51 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include <uv.h>
 #include "session.h"
 
 namespace Token{
-    class BlockChainNode{
+    class BlockChainServer{
     private:
         pthread_t thread_;
-        std::string address_;
-        uint16_t port_;
-        uint32_t sock_;
-        std::vector<Session*> sessions_;
+        std::map<uv_stream_t*, Session*> sessions_; //TODO fix
+        std::list<Session*> peers_;
 
-        void SetAddress(const std::string& addr){
-            address_ = addr;
-        }
+        BlockChainServer();
 
-        void SetPort(uint16_t port){
-            port_ = port;
-        }
-
-        uint32_t GetSocket(){
-            return sock_;
-        }
-
-        void CloseSessions();
-
+        static BlockChainServer* GetInstance();
+        static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
+        static void OnNewConnection(uv_stream_t* stream, int status);
+        static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
         static void* ServerThread(void* data);
 
-        BlockChainNode();
+        static void HandleAsyncBroadcastHead(uv_async_t* handle);
+        static void HandleBroadcastBlock(uv_work_t* req);
+
+        static void HandleVerack(uv_work_t* req);
+        static void HandleBlock(uv_work_t* req);
+        static void HandleVersion(uv_work_t* req);
+        static void HandleGetData(uv_work_t* req);
+        static void HandleGetBlocks(uv_work_t* req);
+
+        static void AfterBroadcastBlock(uv_work_t* req, int status);
+        static void AfterHandleMessage(uv_work_t* req, int status);
     public:
-        ~BlockChainNode();
+        ~BlockChainServer(){}
 
-        const char* GetAddress(){
-            return address_.c_str();
+        static bool StartServer();
+        static void ConnectToPeer(const std::string& address, uint16_t port);
+        static void BroadcastBlockToPeers(Block* block);
+
+        static void GetConnectedPeers(std::list<Session*>& peers){
+            for(auto& it : GetInstance()->peers_){
+                if(it->IsConnected()) peers.push_back(it);
+            }
         }
 
-        uint16_t GetPort(){
-            return port_;
-        }
-
-        void Connect(const std::string& address, uint16_t port){
-            LOG(INFO) << "creating client session for: " << address << ":" << port;
-            NodeClientSession* session = new NodeClientSession(address, port);
-            session->Connect();
-            sessions_.push_back(session);
-        }
-
-        static BlockChainNode* GetInstance();
-        static void Initialize(std::string addr, uint16_t port);
-        static void WaitForShutdown();
+        // static bool ShutdownServer();
+        // static bool ShutdownServerAndWait();
+        // static void Broadcast(Message* msg);
     };
 }
 

@@ -6,67 +6,118 @@
 
 #include "common.h"
 #include "block.h"
-#include "utxo.h"
+#include "unclaimed_transaction.h"
 
 namespace Token{
-    class BlockChainVisitor{
-    public:
-        BlockChainVisitor(){}
-        virtual ~BlockChainVisitor() = default;
+    class BlockChainVisitor;
+    class BlockChain : public IndexManagedPool{
+        //TODO:
+        // - improve load logic by loading all blocks into sorted vector?
+    private:
+        friend class BlockMiner;
 
-        virtual bool VisitStart() = 0;
-        virtual bool Visit(Block* block) = 0;
-        virtual bool VisitEnd() = 0;
+        class BlockNode{
+        private:
+            BlockNode* parent_;
+            Array<BlockNode*> children_;
+            BlockHeader header_;
+        public:
+            BlockNode(Block* block):
+                parent_(nullptr),
+                children_(10),
+                header_(block){}
+            ~BlockNode(){
+                if(!IsLeaf()){
+                    for(auto& it : children_) delete it;
+                }
+            }
+
+            BlockNode* GetParent() const{
+                return parent_;
+            }
+
+            BlockNode* GetChild(uint64_t idx) const{
+                if(idx > GetNumberOfChildren()) return nullptr;
+                return children_[idx];
+            }
+
+            uint64_t GetNumberOfChildren() const{
+                return children_.Length();
+            }
+
+            uint64_t GetTimestamp() const{
+                return header_.GetTimestamp();
+            }
+
+            uint64_t GetHeight() const{
+                return header_.GetHeight();
+            }
+
+            uint256_t GetPreviousHash() const{
+                return header_.GetPreviousHash();
+            }
+
+            uint256_t GetHash() const{
+                return header_.GetHash();
+            }
+
+            bool IsLeaf() const{
+                return GetNumberOfChildren() == 0;
+            }
+
+            void AddChild(BlockNode* child){
+                children_.Add(child);
+                child->SetParent(this);
+            }
+
+            void SetParent(BlockNode* node){
+                parent_ = node;
+            }
+        };
+
+        BlockNode* genesis_;
+        BlockNode* head_;
+        std::map<uint256_t, BlockNode*> nodes_; //TODO: possible memory leak?
+
+        static BlockChain* GetInstance();
+        uint256_t GetHeadFromIndex();
+        bool HasHeadInIndex();
+        bool SetHeadInIndex(const uint256_t& hash);
+        bool LoadBlock(const std::string& filename, Block* block);
+        bool SaveBlock(const std::string& filename, Block* block);
+        bool Append(Block* block);
+        BlockNode* GetHeadNode();
+        BlockNode* GetGenesisNode();
+        BlockNode* GetNode(const uint256_t& hash);
+
+        BlockChain();
+    public:
+        ~BlockChain(){}
+
+        static uint64_t GetHeight();
+        static uint256_t GetHead();
+        static uint256_t GetGenesis();
+        static bool Initialize();
+        static bool ContainsBlock(const uint256_t& hash);
+        static bool ContainsTransaction(const uint256_t& hash);
+        static bool Accept(BlockChainVisitor* vis);
+        static Block* GetBlock(const uint256_t& hash);
+        static Transaction* GetTransaction(const uint256_t& hash);
+        static MerkleTree* GetMerkleTree();
+
+        //TODO remove
+        static bool AppendBlock(Block* block){
+            return GetInstance()->Append(block);
+        }
     };
 
-    class BlockChain{
+    class BlockChainVisitor{
     public:
-        static const uintptr_t kBlockChainInitSize = 1024;
-    private:
-        std::string path_;
-        pthread_rwlock_t lock_;
-        leveldb::DB* state_;
-        std::vector<Block*> blocks_;
+        virtual ~BlockChainVisitor() = default;
 
-        static BlockChain* GetInstance(); //TODO: Revoke access
-
-        static inline leveldb::DB*
-        GetState(){
-            return GetInstance()->state_;
-        }
-
-        bool CreateGenesis(); //TODO: Remove
-
-        bool LoadBlockChain(const std::string& path);
-        bool InitializeChainState(const std::string& root);
-
-        bool GetReference(const std::string& ref, uint32_t* height); //TODO: Remove
-        bool SetReference(const std::string& ref, uint32_t height); //TODO: Remove
-
-        bool SaveBlock(Block* block);
-        bool LoadBlock(uint32_t height, Block* result);
-
-        static bool AppendBlock(Block* block);
-
-        BlockChain():
-            lock_(),
-            path_(),
-            state_(nullptr),
-            blocks_(){
-        }
-
-        friend class BlockMiner; // TODO: Remove
-    public:
-        static void Accept(BlockChainVisitor* vis);
-        static Block* GetHead();
-        static Block* GetGenesis();
-        static Block* GetBlock(const std::string& hash);
-        static Block* GetBlock(uint32_t height);
-        static uint32_t GetHeight();
-        static bool GetBlockList(std::vector<std::string>& blocks);
-        static bool HasHead();
-        static bool ContainsBlock(const std::string& hash);
-        static bool Initialize();
+        virtual bool VisitStart(){ return true; }
+        virtual bool VisitBlock(Block* block) = 0;
+        virtual bool VisitEnd(){ return true; };
     };
 }
 

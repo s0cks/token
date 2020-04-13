@@ -1,115 +1,66 @@
-#include "service/service.h"
 #include <glog/logging.h>
+#include "service/service.h"
+#include "block_chain.h"
 
 namespace Token{
-    grpc::Status BlockChainService::GetHead(grpc::ServerContext *ctx,
-                                            const Token::Messages::EmptyRequest *request,
-                                            Token::Messages::BlockHeader *response){
-        LOG(INFO) << "getting head";
+    static inline void
+    SetBlockHeader(::BlockHeader* header, Block* block){
+        header->set_timestamp(block->GetTimestamp());
+        header->set_height(block->GetHeight());
+        header->set_previous_hash(HexString(block->GetPreviousHash()));
+        header->set_merkle_root(HexString(block->GetMerkleRoot()));
+        header->set_hash(HexString(block->GetHash()));
+        header->set_num_transactions(block->GetNumberOfTransactions());
+    }
+
+    grpc::Status BlockChainService::GetHead(grpc::ServerContext *ctx, const ::EmptyRequest *request, ::BlockHeader *response) {
         Block* head;
-        if(!(head = BlockChain::GetHead())){
-            LOG(ERROR) << "couldn't get BlockChain <HEAD>";
+        if(!(head = BlockChain::GetBlock(BlockChain::GetHead()))){
+            LOG(WARNING) << "couldn't get block chain <HEAD>";
             return grpc::Status::CANCELLED;
         }
-        SetBlockHeader(head, response);
+        LOG(INFO) << "getting <HEAD>";
+        SetBlockHeader(response, head);
         return grpc::Status::OK;
     }
 
-    grpc::Status BlockChainService::GetBlock(grpc::ServerContext *ctx,
-                                             const Token::Messages::Service::GetBlockRequest* request,
-                                             Token::Messages::BlockHeader *response){
-        if(!request->hash().empty()){
-            LOG(INFO) << "getting block: " << request->hash();
-            Block* block = BlockChain::GetBlock(request->hash());
-            if(block){
-                SetBlockHeader(block, response);
-                return grpc::Status::OK;
-            }
-        } else{
-            LOG(INFO) << "getting block @" << request->index();
-            Block* block = BlockChain::GetBlock(request->index());
-            if(block){
-                SetBlockHeader(block, response);
-                return grpc::Status::OK;
-            }
-        }
-        return grpc::Status::CANCELLED;
-    }
-
-    grpc::Status BlockChainService::GetBlockData(grpc::ServerContext *ctx,
-                                                 const Token::Messages::Service::GetBlockRequest *request,
-                                                 Token::Messages::Block *response){
-        if(!request->hash().empty()){
-            Block* block = BlockChain::GetBlock(request->hash());
-            if(block){
-                //TODO Messages::Block* resp = block->GetAsMessage();
-                // response->CopyFrom(*resp);
-                // delete resp;
-                return grpc::Status::OK;
-            }
-        } else{
-            Block* block = BlockChain::GetBlock(request->index());
-            if(block){
-                //TODO Messages::Block* resp = block->GetAsMessage();
-                // response->CopyFrom(*resp);
-                // delete resp;
-                return grpc::Status::OK;
-            }
-        }
-        return grpc::Status::CANCELLED;
-    }
-
-    grpc::Status BlockChainService::GetUnclaimedTransactions(grpc::ServerContext *ctx,
-                                                             const Token::Messages::Service::GetUnclaimedTransactionsRequest *request,
-                                                             Token::Messages::UnclaimedTransactionList *response){
-        if(request->user().empty()){
-            return UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransactions(response) ?
-                   grpc::Status::OK :
-                   grpc::Status::CANCELLED;
-        } else{
-            return UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransactions(request->user(), response) ?
-                   grpc::Status::OK :
-                   grpc::Status::CANCELLED;
-        }
-    }
-
-    grpc::Status BlockChainService::Spend(grpc::ServerContext *ctx,
-                                          const Token::Messages::Service::SpendTokenRequest *request,
-                                          Token::Messages::Transaction* response){
-        LOG(INFO) << "spending " << request->token() << " to " << request->user();
-        UnclaimedTransaction utxo;
-        if(!UnclaimedTransactionPool::GetInstance()->GetUnclaimedTransaction(request->token(), &utxo)){
-            LOG(ERROR) << "cannot get unclaimed transaction: " << request->token();
+    grpc::Status BlockChainService::GetBlock(grpc::ServerContext *ctx, const ::GetBlockRequest *request, ::BlockHeader *response){
+        if(request->hash().empty()){
+            LOG(WARNING) << "requested block hash is empty";
+            return grpc::Status::CANCELLED;
+        } else if(request->hash().length() != 64){
+            LOG(WARNING) << "requested block hash " << request->hash() << " is invalid";
             return grpc::Status::CANCELLED;
         }
-
-
-        LOG(INFO) << request->owner()<< " sent " << request->user() << " token: " << request->token();
-        LOG(INFO) << "creating transaction...";
-
-        Messages::Transaction raw;
-        Messages::Input* in = raw.add_inputs();
-        in->set_previous_hash(utxo.GetTransactionHash());
-        in->set_index(utxo.GetIndex());
-
-        Messages::Output* out = raw.add_outputs();
-        out->set_token(utxo.GetToken());
-        out->set_user(request->user());
-
-        Transaction* tx = nullptr; //TODO: new Transaction(raw);
-        TransactionSigner signer(tx);
-        if(!signer.Sign()){
-            LOG(ERROR) << "didn't sign transaction";
+        Block* result;
+        if(!(result = BlockChain::GetBlock(HashFromHexString(request->hash())))){
+            LOG(WARNING) << "couldn't find block: " << request->hash();
             return grpc::Status::CANCELLED;
         }
-        if(!TransactionPool::AddTransaction(tx)) {
-            LOG(ERROR) << "cannot add transaction to transaction pool";
-            return grpc::Status::CANCELLED;
-        }
-        //TODO tx->Encode(response);
-        delete tx;
-        LOG(INFO) << "spent!";
+        SetBlockHeader(response, result);
+        delete result;
         return grpc::Status::OK;
+    }
+
+    grpc::Status BlockChainService::GetUnclaimedTransactions(grpc::ServerContext *ctx, const Proto::BlockChainService::GetUnclaimedTransactionsRequest* request, Proto::BlockChainService::UnclaimedTransactionList* response){
+        if(request->user_id().empty()){
+            // get all unclaimed transactions
+            LOG(INFO) << "getting all unclaimed transactions";
+            //return UnclaimedTransactionPool::GetUnclaimedTransactions(response) ?
+            // grpc::Status::OK :
+            // grpc::Status::CANCELLED;
+        }
+        // get all unclaimed transactions for user_id
+        LOG(INFO) << "getting all unclaimed transactions for: " << request->user_id();
+        //return UnclaimedTransactionPool::GetUnclaimedTransactions(request->user_id(), response) ?
+        //    grpc::Status::OK :
+        //    grpc::Status::CANCELLED;
+        return grpc::Status::CANCELLED;
+    }
+
+    grpc::Status BlockChainService::Spend(grpc::ServerContext *ctx, ::UnclaimedTransaction *request, ::EmptyResponse *response){
+        LOG(WARNING) << "Spend() not implemented!";
+        return grpc::Status::CANCELLED;
     }
 
     BlockChainService* BlockChainService::GetInstance(){

@@ -1,7 +1,8 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
-
-#include "transaction.h"
+#include <pool.h>
+#include "keychain.h"
+#include "block_chain.h"
 
 static inline bool
 InitializeLogging(char* arg0){
@@ -12,63 +13,36 @@ InitializeLogging(char* arg0){
 
 int
 main(int argc, char** argv){
+    using namespace Token;
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
     if(!InitializeLogging(argv[0])){
         std::cerr << "couldn't initialize logging";
         return EXIT_FAILURE;
     }
 
-    Token::Output out1("TestUser", "TestToken1");
-    Token::Output out2("TestUser", "TestToken1");
-    Token::Output out3("TestUser", "TestToken2");
-
-    LOG(INFO) << "Output #1 Hash: " << out1.GetHash();
-    LOG(INFO) << "Output #2 Hash: " << out2.GetHash();
-    LOG(INFO) << "Output #3 Hash: " << out3.GetHash();
-
-    if(out1 != out2){
-        LOG(ERROR) << "outputs are not equal";
+    if(!TokenKeychain::InitializeKeys()){
+        LOG(ERROR) << "couldn't initialize keychain";
         return EXIT_FAILURE;
     }
 
-    if(out1 == out3){
-        LOG(ERROR) << "outputs have invalid hash";
+    if(!TransactionPool::Initialize()){
+        LOG(ERROR) << "couldn't initialize transaction pool";
         return EXIT_FAILURE;
     }
 
-
-    Token::Transaction tx1(0);
-    for(size_t idx = 0; idx < 128; idx++){
-        std::stringstream token;
-        token << "TestToken" << idx;
-        tx1 << Token::Output("TestUser", token.str());
-    }
-
-    Token::Transaction tx2(1);
-    for(size_t idx = 0; idx < 128; idx++){
-        std::stringstream token;
-        token << "TestToken" << idx;
-        tx2 << Token::Output("TestUser", token.str());
-    }
-
-    Token::Transaction tx3(0);
-    for(size_t idx = 0; idx < 128; idx++){
-        std::stringstream token;
-        token << "TestToken" << idx;
-        tx3 << Token::Output("TestUser", token.str());
-    }
-
-    LOG(INFO) << "Transaction #1 Hash: " << tx1.GetHash();
-    LOG(INFO) << "Transaction #2 Hash: " << tx2.GetHash();
-    LOG(INFO) << "Transaction #3 Hash: " << tx3.GetHash();
-
-    if(tx1 == tx2){
-        LOG(ERROR) << "transactions have invalid hash";
+    Token::Transaction* tx1 = new Token::Transaction();
+    if(!TransactionPool::PutTransaction(tx1)){
+        LOG(ERROR) << "couldn't put transaction into transaction pool";
         return EXIT_FAILURE;
     }
 
-    if(tx1 != tx3){
-        LOG(ERROR) << "transactions have invalid hash";
+    Token::Transaction* tx2;
+    if(!(tx2 = TransactionPool::GetTransaction(tx1->GetHash()))){
+        LOG(ERROR) << "couldn't retrieve transaction from transaction pool";
         return EXIT_FAILURE;
     }
+
+    LOG(INFO) << "Tx1 Hash := " << tx1->GetHash();
+    LOG(INFO) << "Tx2 Hash := " << tx2->GetHash();
     return EXIT_SUCCESS;
 }
