@@ -20,11 +20,6 @@ main(int argc, char** argv){
         return EXIT_FAILURE;
     }
 
-    if(!TokenKeychain::InitializeKeys()){
-        LOG(ERROR) << "couldn't initialize keychain";
-        return EXIT_FAILURE;
-    }
-
     if(!TransactionPool::Initialize()){
         LOG(ERROR) << "couldn't initialize transaction pool";
         return EXIT_FAILURE;

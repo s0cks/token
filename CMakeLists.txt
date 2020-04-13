@@ -69,6 +69,7 @@ target_link_libraries(
         "${PROJECT_NAME}-client"
         "${PROJECT_NAME}-ledger" ${CMAKE_THREAD_LIBS_INIT} ${CRYPTO++_LIBRARIES} ${Protobuf_LIBRARIES} ${GRPC_GRPC++_LIBRARY} ${GRPC_GRPC++_REFLECTION_LIBRARY} gflags
 )
+
 #=================================================
 #       Token Ledger Unit Tests Exe
 #=================================================
