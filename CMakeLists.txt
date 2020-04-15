@@ -17,9 +17,9 @@ find_package(GTest REQUIRED)
 find_package(Libuv REQUIRED)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
-include_directories(${SQLite3_INCLUDE_DIRS})
 include_directories(${CRYPTO++_INCLUDE_DIR})
 include_directories(${LIBUV_INCLUDE_DIRS})
+include_directories(${HTTPPARSER_INCLUDE_DIR})
 include_directories(include)
 include_directories(src)
 
@@ -42,7 +42,7 @@ add_library(
 )
 target_link_libraries(
         "${PROJECT_NAME}-ledger"
-        ${SQLite3_LIBRARIES} ${Protobuf_LIBRARIES} glog::glog ${LevelDB_LIBRARY} ${LIBUV_LIBRARIES}
+        ${HTTPPARSER_LIBRARIES} ${Protobuf_LIBRARIES} glog::glog ${LevelDB_LIBRARY} ${LIBUV_LIBRARIES}
 )
 
 #=================================================

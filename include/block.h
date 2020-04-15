@@ -5,7 +5,8 @@
 #include <sstream>
 #include <vector>
 #include <map>
-#include <service.pb.h>
+#include "blockchain.pb.h"
+#include "service.pb.h" //TODO: remove
 #include "common.h"
 #include "merkle.h"
 #include "transaction.h"

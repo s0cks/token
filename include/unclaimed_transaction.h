@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 #include <leveldb/db.h>
+#include "blockchain.pb.h"
 #include "pool.h"
 #include "transaction.h"
 #include "service/service.h"

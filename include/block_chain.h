@@ -3,7 +3,7 @@
 
 #include <leveldb/db.h>
 #include <map>
-
+#include "blockchain.pb.h"
 #include "common.h"
 #include "block.h"
 #include "unclaimed_transaction.h"

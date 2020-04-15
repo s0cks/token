@@ -2,6 +2,7 @@
 #define TOKEN_TRANSACTION_H
 
 #include <glog/logging.h>
+#include "blockchain.pb.h"
 #include "common.h"
 #include "pool.h"
 #include "binary_object.h"
