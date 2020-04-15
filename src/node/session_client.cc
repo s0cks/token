@@ -86,11 +86,12 @@ namespace Token {
             LOG(ERROR) << "session isn't handshaking";
             return;
         }
-        Block* head = BlockChain::GetBlock(BlockChain::GetHead());
-        if(head->GetHeight() < verack->GetMaxBlock()){
+
+        BlockHeader head = BlockChain::GetHead();
+        if(head.GetHeight() < verack->GetMaxBlock()){
             LOG(INFO) << "synchronizing " << verack->GetMaxBlock() << " blocks....";
             session->SetState(SessionState::kSynchronizing);
-            session->SendGetBlocks(HexString(head->GetHash()), "");
+            session->SendGetBlocks(HexString(head.GetHash()), "");
             return;
         }
 

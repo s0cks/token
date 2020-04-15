@@ -16,42 +16,47 @@ namespace Token{
     }
 
     MerkleNode* MerkleTree::BuildMerkleTree(std::vector<uint256_t>& leaves){
-        Array<MerkleNode*> nodes(leaves.size());
+        std::vector<MerkleNode*> nodes;
         for(auto& it : leaves){
             MerkleNode* node = new MerkleNode(it);
-            nodes_.Add(node);
-            leaves_.Add(node);
-            nodes.Add(node);
+            leaves_.push_back(node);
+            nodes_.insert(std::make_pair(it, node));
+            nodes.push_back(node);
         }
         size_t height = std::ceil(log2(leaves.size())) + 1;
         return BuildMerkleTree(height, nodes);
     }
 
-    MerkleNode* MerkleTree::BuildMerkleTree(size_t height, Array<MerkleNode*>& nodes){
-        if(height == 1 && !nodes.IsEmpty()){
-            return nodes.Pop();
+    MerkleNode* MerkleTree::BuildMerkleTree(size_t height, std::vector<MerkleNode*>& nodes){
+        if(height == 1 && !nodes.empty()){
+            MerkleNode* node = nodes.back();
+            nodes.pop_back();
+            uint256_t hash = node->GetHash();
+            nodes_.insert(std::make_pair(hash, node));
+            return node;
         } else if(height > 1){
             MerkleNode* lchild = BuildMerkleTree(height - 1, nodes);
             MerkleNode* rchild;
-            if(nodes.IsEmpty()){
+            if(nodes.empty()){
                 rchild = new MerkleNode((*lchild));
             } else{
                 rchild = BuildMerkleTree(height - 1, nodes);
             }
 
-            MerkleNode* node = new MerkleNode(ConcatHashes(lchild->GetHash(), rchild->GetHash()));
+            uint256_t hash = ConcatHashes(lchild->GetHash(), rchild->GetHash());
+            MerkleNode* node = new MerkleNode(hash);
             node->SetLeft(lchild);
             node->SetRight(rchild);
-            nodes_.Add(node);
+            nodes_.insert(std::make_pair(hash, node));
             return node;
         }
         return nullptr;
     }
 
     MerkleTree::MerkleTree(std::vector<uint256_t>& leaves):
-        leaves_(),
+        root_(nullptr),
         nodes_(),
-        root_(nullptr){
+        leaves_(){
         root_ = BuildMerkleTree(leaves);
     }
 
@@ -79,15 +84,19 @@ namespace Token{
         }
     }
 
-    MerkleNode* MerkleTree::FindLeafNode(const uint256_t& hash){
-        for(size_t idx = 0; idx < leaves_.Length(); idx++){
-            if(leaves_[idx]->GetHash() == hash) return leaves_[idx];
-        }
+    MerkleNode* MerkleTree::GetNode(const uint256_t& hash) const{
+        auto pos = nodes_.find(hash);
+        if(pos == nodes_.end()) return nullptr;
+        return pos->second;
+    }
+
+    MerkleNode* MerkleTree::GetLeafNode(const uint256_t& hash) const{
+        for(auto& it : leaves_) if(it->GetHash() == hash) return it;
         return nullptr;
     }
 
     bool MerkleTree::BuildAuditProof(const uint256_t& hash, std::vector<MerkleProofHash>& trail){
-        MerkleNode* leaf = FindLeafNode(hash);
+        MerkleNode* leaf = GetLeafNode(hash);
         if(!leaf) return false;
         MerkleNode* parent = leaf->GetParent();
         BuildAuditTrail(trail, parent, leaf);
@@ -105,10 +114,62 @@ namespace Token{
     }
 
     bool MerkleTree::BuildConsistencyProof(uint64_t m, std::vector<MerkleProofHash>& trail){
-        return false; //TODO: Implement
+        uint64_t idx = log2l(m);
+
+        MerkleNode* node = leaves_[0];
+        while(idx > 0){
+            node = node->GetParent();
+            idx--;
+        }
+
+        int k = node->GetLeaves();
+        LOG(INFO) << "node leaves: " << k;
+        if(m != k){
+            MerkleNode* sn = node->GetParent()->GetRight();
+            while(true){
+                int sncount = sn->GetLeaves();
+                LOG(INFO) << "sibling node leaves: " << sncount;
+                if(m - k == sncount){
+                    LOG(INFO) << "adding: " << sn->GetHash();
+                    trail.push_back(MerkleProofHash(MerkleProofHash::Direction::kRoot, sn->GetHash()));
+                    break;
+                }
+
+                if(m - k > sncount){
+                    LOG(INFO) << "adding: " << sn->GetHash();
+                    trail.push_back(MerkleProofHash(MerkleProofHash::Direction::kRoot, sn->GetHash()));
+                    sn = sn->GetParent()->GetRight();
+                    k += sncount;
+                } else{
+                    sn = sn->GetLeft();
+                }
+            }
+        }
+        return true;
+    }
+
+    bool MerkleTree::BuildConsistencyAuditProof(const uint256_t& hash, std::vector<MerkleProofHash>& trail){
+        MerkleNode* node = GetNode(hash);
+        MerkleNode* parent = node->GetParent();
+        BuildAuditTrail(trail, parent, node);
+        return true;
     }
 
     bool MerkleTree::VerifyConsistencyProof(const uint256_t& root, std::vector<MerkleProofHash>& proof){
-        return false; //TODO: Implement
+        uint256_t hash, lhash, rhash;
+        if(proof.size() > 1){
+            lhash = proof[proof.size() - 2].GetHash();
+            int hidx = proof.size() - 1;
+            hash = rhash = ConcatHashes(lhash, proof[hidx].GetHash());
+            hidx -= 2;
+            while(hidx >= 0){
+                lhash = proof[hidx].GetHash();
+                hash = rhash = ConcatHashes(lhash, rhash);
+                hidx--;
+            }
+        } else{
+            hash = proof[0].GetHash();
+        }
+        return hash == root;
     }
 }

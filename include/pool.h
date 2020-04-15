@@ -6,7 +6,6 @@
 #include "uint256_t.h"
 
 namespace Token{
-    //TODO: leverage leveldb::Comparator for faster lookup+indexes?
     class IndexManagedPool{
     private:
         std::string path_;

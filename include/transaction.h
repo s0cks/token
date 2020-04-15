@@ -10,24 +10,25 @@
 namespace Token{
     class Block;
     class Transaction;
+    class UnclaimedTransaction;
     class Output;
 
     class Input : public BinaryObject{
     private:
         Transaction* transaction_;
-        Output* output_;
+        UnclaimedTransaction* utxo_;
 
         friend class Transaction;
     protected:
         bool GetBytes(CryptoPP::SecByteBlock& bytes) const;
     public:
-        Input(): transaction_(nullptr), output_(nullptr){}
+        Input(): transaction_(nullptr), utxo_(nullptr){}
         Input(const Input& other):
                 transaction_(other.transaction_),
-                output_(other.output_){}
-        Input(Transaction* tx, Output* output):
+                utxo_(other.utxo_){}
+        Input(Transaction* tx, UnclaimedTransaction* utxo):
             transaction_(tx),
-            output_(output){}
+            utxo_(utxo){}
         Input(Transaction* tx, const Proto::BlockChain::Input& raw){}
         ~Input(){}
 
@@ -35,16 +36,12 @@ namespace Token{
             return transaction_;
         }
 
-        Output* GetOutput() const{
-            return output_;
-        }
-
-        uint32_t GetOutputIndex() const;
-        std::string GetTransactionHash() const;
+        uint64_t GetOutputIndex() const;
+        uint256_t GetTransactionHash() const;
 
         Input& operator=(const Input& other){
             transaction_ = other.transaction_;
-            output_ = other.output_;
+            utxo_ = other.utxo_;
             return (*this);
         }
 
@@ -57,7 +54,7 @@ namespace Token{
         }
 
         friend Proto::BlockChain::Input& operator<<(Proto::BlockChain::Input& stream, const Input& input){
-            stream.set_previous_hash(input.GetTransactionHash());
+            stream.set_previous_hash(HexString(input.GetTransactionHash()));
             stream.set_index(input.GetOutputIndex());
             return stream;
         }
@@ -171,20 +168,16 @@ namespace Token{
             outputs_(other.outputs_){}
         ~Transaction(){}
 
-        void AddInput(Output* output){
-            inputs_.push_back(Input(this, output));
+        bool GetInput(uint64_t idx, Input* result) const{
+            if(idx < 0 || idx > inputs_.size()) return false;
+            (*result) = inputs_[idx];
+            return true;
         }
 
-        void AddOutput(const std::string& user, const std::string& token){
-            outputs_.push_back(Output(this, user, token));
-        }
-
-        Input* GetInput(uint32_t index){
-            return new Input(inputs_[index]);
-        }
-
-        Output* GetOutput(uint32_t index){
-            return new Output(outputs_[index]);
+        bool GetOutput(uint64_t idx, Output* result) const{
+            if(idx < 0 || idx > outputs_.size()) return false;
+            (*result) = outputs_[idx];
+            return true;
         }
 
         size_t GetNumberOfInputs() const{
@@ -268,10 +261,10 @@ namespace Token{
 
         virtual bool VisitStart(){ return true; }
         virtual bool VisitInputsStart(){ return true; }
-        virtual bool VisitInput(Input* input) = 0;
+        virtual bool VisitInput(const Input& input) = 0;
         virtual bool VisitInputsEnd(){ return true; }
         virtual bool VisitOutputsStart(){ return true; }
-        virtual bool VisitOutput(Output* out) = 0;
+        virtual bool VisitOutput(const Output& output) = 0;
         virtual bool VisitOutputsEnd(){ return true; }
         virtual bool VisitEnd(){ return true; }
     };

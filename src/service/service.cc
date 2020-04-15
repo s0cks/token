@@ -3,24 +3,8 @@
 #include "block_chain.h"
 
 namespace Token{
-    static inline void
-    SetBlockHeader(::BlockHeader* header, Block* block){
-        header->set_timestamp(block->GetTimestamp());
-        header->set_height(block->GetHeight());
-        header->set_previous_hash(HexString(block->GetPreviousHash()));
-        header->set_merkle_root(HexString(block->GetMerkleRoot()));
-        header->set_hash(HexString(block->GetHash()));
-        header->set_num_transactions(block->GetNumberOfTransactions());
-    }
-
     grpc::Status BlockChainService::GetHead(grpc::ServerContext *ctx, const ::EmptyRequest *request, ::BlockHeader *response) {
-        Block* head;
-        if(!(head = BlockChain::GetBlock(BlockChain::GetHead()))){
-            LOG(WARNING) << "couldn't get block chain <HEAD>";
-            return grpc::Status::CANCELLED;
-        }
-        LOG(INFO) << "getting <HEAD>";
-        SetBlockHeader(response, head);
+        (*response) << BlockChain::GetHead();
         return grpc::Status::OK;
     }
 
@@ -32,30 +16,35 @@ namespace Token{
             LOG(WARNING) << "requested block hash " << request->hash() << " is invalid";
             return grpc::Status::CANCELLED;
         }
-        Block* result;
-        if(!(result = BlockChain::GetBlock(HashFromHexString(request->hash())))){
-            LOG(WARNING) << "couldn't find block: " << request->hash();
+
+        uint256_t hash = HashFromHexString(request->hash());
+        if(!BlockChain::ContainsBlock(hash)){
+            LOG(WARNING) << "couldn't find requested block: " << hash;
             return grpc::Status::CANCELLED;
         }
-        SetBlockHeader(response, result);
-        delete result;
+        (*response) << BlockChain::GetBlock(hash);
         return grpc::Status::OK;
     }
 
     grpc::Status BlockChainService::GetUnclaimedTransactions(grpc::ServerContext *ctx, const Proto::BlockChainService::GetUnclaimedTransactionsRequest* request, Proto::BlockChainService::UnclaimedTransactionList* response){
-        if(request->user_id().empty()){
+        std::string user = request->user_id();
+
+        std::vector<uint256_t> utxos;
+        if(user.empty()){
             // get all unclaimed transactions
-            LOG(INFO) << "getting all unclaimed transactions";
-            //return UnclaimedTransactionPool::GetUnclaimedTransactions(response) ?
-            // grpc::Status::OK :
-            // grpc::Status::CANCELLED;
+            if(!UnclaimedTransactionPool::GetUnclaimedTransactions(utxos)){
+                LOG(WARNING) << "couldn't get all unclaimed transactions";
+                return grpc::Status::CANCELLED;
+            }
+        } else{
+            // get all unclaimed transactions for user_id
+            if(!UnclaimedTransactionPool::GetUnclaimedTransactions(user, utxos)){
+                LOG(WARNING) << "couldn't get all unclaimed transactions for: " << user;
+                return grpc::Status::CANCELLED;
+            }
         }
-        // get all unclaimed transactions for user_id
-        LOG(INFO) << "getting all unclaimed transactions for: " << request->user_id();
-        //return UnclaimedTransactionPool::GetUnclaimedTransactions(request->user_id(), response) ?
-        //    grpc::Status::OK :
-        //    grpc::Status::CANCELLED;
-        return grpc::Status::CANCELLED;
+        for(auto& it : utxos) response->add_utxos(HexString(it));
+        return grpc::Status::OK;
     }
 
     grpc::Status BlockChainService::Spend(grpc::ServerContext *ctx, ::UnclaimedTransaction *request, ::EmptyResponse *response){

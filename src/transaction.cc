@@ -6,12 +6,12 @@
 #include "transaction.h"
 
 namespace Token{
-    uint32_t Input::GetOutputIndex() const{
-        return GetOutput()->GetIndex();
+    uint64_t Input::GetOutputIndex() const{
+        return utxo_->GetIndex();
     }
 
-    std::string Input::GetTransactionHash() const{
-        return HexString(GetTransaction()->GetHash());
+    uint256_t Input::GetTransactionHash() const{
+        return utxo_->GetTransaction();
     }
 
     bool Input::GetBytes(CryptoPP::SecByteBlock& bytes) const{
@@ -37,31 +37,26 @@ namespace Token{
 
     bool Transaction::Accept(Token::TransactionVisitor* vis){
         if(!vis->VisitStart()) return false;
-
-        int idx;
-        vis->VisitInputsStart();
-        for(idx = 0; idx < GetNumberOfInputs(); idx++){
-            Input* input;
-            if(!(input = GetInput(idx))) return false;
-            if(!vis->VisitInput(input)){
-                delete input;
-                return false;
+        // visit the inputs
+        {
+            if(!vis->VisitInputsStart()) return false;
+            for(uint64_t idx = 0; idx < GetNumberOfInputs(); idx++){
+                Input input;
+                if(!GetInput(idx, &input)) return false;
+                if(!vis->VisitInput(input)) return false;
             }
-            delete input;
+            if(!vis->VisitInputsEnd()) return false;
         }
-        vis->VisitInputsEnd();
-
-        vis->VisitOutputsStart();
-        for(idx = 0; idx < GetNumberOfOutputs(); idx++){
-            Output* output;
-            if(!(output = GetOutput(idx))) return false;
-            if(!vis->VisitOutput(output)){
-                delete output;
-                return false;
+        // visit the outputs
+        {
+            if(!vis->VisitOutputsStart()) return false;
+            for(uint64_t idx = 0; idx < GetNumberOfOutputs(); idx++){
+                Output output;
+                if(!GetOutput(idx, &output)) return false;
+                if(!vis->VisitOutput(output)) return false;
             }
-            delete output;
+            if(!vis->VisitOutputsEnd()) return false;
         }
-        vis->VisitOutputsEnd();
         return vis->VisitEnd();
     }
 

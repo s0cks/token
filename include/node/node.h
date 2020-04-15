@@ -9,6 +9,7 @@
 #include "session.h"
 
 namespace Token{
+    //TODO: establish timer for ping
     class BlockChainServer{
     private:
         pthread_t thread_;

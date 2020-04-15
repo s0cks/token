@@ -11,40 +11,49 @@
 namespace Token{
     class UnclaimedTransaction : public BinaryObject{
     private:
-        Output* output_;
+        uint256_t tx_hash_;
+        uint64_t tx_index_;
+        std::string user_;
+        std::string token_;
     protected:
         bool GetBytes(CryptoPP::SecByteBlock& bytes) const;
     public:
         UnclaimedTransaction():
-            output_(nullptr){}
+            tx_hash_(),
+            tx_index_(0),
+            user_(),
+            token_(){}
+        UnclaimedTransaction(const uint256_t& tx_hash, uint64_t idx, std::string user, std::string token):
+            tx_hash_(tx_hash),
+            tx_index_(idx),
+            user_(user),
+            token_(token){}
         UnclaimedTransaction(Output* output):
-            output_(output){}
+            tx_hash_(output->GetTransaction()->GetHash()),
+            tx_index_(output->GetIndex()),
+            user_(),
+            token_(){}
         UnclaimedTransaction(const Proto::BlockChain::UnclaimedTransaction& raw):
-            output_(nullptr){}
+            tx_hash_(HashFromHexString(raw.tx_hash())),
+            tx_index_(raw.tx_index()),
+            user_(raw.user()),
+            token_(raw.token()){}
         ~UnclaimedTransaction(){}
 
-        Output* GetOutput() const{
-            return output_;
+        uint256_t GetTransaction() const{
+            return tx_hash_;
         }
 
-        Transaction* GetTransaction() const{
-            return GetOutput()->GetTransaction();
-        }
-
-        std::string GetTransactionHash() const{
-            return HexString(GetTransaction()->GetHash());
+        uint64_t GetIndex() const{
+            return tx_index_;
         }
 
         std::string GetUser() const{
-            return GetOutput()->GetUser();
+            return user_;
         }
 
         std::string GetToken() const{
-            return GetOutput()->GetToken();
-        }
-
-        uint32_t GetIndex() const{
-            return GetOutput()->GetIndex();
+            return token_;
         }
 
         friend bool operator==(const UnclaimedTransaction& lhs, const UnclaimedTransaction& rhs){
@@ -56,7 +65,7 @@ namespace Token{
         }
 
         friend Proto::BlockChain::UnclaimedTransaction& operator<<(Proto::BlockChain::UnclaimedTransaction& stream, const UnclaimedTransaction& utxo){
-            stream.set_tx_hash(utxo.GetTransactionHash());
+            stream.set_tx_hash(HexString(utxo.GetTransaction()));
             stream.set_tx_index(utxo.GetIndex());
             stream.set_user(utxo.GetUser());
             stream.set_token(utxo.GetToken());
@@ -64,7 +73,10 @@ namespace Token{
         }
 
         UnclaimedTransaction& operator=(const UnclaimedTransaction& other){
-            output_ = other.output_;
+            tx_hash_ = other.tx_hash_;
+            tx_index_ = other.tx_index_;
+            user_ = other.user_;
+            token_ = other.token_;
             return (*this);
         }
     };
@@ -84,6 +96,8 @@ namespace Token{
         static bool Initialize();
         static bool PutUnclaimedTransaction(UnclaimedTransaction* utxo);
         static bool HasUnclaimedTransaction(const uint256_t& hash);
+        static bool GetUnclaimedTransactions(std::vector<uint256_t>& utxos);
+        static bool GetUnclaimedTransactions(std::string& user, std::vector<uint256_t>& utxos);
     };
 }
 

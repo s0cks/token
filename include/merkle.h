@@ -3,7 +3,6 @@
 
 #include <vector>
 #include "common.h"
-#include "array.h"
 #include "binary_object.h"
 
 namespace Token{
@@ -45,8 +44,8 @@ namespace Token{
             if(right_)right_->SetParent(this);
         }
         ~MerkleNode(){
-            if(HasLeft()) delete left_;
-            if(HasRight()) delete right_;
+            if(left_) delete left_;
+            if(right_) delete right_;
         }
 
         MerkleNode* GetParent() const{
@@ -101,16 +100,9 @@ namespace Token{
 
         bool VerifyHash() const;
 
-        bool GetLeaves(std::vector<uint256_t>& leaves){
-            if(IsLeaf()){
-                leaves.push_back(GetHash());
-                return true;
-            }
-
-            bool result = false;
-            if(HasLeft()) result |= GetLeft()->GetLeaves(leaves);
-            if(HasRight()) result |= GetRight()->GetLeaves(leaves);
-            return result;
+        uint64_t GetLeaves() const{
+            if(IsLeaf()) return 1;
+            return GetLeft()->GetLeaves() + GetRight()->GetLeaves();
         }
 
         MerkleNode& operator=(MerkleNode& other){
@@ -182,12 +174,16 @@ namespace Token{
     class MerkleTree{
     private:
         MerkleNode* root_;
-        Array<MerkleNode*> leaves_;
-        Array<MerkleNode*> nodes_;
+        std::vector<MerkleNode*> leaves_;
+        std::map<uint256_t, MerkleNode*> nodes_;
 
-        MerkleNode* BuildMerkleTree(size_t height, Array<MerkleNode*>& nodes);
+        MerkleNode* BuildMerkleTree(size_t height, std::vector<MerkleNode*>& nodes);
         MerkleNode* BuildMerkleTree(std::vector<uint256_t>& leaves);
     public:
+        MerkleTree():
+            root_(nullptr),
+            leaves_(),
+            nodes_(){}
         MerkleTree(std::vector<uint256_t>& leaves);
         MerkleTree(const MerkleTree& other):
             root_(other.root_),
@@ -196,25 +192,29 @@ namespace Token{
         ~MerkleTree(){}
 
         void Clear(){
-            nodes_.Clear();
-            leaves_.Clear();
-            //TODO: free? delete root_;
+            if(!HasMerkleRoot()) return;
+            root_ = nullptr;
+            nodes_.clear();
+            leaves_.clear();
+        }
+
+        bool IsEmpty() const{
+            return !HasMerkleRoot();
         }
 
         MerkleNode* GetMerkleRoot() const {
             return root_;
         }
 
-        MerkleNode* FindLeafNode(const uint256_t& hash);
+        MerkleNode* GetNode(const uint256_t& hash) const;
+        MerkleNode* GetLeafNode(const uint256_t& hash) const;
         bool Append(const MerkleTree& tree);
 
         bool BuildAuditProof(const uint256_t& hash, std::vector<MerkleProofHash>& trail);
         bool VerifyAuditProof(const uint256_t& root, const uint256_t& leaf, std::vector<MerkleProofHash>& trail);
 
         bool BuildConsistencyProof(uint64_t num_nodes, std::vector<MerkleProofHash>& trail);
-        bool BuildConsistencyProof(std::vector<MerkleProofHash>& trail){
-            return BuildConsistencyProof(nodes_.Length(), trail);
-        }
+        bool BuildConsistencyAuditProof(const uint256_t& hash, std::vector<MerkleProofHash>& trail);
         bool VerifyConsistencyProof(const uint256_t& root, std::vector<MerkleProofHash>& trail);
 
         bool HasMerkleRoot() const{
@@ -222,7 +222,7 @@ namespace Token{
         }
 
         bool GetLeaves(std::vector<uint256_t>& leaves) const{
-            if(leaves_.IsEmpty()) return false;
+            if(leaves_.empty()) return false;
             for(auto& it : leaves_) leaves.push_back(it->GetHash());
             return leaves.size() > 0;
         }
@@ -231,6 +231,43 @@ namespace Token{
             if(!HasMerkleRoot()) return uint256_t();
             return GetMerkleRoot()->GetHash();
         }
+    };
+
+    class MerkleTreeBuilder{
+    protected:
+        std::vector<uint256_t> leaves_;
+        MerkleTree tree_;
+
+        bool CreateTree(){
+            if(leaves_.size() == 1) leaves_.push_back(leaves_.front());
+            tree_ = MerkleTree(leaves_);
+            return HasTree();
+        }
+
+        bool AddLeaf(const uint256_t& hash){
+            leaves_.push_back(hash);
+            return true; //maybe check if value is in vector?
+        }
+
+        MerkleTreeBuilder():
+            leaves_(),
+            tree_(){}
+    public:
+        virtual ~MerkleTreeBuilder() = default;
+
+        MerkleTree* GetTree(){
+            return &tree_;
+        }
+
+        MerkleTree* GetTreeCopy(){
+            return new MerkleTree(tree_);
+        }
+
+        bool HasTree(){
+            return tree_.HasMerkleRoot();
+        }
+
+        virtual bool BuildTree() = 0;
     };
 }
 

@@ -81,13 +81,13 @@ namespace Token{
         Session* session = data->session;
         GetDataMessage* request = data->request->AsGetDataMessage();
 
-        Block* block;
-        if(!(block = BlockChain::GetBlock(HashFromHexString(request->GetHash())))){
-            LOG(ERROR) << "couldn't find block: " << request->GetHash();
+        uint256_t hash = HashFromHexString(request->GetHash());
+        Block block;
+        if(!BlockChain::GetBlockData(hash, &block)){
+            LOG(ERROR) << "couldn't find block: " << hash;
             return;
         }
-        session->SendBlock((*block));
-        delete block;
+        session->SendBlock(block);
     }
 
     void BlockChainServer::HandleGetBlocks(uv_work_t* req){
@@ -95,33 +95,9 @@ namespace Token{
         Session* session = data->session;
         GetBlocksMessage* request = data->request->AsGetBlocksMessage();
 
-        Block* firstBlock = nullptr;
-        if(!(firstBlock = BlockChain::GetBlock(HashFromHexString(request->GetFirst())))){
-            LOG(ERROR) << "cannot get first block: " << request->GetFirst();
-            return;
-        }
-
-        Block* lastBlock = nullptr;
-        if(!request->GetLast().empty()){
-            if(!(lastBlock = BlockChain::GetBlock(HashFromHexString(request->GetLast())))){
-                LOG(ERROR) << "cannot get last block: " << request->GetLast();
-                return;
-            }
-        }
-
-        uint64_t max = BlockChain::GetHeight();
-        uint64_t first = firstBlock->GetHeight() + 1;
-        uint64_t last;
-        if(!request->GetLast().empty() && lastBlock){
-            last = lastBlock->GetHeight();
-        }
-        last = last > max ? max : last;
-        last = (last - first) > 128 ? first + 128 : last;
-
-        LOG(INFO) << "getting blocks: " << first << ":" << last;
+        //TODO: handle getting inventory via visitor pattern
         Proto::BlockChainServer::Inventory inventory;
         /*
-         * TODO: refactor
         for(uint64_t idx = first;
             idx <= last;
             idx++){
@@ -131,7 +107,6 @@ namespace Token{
                 return;
             }
             Proto::BlockChainServer::InventoryItem* item = inventory.add_items();
-            //TODO: (*item) << block;
         }
          */
         session->SendInventory(inventory);
@@ -235,10 +210,8 @@ namespace Token{
         BlockChainServer* instance = GetInstance();
         Block* block;
         if(!(block = (Block*)handle->data)){
-            if(!(block = BlockChain::GetBlock(BlockChain::GetHead()))){
-                LOG(INFO) << "couldn't figure out what block to broadcast";
-                return;
-            }
+            LOG(ERROR) << "invalid data?";
+            return;
         }
         uv_work_t* work = (uv_work_t*)malloc(sizeof(uv_work_t));
         work->data = new BroadcastBlockData(block);

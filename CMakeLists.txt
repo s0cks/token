@@ -8,11 +8,10 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 find_package(GRPC REQUIRED)
 find_package(Protobuf REQUIRED)
-find_package(Crypto++ REQUIRED) # TODO: change?
+find_package(Crypto++ REQUIRED)
 find_package(Threads)
 find_package(glog REQUIRED)
 find_package(LevelDB REQUIRED)
-find_package(SQLite3 REQUIRED) # TODO: remove
 find_package(gflags REQUIRED)
 find_package(GTest REQUIRED)
 find_package(Libuv REQUIRED)

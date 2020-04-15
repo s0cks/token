@@ -7,6 +7,7 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 
+#include <glog/logging.h>
 #include <gflags/gflags.h>
 
 #include <cryptopp/sha.h>

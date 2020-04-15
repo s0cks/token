@@ -19,6 +19,7 @@ namespace Token{
         kDisconnected
     };
 
+    //TODO: establish timer for ping
     class Session{
     private:
         SessionState state_;

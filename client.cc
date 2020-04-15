@@ -23,15 +23,15 @@ PrintTransaction(Token::Transaction* tx){
     int idx;
     std::cout << "\t\tInputs:" << std::endl;
     for(idx = 0; idx < tx->GetNumberOfInputs(); idx++){
-        Token::Input* input;
-        if(!(input = tx->GetInput(idx))) return;
-        std::cout << "\t\t  * #" << idx << ": " << input->GetHash() << std::endl;
+        Token::Input input;
+        if(!tx->GetInput(idx, &input)) return;
+        std::cout << "\t\t  * #" << idx << ": " << input.GetHash() << std::endl;
     }
     std::cout << "\t\tOutputs:" << std::endl;
     for(idx = 0; idx < tx->GetNumberOfOutputs(); idx++){
-        Token::Output* output;
-        if(!(output = tx->GetOutput(idx))) return;
-        std::cout << "\t\t  * #" << idx << ": " << output->GetHash() << std::endl;
+        Token::Output output;
+        if(!tx->GetOutput(idx, &output)) return;
+        std::cout << "\t\t  * #" << idx << ": " << output.GetHash() << std::endl;
     }
 }
 
@@ -101,8 +101,7 @@ int main(int argc, char** argv){
             LOG(INFO) << "unclaimed transactions: ";
             size_t idx = 1;
             for(auto& it : utxos.utxos()){
-                Token::UnclaimedTransaction utxo(it);
-                LOG(INFO) << (idx++) << ": " << utxo.GetHash() << "(" << utxo.GetUser() << ")";
+                LOG(INFO) << " - #" << (idx++) << " " << it;
             }
         }
     } while(true);
