@@ -2,6 +2,7 @@
 #define TOKEN_BUFFER_H
 
 #include "common.h"
+#include "message.h"
 
 namespace Token{
     class ByteBuffer{

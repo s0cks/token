@@ -7,7 +7,9 @@
 #include "block.h"
 
 namespace Token{
-    //TODO: establish timer for mining
+    //TODO:
+    // - establish timer for mining
+    // - refactor
     class BlockMiner{
     private:
         static void HandleExitCallback(uv_async_t* handle);

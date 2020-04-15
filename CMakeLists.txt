@@ -2,6 +2,11 @@ cmake_minimum_required(VERSION 3.7)
 enable_testing()
 project("token" CXX)
 
+#TODO: Fix for remote building
+#TODO: organize build process into simpler steps
+#TODO: create deb package
+#TODO: define process for creating docker image
+
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -15,6 +20,7 @@ find_package(LevelDB REQUIRED)
 find_package(gflags REQUIRED)
 find_package(GTest REQUIRED)
 find_package(Libuv REQUIRED)
+find_package(HttpParser REQUIRED)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CRYPTO++_INCLUDE_DIR})
@@ -54,7 +60,7 @@ add_executable(
 )
 target_link_libraries(
         "${PROJECT_NAME}-node"
-        "${PROJECT_NAME}-ledger" ${CMAKE_THREAD_LIBS_INIT} ${CRYPTO++_LIBRARIES} ${Protobuf_LIBRARIES} ${GRPC_GRPC++_LIBRARY} ${GRPC_GRPC++_REFLECTION_LIBRARY} gflags
+        "${PROJECT_NAME}-ledger" ${HTTPPARSER_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CRYPTO++_LIBRARIES} ${Protobuf_LIBRARIES} ${GRPC_GRPC++_LIBRARY} ${GRPC_GRPC++_REFLECTION_LIBRARY} gflags
 )
 
 #=================================================

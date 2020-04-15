@@ -70,6 +70,12 @@ namespace Token{
                str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
     }
 
+    static bool
+    BeginsWith(const std::string& str, const std::string prefix){
+        return str.size() >= prefix.size() &&
+                str.compare(0, prefix.size(), prefix) == 0;
+    }
+
     static inline bool
     FileExists(const std::string& name){
         std::ifstream f(name.c_str());
