@@ -59,10 +59,6 @@ namespace Token{
         int r = 0;
         if(nread >= 0){
             size_t parsed = request->Parse(buff->base, buff->len);
-            if(parsed < nread){
-                LOG(ERROR) << "parser error: " << request->GetError();
-                return;
-            }
             uv_work_t* work = (uv_work_t*)malloc(sizeof(uv_work_t));
             work->data = request;
             if(BeginsWith(request->GetRoute(), "/status")){
