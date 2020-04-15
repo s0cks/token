@@ -60,7 +60,7 @@ namespace Token{
         if(nread >= 0){
             size_t parsed = request->Parse(buff->base, buff->len);
             if(parsed < nread){
-                LOG(ERROR) << "parser error";
+                LOG(ERROR) << "parser error: " << request->GetError();
                 return;
             }
             uv_work_t* work = (uv_work_t*)malloc(sizeof(uv_work_t));

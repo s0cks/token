@@ -61,6 +61,10 @@ namespace Token{
         std::string GetRoute() const{
             return route_;
         }
+
+        const char* GetError() const{
+            return http_errno_description((enum http_errno) parser_.http_errno);
+        }
     };
 
     class HttpResponse{
