@@ -159,6 +159,7 @@ namespace Token{
                     UNLOCK;
                     return false;
                 }
+                LOG(INFO) << utxo.GetUser();
                 if(utxo.GetUser() != user) continue;
                 utxos.push_back(utxo.GetHash());
             }
