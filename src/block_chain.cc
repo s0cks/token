@@ -155,29 +155,22 @@ namespace Token{
 
     BlockChain::BlockNode* BlockChain::GetHeadNode(){
         BlockChain* chain = GetInstance();
-        READ_LOCK;
         BlockNode* node = chain->head_;
-        UNLOCK;
         return node;
     }
 
     BlockChain::BlockNode* BlockChain::GetGenesisNode(){
         BlockChain* chain = GetInstance();
-        READ_LOCK;
         BlockNode* node = chain->genesis_;
-        UNLOCK;
         return node;
     }
 
     BlockChain::BlockNode* BlockChain::GetNode(const uint256_t& hash){
         BlockChain* chain = GetInstance();
-        READ_LOCK;
         auto pos = chain->nodes_.find(hash);
         if(pos == chain->nodes_.end()){
-            UNLOCK;
             return nullptr;
         }
-        UNLOCK;
         return pos->second;
     }
 
