@@ -12,9 +12,11 @@ namespace Token{
 
     BlockChain::BlockChain():
         IndexManagedPool(FLAGS_path + "/blocks"),
-        rwlock_(PTHREAD_RWLOCK_INITIALIZER),
+        rwlock_(),
         genesis_(nullptr),
-        head_(nullptr){}
+        head_(nullptr){
+        pthread_rwlock_init(&rwlock_, NULL);
+    }
 
     BlockChain*
     BlockChain::GetInstance(){
