@@ -1,3 +1,4 @@
+#include <pthread.h>
 #include <sstream>
 #include <glog/logging.h>
 #include "common.h"
