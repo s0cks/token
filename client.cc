@@ -4,7 +4,7 @@
 #include "service/client.h"
 
 static inline void
-PrintBlock(Token::Proto::BlockChainService::BlockHeader* block){
+PrintBlock(Token::Proto::BlockChain::BlockHeader* block){
     std::cout << "-- Block # " << block->height() << " ---" << std::endl;
     std::cout << "\tPrevious Hash: " << block->previous_hash() << std::endl;
     std::cout << "\tHash: " << block->hash() << std::endl;

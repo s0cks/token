@@ -84,7 +84,7 @@ namespace Token{
 
     static inline bool
     DeleteFile(const std::string& name){
-        return remove(name.c_str());
+        return remove(name.c_str()) == 0;
     }
 
     static inline bool

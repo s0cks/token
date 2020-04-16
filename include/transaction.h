@@ -16,33 +16,37 @@ namespace Token{
 
     class Input : public BinaryObject{
     private:
-        Transaction* transaction_;
-        UnclaimedTransaction* utxo_;
+        uint256_t previous_hash_;
+        uint32_t index_;
 
         friend class Transaction;
     protected:
         bool GetBytes(CryptoPP::SecByteBlock& bytes) const;
     public:
-        Input(): transaction_(nullptr), utxo_(nullptr){}
+        Input():
+            previous_hash_(),
+            index_(){}
         Input(const Input& other):
-                transaction_(other.transaction_),
-                utxo_(other.utxo_){}
-        Input(Transaction* tx, UnclaimedTransaction* utxo):
-            transaction_(tx),
-            utxo_(utxo){}
-        Input(Transaction* tx, const Proto::BlockChain::Input& raw){}
+            previous_hash_(other.previous_hash_),
+            index_(other.index_){}
+        Input(const UnclaimedTransaction& utxo);
+        Input(const uint256_t& utxo_hash);
+        Input(const Proto::BlockChain::Input& raw):
+            previous_hash_(HashFromHexString(raw.previous_hash())),
+            index_(raw.index()){}
         ~Input(){}
 
-        Transaction* GetTransaction() const{
-            return transaction_;
+        uint64_t GetOutputIndex() const{
+            return index_;
         }
 
-        uint64_t GetOutputIndex() const;
-        uint256_t GetTransactionHash() const;
+        uint256_t GetTransactionHash() const{
+            return previous_hash_;
+        }
 
         Input& operator=(const Input& other){
-            transaction_ = other.transaction_;
-            utxo_ = other.utxo_;
+            index_ = other.index_;
+            previous_hash_ = other.previous_hash_;
             return (*this);
         }
 
@@ -63,7 +67,6 @@ namespace Token{
 
     class Output : public BinaryObject{
     private:
-        Transaction* transaction_;
         uint32_t index_;
         std::string user_;
         std::string token_;
@@ -73,20 +76,14 @@ namespace Token{
         bool GetBytes(CryptoPP::SecByteBlock& bytes) const;
     public:
         Output():
-            transaction_(nullptr),
             user_(),
             token_(){}
-        Output(Transaction* transaction, const std::string& user, const std::string& token):
-            transaction_(transaction),
+        Output(const std::string& user, const std::string& token):
             user_(user),
             token_(token){}
-        Output(Transaction* transaction, const Proto::BlockChain::Output& output): Output(transaction, output.user(), output.token()){}
-        Output(const Output& other): Output(other.transaction_, other.user_, other.token_){}
+        Output(const Proto::BlockChain::Output& output): Output(output.user(), output.token()){}
+        Output(const Output& other): Output(other.user_, other.token_){}
         ~Output(){}
-
-        Transaction* GetTransaction() const{
-            return transaction_;
-        }
 
         uint32_t GetIndex() const{
             return index_;
@@ -103,7 +100,6 @@ namespace Token{
         Output& operator=(const Output& other){
             user_ = other.user_;
             token_ = other.token_;
-            transaction_ = other.transaction_;
             return (*this);
         }
 
@@ -158,8 +154,8 @@ namespace Token{
             inputs_(),
             outputs_(),
             BinaryObject(){
-            for(auto& it : raw.inputs()) inputs_.push_back(Input(this, it));
-            for(auto& it : raw.outputs()) outputs_.push_back(Output(this, it));
+            for(auto& it : raw.inputs()) inputs_.push_back(Input(it));
+            for(auto& it : raw.outputs()) outputs_.push_back(Output(it));
         }
         Transaction(const Transaction& other):
             timestamp_(other.timestamp_),

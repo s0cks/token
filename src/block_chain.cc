@@ -48,7 +48,7 @@ namespace Token{
     static Block*
     CreateGenesis(){
         Transaction coinbase(0, 0);
-        coinbase << Output(&coinbase, "TestUser", "TestToken");
+        coinbase << Output("TestUser", "TestToken");
         return new Block(0, uint256_t(), { coinbase }, 0);
     }
 
@@ -60,7 +60,7 @@ namespace Token{
         if(!chain->InitializeIndex()) return false;;
         if(!chain->HasHeadInIndex()){
             Transaction coinbase(0, 0);
-            coinbase << Output(&coinbase, "TestUser", "TestToken");
+            coinbase << Output("TestUser", "TestToken");
             Block genesis(0, uint256_t(), { coinbase }, 0);
             uint256_t hash = genesis.GetHash();
             std::string filename = chain->GetPath(hash);
@@ -71,6 +71,8 @@ namespace Token{
             chain->head_ = chain->genesis_ = node;
             chain->nodes_.insert(std::make_pair(hash, node));
 
+            LOG(INFO) << "processing " << genesis.GetNumberOfTransactions() << " transactions....";
+
             int i;
             for(i = 0; i < genesis.GetNumberOfTransactions(); i++){
                 Transaction tx;
@@ -79,6 +81,9 @@ namespace Token{
                     UNLOCK;
                     return false;
                 }
+
+                LOG(INFO) << "processing " << tx.GetHash() << " w/ " << tx.GetNumberOfInputs() << " inputs + " << tx.GetNumberOfOutputs() << " outputs";
+
                 int j;
                 for(j = 0; j < tx.GetNumberOfOutputs(); j++) {
                     Output out;
@@ -87,7 +92,8 @@ namespace Token{
                         UNLOCK;
                         return false;
                     }
-                    UnclaimedTransaction utxo(&out);
+
+                    UnclaimedTransaction utxo(tx, out);
                     if(!UnclaimedTransactionPool::PutUnclaimedTransaction(&utxo)){
                         LOG(WARNING) << "couldn't create new unclaimed transaction: " << utxo.GetHash();
                         LOG(WARNING) << "*** Unclaimed Transaction: ";
@@ -97,6 +103,8 @@ namespace Token{
                         UNLOCK;
                         return false;
                     }
+
+                    LOG(INFO) << "created new unclaimed transaction: " << utxo.GetHash() << "(" << utxo.GetTransaction() << "[" << utxo.GetIndex() << "])";
                 }
             }
             return true;
@@ -172,7 +180,10 @@ namespace Token{
         BlockChain* chain = GetInstance();
         //TODO: rwlock
         std::string filename = chain->GetPath(hash);
-        if(!FileExists(filename)) return false;
+        if(!FileExists(filename)){
+            LOG(INFO) << "no block found for: " << filename;
+            return false;
+        }
         return chain->LoadBlock(filename, result);
     }
 
@@ -330,5 +341,58 @@ namespace Token{
          BlockChainMerkleTreeBuilder builder;
          if(!builder.BuildTree()) return nullptr;
          return builder.GetTreeCopy();
+    }
+
+    class BlockChainTransactionResolver : public BlockChainVisitor{
+    private:
+        uint256_t tx_hash_;
+        Transaction* result_;
+
+        void SetResult(Transaction* tx){
+            result_ = tx;
+        }
+    public:
+        BlockChainTransactionResolver(const uint256_t& tx_hash):
+            tx_hash_(tx_hash),
+            result_(nullptr){
+        }
+        ~BlockChainTransactionResolver(){
+            delete result_;
+        }
+
+        uint256_t GetTransactionHash() const{
+            return tx_hash_;
+        }
+
+        Transaction* GetResult() const{
+            return result_;
+        }
+
+        bool HasResult() const{
+            return result_ != nullptr;
+        }
+
+        bool Visit(const Block& block){
+            uint256_t hash = GetTransactionHash();
+            if(!block.Contains(hash)) return true;
+
+            Transaction tx;
+            if(!block.GetTransaction(hash, &tx)){
+                LOG(WARNING) << "unable to get transaction: " << hash;
+                SetResult(nullptr);
+                return false;
+            }
+
+            SetResult(new Transaction(tx));
+            return false;
+        }
+    };
+
+    bool BlockChain::GetTransaction(const uint256_t& hash, Transaction* result){
+        BlockChainTransactionResolver resolver(hash);
+        BlockChain::Accept(&resolver);
+        if(!resolver.HasResult()) return false;
+        (*result) = (*resolver.GetResult());
+        return true;
     }
 }

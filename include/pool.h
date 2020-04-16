@@ -34,7 +34,7 @@ namespace Token{
         }
 
         uint64_t GetSize();
-        std::string GetPath(const uint256_t& hash);
+        std::string GetPath(const uint256_t& hash); //TODO: overload for TxPool + UTxPool as they have a variadic nature, and cache collisions will happen
         bool RegisterPath(const uint256_t& hash, const std::string& filename);
         bool UnregisterPath(const uint256_t& hash);
     };

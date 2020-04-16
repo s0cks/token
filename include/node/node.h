@@ -48,6 +48,8 @@ namespace Token{
             }
         }
 
+        static void WaitForShutdown();
+
         // static bool ShutdownServer();
         // static bool ShutdownServerAndWait();
         // static void Broadcast(Message* msg);

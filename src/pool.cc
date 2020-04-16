@@ -11,6 +11,7 @@ namespace Token{
 
     uint64_t IndexManagedPool::GetSize(){
         uint64_t count = 0;
+
         DIR* dir;
         struct dirent* ent;
         if((dir = opendir(GetRoot().c_str())) != NULL){

@@ -6,13 +6,9 @@
 #include "transaction.h"
 
 namespace Token{
-    uint64_t Input::GetOutputIndex() const{
-        return utxo_->GetIndex();
-    }
-
-    uint256_t Input::GetTransactionHash() const{
-        return utxo_->GetTransaction();
-    }
+    Input::Input(const UnclaimedTransaction& utxo):
+        previous_hash_(utxo.GetTransaction()),
+        index_(utxo.GetIndex()){}
 
     bool Input::GetBytes(CryptoPP::SecByteBlock& bytes) const{
         Proto::BlockChain::Input raw;

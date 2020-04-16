@@ -12,6 +12,7 @@ namespace Token{
     class BlockChainVisitor;
     class BlockChain : public IndexManagedPool{
     private:
+        friend class BlockChainServer;
         friend class BlockMiner;
 
         class BlockNode{
@@ -120,6 +121,7 @@ namespace Token{
         static bool Initialize();
         static bool Accept(BlockChainVisitor* vis);
         static bool GetBlockData(const uint256_t& hash, Block* result);
+        static bool GetTransaction(const uint256_t& hash, Transaction* result);
         static MerkleTree* GetMerkleTree();
 
         //TODO remove

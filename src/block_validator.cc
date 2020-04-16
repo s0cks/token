@@ -1,3 +1,4 @@
+#include "block_chain.h"
 #include "block_validator.h"
 
 namespace Token{
@@ -44,7 +45,7 @@ namespace Token{
                 return false;
             }
 
-            UnclaimedTransaction utxo(&out);
+            UnclaimedTransaction utxo(tx, out);
             if(!UnclaimedTransactionPool::PutUnclaimedTransaction(&utxo)){
                 LOG(WARNING) << "couldn't create new unclaimed transaction: " << utxo.GetHash();
                 LOG(WARNING) << "*** Unclaimed Transaction: ";
@@ -60,18 +61,27 @@ namespace Token{
                 return false;
             }
 
-            /*
-             *TODO:
-             * UnclaimedTransaction utxo(input.GetTransactionHash(), input.GetOutputIndex(),
-             * uint256_t uhash = utxo.GetHash();
-             * if(!UnclaimedTransactionPool::RemoveUnclaimedTransaction(uhash)){
-             *      LOG(WARNING) << "couldn't remove unclaimed transaction: " << uhash;
-             *      LOG(WARNING) << "*** Unclaimed Transaction: ";
-             *      LOG(WARNING) << "***   + Input: " << utxo.GetTransactionHash() << "[" << utxo.GetIndex() << "]";
-             *      LOG(WARNING) << "***   + Output: " << utxo.GetToken() << "(" << utxo.GetUser() << ")";
-             *      return false;
-             * }
-             */
+            Transaction in_tx;
+            if(!BlockChain::GetTransaction(input.GetTransactionHash(), &in_tx)){
+                LOG(WARNING) << "couldn't find transaction: " << input.GetTransactionHash();
+                return false;
+            }
+
+            Output output;
+            if(!in_tx.GetOutput(input.GetOutputIndex(), &output)){
+                LOG(WARNING) << "couldn't find output #" << input.GetOutputIndex() << " in transaction: " << input.GetTransactionHash();
+                return false;
+            }
+
+            UnclaimedTransaction utxo(in_tx, output);
+            uint256_t uhash = utxo.GetHash();
+            if(!UnclaimedTransactionPool::RemoveUnclaimedTransaction(uhash)){
+                LOG(WARNING) << "couldn't remove unclaimed transaction: " << uhash;
+                LOG(WARNING) << "*** Unclaimed Transaction: ";
+                LOG(WARNING) << "***   + Input: " << utxo.GetTransaction() << "[" << utxo.GetIndex() << "]";
+                LOG(WARNING) << "***   + Output: " << utxo.GetToken() << "(" << utxo.GetUser() << ")";
+                return false;
+            }
         }
         valid_txs_.push_back(tx);
         return true;

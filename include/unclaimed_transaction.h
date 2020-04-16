@@ -29,11 +29,25 @@ namespace Token{
             tx_index_(idx),
             user_(user),
             token_(token){}
-        UnclaimedTransaction(Output* output):
-            tx_hash_(output->GetTransaction()->GetHash()),
-            tx_index_(output->GetIndex()),
+        UnclaimedTransaction(const Transaction& tx, uint64_t idx):
+            tx_hash_(tx.GetHash()),
+            tx_index_(idx),
             user_(),
-            token_(){}
+            token_(){
+            Output out;
+            if(!tx.GetOutput(idx, &out)){
+                tx_hash_ = uint256_t();
+                tx_index_ = 0;
+                return;
+            }
+            user_ = out.GetUser();
+            token_ = out.GetToken();
+        }
+        UnclaimedTransaction(const Transaction& tx, const Output& out):
+            tx_hash_(tx.GetHash()),
+            tx_index_(tx.GetIndex()),
+            user_(out.GetUser()),
+            token_(out.GetToken()){}
         UnclaimedTransaction(const Proto::BlockChain::UnclaimedTransaction& raw):
             tx_hash_(HashFromHexString(raw.tx_hash())),
             tx_index_(raw.tx_index()),
@@ -93,7 +107,7 @@ namespace Token{
         ~UnclaimedTransactionPool(){}
 
         static UnclaimedTransaction* GetUnclaimedTransaction(const uint256_t& hash);
-        static UnclaimedTransaction* RemoveUnclaimedTransaction(const uint256_t& hash);
+        static bool RemoveUnclaimedTransaction(const uint256_t& hash);
         static bool Initialize();
         static bool PutUnclaimedTransaction(UnclaimedTransaction* utxo);
         static bool HasUnclaimedTransaction(const uint256_t& hash);

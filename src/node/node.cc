@@ -95,20 +95,29 @@ namespace Token{
         Session* session = data->session;
         GetBlocksMessage* request = data->request->AsGetBlocksMessage();
 
-        //TODO: handle getting inventory via visitor pattern
         Proto::BlockChainServer::Inventory inventory;
-        /*
-        for(uint64_t idx = first;
-            idx <= last;
-            idx++){
-            Block* block = nullptr;
-            if(!(block = BlockChain::GetBlock(idx))){
-                LOG(ERROR) << "couldn't get block " << idx << " from block chain";
-                return;
-            }
-            Proto::BlockChainServer::InventoryItem* item = inventory.add_items();
+
+        uint256_t firstHash = request->GetFirst();
+        uint256_t lastHash = request->GetLast();
+
+        BlockHeader firstHeader = BlockChain::GetBlock(firstHash);
+        BlockHeader lastHeader;
+        if(lastHash.IsNull()){
+            lastHeader = BlockChain::GetHead();
+        } else{
+            lastHeader = BlockChain::GetBlock(lastHash);
         }
-         */
+
+        BlockHeader current = lastHeader;
+        while(!current.GetPreviousHash().IsNull()){
+            uint256_t hash = current.GetHash();
+            uint256_t next = current.GetPreviousHash();
+
+            LOG(INFO) << "inventory: " << hash;
+
+            inventory.add_items(HexString(hash));
+            current = BlockChain::GetBlock(next);
+        }
         session->SendInventory(inventory);
     }
 
@@ -240,5 +249,11 @@ namespace Token{
     bool BlockChainServer::StartServer(){
         BlockChainServer* instance = GetInstance();
         return pthread_create(&instance->thread_, NULL, &ServerThread, (void*)instance) == 0;
+    }
+
+    void BlockChainServer::WaitForShutdown(){
+        BlockChainServer* instance = GetInstance();
+        void* result = nullptr;
+        pthread_join(instance->thread_, &result);
     }
 }

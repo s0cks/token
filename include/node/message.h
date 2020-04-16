@@ -185,12 +185,12 @@ namespace Token{
         }
         ~GetBlocksMessage(){}
 
-        std::string GetFirst() const{
-            return raw_.first();
+        uint256_t GetFirst() const{
+            return HashFromHexString(raw_.first());
         }
 
-        std::string GetLast() const{
-            return raw_.last();
+        uint256_t GetLast() const{
+            return HashFromHexString(raw_.last());
         }
 
         DECLARE_MESSAGE(GetBlocks);
@@ -252,14 +252,7 @@ namespace Token{
 
         bool GetHashes(std::vector<std::string>& hashes){
             for(auto& it : raw_.items()){
-                hashes.push_back(it.hash());
-            }
-            return hashes.size() > 0;
-        }
-
-        bool GetHashes(std::vector<std::string>& hashes, InventoryItemType type){
-            for(auto& it : raw_.items()){
-                if(it.type() == static_cast<int32_t>(type)) hashes.push_back(it.hash());
+                hashes.push_back(it);
             }
             return hashes.size() > 0;
         }

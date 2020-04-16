@@ -91,7 +91,7 @@ namespace Token {
         if(head.GetHeight() < verack->GetMaxBlock()){
             LOG(INFO) << "synchronizing " << verack->GetMaxBlock() << " blocks....";
             session->SetState(SessionState::kSynchronizing);
-            session->SendGetBlocks(HexString(head.GetHash()), "");
+            session->SendGetBlocks(HexString(head.GetHash()), HexString(uint256_t()));
             return;
         }
 

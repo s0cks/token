@@ -20,6 +20,12 @@ namespace Token{
         uint256_t hash_;
         uint256_t merkle_root_;
     public:
+        BlockHeader():
+            timestamp_(0),
+            height_(0),
+            previous_hash_(),
+            hash_(),
+            merkle_root_(){}
         BlockHeader(const Block& block);
         ~BlockHeader(){}
 
@@ -62,7 +68,7 @@ namespace Token{
             return (*this);
         }
 
-        friend Proto::BlockChainService::BlockHeader& operator<<(Proto::BlockChainService::BlockHeader& stream, const BlockHeader& block){
+        friend Proto::BlockChain::BlockHeader& operator<<(Proto::BlockChain::BlockHeader& stream, const BlockHeader& block){
             stream.set_timestamp(block.GetTimestamp());
             stream.set_height(block.GetHeight());
             stream.set_merkle_root(HexString(block.GetMerkleRoot()));

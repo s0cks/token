@@ -65,23 +65,30 @@ namespace Token{
         return utxo;
     }
 
-    UnclaimedTransaction* UnclaimedTransactionPool::RemoveUnclaimedTransaction(const uint256_t& hash){
+    bool UnclaimedTransactionPool::RemoveUnclaimedTransaction(const uint256_t& hash){
         WRITE_LOCK;
         UnclaimedTransactionPool* pool = GetInstance();
         std::string filename = pool->GetPath(hash);
         if(!FileExists(filename)){
             UNLOCK;
-            return nullptr;
+            return false;
         }
-        UnclaimedTransaction* utxo = new UnclaimedTransaction();
-        if(!LoadUnclaimedTransaction(filename, utxo) || !DeleteFile(filename) || !pool->UnregisterPath(hash)){
-            delete utxo;
+
+        if(!DeleteFile(filename)){
+            LOG(WARNING) << "couldn't delete unclaimed transaction from: " << filename;
             UNLOCK;
-            return nullptr;
+            return false;
         }
+
+        if(!pool->UnregisterPath(hash)){
+            LOG(WARNING) << "couldn't unregister unclaimed transaction: " << hash;
+            UNLOCK;
+            return false;
+        }
+
         UNLOCK;
         LOG(INFO) << "removed utxo: " << hash;
-        return utxo;
+        return true;
     }
 
     bool UnclaimedTransactionPool::PutUnclaimedTransaction(UnclaimedTransaction* utxo){
