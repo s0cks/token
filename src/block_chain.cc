@@ -190,8 +190,8 @@ namespace Token{
     }
 
     bool BlockChain::Append(Block* block){
-        WRITE_LOCK;
         BlockChain* chain = GetInstance();
+        WRITE_LOCK;
         uint256_t hash = block->GetHash();
         uint256_t phash = block->GetPreviousHash();
 
