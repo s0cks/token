@@ -6,13 +6,13 @@
 #include "block_validator.h"
 
 namespace Token{
-    static pthread_rwlock_t kChainLock = PTHREAD_RWLOCK_INITIALIZER;
-#define READ_LOCK pthread_rwlock_tryrdlock(&kChainLock);
-#define WRITE_LOCK pthread_rwlock_trywrlock(&kChainLock);
-#define UNLOCK pthread_rwlock_unlock(&kChainLock);
+#define READ_LOCK pthread_rwlock_tryrdlock(&chain->rwlock_);
+#define WRITE_LOCK pthread_rwlock_trywrlock(&chain->rwlock_);
+#define UNLOCK pthread_rwlock_unlock(&chain->rwlock_);
 
     BlockChain::BlockChain():
         IndexManagedPool(FLAGS_path + "/blocks"),
+        rwlock_(PTHREAD_RWLOCK_INITIALIZER),
         genesis_(nullptr),
         head_(nullptr){}
 
@@ -151,22 +151,24 @@ namespace Token{
     }
 
     BlockChain::BlockNode* BlockChain::GetHeadNode(){
+        BlockChain* chain = GetInstance();
         READ_LOCK;
-        BlockNode* node = GetInstance()->head_;
+        BlockNode* node = chain->head_;
         UNLOCK;
         return node;
     }
 
     BlockChain::BlockNode* BlockChain::GetGenesisNode(){
+        BlockChain* chain = GetInstance();
         READ_LOCK;
-        BlockNode* node = GetInstance()->genesis_;
+        BlockNode* node = chain->genesis_;
         UNLOCK;
         return node;
     }
 
     BlockChain::BlockNode* BlockChain::GetNode(const uint256_t& hash){
-        READ_LOCK;
         BlockChain* chain = GetInstance();
+        READ_LOCK;
         auto pos = chain->nodes_.find(hash);
         if(pos == chain->nodes_.end()){
             UNLOCK;

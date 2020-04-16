@@ -81,6 +81,7 @@ namespace Token{
         BlockNode* genesis_;
         BlockNode* head_;
         std::map<uint256_t, BlockNode*> nodes_; //TODO: possible memory leak?
+        pthread_rwlock_t rwlock_;
 
         static BlockChain* GetInstance();
         uint256_t GetHeadFromIndex();
