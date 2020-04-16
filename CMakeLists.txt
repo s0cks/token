@@ -48,7 +48,7 @@ add_library(
 )
 target_link_libraries(
         "${PROJECT_NAME}-ledger"
-        ${HTTPPARSER_LIBRARIES} ${Protobuf_LIBRARIES} glog::glog ${LevelDB_LIBRARY} ${LIBUV_LIBRARIES}
+       ${HTTPPARSER_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CRYPTO++_LIBRARIES} ${Protobuf_LIBRARIES} glog::glog ${LevelDB_LIBRARY} ${LIBUV_LIBRARIES}
 )
 
 #=================================================
@@ -60,7 +60,7 @@ add_executable(
 )
 target_link_libraries(
         "${PROJECT_NAME}-node"
-        "${PROJECT_NAME}-ledger" ${HTTPPARSER_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CRYPTO++_LIBRARIES} ${Protobuf_LIBRARIES} ${GRPC_GRPC++_LIBRARY} ${GRPC_GRPC++_REFLECTION_LIBRARY} gflags
+        "${PROJECT_NAME}-ledger" ${HTTPPARSER_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CRYPTO++_LIBRARIES} ${Protobuf_LIBRARIES} glog::glog ${GRPC_GRPC++_LIBRARY} ${GRPC_GRPC++_REFLECTION_LIBRARY} gflags
 )
 
 #=================================================
