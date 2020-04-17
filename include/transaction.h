@@ -30,7 +30,6 @@ namespace Token{
             previous_hash_(other.previous_hash_),
             index_(other.index_){}
         Input(const UnclaimedTransaction& utxo);
-        Input(const uint256_t& utxo_hash);
         Input(const Proto::BlockChain::Input& raw):
             previous_hash_(HashFromHexString(raw.previous_hash())),
             index_(raw.index()){}
@@ -133,6 +132,8 @@ namespace Token{
     protected:
         bool GetBytes(CryptoPP::SecByteBlock& bytes) const;
     public:
+        typedef Proto::BlockChain::Transaction RawType;
+
         Transaction():
             timestamp_(0),
             index_(0),
@@ -281,21 +282,30 @@ namespace Token{
         bool VerifySignature();
     };
 
-    class TransactionPool : public IndexManagedPool{
+    class TransactionPool : public IndexManagedPool<Transaction>{
     private:
         static TransactionPool* GetInstance();
-        static bool LoadTransaction(const std::string& filename, Transaction* tx);
-        static bool SaveTransaction(const std::string& filename, Transaction* tx);
+
+        std::string CreateObjectLocation(const uint256_t& hash, Transaction* tx) const{
+            std::string hashString = HexString(hash);
+            std::string front = hashString.substr(0, 8);
+            std::string tail = hashString.substr(hashString.length() - 8, hashString.length());
+
+            std::string filename = GetRoot() + "/" + front + ".dat";
+            if(FileExists(filename)){
+                filename = GetRoot() + "/" + tail + ".dat";
+            }
+            return filename;
+        }
 
         TransactionPool(): IndexManagedPool(FLAGS_path + "/txs"){}
     public:
         ~TransactionPool(){}
 
-        static Transaction* GetTransaction(const uint256_t& hash);
-        static Transaction* RemoveTransaction(const uint256_t& hash);
         static bool Initialize();
         static bool PutTransaction(Transaction* tx);
-        static bool HasTransaction(const uint256_t& hash);
+        static bool GetTransaction(const uint256_t& hash, Transaction* result);
+        static bool RemoveTransaction(const uint256_t& hash);
     };
 }
 

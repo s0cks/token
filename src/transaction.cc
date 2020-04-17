@@ -133,59 +133,29 @@ namespace Token{
         return pool->InitializeIndex();
     }
 
-    bool TransactionPool::LoadTransaction(const std::string& filename, Token::Transaction* tx){
-        if(!FileExists(filename)) return false;
-        std::fstream fd(filename, std::ios::in|std::ios::binary);
-        Proto::BlockChain::Transaction raw;
-        if(!raw.ParseFromIstream(&fd)) return false;
-        (*tx) = Transaction(raw);
+    bool TransactionPool::GetTransaction(const uint256_t& hash, Transaction* result){
+        TransactionPool* pool = GetInstance();
+        if(!pool->LoadObject(hash, result)) return false;
+        //TODO: rwlock
         return true;
     }
 
-    bool TransactionPool::SaveTransaction(const std::string& filename, Token::Transaction* tx){
-        if(FileExists(filename) || tx == nullptr) return false;
-        std::fstream fd(filename, std::ios::out|std::ios::binary);
-        Proto::BlockChain::Transaction raw;
-        raw << (*tx);
-        return raw.SerializeToOstream(&fd);
-    }
-
-    Transaction* TransactionPool::GetTransaction(const uint256_t& hash){
+    bool TransactionPool::RemoveTransaction(const uint256_t& hash){
         TransactionPool* pool = GetInstance();
-        std::string filename = pool->GetPath(hash);
-        if(!FileExists(filename)) return nullptr;
-        Transaction* tx = new Transaction();
-        if(!LoadTransaction(filename, tx)){
-            delete tx;
-            return nullptr;
+        //TODO: rwlock
+        if(!pool->DeleteObject(hash)){
+            return false;
         }
-        return tx;
-    }
-
-    Transaction* TransactionPool::RemoveTransaction(const uint256_t& hash){
-        TransactionPool* pool = GetInstance();
-        std::string filename = pool->GetPath(hash);
-        if(!FileExists(filename)) return nullptr;
-        Transaction* tx = new Transaction();
-        if(!LoadTransaction(filename, tx) || !DeleteFile(filename) || !pool->UnregisterPath(hash)){
-            delete tx;
-            return nullptr;
-        }
-        return tx;
-    }
-
-    bool TransactionPool::HasTransaction(const uint256_t& hash){
-        TransactionPool* pool = GetInstance();
-        std::string filename = pool->GetPath(hash);
-        return FileExists(filename);
+        return true;
     }
 
     bool TransactionPool::PutTransaction(Transaction* tx){
-        uint256_t hash = tx->GetHash();
         TransactionPool* pool = GetInstance();
-        std::string filename = pool->GetPath(hash);
-        if(FileExists(filename)) return false;
-        if(!SaveTransaction(filename, tx)) return false;
-        return pool->RegisterPath(hash, filename);
+        //TODO: rwlock
+        uint256_t hash = tx->GetHash();
+        if(!pool->SaveObject(hash, tx)){
+            return false;
+        }
+        return true;
     }
 }

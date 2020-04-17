@@ -19,6 +19,8 @@ namespace Token{
     protected:
         bool GetBytes(CryptoPP::SecByteBlock& bytes) const;
     public:
+        typedef Proto::BlockChain::UnclaimedTransaction RawType;
+
         UnclaimedTransaction():
             tx_hash_(),
             tx_index_(0),
@@ -96,23 +98,31 @@ namespace Token{
         }
     };
 
-    class UnclaimedTransactionPool : public IndexManagedPool{
+    class UnclaimedTransactionPool : public IndexManagedPool<UnclaimedTransaction>{
     private:
         static UnclaimedTransactionPool* GetInstance();
-        static bool LoadUnclaimedTransaction(const std::string& filename, UnclaimedTransaction* utxo);
-        static bool SaveUnclaimedTransaction(const std::string& filename, UnclaimedTransaction* utxo);
+
+        std::string CreateObjectLocation(const uint256_t& hash, UnclaimedTransaction* value) const{
+            std::string hashString = HexString(hash);
+            std::string front = hashString.substr(0, 8);
+            std::string tail = hashString.substr(hashString.length() - 8, hashString.length());
+            std::string filename = GetRoot() + "/" + front + ".dat";
+            if(FileExists(filename)){
+                filename = GetRoot() + "/" + tail + ".dat";
+            }
+            return filename;
+        }
 
         UnclaimedTransactionPool(): IndexManagedPool(FLAGS_path + "/utxos"){}
     public:
         ~UnclaimedTransactionPool(){}
 
-        static UnclaimedTransaction* GetUnclaimedTransaction(const uint256_t& hash);
         static bool RemoveUnclaimedTransaction(const uint256_t& hash);
         static bool Initialize();
         static bool PutUnclaimedTransaction(UnclaimedTransaction* utxo);
-        static bool HasUnclaimedTransaction(const uint256_t& hash);
+        static bool GetUnclaimedTransaction(const uint256_t& hash, UnclaimedTransaction* result);
         static bool GetUnclaimedTransactions(std::vector<uint256_t>& utxos);
-        static bool GetUnclaimedTransactions(std::string& user, std::vector<uint256_t>& utxos);
+        static bool GetUnclaimedTransactions(const std::string& user, std::vector<uint256_t>& utxos);
     };
 }
 

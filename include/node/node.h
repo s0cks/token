@@ -29,6 +29,7 @@ namespace Token{
 
         static void HandleVerack(uv_work_t* req);
         static void HandleBlock(uv_work_t* req);
+        static void HandleTransaction(uv_work_t* req);
         static void HandleVersion(uv_work_t* req);
         static void HandleGetData(uv_work_t* req);
         static void HandleGetBlocks(uv_work_t* req);

@@ -30,96 +30,41 @@ namespace Token{
         return pool->InitializeIndex();
     }
 
-    bool UnclaimedTransactionPool::LoadUnclaimedTransaction(const std::string &filename, UnclaimedTransaction *utxo){
-        if(!FileExists(filename)) return false;
-        std::fstream fd(filename, std::ios::in|std::ios::binary);
-        Proto::BlockChain::UnclaimedTransaction raw;
-        if(!raw.ParseFromIstream(&fd)) return false;
-        (*utxo) = UnclaimedTransaction(raw);
-        return true;
-    }
-
-    bool UnclaimedTransactionPool::SaveUnclaimedTransaction(const std::string &filename, Token::UnclaimedTransaction *utxo){
-        if(FileExists(filename)) return false;
-        std::fstream fd(filename, std::ios::out|std::ios::binary);
-        Proto::BlockChain::UnclaimedTransaction raw;
-        raw << (*utxo);
-        return raw.SerializeToOstream(&fd);
-    }
-
-    UnclaimedTransaction* UnclaimedTransactionPool::GetUnclaimedTransaction(const uint256_t& hash){
+    bool UnclaimedTransactionPool::GetUnclaimedTransaction(const uint256_t& hash, UnclaimedTransaction* result){
         READ_LOCK;
         UnclaimedTransactionPool* pool = GetInstance();
-        std::string filename = pool->GetPath(hash);
-        if(!FileExists(filename)){
+        if(!pool->LoadObject(hash, result)){
             UNLOCK;
-            return nullptr;
+            (*result) = UnclaimedTransaction();
+            return false;
         }
-        UnclaimedTransaction* utxo = new UnclaimedTransaction();
-        if(!LoadUnclaimedTransaction(filename, utxo)){
-            delete utxo;
-            UNLOCK;
-            return nullptr;
-        }
+
         UNLOCK;
-        return utxo;
+        return true;
     }
 
     bool UnclaimedTransactionPool::RemoveUnclaimedTransaction(const uint256_t& hash){
         WRITE_LOCK;
         UnclaimedTransactionPool* pool = GetInstance();
-        std::string filename = pool->GetPath(hash);
-        if(!FileExists(filename)){
+        if(!pool->DeleteObject(hash)){
             UNLOCK;
             return false;
         }
-
-        if(!DeleteFile(filename)){
-            LOG(WARNING) << "couldn't delete unclaimed transaction from: " << filename;
-            UNLOCK;
-            return false;
-        }
-
-        if(!pool->UnregisterPath(hash)){
-            LOG(WARNING) << "couldn't unregister unclaimed transaction: " << hash;
-            UNLOCK;
-            return false;
-        }
-
         UNLOCK;
-        LOG(INFO) << "removed utxo: " << hash;
         return true;
     }
 
     bool UnclaimedTransactionPool::PutUnclaimedTransaction(UnclaimedTransaction* utxo){
         WRITE_LOCK;
+        UnclaimedTransactionPool* pool = GetInstance();
         uint256_t hash = utxo->GetHash();
-        UnclaimedTransactionPool* pool = GetInstance();
-        std::string filename = pool->GetPath(hash);
-        if(FileExists(filename)){
+        if(!pool->SaveObject(hash, utxo)){
             UNLOCK;
             return false;
         }
-        if(!SaveUnclaimedTransaction(filename, utxo)){
-            UNLOCK;
-            return false;
-        }
-        if(!pool->RegisterPath(hash, filename)){
-            UNLOCK;
-            return false;
-        }
-        UNLOCK;
-        LOG(INFO) << "added utxo: " << hash;
-        return true;
-    }
 
-    bool UnclaimedTransactionPool::HasUnclaimedTransaction(const uint256_t& hash){
-        READ_LOCK;
-        UnclaimedTransactionPool* pool = GetInstance();
-        std::string filename = pool->GetPath(hash);
-        bool found = FileExists(filename);
         UNLOCK;
-        return found;
+        return true;
     }
 
     bool UnclaimedTransactionPool::GetUnclaimedTransactions(std::vector<uint256_t>& utxos){
@@ -133,10 +78,8 @@ namespace Token{
                 std::string filename = (pool->GetRoot() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
                 UnclaimedTransaction utxo;
-                if(!pool->LoadUnclaimedTransaction(filename, &utxo)){
-                    LOG(WARNING) << "couldn't load unclaimed transaction data from: " << filename;
-                    utxos.clear();
-                    UNLOCK;
+                if(!pool->LoadRawObject(filename, &utxo)){
+                    LOG(ERROR) << "couldn't load unclaimed transaction from: " << filename;
                     return false;
                 }
                 utxos.push_back(utxo.GetHash());
@@ -150,20 +93,19 @@ namespace Token{
         return false;
     }
 
-    bool UnclaimedTransactionPool::GetUnclaimedTransactions(std::string& user, std::vector<uint256_t>& utxos){
+    bool UnclaimedTransactionPool::GetUnclaimedTransactions(const std::string& user, std::vector<uint256_t>& utxos){
         READ_LOCK;
         UnclaimedTransactionPool* pool = GetInstance();
         DIR* dir;
         struct dirent* ent;
         if((dir = opendir(pool->GetRoot().c_str())) != NULL){
             while((ent = readdir(dir)) != NULL){
-                std::string filename(ent->d_name);
+                std::string name(ent->d_name);
+                std::string filename = (pool->GetRoot() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
                 UnclaimedTransaction utxo;
-                if(!pool->LoadUnclaimedTransaction(filename, &utxo)){
-                    LOG(WARNING) << "couldn't load unclaimed transaction data from: " << filename;
-                    utxos.clear();
-                    UNLOCK;
+                if(!pool->LoadRawObject(filename, &utxo)){
+                    LOG(ERROR) << "couldn't load unclaimed transaction from: " << filename;
                     return false;
                 }
                 LOG(INFO) << utxo.GetUser();

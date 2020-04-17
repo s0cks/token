@@ -95,6 +95,8 @@ namespace Token{
 
         friend class BlockChain;
     public:
+        typedef Proto::BlockChain::Block RawType;
+
         Block():
             timestamp_(0),
             height_(0),
@@ -196,7 +198,7 @@ namespace Token{
             return !operator==(lhs, rhs);
         }
 
-        friend Proto::BlockChain::Block& operator<<(Proto::BlockChain::Block& stream, const Block& block){
+        friend RawType& operator<<(RawType& stream, const Block& block){
             stream.set_timestamp(block.GetTimestamp());
             stream.set_height(block.GetHeight());
             stream.set_merkle_root(HexString(block.GetMerkleRoot()));

@@ -66,10 +66,7 @@ namespace Token{
             coinbase << Output("TestUser", "TestToken");
             Block genesis(0, uint256_t(), { coinbase }, 0);
             uint256_t hash = genesis.GetHash();
-            std::string filename = chain->GetPath(hash);
-            if(!chain->SaveBlock(filename, &genesis)) return false;
-            if(!chain->SetHeadInIndex(hash)) return false;
-            if(!chain->RegisterPath(hash, filename)) return false;
+            if(!chain->SaveObject(hash, &genesis)) return false;
             BlockNode* node = new BlockNode(genesis);
             chain->head_ = chain->genesis_ = node;
             chain->nodes_.insert(std::make_pair(hash, node));
@@ -110,6 +107,7 @@ namespace Token{
                     LOG(INFO) << "created new unclaimed transaction: " << utxo.GetHash() << "(" << utxo.GetTransaction() << "[" << utxo.GetIndex() << "])";
                 }
             }
+            chain->SetHeadInIndex(hash);
             return true;
         }
 
@@ -136,23 +134,6 @@ namespace Token{
         return true;
     }
 
-    bool BlockChain::LoadBlock(const std::string& filename, Token::Block* block){
-        if(!FileExists(filename)) return false;
-        std::fstream fd(filename, std::ios::in|std::ios::binary);
-        Proto::BlockChain::Block raw;
-        if(!raw.ParseFromIstream(&fd)) return false;
-        (*block) = Block(raw);
-        return true;
-    }
-
-    bool BlockChain::SaveBlock(const std::string& filename, Token::Block* block){
-        if(FileExists(filename)) return false;
-        std::fstream fd(filename, std::ios::out|std::ios::binary);
-        Proto::BlockChain::Block raw;
-        raw << (*block);
-        return raw.SerializeToOstream(&fd);
-    }
-
     BlockChain::BlockNode* BlockChain::GetHeadNode(){
         BlockChain* chain = GetInstance();
         BlockNode* node = chain->head_;
@@ -177,12 +158,7 @@ namespace Token{
     bool BlockChain::GetBlockData(const uint256_t& hash, Block* result){
         BlockChain* chain = GetInstance();
         //TODO: rwlock
-        std::string filename = chain->GetPath(hash);
-        if(!FileExists(filename)){
-            LOG(INFO) << "no block found for: " << filename;
-            return false;
-        }
-        return chain->LoadBlock(filename, result);
+        return chain->LoadObject(hash, result);
     }
 
     bool BlockChain::Append(Block* block){
@@ -191,9 +167,8 @@ namespace Token{
         uint256_t hash = block->GetHash();
         uint256_t phash = block->GetPreviousHash();
 
-        std::string filename = chain->GetPath(hash);
-        if(FileExists(filename)){
-            LOG(WARNING) << "block data already exists";
+        if(chain->ContainsObject(hash)){
+            LOG(ERROR) << "duplicate block found for: " << hash;
             UNLOCK;
             return false;
         }
@@ -216,13 +191,8 @@ namespace Token{
             return false;
         }
 
-        if(!SaveBlock(filename, block)) {
-            LOG(INFO) << "couldn't save block: " << filename;
-            UNLOCK;
-            return false;
-        }
-        if(!chain->RegisterPath(hash, filename)) {
-            LOG(INFO) << "couldn't register path: " << hash;
+        if(!chain->SaveObject(hash, block)){
+            LOG(ERROR) << "couldn't save block: " << hash;
             UNLOCK;
             return false;
         }

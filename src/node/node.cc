@@ -131,6 +131,16 @@ namespace Token{
         }
     }
 
+    void BlockChainServer::HandleTransaction(uv_work_t* req){
+        BlockChainServer* instance = GetInstance();
+        ProcessMessageData* data = (ProcessMessageData*)req->data;
+        Transaction* tx = data->request->AsTransactionMessage()->GetTransaction();
+        if(!TransactionPool::PutTransaction(tx)){
+            LOG(ERROR) << "couldn't add transaction to pool: " << tx->GetHash();
+            return;
+        }
+    }
+
     void BlockChainServer::AfterHandleMessage(uv_work_t* req, int status){
         ProcessMessageData* data = (ProcessMessageData*)req->data;
         if(data->request) free(data->request);
@@ -197,6 +207,8 @@ namespace Token{
             uv_queue_work(stream->loop, work, HandleGetBlocks, AfterHandleMessage);
         } else if(msg->IsBlockMessage()){
             uv_queue_work(stream->loop, work, HandleBlock, AfterHandleMessage);
+        } else if(msg->IsTransactionMessage()){
+            uv_queue_work(stream->loop, work, HandleTransaction, AfterHandleMessage);
         } else if(msg->IsVerackMessage()){
             uv_queue_work(stream->loop, work, HandleVerack, AfterHandleMessage);
         }

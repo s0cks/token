@@ -10,7 +10,7 @@
 
 namespace Token{
     class BlockChainVisitor;
-    class BlockChain : public IndexManagedPool{
+    class BlockChain : public IndexManagedPool<Block>{
     private:
         friend class BlockChainServer;
         friend class BlockMiner;
@@ -88,8 +88,12 @@ namespace Token{
         bool HasHeadInIndex();
         bool SetHeadInIndex(const uint256_t& hash);
         bool Append(Block* block);
-        bool LoadBlock(const std::string& filename, Block* block);
-        bool SaveBlock(const std::string& filename, Block* block);
+
+        std::string CreateObjectLocation(const uint256_t& hash, Block* block) const{
+            std::stringstream filename;
+            filename << GetRoot() << "/blk" << block->GetHeight() << ".dat";
+            return filename.str();
+        }
 
         static BlockNode* GetHeadNode();
         static BlockNode* GetGenesisNode();
