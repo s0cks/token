@@ -125,8 +125,8 @@ namespace Token{
         BlockChainServer* instance = GetInstance();
         ProcessMessageData* data = (ProcessMessageData*)req->data;
         Block* block = data->request->AsBlockMessage()->GetBlock();
-        if(!BlockMiner::ScheduleBlock(block)){
-            LOG(ERROR) << "couldn't schedule block: " << block->GetHash();
+        if(!BlockChain::AppendBlock(block)){
+            LOG(ERROR) << "couldn't append block: " << block->GetHash();
             return;
         }
     }
@@ -222,8 +222,8 @@ namespace Token{
         GetInstance()->peers_.push_front(session);
     }
 
-    void BlockChainServer::BroadcastBlockToPeers(Block* block){
-        broadcast_handle_.data = block;
+    void BlockChainServer::BroadcastInventory(const uint256_t& inv){
+        broadcast_handle_.data = nullptr; //inv
         uv_async_send(&broadcast_handle_);
     }
 

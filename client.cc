@@ -103,6 +103,21 @@ int main(int argc, char** argv){
             for(auto& it : utxos.utxos()){
                 LOG(INFO) << " - #" << (idx++) << " " << it;
             }
+        } else if(input == "spend"){
+            std::string token;
+            std::string user;
+
+            std::cout << "User? := ";
+            std::cin >> user;
+
+            std::cout << "Token? := ";
+            std::cin >> token;
+
+            uint256_t hash = HashFromHexString(token);
+            if(!client->Spend(hash, user)){
+                LOG(ERROR) << "couldn't spend: " << hash;
+                return EXIT_FAILURE;
+            }
         }
     } while(true);
 }

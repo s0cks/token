@@ -46,12 +46,12 @@ namespace Token{
         return GetStub()->GetUnclaimedTransactions(&ctx, request, response).ok();
     }
 
-    bool TokenServiceClient::Spend(Token::UnclaimedTransaction* utxo){
-        ::UnclaimedTransaction request;
-        request << (*utxo);
+    bool TokenServiceClient::Spend(const uint256_t& hash, const std::string& dest){
+        ::SpendUnclaimedTransactionRequest request;
+        request.set_user_id("TestUser");
+        request.set_utxo(HexString(hash));
 
         ::EmptyResponse response;
-
         grpc::ClientContext ctx;
         return GetStub()->Spend(&ctx, request, &response).ok();
     }

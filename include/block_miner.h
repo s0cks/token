@@ -12,19 +12,17 @@ namespace Token{
     // - refactor
     class BlockMiner{
     private:
+        static void HandleMineCallback(uv_timer_t* handle);
         static void HandleExitCallback(uv_async_t* handle);
-        static void HandleMineCallback(uv_async_t* handle);
         static void* MinerThread(void* data);
 
         friend class BlockChain;
     public:
+        static const uint64_t kMiningIntervalMilliseconds = 1 * 1000;
+
         ~BlockMiner(){}
 
-        static bool StartMinerThread();
-        static bool ScheduleBlock(Block* block);
-        static bool ScheduleRawBlock(const Proto::BlockChain::Block& raw){
-            return ScheduleBlock(new Block(raw));
-        }
+        static bool Initialize();
     };
 }
 

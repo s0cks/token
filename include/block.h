@@ -149,10 +149,6 @@ namespace Token{
 
         MerkleTree* GetMerkleTree() const;
 
-        BlockHeader GetHeader() const{
-            return BlockHeader((*this));
-        }
-
         uint256_t GetPreviousHash() const{
             return previous_hash_;
         }

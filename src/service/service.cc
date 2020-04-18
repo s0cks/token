@@ -47,9 +47,27 @@ namespace Token{
         return grpc::Status::OK;
     }
 
-    grpc::Status BlockChainService::Spend(grpc::ServerContext *ctx, ::UnclaimedTransaction *request, ::EmptyResponse *response){
-        LOG(WARNING) << "Spend() not implemented!";
-        return grpc::Status::CANCELLED;
+    grpc::Status BlockChainService::Spend(grpc::ServerContext* ctx, const ::SpendUnclaimedTransactionRequest* request, ::EmptyResponse* response){
+        uint256_t hash = HashFromHexString(request->utxo());
+
+        UnclaimedTransaction utxo;
+        if(!UnclaimedTransactionPool::GetUnclaimedTransaction(hash, &utxo)){
+            LOG(ERROR) << "couldn't get unclaimed transaction: " << hash;
+            return grpc::Status::CANCELLED;
+        }
+
+        Transaction tx(0);
+        tx << Input(utxo);
+        tx << Output(request->user_id(), "TestToken");
+
+        uint256_t tx_hash = tx.GetHash();
+        if(!TransactionPool::PutTransaction(&tx)){
+            LOG(ERROR) << "couldn't put transaction: " << tx_hash;
+            return grpc::Status::CANCELLED;
+        }
+
+        LOG(INFO) << "spent: " << tx_hash;
+        return grpc::Status::OK;
     }
 
     BlockChainService* BlockChainService::GetInstance(){

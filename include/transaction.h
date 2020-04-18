@@ -23,6 +23,8 @@ namespace Token{
     protected:
         bool GetBytes(CryptoPP::SecByteBlock& bytes) const;
     public:
+        typedef Proto::BlockChain::Input RawType;
+
         Input():
             previous_hash_(),
             index_(){}
@@ -30,7 +32,7 @@ namespace Token{
             previous_hash_(other.previous_hash_),
             index_(other.index_){}
         Input(const UnclaimedTransaction& utxo);
-        Input(const Proto::BlockChain::Input& raw):
+        Input(const RawType& raw):
             previous_hash_(HashFromHexString(raw.previous_hash())),
             index_(raw.index()){}
         ~Input(){}
@@ -57,7 +59,7 @@ namespace Token{
             return !operator==(lhs, rhs);
         }
 
-        friend Proto::BlockChain::Input& operator<<(Proto::BlockChain::Input& stream, const Input& input){
+        friend RawType& operator<<(RawType& stream, const Input& input){
             stream.set_previous_hash(HexString(input.GetTransactionHash()));
             stream.set_index(input.GetOutputIndex());
             return stream;
@@ -74,13 +76,15 @@ namespace Token{
     protected:
         bool GetBytes(CryptoPP::SecByteBlock& bytes) const;
     public:
+        typedef Proto::BlockChain::Output RawType;
+
         Output():
             user_(),
             token_(){}
         Output(const std::string& user, const std::string& token):
             user_(user),
             token_(token){}
-        Output(const Proto::BlockChain::Output& output): Output(output.user(), output.token()){}
+        Output(const RawType& raw): Output(raw.user(), raw.token()){}
         Output(const Output& other): Output(other.user_, other.token_){}
         ~Output(){}
 
@@ -110,7 +114,7 @@ namespace Token{
             return !operator==(lhs, rhs);
         }
 
-        friend Proto::BlockChain::Output& operator<<(Proto::BlockChain::Output& stream, const Output& output){
+        friend RawType& operator<<(RawType& stream, const Output& output){
             stream.set_user(output.GetUser());
             stream.set_token(output.GetToken());
             return stream;
@@ -148,7 +152,7 @@ namespace Token{
             outputs_(),
             signature_(),
             BinaryObject(){}
-        Transaction(const Proto::BlockChain::Transaction& raw):
+        Transaction(const RawType& raw):
             timestamp_(raw.timestamp()),
             index_(raw.index()),
             signature_(raw.signature()),
@@ -236,17 +240,17 @@ namespace Token{
             return stream;
         }
 
-        friend Proto::BlockChain::Transaction& operator<<(Proto::BlockChain::Transaction& stream, const Transaction& tx){
+        friend RawType& operator<<(RawType& stream, const Transaction& tx){
             stream.set_index(tx.GetIndex());
             stream.set_timestamp(tx.GetTimestamp());
             if(tx.IsSigned()) stream.set_signature(tx.GetSignature());
             uintptr_t idx;
             for(idx = 0; idx < tx.GetNumberOfInputs(); idx++){
-                Proto::BlockChain::Input* raw = stream.add_inputs();
+                Input::RawType* raw = stream.add_inputs();
                 (*raw) << tx.inputs_[idx];
             }
             for(idx = 0; idx < tx.GetNumberOfOutputs(); idx++){
-                Proto::BlockChain::Output* raw = stream.add_outputs();
+                Output::RawType* raw = stream.add_outputs();
                 (*raw) << tx.outputs_[idx];
             }
             return stream;
@@ -284,6 +288,8 @@ namespace Token{
 
     class TransactionPool : public IndexManagedPool<Transaction>{
     private:
+        pthread_rwlock_t rwlock_;
+
         static TransactionPool* GetInstance();
 
         std::string CreateObjectLocation(const uint256_t& hash, Transaction* tx) const{
@@ -298,14 +304,20 @@ namespace Token{
             return filename;
         }
 
-        TransactionPool(): IndexManagedPool(FLAGS_path + "/txs"){}
+        TransactionPool():
+            rwlock_(),
+            IndexManagedPool(FLAGS_path + "/txs"){
+            pthread_rwlock_init(&rwlock_, NULL);
+        }
     public:
         ~TransactionPool(){}
 
         static bool Initialize();
         static bool PutTransaction(Transaction* tx);
         static bool GetTransaction(const uint256_t& hash, Transaction* result);
+        static bool GetTransactions(std::vector<Transaction>& txs);
         static bool RemoveTransaction(const uint256_t& hash);
+        static uint64_t GetSize();
     };
 }
 

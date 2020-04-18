@@ -61,7 +61,7 @@ namespace Token {
         Session* session = data->session;
         Block* block = data->request->AsBlockMessage()->GetBlock();
         LOG(INFO) << "received block: " << block->GetHash();
-        if(!BlockMiner::ScheduleBlock(block)){
+        if(!BlockChain::AppendBlock(block)){
             LOG(WARNING) << "couldn't schedule block for mining: " << block->GetHash();
             return;
         }

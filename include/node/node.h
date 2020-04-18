@@ -40,20 +40,15 @@ namespace Token{
         ~BlockChainServer(){}
 
         static bool StartServer();
+        static void WaitForShutdown();
         static void ConnectToPeer(const std::string& address, uint16_t port);
-        static void BroadcastBlockToPeers(Block* block);
+        static void BroadcastInventory(const uint256_t& hash);
 
         static void GetConnectedPeers(std::list<Session*>& peers){
             for(auto& it : GetInstance()->peers_){
                 if(it->IsConnected()) peers.push_back(it);
             }
         }
-
-        static void WaitForShutdown();
-
-        // static bool ShutdownServer();
-        // static bool ShutdownServerAndWait();
-        // static void Broadcast(Message* msg);
     };
 }
 

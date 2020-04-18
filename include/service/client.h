@@ -28,7 +28,7 @@ namespace Token{
         bool GetBlock(const std::string& hash, ::BlockHeader* response);
         bool GetUnclaimedTransactions(::UnclaimedTransactionList* response);
         bool GetUnclaimedTransactions(const std::string& user, ::UnclaimedTransactionList* response);
-        bool Spend(Token::UnclaimedTransaction* utxo);
+        bool Spend(const uint256_t& hash, const std::string& recipient);
     };
 }
 

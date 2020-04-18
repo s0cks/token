@@ -50,7 +50,7 @@ namespace Token{
             tx_index_(tx.GetIndex()),
             user_(out.GetUser()),
             token_(out.GetToken()){}
-        UnclaimedTransaction(const Proto::BlockChain::UnclaimedTransaction& raw):
+        UnclaimedTransaction(const RawType& raw):
             tx_hash_(HashFromHexString(raw.tx_hash())),
             tx_index_(raw.tx_index()),
             user_(raw.user()),
@@ -81,7 +81,7 @@ namespace Token{
             return !operator==(lhs, rhs);
         }
 
-        friend Proto::BlockChain::UnclaimedTransaction& operator<<(Proto::BlockChain::UnclaimedTransaction& stream, const UnclaimedTransaction& utxo){
+        friend RawType& operator<<(RawType& stream, const UnclaimedTransaction& utxo){
             stream.set_tx_hash(HexString(utxo.GetTransaction()));
             stream.set_tx_index(utxo.GetIndex());
             stream.set_user(utxo.GetUser());
