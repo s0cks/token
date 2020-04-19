@@ -1,7 +1,7 @@
 #include <glog/logging.h>
 #include "block_miner.h"
 #include "block_chain.h"
-#include "node/node.h"
+#include "node/server.h"
 
 namespace Token{
     static pthread_t thread;

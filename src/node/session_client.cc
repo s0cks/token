@@ -2,7 +2,7 @@
 #include "layout.h"
 #include "message_data.h"
 #include "block_miner.h"
-#include "node/node.h"
+#include "node/server.h"
 
 namespace Token {
     static const size_t kResolveWaitTimeMilliseconds = 1 * 1000;

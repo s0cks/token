@@ -1,7 +1,7 @@
 #include <glog/logging.h>
 #include <string.h>
 #include "block_miner.h"
-#include "node/node.h"
+#include "node/server.h"
 #include "layout.h"
 #include "message_data.h"
 

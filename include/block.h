@@ -20,6 +20,8 @@ namespace Token{
         uint256_t hash_;
         uint256_t merkle_root_;
     public:
+        typedef Proto::BlockChain::BlockHeader RawType;
+
         BlockHeader():
             timestamp_(0),
             height_(0),

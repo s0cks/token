@@ -52,4 +52,4 @@ namespace Token{
     };
 }
 
-#endif //TOKEN_NODE_H
+#endif //TOKEN_SERVER_H

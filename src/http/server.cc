@@ -7,7 +7,7 @@ namespace Token{
     //TODO:
     // - create HttpRequest & HttpResponse classes
     // - create skeleton for http endpoint handling
-    // - offload work from nodejs to http service
+    // - offload work from nodejs to http rpc
     // - re-arrange port layout
     // - make configurable via flag
     void* BlockChainHttpServer::ServerThread(void* data){

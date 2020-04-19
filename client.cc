@@ -1,7 +1,7 @@
 #include <glog/logging.h>
 #include <gflags/gflags.h>
 #include "block_chain.h"
-#include "service/client.h"
+#include "rpc/client.h"
 
 static inline void
 PrintBlock(Token::Proto::BlockChain::BlockHeader* block){
@@ -60,7 +60,7 @@ int main(int argc, char** argv){
         } else if(input == "gethead"){
             ::BlockHeader head;
             if(!client->GetHead(&head)){
-                LOG(ERROR) << "couldn't get <HEAD> from service";
+                LOG(ERROR) << "couldn't get <HEAD> from rpc";
                 return EXIT_FAILURE;
             }
             PrintBlock(&head);

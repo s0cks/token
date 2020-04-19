@@ -1,14 +1,14 @@
 #include <glog/logging.h>
-#include "service/service.h"
+#include "rpc/server.h"
 #include "block_chain.h"
 
 namespace Token{
-    grpc::Status BlockChainService::GetHead(grpc::ServerContext *ctx, const ::EmptyRequest *request, ::BlockHeader *response) {
+    grpc::Status BlockChainService::GetHead(grpc::ServerContext *ctx, const Token::Proto::BlockChainService::EmptyRequest *request, BlockHeader::RawType* response) {
         (*response) << BlockChain::GetHead();
         return grpc::Status::OK;
     }
 
-    grpc::Status BlockChainService::GetBlock(grpc::ServerContext *ctx, const ::GetBlockRequest *request, ::BlockHeader *response){
+    grpc::Status BlockChainService::GetBlock(grpc::ServerContext *ctx, const Token::Proto::BlockChainService::GetBlockRequest *request, BlockHeader::RawType* response){
         if(request->hash().empty()){
             LOG(WARNING) << "requested block hash is empty";
             return grpc::Status::CANCELLED;
@@ -47,7 +47,7 @@ namespace Token{
         return grpc::Status::OK;
     }
 
-    grpc::Status BlockChainService::Spend(grpc::ServerContext* ctx, const ::SpendUnclaimedTransactionRequest* request, ::EmptyResponse* response){
+    grpc::Status BlockChainService::Spend(grpc::ServerContext* ctx, const Token::Proto::BlockChainService::SpendUnclaimedTransactionRequest* request, Token::Proto::BlockChainService::EmptyResponse* response){
         uint256_t hash = HashFromHexString(request->utxo());
 
         UnclaimedTransaction utxo;

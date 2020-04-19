@@ -7,7 +7,7 @@
 #include "blockchain.pb.h"
 #include "pool.h"
 #include "transaction.h"
-#include "service/service.h"
+#include "rpc/server.h"
 
 namespace Token{
     class UnclaimedTransaction : public BinaryObject{
