@@ -39,8 +39,6 @@ DEFINE_string(address, "", "The address of the node to connect to");
 
 int main(int argc, char** argv){
     using namespace Token;
-    using namespace Token::Proto;
-
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     TokenServiceClient* client;
@@ -58,7 +56,7 @@ int main(int argc, char** argv){
         if(input == "discon"){
             return EXIT_FAILURE;
         } else if(input == "gethead"){
-            ::BlockHeader head;
+            BlockHeader::RawType head;
             if(!client->GetHead(&head)){
                 LOG(ERROR) << "couldn't get <HEAD> from rpc";
                 return EXIT_FAILURE;
@@ -70,7 +68,7 @@ int main(int argc, char** argv){
             std::cin >> target;
             if(target.length() == 64){
                 LOG(INFO) << "fetching block from hash: " << target;
-                ::BlockHeader blk;
+                BlockHeader::RawType blk;
                 if(!client->GetBlock(target, &blk)){
                     LOG(ERROR) << "couldn't fetch block: " << target;
                     return EXIT_FAILURE;
@@ -83,7 +81,7 @@ int main(int argc, char** argv){
             std::cout << "User? := ";
             std::cin >> user;
 
-            ::UnclaimedTransactionList utxos;
+            Token::Proto::BlockChainService::UnclaimedTransactionList utxos;
             if(user == "None"){
                 LOG(INFO) << "getting all unclaimed transactions";
                 if(!client->GetUnclaimedTransactions(&utxos)){
