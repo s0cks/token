@@ -80,7 +80,7 @@ namespace Token {
 
     void ClientSession::HandleVerackMessage(uv_work_t* req){
         ProcessMessageData* data = (ProcessMessageData*)req->data;
-        Session* session = data->session;
+        ClientSession* session = (ClientSession*)data->session;
         VerackMessage* verack = data->request->AsVerackMessage();
         if(!(session->IsHandshaking() || session->IsSynchronizing())){
             LOG(ERROR) << "session isn't handshaking";
@@ -97,6 +97,14 @@ namespace Token {
 
         LOG(INFO) << "connected!";
         session->SetState(SessionState::kConnected);
+    }
+
+    void ClientSession::HandlePingMessage(uv_work_t* req){
+        ProcessMessageData* data = (ProcessMessageData*)req->data;
+        ClientSession* session = (ClientSession*)data->session;
+        PingMessage* msg = data->request->AsPingMessage();
+        LOG(INFO) << "ping: " << msg->GetNonce();
+        session->SendPong(msg->GetNonce());
     }
 
     void ClientSession::AfterProcessMessage(uv_work_t* req, int status){
@@ -136,6 +144,8 @@ namespace Token {
                 uv_queue_work(stream->loop, work, HandleVersionMessage, AfterProcessMessage);
             } else if(msg->IsVerackMessage()){
                 uv_queue_work(stream->loop, work, HandleVerackMessage, AfterProcessMessage);
+            } else if(msg->IsPingMessage()){
+                uv_queue_work(stream->loop, work, HandlePingMessage, AfterProcessMessage);
             }
         }
     }

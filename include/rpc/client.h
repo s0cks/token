@@ -4,7 +4,6 @@
 
 #include <grpc++/grpc++.h>
 #include "server.h"
-#include "block.h"
 #include "block_chain.h"
 
 namespace Token{

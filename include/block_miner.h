@@ -4,7 +4,6 @@
 #include <pthread.h>
 #include <uv.h>
 #include "common.h"
-#include "block.h"
 
 namespace Token{
     //TODO:

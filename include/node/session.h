@@ -51,6 +51,7 @@ namespace Token{
         virtual uv_stream_t* GetStream() const = 0;
 
         void SendPing(const std::string& nonce=GenerateNonce()){
+            LOG(INFO) << "ping: " << nonce;
             PingMessage msg(nonce);
             Send(&msg);
         }
@@ -133,11 +134,17 @@ namespace Token{
         friend class BlockChainServer;
 
         uv_tcp_t handle_;
+        uv_timer_t ping_timer_;
+        uv_timer_t timeout_timer_;
 
         PeerSession():
             handle_(),
+            ping_timer_(),
+            timeout_timer_(),
             Session(){
             handle_.data = this;
+            ping_timer_.data = this;
+            timeout_timer_.data = this;
         }
     public:
         ~PeerSession(){}
@@ -169,6 +176,7 @@ namespace Token{
         static void HandleVersionMessage(uv_work_t* req);
         static void HandleVerackMessage(uv_work_t* req);
         static void HandleBlockMessage(uv_work_t* req);
+        static void HandlePingMessage(uv_work_t* req);
         static void AfterResolveInventory(uv_work_t* req, int status);
         static void AfterProcessMessage(uv_work_t* req, int status);
 

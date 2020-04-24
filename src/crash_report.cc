@@ -1,10 +1,7 @@
 #include <sstream>
 #include "crash_report.h"
 #include "token.h"
-#include "block.h"
 #include "block_chain.h"
-#include "unclaimed_transaction.h"
-#include "transaction.h"
 
 namespace Token{
     static inline std::string

@@ -1,17 +1,8 @@
 #include <dirent.h>
-#include <glog/logging.h>
-#include "common.h"
-#include "unclaimed_transaction.h"
-#include "block_chain.h"
+#include "pool.h"
+#include "object.h"
 
 namespace Token{
-    bool UnclaimedTransaction::GetBytes(CryptoPP::SecByteBlock& bytes) const{
-        Proto::BlockChain::UnclaimedTransaction raw;
-        raw << (*this);
-        bytes.resize(raw.ByteSizeLong());
-        return raw.SerializeToArray(bytes.data(), bytes.size());
-    }
-
     static pthread_rwlock_t kPoolLock = PTHREAD_RWLOCK_INITIALIZER;
 #define READ_LOCK pthread_rwlock_tryrdlock(&kPoolLock);
 #define WRITE_LOCK pthread_rwlock_trywrlock(&kPoolLock);

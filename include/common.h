@@ -15,6 +15,7 @@
 #include <cryptopp/rsa.h>
 #include <cryptopp/files.h>
 #include <cryptopp/osrng.h>
+#include <cryptopp/pssr.h>
 
 #include "blockchain.pb.h"
 

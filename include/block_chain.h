@@ -5,8 +5,8 @@
 #include <map>
 #include "blockchain.pb.h"
 #include "common.h"
-#include "block.h"
-#include "unclaimed_transaction.h"
+#include "object.h"
+#include "pool.h"
 
 namespace Token{
     class BlockChainVisitor;

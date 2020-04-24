@@ -36,6 +36,8 @@ namespace Token{
         PeerSession* session = new PeerSession();
         instance->sessions_.insert(std::make_pair((uv_stream_t*)session->GetHandle(), session));
         uv_tcp_init(loop, session->GetHandle());
+        uv_timer_init(loop, &session->ping_timer_);
+        uv_timer_init(loop, &session->timeout_timer_);
         if((status = uv_accept(stream, (uv_stream_t*)session->GetHandle())) != 0){
             LOG(ERROR) << "error accepting connection: " << uv_strerror(status);
             return;
@@ -47,6 +49,18 @@ namespace Token{
                 &AllocBuffer,
                 &OnMessageReceived
         );
+    }
+
+    void BlockChainServer::OnPing(uv_timer_t* handle){
+        PeerSession* session = (PeerSession*)handle->data;
+        session->SendPing();
+        uv_timer_start(&session->timeout_timer_, &OnTimeout, 30 * 1000, 0);
+    }
+
+    void BlockChainServer::OnTimeout(uv_timer_t* handle){
+        PeerSession* session = (PeerSession*)handle->data;
+        LOG(WARNING) << "session timed out!";
+        //TODO: implement
     }
 
     void BlockChainServer::HandleVersion(uv_work_t* req){
@@ -62,12 +76,13 @@ namespace Token{
 
     void BlockChainServer::HandleVerack(uv_work_t* req){
         ProcessMessageData* data = (ProcessMessageData*)req->data;
-        Session* session = data->session;
+        PeerSession* session = (PeerSession*)data->session;
         VerackMessage* verack = data->request->AsVerackMessage();
         session->SendVerack();
         if(session->IsSynchronizing()){
             return;
         } else if(session->IsHandshaking()){
+            uv_timer_start(&session->ping_timer_, &OnPing, 0, 30 * 1000);
             session->SetState(SessionState::kConnected);
             if(verack->GetMaxBlock() < BlockChain::GetHeight()) session->SetState(SessionState::kSynchronizing);
             return;
@@ -141,6 +156,15 @@ namespace Token{
         }
     }
 
+    void BlockChainServer::HandlePong(uv_work_t* req){
+        BlockChainServer* instance = GetInstance();
+        ProcessMessageData* data = (ProcessMessageData*)req->data;
+        PeerSession* session = (PeerSession*)data->session;
+        PongMessage* msg = data->request->AsPongMessage();
+        LOG(INFO) << "pong: " << msg->GetNonce();
+        uv_timer_stop(&session->timeout_timer_);
+    }
+
     void BlockChainServer::AfterHandleMessage(uv_work_t* req, int status){
         ProcessMessageData* data = (ProcessMessageData*)req->data;
         if(data->request) free(data->request);
@@ -211,6 +235,8 @@ namespace Token{
             uv_queue_work(stream->loop, work, HandleTransaction, AfterHandleMessage);
         } else if(msg->IsVerackMessage()){
             uv_queue_work(stream->loop, work, HandleVerack, AfterHandleMessage);
+        } else if(msg->IsPongMessage()){
+            uv_queue_work(stream->loop, work, HandlePong, AfterHandleMessage);
         }
     }
 

@@ -4,8 +4,7 @@
 #include <grpc++/grpc++.h>
 #include "service.pb.h"
 #include "service.grpc.pb.h"
-
-#include "block.h"
+#include "object.h"
 
 namespace Token{
     class BlockChainService final : public Token::Proto::BlockChainService::BlockChainService::Service{

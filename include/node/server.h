@@ -9,7 +9,6 @@
 #include "session.h"
 
 namespace Token{
-    //TODO: establish timer for ping
     class BlockChainServer{
     private:
         pthread_t thread_;
@@ -20,6 +19,8 @@ namespace Token{
 
         static BlockChainServer* GetInstance();
         static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
+        static void OnPing(uv_timer_t* handle);
+        static void OnTimeout(uv_timer_t* handle);
         static void OnNewConnection(uv_stream_t* stream, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
         static void* ServerThread(void* data);
@@ -27,6 +28,7 @@ namespace Token{
         static void HandleAsyncBroadcastHead(uv_async_t* handle);
         static void HandleBroadcastBlock(uv_work_t* req);
 
+        static void HandlePong(uv_work_t* req);
         static void HandleVerack(uv_work_t* req);
         static void HandleBlock(uv_work_t* req);
         static void HandleTransaction(uv_work_t* req);

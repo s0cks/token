@@ -6,6 +6,9 @@
 #include "uint256_t.h"
 
 namespace Token{
+    class Transaction;
+    class UnclaimedTransaction;
+
     template<typename PoolObject>
     class IndexManagedPool{
     private:
@@ -93,6 +96,67 @@ namespace Token{
         std::string GetRoot() const{
             return path_;
         }
+    };
+
+    class TransactionPool : public IndexManagedPool<Transaction>{
+    private:
+        pthread_rwlock_t rwlock_;
+
+        static TransactionPool* GetInstance();
+
+        std::string CreateObjectLocation(const uint256_t& hash, Transaction* tx) const{
+            std::string hashString = HexString(hash);
+            std::string front = hashString.substr(0, 8);
+            std::string tail = hashString.substr(hashString.length() - 8, hashString.length());
+
+            std::string filename = GetRoot() + "/" + front + ".dat";
+            if(FileExists(filename)){
+                filename = GetRoot() + "/" + tail + ".dat";
+            }
+            return filename;
+        }
+
+        TransactionPool():
+                rwlock_(),
+                IndexManagedPool(FLAGS_path + "/txs"){
+            pthread_rwlock_init(&rwlock_, NULL);
+        }
+    public:
+        ~TransactionPool(){}
+
+        static bool Initialize();
+        static bool PutTransaction(Transaction* tx);
+        static bool GetTransaction(const uint256_t& hash, Transaction* result);
+        static bool GetTransactions(std::vector<Transaction>& txs);
+        static bool RemoveTransaction(const uint256_t& hash);
+        static uint64_t GetSize();
+    };
+
+    class UnclaimedTransactionPool : public IndexManagedPool<UnclaimedTransaction>{
+    private:
+        static UnclaimedTransactionPool* GetInstance();
+
+        std::string CreateObjectLocation(const uint256_t& hash, UnclaimedTransaction* value) const{
+            std::string hashString = HexString(hash);
+            std::string front = hashString.substr(0, 8);
+            std::string tail = hashString.substr(hashString.length() - 8, hashString.length());
+            std::string filename = GetRoot() + "/" + front + ".dat";
+            if(FileExists(filename)){
+                filename = GetRoot() + "/" + tail + ".dat";
+            }
+            return filename;
+        }
+
+        UnclaimedTransactionPool(): IndexManagedPool(FLAGS_path + "/utxos"){}
+    public:
+        ~UnclaimedTransactionPool(){}
+
+        static bool RemoveUnclaimedTransaction(const uint256_t& hash);
+        static bool Initialize();
+        static bool PutUnclaimedTransaction(UnclaimedTransaction* utxo);
+        static bool GetUnclaimedTransaction(const uint256_t& hash, UnclaimedTransaction* result);
+        static bool GetUnclaimedTransactions(std::vector<uint256_t>& utxos);
+        static bool GetUnclaimedTransactions(const std::string& user, std::vector<uint256_t>& utxos);
     };
 }
 

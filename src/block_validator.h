@@ -2,8 +2,7 @@
 #define TOKEN_BLOCK_VALIDATOR_H
 
 #include <glog/logging.h>
-#include "block.h"
-#include "unclaimed_transaction.h"
+#include "object.h"
 
 namespace Token{
     class BlockValidator : public BlockVisitor{
