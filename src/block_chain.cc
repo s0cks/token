@@ -48,11 +48,16 @@ namespace Token{
         return GetIndex()->Put(writeOpts, key, value).ok();
     }
 
-    static Block*
-    CreateGenesis(){
+    static const uint32_t kNumberOfGenesisOutputs = 32;
+
+    static bool
+    CreateGenesis(Block* genesis){
         Transaction coinbase(0, 0);
-        coinbase << Output("TestUser", "TestToken");
-        return new Block(0, uint256_t(), { coinbase }, 0);
+        for(uint32_t idx = 0; idx < kNumberOfGenesisOutputs; idx++){
+            coinbase << Output("TestUser", "TestToken");
+        }
+        (*genesis) = Block(0, uint256_t(), { coinbase }, 0);
+        return true;
     }
 
     bool BlockChain::Initialize(){
@@ -62,49 +67,27 @@ namespace Token{
         }
         if(!chain->InitializeIndex()) return false;;
         if(!chain->HasHeadInIndex()){
-            Transaction coinbase(0, 0);
-            coinbase << Output("TestUser", "TestToken");
-            Block genesis(0, uint256_t(), { coinbase }, 0);
+            Block genesis;
+            if(!CreateGenesis(&genesis)){
+                LOG(ERROR) << "couldn't create genesis";
+                return false;
+            }
+
             uint256_t hash = genesis.GetHash();
             if(!chain->SaveObject(hash, &genesis)) return false;
             BlockNode* node = new BlockNode(genesis);
             chain->head_ = chain->genesis_ = node;
             chain->nodes_.insert(std::make_pair(hash, node));
 
-            LOG(INFO) << "processing " << genesis.GetNumberOfTransactions() << " transactions....";
-
-            int i;
-            for(i = 0; i < genesis.GetNumberOfTransactions(); i++){
-                Transaction tx;
-                if(!genesis.GetTransaction(i, &tx)){
-                    LOG(ERROR) << "couldn't get transaction #" << i << " in block: " << hash;
-                    UNLOCK;
-                    return false;
-                }
-
-                LOG(INFO) << "processing " << tx.GetHash() << " w/ " << tx.GetNumberOfInputs() << " inputs + " << tx.GetNumberOfOutputs() << " outputs";
-
-                int j;
-                for(j = 0; j < tx.GetNumberOfOutputs(); j++) {
-                    Output out;
-                    if(!tx.GetOutput(j, &out)){
-                        LOG(WARNING) << "couldn't get output #" << j;
-                        UNLOCK;
-                        return false;
-                    }
-
-                    UnclaimedTransaction utxo(tx, out);
+            for(auto it : genesis){
+                uint32_t index = 0;
+                for(auto out = it.outputs_begin(); out != it.outputs_end(); out++){
+                    UnclaimedTransaction utxo(it, index++);
                     if(!UnclaimedTransactionPool::PutUnclaimedTransaction(&utxo)){
                         LOG(WARNING) << "couldn't create new unclaimed transaction: " << utxo.GetHash();
-                        LOG(WARNING) << "*** Unclaimed Transaction: ";
-                        LOG(WARNING) << "***   + Input: " << utxo.GetTransaction() << "[" << utxo.GetIndex()
-                                     << "]";
-                        LOG(WARNING) << "***   + Output: " << utxo.GetToken() << "(" << utxo.GetUser() << ")";
                         UNLOCK;
                         return false;
                     }
-
-                    LOG(INFO) << "created new unclaimed transaction: " << utxo.GetHash() << "(" << utxo.GetTransaction() << "[" << utxo.GetIndex() << "])";
                 }
             }
             chain->SetHeadInIndex(hash);
@@ -181,12 +164,6 @@ namespace Token{
 
         if(!BlockChain::ContainsBlock(phash)){
             LOG(ERROR) << "couldn't find parent: " << phash;
-            UNLOCK;
-            return false;
-        }
-
-        if(!BlockValidator::IsValid(block)){
-            LOG(ERROR) << "the following block contains invalid transactions: " << hash;
             UNLOCK;
             return false;
         }

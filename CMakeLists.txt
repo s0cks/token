@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.7)
-enable_testing()
+cmake_minimum_required(VERSION 3.5)
+        enable_testing()
 project("token" CXX)
 
 #TODO: Fix for remote building
@@ -15,10 +15,9 @@ find_package(GRPC REQUIRED)
 find_package(Protobuf REQUIRED)
 find_package(Crypto++ REQUIRED)
 find_package(Threads)
-find_package(glog REQUIRED)
+find_package(Glog REQUIRED)
 find_package(LevelDB REQUIRED)
-find_package(gflags REQUIRED)
-find_package(GTest REQUIRED)
+find_package(Gflags REQUIRED)
 find_package(Libuv REQUIRED)
 find_package(HttpParser REQUIRED)
 
@@ -33,7 +32,7 @@ set(PROTO_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protos")
 file(GLOB_RECURSE TOKEN_LIB_SOURCES include/*.h src/*.cc src/*.h)
 file(GLOB_RECURSE TOKEN_PROTO_SOURCES protos/*.proto)
 file(GLOB_RECURSE TOKEN_SERVICE_PROTO_SOURCES protos/*.proto)
-file(GLOB_RECURSE TOKEN_TEST_SOURCES tests/*.h tests/*.cc)
+#file(GLOB_RECURSE TOKEN_TEST_SOURCES tests/*.h tests/*.cc)
 
 protobuf_generate_cpp(PROTO_SRC PROTO_HEADER ${TOKEN_PROTO_SOURCES})
 grpc_generate_cpp(GRPC_SRCS GRPC_HDRS ${CMAKE_BINARY_DIR} ${TOKEN_SERVICE_PROTO_SOURCES})
@@ -48,7 +47,7 @@ add_library(
 )
 target_link_libraries(
         "${PROJECT_NAME}-ledger"
-       ${HTTPPARSER_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CRYPTO++_LIBRARIES} ${Protobuf_LIBRARIES} glog::glog ${LevelDB_LIBRARY} ${LIBUV_LIBRARIES}
+       ${HTTPPARSER_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CRYPTO++_LIBRARIES} ${Protobuf_LIBRARIES} ${GLOG_LIBRARIES} ${LevelDB_LIBRARY} ${LIBUV_LIBRARIES}
 )
 
 #=================================================
@@ -60,7 +59,7 @@ add_executable(
 )
 target_link_libraries(
         "${PROJECT_NAME}-node"
-        "${PROJECT_NAME}-ledger" ${HTTPPARSER_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CRYPTO++_LIBRARIES} glog::glog ${GRPC_GRPC++_LIBRARY} ${GRPC_GRPC++_REFLECTION_LIBRARY} gflags
+        "${PROJECT_NAME}-ledger" ${HTTPPARSER_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CRYPTO++_LIBRARIES} ${GLOG_LIBRARIES} gRPC::grpc++ gRPC::grpc++_reflection ${GFLAGS_LIBRARIES}
 )
 
 #=================================================
@@ -72,17 +71,22 @@ add_executable(
 )
 target_link_libraries(
         "${PROJECT_NAME}-client"
-        "${PROJECT_NAME}-ledger" ${CMAKE_THREAD_LIBS_INIT} ${CRYPTO++_LIBRARIES} ${Protobuf_LIBRARIES} ${GRPC_GRPC++_LIBRARY} ${GRPC_GRPC++_REFLECTION_LIBRARY} gflags
+        "${PROJECT_NAME}-ledger" ${CMAKE_THREAD_LIBS_INIT} ${CRYPTO++_LIBRARIES} ${Protobuf_LIBRARIES} gRPC::grpc++ gRPC::grpc++_reflection ${GFLAGS_LIBRARIES}
 )
 
 #=================================================
 #       Token Ledger Unit Tests Exe
 #=================================================
-add_executable(
-        "${PROJECT_NAME}-tests"
-        tests.cc ${TOKEN_TEST_SOURCES}
-)
-target_link_libraries(
-        "${PROJECT_NAME}-tests"
-        "${PROJECT_NAME}-ledger" ${CMAKE_THREAD_LIBS_INIT} ${CRYPTO++_LIBRARIES} ${Protobuf_LIBRARIES} ${GRPC_GRPC++_LIBRARY} ${GRPC_GRPC++_REFLECTION_LIBRARY} gflags ${GTEST_BOTH_LIBRARIES}
-)
+#add_executable(
+#        "${PROJECT_NAME}-tests"
+#        tests.cc ${TOKEN_TEST_SOURCES}
+#)
+#target_link_libraries(
+#        "${PROJECT_NAME}-tests"
+#        "${PROJECT_NAME}-ledger" ${CMAKE_THREAD_LIBS_INIT} ${CRYPTO++_LIBRARIES} ${Protobuf_LIBRARIES} gRPC::grpc++ gRPC::grpc++_reflection ${GFLAGS_LIBRARIES} ${GTEST_BOTH_LIBRARIES}
+#)
+
+set(CPACK_GENERATOR "DEB")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libcrypto++-dev (>= 5.6.4-7), libprotobuf-dev (>= 3.0.0-9), libleveldb-dev (>= 1.18-5), libgoogle-glog-dev (>= 0.3.4-2), libgflags-dev (>= 1.30.1-1), libuv1-dev (>= 1.9.1-3), libhttp-parser-dev (>= 2.1-2)")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Tazz")
+include(CPack)

@@ -20,6 +20,17 @@ namespace Token{
         return pool->InitializeIndex();
     }
 
+    bool TransactionPool::HasTransaction(const uint256_t& hash){
+        TransactionPool* pool = GetInstance();
+        READ_LOCK;
+        if(!pool->ContainsObject(hash)){
+            UNLOCK;
+            return false;
+        }
+        UNLOCK;
+        return true;
+    }
+
     bool TransactionPool::GetTransaction(const uint256_t& hash, Transaction* result){
         TransactionPool* pool = GetInstance();
         READ_LOCK;

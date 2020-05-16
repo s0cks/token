@@ -18,7 +18,7 @@ namespace Token{
         grpc::Status GetHead(grpc::ServerContext* ctx, const Token::Proto::BlockChainService::EmptyRequest* request, BlockHeader::RawType* response);
         grpc::Status GetBlock(grpc::ServerContext* ctx, const Token::Proto::BlockChainService::GetBlockRequest* request, BlockHeader::RawType* response);
         grpc::Status GetUnclaimedTransactions(grpc::ServerContext* ctx, const Proto::BlockChainService::GetUnclaimedTransactionsRequest* request, Proto::BlockChainService::UnclaimedTransactionList* response);
-        grpc::Status Spend(grpc::ServerContext* ctx, const Token::Proto::BlockChainService::SpendUnclaimedTransactionRequest* request, Token::Proto::BlockChainService::EmptyResponse* response);
+        grpc::Status Spend(grpc::ServerContext* ctx, const Token::Proto::BlockChainService::SpendUnclaimedTransactionRequest* request, Transaction::RawType* response);
 
         static BlockChainService* GetInstance();
         static void Start(const std::string address, int port);

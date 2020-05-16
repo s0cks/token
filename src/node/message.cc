@@ -44,6 +44,10 @@ namespace Token{
             DECLARE_HASH_DECODE(Ping, "couldn't deserialize ping from byte array");
             DECLARE_HASH_DECODE(Pong, "couldn't deserialize pong from byte array");
             DECLARE_HASH_DECODE(GetData, "couldn't deserialize getdata from byte array");
+            DECLARE_RAW_DECODE(RequestVote, Proto::BlockChainServer::Action, "couldn't deserialize request vote from byte array");
+            DECLARE_RAW_DECODE(Vote, Proto::BlockChainServer::Action, "couldn't deserialize vote from byte array");
+            DECLARE_RAW_DECODE(Election, Proto::BlockChainServer::Action, "couldn't deserialize election from byte array");
+            DECLARE_RAW_DECODE(Commit, Proto::BlockChainServer::Action, "couldn't deserialize commit from byte array");
             DECLARE_RAW_DECODE(Transaction, Proto::BlockChain::Transaction, "couldn't deserialize transaction from byte array");
             DECLARE_RAW_DECODE(Block, Proto::BlockChain::Block, "couldn't deserialize block from byte array");
             DECLARE_RAW_DECODE(Inventory, Proto::BlockChainServer::Inventory, "couldn't deserialize inventory from byte array");

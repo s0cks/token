@@ -1,5 +1,6 @@
 #include <glog/logging.h>
 #include "rpc/server.h"
+#include "node/server.h"
 #include "block_chain.h"
 
 namespace Token{
@@ -47,7 +48,7 @@ namespace Token{
         return grpc::Status::OK;
     }
 
-    grpc::Status BlockChainService::Spend(grpc::ServerContext* ctx, const Token::Proto::BlockChainService::SpendUnclaimedTransactionRequest* request, Token::Proto::BlockChainService::EmptyResponse* response){
+    grpc::Status BlockChainService::Spend(grpc::ServerContext* ctx, const Token::Proto::BlockChainService::SpendUnclaimedTransactionRequest* request, Transaction::RawType* response){
         uint256_t hash = HashFromHexString(request->utxo());
 
         UnclaimedTransaction utxo;
@@ -60,13 +61,15 @@ namespace Token{
         tx << Input(utxo);
         tx << Output(request->user_id(), "TestToken");
 
-        uint256_t tx_hash = tx.GetHash();
         if(!TransactionPool::PutTransaction(&tx)){
-            LOG(ERROR) << "couldn't put transaction: " << tx_hash;
+            LOG(ERROR) << "couldn't spend: " << hash;
             return grpc::Status::CANCELLED;
         }
 
-        LOG(INFO) << "spent: " << tx_hash;
+        //BlockChainServer::BroadcastInventory(tx);
+
+        LOG(INFO) << "spent: " << hash;
+        (*response) << tx;
         return grpc::Status::OK;
     }
 

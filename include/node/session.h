@@ -11,157 +11,67 @@
 #include "block_chain.h"
 
 namespace Token{
-    enum class SessionState{
-        kConnecting,
-        kHandshaking,
-        kSynchronizing,
-        kConnected,
-        kDisconnected
-    };
-
-    //TODO: establish timer for ping
     class Session{
-    private:
-        SessionState state_;
-        ByteBuffer rbuffer_;
-        ByteBuffer wbuffer_;
+    public:
+        enum State{
+            kConnecting,
+            kConnected,
+            kDisconnected
+        };
 
-        friend class BlockChainServer;
-        friend class ClientSession;
+        static const intptr_t kBufferInitSize = 4096;
+    private:
+        pthread_rwlock_t rwlock_;
+        State state_;
+        ByteBuffer rbuff_;
+        ByteBuffer wbuff_;
     protected:
-        void SetState(SessionState state){
+        void SetState(State state){
+            pthread_rwlock_wrlock(&rwlock_);
             state_ = state;
+            pthread_rwlock_unlock(&rwlock_);
+        }
+
+        virtual uv_stream_t* GetStream() const = 0;
+
+        Session():
+            state_(kDisconnected),
+            rbuff_(kBufferInitSize),
+            wbuff_(kBufferInitSize){}
+    public:
+        virtual ~Session() = default;
+
+        State GetState(){
+            pthread_rwlock_rdlock(&rwlock_);
+            State state = state_;
+            pthread_rwlock_unlock(&rwlock_);
+            return state;
+        }
+
+        bool IsConnected(){
+            return GetState() == kConnected;
+        }
+
+        bool IsConnecting(){
+            return GetState() == kConnecting;
+        }
+
+        bool IsDisconnected(){
+            return GetState() == kDisconnected;
         }
 
         ByteBuffer* GetReadBuffer(){
-            return &rbuffer_;
+            return &rbuff_;
         }
 
         ByteBuffer* GetWriteBuffer(){
-            return &wbuffer_;
+            return &wbuff_;
         }
 
-        static void OnMessageSent(uv_write_t* req, int status);
-        static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
-
-        Session();
-    public:
-        virtual ~Session(){}
-        virtual void Send(Token::Message* msg);
-        virtual uv_stream_t* GetStream() const = 0;
-
-        void SendPing(const std::string& nonce=GenerateNonce()){
-            LOG(INFO) << "ping: " << nonce;
-            PingMessage msg(nonce);
-            Send(&msg);
-        }
-
-        void SendPong(const std::string& nonce=GenerateNonce()){
-            PongMessage msg(nonce);
-            Send(&msg);
-        }
-
-        void SendBlock(const Block& block){
-            BlockMessage msg(block);
-            Send(&msg);
-        }
-
-        void SendGetData(const std::string& hash){
-            GetDataMessage msg(hash);
-            Send(&msg);
-        }
-
-        void SendGetBlocks(const std::string& first, const std::string& last){
-            GetBlocksMessage msg(first, last);
-            Send(&msg);
-        }
-
-        void SendTransaction(const Transaction& tx){
-            TransactionMessage msg(tx);
-            Send(&msg);
-        }
-
-        void SendVersion(const std::string& nonce=GenerateNonce()){
-            VersionMessage msg(nonce);
-            Send(&msg);
-        }
-
-        void SendVerack(const std::string& nonce=GenerateNonce()){
-            VerackMessage msg(nonce);
-            Send(&msg);
-        }
-
-        void SendInventory(const Proto::BlockChainServer::Inventory& inventory){
-            InventoryMessage msg(inventory);
-            Send(&msg);
-        }
-
-        SessionState GetState() const{
-            return state_;
-        }
-
-        bool IsConnecting() const{
-            return GetState() == SessionState::kConnecting;
-        }
-
-        bool IsConnected() const{
-            return GetState() == SessionState::kConnected;
-        }
-
-        bool IsDisconnected() const{
-            return GetState() == SessionState::kDisconnected;
-        }
-
-        bool IsSynchronizing() const{
-            return GetState() == SessionState::kSynchronizing;
-        }
-
-        bool IsHandshaking() const{
-            return GetState() == SessionState::kHandshaking;
-        }
-
-        virtual bool IsPeerSession() const{
-            return false;
-        }
-
-        virtual bool IsClientSession() const{
-            return false;
-        }
+        void Send(Message* msg);
     };
 
-    class PeerSession : public Session{
-    private:
-        friend class BlockChainServer;
-
-        uv_tcp_t handle_;
-        uv_timer_t ping_timer_;
-        uv_timer_t timeout_timer_;
-
-        PeerSession():
-            handle_(),
-            ping_timer_(),
-            timeout_timer_(),
-            Session(){
-            handle_.data = this;
-            ping_timer_.data = this;
-            timeout_timer_.data = this;
-        }
-    public:
-        ~PeerSession(){}
-
-        uv_tcp_t* GetHandle(){
-            return &handle_;
-        }
-
-        virtual uv_stream_t* GetStream() const{
-            return (uv_stream_t*)&handle_;
-        }
-
-        bool IsPeerSession() const{
-            return true;
-        }
-    };
-
+    /*
     class ClientSession : public Session{
     private:
         pthread_t thread_;
@@ -171,14 +81,14 @@ namespace Token{
         uv_connect_t conn_;
         uv_stream_t* handle_;
 
+#define DECLARE_HANDLE(Name) \
+    static void Handle##Name##Message(uv_work_t* req);
+
+        FOR_EACH_MESSAGE_TYPE(DECLARE_HANDLE);
+        static void AfterHandleMessage(uv_work_t* req, int status);
+
         static void ResolveInventory(uv_work_t* req);
-        static void HandleInventoryMessage(uv_work_t* req);
-        static void HandleVersionMessage(uv_work_t* req);
-        static void HandleVerackMessage(uv_work_t* req);
-        static void HandleBlockMessage(uv_work_t* req);
-        static void HandlePingMessage(uv_work_t* req);
         static void AfterResolveInventory(uv_work_t* req, int status);
-        static void AfterProcessMessage(uv_work_t* req, int status);
 
         static void OnConnect(uv_connect_t* conn, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
@@ -210,6 +120,8 @@ namespace Token{
 
         int Connect();
     };
+
+     */
 }
 
 #endif //TOKEN_SESSION_H

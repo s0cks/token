@@ -20,6 +20,14 @@ namespace Token{
             return index_;
         }
 
+        inline std::string GetObjectLocation(const uint256_t& hash) const{
+            leveldb::ReadOptions readOpts;
+            std::string key = HexString(hash);
+            std::string value;
+            if(!GetIndex()->Get(readOpts, key, &value).ok()) return ""; // TODO: ???
+            return value;
+        }
+
         virtual std::string CreateObjectLocation(const uint256_t& hash, PoolObject* value) const = 0;
 
         bool InitializeIndex(){
@@ -69,7 +77,7 @@ namespace Token{
         }
 
         bool DeleteRawObject(const std::string& filename) const{
-            return std::remove(filename.c_str()) == 0;
+            return remove(filename.c_str()) == 0;
         }
 
         bool DeleteObject(const uint256_t& hash) const{
@@ -105,6 +113,10 @@ namespace Token{
         static TransactionPool* GetInstance();
 
         std::string CreateObjectLocation(const uint256_t& hash, Transaction* tx) const{
+            if(ContainsObject(hash)){
+                return GetObjectLocation(hash);
+            }
+
             std::string hashString = HexString(hash);
             std::string front = hashString.substr(0, 8);
             std::string tail = hashString.substr(hashString.length() - 8, hashString.length());
@@ -126,17 +138,23 @@ namespace Token{
 
         static bool Initialize();
         static bool PutTransaction(Transaction* tx);
+        static bool HasTransaction(const uint256_t& hash);
         static bool GetTransaction(const uint256_t& hash, Transaction* result);
         static bool GetTransactions(std::vector<Transaction>& txs);
         static bool RemoveTransaction(const uint256_t& hash);
         static uint64_t GetSize();
     };
 
+    class UnclaimedTransactionPoolVisitor;
     class UnclaimedTransactionPool : public IndexManagedPool<UnclaimedTransaction>{
     private:
         static UnclaimedTransactionPool* GetInstance();
 
         std::string CreateObjectLocation(const uint256_t& hash, UnclaimedTransaction* value) const{
+            if(ContainsObject(hash)){
+                return GetObjectLocation(hash);
+            }
+
             std::string hashString = HexString(hash);
             std::string front = hashString.substr(0, 8);
             std::string tail = hashString.substr(hashString.length() - 8, hashString.length());
@@ -151,12 +169,23 @@ namespace Token{
     public:
         ~UnclaimedTransactionPool(){}
 
-        static bool RemoveUnclaimedTransaction(const uint256_t& hash);
         static bool Initialize();
         static bool PutUnclaimedTransaction(UnclaimedTransaction* utxo);
         static bool GetUnclaimedTransaction(const uint256_t& hash, UnclaimedTransaction* result);
         static bool GetUnclaimedTransactions(std::vector<uint256_t>& utxos);
         static bool GetUnclaimedTransactions(const std::string& user, std::vector<uint256_t>& utxos);
+        static bool HasUnclaimedTransaction(const uint256_t& hash);
+        static bool RemoveUnclaimedTransaction(const uint256_t& hash);
+        static bool Accept(UnclaimedTransactionPoolVisitor* vis);
+    };
+
+    class UnclaimedTransactionPoolVisitor{
+    public:
+        virtual ~UnclaimedTransactionPoolVisitor() = default;
+
+        virtual bool VisitStart() { return true; }
+        virtual bool Visit(const UnclaimedTransaction& utxo) = 0;
+        virtual bool VisitEnd() { return true; };
     };
 }
 

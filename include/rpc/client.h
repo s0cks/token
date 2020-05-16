@@ -21,11 +21,11 @@ namespace Token{
         TokenServiceClient(const std::string& address);
         ~TokenServiceClient(){}
 
-        bool GetHead(BlockHeader::RawType* response);
-        bool GetBlock(const std::string& hash, BlockHeader::RawType* response);
+        bool GetHead(BlockHeader* response);
+        bool GetBlock(const std::string& hash, BlockHeader* response);
         bool GetUnclaimedTransactions(Token::Proto::BlockChainService::UnclaimedTransactionList* response);
         bool GetUnclaimedTransactions(const std::string& user, Token::Proto::BlockChainService::UnclaimedTransactionList* response);
-        bool Spend(const uint256_t& hash, const std::string& recipient);
+        bool Spend(const uint256_t& hash, const std::string& recipient, Transaction* response);
     };
 }
 

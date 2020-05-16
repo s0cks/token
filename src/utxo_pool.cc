@@ -4,9 +4,9 @@
 
 namespace Token{
     static pthread_rwlock_t kPoolLock = PTHREAD_RWLOCK_INITIALIZER;
-#define READ_LOCK pthread_rwlock_tryrdlock(&kPoolLock);
-#define WRITE_LOCK pthread_rwlock_trywrlock(&kPoolLock);
-#define UNLOCK pthread_rwlock_unlock(&kPoolLock);
+#define READ_LOCK pthread_rwlock_tryrdlock(&kPoolLock)
+#define WRITE_LOCK pthread_rwlock_trywrlock(&kPoolLock)
+#define UNLOCK pthread_rwlock_unlock(&kPoolLock)
 
     UnclaimedTransactionPool* UnclaimedTransactionPool::GetInstance(){
         static UnclaimedTransactionPool instance;
@@ -19,6 +19,17 @@ namespace Token{
             if(!CreateDirectory(pool->GetRoot())) return false;
         }
         return pool->InitializeIndex();
+    }
+
+    bool UnclaimedTransactionPool::HasUnclaimedTransaction(const uint256_t& hash){
+        READ_LOCK;
+        UnclaimedTransactionPool* pool = GetInstance();
+        if(!pool->ContainsObject(hash)){
+            UNLOCK;
+            return false;
+        }
+        UNLOCK;
+        return true;
     }
 
     bool UnclaimedTransactionPool::GetUnclaimedTransaction(const uint256_t& hash, UnclaimedTransaction* result){
@@ -35,6 +46,7 @@ namespace Token{
     }
 
     bool UnclaimedTransactionPool::RemoveUnclaimedTransaction(const uint256_t& hash){
+        LOG(INFO) << "removing unclaimed transaction: " << hash;
         WRITE_LOCK;
         UnclaimedTransactionPool* pool = GetInstance();
         if(!pool->DeleteObject(hash)){
@@ -53,7 +65,6 @@ namespace Token{
             UNLOCK;
             return false;
         }
-
         UNLOCK;
         return true;
     }
@@ -77,7 +88,6 @@ namespace Token{
             }
             closedir(dir);
             UNLOCK;
-            LOG(INFO) << "found " << utxos.size() << " utxos for all users";
             return true;
         }
         UNLOCK;
@@ -99,16 +109,36 @@ namespace Token{
                     LOG(ERROR) << "couldn't load unclaimed transaction from: " << filename;
                     return false;
                 }
-                LOG(INFO) << utxo.GetUser();
-                if(utxo.GetUser() != user) continue;
+
+                Output output;
+                if(!utxo.GetOutput(&output)){
+                    LOG(ERROR) << "couldn't get output: " << utxo.GetTransaction() << "[" << utxo.GetIndex() << "]";
+                    return false;
+                }
+
+                if(output.GetUser() != user) continue;
                 utxos.push_back(utxo.GetHash());
             }
             closedir(dir);
             UNLOCK;
-            LOG(INFO) << "found " << utxos.size() << " utxos for " << user;
             return true;
         }
         UNLOCK;
         return false;
+    }
+
+    bool UnclaimedTransactionPool::Accept(UnclaimedTransactionPoolVisitor* vis){
+        if(!vis->VisitStart()) return false;
+
+        std::vector<uint256_t> utxos;
+        if(!GetUnclaimedTransactions(utxos)) return false;
+
+        for(auto& it : utxos){
+            UnclaimedTransaction utxo;
+            if(!GetUnclaimedTransaction(it, &utxo)) return false;
+            if(!vis->Visit(utxo)) return false;
+        }
+
+        return vis->VisitEnd();
     }
 }

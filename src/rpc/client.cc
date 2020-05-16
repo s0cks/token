@@ -19,17 +19,23 @@ namespace Token{
         stub_ = Token::Proto::BlockChainService::BlockChainService::NewStub(channel_);
     }
 
-    bool TokenServiceClient::GetHead(BlockHeader::RawType* response){
+    bool TokenServiceClient::GetHead(BlockHeader* response){
+        BlockHeader::RawType resp;
         Token::Proto::BlockChainService::EmptyRequest request;
         grpc::ClientContext ctx;
-        return GetStub()->GetHead(&ctx, request, response).ok();
+        if(!GetStub()->GetHead(&ctx, request, &resp).ok()) return false;
+        (*response) = BlockHeader(resp);
+        return true;
     }
 
-    bool TokenServiceClient::GetBlock(const std::string &hash, BlockHeader::RawType* response){
+    bool TokenServiceClient::GetBlock(const std::string &hash, BlockHeader* response){
+        BlockHeader::RawType resp;
         Token::Proto::BlockChainService::GetBlockRequest request;
         request.set_hash(hash);
         grpc::ClientContext ctx;
-        return GetStub()->GetBlock(&ctx, request, response).ok();
+        if(!GetStub()->GetBlock(&ctx, request, &resp).ok()) return false;
+        (*response) = BlockHeader(resp);
+        return true;
     }
 
     bool TokenServiceClient::GetUnclaimedTransactions(Token::Proto::BlockChainService::UnclaimedTransactionList *response){
@@ -46,13 +52,15 @@ namespace Token{
         return GetStub()->GetUnclaimedTransactions(&ctx, request, response).ok();
     }
 
-    bool TokenServiceClient::Spend(const uint256_t& hash, const std::string& dest){
+    bool TokenServiceClient::Spend(const uint256_t& hash, const std::string& dest, Transaction* response){
         Token::Proto::BlockChainService::SpendUnclaimedTransactionRequest request;
-        request.set_user_id("TestUser");
+        request.set_user_id(dest);
         request.set_utxo(HexString(hash));
 
-        Token::Proto::BlockChainService::EmptyResponse response;
+        Transaction::RawType resp;
         grpc::ClientContext ctx;
-        return GetStub()->Spend(&ctx, request, &response).ok();
+        if(!GetStub()->Spend(&ctx, request, &resp).ok()) return false;
+        (*response) = Transaction(resp);
+        return true;
     }
 }

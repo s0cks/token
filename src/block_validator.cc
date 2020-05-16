@@ -12,76 +12,57 @@ namespace Token{
             return false;
         }
 
-        uint64_t idx;
-        for(idx = 0; idx < tx.GetNumberOfInputs(); idx++){
-            Input input;
-            if(!tx.GetInput(idx, &input)){
-                LOG(WARNING) << "couldn't get input #" << idx;
+        for(auto it = tx.inputs_begin();
+                it != tx.inputs_end();
+                it++){
+            Transaction in_tx;
+            if(!it->GetTransaction(&in_tx)){
+                LOG(WARNING) << "couldn't get transaction: " << it->GetTransactionHash();
                 return false;
             }
-            /*
-             *TODO:
-             * UnclaimedTransaction utxo(hash, idx,
-             * if(!UnclaimedTransactionPool::HasUnclaimedTransaction(utxo.GetHash())){
-             *   LOG(WARNING) << "no unclaimed transaction found for input #" << idx << " of " << hash;
-             *   return false;
-             * }
-             */
+
+            UnclaimedTransaction utxo(in_tx, it->GetOutputIndex());
+            uint256_t utxo_hash = utxo.GetHash();
+            if(!UnclaimedTransactionPool::HasUnclaimedTransaction(utxo_hash)) {
+                LOG(WARNING) << "couldn't find unclaimed transaction: " << utxo_hash;
+                return false;
+            }
         }
         return true;
     }
 
     bool BlockValidator::Visit(const Transaction& tx){
+        uint32_t index = 0;
         uint256_t hash = tx.GetHash();
         if(!IsValid(tx)){
             invalid_txs_.push_back(tx);
             return false;
         }
-        uint64_t idx;
-        for(idx = 0; idx < tx.GetNumberOfOutputs(); idx++){
-            Output out;
-            if(!tx.GetOutput(idx, &out)){
-                LOG(WARNING) << "couldn't get output #" << idx << " of " << hash;
-                return false;
-            }
 
-            UnclaimedTransaction utxo(tx, out);
+        index = 0;
+        for(auto it = tx.outputs_begin(); it != tx.outputs_end(); it++){
+            UnclaimedTransaction utxo(tx, index++);
             if(!UnclaimedTransactionPool::PutUnclaimedTransaction(&utxo)){
-                LOG(WARNING) << "couldn't create new unclaimed transaction: " << utxo.GetHash();
-                LOG(WARNING) << "*** Unclaimed Transaction: ";
-                LOG(WARNING) << "***   + Input: " << utxo.GetTransaction() << "[" << utxo.GetIndex() << "]";
-                LOG(WARNING) << "***   + Output: " << utxo.GetToken() << "(" << utxo.GetUser() << ")";
+                LOG(WARNING) << "couldn't create unclaimed transaction for: " << hash << "[" << index << "]";
                 return false;
             }
         }
-        for(idx = 0; idx < tx.GetNumberOfInputs(); idx++){
-            Input input;
-            if(!tx.GetInput(idx, &input)){
-                LOG(WARNING) << "couldn't get input #" << idx;
+
+        index = 0;
+        for(auto it = tx.inputs_begin(); it != tx.inputs_end(); it++){
+            UnclaimedTransaction utxo;
+            if(!it->GetUnclaimedTransaction(&utxo)){
+                LOG(WARNING) << "couldn't find unclaimed transaction for: " << it->GetTransactionHash() << "[" << it->GetOutputIndex() << "]";
                 return false;
             }
 
-            Transaction in_tx;
-            if(!BlockChain::GetTransaction(input.GetTransactionHash(), &in_tx)){
-                LOG(WARNING) << "couldn't find transaction: " << input.GetTransactionHash();
-                return false;
-            }
-
-            Output output;
-            if(!in_tx.GetOutput(input.GetOutputIndex(), &output)){
-                LOG(WARNING) << "couldn't find output #" << input.GetOutputIndex() << " in transaction: " << input.GetTransactionHash();
-                return false;
-            }
-
-            UnclaimedTransaction utxo(in_tx, output);
             uint256_t uhash = utxo.GetHash();
             if(!UnclaimedTransactionPool::RemoveUnclaimedTransaction(uhash)){
                 LOG(WARNING) << "couldn't remove unclaimed transaction: " << uhash;
-                LOG(WARNING) << "*** Unclaimed Transaction: ";
-                LOG(WARNING) << "***   + Input: " << utxo.GetTransaction() << "[" << utxo.GetIndex() << "]";
-                LOG(WARNING) << "***   + Output: " << utxo.GetToken() << "(" << utxo.GetUser() << ")";
                 return false;
             }
+
+            index++;
         }
         valid_txs_.push_back(tx);
         return true;

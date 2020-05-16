@@ -1,7 +1,10 @@
 #include <glog/logging.h>
+#include <algorithm>
 #include "block_miner.h"
 #include "block_chain.h"
 #include "node/server.h"
+#include "node/message.h"
+#include "block_validator.h"
 
 namespace Token{
     static pthread_t thread;
@@ -9,26 +12,51 @@ namespace Token{
     static uv_async_t exit_handle;
 
     void BlockMiner::HandleMineCallback(uv_timer_t* handle){
-        if(TransactionPool::GetSize() >= 1){
+        if(TransactionPool::GetSize() >= 2){
             std::vector<Transaction> txs;
             if(!TransactionPool::GetTransactions(txs)){
                 LOG(ERROR) << "couldn't get transactions from transaction pool";
                 return;
             }
+            std::sort(txs.begin(), txs.end());
 
             BlockHeader head = BlockChain::GetHead();
-            Block nblock(head, { txs });
-            if(!BlockChain::GetInstance()->Append(&nblock)){
-                LOG(ERROR) << "couldn't append new block: " << nblock.GetHash();
+            Block block(head, { txs });
+
+            uint256_t hash = block.GetHash();
+            BlockValidator validator(&block);
+            if(!validator.IsValid()){
+                LOG(ERROR) << "the following block contains " << validator.GetNumberOfInvalidTransactions() << " invalid transactions: " << hash;
+
+                for(auto it = validator.invalid_begin();
+                    it != validator.invalid_end();
+                    it++){
+                    uint256_t invalid_tx = it->GetHash();
+                    if(!TransactionPool::RemoveTransaction(invalid_tx)){
+                        LOG(ERROR) << "couldn't remove invalid transaction: " << invalid_tx;
+                        continue;
+                    }
+
+                    LOG(WARNING) << "removed invalid transaction: " << invalid_tx;
+                }
                 return;
             }
 
-            for(auto& it : txs){
-                if(!TransactionPool::RemoveTransaction(it.GetHash())){
-                    LOG(ERROR) << "couldn't remove transaction from pool: " << it.GetHash();
-                    return;
+            if(!BlockChain::GetInstance()->Append(&block)){
+                LOG(ERROR) << "couldn't append new block: " << hash;
+                return;
+            }
+
+            for(auto it = validator.valid_begin();
+                it != validator.valid_end();
+                it++){
+                if(!TransactionPool::RemoveTransaction(it->GetHash())){
+                    LOG(ERROR) << "couldn't remove transaction: " << it->GetHash();
+                    continue;
                 }
             }
+
+            //TODO: BlockChainServer::BroadcastInventory(block);
         }
     }
 

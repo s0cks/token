@@ -7,6 +7,17 @@ namespace Token{
             previous_hash_(utxo.GetTransaction()),
             index_(utxo.GetIndex()){}
 
+    bool Input::GetTransaction(Transaction* result) const{
+        return BlockChain::GetTransaction(GetTransactionHash(), result);
+    }
+
+    bool Input::GetUnclaimedTransaction(UnclaimedTransaction* result) const{
+        Transaction tx;
+        if(!GetTransaction(&tx)) return false;
+        (*result) = UnclaimedTransaction(tx, GetOutputIndex());
+        return true;
+    }
+
     bool Input::GetBytes(CryptoPP::SecByteBlock& bytes) const{
         Proto::BlockChain::Input raw;
         raw << (*this);
@@ -86,6 +97,16 @@ namespace Token{
             LOG(ERROR) << "error occurred signing transaction: " << ex.GetWhat();
             return false;
         }
+    }
+
+    bool UnclaimedTransaction::GetTransaction(Transaction* result) const{
+        return BlockChain::GetTransaction(GetTransaction(), result);
+    }
+
+    bool UnclaimedTransaction::GetOutput(Output* result) const{
+        Transaction tx;
+        if(!GetTransaction(&tx)) return false;
+        return tx.GetOutput(GetIndex(), result);
     }
 
     bool UnclaimedTransaction::GetBytes(CryptoPP::SecByteBlock& bytes) const{

@@ -4,17 +4,17 @@
 #include "rpc/client.h"
 
 static inline void
-PrintBlock(Token::Proto::BlockChain::BlockHeader* block){
-    std::cout << "-- Block # " << block->height() << " ---" << std::endl;
-    std::cout << "\tPrevious Hash: " << block->previous_hash() << std::endl;
-    std::cout << "\tHash: " << block->hash() << std::endl;
-    std::cout << "\tMerkle Root: " << block->merkle_root() << std::endl;
+PrintBlock(Token::BlockHeader* block){
+    std::cout << "-- Block # " << block->GetHeight() << " ---" << std::endl;
+    std::cout << "\tPrevious Hash: " << block->GetPreviousHash() << std::endl;
+    std::cout << "\tHash: " << block->GetHash() << std::endl;
+    std::cout << "\tMerkle Root: " << block->GetMerkleRoot() << std::endl;
     std::cout << "-----------" << std::endl;
 }
 
 static inline void
 PrintUnclaimedTransaction(Token::Proto::BlockChain::UnclaimedTransaction* utxo){
-    std::cout << "Unclaimed Transaction from " << utxo->tx_hash() << "[" << utxo->tx_index() << "] => " << utxo->user() << "(" << utxo->token() << ")" << std::endl;
+    std::cout << "Unclaimed Transaction from " << utxo->tx_hash() << "[" << utxo->tx_index() << "]" << std::endl;
 }
 
 static inline void
@@ -56,7 +56,7 @@ int main(int argc, char** argv){
         if(input == "discon"){
             return EXIT_FAILURE;
         } else if(input == "gethead"){
-            BlockHeader::RawType head;
+            BlockHeader head;
             if(!client->GetHead(&head)){
                 LOG(ERROR) << "couldn't get <HEAD> from rpc";
                 return EXIT_FAILURE;
@@ -68,7 +68,7 @@ int main(int argc, char** argv){
             std::cin >> target;
             if(target.length() == 64){
                 LOG(INFO) << "fetching block from hash: " << target;
-                BlockHeader::RawType blk;
+                BlockHeader blk;
                 if(!client->GetBlock(target, &blk)){
                     LOG(ERROR) << "couldn't fetch block: " << target;
                     return EXIT_FAILURE;
@@ -111,11 +111,14 @@ int main(int argc, char** argv){
             std::cout << "Token? := ";
             std::cin >> token;
 
+            Transaction tx;
             uint256_t hash = HashFromHexString(token);
-            if(!client->Spend(hash, user)){
+            if(!client->Spend(hash, user, &tx)){
                 LOG(ERROR) << "couldn't spend: " << hash;
                 return EXIT_FAILURE;
             }
+
+            LOG(INFO) << "spent: " << tx.GetHash();
         }
     } while(true);
 }

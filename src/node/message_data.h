@@ -6,22 +6,6 @@
 #include "node/message.h"
 
 namespace Token{
-    struct ResolveInventoryData{
-        Session* session;
-        std::vector<std::string> hashes;
-
-        ResolveInventoryData(Session* sess, const std::vector<std::string>& hash_list):
-            session(sess),
-            hashes(hash_list){}
-    };
-
-    struct BroadcastBlockData{
-        Block* block;
-
-        BroadcastBlockData(Block* blk):
-            block(blk){}
-    };
-
     struct ProcessMessageData{
         Session* session;
         Message* request;
@@ -29,6 +13,22 @@ namespace Token{
         ProcessMessageData(Session* sess, Message* msg):
             session(sess),
             request(msg){}
+    };
+
+    struct BroadcastInventoryData{
+        InventoryMessage* inventory;
+
+        BroadcastInventoryData(InventoryMessage* inv):
+            inventory(inv){}
+    };
+
+    struct ResolveInventoryData{
+        Session* session;
+        std::vector<InventoryItem> items;
+
+        ResolveInventoryData(Session* sess, std::vector<InventoryItem>& itms):
+            session(sess),
+            items(itms){}
     };
 }
 

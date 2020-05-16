@@ -6,10 +6,12 @@
 
 namespace Token{
     class BlockValidator : public BlockVisitor{
+    public:
+        typedef std::vector<Transaction> TransactionList;
     private:
         Block* block_;
-        std::vector<Transaction> valid_txs_;
-        std::vector<Transaction> invalid_txs_;
+        TransactionList valid_txs_;
+        TransactionList invalid_txs_;
     public:
         BlockValidator(Block* block):
             block_(block),
@@ -21,12 +23,13 @@ namespace Token{
             return block_;
         }
 
-        bool IsBlockValid() const{
-            return GetNumberOfValidTransactions() == GetBlock()->GetNumberOfTransactions();
-        }
-
         bool IsValid(const Transaction& tx);
         bool Visit(const Transaction& tx);
+
+        bool IsValid() const{
+            if(!GetBlock()->Accept((BlockVisitor*)this)) return false;
+            return GetNumberOfValidTransactions() == GetBlock()->GetNumberOfTransactions();
+        }
 
         uint64_t GetNumberOfInvalidTransactions() const{
             return invalid_txs_.size();
@@ -36,10 +39,25 @@ namespace Token{
             return valid_txs_.size();
         }
 
+        TransactionList::const_iterator valid_begin() const{
+            return valid_txs_.begin();
+        }
+
+        TransactionList::const_iterator valid_end() const{
+            return valid_txs_.end();
+        }
+
+        TransactionList::const_iterator invalid_begin() const{
+            return invalid_txs_.begin();
+        }
+
+        TransactionList::const_iterator invalid_end() const{
+            return invalid_txs_.end();
+        }
+
         static bool IsValid(Block* block){
             BlockValidator validator(block);
-            if(!block->Accept(&validator)) return false;
-            return validator.IsBlockValid();
+            return validator.IsValid();
         }
     };
 }
