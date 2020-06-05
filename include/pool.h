@@ -6,21 +6,25 @@
 #include "uint256_t.h"
 
 namespace Token{
+    class Block;
     class Transaction;
     class UnclaimedTransaction;
 
-    template<typename PoolObject>
+    template<typename PoolObject, typename RawType>
     class IndexManagedPool{
     private:
         std::string path_;
         leveldb::DB* index_;
         bool initialized_;
+
+        typedef typename PoolObject::RawType RawPoolObject;
     protected:
         leveldb::DB* GetIndex() const{
             return index_;
         }
 
-        inline std::string GetObjectLocation(const uint256_t& hash) const{
+        inline std::string
+        GetObjectLocation(const uint256_t& hash) const{
             leveldb::ReadOptions readOpts;
             std::string key = HexString(hash);
             std::string value;
@@ -43,25 +47,24 @@ namespace Token{
             return GetIndex()->Get(readOpts, key, &value).ok();
         }
 
-        bool LoadRawObject(const std::string& filename, PoolObject* result) const{
+        PoolObject* LoadRawObject(const std::string& filename) const{
             std::fstream fd(filename, std::ios::in|std::ios::binary);
-            typename PoolObject::RawType raw;
-            if(!raw.ParseFromIstream(&fd)) return false;
-            (*result) = PoolObject(raw);
-            return true;
+            RawPoolObject raw;
+            if(!raw.ParseFromIstream(&fd)) return nullptr;
+            return new PoolObject(raw);
         }
 
-        bool LoadObject(const uint256_t& hash, PoolObject* result) const{
+        PoolObject* LoadObject(const uint256_t& hash) const{
             leveldb::ReadOptions readOpts;
             std::string key = HexString(hash);
             std::string location;
-            if(!GetIndex()->Get(readOpts, key, &location).ok()) return false;
-            return LoadRawObject(location, result);
+            if(!GetIndex()->Get(readOpts, key, &location).ok()) return nullptr;
+            return LoadRawObject(location);
         }
 
         bool SaveRawObject(const std::string& filename, PoolObject* value) const{
             std::fstream fd(filename, std::ios::out|std::ios::binary);
-            typename PoolObject::RawType raw;
+            RawType raw;
             raw << (*value);
             if(!raw.SerializeToOstream(&fd)) return false;
             return true;
@@ -104,88 +107,6 @@ namespace Token{
         std::string GetRoot() const{
             return path_;
         }
-    };
-
-    class TransactionPool : public IndexManagedPool<Transaction>{
-    private:
-        pthread_rwlock_t rwlock_;
-
-        static TransactionPool* GetInstance();
-
-        std::string CreateObjectLocation(const uint256_t& hash, Transaction* tx) const{
-            if(ContainsObject(hash)){
-                return GetObjectLocation(hash);
-            }
-
-            std::string hashString = HexString(hash);
-            std::string front = hashString.substr(0, 8);
-            std::string tail = hashString.substr(hashString.length() - 8, hashString.length());
-
-            std::string filename = GetRoot() + "/" + front + ".dat";
-            if(FileExists(filename)){
-                filename = GetRoot() + "/" + tail + ".dat";
-            }
-            return filename;
-        }
-
-        TransactionPool():
-                rwlock_(),
-                IndexManagedPool(FLAGS_path + "/txs"){
-            pthread_rwlock_init(&rwlock_, NULL);
-        }
-    public:
-        ~TransactionPool(){}
-
-        static bool Initialize();
-        static bool PutTransaction(Transaction* tx);
-        static bool HasTransaction(const uint256_t& hash);
-        static bool GetTransaction(const uint256_t& hash, Transaction* result);
-        static bool GetTransactions(std::vector<Transaction>& txs);
-        static bool RemoveTransaction(const uint256_t& hash);
-        static uint64_t GetSize();
-    };
-
-    class UnclaimedTransactionPoolVisitor;
-    class UnclaimedTransactionPool : public IndexManagedPool<UnclaimedTransaction>{
-    private:
-        static UnclaimedTransactionPool* GetInstance();
-
-        std::string CreateObjectLocation(const uint256_t& hash, UnclaimedTransaction* value) const{
-            if(ContainsObject(hash)){
-                return GetObjectLocation(hash);
-            }
-
-            std::string hashString = HexString(hash);
-            std::string front = hashString.substr(0, 8);
-            std::string tail = hashString.substr(hashString.length() - 8, hashString.length());
-            std::string filename = GetRoot() + "/" + front + ".dat";
-            if(FileExists(filename)){
-                filename = GetRoot() + "/" + tail + ".dat";
-            }
-            return filename;
-        }
-
-        UnclaimedTransactionPool(): IndexManagedPool(FLAGS_path + "/utxos"){}
-    public:
-        ~UnclaimedTransactionPool(){}
-
-        static bool Initialize();
-        static bool PutUnclaimedTransaction(UnclaimedTransaction* utxo);
-        static bool GetUnclaimedTransaction(const uint256_t& hash, UnclaimedTransaction* result);
-        static bool GetUnclaimedTransactions(std::vector<uint256_t>& utxos);
-        static bool GetUnclaimedTransactions(const std::string& user, std::vector<uint256_t>& utxos);
-        static bool HasUnclaimedTransaction(const uint256_t& hash);
-        static bool RemoveUnclaimedTransaction(const uint256_t& hash);
-        static bool Accept(UnclaimedTransactionPoolVisitor* vis);
-    };
-
-    class UnclaimedTransactionPoolVisitor{
-    public:
-        virtual ~UnclaimedTransactionPoolVisitor() = default;
-
-        virtual bool VisitStart() { return true; }
-        virtual bool Visit(const UnclaimedTransaction& utxo) = 0;
-        virtual bool VisitEnd() { return true; };
     };
 }
 

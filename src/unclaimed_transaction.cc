@@ -1,8 +1,23 @@
-#include <dirent.h>
-#include "pool.h"
-#include "object.h"
+#include "block_chain.h"
 
 namespace Token{
+    bool UnclaimedTransaction::GetTransaction(Transaction* result) const{
+        return BlockChain::GetTransaction(GetTransaction(), result);
+    }
+
+    bool UnclaimedTransaction::GetOutput(Output* result) const{
+        Transaction tx;
+        if(!GetTransaction(&tx)) return false;
+        return tx.GetOutput(GetIndex(), result);
+    }
+
+    bool UnclaimedTransaction::GetBytes(CryptoPP::SecByteBlock& bytes) const{
+        Proto::BlockChain::UnclaimedTransaction raw;
+        raw << (*this);
+        bytes.resize(raw.ByteSizeLong());
+        return raw.SerializeToArray(bytes.data(), bytes.size());
+    }
+
     static pthread_rwlock_t kPoolLock = PTHREAD_RWLOCK_INITIALIZER;
 #define READ_LOCK pthread_rwlock_tryrdlock(&kPoolLock)
 #define WRITE_LOCK pthread_rwlock_trywrlock(&kPoolLock)
@@ -22,31 +37,22 @@ namespace Token{
     }
 
     bool UnclaimedTransactionPool::HasUnclaimedTransaction(const uint256_t& hash){
-        READ_LOCK;
         UnclaimedTransactionPool* pool = GetInstance();
-        if(!pool->ContainsObject(hash)){
-            UNLOCK;
-            return false;
-        }
+        READ_LOCK;
+        bool found = pool->ContainsObject(hash);
         UNLOCK;
-        return true;
+        return found;
     }
 
-    bool UnclaimedTransactionPool::GetUnclaimedTransaction(const uint256_t& hash, UnclaimedTransaction* result){
-        READ_LOCK;
+    UnclaimedTransaction* UnclaimedTransactionPool::GetUnclaimedTransaction(const uint256_t& hash){
         UnclaimedTransactionPool* pool = GetInstance();
-        if(!pool->LoadObject(hash, result)){
-            UNLOCK;
-            (*result) = UnclaimedTransaction();
-            return false;
-        }
-
+        READ_LOCK;
+        UnclaimedTransaction* utxo = pool->LoadObject(hash);
         UNLOCK;
-        return true;
+        return utxo;
     }
 
     bool UnclaimedTransactionPool::RemoveUnclaimedTransaction(const uint256_t& hash){
-        LOG(INFO) << "removing unclaimed transaction: " << hash;
         WRITE_LOCK;
         UnclaimedTransactionPool* pool = GetInstance();
         if(!pool->DeleteObject(hash)){
@@ -79,12 +85,12 @@ namespace Token{
                 std::string name(ent->d_name);
                 std::string filename = (pool->GetRoot() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
-                UnclaimedTransaction utxo;
-                if(!pool->LoadRawObject(filename, &utxo)){
+                UnclaimedTransaction* utxo;
+                if(!(utxo = pool->LoadRawObject(filename))){
                     LOG(ERROR) << "couldn't load unclaimed transaction from: " << filename;
                     return false;
                 }
-                utxos.push_back(utxo.GetHash());
+                utxos.push_back(utxo->GetHash());
             }
             closedir(dir);
             UNLOCK;
@@ -104,20 +110,14 @@ namespace Token{
                 std::string name(ent->d_name);
                 std::string filename = (pool->GetRoot() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
-                UnclaimedTransaction utxo;
-                if(!pool->LoadRawObject(filename, &utxo)){
+                UnclaimedTransaction* utxo;
+                if(!(utxo = pool->LoadRawObject(filename))){
                     LOG(ERROR) << "couldn't load unclaimed transaction from: " << filename;
                     return false;
                 }
 
-                Output output;
-                if(!utxo.GetOutput(&output)){
-                    LOG(ERROR) << "couldn't get output: " << utxo.GetTransaction() << "[" << utxo.GetIndex() << "]";
-                    return false;
-                }
-
-                if(output.GetUser() != user) continue;
-                utxos.push_back(utxo.GetHash());
+                // if(utxo.GetUser() != user) continue;
+                utxos.push_back(utxo->GetHash());
             }
             closedir(dir);
             UNLOCK;
@@ -134,8 +134,8 @@ namespace Token{
         if(!GetUnclaimedTransactions(utxos)) return false;
 
         for(auto& it : utxos){
-            UnclaimedTransaction utxo;
-            if(!GetUnclaimedTransaction(it, &utxo)) return false;
+            UnclaimedTransaction* utxo;
+            if(!(utxo = GetUnclaimedTransaction(it))) return false;
             if(!vis->Visit(utxo)) return false;
         }
 

@@ -3,7 +3,7 @@
 #include <random>
 
 #include "block_miner.h"
-#include "node/server.h"
+#include "old/server.h"
 #include "layout.h"
 #include "message_data.h"
 

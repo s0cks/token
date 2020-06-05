@@ -5,6 +5,7 @@
 #include "block_chain.h"
 #include "block_miner.h"
 #include "block_validator.h"
+#include "object.h"
 
 namespace Token{
 #define READ_LOCK pthread_rwlock_tryrdlock(&chain->rwlock_);
@@ -12,7 +13,7 @@ namespace Token{
 #define UNLOCK pthread_rwlock_unlock(&chain->rwlock_);
 
     BlockChain::BlockChain():
-        IndexManagedPool(FLAGS_path + "/blocks"),
+        IndexManagedPool(FLAGS_path + "/data"),
         rwlock_(),
         genesis_(nullptr),
         head_(nullptr){
@@ -95,14 +96,14 @@ namespace Token{
         }
 
         uint256_t hash = chain->GetHeadFromIndex();
-        Block block;
-        if(!GetBlockData(hash, &block)) return false;
+        Block* block = nullptr;
+        if(!(block = GetBlockData(hash))) return false;
         BlockNode* node = new BlockNode(block);
         BlockNode* head = node;
         BlockNode* parent = node;
         do{
             LOG(INFO) << "loading block: " << hash << "...";
-            if(!GetBlockData(hash, &block)){
+            if(!(block = GetBlockData(hash))){
                 LOG(ERROR) << "cannot load block data!";
                 return false;
             }
@@ -138,10 +139,12 @@ namespace Token{
         return pos->second;
     }
 
-    bool BlockChain::GetBlockData(const uint256_t& hash, Block* result){
+    Block* BlockChain::GetBlockData(const uint256_t& hash){
         BlockChain* chain = GetInstance();
-        //TODO: rwlock
-        return chain->LoadObject(hash, result);
+        READ_LOCK;
+        Block* block = chain->LoadObject(hash);
+        UNLOCK;
+        return block;
     }
 
     bool BlockChain::Append(Block* block){
@@ -184,6 +187,52 @@ namespace Token{
             head_ = node;
         }
         nodes_.insert(std::make_pair(hash, node));
+
+        for(uint32_t txid = 0; txid < block->GetNumberOfTransactions(); txid++){
+            Transaction tx;
+            if(!block->GetTransaction(txid, &tx)){
+                LOG(WARNING) << "couldn't get transaction #" << txid << " from block: " << hash;
+                UNLOCK;
+                return false;
+            }
+
+            uint256_t tx_hash = tx.GetHash();
+            uint32_t idx = 0;
+            for(auto it = tx.outputs_begin(); it != tx.outputs_end(); it++){
+                UnclaimedTransaction utxo(tx_hash, idx++);
+                if(!UnclaimedTransactionPool::PutUnclaimedTransaction(&utxo)){
+                    LOG(WARNING) << "couldn't create unclaimed transaction for: " << tx_hash << "[" << (idx - 1) << "]";
+                    continue;
+                }
+            }
+
+            for(auto it = tx.inputs_begin(); it != tx.inputs_end(); it++){
+                Transaction in_tx;
+                if(!BlockChain::GetTransaction(it->GetTransactionHash(), &in_tx)){
+                    LOG(ERROR) << "couldn't get transaction: " << it->GetTransactionHash();
+                    continue;
+                }
+
+                Output in_out;
+                if(!in_tx.GetOutput(it->GetOutputIndex(), &in_out)){
+                    LOG(ERROR) << "couldn't get output #" << it->GetOutputIndex() << " from transaction: " << it->GetTransactionHash();
+                    continue;
+                }
+
+                UnclaimedTransaction utxo(in_tx, it->GetOutputIndex());
+                uint256_t uhash = utxo.GetHash();
+                if(!UnclaimedTransactionPool::RemoveUnclaimedTransaction(uhash)){
+                    LOG(ERROR) << "couldn't remove unclaimed transaction: " << uhash;
+                    continue;
+                }
+            }
+
+            if(!TransactionPool::RemoveTransaction(tx.GetHash())){
+                LOG(ERROR) << "couldn't remove transaction: " << tx_hash;
+                continue;
+            }
+        }
+
         UNLOCK;
         LOG(INFO) << "appended block: " << hash;
         return true;
@@ -193,10 +242,10 @@ namespace Token{
         if(!vis->VisitStart()) return false;
         uint256_t hash = GetHead().GetHash();
         do{
-            Block block;
-            if(!GetBlockData(hash, &block)) return false;
+            Block* block;
+            if(!(block = GetBlockData(hash))) return false;
             if(!vis->Visit(block)) return false;
-            hash = block.GetPreviousHash();
+            hash = block->GetPreviousHash();
         } while(!hash.IsNull());
         return vis->VisitEnd();
     }
@@ -271,8 +320,8 @@ namespace Token{
             MerkleTreeBuilder(){}
         ~BlockChainMerkleTreeBuilder(){}
 
-        bool Visit(const Block& block){
-            return AddLeaf(block.GetHash());
+        bool Visit(Block* block){
+            return AddLeaf(block->GetHash());
         }
 
         bool BuildTree(){
@@ -299,8 +348,7 @@ namespace Token{
     public:
         BlockChainTransactionResolver(const uint256_t& tx_hash):
             tx_hash_(tx_hash),
-            result_(nullptr){
-        }
+            result_(nullptr){}
         ~BlockChainTransactionResolver(){
             delete result_;
         }
@@ -317,12 +365,12 @@ namespace Token{
             return result_ != nullptr;
         }
 
-        bool Visit(const Block& block){
+        bool Visit(Block* block){
             uint256_t hash = GetTransactionHash();
-            if(!block.Contains(hash)) return true;
+            if(!block->Contains(hash)) return true;
 
             Transaction tx;
-            if(!block.GetTransaction(hash, &tx)){
+            if(!block->GetTransaction(hash, &tx)){
                 LOG(WARNING) << "unable to get transaction: " << hash;
                 SetResult(nullptr);
                 return false;

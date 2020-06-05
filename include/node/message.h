@@ -6,24 +6,23 @@
 #include "service.pb.h"
 
 #include "common.h"
+#include "paxos.h"
+#include "info.h"
 #include "token.h"
 #include "block_chain.h"
 
 namespace Token{
 #define FOR_EACH_MESSAGE_TYPE(V) \
-    V(Ping) \
-    V(Pong) \
     V(Version) \
     V(Verack) \
-    V(RequestVote) \
-    V(Vote) \
-    V(Election) \
+    V(Prepare) \
+    V(Promise) \
     V(Commit) \
-    V(Block) \
-    V(Transaction) \
-    V(Inventory) \
+    V(Accepted) \
+    V(Rejected) \
     V(GetData) \
-    V(GetBlocks)
+    V(Block) \
+    V(Transaction)
 
 #define FORWARD_DECLARE(Name) class Name##Message;
     FOR_EACH_MESSAGE_TYPE(FORWARD_DECLARE)
@@ -39,12 +38,22 @@ namespace Token{
             FOR_EACH_MESSAGE_TYPE(DECLARE_TYPE)
         };
 #undef DECLARE_TYPE
+
+        enum{
+            kTypeOffset = 0,
+            kTypeLength = 1,
+            kSizeOffset = kTypeLength,
+            kSizeLength = 4,
+            kDataOffset = (kTypeLength + kSizeLength),
+            kHeaderSize = kDataOffset,
+            kByteBufferSize = 6144
+        };
     public:
         virtual ~Message() = default;
         virtual std::string GetName() const = 0;
         virtual Type GetType() const = 0;
         virtual uint64_t GetSize() const = 0;
-        virtual bool Encode(uint8_t* bytes, size_t size) = 0;
+        virtual bool Encode(uint8_t* bytes, size_t size) const = 0;
 
 #define DECLARE_TYPECHECK(Name) \
         virtual Name##Message* As##Name##Message(){ return nullptr; } \
@@ -52,8 +61,13 @@ namespace Token{
         FOR_EACH_MESSAGE_TYPE(DECLARE_TYPECHECK);
 #undef DECLARE_TYPECHECK
 
-        static Message* Decode(ByteBuffer* bb);
+        static Message* Decode(uint8_t* bytes, size_t size);
         static Message* Decode(Type type, uint8_t* bytes, uint32_t size);
+
+        friend std::ostream& operator<<(std::ostream& stream, const Message& msg){
+            stream << msg.GetName() << "(" << (Message::kHeaderSize + msg.GetSize()) << " Bytes)";
+            return stream;
+        }
     };
 
 #define DECLARE_MESSAGE(Name) \
@@ -82,40 +96,16 @@ namespace Token{
             return hash_;
         }
 
-        bool Encode(uint8_t* bytes, uint64_t size){
+        bool Encode(uint8_t* bytes, uint64_t size) const{
             memcpy(bytes, hash_.data(), size);
             return true;
         }
     };
 
-    class PingMessage : public HashMessage{
-    public:
-        PingMessage(const std::string& nonce=GenerateNonce()): HashMessage(nonce){}
-        ~PingMessage(){}
-
-        std::string GetNonce() const{
-            return hash_;
-        }
-
-        DECLARE_MESSAGE(Ping);
-    };
-
-    class PongMessage : public HashMessage{
-    public:
-        PongMessage(const std::string& nonce=GenerateNonce()): HashMessage(nonce){}
-        PongMessage(const PingMessage& ping): HashMessage(ping.GetNonce()){}
-        ~PongMessage(){}
-
-        std::string GetNonce() const{
-            return hash_;
-        }
-
-        DECLARE_MESSAGE(Pong);
-    };
-
     class GetDataMessage : public HashMessage{
     public:
         GetDataMessage(const std::string& hash): HashMessage(hash){}
+        GetDataMessage(const uint256_t& hash): HashMessage(HexString(hash)){}
         ~GetDataMessage(){}
 
         DECLARE_MESSAGE(GetData);
@@ -141,61 +131,146 @@ namespace Token{
             return GetRaw().ByteSizeLong();
         }
 
-        bool Encode(uint8_t* bytes, uint64_t size){
+        bool Encode(uint8_t* bytes, uint64_t size) const{
             return GetRaw().SerializeToArray(bytes, size);
         }
     };
 
-    class ActionMessage : public ProtobufMessage<Proto::BlockChainServer::Action>{
+    class VersionMessage : public ProtobufMessage<Proto::BlockChainServer::Version>{
     public:
-        typedef Proto::BlockChainServer::Action RawType;
-    protected:
-        ActionMessage(const uint256_t& sender): ProtobufMessage(){
-            raw_.set_sender_id(HexString(sender));
+        VersionMessage(const Proto::BlockChainServer::Version& raw): ProtobufMessage(raw){}
+        VersionMessage(const NodeInfo& info, const std::string& version=Token::GetVersion(), const uint64_t timestamp=GetCurrentTime(), const std::string& nonce=GenerateNonce()):
+                ProtobufMessage(){
+            raw_.set_node_id(info.GetNodeID());
+            raw_.set_version(version);
+            raw_.set_timestamp(timestamp);
+            raw_.set_nonce(nonce);
         }
-        ActionMessage(const RawType& raw): ProtobufMessage(raw){}
-    public:
-        virtual ~ActionMessage() = default;
+        ~VersionMessage(){}
 
-        uint256_t GetSenderID() const{
-            return HashFromHexString(raw_.sender_id());
+        uint64_t GetTimestamp() const{
+            return raw_.timestamp();
+        }
+
+        std::string GetVersion() const{
+            return raw_.version();
+        }
+
+        std::string GetNonce() const{
+            return raw_.nonce();
+        }
+
+        std::string GetID() const{
+            return raw_.node_id();
+        }
+
+        DECLARE_MESSAGE(Version);
+    };
+
+    class VerackMessage : public ProtobufMessage<Proto::BlockChainServer::Verack>{
+    public:
+        VerackMessage(const Proto::BlockChainServer::Verack& raw): ProtobufMessage(raw){}
+        VerackMessage(const NodeInfo& info, const std::string& version=Token::GetVersion(), const uint64_t timestamp=GetCurrentTime(), const std::string& nonce=GenerateNonce()):
+                ProtobufMessage(){
+            raw_.set_node_id(info.GetNodeID());
+            (*raw_.mutable_callback()) << info.GetNodeAddress();
+            raw_.set_version(version);
+            raw_.set_timestamp(timestamp);
+            raw_.set_nonce(nonce);
+        }
+
+        std::string GetID() const{
+            return raw_.node_id();
+        }
+
+        NodeAddress GetCallbackAddress() const{
+            return NodeAddress(raw_.callback());
+        }
+
+        DECLARE_MESSAGE(Verack);
+    };
+
+    class BasePaxosMessage : public ProtobufMessage<Proto::BlockChainServer::Paxos>{
+    public:
+        BasePaxosMessage(const Proto::BlockChainServer::Paxos& raw): ProtobufMessage(raw){}
+        BasePaxosMessage(const NodeInfo& info, uint32_t height, const std::string& hash): ProtobufMessage(){
+            raw_.set_node_id(info.GetNodeID());
+            raw_.set_height(height);
+            raw_.set_hash(hash);
+        }
+        BasePaxosMessage(const NodeInfo& info, const Block& block): ProtobufMessage(){
+            raw_.set_node_id(info.GetNodeID());
+            raw_.set_height(block.GetHeight());
+            raw_.set_hash(HexString(block.GetHash()));
+        }
+        BasePaxosMessage(const NodeInfo& info, const Proposal& proposal): ProtobufMessage(){
+            raw_.set_node_id(info.GetNodeID());
+            raw_.set_height(proposal.GetHeight());
+            raw_.set_hash(HexString(proposal.GetHash()));
+        }
+        virtual ~BasePaxosMessage() = default;
+
+        std::string GetNodeID() const{
+            return raw_.node_id();
+        }
+
+        uint256_t GetHash() const{
+            return HashFromHexString(raw_.hash());
+        }
+
+        uint32_t GetHeight() const{
+            return raw_.height();
         }
     };
 
-    class RequestVoteMessage : public ActionMessage{
+    class PrepareMessage : public BasePaxosMessage{
     public:
-        RequestVoteMessage(const uint256_t& sender): ActionMessage(sender){}
-        RequestVoteMessage(const ActionMessage::RawType& raw): ActionMessage(raw){}
-        ~RequestVoteMessage(){}
+        PrepareMessage(const Proto::BlockChainServer::Paxos& raw): BasePaxosMessage(raw){}
+        PrepareMessage(const NodeInfo& info, uint32_t height, const std::string& hash): BasePaxosMessage(info, height, hash){}
+        PrepareMessage(const NodeInfo& info, const Proposal& proposal): BasePaxosMessage(info, proposal){}
+        ~PrepareMessage(){}
 
-        DECLARE_MESSAGE(RequestVote);
+        DECLARE_MESSAGE(Prepare);
     };
 
-    class VoteMessage : public ActionMessage{
+    class PromiseMessage : public BasePaxosMessage{
     public:
-        VoteMessage(const uint256_t& sender): ActionMessage(sender){}
-        VoteMessage(const ActionMessage::RawType& raw): ActionMessage(raw){}
-        ~VoteMessage(){}
+        PromiseMessage(const Proto::BlockChainServer::Paxos& raw): BasePaxosMessage(raw){}
+        PromiseMessage(const NodeInfo& info, uint32_t height, const std::string& hash): BasePaxosMessage(info, height, hash){}
+        PromiseMessage(const NodeInfo& info, const Proposal& proposal): BasePaxosMessage(info, proposal){}
+        ~PromiseMessage(){}
 
-        DECLARE_MESSAGE(Vote);
+        DECLARE_MESSAGE(Promise);
     };
 
-    class ElectionMessage : public ActionMessage{
+    class CommitMessage : public BasePaxosMessage{
     public:
-        ElectionMessage(const uint256_t& sender): ActionMessage(sender){}
-        ElectionMessage(const ActionMessage::RawType& raw): ActionMessage(raw){}
-        ~ElectionMessage(){}
-
-        DECLARE_MESSAGE(Election);
-    };
-
-    class CommitMessage : public ActionMessage{
-    public:
-        CommitMessage(const uint256_t& sender): ActionMessage(sender){}
-        CommitMessage(const ActionMessage::RawType& raw): ActionMessage(raw){}
+        CommitMessage(const Proto::BlockChainServer::Paxos& raw): BasePaxosMessage(raw){}
+        CommitMessage(const NodeInfo& info, uint32_t height, const std::string& hash): BasePaxosMessage(info, height, hash){}
+        CommitMessage(const NodeInfo& info, const Proposal& proposal): BasePaxosMessage(info, proposal){}
         ~CommitMessage(){}
 
         DECLARE_MESSAGE(Commit);
+    };
+
+    class AcceptedMessage : public BasePaxosMessage{
+    public:
+        AcceptedMessage(const Proto::BlockChainServer::Paxos& raw): BasePaxosMessage(raw){}
+        AcceptedMessage(const NodeInfo& info, uint32_t height, const std::string& hash): BasePaxosMessage(info, height, hash){}
+        AcceptedMessage(const NodeInfo& info, const Proposal& proposal): BasePaxosMessage(info, proposal){}
+        ~AcceptedMessage(){}
+
+        DECLARE_MESSAGE(Accepted);
+    };
+
+    class RejectedMessage : public BasePaxosMessage{
+    public:
+        RejectedMessage(const Proto::BlockChainServer::Paxos& raw): BasePaxosMessage(raw){}
+        RejectedMessage(const NodeInfo& info, uint32_t height, const std::string& hash): BasePaxosMessage(info, height, hash){}
+        RejectedMessage(const NodeInfo& info, const Proposal& proposal): BasePaxosMessage(info, proposal){}
+        ~RejectedMessage(){}
+
+        DECLARE_MESSAGE(Rejected);
     };
 
     class TransactionMessage : public ProtobufMessage<Proto::BlockChain::Transaction>{
@@ -217,9 +292,8 @@ namespace Token{
     class BlockMessage : public ProtobufMessage<Proto::BlockChain::Block>{
     public:
         BlockMessage(const Proto::BlockChain::Block& raw): ProtobufMessage(raw){}
-        BlockMessage(const Block& block):
-            ProtobufMessage(){
-            raw_ << block;
+        BlockMessage(Block* block): ProtobufMessage(){
+            raw_ << (*block);
         }
         ~BlockMessage(){}
 
@@ -228,179 +302,6 @@ namespace Token{
         }
 
         DECLARE_MESSAGE(Block);
-    };
-
-    class GetBlocksMessage : public ProtobufMessage<Proto::BlockChainServer::BlockRange>{
-    public:
-        GetBlocksMessage(const Proto::BlockChainServer::BlockRange& raw): ProtobufMessage(raw){}
-        GetBlocksMessage(const std::string& first, const std::string& last):
-            ProtobufMessage(){
-            raw_.set_first(first);
-            raw_.set_last(last);
-        }
-        ~GetBlocksMessage(){}
-
-        uint256_t GetFirst() const{
-            return HashFromHexString(raw_.first());
-        }
-
-        uint256_t GetLast() const{
-            return HashFromHexString(raw_.last());
-        }
-
-        DECLARE_MESSAGE(GetBlocks);
-    };
-
-    class VersionMessage : public ProtobufMessage<Proto::BlockChainServer::Version>{
-    public:
-        VersionMessage(const Proto::BlockChainServer::Version& raw): ProtobufMessage(raw){}
-        VersionMessage(const std::string& address, uint32_t port, const std::string& nonce=GenerateNonce()):
-            ProtobufMessage(){
-            raw_.mutable_address()->set_address(address);
-            raw_.mutable_address()->set_port(port);
-            raw_.set_version(Token::GetVersion());
-            raw_.set_timestamp(GetCurrentTime());
-            raw_.set_nonce(nonce);
-        }
-        ~VersionMessage(){}
-
-        uint64_t GetTimestamp() const{
-            return raw_.timestamp();
-        }
-
-        std::string GetPeerAddress() const{
-            return raw_.address().address();
-        }
-
-        uint32_t GetPeerPort() const{
-            return raw_.address().port();
-        }
-
-        std::string GetVersion() const{
-            return raw_.version();
-        }
-
-        std::string GetNonce() const{
-            return raw_.nonce();
-        }
-
-        DECLARE_MESSAGE(Version);
-    };
-
-    class VerackMessage : public ProtobufMessage<Proto::BlockChainServer::Verack>{
-    public:
-        VerackMessage(const Proto::BlockChainServer::Verack& raw): ProtobufMessage(raw){}
-        VerackMessage(const std::string& nonce=GenerateNonce()):
-            ProtobufMessage(){
-            raw_.set_nonce(nonce);
-            raw_.set_max_block(BlockChain::GetHeight());
-        }
-
-        uint64_t GetMaxBlock() const{
-            return raw_.max_block();
-        }
-
-        DECLARE_MESSAGE(Verack);
-    };
-
-    class InventoryItem{
-    public:
-        enum class Type{
-            kNone = 0,
-            kBlock,
-            kTransaction,
-            kUnclaimedTransaction, // needed?
-        };
-    private:
-        Type type_;
-        uint256_t hash_;
-    public:
-        typedef Proto::BlockChainServer::InventoryItem RawType;
-
-        InventoryItem(Type type, uint256_t hash):
-            type_(type),
-            hash_(hash){}
-        InventoryItem(const Transaction& tx):
-            type_(Type::kTransaction),
-            hash_(tx.GetHash()){}
-        InventoryItem(const Block& block):
-            type_(Type::kBlock),
-            hash_(block.GetHash()){}
-        InventoryItem(const InventoryItem& other):
-            type_(other.type_),
-            hash_(other.hash_){}
-        InventoryItem(const RawType& raw):
-            type_(static_cast<Type>(raw.type())),
-            hash_(HashFromHexString(raw.hash())){}
-        ~InventoryItem(){}
-
-        Type GetType() const{
-            return type_;
-        }
-
-        uint256_t GetHash() const{
-            return hash_;
-        }
-
-        bool IsBlock() const{
-            return GetType() == Type::kBlock;
-        }
-
-        bool IsTransaction() const{
-            return GetType() == Type::kTransaction;
-        }
-
-        bool IsUnclaimedTransaction() const{
-            return GetType() == Type::kUnclaimedTransaction;
-        }
-
-        InventoryItem& operator=(const InventoryItem& other){
-            type_ = other.type_;
-            hash_ = other.hash_;
-            return (*this);
-        }
-
-        friend bool operator==(const InventoryItem& a, const InventoryItem& b){
-            return a.type_ == b.type_ &&
-                    a.hash_ == b.hash_;
-        }
-
-        friend bool operator!=(const InventoryItem& a, const InventoryItem& b){
-            return !operator==(a, b);
-        }
-
-        friend RawType& operator<<(RawType& stream, const InventoryItem& item){
-            stream.set_type(static_cast<uint32_t>(item.type_));
-            stream.set_hash(HexString(item.hash_));
-            return stream;
-        }
-    };
-
-    class InventoryMessage : public ProtobufMessage<Proto::BlockChainServer::Inventory>{
-    public:
-        InventoryMessage(std::vector<InventoryItem>& items):
-            ProtobufMessage(){
-            for(auto& i : items){
-                InventoryItem::RawType* item = raw_.add_items();
-                (*item) << i;
-            }
-        }
-        InventoryMessage(const Proto::BlockChainServer::Inventory& raw): ProtobufMessage(raw){}
-        ~InventoryMessage(){}
-
-        bool GetItems(std::vector<InventoryItem>& items){
-            for(auto& it : raw_.items()) items.push_back(InventoryItem(it));
-            return items.size() > 0;
-        }
-
-        bool GetItems(InventoryItem::Type type, std::vector<InventoryItem>& items){
-            for(auto& it : raw_.items()){
-                if(type == static_cast<InventoryItem::Type>(it.type())) items.push_back(InventoryItem(it));
-            }
-            return items.size() > 0;
-        }
-
-        DECLARE_MESSAGE(Inventory);
     };
 }
 

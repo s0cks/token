@@ -194,25 +194,25 @@ namespace Token{
             Printer(parent){}
         ~BlockChainPrinter(){}
 
-        bool Visit(const Block& block){
+        bool Visit(Block* block){
             std::stringstream line;
-            line << "#" << block.GetHeight() << ": " << block.GetHash();
+            line << "#" << block->GetHeight() << ": " << block->GetHash();
             if(IsDetailed()){
                 Indent();
                 std::stringstream timestamp;
-                timestamp << "Timestamp: " << FormatTimestamp(block.GetTimestamp());
+                timestamp << "Timestamp: " << FormatTimestamp(block->GetTimestamp());
                 Printer::Print(timestamp);
 
                 std::stringstream prev_hash;
-                prev_hash << "Previous Hash: " << block.GetPreviousHash();
+                prev_hash << "Previous Hash: " << block->GetPreviousHash();
                 Printer::Print(prev_hash);
 
                 std::stringstream merkle;
-                merkle << "Merkle Root: " << block.GetMerkleRoot();
+                merkle << "Merkle Root: " << block->GetMerkleRoot();
                 Printer::Print(merkle);
 
                 std::stringstream txs;
-                txs << "Number of Transactions: " << block.GetNumberOfTransactions();
+                txs << "Number of Transactions: " << block->GetNumberOfTransactions();
                 Printer::Print(txs);
                 DeIndent();
             }
@@ -240,13 +240,13 @@ namespace Token{
             Printer(parent){}
         ~UnclaimedTransactionPoolPrinter(){}
 
-        bool Visit(const UnclaimedTransaction& utxo){
+        bool Visit(UnclaimedTransaction* utxo){
             std::stringstream line;
             line << "#" << index_++ << " ";
             if(IsDetailed()){
-                line << utxo.GetTransaction() << "[" << utxo.GetIndex() << "]";
+                line << utxo->GetTransaction() << "[" << utxo->GetIndex() << "]";
             } else{
-                line << utxo.GetHash();
+                line << utxo->GetHash();
             }
             return Printer::Print(line);
         }

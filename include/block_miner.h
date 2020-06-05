@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <uv.h>
 #include "common.h"
+#include "paxos.h"
 
 namespace Token{
     //TODO:
@@ -11,11 +12,22 @@ namespace Token{
     // - refactor
     class BlockMiner{
     private:
+        static Proposal* GetProposal();
+        static void SetProposal(Proposal* proposal);
+
+        static bool SubmitProposal(Proposal* proposal);
+        static bool CommitProposal(Proposal* proposal);
+        static bool VoteForProposal(const std::string& node_id);
+        static bool AcceptProposal(const std::string& node_id);
+
         static void HandleMineCallback(uv_timer_t* handle);
         static void HandleExitCallback(uv_async_t* handle);
         static void* MinerThread(void* data);
 
+        BlockMiner(){}
+
         friend class BlockChain;
+        friend class PeerSession;
     public:
         static const uint64_t kMiningIntervalMilliseconds = 1 * 1000;
 

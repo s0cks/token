@@ -4,6 +4,10 @@
 #include <cstdint>
 #include <cstdlib>
 #include <vector>
+#include <random>
+#include <string>
+#include <sstream>
+#include <uv.h>
 #include <sys/time.h>
 #include <sys/stat.h>
 
@@ -16,6 +20,7 @@
 #include <cryptopp/files.h>
 #include <cryptopp/osrng.h>
 #include <cryptopp/pssr.h>
+#include <iomanip>
 
 #include "blockchain.pb.h"
 

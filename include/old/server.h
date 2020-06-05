@@ -8,7 +8,7 @@
 #include <uv.h>
 
 #include "session.h"
-#include "peer.h"
+#include "node/peer.h"
 
 namespace Token{
     class ServerSession : public Session{

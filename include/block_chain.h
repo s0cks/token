@@ -3,14 +3,19 @@
 
 #include <leveldb/db.h>
 #include <map>
+
 #include "blockchain.pb.h"
+
 #include "common.h"
-#include "object.h"
+#include "merkle.h"
 #include "pool.h"
+#include "block.h"
+#include "transaction.h"
+#include "unclaimed_transaction.h"
 
 namespace Token{
     class BlockChainVisitor;
-    class BlockChain : public IndexManagedPool<Block>{
+    class BlockChain : public IndexManagedPool<Block, Block::RawType>{
     private:
         friend class BlockChainServer;
         friend class BlockMiner;
@@ -25,6 +30,10 @@ namespace Token{
                 parent_(nullptr),
                 children_(),
                 header_(block){}
+            BlockNode(Block* block):
+                parent_(nullptr),
+                children_(),
+                header_((*block)){}
             ~BlockNode(){
                 if(!IsLeaf()){
                     for(auto& it : children_) delete it;
@@ -123,9 +132,9 @@ namespace Token{
             return GetInstance()->GetNode(hash) != nullptr;
         }
 
+        static Block* GetBlockData(const uint256_t& hash);
         static bool Initialize();
         static bool Accept(BlockChainVisitor* vis);
-        static bool GetBlockData(const uint256_t& hash, Block* result);
         static bool GetTransaction(const uint256_t& hash, Transaction* result);
         static MerkleTree* GetMerkleTree();
 
@@ -139,7 +148,7 @@ namespace Token{
     public:
         virtual ~BlockChainVisitor() = default;
         virtual bool VisitStart(){ return true; }
-        virtual bool Visit(const Block& block) = 0;
+        virtual bool Visit(Block* block) = 0;
         virtual bool VisitEnd(){ return true; };
     };
 }
