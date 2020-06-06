@@ -1,5 +1,6 @@
 #include "keychain.h"
 #include "block_chain.h"
+#include "node/node.h"
 
 namespace Token{
     Input::Input(const UnclaimedTransaction& utxo):
@@ -169,6 +170,21 @@ namespace Token{
             UNLOCK;
             return false;
         }
+
+        UNLOCK;
+        return true;
+    }
+
+    bool TransactionPool::AddTransaction(Transaction* tx){
+        TransactionPool* pool = GetInstance();
+        WRITE_LOCK;
+        uint256_t hash = tx->GetHash();
+        if(!pool->SaveObject(hash, tx)){
+            UNLOCK;
+            return false;
+        }
+
+        Node::BroadcastInventory(tx);
         UNLOCK;
         return true;
     }

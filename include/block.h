@@ -240,6 +240,7 @@ namespace Token{
         pthread_rwlock_t rwlock_;
 
         static BlockPool* GetInstance();
+        static bool PutBlock(Block* block);
 
         std::string CreateObjectLocation(const uint256_t& hash, Block* blk) const{
             if(ContainsObject(hash)){
@@ -262,11 +263,13 @@ namespace Token{
                 IndexManagedPool(FLAGS_path + "/blocks"){
             pthread_rwlock_init(&rwlock_, NULL);
         }
+
+        friend class Node;
     public:
         ~BlockPool(){}
 
         static bool Initialize();
-        static bool PutBlock(Block* block);
+        static bool AddBlock(Block* block);
         static bool HasBlock(const uint256_t& hash);
         static bool RemoveBlock(const uint256_t& hash);
         static Block* GetBlock(const uint256_t& hash);

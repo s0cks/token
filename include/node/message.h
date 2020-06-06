@@ -22,7 +22,8 @@ namespace Token{
     V(Rejected) \
     V(GetData) \
     V(Block) \
-    V(Transaction)
+    V(Transaction) \
+    V(Inventory)
 
 #define FORWARD_DECLARE(Name) class Name##Message;
     FOR_EACH_MESSAGE_TYPE(FORWARD_DECLARE)
@@ -100,15 +101,6 @@ namespace Token{
             memcpy(bytes, hash_.data(), size);
             return true;
         }
-    };
-
-    class GetDataMessage : public HashMessage{
-    public:
-        GetDataMessage(const std::string& hash): HashMessage(hash){}
-        GetDataMessage(const uint256_t& hash): HashMessage(HexString(hash)){}
-        ~GetDataMessage(){}
-
-        DECLARE_MESSAGE(GetData);
     };
 
     template<typename T>
@@ -230,6 +222,10 @@ namespace Token{
         PrepareMessage(const NodeInfo& info, const Proposal& proposal): BasePaxosMessage(info, proposal){}
         ~PrepareMessage(){}
 
+        Proposal* GetProposal(){
+            return new Proposal(GetNodeID(), GetHeight(), GetHash());
+        }
+
         DECLARE_MESSAGE(Prepare);
     };
 
@@ -276,9 +272,9 @@ namespace Token{
     class TransactionMessage : public ProtobufMessage<Proto::BlockChain::Transaction>{
     public:
         TransactionMessage(const Proto::BlockChain::Transaction& raw): ProtobufMessage(raw){}
-        TransactionMessage(const Transaction& tx):
+        TransactionMessage(Transaction* tx):
             ProtobufMessage(){
-            raw_ << tx;
+            raw_ << (*tx);
         }
         ~TransactionMessage(){}
 
@@ -302,6 +298,119 @@ namespace Token{
         }
 
         DECLARE_MESSAGE(Block);
+    };
+
+    class InventoryItem{
+    public:
+        typedef Proto::BlockChainServer::InventoryItem RawType;
+
+        enum Type{
+            kTransaction,
+            kBlock
+        };
+    private:
+        Type type_;
+        uint256_t hash_;
+    public:
+        InventoryItem(const RawType& raw):
+            type_(static_cast<Type>(raw.type())),
+            hash_(HashFromHexString(raw.hash())){}
+        InventoryItem(Type type, const uint256_t& hash):
+            type_(type),
+            hash_(hash){}
+        InventoryItem(Transaction* tx): InventoryItem(kTransaction, tx->GetHash()){}
+        InventoryItem(Block* blk): InventoryItem(kBlock, blk->GetHash()){}
+        InventoryItem(const InventoryItem& item):
+            type_(item.type_),
+            hash_(item.hash_){}
+        ~InventoryItem(){}
+
+        Type GetType() const{
+            return type_;
+        }
+
+        uint256_t GetHash() const{
+            return hash_;
+        }
+
+        bool ItemExists() const{
+            switch(type_){
+                case kTransaction: return TransactionPool::HasTransaction(hash_);
+                case kBlock: return BlockChain::ContainsBlock(hash_) || BlockPool::HasBlock(hash_);
+                default: return false;
+            }
+        }
+
+        bool IsBlock() const{
+            return type_ == kBlock;
+        }
+
+        bool IsTransaction() const{
+            return type_ == kTransaction;
+        }
+
+        InventoryItem& operator=(const InventoryItem& other){
+            type_ = other.type_;
+            hash_ = other.hash_;
+            return (*this);
+        }
+
+        friend bool operator==(const InventoryItem& a, const InventoryItem& b){
+            return a.type_ == b.type_ &&
+                    a.hash_ == b.hash_;
+        }
+
+        friend bool operator!=(const InventoryItem& a, const InventoryItem& b){
+            return !operator==(a, b);
+        }
+
+        friend RawType& operator<<(RawType& raw, const InventoryItem& item){
+            raw.set_type(item.type_);
+            raw.set_hash(HexString(item.hash_));
+            return raw;
+        }
+    };
+
+    class InventoryMessage : public ProtobufMessage<Proto::BlockChainServer::Inventory>{
+    public:
+        InventoryMessage(const Proto::BlockChainServer::Inventory& raw): ProtobufMessage(raw){}
+        InventoryMessage(std::vector<InventoryItem>& items): ProtobufMessage(){
+            for(auto& it : items){
+                InventoryItem::RawType* item = raw_.add_items();
+                (*item) << it;
+            }
+        }
+        ~InventoryMessage(){}
+
+        bool GetItems(std::vector<InventoryItem>& items){
+            for(auto& it : raw_.items()){
+                items.push_back(InventoryItem(it));
+            }
+            return items.size() > 0;
+        }
+
+        DECLARE_MESSAGE(Inventory);
+    };
+
+    class GetDataMessage : public ProtobufMessage<Proto::BlockChainServer::GetData>{
+    public:
+        GetDataMessage(const Proto::BlockChainServer::GetData& raw): ProtobufMessage(raw){}
+        GetDataMessage(std::vector<InventoryItem>& items): ProtobufMessage(){
+            for(auto& it : items){
+                InventoryItem::RawType* item = raw_.add_items();
+                (*item) << it;
+            }
+        }
+        ~GetDataMessage(){}
+
+        bool GetItems(std::vector<InventoryItem>& items){
+            for(auto& it : raw_.items()){
+                items.push_back(InventoryItem(it));
+            }
+            return items.size() > 0;
+        }
+
+        DECLARE_MESSAGE(GetData);
     };
 }
 

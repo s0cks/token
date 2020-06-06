@@ -34,7 +34,7 @@ namespace Token{
             votes_mutex_(),
             commits_(),
             commits_mutex_(){}
-        Proposal(const std::string& node, const Block& block): Proposal(node, block.GetHeight(), block.GetHash()){}
+        Proposal(const std::string& node, Block* block): Proposal(node, block->GetHeight(), block->GetHash()){}
         ~Proposal(){}
 
         std::string GetProposer() const{
@@ -100,6 +100,11 @@ namespace Token{
 
         friend bool operator<(const Proposal& a, const Proposal& b){
             return a.GetHeight() < b.GetHeight();
+        }
+
+        friend std::ostream& operator<<(std::ostream& stream, const Proposal& proposal){
+            stream << "#" << proposal.GetHeight() << "[" << proposal.GetHash() << "]";
+            return stream;
         }
     };
 }

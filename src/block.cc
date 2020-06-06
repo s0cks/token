@@ -1,4 +1,5 @@
 #include "block_chain.h"
+#include "node/node.h"
 
 namespace Token{
     BlockHeader::BlockHeader(const Block& block):
@@ -124,6 +125,17 @@ namespace Token{
         WRITE_LOCK;
         uint256_t hash = block->GetHash();
         bool written = pool->SaveObject(hash, block);
+        UNLOCK;
+        return written;
+    }
+
+    bool BlockPool::AddBlock(Block* block){
+        //TODO: broadcast?
+        BlockPool* pool = GetInstance();
+        WRITE_LOCK;
+        uint256_t hash = block->GetHash();
+        bool written = pool->SaveObject(hash, block);
+        Node::BroadcastInventory(block);
         UNLOCK;
         return written;
     }

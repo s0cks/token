@@ -49,15 +49,30 @@ namespace Token{
 
     class GetDataTask : public SessionTask{
     private:
-        uint256_t hash_;
+        std::vector<InventoryItem> items_;
     public:
-        GetDataTask(Session* session, const uint256_t& hash):
+        GetDataTask(Session* session, std::vector<InventoryItem>& items):
             SessionTask(session),
-            hash_(hash){}
+            items_(items){}
         ~GetDataTask(){}
 
-        uint256_t GetHash() const{
-            return hash_;
+        bool GetItems(std::vector<InventoryItem>& items){
+            for(auto& it : items_) items.push_back(it);
+            return items.size() == items_.size();
+        }
+
+        bool HasMoreItems(){
+            return items_.size() > 0;
+        }
+
+        uint32_t GetItemCount(){
+            return items_.size();
+        }
+
+        InventoryItem GetNextItem(){
+            InventoryItem item = items_.back();
+            items_.pop_back();
+            return item;
         }
     };
 }

@@ -288,6 +288,7 @@ namespace Token{
         pthread_rwlock_t rwlock_;
 
         static TransactionPool* GetInstance();
+        static bool PutTransaction(Transaction* tx);
 
         std::string CreateObjectLocation(const uint256_t& hash, Transaction* tx) const{
             if(ContainsObject(hash)){
@@ -310,11 +311,13 @@ namespace Token{
                 IndexManagedPool(FLAGS_path + "/txs"){
             pthread_rwlock_init(&rwlock_, NULL);
         }
+
+        friend class Node;
     public:
         ~TransactionPool(){}
 
         static bool Initialize();
-        static bool PutTransaction(Transaction* tx);
+        static bool AddTransaction(Transaction* tx);
         static bool HasTransaction(const uint256_t& hash);
         static bool RemoveTransaction(const uint256_t& hash);
         static bool GetTransactions(std::vector<uint256_t>& txs);

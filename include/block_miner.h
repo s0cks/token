@@ -14,7 +14,7 @@ namespace Token{
     private:
         static Proposal* GetProposal();
         static void SetProposal(Proposal* proposal);
-
+        static bool HasProposal();
         static bool SubmitProposal(Proposal* proposal);
         static bool CommitProposal(Proposal* proposal);
         static bool VoteForProposal(const std::string& node_id);
@@ -27,6 +27,7 @@ namespace Token{
         BlockMiner(){}
 
         friend class BlockChain;
+        friend class Node;
         friend class PeerSession;
     public:
         static const uint64_t kMiningIntervalMilliseconds = 1 * 1000;

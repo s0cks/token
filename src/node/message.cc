@@ -1,5 +1,4 @@
 #include "node/message.h"
-#include "node/buffer.h"
 
 namespace Token{
 #define DEFINE_TYPECHECK(Name) \
@@ -40,10 +39,10 @@ namespace Token{
 
     Message* Message::Decode(Type type, uint8_t* bytes, uint32_t size){
         switch(type){
-            DECLARE_HASH_DECODE(GetData, "couldn't deserialize getdata from byte array");
+            DECLARE_RAW_DECODE(GetData, Proto::BlockChainServer::GetData, "couldn't deserialize getdata from byte array");
             DECLARE_RAW_DECODE(Transaction, Proto::BlockChain::Transaction, "couldn't deserialize transaction from byte array");
             DECLARE_RAW_DECODE(Block, Proto::BlockChain::Block, "couldn't deserialize block from byte array");
-            //DECLARE_RAW_DECODE(Inventory, Proto::BlockChainServer::Inventory, "couldn't deserialize inventory from byte array");
+            DECLARE_RAW_DECODE(Inventory, Proto::BlockChainServer::Inventory, "couldn't deserialize inventory from byte array");
             //DECLARE_RAW_DECODE(GetBlocks, Proto::BlockChainServer::BlockRange, "couldn't deserialize block range from byte array");
             DECLARE_RAW_DECODE(Prepare, Proto::BlockChainServer::Paxos, "couldn't deserialize prepare from byte array");
             DECLARE_RAW_DECODE(Promise, Proto::BlockChainServer::Paxos, "couldn't deserialize promise from byte array");

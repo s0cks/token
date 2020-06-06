@@ -33,6 +33,13 @@ namespace Token{
         pthread_mutex_unlock(&proposal_mutex_);
     }
 
+    bool BlockMiner::HasProposal(){
+        pthread_mutex_lock(&proposal_mutex_);
+        bool found = proposal_ != nullptr;
+        pthread_mutex_unlock(&proposal_mutex_);
+        return found;
+    }
+
     bool BlockMiner::SubmitProposal(Proposal* proposal){
         NodeInfo info = Node::GetInfo();
         LOG(INFO) << info.GetNodeID() << " creating proposal for: " << proposal->GetHeight() << "....";
@@ -97,7 +104,7 @@ namespace Token{
     }
 
     void BlockMiner::HandleMineCallback(uv_timer_t* handle){
-        if(TransactionPool::GetSize() >= 2){
+        if(!HasProposal() && TransactionPool::GetSize() >= 2){
             // collect + sort transactions
             std::vector<uint256_t> all_txs;
             if(!TransactionPool::GetTransactions(all_txs)){
@@ -123,14 +130,15 @@ namespace Token{
             BlockHeader head = BlockChain::GetHead();
             LOG(INFO) << "head := " << head.GetHeight() << "/" << head.GetHash();
 
-            Block block(head, { txs });
+            Block* block = new Block(head, { txs });
+            if(!BlockPool::AddBlock(block)){
+                LOG(WARNING) << "couldn't put newly mined block into block pool!";
+                return;
+            }
 
-            uint256_t hash = block.GetHash();
-
-            // Validity check, no writes still in safe-point
-            BlockValidator validator(&block);
+            BlockValidator validator(block);
             if(!validator.IsValid()){
-                LOG(ERROR) << "the following block contains " << validator.GetNumberOfInvalidTransactions() << " invalid transactions: " << hash;
+                LOG(WARNING) << "blocks isn't valid, orphaning!";
                 return;
             }
 
@@ -139,12 +147,8 @@ namespace Token{
             // append block based on proposals
             // spend inputs, generate unspent outputs
 
-            if(!BlockPool::PutBlock(&block)){
-                LOG(WARNING) << "couldn't put newly mined block into block pool!";
-                return;
-            }
-
             NodeInfo info = Node::GetInstance()->GetInfo();
+            uint256_t hash = block->GetHash();
             Proposal* proposal = new Proposal(info.GetNodeID(), block);
             SetProposal(proposal);
 
@@ -158,14 +162,18 @@ namespace Token{
                 goto cleanup;
             }
 
-            if(!BlockChain::GetInstance()->Append(&block)){
+            if(!BlockChain::GetInstance()->Append(block)){
                 LOG(ERROR) << "couldn't append new block: " << hash;
                 goto cleanup;
             }
 
-            cleanup:
-                SetProposal(nullptr);
-                return;
+            if(!BlockPool::RemoveBlock(hash)){
+                LOG(ERROR) << "couldn't remove new block from pool: " << hash;
+                goto cleanup;
+            }
+        cleanup:
+            SetProposal(nullptr);
+            return;
         }
     }
 

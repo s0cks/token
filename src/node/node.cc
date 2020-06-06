@@ -1,21 +1,14 @@
 #include <random>
 #include "node/node.h"
 #include "node/message.h"
-#include "task.h"
+#include "node/task.h"
+#include "block_miner.h"
 
 namespace Token{
 #define SCHEDULE(Loop, Name, ...) \
     uv_work_t* work = (uv_work_t*)malloc(sizeof(uv_work_t));\
     work->data = new Name##Task(__VA_ARGS__); \
     uv_queue_work((Loop), work, Handle##Name##Task, After##Name##Task);
-
-    /*
-     * void BlockChainServer::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
-        BlockChainServer* instance = GetInstance();
-        buff->base = (char*)malloc(suggested_size);
-        buff->len = suggested_size;
-    }
-     */
 
     void Node::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
         buff->base = (char*)malloc(suggested_size);
@@ -112,10 +105,6 @@ namespace Token{
         //TODO: implement
     }
 
-    void Node::HandleTransactionMessage(uv_work_t* handle){
-        //TODO: implement
-    }
-
     void Node::HandleVersionMessage(uv_work_t* handle){
         Node* node = GetInstance();
         HandleMessageTask* task = (HandleMessageTask*)handle->data;
@@ -155,16 +144,14 @@ namespace Token{
         NodeSession* session = (NodeSession*)task->GetSession();
         PrepareMessage* msg = (PrepareMessage*)task->GetMessage();
 
-        Proposal proposal(msg->GetNodeID(), msg->GetHeight(), msg->GetHash());
-        if(!proposal.IsValid()){
-            LOG(WARNING) << "proposal #" << proposal.GetHeight() << " from " << proposal.GetProposer() << " is invalid!";
+        Proposal* proposal = msg->GetProposal();
+        if(!proposal->IsValid()){
+            LOG(WARNING) << "proposal " << (*proposal) << " is invalid!";
             return;
         }
 
-        uint256_t hash = proposal.GetHash();
-        session->Send(GetDataMessage(hash));
-        session->WaitForHash(hash);
-        session->Send(PromiseMessage(node->GetInfo(), proposal));
+        BlockMiner::SetProposal(proposal);
+        session->Send(PromiseMessage(node->GetInfo(), (*proposal)));
     }
 
     void Node::HandlePromiseMessage(uv_work_t* handle){}
@@ -180,12 +167,17 @@ namespace Token{
 
         Block* block;
         if(!(block = BlockPool::GetBlock(hash))){
-            LOG(WARNING) << "couldn't find block " << hash << " from pool!";
+            LOG(WARNING) << "couldn't find block " << hash << " from pool waiting....";
             goto exit;
         }
 
         if(!BlockChain::AppendBlock(block)){
             LOG(WARNING) << "couldn't append block: " << hash;
+            goto exit;
+        }
+
+        if(!BlockPool::RemoveBlock(hash)){
+            LOG(WARNING) << "couldn't remove block from pool: " << hash;
             goto exit;
         }
 
@@ -211,6 +203,22 @@ namespace Token{
         session->OnHash(hash);
     }
 
+    void Node::HandleTransactionMessage(uv_work_t* handle){
+        HandleMessageTask* task = (HandleMessageTask*)handle->data;
+        NodeSession* session = (NodeSession*)task->GetSession();
+        TransactionMessage* msg = (TransactionMessage*)task->GetMessage();
+
+        Transaction* tx = msg->GetTransaction();
+        uint256_t hash = tx->GetHash();
+
+        if(!TransactionPool::PutTransaction(tx)){
+            LOG(WARNING) << "couldn't add transaction to pool: " << hash;
+            return;
+        }
+
+        session->OnHash(hash);
+    }
+
     void Node::HandleAcceptedMessage(uv_work_t* handle){
 
     }
@@ -219,14 +227,60 @@ namespace Token{
 
     }
 
+    void Node::HandleInventoryMessage(uv_work_t* handle){
+        HandleMessageTask* task = (HandleMessageTask*)handle->data;
+        NodeSession* session = (NodeSession*)task->GetSession();
+        InventoryMessage* msg = (InventoryMessage*)task->GetMessage();
+
+        std::vector<InventoryItem> items;
+        if(!msg->GetItems(items)){
+            LOG(WARNING) << "couldn't get items from inventory message";
+            return;
+        }
+
+        session->Send(GetDataMessage(items));
+    }
+
     void Node::AfterHandleMessage(uv_work_t* handle, int status){
         delete (HandleMessageTask*)handle->data;
+        free(handle);
+    }
+
+    void Node::HandleGetDataTask(uv_work_t* handle){
+        GetDataTask* task = (GetDataTask*)handle->data;
+        NodeSession* session = (NodeSession*)task->GetSession();
+
+        std::vector<InventoryItem> items;
+        if(!task->GetItems(items)){
+            LOG(WARNING) << "couldn't get items for getdata task";
+            return;
+        }
+
+        session->Send(GetDataMessage(items));
+    }
+
+    void Node::AfterHandleGetDataTask(uv_work_t* handle, int status){
+        GetDataTask* task = (GetDataTask*)handle->data;
+        NodeSession* session = (NodeSession*)task->GetSession();
+
+        std::vector<InventoryItem> items;
+        if(!task->GetItems(items)){
+            LOG(WARNING) << "couldn't get items for getdata task";
+            return;
+        }
+
+        LOG(INFO) << "waiting for items....";
+        session->WaitForItems(items);
+        LOG(INFO) << "done!";
+
+        if(handle->data) free(handle->data);
         free(handle);
     }
 
     bool Node::Broadcast(const Message& msg){
         Node* node = GetInstance();
         pthread_rwlock_tryrdlock(&node->rwlock_);
+        LOG(INFO) << "broadcasting " << msg.GetName() << " to " << node->peers_.size() << " peers....";
         for(auto& it : node->peers_){
             it.second->Send(msg);
         }

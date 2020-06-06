@@ -4,6 +4,7 @@
 #include "node.pb.h"
 
 namespace Token{
+    //TODO: rename file
     class NodeAddress{
     public:
         typedef Proto::BlockChainServer::NodeAddress RawType;
@@ -77,6 +78,11 @@ namespace Token{
 
         uint32_t GetPort() const{
             return port_;
+        }
+
+        int GetSocketAddressIn(struct sockaddr_in* addr) const{
+            std::string address = GetAddress(address_);
+            return uv_ip4_addr(address.c_str(), port_, addr);
         }
 
         NodeAddress& operator=(const NodeAddress& other){

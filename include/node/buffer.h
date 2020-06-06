@@ -5,6 +5,7 @@
 #include "message.h"
 
 namespace Token{
+    //TODO: remove?
     class ByteBuffer{
     private:
         uint8_t* buff_;

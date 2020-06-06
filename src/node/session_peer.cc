@@ -1,6 +1,6 @@
-#include "node/peer.h"
+#include "node/session.h"
 #include "node/node.h"
-#include "task.h"
+#include "node/task.h"
 #include "block_miner.h"
 
 namespace Token{
@@ -183,11 +183,15 @@ namespace Token{
         GetDataMessage* msg = (GetDataMessage*)task->GetMessage();
         PeerSession* session = (PeerSession*)task->GetSession();
 
-        uint256_t hash = HashFromHexString(msg->GetHash());
+        std::vector<InventoryItem> items;
+        if(!msg->GetItems(items)){
+            LOG(WARNING) << "cannot get items from message";
+            return;
+        }
 
         uv_work_t* work = (uv_work_t*)malloc(sizeof(uv_work_t));
-        work->data = new GetDataTask(session, hash);
-        uv_queue_work(handle->loop, work, HandleGetDataTask, AfterHandleGetDataTask);
+        work->data = new GetDataTask(session, items);
+        uv_queue_work(handle->loop, work, &HandleGetDataTask, &AfterHandleGetDataTask);
     }
 
     void PeerSession::HandleBlockMessage(uv_work_t* handle){
@@ -195,6 +199,10 @@ namespace Token{
     }
 
     void PeerSession::HandleTransactionMessage(uv_work_t* handle){
+
+    }
+
+    void PeerSession::HandleInventoryMessage(uv_work_t* handle){
 
     }
 
@@ -206,31 +214,50 @@ namespace Token{
     void PeerSession::HandleGetDataTask(uv_work_t* handle){
         GetDataTask* task = (GetDataTask*)handle->data;
         PeerSession* session = (PeerSession*)task->GetSession();
-        uint256_t hash = task->GetHash();
 
-        Block* block = nullptr;
-        if((block = BlockChain::GetBlockData(hash))){
-            LOG(INFO) << hash << " found in block chain!";
-            session->Send(BlockMessage(block));
-            return;
-        }
+        LOG(INFO) << task->GetItemCount() << " items remaining...";
 
-        if((block = BlockPool::GetBlock(hash))){
-            LOG(INFO) << hash << " found in block pool!";
-            session->Send(BlockMessage(block));
-            return;
+        InventoryItem item = task->GetNextItem();
+        if(item.ItemExists()){
+            uint256_t hash = item.GetHash();
+            LOG(INFO) << "sending " << hash << "....";
+
+            if(item.IsBlock()){
+                Block* block = nullptr;
+                if((block = BlockChain::GetBlockData(hash))){
+                    LOG(INFO) << hash << " found in block chain!";
+                    session->Send(BlockMessage(block));
+                    return;
+                }
+
+                if((block = BlockPool::GetBlock(hash))){
+                    LOG(INFO) << hash << " found in block pool!";
+                    session->Send(BlockMessage(block));
+                    return;
+                }
+            } else if(item.IsTransaction()){
+                Transaction* tx;
+                if((tx = TransactionPool::GetTransaction(hash))){
+                    LOG(INFO) << hash << " found in transaction pool!";
+                    session->Send(TransactionMessage(tx));
+                    return;
+                }
+            }
         }
 
         //TODO: get transactions
 
-        // re-queue work
-        uv_work_t* work = (uv_work_t*)malloc(sizeof(uv_work_t));
-        work->data = task;
-        uv_queue_work(handle->loop, work, HandleGetDataTask, AfterHandleGetDataTask);
+        if(task->HasMoreItems()){
+            // re-queue work
+            uv_work_t* work = (uv_work_t*)malloc(sizeof(uv_work_t));
+            work->data = task;
+            uv_queue_work(handle->loop, work, HandleGetDataTask, AfterHandleGetDataTask);
+        }
     }
 
     void PeerSession::AfterHandleGetDataTask(uv_work_t* handle, int status){
-        free(handle->data);
+        GetDataTask* task = (GetDataTask*)handle->data;
+        if(!task->HasMoreItems()) free(handle->data);
         free(handle);
     }
 }
