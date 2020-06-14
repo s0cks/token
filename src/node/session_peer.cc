@@ -4,40 +4,28 @@
 #include "block_miner.h"
 
 namespace Token{
+#define SCHEDULE(Loop, Name, ...)({ \
+    uv_work_t* work = (uv_work_t*)malloc(sizeof(uv_work_t));\
+    work->data = new Name##Task(__VA_ARGS__); \
+    uv_queue_work((Loop), work, Handle##Name##Task, After##Name##Task); \
+})
+#define RESCHEDULE(Loop, Name, TaskInstance)({\
+    uv_work_t* work = (uv_work_t*)malloc(sizeof(uv_work_t)); \
+    work->data = (TaskInstance); \
+    uv_queue_work((Loop), work, Handle##Name##Task, After##Name##Task); \
+})
+
     void PeerSession::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
-        buff->base = (char*)malloc(suggested_size);
-        buff->len = suggested_size;
-    }
-
-    void PeerSession::Send(const Message& msg){
-        LOG(INFO) << "sending " << msg;
-
-        uint32_t type = static_cast<uint32_t>(msg.GetType());
-        uint64_t size = msg.GetSize();
-        uint64_t total_size = Message::kHeaderSize + size;
-
-        uint8_t bytes[total_size];
-        memcpy(&bytes[Message::kTypeOffset], &type, Message::kTypeLength);
-        memcpy(&bytes[Message::kSizeOffset], &size, Message::kSizeLength);
-        msg.Encode(&bytes[Message::kDataOffset], size);
-
-        uv_buf_t buff = uv_buf_init((char*)bytes, total_size);
-        uv_write_t* req = (uv_write_t*)malloc(sizeof(uv_write_t));
-        req->data = this;
-        uv_write(req, GetStream(), &buff, 1, &OnMessageSent);
-    }
-
-    void PeerSession::OnMessageSent(uv_write_t *req, int status){
-        if(status != 0) LOG(ERROR) << "failed to send message: " << uv_strerror(status);
-        if(req){
-            free(req);
-        }
+        PeerSession* session = (PeerSession*)handle->data;
+        ByteBuffer* bb = session->GetReadBuffer();
+        bb->clear();
+        buff->base = (char*)bb->data();
+        buff->len = bb->GetCapacity();
     }
 
     void* PeerSession::PeerSessionThread(void* data){
         PeerSession* session = (PeerSession*)data;
         NodeAddress address = session->node_addr_;
-        LOG(INFO) << "connecting to peer " << address << "....";
 
         uv_loop_t* loop = uv_loop_new();
         uv_tcp_init(loop, &session->socket_);
@@ -67,7 +55,7 @@ namespace Token{
         std::string address = "127.0.0.1";
         uint32_t port = FLAGS_port;
         NodeInfo info(node->GetInfo().GetNodeID(), address, port);
-        session->Send(VersionMessage(info));
+        session->Send(VersionMessage::NewInstance(info.GetNodeID()));
 
         if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
             LOG(ERROR) << "client read error: " << uv_strerror(status);
@@ -92,41 +80,64 @@ namespace Token{
             return;
         }
 
-        Message* msg;
-        if(!(msg = Message::Decode((uint8_t*)buff->base, buff->len))){
-            LOG(INFO) << "couldn't decode message!";
-            return;
-        }
+        uint32_t offset = 0;
+        std::vector<Message*> messages;
+        do{
+            uint32_t mtype = 0;
+            memcpy(&mtype, &buff->base[offset + Message::kTypeOffset], Message::kTypeLength);
 
-        LOG(INFO) << "received: " << (*msg);
+            uint64_t msize = 0;
+            memcpy(&msize, &buff->base[offset + Message::kSizeOffset], Message::kSizeLength);
 
-        uv_work_t* work = (uv_work_t*)malloc(sizeof(uv_work_t));
-        work->data = new HandleMessageTask(session, msg);
-        switch(msg->GetType()){
+            Message* msg = nullptr;
+            if(!(msg = Message::Decode(static_cast<Message::MessageType>(mtype), msize, (uint8_t*)&buff->base[offset + Message::kDataOffset]))){
+                LOG(WARNING) << "couldn't decode message of type := " << mtype << " and of size := " << msize << ", at offset := " << offset;
+                continue;
+            }
+
+            LOG(INFO) << "decoded message: " << msg->ToString();
+            messages.push_back(msg);
+
+            offset += (msize + Message::kHeaderSize);
+        } while((offset + Message::kHeaderSize) < nread);
+
+        for(size_t idx = 0; idx < messages.size(); idx++){
+            Message* msg = messages[idx];
+            HandleMessageTask* task = new HandleMessageTask(session, msg);
+            switch(msg->GetMessageType()){
 #define DEFINE_HANDLER_CASE(Name) \
-            case Message::Type::k##Name##Message: \
-                uv_queue_work(stream->loop, work, &Handle##Name##Message, AfterHandleMessage); \
+            case Message::k##Name##MessageType: \
+                Handle##Name##Message(task); \
                 break;
-            FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLER_CASE);
-            case Message::Type::kUnknownMessage:
-            default: //TODO: handle properly
-                return;
+                FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLER_CASE);
+#undef DEFINE_HANDLER_CASE
+                case Message::kUnknownMessageType:
+                default: //TODO: handle properly
+                    break;
+            }
+
+            delete task;
         }
     }
 
-    void PeerSession::HandleVersionMessage(uv_work_t* handle){
-        Node* node = Node::GetInstance();
-        HandleMessageTask* task = (HandleMessageTask*)handle->data;
+    void PeerSession::HandleGetBlocksMessage(HandleMessageTask* task){}
+
+    void PeerSession::HandleVersionMessage(HandleMessageTask* task){
         VersionMessage* msg = (VersionMessage*)task->GetMessage();
         PeerSession* session = (PeerSession*)task->GetSession();
 
-        NodeInfo ninfo = node->GetInfo();
-        session->Send(VerackMessage(NodeInfo(ninfo.GetNodeID(), "127.0.0.1", FLAGS_port)));
+        NodeInfo ninfo = Node::GetInfo();
+        session->Send(VerackMessage::NewInstance(NodeInfo(ninfo.GetNodeID(), "127.0.0.1", FLAGS_port)));
+
+        uint32_t pheight = msg->GetHeight();
+        BlockHeader head = BlockChain::GetHead();
+        if(head.GetHeight() < pheight){
+            Node::SetState(Node::kSynchronizing);
+            session->Send(GetBlocksMessage::NewInstance());
+        }
     }
 
-    void PeerSession::HandleVerackMessage(uv_work_t* handle){
-        Node* node = Node::GetInstance();
-        HandleMessageTask* task = (HandleMessageTask*)handle->data;
+    void PeerSession::HandleVerackMessage(HandleMessageTask* task){
         VerackMessage* msg = (VerackMessage*)task->GetMessage();
         PeerSession* session = (PeerSession*)task->GetSession();
 
@@ -139,11 +150,9 @@ namespace Token{
         Node::RegisterPeer(msg->GetID(), session);
     }
 
-    void PeerSession::HandlePrepareMessage(uv_work_t* handle){}
+    void PeerSession::HandlePrepareMessage(HandleMessageTask* task){}
 
-    void PeerSession::HandlePromiseMessage(uv_work_t* handle){
-        Node* node = Node::GetInstance();
-        HandleMessageTask* task = (HandleMessageTask*)handle->data;
+    void PeerSession::HandlePromiseMessage(HandleMessageTask* task){
         PromiseMessage* msg = (PromiseMessage*)task->GetMessage();
         PeerSession* session = (PeerSession*)task->GetSession();
 
@@ -157,10 +166,9 @@ namespace Token{
         LOG(INFO) << node_id << " voted for proposal #" << height << "!";
     }
 
-    void PeerSession::HandleCommitMessage(uv_work_t* handle){}
+    void PeerSession::HandleCommitMessage(HandleMessageTask* task){}
 
-    void PeerSession::HandleAcceptedMessage(uv_work_t* handle){
-        HandleMessageTask* task = (HandleMessageTask*)handle->data;
+    void PeerSession::HandleAcceptedMessage(HandleMessageTask* task){
         AcceptedMessage* msg = (AcceptedMessage*)task->GetMessage();
         PeerSession* session = (PeerSession*)task->GetSession();
 
@@ -174,12 +182,12 @@ namespace Token{
         LOG(INFO) << node_id << " accepted #" << height << "!";
     }
 
-    void PeerSession::HandleRejectedMessage(uv_work_t* handle){
+    void PeerSession::HandleRejectedMessage(HandleMessageTask* task){
 
     }
 
-    void PeerSession::HandleGetDataMessage(uv_work_t* handle){
-        HandleMessageTask* task = (HandleMessageTask*)handle->data;
+    //TODO: vectorize-responses
+    void PeerSession::HandleGetDataMessage(HandleMessageTask* task){
         GetDataMessage* msg = (GetDataMessage*)task->GetMessage();
         PeerSession* session = (PeerSession*)task->GetSession();
 
@@ -189,75 +197,103 @@ namespace Token{
             return;
         }
 
-        uv_work_t* work = (uv_work_t*)malloc(sizeof(uv_work_t));
-        work->data = new GetDataTask(session, items);
-        uv_queue_work(handle->loop, work, &HandleGetDataTask, &AfterHandleGetDataTask);
-    }
+        for(auto& item : items){
+            if(item.ItemExists()){
+                uint256_t hash = item.GetHash();
+                LOG(INFO) << "sending " << hash << "....";
+                if(item.IsBlock()){
+                    Block* block = nullptr;
+                    if((block = BlockChain::GetBlockData(hash))){
+                        LOG(INFO) << hash << " found in block chain!";
+                        session->Send(BlockMessage::NewInstance(block));
+                        return;
+                    }
 
-    void PeerSession::HandleBlockMessage(uv_work_t* handle){
-
-    }
-
-    void PeerSession::HandleTransactionMessage(uv_work_t* handle){
-
-    }
-
-    void PeerSession::HandleInventoryMessage(uv_work_t* handle){
-
-    }
-
-    void PeerSession::AfterHandleMessage(uv_work_t* handle, int status){
-        delete (HandleMessageTask*)handle->data;
-        free(handle);
-    }
-
-    void PeerSession::HandleGetDataTask(uv_work_t* handle){
-        GetDataTask* task = (GetDataTask*)handle->data;
-        PeerSession* session = (PeerSession*)task->GetSession();
-
-        LOG(INFO) << task->GetItemCount() << " items remaining...";
-
-        InventoryItem item = task->GetNextItem();
-        if(item.ItemExists()){
-            uint256_t hash = item.GetHash();
-            LOG(INFO) << "sending " << hash << "....";
-
-            if(item.IsBlock()){
-                Block* block = nullptr;
-                if((block = BlockChain::GetBlockData(hash))){
-                    LOG(INFO) << hash << " found in block chain!";
-                    session->Send(BlockMessage(block));
-                    return;
-                }
-
-                if((block = BlockPool::GetBlock(hash))){
-                    LOG(INFO) << hash << " found in block pool!";
-                    session->Send(BlockMessage(block));
-                    return;
-                }
-            } else if(item.IsTransaction()){
-                Transaction* tx;
-                if((tx = TransactionPool::GetTransaction(hash))){
-                    LOG(INFO) << hash << " found in transaction pool!";
-                    session->Send(TransactionMessage(tx));
-                    return;
+                    if((block = BlockPool::GetBlock(hash))){
+                        LOG(INFO) << hash << " found in block pool!";
+                        session->Send(BlockMessage::NewInstance(block));
+                        return;
+                    }
+                } else if(item.IsTransaction()){
+                    Transaction* tx;
+                    if((tx = TransactionPool::GetTransaction(hash))){
+                        LOG(INFO) << hash << " found in transaction pool!";
+                        session->Send(TransactionMessage::NewInstance(tx));
+                        return;
+                    }
                 }
             }
         }
+    }
 
-        //TODO: get transactions
+    void PeerSession::HandleBlockMessage(HandleMessageTask* task){
+        PeerSession* session = (PeerSession*)task->GetSession();
+        BlockMessage* msg = (BlockMessage*)task->GetMessage();
 
-        if(task->HasMoreItems()){
-            // re-queue work
-            uv_work_t* work = (uv_work_t*)malloc(sizeof(uv_work_t));
-            work->data = task;
-            uv_queue_work(handle->loop, work, HandleGetDataTask, AfterHandleGetDataTask);
+        Block* block = msg->GetBlock();
+        uint256_t hash = block->GetHash();
+
+        if(!BlockPool::AddBlock(block)){
+            LOG(WARNING) << "couldn't add " << block->GetHeader() << " to block pool!";
+            return;
+        }
+
+        LOG(INFO) << "downloaded block: " << block->GetHeader();
+        session->OnHash(hash);
+    }
+
+    void PeerSession::HandleTransactionMessage(HandleMessageTask* task){
+
+    }
+
+    void PeerSession::HandleInventoryMessage(HandleMessageTask* task){
+        PeerSession* session = (PeerSession*)task->GetSession();
+        InventoryMessage* msg = (InventoryMessage*)task->GetMessage();
+
+        std::vector<InventoryItem> items;
+        if(!msg->GetItems(items)){
+            LOG(WARNING) << "couldn't get items from inventory";
+            return;
+        }
+
+        auto item_exists = [](InventoryItem item){
+            return item.ItemExists();
+        };
+        items.erase(std::remove_if(items.begin(), items.end(), item_exists), items.end());
+
+        LOG(INFO) << "received inventory of " << items.size() << " items, downloading...";
+        if(!items.empty()) session->Send(GetDataMessage::NewInstance(items));
+        if(Node::IsSynchronizing()) SCHEDULE(session->GetLoop(), SynchronizeBlocks, session, items);
+    }
+
+    void PeerSession::HandleSynchronizeBlocksTask(uv_work_t* handle){
+        SynchronizeBlocksTask* task = (SynchronizeBlocksTask*)handle->data;
+        PeerSession* session = (PeerSession*)task->GetSession();
+
+        std::vector<InventoryItem> items;
+        if(!task->GetItems(items)){
+            LOG(WARNING) << "couldn't get items from task";
+            return;
+        }
+        std::reverse(items.begin(), items.end());
+
+        LOG(WARNING) << "waiting for " << items.size() << " items...";
+        session->WaitForItems(items);
+        LOG(WARNING) << "done waiting!";
+
+        for(auto item = items.rbegin(); item != items.rend(); item++){
+            LOG(INFO) << "appending: " << item->GetHash();
+            Block* block = BlockPool::GetBlock(item->GetHash());
+            if(!BlockChain::AppendBlock(block)){
+                LOG(WARNING) << "couldn't append block: " << block->GetHeader();
+                return;
+            }
         }
     }
 
-    void PeerSession::AfterHandleGetDataTask(uv_work_t* handle, int status){
-        GetDataTask* task = (GetDataTask*)handle->data;
-        if(!task->HasMoreItems()) free(handle->data);
+    void PeerSession::AfterSynchronizeBlocksTask(uv_work_t* handle, int status){
+        Node::SetState(Node::kStarting);
+        if(handle->data) free(handle->data);
         free(handle);
     }
 }

@@ -2,22 +2,51 @@
 #include "node/node.h"
 
 namespace Token{
-    BlockHeader::BlockHeader(const Block& block):
-            timestamp_(block.GetTimestamp()),
-            height_(block.GetHeight()),
-            previous_hash_(block.GetPreviousHash()),
-            hash_(block.GetHash()),
-            merkle_root_(block.GetMerkleRoot()){}
+//######################################################################################################################
+//                                          Block Header
+//######################################################################################################################
+    BlockHeader::BlockHeader(Block* blk): BlockHeader(blk->GetTimestamp(), blk->GetHeight(), blk->GetPreviousHash(), blk->GetMerkleRoot(), blk->GetHash()){}
 
     Block* BlockHeader::GetData() const{
         return BlockChain::GetBlockData(GetHash());
     }
 
-    bool Block::GetBytes(CryptoPP::SecByteBlock& bytes) const{
-        Proto::BlockChain::Block raw;
-        raw << (*this);
-        bytes.resize(raw.ByteSizeLong());
-        return raw.SerializeToArray(bytes.data(), bytes.size());
+//######################################################################################################################
+//                                          Block
+//######################################################################################################################
+    Block* Block::NewInstance(uint32_t height, const Token::uint256_t &phash, std::vector<Transaction*>& transactions,
+                              uint32_t timestamp){
+        Block* instance = (Block*)Allocator::Allocate(sizeof(Block));
+        new (instance)Block(timestamp, height, phash, transactions);
+        return instance;
+    }
+
+    Block* Block::NewInstance(const BlockHeader &parent, std::vector<Transaction *> &transactions, uint32_t timestamp){
+        return NewInstance(parent.GetHeight() + 1, parent.GetHash(), transactions, timestamp);
+    }
+
+    Block* Block::NewInstance(const Block::RawType& raw){
+        std::vector<Transaction*> txs = {};
+        for(auto& it : raw.transactions()) txs.push_back(Transaction::NewInstance(it));
+        return NewInstance(raw.height(), HashFromHexString(raw.previous_hash()), txs, raw.timestamp());
+    }
+
+    std::string Block::ToString() const{
+        std::stringstream stream;
+        stream << "Block(#" << GetHeight() << "/" << GetHash() << ")";
+        return stream.str();
+    }
+
+    bool Block::Encode(Block::RawType& raw) const{
+        raw.set_timestamp(timestamp_);
+        raw.set_height(height_);
+        raw.set_previous_hash(HexString(previous_hash_));
+        raw.set_merkle_root(HexString(GetMerkleRoot()));
+        for(auto& it : transactions_){
+            Transaction::RawType* raw_tx = raw.add_transactions();
+            it->Encode((*raw_tx));
+        }
+        return true;
     }
 
     bool Block::Accept(BlockVisitor* vis) const{
@@ -25,8 +54,7 @@ namespace Token{
         for(size_t idx = 0;
             idx < GetNumberOfTransactions();
             idx++){
-            Transaction tx;
-            if(!GetTransaction(idx, &tx)) return false;
+            Transaction* tx = GetTransaction(idx);
             if(!vis->Visit(tx)) return false;
         }
         return vis->VisitEnd();
@@ -47,8 +75,8 @@ namespace Token{
             return block_;
         }
 
-        bool Visit(const Transaction& tx){
-            return AddLeaf(tx.GetHash());
+        bool Visit(Transaction* tx){
+            return AddLeaf(tx->GetHash());
         }
 
         bool BuildTree(){
@@ -80,6 +108,10 @@ namespace Token{
         return tree->GetMerkleRootHash();
     }
 
+//######################################################################################################################
+//                                          Block Pool
+//######################################################################################################################
+
 #define READ_LOCK pthread_rwlock_tryrdlock(&pool->rwlock_)
 #define WRITE_LOCK pthread_rwlock_trywrlock(&pool->rwlock_)
 #define UNLOCK pthread_rwlock_unlock(&pool->rwlock_)
@@ -99,6 +131,7 @@ namespace Token{
 
     bool BlockPool::HasBlock(const uint256_t& hash){
         BlockPool* pool = GetInstance();
+        READ_LOCK;
         bool found = pool->ContainsObject(hash);
         UNLOCK;
         return found;

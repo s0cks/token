@@ -9,30 +9,22 @@ namespace Token{
     class Transaction;
     class Output;
 
-    class UnclaimedTransaction : public BinaryObject{
-    private:
-        uint256_t hash_; // Transaction Hash
-        uint32_t index_; // Output Index
-    protected:
-        bool GetBytes(CryptoPP::SecByteBlock& bytes) const;
+    class UnclaimedTransaction : public BinaryObject<Proto::BlockChain::UnclaimedTransaction>{
     public:
         typedef Proto::BlockChain::UnclaimedTransaction RawType;
+    private:
+        uint256_t hash_;
+        uint32_t index_;
 
-        UnclaimedTransaction():
-            hash_(),
-            index_(){}
-        UnclaimedTransaction(const uint256_t& hash, uint32_t index):
+        UnclaimedTransaction(const uint256_t& hash, uint32_t idx):
             hash_(hash),
-            index_(index){}
-        UnclaimedTransaction(const Transaction& tx, uint32_t index):
-            hash_(tx.GetHash()),
-            index_(index){}
-        UnclaimedTransaction(const RawType& raw):
-            hash_(HashFromHexString(raw.tx_hash())),
-            index_(raw.tx_index()){}
-        UnclaimedTransaction(const UnclaimedTransaction& other):
-            hash_(other.hash_),
-            index_(other.index_){}
+            index_(idx){}
+
+        bool Encode(RawType& raw) const;
+
+        friend class IndexManagedPool<UnclaimedTransaction, RawType>;
+        friend class UnclaimedTransactionPool;
+    public:
         ~UnclaimedTransaction(){}
 
         uint256_t GetTransaction() const{
@@ -43,28 +35,10 @@ namespace Token{
             return index_;
         }
 
-        bool GetTransaction(Transaction* result) const;
-        bool GetOutput(Output* result) const;
+        std::string ToString() const;
 
-        friend bool operator==(const UnclaimedTransaction& lhs, const UnclaimedTransaction& rhs){
-            return lhs.GetHash() == rhs.GetHash();
-        }
-
-        friend bool operator!=(const UnclaimedTransaction& lhs, const UnclaimedTransaction& rhs){
-            return !operator==(lhs, rhs);
-        }
-
-        friend RawType& operator<<(RawType& stream, const UnclaimedTransaction& utxo){
-            stream.set_tx_hash(HexString(utxo.hash_));
-            stream.set_tx_index(utxo.index_);
-            return stream;
-        }
-
-        UnclaimedTransaction& operator=(const UnclaimedTransaction& other){
-            hash_ = other.hash_;
-            index_ = other.index_;
-            return (*this);
-        }
+        static UnclaimedTransaction* NewInstance(const uint256_t& hash, uint32_t index);
+        static UnclaimedTransaction* NewInstance(const RawType& raw);
     };
 
     class UnclaimedTransactionPoolVisitor;

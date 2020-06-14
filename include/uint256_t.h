@@ -63,7 +63,7 @@ namespace Token{
     };
 
     static inline std::string
-    HexString(const uint256_t& val){
+    HexString(uint256_t val){
         std::string hash;
         CryptoPP::ArraySource source(val.data(), val.size(), true, new CryptoPP::HexEncoder(new CryptoPP::StringSink(hash)));
         return hash;

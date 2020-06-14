@@ -37,6 +37,11 @@ namespace Token{
 #error "Cannot determine CPU architecture"
 #endif
 
+    static const size_t kWordSize = sizeof(uintptr_t);
+    static const size_t kBitsPerByte = 8;
+    static const size_t kBitsPerWord = sizeof(uintptr_t)*kBitsPerByte;
+    static const uintptr_t kUWordOne = 1U;
+
     static inline uintptr_t
     RoundUpPowTwo(uintptr_t x){
         x = x - 1;

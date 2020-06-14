@@ -38,41 +38,48 @@ namespace Token{
         HandleMessageTask(Session* session, Message* msg):
             SessionTask(session),
             message_(msg){}
-        ~HandleMessageTask(){
-            if(message_) delete message_;
-        }
+        ~HandleMessageTask(){}
 
         Message* GetMessage() const{
             return message_;
         }
     };
 
-    class GetDataTask : public SessionTask{
-    private:
+    class InventoryTask : public SessionTask{
+    protected:
         std::vector<InventoryItem> items_;
-    public:
-        GetDataTask(Session* session, std::vector<InventoryItem>& items):
+
+        InventoryTask(Session* session, std::vector<InventoryItem>& items):
             SessionTask(session),
             items_(items){}
-        ~GetDataTask(){}
+    public:
+        ~InventoryTask(){}
 
         bool GetItems(std::vector<InventoryItem>& items){
             for(auto& it : items_) items.push_back(it);
             return items.size() == items_.size();
         }
+    };
 
-        bool HasMoreItems(){
-            return items_.size() > 0;
+    class SynchronizeBlocksTask : public InventoryTask{
+    public:
+        SynchronizeBlocksTask(Session* session, std::vector<InventoryItem>& items): InventoryTask(session, items){}
+        ~SynchronizeBlocksTask(){}
+    };
+
+    class AsyncSendTask : public SessionTask{
+    private:
+        Message* message_;
+    public:
+        AsyncSendTask(Session* session, Message* msg):
+            SessionTask(session),
+            message_(msg){}
+        ~AsyncSendTask(){
+            delete message_;
         }
 
-        uint32_t GetItemCount(){
-            return items_.size();
-        }
-
-        InventoryItem GetNextItem(){
-            InventoryItem item = items_.back();
-            items_.pop_back();
-            return item;
+        Message* GetMessage(){
+            return message_;
         }
     };
 }

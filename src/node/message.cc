@@ -1,49 +1,25 @@
 #include "node/message.h"
 
 namespace Token{
-#define DEFINE_TYPECHECK(Name) \
-    Name##Message* Name##Message::As##Name##Message(){ \
-        return this; \
-    }
-    FOR_EACH_MESSAGE_TYPE(DEFINE_TYPECHECK)
-#undef DEFINE_TYPECHECK
+    const uint32_t GetBlocksMessage::kMaxNumberOfBlocks = 250;
 
-    Message* Message::Decode(uint8_t* bytes, size_t size){
-        uint32_t rtype = 0;
-        memcpy(&rtype, &bytes[Message::kTypeOffset], Message::kTypeLength);
-
-        uint64_t rsize = 0;
-        memcpy(&rsize, &bytes[Message::kSizeOffset], Message::kSizeLength);
-
-        return Message::Decode(static_cast<Type>(rtype), &bytes[Message::kDataOffset], rsize);
-    }
-
-#define DECLARE_HASH_DECODE(Name, ErrorMessage) \
-    case Type::k##Name##Message:{ \
-        if(size != 64){ \
-            LOG(ERROR) << ErrorMessage; \
-            return nullptr; \
-        } \
-        std::string hash((char*)bytes, size); \
-        return new Name##Message(hash); \
-    }
 #define DECLARE_RAW_DECODE(Name, RawType, ErrorMessage) \
-    case Type::k##Name##Message:{ \
+    case MessageType::k##Name##MessageType:{ \
         RawType raw; \
         if(!raw.ParseFromArray(bytes, size)){ \
             LOG(ERROR) << ErrorMessage; \
             return nullptr; \
         } \
-        return new Name##Message(raw); \
+        return Name##Message::NewInstance(raw); \
     }
 
-    Message* Message::Decode(Type type, uint8_t* bytes, uint32_t size){
+    Message* Message::Decode(Message::MessageType type, uintptr_t size, uint8_t* bytes){
         switch(type){
-            DECLARE_RAW_DECODE(GetData, Proto::BlockChainServer::GetData, "couldn't deserialize getdata from byte array");
+            DECLARE_RAW_DECODE(GetBlocks, Proto::BlockChainServer::GetBlocks, "couldn't deserialize getblocks from byte array");
+            DECLARE_RAW_DECODE(GetData, Proto::BlockChainServer::Inventory, "couldn't deserialize getdata from byte array");
             DECLARE_RAW_DECODE(Transaction, Proto::BlockChain::Transaction, "couldn't deserialize transaction from byte array");
             DECLARE_RAW_DECODE(Block, Proto::BlockChain::Block, "couldn't deserialize block from byte array");
             DECLARE_RAW_DECODE(Inventory, Proto::BlockChainServer::Inventory, "couldn't deserialize inventory from byte array");
-            //DECLARE_RAW_DECODE(GetBlocks, Proto::BlockChainServer::BlockRange, "couldn't deserialize block range from byte array");
             DECLARE_RAW_DECODE(Prepare, Proto::BlockChainServer::Paxos, "couldn't deserialize prepare from byte array");
             DECLARE_RAW_DECODE(Promise, Proto::BlockChainServer::Paxos, "couldn't deserialize promise from byte array");
             DECLARE_RAW_DECODE(Commit, Proto::BlockChainServer::Paxos, "couldn't deserialize commit from byte array");

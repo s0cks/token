@@ -4,31 +4,27 @@
 #include "common.h"
 #include "pool.h"
 #include "transaction.h"
+#include "merkle.h"
 
 namespace Token{
     class BlockHeader{
+    public:
+        typedef Proto::BlockChain::BlockHeader RawType;
     private:
         uint32_t timestamp_;
         uint32_t height_;
         uint256_t previous_hash_;
-        uint256_t hash_;
         uint256_t merkle_root_;
+        uint256_t hash_;
     public:
-        typedef Proto::BlockChain::BlockHeader RawType;
-
-        BlockHeader():
-                timestamp_(0),
-                height_(0),
-                previous_hash_(),
-                hash_(),
-                merkle_root_(){}
-        BlockHeader(const Block& block);
-        BlockHeader(const RawType& raw):
-                timestamp_(raw.timestamp()),
-                height_(raw.height()),
-                previous_hash_(HashFromHexString(raw.previous_hash())),
-                hash_(HashFromHexString(raw.hash())),
-                merkle_root_(HashFromHexString(raw.merkle_root())){}
+        BlockHeader(uint32_t timestamp, uint32_t height, const uint256_t& phash, const uint256_t& merkle_root, const uint256_t& hash):
+            timestamp_(timestamp),
+            height_(height),
+            previous_hash_(phash),
+            merkle_root_(merkle_root),
+            hash_(hash){}
+        BlockHeader(Block* blk);
+        BlockHeader(const RawType& raw): BlockHeader(raw.timestamp(), raw.height(), HashFromHexString(raw.previous_hash()), HashFromHexString(raw.merkle_root()), HashFromHexString(raw.hash())){}
         ~BlockHeader(){}
 
         uint32_t GetTimestamp() const{
@@ -43,114 +39,85 @@ namespace Token{
             return previous_hash_;
         }
 
-        uint256_t GetHash() const{
-            return hash_;
-        }
-
         uint256_t GetMerkleRoot() const{
             return merkle_root_;
         }
 
+        uint256_t GetHash() const{
+            return hash_;
+        }
+
         Block* GetData() const;
+
+        BlockHeader& operator=(const BlockHeader& other){
+            timestamp_ = other.timestamp_;
+            height_ = other.height_;
+            previous_hash_ = other.previous_hash_;
+            merkle_root_ = other.merkle_root_;
+            hash_ = other.hash_;
+            return (*this);
+        }
 
         friend bool operator==(const BlockHeader& a, const BlockHeader& b){
             return a.GetHash() == b.GetHash();
         }
 
         friend bool operator!=(const BlockHeader& a, const BlockHeader& b){
-            return !operator==(a, b);
+            return a.GetHash() != b.GetHash();
         }
 
-        BlockHeader& operator=(const BlockHeader& other){
-            timestamp_ = other.timestamp_;
-            height_ = other.height_;
-            previous_hash_ = other.previous_hash_;
-            hash_ = other.hash_;
-            merkle_root_ = other.merkle_root_;
-            return (*this);
+        friend bool operator<(const BlockHeader& a, const BlockHeader& b){
+            return a.GetHeight() < b.GetHeight();
         }
 
-        friend Proto::BlockChain::BlockHeader& operator<<(Proto::BlockChain::BlockHeader& stream, const BlockHeader& block){
-            stream.set_timestamp(block.GetTimestamp());
-            stream.set_height(block.GetHeight());
-            stream.set_merkle_root(HexString(block.GetMerkleRoot()));
-            stream.set_hash(HexString(block.GetHash()));
-            stream.set_previous_hash(HexString(block.GetPreviousHash()));
+        friend std::ostream& operator<<(std::ostream& stream, const BlockHeader& header){
+            stream << "#" << header.GetHeight() << "(" << header.GetHash() << ")";
             return stream;
         }
     };
 
     class BlockVisitor;
-    class Block : public BinaryObject{
+    class Block : public BinaryObject<Proto::BlockChain::Block>{
+    public:
+        typedef Proto::BlockChain::Block RawType;
     private:
-        typedef std::map<uint256_t, Transaction> TransactionMap;
-        typedef std::pair<uint256_t, Transaction> TransactionMapPair;
-        typedef std::vector<Transaction> TransactionList;
-
         uint32_t timestamp_;
         uint32_t height_;
         uint256_t previous_hash_;
-        TransactionList tx_list_;
-        TransactionMap tx_map_;
+        std::vector<Transaction*> transactions_;
+        std::map<uint256_t, Transaction*> transactions_map_;
 
-        bool GetBytes(CryptoPP::SecByteBlock& bytes) const;
+        Block(uint32_t timestamp, uint32_t height, const uint256_t& phash, std::vector<Transaction*> txs):
+            timestamp_(timestamp),
+            height_(height),
+            previous_hash_(phash),
+            transactions_(txs),
+            transactions_map_(){
 
-        friend class BlockChain;
-    public:
-        typedef Proto::BlockChain::Block RawType;
-
-        Block():
-                timestamp_(0),
-                height_(0),
-                previous_hash_(),
-                tx_list_(),
-                tx_map_(){}
-        Block(uint32_t height, const uint256_t& previous_hash, const std::vector<Transaction>& transactions, uint32_t timestamp=GetCurrentTime()):
-                timestamp_(timestamp),
-                height_(height),
-                previous_hash_(previous_hash),
-                tx_list_(transactions),
-                tx_map_(){
-            for(auto& it : transactions) tx_map_.insert(TransactionMapPair(it.GetHash(), it));
-        }
-        Block(const BlockHeader& parent, const std::vector<Transaction>& transactions, uint32_t timestamp=GetCurrentTime()):
-                timestamp_(timestamp),
-                height_(parent.GetHeight() + 1),
-                previous_hash_(parent.GetHash()),
-                tx_list_(transactions),
-                tx_map_(){
-            for(auto& it : transactions) tx_map_.insert(TransactionMapPair(it.GetHash(), it));
-        }
-        Block(Block* parent, const std::vector<Transaction>& transactions, uint32_t timestamp=GetCurrentTime()):
-                timestamp_(timestamp),
-                height_(parent->GetHeight() + 1),
-                previous_hash_(parent->GetHash()),
-                tx_list_(transactions),
-                tx_map_(){
-            for(auto& it : transactions) tx_map_.insert(TransactionMapPair(it.GetHash(), it));
-        }
-        Block(const Proto::BlockChain::Block& raw):
-                timestamp_(raw.timestamp()),
-                height_(raw.height()),
-                previous_hash_(HashFromHexString(raw.previous_hash())),
-                tx_list_(),
-                tx_map_(){
-            for(auto& it : raw.transactions()){
-                Transaction tx(it);
-                tx_list_.push_back(it);
-                tx_map_.insert(TransactionMapPair(tx.GetHash(), tx));
+            uint32_t idx;
+            for(idx = 0; idx < transactions_.size(); idx++){
+                if(!Allocator::AddStrongReference(this, transactions_[idx], (void**)&transactions_[idx])){
+                    LOG(WARNING) << "couldn't add strong reference to transaction #" << idx;
+                }
             }
         }
-        Block(const Block& other):
-                timestamp_(other.timestamp_),
-                height_(other.height_),
-                previous_hash_(other.previous_hash_),
-                tx_list_(other.tx_list_),
-                tx_map_(other.tx_map_){}
+
+        bool Encode(RawType& raw) const;
+
+        friend class BlockChain;
+        friend class BlockPool;
+        friend class BlockMessage;
+        friend class IndexManagedPool<Block, RawType>;
+    public:
         ~Block(){}
+
+        BlockHeader GetHeader() const{
+            return BlockHeader((Block*)this);
+        }
 
         MerkleTree* GetMerkleTree() const;
         uint256_t GetMerkleRoot() const;
+
         uint256_t GetPreviousHash() const{
             return previous_hash_;
         }
@@ -160,24 +127,31 @@ namespace Token{
         }
 
         uint32_t GetNumberOfTransactions() const{
-            return tx_list_.size();
+            return transactions_.size();
         }
 
         uint32_t GetTimestamp() const{
             return timestamp_;
         }
 
-        bool GetTransaction(uint64_t idx, Transaction* result) const{
-            if(idx < 0 || idx > GetNumberOfTransactions()) return false;
-            (*result) = tx_list_[idx];
-            return true;
+        Transaction* GetTransaction(uint32_t idx) const{
+            if(idx < 0 || idx > transactions_.size()) return nullptr;
+            return transactions_[idx];
         }
 
-        bool GetTransaction(const uint256_t& hash, Transaction* result) const{
-            auto pos = tx_map_.find(hash);
-            if(pos == tx_map_.end()) return false;
-            (*result) = pos->second;
-            return true;
+        Transaction* GetTransaction(const uint256_t& hash) const{
+            for(auto& it : transactions_){
+                if(it->GetHash() == hash) return it;
+            }
+            return nullptr;
+        }
+
+        std::vector<Transaction*>::iterator begin(){
+            return transactions_.begin();
+        }
+
+        std::vector<Transaction*>::iterator end(){
+            return transactions_.end();
         }
 
         bool IsGenesis(){
@@ -186,43 +160,11 @@ namespace Token{
 
         bool Contains(const uint256_t& hash) const;
         bool Accept(BlockVisitor* vis) const;
+        std::string ToString() const;
 
-        TransactionList::const_iterator begin() const{
-            return tx_list_.begin();
-        }
-
-        TransactionList::const_iterator end() const{
-            return tx_list_.end();
-        }
-
-        friend bool operator==(const Block& lhs, const Block& rhs){
-            return const_cast<Block&>(lhs).GetHash() == const_cast<Block&>(rhs).GetHash();
-        }
-
-        friend bool operator!=(const Block& lhs, const Block& rhs){
-            return !operator==(lhs, rhs);
-        }
-
-        friend RawType& operator<<(RawType& stream, const Block& block){
-            stream.set_timestamp(block.GetTimestamp());
-            stream.set_height(block.GetHeight());
-            stream.set_merkle_root(HexString(block.GetMerkleRoot()));
-            stream.set_previous_hash(HexString(block.GetPreviousHash()));
-            for(size_t idx = 0; idx < block.GetNumberOfTransactions(); idx++){
-                Proto::BlockChain::Transaction* raw = stream.add_transactions();
-                (*raw) << block.tx_list_[idx];
-            }
-            return stream;
-        }
-
-        Block& operator=(const Block& other){
-            timestamp_ = other.timestamp_;
-            height_ = other.height_;
-            previous_hash_ = other.previous_hash_;
-            tx_list_ = other.tx_list_;
-            tx_map_ = other.tx_map_;
-            return (*this);
-        }
+        static Block* NewInstance(uint32_t height, const uint256_t& phash, std::vector<Transaction*>& transactions, uint32_t timestamp=GetCurrentTime());
+        static Block* NewInstance(const BlockHeader& parent, std::vector<Transaction*>& transactions, uint32_t timestamp=GetCurrentTime());
+        static Block* NewInstance(const RawType& raw);
     };
 
     class BlockVisitor{
@@ -231,7 +173,7 @@ namespace Token{
         virtual ~BlockVisitor(){}
 
         virtual bool VisitStart(){ return true; }
-        virtual bool Visit(const Transaction& tx) = 0;
+        virtual bool Visit(Transaction* tx) = 0;
         virtual bool VisitEnd(){ return true; }
     };
 
@@ -265,6 +207,7 @@ namespace Token{
         }
 
         friend class Node;
+        friend class PeerSession;
     public:
         ~BlockPool(){}
 
@@ -272,6 +215,7 @@ namespace Token{
         static bool AddBlock(Block* block);
         static bool HasBlock(const uint256_t& hash);
         static bool RemoveBlock(const uint256_t& hash);
+        //static bool GetHeader(const uint256_t& hash, BlockHeader* header);
         static Block* GetBlock(const uint256_t& hash);
     };
 }

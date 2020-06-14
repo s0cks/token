@@ -51,7 +51,7 @@ namespace Token{
             std::fstream fd(filename, std::ios::in|std::ios::binary);
             RawPoolObject raw;
             if(!raw.ParseFromIstream(&fd)) return nullptr;
-            return new PoolObject(raw);
+            return PoolObject::NewInstance(raw);
         }
 
         PoolObject* LoadObject(const uint256_t& hash) const{
@@ -65,7 +65,7 @@ namespace Token{
         bool SaveRawObject(const std::string& filename, PoolObject* value) const{
             std::fstream fd(filename, std::ios::out|std::ios::binary);
             RawType raw;
-            raw << (*value);
+            value->Encode(raw);
             if(!raw.SerializeToOstream(&fd)) return false;
             return true;
         }

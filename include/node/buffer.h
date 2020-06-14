@@ -172,11 +172,11 @@ namespace Token{
         }
 
         void PutMessage(Message* msg){
-            uint64_t size = msg->GetSize();
+            uint64_t size = msg->GetMessageSize();
             if((wpos_ + size) > capacity_) return;
             uint8_t bytes[size];
             if(!msg->Encode(bytes, size)){
-                LOG(ERROR) << "couldn't encode message " << msg->GetName() << " to byte buffer";
+                LOG(ERROR) << "couldn't encode message to byte buffer";
                 return;
             }
             memcpy(&buff_[wpos_], bytes, size);
@@ -184,11 +184,11 @@ namespace Token{
         }
 
         void PutMessage(Message* msg, uintptr_t idx){
-            uint64_t size = msg->GetSize();
+            uint64_t size = msg->GetMessageSize();
             if((idx + size) > capacity_) return;
             uint8_t bytes[size];
             if(!msg->Encode(bytes, size)){
-                LOG(ERROR) << "couldn't encode message " << msg->GetName() << " to byte buffer";
+                LOG(ERROR) << "couldn't encode message to byte buffer";
                 return;
             }
             memcpy(&buff_[idx], bytes, size);

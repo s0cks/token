@@ -2,50 +2,28 @@
 #define TOKEN_SESSION_H
 
 #include "message.h"
+#include "buffer.h"
 
 namespace Token{
     class Session{
-    public:
-        virtual ~Session() = default;
-
-        virtual void Send(const Message& msg) = 0;
-    };
-
-    class NodeSession : public Session{
-    public:
-        enum State{
-            kConnecting,
-            kConnected,
-            kDisconnected,
-        };
-
-        friend class Node;
-    private:
-        pthread_rwlock_t rwlock_;
-        State state_;
-        uv_tcp_t handle_;
-        NodeInfo info_;
-
+    protected:
         pthread_mutex_t rmutex_;
         pthread_cond_t rcond_;
-        pthread_mutex_t smutex_;
+        ByteBuffer rbuffer_;
+        ByteBuffer wbuffer_;
 
-        NodeSession():
-                state_(kDisconnected),
-                handle_(),
-                info_(&handle_),
-                rmutex_(),
-                rcond_(){
-            pthread_mutex_init(&rmutex_, NULL);
-            pthread_cond_init(&rcond_, NULL);
-
-            handle_.data = this;
-            SetState(kConnecting);
+        Session():
+            rmutex_(),
+            rcond_(),
+            rbuffer_(4096),
+            wbuffer_(4096){
+            pthread_mutexattr_t rmutex_attr;
+            pthread_mutexattr_settype(&rmutex_attr, PTHREAD_MUTEX_RECURSIVE_NP);
+            pthread_mutex_init(&rmutex_, &rmutex_attr);
         }
 
-        uv_stream_t* GetHandle(){
-            return (uv_stream_t*)&handle_;
-        }
+        static void OnMessageSent(uv_write_t *req, int status);
+        virtual uv_stream_t* GetStream() = 0;
 
         bool IsResolved(const InventoryItem& item){
             uint256_t hash = item.GetHash();
@@ -81,12 +59,13 @@ namespace Token{
         }
 
         void WaitForItem(const InventoryItem& item){
-            pthread_mutex_lock(&rmutex_);
+            pthread_mutex_trylock(&rmutex_);
+            LOG(INFO) << "waiting for: " << item.GetHash();
             while(!IsResolved(item)) pthread_cond_wait(&rcond_, &rmutex_);
             pthread_mutex_unlock(&rmutex_);
         }
 
-        void WaitForItems(std::vector<InventoryItem>& items){
+        void WaitForItems(std::vector<InventoryItem> items){
             if(items.empty()) return;
             InventoryItem next = items.back();
             items.pop_back();
@@ -99,10 +78,53 @@ namespace Token{
             pthread_cond_signal(&rcond_);
             pthread_mutex_unlock(&rmutex_);
         }
+    public:
+        virtual ~Session() = default;
 
-        static void OnMessageSent(uv_write_t* req, int status){
-            if(status != 0) LOG(ERROR) << "failed to send message: " << uv_strerror(status);
-            if(req) free(req);
+        ByteBuffer* GetReadBuffer(){
+            return &rbuffer_;
+        }
+
+        ByteBuffer* GetWriteBuffer(){
+            return &wbuffer_;
+        }
+
+        void Send(Message* msg);
+        void Send(std::vector<Message*>& messages);
+    };
+
+    class NodeSession : public Session{
+    public:
+        enum State{
+            kConnecting,
+            kConnected,
+            kDisconnected,
+        };
+
+        friend class Node;
+    private:
+        pthread_rwlock_t rwlock_;
+        State state_;
+        NodeInfo info_;
+        uv_tcp_t handle_;
+        pthread_mutex_t rmutex_;
+        pthread_cond_t rcond_;
+
+        NodeSession():
+                state_(kDisconnected),
+                handle_(),
+                info_(&handle_),
+                rmutex_(),
+                rcond_(){
+            pthread_mutex_init(&rmutex_, NULL);
+            pthread_cond_init(&rcond_, NULL);
+
+            handle_.data = this;
+            SetState(kConnecting);
+        }
+
+        virtual uv_stream_t* GetStream(){
+            return (uv_stream_t*)&handle_;
         }
     public:
         ~NodeSession(){}
@@ -143,32 +165,15 @@ namespace Token{
             state_ = state;
             pthread_rwlock_unlock(&rwlock_);
         }
-
-        void Send(const Message& msg){
-            pthread_mutex_trylock(&smutex_);
-            LOG(INFO) << "sending " << msg;
-            uint32_t rtype = static_cast<uint32_t>(msg.GetType());
-            uint64_t rsize = msg.GetSize();
-            uint64_t total_size = Message::kHeaderSize + rsize;
-
-            uint8_t bytes[total_size];
-            memcpy(&bytes[Message::kTypeOffset], &rtype, Message::kTypeLength);
-            memcpy(&bytes[Message::kSizeOffset], &rsize, Message::kSizeLength);
-            msg.Encode(&bytes[Message::kDataOffset], rsize);
-
-            uv_buf_t buff = uv_buf_init((char*)bytes, total_size);
-            uv_write_t* req = (uv_write_t*)malloc(sizeof(uv_write_t));
-            req->data = this;
-            uv_write(req, GetHandle(), &buff, 1, &OnMessageSent);
-            pthread_mutex_unlock(&smutex_);
-        }
     };
 
+    class HandleMessageTask;
     class PeerSession : public Session{
     private:
         pthread_t thread_;
         uv_connect_t conn_;
         uv_tcp_t socket_;
+        uv_async_t send_cb_;
         std::string node_id_;
         NodeAddress node_addr_;
 
@@ -176,22 +181,25 @@ namespace Token{
         static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
         static void OnConnect(uv_connect_t* conn, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
-        static void OnMessageSent(uv_write_t *req, int status);
 
-#define DECLARE_HANDLER(Name) \
-    static void Handle##Name##Message(uv_work_t* handle);
-        FOR_EACH_MESSAGE_TYPE(DECLARE_HANDLER);
-        static void AfterHandleMessage(uv_work_t* handle, int status);
+#define DECLARE_MESSAGE_HANDLER(Name) \
+    static void Handle##Name##Message(HandleMessageTask* task);
+    FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER);
 
-        static void HandleGetDataTask(uv_work_t* handle);
-        static void AfterHandleGetDataTask(uv_work_t* handle, int status);
+        static void HandleSynchronizeBlocksTask(uv_work_t* handle);
+        static void AfterSynchronizeBlocksTask(uv_work_t* handle, int status);
     protected:
-        uv_stream_t* GetStream() const{
+        virtual uv_stream_t* GetStream(){
             return conn_.handle;
+        }
+
+        uv_loop_t* GetLoop() const{
+            return socket_.loop;
         }
     public:
         PeerSession(const NodeAddress& addr):
                 thread_(),
+                socket_(),
                 conn_(),
                 node_addr_(addr),
                 node_id_(){
@@ -212,15 +220,20 @@ namespace Token{
             return node_id_;
         }
 
-        void Send(const Message& msg);
-
         bool Connect(){
             return pthread_create(&thread_, NULL, &PeerSessionThread, (void*)this) == 0;
         }
     };
 
-    //TODO: ClientSession
+    //TODO: rename ClientSession
     class NodeClient : public Session{
+    public:
+        enum State{
+            kStarting,
+            kRunning,
+            kStopping,
+            kStopped,
+        };
     private:
         uv_loop_t* loop_;
         uv_signal_t sigterm_;
@@ -230,20 +243,46 @@ namespace Token{
         uv_pipe_t stdin_;
         uv_pipe_t stdout_;
 
+        State state_;
+        pthread_mutex_t smutex_;
+        pthread_cond_t scond_;
+
+        void SetState(State state);
+        void WaitForState(State state);
+        State GetState();
+
+        inline bool
+        IsStarting(){
+            return GetState() == kStarting;
+        }
+
+        inline bool
+        IsRunning(){
+            return GetState() == kRunning;
+        }
+
+        inline bool
+        IsStopping(){
+            return GetState() == kStopping;
+        }
+
+        inline bool
+        IsStopped(){
+            return GetState() == kStopped;
+        }
+
         static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
         static void OnConnect(uv_connect_t* conn, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
         static void OnCommandReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
-        static void OnMessageSent(uv_write_t *req, int status);
         static void OnSignal(uv_signal_t* handle, int signum);
 
-#define DECLARE_HANDLER_FUNCTION(Name) \
-    static void Handle##Name##Message(uv_work_t* handle);
-        FOR_EACH_MESSAGE_TYPE(DECLARE_HANDLER_FUNCTION);
-        static void AfterHandleMessage(uv_work_t* handle, int status);
+#define DECLARE_MESSAGE_HANDLER(Name) \
+    static void Handle##Name##Message(HandleMessageTask* task);
+        FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER);
+#undef DECLARE_MESSAGE_HANDLER
 
-        inline uv_stream_t*
-        GetStream(){
+        virtual uv_stream_t* GetStream(){
             return (uv_stream_t*)&stream_;
         }
 
@@ -254,17 +293,21 @@ namespace Token{
     public:
         NodeClient():
                 loop_(uv_loop_new()),
+                state_(State::kStopped),
                 sigterm_(),
                 sigint_(),
                 stream_(),
                 stdin_(),
                 stdout_(){
+            stdin_.data = this;
+            stdout_.data = this;
             stream_.data = this;
             connection_.data = this;
         }
         ~NodeClient(){}
 
         void Connect(const NodeAddress& addr);
+        bool WaitForShutdown();
     };
 }
 

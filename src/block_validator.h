@@ -7,7 +7,7 @@
 namespace Token{
     class BlockValidator : public BlockVisitor{
     public:
-        typedef std::vector<Transaction> TransactionList;
+        typedef std::vector<Transaction*> TransactionList;
     private:
         Block* block_;
         TransactionList valid_txs_;
@@ -23,8 +23,8 @@ namespace Token{
             return block_;
         }
 
-        bool IsValid(const Transaction& tx);
-        bool Visit(const Transaction& tx);
+        bool IsValid(Transaction* tx);
+        bool Visit(Transaction* tx);
 
         bool IsValid() const{
             if(!GetBlock()->Accept((BlockVisitor*)this)) return false;

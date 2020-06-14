@@ -11,6 +11,9 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+#add support for memory mapped heap:
+# add_compile_definitions(TOKEN_VMEMORY_USE_MEMORYMAP
+
 find_package(Protobuf REQUIRED)
 find_package(Crypto++ REQUIRED)
 find_package(Threads)
@@ -28,9 +31,8 @@ include_directories(include)
 include_directories(src)
 
 set(PROTO_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protos")
-file(GLOB TOKEN_LIB_SOURCES include/*.h src/*.cc src/*.h)
+file(GLOB TOKEN_LIB_SOURCES include/*.h src/*.cc src/*.h src/alloc/*.h src/alloc/*.cc)
 file(GLOB TOKEN_LIB_NET_SOURCES include/node/*.h src/node/*.h src/node/*.cc)
-file(GLOB TOKEN_LIB_RPC_SOURCES include/rpc/*.h src/rpc/*.h src/rpc/*.cc)
 file(GLOB_RECURSE TOKEN_PROTO_SOURCES protos/*.proto)
 #file(GLOB_RECURSE TOKEN_TEST_SOURCES tests/*.h tests/*.cc)
 
@@ -58,6 +60,18 @@ add_executable(
 )
 target_link_libraries(
         "${PROJECT_NAME}-node"
+        "${PROJECT_NAME}-ledger" ${HTTPPARSER_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CRYPTO++_LIBRARIES} ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES}
+)
+
+#=================================================
+#       Token Ledger Client Exe
+#=================================================
+add_executable(
+        "${PROJECT_NAME}-client"
+        client.cc
+)
+target_link_libraries(
+        "${PROJECT_NAME}-client"
         "${PROJECT_NAME}-ledger" ${HTTPPARSER_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CRYPTO++_LIBRARIES} ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES}
 )
 

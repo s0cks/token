@@ -1,23 +1,34 @@
 #include "block_chain.h"
 
 namespace Token{
-    bool UnclaimedTransaction::GetTransaction(Transaction* result) const{
-        return BlockChain::GetTransaction(GetTransaction(), result);
+//######################################################################################################################
+//                                          Unclaimed Transaction
+//######################################################################################################################
+    UnclaimedTransaction* UnclaimedTransaction::NewInstance(const uint256_t &hash, uint32_t index){
+        UnclaimedTransaction* instance = (UnclaimedTransaction*)Allocator::Allocate(sizeof(UnclaimedTransaction));
+        new (instance)UnclaimedTransaction(hash, index);
+        return instance;
     }
 
-    bool UnclaimedTransaction::GetOutput(Output* result) const{
-        Transaction tx;
-        if(!GetTransaction(&tx)) return false;
-        return tx.GetOutput(GetIndex(), result);
+    UnclaimedTransaction* UnclaimedTransaction::NewInstance(const UnclaimedTransaction::RawType& raw){
+        return NewInstance(HashFromHexString(raw.tx_hash()), raw.tx_index());
     }
 
-    bool UnclaimedTransaction::GetBytes(CryptoPP::SecByteBlock& bytes) const{
-        Proto::BlockChain::UnclaimedTransaction raw;
-        raw << (*this);
-        bytes.resize(raw.ByteSizeLong());
-        return raw.SerializeToArray(bytes.data(), bytes.size());
+    std::string UnclaimedTransaction::ToString() const{
+        std::stringstream stream;
+        stream << "UnclaimedTransaction(" << hash_ << "[" << index_ << "])";
+        return stream.str();
     }
 
+    bool UnclaimedTransaction::Encode(Token::UnclaimedTransaction::RawType &raw) const{
+        raw.set_tx_hash(HexString(hash_));
+        raw.set_tx_index(index_);
+        return true;
+    }
+
+//######################################################################################################################
+//                                          Unclaimed Transaction Pool
+//######################################################################################################################
     static pthread_rwlock_t kPoolLock = PTHREAD_RWLOCK_INITIALIZER;
 #define READ_LOCK pthread_rwlock_tryrdlock(&kPoolLock)
 #define WRITE_LOCK pthread_rwlock_trywrlock(&kPoolLock)
@@ -90,6 +101,8 @@ namespace Token{
                     LOG(ERROR) << "couldn't load unclaimed transaction from: " << filename;
                     return false;
                 }
+
+                LOG(INFO) << "utxo: " << utxo->GetHash();
                 utxos.push_back(utxo->GetHash());
             }
             closedir(dir);

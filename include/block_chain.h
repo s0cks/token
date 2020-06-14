@@ -23,17 +23,13 @@ namespace Token{
         class BlockNode{
         private:
             BlockNode* parent_;
-            std::vector<BlockNode*> children_;
             BlockHeader header_;
+            std::vector<BlockNode*> children_;
         public:
-            BlockNode(const Block& block):
-                parent_(nullptr),
-                children_(),
-                header_(block){}
             BlockNode(Block* block):
                 parent_(nullptr),
                 children_(),
-                header_((*block)){}
+                header_(block){}
             ~BlockNode(){
                 if(!IsLeaf()){
                     for(auto& it : children_) delete it;
@@ -89,6 +85,7 @@ namespace Token{
 
         BlockNode* genesis_;
         BlockNode* head_;
+        std::map<uint32_t, BlockNode*> blocks_;
         std::map<uint256_t, BlockNode*> nodes_; //TODO: possible memory leak?
         pthread_rwlock_t rwlock_;
 
@@ -107,12 +104,13 @@ namespace Token{
         static BlockNode* GetHeadNode();
         static BlockNode* GetGenesisNode();
         static BlockNode* GetNode(const uint256_t& hash);
+        static BlockNode* GetNode(uint32_t height);
 
         BlockChain();
     public:
         ~BlockChain(){}
 
-        static uint64_t GetHeight(){
+        static uint32_t GetHeight(){
             return GetHead().GetHeight();
         }
 
@@ -128,6 +126,10 @@ namespace Token{
             return GetNode(hash)->GetHeader();
         }
 
+        static BlockHeader GetBlock(uint32_t height){
+            return GetNode(height)->GetHeader();
+        }
+
         static bool ContainsBlock(const uint256_t& hash){
             return GetInstance()->GetNode(hash) != nullptr;
         }
@@ -135,7 +137,7 @@ namespace Token{
         static Block* GetBlockData(const uint256_t& hash);
         static bool Initialize();
         static bool Accept(BlockChainVisitor* vis);
-        static bool GetTransaction(const uint256_t& hash, Transaction* result);
+        static Transaction* GetTransaction(const uint256_t& hash);
         static MerkleTree* GetMerkleTree();
 
         //TODO remove

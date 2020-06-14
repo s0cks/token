@@ -44,7 +44,7 @@ namespace Token{
         NodeInfo info = Node::GetInfo();
         LOG(INFO) << info.GetNodeID() << " creating proposal for: " << proposal->GetHeight() << "....";
         SetProposal(proposal);
-        Node::Broadcast(PrepareMessage(info, (*proposal)));
+        // Node::AsyncBroadcast(new PrepareMessage(info, (*proposal)));
 
         uint32_t votes_needed = Node::GetNumberOfPeers() > 0 ?
                                 (Node::GetNumberOfPeers() == 1 ? 1 : (Node::GetNumberOfPeers() / 2)) :
@@ -61,7 +61,7 @@ namespace Token{
     bool BlockMiner::CommitProposal(Proposal* proposal){
         NodeInfo info = Node::GetInfo();
         LOG(INFO) << info.GetNodeID() << " committing proposal for: " << proposal->GetHeight() << "....";
-        Node::Broadcast(CommitMessage(info, (*proposal)));
+        // Node::AsyncBroadcast(new CommitMessage(info, (*proposal)));
 
         uint32_t commits_needed = Node::GetNumberOfPeers() > 0 ?
                                   (Node::GetNumberOfPeers() == 1 ? 1 : (Node::GetNumberOfPeers() / 2)) :
@@ -113,7 +113,7 @@ namespace Token{
                 return;
             }
 
-            std::vector<Transaction> txs;
+            std::vector<Transaction*> txs;
             for(auto& it : all_txs){
                 //TODO: fixme, terrible design?
                 Transaction* tx;
@@ -122,15 +122,14 @@ namespace Token{
                     pthread_mutex_unlock(&proposal_mutex_);
                     return;
                 }
-                txs.push_back(Transaction((*tx)));
-                delete tx;
+                txs.push_back(tx);
             }
 
             // Create new block for proposal
             BlockHeader head = BlockChain::GetHead();
-            LOG(INFO) << "head := " << head.GetHeight() << "/" << head.GetHash();
+            LOG(INFO) << "<HEAD> := " << head;
 
-            Block* block = new Block(head, { txs });
+            Block* block = Block::NewInstance(head, txs);
             if(!BlockPool::AddBlock(block)){
                 LOG(WARNING) << "couldn't put newly mined block into block pool!";
                 return;
@@ -165,6 +164,44 @@ namespace Token{
             if(!BlockChain::GetInstance()->Append(block)){
                 LOG(ERROR) << "couldn't append new block: " << hash;
                 goto cleanup;
+            }
+
+            for(uint32_t txid = 0; txid < block->GetNumberOfTransactions(); txid++){
+                Transaction* tx;
+                if(!(tx = block->GetTransaction(txid))){
+                    LOG(WARNING) << "couldn't get transaction #" << txid << " from block: " << hash;
+                    return;
+                }
+
+                uint256_t tx_hash = tx->GetHash();
+                uint32_t idx = 0;
+                for(auto it = tx->outputs_begin(); it != tx->outputs_end(); it++){
+                    UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(tx_hash, idx++);
+                    if(!UnclaimedTransactionPool::PutUnclaimedTransaction(utxo)){
+                        LOG(WARNING) << "couldn't create unclaimed transaction for: " << tx_hash << "[" << (idx - 1) << "]";
+                        continue;
+                    }
+                }
+
+                for(auto it = tx->inputs_begin(); it != tx->inputs_end(); it++){
+                    Transaction* in_tx;
+                    if(!(in_tx = BlockChain::GetTransaction((*it)->GetTransactionHash()))){
+                        LOG(ERROR) << "couldn't get transaction: " << (*it)->GetTransactionHash();
+                        continue;
+                    }
+
+                    UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(in_tx->GetHash(), (*it)->GetOutputIndex());
+                    uint256_t uhash = utxo->GetHash();
+                    if(!UnclaimedTransactionPool::RemoveUnclaimedTransaction(uhash)){
+                        LOG(ERROR) << "couldn't remove unclaimed transaction: " << uhash;
+                        continue;
+                    }
+                }
+
+                if(!TransactionPool::RemoveTransaction(tx_hash)){
+                    LOG(ERROR) << "couldn't remove transaction: " << tx_hash;
+                    continue;
+                }
             }
 
             if(!BlockPool::RemoveBlock(hash)){

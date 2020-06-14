@@ -6,7 +6,6 @@
 #include "uint256_t.h"
 
 namespace Token{
-    class BinaryObject;
     class BlockVisitor;
     class Block;
 

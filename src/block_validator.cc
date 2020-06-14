@@ -2,16 +2,17 @@
 #include "block_validator.h"
 
 namespace Token{
-    bool BlockValidator::IsValid(const Transaction& tx){
-        uint256_t hash = tx.GetHash();
-        if(tx.GetNumberOfInputs() <= 0){
+    bool BlockValidator::IsValid(Transaction* tx){
+        uint256_t hash = tx->GetHash();
+        if(tx->GetNumberOfInputs() <= 0){
             LOG(WARNING) << "transaction " << hash << " has no inputs";
             return false;
-        } else if(tx.GetNumberOfOutputs() <= 0){
+        } else if(tx->GetNumberOfOutputs() <= 0){
             LOG(WARNING) << "transaction " << hash << " has no outputs";
             return false;
         }
 
+        /*
         for(auto it = tx.inputs_begin();
                 it != tx.inputs_end();
                 it++){
@@ -34,10 +35,11 @@ namespace Token{
                 return false;
             }
         }
+        */
         return true;
     }
 
-    bool BlockValidator::Visit(const Transaction& tx){
+    bool BlockValidator::Visit(Transaction* tx){
         if(!IsValid(tx)){
             invalid_txs_.push_back(tx);
             return false;
