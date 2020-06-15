@@ -115,8 +115,7 @@ namespace Token{
                 default: //TODO: handle properly
                     break;
             }
-
-            delete task;
+            //TODO: wuut? delete task;
         }
     }
 

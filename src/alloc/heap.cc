@@ -15,7 +15,6 @@ namespace Token{
             return nullptr;
         }
         current_ += total_size;
-        memset(ptr, 0, total_size);
         return new RawObject(ptr, alloc_size);
     }
 }

@@ -361,17 +361,16 @@ namespace Token{
         std::vector<InventoryItem> items;
         if(stop.IsNull()){
             uint32_t amt = std::min(GetBlocksMessage::kMaxNumberOfBlocks, BlockChain::GetHeight());
-            LOG(INFO) << "sending " << amt << " blocks...";
+            LOG(INFO) << "sending " << (amt + 1) << " blocks...";
 
             BlockHeader start_block = BlockChain::GetBlock(start);
             BlockHeader stop_block = BlockChain::GetBlock(start_block.GetHeight() > amt ? start_block.GetHeight() + amt : amt);
 
-            for(uint32_t idx = start_block.GetHeight();
+            for(uint32_t idx = start_block.GetHeight() + 1;
                         idx <= stop_block.GetHeight();
                         idx++){
                 BlockHeader block = BlockChain::GetBlock(idx);
                 LOG(INFO) << "adding " << block;
-
                 items.push_back(InventoryItem(block));
             }
         }

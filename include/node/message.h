@@ -489,7 +489,7 @@ namespace Token{
         InventoryMessage(const Proto::BlockChainServer::Inventory& raw): ProtobufMessage(raw){}
         InventoryMessage(std::vector<InventoryItem>& items): ProtobufMessage(){
             if(items.size() == 0){
-                LOG(INFO) << "no item!";
+                LOG(INFO) << "no items!";
                 return;
             }
 
