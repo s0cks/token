@@ -109,11 +109,14 @@ namespace Token{
         pthread_cond_t rcond_;
 
         NodeSession():
-                state_(kDisconnected),
-                handle_(),
-                info_(&handle_),
-                rmutex_(),
-                rcond_(){
+            Session(),
+            rwlock_(PTHREAD_RWLOCK_INITIALIZER),
+            rmutex_(PTHREAD_MUTEX_INITIALIZER),
+            rcond_(PTHREAD_COND_INITIALIZER),
+            state_(kDisconnected),
+            handle_(),
+            info_(&handle_){
+            pthread_rwlock_init(&rwlock_, NULL);
             pthread_mutex_init(&rmutex_, NULL);
             pthread_cond_init(&rcond_, NULL);
 
@@ -291,6 +294,7 @@ namespace Token{
         }
     public:
         NodeClient():
+                Session(),
                 loop_(uv_loop_new()),
                 state_(State::kStopped),
                 sigterm_(),
