@@ -1,7 +1,7 @@
 #ifndef TOKEN_SCAVENGER_H
 #define TOKEN_SCAVENGER_H
 
-#include "object.h"
+#include "raw_object.h"
 
 namespace Token{
     class GCMarker{

@@ -21,6 +21,7 @@ namespace Token{
         Allocator() = delete;
 
         friend class Scavenger;
+        friend class Object;
     public:
         ~Allocator(){}
 
@@ -33,6 +34,8 @@ namespace Token{
 
         static bool AddWeakReference(void* object, void* target, void** ptr);
         static bool RemoveWeakReference(void* object, void* target);
+
+        static void* GetObject(uintptr_t address);
 
         static bool PrintRoots();
         static bool PrintAllocated();

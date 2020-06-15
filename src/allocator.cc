@@ -1,6 +1,7 @@
 #include "allocator.h"
 #include "alloc/heap.h"
 #include "alloc/scavenger.h"
+#include "alloc/reference.h"
 
 namespace Token{
     std::map<uintptr_t, RawObject*> Allocator::allocated_ = std::map<uintptr_t, RawObject*>();
@@ -36,10 +37,20 @@ namespace Token{
         return pos->second;
     }
 
+    void* Allocator::GetObject(uintptr_t address){
+        auto pos = allocated_.find(address);
+        if(pos == allocated_.end()) return nullptr;
+        RawObject* obj = pos->second;
+        if(obj->IsForwarding()){
+            return (void*)obj->GetForwardingAddress();
+        } else{
+            return (void*)obj->GetObjectAddress();
+        }
+    }
+
     bool Allocator::MoveObject(Token::RawObject *src, Token::RawObject *dst){
         auto pos = allocated_.find(src->GetObjectAddress());
         if(pos == allocated_.end()) return false;
-        allocated_.erase(pos);
         return allocated_.insert(std::make_pair(dst->GetObjectAddress(), dst)).second;
     }
 

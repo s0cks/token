@@ -150,14 +150,22 @@ namespace Token{
 
     BlockChain::BlockNode* BlockChain::GetGenesisNode(){
         BlockChain* chain = GetInstance();
+        READ_LOCK;
         BlockNode* node = chain->genesis_;
+        UNLOCK;
         return node;
     }
 
     BlockChain::BlockNode* BlockChain::GetNode(const uint256_t& hash){
         BlockChain* chain = GetInstance();
+        READ_LOCK;
         auto pos = chain->nodes_.find(hash);
-        if(pos == chain->nodes_.end()) return nullptr;
+        if(pos == chain->nodes_.end()){
+            UNLOCK;
+            return nullptr;
+        }
+
+        UNLOCK;
         return pos->second;
     }
 
@@ -167,8 +175,14 @@ namespace Token{
             return nullptr;
         }
         BlockChain* chain = GetInstance();
+        READ_LOCK;
         auto pos = chain->blocks_.find(height);
-        if(pos == chain->blocks_.end()) return nullptr;
+        if(pos == chain->blocks_.end()){
+            UNLOCK;
+            return nullptr;
+        }
+
+        UNLOCK;
         return pos->second;
     }
 

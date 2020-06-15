@@ -1,5 +1,5 @@
 #include "heap.h"
-#include "object.h"
+#include "raw_object.h"
 
 namespace Token{
     RawObject* Semispace::Allocate(uintptr_t alloc_size){

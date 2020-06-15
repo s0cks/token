@@ -2,19 +2,20 @@
 #define TOKEN_TRANSACTION_H
 
 #include "allocator.h"
+#include "raw_object.h"
 #include "object.h"
 #include "pool.h"
 
 namespace Token{
-    class Input : public Object{
+    class Input : public BinaryObject<Proto::BlockChain::Input>{
     public:
-        typedef Proto::BlockChain::Input RawType;
+        typedef Proto::BlockChain::Input MessageType;
     private:
         uint256_t hash_;
         uint32_t index_;
 
-        Input(const uint256_t& hash, uint32_t index):
-            hash_(hash),
+        Input(const uint256_t& tx_hash, uint32_t index):
+            hash_(tx_hash),
             index_(index){}
 
         friend class Transaction;
@@ -29,11 +30,17 @@ namespace Token{
             return hash_;
         }
 
+        bool Encode(MessageType& raw) const;
         std::string ToString() const;
         Transaction* GetTransaction() const;
 
         static Input* NewInstance(const uint256_t& tx_hash, uint32_t index);
-        static Input* NewInstance(const RawType& raw);
+        static Input* NewInstance(const MessageType& raw);
+
+        friend std::ostream& operator<<(std::ostream& stream, const Input& input){
+            stream << input.ToString();
+            return stream;
+        }
     };
 
     class Output : public Object{

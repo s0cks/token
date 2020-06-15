@@ -12,8 +12,14 @@ namespace Token{
         return input;
     }
 
-    Input* Input::NewInstance(const RawType& raw){
+    Input* Input::NewInstance(const Input::MessageType& raw){
         return NewInstance(HashFromHexString(raw.previous_hash()), raw.index());
+    }
+
+    bool Input::Encode(Token::Input::MessageType &raw) const{
+        raw.set_index(index_);
+        raw.set_previous_hash(HexString(hash_));
+        return true;
     }
 
     std::string Input::ToString() const{
@@ -79,7 +85,7 @@ namespace Token{
         raw.set_index(index_);
         raw.set_signature(signature_);
         for(auto& it : inputs_){
-            Input::RawType* raw_in = raw.add_inputs();
+            Input::MessageType* raw_in = raw.add_inputs();
             raw_in->set_index(it->GetOutputIndex());
             raw_in->set_previous_hash(HexString(it->GetTransactionHash()));
         }

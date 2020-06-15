@@ -120,7 +120,7 @@ namespace Token{
             LOG(WARNING) << "couldn't darken roots!";
             return false;
         }
-
+        
         if(!scavenger.EvacuateObjects()){
             LOG(WARNING) << "couldn't process objects!";
             return false;

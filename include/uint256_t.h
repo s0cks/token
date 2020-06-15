@@ -1,6 +1,7 @@
 #ifndef TOKEN_UINT256_T_H
 #define TOKEN_UINT256_T_H
 
+#include "common.h"
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
