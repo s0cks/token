@@ -142,7 +142,9 @@ namespace Token{
 
     BlockChain::BlockNode* BlockChain::GetHeadNode(){
         BlockChain* chain = GetInstance();
+        READ_LOCK;
         BlockNode* node = chain->head_;
+        UNLOCK;
         return node;
     }
 
