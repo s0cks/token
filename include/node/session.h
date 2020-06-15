@@ -13,11 +13,12 @@ namespace Token{
         ByteBuffer wbuffer_;
 
         Session():
-            rmutex_(),
+            rmutex_(PTHREAD_MUTEX_INITIALIZER),
             rcond_(),
             rbuffer_(4096),
             wbuffer_(4096){
             pthread_mutexattr_t rmutex_attr;
+            pthread_mutexattr_init(&rmutex_attr);
             pthread_mutexattr_settype(&rmutex_attr, PTHREAD_MUTEX_RECURSIVE_NP);
             pthread_mutex_init(&rmutex_, &rmutex_attr);
         }
