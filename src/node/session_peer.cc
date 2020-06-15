@@ -256,11 +256,6 @@ namespace Token{
             return;
         }
 
-        auto item_exists = [](InventoryItem item){
-            return item.ItemExists();
-        };
-        items.erase(std::remove_if(items.begin(), items.end(), item_exists), items.end());
-
         LOG(INFO) << "received inventory of " << items.size() << " items, downloading...";
         if(!items.empty()) session->Send(GetDataMessage::NewInstance(items));
         if(Node::IsSynchronizing()) SCHEDULE(session->GetLoop(), SynchronizeBlocks, session, items);

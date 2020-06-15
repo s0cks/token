@@ -366,7 +366,7 @@ namespace Token{
             BlockHeader start_block = BlockChain::GetBlock(start);
             BlockHeader stop_block = BlockChain::GetBlock(start_block.GetHeight() > amt ? start_block.GetHeight() + amt : amt);
 
-            for(uint32_t idx = start_block.GetHeight() + 1;
+            for(uint32_t idx = start_block.GetHeight();
                         idx <= stop_block.GetHeight();
                         idx++){
                 BlockHeader block = BlockChain::GetBlock(idx);
