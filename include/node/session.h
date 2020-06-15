@@ -30,18 +30,15 @@ namespace Token{
             if(item.IsTransaction()){
                 Transaction* tx;
                 if((tx = TransactionPool::GetTransaction(hash))){
-                    delete tx;
                     return true;
                 }
             } else if(item.IsBlock()){
                 Block* blk;
                 if((blk = BlockChain::GetBlockData(hash))){
-                    delete blk;
                     return true;
                 }
 
                 if((blk = BlockPool::GetBlock(hash))){
-                    delete blk;
                     return true;
                 }
             }

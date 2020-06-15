@@ -338,9 +338,7 @@ namespace Token{
         BlockChainTransactionResolver(const uint256_t& tx_hash):
             tx_hash_(tx_hash),
             result_(nullptr){}
-        ~BlockChainTransactionResolver(){
-            delete result_;
-        }
+        ~BlockChainTransactionResolver(){}
 
         uint256_t GetTransactionHash() const{
             return tx_hash_;

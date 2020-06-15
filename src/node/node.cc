@@ -296,7 +296,6 @@ namespace Token{
 
         session->Send(AcceptedMessage::NewInstance(info, Proposal(msg->GetNodeID(), height, hash)));
     exit:
-        if(block) delete block;
         return;
     }
 
