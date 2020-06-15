@@ -195,6 +195,7 @@ namespace Token{
         }
     public:
         PeerSession(const NodeAddress& addr):
+                Session(),
                 thread_(),
                 socket_(),
                 conn_(),

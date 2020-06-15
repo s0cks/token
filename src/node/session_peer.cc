@@ -287,7 +287,7 @@ namespace Token{
 
     void PeerSession::AfterSynchronizeBlocksTask(uv_work_t* handle, int status){
         Node::SetState(Node::kStarting);
-        if(handle->data) free(handle->data);
-        free(handle);
+        // if(handle->data) free(handle->data);
+        // free(handle);
     }
 }
