@@ -14,12 +14,13 @@ namespace Token{
 
         Session():
             rmutex_(PTHREAD_MUTEX_INITIALIZER),
-            rcond_(),
+            rcond_(PTHREAD_COND_INITIALIZER),
             rbuffer_(4096),
             wbuffer_(4096){
             pthread_mutexattr_t rmutex_attr;
             pthread_mutexattr_init(&rmutex_attr);
             pthread_mutexattr_settype(&rmutex_attr, PTHREAD_MUTEX_RECURSIVE_NP);
+
             pthread_mutex_init(&rmutex_, &rmutex_attr);
         }
 
@@ -113,15 +114,14 @@ namespace Token{
             rwlock_(PTHREAD_RWLOCK_INITIALIZER),
             rmutex_(PTHREAD_MUTEX_INITIALIZER),
             rcond_(PTHREAD_COND_INITIALIZER),
-            state_(kDisconnected),
+            state_(kConnecting),
             handle_(),
             info_(&handle_){
+            handle_.data = this;
+
             pthread_rwlock_init(&rwlock_, NULL);
             pthread_mutex_init(&rmutex_, NULL);
             pthread_cond_init(&rcond_, NULL);
-
-            handle_.data = this;
-            SetState(kConnecting);
         }
 
         virtual uv_stream_t* GetStream(){
