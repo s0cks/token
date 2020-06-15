@@ -45,7 +45,6 @@ namespace Token{
             }
 
             buffers[idx] = uv_buf_init((char*)bytes, total_size);
-            delete messages[idx];
         }
         messages.clear();
 
