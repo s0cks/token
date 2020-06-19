@@ -92,15 +92,7 @@ namespace Token{
             height_(height),
             previous_hash_(phash),
             transactions_(txs),
-            transactions_map_(){
-
-            uint32_t idx;
-            for(idx = 0; idx < transactions_.size(); idx++){
-                if(!Allocator::AddStrongReference(this, transactions_[idx], (void**)&transactions_[idx])){
-                    LOG(WARNING) << "couldn't add strong reference to transaction #" << idx;
-                }
-            }
-        }
+            transactions_map_(){}
 
         bool Encode(RawType& raw) const;
 

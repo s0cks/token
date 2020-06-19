@@ -13,9 +13,9 @@
 namespace Token{
     static pthread_t thread;
 
-    static pthread_mutex_t proposal_mutex_;
-    static pthread_cond_t proposal_cond_;
-    static Proposal* proposal_;
+    static pthread_mutex_t proposal_mutex_ = PTHREAD_MUTEX_INITIALIZER;
+    static pthread_cond_t proposal_cond_ = PTHREAD_COND_INITIALIZER;
+    static Proposal* proposal_ = nullptr;
 
     static uv_timer_t mine_timer_;
     static uv_async_t exit_handle;

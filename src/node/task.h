@@ -66,22 +66,6 @@ namespace Token{
         SynchronizeBlocksTask(Session* session, std::vector<InventoryItem>& items): InventoryTask(session, items){}
         ~SynchronizeBlocksTask(){}
     };
-
-    class AsyncSendTask : public SessionTask{
-    private:
-        Message* message_;
-    public:
-        AsyncSendTask(Session* session, Message* msg):
-            SessionTask(session),
-            message_(msg){}
-        ~AsyncSendTask(){
-            delete message_;
-        }
-
-        Message* GetMessage(){
-            return message_;
-        }
-    };
 }
 
 #endif //TOKEN_TASK_H

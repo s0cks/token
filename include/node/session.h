@@ -22,6 +22,7 @@ namespace Token{
             pthread_mutexattr_settype(&rmutex_attr, PTHREAD_MUTEX_RECURSIVE_NP);
 
             pthread_mutex_init(&rmutex_, &rmutex_attr);
+            pthread_cond_init(&rcond_, NULL);
         }
 
         static void OnMessageSent(uv_write_t *req, int status);

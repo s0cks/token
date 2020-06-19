@@ -109,15 +109,15 @@ namespace Token{
 
         Node():
             thid_(),
-            rwlock_(),
+            rwlock_(PTHREAD_RWLOCK_INITIALIZER),
             state_(kStopped),
             server_(),
-            smutex_(),
-            scond_(),
+            smutex_(PTHREAD_MUTEX_INITIALIZER),
+            scond_(PTHREAD_COND_INITIALIZER),
             info_(&server_){
             server_.data = this;
-            pthread_mutex_init(&smutex_, 0);
-            pthread_cond_init(&scond_, 0);
+            pthread_mutex_init(&smutex_, NULL);
+            pthread_cond_init(&scond_, NULL);
         }
 
         friend class BlockMiner;

@@ -157,8 +157,6 @@ namespace Token{
 
         Block* blk = msg->GetBlock();
         LOG(INFO) << "received block: " << blk->GetHeader();
-
-        delete blk;
     }
 
     void NodeClient::HandleGetDataMessage(HandleMessageTask *task){}
