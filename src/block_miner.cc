@@ -146,7 +146,7 @@ namespace Token{
             // append block based on proposals
             // spend inputs, generate unspent outputs
 
-            NodeInfo info = Node::GetInstance()->GetInfo();
+            NodeInfo info = Node::GetInfo();
             uint256_t hash = block->GetHash();
             Proposal* proposal = new Proposal(info.GetNodeID(), block);
             SetProposal(proposal);

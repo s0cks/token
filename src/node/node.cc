@@ -17,48 +17,63 @@ namespace Token{
     uv_queue_work((Loop), work, Handle##Name##Task, After##Name##Task); \
 })
 
-    Node* Node::GetInstance(){
-        static Node instance;
-        return &instance;
+    static pthread_t thread_ = 0;
+    static uv_tcp_t handle_;
+    static NodeInfo info_ = NodeInfo();
+    static std::map<std::string, PeerSession*> peers_ = std::map<std::string, PeerSession*>();
+    static pthread_rwlock_t rwlock_ = PTHREAD_RWLOCK_INITIALIZER;
+    static Node::State state_ = Node::State::kStopped;
+    static pthread_mutex_t state_mutex_ = PTHREAD_MUTEX_INITIALIZER;
+    static pthread_cond_t state_cond_ = PTHREAD_COND_INITIALIZER;
+
+    uv_tcp_t* Node::GetHandle(){
+        return &handle_;
+    }
+
+    bool Node::Start(){
+        if(!IsStopped()) return false;
+        return pthread_create(&thread_, NULL, &NodeThread, NULL) == 0;
+    }
+
+    bool Node::WaitForShutdown(){
+        if(IsStarting()) WaitForState(State::kRunning);
+        if(!IsRunning()) return false;
+
+        LOG(INFO) << "shutting server down....";
+        return pthread_join(thread_, NULL) == 0;
     }
 
     NodeInfo Node::GetInfo(){
-        Node* node = GetInstance();
-        pthread_rwlock_tryrdlock(&node->rwlock_);
-        NodeInfo info = node->info_;
-        pthread_rwlock_unlock(&node->rwlock_);
+        pthread_rwlock_tryrdlock(&rwlock_);
+        NodeInfo info = info_;
+        pthread_rwlock_unlock(&rwlock_);
         return info;
     }
 
     void Node::SetState(Node::State state){
-        Node* node = GetInstance();
-        pthread_mutex_trylock(&node->smutex_);
-        node->state_ = state;
-        pthread_cond_signal(&node->scond_);
-        pthread_mutex_unlock(&node->smutex_);
+        pthread_mutex_trylock(&state_mutex_);
+        state_ = state;
+        pthread_cond_signal(&state_cond_);
+        pthread_mutex_unlock(&state_mutex_);
     }
 
     void Node::WaitForState(Node::State state){
-        Node* node = GetInstance();
-        pthread_mutex_trylock(&node->smutex_);
-        while(node->state_ != state) pthread_cond_wait(&node->scond_, &node->smutex_);
-        pthread_mutex_unlock(&node->smutex_);
-        return;
+        pthread_mutex_trylock(&state_mutex_);
+        while(state_ != state) pthread_cond_wait(&state_cond_, &state_mutex_);
+        pthread_mutex_unlock(&state_mutex_);
     }
 
     Node::State Node::GetState() {
-        Node* node = GetInstance();
-        pthread_mutex_trylock(&node->smutex_);
-        Node::State state = node->state_;
-        pthread_mutex_unlock(&node->smutex_);
+        pthread_mutex_trylock(&state_mutex_);
+        Node::State state = state_;
+        pthread_mutex_unlock(&state_mutex_);
         return state;
     }
 
     uint32_t Node::GetNumberOfPeers(){
-        Node* node = GetInstance();
-        pthread_rwlock_tryrdlock(&node->rwlock_);
-        uint32_t peers = node->peers_.size();
-        pthread_rwlock_unlock(&node->rwlock_);
+        pthread_rwlock_tryrdlock(&rwlock_);
+        uint32_t peers = peers_.size();
+        pthread_rwlock_unlock(&rwlock_);
         return peers;
     }
 
@@ -73,22 +88,20 @@ namespace Token{
 
     void* Node::NodeThread(void* ptr){
         SetState(State::kStarting);
-
-        Node* node = Node::GetInstance();
         uv_loop_t* loop = uv_loop_new();
 
         struct sockaddr_in addr;
         uv_ip4_addr("0.0.0.0", FLAGS_port, &addr);
 
-        uv_tcp_init(loop, node->GetHandle());
-        uv_tcp_keepalive(node->GetHandle(), 1, 60);
+        uv_tcp_init(loop, GetHandle());
+        uv_tcp_keepalive(GetHandle(), 1, 60);
         int err;
-        if((err = uv_tcp_bind(node->GetHandle(), (const struct sockaddr*)&addr, 0)) != 0){
+        if((err = uv_tcp_bind(GetHandle(), (const struct sockaddr*)&addr, 0)) != 0){
             LOG(ERROR) << ""; //TODO:
             pthread_exit(0);
         }
 
-        if((err = uv_listen((uv_stream_t*)node->GetHandle(), 100, &OnNewConnection)) != 0){
+        if((err = uv_listen((uv_stream_t*)GetHandle(), 100, &OnNewConnection)) != 0){
             LOG(ERROR) << ""; //TODO:
             pthread_exit(0);
         }
@@ -379,43 +392,34 @@ namespace Token{
     }
 
     bool Node::Broadcast(Message* msg){
-        Node* node = GetInstance();
-        pthread_rwlock_tryrdlock(&node->rwlock_);
-        for(auto& it : node->peers_){
-            it.second->Send(msg);
-        }
-        pthread_rwlock_unlock(&node->rwlock_);
+        pthread_rwlock_trywrlock(&rwlock_);
+        for(auto& it : peers_) it.second->Send(msg);
+        pthread_rwlock_unlock(&rwlock_);
         return true;
     }
 
     void Node::RegisterPeer(const std::string& node_id, PeerSession* peer){
-        Node* node = GetInstance();
-        pthread_rwlock_trywrlock(&node->rwlock_);
-        node->peers_.insert({ node_id, peer });
-        pthread_rwlock_unlock(&node->rwlock_);
+        pthread_rwlock_trywrlock(&rwlock_);
+        peers_.insert({ node_id, peer });
+        pthread_rwlock_unlock(&rwlock_);
     }
 
     void Node::UnregisterPeer(const std::string& node_id){
-        Node* node = GetInstance();
-        pthread_rwlock_trywrlock(&node->rwlock_);
-        node->peers_.erase(node_id);
-        pthread_rwlock_unlock(&node->rwlock_);
+        pthread_rwlock_trywrlock(&rwlock_);
+        peers_.erase(node_id);
+        pthread_rwlock_unlock(&rwlock_);
     }
 
     bool Node::HasPeer(const std::string& node_id){
-        Node* node = GetInstance();
-        pthread_rwlock_tryrdlock(&node->rwlock_);
-        bool found = node->peers_.find(node_id) != node->peers_.end();
-        pthread_rwlock_unlock(&node->rwlock_);
+        pthread_rwlock_tryrdlock(&rwlock_);
+        bool found = peers_.find(node_id) != peers_.end();
+        pthread_rwlock_unlock(&rwlock_);
         return found;
     }
 
     bool Node::ConnectTo(const NodeAddress &address){
-        Node* node = GetInstance();
         if(IsStarting() || IsSynchronizing()){
-            pthread_mutex_trylock(&node->smutex_);
-            while(node->state_ != kRunning) pthread_cond_wait(&node->scond_, &node->smutex_);
-            pthread_mutex_unlock(&node->smutex_);
+            WaitForState(State::kRunning);
             if(!IsRunning()) {
                 LOG(WARNING) << "server is in " << GetState() << " state, not connecting!";
                 return false;

@@ -58,6 +58,9 @@ namespace Token{
             return ntohs(name.sin_port);
         }
     public:
+        NodeAddress():
+            address_(0),
+            port_(0){}
         NodeAddress(const std::string& address, uint32_t port):
             address_(GetAddress(address)),
             port_(port){}
@@ -120,6 +123,9 @@ namespace Token{
         std::string node_id_;
         NodeAddress node_addr_;
     public:
+        NodeInfo():
+            node_id_(),
+            node_addr_(){}
         NodeInfo(const uv_tcp_t* handle):
             node_id_(GenerateNonce()), //TODO: fixme collision-proof this
             node_addr_(handle){}

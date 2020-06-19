@@ -40,18 +40,6 @@ namespace Token{
             return stream;
         }
     private:
-        pthread_t thid_;
-        pthread_rwlock_t rwlock_;
-
-        uv_tcp_t server_;
-        NodeInfo info_;
-
-        pthread_mutex_t smutex_;
-        pthread_cond_t scond_;
-        State state_;
-
-        std::map<std::string, PeerSession*> peers_;
-
         static void RegisterPeer(const std::string& node_id, PeerSession* peer);
         static void UnregisterPeer(const std::string& node_id);
         static bool HasPeer(const std::string& node_id);
@@ -86,6 +74,7 @@ namespace Token{
         }
 
 
+        static uv_tcp_t* GetHandle();
         static void* NodeThread(void* ptr);
         static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
         static void OnNewConnection(uv_stream_t* stream, int status);
@@ -103,29 +92,11 @@ namespace Token{
     DECLARE_TASK(ResolveInventoryData);
 #undef DECLARE_TASK
 
-        uv_tcp_t* GetHandle(){
-            return &server_;
-        }
-
-        Node():
-            thid_(),
-            rwlock_(PTHREAD_RWLOCK_INITIALIZER),
-            state_(kStopped),
-            server_(),
-            smutex_(PTHREAD_MUTEX_INITIALIZER),
-            scond_(PTHREAD_COND_INITIALIZER),
-            info_(&server_){
-            server_.data = this;
-            pthread_mutex_init(&smutex_, NULL);
-            pthread_cond_init(&scond_, NULL);
-        }
-
         friend class BlockMiner;
         friend class PeerSession; //TODO: revoke access
     public:
         ~Node(){}
 
-        static Node* GetInstance();
         static uint32_t GetNumberOfPeers();
         static NodeInfo GetInfo();
         static bool ConnectTo(const NodeAddress& address);
@@ -153,19 +124,8 @@ namespace Token{
             return ConnectTo(NodeAddress(address, port));
         }
 
-        static bool Start(){
-            if(!IsStopped()) return false;
-            Node* node = GetInstance();
-            return pthread_create(&node->thid_, NULL, &NodeThread, node) == 0;
-        }
-
-        static bool WaitForShutdown(){
-            if(IsStarting()) WaitForState(State::kRunning);
-            if(!IsRunning()) return false;
-            Node* node = GetInstance();
-            LOG(INFO) << "waiting for shutdown...";
-            return pthread_join(node->thid_, NULL) == 0;
-        }
+        static bool Start();
+        static bool WaitForShutdown();
     };
 }
 

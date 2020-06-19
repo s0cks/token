@@ -45,7 +45,6 @@ namespace Token{
     }
 
     void PeerSession::OnConnect(uv_connect_t* conn, int status){
-        Node* node = Node::GetInstance();
         PeerSession* session = (PeerSession*)conn->data;
         if(status != 0){
             LOG(ERROR) << "error connecting: " << uv_strerror(status);
@@ -54,7 +53,7 @@ namespace Token{
 
         std::string address = "127.0.0.1";
         uint32_t port = FLAGS_port;
-        NodeInfo info(node->GetInfo().GetNodeID(), address, port);
+        NodeInfo info(Node::GetInfo().GetNodeID(), address, port);
         session->Send(VersionMessage::NewInstance(info.GetNodeID()));
 
         if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
