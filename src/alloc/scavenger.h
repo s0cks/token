@@ -4,23 +4,28 @@
 #include "raw_object.h"
 
 namespace Token{
-    class GCMarker{
+    class Marker : public ObjectPointerVisitor{
     private:
         Color color_;
+
+        void MarkObject(RawObject* obj){
+            obj->SetColor(GetColor());
+        }
     public:
-        GCMarker(Color color):
+        Marker(Color color):
             color_(color){}
-        ~GCMarker(){}
+        ~Marker(){}
 
         Color GetColor() const{
             return color_;
         }
 
-        void MarkObject(RawObject* obj){
-            obj->SetColor(GetColor());
+        bool Visit(RawObject* ptr){
+            if(GetColor() != ptr->GetColor()) MarkObject(ptr);
+            return true;
         }
 
-        GCMarker& operator=(const GCMarker& other){
+        Marker& operator=(const Marker& other){
             color_ = other.color_;
             return (*this);
         }
@@ -29,28 +34,37 @@ namespace Token{
     class Heap;
     class Semispace;
     class Scavenger{
-    private:
+    protected:
         Heap* heap_;
 
-        RawObject* Evacuate(RawObject* obj);
+        bool DarkenRoots();
+        bool MarkObjects();
+        virtual bool ScavengeMemory() = 0;
 
-        friend class HeapObjectPointerVisitor;
-    public:
         Scavenger(Heap* heap):
             heap_(heap){}
-        ~Scavenger(){}
+    public:
+        virtual ~Scavenger() = default;
 
         Heap* GetHeap() const{
             return heap_;
         }
 
+        static bool Scavenge(Heap* heap);
+    };
+
+    class MarkCopyScavenger : public Scavenger{
+    protected:
+        RawObject* Evacuate(RawObject* obj);
+
+        friend class MarkCopyMemoryScavenger;
+    public:
+        MarkCopyScavenger(Heap* heap): Scavenger(heap){}
+        ~MarkCopyScavenger(){}
+
         Semispace* GetFromSpace() const;
         Semispace* GetToSpace() const;
-
-        bool DarkenRoots();
-        bool EvacuateObjects();
-
-        static bool Scavenge(Heap* heap);
+        bool ScavengeMemory();
     };
 }
 

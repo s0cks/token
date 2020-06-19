@@ -1,7 +1,7 @@
 #include "allocator.h"
 #include "alloc/heap.h"
-#include "alloc/scavenger.h"
 #include "alloc/reference.h"
+#include "alloc/scavenger.h"
 
 namespace Token{
     std::map<uintptr_t, RawObject*> Allocator::allocated_ = std::map<uintptr_t, RawObject*>();

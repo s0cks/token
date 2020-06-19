@@ -20,7 +20,7 @@ namespace Token{
 
         Allocator() = delete;
 
-        friend class Scavenger;
+        friend class MarkCopyScavenger;
         friend class Object;
     public:
         ~Allocator(){}

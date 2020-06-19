@@ -3,53 +3,54 @@
 #include "allocator.h"
 
 namespace Token{
-    class GCObjectPointerMarker : public ObjectPointerVisitor{
+    class RootReferenceMarker : public ObjectPointerVisitor{
     private:
-        GCMarker marker_;
+        Marker marker_;
     public:
-        GCObjectPointerMarker(Color color):
-            ObjectPointerVisitor(),
-            marker_(color){}
-        virtual ~GCObjectPointerMarker(){}
-
-        GCMarker GetMarker() const{
-            return marker_;
-        }
-
-        virtual bool Visit(RawObject* obj){
-            GetMarker().MarkObject(obj);
-            return true;
-        }
-    };
-
-    class GCObjectRootsMarker : public GCObjectPointerMarker{
-    public:
-        GCObjectRootsMarker(): GCObjectPointerMarker(Color::kBlack){}
-        ~GCObjectRootsMarker(){}
+        RootReferenceMarker(Color color):
+                ObjectPointerVisitor(),
+                marker_(color){}
+        ~RootReferenceMarker(){}
 
         bool Visit(RawObject* obj){
-            GetMarker().MarkObject(obj);
-            GCObjectPointerMarker refs_marker(Color::kGray);
-            return obj->VisitOwnedReferences(&refs_marker);
+            return obj->VisitPointingReferences(&marker_);
         }
     };
 
+    bool Scavenger::Scavenge(Heap* heap){
+        MarkCopyScavenger scavenger(heap);
+        return scavenger.ScavengeMemory();
+    }
+
     bool Scavenger::DarkenRoots(){
-        GCObjectRootsMarker marker;
+        Marker marker(Color::kBlack);
         return Allocator::VisitRoots(&marker);
     }
 
-    class HeapObjectPointerVisitor : public ObjectPointerVisitor{
+    bool Scavenger::MarkObjects(){
+        RootReferenceMarker marker(Color::kGray);
+        return Allocator::VisitRoots(&marker);
+    }
+
+    Semispace* MarkCopyScavenger::GetFromSpace() const{
+        return GetHeap()->GetFromSpace();
+    }
+
+    Semispace* MarkCopyScavenger::GetToSpace() const{
+        return GetHeap()->GetToSpace();
+    }
+
+    class MarkCopyMemoryScavenger : public ObjectPointerVisitor{
     private:
-        Scavenger* parent_;
-    protected:
-        RawObject* Evacuate(RawObject* obj){
-            return GetParent()->Evacuate(obj);
+        MarkCopyScavenger* parent_;
+
+        bool EvacuateObject(RawObject* obj){
+            return parent_->Evacuate(obj);
         }
     public:
-        HeapObjectPointerVisitor(Scavenger* parent):
+        MarkCopyMemoryScavenger(MarkCopyScavenger* parent):
             parent_(parent){}
-        virtual ~HeapObjectPointerVisitor() = default;
+        ~MarkCopyMemoryScavenger(){}
 
         Scavenger* GetParent() const{
             return parent_;
@@ -66,66 +67,44 @@ namespace Token{
         Semispace* GetToSpace() const{
             return GetHeap()->GetToSpace();
         }
-    };
-
-    class ObjectPromoter : public HeapObjectPointerVisitor{
-    public:
-        ObjectPromoter(Scavenger* parent): HeapObjectPointerVisitor(parent){}
-        ~ObjectPromoter(){}
 
         bool Visit(RawObject* obj){
-            if(!GetFromSpace()->Contains(obj->GetObjectAddress())){
-                LOG(WARNING) << "from space doesn't contain object: " << (*obj);
-                return false;
-            }
-            if(obj->GetColor() == Color::kWhite) return true;
-            if(!obj->IsForwarding()) Evacuate(obj);
-            return true;
+            if(!GetFromSpace()->Contains(obj->GetObjectAddress())) return true; // skip
+            if(obj->IsGarbage()) return true; // object is garbage don't allow it to persist the scavenge
+            if(obj->IsForwarding()) return true; // object is already evacuated
+            return EvacuateObject(obj);
         }
     };
 
-    Semispace* Scavenger::GetFromSpace() const{
-        return GetHeap()->GetFromSpace();
-    }
+    bool MarkCopyScavenger::ScavengeMemory(){
+        LOG(INFO) << "running garbage collection process";
 
-    Semispace* Scavenger::GetToSpace() const{
-        return GetHeap()->GetToSpace();
-    }
-
-    bool Scavenger::EvacuateObjects(){
-        ObjectPromoter promoter(this);
-        if(!Allocator::VisitRoots(&promoter)){
-            LOG(WARNING) << "couldn't promote roots!";
+        if(!DarkenRoots()){
+            LOG(WARNING) << "couldn't darken roots!";
             return false;
         }
 
-        if(!Allocator::VisitAllocated(&promoter)){
-            LOG(WARNING) << "couldn't promote live objects";
+        if(!MarkObjects()){
+            LOG(WARNING) << "couldn't mark references!";
             return false;
         }
+
+        MarkCopyMemoryScavenger scavenger(this);
+        if(!Allocator::VisitAllocated(&scavenger)){
+            LOG(WARNING) << "couldn't scavenge memory";
+            return false;
+        }
+
+        GetHeap()->SwapSpaces();
+        LOG(INFO) << "garbage collection complete!";
         return true;
     }
 
-    RawObject* Scavenger::Evacuate(Token::RawObject* obj){
+    RawObject* MarkCopyScavenger::Evacuate(Token::RawObject* obj){
         RawObject* nobj = GetToSpace()->Allocate(obj->GetObjectSize());
         memcpy(nobj->GetObjectPointer(), obj->GetObjectPointer(), obj->GetObjectSize());
         obj->SetForwardingAddress(nobj->GetObjectAddress());
         Allocator::MoveObject(obj, nobj);
         return nobj;
-    }
-
-    bool Scavenger::Scavenge(Heap* heap){
-        Scavenger scavenger(heap);
-        if(!scavenger.DarkenRoots()){
-            LOG(WARNING) << "couldn't darken roots!";
-            return false;
-        }
-        
-        if(!scavenger.EvacuateObjects()){
-            LOG(WARNING) << "couldn't process objects!";
-            return false;
-        }
-        heap->SwapSpaces();
-        return true;
     }
 }

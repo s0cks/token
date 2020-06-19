@@ -128,11 +128,11 @@ namespace Token{
         }
 
         friend class Allocator;
-        friend class Scavenger;
+        friend class MarkCopyScavenger;
         friend class Reference;
         friend class WeakReference;
         friend class StrongReference;
-        friend class GCMarker;
+        friend class Marker;
     public:
         RawObject(): RawObject(nullptr, 0){}
         RawObject(void* ptr, size_t size);
@@ -164,6 +164,10 @@ namespace Token{
 
         bool IsForwarding() const{
             return ForwardingField::Decode(header_);
+        }
+
+        bool IsGarbage() const{
+            return GetColor() == Color::kWhite;
         }
 
         Color GetColor() const{
