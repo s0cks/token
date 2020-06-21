@@ -7,6 +7,7 @@
 #include "block_miner.h"
 #include "block_chain.h"
 #include "block_validator.h"
+#include "block_handler.h"
 
 #include "paxos.h"
 
@@ -41,10 +42,10 @@ namespace Token{
     }
 
     bool BlockMiner::SubmitProposal(Proposal* proposal){
-        NodeInfo info = Node::GetInfo();
-        LOG(INFO) << info.GetNodeID() << " creating proposal for: " << proposal->GetHeight() << "....";
+        std::string node_id = Node::GetNodeID();
+        LOG(INFO) << node_id << " creating proposal for: " << proposal->GetHeight() << "....";
         SetProposal(proposal);
-        // Node::AsyncBroadcast(new PrepareMessage(info, (*proposal)));
+        Node::Broadcast(PrepareMessage::NewInstance(node_id, (*proposal)));
 
         uint32_t votes_needed = Node::GetNumberOfPeers() > 0 ?
                                 (Node::GetNumberOfPeers() == 1 ? 1 : (Node::GetNumberOfPeers() / 2)) :
@@ -59,10 +60,9 @@ namespace Token{
     }
 
     bool BlockMiner::CommitProposal(Proposal* proposal){
-        NodeInfo info = Node::GetInfo();
-        LOG(INFO) << info.GetNodeID() << " committing proposal for: " << proposal->GetHeight() << "....";
-        // Node::AsyncBroadcast(new CommitMessage(info, (*proposal)));
-
+        std::string node_id = Node::GetNodeID();
+        LOG(INFO) << node_id << " committing proposal for: " << proposal->GetHeight() << "....";
+        Node::Broadcast(CommitMessage::NewInstance(node_id, (*proposal)));
         uint32_t commits_needed = Node::GetNumberOfPeers() > 0 ?
                                   (Node::GetNumberOfPeers() == 1 ? 1 : (Node::GetNumberOfPeers() / 2)) :
                                   0;
@@ -141,14 +141,8 @@ namespace Token{
                 return;
             }
 
-            // send proposal to peers
-            // check proposals for updates
-            // append block based on proposals
-            // spend inputs, generate unspent outputs
-
-            NodeInfo info = Node::GetInfo();
             uint256_t hash = block->GetHash();
-            Proposal* proposal = new Proposal(info.GetNodeID(), block);
+            Proposal* proposal = new Proposal(Node::GetNodeID(), block);
             SetProposal(proposal);
 
             if(!SubmitProposal(proposal)){
@@ -161,51 +155,8 @@ namespace Token{
                 goto cleanup;
             }
 
-            if(!BlockChain::GetInstance()->Append(block)){
-                LOG(ERROR) << "couldn't append new block: " << hash;
-                goto cleanup;
-            }
-
-            for(uint32_t txid = 0; txid < block->GetNumberOfTransactions(); txid++){
-                Transaction* tx;
-                if(!(tx = block->GetTransaction(txid))){
-                    LOG(WARNING) << "couldn't get transaction #" << txid << " from block: " << hash;
-                    return;
-                }
-
-                uint256_t tx_hash = tx->GetHash();
-                uint32_t idx = 0;
-                for(auto it = tx->outputs_begin(); it != tx->outputs_end(); it++){
-                    UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(tx_hash, idx++);
-                    if(!UnclaimedTransactionPool::PutUnclaimedTransaction(utxo)){
-                        LOG(WARNING) << "couldn't create unclaimed transaction for: " << tx_hash << "[" << (idx - 1) << "]";
-                        continue;
-                    }
-                }
-
-                for(auto it = tx->inputs_begin(); it != tx->inputs_end(); it++){
-                    Transaction* in_tx;
-                    if(!(in_tx = BlockChain::GetTransaction((*it)->GetTransactionHash()))){
-                        LOG(ERROR) << "couldn't get transaction: " << (*it)->GetTransactionHash();
-                        continue;
-                    }
-
-                    UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(in_tx->GetHash(), (*it)->GetOutputIndex());
-                    uint256_t uhash = utxo->GetHash();
-                    if(!UnclaimedTransactionPool::RemoveUnclaimedTransaction(uhash)){
-                        LOG(ERROR) << "couldn't remove unclaimed transaction: " << uhash;
-                        continue;
-                    }
-                }
-
-                if(!TransactionPool::RemoveTransaction(tx_hash)){
-                    LOG(ERROR) << "couldn't remove transaction: " << tx_hash;
-                    continue;
-                }
-            }
-
-            if(!BlockPool::RemoveBlock(hash)){
-                LOG(ERROR) << "couldn't remove new block from pool: " << hash;
+            if(!MineBlock(hash, block, true)){
+                LOG(WARNING) << "couldn't mine block: " << hash;
                 goto cleanup;
             }
         cleanup:
@@ -234,5 +185,21 @@ namespace Token{
 
     bool BlockMiner::Initialize(){
         return pthread_create(&thread, NULL, &BlockMiner::MinerThread, nullptr) == 0;
+    }
+
+    bool BlockMiner::MineBlock(const uint256_t& hash, Block* block, bool clean){
+        if(!BlockHandler::ProcessBlock(block, clean)){
+            LOG(WARNING) << "couldn't process block: " << hash;
+            return false;
+        }
+        if(!BlockPool::RemoveBlock(hash)){
+            LOG(ERROR) << "couldn't remove new block from pool: " << hash;
+            return false;
+        }
+        if(!BlockChain::GetInstance()->Append(block)){
+            LOG(ERROR) << "couldn't append new block: " << hash;
+            return false;
+        }
+        return true;
     }
 }

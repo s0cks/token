@@ -137,8 +137,6 @@ namespace Token{
         static Block* GetBlockData(const uint256_t& hash);
         static bool Initialize();
         static bool Accept(BlockChainVisitor* vis);
-        static Transaction* GetTransaction(const uint256_t& hash);
-        static MerkleTree* GetMerkleTree();
 
         //TODO remove
         static bool AppendBlock(Block* block){

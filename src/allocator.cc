@@ -25,7 +25,6 @@ namespace Token{
                 return nullptr;
             }
         }
-        LOG(INFO) << "allocated object: " << (*obj);
         allocated_.insert(std::make_pair(obj->GetObjectAddress(), obj));
         return obj->GetObjectPointer();
     }

@@ -2,21 +2,18 @@
 #define TOKEN_SESSION_H
 
 #include "message.h"
-#include "buffer.h"
 
 namespace Token{
     class Session{
+    public:
+        static const size_t kBufferSize = 4096;
     protected:
         pthread_mutex_t rmutex_;
         pthread_cond_t rcond_;
-        ByteBuffer rbuffer_;
-        ByteBuffer wbuffer_;
 
         Session():
             rmutex_(PTHREAD_MUTEX_INITIALIZER),
-            rcond_(PTHREAD_COND_INITIALIZER),
-            rbuffer_(4096),
-            wbuffer_(4096){
+            rcond_(PTHREAD_COND_INITIALIZER){
             pthread_mutexattr_t rmutex_attr;
             pthread_mutexattr_init(&rmutex_attr);
             pthread_mutexattr_settype(&rmutex_attr, PTHREAD_MUTEX_RECURSIVE_NP);
@@ -25,6 +22,7 @@ namespace Token{
             pthread_cond_init(&rcond_, NULL);
         }
 
+        static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
         static void OnMessageSent(uv_write_t *req, int status);
         virtual uv_stream_t* GetStream() = 0;
 
@@ -78,16 +76,10 @@ namespace Token{
             pthread_cond_signal(&rcond_);
             pthread_mutex_unlock(&rmutex_);
         }
+
+        friend class Node;
     public:
         virtual ~Session() = default;
-
-        ByteBuffer* GetReadBuffer(){
-            return &rbuffer_;
-        }
-
-        ByteBuffer* GetWriteBuffer(){
-            return &wbuffer_;
-        }
 
         void Send(Message* msg);
         void Send(std::vector<Message*>& messages);
@@ -180,7 +172,6 @@ namespace Token{
         NodeAddress node_addr_;
 
         static void* PeerSessionThread(void* data);
-        static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
         static void OnConnect(uv_connect_t* conn, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
 
@@ -274,7 +265,6 @@ namespace Token{
             return GetState() == kStopped;
         }
 
-        static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
         static void OnConnect(uv_connect_t* conn, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
         static void OnCommandReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);

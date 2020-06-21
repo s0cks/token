@@ -3,6 +3,7 @@
 
 #include <glog/logging.h>
 #include "object.h"
+#include "transaction_validator.h"
 
 namespace Token{
     class BlockValidator : public BlockVisitor{
@@ -23,8 +24,27 @@ namespace Token{
             return block_;
         }
 
-        bool IsValid(Transaction* tx);
-        bool Visit(Transaction* tx);
+        bool IsValid(Transaction* tx){
+            uint256_t hash = tx->GetHash();
+            if(tx->GetNumberOfInputs() <= 0){
+                LOG(WARNING) << "transaction " << hash << " has no inputs";
+                return false;
+            } else if(tx->GetNumberOfOutputs() <= 0){
+                LOG(WARNING) << "transaction " << hash << " has no outputs";
+                return false;
+            }
+            return TransactionValidator::IsValid(tx);
+        }
+
+        bool Visit(Transaction* tx){
+            if(!IsValid(tx)){
+                invalid_txs_.push_back(tx);
+                return false;
+            }
+
+            valid_txs_.push_back(tx);
+            return true;
+        }
 
         bool IsValid() const{
             if(!GetBlock()->Accept((BlockVisitor*)this)) return false;

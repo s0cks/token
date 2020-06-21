@@ -184,9 +184,9 @@ namespace Token{
 
         DECLARE_MESSAGE(Verack);
 
-        static VerackMessage* NewInstance(const NodeInfo& info, const std::string& nonce=GenerateNonce(), uint32_t timestamp=GetCurrentTime()){
+        static VerackMessage* NewInstance(const std::string& node_id, const NodeAddress& address, const std::string& nonce=GenerateNonce(), uint32_t timestamp=GetCurrentTime()){
             VerackMessage* instance = (VerackMessage*)Allocator::Allocate(sizeof(VerackMessage));
-            new (instance)VerackMessage(info.GetNodeID(), info.GetNodeAddress(), nonce, timestamp);
+            new (instance)VerackMessage(node_id, address, nonce, timestamp);
             return instance;
         }
 
@@ -200,8 +200,8 @@ namespace Token{
     class BasePaxosMessage : public ProtobufMessage<Proto::BlockChainServer::Paxos>{
     protected:
         BasePaxosMessage(const Proto::BlockChainServer::Paxos& raw): ProtobufMessage(raw){}
-        BasePaxosMessage(const NodeInfo& info, const Proposal& proposal): ProtobufMessage(){
-            raw_.set_node_id(info.GetNodeID());
+        BasePaxosMessage(const std::string& node_id, const Proposal& proposal): ProtobufMessage(){
+            raw_.set_node_id(node_id);
             raw_.set_height(proposal.GetHeight());
             raw_.set_hash(HexString(proposal.GetHash()));
         }
@@ -225,7 +225,7 @@ namespace Token{
     public:
         typedef Proto::BlockChainServer::Paxos RawType;
     private:
-        PrepareMessage(const NodeInfo& info, const Proposal& proposal): BasePaxosMessage(info, proposal){}
+        PrepareMessage(const std::string& node_id, const Proposal& proposal): BasePaxosMessage(node_id, proposal){}
         PrepareMessage(const RawType& raw): BasePaxosMessage(raw){}
     public:
         ~PrepareMessage(){}
@@ -236,9 +236,9 @@ namespace Token{
 
         DECLARE_MESSAGE(Prepare);
 
-        static PrepareMessage* NewInstance(const NodeInfo& info, const Proposal& proposal){
+        static PrepareMessage* NewInstance(const std::string& node_id, const Proposal& proposal){
             PrepareMessage* instance = (PrepareMessage*)Allocator::Allocate(sizeof(PrepareMessage));
-            new (instance)PrepareMessage(info, proposal);
+            new (instance)PrepareMessage(node_id, proposal);
             return instance;
         }
 
@@ -253,16 +253,16 @@ namespace Token{
     public:
         typedef Proto::BlockChainServer::Paxos RawType;
     private:
-        PromiseMessage(const NodeInfo& info, const Proposal& proposal): BasePaxosMessage(info, proposal){}
+        PromiseMessage(const std::string& node_id, const Proposal& proposal): BasePaxosMessage(node_id, proposal){}
         PromiseMessage(const RawType& raw): BasePaxosMessage(raw){}
     public:
         ~PromiseMessage(){}
 
         DECLARE_MESSAGE(Promise);
 
-        static PromiseMessage* NewInstance(const NodeInfo& info, const Proposal& proposal){
+        static PromiseMessage* NewInstance(const std::string& node_id, const Proposal& proposal){
             PromiseMessage* instance = (PromiseMessage*)Allocator::Allocate(sizeof(PromiseMessage));
-            new (instance)PromiseMessage(info, proposal);
+            new (instance)PromiseMessage(node_id, proposal);
             return instance;
         }
 
@@ -277,16 +277,16 @@ namespace Token{
     public:
         typedef Proto::BlockChainServer::Paxos RawType;
     private:
-        CommitMessage(const NodeInfo& info, const Proposal& proposal): BasePaxosMessage(info, proposal){}
+        CommitMessage(const std::string& node_id, const Proposal& proposal): BasePaxosMessage(node_id, proposal){}
         CommitMessage(const RawType& raw): BasePaxosMessage(raw){}
     public:
         ~CommitMessage(){}
 
         DECLARE_MESSAGE(Commit);
 
-        static CommitMessage* NewInstance(const NodeInfo& info, const Proposal& proposal){
+        static CommitMessage* NewInstance(const std::string& node_id, const Proposal& proposal){
             CommitMessage* instance = (CommitMessage*)Allocator::Allocate(sizeof(CommitMessage));
-            new (instance)CommitMessage(info, proposal);
+            new (instance)CommitMessage(node_id, proposal);
             return instance;
         }
 
@@ -301,16 +301,16 @@ namespace Token{
     public:
         typedef Proto::BlockChainServer::Paxos RawType;
     private:
-        AcceptedMessage(const NodeInfo& info, const Proposal& proposal): BasePaxosMessage(info, proposal){}
+        AcceptedMessage(const std::string& node_id, const Proposal& proposal): BasePaxosMessage(node_id, proposal){}
         AcceptedMessage(const RawType& raw): BasePaxosMessage(raw){}
     public:
         ~AcceptedMessage(){}
 
         DECLARE_MESSAGE(Accepted);
 
-        static AcceptedMessage* NewInstance(const NodeInfo& info, const Proposal& proposal){
+        static AcceptedMessage* NewInstance(const std::string& node_id, const Proposal& proposal){
             AcceptedMessage* instance = (AcceptedMessage*)Allocator::Allocate(sizeof(AcceptedMessage));
-            new (instance)AcceptedMessage(info, proposal);
+            new (instance)AcceptedMessage(node_id, proposal);
             return instance;
         }
 
@@ -325,16 +325,16 @@ namespace Token{
     public:
         typedef Proto::BlockChainServer::Paxos RawType;
     private:
-        RejectedMessage(const NodeInfo& info, const Proposal& proposal): BasePaxosMessage(info, proposal){}
+        RejectedMessage(const std::string& node_id, const Proposal& proposal): BasePaxosMessage(node_id, proposal){}
         RejectedMessage(const RawType& raw): BasePaxosMessage(raw){}
     public:
         ~RejectedMessage(){}
 
         DECLARE_MESSAGE(Rejected);
 
-        static RejectedMessage* NewInstance(const NodeInfo& info, const Proposal& proposal){
+        static RejectedMessage* NewInstance(const std::string& node_id, const Proposal& proposal){
             RejectedMessage* instance = (RejectedMessage*)Allocator::Allocate(sizeof(RejectedMessage));
-            new (instance)RejectedMessage(info, proposal);
+            new (instance)RejectedMessage(node_id, proposal);
             return instance;
         }
 
@@ -479,6 +479,17 @@ namespace Token{
             raw.set_type(item.type_);
             raw.set_hash(HexString(item.hash_));
             return raw;
+        }
+
+        friend std::ostream& operator<<(std::ostream& stream, const InventoryItem& item){
+            if(item.IsBlock()){
+                stream << "Block(" << item.GetHash() << ")";
+            } else if(item.IsTransaction()){
+                stream << "Transaction(" << item.GetHash() << ")";
+            } else{
+                stream << "Unknown(" << item.GetHash() << ")";
+            }
+            return stream;
         }
     };
 

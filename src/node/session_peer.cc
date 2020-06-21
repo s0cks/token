@@ -15,14 +15,6 @@ namespace Token{
     uv_queue_work((Loop), work, Handle##Name##Task, After##Name##Task); \
 })
 
-    void PeerSession::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
-        PeerSession* session = (PeerSession*)handle->data;
-        ByteBuffer* bb = session->GetReadBuffer();
-        bb->clear();
-        buff->base = (char*)bb->data();
-        buff->len = bb->GetCapacity();
-    }
-
     void* PeerSession::PeerSessionThread(void* data){
         PeerSession* session = (PeerSession*)data;
         NodeAddress address = session->node_addr_;
@@ -51,11 +43,7 @@ namespace Token{
             return;
         }
 
-        std::string address = "127.0.0.1";
-        uint32_t port = FLAGS_port;
-        NodeInfo info(Node::GetInfo().GetNodeID(), address, port);
-        session->Send(VersionMessage::NewInstance(info.GetNodeID()));
-
+        session->Send(VersionMessage::NewInstance(Node::GetNodeID()));
         if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
             LOG(ERROR) << "client read error: " << uv_strerror(status);
             return;
@@ -114,7 +102,8 @@ namespace Token{
                 default: //TODO: handle properly
                     break;
             }
-            //TODO: wuut? delete task;
+
+            delete task;
         }
     }
 
@@ -124,8 +113,7 @@ namespace Token{
         VersionMessage* msg = (VersionMessage*)task->GetMessage();
         PeerSession* session = (PeerSession*)task->GetSession();
 
-        NodeInfo ninfo = Node::GetInfo();
-        session->Send(VerackMessage::NewInstance(NodeInfo(ninfo.GetNodeID(), "127.0.0.1", FLAGS_port)));
+        session->Send(VerackMessage::NewInstance(Node::GetNodeID(), NodeAddress("127.0.0.1", FLAGS_port))); //TODO: fixme
 
         uint32_t pheight = msg->GetHeight();
         BlockHeader head = BlockChain::GetHead();
@@ -195,33 +183,35 @@ namespace Token{
             return;
         }
 
+        std::vector<Message*> data;
         for(auto& item : items){
-            if(item.ItemExists()){
-                uint256_t hash = item.GetHash();
+            uint256_t hash = item.GetHash();
+            if(item.ItemExists() || BlockPool::HasBlock(hash)){
                 LOG(INFO) << "sending " << hash << "....";
                 if(item.IsBlock()){
                     Block* block = nullptr;
                     if((block = BlockChain::GetBlockData(hash))){
                         LOG(INFO) << hash << " found in block chain!";
-                        session->Send(BlockMessage::NewInstance(block));
-                        return;
+                        data.push_back(BlockMessage::NewInstance(block));
+                        continue;
                     }
 
                     if((block = BlockPool::GetBlock(hash))){
                         LOG(INFO) << hash << " found in block pool!";
-                        session->Send(BlockMessage::NewInstance(block));
-                        return;
+                        data.push_back(BlockMessage::NewInstance(block));
+                        continue;
                     }
                 } else if(item.IsTransaction()){
                     Transaction* tx;
                     if((tx = TransactionPool::GetTransaction(hash))){
                         LOG(INFO) << hash << " found in transaction pool!";
-                        session->Send(TransactionMessage::NewInstance(tx));
-                        return;
+                        data.push_back(TransactionMessage::NewInstance(tx));
+                        continue;
                     }
                 }
             }
         }
+        session->Send(data);
     }
 
     void PeerSession::HandleBlockMessage(HandleMessageTask* task){
@@ -270,23 +260,25 @@ namespace Token{
         }
         std::reverse(items.begin(), items.end());
 
-        LOG(WARNING) << "waiting for " << items.size() << " items...";
         session->WaitForItems(items);
-        LOG(WARNING) << "done waiting!";
 
         for(auto item = items.rbegin(); item != items.rend(); item++){
-            LOG(INFO) << "appending: " << item->GetHash();
-            Block* block = BlockPool::GetBlock(item->GetHash());
-            if(!BlockChain::AppendBlock(block)){
-                LOG(WARNING) << "couldn't append block: " << block->GetHeader();
+            uint256_t hash = item->GetHash();
+            Block* block;
+            if(!(block = BlockPool::GetBlock(hash))){
+                LOG(WARNING) << "couldn't get block from pool: " << hash;
                 return;
+            }
+
+            if(!BlockMiner::MineBlock(hash, block, false)){
+                LOG(WARNING) << "couldn't process block: " << hash;
             }
         }
     }
 
     void PeerSession::AfterSynchronizeBlocksTask(uv_work_t* handle, int status){
         Node::SetState(Node::kStarting);
-        // if(handle->data) free(handle->data);
-        // free(handle);
+        if(handle->data) free(handle->data);
+        free(handle);
     }
 }

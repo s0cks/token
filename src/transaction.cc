@@ -6,19 +6,20 @@ namespace Token{
 //######################################################################################################################
 //                                          Input
 //######################################################################################################################
-    Input* Input::NewInstance(const uint256_t &tx_hash, uint32_t index){
+    Input* Input::NewInstance(const uint256_t &tx_hash, uint32_t index, const std::string& user){
         Input* input = (Input*)Allocator::Allocate(sizeof(Input));
-        new (input)Input(tx_hash, index);
+        new (input)Input(tx_hash, index, user);
         return input;
     }
 
     Input* Input::NewInstance(const Input::MessageType& raw){
-        return NewInstance(HashFromHexString(raw.previous_hash()), raw.index());
+        return NewInstance(HashFromHexString(raw.previous_hash()), raw.index(), raw.user());
     }
 
     bool Input::Encode(Token::Input::MessageType &raw) const{
         raw.set_index(index_);
         raw.set_previous_hash(HexString(hash_));
+        raw.set_user(user_);
         return true;
     }
 
@@ -28,8 +29,8 @@ namespace Token{
         return stream.str();
     }
 
-    Transaction* Input::GetTransaction() const{
-        return BlockChain::GetTransaction(GetTransactionHash());
+    UnclaimedTransaction* Input::GetUnclaimedTransaction() const{
+        return UnclaimedTransactionPool::GetUnclaimedTransaction(hash_, index_);
     }
 
 //######################################################################################################################
@@ -250,7 +251,7 @@ namespace Token{
             return false;
         }
 
-        Node::BroadcastInventory(tx);
+        //Node::BroadcastInventory(tx);
         UNLOCK;
         return true;
     }

@@ -19,7 +19,7 @@ namespace Token{
 
     static pthread_t thread_ = 0;
     static uv_tcp_t handle_;
-    static NodeInfo info_ = NodeInfo();
+    static std::string node_id_ = GenerateNonce();
     static std::map<std::string, PeerSession*> peers_ = std::map<std::string, PeerSession*>();
     static pthread_rwlock_t rwlock_ = PTHREAD_RWLOCK_INITIALIZER;
     static Node::State state_ = Node::State::kStopped;
@@ -28,6 +28,10 @@ namespace Token{
 
     uv_tcp_t* Node::GetHandle(){
         return &handle_;
+    }
+
+    std::string Node::GetNodeID(){
+        return node_id_;
     }
 
     bool Node::Start(){
@@ -41,13 +45,6 @@ namespace Token{
 
         LOG(INFO) << "shutting server down....";
         return pthread_join(thread_, NULL) == 0;
-    }
-
-    NodeInfo Node::GetInfo(){
-        pthread_rwlock_tryrdlock(&rwlock_);
-        NodeInfo info = info_;
-        pthread_rwlock_unlock(&rwlock_);
-        return info;
     }
 
     void Node::SetState(Node::State state){
@@ -75,15 +72,6 @@ namespace Token{
         uint32_t peers = peers_.size();
         pthread_rwlock_unlock(&rwlock_);
         return peers;
-    }
-
-    void Node::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
-        NodeSession* session = (NodeSession*)handle->data;
-        ByteBuffer* bb = session->GetReadBuffer();
-        bb->clear();
-
-        buff->base = (char*)bb->data();
-        buff->len = bb->GetCapacity();
     }
 
     void* Node::NodeThread(void* ptr){
@@ -127,7 +115,7 @@ namespace Token{
             return;
         }
 
-        if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
+        if((status = uv_read_start(session->GetStream(), &Session::AllocBuffer, &OnMessageReceived)) != 0){
             LOG(ERROR) << "client read error: " << uv_strerror(status);
             return;
         }
@@ -244,8 +232,7 @@ namespace Token{
         // - state check
         // - version check
         // - echo nonce
-        NodeInfo info = Node::GetInfo();
-        session->Send(VersionMessage::NewInstance(info.GetNodeID()));
+        session->Send(VersionMessage::NewInstance(GetNodeID()));
     }
 
     void Node::HandleVerackMessage(HandleMessageTask* task){
@@ -257,7 +244,7 @@ namespace Token{
         //TODO:
         // - verify nonce
         LOG(INFO) << "client connected!";
-        session->Send(VerackMessage::NewInstance(Node::GetInfo()));
+        session->Send(VerackMessage::NewInstance(GetNodeID(), NodeAddress("127.0.0.1", FLAGS_port))); //TODO: obtain address dynamically
         session->SetState(NodeSession::kConnected);
         if(!HasPeer(msg->GetID())){
             LOG(WARNING) << "connecting to peer: " << paddr << "....";
@@ -278,13 +265,12 @@ namespace Token{
         }
 
         BlockMiner::SetProposal(proposal);
-        session->Send(PromiseMessage::NewInstance(Node::GetInfo(), (*proposal)));
+        session->Send(PromiseMessage::NewInstance(Node::GetNodeID(), (*proposal)));
     }
 
     void Node::HandlePromiseMessage(HandleMessageTask* task){}
 
     void Node::HandleCommitMessage(HandleMessageTask* task){
-        NodeInfo info = Node::GetInfo();
         NodeSession* session = (NodeSession*)task->GetSession();
         CommitMessage* msg = (CommitMessage*)task->GetMessage();
 
@@ -307,7 +293,7 @@ namespace Token{
             goto exit;
         }
 
-        session->Send(AcceptedMessage::NewInstance(info, Proposal(msg->GetNodeID(), height, hash)));
+        session->Send(AcceptedMessage::NewInstance(GetNodeID(), Proposal(msg->GetNodeID(), height, hash)));
     exit:
         return;
     }
@@ -361,6 +347,7 @@ namespace Token{
         };
         items.erase(std::remove_if(items.begin(), items.end(), item_exists), items.end());
 
+        for(auto& item : items) LOG(INFO) << "downloading " << item << "....";
         if(!items.empty()) session->Send(GetDataMessage::NewInstance(items));
     }
 

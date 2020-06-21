@@ -1,6 +1,11 @@
 #include "node/session.h"
 
 namespace Token{
+    void Session::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
+        buff->base = (char*)Allocator::Allocate(kBufferSize);
+        buff->len = kBufferSize;
+    }
+
     void Session::OnMessageSent(uv_write_t *req, int status){
         if(status != 0) LOG(ERROR) << "failed to send message: " << uv_strerror(status);
         if(req) free(req);
@@ -27,8 +32,12 @@ namespace Token{
 
     void Session::Send(std::vector<Message*>& messages){
         size_t total_messages = messages.size();
-        uv_buf_t buffers[total_messages];
+        if(total_messages <= 0){
+            LOG(WARNING) << "not sending any messages!";
+            return;
+        }
 
+        uv_buf_t buffers[total_messages];
         for(size_t idx = 0; idx < total_messages; idx++){
             Message* msg = messages[idx];
 

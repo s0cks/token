@@ -193,6 +193,7 @@ namespace Token{
 
         void Clear(){
             if(!HasMerkleRoot()) return;
+            delete root_;
             root_ = nullptr;
             nodes_.clear();
             leaves_.clear();

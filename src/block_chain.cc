@@ -92,7 +92,7 @@ namespace Token{
             for(auto it : (*genesis)){
                 uint32_t index = 0;
                 for(auto out = it->outputs_begin(); out != it->outputs_end(); out++){
-                    UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(it->GetHash(), index++);
+                    UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(it->GetHash(), index++, (*out)->GetUser());
                     if(!UnclaimedTransactionPool::PutUnclaimedTransaction(utxo)){
                         LOG(WARNING) << "couldn't create new unclaimed transaction: " << utxo->GetHash();
                         UNLOCK;
@@ -127,7 +127,7 @@ namespace Token{
                 return false;
             }
 
-            //TODO: LOG(INFO) << "loaded block: " << BlockHeader(block);
+            LOG(INFO) << "loaded block " << block->GetHeader();
             node = new BlockNode(block);
             chain->blocks_.insert(std::make_pair(block->GetHeight(), node));
             chain->nodes_.insert(std::make_pair(hash, node));
@@ -251,133 +251,5 @@ namespace Token{
             hash = block->GetPreviousHash();
         } while(!hash.IsNull());
         return vis->VisitEnd();
-    }
-
-    //@Deprecated
-    class BlockChainTransactionMerkleTreeBuilder : public BlockChainVisitor,
-                                        public BlockVisitor,
-                                        public MerkleTreeBuilder{
-    private:
-        std::vector<uint256_t> leaves_;
-    public:
-        BlockChainTransactionMerkleTreeBuilder():
-            leaves_(){}
-        ~BlockChainTransactionMerkleTreeBuilder(){}
-
-        bool Visit(const Block& block){
-            return block.Accept(this);
-        }
-
-        bool Visit(const Transaction& tx){
-            leaves_.push_back(tx.GetHash());
-            return true;
-        }
-
-        bool BuildTree(){
-            if(HasTree()) return false;
-            if(!BlockChain::Accept(this)) return false;
-            return CreateTree();
-        }
-    };
-
-    /*
-     *TODO:
-     * bool Block::Contains(const uint256_t& hash) const{
-        BlockMerkleTreeBuilder builder(this);
-        if(!builder.BuildTree()) return false;
-        MerkleTree* tree = builder.GetTree();
-        std::vector<MerkleProofHash> trail;
-        if(!tree->BuildAuditProof(hash, trail)) return false;
-        return tree->VerifyAuditProof(tree->GetMerkleRootHash(), hash, trail);
-    }
-
-    MerkleTree* Block::GetMerkleTree() const{
-        BlockMerkleTreeBuilder builder(this);
-        if(!builder.BuildTree()) return nullptr;
-        return builder.GetTreeCopy();
-    }
-
-    uint256_t Block::GetMerkleRoot() const{
-        BlockMerkleTreeBuilder builder(this);
-        if(!builder.BuildTree()) return uint256_t();
-        MerkleTree* tree = builder.GetTree();
-        return tree->GetMerkleRootHash();
-    }
-
-    MerkleTree* BlockChain::GetMerkleTree(){
-        BlockChainMerkleTreeBuilder builder;
-        if(!builder.BuildTree()) return nullptr;
-        return builder.GetTree();
-    }
-
-    bool BlockChain::ContainsTransaction(const uint256_t& hash){
-        BlockChainMerkleTreeBuilder builder;
-    }
-
-  */
-
-    class BlockChainMerkleTreeBuilder : public MerkleTreeBuilder, BlockChainVisitor{
-    public:
-        BlockChainMerkleTreeBuilder():
-            BlockChainVisitor(),
-            MerkleTreeBuilder(){}
-        ~BlockChainMerkleTreeBuilder(){}
-
-        bool Visit(Block* block){
-            return AddLeaf(block->GetHash());
-        }
-
-        bool BuildTree(){
-            if(HasTree()) return false;
-            if(!BlockChain::Accept(this)) return false;
-            return CreateTree();
-        }
-    };
-
-    MerkleTree* BlockChain::GetMerkleTree(){
-         BlockChainMerkleTreeBuilder builder;
-         if(!builder.BuildTree()) return nullptr;
-         return builder.GetTreeCopy();
-    }
-
-    class BlockChainTransactionResolver : public BlockChainVisitor{
-    private:
-        uint256_t tx_hash_;
-        Transaction* result_;
-
-        void SetResult(Transaction* tx){
-            result_ = tx;
-        }
-    public:
-        BlockChainTransactionResolver(const uint256_t& tx_hash):
-            tx_hash_(tx_hash),
-            result_(nullptr){}
-        ~BlockChainTransactionResolver(){}
-
-        uint256_t GetTransactionHash() const{
-            return tx_hash_;
-        }
-
-        Transaction* GetResult() const{
-            return result_;
-        }
-
-        bool HasResult() const{
-            return result_ != nullptr;
-        }
-
-        bool Visit(Block* block){
-            uint256_t hash = GetTransactionHash();
-            if(!block->Contains(hash)) return false;
-            SetResult(block->GetTransaction(hash));
-            return true;
-        }
-    };
-
-    Transaction* BlockChain::GetTransaction(const uint256_t& hash){
-        BlockChainTransactionResolver resolver(hash);
-        BlockChain::Accept(&resolver);
-        if(!resolver.HasResult()) return nullptr;
-        return resolver.GetResult();
     }
 }

@@ -4,14 +4,14 @@ namespace Token{
 //######################################################################################################################
 //                                          Unclaimed Transaction
 //######################################################################################################################
-    UnclaimedTransaction* UnclaimedTransaction::NewInstance(const uint256_t &hash, uint32_t index){
+    UnclaimedTransaction* UnclaimedTransaction::NewInstance(const uint256_t &hash, uint32_t index, const std::string& user){
         UnclaimedTransaction* instance = (UnclaimedTransaction*)Allocator::Allocate(sizeof(UnclaimedTransaction));
-        new (instance)UnclaimedTransaction(hash, index);
+        new (instance)UnclaimedTransaction(hash, index, user);
         return instance;
     }
 
     UnclaimedTransaction* UnclaimedTransaction::NewInstance(const UnclaimedTransaction::RawType& raw){
-        return NewInstance(HashFromHexString(raw.tx_hash()), raw.tx_index());
+        return NewInstance(HashFromHexString(raw.tx_hash()), raw.tx_index(), raw.user());
     }
 
     std::string UnclaimedTransaction::ToString() const{
@@ -101,8 +101,6 @@ namespace Token{
                     LOG(ERROR) << "couldn't load unclaimed transaction from: " << filename;
                     return false;
                 }
-
-                LOG(INFO) << "utxo: " << utxo->GetHash();
                 utxos.push_back(utxo->GetHash());
             }
             closedir(dir);
@@ -153,5 +151,16 @@ namespace Token{
         }
 
         return vis->VisitEnd();
+    }
+
+    UnclaimedTransaction* UnclaimedTransactionPool::GetUnclaimedTransaction(const uint256_t &tx_hash, uint32_t tx_index){
+        std::vector<uint256_t> utxos;
+        if(!GetUnclaimedTransactions(utxos)) return nullptr;
+        for(auto& it : utxos){
+            UnclaimedTransaction* utxo;
+            if(!(utxo = GetUnclaimedTransaction(it))) return nullptr;
+            if(utxo->GetTransaction() == tx_hash && utxo->GetIndex() == tx_index) return utxo;
+        }
+        return nullptr;
     }
 }

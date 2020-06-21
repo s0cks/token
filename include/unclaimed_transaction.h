@@ -15,9 +15,11 @@ namespace Token{
     private:
         uint256_t hash_;
         uint32_t index_;
+        std::string user_;
 
-        UnclaimedTransaction(const uint256_t& hash, uint32_t idx):
+        UnclaimedTransaction(const uint256_t& hash, uint32_t idx, const std::string& user):
             hash_(hash),
+            user_(user),
             index_(idx){}
 
         bool Encode(RawType& raw) const;
@@ -35,9 +37,13 @@ namespace Token{
             return index_;
         }
 
+        std::string GetUser() const{
+            return user_;
+        }
+
         std::string ToString() const;
 
-        static UnclaimedTransaction* NewInstance(const uint256_t& hash, uint32_t index);
+        static UnclaimedTransaction* NewInstance(const uint256_t& hash, uint32_t index, const std::string& user);
         static UnclaimedTransaction* NewInstance(const RawType& raw);
     };
 
@@ -72,6 +78,7 @@ namespace Token{
         static bool Accept(UnclaimedTransactionPoolVisitor* vis);
         static bool GetUnclaimedTransactions(std::vector<uint256_t>& utxos);
         static bool GetUnclaimedTransactions(const std::string& user, std::vector<uint256_t>& utxos);
+        static UnclaimedTransaction* GetUnclaimedTransaction(const uint256_t& tx_hash, uint32_t tx_index);
         static UnclaimedTransaction* GetUnclaimedTransaction(const uint256_t& hash);
     };
 

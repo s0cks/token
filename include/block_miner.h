@@ -19,7 +19,7 @@ namespace Token{
         static bool CommitProposal(Proposal* proposal);
         static bool VoteForProposal(const std::string& node_id);
         static bool AcceptProposal(const std::string& node_id);
-
+        static bool MineBlock(const uint256_t& hash, Block* block, bool clean);
         static void HandleMineCallback(uv_timer_t* handle);
         static void HandleExitCallback(uv_async_t* handle);
         static void* MinerThread(void* data);

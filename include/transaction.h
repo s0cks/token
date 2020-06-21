@@ -13,9 +13,11 @@ namespace Token{
     private:
         uint256_t hash_;
         uint32_t index_;
+        std::string user_;
 
-        Input(const uint256_t& tx_hash, uint32_t index):
+        Input(const uint256_t& tx_hash, uint32_t index, const std::string& user):
             hash_(tx_hash),
+            user_(user),
             index_(index){}
 
         friend class Transaction;
@@ -30,11 +32,15 @@ namespace Token{
             return hash_;
         }
 
+        std::string GetUser() const{
+            return user_;
+        }
+
         bool Encode(MessageType& raw) const;
         std::string ToString() const;
-        Transaction* GetTransaction() const;
+        UnclaimedTransaction* GetUnclaimedTransaction() const;
 
-        static Input* NewInstance(const uint256_t& tx_hash, uint32_t index);
+        static Input* NewInstance(const uint256_t& tx_hash, uint32_t index, const std::string& user);
         static Input* NewInstance(const MessageType& raw);
 
         friend std::ostream& operator<<(std::ostream& stream, const Input& input){
@@ -208,6 +214,7 @@ namespace Token{
         }
 
         friend class Node;
+        friend class BlockHandler;
     public:
         ~TransactionPool(){}
 

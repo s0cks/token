@@ -3,14 +3,6 @@
 #include "node/task.h"
 
 namespace Token{
-    void NodeClient::AllocBuffer(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buff){
-        NodeClient* client = (NodeClient*)handle->data;
-        ByteBuffer* rb = client->GetReadBuffer();
-        rb->clear();
-        buff->base = (char*)rb->data();
-        buff->len = rb->GetCapacity();
-    }
-
     void NodeClient::OnSignal(uv_signal_t* handle, int signum){
         NodeClient* client = (NodeClient*)handle->data;
         uv_stop(client->loop_);
@@ -139,9 +131,7 @@ namespace Token{
     void NodeClient::HandleVersionMessage(HandleMessageTask* task){
         NodeClient* client = (NodeClient*)task->GetSession();
         VersionMessage* msg = (VersionMessage*)task->GetMessage();
-
-        NodeInfo info = Node::GetInfo();
-        client->Send(VerackMessage::NewInstance(info));
+        client->Send(VerackMessage::NewInstance(Node::GetNodeID(), NodeAddress("127.0.0.1", FLAGS_port))); //TODO: fixme
     }
 
     void NodeClient::HandleVerackMessage(HandleMessageTask* task){

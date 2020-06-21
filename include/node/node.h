@@ -76,7 +76,6 @@ namespace Token{
 
         static uv_tcp_t* GetHandle();
         static void* NodeThread(void* ptr);
-        static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
         static void OnNewConnection(uv_stream_t* stream, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
 
@@ -96,12 +95,6 @@ namespace Token{
         friend class PeerSession; //TODO: revoke access
     public:
         ~Node(){}
-
-        static uint32_t GetNumberOfPeers();
-        static NodeInfo GetInfo();
-        static bool ConnectTo(const NodeAddress& address);
-        static bool Broadcast(Message* msg);
-
 
         static inline bool
         BroadcastInventory(Block* block){
@@ -124,6 +117,11 @@ namespace Token{
             return ConnectTo(NodeAddress(address, port));
         }
 
+
+        static uint32_t GetNumberOfPeers();
+        static std::string GetNodeID();
+        static bool ConnectTo(const NodeAddress& address);
+        static bool Broadcast(Message* msg);
         static bool Start();
         static bool WaitForShutdown();
     };
