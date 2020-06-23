@@ -11,8 +11,8 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Adds support for memory mapped heap:
-# add_compile_definitions(TOKEN_VMEMORY_USE_MEMORYMAP
+# Configure debug mode when compiling
+# add_compile_definitions(TOKEN_ENABLE_DEBUG)
 
 # Changes garbage collector algorithm to Cheney's Mark-Copy Algorithm
 # add_compile_definitions(TOKEN_USE_CHENEYGC)

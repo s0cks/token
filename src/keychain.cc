@@ -42,7 +42,7 @@ namespace Token{
 #define PRIVATE_KEYFILE (TOKEN_BLOCKCHAIN_HOME + "/chain")
 #define PUBLIC_KEYFILE (TOKEN_BLOCKCHAIN_HOME + "/chain.pub")
 
-    bool TokenKeychain::InitializeKeys(){
+    bool Keychain::Initialize(){
         if(!FileExists(PRIVATE_KEYFILE)){
             LOG(WARNING) << "cannot find private key, checking for public key";
             if(!FileExists(PUBLIC_KEYFILE)){
@@ -60,7 +60,7 @@ namespace Token{
 
                     LOG(INFO) << "generating private key";
                     CryptoPP::RSA::PrivateKey privKey;
-                    privKey.GenerateRandomWithKeySize(rng, TokenKeychain::kKeypairSize);
+                    privKey.GenerateRandomWithKeySize(rng, Keychain::kKeypairSize);
 
                     LOG(INFO) << "generating public key";
                     CryptoPP::RSA::PublicKey pubKey(privKey);
@@ -90,7 +90,7 @@ namespace Token{
         return true;
     }
 
-    bool TokenKeychain::LoadKeys(CryptoPP::RSA::PrivateKey* privKey, CryptoPP::RSA::PublicKey* pubKey){
+    bool Keychain::LoadKeys(CryptoPP::RSA::PrivateKey* privKey, CryptoPP::RSA::PublicKey* pubKey){
         try{
             std::string privateKeyFilename = (TOKEN_BLOCKCHAIN_HOME + "/chain");
             if(!FileExists(privateKeyFilename)){

@@ -147,9 +147,9 @@ namespace Token{
     class BlockChainVisitor{
     public:
         virtual ~BlockChainVisitor() = default;
-        virtual bool VisitStart(){ return true; }
-        virtual bool Visit(Block* block) = 0;
-        virtual bool VisitEnd(){ return true; };
+        virtual bool VisitStart() const{ return true; }
+        virtual bool Visit(const BlockHeader& block) const = 0;
+        virtual bool VisitEnd() const{ return true; }
     };
 }
 

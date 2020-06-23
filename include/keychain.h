@@ -4,13 +4,13 @@
 #include "common.h"
 
 namespace Token{
-    class TokenKeychain{
+    class Keychain{
     private:
-        TokenKeychain(){}
+        Keychain(){}
     public:
-        ~TokenKeychain(){}
+        ~Keychain(){}
 
-        static bool InitializeKeys();
+        static bool Initialize();
         static bool LoadKeys(CryptoPP::RSA::PrivateKey* privKey, CryptoPP::RSA::PublicKey* pubKey);
         static const size_t kKeypairSize = 4096;
     };

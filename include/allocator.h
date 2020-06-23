@@ -13,7 +13,6 @@ namespace Token{
         static std::map<uintptr_t, RawObject*> allocated_;
         static std::map<uintptr_t, RawObject*> roots_;
 
-        static Heap* GetEdenHeap();
         static bool Unreference(RawObject* owner, RawObject* target, bool weak);
         static RawObject* GetObject(void* ptr);
         static bool MoveObject(RawObject* src, RawObject* dst);
@@ -24,6 +23,12 @@ namespace Token{
         friend class Object;
     public:
         ~Allocator(){}
+
+        static size_t GetNumberOfAllocatedObjects(){
+            return allocated_.size();
+        }
+
+        static Heap* GetEdenHeap();
 
         static void* Allocate(uintptr_t size);
         static bool Collect();

@@ -1,7 +1,10 @@
 #include <pthread.h>
 #include <sstream>
 #include <glog/logging.h>
+
 #include "common.h"
+#include "keychain.h"
+#include "crash_report.h"
 #include "block_chain.h"
 #include "block_miner.h"
 #include "object.h"
@@ -70,10 +73,23 @@ namespace Token{
     }
 
     bool BlockChain::Initialize(){
-        BlockChain* chain = GetInstance();
-        if(!FileExists(chain->GetRoot())){
-            if(!CreateDirectory(chain->GetRoot())) return false;
+        if(!Keychain::Initialize()){
+            return CrashReport::GenerateAndExit("Couldn't initialize the keychain");
         }
+
+        if(!TransactionPool::Initialize()){
+            return CrashReport::GenerateAndExit("Couldn't initialize the Transaction Pool");
+        }
+
+        if(!BlockPool::Initialize()){
+            return CrashReport::GenerateAndExit("Couldn't initialize the Block Pool");
+        }
+
+        if(!UnclaimedTransactionPool::Initialize()){
+            return CrashReport::GenerateAndExit("Couldn't initialize the Unclaimed Transaction Pool");
+        }
+
+        BlockChain* chain = GetInstance();
         if(!chain->InitializeIndex()) return false;;
         if(!chain->HasHeadInIndex()){
             Block* genesis;
@@ -245,10 +261,9 @@ namespace Token{
         if(!vis->VisitStart()) return false;
         uint256_t hash = GetHead().GetHash();
         do{
-            Block* block;
-            if(!(block = GetBlockData(hash))) return false;
+            BlockHeader block = BlockChain::GetBlock(hash);
             if(!vis->Visit(block)) return false;
-            hash = block->GetPreviousHash();
+            hash = block.GetPreviousHash();
         } while(!hash.IsNull());
         return vis->VisitEnd();
     }

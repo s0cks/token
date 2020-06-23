@@ -130,7 +130,7 @@ namespace Token{
 
         CryptoPP::RSA::PrivateKey privateKey;
         CryptoPP::RSA::PublicKey publicKey;
-        if(!TokenKeychain::LoadKeys(&privateKey, &publicKey)){
+        if(!Keychain::LoadKeys(&privateKey, &publicKey)){
             LOG(ERROR) << "couldn't load token keychain";
             return false;
         }

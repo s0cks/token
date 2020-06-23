@@ -3,6 +3,7 @@
 
 #include <leveldb/db.h>
 #include "common.h"
+#include "crash_report.h"
 #include "uint256_t.h"
 
 namespace Token{
@@ -35,6 +36,9 @@ namespace Token{
         virtual std::string CreateObjectLocation(const uint256_t& hash, PoolObject* value) const = 0;
 
         bool InitializeIndex(){
+            if(!FileExists(GetRoot())){
+                if(!CreateDirectory(GetRoot())) return CrashReport::GenerateAndExit("Couldn't create directory: " + GetRoot());
+            }
             leveldb::Options options;
             options.create_if_missing = true;
             return initialized_ = leveldb::DB::Open(options, GetRoot() + "/index", &index_).ok();

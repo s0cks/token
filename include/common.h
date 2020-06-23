@@ -3,12 +3,12 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <chrono>
 #include <vector>
 #include <random>
 #include <string>
 #include <sstream>
 #include <uv.h>
-#include <sys/time.h>
 #include <sys/stat.h>
 
 #include <glog/logging.h>
@@ -56,12 +56,15 @@ namespace Token{
         return x + 1;
     }
 
+    static std::chrono::system_clock::time_point
+    GetNow(){
+        using namespace std::chrono;
+        return system_clock::now();
+    }
+
     static uint32_t
     GetCurrentTime(){
-        struct timeval time;
-        gettimeofday(&time, NULL);
-        uint32_t curr_time = ((uint32_t)time.tv_sec * 1000 + time.tv_usec / 1000);
-        return curr_time;
+        return time(NULL);
     }
 
     static inline std::string

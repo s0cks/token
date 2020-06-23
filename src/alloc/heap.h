@@ -41,6 +41,10 @@ namespace Token{
             return GetCurrentAddress() - GetStartAddress();
         }
 
+        uintptr_t GetUnallocatedSize() const{
+            return GetEndAddress() - GetCurrentAddress();
+        }
+
         uintptr_t GetTotalSize() const{
             return size_;
         }
