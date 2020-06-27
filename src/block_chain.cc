@@ -10,18 +10,14 @@
 #include "object.h"
 
 namespace Token{
-#define READ_LOCK pthread_rwlock_tryrdlock(&chain->rwlock_);
-#define WRITE_LOCK pthread_rwlock_trywrlock(&chain->rwlock_);
-#define UNLOCK pthread_rwlock_unlock(&chain->rwlock_);
+    static pthread_mutex_t mutex_ = PTHREAD_MUTEX_INITIALIZER;
 
     BlockChain::BlockChain():
         IndexManagedPool(FLAGS_path + "/data"),
-        rwlock_(),
         nodes_(),
         blocks_(),
         genesis_(nullptr),
         head_(nullptr){
-        pthread_rwlock_init(&rwlock_, NULL);
     }
 
     BlockChain*
@@ -63,13 +59,17 @@ namespace Token{
             std::string user = "TestUser";
             std::stringstream token;
             token << "TestToken" << idx;
-
-            cb_outputs.push_back(std::unique_ptr<Output>(Output::NewInstance(user, token.str())));
+            cb_outputs.push_back(Output("TestUser", token.str()));
         }
-        std::vector<Transaction*> txs = {
-            Transaction::NewInstance(0, cb_inputs, cb_outputs, 0)
-        };
-        return Block::NewInstance(0, uint256_t(), txs, 0);
+
+        Transaction* tx = Transaction::NewInstance(0, cb_inputs, cb_outputs, 0);
+        Allocator::AddRoot(tx);
+
+        std::vector<Transaction*> transactions = { tx };
+        Block* blk = Block::NewInstance(0, uint256_t(), transactions, 0);
+
+        Allocator::RemoveRoot(tx);
+        return blk;
     }
 
     bool BlockChain::Initialize(){
@@ -90,16 +90,14 @@ namespace Token{
         }
 
         BlockChain* chain = GetInstance();
-        if(!chain->InitializeIndex()) return false;;
+        if(!chain->InitializeIndex()) CrashReport::GenerateAndExit("Couldn't initialize the block chain index");
         if(!chain->HasHeadInIndex()){
             Block* genesis;
-            if(!(genesis = CreateGenesis())){
-                LOG(ERROR) << "couldn't create genesis";
-                return false;
-            }
+            if(!(genesis = CreateGenesis())) CrashReport::GenerateAndExit("Couldn't generate genesis block");
+            Allocator::AddRoot(genesis);
 
             uint256_t hash = genesis->GetHash();
-            if(!chain->SaveObject(hash, genesis)) return false;
+            if(!chain->SaveObject(hash, genesis)) CrashReport::GenerateAndExit("Couldn't save genesis object to block chain");
             BlockNode* node = new BlockNode(genesis);
             chain->head_ = chain->genesis_ = node;
             chain->blocks_.insert(std::make_pair(genesis->GetHeight(), node));
@@ -108,12 +106,13 @@ namespace Token{
             for(auto it : (*genesis)){
                 uint32_t index = 0;
                 for(auto out = it->outputs_begin(); out != it->outputs_end(); out++){
-                    UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(it->GetHash(), index++, (*out)->GetUser());
+                    UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(it->GetHash(), index++, (*out).GetUser());
+                    Allocator::AddRoot(utxo);
                     if(!UnclaimedTransactionPool::PutUnclaimedTransaction(utxo)){
                         LOG(WARNING) << "couldn't create new unclaimed transaction: " << utxo->GetHash();
-                        UNLOCK;
                         return false;
                     }
+                    Allocator::RemoveRoot(utxo);
                 }
             }
             chain->SetHeadInIndex(hash);
@@ -122,138 +121,161 @@ namespace Token{
 
         uint256_t hash = chain->GetHeadFromIndex();
         Block* block = nullptr;
-        if(!(block = GetBlockData(hash))) return false;
-
-        if(!Allocator::AddRoot(block)){
-            LOG(WARNING) << "couldn't add block to roots!";
-            return false;
+        if(!(block = GetBlockData(hash))){
+            std::stringstream ss;
+            ss << "Couldn't load the <HEAD> block: " << hash;
+            CrashReport::GenerateAndExit(ss.str());
         }
+
+        Allocator::AddRoot(block);
 
         BlockNode* node = new BlockNode(block);
         BlockNode* head = node;
         BlockNode* parent = node;
         do{
             if(!(block = GetBlockData(hash))){
-                LOG(ERROR) << "cannot load block data!";
-                return false;
+                std::stringstream ss;
+                ss << "Couldn't load block: " << hash;
+                CrashReport::GenerateAndExit(ss.str(), CrashReport::kIncludeMemory|CrashReport::kIncludeStacktrace);
             }
 
-            if(!Allocator::AddRoot(block)){
-                LOG(WARNING) << "couldn't add block to roots!";
-                return false;
-            }
+            Allocator::AddRoot(block);
 
-            LOG(INFO) << "loaded block " << block->GetHeader();
+#if defined(TOKEN_ENABLE_DEBUG)
+            LOG(INFO) << "loaded block: " << block->GetHeader();
+#endif//TOKEN_ENABLE_DEBUG
+
             node = new BlockNode(block);
-            chain->blocks_.insert(std::make_pair(block->GetHeight(), node));
-            chain->nodes_.insert(std::make_pair(hash, node));
+            chain->blocks_.insert({ node->GetHeight(), node });
+            chain->nodes_.insert({ hash, node });
             parent->AddChild(node);
             parent = node;
             hash = node->GetPreviousHash();
         } while(!hash.IsNull());
+
         chain->head_ = head;
+        chain->nodes_.insert({ head->GetHash(), head });
+        chain->blocks_.insert({ head->GetHeight(), head });
         chain->genesis_ = node;
         return true;
     }
 
     BlockChain::BlockNode* BlockChain::GetHeadNode(){
         BlockChain* chain = GetInstance();
-        READ_LOCK;
+        pthread_mutex_trylock(&mutex_);
         BlockNode* node = chain->head_;
-        UNLOCK;
+        pthread_mutex_unlock(&mutex_);
         return node;
     }
 
     BlockChain::BlockNode* BlockChain::GetGenesisNode(){
         BlockChain* chain = GetInstance();
-        READ_LOCK;
+        pthread_mutex_trylock(&mutex_);
         BlockNode* node = chain->genesis_;
-        UNLOCK;
+        pthread_mutex_unlock(&mutex_);
         return node;
     }
 
     BlockChain::BlockNode* BlockChain::GetNode(const uint256_t& hash){
         BlockChain* chain = GetInstance();
-        READ_LOCK;
+
+#if defined(TOKEN_ENABLE_DEBUG)
+        for(auto& it : chain->nodes_) LOG(INFO) << it.first;
+#endif//TOKEN_ENABLE_DEBUG
+
+        pthread_mutex_trylock(&mutex_);
         auto pos = chain->nodes_.find(hash);
         if(pos == chain->nodes_.end()){
-            UNLOCK;
+            pthread_mutex_unlock(&mutex_);
             return nullptr;
         }
 
-        UNLOCK;
+        pthread_mutex_unlock(&mutex_);
         return pos->second;
     }
 
     BlockChain::BlockNode* BlockChain::GetNode(uint32_t height){
-        if(height < 0 || height > GetHeight()){
-            LOG(WARNING) << "height too big!";
-            return nullptr;
-        }
+        if(height < 0 || height > GetHeight()) return nullptr;
+
         BlockChain* chain = GetInstance();
-        READ_LOCK;
+        pthread_mutex_trylock(&mutex_);
         auto pos = chain->blocks_.find(height);
         if(pos == chain->blocks_.end()){
-            UNLOCK;
+            pthread_mutex_unlock(&mutex_);
             return nullptr;
         }
 
-        UNLOCK;
+        pthread_mutex_unlock(&mutex_);
         return pos->second;
     }
 
     Block* BlockChain::GetBlockData(const uint256_t& hash){
         BlockChain* chain = GetInstance();
-        READ_LOCK;
+        pthread_mutex_trylock(&mutex_);
         Block* block = chain->LoadObject(hash);
-        UNLOCK;
+        pthread_mutex_unlock(&mutex_);
         return block;
     }
 
     bool BlockChain::Append(Block* block){
         BlockChain* chain = GetInstance();
-        WRITE_LOCK;
+
+#if defined(TOKEN_ENABLE_DEBUG)
+        BlockHeader head = GetHead();
+        LOG(INFO) << "<HEAD>:";
+        LOG(INFO) << "  hash := " << head.GetHash();
+        LOG(INFO) << "  parent hash := " << head.GetPreviousHash();
+
+        LOG(INFO) << "appending new block:";
+        LOG(INFO) << "  hash := " << block->GetHash();
+        LOG(INFO) << "  parent hash := " << block->GetPreviousHash();
+#endif//TOKEN_ENABLE_DEBUG
+
+        pthread_mutex_trylock(&mutex_);
         uint256_t hash = block->GetHash();
         uint256_t phash = block->GetPreviousHash();
 
         if(chain->ContainsObject(hash)){
-            LOG(ERROR) << "duplicate block found for: " << hash;
-            UNLOCK;
-            return false;
+            std::stringstream ss;
+            ss << "Duplicate block found for: " << hash;
+            CrashReport::GenerateAndExit(ss.str());
         }
 
         if(block->IsGenesis()){
-            LOG(ERROR) << "cannot append genesis block: " << hash;
-            UNLOCK;
-            return false;
+            std::stringstream ss;
+            ss << "Cannot append genesis block: " << hash;
+            CrashReport::GenerateAndExit(ss.str());
         }
 
-        if(!BlockChain::ContainsBlock(phash)){
-            LOG(ERROR) << "couldn't find parent: " << phash;
-            UNLOCK;
+        if(phash != head.GetHash()){
+            std::stringstream ss;
+            ss << "Parent hash '" << phash << "' doesn't match <HEAD> hash: " << head.GetHash();
+            CrashReport::GenerateAndExit(ss.str());
+        }
+
+        if(!chain->ContainsBlock(phash)){
+            LOG(WARNING) << "couldn't find parent: " << phash;
+            pthread_mutex_unlock(&mutex_);
             return false;
         }
 
         if(!chain->SaveObject(hash, block)){
-            LOG(ERROR) << "couldn't save block: " << hash;
-            UNLOCK;
-            return false;
+            std::stringstream ss;
+            ss << "Couldn't save block: " << hash;
+            CrashReport::GenerateAndExit(ss.str());
         }
 
-        LOG(INFO) << "phash := " << phash;
         BlockNode* parent = GetNode(phash);
         BlockNode* node = new BlockNode(block);
         parent->AddChild(node);
-        BlockNode* head = GetHeadNode();
-        if(head->GetHeight() < block->GetHeight()) {
+        if(head.GetHeight() < block->GetHeight()) {
             chain->SetHeadInIndex(hash);
             head_ = node;
         }
-        blocks_.insert(std::make_pair(block->GetHeight(), node));
-        nodes_.insert(std::make_pair(hash, node));
 
-        UNLOCK;
-        LOG(INFO) << "appended block: " << hash;
+        blocks_.insert({ node->GetHeight(), node });
+        nodes_.insert({ hash, node });
+        pthread_mutex_unlock(&mutex_);
         return true;
     }
 

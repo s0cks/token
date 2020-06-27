@@ -6,13 +6,14 @@ project("token" CXX)
 #TODO: organize build process into simpler steps
 #TODO: create deb package
 #TODO: define process for creating docker image
-
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Configure debug mode when compiling
-# add_compile_definitions(TOKEN_ENABLE_DEBUG)
+if (CMAKE_BUILD_TYPE MATCHES Debug)
+        message("Compiling token w/ debug mode")
+        add_compile_definitions(TOKEN_ENABLE_DEBUG)
+endif (CMAKE_BUILD_TYPE MATCHES Debug)
 
 # Changes garbage collector algorithm to Cheney's Mark-Copy Algorithm
 # add_compile_definitions(TOKEN_USE_CHENEYGC)

@@ -7,7 +7,7 @@
 #include "pool.h"
 
 namespace Token{
-    class Input : public BinaryObject<Proto::BlockChain::Input>{
+    class Input{
     public:
         typedef Proto::BlockChain::Input MessageType;
     private:
@@ -15,13 +15,20 @@ namespace Token{
         uint32_t index_;
         std::string user_;
 
+        friend class Transaction;
+    public:
+        Input():
+            hash_(),
+            index_(0),
+            user_(){}
         Input(const uint256_t& tx_hash, uint32_t index, const std::string& user):
             hash_(tx_hash),
             user_(user),
             index_(index){}
-
-        friend class Transaction;
-    public:
+        Input(const MessageType& raw):
+            hash_(HashFromHexString(raw.previous_hash())),
+            index_(raw.index()),
+            user_(raw.user()){}
         ~Input(){}
 
         uint32_t GetOutputIndex() const{
@@ -36,12 +43,34 @@ namespace Token{
             return user_;
         }
 
-        bool Encode(MessageType& raw) const;
         std::string ToString() const;
         UnclaimedTransaction* GetUnclaimedTransaction() const;
 
-        static Input* NewInstance(const uint256_t& tx_hash, uint32_t index, const std::string& user);
-        static Input* NewInstance(const MessageType& raw);
+        Input& operator=(const Input& other){
+            hash_ = other.hash_;
+            index_ = other.index_;
+            user_ = other.user_;
+            return (*this);
+        }
+
+        friend bool operator==(const Input& a, const Input& b){
+            if(a.index_ != b.index_) return false;
+            if(a.hash_ != b.hash_) return false;
+            return a.user_ == b.user_;
+        }
+
+        friend bool operator!=(const Input& a, const Input& b){
+            return !operator==(a, b);
+        }
+
+        friend bool operator<(const Input& a, const Input& b){
+            if(a.hash_ < b.hash_){
+                return -1;
+            } else if(b.hash_ < a.hash_){
+                return 1;
+            }
+            return a.index_ < b.index_;
+        }
 
         friend std::ostream& operator<<(std::ostream& stream, const Input& input){
             stream << input.ToString();
@@ -49,22 +78,24 @@ namespace Token{
         }
     };
 
-    class Output : public Object{
+    class Output{
     public:
-        typedef Proto::BlockChain::Output RawType;
+        typedef Proto::BlockChain::Output MessageType;
     private:
         std::string user_;
         std::string token_;
 
+        friend class Transaction;
+    public:
+        Output():
+            user_(),
+            token_(){}
         Output(const std::string& user, const std::string& token):
             user_(user),
             token_(token){}
-
-        friend class Transaction;
-    protected:
-        bool Encode(RawType& raw) const;
-        bool GetBytes(CryptoPP::SecByteBlock& bytes) const;
-    public:
+        Output(const MessageType& raw):
+            user_(raw.user()),
+            token_(raw.token()){}
         ~Output(){}
 
         std::string GetUser() const{
@@ -77,16 +108,28 @@ namespace Token{
 
         std::string ToString() const;
 
-        static Output* NewInstance(const std::string& user, const std::string& token);
-        static Output* NewInstance(const RawType raw);
+        Output& operator=(const Output& other){
+            user_ = other.user_;
+            token_ = other.token_;
+            return (*this);
+        }
+
+        friend bool operator==(const Output& a, const Output& b){
+            return a.user_ == b.user_ &&
+                    a.token_ == b.token_;
+        }
+
+        friend bool operator!=(const Output& a, const Output& b){
+            return !operator==(a, b);
+        }
     };
 
     class TransactionVisitor;
     class Transaction : public BinaryObject<Proto::BlockChain::Transaction>{
     public:
         typedef Proto::BlockChain::Transaction RawType;
-        typedef std::vector<std::shared_ptr<Input>> InputList;
-        typedef std::vector<std::shared_ptr<Output>> OutputList;
+        typedef std::vector<Input> InputList;
+        typedef std::vector<Output> OutputList;
     private:
         uint32_t timestamp_;
         uint32_t index_;
@@ -112,14 +155,16 @@ namespace Token{
             return signature_;
         }
 
-        Input* GetInput(uint32_t idx) const{
-            if(idx < 0 || idx > inputs_.size()) return nullptr;
-            return inputs_[idx].get();
+        bool GetInput(uint32_t idx, Input* result) const{
+            if(idx < 0 || idx > inputs_.size()) return false;
+            (*result) = inputs_[idx];
+            return true;
         }
 
-        Output* GetOutput(uint32_t idx) const{
-            if(idx < 0 || idx > outputs_.size()) return nullptr;
-            return outputs_[idx].get();
+        bool GetOutput(uint32_t idx, Output* result) const{
+            if(idx < 0 || idx > outputs_.size()) return false;
+            (*result) = outputs_[idx];
+            return true;
         }
 
         uint32_t GetNumberOfInputs() const{
@@ -166,6 +211,7 @@ namespace Token{
         bool Accept(TransactionVisitor* visitor);
         bool Encode(RawType& raw) const;
         std::string ToString() const;
+
         static Transaction* NewInstance(uint32_t index, InputList& inputs, OutputList& outputs, uint32_t timestamp=GetCurrentTime());
         static Transaction* NewInstance(const RawType& raw);
     };

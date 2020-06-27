@@ -1,3 +1,5 @@
+#include "transaction.h"
+
 #include "keychain.h"
 #include "block_chain.h"
 #include "node/node.h"
@@ -6,23 +8,6 @@ namespace Token{
 //######################################################################################################################
 //                                          Input
 //######################################################################################################################
-    Input* Input::NewInstance(const uint256_t &tx_hash, uint32_t index, const std::string& user){
-        Input* input = (Input*)Allocator::Allocate(sizeof(Input));
-        new (input)Input(tx_hash, index, user);
-        return input;
-    }
-
-    Input* Input::NewInstance(const Input::MessageType& raw){
-        return NewInstance(HashFromHexString(raw.previous_hash()), raw.index(), raw.user());
-    }
-
-    bool Input::Encode(Token::Input::MessageType &raw) const{
-        raw.set_index(index_);
-        raw.set_previous_hash(HexString(hash_));
-        raw.set_user(user_);
-        return true;
-    }
-
     std::string Input::ToString() const{
         std::stringstream stream;
         stream << "Input(" << GetTransactionHash() << "[" << GetOutputIndex() << "]" << ")";
@@ -36,28 +21,11 @@ namespace Token{
 //######################################################################################################################
 //                                          Output
 //######################################################################################################################
-    Output* Output::NewInstance(const std::string &user, const std::string &token){
-        Output* instance = (Output*)Allocator::Allocate(sizeof(Output));
-        new (instance)Output(user, token);
-        return instance;
-    }
-
-    Output* Output::NewInstance(const RawType raw){
-        return NewInstance(raw.user(), raw.token());
-    }
-
     std::string Output::ToString() const{
         std::stringstream stream;
         stream << "Output(" << GetUser() << "; " << GetToken() << ")";
         return stream.str();
     }
-
-    bool Output::Encode(RawType& raw) const{
-        raw.set_user(user_);
-        raw.set_token(token_);
-        return true;
-    }
-
 //######################################################################################################################
 //                                          Transaction
 //######################################################################################################################
@@ -68,11 +36,19 @@ namespace Token{
     }
 
     Transaction* Transaction::NewInstance(const Transaction::RawType& raw){
-        InputList inputs = {};
-        for(auto& it : raw.inputs()) inputs.push_back(std::shared_ptr<Input>(Input::NewInstance(it)));
-        OutputList outputs = {};
-        for(auto& it : raw.outputs()) outputs.push_back(std::shared_ptr<Output>(Output::NewInstance(it)));
-        return NewInstance(raw.index(), inputs, outputs, raw.timestamp());
+        Transaction* instance = (Transaction*)Allocator::Allocate(sizeof(Transaction));
+        Transaction::InputList inputs;
+        for(auto& it : raw.inputs()){
+            inputs.push_back(Input(it));
+        }
+
+        Transaction::OutputList outputs;
+        for(auto& it : raw.outputs()){
+            outputs.push_back(Output(it));
+        }
+
+        new (instance)Transaction(raw.timestamp(), raw.index(), inputs, outputs);
+        return instance;
     }
 
     std::string Transaction::ToString() const{
@@ -87,13 +63,14 @@ namespace Token{
         raw.set_signature(signature_);
         for(auto& it : inputs_){
             Input::MessageType* raw_in = raw.add_inputs();
-            raw_in->set_index(it->GetOutputIndex());
-            raw_in->set_previous_hash(HexString(it->GetTransactionHash()));
+            raw_in->set_index(it.GetOutputIndex());
+            raw_in->set_previous_hash(HexString(it.GetTransactionHash()));
+            raw_in->set_user(it.GetUser());
         }
         for(auto& it : outputs_){
-            Output::RawType* raw_out = raw.add_outputs();
-            raw_out->set_token(it->GetToken());
-            raw_out->set_user(it->GetUser());
+            Output::MessageType* raw_out = raw.add_outputs();
+            raw_out->set_user(it.GetUser());
+            raw_out->set_token(it.GetToken());
         }
         return true;
     }
@@ -104,8 +81,9 @@ namespace Token{
         {
             if(!vis->VisitInputsStart()) return false;
             for(uint64_t idx = 0; idx < GetNumberOfInputs(); idx++){
-                Input* input = GetInput(idx);
-                if(!vis->VisitInput(input)) return false;
+                Input input;
+                if(!GetInput(idx, &input)) return false;
+                if(!vis->VisitInput(&input)) return false;
             }
             if(!vis->VisitInputsEnd()) return false;
         }
@@ -113,8 +91,9 @@ namespace Token{
         {
             if(!vis->VisitOutputsStart()) return false;
             for(uint64_t idx = 0; idx < GetNumberOfOutputs(); idx++){
-                Output* output = GetOutput(idx);
-                if(!vis->VisitOutput(output)) return false;
+                Output output;
+                if(!GetOutput(idx, &output)) return false;
+                if(!vis->VisitOutput(&output)) return false;
             }
             if(!vis->VisitOutputsEnd()) return false;
         }
@@ -155,7 +134,6 @@ namespace Token{
             return false;
         }
     }
-
 //######################################################################################################################
 //                                          Transaction Pool
 //######################################################################################################################

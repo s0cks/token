@@ -49,15 +49,15 @@ namespace Token{
                 return children_[idx];
             }
 
-            uint64_t GetNumberOfChildren() const{
+            uint32_t GetNumberOfChildren() const{
                 return children_.size();
             }
 
-            uint64_t GetTimestamp() const{
+            uint32_t GetTimestamp() const{
                 return header_.GetTimestamp();
             }
 
-            uint64_t GetHeight() const{
+            uint32_t GetHeight() const{
                 return header_.GetHeight();
             }
 
@@ -74,6 +74,7 @@ namespace Token{
             }
 
             void AddChild(BlockNode* child){
+                if(!child) return;
                 children_.push_back(child);
                 child->SetParent(this);
             }
@@ -87,7 +88,6 @@ namespace Token{
         BlockNode* head_;
         std::map<uint32_t, BlockNode*> blocks_;
         std::map<uint256_t, BlockNode*> nodes_; //TODO: possible memory leak?
-        pthread_rwlock_t rwlock_;
 
         static BlockChain* GetInstance();
         uint256_t GetHeadFromIndex();

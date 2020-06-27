@@ -2,14 +2,15 @@
 #define TOKEN_MERKLE_H
 
 #include <vector>
-#include "common.h"
+#include "allocator.h"
+#include "object.h"
 #include "uint256_t.h"
 
 namespace Token{
     class BlockVisitor;
     class Block;
 
-    class MerkleNode{
+    class MerkleNode : public Object{
     protected:
         MerkleNode* parent_;
         MerkleNode* left_;
@@ -18,35 +19,37 @@ namespace Token{
 
         void SetParent(MerkleNode* node){
             parent_ = node;
+            Allocator::AddStrongReference(node, this, NULL);
         }
 
         uint256_t ComputeHash() const;
-    public:
+
         MerkleNode(const uint256_t& hash):
             parent_(nullptr),
             left_(nullptr),
             right_(nullptr),
             hash_(hash){}
+        MerkleNode(MerkleNode* node):
+            parent_(nullptr),
+            left_(nullptr),
+            right_(nullptr),
+            hash_(){
+            SetParent(node->GetParent());
+            SetLeft(node->GetLeft());
+            SetRight(node->GetRight());
+            hash_ = ComputeHash();
+        }
         MerkleNode(MerkleNode* left, MerkleNode* right):
             parent_(nullptr),
-            left_(left),
-            right_(right),
-            hash_(ComputeHash()){
-            left->SetParent(this);
-            right->SetParent(this);
+            left_(nullptr),
+            right_(nullptr),
+            hash_(){
+            SetLeft(left);
+            SetRight(right);
+            hash_ = ComputeHash();
         }
-        MerkleNode(const MerkleNode& other):
-            parent_(other.parent_),
-            left_(other.left_),
-            right_(other.right_),
-            hash_(other.hash_){
-            if(left_)left_->SetParent(this);
-            if(right_)right_->SetParent(this);
-        }
-        ~MerkleNode(){
-            if(left_) delete left_;
-            if(right_) delete right_;
-        }
+    public:
+        ~MerkleNode(){}
 
         MerkleNode* GetParent() const{
             return parent_;
@@ -57,8 +60,9 @@ namespace Token{
         }
 
         void SetLeft(MerkleNode* node){
+            if(left_)Allocator::RemoveStrongReference(this, left_);
             left_ = node;
-            if(node)node->SetParent(this);
+            if(left_)left_->SetParent(this);
         }
 
         MerkleNode* GetLeft() const{
@@ -70,8 +74,9 @@ namespace Token{
         }
 
         void SetRight(MerkleNode* node){
+            if(right_) Allocator::RemoveStrongReference(this, right_);
             right_ = node;
-            if(node)node->SetParent(this);
+            if(right_) right_->SetParent(this);
         }
 
         MerkleNode* GetRight() const{
@@ -91,7 +96,7 @@ namespace Token{
         }
 
         bool Equals(MerkleNode* node) const{
-            return (*this) == (*node);
+            return hash_ == node->hash_;
         }
 
         bool CanVerifyHash() const{
@@ -105,23 +110,11 @@ namespace Token{
             return GetLeft()->GetLeaves() + GetRight()->GetLeaves();
         }
 
-        MerkleNode& operator=(MerkleNode& other){
-            parent_ = other.parent_;
-            left_ = other.left_;
-            right_ = other.right_;
-            hash_ = other.hash_;
-            left_->SetParent(this);
-            right_->SetParent(this);
-            return (*this);
-        }
+        std::string ToString() const;
 
-        friend bool operator==(const MerkleNode& lhs, const MerkleNode& rhs){
-            return lhs.GetHash() == rhs.GetHash();
-        }
-
-        friend bool operator!=(const MerkleNode& lhs, const MerkleNode& rhs){
-            return !operator==(lhs, rhs);
-        }
+        static MerkleNode* NewInstance(const uint256_t& hash);
+        static MerkleNode* NewInstance(MerkleNode* left, MerkleNode* right);
+        static MerkleNode* Clone(MerkleNode* node);
     };
 
     class MerkleProofHash{
@@ -179,21 +172,20 @@ namespace Token{
 
         MerkleNode* BuildMerkleTree(size_t height, std::vector<MerkleNode*>& nodes);
         MerkleNode* BuildMerkleTree(std::vector<uint256_t>& leaves);
-    public:
-        MerkleTree():
+
+        MerkleTree(std::vector<uint256_t>& leaves):
             root_(nullptr),
-            leaves_(),
-            nodes_(){}
-        MerkleTree(std::vector<uint256_t>& leaves);
-        MerkleTree(const MerkleTree& other):
-            root_(other.root_),
-            leaves_(other.leaves_),
-            nodes_(other.nodes_){}
+            nodes_(),
+            leaves_(){
+            root_ = BuildMerkleTree(leaves);
+            Allocator::AddStrongReference(this, root_, NULL);
+        }
+    public:
         ~MerkleTree(){}
 
         void Clear(){
-            if(!HasMerkleRoot()) return;
-            delete root_;
+            if(!root_) return;
+            Allocator::RemoveStrongReference(this, root_);
             root_ = nullptr;
             nodes_.clear();
             leaves_.clear();
@@ -232,16 +224,19 @@ namespace Token{
             if(!HasMerkleRoot()) return uint256_t();
             return GetMerkleRoot()->GetHash();
         }
+
+        static MerkleTree* NewInstance(std::vector<uint256_t>& leaves);
     };
 
     class MerkleTreeBuilder{
     protected:
         std::vector<uint256_t> leaves_;
-        MerkleTree tree_;
+        MerkleTree* tree_;
 
         bool CreateTree(){
+            if(leaves_.empty()) return false;
             if(leaves_.size() == 1) leaves_.push_back(leaves_.front());
-            tree_ = MerkleTree(leaves_);
+            tree_ = MerkleTree::NewInstance(leaves_);
             return HasTree();
         }
 
@@ -252,20 +247,16 @@ namespace Token{
 
         MerkleTreeBuilder():
             leaves_(),
-            tree_(){}
+            tree_(nullptr){}
     public:
         virtual ~MerkleTreeBuilder() = default;
 
         MerkleTree* GetTree(){
-            return &tree_;
-        }
-
-        MerkleTree* GetTreeCopy(){
-            return new MerkleTree(tree_);
+            return tree_;
         }
 
         bool HasTree(){
-            return tree_.HasMerkleRoot();
+            return tree_ && tree_->HasMerkleRoot();
         }
 
         virtual bool BuildTree() = 0;

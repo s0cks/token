@@ -39,12 +39,14 @@ namespace Token{
         return pthread_create(&thread_, NULL, &NodeThread, NULL) == 0;
     }
 
-    bool Node::WaitForShutdown(){
-        if(IsStarting()) WaitForState(State::kRunning);
+    bool Node::Shutdown(){
         if(!IsRunning()) return false;
-
-        LOG(INFO) << "shutting server down....";
         return pthread_join(thread_, NULL) == 0;
+    }
+
+    bool Node::WaitForShutdown(){
+        WaitForState(State::kStopped);
+        return true;
     }
 
     void Node::SetState(Node::State state){

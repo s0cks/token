@@ -62,7 +62,16 @@ namespace Token{
             leveldb::ReadOptions readOpts;
             std::string key = HexString(hash);
             std::string location;
-            if(!GetIndex()->Get(readOpts, key, &location).ok()) return nullptr;
+            if(!GetIndex()->Get(readOpts, key, &location).ok()){
+#if defined(TOKEN_ENABLE_DEBUG)
+                LOG(WARNING) << "couldn't load object " << hash << " from: " << location;
+                return nullptr;
+#endif//TOKEN_ENABLE_DEBUG
+            }
+
+#if defined(TOKEN_ENABLE_DEBUG)
+            LOG(INFO) << "loaded object " << hash << " from: " << location;
+#endif//TOKEN_ENABLE_DEBUG
             return LoadRawObject(location);
         }
 
@@ -79,7 +88,16 @@ namespace Token{
             leveldb::WriteOptions writeOpts;
             std::string key = HexString(hash);
             std::string location = CreateObjectLocation(hash, value);
-            if(!GetIndex()->Put(writeOpts, key, location).ok()) return false;
+            if(!GetIndex()->Put(writeOpts, key, location).ok()){
+#if defined(TOKEN_ENABLE_DEBUG)
+                LOG(WARNING) << "couldn't save object " << hash << " to: " << location;
+#endif//TOKEN_ENABLE_DEBUG
+                return false;
+            }
+
+#if defined(TOKEN_ENABLE_DEBUG)
+            LOG(INFO) << "saved object " << hash << " to: " << location;
+#endif//TOKEN_ENABLE_DEBUG
             return SaveRawObject(location, value);
         }
 

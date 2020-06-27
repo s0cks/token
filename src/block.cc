@@ -18,6 +18,11 @@ namespace Token{
                               uint32_t timestamp){
         Block* instance = (Block*)Allocator::Allocate(sizeof(Block));
         new (instance)Block(timestamp, height, phash, transactions);
+        for(size_t idx = 0; idx < transactions.size(); idx++){
+            if(!Allocator::AddStrongReference(instance, transactions[idx], NULL)){
+                CrashReport::GenerateAndExit("Couldn't add strong reference to transaction");
+            }
+        }
         return instance;
     }
 
@@ -26,9 +31,18 @@ namespace Token{
     }
 
     Block* Block::NewInstance(const Block::RawType& raw){
+        Block* instance = (Block*)Allocator::Allocate(sizeof(Block));
+        Allocator::AddRoot(instance);
         std::vector<Transaction*> txs = {};
-        for(auto& it : raw.transactions()) txs.push_back(Transaction::NewInstance(it));
-        return NewInstance(raw.height(), HashFromHexString(raw.previous_hash()), txs, raw.timestamp());
+        for(auto& it : raw.transactions()){
+            Transaction* tx = (Transaction::NewInstance(it));
+            if(!Allocator::AddStrongReference(instance, tx, NULL)){
+                CrashReport::GenerateAndExit("Couldn't add strong reference to transaction");
+            }
+        }
+        new (instance)Block(raw.timestamp(), raw.height(), HashFromHexString(raw.previous_hash()), txs);
+        Allocator::RemoveRoot(instance);
+        return instance;
     }
 
     std::string Block::ToString() const{
@@ -86,6 +100,15 @@ namespace Token{
         }
     };
 
+    bool Block::Finalize(){
+        for(auto& it : transactions_){
+            if(!Allocator::RemoveStrongReference(this, it)){
+                CrashReport::GenerateAndExit("Couldn't remove strong reference to transaction");
+            }
+        }
+        return true;
+    }
+
     bool Block::Contains(const uint256_t& hash) const{
         BlockMerkleTreeBuilder builder(this);
         if(!builder.BuildTree()) return false;
@@ -98,7 +121,8 @@ namespace Token{
     MerkleTree* Block::GetMerkleTree() const{
         BlockMerkleTreeBuilder builder(this);
         if(!builder.BuildTree()) return nullptr;
-        return builder.GetTreeCopy();
+        //TODO: return builder.GetTreeCopy();
+        return nullptr;
     }
 
     uint256_t Block::GetMerkleRoot() const{

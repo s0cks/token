@@ -1,8 +1,19 @@
 #include "raw_object.h"
 #include "object.h"
+#include "allocator.h"
+#include "alloc/reference.h"
 
 namespace Token{
-    bool RawObject::VisitOwnedReferences(ObjectPointerVisitor* vis){
+    bool RawObject::IsReachable() const {
+        if(Allocator::IsRoot(GetObjectPointer())) return true;
+        for(auto& it : pointing_){
+            RawObject* owner = it->GetOwner();
+            if(owner->IsReachable()) return true;
+        }
+        return false;
+    }
+
+    bool RawObject::VisitOwnedReferences(ObjectPointerVisitor* vis) const{
         for(auto& it : owned_){
             RawObject* obj = it->GetTarget();
             if(!vis->Visit(obj)) return false;
@@ -10,7 +21,7 @@ namespace Token{
         return true;
     }
 
-    bool RawObject::VisitPointingReferences(ObjectPointerVisitor* vis){
+    bool RawObject::VisitPointingReferences(ObjectPointerVisitor* vis) const{
         for(auto& it : pointing_){
             RawObject* obj = it->GetOwner();
             if(!vis->Visit(obj)) return false;
@@ -20,17 +31,5 @@ namespace Token{
 
     std::string RawObject::ToString() const{
         return GetObject()->ToString();
-    }
-
-    RawObject::RawObject(void* ptr, size_t size):
-            owned_(),
-            pointing_(),
-            header_(0),
-            ptr_(ptr),
-            forwarding_address_(0){
-        SetForwarding(false);
-        SetCondemned(false);
-        SetColor(Color::kWhite);
-        SetSize(size);
     }
 }

@@ -5,6 +5,7 @@
 #include <string>
 #include <signal.h>
 #include "crash_report.h"
+#include "block_miner.h"
 
 #define TOKEN_MAJOR_VERSION 1
 #define TOKEN_MINOR_VERSION 0
@@ -15,17 +16,8 @@ namespace Token{
 
     class SignalHandlers{
     private:
-        static void HandleInterrupt(int signum){
-            std::stringstream ss;
-            ss << "Interrupt Signal (" << signum << ") Received";
-            CrashReport::GenerateAndExit(ss.str());
-        }
-
-        static void HandleSegfault(int signnum){
-            std::stringstream ss;
-            ss << "Segfault";
-            CrashReport::GenerateAndExit(ss.str());
-        }
+        static void HandleInterrupt(int signum);
+        static void HandleSegfault(int signum);
 
         SignalHandlers() = delete;
     public:

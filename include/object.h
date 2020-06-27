@@ -14,6 +14,10 @@ namespace Token{
     public:
         virtual ~Object() = default;
         virtual std::string ToString() const = 0;
+
+        virtual bool Finalize(){
+            return true; //Implement in child-classes
+        }
     };
 
     template<typename RawObjectType>

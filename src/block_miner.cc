@@ -13,13 +13,42 @@
 
 namespace Token{
     static pthread_t thread;
+    static uv_loop_t* loop_ = nullptr;
 
     static pthread_mutex_t proposal_mutex_ = PTHREAD_MUTEX_INITIALIZER;
     static pthread_cond_t proposal_cond_ = PTHREAD_COND_INITIALIZER;
     static Proposal* proposal_ = nullptr;
 
+    static BlockMiner::State state_ = BlockMiner::State::kStopped;
+    static pthread_mutex_t state_mutex_ = PTHREAD_MUTEX_INITIALIZER;
+    static pthread_cond_t state_cond_ = PTHREAD_COND_INITIALIZER;
+
     static uv_timer_t mine_timer_;
     static uv_async_t exit_handle;
+
+    void BlockMiner::SetState(BlockMiner::State state){
+        pthread_mutex_trylock(&state_mutex_);
+        state_ = state;
+        pthread_cond_signal(&state_cond_);
+        pthread_mutex_unlock(&state_mutex_);
+    }
+
+    BlockMiner::State BlockMiner::GetState(){
+        pthread_mutex_trylock(&state_mutex_);
+        BlockMiner::State state = state_;
+        pthread_mutex_unlock(&state_mutex_);
+        return state;
+    }
+
+    void BlockMiner::WaitForState(State state){
+        pthread_mutex_trylock(&state_mutex_);
+        while(state_ != state) pthread_cond_wait(&state_cond_, &state_mutex_);
+        pthread_mutex_unlock(&state_mutex_);
+    }
+
+    void BlockMiner::WaitForShutdown(){
+        WaitForState(State::kStopped);
+    }
 
     Proposal* BlockMiner::GetProposal(){
         pthread_mutex_lock(&proposal_mutex_);
@@ -103,8 +132,15 @@ namespace Token{
         return accepted;
     }
 
+    void BlockMiner::HandleTerminateCallback(uv_async_t* handle){
+        //TODO: implement
+    }
+
+    //TODO: check state
     void BlockMiner::HandleMineCallback(uv_timer_t* handle){
         if(!HasProposal() && TransactionPool::GetSize() >= 2){
+            LOG(INFO) << "creating proposal...";
+
             // collect + sort transactions
             std::vector<uint256_t> all_txs;
             if(!TransactionPool::GetTransactions(all_txs)){
@@ -122,6 +158,7 @@ namespace Token{
                     pthread_mutex_unlock(&proposal_mutex_);
                     return;
                 }
+                Allocator::AddRoot(tx);
                 txs.push_back(tx);
             }
 
@@ -130,6 +167,7 @@ namespace Token{
             LOG(INFO) << "<HEAD> := " << head;
 
             Block* block = Block::NewInstance(head, txs);
+            Allocator::AddRoot(block);
             if(!BlockPool::AddBlock(block)){
                 LOG(WARNING) << "couldn't put newly mined block into block pool!";
                 return;
@@ -165,26 +203,25 @@ namespace Token{
         }
     }
 
-    void BlockMiner::HandleExitCallback(uv_async_t* handle){
-        if(uv_is_closing((uv_handle_t*)handle) == 0){
-            uv_close((uv_handle_t*)handle, NULL);
-        }
-        pthread_exit(nullptr);
-    }
-
     void* BlockMiner::MinerThread(void* data){
-        pthread_mutex_init(&proposal_mutex_, NULL);
-        pthread_cond_init(&proposal_cond_, NULL);
-        uv_loop_t* loop = uv_loop_new();
-        uv_async_init(loop, &exit_handle, &HandleExitCallback);
+        SetState(State::kRunning);
+        uv_loop_t* loop = loop_ = uv_loop_new();
+        uv_async_init(loop, &exit_handle, &HandleTerminateCallback);
         uv_timer_init(loop, &mine_timer_);
         uv_timer_start(&mine_timer_, &HandleMineCallback, 0, BlockMiner::kMiningIntervalMilliseconds);
         uv_run(loop, UV_RUN_DEFAULT);
-        pthread_exit(nullptr);
+        pthread_exit(0);
     }
 
     bool BlockMiner::Initialize(){
+        if(!IsStopped()) return false;
         return pthread_create(&thread, NULL, &BlockMiner::MinerThread, nullptr) == 0;
+    }
+
+    bool BlockMiner::Shutdown(){
+        if(!IsRunning()) return false;
+        uv_async_send(&exit_handle);
+        return pthread_join(thread, NULL) == 0;
     }
 
     bool BlockMiner::MineBlock(const uint256_t& hash, Block* block, bool clean){

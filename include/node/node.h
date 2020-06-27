@@ -48,30 +48,6 @@ namespace Token{
         static void SetState(State state);
         static State GetState();
 
-        static inline bool
-        IsStarting(){
-            return GetState() == kStarting;
-        }
-
-        static inline bool
-        IsRunning(){
-            return GetState() == kRunning;
-        }
-
-        static inline bool
-        IsSynchronizing(){
-            return GetState() == kSynchronizing;
-        }
-
-        static inline bool
-        IsStopping(){
-            return GetState() == kStopping;
-        }
-
-        static inline bool
-        IsStopped(){
-            return GetState() == kStopped;
-        }
 
 
         static uv_tcp_t* GetHandle();
@@ -124,6 +100,32 @@ namespace Token{
         static bool Broadcast(Message* msg);
         static bool Start();
         static bool WaitForShutdown();
+        static bool Shutdown();
+
+        static inline bool
+        IsStarting(){
+            return GetState() == kStarting;
+        }
+
+        static inline bool
+        IsRunning(){
+            return GetState() == kRunning;
+        }
+
+        static inline bool
+        IsSynchronizing(){
+            return GetState() == kSynchronizing;
+        }
+
+        static inline bool
+        IsStopping(){
+            return GetState() == kStopping;
+        }
+
+        static inline bool
+        IsStopped(){
+            return GetState() == kStopped;
+        }
     };
 }
 

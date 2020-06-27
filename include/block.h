@@ -150,6 +150,7 @@ namespace Token{
             return GetHeight() == 0;
         }
 
+        bool Finalize();
         bool Contains(const uint256_t& hash) const;
         bool Accept(BlockVisitor* vis) const;
         std::string ToString() const;

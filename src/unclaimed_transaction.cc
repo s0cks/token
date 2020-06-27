@@ -23,6 +23,7 @@ namespace Token{
     bool UnclaimedTransaction::Encode(Token::UnclaimedTransaction::RawType &raw) const{
         raw.set_tx_hash(HexString(hash_));
         raw.set_tx_index(index_);
+        raw.set_user(user_);
         return true;
     }
 
@@ -82,6 +83,9 @@ namespace Token{
             UNLOCK;
             return false;
         }
+#if defined(TOKEN_ENABLE_DEBUG)
+        LOG(WARNING) << "put unclaimed transaction: " << hash << " := " << utxo->GetTransaction() << "[" << utxo->GetIndex() << "]";
+#endif//TOKEN_ENABLE_DEBUG
         UNLOCK;
         return true;
     }
@@ -155,12 +159,33 @@ namespace Token{
 
     UnclaimedTransaction* UnclaimedTransactionPool::GetUnclaimedTransaction(const uint256_t &tx_hash, uint32_t tx_index){
         std::vector<uint256_t> utxos;
-        if(!GetUnclaimedTransactions(utxos)) return nullptr;
+        if(!GetUnclaimedTransactions(utxos)) {
+#if defined(TOKEN_ENABLE_DEBUG)
+            LOG(WARNING) << "couldn't get unclaimed transactions";
+#endif//TOKEN_ENABLE_DEBUG
+            return nullptr;
+        }
         for(auto& it : utxos){
+#if defined(TOKEN_ENABLE_DEBUG)
+            LOG(WARNING) << "checking utxo: " << it;
+#endif//TOKEN_ENABLE_DEBUG
+
             UnclaimedTransaction* utxo;
-            if(!(utxo = GetUnclaimedTransaction(it))) return nullptr;
+            if(!(utxo = GetUnclaimedTransaction(it))){
+#if defined(TOKEN_ENABLE_DEBUG)
+                LOG(WARNING) << "couldn't get unclaimed transaction: " << it;
+#endif//TOKEN_ENABLE_DEBUG
+                return nullptr;
+            }
+
+#if defined(TOKEN_ENABLE_DEBUG)
+            LOG(WARNING) << "unclaimed transaction: " << it << " := " << utxo->GetTransaction() << "[" << utxo->GetIndex() << "]";
+#endif//TOKEN_ENABLE_DEBUG
             if(utxo->GetTransaction() == tx_hash && utxo->GetIndex() == tx_index) return utxo;
         }
+#if defined(TOKEN_ENABLE_DEBUG)
+        LOG(WARNING) << "couldn't find unclaimed transaction: " << tx_hash << "[" << tx_index << "]";
+#endif//TOKEN_ENABLE_DEBUG
         return nullptr;
     }
 }

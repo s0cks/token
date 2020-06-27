@@ -111,6 +111,7 @@ namespace Token{
         MemoryInformationSection(CrashReport* report): CrashReportSection(report){}
         ~MemoryInformationSection(){}
 
+#if defined(TOKEN_USE_CHENEYGC)
         inline std::string
         GetHeapSize() const{
             std::stringstream ss;
@@ -124,6 +125,20 @@ namespace Token{
             ss << Allocator::GetEdenHeap()->GetSemispaceSize();
             return ss.str();
         }
+#endif //TOKEN_USE_CHENEYGC
+        inline std::string
+        GetTotalMemoryUsed() const{
+            std::stringstream ss;
+            ss << Allocator::GetBytesAllocated();
+            return ss.str();
+        }
+
+        inline std::string
+        GetTotalMemoryFree() const{
+            std::stringstream ss;
+            ss << Allocator::GetBytesFree();
+            return ss.str();
+        }
 
         inline std::string
         GetNumberOfAllocatedObjects() const{
@@ -132,28 +147,29 @@ namespace Token{
             return ss.str();
         }
 
-        inline std::string
-        GetTotalMemoryUsed() const{
-            std::stringstream ss;
-            ss << Allocator::GetEdenHeap()->GetFromSpace()->GetAllocatedSize();
-            return ss.str();
-        }
-
-        inline std::string
-        GetTotalMemoryFree() const{
-            std::stringstream ss;
-            ss << Allocator::GetEdenHeap()->GetFromSpace()->GetUnallocatedSize();
-            return ss.str();
-        }
-
         bool WriteSection(){
             WriteLine("Memory Information:");
             Indent();
+#if defined(TOKEN_USE_CHENEYGC)
+            WriteLine("Garbage Collector: Mark/Copy");
+#else
+            WriteLine("Garbage Collector: Mark/Sweep");
+#endif //TOKEN_USE_CHENEYGC
             WriteLine("Number of Allocated Objects: " + GetNumberOfAllocatedObjects());
-            WriteLine("Heap Size (Bytes): " + GetHeapSize());
-            WriteLine("Semispace Size (Bytes): " + GetSemispaceSize());
             WriteLine("Total Memory Used (Bytes): " + GetTotalMemoryUsed());
             WriteLine("Total Memory Free (Bytes): " + GetTotalMemoryFree());
+#if defined(TOKEN_USE_CHENEYGC)
+            WriteLine("Heap Size (Bytes): " + GetHeapSize());
+            WriteLine("Semispace Size (Bytes): " + GetSemispaceSize());
+#endif//TOKEN_USE_CHENEYGC
+            DeIndent();
+            WriteLine("Roots:");
+            Indent();
+            for(auto& it : Allocator::allocated_){
+                std::stringstream ss;
+                ss << "- " << (*it.second);
+                WriteLine(ss);
+            }
             WriteNewline();
             return true;
         }

@@ -11,7 +11,29 @@ namespace Token{
     // - establish timer for mining
     // - refactor
     class BlockMiner{
+    public:
+        enum State{
+            kRunning,
+            kStopped
+        };
+
+        friend std::ostream& operator<<(std::ostream& stream, const State& state){
+            switch(state){
+                case kRunning:
+                    stream << "Running";
+                    break;
+                case kStopped:
+                    stream << "Stopped";
+                    break;
+                default:
+                    stream << "Unknown";
+                    break;
+            }
+            return stream;
+        }
     private:
+        static void SetState(State state);
+
         static Proposal* GetProposal();
         static void SetProposal(Proposal* proposal);
         static bool HasProposal();
@@ -20,8 +42,9 @@ namespace Token{
         static bool VoteForProposal(const std::string& node_id);
         static bool AcceptProposal(const std::string& node_id);
         static bool MineBlock(const uint256_t& hash, Block* block, bool clean);
+        static void WaitForState(State state);
+        static void HandleTerminateCallback(uv_async_t* handle);
         static void HandleMineCallback(uv_timer_t* handle);
-        static void HandleExitCallback(uv_async_t* handle);
         static void* MinerThread(void* data);
 
         BlockMiner(){}
@@ -34,7 +57,20 @@ namespace Token{
 
         ~BlockMiner(){}
 
+        static State GetState();
+        static void WaitForShutdown();
         static bool Initialize();
+        static bool Shutdown();
+
+        static inline bool
+        IsRunning(){
+            return GetState() == kRunning;
+        }
+
+        static inline bool
+        IsStopped(){
+            return GetState() == kStopped;
+        }
     };
 }
 
