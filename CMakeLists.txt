@@ -52,7 +52,7 @@ add_library(
 )
 target_link_libraries(
         "${PROJECT_NAME}-ledger"
-       ${HTTPPARSER_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CRYPTO++_LIBRARIES} ${Protobuf_LIBRARIES} ${GLOG_LIBRARIES} ${LevelDB_LIBRARY} ${LIBUV_LIBRARIES}
+       ${HTTPPARSER_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CRYPTO++_LIBRARIES} ${Protobuf_LIBRARIES} ${GLOG_LIBRARIES} ${LevelDB_LIBRARY} ${LIBUV_LIBRARIES} config++
 )
 
 #=================================================
