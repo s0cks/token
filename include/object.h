@@ -34,6 +34,12 @@ namespace Token{
 
         virtual bool Encode(RawObjectType& raw) const = 0;
 
+        bool WriteToFile(std::fstream& fd) const{
+            RawObjectType raw;
+            if(!Encode(raw)) return false;
+            return raw.SerializeToOstream(&fd);
+        }
+
         uint256_t GetHash() const{
             CryptoPP::SHA256 func;
             CryptoPP::SecByteBlock bytes;

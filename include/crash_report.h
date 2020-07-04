@@ -99,6 +99,11 @@ namespace Token{
 
         static bool Generate(const std::string& msg, long flags=kIncludeAll);
         static int GenerateAndExit(const std::string& msg, long flags=kIncludeAll);
+
+        static inline int
+        GenerateAndExit(const std::stringstream& ss, long flags=kIncludeAll){
+            return GenerateAndExit(ss.str(), flags);
+        }
     };
 }
 

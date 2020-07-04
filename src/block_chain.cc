@@ -6,6 +6,7 @@
 #include "keychain.h"
 #include "crash_report.h"
 #include "block_chain.h"
+#include "block_chain_index.h"
 #include "block_miner.h"
 #include "object.h"
 
@@ -13,7 +14,6 @@ namespace Token{
     static pthread_mutex_t mutex_ = PTHREAD_MUTEX_INITIALIZER;
 
     BlockChain::BlockChain():
-        IndexManagedPool(FLAGS_path + "/data"),
         nodes_(),
         blocks_(),
         genesis_(nullptr),
@@ -24,29 +24,6 @@ namespace Token{
     BlockChain::GetInstance(){
         static BlockChain instance;
         return &instance;
-    }
-
-    uint256_t BlockChain::GetHeadFromIndex(){
-        leveldb::ReadOptions readOpts;
-        std::string key = "<HEAD>";
-        std::string value;
-        if(!GetIndex()->Get(readOpts, key, &value).ok()) return uint256_t();
-        return HashFromHexString(value);
-    }
-
-    bool BlockChain::HasHeadInIndex(){
-        leveldb::ReadOptions readOpts;
-        std::string key = "<HEAD>";
-        std::string value;
-        if(!GetIndex()->Get(readOpts, key, &value).ok()) return false;
-        return value.length() > 0;
-    }
-
-    bool BlockChain::SetHeadInIndex(const Token::uint256_t& hash){
-        leveldb::WriteOptions writeOpts;
-        std::string key = "<HEAD>";
-        std::string value = HexString(hash);
-        return GetIndex()->Put(writeOpts, key, value).ok();
     }
 
     static const uint32_t kNumberOfGenesisOutputs = 32;
@@ -89,15 +66,16 @@ namespace Token{
             return CrashReport::GenerateAndExit("Couldn't initialize the Unclaimed Transaction Pool");
         }
 
+        BlockChainIndex::Initialize();
+
         BlockChain* chain = GetInstance();
-        if(!chain->InitializeIndex()) CrashReport::GenerateAndExit("Couldn't initialize the block chain index");
-        if(!chain->HasHeadInIndex()){
+        if(!BlockChainIndex::HasBlockData()){
             Block* genesis;
             if(!(genesis = CreateGenesis())) CrashReport::GenerateAndExit("Couldn't generate genesis block");
             Allocator::AddRoot(genesis);
 
             uint256_t hash = genesis->GetHash();
-            if(!chain->SaveObject(hash, genesis)) CrashReport::GenerateAndExit("Couldn't save genesis object to block chain");
+            BlockChainIndex::PutBlockData(genesis);
             BlockNode* node = new BlockNode(genesis);
             chain->head_ = chain->genesis_ = node;
             chain->blocks_.insert(std::make_pair(genesis->GetHeight(), node));
@@ -115,11 +93,12 @@ namespace Token{
                     Allocator::RemoveRoot(utxo);
                 }
             }
-            chain->SetHeadInIndex(hash);
+
+            BlockChainIndex::PutReference("<HEAD>", hash);
             return true;
         }
 
-        uint256_t hash = chain->GetHeadFromIndex();
+        uint256_t hash = BlockChainIndex::GetReference("<HEAD>");
         Block* block = nullptr;
         if(!(block = GetBlockData(hash))){
             std::stringstream ss;
@@ -179,10 +158,6 @@ namespace Token{
     BlockChain::BlockNode* BlockChain::GetNode(const uint256_t& hash){
         BlockChain* chain = GetInstance();
 
-#if defined(TOKEN_ENABLE_DEBUG)
-        for(auto& it : chain->nodes_) LOG(INFO) << it.first;
-#endif//TOKEN_ENABLE_DEBUG
-
         pthread_mutex_trylock(&mutex_);
         auto pos = chain->nodes_.find(hash);
         if(pos == chain->nodes_.end()){
@@ -212,7 +187,7 @@ namespace Token{
     Block* BlockChain::GetBlockData(const uint256_t& hash){
         BlockChain* chain = GetInstance();
         pthread_mutex_trylock(&mutex_);
-        Block* block = chain->LoadObject(hash);
+        Block* block = BlockChainIndex::GetBlockData(hash);
         pthread_mutex_unlock(&mutex_);
         return block;
     }
@@ -235,10 +210,10 @@ namespace Token{
         uint256_t hash = block->GetHash();
         uint256_t phash = block->GetPreviousHash();
 
-        if(chain->ContainsObject(hash)){
+        if(BlockChainIndex::HasBlockData(hash)){
             std::stringstream ss;
             ss << "Duplicate block found for: " << hash;
-            CrashReport::GenerateAndExit(ss.str());
+            CrashReport::GenerateAndExit(ss);
         }
 
         if(block->IsGenesis()){
@@ -259,17 +234,13 @@ namespace Token{
             return false;
         }
 
-        if(!chain->SaveObject(hash, block)){
-            std::stringstream ss;
-            ss << "Couldn't save block: " << hash;
-            CrashReport::GenerateAndExit(ss.str());
-        }
+        BlockChainIndex::PutBlockData(block);
 
         BlockNode* parent = GetNode(phash);
         BlockNode* node = new BlockNode(block);
         parent->AddChild(node);
         if(head.GetHeight() < block->GetHeight()) {
-            chain->SetHeadInIndex(hash);
+            BlockChainIndex::PutReference("<HEAD>", hash);
             head_ = node;
         }
 

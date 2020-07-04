@@ -15,7 +15,7 @@
 
 namespace Token{
     class BlockChainVisitor;
-    class BlockChain : public IndexManagedPool<Block, Block::RawType>{
+    class BlockChain{
     private:
         friend class BlockChainServer;
         friend class BlockMiner;
@@ -90,16 +90,7 @@ namespace Token{
         std::map<uint256_t, BlockNode*> nodes_; //TODO: possible memory leak?
 
         static BlockChain* GetInstance();
-        uint256_t GetHeadFromIndex();
-        bool HasHeadInIndex();
-        bool SetHeadInIndex(const uint256_t& hash);
         bool Append(Block* block);
-
-        std::string CreateObjectLocation(const uint256_t& hash, Block* block) const{
-            std::stringstream filename;
-            filename << GetRoot() << "/blk" << block->GetHeight() << ".dat";
-            return filename.str();
-        }
 
         static BlockNode* GetHeadNode();
         static BlockNode* GetGenesisNode();

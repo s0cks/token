@@ -45,6 +45,12 @@ namespace Token{
         return instance;
     }
 
+    Block* Block::NewInstance(std::fstream& fd){
+        RawType raw;
+        if(!raw.ParseFromIstream(&fd)) return nullptr;
+        return NewInstance(raw);
+    }
+
     std::string Block::ToString() const{
         std::stringstream stream;
         stream << "Block(#" << GetHeight() << "/" << GetHash() << ")";

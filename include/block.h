@@ -158,6 +158,12 @@ namespace Token{
         static Block* NewInstance(uint32_t height, const uint256_t& phash, std::vector<Transaction*>& transactions, uint32_t timestamp=GetCurrentTime());
         static Block* NewInstance(const BlockHeader& parent, std::vector<Transaction*>& transactions, uint32_t timestamp=GetCurrentTime());
         static Block* NewInstance(const RawType& raw);
+        static Block* NewInstance(std::fstream& fd);
+
+        static inline Block* NewInstance(const std::string& filename){
+            std::fstream fd(filename, std::ios::in|std::ios::binary);
+            return NewInstance(fd);
+        }
     };
 
     class BlockVisitor{
