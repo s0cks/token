@@ -5,7 +5,7 @@
 #include "node.pb.h"
 
 #include "common.h"
-#include "paxos.h"
+#include "proposal.h"
 #include "info.h"
 #include "token.h"
 #include "block_chain.h"

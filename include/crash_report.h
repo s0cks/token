@@ -6,62 +6,21 @@
 
 namespace Token{
     class CrashReport{
-    public:
-        enum{
-            kIncludeNone,
-            kIncludeStacktrace = 1 << 1,
-            kIncludeMemory = 1 << 2,
-            kIncludeBlockChain = 1 << 3,
-            kIncludeTransactionPool = 1 << 4,
-            kIncludeBlockPool = 1 << 5,
-            kIncludeUnclaimedTransactionPool = 1 << 6,
-            kIncludeAll=kIncludeStacktrace|kIncludeMemory|kIncludeBlockChain|kIncludeTransactionPool|kIncludeBlockPool|kIncludeUnclaimedTransactionPool
-        };
     private:
         std::fstream file_;
         std::string message_;
-        long flags_;
 
         inline std::fstream&
         GetStream(){
             return file_;
         }
 
-        long GetFlags() const{
-            return flags_;
-        }
-
-        CrashReport(const std::string& filename, const std::string& msg, long flags):
+        CrashReport(const std::string& filename, const std::string& msg):
             file_(filename, std::ios::out),
-            message_(msg),
-            flags_(flags){}
+            message_(msg){}
     public:
         std::string GetMessage() const{
             return message_;
-        }
-
-        bool ShouldIncludeStacktrace() const{
-            return (GetFlags() & kIncludeStacktrace) == kIncludeStacktrace;
-        }
-
-        bool ShouldIncludeMemory() const{
-            return (GetFlags() & kIncludeMemory) == kIncludeMemory;
-        }
-
-        bool ShouldIncludeBlockChain() const{
-            return (GetFlags() & kIncludeBlockChain) == kIncludeBlockChain;
-        }
-
-        bool ShouldIncludeTransactionPool() const{
-            return (GetFlags() & kIncludeTransactionPool) == kIncludeTransactionPool;
-        }
-
-        bool ShouldIncludeBlockPool() const{
-            return (GetFlags() & kIncludeBlockPool) == kIncludeBlockPool;
-        }
-
-        bool ShouldIncludeUnclaimedTransactionPool() const{
-            return (GetFlags() & kIncludeUnclaimedTransactionPool) == kIncludeUnclaimedTransactionPool;
         }
 
         inline bool
@@ -97,12 +56,12 @@ namespace Token{
             return stream;
         }
 
-        static bool Generate(const std::string& msg, long flags=kIncludeAll);
-        static int GenerateAndExit(const std::string& msg, long flags=kIncludeAll);
+        static bool Generate(const std::string& msg);
+        static int GenerateAndExit(const std::string& msg);
 
         static inline int
-        GenerateAndExit(const std::stringstream& ss, long flags=kIncludeAll){
-            return GenerateAndExit(ss.str(), flags);
+        GenerateAndExit(const std::stringstream& ss){
+            return GenerateAndExit(ss.str());
         }
     };
 }

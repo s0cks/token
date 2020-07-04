@@ -254,9 +254,9 @@ namespace Token{
         return filename.str();
     }
 
-    bool CrashReport::Generate(const std::string &msg, long flags){
+    bool CrashReport::Generate(const std::string &msg){
         std::string filename = GenerateCrashReportFilename();
-        CrashReport report(filename, msg, flags);
+        CrashReport report(filename, msg);
 
         SystemInformationSection sys_info(&report);
         if(!sys_info.WriteSection()){
@@ -264,28 +264,28 @@ namespace Token{
             return false;
         }
 
+        StackTraceSection stack_info(&report);
+        if(!stack_info.WriteSection()){ //TODO: make stateful
+            fprintf(stderr, "couldn't write stack trace to crash report: %s\n", filename.c_str());
+            return false;
+        }
+
         MemoryInformationSection mem_info(&report);
-        if(report.ShouldIncludeMemory() && !mem_info.WriteSection()){
+        if(!mem_info.WriteSection()){ //TODO: make stateful
             fprintf(stderr, "couldn't write memory information to crash report: %s\n", filename.c_str());
             return false;
         }
 
         BlockChainSection chain_info(&report);
-        if(report.ShouldIncludeBlockChain() && !chain_info.WriteSection()){
+        if(!chain_info.WriteSection()){ //TODO: make stateful
             fprintf(stderr, "couldn't write block chain information to crash report: %s\n", filename.c_str());
-            return false;
-        }
-
-        StackTraceSection stack_info(&report);
-        if(report.ShouldIncludeStacktrace() && !stack_info.WriteSection()){
-            fprintf(stderr, "couldn't write stack trace to crash report: %s\n", filename.c_str());
             return false;
         }
         return true;
     }
 
-    int CrashReport::GenerateAndExit(const std::string &msg, long flags){
-        if(!Generate(msg, flags)) fprintf(stderr, "couldn't generate crash report!\n");
+    int CrashReport::GenerateAndExit(const std::string &msg){
+        if(!Generate(msg)) fprintf(stderr, "couldn't generate crash report!\n");
         exit(EXIT_FAILURE);
     }
 }

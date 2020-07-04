@@ -109,7 +109,7 @@ namespace Token{
             if(!(block = GetBlockData(hash))){
                 std::stringstream ss;
                 ss << "Couldn't load block: " << hash;
-                CrashReport::GenerateAndExit(ss.str(), CrashReport::kIncludeMemory|CrashReport::kIncludeStacktrace);
+                CrashReport::GenerateAndExit(ss.str());
             }
 
             Allocator::AddRoot(block);

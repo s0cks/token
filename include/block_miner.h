@@ -4,7 +4,7 @@
 #include <pthread.h>
 #include <uv.h>
 #include "common.h"
-#include "paxos.h"
+#include "proposal.h"
 
 namespace Token{
     //TODO:

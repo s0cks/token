@@ -9,7 +9,7 @@
 #include "block_validator.h"
 #include "block_handler.h"
 
-#include "paxos.h"
+#include "proposal.h"
 
 namespace Token{
     static pthread_t thread;

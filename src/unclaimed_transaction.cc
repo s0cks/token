@@ -94,12 +94,6 @@ namespace Token{
 #endif//TOKEN_ENABLE_DEBUG
     }
 
-    //TODO:
-    // - convert UnclaimedTransactionPool to non-singleton class
-    // - use recursive_mutex for synchronization
-    // - refactor logging
-    // - implement safe-crashing
-
     bool UnclaimedTransactionPool::HasUnclaimedTransaction(const uint256_t& hash){
         leveldb::ReadOptions options;
         std::string key = HexString(hash);

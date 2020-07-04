@@ -1,5 +1,5 @@
-#ifndef TOKEN_PAXOS_H
-#define TOKEN_PAXOS_H
+#ifndef TOKEN_PROPOSAL_H
+#define TOKEN_PROPOSAL_H
 
 #include "common.h"
 #include "block_chain.h"
@@ -109,4 +109,4 @@ namespace Token{
     };
 }
 
-#endif //TOKEN_PAXOS_H
+#endif //TOKEN_PROPOSAL_H
