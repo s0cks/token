@@ -40,6 +40,9 @@ namespace Token{
             return stream;
         }
     private:
+        static void SavePeers();
+        static void LoadPeers();
+
         static void RegisterPeer(const std::string& node_id, PeerSession* peer);
         static void UnregisterPeer(const std::string& node_id);
         static bool HasPeer(const std::string& node_id);
@@ -47,8 +50,6 @@ namespace Token{
         static void WaitForState(State state);
         static void SetState(State state);
         static State GetState();
-
-
 
         static uv_tcp_t* GetHandle();
         static void* NodeThread(void* ptr);
@@ -92,7 +93,6 @@ namespace Token{
         ConnectTo(const std::string& address, uint32_t port){
             return ConnectTo(NodeAddress(address, port));
         }
-
 
         static uint32_t GetNumberOfPeers();
         static std::string GetNodeID();

@@ -16,8 +16,14 @@ namespace Token{
 })
 
     void* PeerSession::PeerSessionThread(void* data){
+        if(!Node::IsRunning() && Node::IsStarting()) Node::WaitForState(Node::kRunning);
+
+
         PeerSession* session = (PeerSession*)data;
         NodeAddress address = session->node_addr_;
+#ifdef TOKEN_ENABLE_DEBUG
+        LOG(INFO) << "connecting to peer: " << address;
+#endif//TOKEN_ENABLE_DEBUG
 
         uv_loop_t* loop = uv_loop_new();
         uv_tcp_init(loop, &session->socket_);
@@ -40,6 +46,8 @@ namespace Token{
         PeerSession* session = (PeerSession*)conn->data;
         if(status != 0){
             LOG(ERROR) << "error connecting: " << uv_strerror(status);
+            uv_read_stop(session->GetStream());
+            uv_stop(session->GetLoop());
             return;
         }
 

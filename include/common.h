@@ -105,6 +105,14 @@ namespace Token{
     CreateDirectory(const std::string& path){
         return (mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) != -1;
     }
+
+    template<class container>
+    static inline void
+    SplitString(const std::string& str, container& cont, char delimiter=' '){
+        std::stringstream ss(str);
+        std::string token;
+        while(std::getline(ss, token, delimiter)) cont.push_back(token);
+    }
 }
 
 // BlockChain Flags

@@ -7,6 +7,7 @@
 #include "crash_report.h"
 #include "block_chain.h"
 #include "block_chain_index.h"
+#include "configuration.h"
 #include "block_miner.h"
 #include "object.h"
 
@@ -62,6 +63,7 @@ namespace Token{
             return CrashReport::GenerateAndExit("Couldn't initialize the Block Pool");
         }
 
+        BlockChainConfiguration::Initialize();
         UnclaimedTransactionPool::Initialize();
         BlockChainIndex::Initialize();
 

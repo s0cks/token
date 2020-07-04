@@ -1,19 +1,16 @@
 #include <algorithm>
 #include <random>
+
 #include "node/node.h"
 #include "node/message.h"
 #include "node/task.h"
 #include "block_miner.h"
+#include "configuration.h"
 
 namespace Token{
 #define SCHEDULE(Loop, Name, ...)({ \
     uv_work_t* work = (uv_work_t*)malloc(sizeof(uv_work_t));\
     work->data = new Name##Task(__VA_ARGS__); \
-    uv_queue_work((Loop), work, Handle##Name##Task, After##Name##Task); \
-})
-#define RESCHEDULE(Loop, Name, TaskInstance)({\
-    uv_work_t* work = (uv_work_t*)malloc(sizeof(uv_work_t)); \
-    work->data = (TaskInstance); \
     uv_queue_work((Loop), work, Handle##Name##Task, After##Name##Task); \
 })
 
@@ -26,6 +23,37 @@ namespace Token{
     static pthread_mutex_t state_mutex_ = PTHREAD_MUTEX_INITIALIZER;
     static pthread_cond_t state_cond_ = PTHREAD_COND_INITIALIZER;
 
+    void Node::LoadPeers(){
+#ifdef TOKEN_ENABLE_DEBUG
+        LOG(INFO) << "loading peers...";
+#endif//TOKEN_ENABLE_DEBUG
+
+        libconfig::Setting& peers = BlockChainConfiguration::GetProperty("Peers", libconfig::Setting::TypeArray);
+        auto iter = peers.begin();
+        while(iter != peers.end()){
+            NodeAddress address((*iter));
+
+#ifdef TOKEN_ENABLE_DEBUG
+            LOG(INFO) << "loaded peer: " << address;
+#endif//TOKEN_ENABLE_DEBUG
+
+            if(!ConnectTo(address)) LOG(WARNING) << "couldn't connect to peer: " << address;
+        }
+    }
+
+    void Node::SavePeers(){
+        libconfig::Setting& root = BlockChainConfiguration::GetRoot();
+        if(root.exists("Peers")) root.remove("Peers");
+
+        libconfig::Setting& peers = root.add("Peers", libconfig::Setting::TypeArray);
+        for(auto& it : peers_){
+            NodeAddress address = it.second->GetAddress();
+            peers.add(libconfig::Setting::TypeString) = address.ToString();
+        }
+
+        BlockChainConfiguration::SaveConfiguration();
+    }
+
     uv_tcp_t* Node::GetHandle(){
         return &handle_;
     }
@@ -36,6 +64,7 @@ namespace Token{
 
     bool Node::Start(){
         if(!IsStopped()) return false;
+        LoadPeers();
         return pthread_create(&thread_, NULL, &NodeThread, NULL) == 0;
     }
 
@@ -390,6 +419,7 @@ namespace Token{
     void Node::RegisterPeer(const std::string& node_id, PeerSession* peer){
         pthread_rwlock_trywrlock(&rwlock_);
         peers_.insert({ node_id, peer });
+        SavePeers();
         pthread_rwlock_unlock(&rwlock_);
     }
 
