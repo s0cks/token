@@ -45,41 +45,54 @@ namespace Token{
 
         static UnclaimedTransaction* NewInstance(const uint256_t& hash, uint32_t index, const std::string& user);
         static UnclaimedTransaction* NewInstance(const RawType& raw);
+        static UnclaimedTransaction* NewInstance(std::fstream& fd);
+
+        static UnclaimedTransaction* NewInstance(const std::string& filename){
+            std::fstream fd(filename, std::ios::in|std::ios::binary);
+            return NewInstance(fd);
+        }
     };
 
     class UnclaimedTransactionPoolVisitor;
-    class UnclaimedTransactionPool : public IndexManagedPool<UnclaimedTransaction, UnclaimedTransaction::RawType>{
-    private:
-        static UnclaimedTransactionPool* GetInstance();
-
-        std::string CreateObjectLocation(const uint256_t& hash, UnclaimedTransaction* value) const{
-            if(ContainsObject(hash)){
-                return GetObjectLocation(hash);
-            }
-
-            std::string hashString = HexString(hash);
-            std::string front = hashString.substr(0, 8);
-            std::string tail = hashString.substr(hashString.length() - 8, hashString.length());
-            std::string filename = GetRoot() + "/" + front + ".dat";
-            if(FileExists(filename)){
-                filename = GetRoot() + "/" + tail + ".dat";
-            }
-            return filename;
-        }
-
-        UnclaimedTransactionPool(): IndexManagedPool(FLAGS_path + "/utxos"){}
+    class UnclaimedTransactionPool{
     public:
-        ~UnclaimedTransactionPool(){}
+        enum State{
+            kUninitialized,
+            kInitializing,
+            kInitialized
+        };
+    private:
+        UnclaimedTransactionPool() = delete;
 
-        static bool Initialize();
-        static bool PutUnclaimedTransaction(UnclaimedTransaction* utxo);
+        static void SetState(State state);
+    public:
+        ~UnclaimedTransactionPool() = delete;
+
+        static State GetState();
+        static void Initialize();
+        static void RemoveUnclaimedTransaction(const uint256_t& hash);
+        static void PutUnclaimedTransaction(UnclaimedTransaction* utxo);
         static bool HasUnclaimedTransaction(const uint256_t& hash);
-        static bool RemoveUnclaimedTransaction(const uint256_t& hash);
         static bool Accept(UnclaimedTransactionPoolVisitor* vis);
         static bool GetUnclaimedTransactions(std::vector<uint256_t>& utxos);
         static bool GetUnclaimedTransactions(const std::string& user, std::vector<uint256_t>& utxos);
         static UnclaimedTransaction* GetUnclaimedTransaction(const uint256_t& tx_hash, uint32_t tx_index);
         static UnclaimedTransaction* GetUnclaimedTransaction(const uint256_t& hash);
+
+        static inline bool
+        IsUninitialized(){
+            return GetState() == kUninitialized;
+        }
+
+        static inline bool
+        IsInitializing(){
+            return GetState() == kInitializing;
+        }
+
+        static inline bool
+        IsInitialized(){
+            return GetState() == kInitialized;
+        }
     };
 
     class UnclaimedTransactionPoolVisitor{

@@ -62,10 +62,7 @@ namespace Token{
             return CrashReport::GenerateAndExit("Couldn't initialize the Block Pool");
         }
 
-        if(!UnclaimedTransactionPool::Initialize()){
-            return CrashReport::GenerateAndExit("Couldn't initialize the Unclaimed Transaction Pool");
-        }
-
+        UnclaimedTransactionPool::Initialize();
         BlockChainIndex::Initialize();
 
         BlockChain* chain = GetInstance();
@@ -86,10 +83,7 @@ namespace Token{
                 for(auto out = it->outputs_begin(); out != it->outputs_end(); out++){
                     UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(it->GetHash(), index++, (*out).GetUser());
                     Allocator::AddRoot(utxo);
-                    if(!UnclaimedTransactionPool::PutUnclaimedTransaction(utxo)){
-                        LOG(WARNING) << "couldn't create new unclaimed transaction: " << utxo->GetHash();
-                        return false;
-                    }
+                    UnclaimedTransactionPool::PutUnclaimedTransaction(utxo);
                     Allocator::RemoveRoot(utxo);
                 }
             }

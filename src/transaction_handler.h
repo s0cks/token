@@ -24,19 +24,13 @@ namespace Token{
 
         bool VisitInput(Input* input){
             UnclaimedTransaction* utxo = input->GetUnclaimedTransaction();
-            if(!UnclaimedTransactionPool::RemoveUnclaimedTransaction(utxo->GetHash())){
-                LOG(WARNING) << "couldn't remove unclaimed transaction from pool: " << utxo->ToString();
-                return false;
-            }
+            UnclaimedTransactionPool::RemoveUnclaimedTransaction(utxo->GetHash());
             return true;
         }
 
         bool VisitOutput(Output* output){
             UnclaimedTransaction* utxo = CreateUnclaimedTransaction(output->GetUser());
-            if(!UnclaimedTransactionPool::PutUnclaimedTransaction(utxo)){
-                LOG(WARNING) << "couldn't add unclaimed transaction to pool: " << utxo->ToString();
-                return false;
-            }
+            UnclaimedTransactionPool::PutUnclaimedTransaction(utxo);
             return true;
         }
 
