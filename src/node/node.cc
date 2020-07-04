@@ -319,10 +319,7 @@ namespace Token{
             goto exit;
         }
 
-        if(!BlockPool::RemoveBlock(hash)){
-            LOG(WARNING) << "couldn't remove block from pool: " << hash;
-            goto exit;
-        }
+        BlockPool::RemoveBlock(hash);
 
         session->Send(AcceptedMessage::NewInstance(GetNodeID(), Proposal(msg->GetNodeID(), height, hash)));
     exit:
@@ -336,11 +333,7 @@ namespace Token{
         Block* block = msg->GetBlock();
         uint256_t hash = block->GetHash();
 
-        if(!BlockPool::PutBlock(block)){
-            LOG(WARNING) << "couldn't add block to pool: " << hash;
-            return;
-        }
-
+        BlockPool::PutBlock(block);
         session->OnHash(hash);
     }
 

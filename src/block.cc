@@ -141,65 +141,167 @@ namespace Token{
 //######################################################################################################################
 //                                          Block Pool
 //######################################################################################################################
+    static std::recursive_mutex mutex_;
+    static leveldb::DB* index_ = nullptr;
+    static BlockPool::State state_ = BlockPool::kUninitialized;
 
-#define READ_LOCK pthread_rwlock_tryrdlock(&pool->rwlock_)
-#define WRITE_LOCK pthread_rwlock_trywrlock(&pool->rwlock_)
-#define UNLOCK pthread_rwlock_unlock(&pool->rwlock_)
-
-    BlockPool* BlockPool::GetInstance(){
-        static BlockPool instance;
-        return &instance;
+    static inline std::string
+    GetDataDirectory(){
+        return FLAGS_path + "/blocks";
     }
 
-    bool BlockPool::Initialize(){
-        BlockPool* pool = GetInstance();
-        if(!FileExists(pool->GetRoot())){
-            if(!CreateDirectory(pool->GetRoot())) return false;
+    static inline leveldb::DB*
+    GetIndex(){
+        return index_;
+    }
+
+    static inline std::string
+    GetNewBlockFilename(const uint256_t& hash){
+        std::string hashString = HexString(hash);
+        std::string front = hashString.substr(0, 8);
+        std::string tail = hashString.substr(hashString.length() - 8, hashString.length());
+        std::string filename = GetDataDirectory() + "/" + front + ".dat";
+        if(FileExists(filename)){
+            filename = GetDataDirectory() + "/" + tail + ".dat";
         }
-        return pool->InitializeIndex();
+        return filename;
+    }
+
+    static inline std::string
+    GetBlockFilename(const uint256_t& hash){
+        leveldb::ReadOptions options;
+        std::string key = HexString(hash);
+        std::string filename;
+        if(!GetIndex()->Get(options, key, &filename).ok()) return GetNewBlockFilename(hash);
+        return filename;
+    }
+
+#define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_);
+
+    void BlockPool::SetState(BlockPool::State state){
+        LOCK_GUARD;
+        state_ = state;
+    }
+
+    BlockPool::State BlockPool::GetState(){
+        LOCK_GUARD;
+        return state_;
+    }
+
+    void BlockPool::Initialize(){
+        if(!IsUninitialized()){
+            std::stringstream ss;
+            ss << "Cannot reinitialize the block pool";
+            CrashReport::GenerateAndExit(ss);
+        }
+
+        SetState(State::kInitializing);
+        std::string filename = GetDataDirectory();
+        if(!FileExists(filename)){
+            if(!CreateDirectory(filename)){
+                std::stringstream ss;
+                ss << "cannot create BlockPool data directory: " << filename;
+                CrashReport::GenerateAndExit(ss);
+            }
+        }
+
+        leveldb::Options options;
+        options.create_if_missing = true;
+        if(!leveldb::DB::Open(options, (filename + "/index"), &index_).ok()){
+            std::stringstream ss;
+            ss << "Cannot create block pool index: " << (filename + "/index");
+            CrashReport::GenerateAndExit(ss);
+        }
+
+        SetState(State::kInitialized);
+#ifdef TOKEN_ENABLE_DEBUG
+        LOG(INFO) << "initialized the block pool";
+#endif//TOKEN_ENABLE_DEBUG
+    }
+
+    void BlockPool::RemoveBlock(const uint256_t& hash){
+        if(!HasBlock(hash)) return;
+
+        LOCK_GUARD;
+        std::string filename = GetBlockFilename(hash);
+        if(!DeleteFile(filename)){
+            std::stringstream ss;
+            ss << "Couldn't remove block " << hash << " data file: " << filename;
+            CrashReport::GenerateAndExit(ss);
+        }
+
+        leveldb::WriteOptions options;
+        if(!GetIndex()->Delete(options, HexString(hash)).ok()){
+            std::stringstream ss;
+            ss << "Couldn't remove block " << hash << " from index";
+            CrashReport::GenerateAndExit(ss);
+        }
+
+#ifdef TOKEN_ENABLE_DEBUG
+        LOG(INFO) << "removed block " << hash << " from block pool";
+#endif//TOKEN_ENABLE_DEBUG
+    }
+
+    void BlockPool::PutBlock(Block* block){
+        uint256_t hash = block->GetHash();
+        if(HasBlock(hash)){
+            std::stringstream ss;
+            ss << "Couldn't add duplicate block " << hash << " to pool";
+            CrashReport::GenerateAndExit(ss);
+        }
+
+        std::string filename = GetNewBlockFilename(hash);
+        std::fstream fd(filename, std::ios::out|std::ios::binary);
+        if(!block->WriteToFile(fd)){
+            std::stringstream ss;
+            ss << "Couldnt't write block " << hash << " to file: " << filename;
+            CrashReport::GenerateAndExit(ss);
+        }
+
+        LOCK_GUARD;
+        leveldb::WriteOptions options;
+        std::string key = HexString(hash);
+        if(!GetIndex()->Put(options, key, filename).ok()){
+            std::stringstream ss;
+            ss << "Couldn't index block: " << hash;
+            CrashReport::GenerateAndExit(ss);
+        }
     }
 
     bool BlockPool::HasBlock(const uint256_t& hash){
-        BlockPool* pool = GetInstance();
-        READ_LOCK;
-        bool found = pool->ContainsObject(hash);
-        UNLOCK;
-        return found;
+        leveldb::ReadOptions options;
+        std::string key = HexString(hash);
+        std::string filename;
+        LOCK_GUARD;
+        return GetIndex()->Get(options, key, &filename).ok();
+    }
+
+    bool BlockPool::Accept(BlockPoolVisitor* vis){
+        CrashReport::GenerateAndExit("Need to implement");
+    }
+
+    bool BlockPool::GetBlocks(std::vector<uint256_t>& blocks){
+        LOCK_GUARD;
+        DIR* dir;
+        struct dirent* ent;
+        if((dir = opendir(GetDataDirectory().c_str())) != NULL){
+            while((ent = readdir(dir)) != NULL){
+                std::string name(ent->d_name);
+                std::string filename = GetDataDirectory() + "/" + name;
+                if(!EndsWith(filename, ".dat")) continue;
+                Block* block = Block::NewInstance(filename);
+                blocks.push_back(block->GetHash());
+            }
+            closedir(dir);
+            return true;
+        }
+        return false;
     }
 
     Block* BlockPool::GetBlock(const uint256_t& hash){
-        BlockPool* pool = GetInstance();
-        READ_LOCK;
-        Block* block = pool->LoadObject(hash);
-        UNLOCK;
-        return block;
-    }
-
-    bool BlockPool::RemoveBlock(const uint256_t& hash){
-        BlockPool* pool = GetInstance();
-        WRITE_LOCK;
-        bool removed = pool->DeleteObject(hash);
-        UNLOCK;
-        return removed;
-    }
-
-    bool BlockPool::PutBlock(Block* block){
-        BlockPool* pool = GetInstance();
-        WRITE_LOCK;
-        uint256_t hash = block->GetHash();
-        bool written = pool->SaveObject(hash, block);
-        UNLOCK;
-        return written;
-    }
-
-    bool BlockPool::AddBlock(Block* block){
-        //TODO: broadcast?
-        BlockPool* pool = GetInstance();
-        WRITE_LOCK;
-        uint256_t hash = block->GetHash();
-        bool written = pool->SaveObject(hash, block);
-        Node::BroadcastInventory(block);
-        UNLOCK;
-        return written;
+        if(!HasBlock(hash)) return nullptr;
+        LOCK_GUARD;
+        std::string filename = GetBlockFilename(hash);
+        return Block::NewInstance(filename);
     }
 }

@@ -59,10 +59,7 @@ namespace Token{
             return CrashReport::GenerateAndExit("Couldn't initialize the Transaction Pool");
         }
 
-        if(!BlockPool::Initialize()){
-            return CrashReport::GenerateAndExit("Couldn't initialize the Block Pool");
-        }
-
+        BlockPool::Initialize();
         BlockChainConfiguration::Initialize();
         UnclaimedTransactionPool::Initialize();
         BlockChainIndex::Initialize();

@@ -99,7 +99,7 @@ namespace Token{
         std::string key = HexString(hash);
         std::string filename;
         LOCK_GUARD;
-        return GetIndex()->Get(options, HexString(hash), &filename).ok();
+        return GetIndex()->Get(options, key, &filename).ok();
     }
 
     static inline std::string

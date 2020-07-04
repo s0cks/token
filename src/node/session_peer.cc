@@ -229,10 +229,7 @@ namespace Token{
         Block* block = msg->GetBlock();
         uint256_t hash = block->GetHash();
 
-        if(!BlockPool::AddBlock(block)){
-            LOG(WARNING) << "couldn't add " << block->GetHeader() << " to block pool!";
-            return;
-        }
+        BlockPool::PutBlock(block);
 
         LOG(INFO) << "downloaded block: " << block->GetHeader();
         session->OnHash(hash);

@@ -176,46 +176,44 @@ namespace Token{
         virtual bool VisitEnd(){ return true; }
     };
 
-    class BlockPool : public IndexManagedPool<Block, Block::RawType>{
-    private:
-        pthread_rwlock_t rwlock_;
-
-        static BlockPool* GetInstance();
-        static bool PutBlock(Block* block);
-
-        std::string CreateObjectLocation(const uint256_t& hash, Block* blk) const{
-            if(ContainsObject(hash)){
-                return GetObjectLocation(hash);
-            }
-
-            std::string hashString = HexString(hash);
-            std::string front = hashString.substr(0, 8);
-            std::string tail = hashString.substr(hashString.length() - 8, hashString.length());
-
-            std::string filename = GetRoot() + "/" + front + ".dat";
-            if(FileExists(filename)){
-                filename = GetRoot() + "/" + tail + ".dat";
-            }
-            return filename;
-        }
-
-        BlockPool():
-                rwlock_(),
-                IndexManagedPool(FLAGS_path + "/blocks"){
-            pthread_rwlock_init(&rwlock_, NULL);
-        }
-
-        friend class Node;
-        friend class PeerSession;
+    class BlockPoolVisitor;
+    class BlockPool{
     public:
-        ~BlockPool(){}
+        enum State{
+            kUninitialized,
+            kInitializing,
+            kInitialized,
+        };
+    private:
+        BlockPool() = delete;
 
-        static bool Initialize();
-        static bool AddBlock(Block* block);
+        static void SetState(State state);
+    public:
+        ~BlockPool() = delete;
+
+        static State GetState();
+        static void Initialize();
+        static void RemoveBlock(const uint256_t& hash);
+        static void PutBlock(Block* block);
         static bool HasBlock(const uint256_t& hash);
-        static bool RemoveBlock(const uint256_t& hash);
-        //static bool GetHeader(const uint256_t& hash, BlockHeader* header);
+        static bool Accept(BlockPoolVisitor* vis);
+        static bool GetBlocks(std::vector<uint256_t>& blocks);
         static Block* GetBlock(const uint256_t& hash);
+
+        static inline bool
+        IsUninitialized(){
+            return GetState() == kUninitialized;
+        }
+
+        static inline bool
+        IsInitializing(){
+            return GetState() == kInitializing;
+        }
+
+        static inline bool
+        IsInitialized(){
+            return GetState() == kInitialized;
+        }
     };
 }
 

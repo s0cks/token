@@ -168,10 +168,7 @@ namespace Token{
 
             Block* block = Block::NewInstance(head, txs);
             Allocator::AddRoot(block);
-            if(!BlockPool::AddBlock(block)){
-                LOG(WARNING) << "couldn't put newly mined block into block pool!";
-                return;
-            }
+            BlockPool::PutBlock(block);
 
             BlockValidator validator(block);
             if(!validator.IsValid()){
@@ -229,10 +226,7 @@ namespace Token{
             LOG(WARNING) << "couldn't process block: " << hash;
             return false;
         }
-        if(!BlockPool::RemoveBlock(hash)){
-            LOG(ERROR) << "couldn't remove new block from pool: " << hash;
-            return false;
-        }
+        BlockPool::RemoveBlock(hash);
         if(!BlockChain::GetInstance()->Append(block)){
             LOG(ERROR) << "couldn't append new block: " << hash;
             return false;
