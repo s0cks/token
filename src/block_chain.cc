@@ -5,11 +5,12 @@
 #include "common.h"
 #include "keychain.h"
 #include "crash_report.h"
-#include "block_chain.h"
-#include "block_chain_index.h"
 #include "configuration.h"
+
+#include "block_chain.h"
 #include "block_miner.h"
-#include "object.h"
+#include "block_node.h"
+#include "block_chain_index.h"
 
 namespace Token{
     static pthread_mutex_t mutex_ = PTHREAD_MUTEX_INITIALIZER;
@@ -120,7 +121,8 @@ namespace Token{
             node = new BlockNode(block);
             chain->blocks_.insert({ node->GetHeight(), node });
             chain->nodes_.insert({ hash, node });
-            parent->AddChild(node);
+            node->SetPrevious(parent);
+            parent->SetNext(node);
             parent = node;
             hash = node->GetPreviousHash();
         } while(!hash.IsNull());
@@ -132,7 +134,7 @@ namespace Token{
         return true;
     }
 
-    BlockChain::BlockNode* BlockChain::GetHeadNode(){
+    BlockNode* BlockChain::GetHeadNode(){
         BlockChain* chain = GetInstance();
         pthread_mutex_trylock(&mutex_);
         BlockNode* node = chain->head_;
@@ -140,7 +142,7 @@ namespace Token{
         return node;
     }
 
-    BlockChain::BlockNode* BlockChain::GetGenesisNode(){
+    BlockNode* BlockChain::GetGenesisNode(){
         BlockChain* chain = GetInstance();
         pthread_mutex_trylock(&mutex_);
         BlockNode* node = chain->genesis_;
@@ -148,7 +150,23 @@ namespace Token{
         return node;
     }
 
-    BlockChain::BlockNode* BlockChain::GetNode(const uint256_t& hash){
+    BlockHeader BlockChain::GetHead(){
+        return GetHeadNode()->GetBlock();
+    }
+
+    BlockHeader BlockChain::GetGenesis(){
+        return GetGenesisNode()->GetBlock();
+    }
+
+    BlockHeader BlockChain::GetBlock(uint32_t height){
+        return GetNode(height)->GetBlock();
+    }
+
+    BlockHeader BlockChain::GetBlock(const uint256_t& hash){
+        return GetNode(hash)->GetBlock();
+    }
+
+    BlockNode* BlockChain::GetNode(const uint256_t& hash){
         BlockChain* chain = GetInstance();
 
         pthread_mutex_trylock(&mutex_);
@@ -162,7 +180,7 @@ namespace Token{
         return pos->second;
     }
 
-    BlockChain::BlockNode* BlockChain::GetNode(uint32_t height){
+    BlockNode* BlockChain::GetNode(uint32_t height){
         if(height < 0 || height > GetHeight()) return nullptr;
 
         BlockChain* chain = GetInstance();
@@ -231,7 +249,8 @@ namespace Token{
 
         BlockNode* parent = GetNode(phash);
         BlockNode* node = new BlockNode(block);
-        parent->AddChild(node);
+        node->SetPrevious(parent);
+        parent->SetNext(node);
         if(head.GetHeight() < block->GetHeight()) {
             BlockChainIndex::PutReference("<HEAD>", hash);
             head_ = node;

@@ -4,8 +4,6 @@
 #include <leveldb/db.h>
 #include <map>
 
-#include "blockchain.pb.h"
-
 #include "common.h"
 #include "merkle.h"
 #include "pool.h"
@@ -14,75 +12,12 @@
 #include "unclaimed_transaction.h"
 
 namespace Token{
+    class BlockNode;
     class BlockChainVisitor;
     class BlockChain{
     private:
         friend class BlockChainServer;
         friend class BlockMiner;
-
-        class BlockNode{
-        private:
-            BlockNode* parent_;
-            BlockHeader header_;
-            std::vector<BlockNode*> children_;
-        public:
-            BlockNode(Block* block):
-                parent_(nullptr),
-                children_(),
-                header_(block){}
-            ~BlockNode(){
-                if(!IsLeaf()){
-                    for(auto& it : children_) delete it;
-                }
-            }
-
-            BlockHeader GetHeader() const{
-                return header_;
-            }
-
-            BlockNode* GetParent() const{
-                return parent_;
-            }
-
-            BlockNode* GetChild(uint64_t idx) const{
-                if(idx > GetNumberOfChildren()) return nullptr;
-                return children_[idx];
-            }
-
-            uint32_t GetNumberOfChildren() const{
-                return children_.size();
-            }
-
-            uint32_t GetTimestamp() const{
-                return header_.GetTimestamp();
-            }
-
-            uint32_t GetHeight() const{
-                return header_.GetHeight();
-            }
-
-            uint256_t GetPreviousHash() const{
-                return header_.GetPreviousHash();
-            }
-
-            uint256_t GetHash() const{
-                return header_.GetHash();
-            }
-
-            bool IsLeaf() const{
-                return GetNumberOfChildren() == 0;
-            }
-
-            void AddChild(BlockNode* child){
-                if(!child) return;
-                children_.push_back(child);
-                child->SetParent(this);
-            }
-
-            void SetParent(BlockNode* node){
-                parent_ = node;
-            }
-        };
 
         BlockNode* genesis_;
         BlockNode* head_;
@@ -105,21 +40,10 @@ namespace Token{
             return GetHead().GetHeight();
         }
 
-        static BlockHeader GetHead(){
-            return GetHeadNode()->GetHeader();
-        }
-
-        static BlockHeader GetGenesis(){
-            return GetGenesisNode()->GetHeader();
-        }
-
-        static BlockHeader GetBlock(const uint256_t& hash){
-            return GetNode(hash)->GetHeader();
-        }
-
-        static BlockHeader GetBlock(uint32_t height){
-            return GetNode(height)->GetHeader();
-        }
+        static BlockHeader GetHead();
+        static BlockHeader GetGenesis();
+        static BlockHeader GetBlock(const uint256_t& hash);
+        static BlockHeader GetBlock(uint32_t height);
 
         static bool ContainsBlock(const uint256_t& hash){
             return GetInstance()->GetNode(hash) != nullptr;
