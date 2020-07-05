@@ -1,11 +1,13 @@
 #include <glog/logging.h>
 #include <time.h>
 #include <execinfo.h>
+
 #include "token.h"
 #include "crash_report.h"
 #include "allocator.h"
 #include "alloc/raw_object.h"
 #include "block_chain.h"
+#include "node/node.h"
 
 namespace Token{
     class CrashReportSection{
@@ -71,7 +73,7 @@ namespace Token{
 
             std::stringstream info;
             info << "#";
-            for(size_t idx = 0; idx < middle; idx++) info << " ";
+            for(size_t idx = 0; idx < middle - 1; idx++) info << " ";
             info << header;
             for(size_t idx = 0; idx < middle; idx++) info << " ";
             info << "#";
@@ -91,14 +93,32 @@ namespace Token{
     };
 
     class SystemInformationSection : public CrashReportSection{
+    private:
+        static inline std::string
+        GetDebugStatus(){
+#ifdef TOKEN_DEBUG
+            return "Enabled";
+#else
+            return "Disabled";
+#endif//TOKEN_DEBUG
+        }
+
+        static inline std::string
+        GetPeerCount(){
+            std::stringstream ss;
+            ss << Node::GetNumberOfPeers();
+            return ss.str();
+        }
     public:
         SystemInformationSection(CrashReport* report): CrashReportSection(report){}
         ~SystemInformationSection(){}
 
         bool WriteSection(){
             WriteHeader("Token v" + Token::GetVersion() + " Crash Report");
+            WriteLine("Debug Mode: " + GetDebugStatus());
             WriteLine("Version: " + Token::GetVersion());
             WriteLine("Current Time: " + GetCurrentTimeFormatted());
+            WriteLine("Number of Peers: " + GetPeerCount());
             WriteLine("Cause: " + GetCrashReport()->GetMessage());
             WriteNewline();
             return true;
@@ -162,13 +182,6 @@ namespace Token{
             WriteLine("Semispace Size (Bytes): " + GetSemispaceSize());
 #endif//TOKEN_USE_CHENEYGC
             DeIndent();
-            WriteLine("Roots:");
-            Indent();
-            for(auto& it : Allocator::allocated_){
-                std::stringstream ss;
-                ss << "- " << (*it.second);
-                WriteLine(ss);
-            }
             WriteNewline();
             return true;
         }
@@ -193,8 +206,9 @@ namespace Token{
             char** bt = backtrace_symbols(bt_ptr, kBacktraceSize);
 
             for(size_t idx = kBacktraceOffset; idx < bt_size; idx++){
-                char* bt_line = bt[idx];
-                WriteLine(std::string(bt_line));
+                std::stringstream ss;
+                ss << (idx + 1 - kBacktraceOffset) << ": " << bt[idx];
+                WriteLine(ss);
             }
 
             WriteNewline();
@@ -217,23 +231,32 @@ namespace Token{
         bool WriteSection(){
             if(BlockChain::IsInitialized()){
                 WriteLine("Block Chain:");
-                BlockHeader head = BlockChain::GetHead();
-                WriteLine("Head:");
                 Indent();
                 {
-                    std::stringstream height;
-                    height << "Height: " << head.GetHeight();
-                    WriteLine(height); //TODO: fixme, weird design
-                    WriteLine("Hash: " + HexString(head.GetHash()));
-                    WriteLine("Previous Hash: " + HexString(head.GetPreviousHash()));
-                    WriteLine("Merkle Root: " + HexString(head.GetMerkleRoot()));
-                    WriteLine("Timestamp: " + GetTimestampFormatted(head.GetTimestamp()));
+                    BlockHeader head = BlockChain::GetHead();
+                    WriteLine("Head:");
+                    Indent();
+                    {
+                        std::stringstream height;
+                        height << "Height: " << head.GetHeight();
+                        WriteLine(height); //TODO: fixme, weird design
+                        WriteLine("Hash: " + HexString(head.GetHash()));
+                        WriteLine("Previous Hash: " + HexString(head.GetPreviousHash()));
+                        WriteLine("Merkle Root: " + HexString(head.GetMerkleRoot()));
+                        WriteLine("Timestamp: " + GetTimestampFormatted(head.GetTimestamp()));
+                    }
+                    DeIndent();
+                    WriteNewline();
                 }
                 DeIndent();
-                WriteLine("Blocks:");
+
                 Indent();
-                BlockChain::Accept(this);
-                WriteNewline();
+                {
+                    WriteLine("Blocks:");
+                    Indent();
+                    BlockChain::Accept(this);
+                    WriteNewline();
+                }
             } else{
                 std::stringstream ss;
                 ss << "BlockChain: ";
@@ -298,6 +321,8 @@ namespace Token{
             fprintf(stderr, "couldn't write block chain information to crash report: %s\n", filename.c_str());
             return false;
         }
+
+        LOG(ERROR) << "A crash report has been generated in: " << filename;
         return true;
     }
 

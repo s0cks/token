@@ -148,6 +148,7 @@ namespace Token{
             }
             node = current;
         }
+        SetState(kInitialized);
     }
 
     BlockHeader BlockChain::GetHead(){
@@ -228,11 +229,11 @@ namespace Token{
 
     void BlockChain::Accept(BlockChainVisitor* vis){
         if(!vis->VisitStart()) return;
-        uint256_t hash = GetHead().GetHash();
+        BlockNode* node = GetHeadNode();
         do{
-            BlockHeader block = BlockChain::GetBlock(hash);
-            if(!vis->Visit(block)) return;
-            hash = block.GetPreviousHash();
-        } while(!hash.IsNull());
+            if(!vis->Visit(node->GetBlock())) return;
+            node = node->GetPrevious();
+        }while(node != nullptr);
+        if(!vis->VisitStart()) return;
     }
 }

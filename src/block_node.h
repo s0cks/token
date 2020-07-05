@@ -68,6 +68,10 @@ namespace Token{
             return block_.GetHash();
         }
 
+        bool IsGenesis() const{
+            return block_.GetHeight() == 0;
+        }
+
         std::string ToString() const;
 
         static BlockNode* NewInstance(const BlockHeader& block);
