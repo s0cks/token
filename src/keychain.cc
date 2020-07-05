@@ -1,6 +1,7 @@
 #include <glog/logging.h>
 #include "common.h"
 #include "keychain.h"
+#include "crash_report.h"
 
 namespace Token{
     void Decode(CryptoPP::BufferedTransformation& bt, const std::string& filename){
@@ -31,105 +32,121 @@ namespace Token{
         CryptoPP::ByteQueue bytes;
         key->DEREncodePrivateKey(bytes);
         Encode(bytes, filename);
+
+#ifdef TOKEN_DEBUG
+        LOG(INFO) << "generated private key: " << filename;
+#endif//TOKEN_DEBUG
     }
 
     void EncodePublicKey(CryptoPP::RSA::PublicKey* key, const std::string& filename){
         CryptoPP::ByteQueue bytes;
         key->DEREncodePublicKey(bytes);
         Encode(bytes, filename);
+
+#ifdef TOKEN_DEBUG
+        LOG(INFO) << "generated public key: " << filename;
+#endif//TOKEN_DEBUG
     }
 
 #define PRIVATE_KEYFILE (TOKEN_BLOCKCHAIN_HOME + "/chain")
 #define PUBLIC_KEYFILE (TOKEN_BLOCKCHAIN_HOME + "/chain.pub")
 
-    bool Keychain::Initialize(){
+    void Keychain::Initialize(){
         if(!FileExists(PRIVATE_KEYFILE)){
-            LOG(WARNING) << "cannot find private key, checking for public key";
             if(!FileExists(PUBLIC_KEYFILE)){
-                LOG(WARNING) << "cannot find public key, checking for chain state";
                 if(FileExists((TOKEN_BLOCKCHAIN_HOME + "/state"))){
-                    LOG(WARNING) << "chain state found";
-                    LOG(WARNING) << "please recover your keys for this node";
-                    LOG(WARNING) << "node will need it's original keys - or will need to be reinitialized";
-                    return false;
+                    std::stringstream ss;
+                    ss << "Failed to load block chain keys:" << std::endl;
+                    ss << "  - Private Key: " << PRIVATE_KEYFILE << " - Missing" << std::endl;
+                    ss << "  - Public Key: " << PUBLIC_KEYFILE << " - Missing" << std::endl;
+                    ss << "Please recover the keys before running this node" << std::endl;
+                    ss << "The node will require it's original keys, or it will need to be reinitialized before running";
+                    CrashReport::GenerateAndExit(ss);
                 }
 
-                LOG(INFO) << "no keys or chain state found, generating new keys";
                 try{
                     CryptoPP::AutoSeededRandomPool rng;
 
-                    LOG(INFO) << "generating private key";
+                    // 1. Generate Private Key
                     CryptoPP::RSA::PrivateKey privKey;
                     privKey.GenerateRandomWithKeySize(rng, Keychain::kKeypairSize);
 
-                    LOG(INFO) << "generating public key";
+                    // 2. Generate Public Key
                     CryptoPP::RSA::PublicKey pubKey(privKey);
 
-                    LOG(INFO) << "encoding keys";
+                    // 3. Write Keys to File
                     EncodePrivateKey(&privKey, PRIVATE_KEYFILE);
                     EncodePublicKey(&pubKey, PUBLIC_KEYFILE);
-                    LOG(INFO) << "encoded keys";
-                    return true;
                 } catch(CryptoPP::Exception& ex){
-                    LOG(ERROR) << "error occurred generating keys: " << ex.GetWhat();
-                    return false;
+                    std::stringstream ss;
+                    ss << "An exception occurred when generating the block chain keys: " << std::endl;
+                    ss << ex.what();
+                    CrashReport::GenerateAndExit(ss);
                 }
             }
 
-            LOG(WARNING) << "found a public key but not a private key, key is invalid";
-            return false;
+            std::stringstream ss;
+            ss << "Failed to load block chain keys:" << std::endl;
+            ss << "  - Private Key: " << PRIVATE_KEYFILE << " - Missing";
+            ss << "  - Public Key: " << PUBLIC_KEYFILE << " - Found";
+            CrashReport::GenerateAndExit(ss);
         }
 
-        LOG(INFO) << "keys are found, testing validity";
         CryptoPP::RSA::PrivateKey privateKey;
         CryptoPP::RSA::PublicKey publicKey;
-        if(!LoadKeys(&privateKey, &publicKey)){
-            LOG(WARNING) << "keys were not loaded";
-            return false;
-        }
-        return true;
+        LoadKeys(&privateKey, &publicKey);
     }
 
-    bool Keychain::LoadKeys(CryptoPP::RSA::PrivateKey* privKey, CryptoPP::RSA::PublicKey* pubKey){
+    void Keychain::LoadKeys(CryptoPP::RSA::PrivateKey* privKey, CryptoPP::RSA::PublicKey* pubKey){
         try{
+            CryptoPP::AutoSeededRandomPool rng;
+
+            // 1. Load + Validate Private Key
             std::string privateKeyFilename = (TOKEN_BLOCKCHAIN_HOME + "/chain");
             if(!FileExists(privateKeyFilename)){
-                LOG(ERROR) << "cannot find private key '" << privateKeyFilename << "'";
-                return false;
+                std::stringstream ss;
+                ss << "Failed to load block chain keys:" << std::endl;
+                ss << "  - Private Key: " << PRIVATE_KEYFILE << " - Missing";
+                ss << "  - Public Key: " << PUBLIC_KEYFILE << " - Found";
+                CrashReport::GenerateAndExit(ss);
             }
             DecodePrivateKey(privKey, privateKeyFilename);
-            LOG(INFO) << "done loading private key";
+            if(!privKey->Validate(rng, 3)){
+                std::stringstream ss;
+                ss << "Failed to load block chain keys:" << std::endl;
+                ss << "  - Private Key: " << PRIVATE_KEYFILE << " - Invalid";
+                ss << "  - Public Key: " << PUBLIC_KEYFILE << " - Found";
+                CrashReport::GenerateAndExit(ss);
+            }
 
+            // 2. Load + Validate Public Key
             std::string publicKeyFilename = (TOKEN_BLOCKCHAIN_HOME + "/chain.pub");
             if(!FileExists(publicKeyFilename)){
-                LOG(ERROR) << "cannot find public key '" << publicKeyFilename << "'";
-                return false;
+                std::stringstream ss;
+                ss << "Failed to load block chain keys:" << std::endl;
+                ss << "  - Private Key: " << PRIVATE_KEYFILE << " - Found";
+                ss << "  - Public Key: " << PUBLIC_KEYFILE << " - Missing";
+                CrashReport::GenerateAndExit(ss);
             }
             DecodePublicKey(pubKey, publicKeyFilename);
-            LOG(INFO) << "done loading public key";
-
-            LOG(INFO) << "validating keys";
-            CryptoPP::AutoSeededRandomPool rng;
-            if(!privKey->Validate(rng, 3)){
-                LOG(ERROR) << "private key is not valid";
-                return false;
-            }
-
             if(!pubKey->Validate(rng, 3)){
-                LOG(ERROR) << "public key is not valid";
-                return false;
+                std::stringstream ss;
+                ss << "Failed to load block chain keys:" << std::endl;
+                ss << "  - Private Key: " << PRIVATE_KEYFILE << " - Valid";
+                ss << "  - Public Key: " << PUBLIC_KEYFILE << " - Invalid";
+                CrashReport::GenerateAndExit(ss);
             }
 
-            LOG(INFO) << "checking for consistency";
-            if((privKey->GetModulus() != pubKey->GetModulus()) || (privKey->GetPublicExponent() != pubKey->GetPublicExponent())){
-                LOG(ERROR) << "keys did not pass consistency (round-trip) check";
-                return false;
-            }
+            // 3. Consistency Check
+            if((privKey->GetModulus() != pubKey->GetModulus()) || (privKey->GetPublicExponent() != pubKey->GetPublicExponent())) CrashReport::GenerateAndExit("Keys didn't pass round-trip consistency check");
 
-            LOG(INFO) << "done loading keys";
-            return true;
+#ifdef TOKEN_DEBUG
+            LOG(INFO) << "initialized block chain keychain";
+#endif//TOKEN_DEBUG
         } catch(CryptoPP::Exception& ex){
-            return false;
+            std::stringstream ss;
+            ss << "Failed to load block chain keys: " << ex.what();
+            CrashReport::GenerateAndExit(ss);
         }
     }
 }

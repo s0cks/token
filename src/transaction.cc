@@ -115,10 +115,7 @@ namespace Token{
 
         CryptoPP::RSA::PrivateKey privateKey;
         CryptoPP::RSA::PublicKey publicKey;
-        if(!Keychain::LoadKeys(&privateKey, &publicKey)){
-            LOG(ERROR) << "couldn't load token keychain";
-            return false;
-        }
+        Keychain::LoadKeys(&privateKey, &publicKey);
 
         try{
             LOG(INFO) << "signing transaction: " << HexString(GetHash());

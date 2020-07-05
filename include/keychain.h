@@ -5,14 +5,15 @@
 
 namespace Token{
     class Keychain{
-    private:
-        Keychain(){}
     public:
-        ~Keychain(){}
-
-        static bool Initialize();
-        static bool LoadKeys(CryptoPP::RSA::PrivateKey* privKey, CryptoPP::RSA::PublicKey* pubKey);
         static const size_t kKeypairSize = 4096;
+    private:
+        Keychain() = delete;
+    public:
+        ~Keychain() = delete;
+
+        static void Initialize();
+        static void LoadKeys(CryptoPP::RSA::PrivateKey* privKey, CryptoPP::RSA::PublicKey* pubKey);
     };
 }
 
