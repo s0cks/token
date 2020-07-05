@@ -10,6 +10,7 @@ namespace Token{
     class BlockVisitor;
     class Block;
 
+    //TODO: fix reference ownership of MerkleNode
     class MerkleNode : public Object{
     protected:
         MerkleNode* parent_;
@@ -117,6 +118,7 @@ namespace Token{
         static MerkleNode* Clone(MerkleNode* node);
     };
 
+    //TODO: refactor MerkleProofHash?
     class MerkleProofHash{
     public:
         enum class Direction{
@@ -163,7 +165,9 @@ namespace Token{
             return (*this);
         }
     };
+    //TODO: create MerkleProof class?
 
+    //TODO: fix reference ownership of MerkleTree
     class MerkleTree{
     private:
         MerkleNode* root_;

@@ -9,7 +9,7 @@ namespace Token{
     class Block;
     class BlockHeader{
     public:
-        typedef Token::Proto::BlockChain::BlockHeader RawType;
+        typedef Proto::BlockChain::BlockHeader RawType;
     private:
         uint32_t timestamp_;
         uint32_t height_;
