@@ -69,34 +69,6 @@ namespace Token{
         static Heap* GetEdenHeap();
 #endif
     };
-
-    /*
-     * TODO
-    class ObjectScopeHandle{
-    private:
-        std::vector<uintptr_t> allocated_;
-    public:
-        ObjectScopeHandle():
-            allocated_(){}
-        ~ObjectScopeHandle(){
-            for(auto& it : allocated_){
-                RawObject* obj;
-                if(!(obj = Allocator::GetObject(it))){
-                    std::stringstream ss;
-                    ss << "Couldn't get object from allocator @" << std::hex << it;
-                    CrashReport::GenerateAndExit(ss.str());
-                }
-                Allocator::RemoveRoot(obj->GetObjectPointer());
-            }
-        }
-
-        void* Allocate(uintptr_t size){
-            void* ptr = Allocator::Allocate(size);
-            Allocator::AddRoot(ptr);
-            return ptr;
-        }
-    };
-     */
 }
 
 #endif //TOKEN_ALLOCATOR_H

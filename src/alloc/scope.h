@@ -20,6 +20,13 @@ namespace Token{
             Allocator::AddRoot(obj);
             pointers_.push_back(reinterpret_cast<uintptr_t>(obj));
         }
+
+        template<typename Type>
+        Type* Retain(Type* ptr){
+            Allocator::AddRoot(ptr);
+            pointers_.push_back(reinterpret_cast<uintptr_t>(ptr));
+            return ptr;
+        }
     };
 }
 

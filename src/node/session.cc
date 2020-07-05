@@ -1,4 +1,5 @@
 #include "node/session.h"
+#include "alloc/scope.h"
 
 namespace Token{
     void Session::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
@@ -13,6 +14,9 @@ namespace Token{
     }
 
     void Session::Send(Message* msg){
+        Scope scope;
+        msg = scope.Retain(msg);
+
         uint32_t type = static_cast<uint32_t>(msg->GetMessageType());
         uint64_t size = msg->GetMessageSize();
         uint64_t total_size = Message::kHeaderSize + size;

@@ -2,6 +2,7 @@
 #include <random>
 #include <condition_variable>
 
+#include "alloc/scope.h"
 #include "node/node.h"
 #include "node/message.h"
 #include "node/task.h"
@@ -77,11 +78,15 @@ namespace Token{
         return node_id_;
     }
 
-    bool Node::Start(){
-        if(!IsStopped()) return false;
+    void Node::Start(){
+        if(!IsStopped()) return;
         LoadNodeInformation();
         LoadPeers();
-        return pthread_create(&thread_, NULL, &NodeThread, NULL) == 0;
+        if(pthread_create(&thread_, NULL, &NodeThread, NULL) != 0){
+            std::stringstream ss;
+            ss << "Couldn't start block chain server thread";
+            CrashReport::GenerateAndExit(ss);
+        }
     }
 
     bool Node::Shutdown(){
@@ -122,7 +127,6 @@ namespace Token{
 
         struct sockaddr_in addr;
         uv_ip4_addr("0.0.0.0", FLAGS_port, &addr);
-
         uv_tcp_init(loop, GetHandle());
         uv_tcp_keepalive(GetHandle(), 1, 60);
         int err;
@@ -186,6 +190,7 @@ namespace Token{
         }
 
         uint32_t offset = 0;
+        Scope scope;
         std::vector<Message*> messages;
         do{
             uint32_t mtype = 0;
@@ -196,20 +201,22 @@ namespace Token{
 
             Message* msg = nullptr;
             if(!(msg = Message::Decode(static_cast<Message::MessageType>(mtype), msize, (uint8_t*)&buff->base[offset + Message::kDataOffset]))){
-                LOG(WARNING) << "couldn't decode message of type := " << mtype << " and of size := " << msize << ", at offset := " << offset;
-                continue;
+                std::stringstream ss;
+                ss << "Couldn't decode message";
+                ss << "\t - Type: " << mtype;
+                ss << "\t - Size: " << msize;
+                ss << "\t - Offset: " << offset;
+                CrashReport::GenerateAndExit(ss);
             }
-            Allocator::AddRoot(msg);
 
-            LOG(INFO) << "decoded message: " << msg->ToString();
+            scope.Retain(msg);
             messages.push_back(msg);
-
             offset += (msize + Message::kHeaderSize);
         } while((offset + Message::kHeaderSize) < nread);
 
         for(size_t idx = 0; idx < messages.size(); idx++){
             Message* msg = messages[idx];
-            HandleMessageTask* task = new HandleMessageTask(session, msg);
+            HandleMessageTask* task = new HandleMessageTask(session, msg);//TODO: implement better memory management
             switch(msg->GetMessageType()){
 #define DEFINE_HANDLER_CASE(Name) \
             case Message::k##Name##MessageType: \
@@ -222,7 +229,6 @@ namespace Token{
                     break;
             }
 
-            Allocator::RemoveRoot(msg);
             delete task;
         }
     }
@@ -237,43 +243,53 @@ namespace Token{
             return;
         }
 
-        std::vector<Message*> data;
+        Scope scope;
+        std::vector<Message*> response;
         for(auto& item : items){
             uint256_t hash = item.GetHash();
             if(item.ItemExists()){
                 if(item.IsBlock()){
                     Block* block = nullptr;
-                    if((block = BlockChain::GetBlockData(hash))){
-                        LOG(INFO) << hash << " found in block chain!";
-                        data.push_back(BlockMessage::NewInstance(block));
-                        continue;
+                    if(BlockChain::HasBlock(hash)){
+                        block = BlockChain::GetBlockData(hash);
+                    } else if(BlockPool::HasBlock(hash)){
+                        block = BlockPool::GetBlock(hash);
+                    } else{
+                        //TODO: return 404
+#ifdef TOKEN_DEBUG
+                        LOG(WARNING) << "cannot find block: " << hash;
+#endif//TOKEN_DEBUG
+                        return;
                     }
 
-                    if((block = BlockPool::GetBlock(hash))){
-                        LOG(INFO) << hash << " found in block pool!";
-                        data.push_back(BlockMessage::NewInstance(block));
-                        continue;
-                    }
-
-                    LOG(WARNING) << "couldn't find: " << hash << "!";
-                    return;
+                    Message* data = BlockMessage::NewInstance(block);
+                    scope.Retain(data);
+                    response.push_back(data);
                 } else if(item.IsTransaction()){
-                    Transaction* tx;
-                    if((tx = TransactionPool::GetTransaction(hash))){
-                        LOG(INFO) << hash << " found in transaction pool!";
-                        data.push_back(TransactionMessage::NewInstance(tx));
-                        continue;
+                    Transaction* tx = nullptr;
+                    if(TransactionPool::HasTransaction(hash)){
+                        tx = TransactionPool::GetTransaction(hash);
+                    } else{
+                        //TODO: return 404
+#ifdef TOKEN_DEBUG
+                        LOG(WARNING) << "couldn't find transaction: " << hash;
+#endif//TOKEN_DEBUG
+                        return;
                     }
 
-                    LOG(WARNING) << "couldn't find: " << hash << "!";
-                    return;
+                    Message* data = TransactionMessage::NewInstance(tx);
+                    scope.Retain(data);
+                    response.push_back(data);
                 }
             } else{
-                LOG(WARNING) << "item doesn't exist: " << hash << "!";
-                return;
+                //TODO: return 500
+#ifdef TOKEN_DEBUG
+                LOG(WARNING) << "item is invalid: " << item;
+#endif//TOKEN_DEBUG
             }
         }
-        session->Send(data);
+
+        session->Send(response);
     }
 
     void Node::HandleVersionMessage(HandleMessageTask* task){
@@ -285,16 +301,15 @@ namespace Token{
         session->Send(VersionMessage::NewInstance(GetNodeID()));
     }
 
+    //TODO:
+    // - verify nonce
     void Node::HandleVerackMessage(HandleMessageTask* task){
         VerackMessage* msg = (VerackMessage*)task->GetMessage();
         NodeSession* session = (NodeSession*)task->GetSession();
-
         NodeAddress paddr = msg->GetCallbackAddress();
 
-        //TODO:
-        // - verify nonce
-        LOG(INFO) << "client connected!";
         session->Send(VerackMessage::NewInstance(GetNodeID(), NodeAddress("127.0.0.1", FLAGS_port))); //TODO: obtain address dynamically
+
         session->SetState(NodeSession::kConnected);
         if(!HasPeer(msg->GetID())){
             LOG(WARNING) << "connecting to peer: " << paddr << "....";

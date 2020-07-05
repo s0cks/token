@@ -40,7 +40,6 @@ namespace Token{
             return stream;
         }
     private:
-        static void SaveNodeInformation();
         static void LoadNodeInformation();
         static void SavePeers();
         static void LoadPeers();
@@ -100,7 +99,7 @@ namespace Token{
         static std::string GetNodeID();
         static bool ConnectTo(const NodeAddress& address);
         static bool Broadcast(Message* msg);
-        static bool Start();
+        static void Start();
         static bool WaitForShutdown();
         static bool Shutdown();
 
