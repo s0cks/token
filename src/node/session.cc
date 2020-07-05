@@ -2,7 +2,8 @@
 
 namespace Token{
     void Session::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
-        buff->base = (char*)Allocator::Allocate(kBufferSize);
+        //TODO: buff->base = (char*)Allocator::Allocate(kBufferSize);
+        buff->base = (char*)malloc(kBufferSize);
         buff->len = kBufferSize;
     }
 

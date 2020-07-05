@@ -2,6 +2,7 @@
 #include "node/node.h"
 #include "node/task.h"
 #include "block_miner.h"
+#include "alloc/scope.h"
 
 namespace Token{
 #define SCHEDULE(Loop, Name, ...)({ \
@@ -72,6 +73,8 @@ namespace Token{
             return;
         }
 
+        Scope scope;
+
         uint32_t offset = 0;
         std::vector<Message*> messages;
         do{
@@ -86,6 +89,7 @@ namespace Token{
                 LOG(WARNING) << "couldn't decode message of type := " << mtype << " and of size := " << msize << ", at offset := " << offset;
                 continue;
             }
+            scope.Retain(msg);
 
             LOG(INFO) << "decoded message: " << msg->ToString();
             messages.push_back(msg);
@@ -118,14 +122,20 @@ namespace Token{
         VersionMessage* msg = (VersionMessage*)task->GetMessage();
         PeerSession* session = (PeerSession*)task->GetSession();
 
-        session->Send(VerackMessage::NewInstance(Node::GetNodeID(), NodeAddress("127.0.0.1", FLAGS_port))); //TODO: fixme
+        Scope scope;
+        std::vector<Message*> response;
 
-        uint32_t pheight = msg->GetHeight();
-        BlockHeader head = BlockChain::GetHead();
-        if(head.GetHeight() < pheight){
-            Node::SetState(Node::kSynchronizing);
-            session->Send(GetBlocksMessage::NewInstance());
+        VerackMessage* verack = VerackMessage::NewInstance(Node::GetNodeID(), NodeAddress("127.0.0.1", FLAGS_port)); //TODO: fixme
+        scope.Retain(dynamic_cast<Object*>(verack));
+        response.push_back(dynamic_cast<Message*>(verack));
+
+        if(BlockChain::GetHead().GetHeight() < msg->GetHeight()){
+            GetBlocksMessage* getblocks = GetBlocksMessage::NewInstance();
+            scope.Retain(dynamic_cast<Object*>(getblocks));
+            response.push_back(dynamic_cast<Message*>(getblocks));
         }
+
+        session->Send(response);
     }
 
     void PeerSession::HandleVerackMessage(HandleMessageTask* task){

@@ -88,7 +88,29 @@ namespace Token{
         ~GCObjectPrinter(){}
 
         bool Visit(RawObject* obj){
-            LOG(INFO) << " - " << (*obj);
+            std::stringstream ss;
+            ss << std::hex << obj->GetObjectPointer();
+#ifdef TOKEN_DEBUG
+            Object* o = (Object*)obj->GetObjectPointer();
+            ss << "[" << o->ToString() << "]";
+#endif//TOKEN_DEBUG
+            ss << std::dec << obj->GetObjectSize() << " Bytes, ";
+            switch(obj->GetColor()){
+                case Color::kFree:
+                    ss << "Free";
+                    break;
+                case Color::kGray:
+                    ss << "Gray";
+                    break;
+                case Color::kBlack:
+                    ss << "Black";
+                    break;
+                default:
+                    ss << "Unknown";
+                    break;
+            }
+            ss << ")";
+            LOG(INFO) << ss.str();
             return true;
         }
     };

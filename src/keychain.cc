@@ -77,18 +77,19 @@ namespace Token{
                     // 3. Write Keys to File
                     EncodePrivateKey(&privKey, PRIVATE_KEYFILE);
                     EncodePublicKey(&pubKey, PUBLIC_KEYFILE);
+                    return;
                 } catch(CryptoPP::Exception& ex){
                     std::stringstream ss;
                     ss << "An exception occurred when generating the block chain keys: " << std::endl;
-                    ss << ex.what();
+                    ss << "\t" << ex.what();
                     CrashReport::GenerateAndExit(ss);
                 }
             }
 
             std::stringstream ss;
             ss << "Failed to load block chain keys:" << std::endl;
-            ss << "  - Private Key: " << PRIVATE_KEYFILE << " - Missing";
-            ss << "  - Public Key: " << PUBLIC_KEYFILE << " - Found";
+            ss << "  - Private Key: " << PRIVATE_KEYFILE << " - Missing" << std::endl;
+            ss << "  - Public Key: " << PUBLIC_KEYFILE << " - Found" << std::endl;
             CrashReport::GenerateAndExit(ss);
         }
 
@@ -106,16 +107,16 @@ namespace Token{
             if(!FileExists(privateKeyFilename)){
                 std::stringstream ss;
                 ss << "Failed to load block chain keys:" << std::endl;
-                ss << "  - Private Key: " << PRIVATE_KEYFILE << " - Missing";
-                ss << "  - Public Key: " << PUBLIC_KEYFILE << " - Found";
+                ss << "  - Private Key: " << PRIVATE_KEYFILE << " - Missing" << std::endl;
+                ss << "  - Public Key: " << PUBLIC_KEYFILE << " - Found" << std::endl;
                 CrashReport::GenerateAndExit(ss);
             }
             DecodePrivateKey(privKey, privateKeyFilename);
             if(!privKey->Validate(rng, 3)){
                 std::stringstream ss;
                 ss << "Failed to load block chain keys:" << std::endl;
-                ss << "  - Private Key: " << PRIVATE_KEYFILE << " - Invalid";
-                ss << "  - Public Key: " << PUBLIC_KEYFILE << " - Found";
+                ss << "  - Private Key: " << PRIVATE_KEYFILE << " - Invalid" << std::endl;
+                ss << "  - Public Key: " << PUBLIC_KEYFILE << " - Found" << std::endl;
                 CrashReport::GenerateAndExit(ss);
             }
 
@@ -124,16 +125,16 @@ namespace Token{
             if(!FileExists(publicKeyFilename)){
                 std::stringstream ss;
                 ss << "Failed to load block chain keys:" << std::endl;
-                ss << "  - Private Key: " << PRIVATE_KEYFILE << " - Found";
-                ss << "  - Public Key: " << PUBLIC_KEYFILE << " - Missing";
+                ss << "  - Private Key: " << PRIVATE_KEYFILE << " - Found" << std::endl;
+                ss << "  - Public Key: " << PUBLIC_KEYFILE << " - Missing" << std::endl;
                 CrashReport::GenerateAndExit(ss);
             }
             DecodePublicKey(pubKey, publicKeyFilename);
             if(!pubKey->Validate(rng, 3)){
                 std::stringstream ss;
                 ss << "Failed to load block chain keys:" << std::endl;
-                ss << "  - Private Key: " << PRIVATE_KEYFILE << " - Valid";
-                ss << "  - Public Key: " << PUBLIC_KEYFILE << " - Invalid";
+                ss << "  - Private Key: " << PRIVATE_KEYFILE << " - Valid" << std::endl;
+                ss << "  - Public Key: " << PUBLIC_KEYFILE << " - Invalid" << std::endl;
                 CrashReport::GenerateAndExit(ss);
             }
 

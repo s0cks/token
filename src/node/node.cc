@@ -199,6 +199,7 @@ namespace Token{
                 LOG(WARNING) << "couldn't decode message of type := " << mtype << " and of size := " << msize << ", at offset := " << offset;
                 continue;
             }
+            Allocator::AddRoot(msg);
 
             LOG(INFO) << "decoded message: " << msg->ToString();
             messages.push_back(msg);
@@ -221,6 +222,7 @@ namespace Token{
                     break;
             }
 
+            Allocator::RemoveRoot(msg);
             delete task;
         }
     }

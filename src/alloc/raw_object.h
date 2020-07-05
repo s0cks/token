@@ -5,6 +5,7 @@
 #include <vector>
 #include "uint256_t.h"
 #include "bitfield.h"
+#include "object.h"
 
 namespace Token{
     enum Color{

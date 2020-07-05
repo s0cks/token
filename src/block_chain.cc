@@ -94,7 +94,7 @@ namespace Token{
             Block* genesis = CreateGenesis();
             head_ = genesis_ = BlockNode::NewInstance(genesis);
             BlockChainIndex::PutBlockData(genesis);
-            Allocator::AddRoot(genesis);
+            Allocator::AddRoot(genesis_);
 
             for(auto it : (*genesis)){
                 uint32_t index = 0;
@@ -126,6 +126,10 @@ namespace Token{
         head_ = node;
         while(true){
             hash = block->GetPreviousHash();
+            if(hash.IsNull()){
+                genesis_ = node;
+                break;
+            }
 
 #ifdef TOKEN_DEBUG
             LOG(INFO) << "loading block: " << hash;

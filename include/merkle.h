@@ -228,6 +228,7 @@ namespace Token{
         static MerkleTree* NewInstance(std::vector<uint256_t>& leaves);
     };
 
+    //TODO: remove MerkleTreeBuilder class?
     class MerkleTreeBuilder{
     protected:
         std::vector<uint256_t> leaves_;
