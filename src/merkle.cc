@@ -83,6 +83,16 @@ namespace Token{
         return instance;
     }
 
+    std::string MerkleTree::ToString() const{
+        std::stringstream ss;
+        ss << "MerkleTree(" << GetMerkleRootHash() << ")";
+        return ss.str();
+    }
+
+    bool MerkleTree::Finalize(){
+        return Allocator::RemoveStrongReference(this, root_);
+    }
+
     bool MerkleTree::Append(const MerkleTree& tree){
         std::vector<uint256_t> leaves;
         if(!GetLeaves(leaves)) return false;

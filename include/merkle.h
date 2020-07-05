@@ -10,7 +10,6 @@ namespace Token{
     class BlockVisitor;
     class Block;
 
-    //TODO: fix reference ownership of MerkleNode
     class MerkleNode : public Object{
     protected:
         MerkleNode* parent_;
@@ -19,8 +18,9 @@ namespace Token{
         uint256_t hash_;
 
         void SetParent(MerkleNode* node){
+            if(parent_) Allocator::RemoveStrongReference(parent_, this);
             parent_ = node;
-            Allocator::AddStrongReference(node, this, NULL);
+            if(parent_) Allocator::AddStrongReference(parent_, this, NULL);
         }
 
         uint256_t ComputeHash() const;
@@ -50,7 +50,7 @@ namespace Token{
             hash_ = ComputeHash();
         }
     public:
-        ~MerkleNode(){}
+        ~MerkleNode() = default;
 
         MerkleNode* GetParent() const{
             return parent_;
@@ -68,6 +68,12 @@ namespace Token{
 
         MerkleNode* GetLeft() const{
             return left_;
+        }
+
+        bool Finalize(){
+            if(left_) Allocator::RemoveStrongReference(left_, this);
+            if(right_) Allocator::RemoveStrongReference(right_, this);
+            return true;
         }
 
         bool HasLeft() const{
@@ -168,7 +174,7 @@ namespace Token{
     //TODO: create MerkleProof class?
 
     //TODO: fix reference ownership of MerkleTree
-    class MerkleTree{
+    class MerkleTree : public Object{
     private:
         MerkleNode* root_;
         std::vector<MerkleNode*> leaves_;
@@ -185,37 +191,26 @@ namespace Token{
             Allocator::AddStrongReference(this, root_, NULL);
         }
     public:
-        ~MerkleTree(){}
+        ~MerkleTree() = default;
 
         void Clear(){
-            if(!root_) return;
+            if(IsEmpty()) return;
             Allocator::RemoveStrongReference(this, root_);
             root_ = nullptr;
             nodes_.clear();
             leaves_.clear();
         }
 
+        bool HasMerkleRoot() const{
+            return GetMerkleRoot() != nullptr;
+        }
+
         bool IsEmpty() const{
-            return !HasMerkleRoot();
+            return !HasMerkleRoot() && leaves_.size() > 0;
         }
 
         MerkleNode* GetMerkleRoot() const {
             return root_;
-        }
-
-        MerkleNode* GetNode(const uint256_t& hash) const;
-        MerkleNode* GetLeafNode(const uint256_t& hash) const;
-        bool Append(const MerkleTree& tree);
-
-        bool BuildAuditProof(const uint256_t& hash, std::vector<MerkleProofHash>& trail);
-        bool VerifyAuditProof(const uint256_t& root, const uint256_t& leaf, std::vector<MerkleProofHash>& trail);
-
-        bool BuildConsistencyProof(uint64_t num_nodes, std::vector<MerkleProofHash>& trail);
-        bool BuildConsistencyAuditProof(const uint256_t& hash, std::vector<MerkleProofHash>& trail);
-        bool VerifyConsistencyProof(const uint256_t& root, std::vector<MerkleProofHash>& trail);
-
-        bool HasMerkleRoot() const{
-            return GetMerkleRoot() != nullptr;
         }
 
         bool GetLeaves(std::vector<uint256_t>& leaves) const{
@@ -228,6 +223,19 @@ namespace Token{
             if(!HasMerkleRoot()) return uint256_t();
             return GetMerkleRoot()->GetHash();
         }
+
+        std::string ToString() const;
+        MerkleNode* GetNode(const uint256_t& hash) const;
+        MerkleNode* GetLeafNode(const uint256_t& hash) const;
+        bool Finalize();
+        bool Append(const MerkleTree& tree);
+
+        bool BuildAuditProof(const uint256_t& hash, std::vector<MerkleProofHash>& trail);
+        bool VerifyAuditProof(const uint256_t& root, const uint256_t& leaf, std::vector<MerkleProofHash>& trail);
+
+        bool BuildConsistencyProof(uint64_t num_nodes, std::vector<MerkleProofHash>& trail);
+        bool BuildConsistencyAuditProof(const uint256_t& hash, std::vector<MerkleProofHash>& trail);
+        bool VerifyConsistencyProof(const uint256_t& root, std::vector<MerkleProofHash>& trail);
 
         static MerkleTree* NewInstance(std::vector<uint256_t>& leaves);
     };

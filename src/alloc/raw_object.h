@@ -38,7 +38,6 @@ namespace Token{
     private:
         enum{
             kBitsForColor = 8,
-            kBitsForCondemned = 1,
             kBitsForForwarding = 1,
             kBitsForSize = 32,
         };
@@ -153,7 +152,8 @@ namespace Token{
 
         friend std::ostream& operator<<(std::ostream& stream, const RawObject& obj){
             stream << std::hex << obj.GetObjectPointer();
-            stream << "(" << std::dec << obj.GetObjectSize() << " Bytes,";
+            stream << "(";
+            stream << std::dec << obj.GetObjectSize() << " Bytes,";
             switch(obj.GetColor()){
                 case Color::kFree:
                     stream << " Free";

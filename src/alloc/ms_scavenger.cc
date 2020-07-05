@@ -37,7 +37,28 @@ namespace Token{
             RawObject* obj = current->second;
             if(obj->GetColor() == Color::kWhite){
 #ifdef TOKEN_DEBUG
-                LOG(INFO) << "removing object: " << (*obj);
+                std::stringstream stream;
+                stream << std::hex << obj->GetObjectPointer();
+                stream << "(";
+                Object* o = (Object*)obj->GetObjectPointer();
+                stream << o->ToString() << ", ";
+                stream << std::dec << obj->GetObjectSize() << " Bytes,";
+                switch(obj->GetColor()){
+                    case Color::kFree:
+                        stream << " Free";
+                        break;
+                    case Color::kGray:
+                        stream << " Gray";
+                        break;
+                    case Color::kBlack:
+                        stream << " Black";
+                        break;
+                    default:
+                        stream << " Unknown";
+                        break;
+                }
+                stream << ")";
+                LOG(INFO) << "removed object: " << stream.str();
 #endif//TOKEN_DEBUG
                 size -= obj->GetObjectSize();
                 delete obj;

@@ -53,6 +53,7 @@ namespace Token{
         while(iter != peers.end()){
             NodeAddress address((*iter));
             if(!ConnectTo(address)) LOG(WARNING) << "couldn't connect to peer: " << address;
+            iter++;
         }
     }
 

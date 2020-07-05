@@ -100,7 +100,7 @@ namespace Token{
         friend class BlockChain;
         friend class BlockMessage;
     public:
-        ~Block(){}
+        ~Block() = default;
 
         BlockHeader GetHeader() const{
             return BlockHeader(timestamp_, height_, previous_hash_, GetMerkleRoot(), GetHash());
