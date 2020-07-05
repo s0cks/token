@@ -1,6 +1,7 @@
 #ifndef TOKEN_PROPOSAL_H
 #define TOKEN_PROPOSAL_H
 
+#include <set>
 #include "common.h"
 #include "block_chain.h"
 
@@ -64,7 +65,7 @@ namespace Token{
         }
 
         bool IsValid() const{
-            return height_ == (BlockChain::GetHeight() + 1);
+            return height_ == (BlockChain::GetHead().GetHeight() + 1);
         }
 
         bool Commit(const std::string& node_id){

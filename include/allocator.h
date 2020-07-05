@@ -1,8 +1,9 @@
 #ifndef TOKEN_ALLOCATOR_H
 #define TOKEN_ALLOCATOR_H
 
-#include "common.h"
+#include <unordered_map>
 #include <vector>
+#include "common.h"
 
 namespace Token{
     class RawObject;

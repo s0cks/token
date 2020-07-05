@@ -1,4 +1,4 @@
-#include "block_chain.h"
+#include "block.h"
 #include "node/node.h"
 
 namespace Token{
@@ -30,23 +30,20 @@ namespace Token{
         return NewInstance(parent.GetHeight() + 1, parent.GetHash(), transactions, timestamp);
     }
 
-    Block* Block::NewInstance(const Block::RawType& raw){
+    Block* Block::NewInstance(RawType raw){
         Block* instance = (Block*)Allocator::Allocate(sizeof(Block));
-        Allocator::AddRoot(instance);
+
         std::vector<Transaction*> txs = {};
         for(auto& it : raw.transactions()){
-            Transaction* tx = (Transaction::NewInstance(it));
-            if(!Allocator::AddStrongReference(instance, tx, NULL)){
-                CrashReport::GenerateAndExit("Couldn't add strong reference to transaction");
-            }
+            txs.push_back(Transaction::NewInstance(it));
         }
+
         new (instance)Block(raw.timestamp(), raw.height(), HashFromHexString(raw.previous_hash()), txs);
-        Allocator::RemoveRoot(instance);
         return instance;
     }
 
     Block* Block::NewInstance(std::fstream& fd){
-        RawType raw;
+        Block::RawType raw;
         if(!raw.ParseFromIstream(&fd)) return nullptr;
         return NewInstance(raw);
     }
@@ -122,13 +119,6 @@ namespace Token{
         std::vector<MerkleProofHash> trail;
         if(!tree->BuildAuditProof(hash, trail)) return false;
         return tree->VerifyAuditProof(tree->GetMerkleRootHash(), hash, trail);
-    }
-
-    MerkleTree* Block::GetMerkleTree() const{
-        BlockMerkleTreeBuilder builder(this);
-        if(!builder.BuildTree()) return nullptr;
-        //TODO: return builder.GetTreeCopy();
-        return nullptr;
     }
 
     uint256_t Block::GetMerkleRoot() const{
@@ -250,6 +240,7 @@ namespace Token{
             CrashReport::GenerateAndExit(ss);
         }
 
+        LOCK_GUARD;
         std::string filename = GetNewBlockFilename(hash);
         std::fstream fd(filename, std::ios::out|std::ios::binary);
         if(!block->WriteToFile(fd)){
@@ -258,7 +249,6 @@ namespace Token{
             CrashReport::GenerateAndExit(ss);
         }
 
-        LOCK_GUARD;
         leveldb::WriteOptions options;
         std::string key = HexString(hash);
         if(!GetIndex()->Put(options, key, filename).ok()){

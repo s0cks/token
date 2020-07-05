@@ -35,13 +35,28 @@ namespace Token{
 
         LOCK_GUARD;
         if(!GetIndex()->Get(options, key, &filename).ok()){
-#ifdef TOKEN_ENABLE_DEBUG
-            LOG(WARNING) << "couldn't find data in index for block: " << hash;
-#endif//TOKEN_ENABLE_DEBUG
-            return nullptr;
+            std::stringstream ss;
+            ss << "Couldn't find block " << hash << " in index";
+            CrashReport::GenerateAndExit(ss);
         }
 
-        return Block::NewInstance(filename);
+        Block* block = Block::NewInstance(filename);
+        if(hash != block->GetHash()){
+            std::stringstream ss;
+            ss << "Couldn't match block hash";
+            ss << std::endl;
+            ss << "\tExpected Hash: " << hash << std::endl;
+            ss << "\tBlock Information: " << std::endl;
+            ss << "\t  - Timestamp: " << block->GetTimestamp() << std::endl;
+            ss << "\t  - Height: " << block->GetHeight() << std::endl;
+            ss << "\t  - Previous Hash: " << block->GetPreviousHash() << std::endl;
+            ss << "\t  - Merkle Root: " << block->GetMerkleRoot() << std::endl;
+            ss << "\t  - Hash: " << block->GetHash() << std::endl;
+            ss << "\t  - Number of Transactions: " << block->GetNumberOfTransactions() << std::endl;
+            CrashReport::GenerateAndExit(ss);
+        }
+
+        return block;
     }
 
     void BlockChainIndex::PutReference(const std::string& name, const uint256_t& hash){
@@ -76,7 +91,6 @@ namespace Token{
             ss << "Couldn't find reference: " << name;
             CrashReport::GenerateAndExit(ss);
         }
-
         return HashFromHexString(value);
     }
 

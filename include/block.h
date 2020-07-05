@@ -2,14 +2,14 @@
 #define TOKEN_BLOCK_H
 
 #include "common.h"
-#include "pool.h"
+#include "uint256_t.h"
 #include "transaction.h"
-#include "merkle.h"
 
 namespace Token{
+    class Block;
     class BlockHeader{
     public:
-        typedef Proto::BlockChain::BlockHeader RawType;
+        typedef Token::Proto::BlockChain::BlockHeader RawType;
     private:
         uint32_t timestamp_;
         uint32_t height_;
@@ -104,10 +104,9 @@ namespace Token{
         ~Block(){}
 
         BlockHeader GetHeader() const{
-            return BlockHeader((Block*)this);
+            return BlockHeader(timestamp_, height_, previous_hash_, GetMerkleRoot(), GetHash());
         }
 
-        MerkleTree* GetMerkleTree() const;
         uint256_t GetMerkleRoot() const;
 
         uint256_t GetPreviousHash() const{
@@ -157,7 +156,7 @@ namespace Token{
 
         static Block* NewInstance(uint32_t height, const uint256_t& phash, std::vector<Transaction*>& transactions, uint32_t timestamp=GetCurrentTime());
         static Block* NewInstance(const BlockHeader& parent, std::vector<Transaction*>& transactions, uint32_t timestamp=GetCurrentTime());
-        static Block* NewInstance(const RawType& raw);
+        static Block* NewInstance(RawType raw);
         static Block* NewInstance(std::fstream& fd);
 
         static inline Block* NewInstance(const std::string& filename){

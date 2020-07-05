@@ -1,10 +1,10 @@
 #ifndef TOKEN_TRANSACTION_H
 #define TOKEN_TRANSACTION_H
 
-#include "allocator.h"
-#include "raw_object.h"
-#include "object.h"
+#include "common.h"
 #include "pool.h"
+#include "object.h"
+#include "uint256_t.h"
 
 namespace Token{
     class Input{

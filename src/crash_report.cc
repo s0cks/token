@@ -3,9 +3,8 @@
 #include <execinfo.h>
 #include "token.h"
 #include "crash_report.h"
-
 #include "allocator.h"
-#include "alloc/heap.h"
+#include "raw_object.h"
 #include "block_chain.h"
 
 namespace Token{
@@ -216,27 +215,45 @@ namespace Token{
         }
 
         bool WriteSection(){
-            WriteLine("Block Chain:");
-            BlockHeader head = BlockChain::GetHead();
-            WriteLine("Head:");
-            Indent();
-            {
-                std::stringstream height;
-                height << "Height: " << head.GetHeight();
-                WriteLine(height); //TODO: fixme, weird design
-                WriteLine("Hash: " + HexString(head.GetHash()));
-                WriteLine("Previous Hash: " + HexString(head.GetPreviousHash()));
-                WriteLine("Merkle Root: " + HexString(head.GetMerkleRoot()));
-                WriteLine("Timestamp: " + GetTimestampFormatted(head.GetTimestamp()));
+            if(BlockChain::IsInitialized()){
+                WriteLine("Block Chain:");
+                BlockHeader head = BlockChain::GetHead();
+                WriteLine("Head:");
+                Indent();
+                {
+                    std::stringstream height;
+                    height << "Height: " << head.GetHeight();
+                    WriteLine(height); //TODO: fixme, weird design
+                    WriteLine("Hash: " + HexString(head.GetHash()));
+                    WriteLine("Previous Hash: " + HexString(head.GetPreviousHash()));
+                    WriteLine("Merkle Root: " + HexString(head.GetMerkleRoot()));
+                    WriteLine("Timestamp: " + GetTimestampFormatted(head.GetTimestamp()));
+                }
+                DeIndent();
+                WriteLine("Blocks:");
+                Indent();
+                BlockChain::Accept(this);
+                WriteNewline();
+            } else{
+                std::stringstream ss;
+                ss << "BlockChain: ";
+                switch(BlockChain::GetState()){
+                    case BlockChain::kInitialized:
+                        ss << "Initialized";
+                        break;
+                    case BlockChain::kInitializing:
+                        ss << "Initializing";
+                        break;
+                    case BlockChain::kUninitialized:
+                        ss << "Uninitialized";
+                        break;
+                    default:
+                        ss << "Unknown";
+                        break;
+                }
+                WriteLine(ss);
             }
-            DeIndent();
-            WriteLine("Blocks:");
-            Indent();
-            if(!BlockChain::Accept(this)){
-                fprintf(stderr, "couldn't walk block chain");
-                return false;
-            }
-            WriteNewline();
+
             return true;
         }
     };
@@ -276,8 +293,8 @@ namespace Token{
             return false;
         }
 
-        BlockChainSection chain_info(&report);
-        if(!chain_info.WriteSection()){ //TODO: make stateful
+        BlockChainSection info(&report);
+        if(!info.WriteSection()){
             fprintf(stderr, "couldn't write block chain information to crash report: %s\n", filename.c_str());
             return false;
         }

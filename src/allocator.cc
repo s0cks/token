@@ -71,7 +71,7 @@ namespace Token{
         allocated_.insert(std::make_pair(obj->GetObjectAddress(), obj));
         allocated_size_ += size;
 #if defined(TOKEN_ENABLE_DEBUG)
-        LOG(INFO) << "allocated object: " << (*obj);
+        //TODO: LOG(INFO) << "allocated object: " << (*obj);
 #endif//TOKEN_ENABLE_DEBUG
         return obj->GetObjectPointer();
     }

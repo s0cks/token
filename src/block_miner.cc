@@ -158,7 +158,6 @@ namespace Token{
                     pthread_mutex_unlock(&proposal_mutex_);
                     return;
                 }
-                Allocator::AddRoot(tx);
                 txs.push_back(tx);
             }
 
@@ -167,7 +166,6 @@ namespace Token{
             LOG(INFO) << "<HEAD> := " << head;
 
             Block* block = Block::NewInstance(head, txs);
-            Allocator::AddRoot(block);
             BlockPool::PutBlock(block);
 
             BlockValidator validator(block);
@@ -227,10 +225,7 @@ namespace Token{
             return false;
         }
         BlockPool::RemoveBlock(hash);
-        if(!BlockChain::GetInstance()->Append(block)){
-            LOG(ERROR) << "couldn't append new block: " << hash;
-            return false;
-        }
+        BlockChain::Append(block);
         return true;
     }
 }

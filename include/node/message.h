@@ -447,7 +447,7 @@ namespace Token{
         bool ItemExists() const{
             switch(type_){
                 case kTransaction: return TransactionPool::HasTransaction(hash_);
-                case kBlock: return BlockChain::ContainsBlock(hash_);
+                case kBlock: return BlockChain::HasBlock(hash_);
                 default: return false;
             }
         }

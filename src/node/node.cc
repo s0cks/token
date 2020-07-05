@@ -314,11 +314,7 @@ namespace Token{
             goto exit;
         }
 
-        if(!BlockChain::AppendBlock(block)){
-            LOG(WARNING) << "couldn't append block: " << hash;
-            goto exit;
-        }
-
+        BlockChain::Append(block);
         BlockPool::RemoveBlock(hash);
 
         session->Send(AcceptedMessage::NewInstance(GetNodeID(), Proposal(msg->GetNodeID(), height, hash)));
@@ -384,7 +380,7 @@ namespace Token{
 
         std::vector<InventoryItem> items;
         if(stop.IsNull()){
-            uint32_t amt = std::min(GetBlocksMessage::kMaxNumberOfBlocks, BlockChain::GetHeight());
+            uint32_t amt = std::min(GetBlocksMessage::kMaxNumberOfBlocks, BlockChain::GetHead().GetHeight());
             LOG(INFO) << "sending " << (amt + 1) << " blocks...";
 
             BlockHeader start_block = BlockChain::GetBlock(start);
