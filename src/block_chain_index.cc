@@ -145,10 +145,6 @@ namespace Token{
             ss << "Couldn't initialize block chain index in file: " << GetIndexFilename();
             CrashReport::GenerateAndExit(ss);
         }
-
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << "initialized block chain index";
-#endif//TOKEN_DEBUG
     }
 
     uint32_t BlockChainIndex::GetNumberOfBlocks(){

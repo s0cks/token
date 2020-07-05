@@ -40,6 +40,8 @@ namespace Token{
             return stream;
         }
     private:
+        static void SaveNodeInformation();
+        static void LoadNodeInformation();
         static void SavePeers();
         static void LoadPeers();
 

@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <random>
+#include <condition_variable>
 
 #include "node/node.h"
 #include "node/message.h"
@@ -8,6 +9,7 @@
 #include "configuration.h"
 
 namespace Token{
+//TODO: remove:
 #define SCHEDULE(Loop, Name, ...)({ \
     uv_work_t* work = (uv_work_t*)malloc(sizeof(uv_work_t));\
     work->data = new Name##Task(__VA_ARGS__); \
@@ -16,32 +18,44 @@ namespace Token{
 
     static pthread_t thread_ = 0;
     static uv_tcp_t handle_;
-    static std::string node_id_ = GenerateNonce();
-    static std::map<std::string, PeerSession*> peers_ = std::map<std::string, PeerSession*>();
-    static pthread_rwlock_t rwlock_ = PTHREAD_RWLOCK_INITIALIZER;
+
+    static std::recursive_mutex mutex_;
+    static std::condition_variable_any cond_;
     static Node::State state_ = Node::State::kStopped;
-    static pthread_mutex_t state_mutex_ = PTHREAD_MUTEX_INITIALIZER;
-    static pthread_cond_t state_cond_ = PTHREAD_COND_INITIALIZER;
+    static std::string node_id_;
+    static std::map<std::string, PeerSession*> peers_ = std::map<std::string, PeerSession*>();
+
+#define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
+#define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
+#define WAIT cond_.wait(lock)
+#define SIGNAL_ONE cond_.notify_one()
+#define SIGNAL_ALL cond_.notify_all()
+
+    void Node::LoadNodeInformation(){
+        LOCK_GUARD;
+        libconfig::Setting& node = BlockChainConfiguration::GetProperty("Node", libconfig::Setting::TypeGroup);
+        if(!node.exists("id")){
+            node.add("id", libconfig::Setting::TypeString) = GenerateNonce();
+            BlockChainConfiguration::SaveConfiguration();
+        }
+
+        std::string node_id;
+        node.lookupValue("id", node_id);
+        node_id_ = node_id;
+    }
 
     void Node::LoadPeers(){
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << "loading peers...";
-#endif//TOKEN_DEBUG
-
+        LOCK_GUARD;
         libconfig::Setting& peers = BlockChainConfiguration::GetProperty("Peers", libconfig::Setting::TypeArray);
         auto iter = peers.begin();
         while(iter != peers.end()){
             NodeAddress address((*iter));
-
-#ifdef TOKEN_DEBUG
-            LOG(INFO) << "loaded peer: " << address;
-#endif//TOKEN_DEBUG
-
             if(!ConnectTo(address)) LOG(WARNING) << "couldn't connect to peer: " << address;
         }
     }
 
     void Node::SavePeers(){
+        LOCK_GUARD;
         libconfig::Setting& root = BlockChainConfiguration::GetRoot();
         if(root.exists("Peers")) root.remove("Peers");
 
@@ -59,11 +73,13 @@ namespace Token{
     }
 
     std::string Node::GetNodeID(){
+        LOCK_GUARD;
         return node_id_;
     }
 
     bool Node::Start(){
         if(!IsStopped()) return false;
+        LoadNodeInformation();
         LoadPeers();
         return pthread_create(&thread_, NULL, &NodeThread, NULL) == 0;
     }
@@ -79,29 +95,24 @@ namespace Token{
     }
 
     void Node::SetState(Node::State state){
-        pthread_mutex_trylock(&state_mutex_);
+        LOCK;
         state_ = state;
-        pthread_cond_signal(&state_cond_);
-        pthread_mutex_unlock(&state_mutex_);
+        SIGNAL_ALL;
     }
 
     void Node::WaitForState(Node::State state){
-        pthread_mutex_trylock(&state_mutex_);
-        while(state_ != state) pthread_cond_wait(&state_cond_, &state_mutex_);
-        pthread_mutex_unlock(&state_mutex_);
+        LOCK;
+        while(state_ != state) WAIT;
     }
 
     Node::State Node::GetState() {
-        pthread_mutex_trylock(&state_mutex_);
-        Node::State state = state_;
-        pthread_mutex_unlock(&state_mutex_);
-        return state;
+        LOCK_GUARD;
+        return state_;
     }
 
     uint32_t Node::GetNumberOfPeers(){
-        pthread_rwlock_tryrdlock(&rwlock_);
+        LOCK_GUARD;
         uint32_t peers = peers_.size();
-        pthread_rwlock_unlock(&rwlock_);
         return peers;
     }
 
@@ -126,7 +137,13 @@ namespace Token{
         }
 
         SetState(State::kRunning);
-        LOG(INFO) << "server listening: @" << FLAGS_port;
+
+#if defined(TOKEN_DEBUG)||defined(TOKEN_VERBOSE)
+        LOG(INFO) << "node " << GetNodeID() << " listening @" << FLAGS_port;
+#else
+        LOG(INFO) << "server listening @" << FLAGS_port;
+#endif//TOKEN_DEBUG or TOKEN_VERBOSE
+
         uv_run(loop, UV_RUN_DEFAULT);
         pthread_exit(0);
     }
@@ -393,30 +410,25 @@ namespace Token{
     }
 
     bool Node::Broadcast(Message* msg){
-        pthread_rwlock_trywrlock(&rwlock_);
+        LOCK_GUARD;
         for(auto& it : peers_) it.second->Send(msg);
-        pthread_rwlock_unlock(&rwlock_);
         return true;
     }
 
     void Node::RegisterPeer(const std::string& node_id, PeerSession* peer){
-        pthread_rwlock_trywrlock(&rwlock_);
+        LOCK_GUARD;
         peers_.insert({ node_id, peer });
         SavePeers();
-        pthread_rwlock_unlock(&rwlock_);
     }
 
     void Node::UnregisterPeer(const std::string& node_id){
-        pthread_rwlock_trywrlock(&rwlock_);
+        LOCK_GUARD;
         peers_.erase(node_id);
-        pthread_rwlock_unlock(&rwlock_);
     }
 
     bool Node::HasPeer(const std::string& node_id){
-        pthread_rwlock_tryrdlock(&rwlock_);
-        bool found = peers_.find(node_id) != peers_.end();
-        pthread_rwlock_unlock(&rwlock_);
-        return found;
+        LOCK_GUARD;
+        return peers_.find(node_id) != peers_.end();
     }
 
     bool Node::ConnectTo(const NodeAddress &address){

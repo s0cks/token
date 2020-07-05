@@ -91,7 +91,7 @@ namespace Token{
 
         SetState(kInitialized);
 #ifdef TOKEN_DEBUG
-        LOG(INFO) << "initialized unclaimed transaction pool";
+        LOG(INFO) << "initialized the unclaimed transaction pool";
 #endif//TOKEN_DEBUG
     }
 
