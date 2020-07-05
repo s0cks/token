@@ -98,7 +98,10 @@ namespace Token{
         pthread_rwlock_t rwlock_;
         State state_;
         NodeInfo info_;
+
         uv_tcp_t handle_;
+        uv_timer_t heartbeat_;
+
         pthread_mutex_t rmutex_;
         pthread_cond_t rcond_;
 
@@ -167,11 +170,13 @@ namespace Token{
         pthread_t thread_;
         uv_connect_t conn_;
         uv_tcp_t socket_;
-        uv_async_t send_cb_;
+        uv_async_t shutdown_;
+        uv_timer_t heartbeat_;
         std::string node_id_;
         NodeAddress node_addr_;
 
         static void* PeerSessionThread(void* data);
+        static void OnShutdown(uv_async_t* handle);
         static void OnConnect(uv_connect_t* conn, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
 
@@ -214,9 +219,8 @@ namespace Token{
             return node_id_;
         }
 
-        bool Connect(){
-            return pthread_create(&thread_, NULL, &PeerSessionThread, (void*)this) == 0;
-        }
+        void Shutdown();
+        bool Connect();
     };
 
     //TODO: rename ClientSession

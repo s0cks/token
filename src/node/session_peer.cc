@@ -10,20 +10,31 @@ namespace Token{
     work->data = new Name##Task(__VA_ARGS__); \
     uv_queue_work((Loop), work, Handle##Name##Task, After##Name##Task); \
 })
-#define RESCHEDULE(Loop, Name, TaskInstance)({\
-    uv_work_t* work = (uv_work_t*)malloc(sizeof(uv_work_t)); \
-    work->data = (TaskInstance); \
-    uv_queue_work((Loop), work, Handle##Name##Task, After##Name##Task); \
-})
+
+    void PeerSession::OnShutdown(uv_async_t* handle){
+        PeerSession* session = (PeerSession*)handle->data;
+        session->Shutdown();
+    }
+
+    void PeerSession::Shutdown(){
+        if(pthread_self() == thread_){
+            // Inside Session Thread
+            uv_read_stop((uv_stream_t*)&socket_);
+            uv_stop(socket_.loop);
+        } else{
+            // Outside Session Thread
+            uv_async_send(&shutdown_);
+        }
+    }
 
     void* PeerSession::PeerSessionThread(void* data){
         if(!Node::IsRunning() && Node::IsStarting()) Node::WaitForState(Node::kRunning);
-
-
         PeerSession* session = (PeerSession*)data;
         NodeAddress address = session->node_addr_;
+        LOG(INFO) << "connecting to peer " << address << "....";
 
         uv_loop_t* loop = uv_loop_new();
+        uv_async_init(loop, &session->shutdown_, &OnShutdown);
         uv_tcp_init(loop, &session->socket_);
         uv_tcp_keepalive(&session->socket_, 1, 60);
 
@@ -32,26 +43,30 @@ namespace Token{
 
         int err;
         if((err = uv_tcp_connect(&session->conn_, &session->socket_, (const struct sockaddr*)&addr, &OnConnect)) != 0){
-            LOG(ERROR) << "cannot connect to peer: " << uv_strerror(err);
-            return nullptr; //TODO: fix error handling
+            LOG(WARNING) << "couldn't connect to peer " << address << ": " << uv_strerror(err);
+            session->Shutdown();
+            goto cleanup;
         }
 
         uv_run(loop, UV_RUN_DEFAULT);
-        return nullptr;
+    cleanup:
+        LOG(INFO) << "disconnected from peer: " << address;
+        uv_loop_close(loop);
+        pthread_exit(0);
     }
 
     void PeerSession::OnConnect(uv_connect_t* conn, int status){
         PeerSession* session = (PeerSession*)conn->data;
         if(status != 0){
-            LOG(ERROR) << "error connecting: " << uv_strerror(status);
-            uv_read_stop(session->GetStream());
-            uv_stop(session->GetLoop());
+            LOG(WARNING) << "client accept error: " << uv_strerror(status);
+            session->Shutdown();
             return;
         }
 
         session->Send(VersionMessage::NewInstance(Node::GetNodeID()));
         if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
-            LOG(ERROR) << "client read error: " << uv_strerror(status);
+            LOG(WARNING) << "client read error: " << uv_strerror(status);
+            session->Shutdown();
             return;
         }
     }
@@ -292,5 +307,14 @@ namespace Token{
         Node::SetState(Node::kStarting);
         if(handle->data) free(handle->data);
         free(handle);
+    }
+
+    bool PeerSession::Connect(){
+        int ret;
+        if((ret = pthread_create(&thread_, NULL, &PeerSessionThread, this)) != 0){
+            LOG(WARNING) << "couldn't start peer thread: " << strerror(ret);
+            return false;
+        }
+        return true;
     }
 }

@@ -137,6 +137,10 @@ namespace Token{
     }
 
     void* Node::NodeThread(void* ptr){
+#ifdef TOKEN_DEBUG
+        LOG(INFO) << "starting server thread...";
+#endif//TOKEN_DEBUG
+
         SetState(State::kStarting);
         uv_loop_t* loop = uv_loop_new();
         uv_async_init(loop, &aterm_, &HandleTerminateCallback);
