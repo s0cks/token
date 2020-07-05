@@ -1,17 +1,9 @@
-#include <glog/logging.h>
-#include <gtest/gtest.h>
-#include <pool.h>
-#include "keychain.h"
-#include "block_chain.h"
-
-static inline bool
-InitializeLogging(char* arg0){
-    google::SetStderrLogging(google::INFO);
-    google::InitGoogleLogging(arg0);
-    return true;
-}
+#include "token_tests.h"
 
 int
 main(int argc, char** argv){
-    return EXIT_SUCCESS;
+    //::google::SetStderrLogging(google::INFO);
+    //::google::InitGoogleLogging(argv[0]);
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }
