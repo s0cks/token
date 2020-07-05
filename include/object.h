@@ -12,6 +12,17 @@
 namespace Token{
     class Object{
     public:
+        enum Type{
+            kUnknown = 0,
+            kBlock,
+            kTransaction,
+            kUnclaimedTransaction,
+            kBlockNode,
+            kMerkleNode,
+            kBytes,
+            kMessage,
+        };
+    public:
         virtual ~Object() = default;
         virtual std::string ToString() const = 0;
 

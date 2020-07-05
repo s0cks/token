@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <vector>
 #include "common.h"
+#include "object.h"
 
 namespace Token{
     class RawObject;
@@ -48,7 +49,7 @@ namespace Token{
         static uintptr_t GetBytesFree();
         static uintptr_t GetTotalSize();
 
-        static void* Allocate(uintptr_t size);
+        static void* Allocate(uintptr_t size, Object::Type type=Object::Type::kUnknown);
         static void AddRoot(void* ptr);
         static void RemoveRoot(void* ptr);
         static bool IsRoot(void* ptr);

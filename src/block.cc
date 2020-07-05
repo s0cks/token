@@ -16,7 +16,7 @@ namespace Token{
 //######################################################################################################################
     Block* Block::NewInstance(uint32_t height, const Token::uint256_t &phash, std::vector<Transaction*>& transactions,
                               uint32_t timestamp){
-        Block* instance = (Block*)Allocator::Allocate(sizeof(Block));
+        Block* instance = (Block*)Allocator::Allocate(sizeof(Block), Object::kBlock);
         new (instance)Block(timestamp, height, phash, transactions);
         for(size_t idx = 0; idx < transactions.size(); idx++){
             if(!Allocator::AddStrongReference(instance, transactions[idx], NULL)){
@@ -31,7 +31,7 @@ namespace Token{
     }
 
     Block* Block::NewInstance(RawType raw){
-        Block* instance = (Block*)Allocator::Allocate(sizeof(Block));
+        Block* instance = (Block*)Allocator::Allocate(sizeof(Block), Object::kBlock);
 
         std::vector<Transaction*> txs = {};
         for(auto& it : raw.transactions()){
@@ -122,6 +122,7 @@ namespace Token{
     }
 
     uint256_t Block::GetMerkleRoot() const{
+        //TODO: scope merkle tree
         BlockMerkleTreeBuilder builder(this);
         if(!builder.BuildTree()) return uint256_t();
         MerkleTree* tree = builder.GetTree();

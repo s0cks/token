@@ -30,13 +30,13 @@ namespace Token{
 //                                          Transaction
 //######################################################################################################################
     Transaction* Transaction::NewInstance(uint32_t index, Transaction::InputList& inputs, Transaction::OutputList& outputs, uint32_t timestamp){
-        Transaction* instance = (Transaction*)Allocator::Allocate(sizeof(Transaction));
+        Transaction* instance = (Transaction*)Allocator::Allocate(sizeof(Transaction), Object::kTransaction);
         new (instance)Transaction(timestamp, index, inputs, outputs);
         return instance;
     }
 
     Transaction* Transaction::NewInstance(const Transaction::RawType& raw){
-        Transaction* instance = (Transaction*)Allocator::Allocate(sizeof(Transaction));
+        Transaction* instance = (Transaction*)Allocator::Allocate(sizeof(Transaction), Object::kTransaction);
         Transaction::InputList inputs;
         for(auto& it : raw.inputs()){
             inputs.push_back(Input(it));

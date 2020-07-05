@@ -36,16 +36,21 @@ namespace Token{
     public:
         typedef std::vector<Reference*> ReferenceList;
     private:
-        enum{
+        enum HeaderLayout{
+            kColorPosition = 0,
             kBitsForColor = 8,
+            kForwardingPosition = kColorPosition + kBitsForColor,
             kBitsForForwarding = 1,
+            kSizePosition = kForwardingPosition + kBitsForForwarding,
             kBitsForSize = 32,
+            kTypePosition = kSizePosition + kBitsForSize,
+            kBitsForType = 16,
         };
 
-        class ColorField : public BitField<uintptr_t, Color, 0, kBitsForColor>{};
-        class CondemnedField : public BitField<uintptr_t, bool, kBitsForColor, kBitsForCondemned>{};
-        class ForwardingField : public BitField<uintptr_t, bool, kBitsForColor + kBitsForCondemned, kBitsForForwarding>{};
-        class SizeField : public BitField<uintptr_t, uint32_t, kBitsForColor + kBitsForCondemned + kBitsForForwarding, kBitsForSize>{};
+        class ColorField : public BitField<uintptr_t, Color, kColorPosition, kBitsForColor>{};
+        class ForwardingField : public BitField<uintptr_t, bool, kForwardingPosition, kBitsForForwarding>{};
+        class SizeField : public BitField<uintptr_t, uint32_t, kSizePosition, kBitsForSize>{};
+        class TypeField : public BitField<uintptr_t, Object::Type, kTypePosition, kBitsForType>{};
 
         uintptr_t header_;
         uintptr_t forwarding_address_;
@@ -65,16 +70,16 @@ namespace Token{
             SetHeader(ForwardingField::Update(val, GetHeader()));
         }
 
-        void SetCondemned(bool val){
-            SetHeader(CondemnedField::Update(val, GetHeader()));
-        }
-
         void SetSize(uint32_t val){
             SetHeader(SizeField::Update(val, GetHeader()));
         }
 
         void SetColor(Color val){
             SetHeader(ColorField::Update(val, GetHeader()));
+        }
+
+        void SetType(Object::Type val){
+            SetHeader(TypeField::Update(val, GetHeader()));
         }
 
         void SetForwardingAddress(uintptr_t address){
@@ -90,16 +95,16 @@ namespace Token{
         friend class StrongReference;
         friend class Marker;
     public:
-        RawObject(Color color, size_t size, void* ptr):
+        RawObject(Object::Type type, size_t size, void* ptr):
                 owned_(),
                 ptr_(ptr),
                 pointing_(),
                 header_(0),
                 forwarding_address_(0){
             SetForwarding(false);
-            SetCondemned(false);
-            SetColor(color);
+            SetColor(Color::kWhite);
             SetSize(size);
+            SetType(type);
         }
         ~RawObject(){
             free(ptr_);
@@ -121,10 +126,6 @@ namespace Token{
             return SizeField::Decode(header_);
         }
 
-        bool IsCondemned() const{
-            return CondemnedField::Decode(header_);
-        }
-
         bool IsReferenced() const{
             return !pointing_.empty();
         }
@@ -141,6 +142,10 @@ namespace Token{
             return ColorField::Decode(header_);
         }
 
+        Object::Type GetObjectType() const{
+            return TypeField::Decode(header_);
+        }
+
         Object* GetObject() const{
             return (Object*)GetObjectPointer();
         }
@@ -153,6 +158,33 @@ namespace Token{
         friend std::ostream& operator<<(std::ostream& stream, const RawObject& obj){
             stream << std::hex << obj.GetObjectPointer();
             stream << "(";
+            switch(obj.GetObjectType()){
+                case Object::kMessage:
+                    stream << "Message, ";
+                    break;
+                case Object::kBytes:
+                    stream << "Bytes, ";
+                    break;
+                case Object::kTransaction:
+                    stream << "Transaction, ";
+                    break;
+                case Object::kUnclaimedTransaction:
+                    stream << "UnclaimedTransaction, ";
+                    break;
+                case Object::kBlock:
+                    stream << "Block, ";
+                    break;
+                case Object::kBlockNode:
+                    stream << "BlockNode, ";
+                    break;
+                case Object::kMerkleNode:
+                    stream << "MerkleNode, ";
+                    break;
+                case Object::kUnknown:
+                default:
+                    stream << "Unknown, ";
+                    break;
+            }
             stream << std::dec << obj.GetObjectSize() << " Bytes,";
             switch(obj.GetColor()){
                 case Color::kFree:

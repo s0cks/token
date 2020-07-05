@@ -7,7 +7,7 @@ namespace Token{
 //                                          Unclaimed Transaction
 //######################################################################################################################
     UnclaimedTransaction* UnclaimedTransaction::NewInstance(const uint256_t &hash, uint32_t index, const std::string& user){
-        UnclaimedTransaction* instance = (UnclaimedTransaction*)Allocator::Allocate(sizeof(UnclaimedTransaction));
+        UnclaimedTransaction* instance = (UnclaimedTransaction*)Allocator::Allocate(sizeof(UnclaimedTransaction), Object::kUnclaimedTransaction);
         new (instance)UnclaimedTransaction(hash, index, user);
         return instance;
     }

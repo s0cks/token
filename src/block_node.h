@@ -10,10 +10,7 @@ namespace Token{
         BlockNode* next_;
         BlockHeader block_;
 
-        BlockNode(const BlockHeader& block):
-                previous_(nullptr),
-                next_(nullptr),
-                block_(block){}
+        BlockNode(const BlockHeader& block);
         BlockNode(Block* block): BlockNode(block->GetHeader()){}
     public:
         ~BlockNode(){

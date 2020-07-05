@@ -3,19 +3,19 @@
 
 namespace Token{
     MerkleNode* MerkleNode::NewInstance(const uint256_t& hash){
-        MerkleNode* instance = (MerkleNode*)Allocator::Allocate(sizeof(MerkleNode));
+        MerkleNode* instance = (MerkleNode*)Allocator::Allocate(sizeof(MerkleNode), Object::kMerkleNode);
         new (instance)MerkleNode(hash);
         return instance;
     }
 
     MerkleNode* MerkleNode::NewInstance(MerkleNode* left, MerkleNode* right){
-        MerkleNode* instance = (MerkleNode*)Allocator::Allocate(sizeof(MerkleNode));
+        MerkleNode* instance = (MerkleNode*)Allocator::Allocate(sizeof(MerkleNode), Object::kMerkleNode);
         new (instance)MerkleNode(left, right);
         return instance;
     }
 
     MerkleNode* MerkleNode::Clone(MerkleNode* node){
-        MerkleNode* instance = (MerkleNode*)Allocator::Allocate(sizeof(MerkleNode));
+        MerkleNode* instance = (MerkleNode*)Allocator::Allocate(sizeof(MerkleNode), Object::kMerkleNode);
         new (instance)MerkleNode(node);
         return instance;
     }
@@ -78,7 +78,7 @@ namespace Token{
     }
 
     MerkleTree* MerkleTree::NewInstance(std::vector<uint256_t>& leaves){
-        MerkleTree* instance = (MerkleTree*)Allocator::Allocate(sizeof(MerkleTree));
+        MerkleTree* instance = (MerkleTree*)Allocator::Allocate(sizeof(MerkleTree), Object::kMerkleNode);
         new (instance)MerkleTree(leaves);
         return instance;
     }

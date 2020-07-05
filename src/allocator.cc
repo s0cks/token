@@ -30,7 +30,7 @@ namespace Token{
     }
 #endif //TOKEN_USE_CHENEYGC
 
-    void* Allocator::Allocate(uintptr_t size){
+    void* Allocator::Allocate(uintptr_t size, Object::Type type){
         if(size == 0){
             return nullptr;
         }
@@ -66,7 +66,7 @@ namespace Token{
             }
         }
         memset(ptr, 0, total_size);
-        RawObject* obj = new RawObject(Color::kWhite, size, ptr); //TODO: memory leak
+        RawObject* obj = new RawObject(type, size, ptr); //TODO: memory leak
 #endif //TOKEN_USE_CHENEYGC
         allocated_.insert(std::make_pair(obj->GetObjectAddress(), obj));
         allocated_size_ += size;
@@ -88,29 +88,7 @@ namespace Token{
         ~GCObjectPrinter(){}
 
         bool Visit(RawObject* obj){
-            std::stringstream ss;
-            ss << std::hex << obj->GetObjectPointer();
-#ifdef TOKEN_DEBUG
-            Object* o = (Object*)obj->GetObjectPointer();
-            ss << "[" << o->ToString() << "]";
-#endif//TOKEN_DEBUG
-            ss << std::dec << obj->GetObjectSize() << " Bytes, ";
-            switch(obj->GetColor()){
-                case Color::kFree:
-                    ss << "Free";
-                    break;
-                case Color::kGray:
-                    ss << "Gray";
-                    break;
-                case Color::kBlack:
-                    ss << "Black";
-                    break;
-                default:
-                    ss << "Unknown";
-                    break;
-            }
-            ss << ")";
-            LOG(INFO) << ss.str();
+            LOG(INFO) << (*obj);
             return true;
         }
     };
