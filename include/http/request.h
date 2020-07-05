@@ -1,3 +1,4 @@
+#ifdef TOKEN_HEALTHCHECK_SUPPORT
 #ifndef TOKEN_REQUEST_H
 #define TOKEN_REQUEST_H
 
@@ -104,3 +105,4 @@ namespace Token{
 }
 
 #endif //TOKEN_REQUEST_H
+#endif//TOKEN_HEALTHCHECK_SUPPORT

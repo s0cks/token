@@ -1,3 +1,4 @@
+#ifdef TOKEN_HEALTHCHECK_SUPPORT
 #include "http/server.h"
 
 namespace Token{
@@ -80,3 +81,5 @@ namespace Token{
         free(buff->base);
     }
 }
+
+#endif//TOKEN_HEALTHCHECK_SUPPORT

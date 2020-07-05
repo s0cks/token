@@ -1,3 +1,4 @@
+#ifdef TOKEN_HEALTHCHECK_SUPPORT
 #include <glog/logging.h>
 #include "http/request.h"
 
@@ -29,3 +30,5 @@ namespace Token{
         free(request);
     }
 }
+
+#endif//TOKEN_HEALTHCHECK_SUPPORT
