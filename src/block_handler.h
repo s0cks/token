@@ -31,11 +31,7 @@ namespace Token{
                 return false;
             }
 
-            if(ShouldRemoveTransactionFromPool() && !TransactionPool::RemoveTransaction(hash)){
-                LOG(WARNING) << "couldn't remove transaction from pool: " << hash;
-                return false;
-            }
-
+            if(ShouldRemoveTransactionFromPool()) TransactionPool::RemoveTransaction(hash);
             return true;
         }
 

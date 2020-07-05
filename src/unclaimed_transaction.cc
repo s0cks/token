@@ -1,5 +1,6 @@
 #include "unclaimed_transaction.h"
 #include "block_chain.h"
+#include "crash_report.h"
 
 namespace Token{
 //######################################################################################################################
@@ -89,9 +90,9 @@ namespace Token{
         }
 
         SetState(kInitialized);
-#ifdef TOKEN_ENABLE_DEBUG
+#ifdef TOKEN_DEBUG
         LOG(INFO) << "initialized unclaimed transaction pool";
-#endif//TOKEN_ENABLE_DEBUG
+#endif//TOKEN_DEBUG
     }
 
     bool UnclaimedTransactionPool::HasUnclaimedTransaction(const uint256_t& hash){
@@ -146,9 +147,9 @@ namespace Token{
             ss << "Couldn't remove unclaimed transaction " << hash << " from index";
             CrashReport::GenerateAndExit(ss);
         }
-#ifdef TOKEN_ENABLE_DEBUG
+#ifdef TOKEN_DEBUG
         LOG(INFO) << "removed unclaimed transaction: " << hash;
-#endif//TOKEN_ENABLE_DEBUG
+#endif//TOKEN_DEBUG
     }
 
     void UnclaimedTransactionPool::PutUnclaimedTransaction(UnclaimedTransaction* utxo){
@@ -233,32 +234,32 @@ namespace Token{
     UnclaimedTransaction* UnclaimedTransactionPool::GetUnclaimedTransaction(const uint256_t &tx_hash, uint32_t tx_index){
         std::vector<uint256_t> utxos;
         if(!GetUnclaimedTransactions(utxos)) {
-#if defined(TOKEN_ENABLE_DEBUG)
+#ifdef TOKEN_DEBUG
             LOG(WARNING) << "couldn't get unclaimed transactions";
-#endif//TOKEN_ENABLE_DEBUG
+#endif//TOKEN_DEBUG
             return nullptr;
         }
         for(auto& it : utxos){
-#if defined(TOKEN_ENABLE_DEBUG)
+#ifdef TOKEN_DEBUG
             LOG(WARNING) << "checking utxo: " << it;
-#endif//TOKEN_ENABLE_DEBUG
+#endif//TOKEN_DEBUG
 
             UnclaimedTransaction* utxo;
             if(!(utxo = GetUnclaimedTransaction(it))){
-#if defined(TOKEN_ENABLE_DEBUG)
+#ifdef TOKEN_DEBUG
                 LOG(WARNING) << "couldn't get unclaimed transaction: " << it;
-#endif//TOKEN_ENABLE_DEBUG
+#endif//TOKEN_DEBUG
                 return nullptr;
             }
 
-#if defined(TOKEN_ENABLE_DEBUG)
+#ifdef TOKEN_DEBUG
             LOG(WARNING) << "unclaimed transaction: " << it << " := " << utxo->GetTransaction() << "[" << utxo->GetIndex() << "]";
-#endif//TOKEN_ENABLE_DEBUG
+#endif//TOKEN_DEBUG
             if(utxo->GetTransaction() == tx_hash && utxo->GetIndex() == tx_index) return utxo;
         }
-#if defined(TOKEN_ENABLE_DEBUG)
+#ifdef TOKEN_DEBUG
         LOG(WARNING) << "couldn't find unclaimed transaction: " << tx_hash << "[" << tx_index << "]";
-#endif//TOKEN_ENABLE_DEBUG
+#endif//TOKEN_DEBUG
         return nullptr;
     }
 }

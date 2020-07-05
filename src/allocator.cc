@@ -70,9 +70,9 @@ namespace Token{
 #endif //TOKEN_USE_CHENEYGC
         allocated_.insert(std::make_pair(obj->GetObjectAddress(), obj));
         allocated_size_ += size;
-#if defined(TOKEN_ENABLE_DEBUG)
+#ifdef TOKEN_DEBUG
         //TODO: LOG(INFO) << "allocated object: " << (*obj);
-#endif//TOKEN_ENABLE_DEBUG
+#endif//TOKEN_DEBUG
         return obj->GetObjectPointer();
     }
 
@@ -206,9 +206,9 @@ namespace Token{
     bool Allocator::DeleteObject(Token::RawObject* obj){
         uintptr_t address = obj->GetObjectAddress();
 
-#if defined(TOKEN_ENABLE_DEBUG)
+#ifdef TOKEN_DEBUG
         LOG(INFO) << "removing object: " << (*obj);
-#endif//TOKEN_ENABLE_DEBUG
+#endif//TOKEN_DEBUG
 
         if(allocated_.erase(address) <= 0){
             std::stringstream ss;

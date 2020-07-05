@@ -6,7 +6,6 @@
 
 #include "common.h"
 #include "merkle.h"
-#include "pool.h"
 #include "block.h"
 #include "transaction.h"
 #include "unclaimed_transaction.h"

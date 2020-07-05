@@ -24,18 +24,18 @@ namespace Token{
     static pthread_cond_t state_cond_ = PTHREAD_COND_INITIALIZER;
 
     void Node::LoadPeers(){
-#ifdef TOKEN_ENABLE_DEBUG
+#ifdef TOKEN_DEBUG
         LOG(INFO) << "loading peers...";
-#endif//TOKEN_ENABLE_DEBUG
+#endif//TOKEN_DEBUG
 
         libconfig::Setting& peers = BlockChainConfiguration::GetProperty("Peers", libconfig::Setting::TypeArray);
         auto iter = peers.begin();
         while(iter != peers.end()){
             NodeAddress address((*iter));
 
-#ifdef TOKEN_ENABLE_DEBUG
+#ifdef TOKEN_DEBUG
             LOG(INFO) << "loaded peer: " << address;
-#endif//TOKEN_ENABLE_DEBUG
+#endif//TOKEN_DEBUG
 
             if(!ConnectTo(address)) LOG(WARNING) << "couldn't connect to peer: " << address;
         }
@@ -338,14 +338,8 @@ namespace Token{
         TransactionMessage* msg = (TransactionMessage*)task->GetMessage();
 
         Transaction* tx = msg->GetTransaction();
-        uint256_t hash = tx->GetHash();
-
-        if(!TransactionPool::PutTransaction(tx)){
-            LOG(WARNING) << "couldn't add transaction to pool: " << hash;
-            return;
-        }
-
-        session->OnHash(hash);
+        TransactionPool::PutTransaction(tx);
+        session->OnHash(tx->GetHash());
     }
 
     void Node::HandleAcceptedMessage(HandleMessageTask* task){}

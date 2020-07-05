@@ -97,9 +97,7 @@ namespace Token{
         bool Encode(RawType& raw) const;
 
         friend class BlockChain;
-        friend class BlockPool;
         friend class BlockMessage;
-        friend class IndexManagedPool<Block, RawType>;
     public:
         ~Block(){}
 

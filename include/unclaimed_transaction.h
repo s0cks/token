@@ -3,12 +3,10 @@
 
 #include "common.h"
 #include "object.h"
-#include "pool.h"
 
 namespace Token{
     class Transaction;
     class Output;
-
     class UnclaimedTransaction : public BinaryObject<Proto::BlockChain::UnclaimedTransaction>{
     public:
         typedef Proto::BlockChain::UnclaimedTransaction RawType;
@@ -23,9 +21,6 @@ namespace Token{
             index_(idx){}
 
         bool Encode(RawType& raw) const;
-
-        friend class IndexManagedPool<UnclaimedTransaction, RawType>;
-        friend class UnclaimedTransactionPool;
     public:
         ~UnclaimedTransaction(){}
 

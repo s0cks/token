@@ -1,4 +1,5 @@
 #include "block_chain_index.h"
+#include "crash_report.h"
 
 namespace Token{
     static std::recursive_mutex mutex_;
@@ -70,9 +71,9 @@ namespace Token{
             CrashReport::GenerateAndExit(ss);
         }
 
-#ifdef TOKEN_ENABLE_DEBUG
+#ifdef TOKEN_DEBUG
         LOG(INFO) << "set reference: " << name << " := " << hash;
-#endif//TOKEN_ENABLE_DEBUG
+#endif//TOKEN_DEBUG
     }
 
     bool BlockChainIndex::HasReference(const std::string& name){
@@ -122,9 +123,9 @@ namespace Token{
             CrashReport::GenerateAndExit(ss);
         }
 
-#ifdef TOKEN_ENABLE_DEBUG
+#ifdef TOKEN_DEBUG
         LOG(INFO) << "indexed block " << block << " to file: " << filename;
-#endif//TOKEN_ENABLE_DEBUG
+#endif//TOKEN_DEBUG
     }
 
     void BlockChainIndex::Initialize(){
@@ -145,9 +146,9 @@ namespace Token{
             CrashReport::GenerateAndExit(ss);
         }
 
-#ifdef TOKEN_ENABLE_DEBUG
+#ifdef TOKEN_DEBUG
         LOG(INFO) << "initialized block chain index";
-#endif//TOKEN_ENABLE_DEBUG
+#endif//TOKEN_DEBUG
     }
 
     uint32_t BlockChainIndex::GetNumberOfBlocks(){

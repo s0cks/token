@@ -2,9 +2,9 @@
 #define TOKEN_TRANSACTION_H
 
 #include "common.h"
-#include "pool.h"
 #include "object.h"
 #include "uint256_t.h"
+#include "unclaimed_transaction.h"
 
 namespace Token{
     class Input{
@@ -145,8 +145,6 @@ namespace Token{
 
         friend class Block;
         friend class TransactionMessage;
-        friend class IndexManagedPool<Transaction, RawType>;
-        friend class TransactionPool;
         friend class TransactionVerifier;
     public:
         ~Transaction(){}
@@ -214,6 +212,12 @@ namespace Token{
 
         static Transaction* NewInstance(uint32_t index, InputList& inputs, OutputList& outputs, uint32_t timestamp=GetCurrentTime());
         static Transaction* NewInstance(const RawType& raw);
+        static Transaction* NewInstance(std::fstream& fd);
+
+        static inline Transaction* NewInstance(const std::string& filename){
+            std::fstream fd(filename, std::ios::in|std::ios::binary);
+            return NewInstance(fd);
+        }
     };
 
     class TransactionVisitor{
@@ -230,47 +234,43 @@ namespace Token{
         virtual bool VisitEnd(){ return true; }
     };
 
-    class TransactionPool : public IndexManagedPool<Transaction, Transaction::RawType>{
-    private:
-        pthread_rwlock_t rwlock_;
-
-        static TransactionPool* GetInstance();
-        static bool PutTransaction(Transaction* tx);
-
-        std::string CreateObjectLocation(const uint256_t& hash, Transaction* tx) const{
-            if(ContainsObject(hash)){
-                return GetObjectLocation(hash);
-            }
-
-            std::string hashString = HexString(hash);
-            std::string front = hashString.substr(0, 8);
-            std::string tail = hashString.substr(hashString.length() - 8, hashString.length());
-
-            std::string filename = GetRoot() + "/" + front + ".dat";
-            if(FileExists(filename)){
-                filename = GetRoot() + "/" + tail + ".dat";
-            }
-            return filename;
-        }
-
-        TransactionPool():
-                rwlock_(),
-                IndexManagedPool(FLAGS_path + "/txs"){
-            pthread_rwlock_init(&rwlock_, NULL);
-        }
-
-        friend class Node;
-        friend class BlockHandler;
+    class TransactionPool{
     public:
-        ~TransactionPool(){}
+        enum State{
+            kUninitialized,
+            kInitializing,
+            kInitialized,
+        };
+    private:
+        TransactionPool() = delete;
 
-        static bool Initialize();
-        static bool AddTransaction(Transaction* tx);
+        static void SetState(State state);
+    public:
+        ~TransactionPool() = delete;
+
+        static State GetState();
+        static void Initialize();
+        static void RemoveTransaction(const uint256_t& hash);
+        static void PutTransaction(Transaction* tx);
         static bool HasTransaction(const uint256_t& hash);
-        static bool RemoveTransaction(const uint256_t& hash);
         static bool GetTransactions(std::vector<uint256_t>& txs);
         static Transaction* GetTransaction(const uint256_t& hash);
-        static uint64_t GetSize();
+        static uint32_t GetNumberOfTransactions();
+
+        static inline bool
+        IsUninitialized(){
+            return GetState() == kUninitialized;
+        }
+
+        static inline bool
+        IsInitializing(){
+            return GetState() == kInitializing;
+        }
+
+        static inline bool
+        IsInitialized(){
+            return GetState() == kInitialized;
+        }
     };
 }
 

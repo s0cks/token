@@ -138,7 +138,7 @@ namespace Token{
 
     //TODO: check state
     void BlockMiner::HandleMineCallback(uv_timer_t* handle){
-        if(!HasProposal() && TransactionPool::GetSize() >= 2){
+        if(!HasProposal() && TransactionPool::GetNumberOfTransactions() >= 2){
             LOG(INFO) << "creating proposal...";
 
             // collect + sort transactions

@@ -4,7 +4,7 @@
 #include "token.h"
 #include "crash_report.h"
 #include "allocator.h"
-#include "raw_object.h"
+#include "alloc/raw_object.h"
 #include "block_chain.h"
 
 namespace Token{

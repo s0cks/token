@@ -109,15 +109,15 @@ namespace Token{
             return;
         }
 
-#ifdef TOKEN_ENABLE_DEBUG
+#ifdef TOKEN_DEBUG
         LOG(INFO) << "loading block chain....";
-#endif//TOKEN_ENABLE_DEBUG
+#endif//TOKEN_DEBUG
 
         uint256_t hash = BlockChainIndex::GetReference("<HEAD>");
 
-#ifdef TOKEN_ENABLE_DEBUG
+#ifdef TOKEN_DEBUG
         LOG(INFO) << "loading block: " << hash;
-#endif//TOKEN_ENABLE_DEBUG
+#endif//TOKEN_DEBUG
 
         Block* block = BlockChainIndex::GetBlockData(hash);
         BlockNode* node = BlockNode::NewInstance(block);
@@ -127,9 +127,9 @@ namespace Token{
         while(true){
             hash = block->GetPreviousHash();
 
-#ifdef TOKEN_ENABLE_DEBUG
+#ifdef TOKEN_DEBUG
             LOG(INFO) << "loading block: " << hash;
-#endif//TOKEN_ENABLE_DEBUG
+#endif//TOKEN_DEBUG
 
             block = BlockChainIndex::GetBlockData(hash);
             BlockNode* current = BlockNode::NewInstance(block);
@@ -179,7 +179,7 @@ namespace Token{
         LOCK_GUARD;
 
         BlockHeader head = BlockChain::GetHead();
-#if defined(TOKEN_ENABLE_DEBUG)
+#ifdef TOKEN_DEBUG
         LOG(INFO) << "<HEAD>:";
         LOG(INFO) << "  hash := " << head.GetHash();
         LOG(INFO) << "  parent hash := " << head.GetPreviousHash();
@@ -187,7 +187,7 @@ namespace Token{
         LOG(INFO) << "appending new block:";
         LOG(INFO) << "  hash := " << block->GetHash();
         LOG(INFO) << "  parent hash := " << block->GetPreviousHash();
-#endif//TOKEN_ENABLE_DEBUG
+#endif//TOKEN_DEBUG
         uint256_t hash = block->GetHash();
         uint256_t phash = block->GetPreviousHash();
 

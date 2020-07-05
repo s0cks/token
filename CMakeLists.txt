@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-        enable_testing()
+enable_testing()
 project("token" CXX)
 
 #TODO: Fix for remote building
@@ -8,16 +8,19 @@ project("token" CXX)
 #TODO: define process for creating docker image
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
         message("Compiling token w/ debug mode")
-        add_compile_definitions(TOKEN_ENABLE_DEBUG)
+        add_compile_definitions(TOKEN_DEBUG)
 endif (CMAKE_BUILD_TYPE MATCHES Debug)
 
-# Changes garbage collector algorithm to Cheney's Mark-Copy Algorithm
-# add_compile_definitions(TOKEN_USE_CHENEYGC)
+# Compiles w/ health check support
+# set(TOKEN_HEALTHCHECK_SUPPORT Enabled)
 
+# Changes garbage collector algorithm to Cheney's Mark-Copy Algorithm
+# set(TOKEN_CHENEYGC_SUPPORT Enabled)
+
+# Packages
 find_package(Protobuf REQUIRED)
 find_package(Crypto++ REQUIRED)
 find_package(Threads)
@@ -27,13 +30,14 @@ find_package(Gflags REQUIRED)
 find_package(Libuv REQUIRED)
 find_package(HttpParser REQUIRED)
 
+# Include Directories
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
-include_directories(${CRYPTO++_INCLUDE_DIR})
-include_directories(${LIBUV_INCLUDE_DIRS})
-include_directories(${HTTPPARSER_INCLUDE_DIR})
 include_directories(include)
 include_directories(src)
+include_directories(${CRYPTO++_INCLUDE_DIR})
+include_directories(${LIBUV_INCLUDE_DIRS})
 
+# Source Sets
 set(PROTO_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protos")
 file(GLOB TOKEN_LIB_SOURCES include/*.h src/*.cc src/*.h src/alloc/*.h src/alloc/*.cc)
 file(GLOB TOKEN_LIB_NET_SOURCES include/node/*.h src/node/*.h src/node/*.cc)
@@ -41,6 +45,20 @@ file(GLOB_RECURSE TOKEN_PROTO_SOURCES protos/*.proto)
 #file(GLOB_RECURSE TOKEN_TEST_SOURCES tests/*.h tests/*.cc)
 
 protobuf_generate_cpp(PROTO_SRC PROTO_HEADER ${TOKEN_PROTO_SOURCES})
+
+# Compilation Options
+
+# Health Check Support
+if(TOKEN_HEALTHCHECK_SUPPORT EQUAL Enabled)
+        message("Compiling ledger w/ health check support")
+        add_compile_definitions(TOKEN_HEALTHCHECK_SUPPORT)
+endif(TOKEN_HEALTHCHECK_SUPPORT EQUAL Enabled)
+
+# Mark-Copy Scavenger Support
+if(TOKEN_CHENEYGC_SUPPORT EQUAL Enabled)
+        message("Compiling ledger w/ mark-copy scavenger support")
+        add_compile_definitions(TOKEN_USE_CHENEYGC)
+endif(TOKEN_CHENEYGC_SUPPORT EQUAL Enabled)
 
 #=================================================
 #       Token Ledger Library

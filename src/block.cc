@@ -204,9 +204,9 @@ namespace Token{
         }
 
         SetState(State::kInitialized);
-#ifdef TOKEN_ENABLE_DEBUG
+#ifdef TOKEN_DEBUG
         LOG(INFO) << "initialized the block pool";
-#endif//TOKEN_ENABLE_DEBUG
+#endif//TOKEN_DEBUG
     }
 
     void BlockPool::RemoveBlock(const uint256_t& hash){
@@ -227,9 +227,9 @@ namespace Token{
             CrashReport::GenerateAndExit(ss);
         }
 
-#ifdef TOKEN_ENABLE_DEBUG
+#ifdef TOKEN_DEBUG
         LOG(INFO) << "removed block " << hash << " from block pool";
-#endif//TOKEN_ENABLE_DEBUG
+#endif//TOKEN_DEBUG
     }
 
     void BlockPool::PutBlock(Block* block){
