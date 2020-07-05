@@ -19,6 +19,7 @@ namespace Token{
 
     static pthread_t thread_ = 0;
     static uv_tcp_t handle_;
+    static uv_async_t aterm_;
 
     static std::recursive_mutex mutex_;
     static std::condition_variable_any cond_;
@@ -91,7 +92,17 @@ namespace Token{
 
     bool Node::Shutdown(){
         if(!IsRunning()) return false;
-        return pthread_join(thread_, NULL) == 0;
+        uv_async_send(&aterm_);
+
+        int ret;
+        if((ret = pthread_join(thread_, NULL)) != 0){
+            std::stringstream ss;
+            ss << "Couldn't join server thread: " << strerror(ret);
+            CrashReport::GenerateAndExit(ss);
+        }
+
+        SetState(State::kStopped);
+        return true;
     }
 
     bool Node::WaitForShutdown(){
@@ -121,9 +132,14 @@ namespace Token{
         return peers;
     }
 
+    void Node::HandleTerminateCallback(uv_async_t* handle){
+        uv_stop(handle->loop);
+    }
+
     void* Node::NodeThread(void* ptr){
         SetState(State::kStarting);
         uv_loop_t* loop = uv_loop_new();
+        uv_async_init(loop, &aterm_, &HandleTerminateCallback);
 
         struct sockaddr_in addr;
         uv_ip4_addr("0.0.0.0", FLAGS_port, &addr);
@@ -140,15 +156,15 @@ namespace Token{
             pthread_exit(0);
         }
 
-        SetState(State::kRunning);
-
 #if defined(TOKEN_DEBUG)||defined(TOKEN_VERBOSE)
         LOG(INFO) << "node " << GetNodeID() << " listening @" << FLAGS_port;
 #else
         LOG(INFO) << "server listening @" << FLAGS_port;
 #endif//TOKEN_DEBUG or TOKEN_VERBOSE
-
+        SetState(State::kRunning);
         uv_run(loop, UV_RUN_DEFAULT);
+
+        uv_loop_close(loop);
         pthread_exit(0);
     }
 

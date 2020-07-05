@@ -1,7 +1,9 @@
 #include <glog/logging.h>
 #include <algorithm>
-#include <memory>
+#include <mutex>
+#include <condition_variable>
 
+#include "alloc/scope.h"
 #include "node/node.h"
 
 #include "block_miner.h"
@@ -12,62 +14,51 @@
 #include "proposal.h"
 
 namespace Token{
-    static pthread_t thread;
-    static uv_loop_t* loop_ = nullptr;
-
-    static pthread_mutex_t proposal_mutex_ = PTHREAD_MUTEX_INITIALIZER;
-    static pthread_cond_t proposal_cond_ = PTHREAD_COND_INITIALIZER;
-    static Proposal* proposal_ = nullptr;
-
+    static pthread_t thread_;
+    static std::recursive_mutex mutex_;
+    static std::condition_variable_any cond_;
     static BlockMiner::State state_ = BlockMiner::State::kStopped;
-    static pthread_mutex_t state_mutex_ = PTHREAD_MUTEX_INITIALIZER;
-    static pthread_cond_t state_cond_ = PTHREAD_COND_INITIALIZER;
+    static Proposal* proposal_ = nullptr;
+    static uv_async_t aterm_;
 
     static uv_timer_t mine_timer_;
-    static uv_async_t exit_handle;
+
+
+#define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
+#define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
+#define WAIT cond_.wait(lock)
+#define SIGNAL_ONE cond_.notify_one()
+#define SIGNAL_ALL cond_.notify_all()
 
     void BlockMiner::SetState(BlockMiner::State state){
-        pthread_mutex_trylock(&state_mutex_);
+        LOCK;
         state_ = state;
-        pthread_cond_signal(&state_cond_);
-        pthread_mutex_unlock(&state_mutex_);
+        SIGNAL_ALL;
     }
 
     BlockMiner::State BlockMiner::GetState(){
-        pthread_mutex_trylock(&state_mutex_);
-        BlockMiner::State state = state_;
-        pthread_mutex_unlock(&state_mutex_);
-        return state;
+        LOCK_GUARD;
+        return state_;
     }
 
     void BlockMiner::WaitForState(State state){
-        pthread_mutex_trylock(&state_mutex_);
-        while(state_ != state) pthread_cond_wait(&state_cond_, &state_mutex_);
-        pthread_mutex_unlock(&state_mutex_);
-    }
-
-    void BlockMiner::WaitForShutdown(){
-        WaitForState(State::kStopped);
+        LOCK;
+        while(state_ != state) WAIT;
     }
 
     Proposal* BlockMiner::GetProposal(){
-        pthread_mutex_lock(&proposal_mutex_);
-        Proposal* proposal = proposal_;
-        pthread_mutex_unlock(&proposal_mutex_);
-        return proposal;
+        LOCK_GUARD;
+        return proposal_;
     }
 
     void BlockMiner::SetProposal(Proposal* proposal){
-        pthread_mutex_lock(&proposal_mutex_);
+        LOCK_GUARD;
         proposal_ = proposal;
-        pthread_mutex_unlock(&proposal_mutex_);
     }
 
     bool BlockMiner::HasProposal(){
-        pthread_mutex_lock(&proposal_mutex_);
-        bool found = proposal_ != nullptr;
-        pthread_mutex_unlock(&proposal_mutex_);
-        return found;
+        LOCK_GUARD;
+        return proposal_ != nullptr;
     }
 
     bool BlockMiner::SubmitProposal(Proposal* proposal){
@@ -80,11 +71,8 @@ namespace Token{
                                 (Node::GetNumberOfPeers() == 1 ? 1 : (Node::GetNumberOfPeers() / 2)) :
                                 0;
 
-        pthread_mutex_lock(&proposal_mutex_);
-        while(proposal->GetNumberOfVotes() < votes_needed){
-            pthread_cond_wait(&proposal_cond_, &proposal_mutex_);
-        }
-        pthread_mutex_unlock(&proposal_mutex_);
+        LOCK;
+        while(proposal->GetNumberOfVotes() < votes_needed) WAIT;
         return true;
     }
 
@@ -96,11 +84,8 @@ namespace Token{
                                   (Node::GetNumberOfPeers() == 1 ? 1 : (Node::GetNumberOfPeers() / 2)) :
                                   0;
 
-        pthread_mutex_trylock(&proposal_mutex_);
-        while(proposal->GetNumberOfCommits() < commits_needed){
-            pthread_cond_wait(&proposal_cond_, &proposal_mutex_);
-        }
-        pthread_mutex_unlock(&proposal_mutex_);
+        LOCK;
+        while(proposal->GetNumberOfCommits() < commits_needed) WAIT;
         return true;
     }
 
@@ -111,10 +96,9 @@ namespace Token{
             return false;
         }
 
-        pthread_mutex_lock(&proposal_mutex_);
+        LOCK;
         bool voted = proposal->Vote(node_id);
-        pthread_cond_signal(&proposal_cond_);
-        pthread_mutex_unlock(&proposal_mutex_);
+        SIGNAL_ALL;
         return voted;
     }
 
@@ -125,106 +109,130 @@ namespace Token{
             return false;
         }
 
-        pthread_mutex_trylock(&proposal_mutex_);
+        LOCK;
         bool accepted = proposal->Commit(node_id);
-        pthread_cond_signal(&proposal_cond_);
-        pthread_mutex_unlock(&proposal_mutex_);
+        SIGNAL_ALL;
         return accepted;
     }
 
     void BlockMiner::HandleTerminateCallback(uv_async_t* handle){
-        //TODO: implement
+        uv_stop(handle->loop);
     }
 
-    //TODO: check state
     void BlockMiner::HandleMineCallback(uv_timer_t* handle){
-        if(!HasProposal() && TransactionPool::GetNumberOfTransactions() >= 2){
-            LOG(INFO) << "creating proposal...";
+        Scope scope;
+        if(TransactionPool::GetNumberOfTransactions() >= 2){
+#ifdef TOKEN_DEBUG
+            LOG(INFO) << "mining new block....";
+#endif//TOKEN_DEBUG
 
-            // collect + sort transactions
-            std::vector<uint256_t> all_txs;
-            if(!TransactionPool::GetTransactions(all_txs)){
-                LOG(ERROR) << "couldn't get transactions from transaction pool";
-                pthread_mutex_unlock(&proposal_mutex_);
-                return;
-            }
+            // 1. Collect transactions from pool
+            Block::TransactionList all_txs;
+            {
+                // 1.a. Get list of transactions
+                std::vector<uint256_t> pool_txs;
+                if(!TransactionPool::GetTransactions(pool_txs)) CrashReport::GenerateAndExit("Couldn't get list of transactions in pool");
 
-            std::vector<Transaction*> txs;
-            for(auto& it : all_txs){
-                //TODO: fixme, terrible design?
-                Transaction* tx;
-                if(!(tx = TransactionPool::GetTransaction(it))){
-                    LOG(WARNING) << "couldn't get transaction: " << it;
-                    pthread_mutex_unlock(&proposal_mutex_);
-                    return;
+                // 1.b. Get data for list of transactions
+                for(auto& it : pool_txs){
+                    Transaction* tx = scope.Retain(TransactionPool::GetTransaction(it));
+#ifdef TOKEN_DEBUG
+                    LOG(INFO) << "using transaction: " << it;
+#endif//TOKEN_DEBUG
+                    all_txs.push_back(tx);
                 }
-                txs.push_back(tx);
             }
 
-            // Create new block for proposal
-            BlockHeader head = BlockChain::GetHead();
-            LOG(INFO) << "<HEAD> := " << head;
+            // 2. Create new block
+            Block* block = scope.Retain(Block::NewInstance(BlockChain::GetHead(), all_txs));
 
-            Block* block = Block::NewInstance(head, txs);
-            BlockPool::PutBlock(block);
-
+            // 3. Validate block
             BlockValidator validator(block);
             if(!validator.IsValid()){
                 LOG(WARNING) << "blocks isn't valid, orphaning!";
                 return;
             }
 
-            uint256_t hash = block->GetHash();
-            Proposal* proposal = new Proposal(Node::GetNodeID(), block);
-            SetProposal(proposal);
+            BlockPool::PutBlock(block);
+            if(!HasProposal()){
+                // 4. Create proposal
 
-            if(!SubmitProposal(proposal)){
-                LOG(ERROR) << "couldn't submit proposal for new block: " << hash;
-                goto cleanup;
-            }
+                BlockHeader header = block->GetHeader();
+                Proposal* proposal = new Proposal(Node::GetNodeID(), block);
 
-            if(!CommitProposal(proposal)){
-                LOG(ERROR) << "couldn't commit proposal for new block: " << hash;
-                goto cleanup;
-            }
+                // 5. Submit proposal
+                if(!SubmitProposal(proposal)){
+                    LOG(ERROR) << "couldn't submit proposal for new block: " << header;
+                    goto cleanup;
+                }
 
-            if(!MineBlock(hash, block, true)){
-                LOG(WARNING) << "couldn't mine block: " << hash;
-                goto cleanup;
+                // 6. Commit proposal
+                if(!CommitProposal(proposal)){
+                    LOG(ERROR) << "couldn't commit proposal for new block: " << header;
+                    goto cleanup;
+                }
+
+                // 7. Finish mining block
+                if(!MineBlock(block, true)){
+                    LOG(WARNING) << "couldn't mine block: " << header;
+                    goto cleanup;
+                }
+
+                cleanup:
+                SetProposal(nullptr);//TODO: memory leak
+            } else{
+                // 4. Wait for Proposal to finish
+                Proposal* proposal = GetProposal();
             }
-        cleanup:
-            SetProposal(nullptr);
-            return;
         }
     }
 
     void* BlockMiner::MinerThread(void* data){
-        SetState(State::kRunning);
-        uv_loop_t* loop = loop_ = uv_loop_new();
-        uv_async_init(loop, &exit_handle, &HandleTerminateCallback);
+        SetState(State::kStarting);
+        uv_loop_t* loop = uv_loop_new();
+        uv_async_init(loop, &aterm_, &HandleTerminateCallback);
+
         uv_timer_init(loop, &mine_timer_);
         uv_timer_start(&mine_timer_, &HandleMineCallback, 0, BlockMiner::kMiningIntervalMilliseconds);
+
+        SetState(State::kRunning);
         uv_run(loop, UV_RUN_DEFAULT);
+
+        SetState(State::kStopped);
+        uv_loop_close(loop);
         pthread_exit(0);
     }
 
-    bool BlockMiner::Initialize(){
-        if(!IsStopped()) return false;
-        return pthread_create(&thread, NULL, &BlockMiner::MinerThread, nullptr) == 0;
+    void BlockMiner::Initialize(){
+        if(!IsStopped()) return;
+        int ret;
+        if((ret = pthread_create(&thread_, NULL, &MinerThread, NULL)) != 0){
+            std::stringstream ss;
+            ss << "Couldn't start the block miner thread: " << strerror(ret);
+            CrashReport::GenerateAndExit(ss);
+        }
     }
 
     bool BlockMiner::Shutdown(){
         if(!IsRunning()) return false;
-        uv_async_send(&exit_handle);
-        return pthread_join(thread, NULL) == 0;
+        uv_async_send(&aterm_);
+
+        int ret;
+        if((ret = pthread_join(thread_, NULL)) != 0){
+            std::stringstream ss;
+            ss << "Couldn't join block miner thread: " << strerror(ret);
+            CrashReport::GenerateAndExit(ss);
+        }
+        return true;
     }
 
-    bool BlockMiner::MineBlock(const uint256_t& hash, Block* block, bool clean){
+    bool BlockMiner::MineBlock(Block* block, bool clean){
+        BlockHeader header = block->GetHeader();
         if(!BlockHandler::ProcessBlock(block, clean)){
-            LOG(WARNING) << "couldn't process block: " << hash;
+            LOG(WARNING) << "couldn't process block: " << header;
             return false;
         }
-        BlockPool::RemoveBlock(hash);
+        BlockPool::RemoveBlock(header.GetHash());
         BlockChain::Append(block);
         return true;
     }

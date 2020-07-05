@@ -3,9 +3,19 @@
 
 namespace Token{
     void SignalHandlers::HandleInterrupt(int signum){
-        LOG(INFO) << "Shutting down.....";
-        //if(!BlockMiner::Shutdown()) CrashReport::GenerateAndExit("Couldn't shutdown Block Miner");
-        if(!Node::Shutdown()) CrashReport::GenerateAndExit("Couldn't shutdown the server");
+        LOG(INFO) << "terminating...";
+
+        // 1. Shutdown Server
+#ifdef TOKEN_DEBUG
+        LOG(INFO) << "shutting down the server thread...";
+#endif//TOKEN_DEBUG
+        Node::Shutdown();
+
+        // 2. Shutdown Block Miner
+#ifdef TOKEN_DEBUG
+        LOG(INFO) << "shutting down the miner thread...";
+#endif//TOKEN_DEBUG
+        BlockMiner::Shutdown();
         exit(0);
     }
 

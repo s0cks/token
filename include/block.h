@@ -80,6 +80,7 @@ namespace Token{
     class Block : public BinaryObject<Proto::BlockChain::Block>{
     public:
         typedef Proto::BlockChain::Block RawType;
+        typedef std::vector<Transaction*> TransactionList; //TODO: refactor typing?
     private:
         uint32_t timestamp_;
         uint32_t height_;

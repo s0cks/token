@@ -54,6 +54,7 @@ namespace Token{
 
         static uv_tcp_t* GetHandle();
         static void* NodeThread(void* ptr);
+        static void HandleTerminateCallback(uv_async_t* handle);
         static void OnNewConnection(uv_stream_t* stream, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
 

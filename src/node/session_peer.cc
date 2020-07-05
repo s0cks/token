@@ -282,7 +282,7 @@ namespace Token{
                 return;
             }
 
-            if(!BlockMiner::MineBlock(hash, block, false)){
+            if(!BlockMiner::MineBlock(block, false)){
                 LOG(WARNING) << "couldn't process block: " << hash;
             }
         }

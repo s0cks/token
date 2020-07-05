@@ -13,6 +13,7 @@ namespace Token{
     class BlockMiner{
     public:
         enum State{
+            kStarting,
             kRunning,
             kStopped
         };
@@ -41,7 +42,7 @@ namespace Token{
         static bool CommitProposal(Proposal* proposal);
         static bool VoteForProposal(const std::string& node_id);
         static bool AcceptProposal(const std::string& node_id);
-        static bool MineBlock(const uint256_t& hash, Block* block, bool clean);
+        static bool MineBlock(Block* block, bool clean);
         static void WaitForState(State state);
         static void HandleTerminateCallback(uv_async_t* handle);
         static void HandleMineCallback(uv_timer_t* handle);
@@ -58,9 +59,16 @@ namespace Token{
         ~BlockMiner(){}
 
         static State GetState();
-        static void WaitForShutdown();
-        static bool Initialize();
+        static void Initialize();
         static bool Shutdown();
+
+        static inline void WaitForRunningState(){
+            WaitForState(State::kRunning);
+        }
+
+        static inline void WaitForStoppedState(){
+            WaitForState(State::kStopped);
+        }
 
         static inline bool
         IsRunning(){
