@@ -95,6 +95,7 @@ namespace Token{
         static std::string GetNodeID();
         static void Start();
         static bool HasPeer(const std::string& node_id);
+        static bool HasPeer(const NodeAddress& address);
         static bool ConnectTo(const NodeAddress& address);
         static bool Broadcast(Message* msg);
         static bool WaitForShutdown();

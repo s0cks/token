@@ -4,6 +4,32 @@
 #include "node/node.h"
 
 namespace Token{
+    void NodeSession::HandleVersionMessage(HandleMessageTask* task){
+        NodeSession* session = (NodeSession*)task->GetSession();
+        //TODO:
+        // - state check
+        // - version check
+        // - echo nonce
+        session->Send(VersionMessage::NewInstance(Node::GetNodeID()));
+    }
+
+    //TODO:
+    // - verify nonce
+    void NodeSession::HandleVerackMessage(HandleMessageTask* task){
+        VerackMessage* msg = (VerackMessage*)task->GetMessage();
+        NodeSession* session = (NodeSession*)task->GetSession();
+        NodeAddress paddr = msg->GetCallbackAddress();
+
+        session->Send(VerackMessage::NewInstance(Node::GetNodeID(), NodeAddress("127.0.0.1", FLAGS_port))); //TODO: obtain address dynamically
+
+        session->SetState(NodeSession::kConnected);
+        if(!Node::HasPeer(msg->GetID())){
+            LOG(WARNING) << "couldn't find peer: " << msg->GetID() << ", connecting to peer " << paddr << "....";
+            if(!Node::ConnectTo(paddr)){
+                LOG(WARNING) << "couldn't connect to peer: " << paddr;
+            }
+        }
+    }
 
     void NodeSession::HandleGetDataMessage(HandleMessageTask* task){
         NodeSession* session = (NodeSession*)task->GetSession();
@@ -62,33 +88,6 @@ namespace Token{
         }
 
         session->Send(response);
-    }
-
-    void NodeSession::HandleVersionMessage(HandleMessageTask* task){
-        NodeSession* session = (NodeSession*)task->GetSession();
-        //TODO:
-        // - state check
-        // - version check
-        // - echo nonce
-        session->Send(VersionMessage::NewInstance(Node::GetNodeID()));
-    }
-
-    //TODO:
-    // - verify nonce
-    void NodeSession::HandleVerackMessage(HandleMessageTask* task){
-        VerackMessage* msg = (VerackMessage*)task->GetMessage();
-        NodeSession* session = (NodeSession*)task->GetSession();
-        NodeAddress paddr = msg->GetCallbackAddress();
-
-        session->Send(VerackMessage::NewInstance(Node::GetNodeID(), NodeAddress("127.0.0.1", FLAGS_port))); //TODO: obtain address dynamically
-
-        session->SetState(NodeSession::kConnected);
-        if(!Node::HasPeer(msg->GetID())){
-            LOG(WARNING) << "connecting to peer: " << paddr << "....";
-            if(!Node::ConnectTo(paddr)){
-                LOG(WARNING) << "couldn't connect to peer: " << paddr;
-            }
-        }
     }
 
     void NodeSession::HandlePrepareMessage(HandleMessageTask* task){

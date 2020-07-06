@@ -51,7 +51,9 @@ namespace Token{
         auto iter = peers.begin();
         while(iter != peers.end()){
             NodeAddress address((*iter));
-            if(!ConnectTo(address)) LOG(WARNING) << "couldn't connect to peer: " << address;
+            if(!HasPeer(address)){
+                if(!ConnectTo(address)) LOG(WARNING) << "couldn't connect to peer: " << address;
+            }
             iter++;
         }
     }
@@ -137,10 +139,7 @@ namespace Token{
     }
 
     void* Node::NodeThread(void* ptr){
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << "starting server thread...";
-#endif//TOKEN_DEBUG
-
+        LOG(INFO) << "starting server...";
         SetState(State::kStarting);
         uv_loop_t* loop = uv_loop_new();
         uv_async_init(loop, &aterm_, &HandleTerminateCallback);
@@ -160,11 +159,7 @@ namespace Token{
             pthread_exit(0);
         }
 
-#if defined(TOKEN_DEBUG)||defined(TOKEN_VERBOSE)
-        LOG(INFO) << "node " << GetNodeID() << " listening @" << FLAGS_port;
-#else
         LOG(INFO) << "server listening @" << FLAGS_port;
-#endif//TOKEN_DEBUG or TOKEN_VERBOSE
         SetState(State::kRunning);
         uv_run(loop, UV_RUN_DEFAULT);
 
@@ -173,7 +168,6 @@ namespace Token{
     }
 
     void Node::OnNewConnection(uv_stream_t* stream, int status){
-        LOG(INFO) << "client is connecting...";
         if(status != 0){
             LOG(ERROR) << "connection error: " << uv_strerror(status);
             return;
@@ -181,12 +175,13 @@ namespace Token{
 
         NodeSession* session = new NodeSession();
         uv_tcp_init(stream->loop, (uv_tcp_t*)session->GetStream());
-
+        LOG(INFO) << "client is connecting...";
         if((status = uv_accept(stream, (uv_stream_t*)session->GetStream())) != 0){
             LOG(ERROR) << "client accept error: " << uv_strerror(status);
             return;
         }
 
+        LOG(INFO) << "client connected";
         if((status = uv_read_start(session->GetStream(), &Session::AllocBuffer, &OnMessageReceived)) != 0){
             LOG(ERROR) << "client read error: " << uv_strerror(status);
             return;
@@ -273,6 +268,15 @@ namespace Token{
     bool Node::HasPeer(const std::string& node_id){
         LOCK_GUARD;
         return peers_.find(node_id) != peers_.end();
+    }
+
+    bool Node::HasPeer(const NodeAddress& address){
+        LOCK_GUARD;
+        for(auto& it : peers_){
+            NodeAddress paddress = it.second->GetAddress();
+            if(paddress == address) return true;
+        }
+        return false;
     }
 
     bool Node::ConnectTo(const NodeAddress &address){

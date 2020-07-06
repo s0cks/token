@@ -51,6 +51,7 @@ namespace Token{
         uv_run(loop, UV_RUN_DEFAULT);
     cleanup:
         LOG(INFO) << "disconnected from peer: " << address;
+        Node::UnregisterPeer(session->GetID());
         uv_loop_close(loop);
         pthread_exit(0);
     }
@@ -63,6 +64,7 @@ namespace Token{
             return;
         }
 
+        LOG(INFO) << "connected to peer: " << session->GetAddress();
         session->Send(VersionMessage::NewInstance(Node::GetNodeID()));
         if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
             LOG(WARNING) << "client read error: " << uv_strerror(status);
