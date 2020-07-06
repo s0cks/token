@@ -2,6 +2,28 @@
 #include "alloc/scope.h"
 
 namespace Token{
+#define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
+#define WAIT cond_.wait(lock)
+#define SIGNAL_ONE cond_.notify_one()
+#define SIGNAL_ALL cond_.notify_all()
+#define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
+
+    void Session::WaitForState(State state){
+        LOCK;
+        while(state_ != state) WAIT;
+    }
+
+    void Session::SetState(Session::State state){
+        LOCK;
+        state_ = state;
+        SIGNAL_ALL;
+    }
+
+    Session::State Session::GetState() {
+        LOCK_GUARD;
+        return state_;
+    }
+
     void Session::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
         //TODO: buff->base = (char*)Allocator::Allocate(kBufferSize);
         buff->base = (char*)malloc(kBufferSize);

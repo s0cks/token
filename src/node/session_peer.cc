@@ -254,7 +254,7 @@ namespace Token{
         BlockPool::PutBlock(block);
 
         LOG(INFO) << "downloaded block: " << block->GetHeader();
-        session->OnHash(hash);
+        //TODO: session->OnHash(hash);
     }
 
     void PeerSession::HandleTransactionMessage(HandleMessageTask* task){
@@ -287,7 +287,7 @@ namespace Token{
         }
         std::reverse(items.begin(), items.end());
 
-        session->WaitForItems(items);
+        //TODO: session->WaitForItems(items);
 
         for(auto item = items.rbegin(); item != items.rend(); item++){
             uint256_t hash = item->GetHash();

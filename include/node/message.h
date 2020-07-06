@@ -1,14 +1,11 @@
 #ifndef TOKEN_MESSAGE_H
 #define TOKEN_MESSAGE_H
 
-#include "blockchain.pb.h"
-#include "node.pb.h"
-
+#include "token.h"
 #include "common.h"
 #include "proposal.h"
-#include "info.h"
-#include "token.h"
 #include "block_chain.h"
+#include "node_info.h"
 
 namespace Token{
 #define FOR_EACH_MESSAGE_TYPE(V) \

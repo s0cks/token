@@ -1,6 +1,7 @@
 #ifndef TOKEN_NODE_H
 #define TOKEN_NODE_H
 
+#include "node_info.h"
 #include "message.h"
 #include "session.h"
 

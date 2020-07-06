@@ -1,37 +1,64 @@
 #ifndef TOKEN_SESSION_H
 #define TOKEN_SESSION_H
 
+#include <mutex>
+#include <condition_variable>
 #include "message.h"
+#include "node_info.h"
 
 namespace Token{
     //TODO:
     // - create + use Bytes class
     // - scope?
-    // - implement better concurrency
-    // - make stateful?
-    // - optimize inheritance
     class Session{
     public:
         static const size_t kBufferSize = 4096;
+
+        enum State{
+            kDisconnected = 0,
+            kConnecting,
+            kConnected
+        };
     protected:
-        pthread_mutex_t rmutex_;
-        pthread_cond_t rcond_;
+        static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
+        static void OnMessageSent(uv_write_t* req, int status);
+
+        std::recursive_mutex mutex_;
+        std::condition_variable_any cond_;
+        State state_;
 
         Session():
-            rmutex_(PTHREAD_MUTEX_INITIALIZER),
-            rcond_(PTHREAD_COND_INITIALIZER){
-            pthread_mutexattr_t rmutex_attr;
-            pthread_mutexattr_init(&rmutex_attr);
-            pthread_mutexattr_settype(&rmutex_attr, PTHREAD_MUTEX_RECURSIVE_NP);
+            mutex_(),
+            cond_(),
+            state_(kDisconnected){}
 
-            pthread_mutex_init(&rmutex_, &rmutex_attr);
-            pthread_cond_init(&rcond_, NULL);
+        virtual uv_stream_t* GetStream() = 0;
+        void SetState(State state);
+
+        friend class Node;
+    public:
+        State GetState();
+
+        void Send(Message* msg);
+        void Send(std::vector<Message*>& messages);
+
+        bool IsDisconnected(){
+            return GetState() == kDisconnected;
         }
 
-        static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
-        static void OnMessageSent(uv_write_t *req, int status);
-        virtual uv_stream_t* GetStream() = 0;
+        bool IsConnecting(){
+            return GetState() == kConnecting;
+        }
 
+        bool IsConnected(){
+            return GetState() == kConnected;
+        }
+
+        void WaitForState(State state);
+    };
+
+    /*
+     * Preserve these
         bool IsResolved(const InventoryItem& item){
             uint256_t hash = item.GetHash();
             if(item.IsTransaction()){
@@ -82,53 +109,27 @@ namespace Token{
             pthread_cond_signal(&rcond_);
             pthread_mutex_unlock(&rmutex_);
         }
-
-        friend class Node;
-    public:
-        virtual ~Session() = default;
-
-        void Send(Message* msg);
-        void Send(std::vector<Message*>& messages);
-    };
+    */
 
     class NodeSession : public Session{
-    public:
-        enum State{
-            kConnecting,
-            kConnected,
-            kDisconnected,
-        };
-
-        friend class Node;
     private:
-        pthread_rwlock_t rwlock_;
-        State state_;
         NodeInfo info_;
-
         uv_tcp_t handle_;
         uv_timer_t heartbeat_;
 
-        pthread_mutex_t rmutex_;
-        pthread_cond_t rcond_;
-
         NodeSession():
             Session(),
-            rwlock_(PTHREAD_RWLOCK_INITIALIZER),
-            rmutex_(PTHREAD_MUTEX_INITIALIZER),
-            rcond_(PTHREAD_COND_INITIALIZER),
-            state_(kConnecting),
             handle_(),
             info_(&handle_){
             handle_.data = this;
-
-            pthread_rwlock_init(&rwlock_, NULL);
-            pthread_mutex_init(&rmutex_, NULL);
-            pthread_cond_init(&rcond_, NULL);
+            heartbeat_.data = this;
         }
 
         virtual uv_stream_t* GetStream(){
             return (uv_stream_t*)&handle_;
         }
+
+        friend class Node;
     public:
         ~NodeSession(){}
 
@@ -142,31 +143,6 @@ namespace Token{
 
         NodeAddress GetAddress() const{
             return GetInfo().GetNodeAddress();
-        }
-
-        State GetState(){
-            pthread_rwlock_rdlock(&rwlock_);
-            State state = state_;
-            pthread_rwlock_unlock(&rwlock_);
-            return state;
-        }
-
-        bool IsConnecting(){
-            return GetState() == kConnecting;
-        }
-
-        bool IsConnected(){
-            return GetState() == kConnected;
-        }
-
-        bool IsDisconnected(){
-            return GetState() == kDisconnected;
-        }
-
-        void SetState(State state){
-            pthread_rwlock_trywrlock(&rwlock_);
-            state_ = state;
-            pthread_rwlock_unlock(&rwlock_);
         }
     };
 
@@ -229,15 +205,7 @@ namespace Token{
         bool Connect();
     };
 
-    //TODO: rename ClientSession
     class NodeClient : public Session{
-    public:
-        enum State{
-            kStarting,
-            kRunning,
-            kStopping,
-            kStopped,
-        };
     private:
         uv_loop_t* loop_;
         uv_signal_t sigterm_;
@@ -246,34 +214,6 @@ namespace Token{
         uv_connect_t connection_;
         uv_pipe_t stdin_;
         uv_pipe_t stdout_;
-
-        State state_;
-        pthread_mutex_t smutex_;
-        pthread_cond_t scond_;
-
-        void SetState(State state);
-        void WaitForState(State state);
-        State GetState();
-
-        inline bool
-        IsStarting(){
-            return GetState() == kStarting;
-        }
-
-        inline bool
-        IsRunning(){
-            return GetState() == kRunning;
-        }
-
-        inline bool
-        IsStopping(){
-            return GetState() == kStopping;
-        }
-
-        inline bool
-        IsStopped(){
-            return GetState() == kStopped;
-        }
 
         static void OnConnect(uv_connect_t* conn, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
@@ -297,7 +237,6 @@ namespace Token{
         NodeClient():
                 Session(),
                 loop_(uv_loop_new()),
-                state_(State::kStopped),
                 sigterm_(),
                 sigint_(),
                 stream_(),
@@ -311,7 +250,6 @@ namespace Token{
         ~NodeClient(){}
 
         void Connect(const NodeAddress& addr);
-        bool WaitForShutdown();
     };
 }
 
