@@ -4,7 +4,7 @@
 #include <pthread.h>
 #include <uv.h>
 #include "common.h"
-#include "proposal.h"
+#include "block.h"
 
 namespace Token{
     //TODO:
@@ -35,15 +35,6 @@ namespace Token{
         }
     private:
         static void SetState(State state);
-
-        //TODO: refactor proposal system to be more fluid + stateful
-        static Proposal* GetProposal();
-        static bool HasProposal();
-        static bool SubmitProposal(Proposal* proposal);
-        static bool CommitProposal(Proposal* proposal);
-        static bool VoteForProposal(const std::string& node_id);
-        static bool AcceptProposal(const std::string& node_id);
-
         static bool MineBlock(Block* block, bool clean);
         static void WaitForState(State state);
         static void HandleTerminateCallback(uv_async_t* handle);
@@ -62,7 +53,6 @@ namespace Token{
 
         static State GetState();
         static void Initialize();
-        static void SetProposal(Proposal* proposal);
         static bool Shutdown();
 
         //TODO: refactor

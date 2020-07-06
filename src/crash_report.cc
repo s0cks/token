@@ -193,10 +193,12 @@ namespace Token{
         static const size_t kBacktraceOffset = 4;
         static const size_t kBacktraceSize = kBacktraceOffset+kBacktraceDepth;
 
-
         StackTraceSection(CrashReport* report): CrashReportSection(report){}
         ~StackTraceSection(){}
 
+        //TODO:
+        // - better stack trace
+        // - allow different threads
         bool WriteSection(){
             WriteLine("Stack Trace:");
             Indent();

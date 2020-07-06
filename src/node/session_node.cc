@@ -1,3 +1,4 @@
+#include <proposal.h>
 #include "alloc/scope.h"
 #include "node/task.h"
 #include "node/session.h"
@@ -10,7 +11,7 @@ namespace Token{
         // - state check
         // - version check
         // - echo nonce
-        session->Send(VersionMessage::NewInstance(Node::GetNodeID()));
+        session->Send(VersionMessage::NewInstance(Node::GetID()));
     }
 
     //TODO:
@@ -20,7 +21,7 @@ namespace Token{
         NodeSession* session = (NodeSession*)task->GetSession();
         NodeAddress paddr = msg->GetCallbackAddress();
 
-        session->Send(VerackMessage::NewInstance(Node::GetNodeID(), NodeAddress("127.0.0.1", FLAGS_port))); //TODO: obtain address dynamically
+        session->Send(VerackMessage::NewInstance(Node::GetID(), NodeAddress("127.0.0.1", FLAGS_port))); //TODO: obtain address dynamically
 
         session->SetState(NodeSession::kConnected);
         if(!Node::HasPeer(msg->GetID())){
@@ -95,13 +96,15 @@ namespace Token{
         PrepareMessage* msg = (PrepareMessage*)task->GetMessage();
 
         Proposal* proposal = msg->GetProposal();
-        if(!proposal->IsValid()){
-            LOG(WARNING) << "proposal " << (*proposal) << " is invalid!";
+        //TODO: validate proposal first
+
+        if(Proposal::HasCurrentProposal()){
+            session->Send(RejectedMessage::NewInstance(proposal));
             return;
         }
 
-        BlockMiner::SetProposal(proposal);
-        session->Send(PromiseMessage::NewInstance(Node::GetNodeID(), (*proposal)));
+        Proposal::SetCurrentProposal(proposal);
+        session->Send(PromiseMessage::NewInstance(proposal));
     }
 
     void NodeSession::HandlePromiseMessage(HandleMessageTask* task){}
@@ -110,8 +113,8 @@ namespace Token{
         NodeSession* session = (NodeSession*)task->GetSession();
         CommitMessage* msg = (CommitMessage*)task->GetMessage();
 
-        uint32_t height = msg->GetHeight();
-        uint256_t hash = msg->GetHash();
+        Proposal* proposal = msg->GetProposal();
+        uint256_t hash = proposal->GetHash();
 
         Block* block;
         if(!(block = BlockPool::GetBlock(hash))){
@@ -119,11 +122,10 @@ namespace Token{
             goto exit;
         }
 
-        //TODO: BlockChain::Append(block);
         BlockPool::RemoveBlock(hash);
 
-        session->Send(AcceptedMessage::NewInstance(Node::GetNodeID(), Proposal(msg->GetNodeID(), height, hash)));
-        exit:
+        session->Send(AcceptedMessage::NewInstance(proposal));
+    exit:
         return;
     }
 

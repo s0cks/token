@@ -23,7 +23,7 @@ namespace Token{
     static std::recursive_mutex mutex_;
     static std::condition_variable_any cond_;
     static Node::State state_ = Node::State::kStopped;
-    static std::string node_id_;
+    static NodeInfo info_ = NodeInfo();
     static std::map<std::string, PeerSession*> peers_ = std::map<std::string, PeerSession*>();
 
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
@@ -42,7 +42,7 @@ namespace Token{
 
         std::string node_id;
         node.lookupValue("id", node_id);
-        node_id_ = node_id;
+        info_ = NodeInfo(node_id, NodeAddress("127.0.0.1", FLAGS_port));
     }
 
     void Node::LoadPeers(){
@@ -76,9 +76,9 @@ namespace Token{
         return &handle_;
     }
 
-    std::string Node::GetNodeID(){
+    NodeInfo Node::GetInfo(){
         LOCK_GUARD;
-        return node_id_;
+        return info_;
     }
 
     void Node::Start(){

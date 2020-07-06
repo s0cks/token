@@ -131,7 +131,7 @@ namespace Token{
     void NodeClient::HandleVersionMessage(HandleMessageTask* task){
         NodeClient* client = (NodeClient*)task->GetSession();
         VersionMessage* msg = (VersionMessage*)task->GetMessage();
-        client->Send(VerackMessage::NewInstance(Node::GetNodeID(), NodeAddress("127.0.0.1", FLAGS_port))); //TODO: fixme
+        client->Send(VerackMessage::NewInstance(Node::GetID(), NodeAddress("127.0.0.1", FLAGS_port))); //TODO: fixme
     }
 
     void NodeClient::HandleVerackMessage(HandleMessageTask* task){

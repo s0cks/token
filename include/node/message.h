@@ -3,9 +3,9 @@
 
 #include "token.h"
 #include "common.h"
-#include "proposal.h"
-#include "block_chain.h"
 #include "node_info.h"
+#include "node.h"
+#include "block_chain.h"
 
 namespace Token{
 #define FOR_EACH_MESSAGE_TYPE(V) \
@@ -192,48 +192,42 @@ namespace Token{
         }
     };
 
-    class BasePaxosMessage : public ProtobufMessage<Proto::BlockChainServer::Paxos>{
+    class Proposal;
+    class PaxosMessage : public ProtobufMessage<Proto::BlockChainServer::Proposal>{
     protected:
-        BasePaxosMessage(const Proto::BlockChainServer::Paxos& raw): ProtobufMessage(raw){}
-        BasePaxosMessage(const std::string& node_id, const Proposal& proposal): ProtobufMessage(){
-            raw_.set_node_id(node_id);
-            raw_.set_height(proposal.GetHeight());
-            raw_.set_hash(HexString(proposal.GetHash()));
-        }
+        PaxosMessage(const Proto::BlockChainServer::Proposal& raw): ProtobufMessage(raw){}
+        PaxosMessage(const NodeInfo& node, Proposal* proposal);
     public:
-        virtual ~BasePaxosMessage() = default;
+        virtual ~PaxosMessage() = default;
 
-        std::string GetNodeID() const{
-            return raw_.node_id();
+        Proposal* GetProposal() const;
+
+        //TODO:
+        // - NodeInfo GetProposer()
+        // - NodeInfo GetSubmitter()
+        NodeInfo GetProposer() const{
+            return NodeInfo(raw_.node_id(), NodeAddress(raw_.address_()));
         }
 
         uint256_t GetHash() const{
             return HashFromHexString(raw_.hash());
         }
-
-        uint32_t GetHeight() const{
-            return raw_.height();
-        }
     };
 
-    class PrepareMessage : public BasePaxosMessage{
+    class PrepareMessage : public PaxosMessage{
     public:
-        typedef Proto::BlockChainServer::Paxos RawType;
+        typedef Proto::BlockChainServer::Proposal RawType;
     private:
-        PrepareMessage(const std::string& node_id, const Proposal& proposal): BasePaxosMessage(node_id, proposal){}
-        PrepareMessage(const RawType& raw): BasePaxosMessage(raw){}
+        PrepareMessage(const RawType& raw): PaxosMessage(raw){}
+        PrepareMessage(const NodeInfo& info, Proposal* proposal): PaxosMessage(info, proposal){}
     public:
         ~PrepareMessage(){}
 
-        Proposal* GetProposal(){
-            return new Proposal(GetNodeID(), GetHeight(), GetHash());
-        }
-
         DECLARE_MESSAGE(Prepare);
 
-        static PrepareMessage* NewInstance(const std::string& node_id, const Proposal& proposal){
+        static PrepareMessage* NewInstance(Proposal* proposal, const NodeInfo& info=Node::GetInfo()){
             PrepareMessage* instance = (PrepareMessage*)Allocator::Allocate(sizeof(PrepareMessage), Object::kMessage);
-            new (instance)PrepareMessage(node_id, proposal);
+            new (instance)PrepareMessage(info, proposal);
             return instance;
         }
 
@@ -244,20 +238,20 @@ namespace Token{
         }
     };
 
-    class PromiseMessage : public BasePaxosMessage{
+    class PromiseMessage : public PaxosMessage{
     public:
-        typedef Proto::BlockChainServer::Paxos RawType;
+        typedef Proto::BlockChainServer::Proposal RawType;
     private:
-        PromiseMessage(const std::string& node_id, const Proposal& proposal): BasePaxosMessage(node_id, proposal){}
-        PromiseMessage(const RawType& raw): BasePaxosMessage(raw){}
+        PromiseMessage(const RawType& raw): PaxosMessage(raw){}
+        PromiseMessage(const NodeInfo& info, Proposal* proposal): PaxosMessage(info, proposal){}
     public:
         ~PromiseMessage(){}
 
         DECLARE_MESSAGE(Promise);
 
-        static PromiseMessage* NewInstance(const std::string& node_id, const Proposal& proposal){
+        static PromiseMessage* NewInstance(Proposal* proposal, const NodeInfo& info=Node::GetInfo()){
             PromiseMessage* instance = (PromiseMessage*)Allocator::Allocate(sizeof(PromiseMessage));
-            new (instance)PromiseMessage(node_id, proposal);
+            new (instance)PromiseMessage(info, proposal);
             return instance;
         }
 
@@ -268,20 +262,20 @@ namespace Token{
         }
     };
 
-    class CommitMessage : public BasePaxosMessage{
+    class CommitMessage : public PaxosMessage{
     public:
-        typedef Proto::BlockChainServer::Paxos RawType;
+        typedef Proto::BlockChainServer::Proposal RawType;
     private:
-        CommitMessage(const std::string& node_id, const Proposal& proposal): BasePaxosMessage(node_id, proposal){}
-        CommitMessage(const RawType& raw): BasePaxosMessage(raw){}
+        CommitMessage(const RawType& raw): PaxosMessage(raw){}
+        CommitMessage(const NodeInfo& info, Proposal* proposal): PaxosMessage(info, proposal){}
     public:
         ~CommitMessage(){}
 
         DECLARE_MESSAGE(Commit);
 
-        static CommitMessage* NewInstance(const std::string& node_id, const Proposal& proposal){
+        static CommitMessage* NewInstance(Proposal* proposal, const NodeInfo& info=Node::GetInfo()){
             CommitMessage* instance = (CommitMessage*)Allocator::Allocate(sizeof(CommitMessage), Object::kMessage);
-            new (instance)CommitMessage(node_id, proposal);
+            new (instance)CommitMessage(info, proposal);
             return instance;
         }
 
@@ -292,20 +286,20 @@ namespace Token{
         }
     };
 
-    class AcceptedMessage : public BasePaxosMessage{
+    class AcceptedMessage : public PaxosMessage{
     public:
-        typedef Proto::BlockChainServer::Paxos RawType;
+        typedef Proto::BlockChainServer::Proposal RawType;
     private:
-        AcceptedMessage(const std::string& node_id, const Proposal& proposal): BasePaxosMessage(node_id, proposal){}
-        AcceptedMessage(const RawType& raw): BasePaxosMessage(raw){}
+        AcceptedMessage(const RawType& raw): PaxosMessage(raw){}
+        AcceptedMessage(const NodeInfo& info, Proposal* proposal): PaxosMessage(info, proposal){}
     public:
         ~AcceptedMessage(){}
 
         DECLARE_MESSAGE(Accepted);
 
-        static AcceptedMessage* NewInstance(const std::string& node_id, const Proposal& proposal){
+        static AcceptedMessage* NewInstance(Proposal* proposal, const NodeInfo& info=Node::GetInfo()){
             AcceptedMessage* instance = (AcceptedMessage*)Allocator::Allocate(sizeof(AcceptedMessage), Object::kMessage);
-            new (instance)AcceptedMessage(node_id, proposal);
+            new (instance)AcceptedMessage(info, proposal);
             return instance;
         }
 
@@ -316,20 +310,20 @@ namespace Token{
         }
     };
 
-    class RejectedMessage : public BasePaxosMessage{
+    class RejectedMessage : public PaxosMessage{
     public:
-        typedef Proto::BlockChainServer::Paxos RawType;
+        typedef Proto::BlockChainServer::Proposal RawType;
     private:
-        RejectedMessage(const std::string& node_id, const Proposal& proposal): BasePaxosMessage(node_id, proposal){}
-        RejectedMessage(const RawType& raw): BasePaxosMessage(raw){}
+        RejectedMessage(const RawType& raw): PaxosMessage(raw){}
+        RejectedMessage(const NodeInfo& info, Proposal* proposal): PaxosMessage(info, proposal){}
     public:
         ~RejectedMessage(){}
 
         DECLARE_MESSAGE(Rejected);
 
-        static RejectedMessage* NewInstance(const std::string& node_id, const Proposal& proposal){
+        static RejectedMessage* NewInstance(Proposal* proposal, const NodeInfo& info=Node::GetInfo()){
             RejectedMessage* instance = (RejectedMessage*)Allocator::Allocate(sizeof(RejectedMessage));
-            new (instance)RejectedMessage(node_id, proposal);
+            new (instance)RejectedMessage(info, proposal);
             return instance;
         }
 

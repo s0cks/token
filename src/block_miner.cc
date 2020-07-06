@@ -2,16 +2,13 @@
 #include <algorithm>
 #include <mutex>
 #include <condition_variable>
-
 #include "alloc/scope.h"
-#include "node/node.h"
-
 #include "block_miner.h"
 #include "block_chain.h"
 #include "block_validator.h"
 #include "block_handler.h"
-
 #include "proposal.h"
+#include "node/message.h"
 
 namespace Token{
     static pthread_t thread_;
@@ -44,75 +41,6 @@ namespace Token{
     void BlockMiner::WaitForState(State state){
         LOCK;
         while(state_ != state) WAIT;
-    }
-
-    Proposal* BlockMiner::GetProposal(){
-        LOCK_GUARD;
-        return proposal_;
-    }
-
-    void BlockMiner::SetProposal(Proposal* proposal){
-        LOCK_GUARD;
-        proposal_ = proposal;
-    }
-
-    bool BlockMiner::HasProposal(){
-        LOCK_GUARD;
-        return proposal_ != nullptr;
-    }
-
-    bool BlockMiner::SubmitProposal(Proposal* proposal){
-        std::string node_id = Node::GetNodeID();
-        LOG(INFO) << node_id << " creating proposal for: " << proposal->GetHeight() << "....";
-        SetProposal(proposal);
-        Node::Broadcast(PrepareMessage::NewInstance(node_id, (*proposal)));
-
-        uint32_t votes_needed = Node::GetNumberOfPeers() > 0 ?
-                                (Node::GetNumberOfPeers() == 1 ? 1 : (Node::GetNumberOfPeers() / 2)) :
-                                0;
-
-        LOCK;
-        while(proposal->GetNumberOfVotes() < votes_needed) WAIT;
-        return true;
-    }
-
-    bool BlockMiner::CommitProposal(Proposal* proposal){
-        std::string node_id = Node::GetNodeID();
-        LOG(INFO) << node_id << " committing proposal for: " << proposal->GetHeight() << "....";
-        Node::Broadcast(CommitMessage::NewInstance(node_id, (*proposal)));
-        uint32_t commits_needed = Node::GetNumberOfPeers() > 0 ?
-                                  (Node::GetNumberOfPeers() == 1 ? 1 : (Node::GetNumberOfPeers() / 2)) :
-                                  0;
-
-        LOCK;
-        while(proposal->GetNumberOfCommits() < commits_needed) WAIT;
-        return true;
-    }
-
-    bool BlockMiner::VoteForProposal(const std::string& node_id){
-        Proposal* proposal;
-        if(!(proposal = GetProposal())){
-            LOG(WARNING) << "couldn't get the proposal";
-            return false;
-        }
-
-        LOCK;
-        bool voted = proposal->Vote(node_id);
-        SIGNAL_ALL;
-        return voted;
-    }
-
-    bool BlockMiner::AcceptProposal(const std::string& node_id){
-        Proposal* proposal;
-        if(!(proposal = GetProposal())){
-            LOG(WARNING) << "couldn't get the proposal";
-            return false;
-        }
-
-        LOCK;
-        bool accepted = proposal->Commit(node_id);
-        SIGNAL_ALL;
-        return accepted;
     }
 
     void BlockMiner::HandleTerminateCallback(uv_async_t* handle){
@@ -154,36 +82,55 @@ namespace Token{
             }
 
             BlockPool::PutBlock(block);
-            if(!HasProposal()){
-                // 4. Create proposal
+            if(!Proposal::HasCurrentProposal()){
+                LOG(INFO) << Node::GetInfo() << " creating proposal for: " << block->GetHeader();
 
-                BlockHeader header = block->GetHeader();
-                Proposal* proposal = new Proposal(Node::GetNodeID(), block);
+                // 4. Create proposal
+#ifdef TOKEN_DEBUG
+                LOG(INFO) << "starting proposal phase...";
+#endif//TOKEN_DEBUG
+                Proposal* proposal = scope.Retain(Proposal::NewInstance(block, Node::GetInfo()));
+                Proposal::SetCurrentProposal(proposal);
 
                 // 5. Submit proposal
-                if(!SubmitProposal(proposal)){
-                    LOG(ERROR) << "couldn't submit proposal for new block: " << header;
-                    goto cleanup;
-                }
+#ifdef TOKEN_DEBUG
+                LOG(INFO) << "starting voting phase....";
+#endif//TOKEN_DEBUG
+                proposal->SetPhase(Proposal::kVotingPhase);
+                PrepareMessage* prepare_msg = scope.Retain(PrepareMessage::NewInstance(proposal));
+                Node::Broadcast(prepare_msg);
+                proposal->WaitForRequiredVotes();
 
-                // 6. Commit proposal
-                if(!CommitProposal(proposal)){
-                    LOG(ERROR) << "couldn't commit proposal for new block: " << header;
-                    goto cleanup;
-                }
+                // 6. Commit Proposal
+#ifdef TOKEN_DEBUG
+                LOG(INFO) << "starting commit phase...." << proposal->ToString();
+#endif//TOKEN_DEBUG
+                proposal->SetPhase(Proposal::kCommitPhase);
+                CommitMessage* commit_msg = scope.Retain(CommitMessage::NewInstance(proposal));
+                Node::Broadcast(commit_msg);
+                proposal->WaitForRequiredCommits();
 
-                // 7. Finish mining block
+                // 7. Finish Mining Block
                 if(!MineBlock(block, true)){
-                    LOG(WARNING) << "couldn't mine block: " << header;
-                    goto cleanup;
+                    //TODO: Handle better?
+                    LOG(WARNING) << "couldn't mine block: " << block->GetHeader();
                 }
 
-            cleanup:
-                SetProposal(nullptr);//TODO: memory leak
+                // 8. Quorum has been reached
+                proposal->SetPhase(Proposal::kQuorumPhase);
             } else{
                 // 4. Wait for Proposal to finish
-                Proposal* proposal = GetProposal();
+                Proposal* proposal = Proposal::GetCurrentProposal();
+#ifdef TOKEN_DEBUG
+                LOG(INFO) << "miner waiting for quorum on proposal....";
+#endif//TOKEN_DEBUG
+                proposal->WaitForQuorum();
+#ifdef TOKEN_DEBUG
+                LOG(INFO) << "proposal has finished, resuming mining...";
+#endif//TOKEN_DEBUG
             }
+
+            Proposal::SetCurrentProposal(nullptr);
         }
     }
 

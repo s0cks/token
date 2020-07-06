@@ -1,4 +1,5 @@
 #include "node/message.h"
+#include "proposal.h"
 
 namespace Token{
     const uint32_t GetBlocksMessage::kMaxNumberOfBlocks = 250;
@@ -20,17 +21,28 @@ namespace Token{
             DECLARE_RAW_DECODE(Transaction, Proto::BlockChain::Transaction, "couldn't deserialize transaction from byte array");
             DECLARE_RAW_DECODE(Block, Proto::BlockChain::Block, "couldn't deserialize block from byte array");
             DECLARE_RAW_DECODE(Inventory, Proto::BlockChainServer::Inventory, "couldn't deserialize inventory from byte array");
-            DECLARE_RAW_DECODE(Prepare, Proto::BlockChainServer::Paxos, "couldn't deserialize prepare from byte array");
-            DECLARE_RAW_DECODE(Promise, Proto::BlockChainServer::Paxos, "couldn't deserialize promise from byte array");
-            DECLARE_RAW_DECODE(Commit, Proto::BlockChainServer::Paxos, "couldn't deserialize commit from byte array");
+            DECLARE_RAW_DECODE(Prepare, Proto::BlockChainServer::Proposal, "couldn't deserialize prepare from byte array");
+            DECLARE_RAW_DECODE(Promise, Proto::BlockChainServer::Proposal, "couldn't deserialize promise from byte array");
+            DECLARE_RAW_DECODE(Commit, Proto::BlockChainServer::Proposal, "couldn't deserialize commit from byte array");
             DECLARE_RAW_DECODE(Version, Proto::BlockChainServer::Version, "couldn't deserialize version from byte array");
             DECLARE_RAW_DECODE(Verack, Proto::BlockChainServer::Verack, "couldn't deserialize verack from byte array");
-            DECLARE_RAW_DECODE(Accepted, Proto::BlockChainServer::Paxos, "couldn't deserialize accepted from byte array");
-            DECLARE_RAW_DECODE(Rejected, Proto::BlockChainServer::Paxos, "couldn't deserialize rejected from byte array");
+            DECLARE_RAW_DECODE(Accepted, Proto::BlockChainServer::Proposal, "couldn't deserialize accepted from byte array");
+            DECLARE_RAW_DECODE(Rejected, Proto::BlockChainServer::Proposal, "couldn't deserialize rejected from byte array");
             default:{
                 LOG(ERROR) << "invalid message of type " << static_cast<uint8_t>(type) << " w/ size " << size;
                 return nullptr;
             }
         }
+    }
+
+    PaxosMessage::PaxosMessage(const NodeInfo& info, Proposal* proposal):
+        ProtobufMessage<Proto::BlockChainServer::Proposal>(){
+        raw_.set_node_id(info.GetNodeID());
+        (*raw_.mutable_address_()) << info.GetNodeAddress();
+        raw_.set_hash(HexString(proposal->GetHash()));
+    }
+
+    Proposal* PaxosMessage::GetProposal() const{
+        return Proposal::NewInstance(GetHash(), GetProposer());
     }
 }

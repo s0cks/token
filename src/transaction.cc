@@ -1,7 +1,7 @@
 #include "transaction.h"
-
 #include "keychain.h"
 #include "block_chain.h"
+#include "crash_report.h"
 #include "node/node.h"
 
 namespace Token{

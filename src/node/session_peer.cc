@@ -4,6 +4,8 @@
 #include "block_miner.h"
 #include "alloc/scope.h"
 
+#include "proposal.h"
+
 namespace Token{
 #define SCHEDULE(Loop, Name, ...)({ \
     uv_work_t* work = (uv_work_t*)malloc(sizeof(uv_work_t));\
@@ -65,7 +67,7 @@ namespace Token{
         }
 
         LOG(INFO) << "connected to peer: " << session->GetAddress();
-        session->Send(VersionMessage::NewInstance(Node::GetNodeID()));
+        session->Send(VersionMessage::NewInstance(Node::GetID()));
         if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
             LOG(WARNING) << "client read error: " << uv_strerror(status);
             session->Shutdown();
@@ -142,7 +144,7 @@ namespace Token{
         Scope scope;
         std::vector<Message*> response;
 
-        VerackMessage* verack = VerackMessage::NewInstance(Node::GetNodeID(), NodeAddress("127.0.0.1", FLAGS_port)); //TODO: fixme
+        VerackMessage* verack = VerackMessage::NewInstance(Node::GetID(), NodeAddress("127.0.0.1", FLAGS_port)); //TODO: fixme
         scope.Retain(dynamic_cast<Object*>(verack));
         response.push_back(dynamic_cast<Message*>(verack));
 
@@ -174,14 +176,18 @@ namespace Token{
         PromiseMessage* msg = (PromiseMessage*)task->GetMessage();
         PeerSession* session = (PeerSession*)task->GetSession();
 
-        std::string node_id = msg->GetNodeID();
-        uint32_t height = msg->GetHeight();
-        if(!BlockMiner::VoteForProposal(node_id)){
-            LOG(WARNING) << node_id << " couldn't vote for proposal #" << height;
+        if(!Proposal::HasCurrentProposal()){
+            LOG(WARNING) << "no active proposal found";
             return;
         }
 
-        LOG(INFO) << node_id << " voted for proposal #" << height << "!";
+        Proposal* proposal = Proposal::GetCurrentProposal();
+        NodeInfo node = session->GetInfo();
+        proposal->Vote(node);
+
+#ifdef TOKEN_DEBUG
+        LOG(INFO) << node << " voted for proposal: " << proposal->GetHash();
+#endif//TOKEN_DEBUG
     }
 
     void PeerSession::HandleCommitMessage(HandleMessageTask* task){}
@@ -189,22 +195,33 @@ namespace Token{
     void PeerSession::HandleAcceptedMessage(HandleMessageTask* task){
         AcceptedMessage* msg = (AcceptedMessage*)task->GetMessage();
         PeerSession* session = (PeerSession*)task->GetSession();
-
-        std::string node_id = msg->GetNodeID();
-        uint32_t height = msg->GetHeight();
-        if(!BlockMiner::AcceptProposal(node_id)){
-            LOG(WARNING) << node_id << " couldn't accept proposal #" << height;
+        if(!Proposal::HasCurrentProposal()){
+            LOG(WARNING) << "no active proposal found";
             return;
         }
 
-        LOG(INFO) << node_id << " accepted #" << height << "!";
+        Proposal* proposal = Proposal::GetCurrentProposal();
+        NodeInfo node = session->GetInfo();
+#ifdef TOKEN_DEBUG
+        LOG(INFO) << node << " accepted proposal: " << proposal->GetHash();
+#endif//TOKEN_DEBUG
     }
 
     void PeerSession::HandleRejectedMessage(HandleMessageTask* task){
+        RejectedMessage* msg = (RejectedMessage*)task->GetMessage();
+        PeerSession* session = (PeerSession*)task->GetSession();
+        if(!Proposal::HasCurrentProposal()){
+            LOG(WARNING) << "no active proposal found";
+            return;
+        }
 
+        Proposal* proposal = Proposal::GetCurrentProposal();
+        NodeInfo node = session->GetInfo();
+#ifdef TOKEN_DEBUG
+        LOG(INFO) << node << " rejected proposal: " << proposal->GetHash();
+#endif//TOKEN_DEBUG
     }
 
-    //TODO: vectorize-responses
     void PeerSession::HandleGetDataMessage(HandleMessageTask* task){
         GetDataMessage* msg = (GetDataMessage*)task->GetMessage();
         PeerSession* session = (PeerSession*)task->GetSession();

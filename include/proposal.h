@@ -2,112 +2,111 @@
 #define TOKEN_PROPOSAL_H
 
 #include <set>
-#include "common.h"
-#include "block_chain.h"
+#include <condition_variable>
+#include "object.h"
+#include "block.h"
+#include "node/node.h"
 
 namespace Token{
     class PrepareMessage;
-    class Proposal{
-    private:
-        std::string proposer_;
-        uint32_t height_;
-        uint256_t hash_;
-
-        //TODO: refactor locking
-        pthread_mutex_t votes_mutex_;
-        std::set<std::string> votes_;
-
-        //TODO: refactor locking
-        pthread_mutex_t commits_mutex_;
-        std::set<std::string> commits_;
+    class Proposal : public Object{
     public:
-        Proposal():
-            proposer_(),
-            height_(0),
-            hash_(),
-            votes_(),
-            votes_mutex_(),
-            commits_(),
-            commits_mutex_(){}
-        Proposal(const std::string& node, uint32_t height, const uint256_t& hash):
-            proposer_(node),
-            height_(height),
-            hash_(hash),
-            votes_(),
-            votes_mutex_(),
-            commits_(),
-            commits_mutex_(){}
-        Proposal(const std::string& node, Block* block): Proposal(node, block->GetHeight(), block->GetHash()){}
-        ~Proposal(){}
+        enum Phase{
+            kProposalPhase,
+            kVotingPhase,
+            kCommitPhase,
+            kQuorumPhase
+        };
 
-        std::string GetProposer() const{
-            return proposer_;
+        static inline uint32_t
+        GetRequiredNumberOfVotes(){
+            uint32_t peers = Node::GetNumberOfPeers();
+            if(peers == 0) return 0;
+            else if(peers == 1) return 1;
+            return peers / 2;
         }
 
-        uint32_t GetHeight() const{
-            return height_;
+        static inline uint32_t
+        GetRequiredNumberOfCommits(){
+            uint32_t peers = Node::GetNumberOfPeers();
+            if(peers == 0) return 0;
+            else if(peers == 1) return 1;
+            return peers / 2;
+        }
+    private:
+        std::recursive_mutex mutex_;
+        std::condition_variable_any cond_;
+        Phase phase_;
+        NodeInfo proposer_;
+        uint256_t hash_;
+        std::set<NodeInfo> votes_;
+        std::set<NodeInfo> commits_;
+
+        void WaitForPhase(Phase phase);
+
+        Proposal(const NodeInfo& proposer, const uint256_t& hash):
+            phase_(kProposalPhase),
+            proposer_(proposer),
+            hash_(hash),
+            votes_(),
+            commits_(){}
+    public:
+        ~Proposal() = default;
+
+        NodeInfo GetProposer() const{
+            return proposer_;
         }
 
         uint256_t GetHash() const{
             return hash_;
         }
 
-        bool Vote(const std::string& node_id){
-            pthread_mutex_trylock(&votes_mutex_);
-            bool voted = votes_.insert(node_id).second;
-            pthread_mutex_unlock(&votes_mutex_);
-            return voted;
+        void SetPhase(Phase phase);
+        void Vote(const NodeInfo& info);
+        void Commit(const NodeInfo& info);
+        void WaitForRequiredVotes(uint32_t required=GetRequiredNumberOfVotes());
+        void WaitForRequiredCommits(uint32_t required=GetRequiredNumberOfCommits());
+        uint32_t GetNumberOfVotes();
+        uint32_t GetNumberOfCommits();
+        Phase GetPhase();
+        std::string ToString() const;
+
+        inline void
+        WaitForQuorum(){
+            WaitForPhase(kQuorumPhase);
         }
 
-        bool HasVote(const std::string& node_id){
-            pthread_mutex_trylock(&votes_mutex_);
-            bool found = votes_.find(node_id) != votes_.end();
-            pthread_mutex_unlock(&votes_mutex_);
-            return found;
+        inline bool
+        InProposingPhase(){
+            return GetPhase() == kProposalPhase;
         }
 
-        bool IsValid() const{
-            return height_ == (BlockChain::GetHead().GetHeight() + 1);
+        inline bool
+        InVotingPhase(){
+            return GetPhase() == kVotingPhase;
         }
 
-        bool Commit(const std::string& node_id){
-            pthread_mutex_trylock(&commits_mutex_);
-            bool committed = commits_.insert(node_id).second;
-            pthread_mutex_unlock(&commits_mutex_);
-            return committed;
+        inline bool
+        InCommitPhase(){
+            return GetPhase() == kCommitPhase;
         }
 
-        uint32_t GetNumberOfVotes(){
-            pthread_mutex_trylock(&votes_mutex_);
-            uint32_t votes = votes_.size();
-            pthread_mutex_unlock(&votes_mutex_);
-            return votes;
+        inline bool
+        InQuorumPhase(){
+            return GetPhase() == kQuorumPhase;
         }
 
-        uint32_t GetNumberOfCommits(){
-            pthread_mutex_trylock(&commits_mutex_);
-            uint32_t commits = commits_.size();
-            pthread_mutex_unlock(&commits_mutex_);
-            return commits;
+        static void SetCurrentProposal(Proposal* proposal);
+        static bool HasCurrentProposal();
+        static Proposal* GetCurrentProposal();
+        static Proposal* NewInstance(const uint256_t& hash, const NodeInfo& proposer);
+
+        static Proposal* NewInstance(Block* block, const NodeInfo& proposer){
+            return NewInstance(block->GetHash(), proposer);
         }
 
-        friend bool operator==(const Proposal& a, const Proposal& b){
-            return a.proposer_ == b.proposer_ &&
-                    a.height_ == b.height_ &&
-                    a.hash_ == b.hash_;
-        }
-
-        friend bool operator!=(const Proposal& a, const Proposal& b){
-            return !operator==(a, b);
-        }
-
-        friend bool operator<(const Proposal& a, const Proposal& b){
-            return a.GetHeight() < b.GetHeight();
-        }
-
-        friend std::ostream& operator<<(std::ostream& stream, const Proposal& proposal){
-            stream << "#" << proposal.GetHeight() << "[" << proposal.GetHash() << "]";
-            return stream;
+        static Proposal* NewInstance(const BlockHeader& block, const NodeInfo& proposer){
+            return NewInstance(block.GetHash(), proposer);
         }
     };
 }

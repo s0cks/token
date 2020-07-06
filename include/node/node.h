@@ -2,10 +2,10 @@
 #define TOKEN_NODE_H
 
 #include "node_info.h"
-#include "message.h"
-#include "session.h"
 
 namespace Token{
+    class Message;
+    class PeerSession;
     class HandleMessageTask;
     class Node{
     public:
@@ -67,30 +67,24 @@ namespace Token{
         ~Node(){}
 
         static inline bool
-        BroadcastInventory(Block* block){
-            std::vector<InventoryItem> items = {
-                InventoryItem(block)
-            };
-            return Broadcast(InventoryMessage::NewInstance(items));
-        }
-
-        static inline bool
-        BroadcastInventory(Transaction* tx){
-            std::vector<InventoryItem> items = {
-                InventoryItem(tx)
-            };
-            return Broadcast(InventoryMessage::NewInstance(items));
-        }
-
-        static inline bool
         ConnectTo(const std::string& address, uint32_t port){
             return ConnectTo(NodeAddress(address, port));
         }
 
+        static inline NodeAddress
+        GetAddress(){
+            return GetInfo().GetNodeAddress();
+        }
+
+        static inline std::string
+        GetID(){
+            return GetInfo().GetNodeID();
+        }
+
+        static NodeInfo GetInfo();
         static void Start();
         static void RegisterPeer(const std::string& node_id, PeerSession* peer);
         static void UnregisterPeer(const std::string& node_id);
-        static std::string GetNodeID();
         static uint32_t GetNumberOfPeers();
         static bool HasPeer(const std::string& node_id);
         static bool HasPeer(const NodeAddress& address);
