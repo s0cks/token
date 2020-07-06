@@ -26,10 +26,12 @@ namespace Token{
         std::recursive_mutex mutex_;
         std::condition_variable_any cond_;
         State state_;
+        NodeInfo info_;
 
-        Session():
+        Session(const NodeInfo& info):
             mutex_(),
             cond_(),
+            info_(info),
             state_(kDisconnected){}
 
         virtual uv_stream_t* GetStream() = 0;
@@ -37,6 +39,18 @@ namespace Token{
 
         friend class Node;
     public:
+        NodeInfo GetInfo() const{
+            return info_;
+        }
+
+        std::string GetID() const{
+            return info_.GetNodeID();
+        }
+
+        NodeAddress GetAddress() const{
+            return info_.GetNodeAddress();
+        }
+
         State GetState();
 
         void Send(Message* msg);
@@ -57,70 +71,15 @@ namespace Token{
         void WaitForState(State state);
     };
 
-    /*
-     * Preserve these
-        bool IsResolved(const InventoryItem& item){
-            uint256_t hash = item.GetHash();
-            if(item.IsTransaction()){
-                Transaction* tx;
-                if((tx = TransactionPool::GetTransaction(hash))){
-                    return true;
-                }
-            } else if(item.IsBlock()){
-                Block* blk;
-                if((blk = BlockChain::GetBlockData(hash))){
-                    return true;
-                }
-
-                if((blk = BlockPool::GetBlock(hash))){
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        inline void
-        WaitForTransaction(const uint256_t& hash){
-            WaitForItem(InventoryItem(InventoryItem::kTransaction, hash));
-        }
-
-        inline void
-        WaitForBlock(const uint256_t& hash){
-            WaitForItem(InventoryItem(InventoryItem::kBlock, hash));
-        }
-
-        void WaitForItem(const InventoryItem& item){
-            pthread_mutex_trylock(&rmutex_);
-            LOG(INFO) << "waiting for: " << item.GetHash();
-            while(!IsResolved(item)) pthread_cond_wait(&rcond_, &rmutex_);
-            pthread_mutex_unlock(&rmutex_);
-        }
-
-        void WaitForItems(std::vector<InventoryItem> items){
-            if(items.empty()) return;
-            InventoryItem next = items.back();
-            items.pop_back();
-            WaitForItem(next);
-            return WaitForItems(items);
-        }
-
-        void OnHash(const uint256_t& hash){
-            pthread_mutex_trylock(&rmutex_);
-            pthread_cond_signal(&rcond_);
-            pthread_mutex_unlock(&rmutex_);
-        }
-    */
-
     class NodeSession : public Session{
     private:
-        NodeInfo info_;
         uv_tcp_t handle_;
         uv_timer_t heartbeat_;
 
         NodeSession():
-            Session(),
             handle_(),
-            info_(&handle_){
+            heartbeat_(),
+            Session(NodeInfo(&handle_)){
             handle_.data = this;
             heartbeat_.data = this;
         }
@@ -132,18 +91,6 @@ namespace Token{
         friend class Node;
     public:
         ~NodeSession(){}
-
-        NodeInfo GetInfo() const{
-            return info_;
-        }
-
-        std::string GetNodeID() const{
-            return GetInfo().GetNodeID();
-        }
-
-        NodeAddress GetAddress() const{
-            return GetInfo().GetNodeAddress();
-        }
     };
 
     class HandleMessageTask;
@@ -178,28 +125,14 @@ namespace Token{
         }
     public:
         PeerSession(const NodeAddress& addr):
-                Session(),
+                Session(NodeInfo(addr)),
                 thread_(),
                 socket_(),
-                conn_(),
-                node_addr_(addr),
-                node_id_(){
+                conn_(){
             socket_.data = this;
             conn_.data = this;
         }
         ~PeerSession(){}
-
-        NodeInfo GetInfo() const{
-            return NodeInfo(node_id_, node_addr_);
-        }
-
-        NodeAddress GetAddress() const{
-            return node_addr_;
-        }
-
-        std::string GetID() const{
-            return node_id_;
-        }
 
         void Shutdown();
         bool Connect();
@@ -235,13 +168,13 @@ namespace Token{
         }
     public:
         NodeClient():
-                Session(),
+                stream_(),
                 loop_(uv_loop_new()),
                 sigterm_(),
                 sigint_(),
-                stream_(),
                 stdin_(),
-                stdout_(){
+                stdout_(),
+                Session(&stream_){
             stdin_.data = this;
             stdout_.data = this;
             stream_.data = this;
