@@ -44,7 +44,6 @@ namespace Token{
         static void LoadNodeInformation();
         static void SavePeers();
         static void LoadPeers();
-
         static void RegisterPeer(const std::string& node_id, PeerSession* peer);
         static void UnregisterPeer(const std::string& node_id);
 
@@ -91,9 +90,9 @@ namespace Token{
             return ConnectTo(NodeAddress(address, port));
         }
 
-        static uint32_t GetNumberOfPeers();
-        static std::string GetNodeID();
         static void Start();
+        static std::string GetNodeID();
+        static uint32_t GetNumberOfPeers();
         static bool HasPeer(const std::string& node_id);
         static bool HasPeer(const NodeAddress& address);
         static bool ConnectTo(const NodeAddress& address);
