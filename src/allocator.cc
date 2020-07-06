@@ -1,86 +1,63 @@
-#include "crash_report.h"
 #include "allocator.h"
-#include "alloc/heap.h"
 #include "alloc/reference.h"
-
-#if defined(TOKEN_USE_CHENEYGC)
-#include "alloc/mc_scavenger.h"
-#else
-#include "alloc/ms_scavenger.h"
-#endif //TOKEN_USE_CHENEYGC
+#include "alloc/scavenger.h"
+#include "crash_report.h"
 
 namespace Token{
-    std::unordered_map<uintptr_t, RawObject*> Allocator::allocated_ = std::unordered_map<uintptr_t, RawObject*>();
-    std::unordered_map<uintptr_t, RawObject*> Allocator::roots_ = std::unordered_map<uintptr_t, RawObject*>();
+    ObjectAddressMap Allocator::allocated_ = ObjectAddressMap();
+    ObjectAddressMap Allocator::roots_ = ObjectAddressMap();
 
-#if !defined(TOKEN_USE_CHENEYGC)
-    uintptr_t Allocator::allocated_size_ = 0;
-#endif//TOKEN_USE_CHENEYGC
-
-#if defined(TOKEN_USE_CHENEYGC)
-    Heap* Allocator::GetEdenHeap(){
-        static Heap eden(FLAGS_minheap_size);
-        return &eden;
+    size_t Allocator::GetNumberOfRootObjects(){
+        return roots_.size();
     }
 
-    bool Allocator::MoveObject(Token::RawObject *src, Token::RawObject *dst){
-        auto pos = allocated_.find(src->GetObjectAddress());
-        if(pos == allocated_.end()) return false;
-        return allocated_.insert(std::make_pair(dst->GetObjectAddress(), dst)).second;
-    }
-#endif //TOKEN_USE_CHENEYGC
-
-    void* Allocator::Allocate(uintptr_t size, Object::Type type){
-        //TODO: refactor to allow more fluid allocation based on Scavenger Type
-        if(size == 0){
-            return nullptr;
-        }
-#if defined(TOKEN_USE_CHENEYGC)
-        if(!(obj = GetEdenHeap()->Allocate(size))){
-            if(!Collect()){
-                LOG(WARNING) << "couldn't collect garbage objects from eden space";
-                return nullptr;
-            }
-
-            if(!(obj = GetEdenHeap()->Allocate(size))) {
-                LOG(WARNING) << "couldn't allocate space for object of size: " << size;
-                return nullptr;
-            }
-        }
-#else
-        uintptr_t total_size = size + sizeof(RawObject);
-        if(total_size > GetBytesFree()){
-            if(!Collect()) CrashReport::GenerateAndExit("Couldn't perform garbage collection");
-            if(total_size > GetBytesFree()){
-                std::stringstream ss;
-                ss << "Couldn't allocate object of size: " << size;
-                CrashReport::GenerateAndExit(ss.str());
-            }
-        }
-        void* ptr = malloc(total_size);
-        if(!ptr){
-            if(!Collect()) CrashReport::GenerateAndExit("Couldn't perform garbage collection");
-            if(!(ptr = malloc(total_size))){
-                std::stringstream ss;
-                ss << "Couldn't allocate object of size: " << size;
-                CrashReport::GenerateAndExit(ss.str());
-            }
-        }
-        memset(ptr, 0, total_size);
-        RawObject* obj = new RawObject(type, size, ptr); //TODO: memory leak
-#endif //TOKEN_USE_CHENEYGC
-        allocated_.insert(std::make_pair(obj->GetObjectAddress(), obj));
-        allocated_size_ += size;
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << "allocated object: " << (*obj);
-#endif//TOKEN_DEBUG
-        return obj->GetObjectPointer();
+    size_t Allocator::GetNumberOfAllocatedObjects() {
+        return allocated_.size();
     }
 
     RawObject* Allocator::GetObject(uintptr_t address){
         auto pos = allocated_.find(address);
         if(pos == allocated_.end()) return nullptr;
         return pos->second;
+    }
+
+    void Allocator::Collect(){
+        if(!Scavenger::ScavengeMemory()) CrashReport::GenerateAndExit("Couldn't perform garbage collection");
+    }
+
+    void* Allocator::Allocate(uintptr_t size, Object::Type type){
+        if(size == 0) return nullptr;
+        uintptr_t total_size = size + sizeof(RawObject);
+        if(total_size > GetBytesFree()){
+            Collect();
+            if(total_size > GetBytesFree()){
+                std::stringstream ss;
+                ss << "Couldn't allocate object of size: " << size;
+                CrashReport::GenerateAndExit(ss);
+            }
+        }
+
+        RawObject* obj = AllocateObject(total_size, type);
+        allocated_.insert({ obj->GetObjectAddress(), obj });
+        return obj->GetObjectPointer();
+    }
+
+    bool Allocator::VisitAllocated(ObjectPointerVisitor* vis){
+        ObjectAddressMap::iterator iter = allocated_.begin();
+        for(; iter != allocated_.end(); iter++){
+            RawObject* obj = iter->second;
+            if(!vis->Visit(obj)) return false;
+        }
+        return true;
+    }
+
+    bool Allocator::VisitRoots(ObjectPointerVisitor* vis){
+        ObjectAddressMap::iterator iter = roots_.begin();
+        for(; iter != roots_.end(); iter++){
+            RawObject* obj = iter->second;
+            if(!vis->Visit(obj)) return false;
+        }
+        return true;
     }
 
     class GCObjectPrinter : public ObjectPointerVisitor{
@@ -104,28 +81,8 @@ namespace Token{
         return VisitRoots(&printer);
     }
 
-    bool Allocator::VisitAllocated(ObjectPointerVisitor* vis){
-        std::unordered_map<uintptr_t, RawObject*>::iterator iter = allocated_.begin();
-        for(; iter != allocated_.end(); iter++){
-            RawObject* obj = iter->second;
-            if(!vis->Visit(obj)) return false;
-        }
-        return true;
-    }
-
-    bool Allocator::VisitRoots(ObjectPointerVisitor* vis){
-        std::unordered_map<uintptr_t, RawObject*>::iterator iter = roots_.begin();
-        for(; iter != roots_.end(); iter++){
-            RawObject* obj = iter->second;
-            if(!vis->Visit(obj)) return false;
-        }
-        return true;
-    }
-
-    bool Allocator::IsRoot(void* ptr){
-        if(!ptr) return false;
-        RawObject* obj = GetObject(ptr);
-        if(obj == nullptr) return false;
+    bool Allocator::IsRoot(RawObject* obj){
+        if(!obj) return false;
         auto pos = roots_.find(obj->GetObjectAddress());
         return pos != roots_.end();
     }
@@ -201,57 +158,5 @@ namespace Token{
         RawObject* src = GetObject(object);
         RawObject* dst = GetObject(target);
         return Unreference(src, dst, true);
-    }
-
-#if !defined(TOKEN_USE_CHENEYGC)
-    bool Allocator::DeleteObject(Token::RawObject* obj){
-        uintptr_t address = obj->GetObjectAddress();
-
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << "removing object: " << (*obj);
-#endif//TOKEN_DEBUG
-
-        if(allocated_.erase(address) <= 0){
-            std::stringstream ss;
-            ss << "Couldn't remove object from allocator: " << (*obj);
-            CrashReport::GenerateAndExit(ss.str());
-        }
-        allocated_size_ -= obj->GetObjectSize();
-        delete obj;
-        return true;
-    }
-#endif//TOKEN_USE_CHENEYGC
-
-    bool Allocator::Collect(){
-#if defined(TOKEN_USE_CHENEYGC)
-        MarkCopyScavenger scavenger(GetEdenHeap());
-#else
-        MarkSweepScavenger scavenger;
-#endif //TOKEN_USE_CHENEYGC
-        return scavenger.ScavengeMemory();
-    }
-
-    size_t Allocator::GetBytesAllocated(){
-#if defined(TOKEN_USE_CHENEYGC)
-        return GetEdenHeap()->GetFromSpace()->GetAllocatedSize();
-#else
-        return allocated_size_;
-#endif//TOKEN_USE_CHENEYGC
-    }
-
-    size_t Allocator::GetBytesFree(){
-#if defined(TOKEN_USE_CHENEYGC)
-        return GetEdenHeap()->GetFromSpace()->GetUnallocatedSize();
-#else
-        return FLAGS_minheap_size - allocated_size_;
-#endif//TOKEN_USE_CHENEYGC
-    }
-
-    size_t Allocator::GetTotalSize(){
-#if defined(TOKEN_USE_CHENEYGC)
-        return GetEdenHeap()->GetSemispaceSize();
-#else
-        return FLAGS_minheap_size;
-#endif//TOKEN_USE_CHENEYGC
     }
 }

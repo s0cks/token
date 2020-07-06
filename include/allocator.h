@@ -1,7 +1,6 @@
 #ifndef TOKEN_ALLOCATOR_H
 #define TOKEN_ALLOCATOR_H
 
-#include <unordered_map>
 #include <vector>
 #include "common.h"
 #include "object.h"
@@ -9,66 +8,56 @@
 namespace Token{
     class RawObject;
     class ObjectPointerVisitor;
-    class Heap;
+
+    typedef uintptr_t ObjectAddress;
+    typedef std::map<ObjectAddress, RawObject*> ObjectAddressMap;
+
     class Allocator{
     private:
-        static std::unordered_map<uintptr_t, RawObject*> allocated_;
-        static std::unordered_map<uintptr_t, RawObject*> roots_;
-#if !defined(TOKEN_USE_CHENEYGC)
-        static uintptr_t allocated_size_;
-
-        static bool DeleteObject(RawObject* obj);
-#endif//TOKEN_USE_CHENEYGC
+        static std::mutex mutex_;
+        static ObjectAddressMap allocated_;
+        static ObjectAddressMap roots_;
 
         static bool Unreference(RawObject* owner, RawObject* target, bool weak);
+        static bool FinalizeObject(RawObject* obj);
+        static bool IsRoot(RawObject* obj);
         static RawObject* GetObject(uintptr_t address);
+        static RawObject* AllocateObject(uintptr_t size, Object::Type type);
 
         static inline RawObject* GetObject(void* ptr){
             return GetObject((uintptr_t)ptr);
         }
 
-#if defined(TOKEN_USE_CHENEYGC)
-        static bool MoveObject(RawObject* src, RawObject* dst);
-#endif //TOKEN_USE_CHENEYGC
-
         Allocator() = delete;
 
-        friend class MarkCopyScavenger;
-        friend class MarkSweepScavenger;
         friend class Object;
-        friend class ObjectScopeHandle;
+        friend class MemorySweeper;
         friend class MemoryInformationSection;
     public:
         ~Allocator(){}
 
-        static size_t GetNumberOfAllocatedObjects(){
-            return allocated_.size();
-        }
-
+        static size_t GetNumberOfAllocatedObjects();
+        static size_t GetNumberOfRootObjects();
         static uintptr_t GetBytesAllocated();
         static uintptr_t GetBytesFree();
         static uintptr_t GetTotalSize();
 
+        static void Collect();
         static void* Allocate(uintptr_t size, Object::Type type=Object::Type::kUnknown);
         static void AddRoot(void* ptr);
         static void RemoveRoot(void* ptr);
-        static bool IsRoot(void* ptr);
-        static bool Collect();
         static bool AddStrongReference(void* object, void* target, void** ptr);
         static bool RemoveStrongReference(void* object, void* target);
-
         static bool AddWeakReference(void* object, void* target, void** ptr);
         static bool RemoveWeakReference(void* object, void* target);
-
         static bool PrintRoots();
         static bool PrintAllocated();
         static bool VisitAllocated(ObjectPointerVisitor* vis);
         static bool VisitRoots(ObjectPointerVisitor* vis);
 
-
-#if defined(TOKEN_USE_CHENEYGC)
-        static Heap* GetEdenHeap();
-#endif
+        static inline bool IsRoot(void* ptr){
+            return IsRoot(GetObject((ObjectAddress)ptr));
+        }
     };
 }
 

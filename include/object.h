@@ -10,6 +10,8 @@
 #include "bitfield.h"
 
 namespace Token{
+    typedef uintptr_t ObjectAddress;
+
     class Object{
     public:
         //TODO: refactor typing system

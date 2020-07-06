@@ -20,7 +20,7 @@ endif (CMAKE_BUILD_TYPE MATCHES Debug)
 # set(TOKEN_HEALTHCHECK_SUPPORT True)
 
 # Changes garbage collector algorithm to Cheney's Mark-Copy Algorithm:
-# set(TOKEN_CHENEYGC_SUPPORT True)
+# set(TOKEN_USE_KOA True)
 
 # Creates a .deb packages:
 # set(TOKEN_CREATE_PACKAGE True)

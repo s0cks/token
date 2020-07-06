@@ -53,7 +53,7 @@ namespace Token{
         class TypeField : public BitField<uintptr_t, Object::Type, kTypePosition, kBitsForType>{};
 
         uintptr_t header_;
-        uintptr_t forwarding_address_;
+        ObjectAddress forwarding_address_;
         ReferenceList pointing_;
         ReferenceList owned_;
         void* ptr_;
@@ -110,12 +110,12 @@ namespace Token{
             free(ptr_);
         }
 
-        uintptr_t GetForwardingAddress() const{
+        ObjectAddress GetForwardingAddress() const{
             return forwarding_address_;
         }
 
-        uintptr_t GetObjectAddress() const{
-            return (uintptr_t)GetObjectPointer();
+        ObjectAddress GetObjectAddress() const{
+            return (ObjectAddress)GetObjectPointer();
         }
 
         void* GetObjectPointer() const{

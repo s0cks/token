@@ -1,11 +1,6 @@
 #include "heap.h"
 #include "allocator.h"
-
-#if defined(TOKEN_USE_CHENEYGC)
-#include "mc_scavenger.h"
-#else
-#include "ms_scavenger.h"
-#endif //TOKEN_USE_CHENEYGC
+#include "scavenger.h"
 
 namespace Token{
     class ObjectPointerMarker : public ObjectPointerVisitor{
@@ -37,9 +32,9 @@ namespace Token{
         }
     };
 
-    bool Scavenger::DarkenRoots(){
+    void Scavenger::DarkenRoots(){
         ObjectPointerMarker marker(Color::kBlack);
-        return Allocator::VisitRoots(&marker);
+        Allocator::VisitRoots(&marker);
     }
 
     class ReachableObjectPointerMarker : public ObjectPointerMarker{
@@ -55,8 +50,8 @@ namespace Token{
         }
     };
 
-    bool Scavenger::MarkObjects(){
+    void Scavenger::MarkObjects(){
         ReachableObjectPointerMarker marker(Color::kGray);
-        return Allocator::VisitAllocated(&marker);
+        Allocator::VisitAllocated(&marker);
     }
 }

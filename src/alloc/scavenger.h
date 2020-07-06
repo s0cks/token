@@ -28,12 +28,15 @@ namespace Token{
     };
 
     class Scavenger{
-    protected:
-        bool DarkenRoots();
-        bool MarkObjects();
-        virtual bool ScavengeMemory() = 0;
+    private:
+        Scavenger() = delete;
+
+        static void DarkenRoots();
+        static void MarkObjects();
     public:
-        virtual ~Scavenger() = default;
+        ~Scavenger() = delete;
+
+        static bool ScavengeMemory();
     };
 }
 
