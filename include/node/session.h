@@ -4,6 +4,12 @@
 #include "message.h"
 
 namespace Token{
+    //TODO:
+    // - create + use Bytes class
+    // - scope?
+    // - implement better concurrency
+    // - make stateful?
+    // - optimize inheritance
     class Session{
     public:
         static const size_t kBufferSize = 4096;
