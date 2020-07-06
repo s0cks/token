@@ -26,8 +26,6 @@ namespace Token{
     FOR_EACH_MESSAGE_TYPE(FORWARD_DECLARE)
 #undef FORWARD_DECLARE
 
-    class ByteBuffer;
-
     class Message : public Object{
     public:
         enum MessageType{

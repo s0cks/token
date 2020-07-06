@@ -75,6 +75,7 @@ namespace Token{
 #undef DECLARE_MESSAGE_HANDLER
     };
 
+    //TODO: add heartbeat?
     class NodeSession : public Session{
     private:
         uv_tcp_t handle_;
@@ -102,6 +103,7 @@ namespace Token{
         ~NodeSession(){}
     };
 
+    //TODO: add heartbeat?
     class HandleMessageTask;
     class PeerSession : public Session{
     private:
@@ -109,7 +111,6 @@ namespace Token{
         uv_connect_t conn_;
         uv_tcp_t socket_;
         uv_async_t shutdown_;
-        uv_timer_t heartbeat_;
 
         static void* PeerSessionThread(void* data);
         static void OnShutdown(uv_async_t* handle);

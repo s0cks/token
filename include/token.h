@@ -7,6 +7,7 @@
 #include "crash_report.h"
 #include "block_miner.h"
 
+//TODO: move to CMakeLists & Compile Definitions
 #define TOKEN_MAJOR_VERSION 1
 #define TOKEN_MINOR_VERSION 0
 #define TOKEN_REVISION_VERSION 0

@@ -13,9 +13,11 @@ namespace Token{
         uint32_t height_;
         uint256_t hash_;
 
+        //TODO: refactor locking
         pthread_mutex_t votes_mutex_;
         std::set<std::string> votes_;
 
+        //TODO: refactor locking
         pthread_mutex_t commits_mutex_;
         std::set<std::string> commits_;
     public:

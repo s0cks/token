@@ -25,6 +25,7 @@
 #include "blockchain.pb.h"
 #include "node.pb.h"
 
+//TODO: cleanup
 namespace Token{
 #if defined(_M_X64) || defined(__x86_64__)
 #define ARCHITECTURE_IS_X64 1

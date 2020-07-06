@@ -12,6 +12,7 @@
 namespace Token{
     class Object{
     public:
+        //TODO: refactor typing system
         enum Type{
             kUnknown = 0,
             kBlock,
