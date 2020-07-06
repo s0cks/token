@@ -47,7 +47,6 @@ namespace Token{
 
         static void RegisterPeer(const std::string& node_id, PeerSession* peer);
         static void UnregisterPeer(const std::string& node_id);
-        static bool HasPeer(const std::string& node_id);
 
         static void WaitForState(State state);
         static void SetState(State state);
@@ -58,11 +57,6 @@ namespace Token{
         static void HandleTerminateCallback(uv_async_t* handle);
         static void OnNewConnection(uv_stream_t* stream, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
-
-#define DECLARE_MESSAGE_HANDLER(Name) \
-    static void Handle##Name##Message(HandleMessageTask* task);
-    FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER);
-#undef DECLARE_MESSAGE_HANDLER
 
 #define DECLARE_TASK(Name) \
     static void Handle##Name##Task(uv_work_t* handle); \
@@ -99,9 +93,10 @@ namespace Token{
 
         static uint32_t GetNumberOfPeers();
         static std::string GetNodeID();
+        static void Start();
+        static bool HasPeer(const std::string& node_id);
         static bool ConnectTo(const NodeAddress& address);
         static bool Broadcast(Message* msg);
-        static void Start();
         static bool WaitForShutdown();
         static bool Shutdown();
 

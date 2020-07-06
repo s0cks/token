@@ -30,7 +30,7 @@ namespace Token{
     void* PeerSession::PeerSessionThread(void* data){
         if(!Node::IsRunning() && Node::IsStarting()) Node::WaitForState(Node::kRunning);
         PeerSession* session = (PeerSession*)data;
-        NodeAddress address = session->node_addr_;
+        NodeAddress address = session->GetAddress();
         LOG(INFO) << "connecting to peer " << address << "....";
 
         uv_loop_t* loop = uv_loop_new();
@@ -118,7 +118,7 @@ namespace Token{
             switch(msg->GetMessageType()){
 #define DEFINE_HANDLER_CASE(Name) \
             case Message::k##Name##MessageType: \
-                Handle##Name##Message(task); \
+                session->Handle##Name##Message(task); \
                 break;
                 FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLER_CASE);
 #undef DEFINE_HANDLER_CASE

@@ -36,7 +36,6 @@ namespace Token{
         static void SetState(State state);
 
         static Proposal* GetProposal();
-        static void SetProposal(Proposal* proposal);
         static bool HasProposal();
         static bool SubmitProposal(Proposal* proposal);
         static bool CommitProposal(Proposal* proposal);
@@ -60,6 +59,7 @@ namespace Token{
 
         static State GetState();
         static void Initialize();
+        static void SetProposal(Proposal* proposal);
         static bool Shutdown();
 
         static inline void WaitForRunningState(){

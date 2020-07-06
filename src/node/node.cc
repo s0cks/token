@@ -6,7 +6,6 @@
 #include "node/node.h"
 #include "node/message.h"
 #include "node/task.h"
-#include "block_miner.h"
 #include "configuration.h"
 
 namespace Token{
@@ -241,7 +240,7 @@ namespace Token{
             switch(msg->GetMessageType()){
 #define DEFINE_HANDLER_CASE(Name) \
             case Message::k##Name##MessageType: \
-                Handle##Name##Message(task); \
+                session->Handle##Name##Message(task); \
                 break;
                 FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLER_CASE);
 #undef DEFINE_HANDLER_CASE
@@ -252,199 +251,6 @@ namespace Token{
 
             delete task;
         }
-    }
-
-    void Node::HandleGetDataMessage(HandleMessageTask* task){
-        NodeSession* session = (NodeSession*)task->GetSession();
-        GetDataMessage* msg = (GetDataMessage*)task->GetMessage();
-
-        std::vector<InventoryItem> items;
-        if(!msg->GetItems(items)){
-            LOG(WARNING) << "cannot get items from message";
-            return;
-        }
-
-        Scope scope;
-        std::vector<Message*> response;
-        for(auto& item : items){
-            uint256_t hash = item.GetHash();
-            if(item.ItemExists()){
-                if(item.IsBlock()){
-                    Block* block = nullptr;
-                    if(BlockChain::HasBlock(hash)){
-                        block = BlockChain::GetBlockData(hash);
-                    } else if(BlockPool::HasBlock(hash)){
-                        block = BlockPool::GetBlock(hash);
-                    } else{
-                        //TODO: return 404
-#ifdef TOKEN_DEBUG
-                        LOG(WARNING) << "cannot find block: " << hash;
-#endif//TOKEN_DEBUG
-                        return;
-                    }
-
-                    Message* data = BlockMessage::NewInstance(block);
-                    scope.Retain(data);
-                    response.push_back(data);
-                } else if(item.IsTransaction()){
-                    Transaction* tx = nullptr;
-                    if(TransactionPool::HasTransaction(hash)){
-                        tx = TransactionPool::GetTransaction(hash);
-                    } else{
-                        //TODO: return 404
-#ifdef TOKEN_DEBUG
-                        LOG(WARNING) << "couldn't find transaction: " << hash;
-#endif//TOKEN_DEBUG
-                        return;
-                    }
-
-                    Message* data = TransactionMessage::NewInstance(tx);
-                    scope.Retain(data);
-                    response.push_back(data);
-                }
-            } else{
-                //TODO: return 500
-#ifdef TOKEN_DEBUG
-                LOG(WARNING) << "item is invalid: " << item;
-#endif//TOKEN_DEBUG
-            }
-        }
-
-        session->Send(response);
-    }
-
-    void Node::HandleVersionMessage(HandleMessageTask* task){
-        NodeSession* session = (NodeSession*)task->GetSession();
-        //TODO:
-        // - state check
-        // - version check
-        // - echo nonce
-        session->Send(VersionMessage::NewInstance(GetNodeID()));
-    }
-
-    //TODO:
-    // - verify nonce
-    void Node::HandleVerackMessage(HandleMessageTask* task){
-        VerackMessage* msg = (VerackMessage*)task->GetMessage();
-        NodeSession* session = (NodeSession*)task->GetSession();
-        NodeAddress paddr = msg->GetCallbackAddress();
-
-        session->Send(VerackMessage::NewInstance(GetNodeID(), NodeAddress("127.0.0.1", FLAGS_port))); //TODO: obtain address dynamically
-
-        session->SetState(NodeSession::kConnected);
-        if(!HasPeer(msg->GetID())){
-            LOG(WARNING) << "connecting to peer: " << paddr << "....";
-            if(!Node::ConnectTo(paddr)){
-                LOG(WARNING) << "couldn't connect to peer: " << paddr;
-            }
-        }
-    }
-
-    void Node::HandlePrepareMessage(HandleMessageTask* task){
-        NodeSession* session = (NodeSession*)task->GetSession();
-        PrepareMessage* msg = (PrepareMessage*)task->GetMessage();
-
-        Proposal* proposal = msg->GetProposal();
-        if(!proposal->IsValid()){
-            LOG(WARNING) << "proposal " << (*proposal) << " is invalid!";
-            return;
-        }
-
-        BlockMiner::SetProposal(proposal);
-        session->Send(PromiseMessage::NewInstance(Node::GetNodeID(), (*proposal)));
-    }
-
-    void Node::HandlePromiseMessage(HandleMessageTask* task){}
-
-    void Node::HandleCommitMessage(HandleMessageTask* task){
-        NodeSession* session = (NodeSession*)task->GetSession();
-        CommitMessage* msg = (CommitMessage*)task->GetMessage();
-
-        uint32_t height = msg->GetHeight();
-        uint256_t hash = msg->GetHash();
-
-        Block* block;
-        if(!(block = BlockPool::GetBlock(hash))){
-            LOG(WARNING) << "couldn't find block " << hash << " from pool waiting....";
-            goto exit;
-        }
-
-        BlockChain::Append(block);
-        BlockPool::RemoveBlock(hash);
-
-        session->Send(AcceptedMessage::NewInstance(GetNodeID(), Proposal(msg->GetNodeID(), height, hash)));
-    exit:
-        return;
-    }
-
-    void Node::HandleBlockMessage(HandleMessageTask* task){
-        NodeSession* session = (NodeSession*)task->GetSession();
-        BlockMessage* msg = (BlockMessage*)task->GetMessage();
-
-        Block* block = msg->GetBlock();
-        uint256_t hash = block->GetHash();
-
-        BlockPool::PutBlock(block);
-        //TODO: session->OnHash(hash); - move to block chain class, block calling thread
-    }
-
-    void Node::HandleTransactionMessage(HandleMessageTask* task){
-        NodeSession* session = (NodeSession*)task->GetSession();
-        TransactionMessage* msg = (TransactionMessage*)task->GetMessage();
-
-        Transaction* tx = msg->GetTransaction();
-        TransactionPool::PutTransaction(tx);
-        //TODO: session->OnHash(tx->GetHash());
-    }
-
-    void Node::HandleAcceptedMessage(HandleMessageTask* task){}
-
-    void Node::HandleRejectedMessage(HandleMessageTask* task){}
-
-    void Node::HandleInventoryMessage(HandleMessageTask* task){
-        NodeSession* session = (NodeSession*)task->GetSession();
-        InventoryMessage* msg = (InventoryMessage*)task->GetMessage();
-
-        std::vector<InventoryItem> items;
-        if(!msg->GetItems(items)){
-            LOG(WARNING) << "couldn't get items from inventory message";
-            return;
-        }
-
-        auto item_exists = [](InventoryItem item){
-            return item.ItemExists();
-        };
-        items.erase(std::remove_if(items.begin(), items.end(), item_exists), items.end());
-
-        for(auto& item : items) LOG(INFO) << "downloading " << item << "....";
-        if(!items.empty()) session->Send(GetDataMessage::NewInstance(items));
-    }
-
-    void Node::HandleGetBlocksMessage(HandleMessageTask* task){
-        NodeSession* session = (NodeSession*)task->GetSession();
-        GetBlocksMessage* msg = (GetBlocksMessage*)task->GetMessage();
-
-        uint256_t start = msg->GetHeadHash();
-        uint256_t stop = msg->GetStopHash();
-
-        std::vector<InventoryItem> items;
-        if(stop.IsNull()){
-            uint32_t amt = std::min(GetBlocksMessage::kMaxNumberOfBlocks, BlockChain::GetHead().GetHeight());
-            LOG(INFO) << "sending " << (amt + 1) << " blocks...";
-
-            BlockHeader start_block = BlockChain::GetBlock(start);
-            BlockHeader stop_block = BlockChain::GetBlock(start_block.GetHeight() > amt ? start_block.GetHeight() + amt : amt);
-
-            for(uint32_t idx = start_block.GetHeight() + 1;
-                        idx <= stop_block.GetHeight();
-                        idx++){
-                BlockHeader block = BlockChain::GetBlock(idx);
-                LOG(INFO) << "adding " << block;
-                items.push_back(InventoryItem(block));
-            }
-        }
-
-        session->Send(InventoryMessage::NewInstance(items));
     }
 
     bool Node::Broadcast(Message* msg){

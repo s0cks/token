@@ -10,6 +10,7 @@ namespace Token{
     //TODO:
     // - create + use Bytes class
     // - scope?
+    class HandleMessageTask;
     class Session{
     public:
         static const size_t kBufferSize = 4096;
@@ -51,11 +52,6 @@ namespace Token{
             return info_.GetNodeAddress();
         }
 
-        State GetState();
-
-        void Send(Message* msg);
-        void Send(std::vector<Message*>& messages);
-
         bool IsDisconnected(){
             return GetState() == kDisconnected;
         }
@@ -68,7 +64,15 @@ namespace Token{
             return GetState() == kConnected;
         }
 
+        State GetState();
         void WaitForState(State state);
+        void Send(Message* msg);
+        void Send(std::vector<Message*>& messages);
+
+#define DECLARE_MESSAGE_HANDLER(Name) \
+    virtual void Handle##Name##Message(HandleMessageTask* task) = 0;
+    FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
+#undef DECLARE_MESSAGE_HANDLER
     };
 
     class NodeSession : public Session{
@@ -88,6 +92,11 @@ namespace Token{
             return (uv_stream_t*)&handle_;
         }
 
+#define DECLARE_MESSAGE_HANDLER(Name) \
+    virtual void Handle##Name##Message(HandleMessageTask* task);
+        FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
+#undef DECLARE_MESSAGE_HANDLER
+
         friend class Node;
     public:
         ~NodeSession(){}
@@ -101,20 +110,13 @@ namespace Token{
         uv_tcp_t socket_;
         uv_async_t shutdown_;
         uv_timer_t heartbeat_;
-        std::string node_id_;
-        NodeAddress node_addr_;
 
         static void* PeerSessionThread(void* data);
         static void OnShutdown(uv_async_t* handle);
         static void OnConnect(uv_connect_t* conn, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
-
-#define DECLARE_MESSAGE_HANDLER(Name) \
-    static void Handle##Name##Message(HandleMessageTask* task);
-    FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER);
-
-        static void HandleSynchronizeBlocksTask(uv_work_t* handle);
-        static void AfterSynchronizeBlocksTask(uv_work_t* handle, int status);
+        static void HandleSynchronizeBlocksTask(uv_work_t* handle); //TODO: remove
+        static void AfterSynchronizeBlocksTask(uv_work_t* handle, int status); //TODO: remove
     protected:
         virtual uv_stream_t* GetStream(){
             return conn_.handle;
@@ -134,6 +136,11 @@ namespace Token{
         }
         ~PeerSession(){}
 
+#define DECLARE_MESSAGE_HANDLER(Name) \
+    virtual void Handle##Name##Message(HandleMessageTask* task);
+        FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
+#undef DECLARE_MESSAGE_HANDLER
+
         void Shutdown();
         bool Connect();
     };
@@ -152,11 +159,6 @@ namespace Token{
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
         static void OnCommandReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
         static void OnSignal(uv_signal_t* handle, int signum);
-
-#define DECLARE_MESSAGE_HANDLER(Name) \
-    static void Handle##Name##Message(HandleMessageTask* task);
-        FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER);
-#undef DECLARE_MESSAGE_HANDLER
 
         virtual uv_stream_t* GetStream(){
             return (uv_stream_t*)&stream_;
@@ -181,6 +183,11 @@ namespace Token{
             connection_.data = this;
         }
         ~NodeClient(){}
+
+#define DECLARE_MESSAGE_HANDLER(Name) \
+    virtual void Handle##Name##Message(HandleMessageTask* task);
+        FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
+#undef DECLARE_MESSAGE_HANDLER
 
         void Connect(const NodeAddress& addr);
     };
