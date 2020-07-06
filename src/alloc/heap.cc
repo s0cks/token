@@ -17,6 +17,6 @@ namespace Token{
         current_ += total_size;
         memset(ptr, 0, total_size);
         RawObject* obj = (RawObject*)ptr;
-        return nullptr; //TODO: new (obj)RawObject(Color::kWhite, alloc_size);
+        return nullptr; //TODO: fixme new (obj)RawObject(Color::kWhite, alloc_size);
     }
 }

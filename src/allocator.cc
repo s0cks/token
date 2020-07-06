@@ -31,6 +31,7 @@ namespace Token{
 #endif //TOKEN_USE_CHENEYGC
 
     void* Allocator::Allocate(uintptr_t size, Object::Type type){
+        //TODO: refactor to allow more fluid allocation based on Scavenger Type
         if(size == 0){
             return nullptr;
         }

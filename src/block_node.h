@@ -13,9 +13,7 @@ namespace Token{
         BlockNode(const BlockHeader& block);
         BlockNode(Block* block): BlockNode(block->GetHeader()){}
     public:
-        ~BlockNode(){
-            //TODO: implement
-        }
+        ~BlockNode(){}
 
         void SetPrevious(BlockNode* node){
             previous_ = node;
@@ -67,6 +65,11 @@ namespace Token{
 
         bool IsGenesis() const{
             return block_.GetHeight() == 0;
+        }
+
+        bool Finalize(){
+            //TODO: implement
+            return true;
         }
 
         std::string ToString() const;

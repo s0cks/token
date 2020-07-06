@@ -28,7 +28,7 @@ namespace Token{
     }
 
     void* PeerSession::PeerSessionThread(void* data){
-        if(!Node::IsRunning() && Node::IsStarting()) Node::WaitForState(Node::kRunning);
+        if(!Node::IsRunning() && Node::IsStarting()) Node::WaitForRunning();
         PeerSession* session = (PeerSession*)data;
         NodeAddress address = session->GetAddress();
         LOG(INFO) << "connecting to peer " << address << "....";
@@ -306,7 +306,6 @@ namespace Token{
     }
 
     void PeerSession::AfterSynchronizeBlocksTask(uv_work_t* handle, int status){
-        Node::SetState(Node::kStarting);
         if(handle->data) free(handle->data);
         free(handle);
     }

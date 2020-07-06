@@ -112,6 +112,11 @@ namespace Token{
         return true;
     }
 
+    bool Node::WaitForRunning(){
+        WaitForState(State::kRunning);
+        return true;
+    }
+
     void Node::SetState(Node::State state){
         LOCK;
         state_ = state;
@@ -231,11 +236,11 @@ namespace Token{
 
         for(size_t idx = 0; idx < messages.size(); idx++){
             Message* msg = messages[idx];
-            HandleMessageTask* task = new HandleMessageTask(session, msg);//TODO: implement better memory management
+            HandleMessageTask task(session, msg);
             switch(msg->GetMessageType()){
 #define DEFINE_HANDLER_CASE(Name) \
             case Message::k##Name##MessageType: \
-                session->Handle##Name##Message(task); \
+                session->Handle##Name##Message(&task); \
                 break;
                 FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLER_CASE);
 #undef DEFINE_HANDLER_CASE
@@ -243,8 +248,6 @@ namespace Token{
                 default: //TODO: handle properly
                     break;
             }
-
-            delete task;
         }
     }
 

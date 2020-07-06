@@ -44,8 +44,6 @@ namespace Token{
         static void LoadNodeInformation();
         static void SavePeers();
         static void LoadPeers();
-        static void RegisterPeer(const std::string& node_id, PeerSession* peer);
-        static void UnregisterPeer(const std::string& node_id);
 
         static void WaitForState(State state);
         static void SetState(State state);
@@ -65,7 +63,6 @@ namespace Token{
 #undef DECLARE_TASK
 
         friend class BlockMiner;
-        friend class PeerSession; //TODO: revoke access
     public:
         ~Node(){}
 
@@ -91,6 +88,8 @@ namespace Token{
         }
 
         static void Start();
+        static void RegisterPeer(const std::string& node_id, PeerSession* peer);
+        static void UnregisterPeer(const std::string& node_id);
         static std::string GetNodeID();
         static uint32_t GetNumberOfPeers();
         static bool HasPeer(const std::string& node_id);
@@ -98,6 +97,7 @@ namespace Token{
         static bool ConnectTo(const NodeAddress& address);
         static bool Broadcast(Message* msg);
         static bool WaitForShutdown();
+        static bool WaitForRunning();
         static bool Shutdown();
 
         static inline bool

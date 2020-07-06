@@ -80,13 +80,12 @@ namespace Token{
     void BlockChain::Initialize(){
         SetState(State::kInitializing);
 
-        Keychain::Initialize(); //TODO: refactor
-        TransactionPool::Initialize();//TODO: refactor
-
+        Keychain::Initialize();
         BlockChainConfiguration::Initialize();
         BlockChainIndex::Initialize();
 
         BlockPool::Initialize();
+        TransactionPool::Initialize();
         UnclaimedTransactionPool::Initialize();
 
         LOCK_GUARD;

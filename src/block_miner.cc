@@ -178,7 +178,7 @@ namespace Token{
                     goto cleanup;
                 }
 
-                cleanup:
+            cleanup:
                 SetProposal(nullptr);//TODO: memory leak
             } else{
                 // 4. Wait for Proposal to finish

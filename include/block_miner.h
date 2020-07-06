@@ -15,7 +15,8 @@ namespace Token{
         enum State{
             kStarting,
             kRunning,
-            kStopped
+            kStopped,
+            // kMining - mining a block or working a proposal
         };
 
         friend std::ostream& operator<<(std::ostream& stream, const State& state){
@@ -35,12 +36,14 @@ namespace Token{
     private:
         static void SetState(State state);
 
+        //TODO: refactor proposal system to be more fluid + stateful
         static Proposal* GetProposal();
         static bool HasProposal();
         static bool SubmitProposal(Proposal* proposal);
         static bool CommitProposal(Proposal* proposal);
         static bool VoteForProposal(const std::string& node_id);
         static bool AcceptProposal(const std::string& node_id);
+
         static bool MineBlock(Block* block, bool clean);
         static void WaitForState(State state);
         static void HandleTerminateCallback(uv_async_t* handle);
@@ -62,10 +65,12 @@ namespace Token{
         static void SetProposal(Proposal* proposal);
         static bool Shutdown();
 
+        //TODO: refactor
         static inline void WaitForRunningState(){
             WaitForState(State::kRunning);
         }
 
+        //TODO: refactor
         static inline void WaitForStoppedState(){
             WaitForState(State::kStopped);
         }

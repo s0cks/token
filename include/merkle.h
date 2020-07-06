@@ -172,8 +172,6 @@ namespace Token{
         }
     };
     //TODO: create MerkleProof class?
-
-    //TODO: fix reference ownership of MerkleTree
     class MerkleTree : public Object{
     private:
         MerkleNode* root_;
@@ -240,7 +238,7 @@ namespace Token{
         static MerkleTree* NewInstance(std::vector<uint256_t>& leaves);
     };
 
-    //TODO: remove MerkleTreeBuilder class?
+    //TODO: refactor MerkleTreeBuilder class?
     class MerkleTreeBuilder{
     protected:
         std::vector<uint256_t> leaves_;
