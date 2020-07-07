@@ -10,6 +10,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 set(PROTO_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protos")
 
+# Monkey Patching for Debug Mode
 if (CMAKE_BUILD_TYPE MATCHES Debug)
         message("Compiling token w/ debug mode and unit tests")
         add_compile_definitions(TOKEN_DEBUG)
