@@ -14,6 +14,7 @@
 !/.gitmodules
 !/CMakeLists.txt
 !/README.md
+!/Dockerfile
 !/main.cc
 !/client.cc
 !/tests.cc
