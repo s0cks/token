@@ -17,7 +17,7 @@ namespace Token{
         // - state check
         // - version check
         // - echo nonce
-        session->Send(VersionMessage::NewInstance(Node::GetID()));
+        session->Send(VersionMessage::NewInstance(Node::GetInfo()));
     }
 
     //TODO:
@@ -27,7 +27,7 @@ namespace Token{
         NodeSession* session = (NodeSession*)task->GetSession();
         NodeAddress paddr = msg->GetCallbackAddress();
 
-        session->Send(VerackMessage::NewInstance(Node::GetID(), NodeAddress("127.0.0.1", FLAGS_port))); //TODO: obtain address dynamically
+        session->Send(VerackMessage::NewInstance(Node::GetInfo())); //TODO: obtain address dynamically
 
         session->SetState(NodeSession::kConnected);
         if(!Node::HasPeer(msg->GetID())){

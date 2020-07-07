@@ -37,8 +37,7 @@ namespace Token{
 
     PaxosMessage::PaxosMessage(const NodeInfo& info, Proposal* proposal):
         ProtobufMessage<Proto::BlockChainServer::Proposal>(){
-        raw_.set_node_id(info.GetNodeID());
-        (*raw_.mutable_address_()) << info.GetNodeAddress();
+        (*raw_.mutable_info()) << info;
         raw_.set_hash(HexString(proposal->GetHash()));
     }
 

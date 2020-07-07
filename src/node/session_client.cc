@@ -21,7 +21,7 @@ namespace Token{
 
         struct sockaddr_in address;
         int err;
-        if((err = addr.GetSocketAddressIn(&address)) != 0){
+        if((err = addr.Get(&address)) != 0){
             LOG(WARNING) << "couldn't resolved address '" << addr << "': " << uv_strerror(err);
             goto cleanup;
         }
@@ -65,8 +65,8 @@ namespace Token{
             return; //TODO: terminate connection
         }
 
-        NodeInfo info(GenerateNonce(), "0.0.0.0", 0);
-        client->Send(VersionMessage::NewInstance(info.GetNodeID()));
+        NodeInfo info(GenerateNonce(), NodeAddress());
+        client->Send(VersionMessage::NewInstance(info));
     }
 
     void NodeClient::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
@@ -131,7 +131,7 @@ namespace Token{
     void NodeClient::HandleVersionMessage(HandleMessageTask* task){
         NodeClient* client = (NodeClient*)task->GetSession();
         VersionMessage* msg = (VersionMessage*)task->GetMessage();
-        client->Send(VerackMessage::NewInstance(Node::GetID(), NodeAddress("127.0.0.1", FLAGS_port))); //TODO: fixme
+        client->Send(VerackMessage::NewInstance(Node::GetInfo())); //TODO: fixme
     }
 
     void NodeClient::HandleVerackMessage(HandleMessageTask* task){

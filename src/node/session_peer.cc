@@ -67,7 +67,7 @@ namespace Token{
         }
 
         LOG(INFO) << "connected to peer: " << session->GetAddress();
-        session->Send(VersionMessage::NewInstance(Node::GetID()));
+        session->Send(VersionMessage::NewInstance(Node::GetInfo()));
         if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
             LOG(WARNING) << "client read error: " << uv_strerror(status);
             session->Shutdown();
@@ -144,7 +144,7 @@ namespace Token{
         Scope scope;
         std::vector<Message*> response;
 
-        VerackMessage* verack = VerackMessage::NewInstance(Node::GetID(), NodeAddress("127.0.0.1", FLAGS_port)); //TODO: fixme
+        VerackMessage* verack = VerackMessage::NewInstance(Node::GetInfo()); //TODO: fixme
         scope.Retain(dynamic_cast<Object*>(verack));
         response.push_back(dynamic_cast<Message*>(verack));
 

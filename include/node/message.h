@@ -107,8 +107,8 @@ namespace Token{
         typedef Proto::BlockChainServer::Version RawType;
     private:
         VersionMessage(const RawType& raw): ProtobufMessage(raw){}
-        VersionMessage(const std::string& node_id, uint32_t timestamp, const std::string& nonce, const BlockHeader& head): ProtobufMessage(){
-            raw_.set_node_id(node_id);
+        VersionMessage(const NodeInfo& info, uint32_t timestamp, const std::string& nonce, const BlockHeader& head): ProtobufMessage(){
+            (*raw_.mutable_info()) << info;
             raw_.set_version(Token::GetVersion());
             raw_.set_timestamp(timestamp);
             raw_.set_nonce(nonce);
@@ -130,8 +130,8 @@ namespace Token{
             return raw_.nonce();
         }
 
-        std::string GetID() const{
-            return raw_.node_id();
+        NodeInfo GetInfo() const{
+            return NodeInfo(raw_.info());
         }
 
         uint32_t GetHeight() const{
@@ -144,9 +144,9 @@ namespace Token{
 
         DECLARE_MESSAGE(Version);
 
-        static VersionMessage* NewInstance(const std::string& node_id, const std::string& nonce=GenerateNonce(), const BlockHeader& head=BlockChain::GetHead(), uint32_t timestamp=GetCurrentTime()){
+        static VersionMessage* NewInstance(const NodeInfo& info, const std::string& nonce=GenerateNonce(), const BlockHeader& head=BlockChain::GetHead(), uint32_t timestamp=GetCurrentTime()){
             VersionMessage* instance = (VersionMessage*)Allocator::Allocate(sizeof(VersionMessage), Object::kMessage);
-            new (instance)VersionMessage(node_id, timestamp, nonce, head);
+            new (instance)VersionMessage(info, timestamp, nonce, head);
             return instance;
         }
 
@@ -162,27 +162,30 @@ namespace Token{
         typedef Proto::BlockChainServer::Verack RawType;
     private:
         VerackMessage(const RawType& raw): ProtobufMessage(raw){}
-        VerackMessage(const std::string& node_id, const NodeAddress& address, const std::string& nonce, uint32_t timestamp): ProtobufMessage(){
-            raw_.set_node_id(node_id);
+        VerackMessage(const NodeInfo& info, const std::string& nonce, uint32_t timestamp): ProtobufMessage(){
+            (*raw_.mutable_info()) << info;
             raw_.set_version(Token::GetVersion());
             raw_.set_timestamp(timestamp);
             raw_.set_nonce(nonce);
-            (*raw_.mutable_callback()) << address;
         }
     public:
+        NodeInfo GetInfo() const{
+            return NodeInfo(raw_.info());
+        }
+
         std::string GetID() const{
-            return raw_.node_id();
+            return GetInfo().GetNodeID();
         }
 
         NodeAddress GetCallbackAddress() const{
-            return NodeAddress(raw_.callback());
+            return GetInfo().GetNodeAddress();
         }
 
         DECLARE_MESSAGE(Verack);
 
-        static VerackMessage* NewInstance(const std::string& node_id, const NodeAddress& address, const std::string& nonce=GenerateNonce(), uint32_t timestamp=GetCurrentTime()){
+        static VerackMessage* NewInstance(const NodeInfo& info, const std::string& nonce=GenerateNonce(), uint32_t timestamp=GetCurrentTime()){
             VerackMessage* instance = (VerackMessage*)Allocator::Allocate(sizeof(VerackMessage), Object::kMessage);
-            new (instance)VerackMessage(node_id, address, nonce, timestamp);
+            new (instance)VerackMessage(info, nonce, timestamp);
             return instance;
         }
 
@@ -207,7 +210,7 @@ namespace Token{
         // - NodeInfo GetProposer()
         // - NodeInfo GetSubmitter()
         NodeInfo GetProposer() const{
-            return NodeInfo(raw_.node_id(), NodeAddress(raw_.address_()));
+            return NodeInfo(raw_.info());
         }
 
         uint256_t GetHash() const{

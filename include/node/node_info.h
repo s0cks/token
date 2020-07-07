@@ -1,10 +1,12 @@
 #ifndef TOKEN_NODE_INFO_H
 #define TOKEN_NODE_INFO_H
 
-#include "node_address.h"
+#include "address.h"
 
 namespace Token{
     class NodeInfo{
+    public:
+        typedef Proto::BlockChainServer::NodeInfo RawType;
     private:
         uuid_t node_id_;
         NodeAddress node_addr_;
@@ -33,6 +35,11 @@ namespace Token{
             node_id_(),
             node_addr_(address, port){
             uuid_parse(node_id.c_str(), node_id_);
+        }
+        NodeInfo(const RawType& raw):
+            node_id_(),
+            node_addr_(raw.address()){
+            uuid_parse(raw.node_id().c_str(), node_id_);
         }
         NodeInfo(const NodeInfo& other):
             node_id_(),
@@ -81,6 +88,12 @@ namespace Token{
             stream << info.GetNodeID();
             stream << "[" << info.GetNodeAddress() << "]";
             return stream;
+        }
+
+        friend RawType& operator<<(RawType& raw, const NodeInfo& info){
+            raw.set_node_id(info.GetNodeID());
+            (*raw.mutable_address()) << info.GetNodeAddress();
+            return raw;
         }
     };
 }
