@@ -280,6 +280,16 @@ namespace Token{
 
     }
 
+    void PeerSession::HandleNotFoundMessage(HandleMessageTask* task){
+        PeerSession* session = (PeerSession*)task->GetSession();
+        NotFoundMessage* msg = (NotFoundMessage*)task->GetMessage();
+
+        NodeInfo info = session->GetInfo();
+
+        InventoryItem item = msg->GetItem();
+        LOG(WARNING) << "peer " << info.GetNodeID() << " has no record of item: " << item;
+    }
+
     void PeerSession::HandleInventoryMessage(HandleMessageTask* task){
         PeerSession* session = (PeerSession*)task->GetSession();
         InventoryMessage* msg = (InventoryMessage*)task->GetMessage();

@@ -20,7 +20,8 @@ namespace Token{
     V(GetBlocks) \
     V(Block) \
     V(Transaction) \
-    V(Inventory)
+    V(Inventory) \
+    V(NotFound)
 
 #define FORWARD_DECLARE(Name) class Name##Message;
     FOR_EACH_MESSAGE_TYPE(FORWARD_DECLARE)
@@ -598,6 +599,39 @@ namespace Token{
             GetBlocksMessage* instance = (GetBlocksMessage*)Allocator::Allocate(sizeof(GetBlocksMessage), Object::kMessage);
             new (instance)GetBlocksMessage(raw);
             return instance;
+        }
+    };
+
+    class NotFoundMessage : public ProtobufMessage<Proto::BlockChainServer::NotFound>{
+    public:
+        typedef Proto::BlockChainServer::NotFound RawType;
+    private:
+        NotFoundMessage(const RawType& raw): ProtobufMessage(raw){}
+        NotFoundMessage(const InventoryItem& item, const std::string& message): ProtobufMessage(){
+            raw_.set_message(message);
+            (*raw_.mutable_item()) << item;
+        }
+    public:
+        ~NotFoundMessage() = default;
+
+        std::string GetMessage() const{
+            return raw_.message();
+        }
+
+        InventoryItem GetItem() const{
+            return InventoryItem(raw_.item());
+        }
+
+        DECLARE_MESSAGE(NotFound);
+
+        static NotFoundMessage* NewInstance(const InventoryItem& item, const std::string& message="Not Found"){
+            NotFoundMessage* instance = (NotFoundMessage*)Allocator::Allocate(sizeof(NotFoundMessage), Object::Type::kMessage);
+            return new (instance)NotFoundMessage(item, message);
+        }
+
+        static NotFoundMessage* NewInstance(const RawType& raw){
+            NotFoundMessage* instance = (NotFoundMessage*)Allocator::Allocate(sizeof(NotFoundMessage), Object::Type::kMessage);
+            return new (instance)NotFoundMessage(raw);
         }
     };
 }

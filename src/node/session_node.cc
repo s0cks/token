@@ -5,6 +5,12 @@
 #include "node/node.h"
 
 namespace Token{
+    void NodeSession::HandleNotFoundMessage(Token::HandleMessageTask* task){
+        //TODO: implement HandleNotFoundMessage
+        LOG(WARNING) << "not implemented";
+        return;
+    }
+
     void NodeSession::HandleVersionMessage(HandleMessageTask* task){
         NodeSession* session = (NodeSession*)task->GetSession();
         //TODO:

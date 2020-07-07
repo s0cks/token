@@ -158,6 +158,7 @@ namespace Token{
     void NodeClient::HandlePromiseMessage(HandleMessageTask* msg){}
     void NodeClient::HandleRejectedMessage(HandleMessageTask* msg){}
     void NodeClient::HandleAcceptedMessage(HandleMessageTask* msg){}
+    void NodeClient::HandleNotFoundMessage(HandleMessageTask* msg){}
 
     void NodeClient::OnCommandReceived(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf){
         if(nread == UV_EOF){
