@@ -20,11 +20,7 @@ namespace Token{
                               uint32_t timestamp){
         Block* instance = (Block*)Allocator::Allocate(sizeof(Block), Object::kBlock);
         new (instance)Block(timestamp, height, phash, transactions);
-        for(size_t idx = 0; idx < transactions.size(); idx++){
-            if(!Allocator::AddStrongReference(instance, transactions[idx], NULL)){
-                CrashReport::GenerateAndExit("Couldn't add strong reference to transaction");
-            }
-        }
+        for(size_t idx = 0; idx < transactions.size(); idx++) Allocator::AddStrongReference(instance, transactions[idx], NULL);
         return instance;
     }
 
@@ -106,11 +102,7 @@ namespace Token{
     };
 
     bool Block::Finalize(){
-        for(auto& it : transactions_){
-            if(!Allocator::RemoveStrongReference(this, it)){
-                CrashReport::GenerateAndExit("Couldn't remove strong reference to transaction");
-            }
-        }
+        for(auto& it : transactions_) Allocator::RemoveStrongReference(this, it);
         return true;
     }
 

@@ -2,6 +2,7 @@
 #define TOKEN_ALLOCATOR_H
 
 #include <vector>
+#include <condition_variable>
 #include "common.h"
 #include "object.h"
 
@@ -14,7 +15,8 @@ namespace Token{
 
     class Allocator{
     private:
-        static std::mutex mutex_;
+        static std::recursive_mutex mutex_;
+        static std::condition_variable_any cond_;
         static ObjectAddressMap allocated_;
         static ObjectAddressMap roots_;
 
@@ -31,7 +33,7 @@ namespace Token{
         Allocator() = delete;
 
         friend class Object;
-        friend class MemorySweeper;
+        friend class Scavenger;
         friend class MemoryInformationSection;
     public:
         ~Allocator(){}

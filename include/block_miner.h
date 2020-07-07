@@ -15,6 +15,7 @@ namespace Token{
         enum State{
             kStarting,
             kRunning,
+            kPaused,
             kStopped,
             // kMining - mining a block or working a proposal
         };
@@ -53,6 +54,8 @@ namespace Token{
 
         static State GetState();
         static void Initialize();
+        static void Pause();
+        static void Resume();
         static bool Shutdown();
 
         //TODO: refactor
@@ -73,6 +76,11 @@ namespace Token{
         static inline bool
         IsStopped(){
             return GetState() == kStopped;
+        }
+
+        static inline bool
+        IsPaused(){
+            return GetState() == kPaused;
         }
     };
 }

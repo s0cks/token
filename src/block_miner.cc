@@ -160,6 +160,22 @@ namespace Token{
         }
     }
 
+    void BlockMiner::Pause(){
+#ifdef TOKEN_DEBUG
+        LOG(INFO) << "pausing miner thread...";
+#endif//TOKEN_DEBUG
+        SetState(State::kPaused);
+        uv_timer_stop(&mine_timer_);
+    }
+
+    void BlockMiner::Resume(){
+#ifdef TOKEN_DEBUG
+        LOG(INFO) << "resuming miner thread...";
+#endif//TOKEN_DEBUG
+        SetState(State::kRunning);
+        uv_timer_again(&mine_timer_);
+    }
+
     bool BlockMiner::Shutdown(){
         if(!IsRunning()) return false;
         uv_async_send(&aterm_);

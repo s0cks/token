@@ -90,7 +90,8 @@ namespace Token{
     }
 
     bool MerkleTree::Finalize(){
-        return Allocator::RemoveStrongReference(this, root_);
+        Allocator::RemoveStrongReference(this, root_);
+        return true;
     }
 
     bool MerkleTree::Append(const MerkleTree& tree){

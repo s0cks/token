@@ -3,17 +3,6 @@
 #include "allocator.h"
 
 namespace Token{
-    class MemorySweeper : public ObjectPointerVisitor{
-    public:
-        MemorySweeper(): ObjectPointerVisitor(){}
-        ~MemorySweeper(){}
-
-        bool Visit(RawObject* obj){
-            if(obj->IsGarbage()) return Allocator::FinalizeObject(obj);
-            return true; // skip object, not garbage
-        }
-    };
-
     bool Scavenger::ScavengeMemory(){
 #ifdef TOKEN_DEBUG
         LOG(INFO) << "performing garbage collection...";
@@ -22,8 +11,20 @@ namespace Token{
         DarkenRoots();
         MarkObjects();
 
-        MemorySweeper sweeper;
-        Allocator::VisitAllocated(&sweeper);
+        uintptr_t allocated_size = Allocator::GetBytesAllocated();
+        ObjectAddressMap allocated = Allocator::allocated_;
+        ObjectAddressMap::iterator iter = allocated.begin();
+        while(iter != allocated.end()){
+            RawObject* obj = iter->second;
+            if(obj->IsGarbage()){
+                Allocator::FinalizeObject(obj);
+                iter = allocated.erase(iter);
+                allocated_size -= obj->GetObjectSize();
+            }
+            iter++;
+        }
+
+        Allocator::allocated_ = allocated;
 #ifdef TOKEN_DEBUG
         uintptr_t total_mem_scavenged = (initial_size - Allocator::GetBytesAllocated());
         LOG(INFO) << "garbage collection complete";
