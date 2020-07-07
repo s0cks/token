@@ -6,31 +6,45 @@
 namespace Token{
     class NodeInfo{
     private:
-        std::string node_id_;
+        uuid_t node_id_;
         NodeAddress node_addr_;
     public:
         NodeInfo():
-                node_id_(),
-                node_addr_(){}
+            node_id_(),
+            node_addr_(){
+            uuid_generate_time_safe(node_id_);
+        }
         NodeInfo(const uv_tcp_t* handle):
-                node_id_(GenerateNonce()), //TODO: fixme collision-proof this
-                node_addr_(handle){}
+            node_id_(),
+            node_addr_(handle){
+            uuid_generate_time_safe(node_id_);
+        }
         NodeInfo(const NodeAddress& addr):
-                node_id_(),
-                node_addr_(addr){}
+            node_id_(),
+            node_addr_(addr){
+            uuid_generate_time_safe(node_id_);
+        }
         NodeInfo(const std::string& node_id, const NodeAddress& addr):
-                node_id_(node_id),
-                node_addr_(addr){}
+            node_id_(),
+            node_addr_(addr){
+            uuid_parse(node_id.c_str(), node_id_);
+        }
         NodeInfo(const std::string& node_id, const std::string& address, uint32_t port):
-                node_id_(node_id),
-                node_addr_(address, port){}
+            node_id_(),
+            node_addr_(address, port){
+            uuid_parse(node_id.c_str(), node_id_);
+        }
         NodeInfo(const NodeInfo& other):
-                node_id_(other.node_id_),
-                node_addr_(other.node_addr_){}
+            node_id_(),
+            node_addr_(other.node_addr_){
+            uuid_copy(node_id_, other.node_id_);
+        }
         ~NodeInfo(){}
 
         std::string GetNodeID() const{
-            return node_id_;
+            char uuid_str[37];
+            uuid_unparse(node_id_, uuid_str);
+            return std::string(uuid_str);
         }
 
         std::string GetAddress() const{
@@ -46,7 +60,7 @@ namespace Token{
         }
 
         NodeInfo& operator=(const NodeInfo& other){
-            node_id_ = other.node_id_;
+            uuid_copy(node_id_, other.node_id_);
             node_addr_ = other.node_addr_;
             return (*this);
         }

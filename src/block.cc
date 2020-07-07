@@ -221,10 +221,6 @@ namespace Token{
             ss << "Couldn't remove block " << hash << " from index";
             CrashReport::GenerateAndExit(ss);
         }
-
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << "removed block " << hash << " from block pool";
-#endif//TOKEN_DEBUG
     }
 
     void BlockPool::PutBlock(Block* block){

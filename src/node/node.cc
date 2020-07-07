@@ -35,9 +35,13 @@ namespace Token{
     void Node::LoadNodeInformation(){
         LOCK_GUARD;
         libconfig::Setting& node = BlockChainConfiguration::GetProperty("Node", libconfig::Setting::TypeGroup);
+        //TODO: load callback address or fetch dynamically
+        NodeAddress address("127.0.0.1", FLAGS_port);
         if(!node.exists("id")){
-            node.add("id", libconfig::Setting::TypeString) = GenerateNonce();
+            info_ = NodeInfo(address);
+            node.add("id", libconfig::Setting::TypeString) = info_.GetNodeID();
             BlockChainConfiguration::SaveConfiguration();
+            return;
         }
 
         std::string node_id;

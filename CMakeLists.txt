@@ -27,6 +27,7 @@ endif (CMAKE_BUILD_TYPE MATCHES Debug)
 
 # Packages
 find_package(Threads)
+find_package(UUID REQUIRED)
 find_package(Crypto++ REQUIRED)
 find_package(Protobuf REQUIRED)
 find_package(LevelDB REQUIRED)
@@ -46,6 +47,7 @@ endif(TOKEN_BUILD_TESTS)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(include)
 include_directories(src)
+include_directories(${UUID_INCLUDE_DIRS})
 include_directories(${CRYPTO++_INCLUDE_DIR})
 include_directories(${LIBUV_INCLUDE_DIRS})
 if(TOKEN_BUILD_TESTS)
@@ -70,6 +72,7 @@ set(TOKEN_LIBRARIES
         ${LIBUV_LIBRARIES} # libuv
         ${GFLAGS_LIBRARIES} # gflags
         config++ # config++
+        ${UUID_LIBRARIES} # uuid
 )
 
 # Optionally add testing libraries

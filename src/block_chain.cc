@@ -183,17 +183,14 @@ namespace Token{
         LOCK_GUARD;
 
         BlockHeader head = BlockChain::GetHead();
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << "<HEAD>:";
-        LOG(INFO) << "  hash := " << head.GetHash();
-        LOG(INFO) << "  parent hash := " << head.GetPreviousHash();
-
-        LOG(INFO) << "appending new block:";
-        LOG(INFO) << "  hash := " << block->GetHash();
-        LOG(INFO) << "  parent hash := " << block->GetPreviousHash();
-#endif//TOKEN_DEBUG
         uint256_t hash = block->GetHash();
         uint256_t phash = block->GetPreviousHash();
+
+#ifdef TOKEN_DEBUG
+        LOG(INFO) << "appending new block:";
+        LOG(INFO) << "  - Parent Hash: " << phash;
+        LOG(INFO) << "  - Hash: " << hash;
+#endif//TOKEN_DEBUG
 
         if(BlockChainIndex::HasBlockData(hash)){
             std::stringstream ss;

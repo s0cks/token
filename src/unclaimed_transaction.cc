@@ -147,9 +147,6 @@ namespace Token{
             ss << "Couldn't remove unclaimed transaction " << hash << " from index";
             CrashReport::GenerateAndExit(ss);
         }
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << "removed unclaimed transaction: " << hash;
-#endif//TOKEN_DEBUG
     }
 
     void UnclaimedTransactionPool::PutUnclaimedTransaction(UnclaimedTransaction* utxo){
@@ -234,32 +231,22 @@ namespace Token{
     UnclaimedTransaction* UnclaimedTransactionPool::GetUnclaimedTransaction(const uint256_t &tx_hash, uint32_t tx_index){
         std::vector<uint256_t> utxos;
         if(!GetUnclaimedTransactions(utxos)) {
-#ifdef TOKEN_DEBUG
-            LOG(WARNING) << "couldn't get unclaimed transactions";
-#endif//TOKEN_DEBUG
+            std::stringstream ss;
+            ss << "Couldn't get all unclaimed transactions from pool";
+            CrashReport::GenerateAndExit(ss);
             return nullptr;
         }
         for(auto& it : utxos){
-#ifdef TOKEN_DEBUG
-            LOG(WARNING) << "checking utxo: " << it;
-#endif//TOKEN_DEBUG
-
             UnclaimedTransaction* utxo;
             if(!(utxo = GetUnclaimedTransaction(it))){
-#ifdef TOKEN_DEBUG
-                LOG(WARNING) << "couldn't get unclaimed transaction: " << it;
-#endif//TOKEN_DEBUG
-                return nullptr;
+                std::stringstream ss;
+                ss << "Couldn't get unclaimed transaction " << it << " from pool";
+                CrashReport::GenerateAndExit(ss);
             }
-
-#ifdef TOKEN_DEBUG
-            LOG(WARNING) << "unclaimed transaction: " << it << " := " << utxo->GetTransaction() << "[" << utxo->GetIndex() << "]";
-#endif//TOKEN_DEBUG
             if(utxo->GetTransaction() == tx_hash && utxo->GetIndex() == tx_index) return utxo;
         }
-#ifdef TOKEN_DEBUG
+
         LOG(WARNING) << "couldn't find unclaimed transaction: " << tx_hash << "[" << tx_index << "]";
-#endif//TOKEN_DEBUG
         return nullptr;
     }
 }

@@ -271,10 +271,6 @@ namespace Token{
             ss << "Couldn't remove transaction " << hash << " from index";
             CrashReport::GenerateAndExit(ss);
         }
-
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << "removed transaction " << hash << " from transaction pool";
-#endif//TOKEN_DEBUG
     }
 
     void TransactionPool::PutTransaction(Transaction* tx){

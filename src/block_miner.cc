@@ -50,10 +50,6 @@ namespace Token{
     void BlockMiner::HandleMineCallback(uv_timer_t* handle){
         Scope scope;
         if(TransactionPool::GetNumberOfTransactions() >= 2){
-#ifdef TOKEN_DEBUG
-            LOG(INFO) << "mining new block....";
-#endif//TOKEN_DEBUG
-
             // 1. Collect transactions from pool
             Block::TransactionList all_txs;
             {
@@ -64,9 +60,6 @@ namespace Token{
                 // 1.b. Get data for list of transactions
                 for(auto& it : pool_txs){
                     Transaction* tx = scope.Retain(TransactionPool::GetTransaction(it));
-#ifdef TOKEN_DEBUG
-                    LOG(INFO) << "using transaction: " << it;
-#endif//TOKEN_DEBUG
                     all_txs.push_back(tx);
                 }
             }
@@ -83,18 +76,18 @@ namespace Token{
 
             BlockPool::PutBlock(block);
             if(!Proposal::HasCurrentProposal()){
-                LOG(INFO) << Node::GetInfo() << " creating proposal for: " << block->GetHeader();
+                LOG(INFO) << Node::GetInfo().GetNodeID() << " creating proposal for: " << block->GetHeader();
 
                 // 4. Create proposal
 #ifdef TOKEN_DEBUG
-                LOG(INFO) << "starting proposal phase...";
+                LOG(INFO) << "entering proposal phase";
 #endif//TOKEN_DEBUG
                 Proposal* proposal = scope.Retain(Proposal::NewInstance(block, Node::GetInfo()));
                 Proposal::SetCurrentProposal(proposal);
 
                 // 5. Submit proposal
 #ifdef TOKEN_DEBUG
-                LOG(INFO) << "starting voting phase....";
+                LOG(INFO) << "entering voting phase";
 #endif//TOKEN_DEBUG
                 proposal->SetPhase(Proposal::kVotingPhase);
                 PrepareMessage* prepare_msg = scope.Retain(PrepareMessage::NewInstance(proposal));
@@ -103,7 +96,7 @@ namespace Token{
 
                 // 6. Commit Proposal
 #ifdef TOKEN_DEBUG
-                LOG(INFO) << "starting commit phase...." << proposal->ToString();
+                LOG(INFO) << "entering commit phase";
 #endif//TOKEN_DEBUG
                 proposal->SetPhase(Proposal::kCommitPhase);
                 CommitMessage* commit_msg = scope.Retain(CommitMessage::NewInstance(proposal));
