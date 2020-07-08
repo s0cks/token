@@ -1,6 +1,7 @@
+#include "alloc/scope.h"
 #include "node/node.h"
-#include "node/session.h"
 #include "node/task.h"
+#include "node/client.h"
 
 namespace Token{
     void NodeClient::OnSignal(uv_signal_t* handle, int signum){
@@ -9,6 +10,10 @@ namespace Token{
     }
 
     void NodeClient::Connect(const NodeAddress& addr){
+        LOG(INFO) << "connecting to server: " << addr;
+        SetState(State::kConnecting);
+        SetPeer(addr);
+
         uv_loop_init(loop_);
         uv_signal_init(loop_, &sigterm_);
         uv_signal_start(&sigterm_, &OnSignal, SIGTERM);
@@ -20,9 +25,8 @@ namespace Token{
         uv_tcp_keepalive(&stream_, 1, 60);
 
         struct sockaddr_in address;
-        int err;
-        if((err = addr.Get(&address)) != 0){
-            LOG(WARNING) << "couldn't resolved address '" << addr << "': " << uv_strerror(err);
+        if(!addr.Get(&address)){
+            LOG(WARNING) << "couldn't resolved address '" << addr;
             goto cleanup;
         }
 
@@ -32,6 +36,7 @@ namespace Token{
         uv_pipe_init(loop_, &stdout_, 0);
         uv_pipe_open(&stdout_, 1);
 
+        int err;
         if((err = uv_tcp_connect(&connection_, &stream_, (const struct sockaddr*)&address, &OnConnect)) != 0){
             LOG(WARNING) << "couldn't connect to peer: " << uv_strerror(err);
             goto cleanup;
@@ -41,7 +46,6 @@ namespace Token{
         uv_signal_stop(&sigterm_);
         uv_signal_stop(&sigint_);
         uv_read_stop((uv_stream_t*)&stdin_);
-
     cleanup:
         uv_loop_close(loop_);
     }
@@ -66,7 +70,9 @@ namespace Token{
         }
 
         NodeInfo info(GenerateNonce(), NodeAddress());
-        client->Send(VersionMessage::NewInstance(info));
+        BlockHeader head;
+
+        client->Send(VersionMessage::NewInstance(info, GenerateNonce(), head));
     }
 
     void NodeClient::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
@@ -85,7 +91,7 @@ namespace Token{
             return;
         }
 
-        /*
+        Scope scope;
         uint32_t offset = 0;
         std::vector<Message*> messages;
         do{
@@ -96,12 +102,13 @@ namespace Token{
             memcpy(&msize, &buff->base[offset + Message::kSizeOffset], Message::kSizeLength);
 
             Message* msg = nullptr;
-            if(!(msg = Message::Decode(static_cast<Message::Type>(mtype), (uint8_t*)&buff->base[offset + Message::kDataOffset], msize))){
+            if(!(msg = Message::Decode(static_cast<Message::MessageType>(mtype), msize, (uint8_t*)&buff->base[offset + Message::kDataOffset]))){
                 LOG(WARNING) << "couldn't decode message of type := " << mtype << " and of size := " << msize << ", at offset := " << offset;
                 continue;
             }
+            scope.Retain(msg);
 
-            LOG(INFO) << "decoded message: " << (*msg);
+            LOG(INFO) << "decoded message: " << msg->ToString();
             messages.push_back(msg);
 
             offset += (msize + Message::kHeaderSize);
@@ -110,22 +117,20 @@ namespace Token{
         for(size_t idx = 0; idx < messages.size(); idx++){
             Message* msg = messages[idx];
             HandleMessageTask* task = new HandleMessageTask(session, msg);
-            switch(msg->GetType()){
+            switch(msg->GetMessageType()){
 #define DEFINE_HANDLER_CASE(Name) \
-            case Message::Type::k##Name##Message: \
-                Handle##Name##Message(task); \
+            case Message::k##Name##MessageType: \
+                session->Handle##Name##Message(task); \
                 break;
                 FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLER_CASE);
 #undef DEFINE_HANDLER_CASE
-                case Message::Type::kUnknownMessage:
+                case Message::kUnknownMessageType:
                 default: //TODO: handle properly
                     break;
             }
 
-            delete messages[idx];
             delete task;
         }
-         */
     }
 
     void NodeClient::HandleVersionMessage(HandleMessageTask* task){
@@ -138,6 +143,7 @@ namespace Token{
         NodeClient* client = (NodeClient*)task->GetSession();
         VerackMessage* msg = (VerackMessage*)task->GetMessage();
 
+        client->SetState(State::kConnected);
         LOG(INFO) << "connected!";
     }
 
@@ -160,7 +166,15 @@ namespace Token{
     void NodeClient::HandleAcceptedMessage(HandleMessageTask* msg){}
     void NodeClient::HandleNotFoundMessage(HandleMessageTask* msg){}
 
+    // commands:
+    // - ping
+    // - gethead
+    // - getutxos
+    // - getdata
+    // - append
     void NodeClient::OnCommandReceived(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf){
+        NodeClient* client = (NodeClient*)stream->data;
+
         if(nread == UV_EOF){
             LOG(ERROR) << "client disconnected!";
             return;
@@ -175,16 +189,58 @@ namespace Token{
             return;
         }
 
-        LOG(INFO) << "nread: " << nread;
+        std::string line(buf->base, nread - 1);
 
-        std::string cmd(buf->base, nread);
+#ifdef TOKEN_DEBUG
+        LOG(INFO) << "parsed: " << line;
+#endif//TOKEN_DEBUG
 
-        if(std::strcmp(cmd.data(), "append") == 0){
-            LOG(INFO) << "appending!...";
-            return;
-        } else{
-            LOG(INFO) << cmd;
+        Command* command = nullptr;
+        if(!(command = Command::ParseCommand(line))){
+            LOG(WARNING) << "couldn't parse command: " << line;
             return;
         }
+
+#define DECLARE_HANDLER(Name, Text, Parameters) \
+    if(command->Is##Name##Command()){ \
+        client->Handle##Name##Command(command->As##Name##Command()); \
+        delete command; \
+        return; \
+    }
+        FOR_EACH_COMMAND(DECLARE_HANDLER);
+#undef DECLARE_HANDLER
+        if(command != nullptr){
+            LOG(WARNING) << "couldn't handle command: " << command->GetName(); //TODO: handle better
+        }
+    }
+
+    void NodeClient::HandleStatusCommand(StatusCommand* cmd){
+        LOG(INFO) << "Peer: " << GetPeer();
+        if(IsDisconnected()){
+            LOG(INFO) << "Status: Disconnected.";
+        } else if(IsConnecting()){
+            LOG(INFO) << "Status: Connecting...";
+        } else if(IsConnected()){
+            LOG(INFO) << "Status: Connected!";
+        }
+    }
+
+    void NodeClient::HandleDisconnectCommand(DisconnectCommand* cmd){
+        LOG(WARNING) << "disconnecting...";
+    }
+
+    //TODO:
+    // need to wait
+    // in order to wait:
+    //   - send_gethead()
+    //   - spawn_response_handler_task() ------------> - wait_for(cv_)
+    //   - continue                               /        .....
+    //      .....                               /          .....
+    //   - receive_head                       /            .....
+    //   - signal_all() --------------------/          - log_head()
+    void NodeClient::HandleGetHeadCommand(GetHeadCommand* cmd){
+        NodeInfo info = Node::GetInfo();
+        BlockHeader head = BlockHeader();
+        Send(VersionMessage::NewInstance(info, GenerateNonce(), head));
     }
 }

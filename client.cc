@@ -1,5 +1,5 @@
 #include "common.h"
-#include "node/session.h"
+#include "node/client.h"
 
 static inline bool
 InitializeLogging(char* arg0){
@@ -19,6 +19,6 @@ main(int argc, char** argv){
 
     NodeClient* client = new NodeClient();
     client->Connect(NodeAddress(FLAGS_peer_address, FLAGS_peer_port));
-    client->WaitForShutdown();
+    client->WaitForState(NodeClient::State::kDisconnected);
     return EXIT_SUCCESS;
 }

@@ -145,53 +145,6 @@ namespace Token{
         void Shutdown();
         bool Connect();
     };
-
-    class NodeClient : public Session{
-    private:
-        uv_loop_t* loop_;
-        uv_signal_t sigterm_;
-        uv_signal_t sigint_;
-        uv_tcp_t stream_;
-        uv_connect_t connection_;
-        uv_pipe_t stdin_;
-        uv_pipe_t stdout_;
-
-        static void OnConnect(uv_connect_t* conn, int status);
-        static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
-        static void OnCommandReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
-        static void OnSignal(uv_signal_t* handle, int signum);
-
-        virtual uv_stream_t* GetStream(){
-            return (uv_stream_t*)&stream_;
-        }
-
-        inline uv_stream_t*
-        GetStdinPipe(){
-            return (uv_stream_t*)&stdin_;
-        }
-    public:
-        NodeClient():
-                stream_(),
-                loop_(uv_loop_new()),
-                sigterm_(),
-                sigint_(),
-                stdin_(),
-                stdout_(),
-                Session(&stream_){
-            stdin_.data = this;
-            stdout_.data = this;
-            stream_.data = this;
-            connection_.data = this;
-        }
-        ~NodeClient(){}
-
-#define DECLARE_MESSAGE_HANDLER(Name) \
-    virtual void Handle##Name##Message(HandleMessageTask* task);
-        FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
-#undef DECLARE_MESSAGE_HANDLER
-
-        void Connect(const NodeAddress& addr);
-    };
 }
 
 #endif //TOKEN_SESSION_H

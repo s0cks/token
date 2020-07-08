@@ -112,6 +112,10 @@ namespace Token{
     template<class container>
     static inline void
     SplitString(const std::string& str, container& cont, char delimiter=' '){
+        if(str.find(delimiter) == std::string::npos){ // delimiter not found, return whole
+            cont.push_back(str);
+            return;
+        }
         std::stringstream ss(str);
         std::string token;
         while(std::getline(ss, token, delimiter)) cont.push_back(token);
