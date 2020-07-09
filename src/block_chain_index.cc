@@ -42,7 +42,7 @@ namespace Token{
         }
 
         Block* block = Block::NewInstance(filename);
-        if(hash != block->GetHash()){
+        if(hash != block->GetSHA256Hash()){
             std::stringstream ss;
             ss << "Couldn't match block hash";
             ss << std::endl;
@@ -52,7 +52,7 @@ namespace Token{
             ss << "\t  - Height: " << block->GetHeight() << std::endl;
             ss << "\t  - Previous Hash: " << block->GetPreviousHash() << std::endl;
             ss << "\t  - Merkle Root: " << block->GetMerkleRoot() << std::endl;
-            ss << "\t  - Hash: " << block->GetHash() << std::endl;
+            ss << "\t  - Hash: " << block->GetSHA256Hash() << std::endl;
             ss << "\t  - Number of Transactions: " << block->GetNumberOfTransactions() << std::endl;
             CrashReport::GenerateAndExit(ss);
         }

@@ -7,7 +7,8 @@ namespace Token{
 //######################################################################################################################
 //                                          Block Header
 //######################################################################################################################
-    BlockHeader::BlockHeader(Block* blk): BlockHeader(blk->GetTimestamp(), blk->GetHeight(), blk->GetPreviousHash(), blk->GetMerkleRoot(), blk->GetHash()){}
+    BlockHeader::BlockHeader(Block* blk): BlockHeader(blk->GetTimestamp(), blk->GetHeight(), blk->GetPreviousHash(), blk->GetMerkleRoot(),
+                                                      blk->GetSHA256Hash()){}
 
     Block* BlockHeader::GetData() const{
         return BlockChain::GetBlockData(GetHash());
@@ -48,7 +49,7 @@ namespace Token{
 
     std::string Block::ToString() const{
         std::stringstream stream;
-        stream << "Block(#" << GetHeight() << "/" << GetHash() << ")";
+        stream << "Block(#" << GetHeight() << "/" << GetSHA256Hash() << ")";
         return stream.str();
     }
 
@@ -91,7 +92,7 @@ namespace Token{
         }
 
         bool Visit(Transaction* tx){
-            return AddLeaf(tx->GetHash());
+            return AddLeaf(tx->GetSHA256Hash());
         }
 
         bool BuildTree(){
@@ -224,7 +225,7 @@ namespace Token{
     }
 
     void BlockPool::PutBlock(Block* block){
-        uint256_t hash = block->GetHash();
+        uint256_t hash = block->GetSHA256Hash();
         if(HasBlock(hash)){
             std::stringstream ss;
             ss << "Couldn't add duplicate block " << hash << " to pool";
@@ -271,7 +272,7 @@ namespace Token{
                 std::string filename = GetDataDirectory() + "/" + name;
                 if(!EndsWith(filename, ".dat")) continue;
                 Block* block = Block::NewInstance(filename);
-                blocks.push_back(block->GetHash());
+                blocks.push_back(block->GetSHA256Hash());
             }
             closedir(dir);
             return true;

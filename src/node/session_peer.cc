@@ -268,7 +268,7 @@ namespace Token{
         BlockMessage* msg = (BlockMessage*)task->GetMessage();
 
         Block* block = msg->GetBlock();
-        uint256_t hash = block->GetHash();
+        uint256_t hash = block->GetSHA256Hash();
 
         BlockPool::PutBlock(block);
 

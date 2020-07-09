@@ -59,7 +59,7 @@ namespace Token{
 
     std::string Transaction::ToString() const{
         std::stringstream stream;
-        stream << "Transaction(" << GetHash() << ")";
+        stream << "Transaction(" << GetSHA256Hash() << ")";
         return stream.str();
     }
 
@@ -118,7 +118,7 @@ namespace Token{
         Keychain::LoadKeys(&privateKey, &publicKey);
 
         try{
-            LOG(INFO) << "signing transaction: " << HexString(GetHash());
+            LOG(INFO) << "signing transaction: " << HexString(GetSHA256Hash());
             CryptoPP::RSASS<CryptoPP::PSS, CryptoPP::SHA256>::Signer signer(privateKey);
             CryptoPP::AutoSeededRandomPool rng;
             CryptoPP::SecByteBlock sigData(signer.MaxSignatureLength());
@@ -247,7 +247,7 @@ namespace Token{
                 std::string filename = (GetDataDirectory() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
                 Transaction* tx = Transaction::NewInstance(filename);
-                txs.push_back(tx->GetHash());
+                txs.push_back(tx->GetSHA256Hash());
             }
             closedir(dir);
             return true;
@@ -274,7 +274,7 @@ namespace Token{
     }
 
     void TransactionPool::PutTransaction(Transaction* tx){
-        uint256_t hash = tx->GetHash();
+        uint256_t hash = tx->GetSHA256Hash();
         if(HasTransaction(hash)){
             std::stringstream ss;
             ss << "Couldn't add duplicate transaction " << hash << " to transaction pool";

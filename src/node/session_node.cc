@@ -140,7 +140,7 @@ namespace Token{
         BlockMessage* msg = (BlockMessage*)task->GetMessage();
 
         Block* block = msg->GetBlock();
-        uint256_t hash = block->GetHash();
+        uint256_t hash = block->GetSHA256Hash();
 
         BlockPool::PutBlock(block);
         //TODO: session->OnHash(hash); - move to block chain class, block calling thread
@@ -152,7 +152,7 @@ namespace Token{
 
         Transaction* tx = msg->GetTransaction();
         TransactionPool::PutTransaction(tx);
-        //TODO: session->OnHash(tx->GetHash());
+        //TODO: session->OnHash(tx->GetSHA256Hash());
     }
 
     void NodeSession::HandleAcceptedMessage(HandleMessageTask* task){}

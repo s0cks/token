@@ -150,7 +150,7 @@ namespace Token{
     }
 
     void UnclaimedTransactionPool::PutUnclaimedTransaction(UnclaimedTransaction* utxo){
-        uint256_t hash = utxo->GetHash();
+        uint256_t hash = utxo->GetSHA256Hash();
         if(HasUnclaimedTransaction(hash)){
             std::stringstream ss;
             ss << "Couldn't add duplicate unclaimed transaction: " << hash;
@@ -185,7 +185,7 @@ namespace Token{
                 std::string filename = (GetDataDirectory() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
                 UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(filename);
-                utxos.push_back(utxo->GetHash());
+                utxos.push_back(utxo->GetSHA256Hash());
             }
             closedir(dir);
             return true;
@@ -205,7 +205,7 @@ namespace Token{
                 if(!EndsWith(filename, ".dat")) continue;
                 UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(filename);
                 // if(utxo.GetUser() != user) continue;
-                utxos.push_back(utxo->GetHash());
+                utxos.push_back(utxo->GetSHA256Hash());
             }
             closedir(dir);
             return true;

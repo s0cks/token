@@ -48,13 +48,11 @@ namespace Token{
         return nullptr;
     }
 
-    static const uint32_t kNumberOfGenesisOutputs = 32;
-
     static Block*
     CreateGenesis(){
         Transaction::InputList cb_inputs;
         Transaction::OutputList cb_outputs;
-        for(uint32_t idx = 0; idx < kNumberOfGenesisOutputs; idx++){
+        for(uint32_t idx = 0; idx < BlockChain::kNumberOfGenesisOutputs; idx++){
             std::string user = "TestUser";
             std::stringstream token;
             token << "TestToken" << idx;
@@ -98,12 +96,13 @@ namespace Token{
             for(auto it : (*genesis)){
                 uint32_t index = 0;
                 for(auto out = it->outputs_begin(); out != it->outputs_end(); out++){
-                    UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(it->GetHash(), index++, (*out).GetUser());
+                    LOG(INFO) << "processing output: #" << index;
+                    UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(it->GetSHA256Hash(), index++, (*out).GetUser());
                     UnclaimedTransactionPool::PutUnclaimedTransaction(utxo);
                 }
             }
 
-            BlockChainIndex::PutReference("<HEAD>", genesis->GetHash());
+            BlockChainIndex::PutReference("<HEAD>", genesis->GetSHA256Hash());
             SetState(State::kInitialized);
             return;
         }
@@ -183,7 +182,7 @@ namespace Token{
         LOCK_GUARD;
 
         BlockHeader head = BlockChain::GetHead();
-        uint256_t hash = block->GetHash();
+        uint256_t hash = block->GetSHA256Hash();
         uint256_t phash = block->GetPreviousHash();
 
 #ifdef TOKEN_DEBUG

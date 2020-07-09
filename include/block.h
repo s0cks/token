@@ -4,6 +4,7 @@
 #include "common.h"
 #include "uint256_t.h"
 #include "transaction.h"
+#include "bloom.h"
 
 namespace Token{
     class Block;
@@ -109,7 +110,7 @@ namespace Token{
         ~Block() = default;
 
         BlockHeader GetHeader() const{
-            return BlockHeader(timestamp_, height_, previous_hash_, GetMerkleRoot(), GetHash());
+            return BlockHeader(timestamp_, height_, previous_hash_, GetMerkleRoot(), GetSHA256Hash());
         }
 
         uint256_t GetMerkleRoot() const;
@@ -137,7 +138,7 @@ namespace Token{
 
         Transaction* GetTransaction(const uint256_t& hash) const{
             for(auto& it : transactions_){
-                if(it->GetHash() == hash) return it;
+                if(it->GetSHA256Hash() == hash) return it;
             }
             return nullptr;
         }

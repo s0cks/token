@@ -7,7 +7,6 @@
 
 #include "common.h"
 #include "uint256_t.h"
-#include "bitfield.h"
 
 namespace Token{
     typedef uintptr_t ObjectAddress;
@@ -54,7 +53,7 @@ namespace Token{
             return raw.SerializeToOstream(&fd);
         }
 
-        uint256_t GetHash() const{
+        uint256_t GetSHA256Hash() const{
             CryptoPP::SHA256 func;
             CryptoPP::SecByteBlock bytes;
             if(!GetBytes(bytes)) {
@@ -65,6 +64,9 @@ namespace Token{
             CryptoPP::ArraySource source(bytes.data(), bytes.size(), true, new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(hash.data(), hash.size())));
             return uint256_t(hash.data());
         }
+
+        //TODO: add GetSHA1Hash();
+        //TODO: add GetMD5Hash();
     };
 }
 

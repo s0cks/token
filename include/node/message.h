@@ -421,8 +421,8 @@ namespace Token{
         InventoryItem(Type type, const uint256_t& hash):
             type_(type),
             hash_(hash){}
-        InventoryItem(Transaction* tx): InventoryItem(kTransaction, tx->GetHash()){}
-        InventoryItem(Block* blk): InventoryItem(kBlock, blk->GetHash()){}
+        InventoryItem(Transaction* tx): InventoryItem(kTransaction, tx->GetSHA256Hash()){}
+        InventoryItem(Block* blk): InventoryItem(kBlock, blk->GetSHA256Hash()){}
         InventoryItem(const BlockHeader& blk): InventoryItem(kBlock, blk.GetHash()){}
         InventoryItem(const InventoryItem& item):
             type_(item.type_),

@@ -25,7 +25,7 @@ namespace Token{
         }
 
         bool Visit(Transaction* tx){
-            uint256_t hash = tx->GetHash();
+            uint256_t hash = tx->GetSHA256Hash();
             if(!TransactionHandler::ProcessTransaction(tx)){
                 LOG(WARNING) << "couldn't process transaction: " << hash;
                 return false;

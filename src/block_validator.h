@@ -25,7 +25,7 @@ namespace Token{
         }
 
         bool IsValid(Transaction* tx){
-            uint256_t hash = tx->GetHash();
+            uint256_t hash = tx->GetSHA256Hash();
             if(tx->GetNumberOfInputs() <= 0){
                 LOG(WARNING) << "transaction " << hash << " has no inputs";
                 return false;

@@ -75,7 +75,6 @@ namespace Token{
         CryptoPP::SecByteBlock nonce(64);
         CryptoPP::AutoSeededRandomPool prng;
         prng.GenerateBlock(nonce, nonce.size());
-
         std::string digest;
         CryptoPP::ArraySource source(nonce, nonce.size(), true, new CryptoPP::HexEncoder(new CryptoPP::StringSink(digest)));
         return digest;

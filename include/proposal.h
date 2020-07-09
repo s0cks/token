@@ -102,7 +102,7 @@ namespace Token{
         static Proposal* NewInstance(const uint256_t& hash, const NodeInfo& proposer);
 
         static Proposal* NewInstance(Block* block, const NodeInfo& proposer){
-            return NewInstance(block->GetHash(), proposer);
+            return NewInstance(block->GetSHA256Hash(), proposer);
         }
 
         static Proposal* NewInstance(const BlockHeader& block, const NodeInfo& proposer){

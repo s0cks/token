@@ -15,7 +15,6 @@ namespace Token{
     static std::recursive_mutex mutex_;
     static std::condition_variable_any cond_;
     static BlockMiner::State state_ = BlockMiner::State::kStopped;
-    static Proposal* proposal_ = nullptr;
     static uv_async_t aterm_;
 
     static uv_timer_t mine_timer_;
@@ -49,7 +48,7 @@ namespace Token{
 
     void BlockMiner::HandleMineCallback(uv_timer_t* handle){
         Scope scope;
-        if(TransactionPool::GetNumberOfTransactions() >= 2){
+        if(TransactionPool::GetNumberOfTransactions() >= kNumberOfTransactionsPerBlock){
             // 1. Collect transactions from pool
             Block::TransactionList all_txs;
             {

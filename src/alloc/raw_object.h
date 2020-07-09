@@ -56,7 +56,6 @@ namespace Token{
         ObjectAddress forwarding_address_;
         ReferenceList pointing_;
         ReferenceList owned_;
-        void* ptr_;
 
         void SetHeader(uintptr_t value){
             header_ = value;
@@ -95,9 +94,8 @@ namespace Token{
         friend class StrongReference;
         friend class Marker;
     public:
-        RawObject(Object::Type type, size_t size, void* ptr):
+        RawObject(Object::Type type, size_t size):
                 owned_(),
-                ptr_(ptr),
                 pointing_(),
                 header_(0),
                 forwarding_address_(0){
@@ -106,9 +104,7 @@ namespace Token{
             SetSize(size);
             SetType(type);
         }
-        ~RawObject(){
-            free(ptr_);
-        }
+        ~RawObject(){}
 
         ObjectAddress GetForwardingAddress() const{
             return forwarding_address_;
@@ -119,7 +115,7 @@ namespace Token{
         }
 
         void* GetObjectPointer() const{
-            return ptr_;
+            return (((void*)this)+sizeof(RawObject));
         }
 
         size_t GetObjectSize() const{

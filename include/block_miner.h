@@ -48,7 +48,8 @@ namespace Token{
         friend class Node;
         friend class PeerSession;
     public:
-        static const uint64_t kMiningIntervalMilliseconds = 1 * 1000;
+        static const uint32_t kMiningIntervalMilliseconds = 1 * 1000;
+        static const uint32_t kNumberOfTransactionsPerBlock = 20000;
 
         ~BlockMiner(){}
 

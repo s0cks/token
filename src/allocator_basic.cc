@@ -36,7 +36,7 @@ namespace Token{
             CrashReport::GenerateAndExit(ss);
         }
         memset(ptr, 0, size);
-        return new (ptr)RawObject(type, size, ptr+sizeof(RawObject));
+        return new (ptr)RawObject(type, size);
     }
 
     bool Allocator::FinalizeObject(RawObject* obj){
