@@ -156,8 +156,13 @@ namespace Token{
     }
 
     void NodeSession::HandleAcceptedMessage(HandleMessageTask* task){}
-
     void NodeSession::HandleRejectedMessage(HandleMessageTask* task){}
+
+    void NodeSession::HandleTestMessage(HandleMessageTask* task){
+        NodeSession* session = (NodeSession*)task->GetSession();
+        TestMessage* msg = (TestMessage*)task->GetMessage();
+        LOG(INFO) << "Test: " << msg->GetHash();
+    }
 
     void NodeSession::HandleInventoryMessage(HandleMessageTask* task){
         NodeSession* session = (NodeSession*)task->GetSession();

@@ -21,6 +21,10 @@ namespace Token{
             data_(){
             memcpy(data_, data, sizeof(data_));
         }
+        uint256_t(uint8_t* data):
+            data_(){
+            memcpy(data_, data, sizeof(data_));
+        }
 
         void SetNull(){
             memset(data_, 0, sizeof(data_));

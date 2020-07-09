@@ -21,7 +21,8 @@ namespace Token{
     V(Block) \
     V(Transaction) \
     V(Inventory) \
-    V(NotFound)
+    V(NotFound) \
+    V(Test)
 
 #define FORWARD_DECLARE(Name) class Name##Message;
     FOR_EACH_MESSAGE_TYPE(FORWARD_DECLARE)
@@ -66,6 +67,30 @@ namespace Token{
         static Message* Decode(MessageType type, uintptr_t size, uint8_t* bytes);
     };
 
+    class HashMessage : public Message{
+    protected:
+        uint256_t hash_;
+
+        HashMessage(const uint256_t& hash):
+            Message(),
+            hash_(hash){}
+
+        virtual bool Encode(uint8_t* bytes, uintptr_t size) const{
+            memcpy(bytes, hash_.data(), size);
+            return true;
+        }
+    public:
+        virtual ~HashMessage() = default;
+
+        uint256_t GetHash() const{
+            return hash_;
+        }
+
+        virtual uintptr_t GetMessageSize() const{
+            return 64; // bytes
+        }
+    };
+
 #define DECLARE_MESSAGE(Name) \
     public: \
         virtual MessageType GetMessageType() const{ return Message::k##Name##MessageType; } \
@@ -99,6 +124,20 @@ namespace Token{
 
         bool Encode(uint8_t* bytes, uintptr_t size) const{
             return GetRaw().SerializeToArray(bytes, size);
+        }
+    };
+
+    class TestMessage : public HashMessage{
+    private:
+        TestMessage(const uint256_t& hash): HashMessage(hash){}
+    public:
+        ~TestMessage() = default;
+
+        DECLARE_MESSAGE(Test);
+
+        static TestMessage* NewInstance(const uint256_t& hash){
+            TestMessage* instance = (TestMessage*)Allocator::Allocate(sizeof(TestMessage));
+            return new (instance)TestMessage(hash);
         }
     };
 

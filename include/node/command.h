@@ -10,7 +10,7 @@ namespace Token{
 #define FOR_EACH_COMMAND(V) \
     V(Status, ".status", 0) \
     V(Disconnect, ".disconnect", 0) \
-    V(GetHead, "gethead", 0)
+    V(Test, ".test", 0)
     //V(Exit, ".exit", 0)
 
 #define FORWARD_DECLARE_COMMAND(Name, Text, Parameters) class Name##Command;
@@ -57,12 +57,12 @@ FOR_EACH_COMMAND(FORWARD_DECLARE_COMMAND);
         DECLARE_COMMAND(Disconnect);
     };
 
-    class GetHeadCommand : public Command{
+    class TestCommand : public Command{
     public:
-        GetHeadCommand(const std::deque<std::string>& args): Command(args){}
-        ~GetHeadCommand() = default;
+        TestCommand(const std::deque<std::string>& args): Command(args){}
+        ~TestCommand() = default;
 
-        DECLARE_COMMAND(GetHead);
+        DECLARE_COMMAND(Test);
     };
 }
 

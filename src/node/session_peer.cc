@@ -305,6 +305,10 @@ namespace Token{
         if(Node::IsSynchronizing()) SCHEDULE(session->GetLoop(), SynchronizeBlocks, session, items);
     }
 
+    void PeerSession::HandleTestMessage(HandleMessageTask* task){
+        //TODO: implement
+    }
+
     void PeerSession::HandleSynchronizeBlocksTask(uv_work_t* handle){
         SynchronizeBlocksTask* task = (SynchronizeBlocksTask*)handle->data;
         PeerSession* session = (PeerSession*)task->GetSession();

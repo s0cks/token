@@ -165,6 +165,7 @@ namespace Token{
     void NodeClient::HandleRejectedMessage(HandleMessageTask* msg){}
     void NodeClient::HandleAcceptedMessage(HandleMessageTask* msg){}
     void NodeClient::HandleNotFoundMessage(HandleMessageTask* msg){}
+    void NodeClient::HandleTestMessage(HandleMessageTask* task){}
 
     // commands:
     // - ping
@@ -229,6 +230,12 @@ namespace Token{
         LOG(WARNING) << "disconnecting...";
     }
 
+    void NodeClient::HandleTestCommand(TestCommand* cmd){
+        std::string nonce = GenerateNonce();
+        LOG(INFO) << "sending nonce: " << nonce;
+        Send(TestMessage::NewInstance(HashFromHexString(nonce)));
+    }
+
     //TODO:
     // need to wait
     // in order to wait:
@@ -238,9 +245,5 @@ namespace Token{
     //      .....                               /          .....
     //   - receive_head                       /            .....
     //   - signal_all() --------------------/          - log_head()
-    void NodeClient::HandleGetHeadCommand(GetHeadCommand* cmd){
-        NodeInfo info = Node::GetInfo();
-        BlockHeader head = BlockHeader();
-        Send(VersionMessage::NewInstance(info, GenerateNonce(), head));
-    }
+    // void NodeClient::HandleGetHeadCommand(GetHeadCommand* cmd){}
 }

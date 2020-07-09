@@ -48,6 +48,8 @@ namespace Token{
         return nullptr;
     }
 
+    // Start - 21:38:56.744585
+    // Finish - 21:56:55.090492
     static Block*
     CreateGenesis(){
         Transaction::InputList cb_inputs;

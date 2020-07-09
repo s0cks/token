@@ -14,8 +14,15 @@ namespace Token{
         return Name##Message::NewInstance(raw); \
     }
 
+#define DECLARE_HASH_DECODE(Name, ErrorMessage) \
+case MessageType::k##Name##MessageType:{ \
+    uint256_t hash(bytes); \
+    return Name##Message::NewInstance(hash); \
+}
+
     Message* Message::Decode(Message::MessageType type, uintptr_t size, uint8_t* bytes){
         switch(type){
+            DECLARE_HASH_DECODE(Test, "couldn't deserialize the test message");
             DECLARE_RAW_DECODE(GetBlocks, Proto::BlockChainServer::GetBlocks, "couldn't deserialize getblocks from byte array");
             DECLARE_RAW_DECODE(GetData, Proto::BlockChainServer::Inventory, "couldn't deserialize getdata from byte array");
             DECLARE_RAW_DECODE(Transaction, Proto::BlockChain::Transaction, "couldn't deserialize transaction from byte array");
