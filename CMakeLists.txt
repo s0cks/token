@@ -95,10 +95,10 @@ if(TOKEN_HEALTHCHECK_SUPPORT)
 endif(TOKEN_HEALTHCHECK_SUPPORT)
 
 # Mark-Copy Scavenger Support
-if(TOKEN_CHENEYGC_SUPPORT)
+if(TOKEN_USE_KOA)
         message("Compiling ledger w/ mark-copy scavenger support")
-        add_compile_definitions(TOKEN_USE_CHENEYGC)
-endif(TOKEN_CHENEYGC_SUPPORT)
+        add_compile_definitions(TOKEN_USE_KOA)
+endif(TOKEN_USE_KOA)
 #------------------------------------------------------------------------------------
 
 

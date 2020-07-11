@@ -33,6 +33,9 @@ namespace Token{
 
         static void DarkenRoots();
         static void MarkObjects();
+#ifdef TOKEN_USE_KOA
+        static RawObject* EvacuateObject(RawObject* obj);
+#endif//TOKEN_USE_KOA
     public:
         ~Scavenger() = delete;
 

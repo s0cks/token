@@ -88,7 +88,7 @@ namespace Token{
         }
 
         friend class Allocator;
-        friend class MarkCopyScavenger;
+        friend class Scavenger;
         friend class Reference;
         friend class WeakReference;
         friend class StrongReference;

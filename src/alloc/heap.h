@@ -60,7 +60,7 @@ namespace Token{
             return GetAllocatedSize() == 0;
         }
 
-        RawObject* Allocate(uintptr_t size);
+        void* Allocate(uintptr_t size);
 
         Semispace& operator=(const Semispace& other){
             start_ = other.start_;
@@ -137,7 +137,7 @@ namespace Token{
                     (address <= GetEndAddress());
         }
 
-        RawObject* Allocate(uintptr_t size){
+        void* Allocate(uintptr_t size){
             return GetFromSpace()->Allocate(size);
         }
     };

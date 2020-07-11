@@ -2,8 +2,8 @@
 #include "raw_object.h"
 
 namespace Token{
-    RawObject* Semispace::Allocate(uintptr_t alloc_size){
-        uintptr_t total_size = alloc_size + sizeof(RawObject);
+    void* Semispace::Allocate(uintptr_t alloc_size){
+        uintptr_t total_size = alloc_size;
         if((GetAllocatedSize() + total_size) > GetTotalSize()){
             LOG(WARNING) << "allocated size: " << GetAllocatedSize();
             LOG(WARNING) << "object too large for semispace!: " << total_size << "/" << GetTotalSize();
@@ -16,7 +16,6 @@ namespace Token{
         }
         current_ += total_size;
         memset(ptr, 0, total_size);
-        RawObject* obj = (RawObject*)ptr;
-        return nullptr; //TODO: fixme new (obj)RawObject(Color::kWhite, alloc_size);
+        return ptr;
     }
 }

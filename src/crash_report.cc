@@ -2,10 +2,15 @@
 #include <time.h>
 #include <execinfo.h>
 
-#include "token.h"
-#include "crash_report.h"
+
 #include "allocator.h"
 #include "alloc/raw_object.h"
+#ifdef TOKEN_USE_KOA
+#include "alloc/heap.h"
+#endif//TOKEN_USE_KOA
+
+#include "token.h"
+#include "crash_report.h"
 #include "block_chain.h"
 #include "node/node.h"
 
@@ -130,7 +135,7 @@ namespace Token{
         MemoryInformationSection(CrashReport* report): CrashReportSection(report){}
         ~MemoryInformationSection(){}
 
-#if defined(TOKEN_USE_CHENEYGC)
+#if defined(TOKEN_USE_KOA)
         inline std::string
         GetHeapSize() const{
             std::stringstream ss;
@@ -144,7 +149,7 @@ namespace Token{
             ss << Allocator::GetEdenHeap()->GetSemispaceSize();
             return ss.str();
         }
-#endif //TOKEN_USE_CHENEYGC
+#endif //TOKEN_USE_KOA
         inline std::string
         GetTotalMemoryUsed() const{
             std::stringstream ss;
@@ -169,18 +174,18 @@ namespace Token{
         bool WriteSection(){
             WriteLine("Memory Information:");
             Indent();
-#if defined(TOKEN_USE_CHENEYGC)
+#if defined(TOKEN_USE_KOA)
             WriteLine("Garbage Collector: Mark/Copy");
 #else
             WriteLine("Garbage Collector: Mark/Sweep");
-#endif //TOKEN_USE_CHENEYGC
+#endif //TOKEN_USE_KOA
             WriteLine("Number of Allocated Objects: " + GetNumberOfAllocatedObjects());
             WriteLine("Total Memory Used (Bytes): " + GetTotalMemoryUsed());
             WriteLine("Total Memory Free (Bytes): " + GetTotalMemoryFree());
-#if defined(TOKEN_USE_CHENEYGC)
+#if defined(TOKEN_USE_KOA)
             WriteLine("Heap Size (Bytes): " + GetHeapSize());
             WriteLine("Semispace Size (Bytes): " + GetSemispaceSize());
-#endif//TOKEN_USE_CHENEYGC
+#endif//TOKEN_USE_KOA
             DeIndent();
             WriteNewline();
             return true;

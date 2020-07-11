@@ -5,6 +5,10 @@
 
 #include "block_miner.h"
 
+#ifdef TOKEN_USE_KOA
+#include "alloc/heap.h"
+#endif//TOKEN_USE_KOA
+
 namespace Token{
     std::recursive_mutex Allocator::mutex_;
     ObjectAddressMap Allocator::allocated_ = ObjectAddressMap();
@@ -15,6 +19,21 @@ namespace Token{
 #define WAIT cond_.wait(lock)
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
+
+#ifdef TOKEN_USE_KOA
+    static Heap* eden_ = nullptr;
+
+    Heap* Allocator::GetEdenHeap(){
+        return eden_;
+    }
+#endif//TOKEN_USE_KOA
+
+    void Allocator::Initialize(){
+#ifdef TOKEN_USE_KOA
+        LOCK_GUARD;
+        eden_ = new Heap(FLAGS_minheap_size);
+#endif//TOKEN_USE_KOA
+    }
 
     size_t Allocator::GetNumberOfRootObjects(){
         LOCK_GUARD;

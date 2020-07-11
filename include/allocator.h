@@ -7,6 +7,7 @@
 #include "object.h"
 
 namespace Token{
+    class Heap;
     class RawObject;
     class ObjectPointerVisitor;
 
@@ -60,6 +61,11 @@ namespace Token{
         static inline bool IsRoot(void* ptr){
             return IsRoot(GetObject((ObjectAddress)ptr));
         }
+
+        static void Initialize();
+#ifdef TOKEN_USE_KOA
+        static Heap* GetEdenHeap();
+#endif//TOKEN_USE_KOA
     };
 }
 
