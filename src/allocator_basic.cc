@@ -40,24 +40,8 @@ namespace Token{
     }
 
     bool Allocator::FinalizeObject(RawObject* obj){
-        LOCK_GUARD;
-        if(IsRoot(obj)){
-            LOG(WARNING) << "cannot finalize root object: " << (*obj);
-            return false;
-        }
-
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << "finalizing object: " << (*obj);
-#endif//TOKEN_DEBUG
-        Object* o = (Object*)obj->GetObjectPointer();
-        if(!o->Finalize()){
-            std::stringstream ss;
-            ss << "Couldn't finalize object: " << (*obj);
-            CrashReport::GenerateAndExit(ss);
-        }
-
-        allocated_size_ -= obj->GetObjectSize();
         free(obj);
+        allocated_size_ -= obj->GetObjectSize();
         return true;
     }
 }

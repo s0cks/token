@@ -168,7 +168,11 @@ namespace Token{
             pthread_exit(0);
         }
 
+#ifdef TOKEN_DEBUG
+        LOG(INFO) << "server " << GetID() << " listening @" << FLAGS_port;
+#else
         LOG(INFO) << "server listening @" << FLAGS_port;
+#endif//TOKEN_DEBUG
         SetState(State::kRunning);
         uv_run(loop, UV_RUN_DEFAULT);
 

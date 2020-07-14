@@ -5,6 +5,7 @@
 #include "uint256_t.h"
 #include "transaction.h"
 #include "bloom.h"
+#include "allocator.h"
 
 namespace Token{
     class Block;
@@ -87,20 +88,31 @@ namespace Token{
     class Block : public BinaryObject<Proto::BlockChain::Block>{
     public:
         typedef Proto::BlockChain::Block RawType;
-        typedef std::vector<Transaction*> TransactionList; //TODO: convert to non-pointer?
+
+        static const size_t kMaxNumberOfTransactions = 40000;
     private:
         uint32_t timestamp_;
         uint32_t height_;
         uint256_t previous_hash_;
-        std::vector<Transaction*> transactions_;
-        std::map<uint256_t, Transaction*> transactions_map_;
+        size_t transactions_len_;
+        Transaction** transactions_;
+        BloomFilter tx_bloom_;
 
-        Block(uint32_t timestamp, uint32_t height, const uint256_t& phash, std::vector<Transaction*> txs):
+        Block(uint32_t timestamp, uint32_t height, const uint256_t& phash, Transaction** txs, uint32_t num_txs):
             timestamp_(timestamp),
             height_(height),
             previous_hash_(phash),
-            transactions_(txs),
-            transactions_map_(){}
+            transactions_len_(0),
+            transactions_(nullptr),
+            tx_bloom_(){
+            transactions_ = (Transaction**)malloc(sizeof(Transaction*)*num_txs);
+            memset(transactions_, 0, sizeof(Transaction*)*num_txs);
+            memmove(transactions_, txs, sizeof(Transaction*)*num_txs);// should this be moved?
+            for(uint32_t idx = 0; idx < num_txs; idx++){
+                Allocator::AddStrongReference(this, transactions_[idx], nullptr);
+                tx_bloom_.Put(transactions_[idx]->GetSHA256Hash());
+            }
+        }
 
         bool Encode(RawType& raw) const;
 
@@ -124,7 +136,7 @@ namespace Token{
         }
 
         uint32_t GetNumberOfTransactions() const{
-            return transactions_.size();
+            return transactions_len_;
         }
 
         uint32_t GetTimestamp() const{
@@ -132,23 +144,8 @@ namespace Token{
         }
 
         Transaction* GetTransaction(uint32_t idx) const{
-            if(idx < 0 || idx > transactions_.size()) return nullptr;
+            if(idx < 0 || idx > transactions_len_) return nullptr;
             return transactions_[idx];
-        }
-
-        Transaction* GetTransaction(const uint256_t& hash) const{
-            for(auto& it : transactions_){
-                if(it->GetSHA256Hash() == hash) return it;
-            }
-            return nullptr;
-        }
-
-        std::vector<Transaction*>::iterator begin(){
-            return transactions_.begin();
-        }
-
-        std::vector<Transaction*>::iterator end(){
-            return transactions_.end();
         }
 
         bool IsGenesis(){
@@ -160,8 +157,8 @@ namespace Token{
         bool Accept(BlockVisitor* vis) const;
         std::string ToString() const;
 
-        static Block* NewInstance(uint32_t height, const uint256_t& phash, std::vector<Transaction*>& transactions, uint32_t timestamp=GetCurrentTime());
-        static Block* NewInstance(const BlockHeader& parent, std::vector<Transaction*>& transactions, uint32_t timestamp=GetCurrentTime());
+        static Block* NewInstance(uint32_t height, const uint256_t& phash, Transaction** transactions, uint32_t num_transactions, uint32_t timestamp=GetCurrentTime());
+        static Block* NewInstance(const BlockHeader& parent, Transaction** transactions, uint32_t num_transactions, uint32_t timestamp=GetCurrentTime());
         static Block* NewInstance(RawType raw);
         static Block* NewInstance(std::fstream& fd);
 

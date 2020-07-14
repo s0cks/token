@@ -17,28 +17,22 @@ namespace Token{
 //######################################################################################################################
 //                                          Block
 //######################################################################################################################
-    Block* Block::NewInstance(uint32_t height, const Token::uint256_t &phash, std::vector<Transaction*>& transactions,
+    Block* Block::NewInstance(uint32_t height, const Token::uint256_t &phash, Transaction** txs, uint32_t num_txs,
                               uint32_t timestamp){
         Block* instance = (Block*)Allocator::Allocate(sizeof(Block), Object::kBlock);
-        new (instance)Block(timestamp, height, phash, transactions);
-        for(size_t idx = 0; idx < transactions.size(); idx++) Allocator::AddStrongReference(instance, transactions[idx], NULL);
+        new (instance)Block(timestamp, height, phash, txs, num_txs);
         return instance;
     }
 
-    Block* Block::NewInstance(const BlockHeader &parent, std::vector<Transaction *> &transactions, uint32_t timestamp){
-        return NewInstance(parent.GetHeight() + 1, parent.GetHash(), transactions, timestamp);
+    Block* Block::NewInstance(const BlockHeader &parent, Transaction** txs, uint32_t num_txs, uint32_t timestamp){
+        return NewInstance(parent.GetHeight() + 1, parent.GetHash(), txs, num_txs, timestamp);
     }
 
     Block* Block::NewInstance(RawType raw){
-        Block* instance = (Block*)Allocator::Allocate(sizeof(Block), Object::kBlock);
-
-        std::vector<Transaction*> txs = {};
-        for(auto& it : raw.transactions()){
-            txs.push_back(Transaction::NewInstance(it));
-        }
-
-        new (instance)Block(raw.timestamp(), raw.height(), HashFromHexString(raw.previous_hash()), txs);
-        return instance;
+        size_t num_txs = raw.transactions_size();
+        Transaction* txs[num_txs];
+        for(size_t idx = 0; idx < num_txs; idx++) txs[idx] = Transaction::NewInstance(raw.transactions(idx));
+        return NewInstance(raw.height(), HashFromHexString(raw.previous_hash()), txs, num_txs, raw.timestamp());
     }
 
     Block* Block::NewInstance(std::fstream& fd){
@@ -58,8 +52,9 @@ namespace Token{
         raw.set_height(height_);
         raw.set_previous_hash(HexString(previous_hash_));
         raw.set_merkle_root(HexString(GetMerkleRoot()));
-        for(auto& it : transactions_){
+        for(uint32_t idx = 0; idx < transactions_len_; idx++){
             Transaction::RawType* raw_tx = raw.add_transactions();
+            Transaction* it = transactions_[idx];
             it->Encode((*raw_tx));
         }
         return true;
@@ -74,6 +69,15 @@ namespace Token{
             if(!vis->Visit(tx)) return false;
         }
         return vis->VisitEnd();
+    }
+
+    bool Block::Finalize(){
+        for(uint32_t idx = 0; idx < transactions_len_; idx++) Allocator::RemoveStrongReference(this, transactions_[idx]);
+        return true;
+    }
+
+    bool Block::Contains(const uint256_t& hash) const{
+        return tx_bloom_.Contains(hash);
     }
 
     class BlockMerkleTreeBuilder : public BlockVisitor,
@@ -101,20 +105,6 @@ namespace Token{
             return CreateTree();
         }
     };
-
-    bool Block::Finalize(){
-        for(auto& it : transactions_) Allocator::RemoveStrongReference(this, it);
-        return true;
-    }
-
-    bool Block::Contains(const uint256_t& hash) const{
-        BlockMerkleTreeBuilder builder(this);
-        if(!builder.BuildTree()) return false;
-        MerkleTree* tree = builder.GetTree();
-        std::vector<MerkleProofHash> trail;
-        if(!tree->BuildAuditProof(hash, trail)) return false;
-        return tree->VerifyAuditProof(tree->GetMerkleRootHash(), hash, trail);
-    }
 
     uint256_t Block::GetMerkleRoot() const{
         //TODO: scope merkle tree

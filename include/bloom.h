@@ -27,7 +27,7 @@ namespace Token{
             }
         }
 
-        bool Contains(const uint256_t& hash){
+        bool Contains(const uint256_t& hash) const{
             uint16_t* hashes = (uint16_t*)hash.data();
             for(size_t idx = 0; idx < num_hashes_; idx++){
                 if(!bits_[hashes[idx]]) return false;

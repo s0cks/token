@@ -61,10 +61,10 @@ namespace Token{
             cb_outputs.push_back(Output("TestUser", token.str()));
         }
 
-        Transaction* tx = Transaction::NewInstance(0, cb_inputs, cb_outputs, 0);
-
-        std::vector<Transaction*> transactions = { tx };
-        return Block::NewInstance(0, uint256_t(), transactions, 0);
+        Transaction* txs[1] = {
+                Transaction::NewInstance(0, cb_inputs, cb_outputs, 0)
+        };
+        return Block::NewInstance(0, uint256_t(), txs, 1);
     }
 
     void BlockChain::SetState(BlockChain::State state){
@@ -95,7 +95,9 @@ namespace Token{
             BlockChainIndex::PutBlockData(genesis);
             Allocator::AddRoot(genesis_);
 
-            for(auto it : (*genesis)){
+            for(uint32_t idx = 0; idx < genesis->GetNumberOfTransactions(); idx++){
+                Transaction* it = genesis->GetTransaction(idx);
+
                 uint32_t index = 0;
                 for(auto out = it->outputs_begin(); out != it->outputs_end(); out++){
                     LOG(INFO) << "processing output: #" << index;

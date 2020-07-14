@@ -17,7 +17,7 @@ namespace Token{
         while(iter != allocated.end()){
             RawObject* obj = iter->second;
             if(obj->IsGarbage()){
-                Allocator::FinalizeObject(obj);
+                Allocator::Finalize(obj);
                 iter = allocated.erase(iter);
                 allocated_size -= obj->GetObjectSize();
             }

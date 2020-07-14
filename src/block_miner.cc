@@ -48,23 +48,24 @@ namespace Token{
 
     void BlockMiner::HandleMineCallback(uv_timer_t* handle){
         Scope scope;
-        if(TransactionPool::GetNumberOfTransactions() >= kNumberOfTransactionsPerBlock){
+        uint32_t num_transactions;
+        if((num_transactions = TransactionPool::GetNumberOfTransactions()) >= kNumberOfTransactionsPerBlock){
             // 1. Collect transactions from pool
-            Block::TransactionList all_txs;
+            Transaction* txs[num_transactions];
             {
                 // 1.a. Get list of transactions
                 std::vector<uint256_t> pool_txs;
                 if(!TransactionPool::GetTransactions(pool_txs)) CrashReport::GenerateAndExit("Couldn't get list of transactions in pool");
 
                 // 1.b. Get data for list of transactions
+                uint32_t index = 0;
                 for(auto& it : pool_txs){
-                    Transaction* tx = scope.Retain(TransactionPool::GetTransaction(it));
-                    all_txs.push_back(tx);
+                    txs[index++] = scope.Retain(TransactionPool::GetTransaction(it));
                 }
             }
 
             // 2. Create new block
-            Block* block = scope.Retain(Block::NewInstance(BlockChain::GetHead(), all_txs));
+            Block* block = scope.Retain(Block::NewInstance(BlockChain::GetHead(), txs, num_transactions));
 
             // 3. Validate block
             BlockValidator validator(block);

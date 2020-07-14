@@ -23,6 +23,7 @@ namespace Token{
 
         static bool Unreference(RawObject* owner, RawObject* target, bool weak);
         static bool FinalizeObject(RawObject* obj);
+        static bool Finalize(RawObject* obj);
         static bool IsRoot(RawObject* obj);
         static RawObject* GetObject(uintptr_t address);
         static RawObject* AllocateObject(uintptr_t size, Object::Type type);
@@ -64,7 +65,7 @@ namespace Token{
 
         static void Initialize();
 #ifdef TOKEN_USE_KOA
-        static Heap* GetEdenHeap();
+        static Heap* GetEdenHeap(); //TODO: remove?
 #endif//TOKEN_USE_KOA
     };
 }
