@@ -151,8 +151,16 @@ namespace Token{
         TransactionMessage* msg = (TransactionMessage*)task->GetMessage();
 
         Transaction* tx = msg->GetTransaction();
-        TransactionPool::PutTransaction(tx);
-        //TODO: session->OnHash(tx->GetSHA256Hash());
+        uint256_t hash = tx->GetSHA256Hash();
+
+#ifdef TOKEN_DEBUG
+        LOG(INFO) << "received transaction: " << hash;
+#endif//TOKEN_DEBUG
+
+        if(!TransactionPool::HasTransaction(hash)){
+            TransactionPool::PutTransaction(tx);
+            Node::Broadcast(InventoryMessage::NewInstance(tx));
+        }
     }
 
     void NodeSession::HandleAcceptedMessage(HandleMessageTask* task){}

@@ -245,5 +245,22 @@ namespace Token{
     //      .....                               /          .....
     //   - receive_head                       /            .....
     //   - signal_all() --------------------/          - log_head()
-    // void NodeClient::HandleGetHeadCommand(GetHeadCommand* cmd){}
+    void NodeClient::HandleTransactionCommand(TransactionCommand* cmd){
+        uint256_t tx_hash = cmd->GetNextArgumentHash();
+        uint32_t index = cmd->GetNextArgumentUInt32();
+        std::string user = cmd->GetNextArgument();
+
+        Transaction::InputList inputs = {
+            Input(tx_hash, index, "TestUser"),
+        };
+        Transaction::OutputList outputs = {
+            Output(user, "TestToken")
+        };
+
+        Scope scope;
+        Transaction* tx = scope.Retain(Transaction::NewInstance(0, inputs, outputs));
+        TransactionMessage* msg = scope.Retain(TransactionMessage::NewInstance(tx));
+        LOG(INFO) << "sending transaction: " << tx->GetSHA256Hash();
+        Send(msg);
+    }
 }

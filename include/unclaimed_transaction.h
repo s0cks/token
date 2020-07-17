@@ -88,6 +88,10 @@ namespace Token{
         IsInitialized(){
             return GetState() == kInitialized;
         }
+
+#ifdef TOKEN_DEBUG
+        static void PrintUnclaimedTransactions();
+#endif//TOKEN_DEBUG
     };
 
     class UnclaimedTransactionPoolVisitor{

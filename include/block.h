@@ -88,8 +88,6 @@ namespace Token{
     class Block : public BinaryObject<Proto::BlockChain::Block>{
     public:
         typedef Proto::BlockChain::Block RawType;
-
-        static const size_t kMaxNumberOfTransactions = 40000;
     private:
         uint32_t timestamp_;
         uint32_t height_;
@@ -102,12 +100,12 @@ namespace Token{
             timestamp_(timestamp),
             height_(height),
             previous_hash_(phash),
-            transactions_len_(0),
+            transactions_len_(num_txs),
             transactions_(nullptr),
             tx_bloom_(){
             transactions_ = (Transaction**)malloc(sizeof(Transaction*)*num_txs);
             memset(transactions_, 0, sizeof(Transaction*)*num_txs);
-            memmove(transactions_, txs, sizeof(Transaction*)*num_txs);// should this be moved?
+            memmove(transactions_, txs, sizeof(Transaction*)*num_txs); // should this be moved?
             for(uint32_t idx = 0; idx < num_txs; idx++){
                 Allocator::AddStrongReference(this, transactions_[idx], nullptr);
                 tx_bloom_.Put(transactions_[idx]->GetSHA256Hash());

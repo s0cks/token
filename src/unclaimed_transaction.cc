@@ -249,4 +249,22 @@ namespace Token{
         LOG(WARNING) << "couldn't find unclaimed transaction: " << tx_hash << "[" << tx_index << "]";
         return nullptr;
     }
+
+#ifdef TOKEN_DEBUG
+    class UnclaimedTransactionPoolPrinter : public UnclaimedTransactionPoolVisitor{
+    public:
+        UnclaimedTransactionPoolPrinter(): UnclaimedTransactionPoolVisitor(){}
+        ~UnclaimedTransactionPoolPrinter() = default;
+
+        bool Visit(UnclaimedTransaction* utxo){
+            LOG(INFO) << utxo->GetTransaction() << "[" << utxo->GetIndex() << "] := " << utxo->GetSHA256Hash();
+            return true;
+        }
+    };
+
+    void UnclaimedTransactionPool::PrintUnclaimedTransactions(){
+        UnclaimedTransactionPoolPrinter printer;
+        if(!Accept(&printer)) CrashReport::GenerateAndExit("Couldn't print unclaimed transactions in pool");
+    }
+#endif//TOKEN_DEBUG
 }

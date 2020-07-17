@@ -7,6 +7,7 @@
 
 #include "common.h"
 #include "uint256_t.h"
+#include "keychain.h"
 
 namespace Token{
     typedef uintptr_t ObjectAddress;
@@ -47,7 +48,7 @@ namespace Token{
 
         virtual bool Encode(RawObjectType& raw) const = 0;
 
-        bool WriteToFile(std::fstream& fd) const{
+        bool WriteToFile(std::fstream &fd) const{
             RawObjectType raw;
             if(!Encode(raw)) return false;
             return raw.SerializeToOstream(&fd);

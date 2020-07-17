@@ -49,7 +49,7 @@ namespace Token{
         friend class PeerSession;
     public:
         static const uint32_t kMiningIntervalMilliseconds = 1 * 1000;
-        static const uint32_t kNumberOfTransactionsPerBlock = 32;
+        static const uint32_t kNumberOfTransactionsPerBlock = 3;
 
         ~BlockMiner(){}
 

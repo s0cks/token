@@ -564,6 +564,20 @@ namespace Token{
             return instance;
         }
 
+        static InventoryMessage* NewInstance(Transaction* tx){
+            std::vector<InventoryItem> items = {
+                InventoryItem(tx)
+            };
+            return NewInstance(items);
+        }
+
+        static InventoryMessage* NewInstance(Block* blk){
+            std::vector<InventoryItem> items = {
+                InventoryItem(blk)
+            };
+            return NewInstance(items);
+        }
+
         static InventoryMessage* NewInstance(const RawType& raw){
             InventoryMessage* instance = (InventoryMessage*)Allocator::Allocate(sizeof(InventoryMessage));
             new (instance)InventoryMessage(raw);

@@ -22,7 +22,7 @@ namespace Token{
             kInitialized
         };
 
-        static const uint32_t kNumberOfGenesisOutputs = 40000;
+        static const uint32_t kNumberOfGenesisOutputs = 1000;
     private:
         friend class BlockMiner;
         friend class Node;
