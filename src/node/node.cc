@@ -276,6 +276,11 @@ namespace Token{
         peers_.erase(node_id);
     }
 
+    void Node::GetPeers(std::vector<PeerInfo>& peers){
+        LOCK_GUARD;
+        for(auto& it : peers_) peers.push_back(PeerInfo(it.second));
+    }
+
     bool Node::HasPeer(const std::string& node_id){
         LOCK_GUARD;
         return peers_.find(node_id) != peers_.end();

@@ -96,6 +96,50 @@ namespace Token{
             return raw;
         }
     };
+
+    class PeerSession;
+    class PeerInfo{
+    public:
+        enum State{ // TODO: remove this / merge this w/ Session::State
+            kConnecting,
+            kConnected,
+            kDisconnected
+        };
+    private:
+        State state_;
+        NodeInfo info_;
+    public:
+        PeerInfo(PeerSession* session);
+        ~PeerInfo() = default;
+
+        NodeInfo GetInfo() const{
+            return info_;
+        }
+
+        std::string GetID() const{
+            return info_.GetNodeID();
+        }
+
+        NodeAddress GetAddress() const{
+            return info_.GetNodeAddress();
+        }
+
+        State GetState() const{
+            return state_;
+        }
+
+        bool IsConnecting() const{
+            return GetState() == kConnecting;
+        }
+
+        bool IsConnect() const{
+            return GetState() == kConnected;
+        }
+
+        bool IsDisconnected() const{
+            return GetState() == kDisconnected;
+        }
+    };
 }
 
 #endif //TOKEN_NODE_INFO_H

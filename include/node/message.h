@@ -9,6 +9,8 @@
 
 namespace Token{
 #define FOR_EACH_MESSAGE_TYPE(V) \
+    V(Ping) \
+    V(Pong) \
     V(Version) \
     V(Verack) \
     V(Prepare) \
@@ -22,7 +24,7 @@ namespace Token{
     V(Transaction) \
     V(Inventory) \
     V(NotFound) \
-    V(Test)
+    V(Test) // TODO: Remove?
 
 #define FORWARD_DECLARE(Name) class Name##Message;
     FOR_EACH_MESSAGE_TYPE(FORWARD_DECLARE)
@@ -138,6 +140,34 @@ namespace Token{
         static TestMessage* NewInstance(const uint256_t& hash){
             TestMessage* instance = (TestMessage*)Allocator::Allocate(sizeof(TestMessage));
             return new (instance)TestMessage(hash);
+        }
+    };
+
+    class PingMessage : public HashMessage{
+    private:
+        PingMessage(const uint256_t& hash): HashMessage(hash){}
+    public:
+        ~PingMessage() = default;
+
+        DECLARE_MESSAGE(Ping);
+
+        static PingMessage* NewInstance(const uint256_t& hash){
+            PingMessage* instance = (PingMessage*)Allocator::Allocate(sizeof(PingMessage));
+            return new(instance)PingMessage(hash);
+        }
+    };
+
+    class PongMessage : public HashMessage{
+    private:
+        PongMessage(const uint256_t& hash): HashMessage(hash){}
+    public:
+        ~PongMessage() = default;
+
+        DECLARE_MESSAGE(Pong);
+
+        static PongMessage* NewInstance(const uint256_t& hash){
+            PongMessage* instance = (PongMessage*)Allocator::Allocate(sizeof(PongMessage));
+            return new(instance)PongMessage(hash);
         }
     };
 

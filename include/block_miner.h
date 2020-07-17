@@ -17,7 +17,6 @@ namespace Token{
             kRunning,
             kPaused,
             kStopped,
-            // kMining - mining a block or working a proposal
         };
 
         friend std::ostream& operator<<(std::ostream& stream, const State& state){
@@ -38,8 +37,10 @@ namespace Token{
         static void SetState(State state);
         static bool MineBlock(Block* block, bool clean);
         static void WaitForState(State state);
+
         static void HandleTerminateCallback(uv_async_t* handle);
         static void HandleMineCallback(uv_timer_t* handle);
+
         static void* MinerThread(void* data);
 
         BlockMiner(){}

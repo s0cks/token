@@ -47,7 +47,6 @@ namespace Token{
 
         static void WaitForState(State state);
         static void SetState(State state);
-        static State GetState();
 
         static uv_tcp_t* GetHandle();
         static void* NodeThread(void* ptr);
@@ -85,6 +84,7 @@ namespace Token{
         static void Start();
         static void RegisterPeer(const std::string& node_id, PeerSession* peer);
         static void UnregisterPeer(const std::string& node_id);
+        static void GetPeers(std::vector<PeerInfo>& peers);
         static uint32_t GetNumberOfPeers();
         static bool HasPeer(const std::string& node_id);
         static bool HasPeer(const NodeAddress& address);
@@ -93,6 +93,7 @@ namespace Token{
         static bool WaitForShutdown();
         static bool WaitForRunning();
         static bool Shutdown();
+        static State GetState();
 
         static inline bool
         IsStarting(){

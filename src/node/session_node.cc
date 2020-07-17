@@ -217,4 +217,7 @@ namespace Token{
 
         session->Send(InventoryMessage::NewInstance(items));
     }
+
+    void NodeSession::HandlePingMessage(HandleMessageTask* task){}
+    void NodeSession::HandlePongMessage(HandleMessageTask* task){}
 }

@@ -135,6 +135,8 @@ namespace Token{
         }
     }
 
+    void PeerSession::HandlePingMessage(HandleMessageTask *task){}
+    void PeerSession::HandlePongMessage(HandleMessageTask *task){}
     void PeerSession::HandleGetBlocksMessage(HandleMessageTask* task){}
 
     void PeerSession::HandleVersionMessage(HandleMessageTask* task){

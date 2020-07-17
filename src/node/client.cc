@@ -263,4 +263,7 @@ namespace Token{
         LOG(INFO) << "sending transaction: " << tx->GetSHA256Hash();
         Send(msg);
     }
+
+    void NodeClient::HandlePingMessage(HandleMessageTask* task){}
+    void NodeClient::HandlePongMessage(HandleMessageTask* task){}
 }
