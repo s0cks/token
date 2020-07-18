@@ -96,9 +96,6 @@ namespace Token{
             return GetPhase() == kQuorumPhase;
         }
 
-        static void SetCurrentProposal(Proposal* proposal);
-        static bool HasCurrentProposal();
-        static Proposal* GetCurrentProposal();
         static Proposal* NewInstance(const uint256_t& hash, const NodeInfo& proposer);
 
         static Proposal* NewInstance(Block* block, const NodeInfo& proposer){

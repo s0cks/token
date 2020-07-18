@@ -5,11 +5,9 @@
 #include <uv.h>
 #include "common.h"
 #include "block.h"
+#include "proposal.h"
 
 namespace Token{
-    //TODO:
-    // - establish timer for mining
-    // - refactor
     class BlockMiner{
     public:
         enum State{
@@ -33,42 +31,40 @@ namespace Token{
             }
             return stream;
         }
-    private:
-        static void SetState(State state);
-        static bool MineBlock(Block* block, bool clean);
-        static void WaitForState(State state);
 
-        static void HandleTerminateCallback(uv_async_t* handle);
-        static void HandleMineCallback(uv_timer_t* handle);
-
-        static void* MinerThread(void* data);
-
-        BlockMiner(){}
+        static const uint32_t kMiningIntervalMilliseconds = 1 * 1000;
+        static const uint32_t kNumberOfTransactionsPerBlock = 3;
 
         friend class BlockChain;
         friend class Node;
         friend class PeerSession;
-    public:
-        static const uint32_t kMiningIntervalMilliseconds = 1 * 1000;
-        static const uint32_t kNumberOfTransactionsPerBlock = 3;
+    private:
+        BlockMiner() = delete;
 
-        ~BlockMiner(){}
+        static void SetState(State state);
+        static void HandleTerminateCallback(uv_async_t* handle);
+        static void HandleProposalTimeoutCallback(uv_timer_t* handle);
+        static void HandleMineBlockCallback(uv_timer_t* handle);
+        static void* MinerThread(void* data);
+
+        static inline Proposal*
+        CreateNewProposal(Block* block, NodeInfo info=Node::GetInfo()){
+            Proposal* proposal = Proposal::NewInstance(block, info);
+            SetProposal(proposal);
+            return proposal;
+        }
+    public:
+        ~BlockMiner() = delete;
 
         static State GetState();
+        static Proposal* GetProposal();
+        static bool HasProposal();
+        static void SetProposal(Proposal* proposal);
         static void Initialize();
         static void Pause();
         static void Resume();
-        static bool Shutdown();
-
-        //TODO: refactor
-        static inline void WaitForRunningState(){
-            WaitForState(State::kRunning);
-        }
-
-        //TODO: refactor
-        static inline void WaitForStoppedState(){
-            WaitForState(State::kStopped);
-        }
+        static void Shutdown();
+        static void WaitForState(State state);
 
         static inline bool
         IsRunning(){

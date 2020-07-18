@@ -12,23 +12,6 @@ namespace Token{
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
 
-    bool Proposal::HasCurrentProposal(){
-        PLOCK_GUARD;
-        return proposal_ != nullptr;
-    }
-
-    void Proposal::SetCurrentProposal(Proposal* proposal){
-        PLOCK_GUARD;
-        if(proposal_) Allocator::RemoveRoot(proposal_);
-        proposal_ = proposal;
-        if(proposal_) Allocator::AddRoot(proposal_);
-    }
-
-    Proposal* Proposal::GetCurrentProposal(){
-        PLOCK_GUARD;
-        return proposal_;
-    }
-
     Proposal* Proposal::NewInstance(const uint256_t& hash, const NodeInfo& proposer){
         Proposal* instance = (Proposal*)Allocator::Allocate(sizeof(Proposal)); //TODO: Type proposal
         new (instance)Proposal(proposer, hash);

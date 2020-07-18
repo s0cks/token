@@ -30,12 +30,12 @@ namespace Token{
         BlockChain() = delete;
 
         static void SetState(State state);
-        static void Append(Block* block);
     public:
         ~BlockChain() = delete;
 
         static State GetState();
         static void Initialize();
+        static void Append(Block* block);
         static void Accept(BlockChainVisitor* vis);
         static bool HasBlock(const uint256_t& hash);
         static BlockHeader GetHead();
