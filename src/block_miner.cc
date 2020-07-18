@@ -138,7 +138,7 @@ namespace Token{
         uint32_t num_transactions;
         if((num_transactions = TransactionPool::GetNumberOfTransactions()) >= kNumberOfTransactionsPerBlock){
             // 1. Collect transactions from pool
-            Transaction* txs[num_transactions];
+            Handle<Array<Transaction>> txs = Array<Transaction>::New(num_transactions);
             {
                 // 1.a. Get list of transactions
                 std::vector<uint256_t> pool_txs;
@@ -147,7 +147,7 @@ namespace Token{
                 // 1.b. Get data for list of transactions
                 uint32_t index = 0;
                 for(auto& it : pool_txs){
-                    txs[index++] = scope.Retain(TransactionPool::GetTransaction(it));
+                    txs->Put(index++, TransactionPool::GetTransaction(it));
                 }
             }
 

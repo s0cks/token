@@ -92,23 +92,16 @@ namespace Token{
         uint32_t timestamp_;
         uint32_t height_;
         uint256_t previous_hash_;
-        size_t transactions_len_;
-        Transaction** transactions_;
+        Handle<Array<Transaction>> transactions_;
         BloomFilter tx_bloom_;
 
-        Block(uint32_t timestamp, uint32_t height, const uint256_t& phash, Transaction** txs, uint32_t num_txs):
+        Block(uint32_t timestamp, uint32_t height, const uint256_t& phash, const Handle<Array<Transaction>>& txs):
             timestamp_(timestamp),
             height_(height),
             previous_hash_(phash),
-            transactions_len_(num_txs),
-            transactions_(nullptr),
+            transactions_(txs),
             tx_bloom_(){
-            transactions_ = (Transaction**)malloc(sizeof(Transaction*)*num_txs);
-            memset(transactions_, 0, sizeof(Transaction*)*num_txs);
-            memmove(transactions_, txs, sizeof(Transaction*)*num_txs); // should this be moved?
-            for(uint32_t idx = 0; idx < num_txs; idx++){
-                tx_bloom_.Put(transactions_[idx]->GetSHA256Hash());
-            }
+            //TODO: load tx_bloom_;
         }
 
         bool Encode(RawType& raw) const;
@@ -133,16 +126,16 @@ namespace Token{
         }
 
         uint32_t GetNumberOfTransactions() const{
-            return transactions_len_;
+            return transactions_->Length();
         }
 
         uint32_t GetTimestamp() const{
             return timestamp_;
         }
 
-        Transaction* GetTransaction(uint32_t idx) const{
-            if(idx < 0 || idx > transactions_len_) return nullptr;
-            return transactions_[idx];
+        Handle<Transaction> GetTransaction(uint32_t idx) const{
+            if(idx < 0 || idx > GetNumberOfTransactions()) return nullptr;
+            return transactions_->Get(idx);
         }
 
         bool IsGenesis(){
@@ -154,8 +147,8 @@ namespace Token{
         bool Accept(BlockVisitor* vis) const;
         std::string ToString() const;
 
-        static Handle<Block> NewInstance(uint32_t height, const uint256_t& phash, Transaction** transactions, uint32_t num_transactions, uint32_t timestamp=GetCurrentTime());
-        static Handle<Block> NewInstance(const BlockHeader& parent, Transaction** transactions, uint32_t num_transactions, uint32_t timestamp=GetCurrentTime());
+        static Handle<Block> NewInstance(uint32_t height, const uint256_t& phash, const Handle<Array<Transaction>>& txs, uint32_t timestamp=GetCurrentTime());
+        static Handle<Block> NewInstance(const BlockHeader& parent, const Handle<Array<Transaction>>& txs, uint32_t timestamp=GetCurrentTime());
         static Handle<Block> NewInstance(RawType raw);
         static Handle<Block> NewInstance(std::fstream& fd);
 

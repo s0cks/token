@@ -97,7 +97,7 @@ namespace Token{
         return GetIndex()->Get(options, key, &filename).ok();
     }
 
-    Transaction* TransactionPool::GetTransaction(const uint256_t& hash){
+    Handle<Transaction> TransactionPool::GetTransaction(const uint256_t& hash){
         if(!HasTransaction(hash)) return nullptr;
         LOCK_GUARD;
         std::string filename = GetTransactionFilename(hash);

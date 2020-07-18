@@ -62,9 +62,8 @@ namespace Token{
             cb_outputs.push_back(Output("TestUser", token.str()));
         }
 
-        Transaction* txs[1] = {
-                Transaction::NewInstance(0, cb_inputs, cb_outputs, 0)
-        };
+        Handle<Array<Transaction>> txs = Array<Transaction>::New(1);
+        txs->Put(0, Transaction::NewInstance(0, cb_inputs, cb_outputs, 0));
         return Block::NewInstance(0, uint256_t(), txs, 1);
     }
 

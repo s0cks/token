@@ -17,20 +17,19 @@ namespace Token{
 //######################################################################################################################
 //                                          Block
 //######################################################################################################################
-    Handle<Block> Block::NewInstance(uint32_t height, const Token::uint256_t &phash, Transaction** txs, uint32_t num_txs,
-                              uint32_t timestamp){
-        return new Block(timestamp, height, phash, txs, num_txs);
+    Handle<Block> Block::NewInstance(uint32_t height, const Token::uint256_t &phash, const Handle<Array<Transaction>>& txs, uint32_t timestamp){
+        return new Block(timestamp, height, phash, txs);
     }
 
-    Handle<Block> Block::NewInstance(const BlockHeader &parent, Transaction** txs, uint32_t num_txs, uint32_t timestamp){
-        return NewInstance(parent.GetHeight() + 1, parent.GetHash(), txs, num_txs, timestamp);
+    Handle<Block> Block::NewInstance(const BlockHeader &parent, const Handle<Array<Transaction>>& txs, uint32_t timestamp){
+        return NewInstance(parent.GetHeight() + 1, parent.GetHash(), txs, timestamp);
     }
 
     Handle<Block> Block::NewInstance(RawType raw){
         size_t num_txs = raw.transactions_size();
-        Transaction* txs[num_txs];
-        for(size_t idx = 0; idx < num_txs; idx++) txs[idx] = Transaction::NewInstance(raw.transactions(idx));
-        return NewInstance(raw.height(), HashFromHexString(raw.previous_hash()), txs, num_txs, raw.timestamp());
+        Handle<Array<Transaction>> txs = Array<Transaction>::New(num_txs);
+        for(size_t idx = 0; idx < num_txs; idx++) txs->Put(idx, Transaction::NewInstance(raw.transactions(idx)));
+        return NewInstance(raw.height(), HashFromHexString(raw.previous_hash()), txs, raw.timestamp());
     }
 
     Handle<Block> Block::NewInstance(std::fstream& fd){
@@ -50,10 +49,10 @@ namespace Token{
         raw.set_height(height_);
         raw.set_previous_hash(HexString(previous_hash_));
         raw.set_merkle_root(HexString(GetMerkleRoot()));
-        for(uint32_t idx = 0; idx < transactions_len_; idx++){
+        for(uint32_t idx = 0; idx < GetNumberOfTransactions(); idx++){
             Transaction::RawType* raw_tx = raw.add_transactions();
-            Transaction* it = transactions_[idx];
-            it->Encode((*raw_tx));
+            Handle<Transaction> tx = GetTransaction(idx);
+            tx->Encode((*raw_tx));
         }
         return true;
     }

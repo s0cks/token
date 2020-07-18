@@ -5,6 +5,7 @@
 namespace Token{
     static Heap* eden_ = nullptr;
     static Heap* survivor_ = nullptr;
+    static Heap* old_ = nullptr;
     static Object stack_space_{};
     static size_t allocating_size_ = 0;
     static void* allocating_ = nullptr;
@@ -12,6 +13,7 @@ namespace Token{
     void Allocator::Initialize(){
         eden_ = new Heap(FLAGS_minheap_size);
         survivor_ = new Heap(FLAGS_maxheap_size);
+        old_ = new Heap(FLAGS_maxheap_size);
         stack_space_.stack_.prev_ = &stack_space_;
         stack_space_.stack_.next_ = &stack_space_;
         stack_space_.space_ = Object::kStackSpace;
@@ -23,6 +25,10 @@ namespace Token{
 
     Heap* Allocator::GetSurvivorHeap(){
         return survivor_;
+    }
+
+    Heap* Allocator::GetOldHeap(){
+        return old_;
     }
 
     class StackSpaceIterator{
@@ -42,19 +48,33 @@ namespace Token{
         }
     };
 
+    void Allocator::MajorGC(){
+
+    }
+
     void Allocator::MinorGC(){
         MarkObjects<HeapMemoryIterator>(GetEdenHeap());
+        MarkObjects<HeapMemoryIterator>(GetSurvivorHeap());
+
         FinalizeObjects<HeapMemoryIterator>(GetEdenHeap());
+        FinalizeObjects<HeapMemoryIterator>(GetSurvivorHeap());
 
         EvacuateLiveObjects(GetEdenHeap(), GetSurvivorHeap());
+        EvacuateLiveObjects(GetSurvivorHeap(), GetOldHeap());
 
         NotifyWeakReferences<false, HeapMemoryIterator>(GetEdenHeap());
+        NotifyWeakReferences<false, HeapMemoryIterator>(GetSurvivorHeap());
         NotifyWeakReferences<true, StackSpaceIterator>({});
 
         UpdateStackReferences();
         UpdateNonRootReferences<HeapMemoryIterator>(GetEdenHeap());
+        UpdateNonRootReferences<HeapMemoryIterator>(GetSurvivorHeap());
+
         CopyLiveObjects<HeapMemoryIterator>(GetEdenHeap());
+        CopyLiveObjects<HeapMemoryIterator>(GetSurvivorHeap());
+
         GetEdenHeap()->Clear();
+        // GetSurvivorHeap()->Clear();
     }
 
     template<typename I>
@@ -80,6 +100,7 @@ namespace Token{
     }
 
     void Allocator::EvacuateLiveObjects(Heap* src, Heap* dst){
+        if(dst == nullptr) return;
         for(Object* obj : Iterable<HeapMemoryIterator>{ src }){
             if(!obj->IsGarbage()){
                 void* nptr = dst->Allocate(obj->GetSize());

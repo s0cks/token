@@ -39,10 +39,12 @@ namespace Token{
 
         static void Initialize();
         static void MinorGC();
+        static void MajorGC();
 
         static void* Allocate(size_t size, Object::Type type=Object::kUnknown);
         static Heap* GetEdenHeap();
         static Heap* GetSurvivorHeap();
+        static Heap* GetOldHeap();
     };
 }
 
