@@ -44,9 +44,7 @@ namespace Token{
 
     void BlockMiner::SetProposal(Proposal* proposal){
         LOCK_GUARD;
-        if(proposal_) Allocator::RemoveRoot(proposal_);
         proposal_ = proposal;
-        if(proposal_) Allocator::AddRoot(proposal_);
     }
 
     bool BlockMiner::HasProposal(){
@@ -154,7 +152,7 @@ namespace Token{
             }
 
             // 2. Create new block
-            Block* block = scope.Retain(Block::NewInstance(BlockChain::GetHead(), txs, num_transactions));
+            Handle<Block> block = Block::NewInstance(BlockChain::GetHead(), txs, num_transactions);
 
             // 3. Validate block
             BlockValidator validator(block);
@@ -179,7 +177,7 @@ namespace Token{
                 LOG(INFO) << "entering voting phase";
 #endif//TOKEN_DEBUG
                 proposal->SetPhase(Proposal::kVotingPhase);
-                PrepareMessage* prepare_msg = scope.Retain(PrepareMessage::NewInstance(proposal));
+                Handle<PrepareMessage> prepare_msg = PrepareMessage::NewInstance(proposal);
                 Node::Broadcast(prepare_msg);
                 proposal->WaitForRequiredVotes();
 
@@ -188,7 +186,7 @@ namespace Token{
                 LOG(INFO) << "entering commit phase";
 #endif//TOKEN_DEBUG
                 proposal->SetPhase(Proposal::kCommitPhase);
-                CommitMessage* commit_msg = scope.Retain(CommitMessage::NewInstance(proposal));
+                Handle<CommitMessage> commit_msg = CommitMessage::NewInstance(proposal);
                 Node::Broadcast(commit_msg);
                 proposal->WaitForRequiredCommits();
 

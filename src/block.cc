@@ -17,25 +17,23 @@ namespace Token{
 //######################################################################################################################
 //                                          Block
 //######################################################################################################################
-    Block* Block::NewInstance(uint32_t height, const Token::uint256_t &phash, Transaction** txs, uint32_t num_txs,
+    Handle<Block> Block::NewInstance(uint32_t height, const Token::uint256_t &phash, Transaction** txs, uint32_t num_txs,
                               uint32_t timestamp){
-        Block* instance = (Block*)Allocator::Allocate(sizeof(Block), Object::kBlock);
-        new (instance)Block(timestamp, height, phash, txs, num_txs);
-        return instance;
+        return new Block(timestamp, height, phash, txs, num_txs);
     }
 
-    Block* Block::NewInstance(const BlockHeader &parent, Transaction** txs, uint32_t num_txs, uint32_t timestamp){
+    Handle<Block> Block::NewInstance(const BlockHeader &parent, Transaction** txs, uint32_t num_txs, uint32_t timestamp){
         return NewInstance(parent.GetHeight() + 1, parent.GetHash(), txs, num_txs, timestamp);
     }
 
-    Block* Block::NewInstance(RawType raw){
+    Handle<Block> Block::NewInstance(RawType raw){
         size_t num_txs = raw.transactions_size();
         Transaction* txs[num_txs];
         for(size_t idx = 0; idx < num_txs; idx++) txs[idx] = Transaction::NewInstance(raw.transactions(idx));
         return NewInstance(raw.height(), HashFromHexString(raw.previous_hash()), txs, num_txs, raw.timestamp());
     }
 
-    Block* Block::NewInstance(std::fstream& fd){
+    Handle<Block> Block::NewInstance(std::fstream& fd){
         Block::RawType raw;
         if(!raw.ParseFromIstream(&fd)) return nullptr;
         return NewInstance(raw);
@@ -72,7 +70,6 @@ namespace Token{
     }
 
     bool Block::Finalize(){
-        for(uint32_t idx = 0; idx < transactions_len_; idx++) Allocator::RemoveStrongReference(this, transactions_[idx]);
         return true;
     }
 

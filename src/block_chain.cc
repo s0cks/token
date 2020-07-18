@@ -94,7 +94,6 @@ namespace Token{
             Block* genesis = CreateGenesis();
             head_ = genesis_ = BlockNode::NewInstance(genesis);
             BlockChainIndex::PutBlockData(genesis);
-            Allocator::AddRoot(genesis_);
 
             for(uint32_t idx = 0; idx < genesis->GetNumberOfTransactions(); idx++){
                 Transaction* it = genesis->GetTransaction(idx);
@@ -124,7 +123,6 @@ namespace Token{
 
         Block* block = BlockChainIndex::GetBlockData(hash);
         BlockNode* node = BlockNode::NewInstance(block);
-        Allocator::AddRoot(node);
 
         head_ = node;
         while(true){
@@ -140,7 +138,6 @@ namespace Token{
 
             block = BlockChainIndex::GetBlockData(hash);
             BlockNode* current = BlockNode::NewInstance(block);
-            Allocator::AddRoot(current);
 
             node->SetPrevious(current);
             current->SetNext(node);

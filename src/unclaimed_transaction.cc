@@ -6,17 +6,15 @@ namespace Token{
 //######################################################################################################################
 //                                          Unclaimed Transaction
 //######################################################################################################################
-    UnclaimedTransaction* UnclaimedTransaction::NewInstance(const uint256_t &hash, uint32_t index, const std::string& user){
-        UnclaimedTransaction* instance = (UnclaimedTransaction*)Allocator::Allocate(sizeof(UnclaimedTransaction), Object::kUnclaimedTransaction);
-        new (instance)UnclaimedTransaction(hash, index, user);
-        return instance;
+    Handle<UnclaimedTransaction> UnclaimedTransaction::NewInstance(const uint256_t &hash, uint32_t index, const std::string& user){
+        return new UnclaimedTransaction(hash, index, user);
     }
 
-    UnclaimedTransaction* UnclaimedTransaction::NewInstance(const UnclaimedTransaction::RawType& raw){
+    Handle<UnclaimedTransaction> UnclaimedTransaction::NewInstance(const UnclaimedTransaction::RawType& raw){
         return NewInstance(HashFromHexString(raw.tx_hash()), raw.tx_index(), raw.user());
     }
 
-    UnclaimedTransaction* UnclaimedTransaction::NewInstance(std::fstream& fd){
+    Handle<UnclaimedTransaction> UnclaimedTransaction::NewInstance(std::fstream& fd){
         UnclaimedTransaction::RawType raw;
         if(!raw.ParseFromIstream(&fd)) return nullptr;
         return NewInstance(raw);

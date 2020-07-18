@@ -141,7 +141,8 @@ namespace Token{
             timestamp_(timestamp),
             index_(index),
             inputs_(inputs),
-            outputs_(outputs){}
+            outputs_(outputs),
+            signature_(){}
 
         friend class Block;
         friend class TransactionMessage;
@@ -210,11 +211,11 @@ namespace Token{
         bool Encode(RawType& raw) const;
         std::string ToString() const;
 
-        static Transaction* NewInstance(uint32_t index, InputList& inputs, OutputList& outputs, uint32_t timestamp=GetCurrentTime());
-        static Transaction* NewInstance(const RawType& raw);
-        static Transaction* NewInstance(std::fstream& fd);
+        static Handle<Transaction> NewInstance(uint32_t index, InputList& inputs, OutputList& outputs, uint32_t timestamp=GetCurrentTime());
+        static Handle<Transaction> NewInstance(const RawType& raw);
+        static Handle<Transaction> NewInstance(std::fstream& fd);
 
-        static inline Transaction* NewInstance(const std::string& filename){
+        static inline Handle<Transaction> NewInstance(const std::string& filename){
             std::fstream fd(filename, std::ios::in|std::ios::binary);
             return NewInstance(fd);
         }

@@ -11,16 +11,16 @@ namespace Token{
             LOG(ERROR) << ErrorMessage; \
             return nullptr; \
         } \
-        return Name##Message::NewInstance(raw); \
+        return Name##Message::NewInstance(raw).CastTo<Message>(); \
     }
 
 #define DECLARE_HASH_DECODE(Name, ErrorMessage) \
 case MessageType::k##Name##MessageType:{ \
     uint256_t hash(bytes); \
-    return Name##Message::NewInstance(hash); \
+    return Name##Message::NewInstance(hash).CastTo<Message>(); \
 }
 
-    Message* Message::Decode(Message::MessageType type, uintptr_t size, uint8_t* bytes){
+    Handle<Message> Message::Decode(Message::MessageType type, uintptr_t size, uint8_t* bytes){
         switch(type){
             DECLARE_HASH_DECODE(Test, "couldn't deserialize the test message");
             DECLARE_RAW_DECODE(GetBlocks, Proto::BlockChainServer::GetBlocks, "couldn't deserialize getblocks from byte array");

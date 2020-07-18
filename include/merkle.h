@@ -10,7 +10,8 @@ namespace Token{
     class BlockVisitor;
     class Block;
 
-    class MerkleNode : public Object{
+    //TODO: offload to heap
+    class MerkleNode{
     protected:
         MerkleNode* parent_;
         MerkleNode* left_;
@@ -18,38 +19,35 @@ namespace Token{
         uint256_t hash_;
 
         void SetParent(MerkleNode* node){
-            if(parent_) Allocator::RemoveStrongReference(parent_, this);
             parent_ = node;
-            if(parent_) Allocator::AddStrongReference(parent_, this, NULL);
         }
 
         uint256_t ComputeHash() const;
-
+    public:
         MerkleNode(const uint256_t& hash):
-            parent_(nullptr),
-            left_(nullptr),
-            right_(nullptr),
-            hash_(hash){}
+                parent_(nullptr),
+                left_(nullptr),
+                right_(nullptr),
+                hash_(hash){}
         MerkleNode(MerkleNode* node):
-            parent_(nullptr),
-            left_(nullptr),
-            right_(nullptr),
-            hash_(){
+                parent_(nullptr),
+                left_(nullptr),
+                right_(nullptr),
+                hash_(){
             SetParent(node->GetParent());
             SetLeft(node->GetLeft());
             SetRight(node->GetRight());
             hash_ = ComputeHash();
         }
         MerkleNode(MerkleNode* left, MerkleNode* right):
-            parent_(nullptr),
-            left_(nullptr),
-            right_(nullptr),
-            hash_(){
+                parent_(nullptr),
+                left_(nullptr),
+                right_(nullptr),
+                hash_(){
             SetLeft(left);
             SetRight(right);
             hash_ = ComputeHash();
         }
-    public:
         ~MerkleNode() = default;
 
         MerkleNode* GetParent() const{
@@ -61,7 +59,6 @@ namespace Token{
         }
 
         void SetLeft(MerkleNode* node){
-            if(left_)Allocator::RemoveStrongReference(this, left_);
             left_ = node;
             if(left_)left_->SetParent(this);
         }
@@ -71,8 +68,6 @@ namespace Token{
         }
 
         bool Finalize(){
-            if(left_) Allocator::RemoveStrongReference(left_, this);
-            if(right_) Allocator::RemoveStrongReference(right_, this);
             return true;
         }
 
@@ -81,7 +76,6 @@ namespace Token{
         }
 
         void SetRight(MerkleNode* node){
-            if(right_) Allocator::RemoveStrongReference(this, right_);
             right_ = node;
             if(right_) right_->SetParent(this);
         }
@@ -118,10 +112,6 @@ namespace Token{
         }
 
         std::string ToString() const;
-
-        static MerkleNode* NewInstance(const uint256_t& hash);
-        static MerkleNode* NewInstance(MerkleNode* left, MerkleNode* right);
-        static MerkleNode* Clone(MerkleNode* node);
     };
 
     //TODO: refactor MerkleProofHash?
@@ -171,8 +161,8 @@ namespace Token{
             return (*this);
         }
     };
-    //TODO: create MerkleProof class?
-    class MerkleTree : public Object{
+
+    class MerkleTree{
     private:
         MerkleNode* root_;
         std::vector<MerkleNode*> leaves_;
@@ -180,20 +170,17 @@ namespace Token{
 
         MerkleNode* BuildMerkleTree(size_t height, std::vector<MerkleNode*>& nodes);
         MerkleNode* BuildMerkleTree(std::vector<uint256_t>& leaves);
-
-        MerkleTree(std::vector<uint256_t>& leaves):
-            root_(nullptr),
-            nodes_(),
-            leaves_(){
-            root_ = BuildMerkleTree(leaves);
-            Allocator::AddStrongReference(this, root_, NULL);
-        }
     public:
+        MerkleTree(std::vector<uint256_t>& leaves):
+                root_(nullptr),
+                nodes_(),
+                leaves_(){
+            root_ = BuildMerkleTree(leaves);
+        }
         ~MerkleTree() = default;
 
         void Clear(){
             if(IsEmpty()) return;
-            Allocator::RemoveStrongReference(this, root_);
             root_ = nullptr;
             nodes_.clear();
             leaves_.clear();
@@ -234,8 +221,6 @@ namespace Token{
         bool BuildConsistencyProof(uint64_t num_nodes, std::vector<MerkleProofHash>& trail);
         bool BuildConsistencyAuditProof(const uint256_t& hash, std::vector<MerkleProofHash>& trail);
         bool VerifyConsistencyProof(const uint256_t& root, std::vector<MerkleProofHash>& trail);
-
-        static MerkleTree* NewInstance(std::vector<uint256_t>& leaves);
     };
 
     //TODO: refactor MerkleTreeBuilder class?
@@ -247,7 +232,7 @@ namespace Token{
         bool CreateTree(){
             if(leaves_.empty()) return false;
             if(leaves_.size() == 1) leaves_.push_back(leaves_.front());
-            tree_ = MerkleTree::NewInstance(leaves_);
+            tree_ = new MerkleTree(leaves_);
             return HasTree();
         }
 

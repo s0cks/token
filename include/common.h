@@ -45,8 +45,10 @@ namespace Token{
     static const size_t kBitsPerWord = sizeof(uintptr_t)*kBitsPerByte;
     static const uintptr_t kUWordOne = 1U;
 
-    static inline uintptr_t
-    RoundUpPowTwo(uintptr_t x){
+    typedef uintptr_t uword;
+
+    static inline uword
+    RoundUpPowTwo(uword x){
         x = x - 1;
         x = x | (x >> 1);
         x = x | (x >> 2);
@@ -119,6 +121,35 @@ namespace Token{
         std::string token;
         while(std::getline(ss, token, delimiter)) cont.push_back(token);
     }
+
+    class Object;
+    template<typename T>
+    class Iterable {
+        T t;
+
+        class Iterator {
+            Iterable* iter;
+        public:
+            Iterator(Iterable* iter) :iter(iter) {}
+            bool operator !=(const Iterator&) {
+                return iter->t.HasNext();
+            }
+            void operator ++() {}
+            Object* operator *() {
+                return iter->t.Next();
+            }
+        };
+    public:
+        template<typename... Args>
+        Iterable(Args&&... args) : t(std::forward<Args>(args)...) {}
+
+        Iterator begin() {
+            return this;
+        }
+        Iterator end() {
+            return this;
+        }
+    };
 }
 
 // BlockChain Flags

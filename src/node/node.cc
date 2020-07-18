@@ -218,8 +218,8 @@ namespace Token{
         }
 
         uint32_t offset = 0;
-        Scope scope;
-        std::vector<Message*> messages;
+
+        std::vector<Handle<Message>> messages;
         do{
             uint32_t mtype = 0;
             memcpy(&mtype, &buff->base[offset + Message::kTypeOffset], Message::kTypeLength);
@@ -227,17 +227,9 @@ namespace Token{
             uint64_t msize = 0;
             memcpy(&msize, &buff->base[offset + Message::kSizeOffset], Message::kSizeLength);
 
-            Message* msg = nullptr;
-            if(!(msg = Message::Decode(static_cast<Message::MessageType>(mtype), msize, (uint8_t*)&buff->base[offset + Message::kDataOffset]))){
-                std::stringstream ss;
-                ss << "Couldn't decode message";
-                ss << "\t - Type: " << mtype;
-                ss << "\t - Size: " << msize;
-                ss << "\t - Offset: " << offset;
-                CrashReport::GenerateAndExit(ss);
-            }
+            //TODO: handle decode failures
+            Handle<Message> msg = Message::Decode(static_cast<Message::MessageType>(mtype), msize, (uint8_t*)&buff->base[offset + Message::kDataOffset]);
 
-            scope.Retain(msg);
             messages.push_back(msg);
             offset += (msize + Message::kHeaderSize);
         } while((offset + Message::kHeaderSize) < nread);
@@ -259,7 +251,7 @@ namespace Token{
         }
     }
 
-    bool Node::Broadcast(Message* msg){
+    bool Node::BroadcastMessage(const Handle<Message>& msg){
         LOCK_GUARD;
         for(auto& it : peers_) it.second->Send(msg);
         return true;

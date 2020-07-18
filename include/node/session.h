@@ -37,6 +37,7 @@ namespace Token{
 
         virtual uv_stream_t* GetStream() = 0;
         void SetState(State state);
+        void SendMessage(const Handle<Message>& msg);
 
         friend class Node;
     public:
@@ -66,8 +67,12 @@ namespace Token{
 
         State GetState();
         void WaitForState(State state);
-        void Send(Message* msg);
         void Send(std::vector<Message*>& messages);
+
+        template<typename T>
+        inline void Send(const Handle<T>& msg){
+            SendMessage(msg.template CastTo<Message>());
+        }
 
 #define DECLARE_MESSAGE_HANDLER(Name) \
     virtual void Handle##Name##Message(HandleMessageTask* task) = 0;

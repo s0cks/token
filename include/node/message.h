@@ -67,7 +67,7 @@ namespace Token{
         FOR_EACH_MESSAGE_TYPE(DECLARE_TYPECHECK)
 #undef DECLARE_TYPECHECK
 
-        static Message* Decode(MessageType type, uintptr_t size, uint8_t* bytes);
+        static Handle<Message> Decode(MessageType type, uintptr_t size, uint8_t* bytes);
     };
 
     class HashMessage : public Message{
@@ -138,9 +138,8 @@ namespace Token{
 
         DECLARE_MESSAGE(Test);
 
-        static TestMessage* NewInstance(const uint256_t& hash){
-            TestMessage* instance = (TestMessage*)Allocator::Allocate(sizeof(TestMessage));
-            return new (instance)TestMessage(hash);
+        static Handle<TestMessage> NewInstance(const uint256_t& hash){
+            return new TestMessage(hash);
         }
     };
 
@@ -152,9 +151,8 @@ namespace Token{
 
         DECLARE_MESSAGE(Ping);
 
-        static PingMessage* NewInstance(const uint256_t& hash){
-            PingMessage* instance = (PingMessage*)Allocator::Allocate(sizeof(PingMessage));
-            return new(instance)PingMessage(hash);
+        static Handle<PingMessage> NewInstance(const uint256_t& hash){
+            return new PingMessage(hash);
         }
     };
 
@@ -166,9 +164,8 @@ namespace Token{
 
         DECLARE_MESSAGE(Pong);
 
-        static PongMessage* NewInstance(const uint256_t& hash){
-            PongMessage* instance = (PongMessage*)Allocator::Allocate(sizeof(PongMessage));
-            return new(instance)PongMessage(hash);
+        static Handle<PongMessage> NewInstance(const uint256_t& hash){
+            return new PongMessage(hash);
         }
     };
 
@@ -214,16 +211,12 @@ namespace Token{
 
         DECLARE_MESSAGE(Version);
 
-        static VersionMessage* NewInstance(const NodeInfo& info, const std::string& nonce=GenerateNonce(), const BlockHeader& head=BlockChain::GetHead(), uint32_t timestamp=GetCurrentTime()){
-            VersionMessage* instance = (VersionMessage*)Allocator::Allocate(sizeof(VersionMessage), Object::kMessage);
-            new (instance)VersionMessage(info, timestamp, nonce, head);
-            return instance;
+        static Handle<VersionMessage> NewInstance(const NodeInfo& info, const std::string& nonce=GenerateNonce(), const BlockHeader& head=BlockChain::GetHead(), uint32_t timestamp=GetCurrentTime()){
+            return new VersionMessage(info, timestamp, nonce, head);
         }
 
-        static VersionMessage* NewInstance(const RawType& raw){
-            VersionMessage* instance = (VersionMessage*)Allocator::Allocate(sizeof(VersionMessage), Object::kMessage);
-            new (instance)VersionMessage(raw);
-            return instance;
+        static Handle<VersionMessage> NewInstance(const RawType& raw){
+            return new VersionMessage(raw);
         }
     };
 
@@ -253,16 +246,12 @@ namespace Token{
 
         DECLARE_MESSAGE(Verack);
 
-        static VerackMessage* NewInstance(const NodeInfo& info, const std::string& nonce=GenerateNonce(), uint32_t timestamp=GetCurrentTime()){
-            VerackMessage* instance = (VerackMessage*)Allocator::Allocate(sizeof(VerackMessage), Object::kMessage);
-            new (instance)VerackMessage(info, nonce, timestamp);
-            return instance;
+        static Handle<VerackMessage> NewInstance(const NodeInfo& info, const std::string& nonce=GenerateNonce(), uint32_t timestamp=GetCurrentTime()){
+            return new VerackMessage(info, nonce, timestamp);
         }
 
-        static VerackMessage* NewInstance(const RawType& raw){
-            VerackMessage* instance = (VerackMessage*)Allocator::Allocate(sizeof(VerackMessage), Object::kMessage);
-            new (instance)VerackMessage(raw);
-            return instance;
+        static Handle<VerackMessage> NewInstance(const RawType& raw){
+            return new VerackMessage(raw);
         }
     };
 
@@ -299,16 +288,12 @@ namespace Token{
 
         DECLARE_MESSAGE(Prepare);
 
-        static PrepareMessage* NewInstance(Proposal* proposal, const NodeInfo& info=Node::GetInfo()){
-            PrepareMessage* instance = (PrepareMessage*)Allocator::Allocate(sizeof(PrepareMessage), Object::kMessage);
-            new (instance)PrepareMessage(info, proposal);
-            return instance;
+        static Handle<PrepareMessage> NewInstance(Proposal* proposal, const NodeInfo& info=Node::GetInfo()){
+            return new PrepareMessage(info, proposal);
         }
 
-        static PrepareMessage* NewInstance(const RawType& raw){
-            PrepareMessage* instance = (PrepareMessage*)Allocator::Allocate(sizeof(PrepareMessage), Object::kMessage);
-            new (instance)PrepareMessage(raw);
-            return instance;
+        static Handle<PrepareMessage> NewInstance(const RawType& raw){
+            return new PrepareMessage(raw);
         }
     };
 
@@ -323,16 +308,12 @@ namespace Token{
 
         DECLARE_MESSAGE(Promise);
 
-        static PromiseMessage* NewInstance(Proposal* proposal, const NodeInfo& info=Node::GetInfo()){
-            PromiseMessage* instance = (PromiseMessage*)Allocator::Allocate(sizeof(PromiseMessage));
-            new (instance)PromiseMessage(info, proposal);
-            return instance;
+        static Handle<PromiseMessage> NewInstance(Proposal* proposal, const NodeInfo& info=Node::GetInfo()){
+            return new PromiseMessage(info, proposal);
         }
 
-        static PromiseMessage* NewInstance(const RawType& raw){
-            PromiseMessage* instance = (PromiseMessage*)Allocator::Allocate(sizeof(PromiseMessage), Object::kMessage);
-            new (instance)PromiseMessage(raw);
-            return instance;
+        static Handle<PromiseMessage> NewInstance(const RawType& raw){
+            return new PromiseMessage(raw);
         }
     };
 
@@ -347,16 +328,12 @@ namespace Token{
 
         DECLARE_MESSAGE(Commit);
 
-        static CommitMessage* NewInstance(Proposal* proposal, const NodeInfo& info=Node::GetInfo()){
-            CommitMessage* instance = (CommitMessage*)Allocator::Allocate(sizeof(CommitMessage), Object::kMessage);
-            new (instance)CommitMessage(info, proposal);
-            return instance;
+        static Handle<CommitMessage> NewInstance(Proposal* proposal, const NodeInfo& info=Node::GetInfo()){
+            return new CommitMessage(info, proposal);
         }
 
-        static CommitMessage* NewInstance(const RawType& raw){
-            CommitMessage* instance = (CommitMessage*)Allocator::Allocate(sizeof(CommitMessage), Object::kMessage);
-            new (instance)CommitMessage(raw);
-            return instance;
+        static Handle<CommitMessage> NewInstance(const RawType& raw){
+            return new CommitMessage(raw);
         }
     };
 
@@ -371,16 +348,12 @@ namespace Token{
 
         DECLARE_MESSAGE(Accepted);
 
-        static AcceptedMessage* NewInstance(Proposal* proposal, const NodeInfo& info=Node::GetInfo()){
-            AcceptedMessage* instance = (AcceptedMessage*)Allocator::Allocate(sizeof(AcceptedMessage), Object::kMessage);
-            new (instance)AcceptedMessage(info, proposal);
-            return instance;
+        static Handle<AcceptedMessage> NewInstance(Proposal* proposal, const NodeInfo& info=Node::GetInfo()){
+            return new AcceptedMessage(info, proposal);
         }
 
-        static AcceptedMessage* NewInstance(const RawType& raw){
-            AcceptedMessage* instance = (AcceptedMessage*)Allocator::Allocate(sizeof(AcceptedMessage), Object::kMessage);
-            new (instance)AcceptedMessage(raw);
-            return instance;
+        static Handle<AcceptedMessage> NewInstance(const RawType& raw){
+            return new AcceptedMessage(raw);
         }
     };
 
@@ -395,16 +368,12 @@ namespace Token{
 
         DECLARE_MESSAGE(Rejected);
 
-        static RejectedMessage* NewInstance(Proposal* proposal, const NodeInfo& info=Node::GetInfo()){
-            RejectedMessage* instance = (RejectedMessage*)Allocator::Allocate(sizeof(RejectedMessage));
-            new (instance)RejectedMessage(info, proposal);
-            return instance;
+        static Handle<RejectedMessage> NewInstance(Proposal* proposal, const NodeInfo& info=Node::GetInfo()){
+            return new RejectedMessage(info, proposal);
         }
 
-        static RejectedMessage* NewInstance(const RawType& raw){
-            RejectedMessage* instance = (RejectedMessage*)Allocator::Allocate(sizeof(RejectedMessage));
-            new (instance)RejectedMessage(raw);
-            return instance;
+        static Handle<RejectedMessage> NewInstance(const RawType& raw){
+            return new RejectedMessage(raw);
         }
     };
 
@@ -428,16 +397,12 @@ namespace Token{
 
         DECLARE_MESSAGE(Transaction);
 
-        static TransactionMessage* NewInstance(Transaction* tx){
-            TransactionMessage* instance = (TransactionMessage*)Allocator::Allocate(sizeof(TransactionMessage));
-            new (instance)TransactionMessage(tx);
-            return instance;
+        static Handle<TransactionMessage> NewInstance(Transaction* tx){
+            return new TransactionMessage(tx);
         }
 
-        static TransactionMessage* NewInstance(const RawType& raw){
-            TransactionMessage* instance = (TransactionMessage*)Allocator::Allocate(sizeof(TransactionMessage), Object::kMessage);
-            new (instance)TransactionMessage(raw);
-            return instance;
+        static Handle<TransactionMessage> NewInstance(const RawType& raw){
+            return new TransactionMessage(raw);
         }
     };
 
@@ -460,16 +425,12 @@ namespace Token{
 
         DECLARE_MESSAGE(Block);
 
-        static BlockMessage* NewInstance(Block* blk){
-            BlockMessage* instance = (BlockMessage*)Allocator::Allocate(sizeof(BlockMessage), Object::kMessage);
-            new (instance)BlockMessage(blk);
-            return instance;
+        static Handle<BlockMessage> NewInstance(Block* blk){
+            return new BlockMessage(blk);
         }
 
-        static BlockMessage* NewInstance(const RawType& raw){
-            BlockMessage* instance = (BlockMessage*)Allocator::Allocate(sizeof(BlockMessage), Object::kMessage);
-            new (instance)BlockMessage(raw);
-            return instance;
+        static Handle<BlockMessage> NewInstance(const RawType& raw){
+            return new BlockMessage(raw);
         }
     };
 
@@ -589,30 +550,26 @@ namespace Token{
 
         DECLARE_MESSAGE(Inventory);
 
-        static InventoryMessage* NewInstance(std::vector<InventoryItem>& items){
-            InventoryMessage* instance = (InventoryMessage*)Allocator::Allocate(sizeof(InventoryMessage), Object::kMessage);
-            new (instance)InventoryMessage(items);
-            return instance;
+        static Handle<InventoryMessage> NewInstance(std::vector<InventoryItem>& items){
+            return new InventoryMessage(items);
         }
 
-        static InventoryMessage* NewInstance(Transaction* tx){
+        static Handle<InventoryMessage> NewInstance(Transaction* tx){
             std::vector<InventoryItem> items = {
                 InventoryItem(tx)
             };
             return NewInstance(items);
         }
 
-        static InventoryMessage* NewInstance(Block* blk){
+        static Handle<InventoryMessage> NewInstance(Block* blk){
             std::vector<InventoryItem> items = {
                 InventoryItem(blk)
             };
             return NewInstance(items);
         }
 
-        static InventoryMessage* NewInstance(const RawType& raw){
-            InventoryMessage* instance = (InventoryMessage*)Allocator::Allocate(sizeof(InventoryMessage));
-            new (instance)InventoryMessage(raw);
-            return instance;
+        static Handle<InventoryMessage> NewInstance(const RawType& raw){
+            return new InventoryMessage(raw);
         }
     };
 
@@ -639,16 +596,12 @@ namespace Token{
 
         DECLARE_MESSAGE(GetData);
 
-        static GetDataMessage* NewInstance(std::vector<InventoryItem>& items){
-            GetDataMessage* instance = (GetDataMessage*)Allocator::Allocate(sizeof(GetDataMessage));
-            new (instance)GetDataMessage(items);
-            return instance;
+        static Handle<GetDataMessage> NewInstance(std::vector<InventoryItem>& items){
+            return new GetDataMessage(items);
         }
 
-        static GetDataMessage* NewInstance(const RawType& raw){
-            GetDataMessage* instance = (GetDataMessage*)Allocator::Allocate(sizeof(GetDataMessage), Object::kMessage);
-            new (instance)GetDataMessage(raw);
-            return instance;
+        static Handle<GetDataMessage> NewInstance(const RawType& raw){
+            return new GetDataMessage(raw);
         }
     };
 
@@ -676,16 +629,12 @@ namespace Token{
 
         DECLARE_MESSAGE(GetBlocks);
 
-        static GetBlocksMessage* NewInstance(const uint256_t& start_hash=BlockChain::GetHead().GetHash(), const uint256_t& stop_hash=uint256_t()){
-            GetBlocksMessage* instance = (GetBlocksMessage*)Allocator::Allocate(sizeof(GetBlocksMessage), Object::kMessage);
-            new (instance)GetBlocksMessage(start_hash, stop_hash);
-            return instance;
+        static Handle<GetBlocksMessage> NewInstance(const uint256_t& start_hash=BlockChain::GetHead().GetHash(), const uint256_t& stop_hash=uint256_t()){
+            return new GetBlocksMessage(start_hash, stop_hash);
         }
 
-        static GetBlocksMessage* NewInstance(const RawType& raw){
-            GetBlocksMessage* instance = (GetBlocksMessage*)Allocator::Allocate(sizeof(GetBlocksMessage), Object::kMessage);
-            new (instance)GetBlocksMessage(raw);
-            return instance;
+        static Handle<GetBlocksMessage> NewInstance(const RawType& raw){
+            return new GetBlocksMessage(raw);
         }
     };
 
@@ -711,14 +660,12 @@ namespace Token{
 
         DECLARE_MESSAGE(NotFound);
 
-        static NotFoundMessage* NewInstance(const InventoryItem& item, const std::string& message="Not Found"){
-            NotFoundMessage* instance = (NotFoundMessage*)Allocator::Allocate(sizeof(NotFoundMessage), Object::Type::kMessage);
-            return new (instance)NotFoundMessage(item, message);
+        static Handle<NotFoundMessage> NewInstance(const InventoryItem& item, const std::string& message="Not Found"){
+            return new NotFoundMessage(item, message);
         }
 
-        static NotFoundMessage* NewInstance(const RawType& raw){
-            NotFoundMessage* instance = (NotFoundMessage*)Allocator::Allocate(sizeof(NotFoundMessage), Object::Type::kMessage);
-            return new (instance)NotFoundMessage(raw);
+        static Handle<NotFoundMessage> NewInstance(const RawType& raw){
+            return new NotFoundMessage(raw);
         }
     };
 }

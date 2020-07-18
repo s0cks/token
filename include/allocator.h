@@ -8,65 +8,41 @@
 
 namespace Token{
     class Heap;
-    class RawObject;
-    class ObjectPointerVisitor;
-
-    typedef uintptr_t ObjectAddress;
-    typedef std::map<ObjectAddress, RawObject*> ObjectAddressMap;
-
     class Allocator{
+        friend class Object;
+        friend class MemoryInformationSection;
     private:
-        static std::recursive_mutex mutex_;
-        static std::condition_variable_any cond_;
-        static ObjectAddressMap allocated_;
-        static ObjectAddressMap roots_;
-
-        static bool Unreference(RawObject* owner, RawObject* target, bool weak);
-        static bool FinalizeObject(RawObject* obj);
-        static bool Finalize(RawObject* obj);
-        static bool IsRoot(RawObject* obj);
-        static RawObject* GetObject(uintptr_t address);
-        static RawObject* AllocateObject(uintptr_t size, Object::Type type);
-
-        static inline RawObject* GetObject(void* ptr){
-            return GetObject((uintptr_t)ptr);
-        }
-
         Allocator() = delete;
 
-        friend class Object;
-        friend class Scavenger;
-        friend class MemoryInformationSection;
+        template<typename I>
+        static void MarkObjects(Iterable<I> iter);
+
+        template<typename I>
+        static void FinalizeObjects(Iterable<I> iter);
+
+        template<typename I>
+        static void CopyLiveObjects(Iterable<I> iter);
+
+        static void EvacuateLiveObjects(Heap* src, Heap* dst);
+
+        template<bool asRoot, typename I>
+        static void NotifyWeakReferences(Iterable<I> iter);
+
+        template<typename I>
+        static void UpdateNonRootReferences(Iterable<I> iter);
+
+        static void UpdateStackReferences();
+
+        static void Initialize(Object* obj);
     public:
         ~Allocator(){}
 
-        static size_t GetNumberOfAllocatedObjects();
-        static size_t GetNumberOfRootObjects();
-        static uintptr_t GetBytesAllocated();
-        static uintptr_t GetBytesFree();
-        static uintptr_t GetTotalSize();
-
-        static void Collect();
-        static void* Allocate(uintptr_t size, Object::Type type=Object::Type::kUnknown);
-        static void AddRoot(void* ptr);
-        static void RemoveRoot(void* ptr);
-        static bool AddStrongReference(void* object, void* target, void** ptr);
-        static bool RemoveStrongReference(void* object, void* target);
-        static bool AddWeakReference(void* object, void* target, void** ptr);
-        static bool RemoveWeakReference(void* object, void* target);
-        static bool PrintRoots();
-        static bool PrintAllocated();
-        static bool VisitAllocated(ObjectPointerVisitor* vis);
-        static bool VisitRoots(ObjectPointerVisitor* vis);
-
-        static inline bool IsRoot(void* ptr){
-            return IsRoot(GetObject((ObjectAddress)ptr));
-        }
-
         static void Initialize();
-#ifdef TOKEN_USE_KOA
-        static Heap* GetEdenHeap(); //TODO: remove?
-#endif//TOKEN_USE_KOA
+        static void MinorGC();
+
+        static void* Allocate(size_t size, Object::Type type=Object::kUnknown);
+        static Heap* GetEdenHeap();
+        static Heap* GetSurvivorHeap();
     };
 }
 

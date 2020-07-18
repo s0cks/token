@@ -4,10 +4,6 @@
 
 
 #include "allocator.h"
-#include "alloc/raw_object.h"
-#ifdef TOKEN_USE_KOA
-#include "alloc/heap.h"
-#endif//TOKEN_USE_KOA
 
 #include "token.h"
 #include "crash_report.h"
@@ -218,21 +214,18 @@ namespace Token{
         inline std::string
         GetTotalMemoryUsed() const{
             std::stringstream ss;
-            ss << Allocator::GetBytesAllocated();
             return ss.str();
         }
 
         inline std::string
         GetTotalMemoryFree() const{
             std::stringstream ss;
-            ss << Allocator::GetBytesFree();
             return ss.str();
         }
 
         inline std::string
         GetNumberOfAllocatedObjects() const{
             std::stringstream ss;
-            ss << Allocator::GetNumberOfAllocatedObjects();
             return ss.str();
         }
 

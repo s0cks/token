@@ -37,27 +37,28 @@ namespace Token{
             return start_;
         }
 
-        uintptr_t GetSize() const{
+        size_t GetSize() const{
             return size_;
         }
 
-        uintptr_t GetStart() const{
-            return reinterpret_cast<uintptr_t>(start_);
+        uword GetStartAddress() const{
+            return (uword)start_;
         }
 
-        uintptr_t GetEnd() const{
-            return GetStart() + size_;
+        uword GetEndAddress() const{
+            return GetStartAddress() + size_;
         }
 
         void CopyFrom(const MemoryRegion& other) const{
             memcpy(start_, other.start_, other.size_);
         }
 
-        void CopyFrom(void* ptr, uintptr_t size) const{
+        void CopyFrom(void* ptr, size_t size) const{
             memcpy(start_, ptr, size);
         }
 
         bool Protect(ProtectionMode mode);
+        void Clear();
     };
 }
 

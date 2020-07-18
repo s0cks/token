@@ -7,34 +7,22 @@ namespace Token{
         size_(0){
         if(size > 0) {
             size_ = RoundUpPowTwo(size);
-#if defined(TOKEN_VMEMORY_USE_MEMORYMAP)
-#warning "compiling token with memory mapped regions!"
-            if ((start_ = mmap(nullptr, size_, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0)) == MAP_FAILED) {
-                LOG(WARNING) << "couldn't map memory region of size: " << size_;
-                return;
-            }
-#else
             LOG(INFO) << "creating memory region of size: " << size_;
             if(!(start_ = malloc(size_))){
-                LOG(WARNING) << "couldnt' create memory region of size: " << size_;
+                LOG(WARNING) << "couldn't create memory region of size: " << size_;
                 return;
             }
-#endif
-            memset(start_, 0, size);
         }
+        Clear();
     }
 
     MemoryRegion::~MemoryRegion(){
-        if(start_!= nullptr){
-#if defined(TOKEN_VMEMORY_USE_MEMORYMAP)
-            if(munmap(start_, size_) != 0){
-                LOG(WARNING) << "failed to munmap memory region!";
-                return;
-            }
-#else
-            if(start_)free(start_);
-#endif
-        }
+        if(start_!= nullptr) if(start_)free(start_);
+    }
+
+    void MemoryRegion::Clear(){
+        if(!start_)return;
+        memset(start_, 0, size_);
     }
 
     bool MemoryRegion::Protect(ProtectionMode mode){

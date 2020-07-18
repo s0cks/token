@@ -258,8 +258,8 @@ namespace Token{
         };
 
         Scope scope;
-        Transaction* tx = scope.Retain(Transaction::NewInstance(0, inputs, outputs));
-        TransactionMessage* msg = scope.Retain(TransactionMessage::NewInstance(tx));
+        Handle<Transaction> tx = Transaction::NewInstance(0, inputs, outputs);
+        Handle<TransactionMessage> msg = TransactionMessage::NewInstance(tx);
         LOG(INFO) << "sending transaction: " << tx->GetSHA256Hash();
         Send(msg);
     }

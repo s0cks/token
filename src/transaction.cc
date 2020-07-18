@@ -29,14 +29,11 @@ namespace Token{
 //######################################################################################################################
 //                                          Transaction
 //######################################################################################################################
-    Transaction* Transaction::NewInstance(uint32_t index, Transaction::InputList& inputs, Transaction::OutputList& outputs, uint32_t timestamp){
-        Transaction* instance = (Transaction*)Allocator::Allocate(sizeof(Transaction), Object::kTransaction);
-        new (instance)Transaction(timestamp, index, inputs, outputs);
-        return instance;
+    Handle<Transaction> Transaction::NewInstance(uint32_t index, Transaction::InputList& inputs, Transaction::OutputList& outputs, uint32_t timestamp){
+        return new Transaction(timestamp, index, inputs, outputs);
     }
 
-    Transaction* Transaction::NewInstance(const Transaction::RawType& raw){
-        Transaction* instance = (Transaction*)Allocator::Allocate(sizeof(Transaction), Object::kTransaction);
+    Handle<Transaction> Transaction::NewInstance(const Transaction::RawType& raw){
         Transaction::InputList inputs;
         for(auto& it : raw.inputs()){
             inputs.push_back(Input(it));
@@ -47,11 +44,10 @@ namespace Token{
             outputs.push_back(Output(it));
         }
 
-        new (instance)Transaction(raw.timestamp(), raw.index(), inputs, outputs);
-        return instance;
+        return new Transaction(raw.timestamp(), raw.index(), inputs, outputs);
     }
 
-    Transaction* Transaction::NewInstance(std::fstream& fd){
+    Handle<Transaction> Transaction::NewInstance(std::fstream& fd){
         Transaction::RawType raw;
         if(!raw.ParseFromIstream(&fd)) return nullptr;
         return NewInstance(raw);
@@ -108,10 +104,12 @@ namespace Token{
 
     bool Transaction::Sign(){
         CryptoPP::SecByteBlock bytes;
+        /*
         if(!GetBytes(bytes)){
             LOG(ERROR) << "couldn't serialize transaction to byte array";
             return false;
         }
+         */
 
         CryptoPP::RSA::PrivateKey privateKey;
         CryptoPP::RSA::PublicKey publicKey;

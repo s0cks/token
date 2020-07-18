@@ -13,17 +13,17 @@ namespace Token{
         Scope():
             pointers_(){}
         ~Scope(){
-            for(auto& ptr : pointers_) Allocator::RemoveRoot((void*)ptr);
+            //TODO: for(auto& ptr : pointers_) Allocator::RemoveRoot((void*)ptr);
         }
 
         void Retain(Object* obj){
-            Allocator::AddRoot(obj);
+            //Allocator::AddRoot(obj);
             pointers_.push_back(reinterpret_cast<uintptr_t>(obj));
         }
 
         template<typename Type>
         Type* Retain(Type* ptr){
-            Allocator::AddRoot(ptr);
+            //Allocator::AddRoot(ptr);
             pointers_.push_back(reinterpret_cast<uintptr_t>(ptr));
             return ptr;
         }

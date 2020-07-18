@@ -13,9 +13,7 @@ namespace Token{
 #define SIGNAL_ALL cond_.notify_all()
 
     Proposal* Proposal::NewInstance(const uint256_t& hash, const NodeInfo& proposer){
-        Proposal* instance = (Proposal*)Allocator::Allocate(sizeof(Proposal)); //TODO: Type proposal
-        new (instance)Proposal(proposer, hash);
-        return instance;
+        return new Proposal(proposer, hash);
     }
 
     void Proposal::SetPhase(Proposal::Phase phase){

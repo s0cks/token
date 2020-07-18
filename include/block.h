@@ -107,7 +107,6 @@ namespace Token{
             memset(transactions_, 0, sizeof(Transaction*)*num_txs);
             memmove(transactions_, txs, sizeof(Transaction*)*num_txs); // should this be moved?
             for(uint32_t idx = 0; idx < num_txs; idx++){
-                Allocator::AddStrongReference(this, transactions_[idx], nullptr);
                 tx_bloom_.Put(transactions_[idx]->GetSHA256Hash());
             }
         }
@@ -155,12 +154,12 @@ namespace Token{
         bool Accept(BlockVisitor* vis) const;
         std::string ToString() const;
 
-        static Block* NewInstance(uint32_t height, const uint256_t& phash, Transaction** transactions, uint32_t num_transactions, uint32_t timestamp=GetCurrentTime());
-        static Block* NewInstance(const BlockHeader& parent, Transaction** transactions, uint32_t num_transactions, uint32_t timestamp=GetCurrentTime());
-        static Block* NewInstance(RawType raw);
-        static Block* NewInstance(std::fstream& fd);
+        static Handle<Block> NewInstance(uint32_t height, const uint256_t& phash, Transaction** transactions, uint32_t num_transactions, uint32_t timestamp=GetCurrentTime());
+        static Handle<Block> NewInstance(const BlockHeader& parent, Transaction** transactions, uint32_t num_transactions, uint32_t timestamp=GetCurrentTime());
+        static Handle<Block> NewInstance(RawType raw);
+        static Handle<Block> NewInstance(std::fstream& fd);
 
-        static inline Block* NewInstance(const std::string& filename){
+        static inline Handle<Block> NewInstance(const std::string& filename){
             std::fstream fd(filename, std::ios::in|std::ios::binary);
             return NewInstance(fd);
         }

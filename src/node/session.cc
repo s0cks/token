@@ -35,10 +35,7 @@ namespace Token{
         if(req) free(req);
     }
 
-    void Session::Send(Message* msg){
-        Scope scope;
-        msg = scope.Retain(msg);
-
+    void Session::SendMessage(const Handle<Message>& msg){
         uint32_t type = static_cast<uint32_t>(msg->GetMessageType());
         uint64_t size = msg->GetMessageSize();
         uint64_t total_size = Message::kHeaderSize + size;

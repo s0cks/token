@@ -38,11 +38,11 @@ namespace Token{
 
         std::string ToString() const;
 
-        static UnclaimedTransaction* NewInstance(const uint256_t& hash, uint32_t index, const std::string& user);
-        static UnclaimedTransaction* NewInstance(const RawType& raw);
-        static UnclaimedTransaction* NewInstance(std::fstream& fd);
+        static Handle<UnclaimedTransaction> NewInstance(const uint256_t& hash, uint32_t index, const std::string& user);
+        static Handle<UnclaimedTransaction> NewInstance(const RawType& raw);
+        static Handle<UnclaimedTransaction> NewInstance(std::fstream& fd);
 
-        static UnclaimedTransaction* NewInstance(const std::string& filename){
+        static inline Handle<UnclaimedTransaction> NewInstance(const std::string& filename){
             std::fstream fd(filename, std::ios::in|std::ios::binary);
             return NewInstance(fd);
         }

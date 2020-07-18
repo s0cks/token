@@ -2,24 +2,6 @@
 #include "merkle.h"
 
 namespace Token{
-    MerkleNode* MerkleNode::NewInstance(const uint256_t& hash){
-        MerkleNode* instance = (MerkleNode*)Allocator::Allocate(sizeof(MerkleNode), Object::kMerkleNode);
-        new (instance)MerkleNode(hash);
-        return instance;
-    }
-
-    MerkleNode* MerkleNode::NewInstance(MerkleNode* left, MerkleNode* right){
-        MerkleNode* instance = (MerkleNode*)Allocator::Allocate(sizeof(MerkleNode), Object::kMerkleNode);
-        new (instance)MerkleNode(left, right);
-        return instance;
-    }
-
-    MerkleNode* MerkleNode::Clone(MerkleNode* node){
-        MerkleNode* instance = (MerkleNode*)Allocator::Allocate(sizeof(MerkleNode), Object::kMerkleNode);
-        new (instance)MerkleNode(node);
-        return instance;
-    }
-
     std::string MerkleNode::ToString() const{
         std::stringstream ss;
         ss << "MerkleNode(" << hash_ << ")";
@@ -42,7 +24,7 @@ namespace Token{
     MerkleNode* MerkleTree::BuildMerkleTree(std::vector<uint256_t>& leaves){
         std::vector<MerkleNode*> nodes;
         for(auto& it : leaves){
-            MerkleNode* node = MerkleNode::NewInstance(it);
+            MerkleNode* node = new MerkleNode(it);
             leaves_.push_back(node);
             nodes_.insert(std::make_pair(it, node));
             nodes.push_back(node);
@@ -62,25 +44,19 @@ namespace Token{
             MerkleNode* lchild = BuildMerkleTree(height - 1, nodes);
             MerkleNode* rchild;
             if(nodes.empty()){
-                rchild = MerkleNode::Clone(lchild);
+                rchild = new MerkleNode(lchild);
             } else{
                 rchild = BuildMerkleTree(height - 1, nodes);
             }
 
             uint256_t hash = ConcatHashes(lchild->GetHash(), rchild->GetHash());
-            MerkleNode* node = MerkleNode::NewInstance(hash);
+            MerkleNode* node = new MerkleNode(hash);
             node->SetLeft(lchild);
             node->SetRight(rchild);
             nodes_.insert(std::make_pair(hash, node));
             return node;
         }
         return nullptr;
-    }
-
-    MerkleTree* MerkleTree::NewInstance(std::vector<uint256_t>& leaves){
-        MerkleTree* instance = (MerkleTree*)Allocator::Allocate(sizeof(MerkleTree), Object::kMerkleNode);
-        new (instance)MerkleTree(leaves);
-        return instance;
     }
 
     std::string MerkleTree::ToString() const{
@@ -90,7 +66,6 @@ namespace Token{
     }
 
     bool MerkleTree::Finalize(){
-        Allocator::RemoveStrongReference(this, root_);
         return true;
     }
 

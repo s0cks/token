@@ -2,6 +2,7 @@
 #define TOKEN_NODE_H
 
 #include "node_info.h"
+#include "object.h"
 
 namespace Token{
     class Message;
@@ -61,6 +62,8 @@ namespace Token{
     DECLARE_TASK(ResolveInventoryData);
 #undef DECLARE_TASK
 
+        static bool BroadcastMessage(const Handle<Message>& msg);
+
         friend class BlockMiner;
     public:
         ~Node(){}
@@ -89,11 +92,17 @@ namespace Token{
         static bool HasPeer(const std::string& node_id);
         static bool HasPeer(const NodeAddress& address);
         static bool ConnectTo(const NodeAddress& address);
-        static bool Broadcast(Message* msg);
         static bool WaitForShutdown();
         static bool WaitForRunning();
         static bool Shutdown();
         static State GetState();
+
+        template<typename T>
+        static inline void
+        Broadcast(const Handle<T>& msg){
+            Handle<Message> m = msg.template CastTo<Message>();
+            BroadcastMessage(m);
+        }
 
         static inline bool
         IsStarting(){

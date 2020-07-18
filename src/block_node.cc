@@ -1,6 +1,5 @@
 #include "block_node.h"
 #include "allocator.h"
-#include "alloc/raw_object.h"
 
 namespace Token{
     BlockNode::BlockNode(const BlockHeader& block):
@@ -9,9 +8,7 @@ namespace Token{
         block_(block){}
 
     BlockNode* BlockNode::NewInstance(const BlockHeader& block){
-        BlockNode* instance = (BlockNode*)Allocator::Allocate(sizeof(BlockNode), Object::kBlockNode);
-        new (instance)BlockNode(block);
-        return instance;
+        return new BlockNode(block);
     }
 
     std::string BlockNode::ToString() const{
