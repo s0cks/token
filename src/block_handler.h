@@ -2,6 +2,7 @@
 #define TOKEN_BLOCK_HANDLER_H
 
 #include "block.h"
+#include "transaction_pool.h"
 #include "transaction_handler.h"
 
 namespace Token{

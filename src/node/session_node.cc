@@ -104,12 +104,12 @@ namespace Token{
         Proposal* proposal = msg->GetProposal();
         //TODO: validate proposal first
 
-        if(Proposal::HasCurrentProposal()){
+        if(BlockMiner::HasProposal()){
             session->Send(RejectedMessage::NewInstance(proposal));
             return;
         }
 
-        Proposal::SetCurrentProposal(proposal);
+        BlockMiner::SetProposal(proposal);
         session->Send(PromiseMessage::NewInstance(proposal));
     }
 

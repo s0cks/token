@@ -6,6 +6,7 @@
 #include "node_info.h"
 #include "node.h"
 #include "block_chain.h"
+#include "transaction_pool.h"
 
 namespace Token{
 #define FOR_EACH_MESSAGE_TYPE(V) \

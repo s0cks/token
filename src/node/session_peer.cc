@@ -178,12 +178,12 @@ namespace Token{
         PromiseMessage* msg = (PromiseMessage*)task->GetMessage();
         PeerSession* session = (PeerSession*)task->GetSession();
 
-        if(!Proposal::HasCurrentProposal()){
+        if(!BlockMiner::GetProposal()){
             LOG(WARNING) << "no active proposal found";
             return;
         }
 
-        Proposal* proposal = Proposal::GetCurrentProposal();
+        Proposal* proposal = BlockMiner::GetProposal();
         NodeInfo node = session->GetInfo();
         proposal->Vote(node);
 
@@ -197,12 +197,12 @@ namespace Token{
     void PeerSession::HandleAcceptedMessage(HandleMessageTask* task){
         AcceptedMessage* msg = (AcceptedMessage*)task->GetMessage();
         PeerSession* session = (PeerSession*)task->GetSession();
-        if(!Proposal::HasCurrentProposal()){
+        if(!BlockMiner::HasProposal()){
             LOG(WARNING) << "no active proposal found";
             return;
         }
 
-        Proposal* proposal = Proposal::GetCurrentProposal();
+        Proposal* proposal = BlockMiner::GetProposal();
         NodeInfo node = session->GetInfo();
 #ifdef TOKEN_DEBUG
         LOG(INFO) << node << " accepted proposal: " << proposal->GetHash();
@@ -212,12 +212,12 @@ namespace Token{
     void PeerSession::HandleRejectedMessage(HandleMessageTask* task){
         RejectedMessage* msg = (RejectedMessage*)task->GetMessage();
         PeerSession* session = (PeerSession*)task->GetSession();
-        if(!Proposal::HasCurrentProposal()){
+        if(!BlockMiner::HasProposal()){
             LOG(WARNING) << "no active proposal found";
             return;
         }
 
-        Proposal* proposal = Proposal::GetCurrentProposal();
+        Proposal* proposal = BlockMiner::GetProposal();
         NodeInfo node = session->GetInfo();
 #ifdef TOKEN_DEBUG
         LOG(INFO) << node << " rejected proposal: " << proposal->GetHash();
@@ -332,9 +332,12 @@ namespace Token{
                 return;
             }
 
+            /*
+            TODO:
             if(!BlockMiner::MineBlock(block, false)){
                 LOG(WARNING) << "couldn't process block: " << hash;
             }
+            */
         }
     }
 

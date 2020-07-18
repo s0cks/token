@@ -11,6 +11,7 @@
 #include "block_miner.h"
 #include "block_node.h"
 #include "block_chain_index.h"
+#include "transaction_pool.h"
 
 namespace Token{
     static std::recursive_mutex mutex_;
