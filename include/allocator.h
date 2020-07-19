@@ -26,6 +26,7 @@ namespace Token{
 
         static void EvacuateEdenObjects();
         static void EvacuateSurvivorObjects();
+        static void EvacuateTenuredObjects();
 
         template<bool asRoot, typename I>
         static void NotifyWeakReferences(Iterable<I> iter);
@@ -47,6 +48,7 @@ namespace Token{
         static void* Allocate(size_t size, Object::Type type=Object::kUnknown);
         static Heap* GetEdenHeap();
         static Heap* GetSurvivorHeap();
+        static Heap* GetTenuredHeap();
         static Semispace* GetSurvivorFromSpace();
         static Semispace* GetSurvivorToSpace();
     };
