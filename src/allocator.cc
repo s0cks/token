@@ -65,72 +65,6 @@ namespace Token{
         }
     };
 
-    void Allocator::MajorGC(){
-        MarkObjects<HeapMemoryIterator>(GetEdenHeap());
-        MarkObjects<SemispaceIterator>(GetSurvivorFromSpace());
-        MarkObjects<HeapMemoryIterator>(GetTenuredHeap());
-        // mark LOS
-
-        FinalizeObjects<HeapMemoryIterator>(GetEdenHeap());
-        FinalizeObjects<SemispaceIterator>(GetSurvivorFromSpace());
-        FinalizeObjects<HeapMemoryIterator>(GetTenuredHeap());
-        // finalize LOS
-
-        tenured_->Clear();
-
-        EvacuateEdenObjects();
-        EvacuateSurvivorObjects();
-        EvacuateTenuredObjects();
-
-        NotifyWeakReferences<false, HeapMemoryIterator>(GetEdenHeap());
-        NotifyWeakReferences<false, SemispaceIterator>(GetSurvivorFromSpace());
-        NotifyWeakReferences<false, HeapMemoryIterator>(GetTenuredHeap());
-        NotifyWeakReferences<true, StackSpaceIterator>({});
-
-        UpdateStackReferences();
-        UpdateNonRootReferences<HeapMemoryIterator>(GetEdenHeap());
-        UpdateNonRootReferences<SemispaceIterator>(GetSurvivorFromSpace());
-        UpdateNonRootReferences<HeapMemoryIterator>(GetTenuredHeap());
-        // update LOS
-
-        CopyLiveObjects<HeapMemoryIterator>(GetEdenHeap());
-        CopyLiveObjects<SemispaceIterator>(GetSurvivorFromSpace());
-        CopyLiveObjects<HeapMemoryIterator>(GetTenuredHeap());
-        // clean LOS
-
-        GetEdenHeap()->Clear();
-        GetSurvivorFromSpace()->Clear();
-
-        std::swap(survivor_from_, survivor_to_);
-    }
-
-    void Allocator::MinorGC(){
-        MarkObjects<HeapMemoryIterator>(GetEdenHeap());
-        MarkObjects<SemispaceIterator>(GetSurvivorFromSpace());
-
-        FinalizeObjects<HeapMemoryIterator>(GetEdenHeap());
-        FinalizeObjects<SemispaceIterator>(GetSurvivorFromSpace());
-
-        EvacuateEdenObjects();
-        EvacuateSurvivorObjects();
-
-        NotifyWeakReferences<false, HeapMemoryIterator>(GetEdenHeap());
-        NotifyWeakReferences<false, SemispaceIterator>(GetSurvivorFromSpace());
-        NotifyWeakReferences<true, StackSpaceIterator>({});
-
-        UpdateStackReferences();
-        UpdateNonRootReferences<HeapMemoryIterator>(GetEdenHeap());
-        UpdateNonRootReferences<SemispaceIterator>(GetSurvivorFromSpace());
-
-        CopyLiveObjects<HeapMemoryIterator>(GetEdenHeap());
-        CopyLiveObjects<SemispaceIterator>(GetSurvivorFromSpace());
-
-        GetEdenHeap()->Clear();
-        GetSurvivorFromSpace()->Clear();
-
-        std::swap(survivor_from_, survivor_to_);
-    }
-
     template<typename I>
     void Allocator::MarkObjects(Iterable<I> iter){
         for(Object* obj : iter){
@@ -282,5 +216,71 @@ namespace Token{
         obj->SetColor(Object::kWhite);
         allocating_size_ = 0;
         allocating_ = nullptr;
+    }
+
+    void Allocator::MajorGC(){
+        MarkObjects<HeapMemoryIterator>(GetEdenHeap());
+        MarkObjects<SemispaceIterator>(GetSurvivorFromSpace());
+        MarkObjects<HeapMemoryIterator>(GetTenuredHeap());
+        // mark LOS
+
+        FinalizeObjects<HeapMemoryIterator>(GetEdenHeap());
+        FinalizeObjects<SemispaceIterator>(GetSurvivorFromSpace());
+        FinalizeObjects<HeapMemoryIterator>(GetTenuredHeap());
+        // finalize LOS
+
+        tenured_->Clear();
+
+        EvacuateEdenObjects();
+        EvacuateSurvivorObjects();
+        EvacuateTenuredObjects();
+
+        NotifyWeakReferences<false, HeapMemoryIterator>(GetEdenHeap());
+        NotifyWeakReferences<false, SemispaceIterator>(GetSurvivorFromSpace());
+        NotifyWeakReferences<false, HeapMemoryIterator>(GetTenuredHeap());
+        NotifyWeakReferences<true, StackSpaceIterator>({});
+
+        UpdateStackReferences();
+        UpdateNonRootReferences<HeapMemoryIterator>(GetEdenHeap());
+        UpdateNonRootReferences<SemispaceIterator>(GetSurvivorFromSpace());
+        UpdateNonRootReferences<HeapMemoryIterator>(GetTenuredHeap());
+        // update LOS
+
+        CopyLiveObjects<HeapMemoryIterator>(GetEdenHeap());
+        CopyLiveObjects<SemispaceIterator>(GetSurvivorFromSpace());
+        CopyLiveObjects<HeapMemoryIterator>(GetTenuredHeap());
+        // clean LOS
+
+        GetEdenHeap()->Clear();
+        GetSurvivorFromSpace()->Clear();
+
+        std::swap(survivor_from_, survivor_to_);
+    }
+
+    void Allocator::MinorGC(){
+        MarkObjects<HeapMemoryIterator>(GetEdenHeap());
+        MarkObjects<SemispaceIterator>(GetSurvivorFromSpace());
+
+        FinalizeObjects<HeapMemoryIterator>(GetEdenHeap());
+        FinalizeObjects<SemispaceIterator>(GetSurvivorFromSpace());
+
+        EvacuateEdenObjects();
+        EvacuateSurvivorObjects();
+
+        NotifyWeakReferences<false, HeapMemoryIterator>(GetEdenHeap());
+        NotifyWeakReferences<false, SemispaceIterator>(GetSurvivorFromSpace());
+        NotifyWeakReferences<true, StackSpaceIterator>({});
+
+        UpdateStackReferences();
+        UpdateNonRootReferences<HeapMemoryIterator>(GetEdenHeap());
+        UpdateNonRootReferences<SemispaceIterator>(GetSurvivorFromSpace());
+
+        CopyLiveObjects<HeapMemoryIterator>(GetEdenHeap());
+        CopyLiveObjects<SemispaceIterator>(GetSurvivorFromSpace());
+
+        GetEdenHeap()->Clear();
+        GetSurvivorFromSpace()->Clear();
+
+        std::swap(survivor_from_, survivor_to_);
     }
 }
