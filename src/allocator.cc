@@ -5,19 +5,21 @@
 
 namespace Token{
     static Heap* eden_ = nullptr;
-    static Heap* survivor_from_ = nullptr; //TODO: convert to semispace instance
-    static Heap* survivor_to_ = nullptr;//TODO: convert to semispace instance
-    static Heap* old_ = nullptr;
+    static Heap* survivor_ = nullptr;
+    static Semispace* survivor_from_ = nullptr;
+    static Semispace* survivor_to_ = nullptr;
+
     static Object stack_space_{};
     static size_t allocating_size_ = 0;
     static void* allocating_ = nullptr;
 
     void Allocator::Initialize(){
-        eden_ = new Heap(FLAGS_minheap_size);
+        eden_ = new Heap(FLAGS_heap_size);
+        survivor_ = new Heap(FLAGS_heap_size);
 
-        uintptr_t semi_size = FLAGS_maxheap_size/2;
-        survivor_from_ = new Heap(semi_size);
-        survivor_to_ = new Heap(semi_size);
+        uint64_t semi_size = FLAGS_heap_size/2;
+        survivor_from_ = new Semispace(survivor_->GetStartAddress(), semi_size);
+        survivor_to_ = new Semispace(survivor_->GetStartAddress() + semi_size, semi_size);
 
         stack_space_.stack_.prev_ = &stack_space_;
         stack_space_.stack_.next_ = &stack_space_;
@@ -28,11 +30,15 @@ namespace Token{
         return eden_;
     }
 
-    Heap* Allocator::GetSurvivorFromSpace(){
+    Heap* Allocator::GetSurvivorHeap(){
+        return survivor_;
+    }
+
+    Semispace* Allocator::GetSurvivorFromSpace(){
         return survivor_from_;
     }
 
-    Heap* Allocator::GetSurvivorToSpace(){
+    Semispace* Allocator::GetSurvivorToSpace(){
         return survivor_to_;
     }
 
@@ -59,24 +65,24 @@ namespace Token{
 
     void Allocator::MinorGC(){
         MarkObjects<HeapMemoryIterator>(GetEdenHeap());
-        MarkObjects<HeapMemoryIterator>(GetSurvivorFromSpace());
+        MarkObjects<SemispaceIterator>(GetSurvivorFromSpace());
 
         FinalizeObjects<HeapMemoryIterator>(GetEdenHeap());
-        FinalizeObjects<HeapMemoryIterator>(GetSurvivorFromSpace());
+        FinalizeObjects<SemispaceIterator>(GetSurvivorFromSpace());
 
-        EvacuateLiveObjects(GetEdenHeap(), GetSurvivorToSpace());
-        EvacuateLiveObjects(GetSurvivorFromSpace(), GetSurvivorToSpace());
+        EvacuateEdenObjects();
+        EvacuateSurvivorObjects();
 
         NotifyWeakReferences<false, HeapMemoryIterator>(GetEdenHeap());
-        NotifyWeakReferences<false, HeapMemoryIterator>(GetSurvivorFromSpace());
+        NotifyWeakReferences<false, SemispaceIterator>(GetSurvivorFromSpace());
         NotifyWeakReferences<true, StackSpaceIterator>({});
 
         UpdateStackReferences();
         UpdateNonRootReferences<HeapMemoryIterator>(GetEdenHeap());
-        UpdateNonRootReferences<HeapMemoryIterator>(GetSurvivorFromSpace());
+        UpdateNonRootReferences<SemispaceIterator>(GetSurvivorFromSpace());
 
         CopyLiveObjects<HeapMemoryIterator>(GetEdenHeap());
-        CopyLiveObjects<HeapMemoryIterator>(GetSurvivorFromSpace());
+        CopyLiveObjects<SemispaceIterator>(GetSurvivorFromSpace());
 
         GetEdenHeap()->Clear();
         GetSurvivorFromSpace()->Clear();
@@ -106,11 +112,22 @@ namespace Token{
         }
     }
 
-    void Allocator::EvacuateLiveObjects(Heap* src, Heap* dst){
-        if(dst == nullptr) return;
-        for(Object* obj : Iterable<HeapMemoryIterator>{ src }){
+    void Allocator::EvacuateEdenObjects(){
+        // eden heap -> survivor heap (to space)
+        for(Object* obj : Iterable<HeapMemoryIterator>{ GetEdenHeap() }){
             if(!obj->IsGarbage()){
-                void* nptr = dst->Allocate(obj->GetSize());
+                void* nptr = GetSurvivorToSpace()->Allocate(obj->GetSize());
+                LOG(INFO) << "evacuating object: " << std::hex << obj << " to " << nptr;
+                obj->ptr_ = static_cast<Object*>(nptr);
+            }
+        }
+    }
+
+    void Allocator::EvacuateSurvivorObjects(){
+        // survivor heap (from space) -> survivor heap (to space)
+        for(Object* obj : Iterable<SemispaceIterator>{ GetSurvivorFromSpace() }){
+            if(!obj->IsGarbage()){
+                void* nptr = GetSurvivorToSpace()->Allocate(obj->GetSize());
                 LOG(INFO) << "evacuating object: " << std::hex << obj << " to " << nptr;
                 obj->ptr_ = static_cast<Object*>(nptr);
             }

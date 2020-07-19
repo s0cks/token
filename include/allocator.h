@@ -8,6 +8,7 @@
 
 namespace Token{
     class Heap;
+    class Semispace;
     class Allocator{
         friend class Object;
         friend class MemoryInformationSection;
@@ -23,7 +24,8 @@ namespace Token{
         template<typename I>
         static void CopyLiveObjects(Iterable<I> iter);
 
-        static void EvacuateLiveObjects(Heap* src, Heap* dst);
+        static void EvacuateEdenObjects();
+        static void EvacuateSurvivorObjects();
 
         template<bool asRoot, typename I>
         static void NotifyWeakReferences(Iterable<I> iter);
@@ -44,8 +46,9 @@ namespace Token{
 
         static void* Allocate(size_t size, Object::Type type=Object::kUnknown);
         static Heap* GetEdenHeap();
-        static Heap* GetSurvivorFromSpace();
-        static Heap* GetSurvivorToSpace();
+        static Heap* GetSurvivorHeap();
+        static Semispace* GetSurvivorFromSpace();
+        static Semispace* GetSurvivorToSpace();
     };
 }
 

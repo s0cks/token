@@ -155,8 +155,7 @@ namespace Token{
 // BlockChain Flags
 DECLARE_string(path);
 DECLARE_bool(verbose);
-DECLARE_uint32(minheap_size);
-DECLARE_uint32(maxheap_size);
+DECLARE_uint64(heap_size);
 DECLARE_uint32(port);
 DECLARE_string(peer_address);
 DECLARE_uint32(peer_port);

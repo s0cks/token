@@ -3,6 +3,7 @@
 #include <glog/logging.h>
 
 #include "common.h"
+#include "token.h"
 #include "keychain.h"
 #include "crash_report.h"
 #include "configuration.h"
@@ -49,24 +50,6 @@ namespace Token{
         return nullptr;
     }
 
-    // Start - 21:38:56.744585
-    // Finish - 21:56:55.090492
-    static Block*
-    CreateGenesis(){
-        Transaction::InputList cb_inputs;
-        Transaction::OutputList cb_outputs;
-        for(uint32_t idx = 0; idx < BlockChain::kNumberOfGenesisOutputs; idx++){
-            std::string user = "TestUser";
-            std::stringstream token;
-            token << "TestToken" << idx;
-            cb_outputs.push_back(Output("TestUser", token.str()));
-        }
-
-        Handle<Array<Transaction>> txs = Array<Transaction>::New(1);
-        txs->Put(0, Transaction::NewInstance(0, cb_inputs, cb_outputs, 0));
-        return Block::NewInstance(0, uint256_t(), txs, 1);
-    }
-
     void BlockChain::SetState(BlockChain::State state){
         LOCK_GUARD;
         state_ = state;
@@ -90,7 +73,7 @@ namespace Token{
 
         LOCK_GUARD;
         if(!BlockChainIndex::HasBlockData()){
-            Block* genesis = CreateGenesis();
+            Handle<Block> genesis = Block::Genesis();
             head_ = genesis_ = BlockNode::NewInstance(genesis);
             BlockChainIndex::PutBlockData(genesis);
 

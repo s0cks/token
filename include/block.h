@@ -147,6 +147,7 @@ namespace Token{
         bool Accept(BlockVisitor* vis) const;
         std::string ToString() const;
 
+        static Handle<Block> Genesis(); // genesis
         static Handle<Block> NewInstance(uint32_t height, const uint256_t& phash, const Handle<Array<Transaction>>& txs, uint32_t timestamp=GetCurrentTime());
         static Handle<Block> NewInstance(const BlockHeader& parent, const Handle<Array<Transaction>>& txs, uint32_t timestamp=GetCurrentTime());
         static Handle<Block> NewInstance(RawType raw);

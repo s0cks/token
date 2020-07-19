@@ -17,6 +17,21 @@ namespace Token{
 //######################################################################################################################
 //                                          Block
 //######################################################################################################################
+    Handle<Block> Block::Genesis(){
+        Transaction::InputList cb_inputs = {};
+        Transaction::OutputList cb_outputs;
+        for(size_t idx = 0; idx < BlockChain::kNumberOfGenesisOutputs; idx++){
+            std::string user = "TestUser";
+            std::stringstream token;
+            token << "TestToken" << idx;
+            cb_outputs.push_back(Output("TestUser", token.str()));
+        }
+
+        Handle<Array<Transaction>> txs = Array<Transaction>::New(1);
+        txs->Put(0, Transaction::NewInstance(0, cb_inputs, cb_outputs, 0));
+        return NewInstance(0, uint256_t(), txs, 0);
+    }
+
     Handle<Block> Block::NewInstance(uint32_t height, const Token::uint256_t &phash, const Handle<Array<Transaction>>& txs, uint32_t timestamp){
         return new Block(timestamp, height, phash, txs);
     }
