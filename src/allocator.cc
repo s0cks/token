@@ -1,10 +1,12 @@
+#include <algorithm>
 #include "allocator.h"
-#include <alloc/heap.h>
-#include <object.h>
+#include "alloc/heap.h"
+#include "object.h"
 
 namespace Token{
     static Heap* eden_ = nullptr;
-    static Heap* survivor_ = nullptr;
+    static Heap* survivor_from_ = nullptr; //TODO: convert to semispace instance
+    static Heap* survivor_to_ = nullptr;//TODO: convert to semispace instance
     static Heap* old_ = nullptr;
     static Object stack_space_{};
     static size_t allocating_size_ = 0;
@@ -12,8 +14,11 @@ namespace Token{
 
     void Allocator::Initialize(){
         eden_ = new Heap(FLAGS_minheap_size);
-        survivor_ = new Heap(FLAGS_maxheap_size);
-        old_ = new Heap(FLAGS_maxheap_size);
+
+        uintptr_t semi_size = FLAGS_maxheap_size/2;
+        survivor_from_ = new Heap(semi_size);
+        survivor_to_ = new Heap(semi_size);
+
         stack_space_.stack_.prev_ = &stack_space_;
         stack_space_.stack_.next_ = &stack_space_;
         stack_space_.space_ = Object::kStackSpace;
@@ -23,12 +28,12 @@ namespace Token{
         return eden_;
     }
 
-    Heap* Allocator::GetSurvivorHeap(){
-        return survivor_;
+    Heap* Allocator::GetSurvivorFromSpace(){
+        return survivor_from_;
     }
 
-    Heap* Allocator::GetOldHeap(){
-        return old_;
+    Heap* Allocator::GetSurvivorToSpace(){
+        return survivor_to_;
     }
 
     class StackSpaceIterator{
@@ -54,27 +59,29 @@ namespace Token{
 
     void Allocator::MinorGC(){
         MarkObjects<HeapMemoryIterator>(GetEdenHeap());
-        MarkObjects<HeapMemoryIterator>(GetSurvivorHeap());
+        MarkObjects<HeapMemoryIterator>(GetSurvivorFromSpace());
 
         FinalizeObjects<HeapMemoryIterator>(GetEdenHeap());
-        FinalizeObjects<HeapMemoryIterator>(GetSurvivorHeap());
+        FinalizeObjects<HeapMemoryIterator>(GetSurvivorFromSpace());
 
-        EvacuateLiveObjects(GetEdenHeap(), GetSurvivorHeap());
-        EvacuateLiveObjects(GetSurvivorHeap(), GetOldHeap());
+        EvacuateLiveObjects(GetEdenHeap(), GetSurvivorToSpace());
+        EvacuateLiveObjects(GetSurvivorFromSpace(), GetSurvivorToSpace());
 
         NotifyWeakReferences<false, HeapMemoryIterator>(GetEdenHeap());
-        NotifyWeakReferences<false, HeapMemoryIterator>(GetSurvivorHeap());
+        NotifyWeakReferences<false, HeapMemoryIterator>(GetSurvivorFromSpace());
         NotifyWeakReferences<true, StackSpaceIterator>({});
 
         UpdateStackReferences();
         UpdateNonRootReferences<HeapMemoryIterator>(GetEdenHeap());
-        UpdateNonRootReferences<HeapMemoryIterator>(GetSurvivorHeap());
+        UpdateNonRootReferences<HeapMemoryIterator>(GetSurvivorFromSpace());
 
         CopyLiveObjects<HeapMemoryIterator>(GetEdenHeap());
-        CopyLiveObjects<HeapMemoryIterator>(GetSurvivorHeap());
+        CopyLiveObjects<HeapMemoryIterator>(GetSurvivorFromSpace());
 
         GetEdenHeap()->Clear();
-        // GetSurvivorHeap()->Clear();
+        GetSurvivorFromSpace()->Clear();
+
+        std::swap(survivor_from_, survivor_to_);
     }
 
     template<typename I>
@@ -153,6 +160,15 @@ namespace Token{
         }
     };
 
+    class DecRefIterator : public FieldIterator{
+    public:
+        void operator()(Object** field) const{
+            Object* obj = (*field);
+            if(!obj) return;
+            obj->DecrementReferenceCount();
+        }
+    };
+
     template<typename I>
     void Allocator::UpdateNonRootReferences(Iterable<I> iter){
         for(Object* obj : iter){
@@ -178,6 +194,12 @@ namespace Token{
 
         allocating_ = ptr;
         return ptr;
+    }
+
+    void Allocator::UntrackStackObject(Token::Object* obj){
+        obj->Accept(DecRefIterator{});
+        obj->stack_.prev_->stack_.next_ = obj->stack_.next_;
+        obj->stack_.next_->stack_.prev_ = obj->stack_.prev_;
     }
 
     void Allocator::Initialize(Object* obj){

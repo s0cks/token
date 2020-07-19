@@ -78,7 +78,7 @@ namespace Token{
 
         Object* Next(){
             Object* next = (Object*)current_;
-            current_ += next->GetSize();
+            current_ += next->GetAllocatedSize();
             return next;
         }
     };

@@ -14,9 +14,10 @@ namespace Token{
     private:
         Object** ptr_;
     protected:
-        HandleBase(): ptr_(nullptr){}
+        HandleBase();
         HandleBase(Object* obj);
         HandleBase(const HandleBase& h);
+        ~HandleBase();
 
         Object* GetPointer() const{
             return ptr_ ? (*ptr_) : nullptr;

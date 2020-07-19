@@ -78,6 +78,11 @@ namespace Token{
 
     static HandleGroup* root_ = nullptr;
 
+    HandleBase::HandleBase(){
+        if(!root_) root_ = new HandleGroup();
+        ptr_ = nullptr;
+    }
+
     HandleBase::HandleBase(Object* obj){
         if(!root_) root_ = new HandleGroup();
         ptr_ = root_->Allocate();
@@ -93,13 +98,22 @@ namespace Token{
         }
     }
 
+    HandleBase::~HandleBase(){
+        if(ptr_) root_->Free(ptr_);
+    }
+
     void HandleBase::operator=(Object* obj){
         if(!ptr_) ptr_ = root_->Allocate();
         root_->Write(ptr_, obj);
     }
 
     void HandleBase::operator=(const HandleBase& h){
-        operator=(h.GetPointer());
+        if(h.ptr_){
+            ptr_ = root_->Allocate();
+            root_->Write(ptr_, *h.ptr_);
+        } else{
+            ptr_ = nullptr;
+        }
     }
 
     enum HeaderLayout{
@@ -123,7 +137,9 @@ namespace Token{
         Allocator::Initialize(this);
     }
 
-    Object::~Object(){}
+    Object::~Object(){
+        if(space_ == kStackSpace) Allocator::UntrackStackObject(this);
+    }
 
     void Object::SetColor(Color color){
         SetHeader(ColorField::Update(color, GetHeader()));

@@ -34,6 +34,7 @@ namespace Token{
         static void UpdateStackReferences();
 
         static void Initialize(Object* obj);
+        static void UntrackStackObject(Object* obj);
     public:
         ~Allocator(){}
 
@@ -43,8 +44,8 @@ namespace Token{
 
         static void* Allocate(size_t size, Object::Type type=Object::kUnknown);
         static Heap* GetEdenHeap();
-        static Heap* GetSurvivorHeap();
-        static Heap* GetOldHeap();
+        static Heap* GetSurvivorFromSpace();
+        static Heap* GetSurvivorToSpace();
     };
 }
 
