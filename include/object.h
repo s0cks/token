@@ -21,12 +21,30 @@ namespace Token{
         }
     };
 
+#define FOR_EACH_OBJECT_TYPE(V) \
+    V(Transaction)
+
+    class Instance;
+#define FORWARD_DECLARE_OBJECT_TYPE(Name) class Name;
+    FOR_EACH_OBJECT_TYPE(FORWARD_DECLARE_OBJECT_TYPE);
+#undef FORWARD_DECLARE_OBJECT_TYPE
+
+    enum class Type{
+        kUnknownType = 0,
+#define DECLARE_OBJECT_TYPE(Name) k##Name##Type,
+    FOR_EACH_OBJECT_TYPE(DECLARE_OBJECT_TYPE)
+#undef DECLARE_OBJECT_TYPE
+    };
+
     typedef uint64_t ObjectHeader;
     class Object{
-        friend class StackSpaceIterator;
-        friend class UpdateIterator;
-        friend class WeakReferenceNotifyIterator;
         friend class Allocator;
+        friend class HandleGroup;
+        friend class UpdateIterator;
+        friend class IncRefIterator;
+        friend class DecRefIterator;
+        friend class StackSpaceIterator;
+        friend class WeakReferenceNotifyIterator;
     public:
         enum Color{
             kWhite=1,
@@ -36,36 +54,31 @@ namespace Token{
             kRoot=kBlack,
         };
 
-        //TODO: refactor typing system
-        enum Type{
-            kUnknown = 0,
-            kBlock,
-            kTransaction,
-            kUnclaimedTransaction,
-            kBlockNode,
-            kMerkleNode,
-            kBytes,
-            kMessage,
-        };
-
         enum Space{
             kStackSpace,
             kEdenSpace,
             kSurvivorSpace
         };
+
+        // Expected Object Layout:
+        //   | Type - 16 bits
+        //   | Size - 32 bits
+        //   | Color - 8 bits
+        //   | Reference Count - 32 bits
+        //   | Ptr - 64 bits
     protected:
-        union{
+        ObjectHeader header_;
+        union{ // layout is weird
             struct{
                 Object* prev_;
                 Object* next_;
             } stack_;
             struct{
                 Object* ptr_;
-                ObjectHeader header_;
                 uint32_t refcount_;
             };
         };
-        Space space_;
+        Space space_; // remove?
 
         inline void WriteBarrier(Object** slot, Object* data){
             //TODO: switch spaces
@@ -102,30 +115,37 @@ namespace Token{
             refcount_ = count;
         }
 
+        inline void
+        IncrementReferenceCount(){
+            refcount_++;
+        }
+
+        inline void
+        DecrementReferenceCount(){
+            refcount_--;
+        }
+
+        void SetColor(Color color);
+        void SetSize(uint32_t size);
         virtual void NotifyWeakReferences(Object** field){}
+        virtual void Accept(const FieldIterator& iter){}
     public:
         Object();
         virtual ~Object();
 
-        virtual void Accept(const FieldIterator& iter){}
-
-        void SetColor(Color color);
-        void SetSize(uint32_t size);
-        void SetType(Type type);
-        Color GetColor() const;
-        Type GetType() const;
         uint32_t GetSize() const;
+        Color GetColor() const;
+
+        uint32_t GetReferenceCount() const{
+            return refcount_;
+        }
 
         Space GetSpace() const{
             return space_;
         }
 
         size_t GetAllocatedSize() const{
-            return GetSize();
-        }
-
-        uint32_t GetReferenceCount() const{
-            return refcount_;
+            return GetSize(); // refactor
         }
 
         bool HasStackReferences() const{
@@ -136,19 +156,12 @@ namespace Token{
             return GetColor() == kWhite;
         }
 
-        void IncrementReferenceCount(){
-            refcount_++;
-        }
-
-        void DecrementReferenceCount(){
-            refcount_--;
-        }
-
         static void* operator new(size_t);
         static void* operator new[](size_t) = delete;
         static void operator delete(void*){}
     };
 
+    //TODO: refactor
     template<typename RawObjectType>
     class BinaryObject : public Object{
     protected:

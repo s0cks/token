@@ -45,7 +45,7 @@ namespace Token{
         static void MinorGC();
         static void MajorGC();
 
-        static void* Allocate(size_t size, Object::Type type=Object::kUnknown);
+        static void* Allocate(size_t size, Type type=Type::kUnknownType);
         static Heap* GetEdenHeap();
         static Heap* GetSurvivorHeap();
         static Heap* GetTenuredHeap();

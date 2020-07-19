@@ -3,9 +3,11 @@
 
 #include "common.h"
 #include "uint256_t.h"
-#include "transaction.h"
 #include "bloom.h"
+
 #include "allocator.h"
+#include "array.h"
+#include "transaction.h"
 
 namespace Token{
     class Block;

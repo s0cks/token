@@ -244,7 +244,7 @@ namespace Token{
         }
     }
 
-    void* Allocator::Allocate(size_t size, Object::Type type){
+    void* Allocator::Allocate(size_t size, Type type){
         allocating_size_ = size;
 
         void* ptr = GetEdenHeap()->Allocate(size);
