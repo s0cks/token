@@ -1,5 +1,4 @@
 #include <proposal.h>
-#include "scope.h"
 #include "task.h"
 #include "session.h"
 #include "server.h"
@@ -51,8 +50,7 @@ namespace Token{
             return;
         }
 
-        Scope scope;
-        std::vector<Message*> response;
+        std::vector<Handle<Message>> response;
         for(auto& item : items){
             uint256_t hash = item.GetHash();
             if(item.ItemExists()){
@@ -69,10 +67,7 @@ namespace Token{
 #endif//TOKEN_DEBUG
                         return;
                     }
-
-                    Message* data = BlockMessage::NewInstance(block);
-                    scope.Retain(data);
-                    response.push_back(data);
+                    response.push_back(BlockMessage::NewInstance(block).CastTo<Message>());
                 } else if(item.IsTransaction()){
                     Transaction* tx = nullptr;
                     if(TransactionPool::HasTransaction(hash)){
@@ -84,10 +79,7 @@ namespace Token{
 #endif//TOKEN_DEBUG
                         return;
                     }
-
-                    Message* data = TransactionMessage::NewInstance(tx);
-                    scope.Retain(data);
-                    response.push_back(data);
+                    response.push_back(TransactionMessage::NewInstance(tx).CastTo<Message>());
                 }
             } else{
                 //TODO: return 500

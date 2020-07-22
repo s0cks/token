@@ -1,4 +1,3 @@
-#include "scope.h"
 #include "server.h"
 #include "task.h"
 #include "client.h"
@@ -91,7 +90,6 @@ namespace Token{
             return;
         }
 
-        Scope scope;
         uint32_t offset = 0;
         std::vector<Message*> messages;
         do{
@@ -101,12 +99,7 @@ namespace Token{
             uint64_t msize = 0;
             memcpy(&msize, &buff->base[offset + Message::kSizeOffset], Message::kSizeLength);
 
-            Message* msg = nullptr;
-            if(!(msg = Message::Decode(static_cast<Message::MessageType>(mtype), msize, (uint8_t*)&buff->base[offset + Message::kDataOffset]))){
-                LOG(WARNING) << "couldn't decode message of type := " << mtype << " and of size := " << msize << ", at offset := " << offset;
-                continue;
-            }
-            scope.Retain(msg);
+            Handle<Message> msg = Message::Decode(static_cast<Message::MessageType>(mtype), msize, (uint8_t*)&buff->base[offset + Message::kDataOffset]);
 
             LOG(INFO) << "decoded message: " << msg->ToString();
             messages.push_back(msg);
@@ -257,7 +250,6 @@ namespace Token{
             Output(user, "TestToken")
         };
 
-        Scope scope;
         Handle<Transaction> tx = Transaction::NewInstance(0, inputs, outputs);
         Handle<TransactionMessage> msg = TransactionMessage::NewInstance(tx);
         LOG(INFO) << "sending transaction: " << tx->GetSHA256Hash();

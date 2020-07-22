@@ -2,7 +2,6 @@
 #include <random>
 #include <condition_variable>
 
-#include "scope.h"
 #include "server.h"
 #include "message.h"
 #include "task.h"

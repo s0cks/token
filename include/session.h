@@ -67,7 +67,7 @@ namespace Token{
 
         State GetState();
         void WaitForState(State state);
-        void Send(std::vector<Message*>& messages);
+        void Send(std::vector<Handle<Message>>& messages);
 
         template<typename T>
         inline void Send(const Handle<T>& msg){

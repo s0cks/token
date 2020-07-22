@@ -1,5 +1,4 @@
 #include "session.h"
-#include "scope.h"
 
 namespace Token{
 #define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
@@ -54,7 +53,7 @@ namespace Token{
         uv_write(req, GetStream(), &buff, 1, &OnMessageSent);
     }
 
-    void Session::Send(std::vector<Message*>& messages){
+    void Session::Send(std::vector<Handle<Message>>& messages){
         size_t total_messages = messages.size();
         if(total_messages <= 0){
             LOG(WARNING) << "not sending any messages!";
@@ -63,7 +62,7 @@ namespace Token{
 
         uv_buf_t buffers[total_messages];
         for(size_t idx = 0; idx < total_messages; idx++){
-            Message* msg = messages[idx];
+            Handle<Message> msg = messages[idx];
 
             uint32_t type = static_cast<uint32_t>(msg->GetMessageType());
             uint64_t size = msg->GetMessageSize();

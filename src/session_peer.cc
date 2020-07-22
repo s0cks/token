@@ -2,7 +2,6 @@
 #include "server.h"
 #include "task.h"
 #include "block_miner.h"
-#include "scope.h"
 #include "proposal.h"
 #include "block_pool.h"
 #include "transaction_pool.h"
@@ -94,8 +93,6 @@ namespace Token{
             return;
         }
 
-        Scope scope;
-
         uint32_t offset = 0;
         std::vector<Message*> messages;
         do{
@@ -105,12 +102,7 @@ namespace Token{
             uint64_t msize = 0;
             memcpy(&msize, &buff->base[offset + Message::kSizeOffset], Message::kSizeLength);
 
-            Message* msg = nullptr;
-            if(!(msg = Message::Decode(static_cast<Message::MessageType>(mtype), msize, (uint8_t*)&buff->base[offset + Message::kDataOffset]))){
-                LOG(WARNING) << "couldn't decode message of type := " << mtype << " and of size := " << msize << ", at offset := " << offset;
-                continue;
-            }
-            scope.Retain(msg);
+            Handle<Message> msg = Message::Decode(static_cast<Message::MessageType>(mtype), msize, (uint8_t*)&buff->base[offset + Message::kDataOffset]);
 
             LOG(INFO) << "decoded message: " << msg->ToString();
             messages.push_back(msg);
@@ -145,19 +137,11 @@ namespace Token{
         VersionMessage* msg = (VersionMessage*)task->GetMessage();
         PeerSession* session = (PeerSession*)task->GetSession();
 
-        Scope scope;
-        std::vector<Message*> response;
-
-        VerackMessage* verack = VerackMessage::NewInstance(Server::GetInfo()); //TODO: fixme
-        scope.Retain(dynamic_cast<Object*>(verack));
-        response.push_back(dynamic_cast<Message*>(verack));
-
+        std::vector<Handle<Message>> response;
+        response.push_back(VerackMessage::NewInstance(Server::GetInfo()).CastTo<Message>());
         if(BlockChain::GetHead().GetHeight() < msg->GetHeight()){
-            GetBlocksMessage* getblocks = GetBlocksMessage::NewInstance();
-            scope.Retain(dynamic_cast<Object*>(getblocks));
-            response.push_back(dynamic_cast<Message*>(getblocks));
+            response.push_back(GetBlocksMessage::NewInstance().CastTo<Message>());
         }
-
         session->Send(response);
     }
 
@@ -236,7 +220,7 @@ namespace Token{
             return;
         }
 
-        std::vector<Message*> data;
+        std::vector<Handle<Message>> data;
         for(auto& item : items){
             uint256_t hash = item.GetHash();
             if(item.ItemExists() || BlockPool::HasBlock(hash)){
@@ -245,20 +229,20 @@ namespace Token{
                     Block* block = nullptr;
                     if((block = BlockChain::GetBlockData(hash))){
                         LOG(INFO) << hash << " found in block chain!";
-                        data.push_back(BlockMessage::NewInstance(block));
+                        data.push_back(BlockMessage::NewInstance(block).CastTo<Message>());
                         continue;
                     }
 
                     if((block = BlockPool::GetBlock(hash))){
                         LOG(INFO) << hash << " found in block pool!";
-                        data.push_back(BlockMessage::NewInstance(block));
+                        data.push_back(BlockMessage::NewInstance(block).CastTo<Message>());
                         continue;
                     }
                 } else if(item.IsTransaction()){
                     Transaction* tx;
                     if((tx = TransactionPool::GetTransaction(hash))){
                         LOG(INFO) << hash << " found in transaction pool!";
-                        data.push_back(TransactionMessage::NewInstance(tx));
+                        data.push_back(TransactionMessage::NewInstance(tx).CastTo<Message>());
                         continue;
                     }
                 }

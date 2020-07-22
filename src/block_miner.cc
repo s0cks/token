@@ -2,14 +2,15 @@
 #include <algorithm>
 #include <mutex>
 #include <condition_variable>
-#include "scope.h"
+
+#include "proposal.h"
+#include "message.h"
+
 #include "block_miner.h"
 #include "block_chain.h"
 #include "block_pool.h"
 #include "block_validator.h"
 #include "block_handler.h"
-#include "proposal.h"
-#include "message.h"
 
 namespace Token{
     static pthread_t thread_;
@@ -135,7 +136,6 @@ namespace Token{
     }
 
     void BlockMiner::HandleMineBlockCallback(uv_timer_t* handle){
-        Scope scope;
         uint32_t num_transactions;
         if((num_transactions = TransactionPool::GetNumberOfTransactions()) >= kNumberOfTransactionsPerBlock){
             // 1. Collect transactions from pool
@@ -170,7 +170,7 @@ namespace Token{
 #ifdef TOKEN_DEBUG
                 LOG(INFO) << "entering proposal phase";
 #endif//TOKEN_DEBUG
-                Proposal* proposal = scope.Retain(Proposal::NewInstance(block, Server::GetInfo()));
+                Handle<Proposal> proposal = Proposal::NewInstance(block, Server::GetInfo());
                 SetProposal(proposal);
 
                 // 5. Submit proposal
