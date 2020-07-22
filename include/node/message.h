@@ -382,7 +382,7 @@ namespace Token{
         typedef Proto::BlockChain::Transaction RawType;
     private:
         TransactionMessage(Transaction* tx): ProtobufMessage(){
-            if(!tx->Encode(raw_)){
+            if(!tx->WriteToMessage(raw_)){
                 LOG(WARNING) << "couldn't encode transaction to message!";
             }
         }
@@ -411,7 +411,7 @@ namespace Token{
         typedef Proto::BlockChain::Block RawType;
     private:
         BlockMessage(Block* blk): ProtobufMessage(){
-            if(!blk->Encode(raw_)){
+            if(!blk->WriteToMessage(raw_)){
                 LOG(WARNING) << "couldn't encode block to message";
             }
         }

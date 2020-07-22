@@ -26,7 +26,7 @@ namespace Token{
         return stream.str();
     }
 
-    bool UnclaimedTransaction::Encode(Token::UnclaimedTransaction::RawType &raw) const{
+    bool UnclaimedTransaction::WriteToMessage(RawType& raw) const{
         raw.set_tx_hash(HexString(hash_));
         raw.set_tx_index(index_);
         raw.set_user(user_);

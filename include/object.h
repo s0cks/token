@@ -37,6 +37,7 @@ namespace Token{
     };
 
     typedef uint64_t ObjectHeader;
+
     class Object{
         friend class Allocator;
         friend class HandleGroup;
@@ -161,31 +162,32 @@ namespace Token{
         static void operator delete(void*){}
     };
 
-    //TODO: refactor
-    template<typename RawObjectType>
+    template<typename RawType>
     class BinaryObject : public Object{
     protected:
-        bool GetBytes(CryptoPP::SecByteBlock& bytes) const{
-            RawObjectType raw;
-            if(!Encode(raw)) return false;
+        BinaryObject(): Object(){}
+    public:
+        ~BinaryObject(){}
+
+        virtual bool WriteToMessage(RawType& raw) const = 0;
+
+        bool WriteToFile(std::fstream& fd) const{
+            RawType msg;
+            if(!WriteToMessage(msg)) return false;
+            return msg.SerializeToOstream(&fd);
+        }
+
+        bool WriteToBytes(CryptoPP::SecByteBlock& bytes) const{
+            RawType raw;
+            if(!WriteToMessage(raw)) return false;
             bytes.resize(raw.ByteSizeLong());
             return raw.SerializeToArray(bytes.data(), bytes.size());
-        }
-    public:
-        virtual ~BinaryObject() = default;
-
-        virtual bool Encode(RawObjectType& raw) const = 0;
-
-        bool WriteToFile(std::fstream &fd) const{
-            RawObjectType raw;
-            if(!Encode(raw)) return false;
-            return raw.SerializeToOstream(&fd);
         }
 
         uint256_t GetSHA256Hash() const{
             CryptoPP::SHA256 func;
             CryptoPP::SecByteBlock bytes;
-            if(!GetBytes(bytes)) {
+            if(!WriteToBytes(bytes)) {
                 LOG(WARNING) << "couldn't get bytes";
                 return uint256_t();
             }

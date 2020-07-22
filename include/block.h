@@ -106,13 +106,12 @@ namespace Token{
             //TODO: load tx_bloom_;
         }
 
-        bool Encode(RawType& raw) const;
-
         friend class BlockChain;
         friend class BlockMessage;
     public:
         ~Block() = default;
 
+        //TODO: refactor
         BlockHeader GetHeader() const{
             return BlockHeader(timestamp_, height_, previous_hash_, GetMerkleRoot(), GetSHA256Hash());
         }
@@ -147,6 +146,7 @@ namespace Token{
         bool Finalize();
         bool Contains(const uint256_t& hash) const;
         bool Accept(BlockVisitor* vis) const;
+        bool WriteToMessage(RawType& raw) const;
         std::string ToString() const;
 
         static Handle<Block> Genesis(); // genesis

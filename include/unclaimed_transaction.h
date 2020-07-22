@@ -19,8 +19,6 @@ namespace Token{
             hash_(hash),
             user_(user),
             index_(idx){}
-
-        bool Encode(RawType& raw) const;
     public:
         ~UnclaimedTransaction(){}
 
@@ -36,6 +34,7 @@ namespace Token{
             return user_;
         }
 
+        bool WriteToMessage(RawType& raw) const;
         std::string ToString() const;
 
         static Handle<UnclaimedTransaction> NewInstance(const uint256_t& hash, uint32_t index, const std::string& user);

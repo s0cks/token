@@ -208,7 +208,7 @@ namespace Token{
 
         bool Sign();
         bool Accept(TransactionVisitor* visitor);
-        bool Encode(RawType& raw) const;
+        bool WriteToMessage(RawType& raw) const;
         std::string ToString() const;
 
         static Handle<Transaction> NewInstance(uint32_t index, InputList& inputs, OutputList& outputs, uint32_t timestamp=GetCurrentTime());

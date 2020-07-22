@@ -59,7 +59,7 @@ namespace Token{
         return stream.str();
     }
 
-    bool Block::Encode(Block::RawType& raw) const{
+    bool Block::WriteToMessage(Block::RawType& raw) const{
         raw.set_timestamp(timestamp_);
         raw.set_height(height_);
         raw.set_previous_hash(HexString(previous_hash_));
@@ -67,7 +67,7 @@ namespace Token{
         for(uint32_t idx = 0; idx < GetNumberOfTransactions(); idx++){
             Transaction::RawType* raw_tx = raw.add_transactions();
             Handle<Transaction> tx = GetTransaction(idx);
-            tx->Encode((*raw_tx));
+            tx->WriteToMessage((*raw_tx));
         }
         return true;
     }

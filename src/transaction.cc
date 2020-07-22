@@ -59,7 +59,7 @@ namespace Token{
         return stream.str();
     }
 
-    bool Transaction::Encode(Transaction::RawType& raw) const{
+    bool Transaction::WriteToMessage(Transaction::RawType& raw) const{
         raw.set_timestamp(timestamp_);
         raw.set_index(index_);
         raw.set_signature(signature_);
