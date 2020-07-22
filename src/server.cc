@@ -2,10 +2,10 @@
 #include <random>
 #include <condition_variable>
 
-#include "alloc/scope.h"
-#include "node/node.h"
-#include "node/message.h"
-#include "node/task.h"
+#include "scope.h"
+#include "server.h"
+#include "message.h"
+#include "task.h"
 #include "configuration.h"
 
 namespace Token{
@@ -22,7 +22,7 @@ namespace Token{
 
     static std::recursive_mutex mutex_;
     static std::condition_variable_any cond_;
-    static Node::State state_ = Node::State::kStopped;
+    static Server::State state_ = Server::State::kStopped;
     static NodeInfo info_ = NodeInfo();
     static std::map<std::string, PeerSession*> peers_ = std::map<std::string, PeerSession*>();
 
@@ -32,9 +32,9 @@ namespace Token{
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
 
-    void Node::LoadNodeInformation(){
+    void Server::LoadNodeInformation(){
         LOCK_GUARD;
-        libconfig::Setting& node = BlockChainConfiguration::GetProperty("Node", libconfig::Setting::TypeGroup);
+        libconfig::Setting& node = BlockChainConfiguration::GetProperty("Server", libconfig::Setting::TypeGroup);
         //TODO: load callback address or fetch dynamically
         NodeAddress address("127.0.0.1", FLAGS_port);
         if(!node.exists("id")){
@@ -49,7 +49,7 @@ namespace Token{
         info_ = NodeInfo(node_id, NodeAddress("127.0.0.1", FLAGS_port));
     }
 
-    void Node::LoadPeers(){
+    void Server::LoadPeers(){
         LOCK_GUARD;
         libconfig::Setting& peers = BlockChainConfiguration::GetProperty("Peers", libconfig::Setting::TypeArray);
         auto iter = peers.begin();
@@ -62,7 +62,7 @@ namespace Token{
         }
     }
 
-    void Node::SavePeers(){
+    void Server::SavePeers(){
         LOCK_GUARD;
         libconfig::Setting& root = BlockChainConfiguration::GetRoot();
         if(root.exists("Peers")) root.remove("Peers");
@@ -76,16 +76,16 @@ namespace Token{
         BlockChainConfiguration::SaveConfiguration();
     }
 
-    uv_tcp_t* Node::GetHandle(){
+    uv_tcp_t* Server::GetHandle(){
         return &handle_;
     }
 
-    NodeInfo Node::GetInfo(){
+    NodeInfo Server::GetInfo(){
         LOCK_GUARD;
         return info_;
     }
 
-    void Node::Start(){
+    void Server::Start(){
         if(!IsStopped()) return;
         LoadNodeInformation();
         LoadPeers();
@@ -96,7 +96,7 @@ namespace Token{
         }
     }
 
-    bool Node::Shutdown(){
+    bool Server::Shutdown(){
         if(!IsRunning()) return false;
         uv_async_send(&aterm_);
 
@@ -111,43 +111,43 @@ namespace Token{
         return true;
     }
 
-    bool Node::WaitForShutdown(){
+    bool Server::WaitForShutdown(){
         WaitForState(State::kStopped);
         return true;
     }
 
-    bool Node::WaitForRunning(){
+    bool Server::WaitForRunning(){
         WaitForState(State::kRunning);
         return true;
     }
 
-    void Node::SetState(Node::State state){
+    void Server::SetState(Server::State state){
         LOCK;
         state_ = state;
         SIGNAL_ALL;
     }
 
-    void Node::WaitForState(Node::State state){
+    void Server::WaitForState(Server::State state){
         LOCK;
         while(state_ != state) WAIT;
     }
 
-    Node::State Node::GetState() {
+    Server::State Server::GetState() {
         LOCK_GUARD;
         return state_;
     }
 
-    uint32_t Node::GetNumberOfPeers(){
+    uint32_t Server::GetNumberOfPeers(){
         LOCK_GUARD;
         uint32_t peers = peers_.size();
         return peers;
     }
 
-    void Node::HandleTerminateCallback(uv_async_t* handle){
+    void Server::HandleTerminateCallback(uv_async_t* handle){
         uv_stop(handle->loop);
     }
 
-    void* Node::NodeThread(void* ptr){
+    void* Server::NodeThread(void* ptr){
         LOG(INFO) << "starting server...";
         SetState(State::kStarting);
         uv_loop_t* loop = uv_loop_new();
@@ -180,7 +180,7 @@ namespace Token{
         pthread_exit(0);
     }
 
-    void Node::OnNewConnection(uv_stream_t* stream, int status){
+    void Server::OnNewConnection(uv_stream_t* stream, int status){
         if(status != 0){
             LOG(ERROR) << "connection error: " << uv_strerror(status);
             return;
@@ -201,7 +201,7 @@ namespace Token{
         }
     }
 
-    void Node::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
+    void Server::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
         NodeSession* session = (NodeSession*)stream->data;
         if(nread == UV_EOF){
             LOG(ERROR) << "client disconnected!";
@@ -251,34 +251,34 @@ namespace Token{
         }
     }
 
-    bool Node::BroadcastMessage(const Handle<Message>& msg){
+    bool Server::BroadcastMessage(const Handle<Message>& msg){
         LOCK_GUARD;
         for(auto& it : peers_) it.second->Send(msg);
         return true;
     }
 
-    void Node::RegisterPeer(const std::string& node_id, PeerSession* peer){
+    void Server::RegisterPeer(const std::string& node_id, PeerSession* peer){
         LOCK_GUARD;
         peers_.insert({ node_id, peer });
         SavePeers();
     }
 
-    void Node::UnregisterPeer(const std::string& node_id){
+    void Server::UnregisterPeer(const std::string& node_id){
         LOCK_GUARD;
         peers_.erase(node_id);
     }
 
-    void Node::GetPeers(std::vector<PeerInfo>& peers){
+    void Server::GetPeers(std::vector<PeerInfo>& peers){
         LOCK_GUARD;
         for(auto& it : peers_) peers.push_back(PeerInfo(it.second));
     }
 
-    bool Node::HasPeer(const std::string& node_id){
+    bool Server::HasPeer(const std::string& node_id){
         LOCK_GUARD;
         return peers_.find(node_id) != peers_.end();
     }
 
-    bool Node::HasPeer(const NodeAddress& address){
+    bool Server::HasPeer(const NodeAddress& address){
         LOCK_GUARD;
         for(auto& it : peers_){
             NodeAddress paddress = it.second->GetAddress();
@@ -287,7 +287,7 @@ namespace Token{
         return false;
     }
 
-    bool Node::ConnectTo(const NodeAddress &address){
+    bool Server::ConnectTo(const NodeAddress &address){
         if(IsStarting() || IsSynchronizing()){
             WaitForState(State::kRunning);
             if(!IsRunning()) {

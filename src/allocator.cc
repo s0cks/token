@@ -1,6 +1,6 @@
 #include <algorithm>
 #include "allocator.h"
-#include "alloc/heap.h"
+#include "heap.h"
 #include "object.h"
 
 namespace Token{

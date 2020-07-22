@@ -1,5 +1,5 @@
-#include "node/node_info.h"
-#include "node/session.h"
+#include "node_info.h"
+#include "session.h"
 
 namespace Token{
     static inline PeerInfo::State

@@ -1,5 +1,5 @@
 #include "common.h"
-#include "node/client.h"
+#include "client.h"
 
 static inline bool
 InitializeLogging(char* arg0){

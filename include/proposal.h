@@ -5,7 +5,7 @@
 #include <condition_variable>
 #include "object.h"
 #include "block.h"
-#include "node/node.h"
+#include "server.h"
 
 namespace Token{
     class PrepareMessage;
@@ -20,7 +20,7 @@ namespace Token{
 
         static inline uint32_t
         GetRequiredNumberOfVotes(){
-            uint32_t peers = Node::GetNumberOfPeers();
+            uint32_t peers = Server::GetNumberOfPeers();
             if(peers == 0) return 0;
             else if(peers == 1) return 1;
             return peers / 2;
@@ -28,7 +28,7 @@ namespace Token{
 
         static inline uint32_t
         GetRequiredNumberOfCommits(){
-            uint32_t peers = Node::GetNumberOfPeers();
+            uint32_t peers = Server::GetNumberOfPeers();
             if(peers == 0) return 0;
             else if(peers == 1) return 1;
             return peers / 2;

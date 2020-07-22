@@ -39,7 +39,7 @@ namespace Token{
         void SetState(State state);
         void SendMessage(const Handle<Message>& msg);
 
-        friend class Node;
+        friend class Server;
     public:
         NodeInfo GetInfo() const{
             return info_;
@@ -103,7 +103,7 @@ namespace Token{
         FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
 
-        friend class Node;
+        friend class Server;
     public:
         ~NodeSession(){}
     };

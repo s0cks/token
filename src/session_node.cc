@@ -1,8 +1,8 @@
 #include <proposal.h>
-#include "alloc/scope.h"
-#include "node/task.h"
-#include "node/session.h"
-#include "node/node.h"
+#include "scope.h"
+#include "task.h"
+#include "session.h"
+#include "server.h"
 
 namespace Token{
     void NodeSession::HandleNotFoundMessage(Token::HandleMessageTask* task){
@@ -17,7 +17,7 @@ namespace Token{
         // - state check
         // - version check
         // - echo nonce
-        session->Send(VersionMessage::NewInstance(Node::GetInfo()));
+        session->Send(VersionMessage::NewInstance(Server::GetInfo()));
     }
 
     //TODO:
@@ -27,12 +27,12 @@ namespace Token{
         NodeSession* session = (NodeSession*)task->GetSession();
         NodeAddress paddr = msg->GetCallbackAddress();
 
-        session->Send(VerackMessage::NewInstance(Node::GetInfo())); //TODO: obtain address dynamically
+        session->Send(VerackMessage::NewInstance(Server::GetInfo())); //TODO: obtain address dynamically
 
         session->SetState(NodeSession::kConnected);
-        if(!Node::HasPeer(msg->GetID())){
+        if(!Server::HasPeer(msg->GetID())){
             LOG(WARNING) << "couldn't find peer: " << msg->GetID() << ", connecting to peer " << paddr << "....";
-            if(!Node::ConnectTo(paddr)){
+            if(!Server::ConnectTo(paddr)){
                 LOG(WARNING) << "couldn't connect to peer: " << paddr;
             }
         }
@@ -159,7 +159,7 @@ namespace Token{
 
         if(!TransactionPool::HasTransaction(hash)){
             TransactionPool::PutTransaction(tx);
-            Node::Broadcast(InventoryMessage::NewInstance(tx));
+            Server::Broadcast(InventoryMessage::NewInstance(tx));
         }
     }
 

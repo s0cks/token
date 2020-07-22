@@ -1,8 +1,8 @@
-#include "node/session.h"
-#include "node/node.h"
-#include "node/task.h"
+#include "session.h"
+#include "server.h"
+#include "task.h"
 #include "block_miner.h"
-#include "alloc/scope.h"
+#include "scope.h"
 
 #include "proposal.h"
 
@@ -30,7 +30,7 @@ namespace Token{
     }
 
     void* PeerSession::PeerSessionThread(void* data){
-        if(!Node::IsRunning() && Node::IsStarting()) Node::WaitForRunning();
+        if(!Server::IsRunning() && Server::IsStarting()) Server::WaitForRunning();
         PeerSession* session = (PeerSession*)data;
         NodeAddress address = session->GetAddress();
         LOG(INFO) << "connecting to peer " << address << "....";
@@ -53,7 +53,7 @@ namespace Token{
         uv_run(loop, UV_RUN_DEFAULT);
     cleanup:
         LOG(INFO) << "disconnected from peer: " << address;
-        Node::UnregisterPeer(session->GetID());
+        Server::UnregisterPeer(session->GetID());
         uv_loop_close(loop);
         pthread_exit(0);
     }
@@ -67,7 +67,7 @@ namespace Token{
         }
 
         LOG(INFO) << "connected to peer: " << session->GetAddress();
-        session->Send(VersionMessage::NewInstance(Node::GetInfo()));
+        session->Send(VersionMessage::NewInstance(Server::GetInfo()));
         if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
             LOG(WARNING) << "client read error: " << uv_strerror(status);
             session->Shutdown();
@@ -146,7 +146,7 @@ namespace Token{
         Scope scope;
         std::vector<Message*> response;
 
-        VerackMessage* verack = VerackMessage::NewInstance(Node::GetInfo()); //TODO: fixme
+        VerackMessage* verack = VerackMessage::NewInstance(Server::GetInfo()); //TODO: fixme
         scope.Retain(dynamic_cast<Object*>(verack));
         response.push_back(dynamic_cast<Message*>(verack));
 
@@ -169,7 +169,7 @@ namespace Token{
         // - register peer
 
         LOG(INFO) << "registering peer: " << msg->GetID();
-        Node::RegisterPeer(msg->GetID(), session);
+        Server::RegisterPeer(msg->GetID(), session);
     }
 
     void PeerSession::HandlePrepareMessage(HandleMessageTask* task){}
@@ -304,7 +304,7 @@ namespace Token{
 
         LOG(INFO) << "received inventory of " << items.size() << " items, downloading...";
         if(!items.empty()) session->Send(GetDataMessage::NewInstance(items));
-        if(Node::IsSynchronizing()) SCHEDULE(session->GetLoop(), SynchronizeBlocks, session, items);
+        if(Server::IsSynchronizing()) SCHEDULE(session->GetLoop(), SynchronizeBlocks, session, items);
     }
 
     void PeerSession::HandleTestMessage(HandleMessageTask* task){

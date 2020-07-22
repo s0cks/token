@@ -1,4 +1,4 @@
-#include "node/message.h"
+#include "message.h"
 #include "proposal.h"
 
 namespace Token{

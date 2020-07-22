@@ -1,5 +1,5 @@
-#ifndef TOKEN_NODE_H
-#define TOKEN_NODE_H
+#ifndef TOKEN_SERVER_H
+#define TOKEN_SERVER_H
 
 #include "node_info.h"
 #include "object.h"
@@ -8,7 +8,7 @@ namespace Token{
     class Message;
     class PeerSession;
     class HandleMessageTask;
-    class Node{
+    class Server{
     public:
         enum State{
             kStarting,
@@ -66,7 +66,7 @@ namespace Token{
 
         friend class BlockMiner;
     public:
-        ~Node(){}
+        ~Server(){}
 
         static inline bool
         ConnectTo(const std::string& address, uint32_t port){
@@ -131,4 +131,4 @@ namespace Token{
     };
 }
 
-#endif //TOKEN_NODE_H
+#endif //TOKEN_SERVER_H

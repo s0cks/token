@@ -1,5 +1,5 @@
 #include "token.h"
-#include "node/node.h"
+#include "server.h"
 
 namespace Token{
     void SignalHandlers::HandleInterrupt(int signum){
@@ -9,7 +9,7 @@ namespace Token{
 #ifdef TOKEN_DEBUG
         LOG(INFO) << "shutting down the server thread...";
 #endif//TOKEN_DEBUG
-        Node::Shutdown();
+        Server::Shutdown();
 
         // 2. Shutdown Block Miner
 #ifdef TOKEN_DEBUG

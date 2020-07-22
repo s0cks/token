@@ -1,7 +1,7 @@
-#include "alloc/scope.h"
-#include "node/node.h"
-#include "node/task.h"
-#include "node/client.h"
+#include "scope.h"
+#include "server.h"
+#include "task.h"
+#include "client.h"
 
 namespace Token{
     void NodeClient::OnSignal(uv_signal_t* handle, int signum){
@@ -136,7 +136,7 @@ namespace Token{
     void NodeClient::HandleVersionMessage(HandleMessageTask* task){
         NodeClient* client = (NodeClient*)task->GetSession();
         VersionMessage* msg = (VersionMessage*)task->GetMessage();
-        client->Send(VerackMessage::NewInstance(Node::GetInfo())); //TODO: fixme
+        client->Send(VerackMessage::NewInstance(Server::GetInfo())); //TODO: fixme
     }
 
     void NodeClient::HandleVerackMessage(HandleMessageTask* task){

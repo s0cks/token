@@ -39,7 +39,7 @@ namespace Token{
         static const uint32_t kNumberOfTransactionsPerBlock = 3;
 
         friend class BlockChain;
-        friend class Node;
+        friend class Server;
         friend class PeerSession;
     private:
         BlockMiner() = delete;
@@ -51,7 +51,7 @@ namespace Token{
         static void* MinerThread(void* data);
 
         static inline Proposal*
-        CreateNewProposal(Block* block, NodeInfo info=Node::GetInfo()){
+        CreateNewProposal(Block* block, NodeInfo info=Server::GetInfo()){
             Proposal* proposal = Proposal::NewInstance(block, info);
             SetProposal(proposal);
             return proposal;

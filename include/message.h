@@ -4,7 +4,7 @@
 #include "token.h"
 #include "common.h"
 #include "node_info.h"
-#include "node.h"
+#include "server.h"
 #include "block_chain.h"
 #include "transaction_pool.h"
 
@@ -288,7 +288,7 @@ namespace Token{
 
         DECLARE_MESSAGE(Prepare);
 
-        static Handle<PrepareMessage> NewInstance(Proposal* proposal, const NodeInfo& info=Node::GetInfo()){
+        static Handle<PrepareMessage> NewInstance(Proposal* proposal, const NodeInfo& info=Server::GetInfo()){
             return new PrepareMessage(info, proposal);
         }
 
@@ -308,7 +308,7 @@ namespace Token{
 
         DECLARE_MESSAGE(Promise);
 
-        static Handle<PromiseMessage> NewInstance(Proposal* proposal, const NodeInfo& info=Node::GetInfo()){
+        static Handle<PromiseMessage> NewInstance(Proposal* proposal, const NodeInfo& info=Server::GetInfo()){
             return new PromiseMessage(info, proposal);
         }
 
@@ -328,7 +328,7 @@ namespace Token{
 
         DECLARE_MESSAGE(Commit);
 
-        static Handle<CommitMessage> NewInstance(Proposal* proposal, const NodeInfo& info=Node::GetInfo()){
+        static Handle<CommitMessage> NewInstance(Proposal* proposal, const NodeInfo& info=Server::GetInfo()){
             return new CommitMessage(info, proposal);
         }
 
@@ -348,7 +348,7 @@ namespace Token{
 
         DECLARE_MESSAGE(Accepted);
 
-        static Handle<AcceptedMessage> NewInstance(Proposal* proposal, const NodeInfo& info=Node::GetInfo()){
+        static Handle<AcceptedMessage> NewInstance(Proposal* proposal, const NodeInfo& info=Server::GetInfo()){
             return new AcceptedMessage(info, proposal);
         }
 
@@ -368,7 +368,7 @@ namespace Token{
 
         DECLARE_MESSAGE(Rejected);
 
-        static Handle<RejectedMessage> NewInstance(Proposal* proposal, const NodeInfo& info=Node::GetInfo()){
+        static Handle<RejectedMessage> NewInstance(Proposal* proposal, const NodeInfo& info=Server::GetInfo()){
             return new RejectedMessage(info, proposal);
         }
 

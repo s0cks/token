@@ -1,5 +1,5 @@
-#include "node/session.h"
-#include "alloc/scope.h"
+#include "session.h"
+#include "scope.h"
 
 namespace Token{
 #define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)

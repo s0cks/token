@@ -115,7 +115,7 @@ message("Compiling Token w/ the following libraries: ${TOKEN_LIBRARIES}")
 add_library("token-ledger" SHARED ${TOKEN_HEADERS} ${TOKEN_SOURCES} ${TOKEN_PROTO_HEADERS} ${TOKEN_PROTO_SOURCES})
 target_link_libraries("${PROJECT_NAME}-ledger" ${TOKEN_LIBRARIES})
 
-# Token Node Executable
+# Token Server Executable
 add_executable("token-node" main.cc ${TOKEN_HEADERS} ${TOKEN_SOURCES} ${TOKEN_PROTO_HEADERS} ${TOKEN_PROTO_SOURCES})
 target_link_libraries("token-node" ${TOKEN_LIBRARIES})
 

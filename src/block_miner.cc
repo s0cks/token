@@ -2,13 +2,13 @@
 #include <algorithm>
 #include <mutex>
 #include <condition_variable>
-#include "alloc/scope.h"
+#include "scope.h"
 #include "block_miner.h"
 #include "block_chain.h"
 #include "block_validator.h"
 #include "block_handler.h"
 #include "proposal.h"
-#include "node/message.h"
+#include "message.h"
 
 namespace Token{
     static pthread_t thread_;
@@ -163,13 +163,13 @@ namespace Token{
 
             BlockPool::PutBlock(block);
             if(!HasProposal()){
-                LOG(INFO) << Node::GetInfo().GetNodeID() << " creating proposal for: " << block->GetHeader();
+                LOG(INFO) << Server::GetInfo().GetNodeID() << " creating proposal for: " << block->GetHeader();
 
                 // 4. Create proposal
 #ifdef TOKEN_DEBUG
                 LOG(INFO) << "entering proposal phase";
 #endif//TOKEN_DEBUG
-                Proposal* proposal = scope.Retain(Proposal::NewInstance(block, Node::GetInfo()));
+                Proposal* proposal = scope.Retain(Proposal::NewInstance(block, Server::GetInfo()));
                 SetProposal(proposal);
 
                 // 5. Submit proposal
@@ -178,7 +178,7 @@ namespace Token{
 #endif//TOKEN_DEBUG
                 proposal->SetPhase(Proposal::kVotingPhase);
                 Handle<PrepareMessage> prepare_msg = PrepareMessage::NewInstance(proposal);
-                Node::Broadcast(prepare_msg);
+                Server::Broadcast(prepare_msg);
                 proposal->WaitForRequiredVotes();
 
                 // 6. Commit Proposal
@@ -187,7 +187,7 @@ namespace Token{
 #endif//TOKEN_DEBUG
                 proposal->SetPhase(Proposal::kCommitPhase);
                 Handle<CommitMessage> commit_msg = CommitMessage::NewInstance(proposal);
-                Node::Broadcast(commit_msg);
+                Server::Broadcast(commit_msg);
                 proposal->WaitForRequiredCommits();
 
                 // 7. Finish Mining Block

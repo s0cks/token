@@ -2,7 +2,7 @@
 #define TOKEN_TASK_H
 
 #include "common.h"
-#include "node/session.h"
+#include "session.h"
 
 namespace Token{
 #define FOR_EACH_TASK(V) \

@@ -25,7 +25,7 @@ namespace Token{
         static const uint32_t kNumberOfGenesisOutputs = 1000;
     private:
         friend class BlockMiner;
-        friend class Node;
+        friend class Server;
 
         BlockChain() = delete;
 

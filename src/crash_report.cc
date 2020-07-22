@@ -8,7 +8,7 @@
 #include "token.h"
 #include "crash_report.h"
 #include "block_chain.h"
-#include "node/node.h"
+#include "server.h"
 
 namespace Token{
     class CrashReportSection{
@@ -107,7 +107,7 @@ namespace Token{
         static inline std::string
         GetPeerCount(){
             std::stringstream ss;
-            ss << Node::GetNumberOfPeers();
+            ss << Server::GetNumberOfPeers();
             return ss.str();
         }
 
@@ -124,12 +124,12 @@ namespace Token{
 
         static inline std::string
         GetNodeThreadStatus(){
-            switch(Node::GetState()){
-                case Node::kStarting: return "Starting";
-                case Node::kSynchronizing: return "Synchronizing";
-                case Node::kRunning: return "Running";
-                case Node::kStopping: return "Stopping";
-                case Node::kStopped: return "Stopped";
+            switch(Server::GetState()){
+                case Server::kStarting: return "Starting";
+                case Server::kSynchronizing: return "Synchronizing";
+                case Server::kRunning: return "Running";
+                case Server::kStopping: return "Stopping";
+                case Server::kStopped: return "Stopped";
                 default: return "Unknown";
             }
         }
@@ -169,14 +169,14 @@ namespace Token{
                 WriteLine("Threads:");
                 Indent();
                 WriteLine("Block Miner: " + GetBlockMinerThreadStatus());
-                WriteLine("Node: " + GetNodeThreadStatus());
+                WriteLine("Server: " + GetNodeThreadStatus());
                 WriteLine("Peers:");
 
                 {
                     // Write Peer Statuses
                     Indent();
                     std::vector<PeerInfo> peers;
-                    Node::GetPeers(peers);
+                    Server::GetPeers(peers);
                     for(auto& it : peers){
                         WriteLine(GetPeerThreadStatus(it));
                     }

@@ -1,4 +1,4 @@
-#include "node/command.h"
+#include "command.h"
 
 namespace Token{
     Command* Command::ParseCommand(const std::string& line){
