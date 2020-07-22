@@ -8,6 +8,9 @@
 #include "proposal.h"
 
 namespace Token{
+    //TODO:
+    // - refactor mining logic
+    // - add timeout to proposal logic
     class BlockMiner{
     public:
         enum State{
