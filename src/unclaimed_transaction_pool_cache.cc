@@ -16,21 +16,17 @@ namespace Token{
     Handle<UnclaimedTransaction> UnclaimedTransactionPoolCache::GetTransaction(const uint256_t &hash) {
         std::deque<uint256_t>::iterator iter = queue_.begin();
         while ((*iter) != hash) iter++;
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << "found: " << (*iter);
-#endif//TOKEN_DEBUG
         queue_.erase(iter);
         queue_.push_front(hash);
         return map_[hash];
     }
 
     void UnclaimedTransactionPoolCache::Evict(const uint256_t& hash){
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << "evicting: " << hash;
-#endif//TOKEN_DEBUG
-        Handle<UnclaimedTransaction> evicted_tx = map_[hash];
         map_.erase(hash);
-        UnclaimedTransactionPoolIndex::PutData(evicted_tx);
+        if(!UnclaimedTransactionPoolIndex::HasData(hash)){
+            Handle<UnclaimedTransaction> tx = map_[hash];
+            UnclaimedTransactionPoolIndex::PutData(tx);
+        }
     }
 
     void UnclaimedTransactionPoolCache::Promote(const Token::uint256_t& hash){

@@ -51,17 +51,9 @@ namespace Token{
         LOCK_GUARD;
         if(!UnclaimedTransactionPoolCache::HasTransaction(hash)){
             if(!UnclaimedTransactionPoolIndex::HasData(hash)) return Handle<UnclaimedTransaction>(); //null
-
-#ifdef TOKEN_DEBUG
-            LOG(INFO) << "loading transaction: " << hash;
-#endif//TOKEN_DEBUG
-
+            if(UnclaimedTransactionPoolCache::IsFull()) UnclaimedTransactionPoolCache::EvictLastUsed();
             Handle<UnclaimedTransaction> tx = UnclaimedTransactionPoolIndex::GetData(hash);
-            if(!UnclaimedTransactionPoolCache::HasTransaction(hash)){
-                if(UnclaimedTransactionPoolCache::IsFull()) UnclaimedTransactionPoolCache::EvictLastUsed();
-            } else{
-                UnclaimedTransactionPoolCache::Promote(hash);
-            }
+            UnclaimedTransactionPoolCache::PutTransaction(hash, tx);
             return tx;
         }
         return UnclaimedTransactionPoolCache::GetTransaction(hash);

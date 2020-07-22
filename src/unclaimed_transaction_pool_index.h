@@ -11,9 +11,9 @@ namespace Token{
         ~UnclaimedTransactionPoolIndex() = delete;
 
         static void Initialize();
-        static void PutData(const Handle<UnclaimedTransaction>& utxo);
         static Handle<UnclaimedTransaction> GetData(const uint256_t& hash);
         static size_t GetNumberOfUnclaimedTransactions();
+        static bool PutData(const Handle<UnclaimedTransaction>& utxo);
         static bool HasData(const uint256_t& hash);
 
         static inline bool HasData(){

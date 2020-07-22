@@ -66,29 +66,26 @@ namespace Token{
         }
     }
 
-    void UnclaimedTransactionPoolIndex::PutData(const Handle<UnclaimedTransaction>& tx){
+    bool UnclaimedTransactionPoolIndex::PutData(const Handle<UnclaimedTransaction>& tx){
         leveldb::WriteOptions options;
         options.sync = true;
         std::string key = KEY(tx->GetSHA256Hash());
         std::string filename = GetNewDataFilename(tx->GetSHA256Hash());
 
         if(FileExists(filename)){
-            std::stringstream ss;
-            ss << "Couldn't overwrite existing data: " << filename;
-            CrashReport::GenerateAndExit(ss);
+            LOG(WARNING) << "couldn't overwrite existing unclaimed transaction data: " << filename;
+            return false;
         }
 
         std::fstream fd(filename, std::ios::out|std::ios::binary);
         if(!tx->WriteToFile(fd)){
-            std::stringstream ss;
-            ss << "Couldn't write transaction " << tx->GetSHA256Hash() << " to file: " << filename;
-            CrashReport::GenerateAndExit(ss);
+            LOG(WARNING) << "couldn't write unclaimed transaction " << tx->GetSHA256Hash() << " to file: " << filename;
+            return false;
         }
 
         if(!GetIndex()->Put(options, key, filename).ok()){
-            std::stringstream ss;
-            ss << "Couldn't index transaction: " << tx->GetSHA256Hash();
-            CrashReport::GenerateAndExit(ss);
+            LOG(WARNING) << "couldn't index unclaimed transaction: " << tx->GetSHA256Hash();
+            return false;
         }
     }
 
