@@ -171,6 +171,9 @@ namespace Token{
         virtual bool VisitEnd(){ return true; }
     };
 
+    //TODO:
+    // - extract class to own file
+    // - refactor to use LRU model
     class BlockPoolVisitor;
     class BlockPool{
     public:
