@@ -34,7 +34,7 @@ namespace Token{
         return new Transaction(timestamp, index, inputs, outputs);
     }
 
-    Handle<Transaction> Transaction::NewInstance(const Transaction::RawType& raw){
+    Handle<Transaction> Transaction::NewInstance(const RawTransaction& raw){
         Transaction::InputList inputs;
         for(auto& it : raw.inputs()){
             inputs.push_back(Input(it));
@@ -49,7 +49,7 @@ namespace Token{
     }
 
     Handle<Transaction> Transaction::NewInstance(std::fstream& fd){
-        Transaction::RawType raw;
+        RawTransaction raw;
         if(!raw.ParseFromIstream(&fd)) return nullptr;
         return NewInstance(raw);
     }
@@ -60,18 +60,18 @@ namespace Token{
         return stream.str();
     }
 
-    bool Transaction::WriteToMessage(Transaction::RawType& raw) const{
+    bool Transaction::WriteToMessage(RawTransaction& raw) const{
         raw.set_timestamp(timestamp_);
         raw.set_index(index_);
         raw.set_signature(signature_);
         for(auto& it : inputs_){
-            Input::MessageType* raw_in = raw.add_inputs();
+            RawInput* raw_in = raw.add_inputs();
             raw_in->set_index(it.GetOutputIndex());
             raw_in->set_previous_hash(HexString(it.GetTransactionHash()));
             raw_in->set_user(it.GetUser());
         }
         for(auto& it : outputs_){
-            Output::MessageType* raw_out = raw.add_outputs();
+            RawOutput* raw_out = raw.add_outputs();
             raw_out->set_user(it.GetUser());
             raw_out->set_token(it.GetToken());
         }

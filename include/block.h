@@ -86,10 +86,9 @@ namespace Token{
         }
     };
 
+    typedef Proto::BlockChain::Block RawBlock;
     class BlockVisitor;
-    class Block : public BinaryObject<Proto::BlockChain::Block>{
-    public:
-        typedef Proto::BlockChain::Block RawType;
+    class Block : public BinaryObject<RawBlock>{
     private:
         uint32_t timestamp_;
         uint32_t height_;
@@ -146,13 +145,13 @@ namespace Token{
         bool Finalize();
         bool Contains(const uint256_t& hash) const;
         bool Accept(BlockVisitor* vis) const;
-        bool WriteToMessage(RawType& raw) const;
+        bool WriteToMessage(RawBlock& raw) const;
         std::string ToString() const;
 
         static Handle<Block> Genesis(); // genesis
         static Handle<Block> NewInstance(uint32_t height, const uint256_t& phash, const Handle<Array<Transaction>>& txs, uint32_t timestamp=GetCurrentTime());
         static Handle<Block> NewInstance(const BlockHeader& parent, const Handle<Array<Transaction>>& txs, uint32_t timestamp=GetCurrentTime());
-        static Handle<Block> NewInstance(RawType raw);
+        static Handle<Block> NewInstance(const RawBlock& raw);
         static Handle<Block> NewInstance(std::fstream& fd);
 
         static inline Handle<Block> NewInstance(const std::string& filename){

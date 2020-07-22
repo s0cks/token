@@ -7,15 +7,15 @@
 #include "unclaimed_transaction.h"
 
 namespace Token{
+    typedef Proto::BlockChain::Input RawInput;
     class Input{
-    public:
-        typedef Proto::BlockChain::Input MessageType;
+        //TODO:
+        // - offload to heap
+        friend class Transaction;
     private:
         uint256_t hash_;
         uint32_t index_;
         std::string user_;
-
-        friend class Transaction;
     public:
         Input():
             hash_(),
@@ -25,7 +25,7 @@ namespace Token{
             hash_(tx_hash),
             user_(user),
             index_(index){}
-        Input(const MessageType& raw):
+        Input(const RawInput& raw):
             hash_(HashFromHexString(raw.previous_hash())),
             index_(raw.index()),
             user_(raw.user()){}
@@ -78,14 +78,12 @@ namespace Token{
         }
     };
 
+    typedef Proto::BlockChain::Output RawOutput;
     class Output{
-    public:
-        typedef Proto::BlockChain::Output MessageType;
+        friend class Transaction;
     private:
         std::string user_;
         std::string token_;
-
-        friend class Transaction;
     public:
         Output():
             user_(),
@@ -93,7 +91,7 @@ namespace Token{
         Output(const std::string& user, const std::string& token):
             user_(user),
             token_(token){}
-        Output(const MessageType& raw):
+        Output(const RawOutput& raw):
             user_(raw.user()),
             token_(raw.token()){}
         ~Output(){}
@@ -124,10 +122,13 @@ namespace Token{
         }
     };
 
+    typedef Proto::BlockChain::Transaction RawTransaction;
     class TransactionVisitor;
-    class Transaction : public BinaryObject<Proto::BlockChain::Transaction>{
+    class Transaction : public BinaryObject<RawTransaction>{
+        friend class Block;
+        friend class TransactionMessage;
+        friend class TransactionVerifier;
     public:
-        typedef Proto::BlockChain::Transaction RawType;
         typedef std::vector<Input> InputList;
         typedef std::vector<Output> OutputList;
     private:
@@ -143,10 +144,6 @@ namespace Token{
             inputs_(inputs),
             outputs_(outputs),
             signature_(){}
-
-        friend class Block;
-        friend class TransactionMessage;
-        friend class TransactionVerifier;
     public:
         ~Transaction(){}
 
@@ -208,11 +205,11 @@ namespace Token{
 
         bool Sign();
         bool Accept(TransactionVisitor* visitor);
-        bool WriteToMessage(RawType& raw) const;
+        bool WriteToMessage(RawTransaction& raw) const;
         std::string ToString() const;
 
         static Handle<Transaction> NewInstance(uint32_t index, InputList& inputs, OutputList& outputs, uint32_t timestamp=GetCurrentTime());
-        static Handle<Transaction> NewInstance(const RawType& raw);
+        static Handle<Transaction> NewInstance(const RawTransaction& raw);
         static Handle<Transaction> NewInstance(std::fstream& fd);
 
         static inline Handle<Transaction> NewInstance(const std::string& filename){

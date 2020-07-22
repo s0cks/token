@@ -40,7 +40,7 @@ namespace Token{
         return NewInstance(parent.GetHeight() + 1, parent.GetHash(), txs, timestamp);
     }
 
-    Handle<Block> Block::NewInstance(RawType raw){
+    Handle<Block> Block::NewInstance(const RawBlock& raw){
         size_t num_txs = raw.transactions_size();
         Handle<Array<Transaction>> txs = Array<Transaction>::New(num_txs);
         for(size_t idx = 0; idx < num_txs; idx++) txs->Put(idx, Transaction::NewInstance(raw.transactions(idx)));
@@ -48,7 +48,7 @@ namespace Token{
     }
 
     Handle<Block> Block::NewInstance(std::fstream& fd){
-        Block::RawType raw;
+        RawBlock raw;
         if(!raw.ParseFromIstream(&fd)) return nullptr;
         return NewInstance(raw);
     }
@@ -59,13 +59,13 @@ namespace Token{
         return stream.str();
     }
 
-    bool Block::WriteToMessage(Block::RawType& raw) const{
+    bool Block::WriteToMessage(RawBlock& raw) const{
         raw.set_timestamp(timestamp_);
         raw.set_height(height_);
         raw.set_previous_hash(HexString(previous_hash_));
         raw.set_merkle_root(HexString(GetMerkleRoot()));
         for(uint32_t idx = 0; idx < GetNumberOfTransactions(); idx++){
-            Transaction::RawType* raw_tx = raw.add_transactions();
+            RawTransaction* raw_tx = raw.add_transactions();
             Handle<Transaction> tx = GetTransaction(idx);
             tx->WriteToMessage((*raw_tx));
         }
