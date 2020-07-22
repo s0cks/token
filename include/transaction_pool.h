@@ -11,6 +11,8 @@ namespace Token{
             kInitializing,
             kInitialized,
         };
+
+        static const size_t kMaxPoolSize = 128;
     private:
         TransactionPool() = delete;
 
@@ -21,11 +23,11 @@ namespace Token{
         static State GetState();
         static void Initialize();
         static void RemoveTransaction(const uint256_t& hash);
-        static void PutTransaction(Transaction* tx);
+        static void PutTransaction(const Handle<Transaction>& tx);
         static bool HasTransaction(const uint256_t& hash);
         static bool GetTransactions(std::vector<uint256_t>& txs);
         static Handle<Transaction> GetTransaction(const uint256_t& hash);
-        static uint32_t GetNumberOfTransactions();
+        static size_t GetNumberOfTransactions();
 
         static inline bool
         IsUninitialized(){
