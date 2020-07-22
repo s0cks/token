@@ -5,6 +5,7 @@
 #include "scope.h"
 #include "block_miner.h"
 #include "block_chain.h"
+#include "block_pool.h"
 #include "block_validator.h"
 #include "block_handler.h"
 #include "proposal.h"

@@ -10,6 +10,7 @@
 #include "block_miner.h"
 #include "block_node.h"
 #include "block_chain_index.h"
+#include "block_pool.h"
 #include "transaction_pool.h"
 #include "unclaimed_transaction_pool.h"
 

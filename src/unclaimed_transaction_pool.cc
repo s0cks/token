@@ -4,9 +4,6 @@
 #include "unclaimed_transaction_pool_cache.h"
 
 namespace Token{
-//######################################################################################################################
-//                                          Unclaimed Transaction Pool
-//######################################################################################################################
     static std::recursive_mutex mutex_;
     static UnclaimedTransactionPool::State state_ = UnclaimedTransactionPool::kUninitialized;
 

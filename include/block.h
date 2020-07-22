@@ -169,49 +169,6 @@ namespace Token{
         virtual bool Visit(Transaction* tx) = 0;
         virtual bool VisitEnd(){ return true; }
     };
-
-    //TODO:
-    // - extract class to own file
-    // - refactor to use LRU model
-    class BlockPoolVisitor;
-    class BlockPool{
-    public:
-        enum State{
-            kUninitialized,
-            kInitializing,
-            kInitialized,
-        };
-    private:
-        BlockPool() = delete;
-
-        static void SetState(State state);
-    public:
-        ~BlockPool() = delete;
-
-        static State GetState();
-        static void Initialize();
-        static void RemoveBlock(const uint256_t& hash);
-        static void PutBlock(Block* block);
-        static bool HasBlock(const uint256_t& hash);
-        static bool Accept(BlockPoolVisitor* vis);
-        static bool GetBlocks(std::vector<uint256_t>& blocks);
-        static Block* GetBlock(const uint256_t& hash);
-
-        static inline bool
-        IsUninitialized(){
-            return GetState() == kUninitialized;
-        }
-
-        static inline bool
-        IsInitializing(){
-            return GetState() == kInitializing;
-        }
-
-        static inline bool
-        IsInitialized(){
-            return GetState() == kInitialized;
-        }
-    };
 }
 
 #endif //TOKEN_BLOCK_H

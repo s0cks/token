@@ -3,8 +3,10 @@
 #include "task.h"
 #include "block_miner.h"
 #include "scope.h"
-
 #include "proposal.h"
+#include "block_pool.h"
+#include "transaction_pool.h"
+#include "unclaimed_transaction_pool.h"
 
 namespace Token{
 #define SCHEDULE(Loop, Name, ...)({ \
