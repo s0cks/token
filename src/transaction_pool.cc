@@ -71,7 +71,6 @@ namespace Token{
 
     void TransactionPool::PutTransaction(const Handle<Transaction>& tx){
         LOCK_GUARD;
-
         uint256_t hash = tx->GetSHA256Hash();
         if(!TransactionPoolCache::HasTransaction(hash)){
             if(TransactionPoolCache::IsFull()) {

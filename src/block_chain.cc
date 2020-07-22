@@ -1,9 +1,7 @@
-#include <pthread.h>
 #include <sstream>
 #include <glog/logging.h>
 
 #include "common.h"
-#include "token.h"
 #include "keychain.h"
 #include "crash_report.h"
 #include "configuration.h"
@@ -13,6 +11,7 @@
 #include "block_node.h"
 #include "block_chain_index.h"
 #include "transaction_pool.h"
+#include "unclaimed_transaction_pool.h"
 
 namespace Token{
     static std::recursive_mutex mutex_;

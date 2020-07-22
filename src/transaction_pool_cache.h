@@ -1,9 +1,8 @@
 #ifndef TOKEN_TRANSACTION_POOL_CACHE_H
 #define TOKEN_TRANSACTION_POOL_CACHE_H
 
-#include <transaction_pool.h>
 #include "uint256_t.h"
-#include "transaction.h"
+#include "transaction_pool.h"
 
 namespace Token{
     class TransactionPoolCache{
