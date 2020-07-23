@@ -154,7 +154,7 @@ namespace Token{
 
         if(!TransactionPool::HasTransaction(hash)){
             TransactionPool::PutTransaction(tx);
-            Server::Broadcast(InventoryMessage::NewInstance(tx));
+            Server::Broadcast(InventoryMessage::NewInstance(tx).CastTo<Message>());
         }
     }
 

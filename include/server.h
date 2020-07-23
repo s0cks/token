@@ -56,8 +56,6 @@ namespace Token{
         static void HandleTerminateCallback(uv_async_t* handle);
         static void OnNewConnection(uv_stream_t* stream, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
-
-        static bool BroadcastMessage(const Handle<Message>& msg);
     public:
         ~Server() = delete;
 
@@ -69,18 +67,12 @@ namespace Token{
         static bool HasPeer(const NodeAddress& address);
         static bool HasPeer(const std::string& id);
         static bool ConnectTo(const NodeAddress& address);
+        static bool Broadcast(const Handle<Message>& msg);
         static void WaitForState(State state);
 
         static inline bool
         ConnectTo(const std::string& address, uint32_t port){
             return ConnectTo(NodeAddress(address, port));
-        }
-
-        template<typename T>
-        static inline void
-        Broadcast(const Handle<T>& msg){
-            Handle<Message> m = msg.template CastTo<Message>();
-            BroadcastMessage(m);
         }
 
         static inline bool

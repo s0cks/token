@@ -179,7 +179,7 @@ namespace Token{
 #endif//TOKEN_DEBUG
                 proposal->SetPhase(Proposal::kVotingPhase);
                 Handle<PrepareMessage> prepare_msg = PrepareMessage::NewInstance(proposal);
-                Server::Broadcast(prepare_msg);
+                Server::Broadcast(prepare_msg.CastTo<Message>());
                 proposal->WaitForRequiredVotes();
 
                 // 6. Commit Proposal
@@ -188,7 +188,7 @@ namespace Token{
 #endif//TOKEN_DEBUG
                 proposal->SetPhase(Proposal::kCommitPhase);
                 Handle<CommitMessage> commit_msg = CommitMessage::NewInstance(proposal);
-                Server::Broadcast(commit_msg);
+                Server::Broadcast(commit_msg.CastTo<Message>());
                 proposal->WaitForRequiredCommits();
 
                 // 7. Finish Mining Block

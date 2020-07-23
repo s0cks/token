@@ -262,9 +262,9 @@ namespace Token{
         }
     }
 
-    bool Server::BroadcastMessage(const Handle<Message>& msg){
+    bool Server::Broadcast(const Handle<Message>& msg){
         LOCK_GUARD;
-        //for(auto& it : peers_) it.second->Send(msg);
+        for(auto& it : peers_) it.second->Send(msg);
         return true;
     }
 
