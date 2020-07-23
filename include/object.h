@@ -23,8 +23,10 @@ namespace Token{
 
 #define FOR_EACH_OBJECT_TYPE(V) \
     V(Transaction) \
-    V(Block) \
-    V(Array)
+    V(Block)
+
+    template<typename T>
+    class Array;
 
     class Instance;
 #define FORWARD_DECLARE_OBJECT_TYPE(Name) class Name;
@@ -36,6 +38,7 @@ namespace Token{
 #define DECLARE_OBJECT_TYPE(Name) k##Name##Type,
     FOR_EACH_OBJECT_TYPE(DECLARE_OBJECT_TYPE)
 #undef DECLARE_OBJECT_TYPE
+        kArrayType,
     };
 
     typedef uint64_t ObjectHeader;
