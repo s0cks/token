@@ -19,7 +19,7 @@ namespace Token{
         static void* ServerThread(void* data);
     public:
         ~BlockChainHttpServer(){
-            //TODO: Shutdown?
+            //TODO: Disconnect?
         }
 
         static bool StartServer();

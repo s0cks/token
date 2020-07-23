@@ -51,8 +51,8 @@ namespace Token{
         static void* MinerThread(void* data);
 
         static inline Proposal*
-        CreateNewProposal(Block* block, NodeInfo info=Server::GetInfo()){
-            Proposal* proposal = Proposal::NewInstance(block, info);
+        CreateNewProposal(Block* block, const std::string& node_id=Server::GetID()){
+            Proposal* proposal = Proposal::NewInstance(block, node_id);
             SetProposal(proposal);
             return proposal;
         }

@@ -37,15 +37,15 @@ namespace Token{
         std::recursive_mutex mutex_;
         std::condition_variable_any cond_;
         Phase phase_;
-        NodeInfo proposer_;
+        std::string proposer_;
         uint32_t height_;
         uint256_t hash_;
-        std::set<NodeInfo> votes_;
-        std::set<NodeInfo> commits_;
+        std::set<std::string> votes_;
+        std::set<std::string> commits_;
 
         void WaitForPhase(Phase phase);
 
-        Proposal(const NodeInfo& proposer, const uint256_t& hash, uint32_t height):
+        Proposal(const std::string& proposer, const uint256_t& hash, uint32_t height):
             phase_(kProposalPhase),
             proposer_(proposer),
             height_(height),
@@ -55,7 +55,7 @@ namespace Token{
     public:
         ~Proposal() = default;
 
-        NodeInfo GetProposer() const{
+        std::string GetProposer() const{
             return proposer_;
         }
 
@@ -68,8 +68,8 @@ namespace Token{
         }
 
         void SetPhase(Phase phase);
-        void Vote(const NodeInfo& info);
-        void Commit(const NodeInfo& info);
+        void Vote(const std::string& node_id);
+        void Commit(const std::string& node_id);
         void WaitForRequiredVotes(uint32_t required=GetRequiredNumberOfVotes());
         void WaitForRequiredCommits(uint32_t required=GetRequiredNumberOfCommits());
         uint32_t GetNumberOfVotes();
@@ -102,13 +102,13 @@ namespace Token{
             return GetPhase() == kQuorumPhase;
         }
 
-        static Handle<Proposal> NewInstance(uint32_t height, const uint256_t& hash, const NodeInfo& proposer);
+        static Handle<Proposal> NewInstance(uint32_t height, const uint256_t& hash, const std::string& proposer);
 
-        static Handle<Proposal> NewInstance(Block* block, const NodeInfo& proposer){
+        static Handle<Proposal> NewInstance(Block* block, const std::string& proposer){
             return NewInstance(block->GetHeight(), block->GetSHA256Hash(), proposer);
         }
 
-        static Handle<Proposal> NewInstance(const BlockHeader& block, const NodeInfo& proposer){
+        static Handle<Proposal> NewInstance(const BlockHeader& block, const std::string& proposer){
             return NewInstance(block.GetHeight(), block.GetHash(), proposer);
         }
     };

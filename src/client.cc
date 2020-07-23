@@ -11,7 +11,7 @@ namespace Token{
     void NodeClient::Connect(const NodeAddress& addr){
         LOG(INFO) << "connecting to server: " << addr;
         SetState(State::kConnecting);
-        SetPeer(addr);
+        //SetPeer(addr);
 
         uv_loop_init(loop_);
         uv_signal_init(loop_, &sigterm_);
@@ -68,10 +68,9 @@ namespace Token{
             return; //TODO: terminate connection
         }
 
-        NodeInfo info(GenerateNonce(), NodeAddress());
-        BlockHeader head;
-
-        client->Send(VersionMessage::NewInstance(info, GenerateNonce(), head));
+        //NodeInfo info(GenerateNonce(), NodeAddress());
+        //BlockHeader head;
+        //client->Send(VersionMessage::NewInstance(info, GenerateNonce(), head));
     }
 
     void NodeClient::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
@@ -129,7 +128,7 @@ namespace Token{
     void NodeClient::HandleVersionMessage(HandleMessageTask* task){
         NodeClient* client = (NodeClient*)task->GetSession();
         VersionMessage* msg = (VersionMessage*)task->GetMessage();
-        client->Send(VerackMessage::NewInstance(Server::GetInfo())); //TODO: fixme
+        //client->Send(VerackMessage::NewInstance(Server::GetInfo())); //TODO: fixme
     }
 
     void NodeClient::HandleVerackMessage(HandleMessageTask* task){
@@ -209,7 +208,7 @@ namespace Token{
     }
 
     void NodeClient::HandleStatusCommand(StatusCommand* cmd){
-        LOG(INFO) << "Peer: " << GetPeer();
+        //LOG(INFO) << "Peer: " << GetPeer();
         if(IsDisconnected()){
             LOG(INFO) << "Status: Disconnected.";
         } else if(IsConnecting()){

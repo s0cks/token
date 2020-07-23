@@ -164,13 +164,13 @@ namespace Token{
 
             BlockPool::PutBlock(block);
             if(!HasProposal()){
-                LOG(INFO) << Server::GetInfo().GetNodeID() << " creating proposal for: " << block->GetHeader();
+                LOG(INFO) << Server::GetID() << " creating proposal for: " << block->GetHeader();
 
                 // 4. Create proposal
 #ifdef TOKEN_DEBUG
                 LOG(INFO) << "entering proposal phase";
 #endif//TOKEN_DEBUG
-                Handle<Proposal> proposal = Proposal::NewInstance(block, Server::GetInfo());
+                Handle<Proposal> proposal = Proposal::NewInstance(block, Server::GetID());
                 SetProposal(proposal);
 
                 // 5. Submit proposal

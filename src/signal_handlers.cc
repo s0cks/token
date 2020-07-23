@@ -5,13 +5,13 @@ namespace Token{
     void SignalHandlers::HandleInterrupt(int signum){
         LOG(INFO) << "terminating...";
 
-        // 1. Shutdown Server
+        // 1. Disconnect Server
 #ifdef TOKEN_DEBUG
         LOG(INFO) << "shutting down the server thread...";
 #endif//TOKEN_DEBUG
         Server::Shutdown();
 
-        // 2. Shutdown Block Miner
+        // 2. Disconnect Block Miner
 #ifdef TOKEN_DEBUG
         LOG(INFO) << "shutting down the miner thread...";
 #endif//TOKEN_DEBUG

@@ -3,7 +3,6 @@
 
 #include "token.h"
 #include "common.h"
-#include "node_info.h"
 #include "server.h"
 #include "block_chain.h"
 #include "transaction_pool.h"
@@ -174,8 +173,8 @@ namespace Token{
         typedef Proto::BlockChainServer::Version RawType;
     private:
         VersionMessage(const RawType& raw): ProtobufMessage(raw){}
-        VersionMessage(const NodeInfo& info, uint32_t timestamp, const std::string& nonce, const BlockHeader& head): ProtobufMessage(){
-            (*raw_.mutable_info()) << info;
+        VersionMessage(const std::string node_id, uint32_t timestamp, const std::string& nonce, const BlockHeader& head): ProtobufMessage(){
+            raw_.set_node_id(node_id);
             raw_.set_version(Token::GetVersion());
             raw_.set_timestamp(timestamp);
             raw_.set_nonce(nonce);
@@ -197,8 +196,8 @@ namespace Token{
             return raw_.nonce();
         }
 
-        NodeInfo GetInfo() const{
-            return NodeInfo(raw_.info());
+        std::string GetNodeID() const{
+            return raw_.node_id();
         }
 
         uint32_t GetHeight() const{
@@ -211,8 +210,8 @@ namespace Token{
 
         DECLARE_MESSAGE(Version);
 
-        static Handle<VersionMessage> NewInstance(const NodeInfo& info, const std::string& nonce=GenerateNonce(), const BlockHeader& head=BlockChain::GetHead(), uint32_t timestamp=GetCurrentTime()){
-            return new VersionMessage(info, timestamp, nonce, head);
+        static Handle<VersionMessage> NewInstance(const std::string& node_id, const std::string& nonce=GenerateNonce(), const BlockHeader& head=BlockChain::GetHead(), uint32_t timestamp=GetCurrentTime()){
+            return new VersionMessage(node_id, timestamp, nonce, head);
         }
 
         static Handle<VersionMessage> NewInstance(const RawType& raw){
@@ -225,29 +224,28 @@ namespace Token{
         typedef Proto::BlockChainServer::Verack RawType;
     private:
         VerackMessage(const RawType& raw): ProtobufMessage(raw){}
-        VerackMessage(const NodeInfo& info, const std::string& nonce, uint32_t timestamp): ProtobufMessage(){
-            (*raw_.mutable_info()) << info;
+        VerackMessage(const std::string& node_id, const std::string& nonce, uint32_t timestamp): ProtobufMessage(){
+            raw_.set_node_id(node_id);
             raw_.set_version(Token::GetVersion());
             raw_.set_timestamp(timestamp);
             raw_.set_nonce(nonce);
         }
     public:
-        NodeInfo GetInfo() const{
-            return NodeInfo(raw_.info());
-        }
+
 
         std::string GetID() const{
-            return GetInfo().GetNodeID();
+            return raw_.node_id();
         }
 
         NodeAddress GetCallbackAddress() const{
-            return GetInfo().GetNodeAddress();
+            // TODO: return GetInfo().GetNodeAddress();
+            return NodeAddress();
         }
 
         DECLARE_MESSAGE(Verack);
 
-        static Handle<VerackMessage> NewInstance(const NodeInfo& info, const std::string& nonce=GenerateNonce(), uint32_t timestamp=GetCurrentTime()){
-            return new VerackMessage(info, nonce, timestamp);
+        static Handle<VerackMessage> NewInstance(const std::string& node_id, const std::string& nonce=GenerateNonce(), uint32_t timestamp=GetCurrentTime()){
+            return new VerackMessage(node_id, nonce, timestamp);
         }
 
         static Handle<VerackMessage> NewInstance(const RawType& raw){
@@ -259,7 +257,7 @@ namespace Token{
     class PaxosMessage : public ProtobufMessage<Proto::BlockChainServer::Proposal>{
     protected:
         PaxosMessage(const Proto::BlockChainServer::Proposal& raw): ProtobufMessage(raw){}
-        PaxosMessage(const NodeInfo& node, Proposal* proposal);
+        PaxosMessage(const std::string& node, Proposal* proposal);
     public:
         virtual ~PaxosMessage() = default;
 
@@ -268,8 +266,8 @@ namespace Token{
         //TODO:
         // - NodeInfo GetProposer()
         // - NodeInfo GetSubmitter()
-        NodeInfo GetProposer() const{
-            return NodeInfo(raw_.info());
+        std::string GetProposer() const{
+            return raw_.node_id();
         }
 
         uint256_t GetHash() const{
@@ -282,14 +280,14 @@ namespace Token{
         typedef Proto::BlockChainServer::Proposal RawType;
     private:
         PrepareMessage(const RawType& raw): PaxosMessage(raw){}
-        PrepareMessage(const NodeInfo& info, Proposal* proposal): PaxosMessage(info, proposal){}
+        PrepareMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(node_id, proposal){}
     public:
         ~PrepareMessage(){}
 
         DECLARE_MESSAGE(Prepare);
 
-        static Handle<PrepareMessage> NewInstance(Proposal* proposal, const NodeInfo& info=Server::GetInfo()){
-            return new PrepareMessage(info, proposal);
+        static Handle<PrepareMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
+            return new PrepareMessage(node_id, proposal);
         }
 
         static Handle<PrepareMessage> NewInstance(const RawType& raw){
@@ -302,14 +300,14 @@ namespace Token{
         typedef Proto::BlockChainServer::Proposal RawType;
     private:
         PromiseMessage(const RawType& raw): PaxosMessage(raw){}
-        PromiseMessage(const NodeInfo& info, Proposal* proposal): PaxosMessage(info, proposal){}
+        PromiseMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(node_id, proposal){}
     public:
         ~PromiseMessage(){}
 
         DECLARE_MESSAGE(Promise);
 
-        static Handle<PromiseMessage> NewInstance(Proposal* proposal, const NodeInfo& info=Server::GetInfo()){
-            return new PromiseMessage(info, proposal);
+        static Handle<PromiseMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
+            return new PromiseMessage(node_id, proposal);
         }
 
         static Handle<PromiseMessage> NewInstance(const RawType& raw){
@@ -322,14 +320,14 @@ namespace Token{
         typedef Proto::BlockChainServer::Proposal RawType;
     private:
         CommitMessage(const RawType& raw): PaxosMessage(raw){}
-        CommitMessage(const NodeInfo& info, Proposal* proposal): PaxosMessage(info, proposal){}
+        CommitMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(node_id, proposal){}
     public:
         ~CommitMessage(){}
 
         DECLARE_MESSAGE(Commit);
 
-        static Handle<CommitMessage> NewInstance(Proposal* proposal, const NodeInfo& info=Server::GetInfo()){
-            return new CommitMessage(info, proposal);
+        static Handle<CommitMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
+            return new CommitMessage(node_id, proposal);
         }
 
         static Handle<CommitMessage> NewInstance(const RawType& raw){
@@ -342,14 +340,14 @@ namespace Token{
         typedef Proto::BlockChainServer::Proposal RawType;
     private:
         AcceptedMessage(const RawType& raw): PaxosMessage(raw){}
-        AcceptedMessage(const NodeInfo& info, Proposal* proposal): PaxosMessage(info, proposal){}
+        AcceptedMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(node_id, proposal){}
     public:
         ~AcceptedMessage(){}
 
         DECLARE_MESSAGE(Accepted);
 
-        static Handle<AcceptedMessage> NewInstance(Proposal* proposal, const NodeInfo& info=Server::GetInfo()){
-            return new AcceptedMessage(info, proposal);
+        static Handle<AcceptedMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
+            return new AcceptedMessage(node_id, proposal);
         }
 
         static Handle<AcceptedMessage> NewInstance(const RawType& raw){
@@ -362,14 +360,14 @@ namespace Token{
         typedef Proto::BlockChainServer::Proposal RawType;
     private:
         RejectedMessage(const RawType& raw): PaxosMessage(raw){}
-        RejectedMessage(const NodeInfo& info, Proposal* proposal): PaxosMessage(info, proposal){}
+        RejectedMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(node_id, proposal){}
     public:
         ~RejectedMessage(){}
 
         DECLARE_MESSAGE(Rejected);
 
-        static Handle<RejectedMessage> NewInstance(Proposal* proposal, const NodeInfo& info=Server::GetInfo()){
-            return new RejectedMessage(info, proposal);
+        static Handle<RejectedMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
+            return new RejectedMessage(node_id, proposal);
         }
 
         static Handle<RejectedMessage> NewInstance(const RawType& raw){

@@ -1,25 +1,14 @@
-#include "session.h"
-#include "server.h"
+#include "peer.h"
 #include "task.h"
-#include "block_miner.h"
-#include "proposal.h"
 #include "block_pool.h"
-#include "transaction_pool.h"
-#include "unclaimed_transaction_pool.h"
 
 namespace Token{
-#define SCHEDULE(Loop, Name, ...)({ \
-    uv_work_t* work = (uv_work_t*)malloc(sizeof(uv_work_t));\
-    work->data = new Name##Task(__VA_ARGS__); \
-    uv_queue_work((Loop), work, Handle##Name##Task, After##Name##Task); \
-})
-
     void PeerSession::OnShutdown(uv_async_t* handle){
         PeerSession* session = (PeerSession*)handle->data;
-        session->Shutdown();
+        session->Disconnect();
     }
 
-    void PeerSession::Shutdown(){
+    void PeerSession::Disconnect(){
         if(pthread_self() == thread_){
             // Inside Session Thread
             uv_read_stop((uv_stream_t*)&socket_);
@@ -31,7 +20,7 @@ namespace Token{
     }
 
     void* PeerSession::PeerSessionThread(void* data){
-        if(!Server::IsRunning() && Server::IsStarting()) Server::WaitForRunning();
+        if(!Server::IsRunning() && Server::IsStarting()) Server::WaitForState(Server::kRunning);
         PeerSession* session = (PeerSession*)data;
         NodeAddress address = session->GetAddress();
         LOG(INFO) << "connecting to peer " << address << "....";
@@ -47,14 +36,13 @@ namespace Token{
         int err;
         if((err = uv_tcp_connect(&session->conn_, &session->socket_, (const struct sockaddr*)&addr, &OnConnect)) != 0){
             LOG(WARNING) << "couldn't connect to peer " << address << ": " << uv_strerror(err);
-            session->Shutdown();
+            session->Disconnect();
             goto cleanup;
         }
 
         uv_run(loop, UV_RUN_DEFAULT);
-    cleanup:
+        cleanup:
         LOG(INFO) << "disconnected from peer: " << address;
-        Server::UnregisterPeer(session->GetID());
         uv_loop_close(loop);
         pthread_exit(0);
     }
@@ -63,15 +51,15 @@ namespace Token{
         PeerSession* session = (PeerSession*)conn->data;
         if(status != 0){
             LOG(WARNING) << "client accept error: " << uv_strerror(status);
-            session->Shutdown();
+            session->Disconnect();
             return;
         }
 
         LOG(INFO) << "connected to peer: " << session->GetAddress();
-        session->Send(VersionMessage::NewInstance(Server::GetInfo()));
+        session->Send(VersionMessage::NewInstance(Server::GetID()));
         if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
             LOG(WARNING) << "client read error: " << uv_strerror(status);
-            session->Shutdown();
+            session->Disconnect();
             return;
         }
     }
@@ -138,7 +126,7 @@ namespace Token{
         PeerSession* session = (PeerSession*)task->GetSession();
 
         std::vector<Handle<Message>> response;
-        response.push_back(VerackMessage::NewInstance(Server::GetInfo()).CastTo<Message>());
+        response.push_back(VerackMessage::NewInstance(Server::GetID()).CastTo<Message>());
         if(BlockChain::GetHead().GetHeight() < msg->GetHeight()){
             response.push_back(GetBlocksMessage::NewInstance().CastTo<Message>());
         }
@@ -153,9 +141,6 @@ namespace Token{
         // - nonce check
         // - state transition
         // - register peer
-
-        LOG(INFO) << "registering peer: " << msg->GetID();
-        Server::RegisterPeer(msg->GetID(), session);
     }
 
     void PeerSession::HandlePrepareMessage(HandleMessageTask* task){}
@@ -170,11 +155,11 @@ namespace Token{
         }
 
         Proposal* proposal = BlockMiner::GetProposal();
-        NodeInfo node = session->GetInfo();
-        proposal->Vote(node);
+        std::string node_id = session->GetID();
+        proposal->Vote(node_id);
 
 #ifdef TOKEN_DEBUG
-        LOG(INFO) << node << " voted for proposal: " << proposal->GetHash();
+        LOG(INFO) << node_id << " voted for proposal: " << proposal->GetHash();
 #endif//TOKEN_DEBUG
     }
 
@@ -189,9 +174,9 @@ namespace Token{
         }
 
         Proposal* proposal = BlockMiner::GetProposal();
-        NodeInfo node = session->GetInfo();
+        std::string node_id = session->GetID();
 #ifdef TOKEN_DEBUG
-        LOG(INFO) << node << " accepted proposal: " << proposal->GetHash();
+        LOG(INFO) << node_id << " accepted proposal: " << proposal->GetHash();
 #endif//TOKEN_DEBUG
     }
 
@@ -204,7 +189,7 @@ namespace Token{
         }
 
         Proposal* proposal = BlockMiner::GetProposal();
-        NodeInfo node = session->GetInfo();
+        std::string node = msg->GetProposer();
 #ifdef TOKEN_DEBUG
         LOG(INFO) << node << " rejected proposal: " << proposal->GetHash();
 #endif//TOKEN_DEBUG
@@ -272,10 +257,8 @@ namespace Token{
         PeerSession* session = (PeerSession*)task->GetSession();
         NotFoundMessage* msg = (NotFoundMessage*)task->GetMessage();
 
-        NodeInfo info = session->GetInfo();
-
         InventoryItem item = msg->GetItem();
-        LOG(WARNING) << "peer " << info.GetNodeID() << " has no record of item: " << item;
+        LOG(WARNING) << "peer " << session->GetID() << " has no record of item: " << item;
     }
 
     void PeerSession::HandleInventoryMessage(HandleMessageTask* task){
@@ -290,46 +273,11 @@ namespace Token{
 
         LOG(INFO) << "received inventory of " << items.size() << " items, downloading...";
         if(!items.empty()) session->Send(GetDataMessage::NewInstance(items));
-        if(Server::IsSynchronizing()) SCHEDULE(session->GetLoop(), SynchronizeBlocks, session, items);
+        //TODO: synchronize blocks
     }
 
     void PeerSession::HandleTestMessage(HandleMessageTask* task){
         //TODO: implement
-    }
-
-    void PeerSession::HandleSynchronizeBlocksTask(uv_work_t* handle){
-        SynchronizeBlocksTask* task = (SynchronizeBlocksTask*)handle->data;
-        PeerSession* session = (PeerSession*)task->GetSession();
-
-        std::vector<InventoryItem> items;
-        if(!task->GetItems(items)){
-            LOG(WARNING) << "couldn't get items from task";
-            return;
-        }
-        std::reverse(items.begin(), items.end());
-
-        //TODO: session->WaitForItems(items);
-
-        for(auto item = items.rbegin(); item != items.rend(); item++){
-            uint256_t hash = item->GetHash();
-            Block* block;
-            if(!(block = BlockPool::GetBlock(hash))){
-                LOG(WARNING) << "couldn't get block from pool: " << hash;
-                return;
-            }
-
-            /*
-            TODO:
-            if(!BlockMiner::MineBlock(block, false)){
-                LOG(WARNING) << "couldn't process block: " << hash;
-            }
-            */
-        }
-    }
-
-    void PeerSession::AfterSynchronizeBlocksTask(uv_work_t* handle, int status){
-        if(handle->data) free(handle->data);
-        free(handle);
     }
 
     bool PeerSession::Connect(){

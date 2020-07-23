@@ -14,7 +14,6 @@ namespace Token{
         uv_connect_t connection_;
         uv_pipe_t stdin_;
         uv_pipe_t stdout_;
-        NodeInfo peer_;
 
         static void OnConnect(uv_connect_t* conn, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
@@ -29,14 +28,8 @@ namespace Token{
         GetStdinPipe(){
             return (uv_stream_t*)&stdin_;
         }
-
-        inline void
-        SetPeer(const NodeInfo& info){
-            peer_ = info;
-        }
     public:
         NodeClient():
-                peer_(),
                 stream_(),
                 loop_(uv_loop_new()),
                 sigterm_(),
@@ -60,10 +53,6 @@ namespace Token{
     void Handle##Name##Command(Name##Command* cmd);
         FOR_EACH_COMMAND(DECLARE_COMMAND_HANDLER);
 #undef DECLARE_COMMAND_HANDLER
-
-        NodeInfo GetPeer() const{
-            return peer_;
-        }
 
         void Connect(const NodeAddress& addr);
     };

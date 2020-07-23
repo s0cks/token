@@ -42,14 +42,13 @@ case MessageType::k##Name##MessageType:{ \
         }
     }
 
-    PaxosMessage::PaxosMessage(const NodeInfo& info, Proposal* proposal):
+    PaxosMessage::PaxosMessage(const std::string& node, Proposal* proposal):
         ProtobufMessage<Proto::BlockChainServer::Proposal>(){
-        (*raw_.mutable_info()) << info;
+        raw_.set_node_id(node);
         raw_.set_hash(HexString(proposal->GetHash()));
     }
 
     Proposal* PaxosMessage::GetProposal() const{
-        //TODO: fix
         return Proposal::NewInstance(0, GetHash(), GetProposer());
     }
 }

@@ -133,26 +133,6 @@ namespace Token{
                 default: return "Unknown";
             }
         }
-
-        static inline std::string
-        GetPeerThreadStatus(const PeerInfo& info){
-            std::stringstream ss;
-            ss << info.GetID() << ": ";
-            switch(info.GetState()){
-                case PeerInfo::kConnecting:
-                    ss << "Connecting";
-                    break;
-                case PeerInfo::kConnected:
-                    ss << "Connected";
-                    break;
-                case PeerInfo::kDisconnected:
-                    ss << "Disconnected";
-                    break;
-                default:
-                    ss << "Unknown";
-                    break;
-            }
-        }
     public:
         SystemInformationSection(CrashReport* report): CrashReportSection(report){}
         ~SystemInformationSection(){}
@@ -174,13 +154,6 @@ namespace Token{
 
                 {
                     // Write Peer Statuses
-                    Indent();
-                    std::vector<PeerInfo> peers;
-                    Server::GetPeers(peers);
-                    for(auto& it : peers){
-                        WriteLine(GetPeerThreadStatus(it));
-                    }
-                    DeIndent();
                 }
                 DeIndent();
             }

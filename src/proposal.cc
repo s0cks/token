@@ -8,7 +8,7 @@ namespace Token{
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
 
-    Handle<Proposal> Proposal::NewInstance(uint32_t height, const uint256_t& hash, const NodeInfo& proposer){
+    Handle<Proposal> Proposal::NewInstance(uint32_t height, const uint256_t& hash, const std::string& proposer){
         return new Proposal(proposer, hash, height);
     }
 
@@ -38,12 +38,12 @@ namespace Token{
         return phase_;
     }
 
-    void Proposal::Vote(const NodeInfo& info){
+    void Proposal::Vote(const std::string& info){
         LOCK_GUARD;
         if(!votes_.insert(info).second) LOG(WARNING) << info << " already voted!";
     }
 
-    void Proposal::Commit(const NodeInfo& info){
+    void Proposal::Commit(const std::string& info){
         LOCK_GUARD;
         if(!commits_.insert(info).second) LOG(WARNING) << info << "already committed!";
     }

@@ -1,3 +1,4 @@
+#include <uuid.h>
 #include <algorithm>
 #include <random>
 #include <condition_variable>
@@ -6,6 +7,7 @@
 #include "message.h"
 #include "task.h"
 #include "configuration.h"
+#include "peer.h"
 
 namespace Token{
 //TODO: remove:
@@ -22,8 +24,9 @@ namespace Token{
     static std::recursive_mutex mutex_;
     static std::condition_variable_any cond_;
     static Server::State state_ = Server::State::kStopped;
-    static NodeInfo info_ = NodeInfo();
-    static std::map<std::string, PeerSession*> peers_ = std::map<std::string, PeerSession*>();
+    static std::string node_id_;
+
+    static std::map<NodeAddress, PeerSession*> peers_;
 
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
 #define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
@@ -31,25 +34,31 @@ namespace Token{
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
 
+    static inline std::string
+    GenerateNewUUID(){
+        uuid_t uuid;
+        uuid_generate_time_safe(uuid);
+        char uuid_str[37];
+        uuid_unparse(uuid, uuid_str);
+        return std::string(uuid_str);
+    }
+
     void Server::LoadNodeInformation(){
         LOCK_GUARD;
         libconfig::Setting& node = BlockChainConfiguration::GetProperty("Server", libconfig::Setting::TypeGroup);
-        //TODO: load callback address or fetch dynamically
-        NodeAddress address("127.0.0.1", FLAGS_port);
         if(!node.exists("id")){
-            info_ = NodeInfo(address);
-            node.add("id", libconfig::Setting::TypeString) = info_.GetNodeID();
+            node_id_ = GenerateNewUUID();
+            node.add("id", libconfig::Setting::TypeString) = node_id_;
             BlockChainConfiguration::SaveConfiguration();
             return;
         }
 
-        std::string node_id;
-        node.lookupValue("id", node_id);
-        info_ = NodeInfo(node_id, NodeAddress("127.0.0.1", FLAGS_port));
+        node.lookupValue("id", node_id_);
     }
 
     void Server::LoadPeers(){
         LOCK_GUARD;
+        // load peers from configuration
         libconfig::Setting& peers = BlockChainConfiguration::GetProperty("Peers", libconfig::Setting::TypeArray);
         auto iter = peers.begin();
         while(iter != peers.end()){
@@ -58,6 +67,20 @@ namespace Token{
                 if(!ConnectTo(address)) LOG(WARNING) << "couldn't connect to peer: " << address;
             }
             iter++;
+        }
+
+        // try to load peer from flags
+        if(!FLAGS_peer_address.empty() || FLAGS_peer_port > 0){
+            std::string address = !FLAGS_peer_address.empty() ?
+                            FLAGS_peer_address :
+                            "127.0.0.1";
+            uint32_t port = FLAGS_peer_port > 0 ?
+                            FLAGS_peer_port :
+                            8080;
+            NodeAddress paddress(address, port);
+            if(!HasPeer(paddress)){
+                if(!ConnectTo(paddress)) LOG(WARNING) << "couldn't connect to peer: " << paddress;
+            }
         }
     }
 
@@ -68,8 +91,8 @@ namespace Token{
 
         libconfig::Setting& peers = root.add("Peers", libconfig::Setting::TypeArray);
         for(auto& it : peers_){
-            NodeAddress address = it.second->GetAddress();
-            peers.add(libconfig::Setting::TypeString) = address.ToString();
+            //NodeAddress address = it.second->GetAddress();
+            //peers.add(libconfig::Setting::TypeString) = address.ToString();
         }
 
         BlockChainConfiguration::SaveConfiguration();
@@ -79,20 +102,20 @@ namespace Token{
         return &handle_;
     }
 
-    NodeInfo Server::GetInfo(){
+    std::string Server::GetID(){
         LOCK_GUARD;
-        return info_;
+        return node_id_;
     }
 
-    void Server::Start(){
-        if(!IsStopped()) return;
+    bool Server::Start(){
+        if(!IsStopped()) return false;
         LoadNodeInformation();
         LoadPeers();
         if(pthread_create(&thread_, NULL, &NodeThread, NULL) != 0){
-            std::stringstream ss;
-            ss << "Couldn't start block chain server thread";
-            CrashReport::GenerateAndExit(ss);
+            LOG(WARNING) << "Couldn't start block chain server thread";
+            return false;
         }
+        return true;
     }
 
     bool Server::Shutdown(){
@@ -107,16 +130,6 @@ namespace Token{
         }
 
         SetState(State::kStopped);
-        return true;
-    }
-
-    bool Server::WaitForShutdown(){
-        WaitForState(State::kStopped);
-        return true;
-    }
-
-    bool Server::WaitForRunning(){
-        WaitForState(State::kRunning);
         return true;
     }
 
@@ -136,10 +149,9 @@ namespace Token{
         return state_;
     }
 
-    uint32_t Server::GetNumberOfPeers(){
+    size_t Server::GetNumberOfPeers(){
         LOCK_GUARD;
-        uint32_t peers = peers_.size();
-        return peers;
+        return peers_.size();
     }
 
     void Server::HandleTerminateCallback(uv_async_t* handle){
@@ -252,49 +264,25 @@ namespace Token{
 
     bool Server::BroadcastMessage(const Handle<Message>& msg){
         LOCK_GUARD;
-        for(auto& it : peers_) it.second->Send(msg);
+        //for(auto& it : peers_) it.second->Send(msg);
         return true;
-    }
-
-    void Server::RegisterPeer(const std::string& node_id, PeerSession* peer){
-        LOCK_GUARD;
-        peers_.insert({ node_id, peer });
-        SavePeers();
-    }
-
-    void Server::UnregisterPeer(const std::string& node_id){
-        LOCK_GUARD;
-        peers_.erase(node_id);
-    }
-
-    void Server::GetPeers(std::vector<PeerInfo>& peers){
-        LOCK_GUARD;
-        for(auto& it : peers_) peers.push_back(PeerInfo(it.second));
     }
 
     bool Server::HasPeer(const std::string& node_id){
         LOCK_GUARD;
-        return peers_.find(node_id) != peers_.end();
-    }
-
-    bool Server::HasPeer(const NodeAddress& address){
-        LOCK_GUARD;
         for(auto& it : peers_){
-            NodeAddress paddress = it.second->GetAddress();
-            if(paddress == address) return true;
+            PeerSession* peer = it.second;
+            if(peer->GetID() == node_id) return true;
         }
         return false;
     }
 
-    bool Server::ConnectTo(const NodeAddress &address){
-        if(IsStarting() || IsSynchronizing()){
-            WaitForState(State::kRunning);
-            if(!IsRunning()) {
-                LOG(WARNING) << "server is in " << GetState() << " state, not connecting!";
-                return false;
-            }
-        }
+    bool Server::HasPeer(const NodeAddress& address){
+        LOCK_GUARD;
+        return peers_.find(address) != peers_.end();
+    }
 
+    bool Server::ConnectTo(const NodeAddress &address){
         //-- Attention! --
         // this is not a memory leak, the memory will be freed upon
         // the session being closed
