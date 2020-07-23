@@ -38,23 +38,29 @@ namespace Token{
         std::condition_variable_any cond_;
         Phase phase_;
         NodeInfo proposer_;
+        uint32_t height_;
         uint256_t hash_;
         std::set<NodeInfo> votes_;
         std::set<NodeInfo> commits_;
 
         void WaitForPhase(Phase phase);
 
-        Proposal(const NodeInfo& proposer, const uint256_t& hash):
+        Proposal(const NodeInfo& proposer, const uint256_t& hash, uint32_t height):
             phase_(kProposalPhase),
             proposer_(proposer),
-            hash_(hash),
+            height_(height),
             votes_(),
+            hash_(hash),
             commits_(){}
     public:
         ~Proposal() = default;
 
         NodeInfo GetProposer() const{
             return proposer_;
+        }
+
+        uint32_t GetHeight() const{
+            return height_;
         }
 
         uint256_t GetHash() const{
@@ -96,14 +102,14 @@ namespace Token{
             return GetPhase() == kQuorumPhase;
         }
 
-        static Proposal* NewInstance(const uint256_t& hash, const NodeInfo& proposer);
+        static Handle<Proposal> NewInstance(uint32_t height, const uint256_t& hash, const NodeInfo& proposer);
 
-        static Proposal* NewInstance(Block* block, const NodeInfo& proposer){
-            return NewInstance(block->GetSHA256Hash(), proposer);
+        static Handle<Proposal> NewInstance(Block* block, const NodeInfo& proposer){
+            return NewInstance(block->GetHeight(), block->GetSHA256Hash(), proposer);
         }
 
-        static Proposal* NewInstance(const BlockHeader& block, const NodeInfo& proposer){
-            return NewInstance(block.GetHash(), proposer);
+        static Handle<Proposal> NewInstance(const BlockHeader& block, const NodeInfo& proposer){
+            return NewInstance(block.GetHeight(), block.GetHash(), proposer);
         }
     };
 }

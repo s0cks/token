@@ -4,48 +4,46 @@
 #include "object.h"
 
 namespace Token{
-    static Heap* eden_ = nullptr;
-    static Heap* survivor_ = nullptr;
-    static Heap* tenured_ = nullptr;
-    static Semispace* survivor_from_ = nullptr;
-    static Semispace* survivor_to_ = nullptr;
+    static const size_t kNumberOfHeaps = 3;
+    static const size_t kTotalSize = FLAGS_heap_size;
+    static const size_t kHeapSize = kTotalSize/kNumberOfHeaps;
+
+    static SinglespaceHeap* eden_ = nullptr;
+    static SemispaceHeap* survivor_ = nullptr;
+    static SinglespaceHeap* tenured_ = nullptr;
 
     static Object stack_space_{};
     static size_t allocating_size_ = 0;
     static void* allocating_ = nullptr;
 
     void Allocator::Initialize(){
-        eden_ = new Heap(FLAGS_heap_size);
-        survivor_ = new Heap(FLAGS_heap_size);
-        tenured_ = new Heap(FLAGS_heap_size);
-
-        uint64_t semi_size = FLAGS_heap_size/2;
-        survivor_from_ = new Semispace(survivor_->GetStartAddress(), semi_size);
-        survivor_to_ = new Semispace(survivor_->GetStartAddress() + semi_size, semi_size);
+        eden_ = new SinglespaceHeap(kHeapSize);
+        survivor_ = new SemispaceHeap(kHeapSize);
+        tenured_ = new SinglespaceHeap(kHeapSize);
 
         stack_space_.stack_.prev_ = &stack_space_;
         stack_space_.stack_.next_ = &stack_space_;
         stack_space_.space_ = Object::kStackSpace;
     }
 
-    Heap* Allocator::GetEdenHeap(){
+    SinglespaceHeap* Allocator::GetEdenHeap(){
         return eden_;
     }
 
-    Heap* Allocator::GetSurvivorHeap(){
+    SemispaceHeap* Allocator::GetSurvivorHeap(){
         return survivor_;
     }
 
-    Heap* Allocator::GetTenuredHeap(){
+    SinglespaceHeap* Allocator::GetTenuredHeap(){
         return tenured_;
     }
 
     Semispace* Allocator::GetSurvivorFromSpace(){
-        return survivor_from_;
+        return GetSurvivorHeap()->GetFromSpace();
     }
 
     Semispace* Allocator::GetSurvivorToSpace(){
-        return survivor_to_;
+        return GetSurvivorHeap()->GetToSpace();
     }
 
     class StackSpaceIterator{
@@ -229,7 +227,7 @@ namespace Token{
         FinalizeObjects<HeapMemoryIterator>(GetTenuredHeap());
         // finalize LOS
 
-        tenured_->Clear();
+        tenured_->Reset();
 
         EvacuateEdenObjects();
         EvacuateSurvivorObjects();
@@ -251,10 +249,9 @@ namespace Token{
         CopyLiveObjects<HeapMemoryIterator>(GetTenuredHeap());
         // clean LOS
 
-        GetEdenHeap()->Clear();
-        GetSurvivorFromSpace()->Clear();
-
-        std::swap(survivor_from_, survivor_to_);
+        GetEdenHeap()->Reset();
+        GetSurvivorHeap()->SwapSpaces();
+        GetSurvivorToSpace()->Reset();
     }
 
     void Allocator::MinorGC(){
@@ -278,9 +275,8 @@ namespace Token{
         CopyLiveObjects<HeapMemoryIterator>(GetEdenHeap());
         CopyLiveObjects<SemispaceIterator>(GetSurvivorFromSpace());
 
-        GetEdenHeap()->Clear();
-        GetSurvivorFromSpace()->Clear();
-
-        std::swap(survivor_from_, survivor_to_);
+        GetEdenHeap()->Reset();
+        GetSurvivorHeap()->SwapSpaces();
+        GetSurvivorToSpace()->Reset();
     }
 }

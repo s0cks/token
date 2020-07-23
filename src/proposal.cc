@@ -2,18 +2,14 @@
 #include "proposal.h"
 
 namespace Token{
-    static std::mutex pmutex_;
-    static Proposal* proposal_ = nullptr;
-
-#define PLOCK_GUARD std::lock_guard<std::mutex> pguard(pmutex_)
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
 #define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
 #define WAIT cond_.wait(lock)
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
 
-    Proposal* Proposal::NewInstance(const uint256_t& hash, const NodeInfo& proposer){
-        return new Proposal(proposer, hash);
+    Handle<Proposal> Proposal::NewInstance(uint32_t height, const uint256_t& hash, const NodeInfo& proposer){
+        return new Proposal(proposer, hash, height);
     }
 
     void Proposal::SetPhase(Proposal::Phase phase){
@@ -64,7 +60,7 @@ namespace Token{
 
     std::string Proposal::ToString() const{
         std::stringstream ss;
-        ss << "Proposal(" << hash_ << ")";
+        ss << "Proposal(#" << GetHeight() << ")";
         return ss.str();
     }
 }

@@ -12,7 +12,7 @@ namespace Token{
         return ptr;
     }
 
-    void* Heap::Allocate(size_t alloc_size){
+    void* SinglespaceHeap::Allocate(size_t alloc_size){
         size_t total_size = alloc_size;
         if((GetAllocatedSize() + total_size) > GetTotalSize()) return nullptr;
         void* ptr = (void*)current_;

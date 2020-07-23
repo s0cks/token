@@ -52,45 +52,68 @@ namespace Token{
                     address <= GetEndAddress();
         }
 
-        void Clear(){
+        void Reset(){
             memset((void*)start_, 0, size_);
             current_ = start_;
         }
 
         void* Allocate(size_t size);
+
+        Semispace& operator=(const Semispace& other){
+            start_ = other.start_;
+            current_ = other.current_;
+            size_ = other.size_;
+            return (*this);
+        }
     };
 
     class Heap{
         friend class HeapMemoryIterator;
     private:
         MemoryRegion region_;
-        uword start_;
-        uword current_;
-        size_t size_;
-
-        MemoryRegion* GetRegion(){
-            return &region_;
-        }
+    protected:
+        Heap(size_t size):
+            region_(size){}
     public:
-        Heap(intptr_t size):
-            region_(size),
-            start_(0),
-            current_(0),
-            size_(size){
-            start_ = current_ = region_.GetStartAddress();
-        }
-        ~Heap(){}
+        virtual ~Heap() = default;
 
         uword GetStartAddress() const{
             return region_.GetStartAddress();
         }
 
-        uword GetCurrentAddress() const{
-            return current_;
-        }
-
         uword GetEndAddress() const{
             return region_.GetEndAddress();
+        }
+
+        bool Contains(uword address) const{
+            return address >= GetStartAddress() &&
+                   address <= GetEndAddress();
+        }
+
+        size_t GetTotalSize() const{
+            return region_.GetSize();
+        }
+
+        virtual void* Allocate(size_t size) = 0;
+        virtual size_t GetAllocatedSize() const = 0;
+        virtual size_t GetUnallocatedSize() const = 0;
+
+        virtual void Reset(){
+            region_.Clear();
+        }
+    };
+
+    class SinglespaceHeap : public Heap{
+    private:
+        uword current_;
+    public:
+        SinglespaceHeap(size_t size):
+            Heap(size),
+            current_(GetStartAddress()){}
+        ~SinglespaceHeap(){}
+
+        uword GetCurrentAddress() const{
+            return current_;
         }
 
         size_t GetAllocatedSize() const{
@@ -101,21 +124,44 @@ namespace Token{
             return GetEndAddress() - GetCurrentAddress();
         }
 
-        size_t GetTotalSize() const{
-            return region_.GetSize();
-        }
-
-        bool Contains(uword address) const{
-            return address >= GetStartAddress() &&
-                    address <= GetEndAddress();
-        }
-
-        void Clear(){
-            region_.Clear();
-            current_ = region_.GetStartAddress();
-        }
-
         void* Allocate(size_t size);
+    };
+
+    class SemispaceHeap : public Heap{
+        friend class HeapMemoryIterator;
+    private:
+        Semispace from_;
+        Semispace to_;
+    public:
+        SemispaceHeap(size_t size):
+            Heap(size),
+            from_(GetStartAddress(), size/2),
+            to_(GetStartAddress()+(size/2), size/2){}
+        ~SemispaceHeap(){}
+
+        Semispace* GetFromSpace(){
+            return &from_;
+        }
+
+        Semispace* GetToSpace(){
+            return &to_;
+        }
+
+        size_t GetAllocatedSize() const{
+            return from_.GetAllocatedSize();
+        }
+
+        size_t GetUnallocatedSize() const{
+            return from_.GetUnallocatedSize();
+        }
+
+        void* Allocate(size_t size){
+            return from_.Allocate(size);
+        }
+
+        void SwapSpaces(){
+            std::swap(from_, to_);
+        }
     };
 
     class Object;
@@ -124,7 +170,7 @@ namespace Token{
         uword current_;
         uword end_;
     public:
-        HeapMemoryIterator(Heap* heap):
+        HeapMemoryIterator(SinglespaceHeap* heap):
             current_(heap->GetStartAddress()),
             end_(heap->GetCurrentAddress()){}
         ~HeapMemoryIterator() = default;

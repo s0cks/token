@@ -49,6 +49,7 @@ case MessageType::k##Name##MessageType:{ \
     }
 
     Proposal* PaxosMessage::GetProposal() const{
-        return Proposal::NewInstance(GetHash(), GetProposer());
+        //TODO: fix
+        return Proposal::NewInstance(0, GetHash(), GetProposer());
     }
 }

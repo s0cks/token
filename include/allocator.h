@@ -7,8 +7,9 @@
 #include "object.h"
 
 namespace Token{
-    class Heap;
     class Semispace;
+    class SemispaceHeap;
+    class SinglespaceHeap;
     class Allocator{
         friend class Object;
         friend class MemoryInformationSection;
@@ -46,9 +47,9 @@ namespace Token{
         static void MajorGC();
 
         static void* Allocate(size_t size, Type type=Type::kUnknownType);
-        static Heap* GetEdenHeap();
-        static Heap* GetSurvivorHeap();
-        static Heap* GetTenuredHeap();
+        static SinglespaceHeap* GetEdenHeap();
+        static SemispaceHeap* GetSurvivorHeap();
+        static SinglespaceHeap* GetTenuredHeap();
         static Semispace* GetSurvivorFromSpace();
         static Semispace* GetSurvivorToSpace();
     };
