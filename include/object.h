@@ -22,7 +22,9 @@ namespace Token{
     };
 
 #define FOR_EACH_OBJECT_TYPE(V) \
-    V(Transaction)
+    V(Transaction) \
+    V(Block) \
+    V(Array)
 
     class Instance;
 #define FORWARD_DECLARE_OBJECT_TYPE(Name) class Name;
@@ -38,6 +40,8 @@ namespace Token{
 
     typedef uint64_t ObjectHeader;
 
+    //TODO:
+    // - add GC debug information
     class Object{
         friend class Allocator;
         friend class HandleGroup;

@@ -83,19 +83,19 @@ namespace Token{
             return GetInfo().GetNodeID();
         }
 
-        static NodeInfo GetInfo();
         static void Start();
         static void RegisterPeer(const std::string& node_id, PeerSession* peer);
         static void UnregisterPeer(const std::string& node_id);
         static void GetPeers(std::vector<PeerInfo>& peers);
-        static uint32_t GetNumberOfPeers();
         static bool HasPeer(const std::string& node_id);
         static bool HasPeer(const NodeAddress& address);
         static bool ConnectTo(const NodeAddress& address);
         static bool WaitForShutdown();
         static bool WaitForRunning();
         static bool Shutdown();
+        static uint32_t GetNumberOfPeers();
         static State GetState();
+        static NodeInfo GetInfo();
 
         template<typename T>
         static inline void

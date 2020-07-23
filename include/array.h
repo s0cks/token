@@ -4,6 +4,8 @@
 #include "object.h"
 
 namespace Token{
+    //TODO:
+    // - refactor Array types
     class ArrayBase : public Object{
     private:
         size_t length_;

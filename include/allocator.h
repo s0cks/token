@@ -7,6 +7,10 @@
 #include "object.h"
 
 namespace Token{
+    //TODO
+    // - add allocation + GC debug information
+    // - refactor scavenge policies into Minor + Major Policy classes
+    // - refactor stack allocations
     class Semispace;
     class SemispaceHeap;
     class SinglespaceHeap;

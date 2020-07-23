@@ -3,6 +3,10 @@
 
 #include "address.h"
 
+//TODO:
+// - merge w/ address.h
+// - refactor
+// - add PeerInfo class
 namespace Token{
     class NodeInfo{
     public:
