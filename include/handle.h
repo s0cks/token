@@ -3,7 +3,7 @@
 
 namespace Token{
     class Object;
-    class HandleBase{
+    class HandleBase{ //TODO: remove
     private:
         Object** ptr_;
     protected:

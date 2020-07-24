@@ -4,6 +4,7 @@
 #include "transaction.h"
 
 namespace Token{
+    //TODO: handle GC of non-cloned Transactions?
     class TransactionPool{
     public:
         enum State{

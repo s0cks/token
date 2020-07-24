@@ -86,6 +86,9 @@ namespace Token{
         }
     };
 
+    //TODO:
+    // - validation logic
+    // - refactor to use raw array
     typedef Proto::BlockChain::Block RawBlock;
     class BlockVisitor;
     class Block : public BinaryObject<RawBlock>{

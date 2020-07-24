@@ -17,6 +17,7 @@ namespace Token{
 FOR_EACH_COMMAND(FORWARD_DECLARE_COMMAND);
 #undef FORWARD_DECLARE_COMMAND
 
+    //TODO: refactor/remove
     class Command{
     protected:
         std::deque<std::string> args_;

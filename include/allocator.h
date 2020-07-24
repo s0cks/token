@@ -8,6 +8,8 @@
 
 namespace Token{
     //TODO
+    // - allocation stats
+    // - zoning
     // - add allocation + GC debug information
     // - refactor scavenge policies into Minor + Major Policy classes
     // - refactor stack allocations
