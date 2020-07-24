@@ -89,7 +89,8 @@ namespace Token{
         Space space_; // remove?
 
         inline void WriteBarrier(Object** slot, Object* data){
-            //TODO: switch spaces
+            if(data) data->IncrementReferenceCount();
+            if((*slot)) (*slot)->DecrementReferenceCount();
             (*slot) = data;
         }
 

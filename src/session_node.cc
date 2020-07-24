@@ -7,13 +7,13 @@
 #include "unclaimed_transaction_pool.h"
 
 namespace Token{
-    void NodeSession::HandleNotFoundMessage(Token::HandleMessageTask* task){
+    void NodeSession::HandleNotFoundMessage(const Handle<HandleMessageTask>& task){
         //TODO: implement HandleNotFoundMessage
         LOG(WARNING) << "not implemented";
         return;
     }
 
-    void NodeSession::HandleVersionMessage(HandleMessageTask* task){
+    void NodeSession::HandleVersionMessage(const Handle<HandleMessageTask>& task){
         NodeSession* session = (NodeSession*)task->GetSession();
         //TODO:
         // - state check
@@ -24,11 +24,11 @@ namespace Token{
 
     //TODO:
     // - verify nonce
-    void NodeSession::HandleVerackMessage(HandleMessageTask* task){
-        VerackMessage* msg = (VerackMessage*)task->GetMessage();
+    void NodeSession::HandleVerackMessage(const Handle<HandleMessageTask>& task){
         NodeSession* session = (NodeSession*)task->GetSession();
-        NodeAddress paddr = msg->GetCallbackAddress();
+        Handle<VerackMessage> msg = task->GetMessage().CastTo<VerackMessage>();
 
+        NodeAddress paddr = msg->GetCallbackAddress();
         session->Send(VerackMessage::NewInstance(Server::GetID())); //TODO: obtain address dynamically
 
         session->SetState(NodeSession::kConnected);
@@ -40,9 +40,9 @@ namespace Token{
         }
     }
 
-    void NodeSession::HandleGetDataMessage(HandleMessageTask* task){
+    void NodeSession::HandleGetDataMessage(const Handle<HandleMessageTask>& task){
         NodeSession* session = (NodeSession*)task->GetSession();
-        GetDataMessage* msg = (GetDataMessage*)task->GetMessage();
+        Handle<GetDataMessage> msg = task->GetMessage().CastTo<GetDataMessage>();
 
         std::vector<InventoryItem> items;
         if(!msg->GetItems(items)){
@@ -92,9 +92,9 @@ namespace Token{
         session->Send(response);
     }
 
-    void NodeSession::HandlePrepareMessage(HandleMessageTask* task){
+    void NodeSession::HandlePrepareMessage(const Handle<HandleMessageTask>& task){
         NodeSession* session = (NodeSession*)task->GetSession();
-        PrepareMessage* msg = (PrepareMessage*)task->GetMessage();
+        Handle<PrepareMessage> msg = task->GetMessage().CastTo<PrepareMessage>();
 
         Proposal* proposal = msg->GetProposal();
         //TODO: validate proposal first
@@ -108,11 +108,11 @@ namespace Token{
         session->Send(PromiseMessage::NewInstance(proposal));
     }
 
-    void NodeSession::HandlePromiseMessage(HandleMessageTask* task){}
+    void NodeSession::HandlePromiseMessage(const Handle<HandleMessageTask>& task){}
 
-    void NodeSession::HandleCommitMessage(HandleMessageTask* task){
+    void NodeSession::HandleCommitMessage(const Handle<HandleMessageTask>& task){
         NodeSession* session = (NodeSession*)task->GetSession();
-        CommitMessage* msg = (CommitMessage*)task->GetMessage();
+        Handle<CommitMessage> msg = task->GetMessage().CastTo<CommitMessage>();
 
         Proposal* proposal = msg->GetProposal();
         uint256_t hash = proposal->GetHash();
@@ -130,9 +130,9 @@ namespace Token{
         return;
     }
 
-    void NodeSession::HandleBlockMessage(HandleMessageTask* task){
+    void NodeSession::HandleBlockMessage(const Handle<HandleMessageTask>& task){
         NodeSession* session = (NodeSession*)task->GetSession();
-        BlockMessage* msg = (BlockMessage*)task->GetMessage();
+        Handle<BlockMessage> msg = task->GetMessage().CastTo<BlockMessage>();
 
         Block* block = msg->GetBlock();
         uint256_t hash = block->GetSHA256Hash();
@@ -141,9 +141,9 @@ namespace Token{
         //TODO: session->OnHash(hash); - move to block chain class, block calling thread
     }
 
-    void NodeSession::HandleTransactionMessage(HandleMessageTask* task){
+    void NodeSession::HandleTransactionMessage(const Handle<HandleMessageTask>& task){
         NodeSession* session = (NodeSession*)task->GetSession();
-        TransactionMessage* msg = (TransactionMessage*)task->GetMessage();
+        Handle<TransactionMessage> msg = task->GetMessage().CastTo<TransactionMessage>();
 
         Transaction* tx = msg->GetTransaction();
         uint256_t hash = tx->GetSHA256Hash();
@@ -158,18 +158,18 @@ namespace Token{
         }
     }
 
-    void NodeSession::HandleAcceptedMessage(HandleMessageTask* task){}
-    void NodeSession::HandleRejectedMessage(HandleMessageTask* task){}
+    void NodeSession::HandleAcceptedMessage(const Handle<HandleMessageTask>& task){}
+    void NodeSession::HandleRejectedMessage(const Handle<HandleMessageTask>& task){}
 
-    void NodeSession::HandleTestMessage(HandleMessageTask* task){
+    void NodeSession::HandleTestMessage(const Handle<HandleMessageTask>& task){
         NodeSession* session = (NodeSession*)task->GetSession();
-        TestMessage* msg = (TestMessage*)task->GetMessage();
+        Handle<TestMessage> msg = task->GetMessage().CastTo<TestMessage>();
         LOG(INFO) << "Test: " << msg->GetHash();
     }
 
-    void NodeSession::HandleInventoryMessage(HandleMessageTask* task){
+    void NodeSession::HandleInventoryMessage(const Handle<HandleMessageTask>& task){
         NodeSession* session = (NodeSession*)task->GetSession();
-        InventoryMessage* msg = (InventoryMessage*)task->GetMessage();
+        Handle<InventoryMessage> msg = task->GetMessage().CastTo<InventoryMessage>();
 
         std::vector<InventoryItem> items;
         if(!msg->GetItems(items)){
@@ -186,9 +186,9 @@ namespace Token{
         if(!items.empty()) session->Send(GetDataMessage::NewInstance(items));
     }
 
-    void NodeSession::HandleGetBlocksMessage(HandleMessageTask* task){
+    void NodeSession::HandleGetBlocksMessage(const Handle<HandleMessageTask>& task){
         NodeSession* session = (NodeSession*)task->GetSession();
-        GetBlocksMessage* msg = (GetBlocksMessage*)task->GetMessage();
+        Handle<GetBlocksMessage> msg = task->GetMessage().CastTo<GetBlocksMessage>();
 
         uint256_t start = msg->GetHeadHash();
         uint256_t stop = msg->GetStopHash();
@@ -213,6 +213,6 @@ namespace Token{
         session->Send(InventoryMessage::NewInstance(items));
     }
 
-    void NodeSession::HandlePingMessage(HandleMessageTask* task){}
-    void NodeSession::HandlePongMessage(HandleMessageTask* task){}
+    void NodeSession::HandlePingMessage(const Handle<HandleMessageTask>& task){}
+    void NodeSession::HandlePongMessage(const Handle<HandleMessageTask>& task){}
 }

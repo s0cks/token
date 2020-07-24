@@ -35,7 +35,7 @@ namespace Token{
         ~PeerSession(){}
 
 #define DECLARE_MESSAGE_HANDLER(Name) \
-    virtual void Handle##Name##Message(HandleMessageTask* task);
+    virtual void Handle##Name##Message(const Handle<HandleMessageTask>& task);
         FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
 

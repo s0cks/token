@@ -193,7 +193,7 @@ namespace Token{
     public:
         SemispaceIterator(Semispace* semispace):
             current_(semispace->GetStartAddress()),
-            end_(semispace->GetEndAddress()){}
+            end_(semispace->GetCurrentAddress()){}
         ~SemispaceIterator() = default;
 
         bool HasNext(){

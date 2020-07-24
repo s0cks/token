@@ -238,22 +238,22 @@ namespace Token{
             uint64_t msize = 0;
             memcpy(&msize, &buff->base[offset + Message::kSizeOffset], Message::kSizeLength);
 
-            //TODO: handle decode failures
             Handle<Message> msg = Message::Decode(static_cast<Message::MessageType>(mtype), msize, (uint8_t*)&buff->base[offset + Message::kDataOffset]);
-
+            LOG(INFO) << "decoded message: " << msg->ToString(); //TODO: handle decode failures
             messages.push_back(msg);
+
             offset += (msize + Message::kHeaderSize);
         } while((offset + Message::kHeaderSize) < nread);
 
         for(size_t idx = 0; idx < messages.size(); idx++){
-            Message* msg = messages[idx];
-            HandleMessageTask task(session, msg);
+            Handle<Message> msg = messages[idx];
+            Handle<HandleMessageTask> task = HandleMessageTask::NewInstance(session, msg);
             switch(msg->GetMessageType()){
 #define DEFINE_HANDLER_CASE(Name) \
             case Message::k##Name##MessageType: \
-                session->Handle##Name##Message(&task); \
+                session->Handle##Name##Message(task); \
                 break;
-                FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLER_CASE);
+            FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLER_CASE);
 #undef DEFINE_HANDLER_CASE
                 case Message::kUnknownMessageType:
                 default: //TODO: handle properly

@@ -80,14 +80,17 @@ namespace Token{
         State GetState();
         void WaitForState(State state);
         void Send(std::vector<Handle<Message>>& messages);
+        void Send(const Handle<Message>& msg);
 
-        template<typename T>
-        void Send(const Handle<T>& msg){
-            SendMessage(msg.template CastTo<Message>());
+#define DECLARE_MESSAGE_SEND(Name) \
+        inline void Send(const Handle<Name##Message>& msg){ \
+            Send(msg.CastTo<Message>()); \
         }
+        FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_SEND)
+#undef DECLARE_MESSAGE_SEND
 
 #define DECLARE_MESSAGE_HANDLER(Name) \
-    virtual void Handle##Name##Message(HandleMessageTask* task) = 0;
+    virtual void Handle##Name##Message(const Handle<HandleMessageTask>& task) = 0;
     FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
     };
@@ -111,7 +114,7 @@ namespace Token{
         }
 
 #define DECLARE_MESSAGE_HANDLER(Name) \
-    virtual void Handle##Name##Message(HandleMessageTask* task);
+    virtual void Handle##Name##Message(const Handle<HandleMessageTask>& task);
         FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
 

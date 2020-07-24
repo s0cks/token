@@ -140,6 +140,11 @@ namespace Token{
         static Handle<TestMessage> NewInstance(const uint256_t& hash){
             return new TestMessage(hash);
         }
+
+        static Handle<TestMessage> NewInstance(){
+            std::string nonce = GenerateNonce();
+            return NewInstance(HashFromHexString(nonce));
+        }
     };
 
     class PingMessage : public HashMessage{

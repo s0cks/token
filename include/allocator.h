@@ -11,6 +11,7 @@ namespace Token{
     // - add allocation + GC debug information
     // - refactor scavenge policies into Minor + Major Policy classes
     // - refactor stack allocations
+    // - locking for allocations + collections
     class Semispace;
     class SemispaceHeap;
     class SinglespaceHeap;

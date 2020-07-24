@@ -136,6 +136,7 @@ namespace Token{
     }
 
     void BlockMiner::HandleMineBlockCallback(uv_timer_t* handle){
+        /*
         uint32_t num_transactions;
         if((num_transactions = TransactionPool::GetNumberOfTransactions()) >= kNumberOfTransactionsPerBlock){
             // 1. Collect transactions from pool
@@ -213,5 +214,6 @@ namespace Token{
 
             SetProposal(nullptr);
         }
+         */
     }
 }

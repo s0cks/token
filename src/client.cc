@@ -99,65 +99,62 @@ namespace Token{
             memcpy(&msize, &buff->base[offset + Message::kSizeOffset], Message::kSizeLength);
 
             Handle<Message> msg = Message::Decode(static_cast<Message::MessageType>(mtype), msize, (uint8_t*)&buff->base[offset + Message::kDataOffset]);
-
-            LOG(INFO) << "decoded message: " << msg->ToString();
+            LOG(INFO) << "decoded message: " << msg->ToString(); //TODO: handle decode failures
             messages.push_back(msg);
 
             offset += (msize + Message::kHeaderSize);
         } while((offset + Message::kHeaderSize) < nread);
 
         for(size_t idx = 0; idx < messages.size(); idx++){
-            Message* msg = messages[idx];
-            HandleMessageTask* task = new HandleMessageTask(session, msg);
+            Handle<Message> msg = messages[idx];
+            Handle<HandleMessageTask> task = HandleMessageTask::NewInstance(session, msg);
             switch(msg->GetMessageType()){
 #define DEFINE_HANDLER_CASE(Name) \
             case Message::k##Name##MessageType: \
                 session->Handle##Name##Message(task); \
                 break;
-                FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLER_CASE);
+            FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLER_CASE);
 #undef DEFINE_HANDLER_CASE
                 case Message::kUnknownMessageType:
                 default: //TODO: handle properly
                     break;
             }
-
-            delete task;
         }
     }
 
-    void NodeClient::HandleVersionMessage(HandleMessageTask* task){
+    void NodeClient::HandleVersionMessage(const Handle<HandleMessageTask>& task){
         NodeClient* client = (NodeClient*)task->GetSession();
-        VersionMessage* msg = (VersionMessage*)task->GetMessage();
+        Handle<VersionMessage> msg = task->GetMessage().CastTo<VersionMessage>();
         //client->Send(VerackMessage::NewInstance(Server::GetInfo())); //TODO: fixme
     }
 
-    void NodeClient::HandleVerackMessage(HandleMessageTask* task){
+    void NodeClient::HandleVerackMessage(const Handle<HandleMessageTask>& task){
         NodeClient* client = (NodeClient*)task->GetSession();
-        VerackMessage* msg = (VerackMessage*)task->GetMessage();
+        Handle<VerackMessage> msg = task->GetMessage().CastTo<VerackMessage>();
 
         client->SetState(State::kConnected);
         LOG(INFO) << "connected!";
     }
 
-    void NodeClient::HandleBlockMessage(HandleMessageTask* task){
+    void NodeClient::HandleBlockMessage(const Handle<HandleMessageTask>& task){
         NodeClient* client = (NodeClient*)task->GetSession();
-        BlockMessage* msg = (BlockMessage*)task->GetMessage();
+        Handle<BlockMessage> msg = task->GetMessage().CastTo<BlockMessage>();
 
         Block* blk = msg->GetBlock();
         LOG(INFO) << "received block: " << blk->GetHeader();
     }
 
-    void NodeClient::HandleGetDataMessage(HandleMessageTask *task){}
-    void NodeClient::HandleGetBlocksMessage(HandleMessageTask* msg){}
-    void NodeClient::HandleInventoryMessage(HandleMessageTask* msg){}
-    void NodeClient::HandleTransactionMessage(HandleMessageTask* msg){}
-    void NodeClient::HandleCommitMessage(HandleMessageTask* msg){}
-    void NodeClient::HandlePrepareMessage(HandleMessageTask* msg){}
-    void NodeClient::HandlePromiseMessage(HandleMessageTask* msg){}
-    void NodeClient::HandleRejectedMessage(HandleMessageTask* msg){}
-    void NodeClient::HandleAcceptedMessage(HandleMessageTask* msg){}
-    void NodeClient::HandleNotFoundMessage(HandleMessageTask* msg){}
-    void NodeClient::HandleTestMessage(HandleMessageTask* task){}
+    void NodeClient::HandleGetDataMessage(const Handle<HandleMessageTask>& task){}
+    void NodeClient::HandleGetBlocksMessage(const Handle<HandleMessageTask>& msg){}
+    void NodeClient::HandleInventoryMessage(const Handle<HandleMessageTask>& msg){}
+    void NodeClient::HandleTransactionMessage(const Handle<HandleMessageTask>& msg){}
+    void NodeClient::HandleCommitMessage(const Handle<HandleMessageTask>& msg){}
+    void NodeClient::HandlePrepareMessage(const Handle<HandleMessageTask>& msg){}
+    void NodeClient::HandlePromiseMessage(const Handle<HandleMessageTask>& msg){}
+    void NodeClient::HandleRejectedMessage(const Handle<HandleMessageTask>& msg){}
+    void NodeClient::HandleAcceptedMessage(const Handle<HandleMessageTask>& msg){}
+    void NodeClient::HandleNotFoundMessage(const Handle<HandleMessageTask>& msg){}
+    void NodeClient::HandleTestMessage(const Handle<HandleMessageTask>& task){}
 
     // commands:
     // - ping
@@ -255,6 +252,6 @@ namespace Token{
         Send(msg);
     }
 
-    void NodeClient::HandlePingMessage(HandleMessageTask* task){}
-    void NodeClient::HandlePongMessage(HandleMessageTask* task){}
+    void NodeClient::HandlePingMessage(const Handle<HandleMessageTask>& task){}
+    void NodeClient::HandlePongMessage(const Handle<HandleMessageTask>& task){}
 }
