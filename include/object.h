@@ -6,6 +6,7 @@
 #include <string>
 
 #include "common.h"
+#include "allocator.h"
 #include "uint256_t.h"
 #include "keychain.h"
 #include "handle.h"
@@ -21,38 +22,19 @@ namespace Token{
         }
     };
 
-#define FOR_EACH_OBJECT_TYPE(V) \
-    V(Transaction) \
-    V(Block)
-
-    template<typename T>
-    class Array;
-
-    class Instance;
-#define FORWARD_DECLARE_OBJECT_TYPE(Name) class Name;
-    FOR_EACH_OBJECT_TYPE(FORWARD_DECLARE_OBJECT_TYPE);
-#undef FORWARD_DECLARE_OBJECT_TYPE
-
-    enum class Type{
-        kUnknownType = 0,
-#define DECLARE_OBJECT_TYPE(Name) k##Name##Type,
-    FOR_EACH_OBJECT_TYPE(DECLARE_OBJECT_TYPE)
-#undef DECLARE_OBJECT_TYPE
-        kArrayType,
-    };
-
     typedef uint64_t ObjectHeader;
 
     //TODO:
     // - add GC debug information
     class Object{
         friend class Allocator;
+        friend class Scavenger;
         friend class HandleGroup;
         friend class UpdateIterator;
         friend class IncRefIterator;
         friend class DecRefIterator;
         friend class StackSpaceIterator;
-        friend class WeakReferenceNotifyIterator;
+        friend class WeakReferenceNotifier;
     public:
         enum Color{
             kWhite=1,
@@ -62,14 +44,7 @@ namespace Token{
             kRoot=kBlack,
         };
 
-        enum Space{
-            kStackSpace,
-            kEdenSpace,
-            kSurvivorSpace
-        };
-
         // Expected Object Layout:
-        //   | Type - 16 bits
         //   | Size - 32 bits
         //   | Color - 8 bits
         //   | Reference Count - 32 bits
@@ -86,7 +61,7 @@ namespace Token{
                 uint32_t refcount_;
             };
         };
-        Space space_; // remove?
+        GCStats stats_;
 
         inline void WriteBarrier(Object** slot, Object* data){
             if(data) data->IncrementReferenceCount();
@@ -115,11 +90,6 @@ namespace Token{
         }
 
         inline void
-        SetSpace(Space space){
-            space_ = space;
-        }
-
-        inline void
         SetReferenceCount(uint32_t count){
             refcount_ = count;
         }
@@ -132,6 +102,10 @@ namespace Token{
         inline void
         DecrementReferenceCount(){
             refcount_--;
+        }
+
+        GCStats* GetStats(){
+            return &stats_;
         }
 
         void SetColor(Color color);
@@ -149,10 +123,6 @@ namespace Token{
             return refcount_;
         }
 
-        Space GetSpace() const{
-            return space_;
-        }
-
         size_t GetAllocatedSize() const{
             return GetSize(); // refactor
         }
@@ -163,6 +133,12 @@ namespace Token{
 
         bool IsGarbage() const{
             return GetColor() == kWhite;
+        }
+
+        virtual std::string ToString() const{
+            std::stringstream ss;
+            ss << "Object(" << std::hex << this << ")";
+            return ss.str();
         }
 
         static void* operator new(size_t);

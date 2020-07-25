@@ -55,7 +55,7 @@ namespace Token{
 
     std::string Block::ToString() const{
         std::stringstream stream;
-        stream << "Block(#" << GetHeight() << "/" << GetSHA256Hash() << ")";
+        stream << "Block(#" << GetHeight() << ")";
         return stream.str();
     }
 

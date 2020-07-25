@@ -16,7 +16,7 @@ namespace Token{
             if(size_){
                 for(size_t i = 0; i < kHandlesPerGroup; i++){
                     Object* data = handles_[i];
-                    if(data && data->GetSpace() != Object::kStackSpace){
+                    if(data && !data->GetStats()->IsStackSpace()){
                         iter(&handles_[i]);
                     }
                 }
@@ -60,11 +60,11 @@ namespace Token{
         }
 
         void Write(Object** ptr, Object* data){
-            if(data && data->GetSpace() != Object::kStackSpace){
+            if(data && !data->GetStats()->IsStackSpace()){
                 data->IncrementReferenceCount();
             }
 
-            if((*ptr) && (*ptr)->GetSpace() != Object::kStackSpace){
+            if((*ptr) && !(*ptr)->GetStats()->IsStackSpace()){
                 (*ptr)->DecrementReferenceCount();
             }
             (*ptr) = data;

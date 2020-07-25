@@ -8,6 +8,7 @@
 namespace Token{
     class Semispace{
         friend class Heap;
+        friend class SemispaceMemoryIterator;
     private:
         uword start_;
         uword current_;
@@ -71,11 +72,26 @@ namespace Token{
         friend class HeapMemoryIterator;
     private:
         MemoryRegion region_;
-    protected:
-        Heap(size_t size):
-            region_(size){}
+        Semispace from_space_;
+        Semispace to_space_;
     public:
-        virtual ~Heap() = default;
+        Heap(size_t semi_size):
+            region_(semi_size*2),
+            from_space_(GetStartAddress(), semi_size),
+            to_space_(GetStartAddress() + semi_size, semi_size){}
+        ~Heap(){}
+
+        MemoryRegion* GetRegion(){
+            return &region_;
+        }
+
+        Semispace* GetFromSpace(){
+            return &from_space_;
+        }
+
+        Semispace* GetToSpace(){
+            return &to_space_;
+        }
 
         uword GetStartAddress() const{
             return region_.GetStartAddress();
@@ -94,73 +110,24 @@ namespace Token{
             return region_.GetSize();
         }
 
-        virtual void* Allocate(size_t size) = 0;
-        virtual size_t GetAllocatedSize() const = 0;
-        virtual size_t GetUnallocatedSize() const = 0;
-
-        virtual void Reset(){
-            region_.Clear();
-        }
-    };
-
-    class SinglespaceHeap : public Heap{
-    private:
-        uword current_;
-    public:
-        SinglespaceHeap(size_t size):
-            Heap(size),
-            current_(GetStartAddress()){}
-        ~SinglespaceHeap(){}
-
-        uword GetCurrentAddress() const{
-            return current_;
-        }
-
         size_t GetAllocatedSize() const{
-            return GetCurrentAddress() - GetStartAddress();
+            return from_space_.GetAllocatedSize();
         }
 
         size_t GetUnallocatedSize() const{
-            return GetEndAddress() - GetCurrentAddress();
-        }
-
-        void* Allocate(size_t size);
-    };
-
-    class SemispaceHeap : public Heap{
-        friend class HeapMemoryIterator;
-    private:
-        Semispace from_;
-        Semispace to_;
-    public:
-        SemispaceHeap(size_t size):
-            Heap(size),
-            from_(GetStartAddress(), size/2),
-            to_(GetStartAddress()+(size/2), size/2){}
-        ~SemispaceHeap(){}
-
-        Semispace* GetFromSpace(){
-            return &from_;
-        }
-
-        Semispace* GetToSpace(){
-            return &to_;
-        }
-
-        size_t GetAllocatedSize() const{
-            return from_.GetAllocatedSize();
-        }
-
-        size_t GetUnallocatedSize() const{
-            return from_.GetUnallocatedSize();
-        }
-
-        void* Allocate(size_t size){
-            return from_.Allocate(size);
+            return from_space_.GetUnallocatedSize();
         }
 
         void SwapSpaces(){
-            std::swap(from_, to_);
+            std::swap(from_space_, to_space_);
+        }
+
+        void Reset(){
+            GetRegion()->Clear();
+        }
+
+        void* Allocate(size_t size){
+            return GetFromSpace()->Allocate(size);
         }
     };
 
@@ -170,9 +137,9 @@ namespace Token{
         uword current_;
         uword end_;
     public:
-        HeapMemoryIterator(SinglespaceHeap* heap):
+        HeapMemoryIterator(Heap* heap):
             current_(heap->GetStartAddress()),
-            end_(heap->GetCurrentAddress()){}
+            end_(heap->GetFromSpace()->GetCurrentAddress()){}
         ~HeapMemoryIterator() = default;
 
         bool HasNext(){

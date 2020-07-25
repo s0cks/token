@@ -23,7 +23,7 @@ namespace Token{
     }
 
     Object::~Object(){
-        if(space_ == kStackSpace) Allocator::UntrackStackObject(this);
+        if(GetStats()->IsStackSpace()) Allocator::UntrackStackObject(this);
     }
 
     void Object::SetColor(Color color){

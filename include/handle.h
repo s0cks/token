@@ -1,6 +1,8 @@
 #ifndef TOKEN_HANDLE_H
 #define TOKEN_HANDLE_H
 
+#include <glog/logging.h>
+
 namespace Token{
     class Object;
     class HandleBase{ //TODO: remove
