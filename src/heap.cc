@@ -11,4 +11,22 @@ namespace Token{
         memset(ptr, 0, total_size);
         return ptr;
     }
+
+    void Semispace::Accept(ObjectPointerVisitor* vis){
+        uword current = GetStartAddress();
+        while(current < GetCurrentAddress()){
+            Object* obj = (Object*)current;
+            if(!vis->Visit(obj)) return;
+            current += obj->GetAllocatedSize();
+        }
+    }
+
+    void Heap::Accept(ObjectPointerVisitor* vis){
+        uword current = GetStartAddress();
+        while(current < GetEndAddress()){
+            Object* obj = (Object*)current;
+            if(!obj || obj->GetAllocatedSize() == 0 || !vis->Visit(obj)) return;
+            current += obj->GetAllocatedSize();
+        }
+    }
 }

@@ -18,12 +18,14 @@ namespace Token{
         return Allocator::Allocate(size);
     }
 
-    Object::Object(){
+    Object::Object():
+        refcount_(0),
+        ptr_(nullptr){
         Allocator::Initialize(this);
     }
 
     Object::~Object(){
-        if(GetStats()->IsStackSpace()) Allocator::UntrackStackObject(this);
+        if(GetStats()->IsStackSpace()) Allocator::UntrackRoot(this);
     }
 
     void Object::SetColor(Color color){

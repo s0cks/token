@@ -29,12 +29,14 @@ namespace Token{
     class Object{
         friend class Allocator;
         friend class Scavenger;
-        friend class HandleGroup;
-        friend class UpdateIterator;
-        friend class IncRefIterator;
-        friend class DecRefIterator;
-        friend class StackSpaceIterator;
-        friend class WeakReferenceNotifier;
+        friend class RootPage;
+        friend class ObjectFinalizer;
+        friend class ObjectRelocator;
+        friend class ObjectPromoter;
+        friend class LiveObjectMarker;
+        friend class LiveObjectCopier;
+        friend class LiveObjectReferenceUpdater;
+        friend class RootObjectReferenceUpdater;
     public:
         enum Color{
             kWhite=1,
@@ -51,16 +53,8 @@ namespace Token{
         //   | Ptr - 64 bits
     protected:
         ObjectHeader header_;
-        union{ // layout is weird
-            struct{
-                Object* prev_;
-                Object* next_;
-            } stack_;
-            struct{
-                Object* ptr_;
-                uint32_t refcount_;
-            };
-        };
+        Object* ptr_;//TODO: forwarding address
+        uint32_t refcount_;
         GCStats stats_;
 
         inline void WriteBarrier(Object** slot, Object* data){
@@ -135,6 +129,10 @@ namespace Token{
             return GetColor() == kWhite;
         }
 
+        bool IsReadyForPromotion(){
+            return stats_.GetNumberOfCollectionsSurvived() >= GCStats::kNumberOfCollectionsRequiredForPromotion;
+        }
+
         virtual std::string ToString() const{
             std::stringstream ss;
             ss << "Object(" << std::hex << this << ")";
@@ -179,6 +177,14 @@ namespace Token{
             CryptoPP::ArraySource source(bytes.data(), bytes.size(), true, new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(hash.data(), hash.size())));
             return uint256_t(hash.data());
         }
+    };
+
+    class ObjectPointerVisitor{
+    protected:
+        ObjectPointerVisitor() = default;
+    public:
+        virtual ~ObjectPointerVisitor() = default;
+        virtual bool Visit(Object* obj) = 0;
     };
 }
 

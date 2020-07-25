@@ -6,9 +6,9 @@
 #include "object.h"
 
 namespace Token{
+    class SemispaceVisitor;
     class Semispace{
         friend class Heap;
-        friend class SemispaceMemoryIterator;
     private:
         uword start_;
         uword current_;
@@ -22,6 +22,10 @@ namespace Token{
             start_(start),
             current_(start),
             size_(size){}
+        Semispace(const Semispace& other):
+            start_(other.start_),
+            current_(other.current_),
+            size_(other.size_){}
         ~Semispace() = default;
 
         uword GetStartAddress() const{
@@ -59,6 +63,7 @@ namespace Token{
         }
 
         void* Allocate(size_t size);
+        void Accept(ObjectPointerVisitor* vis);
 
         Semispace& operator=(const Semispace& other){
             start_ = other.start_;
@@ -68,29 +73,47 @@ namespace Token{
         }
     };
 
+    class HeapVisitor;
     class Heap{
-        friend class HeapMemoryIterator;
     private:
         MemoryRegion region_;
+        Space space_;
         Semispace from_space_;
         Semispace to_space_;
     public:
-        Heap(size_t semi_size):
+        Heap(Space space, size_t semi_size):
             region_(semi_size*2),
+            space_(space),
             from_space_(GetStartAddress(), semi_size),
             to_space_(GetStartAddress() + semi_size, semi_size){}
         ~Heap(){}
+
+        Space GetSpace() const{
+            return space_;
+        }
+
+        bool IsEdenSpace() const{
+            return GetSpace() == Space::kEdenSpace;
+        }
+
+        bool IsSurvivorSpace() const{
+            return GetSpace() == Space::kSurvivorSpace;
+        }
+
+        bool IsTenuredSpace() const{
+            return GetSpace() == Space::kTenuredSpace;
+        }
 
         MemoryRegion* GetRegion(){
             return &region_;
         }
 
-        Semispace* GetFromSpace(){
-            return &from_space_;
+        Semispace GetFromSpace(){
+            return from_space_;
         }
 
-        Semispace* GetToSpace(){
-            return &to_space_;
+        Semispace GetToSpace(){
+            return to_space_;
         }
 
         uword GetStartAddress() const{
@@ -127,51 +150,10 @@ namespace Token{
         }
 
         void* Allocate(size_t size){
-            return GetFromSpace()->Allocate(size);
-        }
-    };
-
-    class Object;
-    class HeapMemoryIterator{
-    private:
-        uword current_;
-        uword end_;
-    public:
-        HeapMemoryIterator(Heap* heap):
-            current_(heap->GetStartAddress()),
-            end_(heap->GetFromSpace()->GetCurrentAddress()){}
-        ~HeapMemoryIterator() = default;
-
-        bool HasNext(){
-            return current_ < end_;
+            return from_space_.Allocate(size);
         }
 
-        Object* Next(){
-            Object* next = (Object*)current_;
-            current_ += next->GetAllocatedSize();
-            return next;
-        }
-    };
-
-    class SemispaceIterator{
-    private:
-        uword current_;
-        uword end_;
-    public:
-        SemispaceIterator(Semispace* semispace):
-            current_(semispace->GetStartAddress()),
-            end_(semispace->GetCurrentAddress()){}
-        ~SemispaceIterator() = default;
-
-        bool HasNext(){
-            return current_ < end_;
-        }
-
-        Object* Next(){
-            Object* next = (Object*)current_;
-            current_ += next->GetAllocatedSize();
-            return next;
-        }
+        void Accept(ObjectPointerVisitor* vis);
     };
 }
 

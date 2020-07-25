@@ -5,32 +5,36 @@
 
 namespace Token{
     class Scavenger{
-    public:
-        static const size_t kNumberOfCollectionsForPromotion = 3;
     private:
-        Scavenger() = delete;
+        Heap* heap_;
+        Semispace from_space_;
+        Semispace to_space_;
 
-        template<typename I>
-        static void MarkObjects(Iterable<I> iterable);
+        Scavenger(Heap* heap):
+            heap_(heap),
+            from_space_(heap->GetFromSpace()),
+            to_space_(heap->GetToSpace()){}
 
-        template<typename I>
-        static void FinalizeObjects(Iterable<I> iterable);
-
-        template<typename I>
-        static void RelocateObjects(Iterable<I> iterable);
-
-        template<bool AsRoot, typename I>
-        static void NotifyWeakReferences(Iterable<I> iterable);
-
-        template<typename I>
-        static void UpdateNonRootReferences(Iterable<I> iterable);
-
-        template<typename I>
-        static void CopyLiveObjects(Iterable<I> iterable);
+        void ScavengeMemory();
     public:
-        ~Scavenger() = delete;
+        ~Scavenger(){}
 
-        static void Scavenge();
+        Heap* GetHeap() const{
+            return heap_;
+        }
+
+        Semispace GetFromSpace() const{
+            return from_space_;
+        }
+
+        Semispace GetToSpace() const{
+            return to_space_;
+        }
+
+        static void Scavenge(Heap* heap){
+            Scavenger scavenger(heap);
+            scavenger.ScavengeMemory();
+        }
     };
 }
 
