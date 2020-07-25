@@ -24,8 +24,8 @@ namespace Token{
 
     typedef uint64_t ObjectHeader;
 
-    //TODO:
-    // - add GC debug information
+    //TODO: cleanup class + memory layout
+    //TODO: track references using Reference class?
     class Object{
         friend class UpdateIterator;
 
@@ -45,6 +45,7 @@ namespace Token{
             kGray,
             kBlack,
             kFree=kWhite,
+            kReferenced=kGray,
             kRoot=kBlack,
         };
 
@@ -56,7 +57,7 @@ namespace Token{
     protected:
         ObjectHeader header_;
         Object* ptr_;//TODO: forwarding address
-        uint32_t refcount_;
+        uint32_t refcount_;//TODO: colorize
         GCStats stats_;
 
         inline void WriteBarrier(Object** slot, Object* data){

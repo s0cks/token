@@ -48,6 +48,7 @@ namespace Token{
     private:
         Allocator() = delete;
 
+        //TODO: refactor roots again
         static Object** AllocateRoot(Object* obj);
         static void FreeRoot(Object** obj);
         static void UntrackRoot(Object* obj);
