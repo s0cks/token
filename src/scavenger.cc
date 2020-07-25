@@ -38,7 +38,7 @@ namespace Token{
                 void* nptr = dest_.Allocate(size);
                 obj->ptr_ = static_cast<Object*>(nptr);
 
-                LOG(INFO) << obj->ToString() << " relocated to: " << std::hex << nptr;
+                LOG(INFO) << std::hex << obj << " relocated to: " << std::hex << nptr;
             }
             return true;
         }
@@ -57,7 +57,7 @@ namespace Token{
                 size_t size = obj->GetSize();
                 void* nptr = dest_->Allocate(size);
                 obj->ptr_ = static_cast<Object*>(nptr);
-                LOG(INFO) << obj->ToString() << " promoted to: " << std::hex << nptr;
+                LOG(INFO) << std::hex << obj << " promoted to: " << std::hex << nptr;
             }
             return true;
         }
@@ -67,7 +67,7 @@ namespace Token{
     public:
         bool Visit(Object* obj){
             if(!obj->IsGarbage()){
-                LOG(INFO) << "copying " << obj->ToString() << " to: " << std::hex << obj->ptr_;
+                LOG(INFO) << "copying " << std::hex << obj << " to: " << std::hex << obj->ptr_;
                 obj->SetColor(Object::kFree);
                 memcpy((void*)obj->ptr_, (void*)obj, obj->GetSize());
             }

@@ -119,6 +119,10 @@ namespace Token{
         if(roots_) roots_->Free(obj);
     }
 
+    void Allocator::UntrackRoot(Object* obj){
+        //TODO: implement
+    }
+
     void Allocator::VisitRoots(RootObjectPointerVisitor* vis){
         RootPage* current = roots_;
         while(current != nullptr){

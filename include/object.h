@@ -27,6 +27,8 @@ namespace Token{
     //TODO:
     // - add GC debug information
     class Object{
+        friend class UpdateIterator;
+
         friend class Allocator;
         friend class Scavenger;
         friend class RootPage;
