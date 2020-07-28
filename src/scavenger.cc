@@ -4,9 +4,7 @@ namespace Token{
     class LiveObjectMarker : public ObjectPointerVisitor{
     public:
         bool Visit(RawObject* obj){
-            LOG(INFO) << "object: " << obj->ToString() << "(References: " << obj->GetReferenceCount() << "; Color: " << obj->GetColor() << ")";
             if(obj->HasStackReferences()){
-                LOG(INFO) << "marking object: " << std::hex << obj;
                 obj->SetColor(Color::kMarked);
             }
             return true;
@@ -17,7 +15,6 @@ namespace Token{
     public:
         bool Visit(RawObject* obj){
             if(obj->IsGarbage()){
-                LOG(INFO) << "finalizing object: " << std::hex << obj;
                 obj->~RawObject();//TODO: call finalizer
                 obj->ptr_ = 0;
             }
@@ -46,7 +43,6 @@ namespace Token{
                 }
 
                 obj->ptr_ = reinterpret_cast<uword>(nptr);
-                LOG(INFO) << std::hex << obj << " relocated to: " << std::hex << nptr;
             }
             return true;
         }
@@ -56,7 +52,6 @@ namespace Token{
     public:
         bool Visit(RawObject* obj){
             if(obj->IsMarked()){
-                LOG(INFO) << "copying " << obj->ToString() << " to: " << std::hex << obj->ptr_;
                 obj->SetColor(Color::kFree);
                 memcpy((void*)obj->ptr_, (void*)obj, obj->GetAllocatedSize());
             }
@@ -86,10 +81,8 @@ namespace Token{
         bool Visit(RawObject** root){
             RawObject* obj = (*root);
             if(!obj) {
-                LOG(WARNING) << "skipping null root";
                 return true;
             }
-            LOG(INFO) << "migrating root " << std::hex << (*root) << " to: " << std::hex << obj->ptr_;
             (*root) = (RawObject*)obj->ptr_;
             return true;
         }

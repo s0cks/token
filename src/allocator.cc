@@ -24,7 +24,6 @@ namespace Token{
             next_(nullptr),
             test_(),
             size_(0){
-            LOG(INFO) << "creating root page";
             for(size_t idx = 0; idx < kNumberOfRootsPerPage; idx++){
                 roots_[idx] = nullptr;
             }
@@ -38,7 +37,6 @@ namespace Token{
         RawObject** Allocate(){
             for(size_t i = 0; i < kNumberOfRootsPerPage; i++){
                 if(!test_.test(i)){
-                    LOG(INFO) << "allocating root";
                     test_.set(i);
                     size_++;
                     return &roots_[i];
@@ -49,10 +47,6 @@ namespace Token{
         }
 
         void Write(RawObject** ptr, RawObject* data){
-            if(data){
-                LOG(INFO) << "root written: " << std::hex << data;
-                LOG(INFO) << "space: " << data->GetSpace();
-            }
             if(data && !data->IsInStackSpace()){
                 data->IncrementReferenceCount();
             }
@@ -84,7 +78,6 @@ namespace Token{
                 for (size_t i = 0; i < kNumberOfRootsPerPage; i++){
                     RawObject* data = roots_[i];
                     if(data && !data->IsInStackSpace()){
-                        LOG(INFO) << "visiting: " << std::hex << data;
                         vis->Visit(&roots_[i]);
                     }
                 }
@@ -117,7 +110,6 @@ namespace Token{
     RawObject** Allocator::TrackRoot(RawObject* obj){
         if(!roots_) roots_ = new RootPage();
         RawObject** ptr = roots_->Allocate();
-        LOG(INFO) << "tracking root: " << obj->ToString();
         roots_->Write(ptr, obj);
         return ptr;
     }
@@ -148,17 +140,13 @@ namespace Token{
             ptr = GetEdenHeap()->Allocate(total_size);
             assert(ptr);
         }
-
-        LOG(INFO) << "allocating: " << std::hex << ptr;
         allocating_size_ = alloc_size;
         allocating_ = ptr;
         return ptr;
     }
 
     void Allocator::Initialize(RawObject* obj){
-        LOG(INFO) << "allocating_: " << std::hex << allocating_;
         if(allocating_ != obj){
-            LOG(INFO) << "setting to stack space";
             obj->SetSpace(Space::kStackSpace);
             return;
         }
@@ -199,12 +187,10 @@ namespace Token{
     }
 
     void RawObject::IncrementReferenceCount(){
-        LOG(INFO) << "incrementing references of: " << ToString();
         stats_.num_references_++;
     }
 
     void RawObject::DecrementReferenceCount(){
-        LOG(INFO) << "decrementing references of: " << ToString();
         stats_.num_references_--;
     }
 
