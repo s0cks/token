@@ -26,11 +26,13 @@ namespace Token{
             return slots_[index];
         }
 
-        size_t Length(){
+        size_t Length() const{
             return length_;
         }
-
+    public:
         void Accept(const FieldIterator& it);
+
+        std::string ToString() const;
     };
 
     template<typename T>
@@ -76,12 +78,16 @@ namespace Token{
             return static_cast<T*>(ArrayBase::Get(index));
         }
 
-        size_t Length(){
+        size_t Length() const{
             return ArrayBase::Length();
         }
 
         Iterable GetIterable(){
             return { this };
+        }
+
+        std::string ToString() const{
+            return ArrayBase::ToString();
         }
 
         static Handle<Array> New(size_t length){

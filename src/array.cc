@@ -18,4 +18,10 @@ namespace Token{
             iter(&slots_[i]);
         }
     }
+
+    std::string ArrayBase::ToString() const{
+        std::stringstream ss;
+        ss << "Array(" << Length() << ")";
+        return ss.str();
+    }
 }

@@ -6,13 +6,13 @@ namespace Token{
         ptr_ = nullptr;
     }
 
-    HandleBase::HandleBase(Object* obj){
-        ptr_ = Allocator::AllocateRoot(obj);
+    HandleBase::HandleBase(RawObject* obj){
+        ptr_ = Allocator::TrackRoot(obj);
     }
 
     HandleBase::HandleBase(const HandleBase& h){
         if(h.ptr_){
-            ptr_ = Allocator::AllocateRoot(*h.ptr_);
+            ptr_ = Allocator::TrackRoot(*h.ptr_);
         } else{
             ptr_ = nullptr;
         }
@@ -22,13 +22,13 @@ namespace Token{
         if(ptr_) Allocator::FreeRoot(ptr_);
     }
 
-    void HandleBase::operator=(Object* obj){
-        if(!ptr_) ptr_ = Allocator::AllocateRoot(obj);
+    void HandleBase::operator=(RawObject* obj){
+        if(!ptr_) ptr_ = Allocator::TrackRoot(obj);
     }
 
     void HandleBase::operator=(const HandleBase& h){
         if(h.ptr_){
-            ptr_ = Allocator::AllocateRoot(*h.ptr_);
+            ptr_ = Allocator::TrackRoot(*h.ptr_);
         } else{
             ptr_ = nullptr;
         }

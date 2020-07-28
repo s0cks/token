@@ -2,7 +2,7 @@
 #include <algorithm>
 #include "allocator.h"
 #include "heap.h"
-#include "object.h"
+#include "bitfield.h"
 #include "scavenger.h"
 
 namespace Token{
@@ -18,12 +18,13 @@ namespace Token{
         RootPage* next_;
         std::bitset<kNumberOfRootsPerPage> test_;
         size_t size_;
-        Object* roots_[kNumberOfRootsPerPage];
+        RawObject* roots_[kNumberOfRootsPerPage];
     public:
         RootPage():
             next_(nullptr),
             test_(),
             size_(0){
+            LOG(INFO) << "creating root page";
             for(size_t idx = 0; idx < kNumberOfRootsPerPage; idx++){
                 roots_[idx] = nullptr;
             }
@@ -34,9 +35,10 @@ namespace Token{
             return next_;
         }
 
-        Object** Allocate(){
+        RawObject** Allocate(){
             for(size_t i = 0; i < kNumberOfRootsPerPage; i++){
                 if(!test_.test(i)){
+                    LOG(INFO) << "allocating root";
                     test_.set(i);
                     size_++;
                     return &roots_[i];
@@ -46,17 +48,21 @@ namespace Token{
             return next_->Allocate();
         }
 
-        void Write(Object** ptr, Object* data){
-            if(data && !data->GetStats()->IsStackSpace()){
+        void Write(RawObject** ptr, RawObject* data){
+            if(data){
+                LOG(INFO) << "root written: " << std::hex << data;
+                LOG(INFO) << "space: " << data->GetSpace();
+            }
+            if(data && !data->IsInStackSpace()){
                 data->IncrementReferenceCount();
             }
-            if((*ptr) && !(*ptr)->GetStats()->IsStackSpace()){
+            if((*ptr) && !(*ptr)->IsInStackSpace()){
                 (*ptr)->DecrementReferenceCount();
             }
             (*ptr) = data;
         }
 
-        void Free(Object** ptr){
+        void Free(RawObject** ptr){
             ptrdiff_t offset = ptr - roots_;
             if(offset >= 0 && offset < static_cast<int>(kNumberOfRootsPerPage)){
                 Write(ptr, nullptr);
@@ -76,8 +82,8 @@ namespace Token{
         void Accept(RootObjectPointerVisitor* vis){
             if (size_) {
                 for (size_t i = 0; i < kNumberOfRootsPerPage; i++){
-                    Object* data = roots_[i];
-                    if(data && !data->GetStats()->IsStackSpace()){
+                    RawObject* data = roots_[i];
+                    if(data && !data->IsInStackSpace()){
                         LOG(INFO) << "visiting: " << std::hex << data;
                         vis->Visit(&roots_[i]);
                     }
@@ -108,18 +114,19 @@ namespace Token{
         return survivor_;
     }
 
-    Object** Allocator::AllocateRoot(Object* obj){
+    RawObject** Allocator::TrackRoot(RawObject* obj){
         if(!roots_) roots_ = new RootPage();
-        Object** ptr = roots_->Allocate();
+        RawObject** ptr = roots_->Allocate();
+        LOG(INFO) << "tracking root: " << obj->ToString();
         roots_->Write(ptr, obj);
         return ptr;
     }
 
-    void Allocator::FreeRoot(Object** obj){
+    void Allocator::FreeRoot(RawObject** obj){
         if(roots_) roots_->Free(obj);
     }
 
-    void Allocator::UntrackRoot(Object* obj){
+    void Allocator::UntrackRoot(RawObject* root){
         //TODO: implement
     }
 
@@ -131,30 +138,33 @@ namespace Token{
         }
     }
 
-    void* Allocator::Allocate(size_t size){
-        allocating_size_ = size;
+#define ALIGN(Size) (((Size)+7)&~7)
 
-        void* ptr = GetEdenHeap()->Allocate(size);
+    void* Allocator::Allocate(size_t alloc_size){
+        size_t total_size = ALIGN(alloc_size);
+        void* ptr = GetEdenHeap()->Allocate(total_size);
         if(!ptr){
             Scavenger::Scavenge(GetEdenHeap());//TODO: convert to MinorGC?
-            ptr = GetEdenHeap()->Allocate(size);
+            ptr = GetEdenHeap()->Allocate(total_size);
             assert(ptr);
         }
 
+        LOG(INFO) << "allocating: " << std::hex << ptr;
+        allocating_size_ = alloc_size;
         allocating_ = ptr;
         return ptr;
     }
 
-    void Allocator::Initialize(Object* obj){
-         if(allocating_ != obj){
-            obj->stats_ = GCStats(Space::kStackSpace);
+    void Allocator::Initialize(RawObject* obj){
+        LOG(INFO) << "allocating_: " << std::hex << allocating_;
+        if(allocating_ != obj){
+            LOG(INFO) << "setting to stack space";
+            obj->SetSpace(Space::kStackSpace);
             return;
         }
 
-        obj->stats_ = GCStats(Space::kEdenSpace);
-        obj->SetReferenceCount(0);
-        obj->SetSize(allocating_size_);
-        obj->SetColor(Object::kWhite);
+        obj->SetObjectSize(allocating_size_);
+        obj->SetSpace(Space::kEdenSpace);
         allocating_size_ = 0;
         allocating_ = nullptr;
     }
@@ -166,5 +176,39 @@ namespace Token{
 
     void Allocator::MajorCollect(){
 
+    }
+
+    void RawObject::SetSpace(Space space){
+        stats_.space_ = space;
+    }
+
+    void RawObject::SetColor(Color color){
+        stats_.color_ = color;
+    }
+
+    Color RawObject::GetColor() const{
+        return stats_.color_;
+    }
+
+    void RawObject::SetObjectSize(size_t size){
+        stats_.object_size_ = size;
+    }
+
+    size_t RawObject::GetObjectSize() const{
+        return stats_.object_size_;
+    }
+
+    void RawObject::IncrementReferenceCount(){
+        LOG(INFO) << "incrementing references of: " << ToString();
+        stats_.num_references_++;
+    }
+
+    void RawObject::DecrementReferenceCount(){
+        LOG(INFO) << "decrementing references of: " << ToString();
+        stats_.num_references_--;
+    }
+
+    size_t RawObject::GetReferenceCount() const{
+        return stats_.num_references_;
     }
 }

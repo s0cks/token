@@ -3,10 +3,11 @@
 namespace Token{
     class LiveObjectMarker : public ObjectPointerVisitor{
     public:
-        bool Visit(Object* obj){
+        bool Visit(RawObject* obj){
+            LOG(INFO) << "object: " << obj->ToString() << "(References: " << obj->GetReferenceCount() << "; Color: " << obj->GetColor() << ")";
             if(obj->HasStackReferences()){
                 LOG(INFO) << "marking object: " << std::hex << obj;
-                obj->SetColor(Object::kBlack);
+                obj->SetColor(Color::kMarked);
             }
             return true;
         }
@@ -14,11 +15,11 @@ namespace Token{
 
     class ObjectFinalizer : public ObjectPointerVisitor{
     public:
-        bool Visit(Object* obj){
+        bool Visit(RawObject* obj){
             if(obj->IsGarbage()){
                 LOG(INFO) << "finalizing object: " << std::hex << obj;
-                obj->~Object();//TODO: call finalizer
-                obj->ptr_ = nullptr;
+                obj->~RawObject();//TODO: call finalizer
+                obj->ptr_ = 0;
             }
             return true;
         }
@@ -27,37 +28,25 @@ namespace Token{
     class ObjectRelocator : public ObjectPointerVisitor{
     private:
         Semispace dest_;
+        Heap* promotion_;
     public:
-        ObjectRelocator(const Semispace& dest):
+        ObjectRelocator(const Semispace& dest, Heap* promotion):
             ObjectPointerVisitor(),
-            dest_(dest){}
+            dest_(dest),
+            promotion_(promotion){}
 
-        bool Visit(Object* obj){
-            if(!obj->IsGarbage() && !obj->IsReadyForPromotion()){
-                size_t size = obj->GetSize();
-                void* nptr = dest_.Allocate(size);
-                obj->ptr_ = static_cast<Object*>(nptr);
+        bool Visit(RawObject* obj){
+            if(obj->IsMarked()){
+                size_t size = obj->GetAllocatedSize();
+                void* nptr = nullptr;
+                if(obj->IsReadyForPromotion()){
+                    nptr = promotion_->Allocate(size);
+                } else{
+                    nptr = dest_.Allocate(size);
+                }
 
+                obj->ptr_ = reinterpret_cast<uword>(nptr);
                 LOG(INFO) << std::hex << obj << " relocated to: " << std::hex << nptr;
-            }
-            return true;
-        }
-    };
-
-    class ObjectPromoter : public ObjectPointerVisitor{
-    private:
-        Heap* dest_;
-    public:
-        ObjectPromoter(Heap* dest):
-            ObjectPointerVisitor(),
-            dest_(dest){}
-
-        bool Visit(Object* obj){
-            if(!obj->IsGarbage() && obj->IsReadyForPromotion()){
-                size_t size = obj->GetSize();
-                void* nptr = dest_->Allocate(size);
-                obj->ptr_ = static_cast<Object*>(nptr);
-                LOG(INFO) << std::hex << obj << " promoted to: " << std::hex << nptr;
             }
             return true;
         }
@@ -65,11 +54,11 @@ namespace Token{
 
     class LiveObjectCopier : public ObjectPointerVisitor{
     public:
-        bool Visit(Object* obj){
-            if(!obj->IsGarbage()){
-                LOG(INFO) << "copying " << std::hex << obj << " to: " << std::hex << obj->ptr_;
-                obj->SetColor(Object::kFree);
-                memcpy((void*)obj->ptr_, (void*)obj, obj->GetSize());
+        bool Visit(RawObject* obj){
+            if(obj->IsMarked()){
+                LOG(INFO) << "copying " << obj->ToString() << " to: " << std::hex << obj->ptr_;
+                obj->SetColor(Color::kFree);
+                memcpy((void*)obj->ptr_, (void*)obj, obj->GetAllocatedSize());
             }
             return true;
         }
@@ -77,16 +66,16 @@ namespace Token{
 
     class UpdateIterator : public FieldIterator{
     public:
-        void operator()(Object** field) const{
-            Object* obj = (*field);
+        void operator()(RawObject** field) const{
+            RawObject* obj = (*field);
             if(!obj) return;
-            (*field) = obj->ptr_;
+            (*field) = (RawObject*)obj->ptr_;
         }
     };
 
     class LiveObjectReferenceUpdater : public ObjectPointerVisitor{
     public:
-        bool Visit(Object* obj){
+        bool Visit(RawObject* obj){
             if(!obj->IsGarbage()) obj->Accept(UpdateIterator{});
             return true;
         }
@@ -94,14 +83,14 @@ namespace Token{
 
     class RootObjectReferenceUpdater : public RootObjectPointerVisitor{
     public:
-        bool Visit(Object** root){
-            Object* obj = (*root);
+        bool Visit(RawObject** root){
+            RawObject* obj = (*root);
             if(!obj) {
                 LOG(WARNING) << "skipping null root";
                 return true;
             }
             LOG(INFO) << "migrating root " << std::hex << (*root) << " to: " << std::hex << obj->ptr_;
-            (*root) = obj->ptr_;
+            (*root) = (RawObject*)obj->ptr_;
             return true;
         }
     };
@@ -116,14 +105,10 @@ namespace Token{
         GetFromSpace().Accept(&finalizer);
 
         LOG(INFO) << "relocating live objects....";
-        ObjectRelocator relocator(GetToSpace());
-        GetFromSpace().Accept(&relocator);
-
-        LOG(INFO) << "promoting live objects....";
         switch(GetHeap()->GetSpace()){
             case Space::kEdenSpace:{
-                ObjectPromoter promoter(Allocator::GetSurvivorHeap());
-                GetFromSpace().Accept(&promoter);
+                ObjectRelocator relocator(GetToSpace(), Allocator::GetSurvivorHeap());
+                GetFromSpace().Accept(&relocator);
                 break;
             }
             case Space::kSurvivorSpace:{

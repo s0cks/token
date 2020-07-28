@@ -92,24 +92,38 @@ namespace Token{
     typedef Proto::BlockChain::Block RawBlock;
     class BlockVisitor;
     class Block : public BinaryObject<RawBlock>{
+        friend class BlockChain;
+        friend class BlockMessage;
     private:
         uint32_t timestamp_;
         uint32_t height_;
         uint256_t previous_hash_;
-        Handle<Array<Transaction>> transactions_;
+        Transaction** transactions_;
+        size_t num_transactions_;
         BloomFilter tx_bloom_;
 
         Block(uint32_t timestamp, uint32_t height, const uint256_t& phash, const Handle<Array<Transaction>>& txs):
+            BinaryObject(),
             timestamp_(timestamp),
             height_(height),
             previous_hash_(phash),
-            transactions_(txs),
+            transactions_(nullptr),
+            num_transactions_(txs->Length()),
             tx_bloom_(){
             //TODO: load tx_bloom_;
+            transactions_ = (Transaction**)malloc(sizeof(Transaction*)*txs->Length());
+            memset(transactions_, 0, sizeof(Transaction*)*txs->Length());
+            for(size_t idx = 0; idx < txs->Length(); idx++){
+                WriteBarrier(&transactions_[idx], txs->Get(idx));
+                tx_bloom_.Put(txs->Get(idx)->GetSHA256Hash());
+            }
         }
-
-        friend class BlockChain;
-        friend class BlockMessage;
+    protected:
+        virtual void Accept(const FieldIterator& iter){
+            for(size_t idx = 0; idx < num_transactions_; idx++){
+                iter(&transactions_[idx]);
+            }
+        }
     public:
         ~Block() = default;
 
@@ -129,7 +143,7 @@ namespace Token{
         }
 
         uint32_t GetNumberOfTransactions() const{
-            return transactions_->Length();
+            return num_transactions_;
         }
 
         uint32_t GetTimestamp() const{
@@ -138,7 +152,7 @@ namespace Token{
 
         Handle<Transaction> GetTransaction(uint32_t idx) const{
             if(idx < 0 || idx > GetNumberOfTransactions()) return nullptr;
-            return transactions_->Get(idx);
+            return transactions_[idx];
         }
 
         bool IsGenesis(){

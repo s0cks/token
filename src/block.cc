@@ -33,7 +33,7 @@ namespace Token{
     }
 
     Handle<Block> Block::NewInstance(uint32_t height, const Token::uint256_t &phash, const Handle<Array<Transaction>>& txs, uint32_t timestamp){
-        return new Block(timestamp, height, phash, txs);
+        return Handle<Block>(new Block(timestamp, height, phash, txs));
     }
 
     Handle<Block> Block::NewInstance(const BlockHeader &parent, const Handle<Array<Transaction>>& txs, uint32_t timestamp){
