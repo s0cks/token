@@ -76,7 +76,7 @@ namespace Token{
         }
     };
 
-    class RootObjectReferenceUpdater : public RootObjectPointerVisitor{
+    class RootObjectReferenceUpdater : public WeakObjectPointerVisitor{
     public:
         bool Visit(RawObject** root){
             RawObject* obj = (*root);

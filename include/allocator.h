@@ -67,7 +67,7 @@ namespace Token{
     class Heap;
     class RawObject;
     class ObjectPointerVisitor;
-    class RootObjectPointerVisitor;
+    class WeakObjectPointerVisitor;
     class Allocator{
         friend class RawObject;
         friend class Object;
@@ -82,7 +82,7 @@ namespace Token{
         static void FreeRoot(RawObject** root);
         static void UntrackRoot(RawObject* root);
 
-        static void VisitRoots(RootObjectPointerVisitor* vis);
+        static void VisitRoots(WeakObjectPointerVisitor* vis);
         static void Initialize(RawObject* obj);
     public:
         ~Allocator(){}
@@ -95,11 +95,11 @@ namespace Token{
         static Heap* GetSurvivorHeap();
     };
 
-    class RootObjectPointerVisitor{
+    class WeakObjectPointerVisitor{
     protected:
-        RootObjectPointerVisitor() = default;
+        WeakObjectPointerVisitor() = default;
     public:
-        virtual ~RootObjectPointerVisitor() = default;
+        virtual ~WeakObjectPointerVisitor() = default;
         virtual bool Visit(RawObject** root) = 0;
     };
 
