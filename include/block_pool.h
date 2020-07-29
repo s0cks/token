@@ -4,8 +4,6 @@
 #include "block.h"
 
 namespace Token{
-    //TODO:
-    // - refactor to use LRU model
     class BlockPoolVisitor;
     class BlockPool{
     public:
