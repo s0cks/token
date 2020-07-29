@@ -1,6 +1,5 @@
 #include "crash_report.h"
 #include "block_pool.h"
-#include "block_pool_cache.h"
 #include "block_pool_index.h"
 
 namespace Token{
@@ -46,14 +45,8 @@ namespace Token{
 
     Handle<Block> BlockPool::GetBlock(const uint256_t& hash){
         LOCK_GUARD;
-        if(!BlockPoolCache::HasTransaction(hash)){
-            if(!BlockPoolIndex::HasData(hash)) return Handle<Block>(); //null
-            if(BlockPoolCache::IsFull()) BlockPoolCache::EvictLastUsed();
-            Handle<Block> tx = BlockPoolIndex::GetData(hash);
-            BlockPoolCache::PutTransaction(hash, tx);
-            return tx;
-        }
-        return BlockPoolCache::GetTransaction(hash);
+        if(!BlockPoolIndex::HasData(hash)) return Handle<Block>(); //null
+        return BlockPoolIndex::GetData(hash);
     }
 
     void BlockPool::RemoveBlock(const uint256_t& hash){
@@ -62,18 +55,12 @@ namespace Token{
         if(!HasBlock(hash)) return;
     }
 
-    void BlockPool::PutBlock(const Handle<Block>& utxo){
+    void BlockPool::PutBlock(const Handle<Block>& block){
         LOCK_GUARD;
-        uint256_t hash = utxo->GetSHA256Hash();
-        if(!BlockPoolCache::HasTransaction(hash)){
-            if(BlockPoolCache::IsFull()) BlockPoolCache::EvictLastUsed();
-        } else{
-            BlockPoolCache::Promote(hash);
-        }
-        BlockPoolCache::PutTransaction(hash, utxo);
+        BlockPoolIndex::PutData(block);
     }
 
-    bool BlockPool::GetBlocks(std::vector<uint256_t>& utxos){
+    bool BlockPool::GetBlocks(std::vector<uint256_t>& blocks){
         LOCK_GUARD;
         DIR* dir;
         struct dirent* ent;
@@ -82,26 +69,32 @@ namespace Token{
                 std::string name(ent->d_name);
                 std::string filename = (GetDataDirectory() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
-                Block* utxo = Block::NewInstance(filename);
-                utxos.push_back(utxo->GetSHA256Hash());
+
+                Handle<Block> block = Block::NewInstance(filename);
+                blocks.push_back(block->GetSHA256Hash());
             }
             closedir(dir);
             return true;
         }
-
         return false;
     }
 
     bool BlockPool::Accept(BlockPoolVisitor* vis){
         if(!vis->VisitStart()) return false;
 
-        std::vector<uint256_t> utxos;
-        if(!GetBlocks(utxos)) return false;
+        LOCK_GUARD;
+        DIR* dir;
+        struct dirent* ent;
+        if((dir = opendir(GetDataDirectory().c_str())) != NULL){
+            while((ent = readdir(dir)) != NULL){
+                std::string name(ent->d_name);
+                std::string filename = (GetDataDirectory() + "/" + name);
+                if(!EndsWith(filename, ".dat")) continue;
 
-        for(auto& it : utxos){
-            Block* utxo;
-            if(!(utxo = GetBlock(it))) return false;
-            if(!vis->Visit(utxo)) return false;
+                Handle<Block> block = Block::NewInstance(filename);
+                if(!vis->Visit(block)) break;
+            }
+            closedir(dir);
         }
 
         return vis->VisitEnd();

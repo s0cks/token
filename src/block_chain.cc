@@ -82,7 +82,6 @@ namespace Token{
 
                 uint32_t index = 0;
                 for(auto out = it->outputs_begin(); out != it->outputs_end(); out++){
-                    LOG(INFO) << "processing output: #" << index;
                     UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(it->GetSHA256Hash(), index++, (*out).GetUser());
                     UnclaimedTransactionPool::PutUnclaimedTransaction(utxo);
                 }
@@ -215,4 +214,21 @@ namespace Token{
         }while(node != nullptr);
         if(!vis->VisitStart()) return;
     }
+
+#ifdef TOKEN_DEBUG
+    class BlockChainPrinter : public BlockChainVisitor{
+    public:
+        BlockChainPrinter(): BlockChainVisitor(){}
+
+        bool Visit(const BlockHeader& block) const{
+            LOG(INFO) << " - " << block;
+            return true;
+        }
+    };
+
+    void BlockChain::PrintBlockChain(){
+        BlockChainPrinter printer;
+        Accept(&printer);
+    }
+#endif//TOKEN_DEBUG
 }

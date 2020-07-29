@@ -10,13 +10,6 @@
 #include "peer.h"
 
 namespace Token{
-//TODO: remove:
-#define SCHEDULE(Loop, Name, ...)({ \
-    uv_work_t* work = (uv_work_t*)malloc(sizeof(uv_work_t));\
-    work->data = new Name##Task(__VA_ARGS__); \
-    uv_queue_work((Loop), work, Handle##Name##Task, After##Name##Task); \
-})
-
     static pthread_t thread_ = 0;
     static uv_tcp_t handle_;
     static uv_async_t aterm_;
@@ -287,5 +280,21 @@ namespace Token{
         // this is not a memory leak, the memory will be freed upon
         // the session being closed
         return (new PeerSession(address))->Connect();
+    }
+
+    void Server::RegisterPeer(PeerSession* peer){
+        LOCK_GUARD;
+        NodeAddress paddr = peer->GetAddress();
+        auto pos = peers_.find(paddr);
+        if(pos != peers_.end()) return;
+        peers_.insert({ paddr, peer });
+    }
+
+    void Server::UnregisterPeer(PeerSession* peer){
+        LOCK_GUARD;
+        NodeAddress paddr = peer->GetAddress();
+        auto pos = peers_.find(paddr);
+        if(pos == peers_.end()) return;
+        peers_.insert({ paddr, peer });
     }
 }

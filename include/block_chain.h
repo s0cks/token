@@ -56,6 +56,10 @@ namespace Token{
         IsInitialized(){
             return GetState() == kInitialized;
         }
+
+#ifdef TOKEN_DEBUG
+        static void PrintBlockChain();
+#endif//TOKEN_DEBUG
     };
 
     class BlockChainVisitor{

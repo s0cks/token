@@ -4,6 +4,7 @@
 #include "token.h"
 #include "common.h"
 #include "server.h"
+#include "block_pool.h"
 #include "block_chain.h"
 #include "transaction_pool.h"
 
@@ -229,11 +230,12 @@ namespace Token{
         typedef Proto::BlockChainServer::Verack RawType;
     private:
         VerackMessage(const RawType& raw): ProtobufMessage(raw){}
-        VerackMessage(const std::string& node_id, const std::string& nonce, uint32_t timestamp): ProtobufMessage(){
+        VerackMessage(const std::string& node_id, const std::string& nonce, const NodeAddress& address, uint32_t timestamp): ProtobufMessage(){
             raw_.set_node_id(node_id);
             raw_.set_version(Token::GetVersion());
             raw_.set_timestamp(timestamp);
             raw_.set_nonce(nonce);
+            (*raw_.mutable_address()) << address;
         }
     public:
 
@@ -243,14 +245,13 @@ namespace Token{
         }
 
         NodeAddress GetCallbackAddress() const{
-            // TODO: return GetInfo().GetNodeAddress();
-            return NodeAddress();
+            return NodeAddress(raw_.address());
         }
 
         DECLARE_MESSAGE(Verack);
 
-        static Handle<VerackMessage> NewInstance(const std::string& node_id, const std::string& nonce=GenerateNonce(), uint32_t timestamp=GetCurrentTime()){
-            return new VerackMessage(node_id, nonce, timestamp);
+        static Handle<VerackMessage> NewInstance(const std::string& node_id, const NodeAddress& address, const std::string& nonce=GenerateNonce(), uint32_t timestamp=GetCurrentTime()){
+            return new VerackMessage(node_id, nonce, address, timestamp);
         }
 
         static Handle<VerackMessage> NewInstance(const RawType& raw){
@@ -266,7 +267,7 @@ namespace Token{
     public:
         virtual ~PaxosMessage() = default;
 
-        Proposal* GetProposal() const;
+        Handle<Proposal> GetProposal() const;
 
         //TODO:
         // - NodeInfo GetProposer()
@@ -277,6 +278,10 @@ namespace Token{
 
         uint256_t GetHash() const{
             return HashFromHexString(raw_.hash());
+        }
+
+        uint32_t GetHeight() const{
+            return raw_.height();
         }
     };
 
@@ -474,7 +479,7 @@ namespace Token{
         bool ItemExists() const{
             switch(type_){
                 case kTransaction: return TransactionPool::HasTransaction(hash_);
-                case kBlock: return BlockChain::HasBlock(hash_);
+                case kBlock: return BlockChain::HasBlock(hash_) || BlockPool::HasBlock(hash_);
                 default: return false;
             }
         }

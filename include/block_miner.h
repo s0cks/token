@@ -36,7 +36,7 @@ namespace Token{
         }
 
         static const uint32_t kMiningIntervalMilliseconds = 1 * 1000;
-        static const uint32_t kNumberOfTransactionsPerBlock = 3;
+        static const uint32_t kNumberOfTransactionsPerBlock = 2;
 
         friend class BlockChain;
         friend class Server;
@@ -60,9 +60,9 @@ namespace Token{
         ~BlockMiner() = delete;
 
         static State GetState();
-        static Proposal* GetProposal();
+        static Handle<Proposal> GetProposal();
         static bool HasProposal();
-        static void SetProposal(Proposal* proposal);
+        static void SetProposal(const Handle<Proposal>& proposal);
         static void Initialize();
         static void Pause();
         static void Resume();

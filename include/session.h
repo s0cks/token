@@ -51,8 +51,8 @@ namespace Token{
 
         virtual uv_stream_t* GetStream() = 0;
         void SetState(State state);
-        void SendMessage(const Handle<Message>& msg);
-
+        void SetID(const std::string& id);
+\
         friend class Server;
     public:
         std::string GetID() const{

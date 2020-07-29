@@ -13,6 +13,9 @@ namespace Token{
             // Inside Session Thread
             uv_read_stop((uv_stream_t*)&socket_);
             uv_stop(socket_.loop);
+            uv_loop_close(socket_.loop);
+            Server::UnregisterPeer(this);
+            SetState(State::kDisconnected);
         } else{
             // Outside Session Thread
             uv_async_send(&shutdown_);
@@ -20,7 +23,7 @@ namespace Token{
     }
 
     void* PeerSession::PeerSessionThread(void* data){
-        if(!Server::IsRunning() && Server::IsStarting()) Server::WaitForState(Server::kRunning);
+        Server::WaitForState(Server::kRunning);
         PeerSession* session = (PeerSession*)data;
         NodeAddress address = session->GetAddress();
         LOG(INFO) << "connecting to peer " << address << "....";
@@ -41,9 +44,8 @@ namespace Token{
         }
 
         uv_run(loop, UV_RUN_DEFAULT);
-        cleanup:
+    cleanup:
         LOG(INFO) << "disconnected from peer: " << address;
-        uv_loop_close(loop);
         pthread_exit(0);
     }
 
@@ -55,7 +57,6 @@ namespace Token{
             return;
         }
 
-        LOG(INFO) << "connected to peer: " << session->GetAddress();
         session->Send(VersionMessage::NewInstance(Server::GetID()));
         if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
             LOG(WARNING) << "client read error: " << uv_strerror(status);
@@ -122,8 +123,10 @@ namespace Token{
         PeerSession* session = (PeerSession*)task->GetSession();
         Handle<VersionMessage> msg = task->GetMessage().CastTo<VersionMessage>();
 
+        NodeAddress callback("127.0.0.1", FLAGS_port);
+
         std::vector<Handle<Message>> response;
-        response.push_back(VerackMessage::NewInstance(Server::GetID()).CastTo<Message>());
+        response.push_back(VerackMessage::NewInstance(Server::GetID(), callback).CastTo<Message>());
         if(BlockChain::GetHead().GetHeight() < msg->GetHeight()){
             response.push_back(GetBlocksMessage::NewInstance().CastTo<Message>());
         }
@@ -134,10 +137,14 @@ namespace Token{
         PeerSession* session = (PeerSession*)task->GetSession();
         Handle<VerackMessage> msg = task->GetMessage().CastTo<VerackMessage>();
 
+        Server::RegisterPeer(session);
+        session->SetID(msg->GetID());
+        session->SetState(Session::kConnected);
+
         //TODO:
         // - nonce check
         // - state transition
-        // - register peer
+        LOG(INFO) << "connected to peer: " << session->GetID() << "[" << session->GetAddress() << "]";
     }
 
     void PeerSession::HandlePrepareMessage(const Handle<HandleMessageTask>& task){}
@@ -154,7 +161,6 @@ namespace Token{
         Proposal* proposal = BlockMiner::GetProposal();
         std::string node_id = session->GetID();
         proposal->Vote(node_id);
-
 #ifdef TOKEN_DEBUG
         LOG(INFO) << node_id << " voted for proposal: " << proposal->GetHash();
 #endif//TOKEN_DEBUG
@@ -173,6 +179,7 @@ namespace Token{
 
         Proposal* proposal = BlockMiner::GetProposal();
         std::string node_id = session->GetID();
+        proposal->Commit(node_id);
 #ifdef TOKEN_DEBUG
         LOG(INFO) << node_id << " accepted proposal: " << proposal->GetHash();
 #endif//TOKEN_DEBUG
@@ -189,6 +196,7 @@ namespace Token{
 
         Proposal* proposal = BlockMiner::GetProposal();
         std::string node = msg->GetProposer();
+        //TODO: proposal->Rejected(node_id);
 #ifdef TOKEN_DEBUG
         LOG(INFO) << node << " rejected proposal: " << proposal->GetHash();
 #endif//TOKEN_DEBUG
@@ -204,35 +212,38 @@ namespace Token{
             return;
         }
 
-        std::vector<Handle<Message>> data;
+        LOG(INFO) << "getting " << items.size() << " items....";
+        std::vector<Handle<Message>> response;
         for(auto& item : items){
             uint256_t hash = item.GetHash();
-            if(item.ItemExists() || BlockPool::HasBlock(hash)){
-                LOG(INFO) << "sending " << hash << "....";
-                if(item.IsBlock()){
-                    Block* block = nullptr;
-                    if((block = BlockChain::GetBlockData(hash))){
-                        LOG(INFO) << hash << " found in block chain!";
-                        data.push_back(BlockMessage::NewInstance(block).CastTo<Message>());
-                        continue;
-                    }
-
-                    if((block = BlockPool::GetBlock(hash))){
-                        LOG(INFO) << hash << " found in block pool!";
-                        data.push_back(BlockMessage::NewInstance(block).CastTo<Message>());
-                        continue;
-                    }
-                } else if(item.IsTransaction()){
-                    Transaction* tx;
-                    if((tx = TransactionPool::GetTransaction(hash))){
-                        LOG(INFO) << hash << " found in transaction pool!";
-                        data.push_back(TransactionMessage::NewInstance(tx).CastTo<Message>());
-                        continue;
-                    }
+            LOG(INFO) << "resolving item : " << hash;
+            if(item.IsBlock()){
+                if(BlockChain::HasBlock(hash)){
+                    LOG(INFO) << "item " << hash << " found in block chain";
+                    response.push_back(BlockMessage::NewInstance(BlockChain::GetBlockData(hash)).CastTo<Message>());
+                    continue;
                 }
+
+                if(BlockPool::HasBlock(hash)){
+                    LOG(INFO) << "item " << hash << " found in block pool";
+                    response.push_back(BlockMessage::NewInstance(BlockPool::GetBlock(hash)).CastTo<Message>());
+                    continue;
+                }
+
+                LOG(WARNING) << "couldn't find requested block: " << hash;
+                response.push_back(NotFoundMessage::NewInstance(item).CastTo<Message>());
+            } else if(item.IsTransaction()){
+                if(TransactionPool::HasTransaction(hash)){
+                    LOG(INFO) << "item " << hash << " found in transaction pool";
+                    response.push_back(TransactionMessage::NewInstance(TransactionPool::GetTransaction(hash)).CastTo<Message>());
+                    continue;
+                }
+
+                LOG(WARNING) << "couldn't find requested transaction: " << hash;
+                response.push_back(NotFoundMessage::NewInstance(item).CastTo<Message>());
             }
         }
-        session->Send(data);
+        session->Send(response);
     }
 
     void PeerSession::HandleBlockMessage(const Handle<HandleMessageTask>& task){
@@ -265,13 +276,17 @@ namespace Token{
 
         std::vector<InventoryItem> items;
         if(!msg->GetItems(items)){
-            LOG(WARNING) << "couldn't get items from inventory";
+            LOG(WARNING) << "couldn't get items from inventory message";
             return;
         }
 
-        LOG(INFO) << "received inventory of " << items.size() << " items, downloading...";
-        if(!items.empty()) session->Send(GetDataMessage::NewInstance(items));
-        //TODO: synchronize blocks
+        std::vector<InventoryItem> needed;
+        for(auto& item : items){
+            if(!item.ItemExists()) needed.push_back(item);
+        }
+
+        LOG(INFO) << "downloading " << needed.size() << "/" << items.size() << " items from inventory....";
+        session->Send(GetDataMessage::NewInstance(items));
     }
 
     void PeerSession::HandleTestMessage(const Handle<HandleMessageTask>& task){

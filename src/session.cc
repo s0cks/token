@@ -23,6 +23,10 @@ namespace Token{
         return state_;
     }
 
+    void Session::SetID(const std::string& id){
+        uuid_parse(id.c_str(), uuid_);
+    }
+
     void Session::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
         //TODO: buff->base = (char*)Allocator::Allocate(kBufferSize);
         buff->base = (char*)malloc(kBufferSize);
@@ -35,6 +39,8 @@ namespace Token{
     }
 
     void Session::Send(const Handle<Message>& msg){
+        LOG(INFO) << "sending " << msg->ToString();
+
         uint32_t type = static_cast<uint32_t>(msg->GetMessageType());
         uint64_t size = msg->GetMessageSize();
         uint64_t total_size = Message::kHeaderSize + size;
@@ -60,9 +66,12 @@ namespace Token{
             return;
         }
 
+        LOG(INFO) << "sending " << total_messages << " messages....";
         uv_buf_t buffers[total_messages];
         for(size_t idx = 0; idx < total_messages; idx++){
             Handle<Message> msg = messages[idx];
+
+            LOG(INFO) << "sending " << msg->ToString();
 
             uint32_t type = static_cast<uint32_t>(msg->GetMessageType());
             uint64_t size = msg->GetMessageSize();

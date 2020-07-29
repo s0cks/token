@@ -64,6 +64,24 @@ namespace Token{
         }
     }
 
+    void TransactionPoolIndex::RemoveData(const uint256_t& hash){
+        if(!HasData(hash)) return;
+
+        leveldb::WriteOptions options;
+        options.sync = true;
+        std::string key = KEY(hash);
+        std::string filename = GetDataFilename(hash);
+        if(!GetIndex()->Delete(options, key).ok()){
+            LOG(WARNING) << "couldn't remove index key: " << hash;
+            return;
+        }
+
+        if(!DeleteFile(filename)){
+            LOG(WARNING) << "couldn't delete transaction pool data: " << filename;
+            return;
+        }
+    }
+
     void TransactionPoolIndex::PutData(const Handle<Transaction>& tx){
         leveldb::WriteOptions options;
         options.sync = true;

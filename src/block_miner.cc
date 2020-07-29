@@ -44,7 +44,7 @@ namespace Token{
         while(state_ != state) WAIT;
     }
 
-    void BlockMiner::SetProposal(Proposal* proposal){
+    void BlockMiner::SetProposal(const Handle<Proposal>& proposal){
         LOCK_GUARD;
         proposal_ = proposal;
     }
@@ -54,7 +54,7 @@ namespace Token{
         return proposal_ != nullptr;
     }
 
-    Proposal* BlockMiner::GetProposal(){
+    Handle<Proposal> BlockMiner::GetProposal(){
         LOCK_GUARD;
         return proposal_;
     }
@@ -135,26 +135,59 @@ namespace Token{
         return true;
     }
 
-    void BlockMiner::HandleMineBlockCallback(uv_timer_t* handle){
-        /*
-        uint32_t num_transactions;
-        if((num_transactions = TransactionPool::GetNumberOfTransactions()) >= kNumberOfTransactionsPerBlock){
-            // 1. Collect transactions from pool
-            Handle<Array<Transaction>> txs = Array<Transaction>::New(num_transactions);
-            {
-                // 1.a. Get list of transactions
-                std::vector<uint256_t> pool_txs;
-                if(!TransactionPool::GetTransactions(pool_txs)) CrashReport::GenerateAndExit("Couldn't get list of transactions in pool");
+    static inline size_t
+    GetNumberOfTransactionsInPool(){
+        return TransactionPool::GetNumberOfTransactions();
+    }
 
-                // 1.b. Get data for list of transactions
-                uint32_t index = 0;
-                for(auto& it : pool_txs){
-                    txs->Put(index++, TransactionPool::GetTransaction(it));
-                }
+    class TransactionPoolBlockBuilder : public TransactionPoolVisitor{
+    private:
+        size_t num_transactions_;
+        size_t index_;
+        Transaction** transactions_;
+
+        inline void
+        AddTransaction(const Handle<Transaction>& tx){
+            transactions_[index_++] = tx;
+        }
+    public:
+        TransactionPoolBlockBuilder():
+            TransactionPoolVisitor(),
+            num_transactions_(GetNumberOfTransactionsInPool()),
+            index_(0),
+            transactions_(nullptr){
+            if(num_transactions_ > 0){
+                transactions_ = (Transaction**)malloc(sizeof(Transaction*)*num_transactions_);
+                memset(transactions_, 0, sizeof(Transaction*)*num_transactions_);
             }
+        }
+        ~TransactionPoolBlockBuilder(){
+            if(num_transactions_ > 0 && transactions_) free(transactions_);
+        }
 
-            // 2. Create new block
-            Handle<Block> block = Block::NewInstance(BlockChain::GetHead(), txs, num_transactions);
+        Handle<Block> GetBlock() const{
+            BlockHeader parent = BlockChain::GetHead();
+            return Block::NewInstance(parent, transactions_, num_transactions_);
+        }
+
+        bool Visit(const Handle<Transaction>& tx){
+            if(TransactionValidator::IsValid(tx)) AddTransaction(tx);
+            return true;
+        }
+
+        static Handle<Block> Build(){
+            TransactionPoolBlockBuilder builder;
+            TransactionPool::Accept(&builder);
+            Handle<Block> block = builder.GetBlock();
+            BlockPool::PutBlock(block);
+            return block;
+        }
+    };
+
+    void BlockMiner::HandleMineBlockCallback(uv_timer_t* handle){
+        if(!HasProposal()){
+            if(GetNumberOfTransactionsInPool() < kNumberOfTransactionsPerBlock) return; // do nothing?....
+            Handle<Block> block = TransactionPoolBlockBuilder::Build();
 
             // 3. Validate block
             BlockValidator validator(block);
@@ -163,57 +196,71 @@ namespace Token{
                 return;
             }
 
-            BlockPool::PutBlock(block);
-            if(!HasProposal()){
-                LOG(INFO) << Server::GetID() << " creating proposal for: " << block->GetHeader();
+            LOG(INFO) << Server::GetID() << " creating proposal for: " << block->GetHeader();
 
-                // 4. Create proposal
+            // 4. Create proposal
 #ifdef TOKEN_DEBUG
-                LOG(INFO) << "entering proposal phase";
+            LOG(INFO) << "entering proposal phase";
 #endif//TOKEN_DEBUG
-                Handle<Proposal> proposal = Proposal::NewInstance(block, Server::GetID());
-                SetProposal(proposal);
+            Handle<Proposal> proposal = Proposal::NewInstance(block, Server::GetID());
+            SetProposal(proposal);
 
-                // 5. Submit proposal
+            // 5. Submit proposal
 #ifdef TOKEN_DEBUG
-                LOG(INFO) << "entering voting phase";
+            LOG(INFO) << "entering voting phase";
 #endif//TOKEN_DEBUG
-                proposal->SetPhase(Proposal::kVotingPhase);
-                Handle<PrepareMessage> prepare_msg = PrepareMessage::NewInstance(proposal);
-                Server::Broadcast(prepare_msg.CastTo<Message>());
-                proposal->WaitForRequiredVotes();
+            proposal->SetPhase(Proposal::kVotingPhase);
+            Handle<PrepareMessage> prepare_msg = PrepareMessage::NewInstance(proposal);
+            Server::Broadcast(prepare_msg.CastTo<Message>());
+            proposal->WaitForRequiredVotes();
 
-                // 6. Commit Proposal
+            // 6. Commit Proposal
 #ifdef TOKEN_DEBUG
-                LOG(INFO) << "entering commit phase";
+            LOG(INFO) << "entering commit phase";
 #endif//TOKEN_DEBUG
-                proposal->SetPhase(Proposal::kCommitPhase);
-                Handle<CommitMessage> commit_msg = CommitMessage::NewInstance(proposal);
-                Server::Broadcast(commit_msg.CastTo<Message>());
-                proposal->WaitForRequiredCommits();
+            proposal->SetPhase(Proposal::kCommitPhase);
+            Handle<CommitMessage> commit_msg = CommitMessage::NewInstance(proposal);
+            Server::Broadcast(commit_msg.CastTo<Message>());
+            proposal->WaitForRequiredCommits();
 
-                // 7. Finish Mining Block
-                if(!MineBlock(block, true)){
-                    //TODO: Handle better?
-                    LOG(WARNING) << "couldn't mine block: " << block->GetHeader();
-                }
+            // 7. Quorum has been reached
+            proposal->SetPhase(Proposal::kQuorumPhase);
+            Handle<AcceptedMessage> accepted_msg = AcceptedMessage::NewInstance(proposal);
+            Server::Broadcast(accepted_msg.CastTo<Message>());
 
-                // 8. Quorum has been reached
-                proposal->SetPhase(Proposal::kQuorumPhase);
-            } else{
-                // 4. Wait for Proposal to finish
-                Proposal* proposal = GetProposal();
+            // 7. Finish Mining Block
+            if(!MineBlock(block, true)){
+                //TODO: Handle better?
+                LOG(WARNING) << "couldn't mine block: " << block->GetHeader();
+            }
+            SetProposal(nullptr);
+        } else{
+            // 4. Wait for Proposal to finish
+            Proposal* proposal = GetProposal();
 #ifdef TOKEN_DEBUG
-                LOG(INFO) << "miner waiting for quorum on proposal....";
+            LOG(INFO) << "miner waiting for quorum on proposal....";
 #endif//TOKEN_DEBUG
-                proposal->WaitForQuorum();
-#ifdef TOKEN_DEBUG
-                LOG(INFO) << "proposal has finished, resuming mining...";
-#endif//TOKEN_DEBUG
+
+            proposal->WaitForQuorum();
+
+            uint256_t hash = proposal->GetHash();
+            if(!BlockPool::HasBlock(hash)){
+                LOG(WARNING) << "block " << hash << " not found in pool, cannot finish proposal: #" << proposal->GetHeight();
+                return;
             }
 
+            Handle<Block> block = BlockPool::GetBlock(hash);
+
+            // 7. Finish Mining Block
+            if(!MineBlock(block, false)){ //TODO: yes we want to clean the transaction pool as well
+                //TODO: Handle better?
+                LOG(WARNING) << "couldn't mine block: " << block->GetHeader();
+            }
+
+#ifdef TOKEN_DEBUG
+            LOG(INFO) << "proposal has finished, resuming mining...";
+#endif//TOKEN_DEBUG
             SetProposal(nullptr);
         }
-         */
     }
 }

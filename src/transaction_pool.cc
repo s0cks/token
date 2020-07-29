@@ -2,7 +2,6 @@
 #include <unordered_map>
 #include "crash_report.h"
 #include "transaction_pool.h"
-#include "transaction_pool_cache.h"
 #include "transaction_pool_index.h"
 
 namespace Token{
@@ -19,6 +18,23 @@ namespace Token{
     void TransactionPool::SetState(TransactionPool::State state){
         LOCK_GUARD;
         state_ = state;
+    }
+
+    void TransactionPool::Accept(TransactionPoolVisitor* vis){
+        LOCK_GUARD;
+        DIR* dir;
+        struct dirent* ent;
+        if((dir = opendir(TransactionPoolIndex::GetDirectory().c_str())) != NULL){
+            while((ent = readdir(dir)) != NULL){
+                std::string name(ent->d_name);
+                std::string filename = (TransactionPoolIndex::GetDirectory() + "/" + name);
+                if(!EndsWith(filename, ".dat")) continue;
+
+                Handle<Transaction> tx = Transaction::NewInstance(filename);
+                if(!vis->Visit(tx)) break;
+            }
+            closedir(dir);
+        }
     }
 
     void TransactionPool::Initialize(){
@@ -43,48 +59,27 @@ namespace Token{
 
     Handle<Transaction> TransactionPool::GetTransaction(const uint256_t& hash){
         LOCK_GUARD;
-        if(!TransactionPoolCache::HasTransaction(hash)){
-            if(!TransactionPoolIndex::HasData(hash)) return Handle<Transaction>(); //null
+        if(!TransactionPoolIndex::HasData(hash)) return Handle<Transaction>(); //null
 
 #ifdef TOKEN_DEBUG
             LOG(INFO) << "loading transaction: " << hash;
 #endif//TOKEN_DEBUG
-
-            Handle<Transaction> tx = TransactionPoolIndex::GetData(hash);
-            if(!TransactionPoolCache::HasTransaction(hash)){
-                if(TransactionPoolCache::IsFull()) {
-                    TransactionPoolCache::EvictLastUsed();
-                }
-            } else{
-                TransactionPoolCache::Promote(hash);
-            }
-            return tx;
-        }
-        return TransactionPoolCache::GetTransaction(hash);
+        return TransactionPoolIndex::GetData(hash);
     }
 
     void TransactionPool::RemoveTransaction(const uint256_t& hash){
         LOCK_GUARD;
-        //TODO: implement
         if(!HasTransaction(hash)) return;
+        TransactionPoolIndex::RemoveData(hash);
     }
 
     void TransactionPool::PutTransaction(const Handle<Transaction>& tx){
         LOCK_GUARD;
-        uint256_t hash = tx->GetSHA256Hash();
-        if(!TransactionPoolCache::HasTransaction(hash)){
-            if(TransactionPoolCache::IsFull()) {
-                TransactionPoolCache::EvictLastUsed();
-            }
-        } else{
-            TransactionPoolCache::Promote(hash);
-        }
-        TransactionPoolCache::PutTransaction(hash, tx);
+        TransactionPoolIndex::PutData(tx);
     }
 
     bool TransactionPool::GetTransactions(std::vector<uint256_t>& txs){
         LOCK_GUARD;
-
         DIR* dir;
         struct dirent* ent;
         if((dir = opendir(TransactionPoolIndex::GetDirectory().c_str())) != NULL){
@@ -93,7 +88,7 @@ namespace Token{
                 std::string filename = (TransactionPoolIndex::GetDirectory() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
 
-                Transaction* tx = Transaction::NewInstance(filename);
+                Handle<Transaction> tx = Transaction::NewInstance(filename);
                 txs.push_back(tx->GetSHA256Hash());
             }
             closedir(dir);

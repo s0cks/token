@@ -19,16 +19,19 @@ namespace Token{
     }
 
     void Proposal::WaitForPhase(Proposal::Phase phase){
+        LOG(INFO) << "waiting for " << phase << " phase....";
         LOCK;
         while(phase_ != phase) WAIT;
     }
 
     void Proposal::WaitForRequiredVotes(uint32_t required){
+        LOG(INFO) << "waiting for " << required << " votes....";
         LOCK;
         while(votes_.size() < required) WAIT;
     }
 
     void Proposal::WaitForRequiredCommits(uint32_t required){
+        LOG(INFO) << "waiting for " << required << " commits....";
         LOCK;
         while(commits_.size() < required) WAIT;
     }
@@ -41,11 +44,13 @@ namespace Token{
     void Proposal::Vote(const std::string& info){
         LOCK_GUARD;
         if(!votes_.insert(info).second) LOG(WARNING) << info << " already voted!";
+        SIGNAL_ALL;
     }
 
     void Proposal::Commit(const std::string& info){
         LOCK_GUARD;
         if(!commits_.insert(info).second) LOG(WARNING) << info << "already committed!";
+        SIGNAL_ALL;
     }
 
     uint32_t Proposal::GetNumberOfVotes(){

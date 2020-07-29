@@ -4,7 +4,7 @@
 #include "transaction.h"
 
 namespace Token{
-    //TODO: handle GC of non-cloned Transactions?
+    class TransactionPoolVisitor;
     class TransactionPool{
     public:
         enum State{
@@ -23,6 +23,7 @@ namespace Token{
 
         static State GetState();
         static void Initialize();
+        static void Accept(TransactionPoolVisitor* vis);
         static void RemoveTransaction(const uint256_t& hash);
         static void PutTransaction(const Handle<Transaction>& tx);
         static bool HasTransaction(const uint256_t& hash);
@@ -44,6 +45,14 @@ namespace Token{
         IsInitialized(){
             return GetState() == kInitialized;
         }
+    };
+
+    class TransactionPoolVisitor{
+    protected:
+        TransactionPoolVisitor() = default;
+    public:
+        virtual ~TransactionPoolVisitor() = default;
+        virtual bool Visit(const Handle<Transaction>& tx) = 0;
     };
 }
 

@@ -103,19 +103,19 @@ namespace Token{
         size_t num_transactions_;
         BloomFilter tx_bloom_;
 
-        Block(uint32_t timestamp, uint32_t height, const uint256_t& phash, const Handle<Array<Transaction>>& txs):
+        Block(uint32_t timestamp, uint32_t height, const uint256_t& phash, Transaction** txs, size_t num_txs):
             BinaryObject(),
             timestamp_(timestamp),
             height_(height),
             previous_hash_(phash),
             transactions_(nullptr),
-            num_transactions_(txs->Length()),
+            num_transactions_(num_txs),
             tx_bloom_(){
-            transactions_ = (Transaction**)malloc(sizeof(Transaction*)*txs->Length());
-            memset(transactions_, 0, sizeof(Transaction*)*txs->Length());
-            for(size_t idx = 0; idx < txs->Length(); idx++){
-                WriteBarrier(&transactions_[idx], txs->Get(idx));
-                tx_bloom_.Put(txs->Get(idx)->GetSHA256Hash());
+            transactions_ = (Transaction**)malloc(sizeof(Transaction*)*num_txs);
+            memset(transactions_, 0, sizeof(Transaction*)*num_txs);
+            for(size_t idx = 0; idx < num_txs; idx++){
+                WriteBarrier(&transactions_[idx], txs[idx]);
+                tx_bloom_.Put(txs[idx]->GetSHA256Hash());
             }
         }
     protected:
@@ -164,8 +164,8 @@ namespace Token{
         std::string ToString() const;
 
         static Handle<Block> Genesis(); // genesis
-        static Handle<Block> NewInstance(uint32_t height, const uint256_t& phash, const Handle<Array<Transaction>>& txs, uint32_t timestamp=GetCurrentTime());
-        static Handle<Block> NewInstance(const BlockHeader& parent, const Handle<Array<Transaction>>& txs, uint32_t timestamp=GetCurrentTime());
+        static Handle<Block> NewInstance(uint32_t height, const uint256_t& phash, Transaction** txs, size_t num_txs, uint32_t timestamp=GetCurrentTime());
+        static Handle<Block> NewInstance(const BlockHeader& parent, Transaction** txs, size_t num_txs, uint32_t timestamp=GetCurrentTime());
         static Handle<Block> NewInstance(const RawBlock& raw);
         static Handle<Block> NewInstance(std::fstream& fd);
 

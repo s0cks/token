@@ -29,10 +29,12 @@ namespace Token{
         Handle<VerackMessage> msg = task->GetMessage().CastTo<VerackMessage>();
 
         NodeAddress paddr = msg->GetCallbackAddress();
-        session->Send(VerackMessage::NewInstance(Server::GetID())); //TODO: obtain address dynamically
+        NodeAddress callback("127.0.0.1", FLAGS_port);
+
+        session->Send(VerackMessage::NewInstance(Server::GetID(), callback)); //TODO: obtain address dynamically
 
         session->SetState(NodeSession::kConnected);
-        if(!Server::HasPeer(msg->GetID())){
+        if(!Server::HasPeer(callback)){
             LOG(WARNING) << "couldn't find peer: " << msg->GetID() << ", connecting to peer " << paddr << "....";
             if(!Server::ConnectTo(paddr)){
                 LOG(WARNING) << "couldn't connect to peer: " << paddr;
@@ -96,16 +98,23 @@ namespace Token{
         NodeSession* session = (NodeSession*)task->GetSession();
         Handle<PrepareMessage> msg = task->GetMessage().CastTo<PrepareMessage>();
 
-        Proposal* proposal = msg->GetProposal();
-        //TODO: validate proposal first
-
+        Handle<Proposal> proposal = msg->GetProposal(); //TODO: validate proposal
         if(BlockMiner::HasProposal()){
             session->Send(RejectedMessage::NewInstance(proposal));
             return;
         }
-
         BlockMiner::SetProposal(proposal);
-        session->Send(PromiseMessage::NewInstance(proposal));
+
+        proposal->SetPhase(Proposal::kVotingPhase);
+        std::vector<Handle<Message>> response;
+        if(!BlockPool::HasBlock(proposal->GetHash())){
+            std::vector<InventoryItem> items = {
+                InventoryItem(InventoryItem::kBlock, proposal->GetHash())
+            };
+            response.push_back(GetDataMessage::NewInstance(items).CastTo<Message>());
+        }
+        response.push_back(PromiseMessage::NewInstance(proposal).CastTo<Message>());
+        session->Send(response);
     }
 
     void NodeSession::HandlePromiseMessage(const Handle<HandleMessageTask>& task){}
@@ -117,18 +126,25 @@ namespace Token{
         Proposal* proposal = msg->GetProposal();
         uint256_t hash = proposal->GetHash();
 
-        Block* block;
-        if(!(block = BlockPool::GetBlock(hash))){
-            LOG(WARNING) << "couldn't find block " << hash << " from pool waiting....";
-            goto exit;
+        if(!BlockPool::HasBlock(hash)){
+            LOG(WARNING) << "couldn't find block " << hash << " in pool, rejecting request to commit proposal....";
+            session->Send(RejectedMessage::NewInstance(proposal));
+        } else{
+            proposal->SetPhase(Proposal::kCommitPhase);
+            session->Send(AcceptedMessage::NewInstance(proposal));
         }
-
-        BlockPool::RemoveBlock(hash);
-
-        session->Send(AcceptedMessage::NewInstance(proposal));
-    exit:
-        return;
     }
+
+    void NodeSession::HandleAcceptedMessage(const Handle<HandleMessageTask>& task){
+        NodeSession* session = (NodeSession*)task->GetSession();
+        Handle<AcceptedMessage> msg = task->GetMessage().CastTo<AcceptedMessage>();
+        Handle<Proposal> proposal = msg->GetProposal();
+
+        // validate proposal still?
+        proposal->SetPhase(Proposal::kQuorumPhase);
+    }
+
+    void NodeSession::HandleRejectedMessage(const Handle<HandleMessageTask>& task){}
 
     void NodeSession::HandleBlockMessage(const Handle<HandleMessageTask>& task){
         NodeSession* session = (NodeSession*)task->GetSession();
@@ -137,8 +153,10 @@ namespace Token{
         Block* block = msg->GetBlock();
         uint256_t hash = block->GetSHA256Hash();
 
-        BlockPool::PutBlock(block);
-        //TODO: session->OnHash(hash); - move to block chain class, block calling thread
+        if(!BlockPool::HasBlock(hash)){
+            BlockPool::PutBlock(block);
+            Server::Broadcast(InventoryMessage::NewInstance(block).CastTo<Message>());
+        }
     }
 
     void NodeSession::HandleTransactionMessage(const Handle<HandleMessageTask>& task){
@@ -158,9 +176,6 @@ namespace Token{
         }
     }
 
-    void NodeSession::HandleAcceptedMessage(const Handle<HandleMessageTask>& task){}
-    void NodeSession::HandleRejectedMessage(const Handle<HandleMessageTask>& task){}
-
     void NodeSession::HandleTestMessage(const Handle<HandleMessageTask>& task){
         NodeSession* session = (NodeSession*)task->GetSession();
         Handle<TestMessage> msg = task->GetMessage().CastTo<TestMessage>();
@@ -177,13 +192,13 @@ namespace Token{
             return;
         }
 
-        auto item_exists = [](InventoryItem item){
-            return item.ItemExists();
-        };
-        items.erase(std::remove_if(items.begin(), items.end(), item_exists), items.end());
+        std::vector<InventoryItem> needed;
+        for(auto& item : items){
+            if(!item.ItemExists()) needed.push_back(item);
+        }
 
-        for(auto& item : items) LOG(INFO) << "downloading " << item << "....";
-        if(!items.empty()) session->Send(GetDataMessage::NewInstance(items));
+        LOG(INFO) << "downloading " << needed.size() << "/" << items.size() << " items from inventory....";
+        if(!needed.empty()) session->Send(GetDataMessage::NewInstance(needed));
     }
 
     void NodeSession::HandleGetBlocksMessage(const Handle<HandleMessageTask>& task){

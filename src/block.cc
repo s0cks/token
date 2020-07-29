@@ -26,25 +26,28 @@ namespace Token{
             token << "TestToken" << idx;
             cb_outputs.push_back(Output("TestUser", token.str()));
         }
-
-        Handle<Array<Transaction>> txs = Array<Transaction>::New(1);
-        txs->Put(0, Transaction::NewInstance(0, cb_inputs, cb_outputs, 0));
-        return NewInstance(0, uint256_t(), txs, 0);
+        Transaction* txs[1] = {
+            Transaction::NewInstance(0, cb_inputs, cb_outputs, 0)
+        };
+        return NewInstance(0, uint256_t(), txs, 1, 0);
     }
 
-    Handle<Block> Block::NewInstance(uint32_t height, const Token::uint256_t &phash, const Handle<Array<Transaction>>& txs, uint32_t timestamp){
-        return Handle<Block>(new Block(timestamp, height, phash, txs));
+    Handle<Block> Block::NewInstance(uint32_t height, const uint256_t& phash, Transaction** txs, size_t num_txs, uint32_t timestamp){
+        return new Block(timestamp, height, phash, txs, num_txs);
     }
 
-    Handle<Block> Block::NewInstance(const BlockHeader &parent, const Handle<Array<Transaction>>& txs, uint32_t timestamp){
-        return NewInstance(parent.GetHeight() + 1, parent.GetHash(), txs, timestamp);
+    Handle<Block> Block::NewInstance(const BlockHeader& previous, Transaction** txs, size_t num_txs, uint32_t timestamp){
+        return new Block(timestamp, previous.GetHeight() + 1, previous.GetHash(), txs, num_txs);
     }
 
     Handle<Block> Block::NewInstance(const RawBlock& raw){
         size_t num_txs = raw.transactions_size();
-        Handle<Array<Transaction>> txs = Array<Transaction>::New(num_txs);
-        for(size_t idx = 0; idx < num_txs; idx++) txs->Put(idx, Transaction::NewInstance(raw.transactions(idx)));
-        return NewInstance(raw.height(), HashFromHexString(raw.previous_hash()), txs, raw.timestamp());
+        Transaction* txs[num_txs];
+
+        for(size_t idx = 0; idx < num_txs; idx++){
+            txs[idx] = Transaction::NewInstance(raw.transactions(idx));
+        }
+        return NewInstance(raw.height(), HashFromHexString(raw.previous_hash()), txs, num_txs, raw.timestamp());
     }
 
     Handle<Block> Block::NewInstance(std::fstream& fd){

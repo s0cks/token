@@ -112,6 +112,27 @@ namespace Token{
             return NewInstance(block.GetHeight(), block.GetHash(), proposer);
         }
     };
+
+    static std::ostream& operator<<(std::ostream& stream, const Proposal::Phase& phase){
+        switch(phase){
+            case Proposal::Phase::kProposalPhase:
+                stream << "Proposal";
+                break;
+            case Proposal::Phase::kVotingPhase:
+                stream << "Voting";
+                break;
+            case Proposal::Phase::kCommitPhase:
+                stream << "Commit";
+                break;
+            case Proposal::Phase::kQuorumPhase:
+                stream << "Quorum";
+                break;
+            default:
+                stream << "Unknown";
+                break;
+        }
+        return stream;
+    }
 }
 
 #endif //TOKEN_PROPOSAL_H

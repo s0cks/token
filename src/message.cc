@@ -35,6 +35,7 @@ case MessageType::k##Name##MessageType:{ \
             DECLARE_RAW_DECODE(Verack, Proto::BlockChainServer::Verack, "couldn't deserialize verack from byte array");
             DECLARE_RAW_DECODE(Accepted, Proto::BlockChainServer::Proposal, "couldn't deserialize accepted from byte array");
             DECLARE_RAW_DECODE(Rejected, Proto::BlockChainServer::Proposal, "couldn't deserialize rejected from byte array");
+            DECLARE_RAW_DECODE(NotFound, Proto::BlockChainServer::NotFound, "couldn't deserialize notfound from byte array");
             default:{
                 LOG(ERROR) << "invalid message of type " << static_cast<uint8_t>(type) << " w/ size " << size;
                 return nullptr;
@@ -48,7 +49,18 @@ case MessageType::k##Name##MessageType:{ \
         raw_.set_hash(HexString(proposal->GetHash()));
     }
 
-    Proposal* PaxosMessage::GetProposal() const{
-        return Proposal::NewInstance(0, GetHash(), GetProposer());
+
+    Handle<Proposal> PaxosMessage::GetProposal() const{
+        if(BlockMiner::HasProposal()){
+            Handle<Proposal> proposal = BlockMiner::GetProposal();
+            if(proposal->GetHeight() == GetHeight() &&
+                proposal->GetHash() == GetHash()){
+                return proposal;
+            }
+
+            LOG(WARNING) << "current proposal #" << proposal->GetHeight() << "(" << proposal->GetHash() << ") is invalid";
+            LOG(WARNING) << "expected proposal #" << GetHeight() << "(" << GetHash() << ")";
+        }
+        return Proposal::NewInstance(GetHeight(), GetHash(), GetProposer());
     }
 }

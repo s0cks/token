@@ -12,6 +12,7 @@ namespace Token{
 
         static void Initialize();
         static void PutData(const Handle<Transaction>& tx);
+        static void RemoveData(const uint256_t& hash);
         static Handle<Transaction> GetData(const uint256_t& hash);
         static size_t GetNumberOfTransactions();
         static bool HasData(const uint256_t& hash);

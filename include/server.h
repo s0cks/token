@@ -11,6 +11,7 @@ namespace Token{
     class PeerSession;
     class HandleMessageTask;
     class Server{
+        friend class PeerSession;
     public:
         enum State{
             kStarting,
@@ -49,7 +50,8 @@ namespace Token{
         static void LoadNodeInformation();
         static void SavePeers();
         static void LoadPeers();
-
+        static void RegisterPeer(PeerSession* peer);
+        static void UnregisterPeer(PeerSession* peer);
         static void SetState(State state);
         static uv_tcp_t* GetHandle();
         static void* NodeThread(void* ptr);
