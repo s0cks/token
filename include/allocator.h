@@ -169,14 +169,16 @@ namespace Token{
         }
     };
 
-    class RawObject;
-    class FieldIterator{
+    class WeakReferenceVisitor{
+    protected:
+        WeakReferenceVisitor() = default;
     public:
-        virtual void operator()(RawObject** field) const = 0;
+        virtual ~WeakReferenceVisitor() = default;
+        virtual bool Visit(RawObject** field) const = 0;
 
         template<typename T>
-        void operator()(T** field) const{
-            operator()(reinterpret_cast<RawObject**>(field));
+        bool Visit(T** field) const{
+            return Visit((RawObject**)field);
         }
     };
 
@@ -267,7 +269,7 @@ namespace Token{
         }
 
         virtual void NotifyWeakReferences(RawObject** field){}
-        virtual void Accept(const FieldIterator& iter){}
+        virtual void Accept(WeakReferenceVisitor* vis){}
 
         void WriteBarrier(RawObject** slot, RawObject* data){
             if(data) data->IncrementReferenceCount();

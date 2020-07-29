@@ -25,7 +25,7 @@ namespace Token{
             return block_;
         }
 
-        bool Visit(Transaction* tx){
+        bool Visit(const Handle<Transaction>& tx){
             uint256_t hash = tx->GetSHA256Hash();
             if(!TransactionHandler::ProcessTransaction(tx)){
                 LOG(WARNING) << "couldn't process transaction: " << hash;

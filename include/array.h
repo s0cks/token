@@ -30,7 +30,7 @@ namespace Token{
             return length_;
         }
     public:
-        void Accept(const FieldIterator& it);
+        void Accept(WeakReferenceVisitor* vis);
 
         std::string ToString() const;
     };

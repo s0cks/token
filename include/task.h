@@ -37,8 +37,8 @@ namespace Token{
             WriteBarrier(&message_, message);
         }
     protected:
-        virtual void Accept(const FieldIterator& iter){
-            iter(&message_);
+        virtual void Accept(WeakReferenceVisitor* vis){
+            vis->Visit(&message_);
         }
     public:
         ~HandleMessageTask() = default;

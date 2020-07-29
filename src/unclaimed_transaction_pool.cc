@@ -155,7 +155,7 @@ namespace Token{
         UnclaimedTransactionPoolPrinter(): UnclaimedTransactionPoolVisitor(){}
         ~UnclaimedTransactionPoolPrinter() = default;
 
-        bool Visit(UnclaimedTransaction* utxo){
+        bool Visit(const Handle<UnclaimedTransaction>& utxo){
             LOG(INFO) << utxo->GetTransaction() << "[" << utxo->GetIndex() << "] := " << utxo->GetSHA256Hash();
             return true;
         }

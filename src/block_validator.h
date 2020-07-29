@@ -24,7 +24,7 @@ namespace Token{
             return block_;
         }
 
-        bool IsValid(Transaction* tx){
+        bool IsValid(const Handle<Transaction>& tx){
             uint256_t hash = tx->GetSHA256Hash();
             if(tx->GetNumberOfInputs() <= 0){
                 LOG(WARNING) << "transaction " << hash << " has no inputs";
@@ -36,7 +36,7 @@ namespace Token{
             return TransactionValidator::IsValid(tx);
         }
 
-        bool Visit(Transaction* tx){
+        bool Visit(const Handle<Transaction>& tx){
             if(!IsValid(tx)){
                 invalid_txs_.push_back(tx);
                 return false;

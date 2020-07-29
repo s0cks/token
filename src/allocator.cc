@@ -73,7 +73,7 @@ namespace Token{
             }
         }
 
-        void Accept(RootObjectPointerVisitor* vis){
+        void Accept(WeakObjectPointerVisitor* vis){
             if (size_) {
                 for (size_t i = 0; i < kNumberOfRootsPerPage; i++){
                     RawObject* data = roots_[i];
@@ -122,7 +122,7 @@ namespace Token{
         //TODO: implement
     }
 
-    void Allocator::VisitRoots(RootObjectPointerVisitor* vis){
+    void Allocator::VisitRoots(WeakObjectPointerVisitor* vis){
         RootPage* current = roots_;
         while(current != nullptr){
             current->Accept(vis);

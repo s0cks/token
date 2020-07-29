@@ -59,19 +59,17 @@ namespace Token{
         }
     };
 
-    class UpdateIterator : public FieldIterator{
+    class LiveObjectReferenceUpdater : public ObjectPointerVisitor,
+                                              WeakReferenceVisitor{
     public:
-        void operator()(RawObject** field) const{
+        bool Visit(RawObject** field) const{
             RawObject* obj = (*field);
-            if(!obj) return;
-            (*field) = (RawObject*)obj->ptr_;
+            if(obj) (*field) = (RawObject*)obj->ptr_;
+            return true;
         }
-    };
 
-    class LiveObjectReferenceUpdater : public ObjectPointerVisitor{
-    public:
         bool Visit(RawObject* obj){
-            if(!obj->IsGarbage()) obj->Accept(UpdateIterator{});
+            if(!obj->IsGarbage()) obj->Accept(this);
             return true;
         }
     };

@@ -119,9 +119,9 @@ namespace Token{
             }
         }
     protected:
-        virtual void Accept(const FieldIterator& iter){
+        virtual void Accept(WeakReferenceVisitor* vis){
             for(size_t idx = 0; idx < num_transactions_; idx++){
-                iter(&transactions_[idx]);
+                vis->Visit(&transactions_[idx]);
             }
         }
     public:

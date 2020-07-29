@@ -123,6 +123,7 @@ namespace Token{
     };
 
     typedef Proto::BlockChain::Transaction RawTransaction;
+
     class TransactionVisitor;
     class Transaction : public BinaryObject<RawTransaction>{
         friend class Block;

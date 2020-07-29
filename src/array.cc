@@ -13,9 +13,9 @@ namespace Token{
 
     void ArrayBase::operator delete(void*, size_t, bool){}
 
-    void ArrayBase::Accept(const FieldIterator& iter) {
+    void ArrayBase::Accept(WeakReferenceVisitor* vis) {
         for (size_t i = 0; i < Length(); i++) {
-            iter(&slots_[i]);
+            vis->Visit(&slots_[i]);
         }
     }
 
