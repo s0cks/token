@@ -61,9 +61,6 @@ namespace Token{
         return stream;
     }
 
-    //TODO
-    // - refactor stack allocations
-    // - locking for allocations + collections
     class Heap;
     class RawObject;
     class ObjectPointerVisitor;
