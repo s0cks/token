@@ -114,7 +114,6 @@ namespace Token{
     };
 
     uint256_t Block::GetMerkleRoot() const{
-        //TODO: scope merkle tree
         BlockMerkleTreeBuilder builder(this);
         if(!builder.BuildTree()) return uint256_t();
         MerkleTree* tree = builder.GetTree();

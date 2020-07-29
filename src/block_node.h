@@ -67,11 +67,6 @@ namespace Token{
             return block_.GetHeight() == 0;
         }
 
-        bool Finalize(){
-            //TODO: implement
-            return true;
-        }
-
         std::string ToString() const;
 
         static BlockNode* NewInstance(const BlockHeader& block);

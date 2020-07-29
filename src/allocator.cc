@@ -136,7 +136,7 @@ namespace Token{
         size_t total_size = ALIGN(alloc_size);
         void* ptr = GetEdenHeap()->Allocate(total_size);
         if(!ptr){
-            Scavenger::Scavenge(GetEdenHeap());//TODO: convert to MinorGC?
+            MinorCollect();
             ptr = GetEdenHeap()->Allocate(total_size);
             assert(ptr);
         }
