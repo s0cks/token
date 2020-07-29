@@ -57,9 +57,9 @@ namespace Token{
         BlockPoolVisitor() = default;
     public:
         virtual ~BlockPoolVisitor() = default;
-        virtual bool VisitStart(){}
+        virtual bool VisitStart(){ return true; }
         virtual bool Visit(const Handle<Block>& block) = 0;
-        virtual bool VisitEnd(){}
+        virtual bool VisitEnd(){ return true; }
     };
 }
 

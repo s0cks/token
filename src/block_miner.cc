@@ -20,7 +20,8 @@ namespace Token{
     static uv_timer_t mine_timer_;
     static uv_timer_t proposal_timeout_timer_;
     static BlockMiner::State state_ = BlockMiner::State::kStopped;
-    static Proposal* proposal_ = nullptr;
+
+    static Handle<Proposal> proposal_ = Handle<Proposal>();
 
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
 #define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
@@ -236,7 +237,7 @@ namespace Token{
             SetProposal(nullptr);
         } else{
             // 4. Wait for Proposal to finish
-            Proposal* proposal = GetProposal();
+            Handle<Proposal> proposal = GetProposal();
 #ifdef TOKEN_DEBUG
             LOG(INFO) << "miner waiting for quorum on proposal....";
 #endif//TOKEN_DEBUG

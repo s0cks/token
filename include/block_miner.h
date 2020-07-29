@@ -12,6 +12,9 @@ namespace Token{
     // - refactor mining logic
     // - add timeout to proposal logic
     class BlockMiner{
+        friend class BlockChain;
+        friend class Server;
+        friend class PeerSession;
     public:
         enum State{
             kStarting,
@@ -37,10 +40,6 @@ namespace Token{
 
         static const uint32_t kMiningIntervalMilliseconds = 1 * 1000;
         static const uint32_t kNumberOfTransactionsPerBlock = 2;
-
-        friend class BlockChain;
-        friend class Server;
-        friend class PeerSession;
     private:
         BlockMiner() = delete;
 

@@ -86,6 +86,7 @@ namespace Token {
             LOG(WARNING) << "couldn't index unclaimed transaction: " << tx->GetSHA256Hash();
             return false;
         }
+        return true;
     }
 
     size_t BlockPoolIndex::GetNumberOfBlocks() {
