@@ -86,12 +86,13 @@ namespace Token{
         }
     };
 
-    //TODO:
-    // - validation logic
-    // - refactor to use raw array
     typedef Proto::BlockChain::Block RawBlock;
+
     class BlockVisitor;
     class Block : public BinaryObject<RawBlock>{
+        //TODO:
+        // - validation logic
+        // - refactor to use raw array
         friend class BlockChain;
         friend class BlockMessage;
     private:
@@ -110,7 +111,6 @@ namespace Token{
             transactions_(nullptr),
             num_transactions_(txs->Length()),
             tx_bloom_(){
-            //TODO: load tx_bloom_;
             transactions_ = (Transaction**)malloc(sizeof(Transaction*)*txs->Length());
             memset(transactions_, 0, sizeof(Transaction*)*txs->Length());
             for(size_t idx = 0; idx < txs->Length(); idx++){
@@ -127,7 +127,6 @@ namespace Token{
     public:
         ~Block() = default;
 
-        //TODO: refactor
         BlockHeader GetHeader() const{
             return BlockHeader(timestamp_, height_, previous_hash_, GetMerkleRoot(), GetSHA256Hash());
         }
@@ -151,7 +150,7 @@ namespace Token{
         }
 
         Handle<Transaction> GetTransaction(uint32_t idx) const{
-            if(idx < 0 || idx > GetNumberOfTransactions()) return nullptr;
+            if(idx < 0 || idx > GetNumberOfTransactions()) return Handle<Transaction>();
             return transactions_[idx];
         }
 
@@ -159,9 +158,8 @@ namespace Token{
             return GetHeight() == 0;
         }
 
-        bool Finalize();
-        bool Contains(const uint256_t& hash) const;
         bool Accept(BlockVisitor* vis) const;
+        bool Contains(const uint256_t& hash) const;
         bool WriteToMessage(RawBlock& raw) const;
         std::string ToString() const;
 
@@ -178,12 +176,12 @@ namespace Token{
     };
 
     class BlockVisitor{
+    protected:
+        BlockVisitor() = default;
     public:
-        BlockVisitor(){}
-        virtual ~BlockVisitor(){}
-
+        virtual ~BlockVisitor() = default;
         virtual bool VisitStart(){ return true; }
-        virtual bool Visit(Transaction* tx) = 0;
+        virtual bool Visit(const Handle<Transaction>& tx) = 0;
         virtual bool VisitEnd(){ return true; }
     };
 }

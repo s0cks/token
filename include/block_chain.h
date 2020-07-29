@@ -13,8 +13,9 @@
 namespace Token{
     class BlockNode;
     class BlockChainVisitor;
-
     class BlockChain{
+        friend class Server;
+        friend class BlockMiner;
     public:
         enum State{
             kUninitialized,
@@ -24,9 +25,6 @@ namespace Token{
 
         static const uint32_t kNumberOfGenesisOutputs = 1000;
     private:
-        friend class BlockMiner;
-        friend class Server;
-
         BlockChain() = delete;
 
         static void SetState(State state);

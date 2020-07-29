@@ -77,14 +77,10 @@ namespace Token{
         for(size_t idx = 0;
             idx < GetNumberOfTransactions();
             idx++){
-            Transaction* tx = GetTransaction(idx);
+            Handle<Transaction> tx = GetTransaction(idx);
             if(!vis->Visit(tx)) return false;
         }
         return vis->VisitEnd();
-    }
-
-    bool Block::Finalize(){
-        return true;
     }
 
     bool Block::Contains(const uint256_t& hash) const{
@@ -106,7 +102,7 @@ namespace Token{
             return block_;
         }
 
-        bool Visit(Transaction* tx){
+        bool Visit(const Handle<Transaction>& tx){
             return AddLeaf(tx->GetSHA256Hash());
         }
 
