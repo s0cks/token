@@ -38,6 +38,7 @@ namespace Token{
         if(req) free(req);
     }
 
+    //TODO: there seems to be some memory issues
     void Session::Send(const Handle<Message>& msg){
         LOG(INFO) << "sending " << msg->ToString();
 
@@ -59,6 +60,7 @@ namespace Token{
         uv_write(req, GetStream(), &buff, 1, &OnMessageSent);
     }
 
+    //TODO: there seems to be some memory issues
     void Session::Send(std::vector<Handle<Message>>& messages){
         size_t total_messages = messages.size();
         if(total_messages <= 0){

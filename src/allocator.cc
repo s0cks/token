@@ -85,10 +85,18 @@ namespace Token{
         }
     };
 
+    static std::mutex mutex_;
+    static std::condition_variable cond_;
     static Heap* eden_ = nullptr;
     static Heap* survivor_ = nullptr;
     static Heap* tenured_ = nullptr;
     static RootPage* roots_ = nullptr;
+
+#define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
+#define LOCK std::unique_lock<std::mutex> lock(mutex_)
+#define WAIT cond_.wait(lock)
+#define SIGNAL_ONE cond_.notify_one()
+#define SIGNAL_ALL cond_.notify_all()
 
     static size_t allocating_size_ = 0;
     static void* allocating_ = nullptr;
@@ -133,6 +141,7 @@ namespace Token{
 #define ALIGN(Size) (((Size)+7)&~7)
 
     void* Allocator::Allocate(size_t alloc_size){
+        LOCK_GUARD;
         size_t total_size = ALIGN(alloc_size);
         void* ptr = GetEdenHeap()->Allocate(total_size);
         if(!ptr){
@@ -158,6 +167,7 @@ namespace Token{
     }
 
     void Allocator::MinorCollect(){
+        LOCK_GUARD;
         Scavenger::Scavenge(GetEdenHeap());
         Scavenger::Scavenge(GetSurvivorHeap());
     }
