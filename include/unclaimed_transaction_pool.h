@@ -53,11 +53,13 @@ namespace Token{
     };
 
     class UnclaimedTransactionPoolVisitor{
+    protected:
+        UnclaimedTransactionPoolVisitor() = default;
     public:
         virtual ~UnclaimedTransactionPoolVisitor() = default;
 
         virtual bool VisitStart() { return true; }
-        virtual bool Visit(UnclaimedTransaction* utxo) = 0;
+        virtual bool Visit(const Handle<UnclaimedTransaction>& utxo) = 0;
         virtual bool VisitEnd() { return true; };
     };
 }
