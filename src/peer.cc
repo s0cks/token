@@ -8,6 +8,10 @@ namespace Token{
         session->Disconnect();
     }
 
+    uv_loop_t* PeerSession::GetLoop() const{
+        return socket_.loop;// is this safe?
+    }
+
     void PeerSession::Disconnect(){
         if(pthread_self() == thread_){
             // Inside Session Thread
@@ -129,6 +133,10 @@ namespace Token{
         response.push_back(VerackMessage::NewInstance(Server::GetID(), callback).CastTo<Message>());
         if(BlockChain::GetHead().GetHeight() < msg->GetHeight()){
             response.push_back(GetBlocksMessage::NewInstance().CastTo<Message>());
+
+            Handle<SynchronizeBlockChainTask> sync_task = SynchronizeBlockChainTask::NewInstance(session->GetLoop(), session, msg->GetHead());
+            sync_task->Submit();
+
         }
         session->Send(response);
     }
@@ -255,7 +263,7 @@ namespace Token{
         BlockPool::PutBlock(block);
 
         LOG(INFO) << "downloaded block: " << block->GetHeader();
-        //TODO: session->OnHash(hash);
+        session->OnItemReceived(InventoryItem(InventoryItem::kBlock, hash));
     }
 
     void PeerSession::HandleTransactionMessage(const Handle<HandleMessageTask>& task){

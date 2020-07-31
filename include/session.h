@@ -52,6 +52,7 @@ namespace Token{
         virtual uv_stream_t* GetStream() = 0;
         void SetState(State state);
         void SetID(const std::string& id);
+        void OnItemReceived(const InventoryItem& item);
 
         friend class Server;
     public:
@@ -79,6 +80,7 @@ namespace Token{
 
         State GetState();
         void WaitForState(State state);
+        void WaitForItem(const InventoryItem& item);
         void Send(std::vector<Handle<Message>>& messages);
         void Send(const Handle<Message>& msg);
 

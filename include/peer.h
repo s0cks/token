@@ -38,7 +38,7 @@ namespace Token{
     virtual void Handle##Name##Message(const Handle<HandleMessageTask>& task);
         FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
-
+        uv_loop_t* GetLoop() const;
         void Disconnect();
         bool Connect();
     };

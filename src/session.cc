@@ -12,6 +12,16 @@ namespace Token{
         while(state_ != state) WAIT;
     }
 
+    void Session::WaitForItem(const InventoryItem& item){
+        LOCK;
+        while(!item.ItemExists()) WAIT;
+    }
+
+    void Session::OnItemReceived(const InventoryItem& item){
+        LOCK;// wuuuuuuuuut???
+        SIGNAL_ALL;
+    }
+
     void Session::SetState(Session::State state){
         LOCK;
         state_ = state;
