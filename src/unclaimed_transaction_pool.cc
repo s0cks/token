@@ -1,7 +1,6 @@
 #include "crash_report.h"
 #include "unclaimed_transaction_pool.h"
 #include "unclaimed_transaction_pool_index.h"
-#include "unclaimed_transaction_pool_cache.h"
 
 namespace Token{
     static std::recursive_mutex mutex_;
@@ -46,14 +45,8 @@ namespace Token{
 
     Handle<UnclaimedTransaction> UnclaimedTransactionPool::GetUnclaimedTransaction(const uint256_t& hash){
         LOCK_GUARD;
-        if(!UnclaimedTransactionPoolCache::HasTransaction(hash)){
-            if(!UnclaimedTransactionPoolIndex::HasData(hash)) return Handle<UnclaimedTransaction>(); //null
-            if(UnclaimedTransactionPoolCache::IsFull()) UnclaimedTransactionPoolCache::EvictLastUsed();
-            Handle<UnclaimedTransaction> tx = UnclaimedTransactionPoolIndex::GetData(hash);
-            UnclaimedTransactionPoolCache::PutTransaction(hash, tx);
-            return tx;
-        }
-        return UnclaimedTransactionPoolCache::GetTransaction(hash);
+        if(!UnclaimedTransactionPoolIndex::HasData(hash)) return Handle<UnclaimedTransaction>(); //null
+        return UnclaimedTransactionPoolIndex::GetData(hash);
     }
 
     void UnclaimedTransactionPool::RemoveUnclaimedTransaction(const uint256_t& hash){
@@ -64,13 +57,7 @@ namespace Token{
 
     void UnclaimedTransactionPool::PutUnclaimedTransaction(const Handle<UnclaimedTransaction>& utxo){
         LOCK_GUARD;
-        uint256_t hash = utxo->GetSHA256Hash();
-        if(!UnclaimedTransactionPoolCache::HasTransaction(hash)){
-            if(UnclaimedTransactionPoolCache::IsFull()) UnclaimedTransactionPoolCache::EvictLastUsed();
-        } else{
-            UnclaimedTransactionPoolCache::Promote(hash);
-        }
-        UnclaimedTransactionPoolCache::PutTransaction(hash, utxo);
+        UnclaimedTransactionPoolIndex::PutData(utxo);
     }
 
     bool UnclaimedTransactionPool::GetUnclaimedTransactions(std::vector<uint256_t>& utxos){
@@ -82,7 +69,8 @@ namespace Token{
                 std::string name(ent->d_name);
                 std::string filename = (GetDataDirectory() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
-                UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(filename);
+
+                Handle<UnclaimedTransaction> utxo = UnclaimedTransaction::NewInstance(filename);
                 utxos.push_back(utxo->GetSHA256Hash());
             }
             closedir(dir);
@@ -101,8 +89,8 @@ namespace Token{
                 std::string name(ent->d_name);
                 std::string filename = (GetDataDirectory() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
-                UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(filename);
-                // if(utxo.GetUser() != user) continue;
+                Handle<UnclaimedTransaction> utxo = UnclaimedTransaction::NewInstance(filename);
+                if(utxo->GetUser() != user) continue;
                 utxos.push_back(utxo->GetSHA256Hash());
             }
             closedir(dir);
@@ -114,13 +102,18 @@ namespace Token{
     bool UnclaimedTransactionPool::Accept(UnclaimedTransactionPoolVisitor* vis){
         if(!vis->VisitStart()) return false;
 
-        std::vector<uint256_t> utxos;
-        if(!GetUnclaimedTransactions(utxos)) return false;
-
-        for(auto& it : utxos){
-            UnclaimedTransaction* utxo;
-            if(!(utxo = GetUnclaimedTransaction(it))) return false;
-            if(!vis->Visit(utxo)) return false;
+        LOCK_GUARD;
+        DIR* dir;
+        struct dirent* ent;
+        if((dir = opendir(GetDataDirectory().c_str())) != NULL){
+            while((ent = readdir(dir)) != NULL){
+                std::string name(ent->d_name);
+                std::string filename = (GetDataDirectory() + "/" + name);
+                if(!EndsWith(filename, ".dat")) continue;
+                Handle<UnclaimedTransaction> utxo = UnclaimedTransaction::NewInstance(filename);
+                if(vis->Visit(utxo)) break;
+            }
+            closedir(dir);
         }
 
         return vis->VisitEnd();

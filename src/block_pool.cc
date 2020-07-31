@@ -51,8 +51,8 @@ namespace Token{
 
     void BlockPool::RemoveBlock(const uint256_t& hash){
         LOCK_GUARD;
-        //TODO: implement
         if(!HasBlock(hash)) return;
+
     }
 
     void BlockPool::PutBlock(const Handle<Block>& block){

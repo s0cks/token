@@ -60,10 +60,6 @@ namespace Token{
     Handle<Transaction> TransactionPool::GetTransaction(const uint256_t& hash){
         LOCK_GUARD;
         if(!TransactionPoolIndex::HasData(hash)) return Handle<Transaction>(); //null
-
-#ifdef TOKEN_DEBUG
-            LOG(INFO) << "loading transaction: " << hash;
-#endif//TOKEN_DEBUG
         return TransactionPoolIndex::GetData(hash);
     }
 

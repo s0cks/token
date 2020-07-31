@@ -1,5 +1,6 @@
 #include "peer.h"
 #include "task.h"
+#include "async_task.h"
 #include "block_pool.h"
 
 namespace Token{
@@ -133,7 +134,6 @@ namespace Token{
         response.push_back(VerackMessage::NewInstance(Server::GetID(), callback).CastTo<Message>());
         if(BlockChain::GetHead().GetHeight() < msg->GetHeight()){
             response.push_back(GetBlocksMessage::NewInstance().CastTo<Message>());
-
             Handle<SynchronizeBlockChainTask> sync_task = SynchronizeBlockChainTask::NewInstance(session->GetLoop(), session, msg->GetHead());
             sync_task->Submit();
 
