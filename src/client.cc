@@ -68,9 +68,7 @@ namespace Token{
             return; //TODO: terminate connection
         }
 
-        //NodeInfo info(GenerateNonce(), NodeAddress());
-        //BlockHeader head;
-        //client->Send(VersionMessage::NewInstance(info, GenerateNonce(), head));
+        client->Send(VersionMessage::NewInstance(client->GetID()));
     }
 
     void NodeClient::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
@@ -125,7 +123,7 @@ namespace Token{
     void NodeClient::HandleVersionMessage(const Handle<HandleMessageTask>& task){
         NodeClient* client = (NodeClient*)task->GetSession();
         Handle<VersionMessage> msg = task->GetMessage().CastTo<VersionMessage>();
-        //client->Send(VerackMessage::NewInstance(Server::GetInfo())); //TODO: fixme
+        client->Send(VerackMessage::NewInstance(client->GetID()));
     }
 
     void NodeClient::HandleVerackMessage(const Handle<HandleMessageTask>& task){

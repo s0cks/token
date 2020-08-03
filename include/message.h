@@ -174,24 +174,34 @@ namespace Token{
         }
     };
 
+    enum class ClientType{
+        kNode,
+        kClient
+    };
+
     class VersionMessage : public ProtobufMessage<Proto::BlockChainServer::Version>{
     public:
         typedef Proto::BlockChainServer::Version RawType;
     private:
         VersionMessage(const RawType& raw): ProtobufMessage(raw){}
-        VersionMessage(const std::string node_id, uint32_t timestamp, const std::string& nonce, const BlockHeader& head): ProtobufMessage(){
+        VersionMessage(ClientType type, const std::string node_id, uint32_t timestamp, const std::string& nonce, const BlockHeader& head): ProtobufMessage(){
             raw_.set_node_id(node_id);
             raw_.set_version(Token::GetVersion());
             raw_.set_timestamp(timestamp);
             raw_.set_nonce(nonce);
-            raw_.set_head(HexString(head.GetHash()));
             raw_.set_height(head.GetHeight());
+            raw_.set_head(HexString(head.GetHash()));
+            raw_.set_type(static_cast<uint32_t>(type));
         }
     public:
         ~VersionMessage(){}
 
-        uint32_t GetTimestamp() const{
+        uint64_t GetTimestamp() const{
             return raw_.timestamp();
+        }
+
+        uint32_t GetHeight() const{
+            return raw_.height();
         }
 
         std::string GetVersion() const{
@@ -206,8 +216,16 @@ namespace Token{
             return raw_.node_id();
         }
 
-        uint32_t GetHeight() const{
-            return raw_.height();
+        ClientType GetClientType() const{
+            return static_cast<ClientType>(raw_.type());
+        }
+
+        bool IsNode() const{
+            return GetClientType() == ClientType::kNode;
+        }
+
+        bool IsClient() const{
+            return GetClientType() == ClientType::kClient;
         }
 
         uint256_t GetHead() const{
@@ -216,8 +234,12 @@ namespace Token{
 
         DECLARE_MESSAGE(Version);
 
-        static Handle<VersionMessage> NewInstance(const std::string& node_id, const std::string& nonce=GenerateNonce(), const BlockHeader& head=BlockChain::GetHead(), uint32_t timestamp=GetCurrentTime()){
-            return new VersionMessage(node_id, timestamp, nonce, head);
+        static Handle<VersionMessage> NewInstance(ClientType type, const std::string& node_id, const std::string& nonce=GenerateNonce(), const BlockHeader& head=BlockChain::GetHead(), uint32_t timestamp=GetCurrentTime()){
+            return new VersionMessage(type, node_id, timestamp, nonce, head);
+        }
+
+        static Handle<VersionMessage> NewInstance(const std::string& node_id){
+            return NewInstance(ClientType::kClient, node_id, GenerateNonce(), BlockHeader());
         }
 
         static Handle<VersionMessage> NewInstance(const RawType& raw){
@@ -230,15 +252,26 @@ namespace Token{
         typedef Proto::BlockChainServer::Verack RawType;
     private:
         VerackMessage(const RawType& raw): ProtobufMessage(raw){}
-        VerackMessage(const std::string& node_id, const std::string& nonce, const NodeAddress& address, uint32_t timestamp): ProtobufMessage(){
+        VerackMessage(ClientType type, const std::string& node_id, const std::string& nonce, const NodeAddress& address, uint32_t timestamp): ProtobufMessage(){
             raw_.set_node_id(node_id);
             raw_.set_version(Token::GetVersion());
             raw_.set_timestamp(timestamp);
             raw_.set_nonce(nonce);
+            raw_.set_type(static_cast<uint32_t>(type));
             (*raw_.mutable_address()) << address;
         }
     public:
+        ClientType GetClientType() const{
+            return static_cast<ClientType>(raw_.type());
+        }
 
+        bool IsNode() const{
+            return GetClientType() == ClientType::kNode;
+        }
+
+        bool IsClient() const{
+            return GetClientType() == ClientType::kClient;
+        }
 
         std::string GetID() const{
             return raw_.node_id();
@@ -250,8 +283,12 @@ namespace Token{
 
         DECLARE_MESSAGE(Verack);
 
-        static Handle<VerackMessage> NewInstance(const std::string& node_id, const NodeAddress& address, const std::string& nonce=GenerateNonce(), uint32_t timestamp=GetCurrentTime()){
-            return new VerackMessage(node_id, nonce, address, timestamp);
+        static Handle<VerackMessage> NewInstance(ClientType type, const std::string& node_id, const NodeAddress& address, const std::string& nonce=GenerateNonce(), uint32_t timestamp=GetCurrentTime()){
+            return new VerackMessage(type, node_id, nonce, address, timestamp);
+        }
+
+        static Handle<VerackMessage> NewInstance(const std::string& node_id){
+            return NewInstance(ClientType::kClient, node_id, NodeAddress());
         }
 
         static Handle<VerackMessage> NewInstance(const RawType& raw){

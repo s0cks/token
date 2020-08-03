@@ -131,7 +131,7 @@ namespace Token{
         NodeAddress callback("127.0.0.1", FLAGS_port);
 
         std::vector<Handle<Message>> response;
-        response.push_back(VerackMessage::NewInstance(Server::GetID(), callback).CastTo<Message>());
+        response.push_back(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), callback).CastTo<Message>());
         if(BlockChain::GetHead().GetHeight() < msg->GetHeight()){
             response.push_back(GetBlocksMessage::NewInstance().CastTo<Message>());
             Handle<SynchronizeBlockChainTask> sync_task = SynchronizeBlockChainTask::NewInstance(session->GetLoop(), session, msg->GetHead());

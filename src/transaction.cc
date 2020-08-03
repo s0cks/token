@@ -105,12 +105,10 @@ namespace Token{
 
     bool Transaction::Sign(){
         CryptoPP::SecByteBlock bytes;
-        /*
-        if(!GetBytes(bytes)){
-            LOG(ERROR) << "couldn't serialize transaction to byte array";
+        if(!WriteToBytes(bytes)){
+            LOG(WARNING) << "couldn't serialize transaction to bytes";
             return false;
         }
-         */
 
         CryptoPP::RSA::PrivateKey privateKey;
         CryptoPP::RSA::PublicKey publicKey;

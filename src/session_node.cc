@@ -28,12 +28,13 @@ namespace Token{
         NodeSession* session = (NodeSession*)task->GetSession();
         Handle<VerackMessage> msg = task->GetMessage().CastTo<VerackMessage>();
 
-        NodeAddress paddr = msg->GetCallbackAddress();
-        NodeAddress callback("127.0.0.1", FLAGS_port);
-
-        session->Send(VerackMessage::NewInstance(Server::GetID(), callback)); //TODO: obtain address dynamically
-
+        NodeAddress callback("127.0.0.1", FLAGS_port); //TODO: obtain address dynamically
+        session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), callback));
         session->SetState(NodeSession::kConnected);
+
+
+        NodeAddress paddr = msg->GetCallbackAddress();
+
         if(!Server::HasPeer(callback)){
             LOG(WARNING) << "couldn't find peer: " << msg->GetID() << ", connecting to peer " << paddr << "....";
             if(!Server::ConnectTo(paddr)){

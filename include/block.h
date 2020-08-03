@@ -24,9 +24,9 @@ namespace Token{
         BlockHeader():
             timestamp_(0),
             height_(0),
-            previous_hash_(),
-            merkle_root_(),
-            hash_(){}
+            previous_hash_(uint256_t()),
+            merkle_root_(), // fill w/ genesis's merkle root
+            hash_(){} //TODO: fill w/ genesis's hash
         BlockHeader(uint32_t timestamp, uint32_t height, const uint256_t& phash, const uint256_t& merkle_root, const uint256_t& hash):
             timestamp_(timestamp),
             height_(height),
