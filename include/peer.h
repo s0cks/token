@@ -1,7 +1,7 @@
 #ifndef TOKEN_PEER_H
 #define TOKEN_PEER_H
 
-#include <uuid.h>
+#include <uuid/uuid.h>
 #include "address.h"
 #include "session.h"
 

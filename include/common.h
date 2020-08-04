@@ -10,7 +10,7 @@
 #include <sstream>
 #include <uv.h>
 #include <sys/stat.h>
-#include <uuid.h>
+#include <uuid/uuid.h>
 
 #include <glog/logging.h>
 #include <gflags/gflags.h>
