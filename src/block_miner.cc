@@ -48,6 +48,9 @@ namespace Token{
     void BlockMiner::SetProposal(const Handle<Proposal>& proposal){
         LOCK_GUARD;
         proposal_ = proposal;
+
+        LOG(INFO) << "starting proposal timer for " << (kProposalTimeoutMilliseconds / 1000) << " seconds...";
+        uv_timer_start(&proposal_timeout_timer_, &HandleProposalTimeoutCallback, kProposalTimeoutMilliseconds, 0);
     }
 
     bool BlockMiner::HasProposal(){
@@ -121,7 +124,10 @@ namespace Token{
     }
 
     void BlockMiner::HandleProposalTimeoutCallback(uv_timer_t* handle){
-        //TODO: implement
+        Handle<Proposal> proposal = GetProposal();
+        LOG(INFO) << "proposal #" << proposal->GetHeight() << " timed out!";
+        proposal->SetPhase(Proposal::kQuorumPhase); // should we use kQuorum? maybe redefine the quorum phase and have a flag attached for status?
+        SetProposal(nullptr);
     }
 
     static inline bool

@@ -40,6 +40,7 @@ namespace Token{
 
         static const uint32_t kMiningIntervalMilliseconds = 1 * 1000;
         static const uint32_t kNumberOfTransactionsPerBlock = 2;
+        static const uint32_t kProposalTimeoutMilliseconds = 10 * 1000;
     private:
         BlockMiner() = delete;
 
