@@ -1,7 +1,7 @@
 #ifndef TOKEN_SESSION_H
 #define TOKEN_SESSION_H
 
-#include <uuid.h>
+#include <uuid/uuid.h>
 #include <uv.h>
 #include <mutex>
 #include <condition_variable>
