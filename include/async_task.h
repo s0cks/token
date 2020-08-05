@@ -40,6 +40,7 @@ namespace Token{
         Result(Status status, const std::string& msg):
                 status_(status),
                 message_(msg){}
+        Result(Status status, const std::stringstream& ss): Result(status, ss.str()){}
         Result(const Result& other):
                 status_(other.status_),
                 message_(other.message_){}
@@ -129,8 +130,8 @@ namespace Token{
         Session* session_;
 
         AsyncSessionTask(uv_loop_t* loop, Session* session):
-                AsyncTask(loop),
-                session_(session){}
+            AsyncTask(loop),
+            session_(session){}
     public:
         virtual ~AsyncSessionTask() = default;
 
@@ -139,13 +140,49 @@ namespace Token{
         }
     };
 
+    class HandleProposalTask : public AsyncTask{
+    private:
+        Proposal* proposal_;
+        Block* block_;
+
+        Result DoWork();
+    protected:
+        void Accept(WeakReferenceVisitor* vis){
+            vis->Visit(&proposal_);
+            vis->Visit(&block_);
+        }
+    public:
+        HandleProposalTask(uv_loop_t* loop, const Handle<Proposal>& proposal, const Handle<Block>& blk):
+            AsyncTask(loop),
+            proposal_(nullptr),
+            block_(nullptr){
+            WriteBarrier(&proposal_, proposal);
+            WriteBarrier(&block_, blk);
+        }
+        ~HandleProposalTask() = default;
+
+        DEFINE_ASYNC_TASK(HandleProposal);
+
+        Handle<Block> GetBlock() const{
+            return block_;
+        }
+
+        Handle<Proposal> GetProposal() const{
+            return proposal_;
+        }
+
+        static Handle<HandleProposalTask> NewInstance(uv_loop_t* loop, const Handle<Proposal>& proposal, const Handle<Block>& blk){
+            return new HandleProposalTask(loop, proposal, blk);
+        }
+    };
+
     class SynchronizeBlockChainTask : public AsyncSessionTask{
     private:
         uint256_t head_;
 
         SynchronizeBlockChainTask(uv_loop_t* loop, Session* session, const uint256_t& head):
-                AsyncSessionTask(loop, session),
-                head_(head){}
+            AsyncSessionTask(loop, session),
+            head_(head){}
 
         static inline InventoryItem
         GetItem(const uint256_t hash){
@@ -157,7 +194,7 @@ namespace Token{
     public:
         ~SynchronizeBlockChainTask() = default;
 
-    DEFINE_ASYNC_TASK(SynchronizeBlockChain);
+        DEFINE_ASYNC_TASK(SynchronizeBlockChain);
 
         InventoryItem GetHead() const{
             return InventoryItem(InventoryItem::kBlock, head_);

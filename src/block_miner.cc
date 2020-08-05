@@ -12,6 +12,8 @@
 #include "block_validator.h"
 #include "block_handler.h"
 
+#include "async_task.h"
+
 namespace Token{
     static pthread_t thread_;
     static std::recursive_mutex mutex_;
@@ -130,18 +132,6 @@ namespace Token{
         SetProposal(nullptr);
     }
 
-    static inline bool
-    MineBlock(Block* block, bool clean){
-        BlockHeader header = block->GetHeader();
-        if(!BlockHandler::ProcessBlock(block, clean)){
-            LOG(WARNING) << "couldn't process block: " << header;
-            return false;
-        }
-        BlockPool::RemoveBlock(header.GetHash());
-        BlockChain::Append(block);
-        return true;
-    }
-
     static inline size_t
     GetNumberOfTransactionsInPool(){
         return TransactionPool::GetNumberOfTransactions();
@@ -191,6 +181,18 @@ namespace Token{
         }
     };
 
+    static inline bool
+    MineBlock(const Handle<Block>& block, bool clean){
+        BlockHeader header = block->GetHeader();
+        if(!BlockHandler::ProcessBlock(block, clean)){
+            LOG(WARNING) << "couldn't process block: " << header;
+            return false;
+        }
+        BlockPool::RemoveBlock(header.GetHash());
+        BlockChain::Append(block);
+        return true;
+    }
+
     void BlockMiner::HandleMineBlockCallback(uv_timer_t* handle){
         if(!HasProposal()){
             if(GetNumberOfTransactionsInPool() < kNumberOfTransactionsPerBlock) return; // do nothing?....
@@ -212,35 +214,11 @@ namespace Token{
             Handle<Proposal> proposal = Proposal::NewInstance(block, Server::GetID());
             SetProposal(proposal);
 
-            // 5. Submit proposal
-#ifdef TOKEN_DEBUG
-            LOG(INFO) << "entering voting phase";
-#endif//TOKEN_DEBUG
-            proposal->SetPhase(Proposal::kVotingPhase);
-            Handle<PrepareMessage> prepare_msg = PrepareMessage::NewInstance(proposal);
-            Server::Broadcast(prepare_msg.CastTo<Message>());
-            proposal->WaitForRequiredVotes();
-
-            // 6. Commit Proposal
-#ifdef TOKEN_DEBUG
-            LOG(INFO) << "entering commit phase";
-#endif//TOKEN_DEBUG
-            proposal->SetPhase(Proposal::kCommitPhase);
-            Handle<CommitMessage> commit_msg = CommitMessage::NewInstance(proposal);
-            Server::Broadcast(commit_msg.CastTo<Message>());
-            proposal->WaitForRequiredCommits();
-
-            // 7. Quorum has been reached
-            proposal->SetPhase(Proposal::kQuorumPhase);
-            Handle<AcceptedMessage> accepted_msg = AcceptedMessage::NewInstance(proposal);
-            Server::Broadcast(accepted_msg.CastTo<Message>());
-
-            // 7. Finish Mining Block
-            if(!MineBlock(block, true)){
-                //TODO: Handle better?
-                LOG(WARNING) << "couldn't mine block: " << block->GetHeader();
+            Handle<HandleProposalTask> task = HandleProposalTask::NewInstance(handle->loop, proposal, block);
+            if(!task->Submit()){
+                LOG(WARNING) << "couldn't submit HandleProposal task for proposal: #" << proposal->GetHeight();
+                return;
             }
-            SetProposal(nullptr);
         } else{
             // 4. Wait for Proposal to finish
             Handle<Proposal> proposal = GetProposal();

@@ -1,7 +1,59 @@
 #include "async_task.h"
 #include "block_handler.h"
+#include "proposal.h"
 
 namespace Token{
+    static inline bool
+    MineBlock(const Handle<Block>& block, bool clean){
+        BlockHeader header = block->GetHeader();
+        if(!BlockHandler::ProcessBlock(block, clean)){
+            LOG(WARNING) << "couldn't process block: " << header;
+            return false;
+        }
+        BlockPool::RemoveBlock(header.GetHash());
+        BlockChain::Append(block);
+        return true;
+    }
+
+    Result HandleProposalTask::DoWork(){
+        Handle<Proposal> proposal = GetProposal();
+
+        // 5. Submit proposal
+#ifdef TOKEN_DEBUG
+        LOG(INFO) << "entering voting phase";
+#endif//TOKEN_DEBUG
+        proposal->SetPhase(Proposal::kVotingPhase);
+        Handle<PrepareMessage> prepare_msg = PrepareMessage::NewInstance(proposal);
+        Server::Broadcast(prepare_msg.CastTo<Message>());
+        proposal->WaitForRequiredVotes();
+
+        // 6. Commit Proposal
+#ifdef TOKEN_DEBUG
+        LOG(INFO) << "entering commit phase";
+#endif//TOKEN_DEBUG
+        proposal->SetPhase(Proposal::kCommitPhase);
+        Handle<CommitMessage> commit_msg = CommitMessage::NewInstance(proposal);
+        Server::Broadcast(commit_msg.CastTo<Message>());
+        proposal->WaitForRequiredCommits();
+
+        // 7. Quorum has been reached
+        proposal->SetPhase(Proposal::kQuorumPhase);
+        Handle<AcceptedMessage> accepted_msg = AcceptedMessage::NewInstance(proposal);
+        Server::Broadcast(accepted_msg.CastTo<Message>());
+
+        // 8. Finish Mining the Block
+        Handle<Block> block = GetBlock();
+        if(!MineBlock(block, true)){
+            std::stringstream ss;
+            ss << "couldn't mine block: " << block->GetSHA256Hash() << ", orphaning....";
+            return Result(Result::kFailed, ss);
+        }
+
+        std::stringstream ss;
+        ss << "proposal #" << proposal->GetHeight() << " has finished!";
+        return Result(Result::kSuccessful, ss);
+    }
+
     bool SynchronizeBlockChainTask::ProcessBlock(const Handle<Block>& block){
         BlockHeader header = block->GetHeader();
         if(!BlockHandler::ProcessBlock(block, false)){

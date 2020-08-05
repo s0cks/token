@@ -2,6 +2,7 @@
 #include "task.h"
 #include "async_task.h"
 #include "block_pool.h"
+#include "block_miner.h"
 
 namespace Token{
     void PeerSession::OnShutdown(uv_async_t* handle){
@@ -15,14 +16,14 @@ namespace Token{
 
     void PeerSession::Disconnect(){
         if(pthread_self() == thread_){
-            // Inside Session Thread
+            // Inside Session OSThreadBase
             uv_read_stop((uv_stream_t*)&socket_);
             uv_stop(socket_.loop);
             uv_loop_close(socket_.loop);
             Server::UnregisterPeer(this);
             SetState(State::kDisconnected);
         } else{
-            // Outside Session Thread
+            // Outside Session OSThreadBase
             uv_async_send(&shutdown_);
         }
     }

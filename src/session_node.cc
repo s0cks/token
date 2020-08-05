@@ -3,6 +3,7 @@
 #include "session.h"
 #include "server.h"
 #include "block_pool.h"
+#include "block_miner.h"
 #include "transaction_pool.h"
 #include "unclaimed_transaction_pool.h"
 

@@ -9,6 +9,7 @@
 #include "crash_report.h"
 #include "block_chain.h"
 #include "server.h"
+#include "block_miner.h"
 
 namespace Token{
     class CrashReportSection{
@@ -145,7 +146,7 @@ namespace Token{
             WriteLine("Number of Peers: " + GetPeerCount());
 
             {
-                // Write Thread Status
+                // Write OSThreadBase Status
                 WriteLine("Threads:");
                 Indent();
                 WriteLine("Block Miner: " + GetBlockMinerThreadStatus());

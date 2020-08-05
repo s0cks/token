@@ -18,6 +18,10 @@ namespace Token{
             return ptr_ ? (*ptr_) : nullptr;
         }
 
+        bool IsNull() const{
+            return ptr_ == nullptr;
+        }
+
         void operator=(RawObject* obj);
         void operator=(const HandleBase& h);
     };
@@ -53,6 +57,10 @@ namespace Token{
         template<typename U>
         Handle<U> DynamicCastTo() const {
             return dynamic_cast<U*>(operator T*());
+        }
+
+        bool IsNull() const{
+            return HandleBase::IsNull();
         }
 
         template<class S> friend class Handle;

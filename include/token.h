@@ -5,7 +5,6 @@
 #include <string>
 #include <signal.h>
 #include "crash_report.h"
-#include "block_miner.h"
 
 #define TOKEN_MAJOR_VERSION 1
 #define TOKEN_MINOR_VERSION 0

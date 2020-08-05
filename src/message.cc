@@ -1,5 +1,6 @@
 #include "message.h"
 #include "proposal.h"
+#include "block_miner.h"
 
 namespace Token{
     const uint32_t GetBlocksMessage::kMaxNumberOfBlocks = 250;

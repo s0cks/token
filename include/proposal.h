@@ -6,6 +6,7 @@
 #include "object.h"
 #include "block.h"
 #include "server.h"
+#include "async_task.h"
 
 namespace Token{
     class PrepareMessage;

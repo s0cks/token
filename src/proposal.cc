@@ -25,7 +25,6 @@ namespace Token{
     }
 
     void Proposal::WaitForRequiredVotes(uint32_t required){
-        required = required + 10;
         LOG(INFO) << "waiting for " << required << " votes....";
         LOCK;
         while(votes_.size() < required) WAIT;

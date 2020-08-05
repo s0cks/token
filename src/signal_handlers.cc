@@ -1,5 +1,6 @@
 #include "token.h"
 #include "server.h"
+#include "block_miner.h"
 
 namespace Token{
     void SignalHandlers::HandleInterrupt(int signum){
