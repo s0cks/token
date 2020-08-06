@@ -9,7 +9,6 @@
 #include "crash_report.h"
 #include "block_chain.h"
 #include "server.h"
-#include "block_miner.h"
 
 namespace Token{
     class CrashReportSection{
@@ -113,17 +112,6 @@ namespace Token{
         }
 
         static inline std::string
-        GetBlockMinerThreadStatus(){
-            switch(BlockMiner::GetState()){
-                case BlockMiner::kStarting: return "Starting";
-                case BlockMiner::kRunning: return "Running";
-                case BlockMiner::kPaused: return "Paused";
-                case BlockMiner::kStopped: return "Stopped";
-                default: return "Unknown";
-            }
-        }
-
-        static inline std::string
         GetNodeThreadStatus(){
             switch(Server::GetState()){
                 case Server::kStarting: return "Starting";
@@ -149,7 +137,6 @@ namespace Token{
                 // Write OSThreadBase Status
                 WriteLine("Threads:");
                 Indent();
-                WriteLine("Block Miner: " + GetBlockMinerThreadStatus());
                 WriteLine("Server: " + GetNodeThreadStatus());
                 WriteLine("Peers:");
 

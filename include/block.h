@@ -173,6 +173,8 @@ namespace Token{
             std::fstream fd(filename, std::ios::in|std::ios::binary);
             return NewInstance(fd);
         }
+
+        static const size_t kMaxTransactionsForBlock = 40000;
     };
 
     class BlockVisitor{

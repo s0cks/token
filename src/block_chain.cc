@@ -7,7 +7,6 @@
 #include "configuration.h"
 
 #include "block_chain.h"
-#include "block_miner.h"
 #include "block_node.h"
 #include "block_chain_index.h"
 #include "block_pool.h"

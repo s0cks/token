@@ -182,16 +182,14 @@ namespace Token{
     typedef uint64_t ObjectHeader;
 
     class RawObject{
-        friend class UpdateIterator;
-
+        friend class Heap;
+        friend class Thread;
         friend class Allocator;
         friend class Scavenger;
-        friend class Heap;
         friend class Semispace;
         friend class RootPage;
         friend class ObjectFinalizer;
         friend class ObjectRelocator;
-        friend class ObjectPromoter;
         friend class LiveObjectMarker;
         friend class LiveObjectCopier;
         friend class LiveObjectReferenceUpdater;

@@ -64,6 +64,11 @@ namespace Token{
         }
 
         template<class S> friend class Handle;
+
+        friend std::ostream& operator<<(std::ostream& stream, const Handle<T>& handle){
+            stream << handle.operator->()->ToString();
+            return stream;
+        }
     };
 }
 

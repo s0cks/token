@@ -40,7 +40,6 @@ namespace Token{
 
         static const uint32_t kMiningIntervalMilliseconds = 1 * 1000;
         static const uint32_t kNumberOfTransactionsPerBlock = 2;
-        static const uint32_t kProposalTimeoutMilliseconds = 10 * 1000;
     private:
         BlockMiner() = delete;
 
@@ -49,20 +48,10 @@ namespace Token{
         static void HandleProposalTimeoutCallback(uv_timer_t* handle);
         static void HandleMineBlockCallback(uv_timer_t* handle);
         static void* MinerThread(void* data);
-
-        static inline Proposal*
-        CreateNewProposal(Block* block, const std::string& node_id=Server::GetID()){
-            Proposal* proposal = Proposal::NewInstance(block, node_id);
-            SetProposal(proposal);
-            return proposal;
-        }
     public:
         ~BlockMiner() = delete;
 
         static State GetState();
-        static Handle<Proposal> GetProposal();
-        static bool HasProposal();
-        static void SetProposal(const Handle<Proposal>& proposal);
         static void Initialize();
         static void Pause();
         static void Resume();

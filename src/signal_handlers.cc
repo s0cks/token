@@ -1,6 +1,5 @@
 #include "token.h"
 #include "server.h"
-#include "block_miner.h"
 
 namespace Token{
     void SignalHandlers::HandleInterrupt(int signum){
@@ -12,11 +11,7 @@ namespace Token{
 #endif//TOKEN_DEBUG
         Server::Shutdown();
 
-        // 2. Disconnect Block Miner
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << "shutting down the miner thread...";
-#endif//TOKEN_DEBUG
-        BlockMiner::Shutdown();
+        //TODO: shutdown block discovery thread
         exit(0);
     }
 

@@ -3,6 +3,7 @@
 
 #include <uv.h>
 #include "task.h"
+#include "proposal.h"
 
 namespace Token{
     class Result{

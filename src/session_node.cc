@@ -3,7 +3,6 @@
 #include "session.h"
 #include "server.h"
 #include "block_pool.h"
-#include "block_miner.h"
 #include "transaction_pool.h"
 #include "unclaimed_transaction_pool.h"
 
@@ -101,11 +100,13 @@ namespace Token{
         Handle<PrepareMessage> msg = task->GetMessage().CastTo<PrepareMessage>();
 
         Handle<Proposal> proposal = msg->GetProposal(); //TODO: validate proposal
+        /*
         if(BlockMiner::HasProposal()){
             session->Send(RejectedMessage::NewInstance(proposal));
             return;
         }
         BlockMiner::SetProposal(proposal);
+        */
 
         proposal->SetPhase(Proposal::kVotingPhase);
         std::vector<Handle<Message>> response;
