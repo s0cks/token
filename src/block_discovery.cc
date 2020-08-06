@@ -8,6 +8,17 @@
 #include "transaction_validator.h"
 
 namespace Token{
+    static std::recursive_mutex mutex_;
+    static std::condition_variable_any cond_;
+    static Thread::State state_ = Thread::State::kStopped;
+
+#define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
+#define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
+#define UNLOCK lock.unlock()
+#define WAIT cond_.wait(lock)
+#define SIGNAL_ONE cond_.notify_one()
+#define SIGNAL_ALL cond_.notify_all()
+
     static inline size_t
     GetNumberOfTransactionsInPool(){
         return TransactionPool::GetNumberOfTransactions();
@@ -67,15 +78,44 @@ namespace Token{
 
     void BlockDiscoveryThread::HandleThread(uword parameter){
         LOG(INFO) << "starting the block discovery thread....";
+        SetState(Thread::State::kRunning);
+        while(!IsStopped()){
+            if(IsPaused()){
+                LOG(INFO) << "pausing block discovery thread....";
 
-        while(true){
-            //TODO: be more stateful, prevent GC of live objects
+                LOCK;
+                while(GetState() != Thread::State::kRunning || GetState() != Thread::State::kStopped) WAIT;
+                UNLOCK;
+
+                if(IsStopped()){
+                    LOG(WARNING) << "block discovery thread has been halted, exiting.";
+                    return;
+                }
+
+                LOG(INFO) << "block discovery thread is resuming.";
+            }
+
             if(GetNumberOfTransactionsInPool() >= 2){
                 Handle<Block> block = TransactionPoolBlockBuilder::Build();
 
                 LOG(INFO) << "discovered block " << block << ", scheduling proposal....";
-                BlockQueue::Queue(block);
+                BlockQueue::Queue(block); //TODO: pre-validate block before queuing?
             }
         }
+    }
+
+    Thread::State BlockDiscoveryThread::GetState(){
+        LOCK_GUARD;
+        return state_;
+    }
+
+    void BlockDiscoveryThread::SetState(Thread::State state){
+        LOCK_GUARD;
+        state_ = state;
+    }
+
+    void BlockDiscoveryThread::WaitForState(Thread::State state){
+        LOCK;
+        while(GetState() != state) WAIT;
     }
 }

@@ -10,6 +10,8 @@
 namespace Token{
     class PrepareMessage;
     class Proposal : public Object{
+        friend class ProposerThread;
+        friend class NodeSession; //TODO: revoke friendship
     public:
         enum Phase{
             kProposalPhase,
@@ -18,16 +20,14 @@ namespace Token{
             kQuorumPhase
         };
 
-        static inline uint32_t
-        GetRequiredNumberOfVotes(){
-            uint32_t peers = Server::GetNumberOfPeers();
-            if(peers == 0) return 0;
-            else if(peers == 1) return 1;
-            return peers / 2;
-        }
+        enum class Status{
+            kUnknownStatus = 0,
+            kAcceptedStatus,
+            kRejectedStatus
+        };
 
         static inline uint32_t
-        GetRequiredNumberOfCommits(){
+        GetNumberOfRequiredResponses(){
             uint32_t peers = Server::GetNumberOfPeers();
             if(peers == 0) return 0;
             else if(peers == 1) return 1;
@@ -37,21 +37,26 @@ namespace Token{
         std::recursive_mutex mutex_;
         std::condition_variable_any cond_;
         Phase phase_;
+        Status status_;
+
         std::string proposer_;
         uint32_t height_;
         uint256_t hash_;
-        std::set<std::string> votes_;
-        std::set<std::string> commits_;
 
-        void WaitForPhase(Phase phase);
+        std::set<std::string> accepted_;
+        std::set<std::string> rejected_;
+
+        void SetPhase(Phase phase);
+        void SetStatus(Status status);
 
         Proposal(const std::string& proposer, const uint256_t& hash, uint32_t height):
             phase_(kProposalPhase),
+            status_(Status::kUnknownStatus),
             proposer_(proposer),
             height_(height),
-            votes_(),
             hash_(hash),
-            commits_(){}
+            accepted_(),
+            rejected_(){}
     public:
         ~Proposal() = default;
 
@@ -67,20 +72,18 @@ namespace Token{
             return hash_;
         }
 
-        void SetPhase(Phase phase);
-        void Vote(const std::string& node_id);
-        void Commit(const std::string& node_id);
-        void WaitForRequiredVotes(uint32_t required=GetRequiredNumberOfVotes());
-        void WaitForRequiredCommits(uint32_t required=GetRequiredNumberOfCommits());
-        uint32_t GetNumberOfVotes();
-        uint32_t GetNumberOfCommits();
+        void AcceptProposal(const std::string& node);
+        void RejectProposal(const std::string& node);
+        void WaitForPhase(Phase phase);
+        void WaitForStatus(Status status);
+        void WaitForRequiredResponses(uint32_t required=GetNumberOfRequiredResponses());
+        bool HasResponseFrom(const std::string& node_id);
+        size_t GetNumberOfAccepted();
+        size_t GetNumberOfRejected();
+        size_t GetNumberOfResponses();
         Phase GetPhase();
+        Status GetStatus();
         std::string ToString() const;
-
-        inline void
-        WaitForQuorum(){
-            WaitForPhase(kQuorumPhase);
-        }
 
         inline bool
         InProposingPhase(){
@@ -102,6 +105,16 @@ namespace Token{
             return GetPhase() == kQuorumPhase;
         }
 
+        inline bool
+        IsAccepted(){
+            return GetStatus() == Status::kAcceptedStatus;
+        }
+
+        inline bool
+        IsRejected(){
+            return GetStatus() == Status::kRejectedStatus;
+        }
+
         static Handle<Proposal> NewInstance(uint32_t height, const uint256_t& hash, const std::string& proposer);
 
         static Handle<Proposal> NewInstance(Block* block, const std::string& proposer){
@@ -112,6 +125,21 @@ namespace Token{
             return NewInstance(block.GetHeight(), block.GetHash(), proposer);
         }
     };
+
+    static std::ostream& operator<<(std::ostream& stream, const Proposal::Status& status){
+        switch(status){
+            case Proposal::Status::kAcceptedStatus:
+                stream << "Accepted";
+                return stream;
+            case Proposal::Status::kRejectedStatus:
+                stream << "Rejected";
+                return stream;
+            case Proposal::Status::kUnknownStatus:
+            default:
+                stream << "Unknown";
+                return stream;
+        }
+    }
 
     static std::ostream& operator<<(std::ostream& stream, const Proposal::Phase& phase){
         switch(phase){

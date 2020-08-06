@@ -4,6 +4,7 @@
 namespace Token{
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
 #define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
+#define UNLOCK lock.unlock()
 #define WAIT cond_.wait(lock)
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
@@ -15,6 +16,16 @@ namespace Token{
     void Proposal::SetPhase(Proposal::Phase phase){
         LOCK;
         phase_ = phase;
+        accepted_.clear();
+        rejected_.clear();
+        UNLOCK;
+        SIGNAL_ALL;
+    }
+
+    void Proposal::SetStatus(Proposal::Status status){
+        LOCK;
+        status_ = status;
+        UNLOCK;
         SIGNAL_ALL;
     }
 
@@ -24,16 +35,32 @@ namespace Token{
         while(phase_ != phase) WAIT;
     }
 
-    void Proposal::WaitForRequiredVotes(uint32_t required){
-        LOG(INFO) << "waiting for " << required << " votes....";
+    void Proposal::WaitForStatus(Proposal::Status status){
+        LOG(INFO) << "waiting for " << status << " status....";
         LOCK;
-        while(votes_.size() < required) WAIT;
+        while(status_ != status) WAIT;
     }
 
-    void Proposal::WaitForRequiredCommits(uint32_t required){
-        LOG(INFO) << "waiting for " << required << " commits....";
+    void Proposal::WaitForRequiredResponses(uint32_t required){
+        LOG(INFO) << "waiting for " << required << " peers....";
+
         LOCK;
-        while(commits_.size() < required) WAIT;
+        while(GetNumberOfResponses() < required) WAIT;
+    }
+
+    size_t Proposal::GetNumberOfAccepted(){
+        LOCK_GUARD;
+        return accepted_.size();
+    }
+
+    size_t Proposal::GetNumberOfRejected(){
+        LOCK_GUARD;
+        return rejected_.size();
+    }
+
+    size_t Proposal::GetNumberOfResponses(){
+        LOCK_GUARD;
+        return accepted_.size() + rejected_.size();
     }
 
     Proposal::Phase Proposal::GetPhase(){
@@ -41,26 +68,37 @@ namespace Token{
         return phase_;
     }
 
-    void Proposal::Vote(const std::string& info){
+    Proposal::Status Proposal::GetStatus(){
         LOCK_GUARD;
-        if(!votes_.insert(info).second) LOG(WARNING) << info << " already voted!";
+        return status_;
+    }
+
+    void Proposal::AcceptProposal(const std::string& node){
+        if(HasResponseFrom(node)){
+            LOG(WARNING) << "node " << node << "has voted already! skipping second vote.";
+            return;
+        }
+
+        LOCK_GUARD;
+        if(!accepted_.insert(node).second) LOG(WARNING) << "couldn't accept acceptance vote from node: " << node;
         SIGNAL_ALL;
     }
 
-    void Proposal::Commit(const std::string& info){
+    void Proposal::RejectProposal(const std::string& node){
+        if(HasResponseFrom(node)){
+            LOG(WARNING) << "node " << node << " has voted already! skipping second vote.";
+            return;
+        }
+
         LOCK_GUARD;
-        if(!commits_.insert(info).second) LOG(WARNING) << info << "already committed!";
+        if(!rejected_.insert(node).second) LOG(WARNING) << "couldn't accept rejection vote from node: " << node;
         SIGNAL_ALL;
     }
 
-    uint32_t Proposal::GetNumberOfVotes(){
+    bool Proposal::HasResponseFrom(const std::string& node){
         LOCK_GUARD;
-        return votes_.size();
-    }
-
-    uint32_t Proposal::GetNumberOfCommits(){
-        LOCK_GUARD;
-        return commits_.size();
+        return accepted_.find(node) != accepted_.end() ||
+                rejected_.find(node) != rejected_.end();
     }
 
     std::string Proposal::ToString() const{

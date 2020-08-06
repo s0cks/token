@@ -1,5 +1,6 @@
 #include "message.h"
 #include "proposal.h"
+#include "proposer.h"
 #include "block_miner.h"
 
 namespace Token{
@@ -52,9 +53,8 @@ case MessageType::k##Name##MessageType:{ \
 
 
     Handle<Proposal> PaxosMessage::GetProposal() const{
-        /*
-        if(BlockMiner::HasProposal()){
-            Handle<Proposal> proposal = BlockMiner::GetProposal();
+        if(ProposerThread::HasProposal()){
+            Handle<Proposal> proposal = ProposerThread::GetProposal();
             if(proposal->GetHeight() == GetHeight() &&
                 proposal->GetHash() == GetHash()){
                 return proposal;
@@ -63,7 +63,6 @@ case MessageType::k##Name##MessageType:{ \
             LOG(WARNING) << "current proposal #" << proposal->GetHeight() << "(" << proposal->GetHash() << ") is invalid";
             LOG(WARNING) << "expected proposal #" << GetHeight() << "(" << GetHash() << ")";
         }
-        */
         return Proposal::NewInstance(GetHeight(), GetHash(), GetProposer());
     }
 }

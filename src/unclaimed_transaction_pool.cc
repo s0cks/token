@@ -111,7 +111,7 @@ namespace Token{
                 std::string filename = (GetDataDirectory() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
                 Handle<UnclaimedTransaction> utxo = UnclaimedTransaction::NewInstance(filename);
-                if(vis->Visit(utxo)) break;
+                if(!vis->Visit(utxo)) break;
             }
             closedir(dir);
         }

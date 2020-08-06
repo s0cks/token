@@ -19,17 +19,33 @@ namespace Token{
 //######################################################################################################################
     Handle<Block> Block::Genesis(){
         Transaction::InputList cb_inputs = {};
-        Transaction::OutputList cb_outputs;
+        Transaction::OutputList cb_outputs_a;
         for(size_t idx = 0; idx < BlockChain::kNumberOfGenesisOutputs; idx++){
-            std::string user = "TestUser";
-            std::stringstream token;
-            token << "TestToken" << idx;
-            cb_outputs.push_back(Output("TestUser", token.str()));
+            std::string user = "VenueA";
+            std::string token = "TestToken";
+            cb_outputs_a.push_back(Output(user, token));
         }
-        Transaction* txs[1] = {
-            Transaction::NewInstance(0, cb_inputs, cb_outputs, 0)
+
+        Transaction::OutputList cb_outputs_b;
+        for(size_t idx = 0; idx < BlockChain::kNumberOfGenesisOutputs; idx++){
+            std::string user = "VenueB";
+            std::string token = "TestToken";
+            cb_outputs_b.push_back(Output(user, token));
+        }
+
+        Transaction::OutputList cb_outputs_c;
+        for(size_t idx = 0; idx < BlockChain::kNumberOfGenesisOutputs; idx++){
+            std::string user = "VenueC";
+            std::string token = "TestToken";
+            cb_outputs_c.push_back(Output(user, token));
+        }
+
+        Transaction* txs[3] = {
+            Transaction::NewInstance(0, cb_inputs, cb_outputs_a, 0),
+            Transaction::NewInstance(1, cb_inputs, cb_outputs_b, 0),
+            Transaction::NewInstance(2, cb_inputs, cb_outputs_c, 0),
         };
-        return NewInstance(0, uint256_t(), txs, 1, 0);
+        return NewInstance(0, uint256_t(), txs, 3, 0);
     }
 
     Handle<Block> Block::NewInstance(uint32_t height, const uint256_t& phash, Transaction** txs, size_t num_txs, uint32_t timestamp){

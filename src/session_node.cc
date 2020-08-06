@@ -1,7 +1,8 @@
-#include <proposal.h>
 #include "task.h"
-#include "session.h"
 #include "server.h"
+#include "session.h"
+#include "proposal.h"
+#include "proposer.h"
 #include "block_pool.h"
 #include "transaction_pool.h"
 #include "unclaimed_transaction_pool.h"
@@ -99,15 +100,13 @@ namespace Token{
         NodeSession* session = (NodeSession*)task->GetSession();
         Handle<PrepareMessage> msg = task->GetMessage().CastTo<PrepareMessage>();
 
-        Handle<Proposal> proposal = msg->GetProposal(); //TODO: validate proposal
-        /*
-        if(BlockMiner::HasProposal()){
+        Handle<Proposal> proposal = msg->GetProposal();
+        if(ProposerThread::HasProposal()){
             session->Send(RejectedMessage::NewInstance(proposal));
             return;
         }
-        BlockMiner::SetProposal(proposal);
-        */
 
+        ProposerThread::SetProposal(proposal);
         proposal->SetPhase(Proposal::kVotingPhase);
         std::vector<Handle<Message>> response;
         if(!BlockPool::HasBlock(proposal->GetHash())){

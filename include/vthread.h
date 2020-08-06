@@ -10,6 +10,12 @@ namespace Token{
     typedef void (*ThreadHandlerFunction)(uword parameter);
 
     class Thread{
+    public:
+        enum State{
+            kRunning,
+            kPaused,
+            kStopped,
+        };
     protected:
         const ThreadId id_;
         std::string name_;

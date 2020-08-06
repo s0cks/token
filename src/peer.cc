@@ -2,6 +2,7 @@
 #include "task.h"
 #include "async_task.h"
 #include "block_pool.h"
+#include "proposer.h"
 
 namespace Token{
     void PeerSession::OnShutdown(uv_async_t* handle){
@@ -161,20 +162,17 @@ namespace Token{
         PeerSession* session = (PeerSession*)task->GetSession();
         Handle<PromiseMessage> msg = task->GetMessage().CastTo<PromiseMessage>();
 
-        /*
-        if(!BlockMiner::GetProposal()){
+        if(!ProposerThread::HasProposal()){
             LOG(WARNING) << "no active proposal found";
             return;
         }
-        *
 
-        Proposal* proposal = BlockMiner::GetProposal();
+        Handle<Proposal> proposal = ProposerThread::GetProposal();
         std::string node_id = session->GetID();
-        proposal->Vote(node_id);
+        proposal->AcceptProposal(node_id);
 #ifdef TOKEN_DEBUG
         LOG(INFO) << node_id << " voted for proposal: " << proposal->GetHash();
 #endif//TOKEN_DEBUG
-        */
     }
 
     void PeerSession::HandleCommitMessage(const Handle<HandleMessageTask>& task){}
@@ -183,38 +181,34 @@ namespace Token{
         PeerSession* session = (PeerSession*)task->GetSession();
         Handle<AcceptedMessage> msg = task->GetMessage().CastTo<AcceptedMessage>();
 
-        /*
-        if(!BlockMiner::HasProposal()){
+        if(!ProposerThread::HasProposal()){
             LOG(WARNING) << "no active proposal found";
             return;
         }
 
-        Proposal* proposal = BlockMiner::GetProposal();
+        Proposal* proposal = ProposerThread::GetProposal();
         std::string node_id = session->GetID();
-        proposal->Commit(node_id);
+        proposal->AcceptProposal(node_id);
 #ifdef TOKEN_DEBUG
         LOG(INFO) << node_id << " accepted proposal: " << proposal->GetHash();
 #endif//TOKEN_DEBUG
-         */
     }
 
     void PeerSession::HandleRejectedMessage(const Handle<HandleMessageTask>& task){
         PeerSession* session = (PeerSession*)task->GetSession();
         Handle<RejectedMessage> msg = task->GetMessage().CastTo<RejectedMessage>();
 
-/*
-        if(!BlockMiner::HasProposal()){
+        if(!ProposerThread::HasProposal()){
             LOG(WARNING) << "no active proposal found";
             return;
         }
 
-        Proposal* proposal = BlockMiner::GetProposal();
+        Proposal* proposal = ProposerThread::GetProposal();
         std::string node = msg->GetProposer();
-        //TODO: proposal->Rejected(node_id);
+        proposal->RejectProposal(node);
 #ifdef TOKEN_DEBUG
         LOG(INFO) << node << " rejected proposal: " << proposal->GetHash();
 #endif//TOKEN_DEBUG
-*/
     }
 
     void PeerSession::HandleGetDataMessage(const Handle<HandleMessageTask>& task){

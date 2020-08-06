@@ -141,42 +141,6 @@ namespace Token{
         }
     };
 
-    class HandleProposalTask : public AsyncTask{
-    private:
-        Proposal* proposal_;
-        Block* block_;
-
-        Result DoWork();
-    protected:
-        void Accept(WeakReferenceVisitor* vis){
-            vis->Visit(&proposal_);
-            vis->Visit(&block_);
-        }
-    public:
-        HandleProposalTask(uv_loop_t* loop, const Handle<Proposal>& proposal, const Handle<Block>& blk):
-            AsyncTask(loop),
-            proposal_(nullptr),
-            block_(nullptr){
-            WriteBarrier(&proposal_, proposal);
-            WriteBarrier(&block_, blk);
-        }
-        ~HandleProposalTask() = default;
-
-        DEFINE_ASYNC_TASK(HandleProposal);
-
-        Handle<Block> GetBlock() const{
-            return block_;
-        }
-
-        Handle<Proposal> GetProposal() const{
-            return proposal_;
-        }
-
-        static Handle<HandleProposalTask> NewInstance(uv_loop_t* loop, const Handle<Proposal>& proposal, const Handle<Block>& blk){
-            return new HandleProposalTask(loop, proposal, blk);
-        }
-    };
-
     class SynchronizeBlockChainTask : public AsyncSessionTask{
     private:
         uint256_t head_;
