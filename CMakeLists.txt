@@ -10,6 +10,9 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 set(PROTO_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protos")
 
+file(GLOB_RECURSE TOKEN_CMAKE_MODULES ${CMAKE_MODULE_PATH}/*.cmake)
+message("Using Modules: ${TOKEN_CMAKE_MODULES}")
+
 # Monkey Patching for Debug Mode
 if (CMAKE_BUILD_TYPE MATCHES Debug)
         message("Compiling token w/ debug mode and unit tests")
@@ -48,8 +51,6 @@ endif(TOKEN_BUILD_TESTS)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(include)
 include_directories(src)
-include_directories(${CRYPTO++_INCLUDE_DIR})
-include_directories(${LIBUV_INCLUDE_DIRS})
 if(TOKEN_BUILD_TESTS)
         include_directories(tests)
 endif(TOKEN_BUILD_TESTS)

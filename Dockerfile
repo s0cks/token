@@ -1,16 +1,38 @@
-FROM grpc/cxx
+FROM token-base:0.0.1
+# Install Latest Dependencies
 RUN apt-get update && apt-get install -y \
-    build-essential \
-    cmake \
-    git \
+    libdevmapper-dev \
+    libprotoc-dev \
+    libpopt-dev \
+    libgcrypt20-dev \
+    protobuf-compiler \
+    libuuid1 \
     libcrypto++-dev \
+    libconfig++-dev \
+    libgflags-dev \
+    libgoogle-glog-dev \
     libprotobuf-dev \
     libleveldb-dev \
-    libgoogle-glog-dev \
-    libgflags-dev \
     libuv1-dev \
-    libhttp-parser-dev
-COPY build/token-0.1.1-Linux.deb /tmp/token-0.1.1-Linux.deb
-RUN dpkg -i /tmp/token-0.1.1-Linux.deb
+    uuid-dev
+
+# Debug
+RUN echo "$(ls -lash /usr/include/)"
+RUN echo "$(ls -lash /usr/local/include/)"
+
+# Copy + Compile Ledger Source
+RUN mkdir /token-node/
+COPY cmake /token-node/cmake
+COPY include /token-node/include
+COPY protos /token-node/protos
+COPY src /token-node/src
+COPY CMakeLists.txt main.cc client.cc tests.cc /token-node/
+WORKDIR /token-node
+RUN cmake -DCMAKE_BUILD_TYPE=Debug . && make
+
+# Run the Ledger Executable
+WORKDIR /opt/token-node
+COPY /token-node/token-node ./
+CMD [ "./token-node" ]
 # TODO: Update and get working
 # TODO: Investigate using vagrant to test docker images?

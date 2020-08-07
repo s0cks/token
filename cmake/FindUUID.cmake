@@ -31,7 +31,7 @@ else (UUID_PKG_FOUND)
 
     find_path(UUID_INCLUDE_DIRS
             NAMES uuid.h
-            HINTS ${UUID_LOCATION}/include/*
+            HINTS ${UUID_LOCATION}/include/uuid/*
             ${CMAKE_INSTALL_PREFIX}/uuid/*/${PLATFORM}/
             DOC "The uuid include directory"
             )
