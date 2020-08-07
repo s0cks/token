@@ -152,18 +152,15 @@ namespace Token{
     };
 }
 
-// BlockChain Flags
+// Command Line Flags
 DECLARE_string(path);
-DECLARE_bool(verbose);
-DECLARE_uint64(heap_size);
 DECLARE_uint32(port);
+DECLARE_uint32(heap_size);
+
+//TODO: remove these flags
 DECLARE_string(peer_address);
 DECLARE_uint32(peer_port);
 
-// RPC Service Flags
-DECLARE_uint32(service_port);
-
-#define TOKEN_VERBOSE (FLAGS_verbose)
 #define TOKEN_BLOCKCHAIN_HOME (FLAGS_path)
 
 #endif //TOKEN_COMMON_H

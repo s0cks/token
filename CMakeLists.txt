@@ -116,12 +116,12 @@ add_library("token-ledger" SHARED ${TOKEN_HEADERS} ${TOKEN_SOURCES} ${TOKEN_PROT
 target_link_libraries("${PROJECT_NAME}-ledger" ${TOKEN_LIBRARIES})
 
 # Token Server Executable
-add_executable("token-node" main.cc ${TOKEN_HEADERS} ${TOKEN_SOURCES} ${TOKEN_PROTO_HEADERS} ${TOKEN_PROTO_SOURCES})
-target_link_libraries("token-node" ${TOKEN_LIBRARIES})
+add_executable("token-node" main.cc)
+target_link_libraries("token-node" "token-ledger" ${TOKEN_LIBRARIES})
 
 # Token Client Executable
-add_executable("token-client" client.cc ${TOKEN_HEADERS} ${TOKEN_SOURCES} ${TOKEN_PROTO_HEADERS} ${TOKEN_PROTO_SOURCES})
-target_link_libraries("token-client" ${TOKEN_LIBRARIES})
+add_executable("token-client" client.cc)
+target_link_libraries("token-client" "token-ledger" ${TOKEN_LIBRARIES})
 
 # Token Unit Tests Executable
 if(TOKEN_BUILD_TESTS)
@@ -140,3 +140,14 @@ if(TOKEN_CREATE_PACKAGE)
         set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Tazz")
         include(CPack)
 endif(TOKEN_CREATE_PACKAGE)
+
+# Install Token Node
+install(
+        TARGETS token-ledger
+        LIBRARY DESTINATION lib
+        INCLUDES DESTINATION include
+)
+install(
+        TARGETS token-node
+        RUNTIME DESTINATION bin
+)

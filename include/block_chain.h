@@ -23,7 +23,7 @@ namespace Token{
             kInitialized
         };
 
-        static const uint32_t kNumberOfGenesisOutputs = 10000;
+        static const uint32_t kNumberOfGenesisOutputs = 100;
     private:
         BlockChain() = delete;
 

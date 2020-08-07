@@ -76,6 +76,20 @@ namespace Token{
         }
     };
 
+    static inline void
+    OrphanTransaction(const Handle<Transaction>& tx){
+        uint256_t hash = tx->GetSHA256Hash();
+        LOG(WARNING) << "orphaning transaction: " << hash;
+        TransactionPool::RemoveTransaction(hash);
+    }
+
+    static inline void
+    OrphanBlock(const Handle<Block>& blk){
+        uint256_t hash = blk->GetSHA256Hash();
+        LOG(WARNING) << "orphaning block: " << hash;
+        BlockPool::RemoveBlock(hash);
+    }
+
     void BlockDiscoveryThread::HandleThread(uword parameter){
         LOG(INFO) << "starting the block discovery thread....";
         SetState(Thread::State::kRunning);
@@ -97,6 +111,20 @@ namespace Token{
 
             if(GetNumberOfTransactionsInPool() >= 2){
                 Handle<Block> block = TransactionPoolBlockBuilder::Build();
+
+                BlockValidator validator(block);
+                if(!validator.IsValid()){
+                    LOG(WARNING) << "invalid block discovered: " << block;
+                    LOG(WARNING) << "removing " << validator.GetNumberOfInvalidTransactions() << " invalid transactions from pool....";
+                    auto iter = validator.invalid_begin();
+                    while(iter != validator.invalid_end()){
+                        Handle<Transaction> invalid_tx = (*iter);
+                        OrphanTransaction(invalid_tx);
+                        iter++;
+                    }
+                    OrphanBlock(block);
+                    continue;
+                }
 
                 LOG(INFO) << "discovered block " << block << ", scheduling proposal....";
                 BlockQueue::Queue(block); //TODO: pre-validate block before queuing?
