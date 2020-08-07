@@ -23,11 +23,10 @@ COPY tests /token-node/tests
 COPY CMakeLists.txt main.cc client.cc tests.cc /token-node/
 WORKDIR /token-node
 
-RUN mkdir -p /opt/token \
-    && cmake -DCMAKE_BUILD_TYPE=Debug . -DCMAKE_INSTALL_PREFIX=/opt/token/ \
+RUN cmake -DCMAKE_BUILD_TYPE=Debug . -DCMAKE_INSTALL_PREFIX=/opt/token/ \
     && cmake --build . --target install
 
 WORKDIR /opt/token/
-CMD [ "./token-node" ]
+CMD [ "./token-node", "--path /opt/token/ledger", "--port 8000" ]
 # TODO: Update and get working
 # TODO: Investigate using vagrant to test docker images?
