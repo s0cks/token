@@ -31,15 +31,17 @@ namespace Token{
 
         NodeAddress callback("127.0.0.1", FLAGS_port); //TODO: obtain address dynamically
         session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), callback));
-        session->SetState(NodeSession::kConnected);
 
-
-        NodeAddress paddr = msg->GetCallbackAddress();
-
-        if(!Server::HasPeer(callback)){
-            LOG(WARNING) << "couldn't find peer: " << msg->GetID() << ", connecting to peer " << paddr << "....";
-            if(!Server::ConnectTo(paddr)){
-                LOG(WARNING) << "couldn't connect to peer: " << paddr;
+        if(session->IsConnecting()){
+            session->SetState(Session::State::kConnected);
+            if(msg->IsNode()){
+                NodeAddress paddr = msg->GetCallbackAddress();
+                if(!Server::HasPeer(callback)){
+                    LOG(WARNING) << "couldn't find peer: " << msg->GetID() << ", connecting to peer " << paddr << "....";
+                    if(!Server::ConnectTo(paddr)){
+                        LOG(WARNING) << "couldn't connect to peer: " << paddr;
+                    }
+                }
             }
         }
     }
@@ -178,12 +180,6 @@ namespace Token{
         }
     }
 
-    void NodeSession::HandleTestMessage(const Handle<HandleMessageTask>& task){
-        NodeSession* session = (NodeSession*)task->GetSession();
-        Handle<TestMessage> msg = task->GetMessage().CastTo<TestMessage>();
-        LOG(INFO) << "Test: " << msg->GetHash();
-    }
-
     void NodeSession::HandleInventoryMessage(const Handle<HandleMessageTask>& task){
         NodeSession* session = (NodeSession*)task->GetSession();
         Handle<InventoryMessage> msg = task->GetMessage().CastTo<InventoryMessage>();
@@ -201,6 +197,52 @@ namespace Token{
 
         LOG(INFO) << "downloading " << needed.size() << "/" << items.size() << " items from inventory....";
         if(!needed.empty()) session->Send(GetDataMessage::NewInstance(needed));
+    }
+
+    class UserUnclaimedTransactionCollector : public UnclaimedTransactionPoolVisitor{
+    private:
+        std::vector<InventoryItem>& items_;
+        std::string target_;
+    public:
+        UserUnclaimedTransactionCollector(std::vector<InventoryItem>& items, const std::string& target):
+            UnclaimedTransactionPoolVisitor(),
+            items_(items),
+            target_(target){}
+        ~UserUnclaimedTransactionCollector(){}
+
+        std::string GetTarget() const{
+            return target_;
+        }
+
+        bool Visit(const Handle<UnclaimedTransaction>& utxo){
+            if(utxo->GetUser() == GetTarget()) items_.push_back(InventoryItem(utxo));
+            return true;
+        }
+    };
+
+    void NodeSession::HandleGetUnclaimedTransactionsMessage(const Token::Handle<Token::HandleMessageTask>& task){
+        NodeSession* session = (NodeSession*)task->GetSession();
+        Handle<GetUnclaimedTransactionsMessage> msg = task->GetMessage().CastTo<GetUnclaimedTransactionsMessage>();
+
+        std::string user = msg->GetUser();
+        LOG(INFO) << "getting unclaimed transactions for " << user << "....";
+
+        std::vector<InventoryItem> items;
+        UserUnclaimedTransactionCollector collector(items, user);
+        if(!UnclaimedTransactionPool::Accept(&collector)){
+            LOG(WARNING) << "couldn't visit unclaimed transaction pool";
+            //TODO: send not found?
+            return;
+        }
+
+        if(items.empty()){
+            LOG(WARNING) << "no unclaimed transactions found for user: " << user;
+            //TODO: send not found?
+            return;
+        }
+
+        LOG(INFO) << "sending inventory of " << items.size() << " items";
+        session->SendInventory(items);
     }
 
     void NodeSession::HandleGetBlocksMessage(const Handle<HandleMessageTask>& task){
@@ -229,7 +271,4 @@ namespace Token{
 
         session->Send(InventoryMessage::NewInstance(items));
     }
-
-    void NodeSession::HandlePingMessage(const Handle<HandleMessageTask>& task){}
-    void NodeSession::HandlePongMessage(const Handle<HandleMessageTask>& task){}
 }

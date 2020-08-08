@@ -107,4 +107,26 @@ namespace Token{
 
         for(size_t idx = 0; idx < total_messages; idx++) free(buffers[idx].base);
     }
+
+    void Session::SendInventory(std::vector<InventoryItem>& items){
+        std::vector<Handle<Message>> data;
+
+        size_t n = InventoryMessage::kMaxAmountOfItemsPerMessage;
+        size_t size = (items.size() - 1) / n + 1;
+
+        for(size_t idx = 0; idx < size; idx++){
+            auto start = std::next(items.cbegin(), idx*n);
+            auto end = std::next(items.cbegin(), idx*n+n);
+
+            std::vector<InventoryItem> inv(n);
+            if(idx*n+n > items.size()){
+                end = items.cend();
+                inv.resize(items.size()-idx*n);
+            }
+            std::copy(start, end, inv.begin());
+
+            data.push_back(InventoryMessage::NewInstance(inv).CastTo<Message>());
+        }
+        Send(data);
+    }
 }

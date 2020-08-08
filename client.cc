@@ -19,8 +19,8 @@ main(int argc, char** argv){
 
     Allocator::Initialize();
 
-    NodeClient* client = new NodeClient();
+    ClientSession* client = new ClientSession();
     client->Connect(NodeAddress(FLAGS_peer_address, FLAGS_peer_port));
-    client->WaitForState(NodeClient::State::kDisconnected);
+    client->WaitForState(ClientSession::State::kDisconnected);
     return EXIT_SUCCESS;
 }

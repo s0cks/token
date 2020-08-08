@@ -14,7 +14,9 @@ namespace Token{
     class HandleMessageTask;
     class Session{
     public:
-        static const size_t kBufferSize = 4096;
+        static const uint32_t kHeartbeatIntervalMilliseconds = 30 * 1000;
+        static const uint32_t kHeartbeatTimeoutMilliseconds = 1 * 60 * 1000;
+        static const size_t kBufferSize = 4096*2;//bad?
 
         enum State{
             kDisconnected = 0,
@@ -83,6 +85,7 @@ namespace Token{
         void WaitForItem(const InventoryItem& item);
         void Send(std::vector<Handle<Message>>& messages);
         void Send(const Handle<Message>& msg);
+        void SendInventory(std::vector<InventoryItem>& items);
 
 #define DECLARE_MESSAGE_SEND(Name) \
         inline void Send(const Handle<Name##Message>& msg){ \
@@ -95,6 +98,48 @@ namespace Token{
     virtual void Handle##Name##Message(const Handle<HandleMessageTask>& task) = 0;
     FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
+    };
+
+    class SessionInfo{
+    protected:
+        Session* session_;
+
+        SessionInfo(Session* session):
+            session_(session){}
+    public:
+        ~SessionInfo() = default;
+
+        Session* GetSession() const{
+            return session_;
+        }
+
+        std::string GetID() const{
+            return session_->GetID();
+        }
+
+        NodeAddress GetAddress() const{
+            return session_->GetAddress();
+        }
+
+        Session::State GetState() const{
+            return session_->GetState();
+        }
+
+        bool IsDisconnected() const{
+            return GetState() == Session::State::kDisconnected;
+        }
+
+        bool IsConnected() const{
+            return GetState() == Session::State::kConnected;
+        }
+
+        bool IsConnecting() const{
+            return GetState() == Session::State::kConnecting;
+        }
+
+        void operator=(const SessionInfo& info){
+            session_ = info.session_;
+        }
     };
 
     //TODO: add heartbeat?

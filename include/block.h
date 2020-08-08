@@ -10,10 +10,11 @@
 #include "transaction.h"
 
 namespace Token{
+    typedef Proto::BlockChain::BlockHeader RawBlockHeader;
+
     class Block;
     class BlockHeader{
     public:
-        typedef Proto::BlockChain::BlockHeader RawType;
     private:
         uint32_t timestamp_;
         uint32_t height_;
@@ -34,7 +35,7 @@ namespace Token{
             merkle_root_(merkle_root),
             hash_(hash){}
         BlockHeader(Block* blk);
-        BlockHeader(const RawType& raw): BlockHeader(raw.timestamp(), raw.height(), HashFromHexString(raw.previous_hash()), HashFromHexString(raw.merkle_root()), HashFromHexString(raw.hash())){}
+        BlockHeader(const RawBlockHeader& raw): BlockHeader(raw.timestamp(), raw.height(), HashFromHexString(raw.previous_hash()), HashFromHexString(raw.merkle_root()), HashFromHexString(raw.hash())){}
         ~BlockHeader(){}
 
         uint32_t GetTimestamp() const{
@@ -83,6 +84,15 @@ namespace Token{
         friend std::ostream& operator<<(std::ostream& stream, const BlockHeader& header){
             stream << "#" << header.GetHeight() << "(" << header.GetHash() << ")";
             return stream;
+        }
+
+        friend RawBlockHeader& operator<<(RawBlockHeader& raw, const BlockHeader& header){
+            raw.set_hash(HexString(header.GetHash()));
+            raw.set_timestamp(header.GetTimestamp());
+            raw.set_height(header.GetHeight());
+            raw.set_previous_hash(HexString(header.GetPreviousHash()));
+            raw.set_merkle_root(HexString(header.GetMerkleRoot()));
+            return raw;
         }
     };
 

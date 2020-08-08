@@ -143,9 +143,9 @@ namespace Token{
 
     class SynchronizeBlockChainTask : public AsyncSessionTask{
     private:
-        uint256_t head_;
+        BlockHeader head_;
 
-        SynchronizeBlockChainTask(uv_loop_t* loop, Session* session, const uint256_t& head):
+        SynchronizeBlockChainTask(uv_loop_t* loop, Session* session, const BlockHeader& head):
             AsyncSessionTask(loop, session),
             head_(head){}
 
@@ -162,10 +162,10 @@ namespace Token{
         DEFINE_ASYNC_TASK(SynchronizeBlockChain);
 
         InventoryItem GetHead() const{
-            return InventoryItem(InventoryItem::kBlock, head_);
+            return InventoryItem(InventoryItem::kBlock, head_.GetHash());
         }
 
-        static Handle<SynchronizeBlockChainTask> NewInstance(uv_loop_t* loop, Session* session, const uint256_t& head){
+        static Handle<SynchronizeBlockChainTask> NewInstance(uv_loop_t* loop, Session* session, const BlockHeader& head){
             return new SynchronizeBlockChainTask(loop, session, head);
         }
     };

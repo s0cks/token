@@ -9,16 +9,17 @@ namespace Token{
 #define FOR_EACH_COMMAND(V) \
     V(Status, ".status", 0) \
     V(Disconnect, ".disconnect", 0) \
-    V(Test, ".test", 0) \
-    V(Transaction, "tx", 3)
+    V(Transaction, "tx", 3) \
+    V(GetTokens, "gettokens", 1)
     //V(Exit, ".exit", 0)
 
 #define FORWARD_DECLARE_COMMAND(Name, Text, Parameters) class Name##Command;
 FOR_EACH_COMMAND(FORWARD_DECLARE_COMMAND);
 #undef FORWARD_DECLARE_COMMAND
 
-    //TODO: refactor/remove
     class Command{
+        //TODO:
+        // - refactor/remove this class for something more flexible
     protected:
         std::deque<std::string> args_;
 
@@ -73,20 +74,20 @@ FOR_EACH_COMMAND(FORWARD_DECLARE_COMMAND);
         DECLARE_COMMAND(Disconnect);
     };
 
-    class TestCommand : public Command{
-    public:
-        TestCommand(const std::deque<std::string>& args): Command(args){}
-        ~TestCommand() = default;
-
-        DECLARE_COMMAND(Test);
-    };
-
     class TransactionCommand : public Command{
     public:
         TransactionCommand(const std::deque<std::string>& args): Command(args){}
         ~TransactionCommand() = default;
 
         DECLARE_COMMAND(Transaction);
+    };
+
+    class GetTokensCommand : public Command{
+    public:
+        GetTokensCommand(const std::deque<std::string>& args): Command(args){}
+        ~GetTokensCommand() = default;
+
+        DECLARE_COMMAND(GetTokens);
     };
 }
 

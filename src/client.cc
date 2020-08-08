@@ -3,17 +3,53 @@
 #include "client.h"
 
 namespace Token{
-    void NodeClient::OnSignal(uv_signal_t* handle, int signum){
-        NodeClient* client = (NodeClient*)handle->data;
+    ClientSessionInfo::ClientSessionInfo(ClientSession* session):
+        SessionInfo(session){
+    }
+
+    BlockHeader ClientSessionInfo::GetHead() const{
+        return ((ClientSession*)GetSession())->GetHead();
+    }
+
+    NodeAddress ClientSessionInfo::GetPeerAddress() const{
+        return ((ClientSession*)GetSession())->GetPeerAddress();
+    }
+
+    std::string ClientSessionInfo::GetPeerID() const{
+        return ((ClientSession*)GetSession())->GetPeerID();
+    }
+
+    void ClientSessionInfo::operator=(const ClientSessionInfo& info){
+        SessionInfo::operator=(info);
+    }
+
+    void ClientSession::OnSignal(uv_signal_t* handle, int signum){
+        ClientSession* client = (ClientSession*)handle->data;
         uv_stop(client->loop_);
     }
 
-    void NodeClient::Connect(const NodeAddress& addr){
+    void ClientSession::OnHeartbeatTick(uv_timer_t* handle){
+        ClientSession* client = (ClientSession*)handle->data;
+
+        LOG(INFO) << "sending ping to peer....";
+        client->Send(VersionMessage::NewInstance(client->GetID()));
+        uv_timer_start(&client->hb_timeout_, &OnHeartbeatTimeout, Session::kHeartbeatTimeoutMilliseconds, 0);
+    }
+
+    void ClientSession::OnHeartbeatTimeout(uv_timer_t* handle){
+        ClientSession* client = (ClientSession*)handle->data;
+
+        LOG(WARNING) << "peer " << client->GetID() << " timed out, disconnecting....";
+        //TODO: disconnect client
+    }
+
+    void ClientSession::Connect(const NodeAddress& addr){
         LOG(INFO) << "connecting to server: " << addr;
         SetState(State::kConnecting);
-        //SetPeer(addr);
 
         uv_loop_init(loop_);
+        uv_timer_init(loop_, &hb_timer_);
+        uv_timer_init(loop_, &hb_timeout_);
         uv_signal_init(loop_, &sigterm_);
         uv_signal_start(&sigterm_, &OnSignal, SIGTERM);
 
@@ -49,13 +85,13 @@ namespace Token{
         uv_loop_close(loop_);
     }
 
-    void NodeClient::OnConnect(uv_connect_t* conn, int status){
+    void ClientSession::OnConnect(uv_connect_t* conn, int status){
         if(status != 0){
             LOG(WARNING) << "error connecting to server: " << uv_strerror(status);
             return; //TODO: terminate connection
         }
 
-        NodeClient* client = (NodeClient*)conn->data;
+        ClientSession* client = (ClientSession*)conn->data;
 
         int err;
         if((err = uv_read_start(client->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
@@ -68,11 +104,16 @@ namespace Token{
             return; //TODO: terminate connection
         }
 
+        if((err = uv_timer_start(&client->hb_timer_, &OnHeartbeatTick, 0, Session::kHeartbeatIntervalMilliseconds)) != 0){
+            LOG(WARNING) << "couldn't start the heartbeat timer: " << uv_strerror(err);
+            return; //TODO: terminate connection
+        }
+
         client->Send(VersionMessage::NewInstance(client->GetID()));
     }
 
-    void NodeClient::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
-        NodeClient* session = (NodeClient*)stream->data;
+    void ClientSession::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
+        ClientSession* session = (ClientSession*)stream->data;
         if(nread == UV_EOF){
             LOG(ERROR) << "client disconnected!";
             return;
@@ -82,7 +123,7 @@ namespace Token{
         } else if(nread == 0){
             LOG(WARNING) << "zero message size received";
             return;
-        } else if(nread >= 4096){
+        } else if(nread >= Session::kBufferSize){
             LOG(ERROR) << "too large of a buffer";
             return;
         }
@@ -120,48 +161,63 @@ namespace Token{
         }
     }
 
-    void NodeClient::HandleVersionMessage(const Handle<HandleMessageTask>& task){
-        NodeClient* client = (NodeClient*)task->GetSession();
+    void ClientSession::HandleVersionMessage(const Handle<HandleMessageTask>& task){
+        ClientSession* client = (ClientSession*)task->GetSession();
         Handle<VersionMessage> msg = task->GetMessage().CastTo<VersionMessage>();
         client->Send(VerackMessage::NewInstance(client->GetID()));
     }
 
-    void NodeClient::HandleVerackMessage(const Handle<HandleMessageTask>& task){
-        NodeClient* client = (NodeClient*)task->GetSession();
+    void ClientSession::HandleVerackMessage(const Handle<HandleMessageTask>& task){
+        ClientSession* client = (ClientSession*)task->GetSession();
         Handle<VerackMessage> msg = task->GetMessage().CastTo<VerackMessage>();
-
-        client->SetState(State::kConnected);
-        LOG(INFO) << "connected!";
+        if(IsConnecting()){
+            LOG(INFO) << "client connected!";
+            client->SetState(State::kConnected);
+        }
+        client->SetHead(msg->GetHead());
+        client->SetPeerID(msg->GetID());
+        client->SetPeerAddress(msg->GetCallbackAddress());
+        if(IsConnected()){
+            uv_timer_stop(&client->hb_timeout_);
+        }
     }
 
-    void NodeClient::HandleBlockMessage(const Handle<HandleMessageTask>& task){
-        NodeClient* client = (NodeClient*)task->GetSession();
+    void ClientSession::HandleBlockMessage(const Handle<HandleMessageTask>& task){
+        ClientSession* client = (ClientSession*)task->GetSession();
         Handle<BlockMessage> msg = task->GetMessage().CastTo<BlockMessage>();
 
         Block* blk = msg->GetBlock();
         LOG(INFO) << "received block: " << blk->GetHeader();
     }
 
-    void NodeClient::HandleGetDataMessage(const Handle<HandleMessageTask>& task){}
-    void NodeClient::HandleGetBlocksMessage(const Handle<HandleMessageTask>& msg){}
-    void NodeClient::HandleInventoryMessage(const Handle<HandleMessageTask>& msg){}
-    void NodeClient::HandleTransactionMessage(const Handle<HandleMessageTask>& msg){}
-    void NodeClient::HandleCommitMessage(const Handle<HandleMessageTask>& msg){}
-    void NodeClient::HandlePrepareMessage(const Handle<HandleMessageTask>& msg){}
-    void NodeClient::HandlePromiseMessage(const Handle<HandleMessageTask>& msg){}
-    void NodeClient::HandleRejectedMessage(const Handle<HandleMessageTask>& msg){}
-    void NodeClient::HandleAcceptedMessage(const Handle<HandleMessageTask>& msg){}
-    void NodeClient::HandleNotFoundMessage(const Handle<HandleMessageTask>& msg){}
-    void NodeClient::HandleTestMessage(const Handle<HandleMessageTask>& task){}
+    void ClientSession::HandleInventoryMessage(const Handle<HandleMessageTask>& task){
+        ClientSession* session = (ClientSession*)task->GetSession();
+        Handle<InventoryMessage> msg = task->GetMessage().CastTo<InventoryMessage>();
 
-    // commands:
-    // - ping
-    // - gethead
-    // - getutxos
-    // - getdata
-    // - append
-    void NodeClient::OnCommandReceived(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf){
-        NodeClient* client = (NodeClient*)stream->data;
+        std::vector<InventoryItem> items;
+        if(!msg->GetItems(items)){
+            LOG(WARNING) << "couldn't read inventory from peer";
+            return;
+        }
+
+        for(auto& item : items){
+            LOG(INFO) << "  - " << item.GetHash();
+        }
+    }
+
+    void ClientSession::HandleGetDataMessage(const Handle<HandleMessageTask>& task){}
+    void ClientSession::HandleGetBlocksMessage(const Handle<HandleMessageTask>& msg){}
+    void ClientSession::HandleTransactionMessage(const Handle<HandleMessageTask>& msg){}
+    void ClientSession::HandleCommitMessage(const Handle<HandleMessageTask>& msg){}
+    void ClientSession::HandlePrepareMessage(const Handle<HandleMessageTask>& msg){}
+    void ClientSession::HandlePromiseMessage(const Handle<HandleMessageTask>& msg){}
+    void ClientSession::HandleRejectedMessage(const Handle<HandleMessageTask>& msg){}
+    void ClientSession::HandleAcceptedMessage(const Handle<HandleMessageTask>& msg){}
+    void ClientSession::HandleNotFoundMessage(const Handle<HandleMessageTask>& msg){}
+    void ClientSession::HandleGetUnclaimedTransactionsMessage(const Handle<HandleMessageTask>& task){}
+
+    void ClientSession::OnCommandReceived(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf){
+        ClientSession* client = (ClientSession*)stream->data;
 
         if(nread == UV_EOF){
             LOG(ERROR) << "client disconnected!";
@@ -202,25 +258,36 @@ namespace Token{
         }
     }
 
-    void NodeClient::HandleStatusCommand(StatusCommand* cmd){
-        //LOG(INFO) << "Peer: " << GetPeer();
-        if(IsDisconnected()){
-            LOG(INFO) << "Status: Disconnected.";
-        } else if(IsConnecting()){
-            LOG(INFO) << "Status: Connecting...";
-        } else if(IsConnected()){
-            LOG(INFO) << "Status: Connected!";
+    void ClientSession::HandleStatusCommand(StatusCommand* cmd){
+        ClientSessionInfo info = GetInfo();
+        LOG(INFO) << "Client ID: " << info.GetID();
+        switch(info.GetState()){
+            case Session::State::kDisconnected:
+                LOG(INFO) << "Disconnected!";
+                break;
+            case Session::State::kConnecting:
+                LOG(INFO) << "Connecting....";
+                break;
+            case Session::State::kConnected:
+                LOG(INFO) << "Connected.";
+                break;
+            default:
+                LOG(WARNING) << "Unknown Connection Status!";
+                break;
         }
+        LOG(INFO) << "Peer Information:";
+        LOG(INFO) << "  - ID: " << info.GetPeerID();
+        LOG(INFO) << "  - Address: " << info.GetPeerAddress();
+        LOG(INFO) << "  - Head: " << info.GetHead();
+
     }
 
-    void NodeClient::HandleDisconnectCommand(DisconnectCommand* cmd){
+    void ClientSession::HandleDisconnectCommand(DisconnectCommand* cmd){
         LOG(WARNING) << "disconnecting...";
-    }
-
-    void NodeClient::HandleTestCommand(TestCommand* cmd){
-        std::string nonce = GenerateNonce();
-        LOG(INFO) << "sending nonce: " << nonce;
-        Send(TestMessage::NewInstance(HashFromHexString(nonce)));
+        uv_read_stop((uv_stream_t*)&connection_);
+        uv_stop(loop_);
+        uv_loop_close(loop_);
+        SetState(State::kDisconnected);
     }
 
     //TODO:
@@ -232,7 +299,7 @@ namespace Token{
     //      .....                               /          .....
     //   - receive_head                       /            .....
     //   - signal_all() --------------------/          - log_head()
-    void NodeClient::HandleTransactionCommand(TransactionCommand* cmd){
+    void ClientSession::HandleTransactionCommand(TransactionCommand* cmd){
         uint256_t tx_hash = cmd->GetNextArgumentHash();
         uint32_t index = cmd->GetNextArgumentUInt32();
         std::string user = cmd->GetNextArgument();
@@ -251,6 +318,10 @@ namespace Token{
         Send(msg);
     }
 
-    void NodeClient::HandlePingMessage(const Handle<HandleMessageTask>& task){}
-    void NodeClient::HandlePongMessage(const Handle<HandleMessageTask>& task){}
+    void ClientSession::HandleGetTokensCommand(Token::GetTokensCommand* cmd){
+        std::string user = cmd->GetNextArgument();
+
+        LOG(INFO) << "getting tokens for " << user << "....";
+        Send(GetUnclaimedTransactionsMessage::NewInstance(user));
+    }
 }

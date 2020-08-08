@@ -7,11 +7,10 @@
 #include "block_pool.h"
 #include "block_chain.h"
 #include "transaction_pool.h"
+#include "unclaimed_transaction_pool.h"
 
 namespace Token{
 #define FOR_EACH_MESSAGE_TYPE(V) \
-    V(Ping) \
-    V(Pong) \
     V(Version) \
     V(Verack) \
     V(Prepare) \
@@ -25,7 +24,7 @@ namespace Token{
     V(Transaction) \
     V(Inventory) \
     V(NotFound) \
-    V(Test) // TODO: Remove?
+    V(GetUnclaimedTransactions)
 
 #define FORWARD_DECLARE(Name) class Name##Message;
     FOR_EACH_MESSAGE_TYPE(FORWARD_DECLARE)
@@ -59,7 +58,9 @@ namespace Token{
         virtual MessageType GetMessageType() const = 0;
 
         std::string ToString() const{
-            return std::string(GetName());
+            std::stringstream ss;
+            ss << GetName() << "Message(" << GetMessageSize() << " Bytes)";
+            return ss.str();
         }
 
 #define DECLARE_TYPECHECK(Name) \
@@ -130,50 +131,8 @@ namespace Token{
         }
     };
 
-    class TestMessage : public HashMessage{
-    private:
-        TestMessage(const uint256_t& hash): HashMessage(hash){}
-    public:
-        ~TestMessage() = default;
-
-        DECLARE_MESSAGE(Test);
-
-        static Handle<TestMessage> NewInstance(const uint256_t& hash){
-            return new TestMessage(hash);
-        }
-
-        static Handle<TestMessage> NewInstance(){
-            std::string nonce = GenerateNonce();
-            return NewInstance(HashFromHexString(nonce));
-        }
-    };
-
-    class PingMessage : public HashMessage{
-    private:
-        PingMessage(const uint256_t& hash): HashMessage(hash){}
-    public:
-        ~PingMessage() = default;
-
-        DECLARE_MESSAGE(Ping);
-
-        static Handle<PingMessage> NewInstance(const uint256_t& hash){
-            return new PingMessage(hash);
-        }
-    };
-
-    class PongMessage : public HashMessage{
-    private:
-        PongMessage(const uint256_t& hash): HashMessage(hash){}
-    public:
-        ~PongMessage() = default;
-
-        DECLARE_MESSAGE(Pong);
-
-        static Handle<PongMessage> NewInstance(const uint256_t& hash){
-            return new PongMessage(hash);
-        }
-    };
-
+    //TODO:
+    // - refactor this
     enum class ClientType{
         kNode,
         kClient
@@ -189,8 +148,7 @@ namespace Token{
             raw_.set_version(Token::GetVersion());
             raw_.set_timestamp(timestamp);
             raw_.set_nonce(nonce);
-            raw_.set_height(head.GetHeight());
-            raw_.set_head(HexString(head.GetHash()));
+            (*raw_.mutable_head()) << head;
             raw_.set_type(static_cast<uint32_t>(type));
         }
     public:
@@ -200,8 +158,8 @@ namespace Token{
             return raw_.timestamp();
         }
 
-        uint32_t GetHeight() const{
-            return raw_.height();
+        BlockHeader GetHead() const{
+            return BlockHeader(raw_.head());
         }
 
         std::string GetVersion() const{
@@ -228,10 +186,6 @@ namespace Token{
             return GetClientType() == ClientType::kClient;
         }
 
-        uint256_t GetHead() const{
-            return HashFromHexString(raw_.head());
-        }
-
         DECLARE_MESSAGE(Version);
 
         static Handle<VersionMessage> NewInstance(ClientType type, const std::string& node_id, const std::string& nonce=GenerateNonce(), const BlockHeader& head=BlockChain::GetHead(), uint32_t timestamp=GetCurrentTime()){
@@ -252,13 +206,14 @@ namespace Token{
         typedef Proto::BlockChainServer::Verack RawType;
     private:
         VerackMessage(const RawType& raw): ProtobufMessage(raw){}
-        VerackMessage(ClientType type, const std::string& node_id, const std::string& nonce, const NodeAddress& address, uint32_t timestamp): ProtobufMessage(){
+        VerackMessage(ClientType type, const std::string& node_id, const std::string& nonce, const NodeAddress& address, const BlockHeader& head, uint32_t timestamp): ProtobufMessage(){
             raw_.set_node_id(node_id);
             raw_.set_version(Token::GetVersion());
             raw_.set_timestamp(timestamp);
             raw_.set_nonce(nonce);
             raw_.set_type(static_cast<uint32_t>(type));
             (*raw_.mutable_address()) << address;
+            (*raw_.mutable_head()) << head;
         }
     public:
         ClientType GetClientType() const{
@@ -281,14 +236,18 @@ namespace Token{
             return NodeAddress(raw_.address());
         }
 
+        BlockHeader GetHead() const{
+            return BlockHeader(raw_.head());
+        }
+
         DECLARE_MESSAGE(Verack);
 
-        static Handle<VerackMessage> NewInstance(ClientType type, const std::string& node_id, const NodeAddress& address, const std::string& nonce=GenerateNonce(), uint32_t timestamp=GetCurrentTime()){
-            return new VerackMessage(type, node_id, nonce, address, timestamp);
+        static Handle<VerackMessage> NewInstance(ClientType type, const std::string& node_id, const NodeAddress& address, const BlockHeader& head=BlockChain::GetHead(), const std::string& nonce=GenerateNonce(), uint32_t timestamp=GetCurrentTime()){
+            return new VerackMessage(type, node_id, nonce, address, head, timestamp);
         }
 
         static Handle<VerackMessage> NewInstance(const std::string& node_id){
-            return NewInstance(ClientType::kClient, node_id, NodeAddress());
+            return NewInstance(ClientType::kClient, node_id, NodeAddress(), BlockHeader());
         }
 
         static Handle<VerackMessage> NewInstance(const RawType& raw){
@@ -484,21 +443,27 @@ namespace Token{
         typedef Proto::BlockChainServer::InventoryItem RawType;
 
         enum Type{
+            kUnknown=0,
             kTransaction,
-            kBlock
+            kBlock,
+            kUnclaimedTransaction
         };
     private:
         Type type_;
         uint256_t hash_;
     public:
+        InventoryItem():
+            type_(kUnknown),
+            hash_(){}
         InventoryItem(const RawType& raw):
             type_(static_cast<Type>(raw.type())),
             hash_(HashFromHexString(raw.hash())){}
         InventoryItem(Type type, const uint256_t& hash):
             type_(type),
             hash_(hash){}
-        InventoryItem(Transaction* tx): InventoryItem(kTransaction, tx->GetSHA256Hash()){}
-        InventoryItem(Block* blk): InventoryItem(kBlock, blk->GetSHA256Hash()){}
+        InventoryItem(const Handle<Transaction>& tx): InventoryItem(kTransaction, tx->GetSHA256Hash()){}
+        InventoryItem(const Handle<Block>& blk): InventoryItem(kBlock, blk->GetSHA256Hash()){}
+        InventoryItem(const Handle<UnclaimedTransaction>& utxo): InventoryItem(kUnclaimedTransaction, utxo->GetSHA256Hash()){}
         InventoryItem(const BlockHeader& blk): InventoryItem(kBlock, blk.GetHash()){}
         InventoryItem(const InventoryItem& item):
             type_(item.type_),
@@ -517,8 +482,13 @@ namespace Token{
             switch(type_){
                 case kTransaction: return TransactionPool::HasTransaction(hash_);
                 case kBlock: return BlockChain::HasBlock(hash_) || BlockPool::HasBlock(hash_);
+                case kUnclaimedTransaction: UnclaimedTransactionPool::HasUnclaimedTransaction(hash_);
                 default: return false;
             }
+        }
+
+        bool IsUnclaimedTransaction() const{
+            return type_ == kUnclaimedTransaction;
         }
 
         bool IsBlock() const{
@@ -565,6 +535,8 @@ namespace Token{
     class InventoryMessage : public ProtobufMessage<Proto::BlockChainServer::Inventory>{
     public:
         typedef Proto::BlockChainServer::Inventory RawType;
+
+        static const size_t kMaxAmountOfItemsPerMessage = 50;
     private:
         InventoryMessage(const Proto::BlockChainServer::Inventory& raw): ProtobufMessage(raw){}
         InventoryMessage(std::vector<InventoryItem>& items): ProtobufMessage(){
@@ -599,14 +571,14 @@ namespace Token{
             return new InventoryMessage(items);
         }
 
-        static Handle<InventoryMessage> NewInstance(Transaction* tx){
+        static Handle<InventoryMessage> NewInstance(const Handle<Transaction>& tx){
             std::vector<InventoryItem> items = {
                 InventoryItem(tx)
             };
             return NewInstance(items);
         }
 
-        static Handle<InventoryMessage> NewInstance(Block* blk){
+        static Handle<InventoryMessage> NewInstance(const Handle<Block>& blk){
             std::vector<InventoryItem> items = {
                 InventoryItem(blk)
             };
@@ -711,6 +683,37 @@ namespace Token{
 
         static Handle<NotFoundMessage> NewInstance(const RawType& raw){
             return new NotFoundMessage(raw);
+        }
+    };
+
+    //@SideClientServerOnly
+    class GetUnclaimedTransactionsMessage : public Message{
+    private:
+        std::string user_;
+
+        GetUnclaimedTransactionsMessage(const std::string& user):
+            Message(),
+            user_(user){}
+    public:
+        ~GetUnclaimedTransactionsMessage() = default;
+
+        std::string GetUser() const{
+            return user_;
+        }
+
+        uintptr_t GetMessageSize() const{
+            return user_.size();
+        }
+
+        bool Encode(uint8_t* bytes, uintptr_t size) const{
+            memcpy(bytes, user_.c_str(), size);
+            return true;
+        }
+
+        DECLARE_MESSAGE(GetUnclaimedTransactions);
+
+        static Handle<GetUnclaimedTransactionsMessage> NewInstance(const std::string& user){
+            return new GetUnclaimedTransactionsMessage(user);
         }
     };
 }
