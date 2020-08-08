@@ -287,13 +287,6 @@ namespace Token{
         }
 
         virtual std::string ToString() const = 0;
-
-        static void* operator new(size_t size){
-            return Allocator::Allocate(size);
-        }
-
-        static void* operator new[](size_t) = delete;
-        static void operator delete(void*){}
     };
 }
 

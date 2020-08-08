@@ -79,10 +79,10 @@ namespace Token{
             for(uint32_t idx = 0; idx < genesis->GetNumberOfTransactions(); idx++){
                 Transaction* it = genesis->GetTransaction(idx);
 
-                uint32_t index = 0;
-                for(auto out = it->outputs_begin(); out != it->outputs_end(); out++){
-                    UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(it->GetSHA256Hash(), index++, (*out).GetUser());
-                    UnclaimedTransactionPool::PutUnclaimedTransaction(utxo);
+                for(uint32_t out_idx = 0; out_idx < it->GetNumberOfOutputs(); out_idx++){
+                    Handle<Output> out_it = it->GetOutput(out_idx);
+                    Handle<UnclaimedTransaction> out_utxo = UnclaimedTransaction::NewInstance(it->GetSHA256Hash(), out_idx, out_it->GetUser());
+                    UnclaimedTransactionPool::PutUnclaimedTransaction(out_utxo);
                 }
             }
 

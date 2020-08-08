@@ -11,11 +11,6 @@ namespace Token{
         size_t length_;
         Object* slots_[1];
     protected:
-        static void* operator new(size_t size) = delete;
-        static void* operator new(size_t size, size_t length, bool);
-        static void operator delete(void*, size_t, bool);
-        using Object::operator delete;
-
         ArrayBase(size_t length);
 
         void Put(size_t index, Object* obj){

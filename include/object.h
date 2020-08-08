@@ -12,14 +12,12 @@
 #include "handle.h"
 
 namespace Token{
-    //TODO: cleanup class + memory layout
-    //TODO: track references using Reference class?
     class Object : public RawObject{
+        //TODO:
+        // - track references using Reference class?
     protected:
         Object(): RawObject(){}
     public:
-        virtual ~Object() = default;
-
         virtual std::string ToString() const{
             std::stringstream ss;
             ss << "Object(" << std::hex << this << ")";

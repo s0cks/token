@@ -237,14 +237,15 @@ namespace Token{
         uint32_t index = cmd->GetNextArgumentUInt32();
         std::string user = cmd->GetNextArgument();
 
-        Transaction::InputList inputs = {
-            Input(tx_hash, index, "TestUser"),
-        };
-        Transaction::OutputList outputs = {
-            Output(user, "TestToken")
+        Input* inputs[1] = {
+            Input::NewInstance(tx_hash, index, "TestUser")
         };
 
-        Handle<Transaction> tx = Transaction::NewInstance(0, inputs, outputs);
+        Output* outputs[1] = {
+            Output::NewInstance(user, "TestToken")
+        };
+
+        Handle<Transaction> tx = Transaction::NewInstance(0, inputs, 1, outputs, 1);
         Handle<TransactionMessage> msg = TransactionMessage::NewInstance(tx);
         LOG(INFO) << "sending transaction: " << tx->GetSHA256Hash();
         Send(msg);

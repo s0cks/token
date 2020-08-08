@@ -30,22 +30,24 @@ namespace Token{
 //######################################################################################################################
 //                                          Transaction
 //######################################################################################################################
-    Handle<Transaction> Transaction::NewInstance(uint32_t index, Transaction::InputList& inputs, Transaction::OutputList& outputs, uint32_t timestamp){
-        return new Transaction(timestamp, index, inputs, outputs);
+    Handle<Transaction> Transaction::NewInstance(uint32_t index, Input** inputs, size_t num_inputs, Output** outputs, size_t num_outputs, uint32_t timestamp){
+        return new Transaction(timestamp, index, inputs, num_inputs, outputs, num_outputs);
     }
 
     Handle<Transaction> Transaction::NewInstance(const RawTransaction& raw){
-        Transaction::InputList inputs;
-        for(auto& it : raw.inputs()){
-            inputs.push_back(Input(it));
+        size_t num_inputs = raw.inputs_size();
+        Input* inputs[num_inputs];
+        for(size_t idx = 0; idx < num_inputs; idx++){
+            inputs[idx] = Input::NewInstance(raw.inputs(idx));
         }
 
-        Transaction::OutputList outputs;
-        for(auto& it : raw.outputs()){
-            outputs.push_back(Output(it));
+        size_t num_outputs = raw.outputs_size();
+        Output* outputs[num_outputs];
+        for(size_t idx = 0; idx < num_outputs; idx++){
+            outputs[idx] = Output::NewInstance(raw.outputs(idx));
         }
 
-        return new Transaction(raw.timestamp(), raw.index(), inputs, outputs);
+        return new Transaction(raw.timestamp(), raw.index(), inputs, num_inputs, outputs, num_outputs);
     }
 
     Handle<Transaction> Transaction::NewInstance(std::fstream& fd){
@@ -64,16 +66,18 @@ namespace Token{
         raw.set_timestamp(timestamp_);
         raw.set_index(index_);
         raw.set_signature(signature_);
-        for(auto& it : inputs_){
+        for(uint32_t idx = 0; idx < GetNumberOfInputs(); idx++){
             RawInput* raw_in = raw.add_inputs();
-            raw_in->set_index(it.GetOutputIndex());
-            raw_in->set_previous_hash(HexString(it.GetTransactionHash()));
-            raw_in->set_user(it.GetUser());
+            Handle<Input> it = GetInput(idx);
+            raw_in->set_index(it->GetOutputIndex());
+            raw_in->set_previous_hash(HexString(it->GetTransactionHash()));
+            raw_in->set_user(it->GetUser());
         }
-        for(auto& it : outputs_){
+        for(uint32_t idx = 0; idx < GetNumberOfOutputs(); idx++){
             RawOutput* raw_out = raw.add_outputs();
-            raw_out->set_user(it.GetUser());
-            raw_out->set_token(it.GetToken());
+            Handle<Output> it = GetOutput(idx);
+            raw_out->set_user(it->GetUser());
+            raw_out->set_token(it->GetToken());
         }
         return true;
     }
@@ -84,9 +88,8 @@ namespace Token{
         {
             if(!vis->VisitInputsStart()) return false;
             for(uint64_t idx = 0; idx < GetNumberOfInputs(); idx++){
-                Input input;
-                if(!GetInput(idx, &input)) return false;
-                if(!vis->VisitInput(&input)) return false;
+                Handle<Input> it = GetInput(idx);
+                if(!vis->VisitInput(it)) return false;
             }
             if(!vis->VisitInputsEnd()) return false;
         }
@@ -94,9 +97,8 @@ namespace Token{
         {
             if(!vis->VisitOutputsStart()) return false;
             for(uint64_t idx = 0; idx < GetNumberOfOutputs(); idx++){
-                Output output;
-                if(!GetOutput(idx, &output)) return false;
-                if(!vis->VisitOutput(&output)) return false;
+                Handle<Output> it = GetOutput(idx);
+                if(!vis->VisitOutput(it)) return false;
             }
             if(!vis->VisitOutputsEnd()) return false;
         }
