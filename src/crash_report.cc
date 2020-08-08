@@ -2,9 +2,6 @@
 #include <time.h>
 #include <execinfo.h>
 
-
-#include "allocator.h"
-
 #include "token.h"
 #include "crash_report.h"
 #include "block_chain.h"

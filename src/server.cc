@@ -100,17 +100,7 @@ namespace Token{
         return node_id_;
     }
 
-    bool Server::Start(){
-        if(!IsStopped()) return false;
-        LoadNodeInformation();
-        LoadPeers();
-        if(pthread_create(&thread_, NULL, &NodeThread, NULL) != 0){
-            LOG(WARNING) << "Couldn't start block chain server thread";
-            return false;
-        }
-        return true;
-    }
-
+    /*
     bool Server::Shutdown(){
         if(!IsRunning()) return false;
         uv_async_send(&aterm_);
@@ -125,6 +115,7 @@ namespace Token{
         SetState(State::kStopped);
         return true;
     }
+    */
 
     void Server::SetState(Server::State state){
         LOCK;
@@ -151,7 +142,7 @@ namespace Token{
         uv_stop(handle->loop);
     }
 
-    void* Server::NodeThread(void* ptr){
+    void Server::HandleThread(uword parameter){
         LOG(INFO) << "starting server...";
         SetState(State::kStarting);
         uv_loop_t* loop = uv_loop_new();

@@ -3,14 +3,15 @@
 
 #include <sstream>
 #include <uv.h>
+#include "allocator.h"
 #include "address.h"
-#include "handle.h"
+#include "vthread.h"
 
 namespace Token{
     class Message;
     class PeerSession;
     class HandleMessageTask;
-    class Server{
+    class Server : public Thread{
         friend class PeerSession;
     public:
         enum State{
@@ -47,6 +48,8 @@ namespace Token{
 
         static const size_t kMaxNumberOfPeers = 16;
     private:
+        Server() = delete;
+
         static void LoadNodeInformation();
         static void SavePeers();
         static void LoadPeers();
@@ -54,7 +57,7 @@ namespace Token{
         static void UnregisterPeer(PeerSession* peer);
         static void SetState(State state);
         static uv_tcp_t* GetHandle();
-        static void* NodeThread(void* ptr);
+        static void HandleThread(uword parameter);
         static void HandleTerminateCallback(uv_async_t* handle);
         static void OnNewConnection(uv_stream_t* stream, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
@@ -64,8 +67,6 @@ namespace Token{
         static State GetState();
         static std::string GetID();
         static size_t GetNumberOfPeers();
-        static bool Start();
-        static bool Shutdown();
         static bool HasPeer(const NodeAddress& address);
         static bool HasPeer(const std::string& id);
         static bool ConnectTo(const NodeAddress& address);
@@ -100,6 +101,13 @@ namespace Token{
         static inline bool
         IsStopped(){
             return GetState() == kStopped;
+        }
+
+        static bool Start(){
+            if(!IsStopped()) return false;
+            LoadNodeInformation();
+            LoadPeers();
+            return Thread::Start("ServerThread", &HandleThread, 0) == 0;
         }
     };
 }
