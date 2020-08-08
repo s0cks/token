@@ -13,20 +13,32 @@ RUN apt-get update && apt-get install -y \
     libuv1-dev \
     uuid-dev
 
-# Copy + Compile Ledger Source
-RUN mkdir /token-node/
-COPY cmake /token-node/cmake
-COPY include /token-node/include
-COPY protos /token-node/protos
-COPY src /token-node/src
-COPY tests /token-node/tests
-COPY CMakeLists.txt main.cc client.cc tests.cc /token-node/
-WORKDIR /token-node
+# Copy The Ledger Source
+RUN mkdir -p /usr/src/libtoken-ledger/build
+COPY cmake /usr/src/libtoken-ledger/cmake/
+COPY include /usr/src/libtoken-ledger/include/
+COPY protos /usr/src/libtoken-ledger/protos/
+COPY src /usr/src/libtoken-ledger/src/
+COPY tests /usr/src/libtoken-ledger/tests/
+COPY CMakeLists.txt main.cc client.cc tests.cc /usr/src/libtoken-ledger/
 
-RUN cmake -DCMAKE_BUILD_TYPE=Debug . -DCMAKE_INSTALL_PREFIX=/opt/token/ \
+# Create the Token User
+RUN useradd token \
+    && passwd -d token
+
+# Create the Logging Directory
+RUN mkdir -p /var/log/token \
+    && chown token:token /var/log/token
+
+# Create the Ledger Directory
+RUN mkdir -p /opt/token/ledger \
+    && chown token:token /opt/token/ledger
+
+# Compile the Ledger Source
+WORKDIR /usr/src/libtoken-ledger/build
+RUN cmake -DCMAKE_BUILD_TYPE=Debug .. \
     && cmake --build . --target install
 
-WORKDIR /opt/token/
-CMD [ "./token-node", "--path /opt/token/ledger", "--port 8000" ]
+CMD [ "./token-node", "--path", "/opt/token/ledger", "--port", "8000" ]
 # TODO: Update and get working
 # TODO: Investigate using vagrant to test docker images?

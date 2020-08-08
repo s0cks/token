@@ -17,7 +17,7 @@ message("Using Modules: ${TOKEN_CMAKE_MODULES}")
 if (CMAKE_BUILD_TYPE MATCHES Debug)
         message("Compiling token w/ debug mode and unit tests")
         add_compile_definitions(TOKEN_DEBUG)
-        set(TOKEN_BUILD_TESTS True)
+        # TODO: Enable tests set(TOKEN_BUILD_TESTS True)
 endif (CMAKE_BUILD_TYPE MATCHES Debug)
 
 # Compiles w/ health check support:
@@ -128,7 +128,7 @@ if(TOKEN_BUILD_TESTS)
         message("Enabling testing")
         enable_testing()
 
-        add_executable("token-tests" tests.cc ${TOKEN_TEST_SOURCES} ${TOKEN_HEADERS} ${TOKEN_SOURCES} ${TOKEN_PROTO_HEADERS} ${TOKEN_PROTO_SOURCES})
+        add_executable("token-tests" tests.cc ${TOKEN_TEST_SOURCES})
         target_link_libraries("token-tests" ${TOKEN_LIBRARIES})
 endif(TOKEN_BUILD_TESTS)
 
