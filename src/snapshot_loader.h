@@ -4,6 +4,7 @@
 #include "snapshot_file.h"
 
 namespace Token{
+    //TODO: remove?
     class SnapshotBlockLoader{
     private:
         SnapshotBlockIndex* index_;

@@ -10,6 +10,7 @@
 namespace Token{
     class SnapshotFile{
         //TODO:
+        // - refactor
         // - reduce usage of this class?
         friend class Snapshot;
         friend class SnapshotWriter;

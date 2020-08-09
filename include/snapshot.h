@@ -5,6 +5,7 @@
 #include "block_chain.h"
 
 namespace Token{
+    //TODO: refactor
     class SnapshotBlockIndexVisitor;
     class SnapshotBlockIndex{
         friend class SnapshotBlockLoader; //TODO: revoke access
@@ -190,6 +191,7 @@ namespace Token{
         bool Accept(SnapshotReader* reader);
     };
 
+    //TODO: merge block chain index + data sections together
     class SnapshotBlockChainIndexSection : public SnapshotSection, public BlockChainDataVisitor{
     private:
         SnapshotFile* file_;
@@ -279,6 +281,7 @@ namespace Token{
         bool Accept(SnapshotReader* reader);
     };
 
+    //TODO: remove
     class SnapshotBlockIndexLinker : public SnapshotBlockIndexVisitor{
     private:
         SnapshotFile* file_;
