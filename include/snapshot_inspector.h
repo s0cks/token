@@ -8,7 +8,8 @@
 namespace Token{
 #define FOR_EACH_INSPECTOR_COMMAND(V) \
     V(Status, ".status", 0) \
-    V(GetBlock, "getblock", 1)
+    V(GetBlock, "getblock", 1) \
+    V(GetBlocks, "getblocks", 0)
 
     class SnapshotBlockLoader;
     class SnapshotInspectorCommand;
@@ -93,7 +94,7 @@ namespace Token{
         static inline Type
         GetCommand(const std::string& name){
 #define DECLARE_CHECK(Name, Text, Parameter) \
-            if(!strncmp(name.c_str(), (Text), strlen((Text)))) {\
+            if(!strncmp(name.c_str(), (Text), name.length())) {\
                 return Type::k##Name##Type; \
             }
             FOR_EACH_INSPECTOR_COMMAND(DECLARE_CHECK);

@@ -15,7 +15,6 @@ namespace Token{
         snapshot_(nullptr),
         filename_(filename),
         file_(NULL){
-        LOG(INFO) << "opening snapshot file: " << filename;
         if((file_ = fopen(filename_.c_str(), "rb")) == NULL){
             std::stringstream ss;
             ss << "Couldn't open snapshot file " << filename_ << strerror(errno);
@@ -29,7 +28,6 @@ namespace Token{
         file_(NULL){
         snapshot_->filename_ = filename_;
         CheckSnapshotDirectory();
-        LOG(INFO) << "creating snapshot file: " << filename_;
         if((file_ = fopen(filename_.data(), "wb")) == NULL){
             std::stringstream ss;
             ss << "Couldn't create snapshot file " << filename_ << ": " << strerror(errno);

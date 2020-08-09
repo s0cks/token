@@ -96,8 +96,6 @@ namespace Token{
         }
     };
 
-    typedef Proto::BlockChain::Block RawBlock;
-
     class BlockVisitor;
     class Block : public Object{
         //TODO:
@@ -105,7 +103,7 @@ namespace Token{
         friend class BlockChain;
         friend class BlockMessage;
     public:
-        static const uint32_t kNumberOfGenesisOutputs = 1000;
+        static const uint32_t kNumberOfGenesisOutputs = 32;
     private:
         uint32_t timestamp_;
         uint32_t height_;
@@ -174,7 +172,7 @@ namespace Token{
         ~Block() = default;
 
         BlockHeader GetHeader() const{
-            return BlockHeader(timestamp_, height_, previous_hash_, GetMerkleRoot(), GetSHA256Hash());
+            return BlockHeader(timestamp_, height_, previous_hash_, GetMerkleRoot(), GetHash());
         }
 
         uint256_t GetMerkleRoot() const;
@@ -204,12 +202,10 @@ namespace Token{
             return GetHeight() == 0;
         }
 
-        uint256_t GetSHA256Hash() const;
         size_t GetBufferSize() const;
         bool Encode(uint8_t* bytes) const;
         bool Accept(BlockVisitor* vis) const;
         bool Contains(const uint256_t& hash) const;
-        bool WriteToMessage(RawBlock& raw) const;
         std::string ToString() const;
 
         bool Encode(CryptoPP::SecByteBlock& bytes) const{
@@ -222,13 +218,13 @@ namespace Token{
         static Handle<Block> Genesis(); // genesis
         static Handle<Block> NewInstance(uint32_t height, const uint256_t& phash, Transaction** txs, size_t num_txs, uint32_t timestamp=GetCurrentTime());
         static Handle<Block> NewInstance(const BlockHeader& parent, Transaction** txs, size_t num_txs, uint32_t timestamp=GetCurrentTime());
-        static Handle<Block> NewInstance(const RawBlock& raw);
-        static Handle<Block> NewInstance(std::fstream& fd);
         static Handle<Block> NewInstance(uint8_t* bytes);
 
+        //TODO: refactor
+        static Handle<Block> NewInstance(std::fstream& fd, uint32_t size);
         static inline Handle<Block> NewInstance(const std::string& filename){
             std::fstream fd(filename, std::ios::in|std::ios::binary);
-            return NewInstance(fd);
+            return NewInstance(fd, GetFilesize(filename));
         }
 
         static const size_t kMaxTransactionsForBlock = 40000;

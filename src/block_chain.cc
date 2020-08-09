@@ -94,7 +94,7 @@ namespace Token{
                 }
             }
 
-            BlockChainIndex::PutReference("<HEAD>", genesis->GetSHA256Hash());
+            BlockChainIndex::PutReference("<HEAD>", genesis->GetHash());
             SetState(State::kInitialized);
             return;
         }
@@ -170,7 +170,7 @@ namespace Token{
         LOCK_GUARD;
 
         BlockHeader head = BlockChain::GetHead();
-        uint256_t hash = block->GetSHA256Hash();
+        uint256_t hash = block->GetHash();
         uint256_t phash = block->GetPreviousHash();
 
 #ifdef TOKEN_DEBUG

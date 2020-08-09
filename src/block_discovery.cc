@@ -85,7 +85,7 @@ namespace Token{
 
     static inline void
     OrphanBlock(const Handle<Block>& blk){
-        uint256_t hash = blk->GetSHA256Hash();
+        uint256_t hash = blk->GetHash();
         LOG(WARNING) << "orphaning block: " << hash;
         BlockPool::RemoveBlock(hash);
     }

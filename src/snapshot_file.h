@@ -9,6 +9,8 @@
 
 namespace Token{
     class SnapshotFile{
+        //TODO:
+        // - reduce usage of this class?
         friend class Snapshot;
         friend class SnapshotWriter;
         friend class SnapshotReader;
@@ -47,7 +49,7 @@ namespace Token{
         GetNewSnapshotFilename(){
             std::stringstream filename;
             filename << GetSnapshotDirectory();
-            filename << "/snapshot-" << GetCurrentTimeFormatted() << ".dat";
+            filename << "/snapshot-" << GetCurrentTimestampFormattedFileSafe() << ".dat";
             return filename.str();
         }
     public:

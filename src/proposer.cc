@@ -121,7 +121,7 @@ namespace Token{
             CHECK_FOR_REJECTION(proposal);
 
             if(proposal->IsAccepted()){
-                uint256_t hash = block->GetSHA256Hash();
+                uint256_t hash = block->GetHash();
                 if(!BlockHandler::ProcessBlock(block, true)){
                     LOG(WARNING) << "couldn't process block: " << hash;
                     return;

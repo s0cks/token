@@ -121,7 +121,7 @@ namespace Token{
         static Handle<Proposal> NewInstance(uint32_t height, const uint256_t& hash, const std::string& proposer);
 
         static Handle<Proposal> NewInstance(Block* block, const std::string& proposer){
-            return NewInstance(block->GetHeight(), block->GetSHA256Hash(), proposer);
+            return NewInstance(block->GetHeight(), block->GetHash(), proposer);
         }
 
         static Handle<Proposal> NewInstance(const BlockHeader& block, const std::string& proposer){

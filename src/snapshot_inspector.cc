@@ -13,7 +13,7 @@ namespace Token{
         LOG(INFO) << "Block #" << blk->GetHeight();
         LOG(INFO) << "  - Timestamp: " << blk->GetTimestamp();
         LOG(INFO) << "  - Height: " << blk->GetHeight();
-        LOG(INFO) << "  - Hash: " << blk->GetSHA256Hash();
+        LOG(INFO) << "  - Hash: " << blk->GetHash();
         LOG(INFO) << "  - Previous Hash: " << blk->GetPreviousHash();
         LOG(INFO) << "  - Merkle Root: " << blk->GetMerkleRoot();
         LOG(INFO) << "  - Transactions: ";
@@ -21,6 +21,14 @@ namespace Token{
             Handle<Transaction> tx = blk->GetTransaction(idx);
             LOG(INFO) << "      * #" << tx->GetIndex() << ": " << tx->GetHash();
         }
+    }
+
+    static inline void
+    PrintStatus(Snapshot* snapshot){
+        LOG(INFO) << "Snapshot: " << snapshot->GetFilename();
+        LOG(INFO) << "Size: " << GetFilesize(snapshot->GetFilename());
+        LOG(INFO) << "Version: " << snapshot->GetVersion();
+        LOG(INFO) << "Created: " << GetTimestampFormattedReadable(snapshot->GetTimestamp());
     }
 
     void SnapshotInspector::SetSnapshot(Snapshot* snapshot){
@@ -97,12 +105,29 @@ namespace Token{
     }
 
     void SnapshotInspector::HandleStatusCommand(Token::SnapshotInspectorCommand* cmd){
-        LOG(INFO) << "Hello World";
+        PrintStatus(GetSnapshot());
     }
 
     void SnapshotInspector::HandleGetBlockCommand(Token::SnapshotInspectorCommand* cmd){
         uint256_t hash = cmd->GetNextArgumentHash();
         PrintBlock(GetBlock(hash));
+    }
+
+    class SnapshotBlockPrinter : public SnapshotBlockDataVisitor{
+    public:
+        SnapshotBlockPrinter() = default;
+        ~SnapshotBlockPrinter() = default;
+
+        bool Visit(const Handle<Block>& blk){
+            PrintBlock(blk);
+            return true;
+        }
+    };
+
+    void SnapshotInspector::HandleGetBlocksCommand(Token::SnapshotInspectorCommand* cmd){
+        LOG(INFO) << "Blocks:";
+        SnapshotBlockPrinter printer;
+        GetSnapshot()->Accept(&printer);
     }
 
     std::string SnapshotInspectorCommand::GetCommandName() const{

@@ -71,7 +71,7 @@ namespace Token{
                 if(!EndsWith(filename, ".dat")) continue;
 
                 Handle<Block> block = Block::NewInstance(filename);
-                blocks.push_back(block->GetSHA256Hash());
+                blocks.push_back(block->GetHash());
             }
             closedir(dir);
             return true;

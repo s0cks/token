@@ -68,24 +68,24 @@ namespace Token {
     bool BlockPoolIndex::PutData(const Handle<Block>& blk) {
         leveldb::WriteOptions options;
         options.sync = true;
-        std::string key = KEY(blk->GetSHA256Hash());
-        std::string filename = GetNewDataFilename(blk->GetSHA256Hash());
 
-        if (FileExists(filename)) {
-            LOG(WARNING) << "couldn't overwrite existing unclaimed transaction data: " << filename;
+        uint256_t hash = blk->GetHash();
+
+        std::string key = KEY(hash);
+        std::string filename = GetNewDataFilename(hash);
+
+        if(FileExists(filename)){
+            LOG(WARNING) << "couldn't overwrite existing block data in file: " << filename;
             return false;
         }
 
-        std::fstream fd(filename, std::ios::out | std::ios::binary);
-        /*
-        if (!tx->WriteToFile(fd)) {
-            LOG(WARNING) << "couldn't write unclaimed transaction " << tx->GetSHA256Hash() << " to file: " << filename;
+        if(!blk->WriteToFile(filename)){
+            LOG(WARNING) << "couldn't write block " << hash << " data to file: " << filename;
             return false;
         }
-        */
 
         if (!GetIndex()->Put(options, key, filename).ok()) {
-            LOG(WARNING) << "couldn't block: " << blk->GetSHA256Hash();
+            LOG(WARNING) << "couldn't block: " << blk->GetHash();
             return false;
         }
         return true;

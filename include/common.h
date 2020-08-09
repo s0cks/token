@@ -1,6 +1,7 @@
 #ifndef TOKEN_COMMON_H
 #define TOKEN_COMMON_H
 
+#include <time.h>
 #include <cstdint>
 #include <cstdlib>
 #include <chrono>
@@ -73,6 +74,32 @@ namespace Token{
     }
 
     static inline std::string
+    GetCurrentTimestampFormattedFileSafe(){
+        time_t now = time(NULL);
+        struct tm* timeinfo = gmtime(&now);
+        char buff[256];
+        strftime(buff, sizeof(buff), "%Y%m%d-%H%M%S", timeinfo);
+        return std::string(buff);
+    }
+
+    static inline std::string
+    GetTimestampFormattedReadable(uint32_t timestamp){
+        struct tm* timeinfo = gmtime((time_t*)&timestamp);
+        char buff[256];
+        strftime(buff, sizeof(buff), "%m/%d/%Y %H:%M:%S", timeinfo);
+        return std::string(buff);
+    }
+
+    static inline std::string
+    GetCurrentTimestampFormattedReadable(){
+        time_t now = time(NULL);
+        struct tm* timeinfo = gmtime(&now);
+        char buff[256];
+        strftime(buff, sizeof(buff), "%m/%d/%Y %H:%M:%S", timeinfo);
+        return std::string(buff);
+    }
+
+    static inline std::string
     GenerateNonce(){
         CryptoPP::SecByteBlock nonce(64);
         CryptoPP::AutoSeededRandomPool prng;
@@ -92,6 +119,12 @@ namespace Token{
     BeginsWith(const std::string& str, const std::string prefix){
         return str.size() >= prefix.size() &&
                 str.compare(0, prefix.size(), prefix) == 0;
+    }
+
+    static inline size_t
+    GetFilesize(const std::string& filename){
+        std::ifstream fd(filename, std::ios::binary|std::ios::ate);
+        return fd.tellg();
     }
 
     static inline bool
@@ -120,16 +153,6 @@ namespace Token{
         std::stringstream ss(str);
         std::string token;
         while(std::getline(ss, token, delimiter)) cont.push_back(token);
-    }
-
-    static inline std::string
-    GetCurrentTimeFormatted(){
-        time_t current_time;
-        time(&current_time);
-        struct tm* timeinfo = localtime(&current_time);
-        char buff[256];
-        strftime(buff, sizeof(buff), "%Y%m%d-%H%M%S", timeinfo);
-        return std::string(buff);
     }
 }
 

@@ -416,16 +416,20 @@ namespace Token{
         typedef Proto::BlockChain::Block RawType;
     private:
         BlockMessage(Block* blk): ProtobufMessage(){
+            /*
+             * TODO:
             if(!blk->WriteToMessage(raw_)){
                 LOG(WARNING) << "couldn't encode block to message";
             }
+            */
         }
         BlockMessage(const RawType& raw): ProtobufMessage(raw){}
     public:
         ~BlockMessage(){}
 
         Block* GetBlock() const{
-            return Block::NewInstance(raw_);
+            return nullptr;
+            //TODO: return Block::NewInstance(raw_);
         }
 
         DECLARE_MESSAGE(Block);
@@ -463,7 +467,7 @@ namespace Token{
             type_(type),
             hash_(hash){}
         InventoryItem(const Handle<Transaction>& tx): InventoryItem(kTransaction, tx->GetHash()){}
-        InventoryItem(const Handle<Block>& blk): InventoryItem(kBlock, blk->GetSHA256Hash()){}
+        InventoryItem(const Handle<Block>& blk): InventoryItem(kBlock, blk->GetHash()){}
         InventoryItem(const Handle<UnclaimedTransaction>& utxo): InventoryItem(kUnclaimedTransaction, utxo->GetHash()){}
         InventoryItem(const BlockHeader& blk): InventoryItem(kBlock, blk.GetHash()){}
         InventoryItem(const InventoryItem& item):

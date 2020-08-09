@@ -16,6 +16,7 @@ namespace Token{
             friend class SnapshotBlockChainDataSection; //TODO: revoke access
         private:
             uint256_t hash_;
+            uint32_t size_;
             uint64_t index_pos_;
             uint64_t data_pos_;
 
@@ -23,19 +24,25 @@ namespace Token{
                 data_pos_ = pos;
             }
         public:
-            BlockReference(const uint256_t& hash, uint64_t index_pos, uint64_t data_pos):
+            BlockReference(const uint256_t& hash, uint32_t size, uint64_t index_pos, uint64_t data_pos):
                 hash_(hash),
+                size_(size),
                 index_pos_(index_pos),
                 data_pos_(data_pos){}
-            BlockReference(const BlockHeader& blk, uint64_t index_pos, uint64_t data_pos):
-                BlockReference(blk.GetHash(), index_pos, data_pos){}
+            BlockReference(const BlockHeader& blk, uint32_t size, uint64_t index_pos, uint64_t data_pos):
+                BlockReference(blk.GetHash(), size, index_pos, data_pos){}
             BlockReference(const BlockReference& ref):
                 hash_(ref.hash_),
+                size_(ref.size_),
                 index_pos_(ref.index_pos_),
                 data_pos_(ref.data_pos_){}
 
             uint256_t GetHash() const{
                 return hash_;
+            }
+
+            uint32_t GetSize() const{
+                return size_;
             }
 
             uint64_t GetIndexPosition() const{
@@ -50,11 +57,12 @@ namespace Token{
                 hash_ = ref.hash_;
                 index_pos_ = ref.index_pos_;
                 data_pos_ = ref.data_pos_;
+                size_ = ref.size_;
             }
         };
 
         friend std::ostream& operator<<(std::ostream& stream, const BlockReference& ref){
-            stream << ref.GetHash() << "@" << ref.GetIndexPosition() << " => " << ref.GetDataPosition();
+            stream << ref.GetHash() << "@" << ref.GetIndexPosition() << " (" << ref.GetSize() << ") => " << ref.GetDataPosition();
             return stream;
         }
     private:
@@ -69,8 +77,8 @@ namespace Token{
             return &pos->second;
         }
 
-        BlockReference* CreateReference(const uint256_t& hash, uint64_t index_pos, uint64_t data_pos=0){
-            if(!references_.insert({ hash, BlockReference(hash, index_pos, data_pos) }).second){
+        BlockReference* CreateReference(const uint256_t& hash, uint32_t size, uint64_t index_pos, uint64_t data_pos=0){
+            if(!references_.insert({ hash, BlockReference(hash, size, index_pos, data_pos) }).second){
                 LOG(WARNING) << "couldn't create reference for " << hash << " @ " << index_pos;
                 return nullptr;
             }

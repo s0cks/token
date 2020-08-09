@@ -34,12 +34,29 @@ namespace Token{
             return ss.str();
         }
 
+        bool WriteToFile(std::fstream& file) const{
+            size_t size = GetBufferSize();
+            uint8_t bytes[size];
+            if(!Encode(bytes)){
+                LOG(WARNING) << "couldn't encode object to bytes";
+                return false;
+            }
+            file.write((char*)bytes, size);
+            file.flush();
+            return true;
+        }
+
+        bool WriteToFile(const std::string& filename) const{
+            std::fstream fd(filename, std::ios::out|std::ios::binary);
+            return WriteToFile(fd);
+        }
+
         uint256_t GetHash() const{
             size_t size = GetBufferSize();
             CryptoPP::SHA256 func;
             CryptoPP::SecByteBlock bytes(size);
             if(!Encode(bytes)){
-                LOG(WARNING) << "couldn't encode transaction to bytes";
+                LOG(WARNING) << "couldn't encode object to bytes";
                 return uint256_t();
             }
 

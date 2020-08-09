@@ -297,7 +297,7 @@ namespace Token{
         Handle<BlockMessage> msg = task->GetMessage().CastTo<BlockMessage>();
 
         Block* block = msg->GetBlock();
-        uint256_t hash = block->GetSHA256Hash();
+        uint256_t hash = block->GetHash();
         BlockPool::PutBlock(block);
 
         LOG(INFO) << "downloaded block: " << block->GetHeader();

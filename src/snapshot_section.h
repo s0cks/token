@@ -30,24 +30,6 @@ namespace Token{
     };
 
     class SnapshotPrologueSection : public SnapshotSection{
-    private:
-        static inline BlockHeader
-        ReadBlockChainHead(SnapshotFile* file){
-            RawBlockHeader raw;
-            if(!file->ReadMessage(raw)){
-                std::stringstream ss;
-                ss << "Couldn't read block chain head from snapshot file: " << file->GetFilename();
-                CrashReport::GenerateAndExit(ss);
-            }
-            return BlockHeader(raw);
-        }
-
-        static inline void
-        WriteBlockChainHead(SnapshotFile* file){
-            RawBlockHeader head;
-            head << BlockChain::GetHead();
-            file->WriteMessage(head);
-        }
     public:
         SnapshotPrologueSection(): SnapshotSection(nullptr){}
         SnapshotPrologueSection(Snapshot* snapshot): SnapshotSection(snapshot){}
@@ -55,17 +37,8 @@ namespace Token{
 
         bool Accept(SnapshotWriter* writer){
             SnapshotFile* file = writer->GetFile();
-
-            uint32_t timestamp = GetCurrentTime();
-            LOG(INFO) << "writing snapshot w/ timestamp: " << timestamp;
-
-            file->WriteInt(timestamp);
+            file->WriteInt(GetCurrentTime());
             file->WriteString(Token::GetVersion());
-            if(BlockChain::IsInitialized()){
-                WriteBlockChainHead(file);
-            }
-
-            file->Flush();
             return true;
         }
 
@@ -75,7 +48,6 @@ namespace Token{
 
             snapshot->timestamp_ = file->ReadInt();
             snapshot->version_ = file->ReadString();
-            snapshot->head_ = ReadBlockChainHead(file);
             return true;
         }
     };
@@ -102,13 +74,15 @@ namespace Token{
 
         inline void
         WriteReference(SnapshotBlockIndex::BlockReference* ref){
+            LOG(INFO) << "writing reference: " << (*ref);
             GetFile()->WriteHash(ref->GetHash());
             GetFile()->WriteLong(ref->GetDataPosition());
+            GetFile()->WriteInt(ref->GetSize());
         }
 
         inline SnapshotBlockIndex::BlockReference*
-        CreateReference(const uint256_t& hash){
-            return GetIndex()->CreateReference(hash, GetFile()->GetCurrentFilePosition());
+        CreateReference(const uint256_t& hash, size_t size){ // need to find a more intelligent way of mapping sizes
+            return GetIndex()->CreateReference(hash, size,GetFile()->GetCurrentFilePosition());
         }
 
         inline SnapshotBlockIndex::BlockReference*
@@ -116,7 +90,8 @@ namespace Token{
             uint64_t index_pos = GetFile()->GetCurrentFilePosition();
             uint256_t hash = GetFile()->ReadHash();
             uint64_t data_pos = GetFile()->ReadLong();
-            return GetIndex()->CreateReference(hash, index_pos, data_pos);
+            uint32_t size = GetFile()->ReadInt();
+            return GetIndex()->CreateReference(hash, size, index_pos, data_pos);
         }
     public:
         SnapshotBlockChainIndexSection(SnapshotBlockIndex* index):
@@ -130,8 +105,8 @@ namespace Token{
         ~SnapshotBlockChainIndexSection() = default;
 
         bool Visit(const Handle<Block>& blk){
-            uint256_t hash = blk->GetSHA256Hash();
-            SnapshotBlockIndex::BlockReference* ref = CreateReference(hash);
+            uint256_t hash = blk->GetHash();
+            SnapshotBlockIndex::BlockReference* ref = CreateReference(hash, blk->GetBufferSize());
             WriteReference(ref);
             return true;
         }
@@ -153,13 +128,7 @@ namespace Token{
             SetFile(file);
 
             uint32_t num_references = file->ReadInt();
-            LOG(INFO) << "reading " << num_references << " references from snapshot block index";
-
-            for(uint32_t idx = 0; idx < num_references; idx++){
-                SnapshotBlockIndex::BlockReference* reference = ReadReference();
-                LOG(INFO) << "read reference: " << (*reference);
-            }
-
+            for(uint32_t idx = 0; idx < num_references; idx++) ReadReference();
             return true;
         }
     };
@@ -188,13 +157,13 @@ namespace Token{
 
         inline void
         WriteBlockData(const Handle<Block>& blk){
-            //TODO: need to find a way to minimize memory usage here
-            RawBlock raw;
-            if(!blk->WriteToMessage(raw)){
-                LOG(WARNING) << "couldn't write block " << blk->GetSHA256Hash() << " to snapshot: " << GetFile()->GetFilename();
+            size_t size = blk->GetBufferSize();
+            uint8_t bytes[size];
+            if(!blk->Encode(bytes)){
+                LOG(WARNING) << "couldn't serialize block to byte array";
                 return;
             }
-            GetFile()->WriteMessage(raw);
+            GetFile()->WriteBytes(bytes, size);
         }
 
         inline SnapshotBlockIndex::BlockReference*
@@ -216,7 +185,7 @@ namespace Token{
             SnapshotFile* file = GetFile();
             SnapshotBlockIndex* index = GetIndex();
 
-            uint256_t hash = blk->GetSHA256Hash();
+            uint256_t hash = blk->GetHash();
             SnapshotBlockIndex::BlockReference* ref = nullptr;
             if(!(ref = GetReference(hash))){
                 LOG(WARNING) << "couldn't find reference " << hash << " in snapshot block index";
@@ -224,6 +193,7 @@ namespace Token{
             }
 
             ref->SetDataPosition(file->GetCurrentFilePosition());
+            LOG(INFO) << "writing block of size " << ref->GetSize() << " @" << ref->GetDataPosition();
             WriteBlockData(blk);
             return true;
         }

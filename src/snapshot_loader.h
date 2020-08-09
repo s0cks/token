@@ -34,12 +34,14 @@ namespace Token{
             }
 
             file_.SetCurrentFilePosition(ref->GetDataPosition());
-            RawBlock raw;
-            if(!file_.ReadMessage(raw)){
-                LOG(WARNING) << "couldn't read block from snapshot: " << GetFilename();
+            size_t size = ref->GetSize();
+            uint8_t bytes[size];
+            if(!file_.ReadBytes(bytes, size)){
+                LOG(WARNING) << "couldn't ready " << size << " block bytes from snapshot: " << GetFilename();
                 return nullptr;
             }
-            return Block::NewInstance(raw);
+
+            return Block::NewInstance(bytes);
         }
     };
 }
