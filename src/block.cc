@@ -65,16 +65,16 @@ namespace Token{
 
     Handle<Block> Block::NewInstance(uint8_t* bytes){
         size_t offset = 0;
-        uint32_t timestamp = DecodeInt(&bytes[offset]);
+        int32_t timestamp = DecodeInt(&bytes[offset]);
         offset += 4;
 
-        uint32_t height = DecodeInt(&bytes[offset]);
+        int32_t height = DecodeInt(&bytes[offset]);
         offset += 4;
 
         uint256_t phash = DecodeHash(&bytes[offset]);
         offset += uint256_t::kSize;
 
-        uint32_t num_txs = DecodeInt(&bytes[offset]);
+        int32_t num_txs = DecodeInt(&bytes[offset]);
         offset += 4;
 
         Transaction* txs[num_txs];

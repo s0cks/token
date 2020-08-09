@@ -3,15 +3,13 @@
 
 #include <uv.h>
 #include "snapshot.h"
-#include "snapshot_loader.h"
 
 namespace Token{
 #define FOR_EACH_INSPECTOR_COMMAND(V) \
     V(Status, ".status", 0) \
-    V(GetBlock, "getblock", 1) \
+    V(GetData, "getdata", 1) \
     V(GetBlocks, "getblocks", 0)
 
-    class SnapshotBlockLoader;
     class SnapshotInspectorCommand;
     class SnapshotInspector{
     private:
@@ -19,9 +17,9 @@ namespace Token{
         uv_pipe_t stdout_;
 
         Snapshot* snapshot_;
-        SnapshotBlockLoader* blk_loader_;
 
         void SetSnapshot(Snapshot* snapshot);
+        void PrintSnapshot(Snapshot* snapshot);
 
         inline Snapshot*
         GetSnapshot() const{
@@ -33,14 +31,9 @@ namespace Token{
             return GetSnapshot() != nullptr;
         }
 
-        inline SnapshotBlockLoader*
-        GetSnapshotBlockLoader() const{
-            return blk_loader_;
-        }
-
         inline Handle<Block>
         GetBlock(const uint256_t& hash){
-            return GetSnapshotBlockLoader()->GetBlock(hash);
+            return GetSnapshot()->GetBlock(hash);
         }
 
         static void OnCommandReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
@@ -53,8 +46,7 @@ namespace Token{
         SnapshotInspector():
             stdin_(),
             stdout_(),
-            snapshot_(nullptr),
-            blk_loader_(nullptr){
+            snapshot_(nullptr){
             stdin_.data = this;
             stdout_.data = this;
         }
@@ -94,7 +86,7 @@ namespace Token{
         static inline Type
         GetCommand(const std::string& name){
 #define DECLARE_CHECK(Name, Text, Parameter) \
-            if(!strncmp(name.c_str(), (Text), name.length())) {\
+            if(!strncmp(name.c_str(), (Text), strlen((Text)))) {\
                 return Type::k##Name##Type; \
             }
             FOR_EACH_INSPECTOR_COMMAND(DECLARE_CHECK);

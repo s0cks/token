@@ -1,24 +1,9 @@
 #include "token.h"
 #include "snapshot.h"
-#include "snapshot_file.h"
-#include "snapshot_loader.h"
-
 #include "snapshot_reader.h"
 #include "snapshot_writer.h"
 
 namespace Token{
-    void SnapshotBlockIndex::Accept(SnapshotBlockIndexVisitor* vis){
-        for(auto& ref : references_){
-            if(!vis->Visit(&ref.second)) return;
-        }
-    }
-
-    Snapshot::Snapshot(SnapshotFile* file):
-        filename_(file->GetFilename()),
-        timestamp_(0),
-        version_(),
-        index_(new SnapshotBlockIndex()){}
-
     bool Snapshot::WriteSnapshot(Snapshot* snapshot){
         SnapshotWriter writer(snapshot);
         return writer.WriteSnapshot();
@@ -34,159 +19,244 @@ namespace Token{
         return reader.ReadSnapshot();
     }
 
-    class SnapshotBlockIndexReferenceLoader : public SnapshotBlockIndexVisitor{
-    private:
-        SnapshotBlockDataVisitor* parent_;
-        SnapshotBlockLoader loader_;
-
-        inline SnapshotBlockDataVisitor*
-        GetParent() const{
-            return parent_;
+    bool Snapshot::Accept(SnapshotBlockDataVisitor* vis){
+        SnapshotBlockChainSection chain = GetBlockChainSection();
+        for(auto& it : chain.index_){
+            Handle<Block> blk = GetBlock(it.second);
+            if(!vis->Visit(blk)) return false;
         }
-
-        inline Handle<Block>
-        LoadBlock(const uint256_t& hash){
-            return loader_.GetBlock(hash);
-        }
-    public:
-        SnapshotBlockIndexReferenceLoader(Snapshot* snapshot, SnapshotBlockDataVisitor* parent):
-            SnapshotBlockIndexVisitor(),
-            parent_(parent),
-            loader_(snapshot){}
-        ~SnapshotBlockIndexReferenceLoader() = default;
-
-        bool Visit(SnapshotBlockIndex::BlockReference* ref){
-            uint256_t hash = ref->GetHash();
-            Handle<Block> blk = LoadBlock(hash);
-            return GetParent()->Visit(blk);
-        }
-    };
-
-    Handle<Block> Snapshot::GetBlock(const uint256_t& hash){
-        std::string filename = GetFilename();
-        if(!FileExists(filename)){
-            LOG(WARNING) << "snapshot " << filename << " doesn't exist, cannot load block data";
-            return nullptr;
-        }
-        SnapshotBlockLoader loader(this);
-        return loader.GetBlock(hash);
+        return true;
     }
 
-    void Snapshot::Accept(SnapshotBlockDataVisitor* vis){
-        std::string filename = GetFilename();
-        if(!FileExists(filename)){
-            LOG(WARNING) << "snapshot " << filename << " doesn't exist, cannot load block data";
-            return;
+    IndexReference* Snapshot::GetReference(const Token::uint256_t& hash){
+        return blocks_.GetReference(hash);
+    }
+
+    Handle<Block> Snapshot::GetBlock(const IndexReference& ref){
+        SnapshotReader reader(GetFilename());
+        reader.SetCurrentPosition(ref.GetDataPosition());
+
+        size_t size = ref.GetSize();
+        uint8_t bytes[size];
+        if(!reader.ReadBytes(bytes, size)){
+            LOG(WARNING) << "couldn't read block data " << ref << " from snapshot file: " << GetFilename();
+            return nullptr;
         }
-        SnapshotBlockIndexReferenceLoader loader(this, vis);
-        GetIndex()->Accept(&loader);
+
+        return Block::NewInstance((uint8_t*)bytes); //TODO: fix sign-cast
     }
 
     bool SnapshotPrologueSection::Accept(SnapshotWriter* writer){
-        SnapshotFile* file = writer->GetFile();
-        file->WriteLong(GetCurrentTimestamp());
-        file->WriteString(Token::GetVersion());
+        writer->WriteLong(timestamp_);
+        writer->WriteString(version_);
         return true;
     }
 
     bool SnapshotPrologueSection::Accept(SnapshotReader* reader){
-        Snapshot* snapshot = GetSnapshot();
-        SnapshotFile* file = reader->GetFile();
+        int64_t timestamp = reader->ReadLong();
+        LOG(INFO) << "read timestamp: " << timestamp;
 
-        snapshot->timestamp_ = file->ReadLong();
-        snapshot->version_ = file->ReadString();
+        std::string version = reader->ReadString();
+        LOG(INFO) << "read version: " << version;
+
+        timestamp_ = timestamp;
+        version_ = version;
         return true;
     }
 
-    void SnapshotBlockChainIndexSection::WriteReference(SnapshotBlockIndex::BlockReference* ref){
-        GetFile()->WriteHash(ref->GetHash());
-        GetFile()->WriteUnsignedLong(ref->GetDataPosition());
-        GetFile()->WriteInt(ref->GetSize());
-    }
+    class BlockChainIndexTableWriter : public BlockChainVisitor{
+    private:
+        SnapshotWriter* writer_;
+        IndexTable& table_;
 
-    SnapshotBlockIndex::BlockReference* SnapshotBlockChainIndexSection::CreateReference(const uint256_t& hash, size_t size){ // need to find a more intelligent way of mapping sizes
-        return GetIndex()->CreateReference(hash, size,GetFile()->GetCurrentFilePosition());
-    }
-
-    SnapshotBlockIndex::BlockReference* SnapshotBlockChainIndexSection::ReadReference(){
-        uint64_t index_pos = GetFile()->GetCurrentFilePosition();
-        uint256_t hash = GetFile()->ReadHash();
-        uint64_t data_pos = GetFile()->ReadUnsignedLong();
-        uint32_t size = GetFile()->ReadInt();
-        return GetIndex()->CreateReference(hash, size, index_pos, data_pos);
-    }
-
-    bool SnapshotBlockChainIndexSection::Accept(SnapshotWriter* writer){
-        SnapshotFile* file = writer->GetFile();
-        SetFile(file);
-
-        uint32_t num_references = BlockChain::GetHead().GetHeight() + 1; // does this really capture the num references?
-        file->WriteInt(num_references);
-        BlockChain::Accept(this);
-        return true;
-    }
-
-    bool SnapshotBlockChainIndexSection::Accept(SnapshotReader* reader){
-        SnapshotFile* file = reader->GetFile();
-        SetFile(file);
-
-        uint32_t num_references = file->ReadInt();
-        for(uint32_t idx = 0; idx < num_references; idx++) ReadReference();
-        return true;
-    }
-
-    void SnapshotBlockChainDataSection::WriteBlockData(const Handle<Block>& blk){
-        size_t size = blk->GetBufferSize();
-        uint8_t bytes[size];
-        if(!blk->Encode(bytes)){
-            LOG(WARNING) << "couldn't serialize block to byte array";
-            return;
-        }
-        GetFile()->WriteBytes(bytes, size);
-    }
-
-    bool SnapshotBlockChainDataSection::Visit(const Handle<Block>& blk){
-        SnapshotFile* file = GetFile();
-
-        uint256_t hash = blk->GetHash();
-        SnapshotBlockIndex::BlockReference* ref = nullptr;
-        if(!(ref = GetReference(hash))){
-            LOG(WARNING) << "couldn't find reference " << hash << " in snapshot block index";
-            return false;
+        inline SnapshotWriter*
+        GetWriter() const{
+            return writer_;
         }
 
-        ref->SetDataPosition(file->GetCurrentFilePosition());
-        LOG(INFO) << "writing block of size " << ref->GetSize() << " @" << ref->GetDataPosition();
-        WriteBlockData(blk);
+        inline bool
+        HasReference(const uint256_t& hash){
+            return table_.find(hash) != table_.end();
+        }
+
+        inline IndexReference*
+        GetReference(const uint256_t& hash){
+            auto pos = table_.find(hash);
+            return &pos->second;
+        }
+
+        inline IndexReference*
+        CreateNewReference(const uint256_t& hash){
+            if(HasReference(hash)) return GetReference(hash);
+            uint64_t write_pos = GetWriter()->GetCurrentPosition();
+            if(!table_.insert({ hash, IndexReference(hash, 0, write_pos, 0) }).second){
+                LOG(WARNING) << "couldn't create index reference for " << hash << " @" << write_pos;
+                return nullptr;
+            }
+            return GetReference(hash);
+        }
+    public:
+        BlockChainIndexTableWriter(IndexTable& table, SnapshotWriter* writer):
+            BlockChainVisitor(),
+            writer_(writer),
+            table_(table){}
+        ~BlockChainIndexTableWriter() = default;
+
+        bool Visit(const BlockHeader& blk){
+            uint256_t hash = blk.GetHash();
+            IndexReference* ref = CreateNewReference(hash);
+            LOG(INFO) << "created reference for " << hash << ": " << (*ref);
+            GetWriter()->WriteReference((*ref));
+            return true;
+        }
+    };
+
+    class BlockChainDataWriter : public BlockChainDataVisitor{
+    private:
+        SnapshotWriter* writer_;
+        IndexTable& table_;
+
+        inline SnapshotWriter*
+        GetWriter() const{
+            return writer_;
+        }
+
+        inline bool
+        HasReference(const uint256_t& hash){
+            return table_.find(hash) != table_.end();
+        }
+
+        inline IndexReference*
+        GetReference(const uint256_t& hash){
+            auto pos = table_.find(hash);
+            return &pos->second;
+        }
+
+        inline void
+        WriteBlockData(const Handle<Block>& blk){
+            size_t size = blk->GetBufferSize();
+            uint8_t bytes[size];
+            if(!blk->Encode(bytes)){
+                LOG(WARNING) << "couldn't serialize block to byte array";
+                return;
+            }
+            GetWriter()->WriteBytes(bytes, size);
+        }
+    public:
+        BlockChainDataWriter(IndexTable& table, SnapshotWriter* writer):
+            BlockChainDataVisitor(),
+            writer_(writer),
+            table_(table){}
+        ~BlockChainDataWriter() = default;
+
+        bool Visit(const Handle<Block>& blk){
+            uint256_t hash = blk->GetHash();
+            if(!HasReference(hash)){
+                LOG(WARNING) << "cannot find reference for " << hash << " in index table";
+                return false;
+            }
+
+            IndexReference* ref = GetReference(hash);
+            ref->SetDataPosition(GetWriter()->GetCurrentPosition());
+            ref->SetSize(blk->GetBufferSize());
+            WriteBlockData(blk);
+            return true;
+        }
+    };
+
+    class BlockChainIndexTableUpdater : public BlockChainVisitor{
+    private:
+        SnapshotWriter* writer_;
+        IndexTable& table_;
+
+        inline SnapshotWriter*
+        GetWriter() const{
+            return writer_;
+        }
+
+        inline bool
+        HasReference(const uint256_t& hash){
+            return table_.find(hash) != table_.end();
+        }
+
+        inline IndexReference*
+        GetReference(const uint256_t& hash){
+            auto pos = table_.find(hash);
+            return &pos->second;
+        }
+    public:
+        BlockChainIndexTableUpdater(IndexTable& table, SnapshotWriter* writer):
+            BlockChainVisitor(),
+            writer_(writer),
+            table_(table){}
+        ~BlockChainIndexTableUpdater() = default;
+
+        bool Visit(const BlockHeader& blk){
+            uint256_t hash = blk.GetHash();
+            if(!HasReference(hash)){
+                LOG(WARNING) << "cannot find index table reference to: " << hash;
+                return false;
+            }
+
+            IndexReference* ref = GetReference(hash);
+            int64_t current_pos = GetWriter()->GetCurrentPosition();
+            int64_t index_pos = ref->GetIndexPosition();
+            GetWriter()->SetCurrentPosition(index_pos);
+            GetWriter()->WriteReference((*ref));
+            GetWriter()->SetCurrentPosition(current_pos);
+            return true;
+        }
+    };
+
+    bool SnapshotBlockChainSection::WriteBlockIndexTable(SnapshotWriter* writer){
+        writer->WriteLong(BlockChain::GetHead().GetHeight() + 1); // num_references
+        LOG(INFO) << "writing block chain index table to snapshot...";
+        BlockChainIndexTableWriter tbl_writer(index_, writer);
+        BlockChain::Accept(&tbl_writer);
         return true;
     }
 
-    bool SnapshotBlockChainDataSection::Accept(SnapshotWriter* writer){
-        SetFile(writer->GetFile());
-        BlockChain::Accept(this);
+    bool SnapshotBlockChainSection::WriteBlockData(Token::SnapshotWriter* writer){
+        LOG(INFO) << "writing block chain data to snapshot...";
+        BlockChainDataWriter data_writer(index_, writer);
+        BlockChain::Accept(&data_writer);
         return true;
     }
 
-    bool SnapshotBlockChainDataSection::Accept(SnapshotReader* reader){
-        return true; //TODO implement SnapshotBlockDataSection read()
-    }
-
-    bool SnapshotBlockIndexLinker::Visit(SnapshotBlockIndex::BlockReference* ref){
-        SnapshotFile* file = GetFile();
-
-        uint64_t current_pos = file->GetCurrentFilePosition();
-        uint64_t index_pos = ref->GetIndexPosition();
-        uint64_t data_pos = ref->GetDataPosition();
-
-        file->SetCurrentFilePosition(index_pos + uint256_t::kSize);
-        file->WriteUnsignedLong(data_pos);
-        file->SetCurrentFilePosition(current_pos);
+    bool SnapshotBlockChainSection::UpdateBlockIndexTable(Token::SnapshotWriter* writer){
+        LOG(INFO) << "updating block chain index table in snapshot....";
+        BlockChainIndexTableUpdater tbl_updater(index_, writer);
+        BlockChain::Accept(&tbl_updater);
         return true;
     }
 
-    bool SnapshotBlockIndexLinker::Accept(SnapshotWriter* writer){
-        SetFile(writer->GetFile());
-        GetIndex()->Accept(this);
+    bool SnapshotBlockChainSection::Accept(SnapshotWriter* writer){
+        WriteBlockIndexTable(writer); //TODO: check state
+        WriteBlockData(writer); //TODO: check state
+        UpdateBlockIndexTable(writer); //TODO: check state
         return true;
+    }
+
+    bool SnapshotBlockChainSection::ReadBlockIndexTable(SnapshotReader* reader){
+        int64_t num_references = reader->ReadLong();
+        for(int64_t idx = 0; idx < num_references; idx++){
+            IndexReference ref = reader->ReadReference();
+            if(!index_.insert({ ref.GetHash(), ref }).second){
+                LOG(WARNING) << "couldn't register new reference: " << ref;
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool SnapshotBlockChainSection::Accept(SnapshotReader* reader){
+        ReadBlockIndexTable(reader); //TODO: check state
+        return true;
+    }
+
+    IndexReference* SnapshotBlockChainSection::GetReference(const uint256_t& hash){
+        auto pos = index_.find(hash);
+        if(pos == index_.end()) return nullptr;
+        return &pos->second;
     }
 }

@@ -1,5 +1,4 @@
 #include "snapshot_inspector.h"
-#include "snapshot_loader.h"
 
 namespace Token{
     static void
@@ -23,24 +22,19 @@ namespace Token{
         }
     }
 
-    static inline void
-    PrintStatus(Snapshot* snapshot){
+    void SnapshotInspector::PrintSnapshot(Snapshot* snapshot){
         LOG(INFO) << "Snapshot: " << snapshot->GetFilename();
-        LOG(INFO) << "Created: " << GetTimestampFormattedReadable(snapshot->GetTimestamp());
-        LOG(INFO) << "Version: " << snapshot->GetVersion();
+        LOG(INFO) << "Created: " << GetTimestampFormattedReadable(snapshot->prologue_.GetTimestamp());
+        LOG(INFO) << "Version: " << snapshot->prologue_.GetVersion();
         LOG(INFO) << "Size: " << GetFilesize(snapshot->GetFilename()) << " Bytes";
     }
 
     void SnapshotInspector::SetSnapshot(Snapshot* snapshot){
         if(HasSnapshot()){
             delete snapshot_;
-            delete blk_loader_;
         }
 
         snapshot_ = snapshot;
-        blk_loader_ = snapshot ?
-                        new SnapshotBlockLoader(snapshot) :
-                        nullptr;
     }
 
     void SnapshotInspector::Inspect(Snapshot* snapshot){
@@ -105,10 +99,10 @@ namespace Token{
     }
 
     void SnapshotInspector::HandleStatusCommand(Token::SnapshotInspectorCommand* cmd){
-        PrintStatus(GetSnapshot());
+        PrintSnapshot(GetSnapshot());
     }
 
-    void SnapshotInspector::HandleGetBlockCommand(Token::SnapshotInspectorCommand* cmd){
+    void SnapshotInspector::HandleGetDataCommand(Token::SnapshotInspectorCommand* cmd){
         uint256_t hash = cmd->GetNextArgumentHash();
         PrintBlock(GetBlock(hash));
     }
