@@ -122,34 +122,15 @@ namespace Token{
         while(std::getline(ss, token, delimiter)) cont.push_back(token);
     }
 
-    class Object;
-    template<typename T>
-    class Iterable {
-        T t;
-
-        class Iterator {
-            Iterable* iter;
-        public:
-            Iterator(Iterable* iter) :iter(iter) {}
-            bool operator !=(const Iterator&) {
-                return iter->t.HasNext();
-            }
-            void operator ++() {}
-            Object* operator *() {
-                return iter->t.Next();
-            }
-        };
-    public:
-        template<typename... Args>
-        Iterable(Args&&... args) : t(std::forward<Args>(args)...) {}
-
-        Iterator begin() {
-            return this;
-        }
-        Iterator end() {
-            return this;
-        }
-    };
+    static inline std::string
+    GetCurrentTimeFormatted(){
+        time_t current_time;
+        time(&current_time);
+        struct tm* timeinfo = localtime(&current_time);
+        char buff[256];
+        strftime(buff, sizeof(buff), "%Y%m%d-%H%M%S", timeinfo);
+        return std::string(buff);
+    }
 }
 
 // Command Line Flags
