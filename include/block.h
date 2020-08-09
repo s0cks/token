@@ -102,9 +102,10 @@ namespace Token{
     class Block : public BinaryObject<RawBlock>{
         //TODO:
         // - validation logic
-        // - refactor to use raw array
         friend class BlockChain;
         friend class BlockMessage;
+    public:
+        static const uint32_t kNumberOfGenesisOutputs = 1000;
     private:
         uint32_t timestamp_;
         uint32_t height_;

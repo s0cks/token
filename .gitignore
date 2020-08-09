@@ -10,11 +10,9 @@
 !/scripts/
 !/terraform/
 !/tests/
+!/*.cc
+!/README.md
+!/Dockerfile
 !/.gitignore
 !/.gitmodules
 !/CMakeLists.txt
-!/README.md
-!/Dockerfile
-!/main.cc
-!/client.cc
-!/tests.cc

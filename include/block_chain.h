@@ -13,17 +13,15 @@
 namespace Token{
     class BlockNode;
     class BlockChainVisitor;
+    class BlockChainDataVisitor;
     class BlockChain{
         friend class Server;
-        friend class BlockMiner;
     public:
         enum State{
             kUninitialized,
             kInitializing,
             kInitialized
         };
-
-        static const uint32_t kNumberOfGenesisOutputs = 100;
     private:
         BlockChain() = delete;
 
@@ -35,12 +33,13 @@ namespace Token{
         static void Initialize();
         static void Append(Block* block);
         static void Accept(BlockChainVisitor* vis);
+        static void Accept(BlockChainDataVisitor* vis);
         static bool HasBlock(const uint256_t& hash);
         static BlockHeader GetHead();
         static BlockHeader GetGenesis();
         static BlockHeader GetBlock(const uint256_t& hash);
         static BlockHeader GetBlock(uint32_t height);
-        static Block* GetBlockData(const uint256_t& hash);
+        static Handle<Block> GetBlockData(const uint256_t& hash);
 
         static inline bool
         IsUninitialized(){
@@ -66,8 +65,16 @@ namespace Token{
     public:
         virtual ~BlockChainVisitor() = default;
         virtual bool VisitStart() const{ return true; }
-        virtual bool Visit(const BlockHeader& block) const = 0;
+        virtual bool Visit(const BlockHeader& block) = 0;
         virtual bool VisitEnd() const{ return true; }
+    };
+
+    class BlockChainDataVisitor{
+    protected:
+        BlockChainDataVisitor() = default;
+    public:
+        virtual ~BlockChainDataVisitor() = default;
+        virtual bool Visit(const Handle<Block>& blk) = 0;
     };
 }
 

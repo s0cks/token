@@ -9,14 +9,17 @@
 
 namespace Token{
     class SnapshotFile{
+        friend class Snapshot;
         friend class SnapshotWriter;
         friend class SnapshotReader;
+        friend class SnapshotBlockLoader;
     private:
+        Snapshot* snapshot_;
         std::string filename_;
         FILE* file_;
 
         SnapshotFile(const std::string& filename);
-        SnapshotFile();
+        SnapshotFile(Snapshot* snapshot);
 
         inline FILE*
         GetFilePointer() const{
@@ -50,20 +53,30 @@ namespace Token{
     public:
         ~SnapshotFile();
 
+        Snapshot* GetSnapshot() const{
+            return snapshot_;
+        }
+
         std::string GetFilename() const{
             return filename_;
         }
 
+        uint64_t GetCurrentFilePosition();
+        void SetCurrentFilePosition(uint64_t pos);
         void Flush();
         void Close();
+        void WriteHash(const uint256_t& hash);
+        void WriteString(const std::string& value);
         void WriteMessage(google::protobuf::Message& msg);
         void WriteBytes(uint8_t* bytes, size_t size);
         void WriteInt(uint32_t value);
-        void WriteString(const std::string& value);
+        void WriteLong(uint64_t value);
         bool ReadMessage(google::protobuf::Message& msg);
         bool ReadBytes(uint8_t* bytes, size_t size);
         uint8_t ReadByte();
         uint32_t ReadInt();
+        uint64_t ReadLong();
+        uint256_t ReadHash();
         std::string ReadString();
     };
 
@@ -71,9 +84,11 @@ namespace Token{
         friend class SnapshotSection;
     private:
         SnapshotFile file_;
+
+        void WriteBlockChainData();
     public:
-        SnapshotWriter():
-                file_(){}
+        SnapshotWriter(Snapshot* snapshot=new Snapshot()):
+            file_(snapshot){}
         ~SnapshotWriter() = default;
 
         SnapshotFile* GetFile(){
@@ -88,7 +103,7 @@ namespace Token{
         SnapshotFile file_;
     public:
         SnapshotReader(const std::string& filename):
-                file_(filename){}
+            file_(filename){}
         ~SnapshotReader() = default;
 
         SnapshotFile* GetFile(){

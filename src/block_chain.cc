@@ -62,6 +62,14 @@ namespace Token{
     void BlockChain::Initialize(){
         SetState(State::kInitializing);
 
+        if(!FileExists(TOKEN_BLOCKCHAIN_HOME)){
+            if(!CreateDirectory(TOKEN_BLOCKCHAIN_HOME)){
+                std::stringstream ss;
+                ss << "Couldn't initialize block chain in directory: " << TOKEN_BLOCKCHAIN_HOME;
+                CrashReport::GenerateAndExit(ss);
+            }
+        }
+
         Keychain::Initialize();
         BlockChainConfiguration::Initialize();
         BlockChainIndex::Initialize();
@@ -96,12 +104,11 @@ namespace Token{
 #endif//TOKEN_DEBUG
 
         uint256_t hash = BlockChainIndex::GetReference("<HEAD>");
-
+        Block* block = BlockChainIndex::GetBlockData(hash);
 #ifdef TOKEN_DEBUG
-        LOG(INFO) << "loading block: " << hash;
+        LOG(INFO) << "loading block: " << block->GetHeader();
 #endif//TOKEN_DEBUG
 
-        Block* block = BlockChainIndex::GetBlockData(hash);
         BlockNode* node = BlockNode::NewInstance(block);
 
         head_ = node;
@@ -112,11 +119,10 @@ namespace Token{
                 break;
             }
 
-#ifdef TOKEN_DEBUG
-            LOG(INFO) << "loading block: " << hash;
-#endif//TOKEN_DEBUG
-
             block = BlockChainIndex::GetBlockData(hash);
+#ifdef TOKEN_DEBUG
+            LOG(INFO) << "loading block: " << block->GetHeader();
+#endif//TOKEN_DEBUG
             BlockNode* current = BlockNode::NewInstance(block);
 
             node->SetPrevious(current);
@@ -151,7 +157,7 @@ namespace Token{
         return GetNode(hash)->GetBlock();
     }
 
-    Block* BlockChain::GetBlockData(const uint256_t& hash){
+    Handle<Block> BlockChain::GetBlockData(const uint256_t& hash){
         return BlockChainIndex::GetBlockData(hash);
     }
 
@@ -214,12 +220,21 @@ namespace Token{
         if(!vis->VisitStart()) return;
     }
 
+    void BlockChain::Accept(BlockChainDataVisitor* vis){
+        BlockNode* node = GetGenesisNode();
+        while(node != nullptr){
+            Handle<Block> blk = node->GetData();
+            if(!vis->Visit(blk)) return;
+            node = node->GetNext();
+        }
+    }
+
 #ifdef TOKEN_DEBUG
     class BlockChainPrinter : public BlockChainVisitor{
     public:
         BlockChainPrinter(): BlockChainVisitor(){}
 
-        bool Visit(const BlockHeader& block) const{
+        bool Visit(const BlockHeader& block){
             LOG(INFO) << " - " << block;
             return true;
         }

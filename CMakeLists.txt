@@ -123,6 +123,10 @@ target_link_libraries("token-node" "token-ledger" ${TOKEN_LIBRARIES})
 add_executable("token-client" client.cc)
 target_link_libraries("token-client" "token-ledger" ${TOKEN_LIBRARIES})
 
+# Token Inspect Client Executable
+add_executable("token-inspector" inspector.cc)
+target_link_libraries("token-inspector" "token-ledger" ${TOKEN_LIBRARIES})
+
 # Token Unit Tests Executable
 if(TOKEN_BUILD_TESTS)
         message("Enabling testing")

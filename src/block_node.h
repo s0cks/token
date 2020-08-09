@@ -43,6 +43,8 @@ namespace Token{
             return block_;
         }
 
+        Handle<Block> GetData() const;
+
         uint32_t GetTimestamp() const{
             return block_.GetTimestamp();
         }

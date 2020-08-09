@@ -7,8 +7,12 @@ namespace Token{
         LOG(WARNING) << "snapshot file " << GetFilename() << " is not opened"; \
         return; \
     }
+#define CHECK_WRITTEN(Written, Expected, Size) \
+    if((Written) != (Expected)) \
+        LOG(WARNING) << "could only write " << ((Written)*(Size)) << "/" << ((Expected)*(Size)) << " bytes to snapshot file: " << GetFilename();
 
     SnapshotFile::SnapshotFile(const std::string& filename):
+        snapshot_(nullptr),
         filename_(filename),
         file_(NULL){
         LOG(INFO) << "opening snapshot file: " << filename;
@@ -19,9 +23,11 @@ namespace Token{
         }
     }
 
-    SnapshotFile::SnapshotFile():
+    SnapshotFile::SnapshotFile(Snapshot* snapshot):
+        snapshot_(snapshot),
         filename_(GetNewSnapshotFilename()),
         file_(NULL){
+        snapshot_->filename_ = filename_;
         CheckSnapshotDirectory();
         LOG(INFO) << "creating snapshot file: " << filename_;
         if((file_ = fopen(filename_.data(), "wb")) == NULL){
@@ -45,15 +51,23 @@ namespace Token{
 
     void SnapshotFile::WriteInt(uint32_t value){
         CHECK_FILE_POINTER;
-        size_t written_bytes;
-        if((written_bytes = fwrite(&value, sizeof(uint32_t), 1, GetFilePointer())) != 1)
-            LOG(WARNING) << "could only write " << written_bytes << "/" << sizeof(uint32_t) << " bytes to snapshot file: " << GetFilename();
+        CHECK_WRITTEN(fwrite(&value, sizeof(uint32_t), 1, GetFilePointer()), 1, sizeof(uint32_t));
+        Flush();
+    }
+
+    void SnapshotFile::WriteLong(uint64_t value){
+        CHECK_FILE_POINTER;
+        CHECK_WRITTEN(fwrite(&value, sizeof(uint64_t), 1, GetFilePointer()), 1, sizeof(uint64_t));
         Flush();
     }
 
     void SnapshotFile::WriteString(const std::string& value){
         WriteInt(value.length());
         WriteBytes((uint8_t*)value.data(), value.length());
+    }
+
+    void SnapshotFile::WriteHash(const uint256_t& hash){
+        WriteBytes((uint8_t*)hash.data(), uint256_t::kSize);
     }
 
     void SnapshotFile::WriteMessage(google::protobuf::Message& msg){
@@ -99,6 +113,26 @@ namespace Token{
         return (*(uint32_t*)bytes);
     }
 
+    uint64_t SnapshotFile::ReadLong(){
+        uint8_t bytes[8];
+        if(!ReadBytes(bytes, 8)){
+            std::stringstream ss;
+            ss << "Couldn't read long from snapshot file: " << GetFilename();
+            CrashReport::GenerateAndExit(ss);
+        }
+        return (*(uint64_t*)bytes);
+    }
+
+    uint256_t SnapshotFile::ReadHash(){
+        uint8_t bytes[uint256_t::kSize];
+        if(!ReadBytes(bytes, uint256_t::kSize)){
+            std::stringstream ss;
+            ss << "Couldn't read hash from snapshot file: " << GetFilename();
+            CrashReport::GenerateAndExit(ss);
+        }
+        return uint256_t(bytes);
+    }
+
     std::string SnapshotFile::ReadString(){
         uint32_t size = ReadInt();
         uint8_t bytes[size];
@@ -124,17 +158,57 @@ namespace Token{
             LOG(WARNING) << "couldn't close snapshot file " << GetFilename() << ": " << strerror(err);
     }
 
+    uint64_t SnapshotFile::GetCurrentFilePosition(){
+        if(GetFilePointer() == NULL){
+            LOG(WARNING) << "snapshot file " << GetFilename() << " is not opened";
+            return 0;
+        }
+        return (uint64_t)ftell(GetFilePointer());
+    }
+
+    void SnapshotFile::SetCurrentFilePosition(uint64_t pos){
+        CHECK_FILE_POINTER;
+        int err;
+        if((err = fseek(GetFilePointer(), pos, SEEK_SET)) != 0)
+            LOG(WARNING) << "couldn't seek snapshot file to " << pos << ": " << strerror(err);
+    }
+
     bool SnapshotWriter::WriteSnapshot(){
         SnapshotPrologueSection prologue;
         if(!prologue.Accept(this)){
             LOG(WARNING) << "couldn't write prologue section to snapshot: " << GetFile()->GetFilename();
             return false;
         }
+
+        {
+            // Encode Block Chain Data to Snapshot
+            SnapshotBlockIndex mappings;
+
+            // Write Block Index
+            SnapshotBlockChainIndexSection index(&mappings);
+            if(!index.Accept(this)){
+                LOG(WARNING) << "couldn't write block chain index section to snapshot: " << GetFile()->GetFilename();
+                return false;
+            }
+
+            // Write Block Data
+            SnapshotBlockChainDataSection data(&mappings);
+            if(!data.Accept(this)){
+                LOG(WARNING) << "couldn't write block chain data section to snapshot: " << GetFile()->GetFilename();
+                return false;
+            }
+
+            SnapshotBlockIndexLinker linker(&mappings);
+            if(!linker.Accept(this)){
+                LOG(WARNING) << "couldn't link the block chain index and data sections in snapshot: " << GetFile()->GetFilename();
+                return false;
+            }
+        }
         return true;
     }
 
     Snapshot* SnapshotReader::ReadSnapshot(){
-        Snapshot* snapshot = new Snapshot();
+        Snapshot* snapshot = new Snapshot(GetFile());
 
         SnapshotPrologueSection prologue(snapshot);
         if(!prologue.Accept(this)){
@@ -143,6 +217,12 @@ namespace Token{
             return nullptr;
         }
 
+        SnapshotBlockChainIndexSection index(snapshot);
+        if(!index.Accept(this)){
+            LOG(WARNING) << "couldn't read block index section from snapshot: " << GetFile()->GetFilename();
+            delete snapshot;
+            return nullptr;
+        }
         return snapshot;
     }
 }

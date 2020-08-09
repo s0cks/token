@@ -244,7 +244,7 @@ namespace Token{
         BlockChainSection(CrashReport* report): CrashReportSection(report){}
         ~BlockChainSection(){}
 
-        bool Visit(const BlockHeader& block) const{
+        bool Visit(const BlockHeader& block){
             std::stringstream ss;
             ss << "- " << block;
             WriteLine(ss);
