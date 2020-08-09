@@ -2,7 +2,7 @@
 #define TOKEN_SNAPSHOT_H
 
 #include "common.h"
-#include "block.h"
+#include "block_chain.h"
 
 namespace Token{
     class SnapshotBlockIndexVisitor;
@@ -100,12 +100,15 @@ namespace Token{
     };
 
     class SnapshotFile;
+    class SnapshotReader;
+    class SnapshotWriter;
     class SnapshotBlockDataVisitor;
     class Snapshot{
         friend class SnapshotFile;
         friend class SnapshotPrologueSection; //TODO: revoke access
     private:
         std::string filename_;
+
         // Prologue Information
         int64_t timestamp_;
         std::string version_;
@@ -153,6 +156,157 @@ namespace Token{
     public:
         virtual ~SnapshotBlockDataVisitor() = default;
         virtual bool Visit(const Handle<Block>& blk) = 0;
+    };
+
+    class SnapshotSection{
+        //TODO:
+        // - write section metadata:
+        //      * Type
+        //      * Size
+        // - update prologue section to be more descriptive
+    protected:
+        Snapshot* snapshot_;
+
+        SnapshotSection(Snapshot* snapshot):
+                snapshot_(snapshot){}
+    public:
+        virtual ~SnapshotSection() = default;
+
+        Snapshot* GetSnapshot() const{
+            return snapshot_;
+        }
+
+        virtual bool Accept(SnapshotReader* reader) = 0;
+        virtual bool Accept(SnapshotWriter* writer) = 0;
+    };
+
+    class SnapshotPrologueSection : public SnapshotSection{
+    public:
+        SnapshotPrologueSection(): SnapshotSection(nullptr){}
+        SnapshotPrologueSection(Snapshot* snapshot): SnapshotSection(snapshot){}
+        ~SnapshotPrologueSection() = default;
+
+        bool Accept(SnapshotWriter* writer);
+        bool Accept(SnapshotReader* reader);
+    };
+
+    class SnapshotBlockChainIndexSection : public SnapshotSection, public BlockChainDataVisitor{
+    private:
+        SnapshotFile* file_;
+        SnapshotBlockIndex* index_;
+
+        inline void
+        SetFile(SnapshotFile* file){
+            file_ = file;
+        }
+
+        inline SnapshotFile*
+        GetFile() const{
+            return file_;
+        }
+
+        inline SnapshotBlockIndex*
+        GetIndex() const{
+            return index_;
+        }
+
+        void WriteReference(SnapshotBlockIndex::BlockReference* ref);
+        SnapshotBlockIndex::BlockReference* CreateReference(const uint256_t& hash, size_t size);
+        SnapshotBlockIndex::BlockReference* ReadReference();
+    public:
+        SnapshotBlockChainIndexSection(SnapshotBlockIndex* index):
+                SnapshotSection(nullptr),
+                file_(nullptr),
+                index_(index){}
+        SnapshotBlockChainIndexSection(Snapshot* snapshot):
+                SnapshotSection(snapshot),
+                file_(nullptr),
+                index_(snapshot->GetIndex()){}
+        ~SnapshotBlockChainIndexSection() = default;
+
+        bool Visit(const Handle<Block>& blk){
+            uint256_t hash = blk->GetHash();
+            SnapshotBlockIndex::BlockReference* ref = CreateReference(hash, blk->GetBufferSize());
+            WriteReference(ref);
+            return true;
+        }
+
+        bool Accept(SnapshotWriter* writer);
+        bool Accept(SnapshotReader* reader);
+    };
+
+    class SnapshotBlockChainDataSection : public SnapshotSection, BlockChainDataVisitor{
+        //TODO:
+        // - need to iterate block chain genesis->head
+    private:
+        SnapshotFile* file_;
+        SnapshotBlockIndex* index_;
+
+        inline void
+        SetFile(SnapshotFile* file){
+            file_ = file;
+        }
+
+        inline SnapshotFile*
+        GetFile() const{
+            return file_;
+        }
+
+        inline SnapshotBlockIndex*
+        GetIndex() const{
+            return index_;
+        }
+
+        void WriteBlockData(const Handle<Block>& blk);
+
+        inline SnapshotBlockIndex::BlockReference*
+        GetReference(const uint256_t& hash){
+            return GetIndex()->GetReference(hash);
+        }
+    public:
+        SnapshotBlockChainDataSection(SnapshotBlockIndex* index):
+                SnapshotSection(nullptr),
+                file_(nullptr),
+                index_(index){}
+        SnapshotBlockChainDataSection(Snapshot* snapshot):
+                SnapshotSection(snapshot),
+                file_(nullptr),
+                index_(snapshot->GetIndex()){}
+        ~SnapshotBlockChainDataSection() = default;
+
+        bool Visit(const Handle<Block>& blk);
+        bool Accept(SnapshotWriter* writer);
+        bool Accept(SnapshotReader* reader);
+    };
+
+    class SnapshotBlockIndexLinker : public SnapshotBlockIndexVisitor{
+    private:
+        SnapshotFile* file_;
+        SnapshotBlockIndex* index_;
+
+        inline void
+        SetFile(SnapshotFile* file){
+            file_ = file;
+        }
+
+        inline SnapshotFile*
+        GetFile() const{
+            return file_;
+        }
+
+        inline SnapshotBlockIndex*
+        GetIndex() const{
+            return index_;
+        }
+    public:
+        SnapshotBlockIndexLinker(SnapshotBlockIndex* index):
+                SnapshotBlockIndexVisitor(),
+                file_(nullptr),
+                index_(index){}
+        ~SnapshotBlockIndexLinker() = default;
+
+        bool Visit(SnapshotBlockIndex::BlockReference* ref);
+        bool Accept(SnapshotWriter* writer);
     };
 }
 

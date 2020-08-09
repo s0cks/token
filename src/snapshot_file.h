@@ -84,38 +84,9 @@ namespace Token{
         std::string ReadString();
     };
 
-    class SnapshotWriter{
-        friend class SnapshotSection;
-    private:
-        SnapshotFile file_;
 
-        void WriteBlockChainData();
-    public:
-        SnapshotWriter(Snapshot* snapshot=new Snapshot()):
-            file_(snapshot){}
-        ~SnapshotWriter() = default;
 
-        SnapshotFile* GetFile(){
-            return &file_;
-        }
 
-        bool WriteSnapshot();
-    };
-
-    class SnapshotReader{
-    private:
-        SnapshotFile file_;
-    public:
-        SnapshotReader(const std::string& filename):
-            file_(filename){}
-        ~SnapshotReader() = default;
-
-        SnapshotFile* GetFile(){
-            return &file_;
-        }
-
-        Snapshot* ReadSnapshot();
-    };
 }
 
 #endif //TOKEN_SNAPSHOT_FILE_H
