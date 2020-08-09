@@ -95,11 +95,14 @@ namespace Token{
         }
 
         std::fstream fd(filename, std::ios::out|std::ios::binary);
+        /*
+         * TODO:
         if(!tx->WriteToFile(fd)){
             std::stringstream ss;
             ss << "Couldn't write transaction " << tx->GetSHA256Hash() << " to file: " << filename;
             CrashReport::GenerateAndExit(ss);
         }
+        */
 
         if(!GetIndex()->Put(options, key, filename).ok()){
             std::stringstream ss;

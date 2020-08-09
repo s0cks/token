@@ -63,12 +63,14 @@ namespace Token{
                 test_.reset(offset);
                 size_--;
             } else{
-                next_->Free(ptr);
-                if(!next_->size_){
-                    RootPage* tmp = next_;
-                    next_ = tmp->next_;
-                    tmp->next_ = nullptr;
-                    delete tmp;
+                if(next_){
+                    next_->Free(ptr);
+                    if(!next_->size_){
+                        RootPage* tmp = next_;
+                        next_ = tmp->next_;
+                        tmp->next_ = nullptr;
+                        delete tmp;
+                    }
                 }
             }
         }

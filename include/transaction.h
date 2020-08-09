@@ -7,10 +7,17 @@
 #include "unclaimed_transaction.h"
 
 namespace Token{
-    typedef Proto::BlockChain::Input RawInput;
     class Input : public Object{
         friend class Transaction;
     private:
+        enum Layout{
+            kHashOffset = 0,
+            kHashLength = uint256_t::kSize,
+            kIndexOffset = kHashOffset + kHashLength,
+            kIndexLength = 4,
+            kUserOffset = kIndexOffset + kIndexLength,
+        };
+
         uint256_t hash_;
         uint32_t index_;
         std::string user_;
@@ -19,10 +26,6 @@ namespace Token{
             hash_(tx_hash),
             user_(user),
             index_(index){}
-        Input(const RawInput& raw):
-            hash_(HashFromHexString(raw.previous_hash())),
-            index_(raw.index()),
-            user_(raw.user()){}
     public:
         ~Input(){}
 
@@ -39,18 +42,17 @@ namespace Token{
         }
 
         UnclaimedTransaction* GetUnclaimedTransaction() const;
+        bool Encode(uint8_t* bytes) const;
+        size_t GetBufferSize() const;
         std::string ToString() const;
 
         static Handle<Input> NewInstance(const uint256_t& hash, uint32_t index, const std::string& user){
             return new Input(hash, index, user);
         }
 
-        static Handle<Input> NewInstance(const RawInput& raw){
-            return new Input(raw);
-        }
+        static Handle<Input> NewInstance(uint8_t* bytes);  //TODO: check size?
     };
 
-    typedef Proto::BlockChain::Output RawOutput;
     class Output : public Object{
         friend class Transaction;
     private:
@@ -60,9 +62,16 @@ namespace Token{
         Output(const std::string& user, const std::string& token):
             user_(user),
             token_(token){}
-        Output(const RawOutput& raw):
-            user_(raw.user()),
-            token_(raw.token()){}
+
+        inline size_t
+        GetUserOffset() const{
+            return 0;
+        }
+
+        inline size_t
+        GetTokenOffset() const{
+            return GetUserOffset() + 4 + user_.length();
+        }
     public:
         ~Output(){}
 
@@ -74,21 +83,19 @@ namespace Token{
             return token_;
         }
 
+        bool Encode(uint8_t* bytes) const;
+        size_t GetBufferSize() const;
         std::string ToString() const;
 
         static Handle<Output> NewInstance(const std::string& user, const std::string& token){
             return new Output(user, token);
         }
 
-        static Handle<Output> NewInstance(const RawOutput& raw){
-            return new Output(raw);
-        }
+        static Handle<Output> NewInstance(uint8_t* bytes);
     };
 
-    typedef Proto::BlockChain::Transaction RawTransaction;
-
     class TransactionVisitor;
-    class Transaction : public BinaryObject<RawTransaction>{
+    class Transaction : public Object{
         friend class Block;
         friend class TransactionMessage;
         friend class TransactionVerifier;
@@ -102,7 +109,7 @@ namespace Token{
         std::string signature_;
 
         Transaction(uint32_t timestamp, uint32_t index, Input** inputs, size_t num_inputs, Output** outputs, size_t num_outputs):
-            BinaryObject(),
+            Object(),
             timestamp_(timestamp),
             index_(index),
             inputs_(nullptr),
@@ -130,8 +137,16 @@ namespace Token{
     public:
         ~Transaction() = default;
 
-        std::string GetSignature() const{
-            return signature_;
+        uint32_t GetTimestamp() const{
+            return timestamp_;
+        }
+
+        uint32_t GetIndex() const{
+            return index_;
+        }
+
+        uint32_t GetNumberOfInputs() const{
+            return num_inputs_;
         }
 
         Handle<Input> GetInput(uint32_t idx) const{
@@ -144,37 +159,38 @@ namespace Token{
             return outputs_[idx];
         }
 
-        uint32_t GetNumberOfInputs() const{
-            return num_inputs_;
-        }
-
         uint32_t GetNumberOfOutputs() const{
             return num_outputs_;
         }
 
-        uint32_t GetIndex() const{
-            return index_;
-        }
-
-        uint32_t GetTimestamp() const{
-            return timestamp_;
-        }
-
-        bool IsCoinbase() const{
-            return GetIndex() == 0;
+        std::string GetSignature() const{
+            return signature_;
         }
 
         bool IsSigned() const{
             return !signature_.empty();
         }
 
+        bool IsCoinbase() const{
+            return GetIndex() == 0;
+        }
+
         bool Sign();
+        bool Encode(uint8_t* bytes) const;
         bool Accept(TransactionVisitor* visitor);
-        bool WriteToMessage(RawTransaction& raw) const;
+        size_t GetBufferSize() const;
+        uint256_t GetSHA256Hash() const;
         std::string ToString() const;
 
+        bool Encode(CryptoPP::SecByteBlock& bytes){
+            size_t size = GetBufferSize();
+            bytes.resize(size);
+            Encode(bytes.data());
+            return true;
+        }
+
         static Handle<Transaction> NewInstance(uint32_t index, Input** inputs, size_t num_inputs, Output** outputs, size_t num_outputs, uint32_t timestamp=GetCurrentTime());
-        static Handle<Transaction> NewInstance(const RawTransaction& raw);
+        static Handle<Transaction> NewInstance(uint8_t* bytes);
         static Handle<Transaction> NewInstance(std::fstream& fd);
 
         static inline Handle<Transaction> NewInstance(const std::string& filename){

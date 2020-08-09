@@ -386,9 +386,7 @@ namespace Token{
         typedef Proto::BlockChain::Transaction RawType;
     private:
         TransactionMessage(Transaction* tx): ProtobufMessage(){
-            if(!tx->WriteToMessage(raw_)){
-                LOG(WARNING) << "couldn't encode transaction to message!";
-            }
+
         }
 
         TransactionMessage(const RawType& raw): ProtobufMessage(raw){}
@@ -396,7 +394,7 @@ namespace Token{
         ~TransactionMessage(){}
 
         Transaction* GetTransaction() const{
-            return Transaction::NewInstance(raw_);
+            return nullptr;
         }
 
         DECLARE_MESSAGE(Transaction);

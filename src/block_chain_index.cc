@@ -111,11 +111,13 @@ namespace Token{
         }
 
         std::fstream fd(filename, std::ios::out|std::ios::binary);
+        /*
         if(!blk->WriteToFile(fd)){
             std::stringstream ss;
             ss << "Couldn't write block " << block << " to file: " << filename;
             CrashReport::GenerateAndExit(ss);
         }
+        */
 
         if(!GetIndex()->Put(options, key, filename).ok()){
             std::stringstream ss;
