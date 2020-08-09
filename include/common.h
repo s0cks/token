@@ -68,35 +68,30 @@ namespace Token{
         return system_clock::now();
     }
 
-    static uint32_t
-    GetCurrentTime(){
+    static int64_t
+    GetCurrentTimestamp(){
         return time(NULL);
     }
 
     static inline std::string
-    GetCurrentTimestampFormattedFileSafe(){
-        time_t now = time(NULL);
-        struct tm* timeinfo = gmtime(&now);
+    GetTimestampFormattedReadable(int64_t timestamp){
+        struct tm* timeinfo = gmtime(&timestamp);
+        char buff[256];
+        strftime(buff, sizeof(buff), "%m/%d/%Y %H:%M:%S", timeinfo);
+        return std::string(buff);
+    }
+
+    static inline std::string
+    GetTimestampFormattedFileSafe(int64_t timestamp){
+        struct tm* timeinfo = gmtime(&timestamp);
         char buff[256];
         strftime(buff, sizeof(buff), "%Y%m%d-%H%M%S", timeinfo);
         return std::string(buff);
     }
 
-    static inline std::string
-    GetTimestampFormattedReadable(uint32_t timestamp){
-        struct tm* timeinfo = gmtime((time_t*)&timestamp);
-        char buff[256];
-        strftime(buff, sizeof(buff), "%m/%d/%Y %H:%M:%S", timeinfo);
-        return std::string(buff);
-    }
-
-    static inline std::string
-    GetCurrentTimestampFormattedReadable(){
-        time_t now = time(NULL);
-        struct tm* timeinfo = gmtime(&now);
-        char buff[256];
-        strftime(buff, sizeof(buff), "%m/%d/%Y %H:%M:%S", timeinfo);
-        return std::string(buff);
+    static uint32_t
+    GetCurrentTime(){
+        return time(NULL);
     }
 
     static inline std::string

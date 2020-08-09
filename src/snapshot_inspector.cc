@@ -26,9 +26,9 @@ namespace Token{
     static inline void
     PrintStatus(Snapshot* snapshot){
         LOG(INFO) << "Snapshot: " << snapshot->GetFilename();
-        LOG(INFO) << "Size: " << GetFilesize(snapshot->GetFilename());
-        LOG(INFO) << "Version: " << snapshot->GetVersion();
         LOG(INFO) << "Created: " << GetTimestampFormattedReadable(snapshot->GetTimestamp());
+        LOG(INFO) << "Version: " << snapshot->GetVersion();
+        LOG(INFO) << "Size: " << GetFilesize(snapshot->GetFilename()) << " Bytes";
     }
 
     void SnapshotInspector::SetSnapshot(Snapshot* snapshot){

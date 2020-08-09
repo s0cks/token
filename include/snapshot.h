@@ -107,16 +107,16 @@ namespace Token{
     private:
         std::string filename_;
         // Prologue Information
-        uint32_t timestamp_;
+        int64_t timestamp_;
         std::string version_;
-        BlockHeader head_;
+
+        // TODO: cleanup index usage for snapshots
         SnapshotBlockIndex* index_;
     public:
         Snapshot():
             filename_(),
-            timestamp_(0),
+            timestamp_(GetCurrentTimestamp()),
             version_(),
-            head_(),
             index_(new SnapshotBlockIndex()){}
         Snapshot(SnapshotFile* file);
         ~Snapshot(){
@@ -127,16 +127,12 @@ namespace Token{
             return filename_;
         }
 
-        uint32_t GetTimestamp() const{
+        uint64_t GetTimestamp() const{
             return timestamp_;
         }
 
         std::string GetVersion() const{
             return version_;
-        }
-
-        BlockHeader GetHead() const{
-            return head_;
         }
 
         SnapshotBlockIndex* GetIndex() const{

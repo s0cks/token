@@ -49,7 +49,7 @@ namespace Token{
         GetNewSnapshotFilename(){
             std::stringstream filename;
             filename << GetSnapshotDirectory();
-            filename << "/snapshot-" << GetCurrentTimestampFormattedFileSafe() << ".dat";
+            filename << "/snapshot-" << GetTimestampFormattedFileSafe(GetCurrentTimestamp()) << ".dat";
             return filename.str();
         }
     public:
@@ -72,12 +72,14 @@ namespace Token{
         void WriteMessage(google::protobuf::Message& msg);
         void WriteBytes(uint8_t* bytes, size_t size);
         void WriteInt(uint32_t value);
-        void WriteLong(uint64_t value);
+        void WriteUnsignedLong(uint64_t value);
+        void WriteLong(int64_t value);
         bool ReadMessage(google::protobuf::Message& msg);
         bool ReadBytes(uint8_t* bytes, size_t size);
         uint8_t ReadByte();
         uint32_t ReadInt();
-        uint64_t ReadLong();
+        uint64_t ReadUnsignedLong();
+        int64_t ReadLong();
         uint256_t ReadHash();
         std::string ReadString();
     };

@@ -37,7 +37,7 @@ namespace Token{
 
         bool Accept(SnapshotWriter* writer){
             SnapshotFile* file = writer->GetFile();
-            file->WriteInt(GetCurrentTime());
+            file->WriteLong(GetCurrentTimestamp());
             file->WriteString(Token::GetVersion());
             return true;
         }
@@ -46,7 +46,7 @@ namespace Token{
             Snapshot* snapshot = GetSnapshot();
             SnapshotFile* file = reader->GetFile();
 
-            snapshot->timestamp_ = file->ReadInt();
+            snapshot->timestamp_ = file->ReadLong();
             snapshot->version_ = file->ReadString();
             return true;
         }
@@ -74,9 +74,8 @@ namespace Token{
 
         inline void
         WriteReference(SnapshotBlockIndex::BlockReference* ref){
-            LOG(INFO) << "writing reference: " << (*ref);
             GetFile()->WriteHash(ref->GetHash());
-            GetFile()->WriteLong(ref->GetDataPosition());
+            GetFile()->WriteUnsignedLong(ref->GetDataPosition());
             GetFile()->WriteInt(ref->GetSize());
         }
 
@@ -89,7 +88,7 @@ namespace Token{
         ReadReference(){
             uint64_t index_pos = GetFile()->GetCurrentFilePosition();
             uint256_t hash = GetFile()->ReadHash();
-            uint64_t data_pos = GetFile()->ReadLong();
+            uint64_t data_pos = GetFile()->ReadUnsignedLong();
             uint32_t size = GetFile()->ReadInt();
             return GetIndex()->CreateReference(hash, size, index_pos, data_pos);
         }
@@ -117,8 +116,6 @@ namespace Token{
 
             uint32_t num_references = BlockChain::GetHead().GetHeight() + 1; // does this really capture the num references?
             file->WriteInt(num_references);
-
-            LOG(INFO) << "writing " << num_references << " references to snapshot block index";
             BlockChain::Accept(this);
             return true;
         }
@@ -243,7 +240,7 @@ namespace Token{
             uint64_t data_pos = ref->GetDataPosition();
 
             file->SetCurrentFilePosition(index_pos + uint256_t::kSize);
-            file->WriteLong(data_pos);
+            file->WriteUnsignedLong(data_pos);
             file->SetCurrentFilePosition(current_pos);
             return true;
         }

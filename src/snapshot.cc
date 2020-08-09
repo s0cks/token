@@ -13,7 +13,6 @@ namespace Token{
         filename_(file->GetFilename()),
         timestamp_(0),
         version_(),
-        head_(),
         index_(new SnapshotBlockIndex()){}
 
     bool Snapshot::WriteSnapshot(Snapshot* snapshot){

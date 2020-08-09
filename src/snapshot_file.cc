@@ -53,9 +53,15 @@ namespace Token{
         Flush();
     }
 
-    void SnapshotFile::WriteLong(uint64_t value){
+    void SnapshotFile::WriteUnsignedLong(uint64_t value){
         CHECK_FILE_POINTER;
         CHECK_WRITTEN(fwrite(&value, sizeof(uint64_t), 1, GetFilePointer()), 1, sizeof(uint64_t));
+        Flush();
+    }
+
+    void SnapshotFile::WriteLong(int64_t value){
+        CHECK_FILE_POINTER;
+        CHECK_WRITTEN(fwrite(&value, sizeof(int64_t), 1, GetFilePointer()), 1, sizeof(uint64_t));
         Flush();
     }
 
@@ -111,7 +117,7 @@ namespace Token{
         return (*(uint32_t*)bytes);
     }
 
-    uint64_t SnapshotFile::ReadLong(){
+    uint64_t SnapshotFile::ReadUnsignedLong(){
         uint8_t bytes[8];
         if(!ReadBytes(bytes, 8)){
             std::stringstream ss;
@@ -119,6 +125,16 @@ namespace Token{
             CrashReport::GenerateAndExit(ss);
         }
         return (*(uint64_t*)bytes);
+    }
+
+    int64_t SnapshotFile::ReadLong(){
+        uint8_t bytes[8];
+        if(!ReadBytes(bytes, 8)){
+            std::stringstream ss;
+            ss << "Couldn't read long from snapshot file: " << GetFilename();
+            CrashReport::GenerateAndExit(ss);
+        }
+        return (*(int64_t*)bytes);
     }
 
     uint256_t SnapshotFile::ReadHash(){
