@@ -85,7 +85,7 @@ namespace Token{
                 if(!EndsWith(filename, ".dat")) continue;
 
                 Handle<Transaction> tx = Transaction::NewInstance(filename);
-                txs.push_back(tx->GetSHA256Hash());
+                txs.push_back(tx->GetHash());
             }
             closedir(dir);
             return true;

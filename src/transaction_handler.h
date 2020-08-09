@@ -12,7 +12,7 @@ namespace Token{
 
         inline Handle<UnclaimedTransaction>
         CreateUnclaimedTransaction(const std::string& user){
-            uint256_t tx_hash = transaction_->GetSHA256Hash();
+            uint256_t tx_hash = transaction_->GetHash();
             return UnclaimedTransaction::NewInstance(tx_hash, out_idx_++, user);
         }
     public:
@@ -24,7 +24,7 @@ namespace Token{
 
         bool VisitInput(Input* input){
             UnclaimedTransaction* utxo = input->GetUnclaimedTransaction();
-            UnclaimedTransactionPool::RemoveUnclaimedTransaction(utxo->GetSHA256Hash());
+            UnclaimedTransactionPool::RemoveUnclaimedTransaction(utxo->GetHash());
             return true;
         }
 

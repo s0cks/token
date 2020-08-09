@@ -168,7 +168,7 @@ namespace Token{
         Handle<TransactionMessage> msg = task->GetMessage().CastTo<TransactionMessage>();
 
         Transaction* tx = msg->GetTransaction();
-        uint256_t hash = tx->GetSHA256Hash();
+        uint256_t hash = tx->GetHash();
 
 #ifdef TOKEN_DEBUG
         LOG(INFO) << "received transaction: " << hash;

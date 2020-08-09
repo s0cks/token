@@ -37,7 +37,7 @@ namespace Token{
 
         inline void
         RemoveTransactionFromPool(const Handle<Transaction>& tx){
-            TransactionPool::RemoveTransaction(tx->GetSHA256Hash());
+            TransactionPool::RemoveTransaction(tx->GetHash());
         }
     public:
         TransactionPoolBlockBuilder():
@@ -78,7 +78,7 @@ namespace Token{
 
     static inline void
     OrphanTransaction(const Handle<Transaction>& tx){
-        uint256_t hash = tx->GetSHA256Hash();
+        uint256_t hash = tx->GetHash();
         LOG(WARNING) << "orphaning transaction: " << hash;
         TransactionPool::RemoveTransaction(hash);
     }

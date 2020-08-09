@@ -71,7 +71,7 @@ namespace Token{
                 if(!EndsWith(filename, ".dat")) continue;
 
                 Handle<UnclaimedTransaction> utxo = UnclaimedTransaction::NewInstance(filename);
-                utxos.push_back(utxo->GetSHA256Hash());
+                utxos.push_back(utxo->GetHash());
             }
             closedir(dir);
             return true;
@@ -91,7 +91,7 @@ namespace Token{
                 if(!EndsWith(filename, ".dat")) continue;
                 Handle<UnclaimedTransaction> utxo = UnclaimedTransaction::NewInstance(filename);
                 if(utxo->GetUser() != user) continue;
-                utxos.push_back(utxo->GetSHA256Hash());
+                utxos.push_back(utxo->GetHash());
             }
             closedir(dir);
             return true;
@@ -149,7 +149,7 @@ namespace Token{
         ~UnclaimedTransactionPoolPrinter() = default;
 
         bool Visit(const Handle<UnclaimedTransaction>& utxo){
-            LOG(INFO) << utxo->GetTransaction() << "[" << utxo->GetIndex() << "] := " << utxo->GetSHA256Hash();
+            LOG(INFO) << utxo->GetTransaction() << "[" << utxo->GetIndex() << "] := " << utxo->GetHash();
             return true;
         }
     };

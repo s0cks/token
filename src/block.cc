@@ -193,7 +193,7 @@ namespace Token{
         }
 
         bool Visit(const Handle<Transaction>& tx){
-            return AddLeaf(tx->GetSHA256Hash());
+            return AddLeaf(tx->GetHash());
         }
 
         bool BuildTree(){

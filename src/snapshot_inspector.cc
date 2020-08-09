@@ -19,7 +19,7 @@ namespace Token{
         LOG(INFO) << "  - Transactions: ";
         for(size_t idx = 0; idx < blk->GetNumberOfTransactions(); idx++){
             Handle<Transaction> tx = blk->GetTransaction(idx);
-            LOG(INFO) << "      * #" << tx->GetIndex() << ": " << tx->GetSHA256Hash();
+            LOG(INFO) << "      * #" << tx->GetIndex() << ": " << tx->GetHash();
         }
     }
 

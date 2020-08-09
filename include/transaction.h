@@ -10,14 +10,6 @@ namespace Token{
     class Input : public Object{
         friend class Transaction;
     private:
-        enum Layout{
-            kHashOffset = 0,
-            kHashLength = uint256_t::kSize,
-            kIndexOffset = kHashOffset + kHashLength,
-            kIndexLength = 4,
-            kUserOffset = kIndexOffset + kIndexLength,
-        };
-
         uint256_t hash_;
         uint32_t index_;
         std::string user_;
@@ -62,16 +54,6 @@ namespace Token{
         Output(const std::string& user, const std::string& token):
             user_(user),
             token_(token){}
-
-        inline size_t
-        GetUserOffset() const{
-            return 0;
-        }
-
-        inline size_t
-        GetTokenOffset() const{
-            return GetUserOffset() + 4 + user_.length();
-        }
     public:
         ~Output(){}
 
@@ -179,15 +161,7 @@ namespace Token{
         bool Encode(uint8_t* bytes) const;
         bool Accept(TransactionVisitor* visitor);
         size_t GetBufferSize() const;
-        uint256_t GetSHA256Hash() const;
         std::string ToString() const;
-
-        bool Encode(CryptoPP::SecByteBlock& bytes){
-            size_t size = GetBufferSize();
-            bytes.resize(size);
-            Encode(bytes.data());
-            return true;
-        }
 
         static Handle<Transaction> NewInstance(uint32_t index, Input** inputs, size_t num_inputs, Output** outputs, size_t num_outputs, uint32_t timestamp=GetCurrentTime());
         static Handle<Transaction> NewInstance(uint8_t* bytes);

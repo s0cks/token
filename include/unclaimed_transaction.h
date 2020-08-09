@@ -5,11 +5,9 @@
 #include "object.h"
 
 namespace Token{
-    class Transaction;
     class Output;
-    class UnclaimedTransaction : public BinaryObject<Proto::BlockChain::UnclaimedTransaction>{
-    public:
-        typedef Proto::BlockChain::UnclaimedTransaction RawType;
+    class Transaction;
+    class UnclaimedTransaction : public Object{
     private:
         uint256_t hash_;
         uint32_t index_;
@@ -34,11 +32,15 @@ namespace Token{
             return user_;
         }
 
-        bool WriteToMessage(RawType& raw) const;
+        bool Encode(uint8_t* bytes) const;
+        size_t GetBufferSize() const;
         std::string ToString() const;
 
-        static Handle<UnclaimedTransaction> NewInstance(const uint256_t& hash, uint32_t index, const std::string& user);
-        static Handle<UnclaimedTransaction> NewInstance(const RawType& raw);
+        static Handle<UnclaimedTransaction> NewInstance(const uint256_t &hash, uint32_t index, const std::string& user){
+            return new UnclaimedTransaction(hash, index, user);
+        }
+
+        static Handle<UnclaimedTransaction> NewInstance(uint8_t* bytes);
         static Handle<UnclaimedTransaction> NewInstance(std::fstream& fd);
 
         static inline Handle<UnclaimedTransaction> NewInstance(const std::string& filename){

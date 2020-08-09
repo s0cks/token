@@ -8,13 +8,12 @@ namespace Token{
     class Task : public Object{
     protected:
         Task() = default;
+
+        size_t GetBufferSize() const{ return 0; }
+        bool Encode(uint8_t* bytes) const{ return false; }
     public:
         ~Task() = default;
     };
-
-
-
-
 
     class SessionTask : public Task{
     protected:

@@ -115,6 +115,9 @@ namespace Token{
         ProtobufMessage(const T& raw):
             Message(),
             raw_(raw){}
+
+        size_t GetBufferSize() const{ return 0; }
+        bool Encode(uint8_t* bytes) const{ return false; }
     public:
         virtual ~ProtobufMessage() = default;
 
@@ -459,9 +462,9 @@ namespace Token{
         InventoryItem(Type type, const uint256_t& hash):
             type_(type),
             hash_(hash){}
-        InventoryItem(const Handle<Transaction>& tx): InventoryItem(kTransaction, tx->GetSHA256Hash()){}
+        InventoryItem(const Handle<Transaction>& tx): InventoryItem(kTransaction, tx->GetHash()){}
         InventoryItem(const Handle<Block>& blk): InventoryItem(kBlock, blk->GetSHA256Hash()){}
-        InventoryItem(const Handle<UnclaimedTransaction>& utxo): InventoryItem(kUnclaimedTransaction, utxo->GetSHA256Hash()){}
+        InventoryItem(const Handle<UnclaimedTransaction>& utxo): InventoryItem(kUnclaimedTransaction, utxo->GetHash()){}
         InventoryItem(const BlockHeader& blk): InventoryItem(kBlock, blk.GetHash()){}
         InventoryItem(const InventoryItem& item):
             type_(item.type_),
@@ -692,6 +695,9 @@ namespace Token{
         GetUnclaimedTransactionsMessage(const std::string& user):
             Message(),
             user_(user){}
+
+        size_t GetBufferSize() const{ return 0; }
+        bool Encode(uint8_t* bytes) const{ return false; }
     public:
         ~GetUnclaimedTransactionsMessage() = default;
 

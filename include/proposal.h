@@ -57,6 +57,9 @@ namespace Token{
             hash_(hash),
             accepted_(),
             rejected_(){}
+
+        size_t GetBufferSize() const{ return 0; }
+        bool Encode(uint8_t* bytes) const{ return false; }
     public:
         ~Proposal() = default;
 

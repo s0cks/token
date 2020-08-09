@@ -314,7 +314,7 @@ namespace Token{
 
         Handle<Transaction> tx = Transaction::NewInstance(0, inputs, 1, outputs, 1);
         Handle<TransactionMessage> msg = TransactionMessage::NewInstance(tx);
-        LOG(INFO) << "sending transaction: " << tx->GetSHA256Hash();
+        LOG(INFO) << "sending transaction: " << tx->GetHash();
         Send(msg);
     }
 

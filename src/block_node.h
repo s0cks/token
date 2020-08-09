@@ -12,6 +12,14 @@ namespace Token{
 
         BlockNode(const BlockHeader& block);
         BlockNode(Block* block): BlockNode(block->GetHeader()){}
+    protected:
+        size_t GetBufferSize() const{
+            return 0;//TODO: implement
+        }
+
+        bool Encode(uint8_t* bytes) const{
+            return false;//TODO: implement
+        }
     public:
         ~BlockNode(){}
 

@@ -126,7 +126,7 @@ namespace Token{
             memset(transactions_, 0, sizeof(Transaction*)*num_txs);
             for(size_t idx = 0; idx < num_txs; idx++){
                 WriteBarrier(&transactions_[idx], txs[idx]);
-                tx_bloom_.Put(txs[idx]->GetSHA256Hash());
+                tx_bloom_.Put(txs[idx]->GetHash());
             }
         }
 

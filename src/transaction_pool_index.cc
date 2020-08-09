@@ -85,8 +85,8 @@ namespace Token{
     void TransactionPoolIndex::PutData(const Handle<Transaction>& tx){
         leveldb::WriteOptions options;
         options.sync = true;
-        std::string key = KEY(tx->GetSHA256Hash());
-        std::string filename = GetNewDataFilename(tx->GetSHA256Hash());
+        std::string key = KEY(tx->GetHash());
+        std::string filename = GetNewDataFilename(tx->GetHash());
 
         if(FileExists(filename)){
             std::stringstream ss;
@@ -106,7 +106,7 @@ namespace Token{
 
         if(!GetIndex()->Put(options, key, filename).ok()){
             std::stringstream ss;
-            ss << "Couldn't index transaction: " << tx->GetSHA256Hash();
+            ss << "Couldn't index transaction: " << tx->GetHash();
             CrashReport::GenerateAndExit(ss);
         }
     }

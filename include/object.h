@@ -17,43 +17,32 @@ namespace Token{
         // - track references using Reference class?
     protected:
         Object(): RawObject(){}
+
+        virtual size_t GetBufferSize() const = 0;
+        virtual bool Encode(uint8_t* bytes) const = 0;
+
+        bool Encode(CryptoPP::SecByteBlock& bytes){
+            size_t size = GetBufferSize();
+            bytes.resize(size);
+            Encode(bytes.data());
+            return true;
+        }
     public:
         virtual std::string ToString() const{
             std::stringstream ss;
             ss << "Object(" << std::hex << this << ")";
             return ss.str();
         }
-    };
 
-    template<typename RawType>
-    class BinaryObject : public Object{
-    protected:
-        BinaryObject(): Object(){}
-    public:
-        ~BinaryObject(){}
-
-        virtual bool WriteToMessage(RawType& raw) const = 0;
-
-        bool WriteToFile(std::fstream& fd) const{
-            RawType msg;
-            if(!WriteToMessage(msg)) return false;
-            return msg.SerializeToOstream(&fd);
-        }
-
-        bool WriteToBytes(CryptoPP::SecByteBlock& bytes) const{
-            RawType raw;
-            if(!WriteToMessage(raw)) return false;
-            bytes.resize(raw.ByteSizeLong());
-            return raw.SerializeToArray(bytes.data(), bytes.size());
-        }
-
-        uint256_t GetSHA256Hash() const{
+        uint256_t GetHash() const{
+            size_t size = GetBufferSize();
             CryptoPP::SHA256 func;
-            CryptoPP::SecByteBlock bytes;
-            if(!WriteToBytes(bytes)) {
-                LOG(WARNING) << "couldn't get bytes";
+            CryptoPP::SecByteBlock bytes(size);
+            if(!Encode(bytes)){
+                LOG(WARNING) << "couldn't encode transaction to bytes";
                 return uint256_t();
             }
+
             CryptoPP::SecByteBlock hash(CryptoPP::SHA256::DIGESTSIZE);
             CryptoPP::ArraySource source(bytes.data(), bytes.size(), true, new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(hash.data(), hash.size())));
             return uint256_t(hash.data());

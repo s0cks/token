@@ -71,8 +71,12 @@ namespace Token{
     }
 
     bool Output::Encode(uint8_t* bytes) const{
-        EncodeString(&bytes[GetUserOffset()], user_);
-        EncodeString(&bytes[GetTokenOffset()], token_);
+        size_t offset = 0;
+        EncodeString(&bytes[offset], user_);
+        offset += (4 + user_.length());
+
+        EncodeString(&bytes[offset], token_);
+        offset += (4 + token_.length());
         return true;
     }
 
@@ -132,7 +136,7 @@ namespace Token{
 
     std::string Transaction::ToString() const{
         std::stringstream stream;
-        stream << "Transaction(" << GetSHA256Hash() << ")";
+        stream << "Transaction(" << GetHash() << ")";
         return stream.str();
     }
 
@@ -171,7 +175,7 @@ namespace Token{
         Keychain::LoadKeys(&privateKey, &publicKey);
 
         try{
-            LOG(INFO) << "signing transaction: " << HexString(GetSHA256Hash());
+            LOG(INFO) << "signing transaction: " << HexString(GetHash());
             CryptoPP::RSASS<CryptoPP::PSS, CryptoPP::SHA256>::Signer signer(privateKey);
             CryptoPP::AutoSeededRandomPool rng;
             CryptoPP::SecByteBlock sigData(signer.MaxSignatureLength());
@@ -188,24 +192,6 @@ namespace Token{
         } catch(CryptoPP::Exception& ex){
             LOG(ERROR) << "error occurred signing transaction: " << ex.GetWhat();
             return false;
-        }
-    }
-
-    uint256_t Transaction::GetSHA256Hash() const{
-        try{
-            size_t size = GetBufferSize();
-            CryptoPP::SHA256 func;
-            CryptoPP::SecByteBlock bytes(size);
-            if(!Encode(bytes)){
-                LOG(WARNING) << "couldn't encode transaction to bytes";
-                return uint256_t();
-            }
-
-            CryptoPP::SecByteBlock hash(CryptoPP::SHA256::DIGESTSIZE);
-            CryptoPP::ArraySource source(bytes.data(), bytes.size(), true, new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(hash.data(), hash.size())));
-            return uint256_t(hash.data());
-        } catch(CryptoPP::Exception& exc){
-            LOG(WARNING) << "exception occurred getting block hash: " << exc.what();
         }
     }
 
