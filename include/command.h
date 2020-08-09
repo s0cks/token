@@ -19,7 +19,7 @@ FOR_EACH_COMMAND(FORWARD_DECLARE_COMMAND);
 
     class Command{
         //TODO:
-        // - refactor/remove this class for something more flexible
+        // - refactor/remove this class for something more flexible, model after SnapshotInspectorCommand
     protected:
         std::deque<std::string> args_;
 
