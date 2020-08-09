@@ -7,6 +7,12 @@
 #include "snapshot_file.h"
 
 namespace Token{
+    //TODO:
+    // - write section metadata:
+    //      * Type
+    //      * Size
+    // - update prologue section to be more descriptive
+    // - create heap section
     class SnapshotSection{
     protected:
         Snapshot* snapshot_;
