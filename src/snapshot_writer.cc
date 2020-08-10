@@ -39,11 +39,50 @@ namespace Token{
         return ftell(GetFilePointer());
     }
 
+    void SnapshotWriter::WriteHeader(SnapshotSection* section){
+        WriteInt(section->GetSectionId());
+        WriteLong(section->GetSize());
+    }
+
+    void SnapshotWriter::UpdateHeader(Token::SnapshotSection* section){
+        int64_t offset = section->GetOffset() + sizeof(uint32_t);
+
+        int64_t last = GetCurrentPosition();
+        SetCurrentPosition(offset);
+        WriteLong(section->GetSize());
+        SetCurrentPosition(last);
+        LOG(INFO) << "wrote section #" << section->GetSectionId() << " (" << section->GetSize() << ") @" << section->GetOffset();
+    }
+
     bool SnapshotWriter::WriteSnapshot(){
         Snapshot* snapshot = GetSnapshot();
-        snapshot->prologue_.Accept(this);//TODO: check result
-        snapshot->blocks_.Accept(this); //TODO: check result
-        snapshot->utxos_.Accept(this); //TODO: check result
+        {
+            int64_t offset = GetCurrentPosition();
+            snapshot->prologue_.SetRegion(offset, 0);
+            WriteHeader(&snapshot->prologue_);
+            snapshot->prologue_.Accept(this);//TODO: check result
+            int64_t size = (GetCurrentPosition() - offset);
+            snapshot->prologue_.SetRegion(offset, size);
+            UpdateHeader(&snapshot->prologue_);
+        }
+
+        {
+            int64_t offset = GetCurrentPosition();
+            WriteHeader(&snapshot->blocks_);
+            snapshot->blocks_.Accept(this); //TODO: check result
+            int64_t size = (GetCurrentPosition() - offset);
+            snapshot->blocks_.SetRegion(offset, size);
+            UpdateHeader(&snapshot->blocks_);
+        }
+
+        {
+            int64_t offset = GetCurrentPosition();
+            WriteHeader(&snapshot->utxos_);
+            snapshot->utxos_.Accept(this); //TODO: check result
+            int64_t size = (GetCurrentPosition() - offset);
+            snapshot->utxos_.SetRegion(offset, size);
+            UpdateHeader(&snapshot->utxos_);
+        }
         return true;
     }
 

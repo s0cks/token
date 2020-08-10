@@ -35,6 +35,7 @@ namespace Token{
         static void Accept(BlockChainVisitor* vis);
         static void Accept(BlockChainDataVisitor* vis);
         static bool HasBlock(const uint256_t& hash);
+        static bool HasTransaction(const uint256_t& hash);
         static BlockHeader GetHead();
         static BlockHeader GetGenesis();
         static BlockHeader GetBlock(const uint256_t& hash);

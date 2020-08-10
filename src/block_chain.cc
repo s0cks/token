@@ -166,6 +166,17 @@ namespace Token{
         return GetNode(hash) != nullptr;
     }
 
+    bool BlockChain::HasTransaction(const uint256_t& hash){
+        LOCK_GUARD;
+        BlockNode* node = GetGenesisNode();
+        while(node != nullptr){
+            Handle<Block> blk = node->GetData();
+            if(blk->Contains(hash)) return true;
+            node = node->GetNext();
+        }
+        return false;
+    }
+
     void BlockChain::Append(Block* block){
         LOCK_GUARD;
 

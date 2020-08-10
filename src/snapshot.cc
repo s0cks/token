@@ -198,7 +198,6 @@ namespace Token{
         bool Visit(const BlockHeader& blk){
             uint256_t hash = blk.GetHash();
             IndexReference* ref = CreateNewReference(hash);
-            LOG(INFO) << "created reference for " << hash << ": " << (*ref);
             GetWriter()->WriteReference((*ref));
             return true;
         }
@@ -293,7 +292,6 @@ namespace Token{
         bool Visit(const Handle<UnclaimedTransaction>& utxo){
             uint256_t hash = utxo->GetHash();
             IndexReference* ref = CreateNewReference(hash);
-            LOG(INFO) << "created reference for " << hash << ": " << (*ref);
             GetWriter()->WriteReference((*ref));
             return true;
         }
@@ -317,8 +315,6 @@ namespace Token{
             IndexReference* ref = GetReference(hash);
             ref->SetDataPosition(GetWriter()->GetCurrentPosition());
             ref->SetSize(size);
-
-            LOG(INFO) << "encoding " << utxo << " to: " << (*ref);
 
             ByteBuffer bytes(size);
             if(!utxo->Encode(&bytes)){
@@ -351,7 +347,6 @@ namespace Token{
             GetWriter()->SetCurrentPosition(index_pos);
             GetWriter()->WriteReference((*ref));
             GetWriter()->SetCurrentPosition(current_pos);
-            LOG(INFO) << "linking reference: " << (*ref);
             return true;
         }
     };

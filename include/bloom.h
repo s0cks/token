@@ -18,6 +18,9 @@ namespace Token{
         BloomFilter(size_t num_hashes=4):
             num_hashes_(num_hashes),
             bits_(){}
+        BloomFilter(const BloomFilter& filter):
+            num_hashes_(filter.num_hashes_),
+            bits_(filter.bits_){}
         ~BloomFilter(){}
 
         void Put(const uint256_t& hash){
@@ -33,6 +36,11 @@ namespace Token{
                 if(!bits_[hashes[idx]]) return false;
             }
             return true;
+        }
+
+        void operator=(const BloomFilter& filter){
+            num_hashes_ = filter.num_hashes_;
+            bits_ = filter.bits_;
         }
     };
 }

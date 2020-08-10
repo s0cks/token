@@ -106,12 +106,35 @@ namespace Token{
             LOG(WARNING) << "couldn't seek to " << pos << " in snapshot " << GetFilename() << ": " << strerror(err);
     }
 
-    Snapshot* SnapshotReader::ReadSnapshot(){
+    void SnapshotReader::ReadHeader(Token::SnapshotSection* section){
+        int64_t offset = GetCurrentPosition();
+        int32_t id = ReadInt();
+        int64_t size = ReadLong();
+        section->SetRegion(offset, size);
+        LOG(INFO) << "read section #" << id << " (" << size << ") @" << offset;
+    }
+
+    void SnapshotReader::SkipData(SnapshotSection* section){
+        LOG(INFO) << "skipping section #" << section->GetSectionId() << "@" << section->GetOffset() << " (" << section->GetSize() << " bytes)";
+        SetCurrentPosition(section->GetOffset() + section->GetSize());
+    }
+
+    Snapshot* SnapshotReader::ReadSnapshot() {
         Snapshot* snapshot = new Snapshot();
         snapshot->filename_ = GetFilename();
-        snapshot->prologue_.Accept(this);
-        snapshot->blocks_.Accept(this);
-        snapshot->utxos_.Accept(this);
+        {
+            ReadHeader(&snapshot->prologue_);
+            snapshot->prologue_.Accept(this);
+        }
+        {
+            ReadHeader(&snapshot->blocks_);
+            snapshot->blocks_.Accept(this);
+            SkipData(&snapshot->blocks_);
+        }
+        {
+            ReadHeader(&snapshot->utxos_);
+            snapshot->utxos_.Accept(this);
+        }
         return snapshot;
     }
 }

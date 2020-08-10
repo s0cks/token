@@ -6,13 +6,51 @@
 #include "block_chain.h"
 
 namespace Token{
+#define SNAPSHOT_PROLOGUE 0xAA
+#define SNAPSHOT_BLOCKDATA 0xAB
+#define SNAPSHOT_UTXODATA 0xAC
+
     class SnapshotWriter;
     class SnapshotReader;
     class SnapshotSection{
+        friend class Snapshot;
+        friend class SnapshotWriter;
+        friend class SnapshotReader;
+    public:
+        enum Section{
+            kPrologueSection,
+            kBlockChainDataSection,
+            kUnclaimedTransactionPoolSection,
+        };
     protected:
-        SnapshotSection() = default;
+        Section section_;
+        int64_t offset_;
+        int64_t size_;
+
+        SnapshotSection(Section sid):
+            section_(sid),
+            offset_(0),
+            size_(0){}
+
+        void SetRegion(int64_t offset, int64_t size){
+            offset_ = offset;
+            size_ = size;
+        }
     public:
         virtual ~SnapshotSection() = default;
+
+        Section GetSectionId() const{
+            return section_;
+        }
+
+        int64_t GetOffset() const{
+            return offset_;
+        }
+
+        int64_t GetSize() const{
+            return size_;
+        }
+
         virtual bool Accept(SnapshotWriter* writer) = 0;
         virtual bool Accept(SnapshotReader* reader) = 0;
     };
@@ -20,10 +58,10 @@ namespace Token{
     class SnapshotPrologueSection : public SnapshotSection{
     private:
         std::string version_;
-        int64_t timestamp_;
+        uint64_t timestamp_;
     public:
         SnapshotPrologueSection():
-            SnapshotSection(),
+            SnapshotSection(SnapshotSection::kPrologueSection),
             version_(Token::GetVersion()),
             timestamp_(GetCurrentTimestamp()){}
         ~SnapshotPrologueSection() = default;
@@ -32,7 +70,7 @@ namespace Token{
             return version_;
         }
 
-        int64_t GetTimestamp() const{
+        uint64_t GetTimestamp() const{
             return timestamp_;
         }
 
@@ -112,8 +150,8 @@ namespace Token{
     protected:
         IndexTable index_;
 
-        IndexedSection():
-            SnapshotSection(),
+        IndexedSection(SnapshotSection::Section section):
+            SnapshotSection(section),
             index_(){}
 
         virtual bool LinkIndexTable(SnapshotWriter* writer) = 0;
@@ -153,7 +191,7 @@ namespace Token{
         bool WriteData(SnapshotWriter* writer);
         bool LinkIndexTable(SnapshotWriter* writer);
     public:
-        SnapshotBlockChainSection(): IndexedSection(){}
+        SnapshotBlockChainSection(): IndexedSection(SnapshotSection::kBlockChainDataSection){}
         ~SnapshotBlockChainSection() = default;
 
         void operator=(const SnapshotBlockChainSection& section){
@@ -169,7 +207,7 @@ namespace Token{
         bool LinkIndexTable(SnapshotWriter* writer);
     public:
         SnapshotUnclaimedTransactionPoolSection():
-            IndexedSection(){}
+            IndexedSection(SnapshotSection::kUnclaimedTransactionPoolSection){}
         ~SnapshotUnclaimedTransactionPoolSection() = default;
 
         void operator=(const SnapshotUnclaimedTransactionPoolSection& section){
@@ -180,6 +218,8 @@ namespace Token{
     class SnapshotBlockDataVisitor;
     class SnapshotUnclaimedTransactionDataVisitor;
     class Snapshot{
+        //TODO:
+        // - encode bloom filter to blocks
         friend class SnapshotWriter;
         friend class SnapshotReader;
         friend class SnapshotInspector;

@@ -19,6 +19,7 @@ namespace Token{
         uint256_t previous_hash_;
         uint256_t merkle_root_;
         uint256_t hash_;
+        BloomFilter bloom_;
     public:
         BlockHeader():
             timestamp_(0),
@@ -26,12 +27,13 @@ namespace Token{
             previous_hash_(uint256_t()),
             merkle_root_(), // fill w/ genesis's merkle root
             hash_(){} //TODO: fill w/ genesis's hash
-        BlockHeader(uint32_t timestamp, uint32_t height, const uint256_t& phash, const uint256_t& merkle_root, const uint256_t& hash):
+        BlockHeader(uint32_t timestamp, uint32_t height, const uint256_t& phash, const uint256_t& merkle_root, const uint256_t& hash, const BloomFilter& tx_bloom):
             timestamp_(timestamp),
             height_(height),
             previous_hash_(phash),
             merkle_root_(merkle_root),
-            hash_(hash){}
+            hash_(hash),
+            bloom_(tx_bloom){}
         BlockHeader(Block* blk);
         ~BlockHeader(){}
 
@@ -56,6 +58,10 @@ namespace Token{
         }
 
         Block* GetData() const;
+
+        bool Contains(const uint256_t& hash) const{
+            return bloom_.Contains(hash);
+        }
 
         BlockHeader& operator=(const BlockHeader& other){
             timestamp_ = other.timestamp_;
@@ -88,11 +94,12 @@ namespace Token{
     class Block : public Object{
         //TODO:
         // - validation logic
+        friend class BlockHeader;
         friend class BlockChain;
         friend class BlockMessage;
     public:
-        static const size_t kMaxTransactionsForBlock = 40000;
-        static const uint32_t kNumberOfGenesisOutputs = kMaxTransactionsForBlock;
+        static const size_t kMaxTransactionsForBlock = 20;
+        static const uint32_t kNumberOfGenesisOutputs = 40000;
     private:
         uint32_t timestamp_;
         uint32_t height_;
@@ -126,7 +133,7 @@ namespace Token{
         ~Block() = default;
 
         BlockHeader GetHeader() const{
-            return BlockHeader(timestamp_, height_, previous_hash_, GetMerkleRoot(), GetHash());
+            return BlockHeader(timestamp_, height_, previous_hash_, GetMerkleRoot(), GetHash(), tx_bloom_);
         }
 
         uint256_t GetPreviousHash() const{

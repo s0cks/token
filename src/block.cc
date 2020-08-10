@@ -8,8 +8,13 @@ namespace Token{
 //######################################################################################################################
 //                                          Block Header
 //######################################################################################################################
-    BlockHeader::BlockHeader(Block* blk): BlockHeader(blk->GetTimestamp(), blk->GetHeight(), blk->GetPreviousHash(), blk->GetMerkleRoot(),
-                                                      blk->GetHash()){}
+    BlockHeader::BlockHeader(Block* blk):
+        timestamp_(blk->timestamp_),
+        height_(blk->height_),
+        previous_hash_(blk->previous_hash_),
+        merkle_root_(blk->GetMerkleRoot()),
+        hash_(blk->GetHash()),
+        bloom_(blk->tx_bloom_){}
 
     Block* BlockHeader::GetData() const{
         return BlockChain::GetBlockData(GetHash());

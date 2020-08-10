@@ -318,6 +318,9 @@ namespace Token{
     }
 
     bool CrashReport::Generate(const std::string &msg){
+        LOG(WARNING) << "Generating crash report....";
+        LOG(WARNING) << "Cause: " << msg;
+
         std::string filename = GenerateCrashReportFilename();
         CrashReport report(filename, msg);
 

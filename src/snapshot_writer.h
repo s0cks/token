@@ -41,6 +41,9 @@ namespace Token{
         GetFilePointer() const{
             return file_;
         }
+
+        void WriteHeader(SnapshotSection* section);
+        void UpdateHeader(SnapshotSection* section);
     public:
         SnapshotWriter(Snapshot* snapshot, const std::string& filename=GetNewSnapshotFilename()):
             filename_(filename),

@@ -7,6 +7,7 @@
 namespace Token{
     class Snapshot;
     class SnapshotReader{
+        friend class Snapshot;
     private:
         std::string filename_;
         FILE* file_;
@@ -17,6 +18,9 @@ namespace Token{
         }
 
         int64_t GetCurrentPosition();
+        void SkipData(SnapshotSection* section);
+        void SetCurrentPosition(int64_t pos);
+        void ReadHeader(SnapshotSection* section);
     public:
         SnapshotReader(const std::string& filename):
             filename_(filename),
@@ -44,7 +48,6 @@ namespace Token{
         int64_t ReadLong();
         uint64_t ReadUnsignedLong();
         IndexReference ReadReference();
-        void SetCurrentPosition(int64_t pos);
         void Close();
     };
 }

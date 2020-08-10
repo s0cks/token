@@ -11,7 +11,8 @@ namespace Token{
         BlockHeader block_;
 
         BlockNode(const BlockHeader& block);
-        BlockNode(Block* block): BlockNode(block->GetHeader()){}
+        BlockNode(Block* block):
+            BlockNode(block->GetHeader()){}
     public:
         ~BlockNode(){}
 
