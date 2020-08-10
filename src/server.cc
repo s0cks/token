@@ -8,6 +8,7 @@
 #include "task.h"
 #include "configuration.h"
 #include "peer.h"
+#include "bytes.h"
 
 namespace Token{
     static pthread_t thread_ = 0;
@@ -222,7 +223,9 @@ namespace Token{
             uint64_t msize = 0;
             memcpy(&msize, &buff->base[offset + Message::kSizeOffset], Message::kSizeLength);
 
-            Handle<Message> msg = Message::Decode(static_cast<Message::MessageType>(mtype), msize, (uint8_t*)&buff->base[offset + Message::kDataOffset]);
+            ByteBuffer bytes((uint8_t*)&buff->base[offset + Message::kDataOffset], (size_t)msize);
+
+            Handle<Message> msg = Message::Decode(static_cast<Message::MessageType>(mtype), &bytes);
             LOG(INFO) << "decoded message: " << msg->ToString(); //TODO: handle decode failures
             messages.push_back(msg);
 

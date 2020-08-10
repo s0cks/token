@@ -70,6 +70,17 @@ namespace Token{
             }
             cap_ = max;
         }
+        ByteBuffer(uint8_t* data, size_t size):
+            data_(nullptr),
+            cap_(0),
+            rpos_(0),
+            wpos_(0){
+            if(size > 0){
+                data_ = (uint8_t*)malloc(sizeof(uint8_t)*size);
+                memcpy(data_, data, sizeof(uint8_t)*size);
+                cap_ = size;
+            }
+        }
         ~ByteBuffer(){
             if(data_) free(data_);
         }

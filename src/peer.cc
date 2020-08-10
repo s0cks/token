@@ -3,6 +3,7 @@
 #include "async_task.h"
 #include "block_pool.h"
 #include "proposer.h"
+#include "bytes.h"
 
 namespace Token{
     PeerInfo::PeerInfo(PeerSession* session):
@@ -124,11 +125,12 @@ namespace Token{
             uint32_t mtype = 0;
             memcpy(&mtype, &buff->base[offset + Message::kTypeOffset], Message::kTypeLength);
 
-            uint64_t msize = 0;
+            uint32_t msize = 0;
             memcpy(&msize, &buff->base[offset + Message::kSizeOffset], Message::kSizeLength);
 
-            Handle<Message> msg = Message::Decode(static_cast<Message::MessageType>(mtype), msize, (uint8_t*)&buff->base[offset + Message::kDataOffset]);
-            LOG(INFO) << "decoded message: " << msg->ToString(); //TODO: handle decode errors
+            ByteBuffer bytes((uint8_t*)&buff->base[offset + Message::kDataOffset], (size_t)msize);
+            Handle<Message> msg = Message::Decode(static_cast<Message::MessageType>(mtype), &bytes);
+            LOG(INFO) << "decoded message: " << msg->ToString(); //TODO: handle decode failures
             messages.push_back(msg);
 
             offset += (msize + Message::kHeaderSize);

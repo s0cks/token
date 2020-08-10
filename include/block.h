@@ -14,8 +14,8 @@ namespace Token{
     class BlockHeader{
     public:
     private:
-        uint32_t timestamp_;
-        uint32_t height_;
+        uint64_t timestamp_;
+        uint64_t height_;
         uint256_t previous_hash_;
         uint256_t merkle_root_;
         uint256_t hash_;
@@ -35,11 +35,11 @@ namespace Token{
         BlockHeader(Block* blk);
         ~BlockHeader(){}
 
-        uint32_t GetTimestamp() const{
+        uint64_t GetTimestamp() const{
             return timestamp_;
         }
 
-        uint32_t GetHeight() const{
+        uint64_t GetHeight() const{
             return height_;
         }
 

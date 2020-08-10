@@ -41,19 +41,24 @@ namespace Token{
 
         enum{
             kTypeOffset = 0,
-            kTypeLength = 1,
+            kTypeLength = 1,// should this be 2?
             kSizeOffset = kTypeLength,
             kSizeLength = 4,
             kDataOffset = (kTypeLength + kSizeLength),
             kHeaderSize = kDataOffset,
-            kByteBufferSize = 6144
         };
     protected:
         Message(){}
     public:
         virtual ~Message() = default;
-        virtual const char* GetName() const = 0;
-        virtual MessageType GetMessageType() const = 0;
+
+        virtual const char* GetName() const{
+            return "Unknown";
+        }
+
+        virtual MessageType GetMessageType() const{
+            return MessageType::kUnknownMessageType;
+        }
 
         std::string ToString() const{
             std::stringstream ss;
@@ -66,32 +71,7 @@ namespace Token{
         FOR_EACH_MESSAGE_TYPE(DECLARE_TYPECHECK)
 #undef DECLARE_TYPECHECK
 
-        static Handle<Message> Decode(MessageType type, uintptr_t size, uint8_t* bytes);
-    };
-
-    class HashMessage : public Message{
-    protected:
-        uint256_t hash_;
-
-        HashMessage(const uint256_t& hash):
-            Message(),
-            hash_(hash){}
-
-        virtual bool Encode(uint8_t* bytes, uintptr_t size) const{
-            memcpy(bytes, hash_.data(), size);
-            return true;
-        }
-    public:
-        virtual ~HashMessage() = default;
-
-        //TODO: rename, shadows Object.GetHash()
-        uint256_t GetHash() const{
-            return hash_;
-        }
-
-        size_t GetBufferSize() const{
-            return 64; // bytes
-        }
+        static Handle<Message> Decode(MessageType type, ByteBuffer* bytes);
     };
 
 #define DECLARE_MESSAGE(Name) \
@@ -116,7 +96,6 @@ namespace Token{
         std::string node_id_;
         BlockHeader head_;
 
-        VersionMessage(uint8_t* bytes);
         VersionMessage(ClientType type, const std::string& version, const std::string& node_id, uint64_t timestamp, const std::string& nonce, const BlockHeader& head):
             Message(),
             client_type_(type),
@@ -159,10 +138,11 @@ namespace Token{
             return GetClientType() == ClientType::kClient;
         }
 
-        size_t GetBufferSize() const{ return 0; } //TODO: implement
-        bool Encode(ByteBuffer* bytes) const{ return true; } //TODO: implement
+        size_t GetBufferSize() const;
+        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(Version);
 
+        static Handle<VersionMessage> NewInstance(ByteBuffer* bytes);
         static Handle<VersionMessage> NewInstance(ClientType type, const std::string& node_id, const std::string& version=Token::GetVersion(), const std::string& nonce=GenerateNonce(), const BlockHeader& head=BlockChain::GetHead(), uint64_t timestamp=GetCurrentTime()){
             return new VersionMessage(type, version, node_id, timestamp, nonce, head);
         }
@@ -182,7 +162,7 @@ namespace Token{
         NodeAddress callback_;
         BlockHeader head_;
 
-        VerackMessage(ClientType type, const std::string& node_id, const std::string& nonce, const NodeAddress& address, const BlockHeader& head, uint32_t timestamp):
+        VerackMessage(ClientType type, const std::string& node_id, const std::string& nonce, const NodeAddress& address, const BlockHeader& head, uint64_t timestamp):
             Message(),
             client_type_(type),
             node_id_(node_id),
@@ -215,10 +195,11 @@ namespace Token{
             return head_;
         }
 
-        size_t GetBufferSize() const{ return 0; } //TODO: implement
-        bool Encode(ByteBuffer* bytes) const{ return false; } // TODO: implement
+        size_t GetBufferSize() const;
+        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(Verack);
 
+        static Handle<VerackMessage> NewInstance(ByteBuffer* bytes);
         static Handle<VerackMessage> NewInstance(ClientType type, const std::string& node_id, const NodeAddress& address, const BlockHeader& head=BlockChain::GetHead(), const std::string& nonce=GenerateNonce(), uint64_t timestamp=GetCurrentTimestamp()){
             return new VerackMessage(type, node_id, nonce, address, head, timestamp);
         }
@@ -240,9 +221,14 @@ namespace Token{
             proposal_(nullptr){
             WriteBarrier(&proposal_, proposal);
         }
+
+        template<typename T>
+        static Handle<T> NewInstance(ByteBuffer* bytes);
     public:
         virtual ~PaxosMessage() = default;
 
+        size_t GetBufferSize() const;
+        bool Encode(ByteBuffer* bytes) const;
         Handle<Proposal> GetProposal() const;
 
         //TODO:
@@ -259,9 +245,11 @@ namespace Token{
     public:
         ~PrepareMessage(){}
 
-        size_t GetBufferSize() const{ return 0; } //TODO: implement
-        bool Encode(ByteBuffer* bytes) const{ return false; } // TODO: implement
         DECLARE_MESSAGE(Prepare);
+
+        static Handle<PrepareMessage> NewInstance(ByteBuffer* bytes){
+            return PaxosMessage::NewInstance<PrepareMessage>(bytes);
+        }
 
         static Handle<PrepareMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
             return new PrepareMessage(node_id, proposal);
@@ -274,9 +262,11 @@ namespace Token{
     public:
         ~PromiseMessage(){}
 
-        size_t GetBufferSize() const{ return 0; } //TODO: implement
-        bool Encode(ByteBuffer* bytes) const{ return false; } // TODO: implement
         DECLARE_MESSAGE(Promise);
+
+        static Handle<PromiseMessage> NewInstance(ByteBuffer* bytes){
+            return PaxosMessage::NewInstance<PromiseMessage>(bytes);
+        }
 
         static Handle<PromiseMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
             return new PromiseMessage(node_id, proposal);
@@ -289,9 +279,11 @@ namespace Token{
     public:
         ~CommitMessage(){}
 
-        size_t GetBufferSize() const{ return 0; } //TODO: implement
-        bool Encode(ByteBuffer* bytes) const{ return false; } // TODO: implement
         DECLARE_MESSAGE(Commit);
+
+        static Handle<CommitMessage> NewInstance(ByteBuffer* bytes){
+            return PaxosMessage::NewInstance<CommitMessage>(bytes);
+        }
 
         static Handle<CommitMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
             return new CommitMessage(node_id, proposal);
@@ -304,9 +296,11 @@ namespace Token{
     public:
         ~AcceptedMessage(){}
 
-        size_t GetBufferSize() const{ return 0; } //TODO: implement
-        bool Encode(ByteBuffer* bytes) const{ return false; } // TODO: implement
         DECLARE_MESSAGE(Accepted);
+
+        static Handle<AcceptedMessage> NewInstance(ByteBuffer* bytes){
+            return PaxosMessage::NewInstance<AcceptedMessage>(bytes);
+        }
 
         static Handle<AcceptedMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
             return new AcceptedMessage(node_id, proposal);
@@ -319,9 +313,11 @@ namespace Token{
     public:
         ~RejectedMessage(){}
 
-        size_t GetBufferSize() const{ return 0; } //TODO: implement
-        bool Encode(ByteBuffer* bytes) const{ return false; } // TODO: implement
         DECLARE_MESSAGE(Rejected);
+
+        static Handle<RejectedMessage> NewInstance(ByteBuffer* bytes){
+            return PaxosMessage::NewInstance<RejectedMessage>(bytes);
+        }
 
         static Handle<RejectedMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
             return new RejectedMessage(node_id, proposal);
@@ -337,6 +333,10 @@ namespace Token{
             data_(nullptr){
             WriteBarrier(&data_, tx);
         }
+    protected:
+        void Accept(WeakReferenceVisitor* vis){
+            vis->Visit(&data_);
+        }
     public:
         ~TransactionMessage(){}
 
@@ -344,10 +344,11 @@ namespace Token{
             return data_;
         }
 
-        size_t GetBufferSize() const{ return 0; } //TODO: implement
-        bool Encode(ByteBuffer* bytes) const{ return false; } // TODO: implement
+        size_t GetBufferSize() const;
+        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(Transaction);
 
+        static Handle<TransactionMessage> NewInstance(ByteBuffer* bytes);
         static Handle<TransactionMessage> NewInstance(const Handle<Transaction>& tx){
             return new TransactionMessage(tx);
         }
@@ -362,6 +363,10 @@ namespace Token{
             data_(nullptr){
             WriteBarrier(&data_, blk);
         }
+    protected:
+        void Accept(WeakReferenceVisitor* vis){
+            vis->Visit(&data_);
+        }
     public:
         ~BlockMessage(){}
 
@@ -369,10 +374,11 @@ namespace Token{
             return data_;
         }
 
-        size_t GetBufferSize() const{ return 0; } //TODO: implement
-        bool Encode(ByteBuffer* bytes) const{ return false; } // TODO: implement
+        size_t GetBufferSize() const;
+        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(Block);
 
+        static Handle<BlockMessage> NewInstance(ByteBuffer* bytes);
         static Handle<BlockMessage> NewInstance(Block* blk){
             return new BlockMessage(blk);
         }
@@ -386,6 +392,8 @@ namespace Token{
             kBlock,
             kUnclaimedTransaction
         };
+
+        static const size_t kBufferSize = sizeof(uint16_t) + uint256_t::kSize;
     private:
         Type type_;
         uint256_t hash_;
@@ -464,40 +472,35 @@ namespace Token{
     class InventoryMessage : public Message{
         static const size_t kMaxAmountOfItemsPerMessage = 50;
     private:
-        InventoryMessage(std::vector<InventoryItem>& items):
-            Message(){
-            if(items.size() == 0){
-                LOG(INFO) << "no items!";
-                return;
-            }
-
-            //TODO: implement:
-
-            /*for(auto& it : items){
-                InventoryItem::RawType* item = raw_.add_items();
-                (*item) << it;
-            }
-            */
+        std::vector<InventoryItem> items_;
+    protected:
+        InventoryMessage(const std::vector<InventoryItem>& items):
+            Message(),
+            items_(items){
+            if(items_.empty())
+                LOG(WARNING) << "inventory created w/ zero size";
         }
+
+        static void DecodeItems(ByteBuffer* bytes, std::vector<InventoryItem>& items, uint32_t num_items);
     public:
 
         ~InventoryMessage(){}
 
-        uint32_t GetNumberOfItems(){
-            return 0;
+        size_t GetNumberOfItems() const{
+            return items_.size();
         }
 
         bool GetItems(std::vector<InventoryItem>& items){
-            //TODO: for(auto& it : raw_.items()){
-            //   items.push_back(InventoryItem(it));
-            //}
+            items.resize(items_.size());
+            items.insert(items.end(), items_.begin(), items_.end());
             return items.size() > 0;
         }
 
-        size_t GetBufferSize() const{ return 0; } //TODO: implement
-        bool Encode(ByteBuffer* bytes) const{ return false; } // TODO: implement
+        size_t GetBufferSize() const;
+        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(Inventory);
 
+        static Handle<InventoryMessage> NewInstance(ByteBuffer* bytes);
         static Handle<InventoryMessage> NewInstance(std::vector<InventoryItem>& items){
             return new InventoryMessage(items);
         }
@@ -517,32 +520,24 @@ namespace Token{
         }
     };
 
-    class GetDataMessage : public Message{
+    class GetDataMessage : public InventoryMessage{
     private:
+        GetDataMessage(const std::vector<InventoryItem>& items): InventoryMessage(items){}
     public:
         ~GetDataMessage(){}
 
-        bool GetItems(std::vector<InventoryItem>& items){
-            //TODO: implement
-            return items.size() > 0;
-        }
-
-        size_t GetBufferSize() const{ return 0; } //TODO: implement
-        bool Encode(ByteBuffer* bytes) const{ return false; } // TODO: implement
         DECLARE_MESSAGE(GetData);
 
-        static Handle<GetDataMessage> NewInstance(std::vector<InventoryItem>& items){
-            return nullptr; //TODO: implement
-        }
+        static Handle<GetDataMessage> NewInstance(ByteBuffer* bytes);
 
-        static Handle<GetDataMessage> NewInstance(){
+        static Handle<GetDataMessage> NewInstance(std::vector<InventoryItem>& items){
             return nullptr; //TODO: implement
         }
     };
 
     class GetBlocksMessage : public Message{
     public:
-        static const uint32_t kMaxNumberOfBlocks;
+        static const size_t kMaxNumberOfBlocks;
     private:
         uint256_t start_;
         uint256_t stop_;
@@ -562,10 +557,14 @@ namespace Token{
             return stop_;
         }
 
-        size_t GetBufferSize() const{ return 0; } //TODO: implement
-        bool Encode(ByteBuffer* bytes) const{ return false; } // TODO: implement
+        size_t GetBufferSize() const{
+            return uint256_t::kSize * 2;
+        }
+
+        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(GetBlocks);
 
+        static Handle<GetBlocksMessage> NewInstance(ByteBuffer* bytes);
         static Handle<GetBlocksMessage> NewInstance(const uint256_t& start_hash=BlockChain::GetHead().GetHash(), const uint256_t& stop_hash=uint256_t()){
             return new GetBlocksMessage(start_hash, stop_hash);
         }
@@ -573,25 +572,29 @@ namespace Token{
 
     class NotFoundMessage : public Message{
     private:
+        InventoryItem item_;
+        std::string message_;
+
         NotFoundMessage(const InventoryItem& item, const std::string& message):
-            Message(){
-            //TODO: implement
-        }
+            Message(),
+            item_(item),
+            message_(message){}
     public:
         ~NotFoundMessage() = default;
 
         std::string GetMessage() const{
-            return ""; //TODO: implement
+            return message_;
         }
 
         InventoryItem GetItem() const{
-            return InventoryItem();
+            return item_;
         }
 
-        size_t GetBufferSize() const{ return 0; } //TODO: implement
-        bool Encode(ByteBuffer* bytes) const{ return false; } // TODO: implement
+        size_t GetBufferSize() const;
+        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(NotFound);
 
+        static Handle<NotFoundMessage> NewInstance(ByteBuffer* bytes);
         static Handle<NotFoundMessage> NewInstance(const InventoryItem& item, const std::string& message="Not Found"){
             return new NotFoundMessage(item, message);
         }
@@ -621,10 +624,11 @@ namespace Token{
             return true;
         }
 
-        size_t GetBufferSize() const{ return 0; } //TODO: implement
-        bool Encode(ByteBuffer* bytes) const{ return false; } // TODO: implement
+        size_t GetBufferSize() const;
+        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(GetUnclaimedTransactions);
 
+        static Handle<GetUnclaimedTransactionsMessage> NewInstance(ByteBuffer* bytes);
         static Handle<GetUnclaimedTransactionsMessage> NewInstance(const std::string& user){
             return new GetUnclaimedTransactionsMessage(user);
         }
