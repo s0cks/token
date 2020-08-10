@@ -1,6 +1,7 @@
 #include "server.h"
 #include "task.h"
 #include "client.h"
+#include "bytes.h"
 
 namespace Token{
     ClientSessionInfo::ClientSessionInfo(ClientSession* session):
@@ -137,7 +138,9 @@ namespace Token{
             uint64_t msize = 0;
             memcpy(&msize, &buff->base[offset + Message::kSizeOffset], Message::kSizeLength);
 
-            Handle<Message> msg = Message::Decode(static_cast<Message::MessageType>(mtype), msize, (uint8_t*)&buff->base[offset + Message::kDataOffset]);
+            ByteBuffer bytes((uint8_t*)&buff->base[offset + Message::kDataOffset], msize);
+
+            Handle<Message> msg = Message::Decode(static_cast<Message::MessageType>(mtype), &bytes);
             LOG(INFO) << "decoded message: " << msg->ToString(); //TODO: handle decode failures
             messages.push_back(msg);
 

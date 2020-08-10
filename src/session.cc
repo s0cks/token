@@ -53,16 +53,17 @@ namespace Token{
         LOG(INFO) << "sending " << msg->ToString();
 
         uint32_t type = static_cast<uint32_t>(msg->GetMessageType());
-        uint64_t size = msg->GetMessageSize();
+        uint64_t size = 0; // msg->GetBufferSize();
         uint64_t total_size = Message::kHeaderSize + size;
 
         uint8_t* bytes = (uint8_t*)malloc(sizeof(uint8_t)*total_size);
         memcpy(&bytes[Message::kTypeOffset], &type, Message::kTypeLength);
         memcpy(&bytes[Message::kSizeOffset], &size, Message::kSizeLength);
-        if(!msg->Encode(&bytes[Message::kDataOffset], size)){
+        /*if(!msg->Encode(&bytes[Message::kDataOffset], size)){
             LOG(WARNING) << "couldn't encode message " << msg->ToString();
             return;
         }
+        */
 
         uv_buf_t buff = uv_buf_init((char*)bytes, total_size);
         uv_write_t* req = (uv_write_t*)malloc(sizeof(uv_write_t));
@@ -86,16 +87,16 @@ namespace Token{
             LOG(INFO) << "sending " << msg->ToString();
 
             uint32_t type = static_cast<uint32_t>(msg->GetMessageType());
-            uint64_t size = msg->GetMessageSize();
+            uint64_t size = 0; //msg->GetMessageSize();
             uint64_t total_size = Message::kHeaderSize + size;
 
             uint8_t* bytes = (uint8_t*)malloc(total_size);
             memcpy(&bytes[Message::kTypeOffset], &type, Message::kTypeLength);
             memcpy(&bytes[Message::kSizeOffset], &size, Message::kSizeLength);
-            if(!msg->Encode(&bytes[Message::kDataOffset], size)){
+            /*if(!msg->Encode(&bytes[Message::kDataOffset], size)){
                 LOG(WARNING) << "couldn't encode message #" << idx << ": " << msg;
                 continue;
-            }
+            }*/
 
             buffers[idx] = uv_buf_init((char*)bytes, total_size);
         }
@@ -111,7 +112,7 @@ namespace Token{
     void Session::SendInventory(std::vector<InventoryItem>& items){
         std::vector<Handle<Message>> data;
 
-        size_t n = InventoryMessage::kMaxAmountOfItemsPerMessage;
+        size_t n = 0; //InventoryMessage::kMaxAmountOfItemsPerMessage;
         size_t size = (items.size() - 1) / n + 1;
 
         for(size_t idx = 0; idx < size; idx++){

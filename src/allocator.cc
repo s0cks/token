@@ -1,5 +1,7 @@
+#include <cassert>
 #include <bitset>
 #include <algorithm>
+
 #include "allocator.h"
 #include "heap.h"
 #include "bitfield.h"

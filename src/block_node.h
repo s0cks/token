@@ -12,14 +12,6 @@ namespace Token{
 
         BlockNode(const BlockHeader& block);
         BlockNode(Block* block): BlockNode(block->GetHeader()){}
-    protected:
-        size_t GetBufferSize() const{
-            return 0;//TODO: implement
-        }
-
-        bool Encode(uint8_t* bytes) const{
-            return false;//TODO: implement
-        }
     public:
         ~BlockNode(){}
 
@@ -77,6 +69,8 @@ namespace Token{
             return block_.GetHeight() == 0;
         }
 
+        size_t GetBufferSize() const{ return 0; } //TODO: implement
+        bool Encode(ByteBuffer* bytes) const{ return false; } // TODO: implement
         std::string ToString() const;
 
         static BlockNode* NewInstance(const BlockHeader& block);

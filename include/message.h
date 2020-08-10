@@ -41,25 +41,28 @@ namespace Token{
 
         enum{
             kTypeOffset = 0,
-            kTypeLength = 1,
+            kTypeLength = 1,// should this be 2?
             kSizeOffset = kTypeLength,
             kSizeLength = 4,
             kDataOffset = (kTypeLength + kSizeLength),
             kHeaderSize = kDataOffset,
-            kByteBufferSize = 6144
         };
     protected:
         Message(){}
     public:
         virtual ~Message() = default;
-        virtual uintptr_t GetMessageSize() const = 0;
-        virtual const char* GetName() const = 0;
-        virtual bool Encode(uint8_t* bytes, uintptr_t size) const = 0;
-        virtual MessageType GetMessageType() const = 0;
+
+        virtual const char* GetName() const{
+            return "Unknown";
+        }
+
+        virtual MessageType GetMessageType() const{
+            return MessageType::kUnknownMessageType;
+        }
 
         std::string ToString() const{
             std::stringstream ss;
-            ss << GetName() << "Message(" << GetMessageSize() << " Bytes)";
+            ss << GetName() << "Message(" << GetBufferSize() << " Bytes)";
             return ss.str();
         }
 
@@ -68,31 +71,7 @@ namespace Token{
         FOR_EACH_MESSAGE_TYPE(DECLARE_TYPECHECK)
 #undef DECLARE_TYPECHECK
 
-        static Handle<Message> Decode(MessageType type, uintptr_t size, uint8_t* bytes);
-    };
-
-    class HashMessage : public Message{
-    protected:
-        uint256_t hash_;
-
-        HashMessage(const uint256_t& hash):
-            Message(),
-            hash_(hash){}
-
-        virtual bool Encode(uint8_t* bytes, uintptr_t size) const{
-            memcpy(bytes, hash_.data(), size);
-            return true;
-        }
-    public:
-        virtual ~HashMessage() = default;
-
-        uint256_t GetHash() const{
-            return hash_;
-        }
-
-        virtual uintptr_t GetMessageSize() const{
-            return 64; // bytes
-        }
+        static Handle<Message> Decode(MessageType type, ByteBuffer* bytes);
     };
 
 #define DECLARE_MESSAGE(Name) \
@@ -100,85 +79,55 @@ namespace Token{
         virtual MessageType GetMessageType() const{ return Message::k##Name##MessageType; } \
         virtual const char* GetName() const{ return #Name; }
 
-    template<typename T>
-    class ProtobufMessage : public Message{
-    protected:
-        T raw_;
-
-        T GetRaw() const{
-            return raw_;
-        }
-
-        ProtobufMessage():
-            Message(),
-            raw_(){}
-        ProtobufMessage(const T& raw):
-            Message(),
-            raw_(raw){}
-
-        size_t GetBufferSize() const{ return 0; }
-        bool Encode(uint8_t* bytes) const{ return false; }
-    public:
-        virtual ~ProtobufMessage() = default;
-
-        uintptr_t GetAllocationSize() const{
-            return Message::kHeaderSize + GetMessageSize();
-        }
-
-        uintptr_t GetMessageSize() const{
-            return GetRaw().ByteSizeLong();
-        }
-
-        bool Encode(uint8_t* bytes, uintptr_t size) const{
-            return GetRaw().SerializeToArray(bytes, size);
-        }
-    };
-
     //TODO:
     // - refactor this
     enum class ClientType{
+        kUnknown=0,
         kNode,
         kClient
     };
 
-    class VersionMessage : public ProtobufMessage<Proto::BlockChainServer::Version>{
-    public:
-        typedef Proto::BlockChainServer::Version RawType;
+    class VersionMessage : public Message{
     private:
-        VersionMessage(const RawType& raw): ProtobufMessage(raw){}
-        VersionMessage(ClientType type, const std::string node_id, uint32_t timestamp, const std::string& nonce, const BlockHeader& head): ProtobufMessage(){
-            raw_.set_node_id(node_id);
-            raw_.set_version(Token::GetVersion());
-            raw_.set_timestamp(timestamp);
-            raw_.set_nonce(nonce);
-            (*raw_.mutable_head()) << head;
-            raw_.set_type(static_cast<uint32_t>(type));
-        }
-    public:
-        ~VersionMessage(){}
+        uint64_t timestamp_;
+        ClientType client_type_; //TODO: refactor this field
+        std::string version_;
+        std::string nonce_;
+        std::string node_id_;
+        BlockHeader head_;
 
-        uint64_t GetTimestamp() const{
-            return raw_.timestamp();
+        VersionMessage(ClientType type, const std::string& version, const std::string& node_id, uint64_t timestamp, const std::string& nonce, const BlockHeader& head):
+            Message(),
+            client_type_(type),
+            version_(version),
+            nonce_(nonce),
+            node_id_(node_id),
+            head_(head){}
+    public:
+        ~VersionMessage() = default;
+
+        int64_t GetTimestamp() const{
+            return timestamp_;
         }
 
         BlockHeader GetHead() const{
-            return BlockHeader(raw_.head());
+            return head_;
         }
 
         std::string GetVersion() const{
-            return raw_.version();
+            return version_;
         }
 
         std::string GetNonce() const{
-            return raw_.nonce();
+            return nonce_;
         }
 
-        std::string GetNodeID() const{
-            return raw_.node_id();
+        std::string GetID() const{
+            return node_id_;
         }
 
         ClientType GetClientType() const{
-            return static_cast<ClientType>(raw_.type());
+            return client_type_;
         }
 
         bool IsNode() const{
@@ -189,38 +138,41 @@ namespace Token{
             return GetClientType() == ClientType::kClient;
         }
 
+        size_t GetBufferSize() const;
+        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(Version);
 
-        static Handle<VersionMessage> NewInstance(ClientType type, const std::string& node_id, const std::string& nonce=GenerateNonce(), const BlockHeader& head=BlockChain::GetHead(), uint32_t timestamp=GetCurrentTime()){
-            return new VersionMessage(type, node_id, timestamp, nonce, head);
+        static Handle<VersionMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<VersionMessage> NewInstance(ClientType type, const std::string& node_id, const std::string& version=Token::GetVersion(), const std::string& nonce=GenerateNonce(), const BlockHeader& head=BlockChain::GetHead(), uint64_t timestamp=GetCurrentTime()){
+            return new VersionMessage(type, version, node_id, timestamp, nonce, head);
         }
 
         static Handle<VersionMessage> NewInstance(const std::string& node_id){
-            return NewInstance(ClientType::kClient, node_id, GenerateNonce(), BlockHeader());
-        }
-
-        static Handle<VersionMessage> NewInstance(const RawType& raw){
-            return new VersionMessage(raw);
+            return NewInstance(ClientType::kClient, node_id, Token::GetVersion(), GenerateNonce(), BlockHeader());
         }
     };
 
-    class VerackMessage : public ProtobufMessage<Proto::BlockChainServer::Verack>{
-    public:
-        typedef Proto::BlockChainServer::Verack RawType;
+    class VerackMessage : public Message{
     private:
-        VerackMessage(const RawType& raw): ProtobufMessage(raw){}
-        VerackMessage(ClientType type, const std::string& node_id, const std::string& nonce, const NodeAddress& address, const BlockHeader& head, uint32_t timestamp): ProtobufMessage(){
-            raw_.set_node_id(node_id);
-            raw_.set_version(Token::GetVersion());
-            raw_.set_timestamp(timestamp);
-            raw_.set_nonce(nonce);
-            raw_.set_type(static_cast<uint32_t>(type));
-            (*raw_.mutable_address()) << address;
-            (*raw_.mutable_head()) << head;
-        }
+        uint64_t timestamp_;
+        std::string node_id_;
+        std::string version_;
+        std::string nonce_;
+        ClientType client_type_;
+        NodeAddress callback_;
+        BlockHeader head_;
+
+        VerackMessage(ClientType type, const std::string& node_id, const std::string& nonce, const NodeAddress& address, const BlockHeader& head, uint64_t timestamp):
+            Message(),
+            client_type_(type),
+            node_id_(node_id),
+            nonce_(nonce),
+            callback_(address),
+            head_(head),
+            timestamp_(timestamp){}
     public:
         ClientType GetClientType() const{
-            return static_cast<ClientType>(raw_.type());
+            return client_type_;
         }
 
         bool IsNode() const{
@@ -232,227 +184,216 @@ namespace Token{
         }
 
         std::string GetID() const{
-            return raw_.node_id();
+            return node_id_;
         }
 
         NodeAddress GetCallbackAddress() const{
-            return NodeAddress(raw_.address());
+            return callback_;
         }
 
         BlockHeader GetHead() const{
-            return BlockHeader(raw_.head());
+            return head_;
         }
 
+        size_t GetBufferSize() const;
+        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(Verack);
 
-        static Handle<VerackMessage> NewInstance(ClientType type, const std::string& node_id, const NodeAddress& address, const BlockHeader& head=BlockChain::GetHead(), const std::string& nonce=GenerateNonce(), uint32_t timestamp=GetCurrentTime()){
+        static Handle<VerackMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<VerackMessage> NewInstance(ClientType type, const std::string& node_id, const NodeAddress& address, const BlockHeader& head=BlockChain::GetHead(), const std::string& nonce=GenerateNonce(), uint64_t timestamp=GetCurrentTimestamp()){
             return new VerackMessage(type, node_id, nonce, address, head, timestamp);
         }
 
         static Handle<VerackMessage> NewInstance(const std::string& node_id){
             return NewInstance(ClientType::kClient, node_id, NodeAddress(), BlockHeader());
         }
-
-        static Handle<VerackMessage> NewInstance(const RawType& raw){
-            return new VerackMessage(raw);
-        }
     };
 
     class Proposal;
-    class PaxosMessage : public ProtobufMessage<Proto::BlockChainServer::Proposal>{
+    class PaxosMessage : public Message{
     protected:
-        PaxosMessage(const Proto::BlockChainServer::Proposal& raw): ProtobufMessage(raw){}
-        PaxosMessage(const std::string& node, Proposal* proposal);
+        std::string node_;
+        Proposal* proposal_;
+
+        PaxosMessage(const std::string& node, Proposal* proposal):
+            Message(),
+            node_(node),
+            proposal_(nullptr){
+            WriteBarrier(&proposal_, proposal);
+        }
+
+        template<typename T>
+        static Handle<T> NewInstance(ByteBuffer* bytes);
     public:
         virtual ~PaxosMessage() = default;
 
+        size_t GetBufferSize() const;
+        bool Encode(ByteBuffer* bytes) const;
         Handle<Proposal> GetProposal() const;
 
         //TODO:
         // - NodeInfo GetProposer()
         // - NodeInfo GetSubmitter()
         std::string GetProposer() const{
-            return raw_.node_id();
-        }
-
-        uint256_t GetHash() const{
-            return HashFromHexString(raw_.hash());
-        }
-
-        uint32_t GetHeight() const{
-            return raw_.height();
+            return node_;
         }
     };
 
     class PrepareMessage : public PaxosMessage{
-    public:
-        typedef Proto::BlockChainServer::Proposal RawType;
     private:
-        PrepareMessage(const RawType& raw): PaxosMessage(raw){}
         PrepareMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(node_id, proposal){}
     public:
         ~PrepareMessage(){}
 
         DECLARE_MESSAGE(Prepare);
 
-        static Handle<PrepareMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
-            return new PrepareMessage(node_id, proposal);
+        static Handle<PrepareMessage> NewInstance(ByteBuffer* bytes){
+            return PaxosMessage::NewInstance<PrepareMessage>(bytes);
         }
 
-        static Handle<PrepareMessage> NewInstance(const RawType& raw){
-            return new PrepareMessage(raw);
+        static Handle<PrepareMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
+            return new PrepareMessage(node_id, proposal);
         }
     };
 
     class PromiseMessage : public PaxosMessage{
-    public:
-        typedef Proto::BlockChainServer::Proposal RawType;
     private:
-        PromiseMessage(const RawType& raw): PaxosMessage(raw){}
         PromiseMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(node_id, proposal){}
     public:
         ~PromiseMessage(){}
 
         DECLARE_MESSAGE(Promise);
 
-        static Handle<PromiseMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
-            return new PromiseMessage(node_id, proposal);
+        static Handle<PromiseMessage> NewInstance(ByteBuffer* bytes){
+            return PaxosMessage::NewInstance<PromiseMessage>(bytes);
         }
 
-        static Handle<PromiseMessage> NewInstance(const RawType& raw){
-            return new PromiseMessage(raw);
+        static Handle<PromiseMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
+            return new PromiseMessage(node_id, proposal);
         }
     };
 
     class CommitMessage : public PaxosMessage{
-    public:
-        typedef Proto::BlockChainServer::Proposal RawType;
     private:
-        CommitMessage(const RawType& raw): PaxosMessage(raw){}
         CommitMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(node_id, proposal){}
     public:
         ~CommitMessage(){}
 
         DECLARE_MESSAGE(Commit);
 
-        static Handle<CommitMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
-            return new CommitMessage(node_id, proposal);
+        static Handle<CommitMessage> NewInstance(ByteBuffer* bytes){
+            return PaxosMessage::NewInstance<CommitMessage>(bytes);
         }
 
-        static Handle<CommitMessage> NewInstance(const RawType& raw){
-            return new CommitMessage(raw);
+        static Handle<CommitMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
+            return new CommitMessage(node_id, proposal);
         }
     };
 
     class AcceptedMessage : public PaxosMessage{
-    public:
-        typedef Proto::BlockChainServer::Proposal RawType;
     private:
-        AcceptedMessage(const RawType& raw): PaxosMessage(raw){}
         AcceptedMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(node_id, proposal){}
     public:
         ~AcceptedMessage(){}
 
         DECLARE_MESSAGE(Accepted);
 
-        static Handle<AcceptedMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
-            return new AcceptedMessage(node_id, proposal);
+        static Handle<AcceptedMessage> NewInstance(ByteBuffer* bytes){
+            return PaxosMessage::NewInstance<AcceptedMessage>(bytes);
         }
 
-        static Handle<AcceptedMessage> NewInstance(const RawType& raw){
-            return new AcceptedMessage(raw);
+        static Handle<AcceptedMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
+            return new AcceptedMessage(node_id, proposal);
         }
     };
 
     class RejectedMessage : public PaxosMessage{
-    public:
-        typedef Proto::BlockChainServer::Proposal RawType;
     private:
-        RejectedMessage(const RawType& raw): PaxosMessage(raw){}
         RejectedMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(node_id, proposal){}
     public:
         ~RejectedMessage(){}
 
         DECLARE_MESSAGE(Rejected);
 
+        static Handle<RejectedMessage> NewInstance(ByteBuffer* bytes){
+            return PaxosMessage::NewInstance<RejectedMessage>(bytes);
+        }
+
         static Handle<RejectedMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
             return new RejectedMessage(node_id, proposal);
         }
-
-        static Handle<RejectedMessage> NewInstance(const RawType& raw){
-            return new RejectedMessage(raw);
-        }
     };
 
-    class TransactionMessage : public ProtobufMessage<Proto::BlockChain::Transaction>{
-    public:
-        typedef Proto::BlockChain::Transaction RawType;
+    class TransactionMessage : public Message{
     private:
-        TransactionMessage(Transaction* tx): ProtobufMessage(){
+        Transaction* data_;
 
+        TransactionMessage(const Handle<Transaction>& tx):
+            Message(),
+            data_(nullptr){
+            WriteBarrier(&data_, tx);
         }
-
-        TransactionMessage(const RawType& raw): ProtobufMessage(raw){}
+    protected:
+        void Accept(WeakReferenceVisitor* vis){
+            vis->Visit(&data_);
+        }
     public:
         ~TransactionMessage(){}
 
-        Transaction* GetTransaction() const{
-            return nullptr;
+        Handle<Transaction> GetTransaction() const{
+            return data_;
         }
 
+        size_t GetBufferSize() const;
+        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(Transaction);
 
-        static Handle<TransactionMessage> NewInstance(Transaction* tx){
+        static Handle<TransactionMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<TransactionMessage> NewInstance(const Handle<Transaction>& tx){
             return new TransactionMessage(tx);
-        }
-
-        static Handle<TransactionMessage> NewInstance(const RawType& raw){
-            return new TransactionMessage(raw);
         }
     };
 
-    class BlockMessage : public ProtobufMessage<Proto::BlockChain::Block>{
-    public:
-        typedef Proto::BlockChain::Block RawType;
+    class BlockMessage : public Message{
     private:
-        BlockMessage(Block* blk): ProtobufMessage(){
-            /*
-             * TODO:
-            if(!blk->WriteToMessage(raw_)){
-                LOG(WARNING) << "couldn't encode block to message";
-            }
-            */
+        Block* data_;
+
+        BlockMessage(const Handle<Block>& blk):
+            Message(),
+            data_(nullptr){
+            WriteBarrier(&data_, blk);
         }
-        BlockMessage(const RawType& raw): ProtobufMessage(raw){}
+    protected:
+        void Accept(WeakReferenceVisitor* vis){
+            vis->Visit(&data_);
+        }
     public:
         ~BlockMessage(){}
 
-        Block* GetBlock() const{
-            return nullptr;
-            //TODO: return Block::NewInstance(raw_);
+        Handle<Block> GetBlock() const{
+            return data_;
         }
 
+        size_t GetBufferSize() const;
+        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(Block);
 
+        static Handle<BlockMessage> NewInstance(ByteBuffer* bytes);
         static Handle<BlockMessage> NewInstance(Block* blk){
             return new BlockMessage(blk);
-        }
-
-        static Handle<BlockMessage> NewInstance(const RawType& raw){
-            return new BlockMessage(raw);
         }
     };
 
     class InventoryItem{
     public:
-        typedef Proto::BlockChainServer::InventoryItem RawType;
-
         enum Type{
             kUnknown=0,
             kTransaction,
             kBlock,
             kUnclaimedTransaction
         };
+
+        static const size_t kBufferSize = sizeof(uint16_t) + uint256_t::kSize;
     private:
         Type type_;
         uint256_t hash_;
@@ -460,9 +401,6 @@ namespace Token{
         InventoryItem():
             type_(kUnknown),
             hash_(){}
-        InventoryItem(const RawType& raw):
-            type_(static_cast<Type>(raw.type())),
-            hash_(HashFromHexString(raw.hash())){}
         InventoryItem(Type type, const uint256_t& hash):
             type_(type),
             hash_(hash){}
@@ -519,12 +457,6 @@ namespace Token{
             return !operator==(a, b);
         }
 
-        friend RawType& operator<<(RawType& raw, const InventoryItem& item){
-            raw.set_type(item.type_);
-            raw.set_hash(HexString(item.hash_));
-            return raw;
-        }
-
         friend std::ostream& operator<<(std::ostream& stream, const InventoryItem& item){
             if(item.IsBlock()){
                 stream << "Block(" << item.GetHash() << ")";
@@ -537,41 +469,38 @@ namespace Token{
         }
     };
 
-    class InventoryMessage : public ProtobufMessage<Proto::BlockChainServer::Inventory>{
-    public:
-        typedef Proto::BlockChainServer::Inventory RawType;
-
+    class InventoryMessage : public Message{
         static const size_t kMaxAmountOfItemsPerMessage = 50;
     private:
-        InventoryMessage(const Proto::BlockChainServer::Inventory& raw): ProtobufMessage(raw){}
-        InventoryMessage(std::vector<InventoryItem>& items): ProtobufMessage(){
-            if(items.size() == 0){
-                LOG(INFO) << "no items!";
-                return;
-            }
-
-            for(auto& it : items){
-                InventoryItem::RawType* item = raw_.add_items();
-                (*item) << it;
-            }
+        std::vector<InventoryItem> items_;
+    protected:
+        InventoryMessage(const std::vector<InventoryItem>& items):
+            Message(),
+            items_(items){
+            if(items_.empty())
+                LOG(WARNING) << "inventory created w/ zero size";
         }
+
+        static void DecodeItems(ByteBuffer* bytes, std::vector<InventoryItem>& items, uint32_t num_items);
     public:
 
         ~InventoryMessage(){}
 
-        uint32_t GetNumberOfItems(){
-            return raw_.items_size();
+        size_t GetNumberOfItems() const{
+            return items_.size();
         }
 
         bool GetItems(std::vector<InventoryItem>& items){
-            for(auto& it : raw_.items()){
-                items.push_back(InventoryItem(it));
-            }
+            items.resize(items_.size());
+            items.insert(items.end(), items_.begin(), items_.end());
             return items.size() > 0;
         }
 
+        size_t GetBufferSize() const;
+        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(Inventory);
 
+        static Handle<InventoryMessage> NewInstance(ByteBuffer* bytes);
         static Handle<InventoryMessage> NewInstance(std::vector<InventoryItem>& items){
             return new InventoryMessage(items);
         }
@@ -589,105 +518,85 @@ namespace Token{
             };
             return NewInstance(items);
         }
-
-        static Handle<InventoryMessage> NewInstance(const RawType& raw){
-            return new InventoryMessage(raw);
-        }
     };
 
-    class GetDataMessage : public ProtobufMessage<Proto::BlockChainServer::Inventory>{
-    public:
-        typedef Proto::BlockChainServer::Inventory RawType;
+    class GetDataMessage : public InventoryMessage{
     private:
-        GetDataMessage(const Proto::BlockChainServer::Inventory& raw): ProtobufMessage(raw){}
-        GetDataMessage(std::vector<InventoryItem>& items): ProtobufMessage(){
-            for(auto& it : items){
-                InventoryItem::RawType* item = raw_.add_items();
-                (*item) << it;
-            }
-        }
+        GetDataMessage(const std::vector<InventoryItem>& items): InventoryMessage(items){}
     public:
         ~GetDataMessage(){}
 
-        bool GetItems(std::vector<InventoryItem>& items){
-            for(auto& it : raw_.items()){
-                items.push_back(InventoryItem(it));
-            }
-            return items.size() > 0;
-        }
-
         DECLARE_MESSAGE(GetData);
 
-        static Handle<GetDataMessage> NewInstance(std::vector<InventoryItem>& items){
-            return new GetDataMessage(items);
-        }
+        static Handle<GetDataMessage> NewInstance(ByteBuffer* bytes);
 
-        static Handle<GetDataMessage> NewInstance(const RawType& raw){
-            return new GetDataMessage(raw);
+        static Handle<GetDataMessage> NewInstance(std::vector<InventoryItem>& items){
+            return nullptr; //TODO: implement
         }
     };
 
-    class GetBlocksMessage : public ProtobufMessage<Proto::BlockChainServer::GetBlocks>{
+    class GetBlocksMessage : public Message{
     public:
-        static const uint32_t kMaxNumberOfBlocks;
-
-        typedef Proto::BlockChainServer::GetBlocks RawType;
+        static const size_t kMaxNumberOfBlocks;
     private:
-        GetBlocksMessage(const Proto::BlockChainServer::GetBlocks& raw): ProtobufMessage(raw){}
-        GetBlocksMessage(const uint256_t& start_hash, const uint256_t& stop_hash): ProtobufMessage(){
-            raw_.set_head_hash(HexString(start_hash));
-            raw_.set_stop_hash(HexString(stop_hash));
-        }
+        uint256_t start_;
+        uint256_t stop_;
+
+        GetBlocksMessage(const uint256_t& start_hash, const uint256_t& stop_hash):
+            Message(),
+            start_(start_hash),
+            stop_(stop_hash){}
     public:
         ~GetBlocksMessage(){}
 
         uint256_t GetHeadHash() const{
-            return HashFromHexString(raw_.head_hash());
+            return start_;
         }
 
         uint256_t GetStopHash() const{
-            return HashFromHexString(raw_.stop_hash());
+            return stop_;
         }
 
+        size_t GetBufferSize() const{
+            return uint256_t::kSize * 2;
+        }
+
+        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(GetBlocks);
 
+        static Handle<GetBlocksMessage> NewInstance(ByteBuffer* bytes);
         static Handle<GetBlocksMessage> NewInstance(const uint256_t& start_hash=BlockChain::GetHead().GetHash(), const uint256_t& stop_hash=uint256_t()){
             return new GetBlocksMessage(start_hash, stop_hash);
         }
-
-        static Handle<GetBlocksMessage> NewInstance(const RawType& raw){
-            return new GetBlocksMessage(raw);
-        }
     };
 
-    class NotFoundMessage : public ProtobufMessage<Proto::BlockChainServer::NotFound>{
-    public:
-        typedef Proto::BlockChainServer::NotFound RawType;
+    class NotFoundMessage : public Message{
     private:
-        NotFoundMessage(const RawType& raw): ProtobufMessage(raw){}
-        NotFoundMessage(const InventoryItem& item, const std::string& message): ProtobufMessage(){
-            raw_.set_message(message);
-            (*raw_.mutable_item()) << item;
-        }
+        InventoryItem item_;
+        std::string message_;
+
+        NotFoundMessage(const InventoryItem& item, const std::string& message):
+            Message(),
+            item_(item),
+            message_(message){}
     public:
         ~NotFoundMessage() = default;
 
         std::string GetMessage() const{
-            return raw_.message();
+            return message_;
         }
 
         InventoryItem GetItem() const{
-            return InventoryItem(raw_.item());
+            return item_;
         }
 
+        size_t GetBufferSize() const;
+        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(NotFound);
 
+        static Handle<NotFoundMessage> NewInstance(ByteBuffer* bytes);
         static Handle<NotFoundMessage> NewInstance(const InventoryItem& item, const std::string& message="Not Found"){
             return new NotFoundMessage(item, message);
-        }
-
-        static Handle<NotFoundMessage> NewInstance(const RawType& raw){
-            return new NotFoundMessage(raw);
         }
     };
 
@@ -699,9 +608,6 @@ namespace Token{
         GetUnclaimedTransactionsMessage(const std::string& user):
             Message(),
             user_(user){}
-
-        size_t GetBufferSize() const{ return 0; }
-        bool Encode(uint8_t* bytes) const{ return false; }
     public:
         ~GetUnclaimedTransactionsMessage() = default;
 
@@ -718,8 +624,11 @@ namespace Token{
             return true;
         }
 
+        size_t GetBufferSize() const;
+        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(GetUnclaimedTransactions);
 
+        static Handle<GetUnclaimedTransactionsMessage> NewInstance(ByteBuffer* bytes);
         static Handle<GetUnclaimedTransactionsMessage> NewInstance(const std::string& user){
             return new GetUnclaimedTransactionsMessage(user);
         }

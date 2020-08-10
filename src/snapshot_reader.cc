@@ -30,13 +30,6 @@ namespace Token{
         return fread(bytes, sizeof(uint8_t), size, GetFilePointer()) == size;
     }
 
-    bool SnapshotReader::ReadMessage(google::protobuf::Message& msg){
-        int32_t num_bytes = ReadInt();
-        uint8_t bytes[num_bytes];
-        if(!ReadBytes(bytes, num_bytes)) return false;
-        return msg.ParseFromArray(bytes, num_bytes);
-    }
-
     int32_t SnapshotReader::ReadInt(){
         uint8_t bytes[4];
         if(!ReadBytes(bytes, 4)){

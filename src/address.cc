@@ -56,10 +56,6 @@ namespace Token{
         address_(0),
         port_(0){}
 
-    NodeAddress::NodeAddress(const RawType& raw):
-        address_(raw.address()),
-        port_(raw.port()){}
-
     NodeAddress::NodeAddress(const std::string& address):
         address_(0),
         port_(0){

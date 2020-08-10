@@ -57,9 +57,6 @@ namespace Token{
             hash_(hash),
             accepted_(),
             rejected_(){}
-
-        size_t GetBufferSize() const{ return 0; }
-        bool Encode(uint8_t* bytes) const{ return false; }
     public:
         ~Proposal() = default;
 
@@ -75,6 +72,8 @@ namespace Token{
             return hash_;
         }
 
+        size_t GetBufferSize() const{ return 0; } //TODO: implement
+        bool Encode(ByteBuffer* bytes) const{ return false; } // TODO: implement
         void AcceptProposal(const std::string& node);
         void RejectProposal(const std::string& node);
         void WaitForPhase(Phase phase);

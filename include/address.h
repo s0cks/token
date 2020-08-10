@@ -5,14 +5,11 @@
 
 namespace Token{
     class NodeAddress{
-    public:
-        typedef Proto::BlockChainServer::NodeAddress RawType;
     private:
         uint32_t address_;
         uint32_t port_;
     public:
         NodeAddress();
-        NodeAddress(const RawType& raw);
         NodeAddress(const std::string& address);
         NodeAddress(const std::string& address, uint32_t port);
         NodeAddress(const uv_tcp_t* stream);
@@ -47,12 +44,6 @@ namespace Token{
 
         friend std::ostream& operator<<(std::ostream& stream, const NodeAddress& address){
             stream << address.ToString();
-            return stream;
-        }
-
-        friend RawType& operator<<(RawType& stream, const NodeAddress& address){
-            stream.set_address(address.address_);
-            stream.set_port(address.port_);
             return stream;
         }
     };

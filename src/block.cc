@@ -49,48 +49,31 @@ namespace Token{
         return NewInstance(0, uint256_t(), txs, 3, 0);
     }
 
-    Handle<Block> Block::NewInstance(uint32_t height, const uint256_t& phash, Transaction** txs, size_t num_txs, uint32_t timestamp){
-        return new Block(timestamp, height, phash, txs, num_txs);
+    Handle<Block> Block::NewInstance(std::fstream& fd, size_t size){
+        ByteBuffer bytes(size);
+        fd.read((char*)bytes.data(), size);
+        return NewInstance(&bytes);
     }
 
-    Handle<Block> Block::NewInstance(const BlockHeader& previous, Transaction** txs, size_t num_txs, uint32_t timestamp){
-        return new Block(timestamp, previous.GetHeight() + 1, previous.GetHash(), txs, num_txs);
-    }
-
-    Handle<Block> Block::NewInstance(std::fstream& fd, uint32_t size){
-        uint8_t bytes[size];
-        fd.read((char*)bytes, size);
-        return NewInstance(bytes);
-    }
-
-    Handle<Block> Block::NewInstance(uint8_t* bytes){
-        size_t offset = 0;
-        int32_t timestamp = DecodeInt(&bytes[offset]);
-        offset += 4;
-
-        int32_t height = DecodeInt(&bytes[offset]);
-        offset += 4;
-
-        uint256_t phash = DecodeHash(&bytes[offset]);
-        offset += uint256_t::kSize;
-
-        int32_t num_txs = DecodeInt(&bytes[offset]);
-        offset += 4;
-
+    Handle<Block> Block::NewInstance(ByteBuffer* bytes){
+        uint64_t timestamp = bytes->GetLong();
+        uint32_t height = bytes->GetInt();
+        uint256_t phash = bytes->GetHash();
+        uint32_t num_txs = bytes->GetInt();
         Transaction* txs[num_txs];
-        for(uint32_t idx = 0; idx < num_txs; idx++){
-            Transaction* tx = txs[idx] = Transaction::NewInstance(&bytes[offset]);
-            offset += tx->GetBufferSize();
-        }
+        for(uint32_t idx = 0; idx < num_txs; idx++)
+            txs[idx] = Transaction::NewInstance(bytes);
         return new Block(timestamp, height, phash, txs, num_txs);
     }
 
     size_t Block::GetBufferSize() const{
         size_t size = 0;
-        size += 4; // timestamp_
-        size += 4; // height_
+        size += sizeof(uint64_t); // timestamp_
+        size += sizeof(uint32_t); // height_
         size += uint256_t::kSize; // previous_hash_
-        size += (4 + GetTransactionsLength());
+        size += sizeof(uint32_t); // num_transactions_;
+        for(uint32_t idx = 0; idx < num_transactions_; idx++)
+            size += transactions_[idx]->GetBufferSize(); // transactions_[idx]
         return size;
     }
 
@@ -100,24 +83,13 @@ namespace Token{
         return stream.str();
     }
 
-    bool Block::Encode(uint8_t* bytes) const{
-        size_t offset = 0;
-        EncodeInt(&bytes[offset], timestamp_);
-        offset += 4;
-
-        EncodeInt(&bytes[offset], height_);
-        offset += 4;
-
-        EncodeHash(&bytes[offset], previous_hash_);
-        offset += uint256_t::kSize;
-
-        EncodeInt(&bytes[offset], num_transactions_);
-        offset += 4;
-        for(uint32_t idx = 0; idx < num_transactions_; idx++){
-            Transaction* tx = transactions_[idx];
-            if(!tx->Encode(&bytes[offset])) return false;
-            offset += tx->GetBufferSize();
-        }
+    bool Block::Encode(ByteBuffer* bytes) const{
+        bytes->PutLong(timestamp_);
+        bytes->PutInt(height_);
+        bytes->PutHash(previous_hash_);
+        bytes->PutInt(num_transactions_);
+        for(uint32_t idx = 0; idx < num_transactions_; idx++)
+            if(!transactions_[idx]->Encode(bytes)) return false;
         return true;
     }
 

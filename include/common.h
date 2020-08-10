@@ -24,9 +24,6 @@
 #include <cryptopp/pssr.h>
 #include <iomanip>
 
-#include "blockchain.pb.h"
-#include "node.pb.h"
-
 //TODO: cleanup
 namespace Token{
 #if defined(_M_X64) || defined(__x86_64__)
@@ -68,29 +65,31 @@ namespace Token{
         return system_clock::now();
     }
 
-    static int64_t
+    static uint64_t
     GetCurrentTimestamp(){
         return time(NULL);
     }
 
     static inline std::string
-    GetTimestampFormattedReadable(int64_t timestamp){
-        struct tm* timeinfo = gmtime(&timestamp);
+    GetTimestampFormattedReadable(uint64_t timestamp){
+        //TODO: fix usage of gmtime
+        struct tm* timeinfo = gmtime((time_t*)&timestamp);
         char buff[256];
         strftime(buff, sizeof(buff), "%m/%d/%Y %H:%M:%S", timeinfo);
         return std::string(buff);
     }
 
     static inline std::string
-    GetTimestampFormattedFileSafe(int64_t timestamp){
-        struct tm* timeinfo = gmtime(&timestamp);
+    GetTimestampFormattedFileSafe(uint64_t timestamp){
+        //TODO: fix usage of gmtime
+        struct tm* timeinfo = gmtime((time_t*)&timestamp);
         char buff[256];
         strftime(buff, sizeof(buff), "%Y%m%d-%H%M%S", timeinfo);
         return std::string(buff);
     }
 
     static uint32_t
-    GetCurrentTime(){
+    GetCurrentTime(){ //TODO: remove
         return time(NULL);
     }
 

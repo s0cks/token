@@ -74,7 +74,6 @@ namespace Token{
         void WriteUnsignedLong(uint64_t value);
         void WriteHash(const uint256_t& hash);
         void WriteString(const std::string& value);
-        void WriteMessage(google::protobuf::Message& msg);
         void WriteReference(const IndexReference& ref);
         void SetCurrentPosition(int64_t pos);
         void Flush();

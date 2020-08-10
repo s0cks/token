@@ -34,15 +34,14 @@ namespace Token{
         }
 
         UnclaimedTransaction* GetUnclaimedTransaction() const;
-        bool Encode(uint8_t* bytes) const;
         size_t GetBufferSize() const;
+        bool Encode(ByteBuffer* bytes) const;
         std::string ToString() const;
 
+        static Handle<Input> NewInstance(ByteBuffer* bytes);
         static Handle<Input> NewInstance(const uint256_t& hash, uint32_t index, const std::string& user){
             return new Input(hash, index, user);
         }
-
-        static Handle<Input> NewInstance(uint8_t* bytes);  //TODO: check size?
     };
 
     class Output : public Object{
@@ -65,15 +64,14 @@ namespace Token{
             return token_;
         }
 
-        bool Encode(uint8_t* bytes) const;
+        bool Encode(ByteBuffer* bytes) const;
         size_t GetBufferSize() const;
         std::string ToString() const;
 
+        static Handle<Output> NewInstance(ByteBuffer* bytes);
         static Handle<Output> NewInstance(const std::string& user, const std::string& token){
             return new Output(user, token);
         }
-
-        static Handle<Output> NewInstance(uint8_t* bytes);
     };
 
     class TransactionVisitor;
@@ -158,18 +156,21 @@ namespace Token{
         }
 
         bool Sign();
-        bool Encode(uint8_t* bytes) const;
+        bool Encode(ByteBuffer* bytes) const;
         bool Accept(TransactionVisitor* visitor);
         size_t GetBufferSize() const;
         std::string ToString() const;
 
-        static Handle<Transaction> NewInstance(uint32_t index, Input** inputs, size_t num_inputs, Output** outputs, size_t num_outputs, uint32_t timestamp=GetCurrentTime());
-        static Handle<Transaction> NewInstance(uint8_t* bytes);
-        static Handle<Transaction> NewInstance(std::fstream& fd);
+        static Handle<Transaction> NewInstance(ByteBuffer* bytes);
+        static Handle<Transaction> NewInstance(std::fstream& fd, size_t size);
+
+        static Handle<Transaction> NewInstance(uint32_t index, Input** inputs, size_t num_inputs, Output** outputs, size_t num_outputs, uint32_t timestamp=GetCurrentTime()){
+            return new Transaction(timestamp, index, inputs, num_inputs, outputs, num_outputs);
+        }
 
         static inline Handle<Transaction> NewInstance(const std::string& filename){
             std::fstream fd(filename, std::ios::in|std::ios::binary);
-            return NewInstance(fd);
+            return NewInstance(fd, GetFilesize(filename));
         }
     };
 

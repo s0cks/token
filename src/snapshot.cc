@@ -1,4 +1,5 @@
 #include "token.h"
+#include "bytes.h"
 #include "snapshot.h"
 #include "snapshot_reader.h"
 #include "snapshot_writer.h"
@@ -37,13 +38,12 @@ namespace Token{
         reader.SetCurrentPosition(ref.GetDataPosition());
 
         size_t size = ref.GetSize();
-        uint8_t bytes[size];
-        if(!reader.ReadBytes(bytes, size)){
+        ByteBuffer bytes(size);
+        if(!reader.ReadBytes(bytes.data(), size)){
             LOG(WARNING) << "couldn't read block data " << ref << " from snapshot file: " << GetFilename();
             return nullptr;
         }
-
-        return Block::NewInstance((uint8_t*)bytes); //TODO: fix sign-cast
+        return Block::NewInstance(&bytes);
     }
 
     bool SnapshotPrologueSection::Accept(SnapshotWriter* writer){
@@ -129,12 +129,12 @@ namespace Token{
         inline void
         WriteBlockData(const Handle<Block>& blk){
             size_t size = blk->GetBufferSize();
-            uint8_t bytes[size];
-            if(!blk->Encode(bytes)){
+            ByteBuffer bytes(size);
+            if(!blk->Encode(&bytes)){
                 LOG(WARNING) << "couldn't serialize block to byte array";
                 return;
             }
-            GetWriter()->WriteBytes(bytes, size);
+            GetWriter()->WriteBytes(bytes.data(), size);
         }
     public:
         BlockChainDataWriter(IndexTable& table, SnapshotWriter* writer):

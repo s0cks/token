@@ -159,6 +159,8 @@ namespace Token{
     public:
         ~SynchronizeBlockChainTask() = default;
 
+        size_t GetBufferSize() const{ return 0; } //TODO: implement
+        bool Encode(ByteBuffer* bytes) const{ return false; } // TODO: implement
         DEFINE_ASYNC_TASK(SynchronizeBlockChain);
 
         InventoryItem GetHead() const{

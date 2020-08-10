@@ -85,18 +85,6 @@ namespace Token{
         WriteBytes((uint8_t*)value.data(), value.length());
     }
 
-    void SnapshotWriter::WriteMessage(google::protobuf::Message& msg){
-        int32_t size = msg.ByteSizeLong();
-        WriteInt(size);
-
-        uint8_t data[size];
-        if(!msg.SerializeToArray(data, size)){
-            LOG(WARNING) << "couldn't serialize message to snapshot file: " << GetFilename();
-            return;
-        }
-        WriteBytes(data, size);
-    }
-
     void SnapshotWriter::WriteReference(const IndexReference& ref){
         WriteHash(ref.GetHash());
         WriteInt(ref.GetSize());

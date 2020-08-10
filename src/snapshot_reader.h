@@ -36,7 +36,6 @@ namespace Token{
         }
 
         Snapshot* ReadSnapshot();
-        bool ReadMessage(google::protobuf::Message& msg);
         bool ReadBytes(uint8_t* bytes, size_t size);
         std::string ReadString();
         uint256_t ReadHash();

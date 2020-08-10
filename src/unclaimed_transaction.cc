@@ -7,18 +7,10 @@ namespace Token{
 //######################################################################################################################
 //                                          Unclaimed Transaction
 //######################################################################################################################
-    Handle<UnclaimedTransaction> UnclaimedTransaction::NewInstance(uint8_t* bytes){
-        size_t offset = 0;
-        uint256_t hash = DecodeHash(&bytes[offset]);
-        offset += uint256_t::kSize;
-
-        uint32_t index = DecodeInt(&bytes[offset]);
-        offset += 4;
-
-        uint32_t user_length = DecodeInt(&bytes[offset]);
-        offset += 4;
-
-        std::string user = DecodeString(&bytes[offset], user_length);
+    Handle<UnclaimedTransaction> UnclaimedTransaction::NewInstance(ByteBuffer* bytes){
+        uint256_t hash = bytes->GetHash();
+        uint32_t index = bytes->GetInt();
+        std::string user = bytes->GetString();
         return new UnclaimedTransaction(hash, index, user);
     }
 
@@ -41,15 +33,10 @@ namespace Token{
         return size;
     }
 
-    bool UnclaimedTransaction::Encode(uint8_t* bytes) const{
-        size_t offset = 0;
-        EncodeHash(&bytes[offset], hash_);
-        offset += uint256_t::kSize;
-
-        EncodeInt(&bytes[offset], index_);
-        offset += 4;
-
-        EncodeString(&bytes[offset], user_);
+    bool UnclaimedTransaction::Encode(ByteBuffer* bytes) const{
+        bytes->PutHash(hash_);
+        bytes->PutInt(index_);
+        bytes->PutString(user_);
         return true;
     }
 }

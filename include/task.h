@@ -56,6 +56,9 @@ namespace Token{
             return message_;
         }
 
+        size_t GetBufferSize() const{ return 0; } //TODO: implement
+        bool Encode(ByteBuffer* bytes) const{ return false; } // TODO: implement
+
         static Handle<HandleMessageTask> NewInstance(Session* session, const Handle<Message>& msg){
             return new HandleMessageTask(session, msg);
         }
