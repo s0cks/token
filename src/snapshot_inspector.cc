@@ -32,6 +32,8 @@ namespace Token{
         LOG(INFO) << "Created: " << GetTimestampFormattedReadable(snapshot->prologue_.GetTimestamp());
         LOG(INFO) << "Version: " << snapshot->prologue_.GetVersion();
         LOG(INFO) << "Size: " << GetFilesize(snapshot->GetFilename()) << " Bytes";
+        LOG(INFO) << "Number of Blocks: " << snapshot->blocks_.GetNumberOfReferences();
+        LOG(INFO) << "Number of Unclaimed Transactions: " << snapshot->utxos_.GetNumberOfReferences();
     }
 
     void SnapshotInspector::SetSnapshot(Snapshot* snapshot){

@@ -91,8 +91,8 @@ namespace Token{
         friend class BlockChain;
         friend class BlockMessage;
     public:
-        static const uint32_t kNumberOfGenesisOutputs = 32;
         static const size_t kMaxTransactionsForBlock = 40000;
+        static const uint32_t kNumberOfGenesisOutputs = kMaxTransactionsForBlock;
     private:
         uint32_t timestamp_;
         uint32_t height_;

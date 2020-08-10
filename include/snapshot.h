@@ -125,6 +125,10 @@ namespace Token{
 
         IndexReference* GetReference(const uint256_t& hash);
 
+        size_t GetNumberOfReferences() const{
+            return index_.size();
+        }
+
         bool Accept(SnapshotWriter* writer){
             WriteIndexTable(writer);
             WriteData(writer);

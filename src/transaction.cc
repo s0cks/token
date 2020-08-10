@@ -12,11 +12,8 @@ namespace Token{
 //######################################################################################################################
     Handle<Input> Input::NewInstance(ByteBuffer* bytes){
         uint256_t hash = bytes->GetHash();
-        LOG(INFO) << "hash: " << hash;
         uint32_t index = bytes->GetInt();
-        LOG(INFO) << "index: " << index;
         std::string user = bytes->GetString();
-        LOG(INFO) << "user: " << user;
         return new Input(hash, index, user);
     }
 

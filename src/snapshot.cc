@@ -176,9 +176,9 @@ namespace Token{
     }
 
     bool IndexedSection::ReadIndexTable(Token::SnapshotReader* reader){
-        int64_t num_references = reader->ReadLong();
-        LOG(INFO) << "reading " << num_references << " references from unclaimed transaction pool section";
-        for(int64_t idx = 0; idx < num_references; idx++){
+        uint64_t num_references = reader->ReadLong();
+        LOG(INFO) << "reading " << num_references << " references from index table...";
+        for(uint64_t idx = 0; idx < num_references; idx++){
             IndexReference ref = reader->ReadReference();
             if(!index_.insert({ ref.GetHash(), ref }).second){
                 LOG(WARNING) << "couldn't register new reference: " << ref;
@@ -318,6 +318,8 @@ namespace Token{
             ref->SetDataPosition(GetWriter()->GetCurrentPosition());
             ref->SetSize(size);
 
+            LOG(INFO) << "encoding " << utxo << " to: " << (*ref);
+
             ByteBuffer bytes(size);
             if(!utxo->Encode(&bytes)){
                 LOG(WARNING) << "cannot serialize unclaimed transaction " << hash << " to snapshot";
@@ -349,11 +351,13 @@ namespace Token{
             GetWriter()->SetCurrentPosition(index_pos);
             GetWriter()->WriteReference((*ref));
             GetWriter()->SetCurrentPosition(current_pos);
+            LOG(INFO) << "linking reference: " << (*ref);
             return true;
         }
     };
 
     bool SnapshotUnclaimedTransactionPoolSection::WriteIndexTable(SnapshotWriter* writer){
+        LOG(INFO) << "writing " << UnclaimedTransactionPool::GetNumberOfUnclaimedTransactions() << " unclaimed transactions to snapshot: " << writer->GetFilename();
         writer->WriteLong(UnclaimedTransactionPool::GetNumberOfUnclaimedTransactions());
         LOG(INFO) << "writing unclaimed transaction pool index table to snapshot...";
         UnclaimedTransactionPoolIndexTableWriter tbl_writer(writer, index_);
