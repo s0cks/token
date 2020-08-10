@@ -15,6 +15,7 @@ namespace Token{
     class Object : public RawObject{
         //TODO:
         // - track references using Reference class?
+        // - create ObjectFile + ObjectBuffer classes for serialization purposes?
     protected:
         Object(): RawObject(){}
 

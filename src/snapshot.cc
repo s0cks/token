@@ -53,14 +53,8 @@ namespace Token{
     }
 
     bool SnapshotPrologueSection::Accept(SnapshotReader* reader){
-        int64_t timestamp = reader->ReadLong();
-        LOG(INFO) << "read timestamp: " << timestamp;
-
-        std::string version = reader->ReadString();
-        LOG(INFO) << "read version: " << version;
-
-        timestamp_ = timestamp;
-        version_ = version;
+        timestamp_ = reader->ReadLong();
+        version_ = reader->ReadString();
         return true;
     }
 

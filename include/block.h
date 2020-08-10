@@ -160,8 +160,6 @@ namespace Token{
                 size += transactions_[idx]->GetBufferSize();
             return size;
         }
-
-        bool EncodeTransactions(uint8_t* bytes) const;
     protected:
         virtual void Accept(WeakReferenceVisitor* vis){
             for(size_t idx = 0; idx < num_transactions_; idx++){
