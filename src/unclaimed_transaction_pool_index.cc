@@ -78,12 +78,10 @@ namespace Token{
         }
 
         std::fstream fd(filename, std::ios::out|std::ios::binary);
-        /*TODO:
         if(!tx->WriteToFile(fd)){
             LOG(WARNING) << "couldn't write unclaimed transaction " << tx->GetHash() << " to file: " << filename;
             return false;
         }
-        */
 
         if(!GetIndex()->Put(options, key, filename).ok()){
             LOG(WARNING) << "couldn't index unclaimed transaction: " << tx->GetHash();

@@ -37,7 +37,7 @@ namespace Token{
         std::string ToString() const;
 
         static Handle<UnclaimedTransaction> NewInstance(ByteBuffer* bytes);
-        static Handle<UnclaimedTransaction> NewInstance(std::fstream& fd);
+        static Handle<UnclaimedTransaction> NewInstance(std::fstream& fd, size_t size);
 
         static Handle<UnclaimedTransaction> NewInstance(const uint256_t &hash, uint32_t index, const std::string& user){
             return new UnclaimedTransaction(hash, index, user);
@@ -45,7 +45,7 @@ namespace Token{
 
         static inline Handle<UnclaimedTransaction> NewInstance(const std::string& filename){
             std::fstream fd(filename, std::ios::in|std::ios::binary);
-            return NewInstance(fd);
+            return NewInstance(fd, GetFilesize(filename));
         }
     };
 }

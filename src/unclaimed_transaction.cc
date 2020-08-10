@@ -14,9 +14,10 @@ namespace Token{
         return new UnclaimedTransaction(hash, index, user);
     }
 
-    Handle<UnclaimedTransaction> UnclaimedTransaction::NewInstance(std::fstream& fd){
-        //TODO: implement
-        return nullptr;
+    Handle<UnclaimedTransaction> UnclaimedTransaction::NewInstance(std::fstream& fd, size_t size){
+        ByteBuffer bytes(size);
+        fd.read((char*)bytes.data(), size);
+        return NewInstance(&bytes);
     }
 
     std::string UnclaimedTransaction::ToString() const{

@@ -22,6 +22,11 @@ namespace Token{
         }
     }
 
+    static inline void
+    PrintUnclaimedTransaction(const Handle<UnclaimedTransaction>& utxo){
+        LOG(INFO) << "  - " << utxo;
+    }
+
     void SnapshotInspector::PrintSnapshot(Snapshot* snapshot){
         LOG(INFO) << "Snapshot: " << snapshot->GetFilename();
         LOG(INFO) << "Created: " << GetTimestampFormattedReadable(snapshot->prologue_.GetTimestamp());
@@ -30,10 +35,7 @@ namespace Token{
     }
 
     void SnapshotInspector::SetSnapshot(Snapshot* snapshot){
-        if(HasSnapshot()){
-            delete snapshot_;
-        }
-
+        if(HasSnapshot()) delete snapshot_;
         snapshot_ = snapshot;
     }
 
@@ -105,6 +107,37 @@ namespace Token{
     void SnapshotInspector::HandleGetDataCommand(Token::SnapshotInspectorCommand* cmd){
         uint256_t hash = cmd->GetNextArgumentHash();
         PrintBlock(GetBlock(hash));
+    }
+
+    class SnapshotUnclaimedTransactionPrinter : public SnapshotUnclaimedTransactionDataVisitor{
+    private:
+        std::string user_;
+    public:
+        SnapshotUnclaimedTransactionPrinter(const std::string& user):
+            SnapshotUnclaimedTransactionDataVisitor(),
+            user_(user){}
+        SnapshotUnclaimedTransactionPrinter():
+            SnapshotUnclaimedTransactionDataVisitor(),
+            user_(){}
+        ~SnapshotUnclaimedTransactionPrinter() = default;
+
+        bool Visit(const Handle<UnclaimedTransaction>& utxo){
+            PrintUnclaimedTransaction(utxo);
+            return true;
+        }
+    };
+
+    void SnapshotInspector::HandleGetUnclaimedTransactionsCommand(Token::SnapshotInspectorCommand* cmd){
+        if(cmd->HasNextArgument()){
+            std::string user = cmd->GetNextArgument();
+            LOG(INFO) << "Unclaimed Transactions (" << user << "):";
+            SnapshotUnclaimedTransactionPrinter printer(user);
+            snapshot_->Accept(&printer);
+        } else{
+            LOG(INFO) << "Unclaimed Transactions: ";
+            SnapshotUnclaimedTransactionPrinter printer;
+            snapshot_->Accept(&printer);
+        }
     }
 
     class SnapshotBlockPrinter : public SnapshotBlockDataVisitor{

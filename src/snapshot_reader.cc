@@ -111,6 +111,7 @@ namespace Token{
         snapshot->filename_ = GetFilename();
         snapshot->prologue_.Accept(this);
         snapshot->blocks_.Accept(this);
+        snapshot->utxos_.Accept(this);
         return snapshot;
     }
 }

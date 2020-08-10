@@ -21,6 +21,7 @@ namespace Token{
     public:
         ~UnclaimedTransactionPool() = delete;
 
+        static size_t GetNumberOfUnclaimedTransactions();
         static State GetState();
         static void Initialize();
         static void RemoveUnclaimedTransaction(const uint256_t& hash);

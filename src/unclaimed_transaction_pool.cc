@@ -142,6 +142,24 @@ namespace Token{
         return nullptr;
     }
 
+    size_t UnclaimedTransactionPool::GetNumberOfUnclaimedTransactions(){
+        size_t size = 0;
+
+        LOCK_GUARD;
+        DIR* dir;
+        struct dirent* ent;
+        if((dir = opendir(GetDataDirectory().c_str())) != NULL){
+            while((ent = readdir(dir)) != NULL){
+                std::string name(ent->d_name);
+                std::string filename = (GetDataDirectory() + "/" + name);
+                if(!EndsWith(filename, ".dat")) continue;
+                size++;
+            }
+            closedir(dir);
+        }
+        return size;
+    }
+
 #ifdef TOKEN_DEBUG
     class UnclaimedTransactionPoolPrinter : public UnclaimedTransactionPoolVisitor{
     public:

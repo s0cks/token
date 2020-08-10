@@ -8,7 +8,8 @@ namespace Token{
 #define FOR_EACH_INSPECTOR_COMMAND(V) \
     V(Status, ".status", 0) \
     V(GetData, "getdata", 1) \
-    V(GetBlocks, "getblocks", 0)
+    V(GetBlocks, "getblocks", 0) \
+    V(GetUnclaimedTransactions, "getutxos", 0) \
 
     class SnapshotInspectorCommand;
     class SnapshotInspector{
@@ -109,6 +110,10 @@ namespace Token{
         bool Is##Name##Command() const{ return GetType() == SnapshotInspectorCommand::Type::k##Name##Type; }
         FOR_EACH_INSPECTOR_COMMAND(DECLARE_CHECK);
 #undef DECLARE_CHECK
+
+        bool HasNextArgument() const{
+            return !args_.empty();
+        }
 
         std::string GetNextArgument(){
             std::string arg = args_.front();

@@ -41,8 +41,9 @@ namespace Token{
 
     bool SnapshotWriter::WriteSnapshot(){
         Snapshot* snapshot = GetSnapshot();
-        snapshot->GetPrologueSection().Accept(this); //TODO: check result
-        snapshot->GetBlockChainSection().Accept(this); //TODO: check result
+        snapshot->prologue_.Accept(this);//TODO: check result
+        snapshot->blocks_.Accept(this); //TODO: check result
+        snapshot->utxos_.Accept(this); //TODO: check result
         return true;
     }
 

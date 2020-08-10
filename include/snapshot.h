@@ -108,30 +108,73 @@ namespace Token{
 
     typedef std::map<uint256_t, IndexReference> IndexTable;
 
-    class SnapshotBlockChainSection : public SnapshotSection{
-        friend class Snapshot;
-    private:
+    class IndexedSection : public SnapshotSection{
+    protected:
         IndexTable index_;
 
-        bool WriteBlockIndexTable(SnapshotWriter* writer);
-        bool WriteBlockData(SnapshotWriter* writer);
-        bool UpdateBlockIndexTable(SnapshotWriter* writer);
-        bool ReadBlockIndexTable(SnapshotReader* reader);
+        IndexedSection():
+            SnapshotSection(),
+            index_(){}
+
+        virtual bool LinkIndexTable(SnapshotWriter* writer) = 0;
+        virtual bool WriteIndexTable(SnapshotWriter* writer) = 0;
+        virtual bool WriteData(SnapshotWriter* writer) = 0;
+        bool ReadIndexTable(SnapshotReader* reader);
     public:
-        SnapshotBlockChainSection():
-            SnapshotSection(){}
-        ~SnapshotBlockChainSection() = default;
+        virtual ~IndexedSection() = default;
 
         IndexReference* GetReference(const uint256_t& hash);
-        bool Accept(SnapshotWriter* writer);
-        bool Accept(SnapshotReader* reader);
 
-        void operator=(const SnapshotBlockChainSection& chain){
-            index_ = chain.index_;
+        bool Accept(SnapshotWriter* writer){
+            WriteIndexTable(writer);
+            WriteData(writer);
+            LinkIndexTable(writer);
+            return true;
+        }
+
+        bool Accept(SnapshotReader* reader){
+            ReadIndexTable(reader); //TODO: check state
+            return true;
+        }
+
+        void operator=(const IndexedSection& section){
+            index_ = section.index_;
+        }
+    };
+
+    class SnapshotBlockChainSection : public IndexedSection{
+        friend class Snapshot;
+    protected:
+        bool WriteIndexTable(SnapshotWriter* writer);
+        bool WriteData(SnapshotWriter* writer);
+        bool LinkIndexTable(SnapshotWriter* writer);
+    public:
+        SnapshotBlockChainSection(): IndexedSection(){}
+        ~SnapshotBlockChainSection() = default;
+
+        void operator=(const SnapshotBlockChainSection& section){
+            IndexedSection::operator=(section);
+        }
+    };
+
+    class SnapshotUnclaimedTransactionPoolSection : public IndexedSection{
+        friend class Snapshot;
+    protected:
+        bool WriteIndexTable(SnapshotWriter* writer);
+        bool WriteData(SnapshotWriter* writer);
+        bool LinkIndexTable(SnapshotWriter* writer);
+    public:
+        SnapshotUnclaimedTransactionPoolSection():
+            IndexedSection(){}
+        ~SnapshotUnclaimedTransactionPoolSection() = default;
+
+        void operator=(const SnapshotUnclaimedTransactionPoolSection& section){
+            IndexedSection::operator=(section);
         }
     };
 
     class SnapshotBlockDataVisitor;
+    class SnapshotUnclaimedTransactionDataVisitor;
     class Snapshot{
         friend class SnapshotWriter;
         friend class SnapshotReader;
@@ -140,20 +183,29 @@ namespace Token{
         std::string filename_;
         SnapshotPrologueSection prologue_;
         SnapshotBlockChainSection blocks_;
+        SnapshotUnclaimedTransactionPoolSection utxos_;
 
         IndexReference* GetReference(const uint256_t& hash);
         Handle<Block> GetBlock(const IndexReference& ref);
+        Handle<UnclaimedTransaction> GetUnclaimedTransaction(const IndexReference& ref);
 
         Handle<Block> GetBlock(const uint256_t& hash){
             IndexReference* ref = GetReference(hash);
             if(!ref) return nullptr;
             return GetBlock((*ref));
         }
+
+        Handle<UnclaimedTransaction> GetUnclaimedTransaction(const uint256_t& hash){
+            IndexReference* ref = GetReference(hash);
+            if(!ref) return nullptr;
+            return GetUnclaimedTransaction((*ref));
+        }
     public:
         Snapshot():
             filename_(),
             prologue_(),
-            blocks_(){}
+            blocks_(),
+            utxos_(){}
         ~Snapshot() = default;
 
         std::string GetFilename() const{
@@ -168,7 +220,12 @@ namespace Token{
             return blocks_;
         }
 
+        SnapshotUnclaimedTransactionPoolSection GetUnclaimedTransactionPoolSection() const{
+            return utxos_;
+        }
+
         bool Accept(SnapshotBlockDataVisitor* vis);
+        bool Accept(SnapshotUnclaimedTransactionDataVisitor* vis);
 
         static bool WriteSnapshot(Snapshot* snapshot);
         static bool WriteNewSnapshot();
@@ -181,6 +238,14 @@ namespace Token{
     public:
         virtual ~SnapshotBlockDataVisitor() = default;
         virtual bool Visit(const Handle<Block>& blk) = 0;
+    };
+
+    class SnapshotUnclaimedTransactionDataVisitor{
+    protected:
+        SnapshotUnclaimedTransactionDataVisitor() = default;
+    public:
+        virtual ~SnapshotUnclaimedTransactionDataVisitor() = default;
+        virtual bool Visit(const Handle<UnclaimedTransaction>& utxo) = 0;
     };
 }
 
