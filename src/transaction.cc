@@ -1,7 +1,6 @@
 #include "transaction.h"
 #include "keychain.h"
 #include "block_chain.h"
-#include "crash_report.h"
 #include "server.h"
 #include "unclaimed_transaction_pool.h"
 
@@ -11,43 +10,36 @@ namespace Token{
 //######################################################################################################################
 //                                          Input
 //######################################################################################################################
-    Handle<Input> Input::NewInstance(uint8_t* bytes){
-        size_t offset = 0;
-        uint256_t hash = DecodeHash(&bytes[offset]);
-        offset += uint256_t::kSize;
+    Handle<Input> Input::NewInstance(ByteBuffer* bytes){
+        uint256_t hash = bytes->GetHash();
+        LOG(INFO) << "hash: " << hash;
+        uint32_t index = bytes->GetInt();
+        LOG(INFO) << "index: " << index;
+        std::string user = bytes->GetString();
+        LOG(INFO) << "user: " << user;
+        return new Input(hash, index, user);
+    }
 
-        uint32_t index = DecodeInt(&bytes[offset]);
-        offset += 4;
+    size_t Input::GetBufferSize() const{
+        size_t size = 0;
+        size += uint256_t::kSize; // hash_
+        size += sizeof(uint32_t); // index_
+        size += sizeof(uint32_t); // length(user_)
+        size += user_.length();
+        return size;
+    }
 
-        uint32_t user_length = DecodeInt(&bytes[offset]);
-        offset += 4;
-
-        std::string user = DecodeString(&bytes[offset], user_length);
-        return NewInstance(hash, index, user);
+    bool Input::Encode(ByteBuffer* bytes) const{
+        bytes->PutHash(hash_);
+        bytes->PutInt(index_);
+        bytes->PutString(user_);
+        return true;
     }
 
     std::string Input::ToString() const{
         std::stringstream stream;
         stream << "Input(" << GetTransactionHash() << "[" << GetOutputIndex() << "]" << ", " << GetUser() << ")";
         return stream.str();
-    }
-
-    size_t Input::GetBufferSize() const{
-        size_t size = 0;
-        size += uint256_t::kSize;
-        size += 4;
-        size += 4 + user_.length();
-        return size;
-    }
-
-    bool Input::Encode(uint8_t* bytes) const{
-        size_t offset = 0;
-        EncodeHash(&bytes[offset], hash_);
-        offset += uint256_t::kSize;
-        EncodeInt(&bytes[offset], index_);
-        offset += 4;
-        EncodeString(&bytes[offset], user_);
-        return true;
     }
 
     UnclaimedTransaction* Input::GetUnclaimedTransaction() const{
@@ -57,81 +49,83 @@ namespace Token{
 //######################################################################################################################
 //                                          Output
 //######################################################################################################################
+    Handle<Output> Output::NewInstance(ByteBuffer* bytes){
+        std::string user = bytes->GetString();
+        std::string token = bytes->GetString();
+        return new Output(user, token);
+    }
+
+    size_t Output::GetBufferSize() const{
+        size_t size = 0;
+        size += sizeof(uint32_t); // length(user_)
+        size += user_.length();
+        size += sizeof(uint32_t); // length(token_)
+        size += token_.length();
+        return size;
+    }
+
+    bool Output::Encode(ByteBuffer* bytes) const{
+        bytes->PutString(user_);
+        bytes->PutString(token_);
+        return true;
+    }
+
     std::string Output::ToString() const{
         std::stringstream stream;
         stream << "Output(" << GetUser() << "; " << GetToken() << ")";
         return stream.str();
     }
-
-    size_t Output::GetBufferSize() const{
-        size_t size = 0;
-        size += 4 + user_.length();
-        size += 4 + token_.length();
-        return size;
-    }
-
-    bool Output::Encode(uint8_t* bytes) const{
-        size_t offset = 0;
-        EncodeString(&bytes[offset], user_);
-        offset += (4 + user_.length());
-
-        EncodeString(&bytes[offset], token_);
-        offset += (4 + token_.length());
-        return true;
-    }
-
-    Handle<Output> Output::NewInstance(uint8_t* bytes){
-        size_t offset = 0;
-
-        uint32_t user_length = DecodeInt(&bytes[offset]);
-        offset += 4;
-        std::string user = DecodeString(&bytes[offset], user_length);
-        offset += user.length();
-
-        uint32_t token_length = DecodeInt(&bytes[offset]);
-        offset += 4;
-        std::string token = DecodeString(&bytes[offset], token_length);
-        return new Output(user, token);
-    }
 //######################################################################################################################
 //                                          Transaction
 //######################################################################################################################
-    Handle<Transaction> Transaction::NewInstance(uint32_t index, Input** inputs, size_t num_inputs, Output** outputs, size_t num_outputs, uint32_t timestamp){
-        return new Transaction(timestamp, index, inputs, num_inputs, outputs, num_outputs);
-    }
-
-    Handle<Transaction> Transaction::NewInstance(uint8_t* bytes){
-        size_t offset = 0;
-
-        uint32_t timestamp = DecodeInt(&bytes[offset]);
-        offset += 4;
-
-        uint32_t index = DecodeInt(&bytes[offset]);
-        offset += 4;
-
-        uint32_t num_inputs = DecodeInt(&bytes[offset]);
-        offset += 4;
-
+    Handle<Transaction> Transaction::NewInstance(ByteBuffer* bytes){
+        uint64_t timestamp = bytes->GetLong();
+        uint32_t index = bytes->GetInt();
+        uint32_t num_inputs = bytes->GetInt();
         Input* inputs[num_inputs];
-        for(uint32_t idx = 0; idx < num_inputs; idx++){
-            Handle<Input> input = inputs[idx] = Input::NewInstance(&bytes[offset]);
-            offset += input->GetBufferSize();
-        }
-
-        uint32_t num_outputs = DecodeInt(&bytes[offset]);
-        offset += 4;
-
+        for(uint32_t idx = 0; idx < num_inputs; idx++)
+            inputs[idx] = Input::NewInstance(bytes);
+        uint32_t num_outputs = bytes->GetInt();
         Output* outputs[num_outputs];
-        for(uint32_t idx = 0; idx < num_outputs; idx++){
-            Handle<Output> output = outputs[idx] = Output::NewInstance(&bytes[offset]);
-            offset += output->GetBufferSize();
-        }
+        for(uint32_t idx = 0; idx < num_outputs; idx++)
+            outputs[idx] = Output::NewInstance(bytes);
         return new Transaction(timestamp, index, inputs, num_inputs, outputs, num_outputs);
     }
 
-    Handle<Transaction> Transaction::NewInstance(std::fstream& fd){
-        //TODO: implement
-        return nullptr;
+    Handle<Transaction> Transaction::NewInstance(std::fstream& fd, size_t size){
+        ByteBuffer bytes(size);
+        fd.read((char*)bytes.data(), size);
+        return NewInstance(&bytes);
+    }
+
+    size_t Transaction::GetBufferSize() const{
+        size_t size = 0;
+        size += sizeof(uint64_t); // timestamp_
+        size += sizeof(uint32_t); // index_
+        size += sizeof(uint32_t); // num_inputs_
+        for(uint32_t idx = 0; idx < GetNumberOfInputs(); idx++)
+            size += inputs_[idx]->GetBufferSize(); // inputs_[idx]
+        size += sizeof(uint32_t); // num_outputs_
+        for(uint32_t idx = 0; idx < GetNumberOfOutputs(); idx++)
+            size += outputs_[idx]->GetBufferSize(); // outputs_[idx]
+        return size;
+    }
+
+    bool Transaction::Encode(ByteBuffer* bytes) const{
+        bytes->PutLong(timestamp_);
+        bytes->PutInt(index_);
+        bytes->PutInt(num_inputs_);
+        uint32_t idx;
+        for(idx = 0; idx < num_inputs_; idx++){
+            Input* input = inputs_[idx];
+            if(!input->Encode(bytes)) return false;
+        }
+        bytes->PutInt(num_outputs_);
+        for(idx = 0; idx < num_outputs_; idx++){
+            Output* output = outputs_[idx];
+            if(!output->Encode(bytes)) return false;
+        }
+        return true;
     }
 
     std::string Transaction::ToString() const{
@@ -165,10 +159,13 @@ namespace Token{
 
     bool Transaction::Sign(){
         CryptoPP::SecByteBlock bytes;
-        if(!Encode(bytes)){
-            LOG(WARNING) << "couldn't serialize transaction to bytes";
-            return false;
-        }
+        /*
+          TODO:
+            if(!Encode(bytes)){
+                LOG(WARNING) << "couldn't serialize transaction to bytes";
+                return false;
+            }
+         */
 
         CryptoPP::RSA::PrivateKey privateKey;
         CryptoPP::RSA::PublicKey publicKey;
@@ -193,47 +190,5 @@ namespace Token{
             LOG(ERROR) << "error occurred signing transaction: " << ex.GetWhat();
             return false;
         }
-    }
-
-    size_t Transaction::GetBufferSize() const{
-        size_t size = 0;
-        size += 4; // timestamp_
-        size += 4; // index_
-        size += 4; // num_inputs
-        for(uint32_t idx = 0; idx < GetNumberOfInputs(); idx++)
-            size += inputs_[idx]->GetBufferSize();
-        size += 4; // num_outputs
-        for(uint32_t idx = 0; idx < GetNumberOfOutputs(); idx++)
-            size += outputs_[idx]->GetBufferSize();
-        size += (4 + signature_.length());
-        return size;
-    }
-
-    bool Transaction::Encode(uint8_t* bytes) const{
-        size_t offset = 0;
-        EncodeInt(&bytes[offset], timestamp_);
-        offset += 4;
-
-        EncodeInt(&bytes[offset], index_);
-        offset += 4;
-
-        EncodeInt(&bytes[offset], num_inputs_);
-        offset += 4;
-        for(uint32_t idx = 0; idx < num_inputs_; idx++){
-            Input* input = inputs_[idx];
-            if(!input->Encode(&bytes[offset])) return false;
-            offset += input->GetBufferSize();
-        }
-
-        EncodeInt(&bytes[offset], num_outputs_);
-        offset += 4;
-        for(uint32_t idx = 0; idx < num_outputs_; idx++){
-            Output* output = outputs_[idx];
-            if(!output->Encode(&bytes[offset])) return false;
-            offset += output->GetBufferSize();
-        }
-
-        EncodeString(&bytes[offset], signature_);
-        return true;
     }
 }

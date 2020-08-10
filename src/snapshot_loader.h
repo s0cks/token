@@ -2,6 +2,7 @@
 #define TOKEN_SNAPSHOT_LOADER_H
 
 #include "snapshot_file.h"
+#include "bytes.h"
 
 namespace Token{
     class SnapshotBlockLoader{
@@ -25,7 +26,7 @@ namespace Token{
         SnapshotBlockLoader(Snapshot* snapshot):
             SnapshotBlockLoader(snapshot->GetFilename(), snapshot->GetIndex()){}
         ~SnapshotBlockLoader() = default;
-
+        
         Handle<Block> GetBlock(const uint256_t& hash){
             SnapshotBlockIndex::BlockReference* ref = nullptr;
             if(!(ref = GetIndex()->GetReference(hash))){
@@ -35,13 +36,12 @@ namespace Token{
 
             file_.SetCurrentFilePosition(ref->GetDataPosition());
             size_t size = ref->GetSize();
-            uint8_t bytes[size];
-            if(!file_.ReadBytes(bytes, size)){
+            ByteBuffer bytes(size);
+            if(!file_.ReadBytes(bytes.data(), size)){
                 LOG(WARNING) << "couldn't ready " << size << " block bytes from snapshot: " << GetFilename();
                 return nullptr;
             }
-
-            return Block::NewInstance(bytes);
+            return Block::NewInstance(&bytes);
         }
     };
 }

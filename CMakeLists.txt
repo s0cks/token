@@ -33,7 +33,6 @@ endif (CMAKE_BUILD_TYPE MATCHES Debug)
 find_package(Threads)
 find_package(UUID REQUIRED)
 find_package(Crypto++ REQUIRED)
-find_package(Protobuf REQUIRED)
 find_package(LevelDB REQUIRED)
 find_package(Glog REQUIRED)
 find_package(Gflags REQUIRED)
@@ -67,7 +66,6 @@ endif(TOKEN_BUILD_TESTS)
 set(TOKEN_LIBRARIES
         ${CMAKE_THREAD_LIBS_INIT} # pthread
         ${CRYPTO++_LIBRARIES} # crypto++
-        ${Protobuf_LIBRARIES} # protobuf
         ${GLOG_LIBRARIES} # glog
         ${LevelDB_LIBRARY} # leveldb
         ${LIBUV_LIBRARIES} # libuv
@@ -86,33 +84,10 @@ if(TOKEN_HEALTHCHECK_SUPPORT)
         list(APPEND TOKEN_LIBRARIES ${HTTPPARSER_LIBRARIES})
 endif(TOKEN_HEALTHCHECK_SUPPORT)
 
-# Compilation Options
-#-----------------------------------------------------------------------------------
-# Health Check Support
-if(TOKEN_HEALTHCHECK_SUPPORT)
-        message("Compiling ledger w/ health check support")
-        add_compile_definitions(TOKEN_HEALTHCHECK_SUPPORT)
-endif(TOKEN_HEALTHCHECK_SUPPORT)
-
-# Mark-Copy Scavenger Support
-if(TOKEN_USE_KOA)
-        message("Compiling ledger w/ mark-copy scavenger support")
-        add_compile_definitions(TOKEN_USE_KOA)
-endif(TOKEN_USE_KOA)
-#------------------------------------------------------------------------------------
-
-
-# Generate Proto Sources
-protobuf_generate_cpp(
-        TOKEN_PROTO_SOURCES
-        TOKEN_PROTO_HEADERS
-        ${TOKEN_PROTOS}
-)
-
 message("Compiling Token w/ the following libraries: ${TOKEN_LIBRARIES}")
 
 # Token Ledger Library
-add_library("token-ledger" SHARED ${TOKEN_HEADERS} ${TOKEN_SOURCES} ${TOKEN_PROTO_HEADERS} ${TOKEN_PROTO_SOURCES})
+add_library("token-ledger" SHARED ${TOKEN_HEADERS} ${TOKEN_SOURCES})
 target_link_libraries("${PROJECT_NAME}-ledger" ${TOKEN_LIBRARIES})
 
 # Token Server Executable
@@ -136,15 +111,7 @@ if(TOKEN_BUILD_TESTS)
         target_link_libraries("token-tests" ${TOKEN_LIBRARIES})
 endif(TOKEN_BUILD_TESTS)
 
-# Token Debian Package
-if(TOKEN_CREATE_PACKAGE)
-        message("Creating a .deb package")
-        set(CPACK_GENERATOR "DEB")
-        set(CPACK_DEBIAN_PACKAGE_DEPENDS "libcrypto++-dev (>= 5.6.4-7), libprotobuf-dev (>= 3.0.0-9), libleveldb-dev (>= 1.18-5), libgoogle-glog-dev (>= 0.3.4-2), libgflags-dev (>= 1.30.1-1), libuv1-dev (>= 1.9.1-3), libhttp-parser-dev (>= 2.1-2)")
-        set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Tazz")
-        include(CPack)
-endif(TOKEN_CREATE_PACKAGE)
-
+# should we remove this?
 # Install Token Node
 install(
         TARGETS token-ledger

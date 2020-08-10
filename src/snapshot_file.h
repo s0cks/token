@@ -69,12 +69,10 @@ namespace Token{
         void Close();
         void WriteHash(const uint256_t& hash);
         void WriteString(const std::string& value);
-        void WriteMessage(google::protobuf::Message& msg);
         void WriteBytes(uint8_t* bytes, size_t size);
         void WriteInt(uint32_t value);
         void WriteUnsignedLong(uint64_t value);
         void WriteLong(int64_t value);
-        bool ReadMessage(google::protobuf::Message& msg);
         bool ReadBytes(uint8_t* bytes, size_t size);
         uint8_t ReadByte();
         uint32_t ReadInt();

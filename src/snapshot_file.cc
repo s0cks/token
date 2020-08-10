@@ -74,27 +74,8 @@ namespace Token{
         WriteBytes((uint8_t*)hash.data(), uint256_t::kSize);
     }
 
-    void SnapshotFile::WriteMessage(google::protobuf::Message& msg){
-        uint32_t size = msg.ByteSizeLong();
-        WriteInt(size);
-
-        uint8_t data[size];
-        if(!msg.SerializeToArray(data, size)){
-            LOG(WARNING) << "couldn't serialize message to snapshot file: " << GetFilename();
-            return;
-        }
-        WriteBytes(data, size);
-    }
-
     bool SnapshotFile::ReadBytes(uint8_t* bytes, size_t size){
         return fread(bytes, sizeof(uint8_t), size, GetFilePointer()) == size;
-    }
-
-    bool SnapshotFile::ReadMessage(google::protobuf::Message& msg){
-        uint32_t num_bytes = ReadInt();
-        uint8_t bytes[num_bytes];
-        if(!ReadBytes(bytes, num_bytes)) return false;
-        return msg.ParseFromArray(bytes, num_bytes);
     }
 
     uint8_t SnapshotFile::ReadByte(){

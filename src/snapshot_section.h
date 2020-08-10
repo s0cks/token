@@ -2,6 +2,7 @@
 #define TOKEN_SNAPSHOT_SECTIONS_H
 
 #include "token.h"
+#include "bytes.h"
 #include "snapshot.h"
 #include "block_chain.h"
 #include "snapshot_file.h"
@@ -155,12 +156,12 @@ namespace Token{
         inline void
         WriteBlockData(const Handle<Block>& blk){
             size_t size = blk->GetBufferSize();
-            uint8_t bytes[size];
-            if(!blk->Encode(bytes)){
+            ByteBuffer bytes(size);
+            if(!blk->Encode(&bytes)){
                 LOG(WARNING) << "couldn't serialize block to byte array";
                 return;
             }
-            GetFile()->WriteBytes(bytes, size);
+            GetFile()->WriteBytes(bytes.data(), size);
         }
 
         inline SnapshotBlockIndex::BlockReference*

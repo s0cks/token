@@ -10,8 +10,6 @@
 #include "transaction.h"
 
 namespace Token{
-    typedef Proto::BlockChain::BlockHeader RawBlockHeader;
-
     class Block;
     class BlockHeader{
     public:
@@ -35,7 +33,6 @@ namespace Token{
             merkle_root_(merkle_root),
             hash_(hash){}
         BlockHeader(Block* blk);
-        BlockHeader(const RawBlockHeader& raw): BlockHeader(raw.timestamp(), raw.height(), HashFromHexString(raw.previous_hash()), HashFromHexString(raw.merkle_root()), HashFromHexString(raw.hash())){}
         ~BlockHeader(){}
 
         uint32_t GetTimestamp() const{
@@ -85,15 +82,6 @@ namespace Token{
             stream << "#" << header.GetHeight() << "(" << header.GetHash() << ")";
             return stream;
         }
-
-        friend RawBlockHeader& operator<<(RawBlockHeader& raw, const BlockHeader& header){
-            raw.set_hash(HexString(header.GetHash()));
-            raw.set_timestamp(header.GetTimestamp());
-            raw.set_height(header.GetHeight());
-            raw.set_previous_hash(HexString(header.GetPreviousHash()));
-            raw.set_merkle_root(HexString(header.GetMerkleRoot()));
-            return raw;
-        }
     };
 
     class BlockVisitor;
@@ -104,6 +92,7 @@ namespace Token{
         friend class BlockMessage;
     public:
         static const uint32_t kNumberOfGenesisOutputs = 32;
+        static const size_t kMaxTransactionsForBlock = 40000;
     private:
         uint32_t timestamp_;
         uint32_t height_;
@@ -127,41 +116,6 @@ namespace Token{
                 tx_bloom_.Put(txs[idx]->GetHash());
             }
         }
-
-        inline size_t
-        GetTimestampOffset() const{
-            return 0;
-        }
-
-        inline size_t
-        GetHeightOffset() const{
-            return GetTimestampOffset() + 4;
-        }
-
-        inline size_t
-        GetPreviousHashOffset() const{
-            return GetHeightOffset() + 4;
-        }
-
-        inline size_t
-        GetTransactionsLengthOffset() const{
-            return GetPreviousHashOffset() + uint256_t::kSize;
-        }
-
-        inline size_t
-        GetTransactionsOffset() const{
-            return GetTransactionsLengthOffset() + 4;
-        }
-
-        inline size_t
-        GetTransactionsLength() const{
-            size_t size = 0;
-            for(uint32_t idx = 0; idx < GetNumberOfTransactions(); idx++)
-                size += transactions_[idx]->GetBufferSize();
-            return size;
-        }
-
-        bool EncodeTransactions(uint8_t* bytes) const;
     protected:
         virtual void Accept(WeakReferenceVisitor* vis){
             for(size_t idx = 0; idx < num_transactions_; idx++){
@@ -174,8 +128,6 @@ namespace Token{
         BlockHeader GetHeader() const{
             return BlockHeader(timestamp_, height_, previous_hash_, GetMerkleRoot(), GetHash());
         }
-
-        uint256_t GetMerkleRoot() const;
 
         uint256_t GetPreviousHash() const{
             return previous_hash_;
@@ -202,32 +154,29 @@ namespace Token{
             return GetHeight() == 0;
         }
 
+        uint256_t GetMerkleRoot() const;
         size_t GetBufferSize() const;
-        bool Encode(uint8_t* bytes) const;
+        bool Encode(ByteBuffer* bytes) const;
         bool Accept(BlockVisitor* vis) const;
         bool Contains(const uint256_t& hash) const;
         std::string ToString() const;
 
-        bool Encode(CryptoPP::SecByteBlock& bytes) const{
-            size_t size = GetBufferSize();
-            bytes.resize(size);
-            Encode(bytes.data());
-            return true;
+        static Handle<Block> Genesis(); // genesis
+        static Handle<Block> NewInstance(std::fstream& fd, size_t size);
+        static Handle<Block> NewInstance(ByteBuffer* bytes);
+
+        static Handle<Block> NewInstance(uint32_t height, const uint256_t& phash, Transaction** txs, size_t num_txs, uint64_t timestamp=GetCurrentTime()){
+            return new Block(timestamp, height, phash, txs, num_txs);
         }
 
-        static Handle<Block> Genesis(); // genesis
-        static Handle<Block> NewInstance(uint32_t height, const uint256_t& phash, Transaction** txs, size_t num_txs, uint32_t timestamp=GetCurrentTime());
-        static Handle<Block> NewInstance(const BlockHeader& parent, Transaction** txs, size_t num_txs, uint32_t timestamp=GetCurrentTime());
-        static Handle<Block> NewInstance(uint8_t* bytes);
+        static Handle<Block> NewInstance(const BlockHeader& previous, Transaction** txs, size_t num_txs, uint64_t timestamp=GetCurrentTimestamp()){
+            return new Block(timestamp, previous.GetHeight() + 1, previous.GetHash(), txs, num_txs);
+        }
 
-        //TODO: refactor
-        static Handle<Block> NewInstance(std::fstream& fd, uint32_t size);
         static inline Handle<Block> NewInstance(const std::string& filename){
             std::fstream fd(filename, std::ios::in|std::ios::binary);
-            return NewInstance(fd, GetFilesize(filename));
+            return NewInstance(fd, GetFilesize(filename));//TODO: refactor?
         }
-
-        static const size_t kMaxTransactionsForBlock = 40000;
     };
 
     class BlockVisitor{
