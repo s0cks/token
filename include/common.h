@@ -59,12 +59,6 @@ namespace Token{
         return x + 1;
     }
 
-    static std::chrono::system_clock::time_point
-    GetNow(){
-        using namespace std::chrono;
-        return system_clock::now();
-    }
-
     static uint64_t
     GetCurrentTimestamp(){
         return time(NULL);
