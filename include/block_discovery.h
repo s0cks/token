@@ -5,6 +5,8 @@
 
 namespace Token{
     class BlockDiscoveryThread : public Thread{
+        //TODO:
+        // - need to pause block discovery thread when proposal thread is running or merge these 2 together again
     private:
         BlockDiscoveryThread() = delete;
 
