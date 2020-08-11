@@ -14,5 +14,4 @@
 !/README.md
 !/Dockerfile
 !/.gitignore
-!/.gitmodules
 !/CMakeLists.txt
