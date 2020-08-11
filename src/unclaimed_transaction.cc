@@ -10,7 +10,7 @@ namespace Token{
     Handle<UnclaimedTransaction> UnclaimedTransaction::NewInstance(ByteBuffer* bytes){
         uint256_t hash = bytes->GetHash();
         uint32_t index = bytes->GetInt();
-        std::string user = bytes->GetString();
+        UserID user = UserID(bytes);
         return new UnclaimedTransaction(hash, index, user);
     }
 
@@ -29,15 +29,15 @@ namespace Token{
     size_t UnclaimedTransaction::GetBufferSize() const{
         size_t size = 0;
         size += uint256_t::kSize;
-        size += 4;
-        size += (4 + user_.length());
+        size += sizeof(uint32_t);
+        size += UserID::kSize;
         return size;
     }
 
     bool UnclaimedTransaction::Encode(ByteBuffer* bytes) const{
         bytes->PutHash(hash_);
         bytes->PutInt(index_);
-        bytes->PutString(user_);
+        user_.Encode(bytes);
         return true;
     }
 }

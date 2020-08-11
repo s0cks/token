@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "object.h"
+#include "user.h"
 
 namespace Token{
     class Output;
@@ -11,9 +12,9 @@ namespace Token{
     private:
         uint256_t hash_;
         uint32_t index_;
-        std::string user_;
+        UserID user_;
 
-        UnclaimedTransaction(const uint256_t& hash, uint32_t idx, const std::string& user):
+        UnclaimedTransaction(const uint256_t& hash, uint32_t idx, const UserID& user):
             hash_(hash),
             user_(user),
             index_(idx){}
@@ -28,7 +29,7 @@ namespace Token{
             return index_;
         }
 
-        std::string GetUser() const{
+        UserID GetUser() const{
             return user_;
         }
 
@@ -40,7 +41,7 @@ namespace Token{
         static Handle<UnclaimedTransaction> NewInstance(std::fstream& fd, size_t size);
 
         static Handle<UnclaimedTransaction> NewInstance(const uint256_t &hash, uint32_t index, const std::string& user){
-            return new UnclaimedTransaction(hash, index, user);
+            return new UnclaimedTransaction(hash, index, UserID(user));
         }
 
         static inline Handle<UnclaimedTransaction> NewInstance(const std::string& filename){

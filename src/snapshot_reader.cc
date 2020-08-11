@@ -115,7 +115,6 @@ namespace Token{
     }
 
     void SnapshotReader::SkipData(SnapshotSection* section){
-        LOG(INFO) << "skipping section #" << section->GetSectionId() << "@" << section->GetOffset() << " (" << section->GetSize() << " bytes)";
         SetCurrentPosition(section->GetOffset() + section->GetSize());
     }
 

@@ -12,9 +12,9 @@ namespace Token{
     private:
         uint256_t hash_;
         uint32_t index_;
-        std::string user_;
+        UserID user_;
 
-        Input(const uint256_t& tx_hash, uint32_t index, const std::string& user):
+        Input(const uint256_t& tx_hash, uint32_t index, const UserID& user):
             hash_(tx_hash),
             user_(user),
             index_(index){}
@@ -29,7 +29,7 @@ namespace Token{
             return hash_;
         }
 
-        std::string GetUser() const{
+        UserID GetUser() const{
             return user_;
         }
 
@@ -40,7 +40,7 @@ namespace Token{
 
         static Handle<Input> NewInstance(ByteBuffer* bytes);
         static Handle<Input> NewInstance(const uint256_t& hash, uint32_t index, const std::string& user){
-            return new Input(hash, index, user);
+            return new Input(hash, index, UserID(user));
         }
     };
 

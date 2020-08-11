@@ -21,15 +21,14 @@ namespace Token{
         size_t size = 0;
         size += uint256_t::kSize; // hash_
         size += sizeof(uint32_t); // index_
-        size += sizeof(uint32_t); // length(user_)
-        size += user_.length();
+        size += UserID::kSize;
         return size;
     }
 
     bool Input::Encode(ByteBuffer* bytes) const{
         bytes->PutHash(hash_);
         bytes->PutInt(index_);
-        bytes->PutString(user_);
+        user_.Encode(bytes);
         return true;
     }
 

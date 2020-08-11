@@ -4,6 +4,18 @@
 #include "bytes.h"
 
 namespace Token{
+    std::string ClientCommand::GetCommandName() const{
+        switch(GetType()){
+#define DECLARE_CHECK(Name, Text, Parameters) \
+            case ClientCommand::Type::k##Name##Type: return #Text;
+            FOR_EACH_CLIENT_COMMAND(DECLARE_CHECK)
+#undef DECLARE_CHECK
+            case ClientCommand::Type::kUnknownType:
+            default:
+                return "Unknown";
+        }
+    }
+
     ClientSessionInfo::ClientSessionInfo(ClientSession* session):
         SessionInfo(session){
     }
@@ -237,31 +249,25 @@ namespace Token{
         }
 
         std::string line(buf->base, nread - 1);
+        std::deque<std::string> args;
+        SplitString(line, args, ' ');
 
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << "parsed: " << line;
-#endif//TOKEN_DEBUG
-
-        Command* command = nullptr;
-        if(!(command = Command::ParseCommand(line))){
-            LOG(WARNING) << "couldn't parse command: " << line;
-            return;
-        }
-
+        ClientCommand cmd(args);
+        switch(cmd.GetType()){
 #define DECLARE_HANDLER(Name, Text, Parameters) \
-    if(command->Is##Name##Command()){ \
-        client->Handle##Name##Command(command->As##Name##Command()); \
-        delete command; \
-        return; \
-    }
-        FOR_EACH_COMMAND(DECLARE_HANDLER);
+            case ClientCommand::Type::k##Name##Type: \
+                client->Handle##Name##Command(&cmd); \
+                break;
+            FOR_EACH_CLIENT_COMMAND(DECLARE_HANDLER);
+            case ClientCommand::Type::kUnknownType:
 #undef DECLARE_HANDLER
-        if(command != nullptr){
-            LOG(WARNING) << "couldn't handle command: " << command->GetName(); //TODO: handle better
+            default:
+                LOG(WARNING) << "unable to handle command: " << cmd;
+                return;
         }
     }
 
-    void ClientSession::HandleStatusCommand(StatusCommand* cmd){
+    void ClientSession::HandleStatusCommand(ClientCommand* cmd){
         ClientSessionInfo info = GetInfo();
         LOG(INFO) << "Client ID: " << info.GetID();
         switch(info.GetState()){
@@ -285,7 +291,7 @@ namespace Token{
 
     }
 
-    void ClientSession::HandleDisconnectCommand(DisconnectCommand* cmd){
+    void ClientSession::HandleDisconnectCommand(ClientCommand* cmd){
         LOG(WARNING) << "disconnecting...";
         uv_read_stop((uv_stream_t*)&connection_);
         uv_stop(loop_);
@@ -293,16 +299,7 @@ namespace Token{
         SetState(State::kDisconnected);
     }
 
-    //TODO:
-    // need to wait
-    // in order to wait:
-    //   - send_gethead()
-    //   - spawn_response_handler_task() ------------> - wait_for(cv_)
-    //   - continue                               /        .....
-    //      .....                               /          .....
-    //   - receive_head                       /            .....
-    //   - signal_all() --------------------/          - log_head()
-    void ClientSession::HandleTransactionCommand(TransactionCommand* cmd){
+    void ClientSession::HandleTransactionCommand(ClientCommand* cmd){
         uint256_t tx_hash = cmd->GetNextArgumentHash();
         uint32_t index = cmd->GetNextArgumentUInt32();
         std::string user = cmd->GetNextArgument();
@@ -321,10 +318,13 @@ namespace Token{
         Send(msg);
     }
 
-    void ClientSession::HandleGetTokensCommand(Token::GetTokensCommand* cmd){
-        std::string user = cmd->GetNextArgument();
-
-        LOG(INFO) << "getting tokens for " << user << "....";
-        Send(GetUnclaimedTransactionsMessage::NewInstance(user));
-    }
+    //TODO:
+    // need to wait
+    // in order to wait:
+    //   - send_gethead()
+    //   - spawn_response_handler_task() ------------> - wait_for(cv_)
+    //   - continue                               /        .....
+    //      .....                               /          .....
+    //   - receive_head                       /            .....
+    //   - signal_all() --------------------/          - log_head()
 }

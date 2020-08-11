@@ -24,7 +24,7 @@ namespace Token{
 
     static inline void
     PrintUnclaimedTransaction(const Handle<UnclaimedTransaction>& utxo){
-        LOG(INFO) << "  - " << utxo;
+        LOG(INFO) << "  - " << utxo << " => " << utxo->GetUser();
     }
 
     void SnapshotInspector::PrintSnapshot(Snapshot* snapshot){
@@ -123,8 +123,12 @@ namespace Token{
             user_(){}
         ~SnapshotUnclaimedTransactionPrinter() = default;
 
+        std::string GetTarget() const{
+            return user_;
+        }
+
         bool Visit(const Handle<UnclaimedTransaction>& utxo){
-            PrintUnclaimedTransaction(utxo);
+            if(utxo->GetUser() == GetTarget()) PrintUnclaimedTransaction(utxo);
             return true;
         }
     };

@@ -99,7 +99,7 @@ namespace Token{
         friend class BlockMessage;
     public:
         static const size_t kMaxTransactionsForBlock = 20;
-        static const uint32_t kNumberOfGenesisOutputs = 40000;
+        static const uint32_t kNumberOfGenesisOutputs = 32; // TODO: changeme
     private:
         uint32_t timestamp_;
         uint32_t height_;

@@ -19,12 +19,21 @@ main(int argc, char** argv){
     InitializeLogging(argv[0]);
     Allocator::Initialize();
 
-    LOG(INFO) << "please enter a snapshot to inspect:";
-    std::string snapshot_path;
-    std::cin >> snapshot_path;
+    do{
+        LOG(INFO) << "Please enter a snapshot to inspect (type .exit to quit):";
+        std::string snapshot_path;
+        std::cin >> snapshot_path;
 
-    SnapshotInspector inspector;
-    Snapshot* snapshot = Snapshot::ReadSnapshot(snapshot_path);
-    inspector.Inspect(snapshot);
+        if(snapshot_path == ".exit") break;
+
+        if(!FileExists(snapshot_path)){
+            LOG(WARNING) << "Snapshot " << snapshot_path << " doesn't exist!";
+            continue;
+        }
+
+        SnapshotInspector inspector;
+        Snapshot* snapshot = Snapshot::ReadSnapshot(snapshot_path);
+        inspector.Inspect(snapshot);
+    } while(true);
     return EXIT_SUCCESS;
 }

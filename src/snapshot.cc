@@ -177,7 +177,6 @@ namespace Token{
 
     bool IndexedSection::ReadIndexTable(Token::SnapshotReader* reader){
         uint64_t num_references = reader->ReadLong();
-        LOG(INFO) << "reading " << num_references << " references from index table...";
         for(uint64_t idx = 0; idx < num_references; idx++){
             IndexReference ref = reader->ReadReference();
             if(!index_.insert({ ref.GetHash(), ref }).second){

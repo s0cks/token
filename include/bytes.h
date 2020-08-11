@@ -110,6 +110,19 @@ namespace Token{
         DEFINE_DECODER(Int, uint32_t);
         DEFINE_DECODER(Long, uint64_t);
 #undef DEFINE_DECODER
+        void PutBytes(uint8_t* bytes, size_t size){
+            if((wpos_ + size) >= GetCapacity())
+                Resize(GetCapacity() + size);
+            memcpy(&data_[wpos_], bytes, size);
+            wpos_ += size;
+        }
+
+        bool GetBytes(uint8_t* result, size_t size){
+            if((rpos_ + size) >= GetCapacity()) return false;
+            memcpy(result, &data_[rpos_], size);
+            rpos_ += size;
+            return true;
+        }
 
         void PutString(const std::string& value){
             if((wpos_ + sizeof(uint32_t) + value.length()) >= GetCapacity())
