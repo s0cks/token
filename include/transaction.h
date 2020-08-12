@@ -78,7 +78,6 @@ namespace Token{
     class Transaction : public Object{
         friend class Block;
         friend class TransactionMessage;
-        friend class TransactionVerifier;
     private:
         uint32_t timestamp_;
         uint32_t index_;
