@@ -88,6 +88,7 @@ message("Compiling Token w/ the following libraries: ${TOKEN_LIBRARIES}")
 
 # Token Ledger Library
 add_library("token-ledger" SHARED ${TOKEN_HEADERS} ${TOKEN_SOURCES})
+set_target_properties("token-ledger" PROPERTIES PUBLIC_HEADER "${TOKEN_HEADERS}")
 target_link_libraries("${PROJECT_NAME}-ledger" ${TOKEN_LIBRARIES})
 
 # Token Server Executable
@@ -102,21 +103,13 @@ target_link_libraries("token-client" "token-ledger" ${TOKEN_LIBRARIES})
 add_executable("token-inspector" inspector.cc)
 target_link_libraries("token-inspector" "token-ledger" ${TOKEN_LIBRARIES})
 
-# Token Unit Tests Executable
-if(TOKEN_BUILD_TESTS)
-        message("Enabling testing")
-        enable_testing()
-
-        add_executable("token-tests" tests.cc ${TOKEN_TEST_SOURCES})
-        target_link_libraries("token-tests" ${TOKEN_LIBRARIES})
-endif(TOKEN_BUILD_TESTS)
-
 # should we remove this?
 # Install Token Node
 install(
         TARGETS token-ledger
         LIBRARY DESTINATION lib
         INCLUDES DESTINATION include
+        PUBLIC_HEADER DESTINATION include/token
 )
 install(
         TARGETS token-node
