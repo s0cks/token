@@ -11,7 +11,7 @@ namespace Token{
         uint32_t out_idx_;
 
         inline Handle<UnclaimedTransaction>
-        CreateUnclaimedTransaction(const std::string& user){
+        CreateUnclaimedTransaction(const UserID& user){
             uint256_t tx_hash = transaction_->GetHash();
             return UnclaimedTransaction::NewInstance(tx_hash, out_idx_++, user);
         }

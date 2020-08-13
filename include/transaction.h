@@ -39,6 +39,11 @@ namespace Token{
         std::string ToString() const;
 
         static Handle<Input> NewInstance(ByteBuffer* bytes);
+
+        static Handle<Input> NewInstance(const uint256_t& hash, uint32_t index, const UserID& user){
+            return new Input(hash, index, user);
+        }
+
         static Handle<Input> NewInstance(const uint256_t& hash, uint32_t index, const std::string& user){
             return new Input(hash, index, UserID(user));
         }
@@ -47,16 +52,16 @@ namespace Token{
     class Output : public Object{
         friend class Transaction;
     private:
-        std::string user_;
+        UserID user_;
         std::string token_;
 
-        Output(const std::string& user, const std::string& token):
+        Output(const UserID& user, const std::string& token):
             user_(user),
             token_(token){}
     public:
         ~Output(){}
 
-        std::string GetUser() const{
+        UserID GetUser() const{
             return user_;
         }
 
@@ -69,6 +74,11 @@ namespace Token{
         std::string ToString() const;
 
         static Handle<Output> NewInstance(ByteBuffer* bytes);
+
+        static Handle<Output> NewInstance(const UserID& user, const std::string& token){
+            return new Output(user, token);
+        }
+
         static Handle<Output> NewInstance(const std::string& user, const std::string& token){
             return new Output(user, token);
         }

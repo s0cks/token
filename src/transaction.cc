@@ -13,7 +13,7 @@ namespace Token{
     Handle<Input> Input::NewInstance(ByteBuffer* bytes){
         uint256_t hash = bytes->GetHash();
         uint32_t index = bytes->GetInt();
-        std::string user = bytes->GetString();
+        UserID user(bytes);
         return new Input(hash, index, user);
     }
 
@@ -46,22 +46,21 @@ namespace Token{
 //                                          Output
 //######################################################################################################################
     Handle<Output> Output::NewInstance(ByteBuffer* bytes){
-        std::string user = bytes->GetString();
+        UserID user(bytes);
         std::string token = bytes->GetString();
         return new Output(user, token);
     }
 
     size_t Output::GetBufferSize() const{
         size_t size = 0;
-        size += sizeof(uint32_t); // length(user_)
-        size += user_.length();
+        size += UserID::kSize;
         size += sizeof(uint32_t); // length(token_)
         size += token_.length();
         return size;
     }
 
     bool Output::Encode(ByteBuffer* bytes) const{
-        bytes->PutString(user_);
+        user_.Encode(bytes);
         bytes->PutString(token_);
         return true;
     }

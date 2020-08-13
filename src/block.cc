@@ -16,8 +16,26 @@ namespace Token{
         hash_(blk->GetHash()),
         bloom_(blk->tx_bloom_){}
 
+    BlockHeader::BlockHeader(ByteBuffer* bytes):
+        timestamp_(bytes->GetLong()),
+        height_(bytes->GetLong()),
+        previous_hash_(bytes->GetHash()),
+        merkle_root_(bytes->GetHash()),
+        hash_(bytes->GetHash()),
+        bloom_(){} //TODO: decode(bloom_)
+
     Block* BlockHeader::GetData() const{
         return BlockChain::GetBlockData(GetHash());
+    }
+
+    bool BlockHeader::Encode(ByteBuffer* bytes) const{
+        bytes->PutLong(timestamp_);
+        bytes->PutLong(height_);
+        bytes->PutHash(previous_hash_);
+        bytes->PutHash(merkle_root_);
+        bytes->PutHash(hash_);
+        //TODO: encode(bloom_)
+        return true;
     }
 
 //######################################################################################################################

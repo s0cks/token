@@ -38,7 +38,7 @@ namespace Token{
 
     void ClientSession::OnSignal(uv_signal_t* handle, int signum){
         ClientSession* client = (ClientSession*)handle->data;
-        uv_stop(client->loop_);
+        uv_stop(handle->loop);
     }
 
     void ClientSession::OnHeartbeatTick(uv_timer_t* handle){
@@ -60,16 +60,17 @@ namespace Token{
         LOG(INFO) << "connecting to server: " << addr;
         SetState(State::kConnecting);
 
-        uv_loop_init(loop_);
-        uv_timer_init(loop_, &hb_timer_);
-        uv_timer_init(loop_, &hb_timeout_);
-        uv_signal_init(loop_, &sigterm_);
+        uv_loop_t* loop = uv_loop_new();
+        uv_loop_init(loop);
+        uv_timer_init(loop, &hb_timer_);
+        uv_timer_init(loop, &hb_timeout_);
+        uv_signal_init(loop, &sigterm_);
         uv_signal_start(&sigterm_, &OnSignal, SIGTERM);
 
-        uv_signal_init(loop_, &sigint_);
+        uv_signal_init(loop, &sigint_);
         uv_signal_start(&sigterm_, &OnSignal, SIGINT);
 
-        uv_tcp_init(loop_, &stream_);
+        uv_tcp_init(loop, &stream_);
         uv_tcp_keepalive(&stream_, 1, 60);
 
         struct sockaddr_in address;
@@ -78,24 +79,17 @@ namespace Token{
             goto cleanup;
         }
 
-        uv_pipe_init(loop_, &stdin_, 0);
-        uv_pipe_open(&stdin_, 0);
-
-        uv_pipe_init(loop_, &stdout_, 0);
-        uv_pipe_open(&stdout_, 1);
-
         int err;
         if((err = uv_tcp_connect(&connection_, &stream_, (const struct sockaddr*)&address, &OnConnect)) != 0){
             LOG(WARNING) << "couldn't connect to peer: " << uv_strerror(err);
             goto cleanup;
         }
 
-        uv_run(loop_, UV_RUN_DEFAULT);
+        uv_run(loop, UV_RUN_DEFAULT);
         uv_signal_stop(&sigterm_);
         uv_signal_stop(&sigint_);
-        uv_read_stop((uv_stream_t*)&stdin_);
     cleanup:
-        uv_loop_close(loop_);
+        uv_loop_close(loop);
     }
 
     void ClientSession::OnConnect(uv_connect_t* conn, int status){
@@ -109,11 +103,6 @@ namespace Token{
         int err;
         if((err = uv_read_start(client->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
             LOG(ERROR) << " client read error: " << uv_strerror(err);
-            return; //TODO: terminate connection
-        }
-
-        if((err = uv_read_start(client->GetStdinPipe(), &AllocBuffer, &OnCommandReceived)) != 0){
-            LOG(ERROR) << "couldn't start reading from stdin-pipe: " << uv_strerror(err);
             return; //TODO: terminate connection
         }
 
@@ -231,8 +220,95 @@ namespace Token{
     void ClientSession::HandleNotFoundMessage(const Handle<HandleMessageTask>& msg){}
     void ClientSession::HandleGetUnclaimedTransactionsMessage(const Handle<HandleMessageTask>& task){}
 
-    void ClientSession::OnCommandReceived(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf){
-        ClientSession* client = (ClientSession*)stream->data;
+    void ClientSession::Disconnect(){
+        LOG(WARNING) << "disconnecting...";
+        uv_read_stop(GetStream());
+        uv_stop(GetLoop());
+        uv_loop_close(GetLoop());
+        SetState(State::kDisconnected);
+    }
+
+    //TODO:
+    // need to wait
+    // in order to wait:
+    //   - send_gethead()
+    //   - spawn_response_handler_task() ------------> - wait_for(cv_)
+    //   - continue                               /        .....
+    //      .....                               /          .....
+    //   - receive_head                       /            .....
+    //   - signal_all() --------------------/          - log_head()
+
+    void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
+        //TODO: buff->base = (char*)Allocator::Allocate(kBufferSize);
+        buff->base = (char*)malloc(2048);
+        buff->len = 2048;
+    }
+
+    void ClientCommandHandler::Start(){
+        ClientSession* client = GetSession();
+        uv_loop_t* loop = client->GetLoop();
+
+        uv_pipe_init(loop, &stdin_, 0);
+        uv_pipe_open(&stdin_, 0);
+
+        int err;
+        if((err = uv_read_start((uv_stream_t*)&stdin_, &AllocBuffer, &OnCommandReceived)) != 0){
+            LOG(ERROR) << "couldn't start reading from stdin-pipe: " << uv_strerror(err);
+            return; //TODO: terminate connection
+        }
+    }
+
+    void ClientCommandHandler::HandleStatusCommand(ClientCommand* cmd){
+        ClientSessionInfo info = GetSession()->GetInfo();
+        LOG(INFO) << "Client ID: " << info.GetID();
+        switch(info.GetState()){
+            case Session::State::kDisconnected:
+                LOG(INFO) << "Disconnected!";
+                break;
+            case Session::State::kConnecting:
+                LOG(INFO) << "Connecting....";
+                break;
+            case Session::State::kConnected:
+                LOG(INFO) << "Connected.";
+                break;
+            default:
+                LOG(WARNING) << "Unknown Connection Status!";
+                break;
+        }
+        LOG(INFO) << "Peer Information:";
+        LOG(INFO) << "  - ID: " << info.GetPeerID();
+        LOG(INFO) << "  - Address: " << info.GetPeerAddress();
+        LOG(INFO) << "  - Head: " << info.GetHead();
+
+    }
+
+    void ClientCommandHandler::HandleDisconnectCommand(ClientCommand* cmd){
+        uv_read_stop((uv_stream_t*)&stdin_);
+        GetSession()->Disconnect();
+    }
+
+    void ClientCommandHandler::HandleTransactionCommand(ClientCommand* cmd){
+        uint256_t tx_hash = cmd->GetNextArgumentHash();
+        uint32_t index = cmd->GetNextArgumentUInt32();
+        std::string user = cmd->GetNextArgument();
+
+        Input* inputs[1] = {
+                Input::NewInstance(tx_hash, index, "TestUser")
+        };
+
+        Output* outputs[1] = {
+                Output::NewInstance(user, "TestToken")
+        };
+
+        Handle<Transaction> tx = Transaction::NewInstance(0, inputs, 1, outputs, 1);
+        Handle<TransactionMessage> msg = TransactionMessage::NewInstance(tx);
+        LOG(INFO) << "sending transaction: " << tx->GetHash();
+        Send(msg);
+    }
+
+    void ClientCommandHandler::OnCommandReceived(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf){
+        ClientCommandHandler* handler = (ClientCommandHandler*)stream->data;
+        ClientSession* client = handler->GetSession();
 
         if(nread == UV_EOF){
             LOG(ERROR) << "client disconnected!";
@@ -256,7 +332,7 @@ namespace Token{
         switch(cmd.GetType()){
 #define DECLARE_HANDLER(Name, Text, Parameters) \
             case ClientCommand::Type::k##Name##Type: \
-                client->Handle##Name##Command(&cmd); \
+                handler->Handle##Name##Command(&cmd); \
                 break;
             FOR_EACH_CLIENT_COMMAND(DECLARE_HANDLER);
             case ClientCommand::Type::kUnknownType:
@@ -266,65 +342,4 @@ namespace Token{
                 return;
         }
     }
-
-    void ClientSession::HandleStatusCommand(ClientCommand* cmd){
-        ClientSessionInfo info = GetInfo();
-        LOG(INFO) << "Client ID: " << info.GetID();
-        switch(info.GetState()){
-            case Session::State::kDisconnected:
-                LOG(INFO) << "Disconnected!";
-                break;
-            case Session::State::kConnecting:
-                LOG(INFO) << "Connecting....";
-                break;
-            case Session::State::kConnected:
-                LOG(INFO) << "Connected.";
-                break;
-            default:
-                LOG(WARNING) << "Unknown Connection Status!";
-                break;
-        }
-        LOG(INFO) << "Peer Information:";
-        LOG(INFO) << "  - ID: " << info.GetPeerID();
-        LOG(INFO) << "  - Address: " << info.GetPeerAddress();
-        LOG(INFO) << "  - Head: " << info.GetHead();
-
-    }
-
-    void ClientSession::HandleDisconnectCommand(ClientCommand* cmd){
-        LOG(WARNING) << "disconnecting...";
-        uv_read_stop((uv_stream_t*)&connection_);
-        uv_stop(loop_);
-        uv_loop_close(loop_);
-        SetState(State::kDisconnected);
-    }
-
-    void ClientSession::HandleTransactionCommand(ClientCommand* cmd){
-        uint256_t tx_hash = cmd->GetNextArgumentHash();
-        uint32_t index = cmd->GetNextArgumentUInt32();
-        std::string user = cmd->GetNextArgument();
-
-        Input* inputs[1] = {
-            Input::NewInstance(tx_hash, index, "TestUser")
-        };
-
-        Output* outputs[1] = {
-            Output::NewInstance(user, "TestToken")
-        };
-
-        Handle<Transaction> tx = Transaction::NewInstance(0, inputs, 1, outputs, 1);
-        Handle<TransactionMessage> msg = TransactionMessage::NewInstance(tx);
-        LOG(INFO) << "sending transaction: " << tx->GetHash();
-        Send(msg);
-    }
-
-    //TODO:
-    // need to wait
-    // in order to wait:
-    //   - send_gethead()
-    //   - spawn_response_handler_task() ------------> - wait_for(cv_)
-    //   - continue                               /        .....
-    //      .....                               /          .....
-    //   - receive_head                       /            .....
-    //   - signal_all() --------------------/          - log_head()
 }

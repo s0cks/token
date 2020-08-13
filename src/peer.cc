@@ -2,7 +2,6 @@
 #include "task.h"
 #include "async_task.h"
 #include "block_pool.h"
-#include "proposer.h"
 #include "bytes.h"
 
 namespace Token{
@@ -68,7 +67,7 @@ namespace Token{
         uv_tcp_init(loop, &session->socket_);
         uv_tcp_keepalive(&session->socket_, 1, 60);
 
-        uv_timer_start(&session->hb_timer_, &OnHeartbeatTick, 0, Session::kHeartbeatIntervalMilliseconds);
+        uv_timer_start(&session->hb_timer_, &OnHeartbeatTick, 90 * 1000, Session::kHeartbeatIntervalMilliseconds);
 
         struct sockaddr_in addr;
         uv_ip4_addr(address.GetAddress().c_str(), address.GetPort(), &addr);
@@ -94,6 +93,7 @@ namespace Token{
             return;
         }
 
+        session->SetState(Session::kConnecting);
         session->Send(VersionMessage::NewInstance(Server::GetID()));
         if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
             LOG(WARNING) << "client read error: " << uv_strerror(status);
@@ -122,13 +122,10 @@ namespace Token{
         uint32_t offset = 0;
         std::vector<Handle<Message>> messages;
         do{
-            uint32_t mtype = 0;
-            memcpy(&mtype, &buff->base[offset + Message::kTypeOffset], Message::kTypeLength);
+            ByteBuffer bytes((uint8_t*)buff->base, buff->len);
+            uint32_t mtype = bytes.GetInt();
+            uint64_t msize = bytes.GetLong();
 
-            uint32_t msize = 0;
-            memcpy(&msize, &buff->base[offset + Message::kSizeOffset], Message::kSizeLength);
-
-            ByteBuffer bytes((uint8_t*)&buff->base[offset + Message::kDataOffset], (size_t)msize);
             Handle<Message> msg = Message::Decode(static_cast<Message::MessageType>(mtype), &bytes);
             LOG(INFO) << "decoded message: " << msg->ToString(); //TODO: handle decode failures
             messages.push_back(msg);
@@ -187,7 +184,6 @@ namespace Token{
             session->SetID(msg->GetID());
             session->SetState(Session::kConnected);
         }
-
         session->SetHead(msg->GetHead());
 
         //TODO:
@@ -201,6 +197,7 @@ namespace Token{
         PeerSession* session = (PeerSession*)task->GetSession();
         Handle<PromiseMessage> msg = task->GetMessage().CastTo<PromiseMessage>();
 
+        /*
         if(!ProposerThread::HasProposal()){
             LOG(WARNING) << "no active proposal found";
             return;
@@ -212,6 +209,7 @@ namespace Token{
 #ifdef TOKEN_DEBUG
         LOG(INFO) << node_id << " voted for proposal: " << proposal->GetHash();
 #endif//TOKEN_DEBUG
+        */
     }
 
     void PeerSession::HandleCommitMessage(const Handle<HandleMessageTask>& task){}
@@ -220,6 +218,7 @@ namespace Token{
         PeerSession* session = (PeerSession*)task->GetSession();
         Handle<AcceptedMessage> msg = task->GetMessage().CastTo<AcceptedMessage>();
 
+        /*
         if(!ProposerThread::HasProposal()){
             LOG(WARNING) << "no active proposal found";
             return;
@@ -231,12 +230,14 @@ namespace Token{
 #ifdef TOKEN_DEBUG
         LOG(INFO) << node_id << " accepted proposal: " << proposal->GetHash();
 #endif//TOKEN_DEBUG
+         */
     }
 
     void PeerSession::HandleRejectedMessage(const Handle<HandleMessageTask>& task){
         PeerSession* session = (PeerSession*)task->GetSession();
         Handle<RejectedMessage> msg = task->GetMessage().CastTo<RejectedMessage>();
 
+        /*
         if(!ProposerThread::HasProposal()){
             LOG(WARNING) << "no active proposal found";
             return;
@@ -248,6 +249,7 @@ namespace Token{
 #ifdef TOKEN_DEBUG
         LOG(INFO) << node << " rejected proposal: " << proposal->GetHash();
 #endif//TOKEN_DEBUG
+    */
     }
 
     void PeerSession::HandleGetDataMessage(const Handle<HandleMessageTask>& task){

@@ -13,6 +13,11 @@ namespace Token{
     class Block;
     class BlockHeader{
     public:
+        static const size_t kSize = sizeof(uint64_t) +
+                                    sizeof(uint64_t) +
+                                    uint256_t::kSize +
+                                    uint256_t::kSize +
+                                    uint256_t::kSize;
     private:
         uint64_t timestamp_;
         uint64_t height_;
@@ -35,6 +40,7 @@ namespace Token{
             hash_(hash),
             bloom_(tx_bloom){}
         BlockHeader(Block* blk);
+        BlockHeader(ByteBuffer* bytes);
         ~BlockHeader(){}
 
         uint64_t GetTimestamp() const{
@@ -62,6 +68,8 @@ namespace Token{
         bool Contains(const uint256_t& hash) const{
             return bloom_.Contains(hash);
         }
+
+        bool Encode(ByteBuffer* bytes) const;
 
         BlockHeader& operator=(const BlockHeader& other){
             timestamp_ = other.timestamp_;

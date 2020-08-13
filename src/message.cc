@@ -1,6 +1,5 @@
 #include "message.h"
 #include "proposal.h"
-#include "proposer.h"
 
 #include "bytes.h"
 
@@ -11,8 +10,7 @@ namespace Token{
         std::string version = bytes->GetString();
         std::string nonce = bytes->GetString();
         std::string node_id = bytes->GetString();
-        //TODO: decode head_
-        BlockHeader head;
+        BlockHeader head = BlockHeader(bytes);
         return new VersionMessage(client_type, version, node_id, timestamp, nonce, head);
     }
 
@@ -22,11 +20,11 @@ namespace Token{
         size += sizeof(uint16_t); // client_type_
         size += sizeof(uint32_t); // length(version_)
         size += version_.length(); // version_
-        size += sizeof(uint32_t); // length(nonce_)
+        size += sizeof(uint32_t); // length(nonce_) TODO: don't encode string values
         size += nonce_.length(); // nonce_
-        size += sizeof(uint32_t); // length(node_id_)
+        size += sizeof(uint32_t); // length(node_id_) TODO: don't encode string values
         size += node_id_.length(); // node_id_
-        //TODO: calculate sizeof(head_)
+        size += BlockHeader::kSize;
         return size;
     }
 
@@ -36,7 +34,7 @@ namespace Token{
         bytes->PutString(version_);
         bytes->PutString(nonce_);
         bytes->PutString(node_id_);
-        //TODO: encode head_
+        head_.Encode(bytes);
         return true;
     }
 
@@ -47,7 +45,7 @@ namespace Token{
         std::string nonce = bytes->GetString();
         ClientType client_type = static_cast<ClientType>(bytes->GetShort());
         NodeAddress address; //TODO: decode callback_
-        BlockHeader head; //TODO: decode head_
+        BlockHeader head = BlockHeader(bytes);
         return new VerackMessage(client_type, node_id, nonce, address, head, timestamp);
     }
 
@@ -61,7 +59,7 @@ namespace Token{
         size += sizeof(uint32_t); // length(nonce_)
         size += nonce_.length(); // nonce_
         //TODO: calculate sizeof(callback_)
-        //TODO: calculate sizeof(head_)
+        size += BlockHeader::kSize;
         return size;
     }
 
@@ -71,29 +69,51 @@ namespace Token{
         bytes->PutString(version_);
         bytes->PutString(nonce_);
         //TODO: encode(callback_)
-        //TODO: encode(head_)
+        head_.Encode(bytes);
         return true;
-    }
-
-    template<typename T>
-    Handle<T> PaxosMessage::NewInstance(ByteBuffer* bytes){
-        std::string node_id = bytes->GetString();
-        //TODO: decode(proposal)
-        return (T*)new PaxosMessage(node_id, nullptr);
     }
 
     size_t PaxosMessage::GetBufferSize() const{
         size_t size = 0;
-        size += sizeof(uint32_t); // length(node_)
-        size += node_.length(); // node_
-        //TODO: calculate sizeof(proposal_)
+        size += (sizeof(uint32_t) + node_.length()); // node_
+        size += proposal_->GetBufferSize();
         return size;
     }
 
     bool PaxosMessage::Encode(ByteBuffer* bytes) const{
         bytes->PutString(node_);
-        //TODO: encode(proposal_)
+        proposal_->Encode(bytes);
         return true;
+    }
+
+    Handle<PrepareMessage> PrepareMessage::NewInstance(ByteBuffer* bytes){
+        std::string node_id = bytes->GetString();
+        Handle<Proposal> proposal = Proposal::NewInstance(bytes);
+        return new PrepareMessage(node_id, proposal);
+    }
+
+    Handle<PromiseMessage> PromiseMessage::NewInstance(ByteBuffer* bytes){
+        std::string node_id = bytes->GetString();
+        Handle<Proposal> proposal = Proposal::NewInstance(bytes);
+        return new PromiseMessage(node_id, proposal);
+    }
+
+    Handle<CommitMessage> CommitMessage::NewInstance(ByteBuffer* bytes){
+        std::string node_id = bytes->GetString();
+        Handle<Proposal> proposal = Proposal::NewInstance(bytes);
+        return new CommitMessage(node_id, proposal);
+    }
+
+    Handle<AcceptedMessage> AcceptedMessage::NewInstance(ByteBuffer* bytes){
+        std::string node_id = bytes->GetString();
+        Handle<Proposal> proposal = Proposal::NewInstance(bytes);
+        return new AcceptedMessage(node_id, proposal);
+    }
+
+    Handle<RejectedMessage> RejectedMessage::NewInstance(ByteBuffer* bytes){
+        std::string node_id = bytes->GetString();
+        Handle<Proposal> proposal = Proposal::NewInstance(bytes);
+        return new RejectedMessage(node_id, proposal);
     }
 
     Handle<TransactionMessage> TransactionMessage::NewInstance(ByteBuffer* bytes){

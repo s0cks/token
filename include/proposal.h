@@ -10,7 +10,7 @@
 namespace Token{
     class PrepareMessage;
     class Proposal : public Object{
-        friend class ProposerThread;
+        friend class BlockDiscoveryThread;
         friend class NodeSession; //TODO: revoke friendship
     public:
         enum Phase{
@@ -72,8 +72,8 @@ namespace Token{
             return hash_;
         }
 
-        size_t GetBufferSize() const{ return 0; } //TODO: implement
-        bool Encode(ByteBuffer* bytes) const{ return false; } // TODO: implement
+        size_t GetBufferSize() const;
+        bool Encode(ByteBuffer* bytes) const;
         void AcceptProposal(const std::string& node);
         void RejectProposal(const std::string& node);
         void WaitForPhase(Phase phase);
@@ -117,6 +117,7 @@ namespace Token{
             return GetStatus() == Status::kRejectedStatus;
         }
 
+        static Handle<Proposal> NewInstance(ByteBuffer* bytes);
         static Handle<Proposal> NewInstance(uint32_t height, const uint256_t& hash, const std::string& proposer);
 
         static Handle<Proposal> NewInstance(Block* block, const std::string& proposer){

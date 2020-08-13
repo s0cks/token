@@ -53,6 +53,7 @@ namespace Token{
         LOCK_GUARD;
         //TODO: implement
         if(!HasUnclaimedTransaction(hash)) return;
+        UnclaimedTransactionPoolIndex::RemoveData(hash);
     }
 
     void UnclaimedTransactionPool::PutUnclaimedTransaction(const Handle<UnclaimedTransaction>& utxo){

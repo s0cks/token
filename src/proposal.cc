@@ -8,9 +8,30 @@ namespace Token{
 #define WAIT cond_.wait(lock)
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
+    Handle<Proposal> Proposal::NewInstance(ByteBuffer* bytes){
+        uint32_t height = bytes->GetInt();
+        uint256_t hash = bytes->GetHash();
+        std::string proposer = bytes->GetString();
+        return new Proposal(proposer, hash, height);
+    }
 
     Handle<Proposal> Proposal::NewInstance(uint32_t height, const uint256_t& hash, const std::string& proposer){
         return new Proposal(proposer, hash, height);
+    }
+
+    size_t Proposal::GetBufferSize() const{
+        size_t size = 0;
+        size += sizeof(uint32_t);
+        size += uint256_t::kSize;
+        size += (sizeof(uint32_t) + proposer_.length());
+        return size;
+    }
+
+    bool Proposal::Encode(ByteBuffer* bytes) const{
+        bytes->PutInt(height_);
+        bytes->PutHash(hash_);
+        bytes->PutString(proposer_);
+        return true;
     }
 
     void Proposal::SetPhase(Proposal::Phase phase){

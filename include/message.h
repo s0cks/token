@@ -3,7 +3,7 @@
 
 #include "token.h"
 #include "common.h"
-#include "server.h"
+#include "address.h"
 #include "block_pool.h"
 #include "block_chain.h"
 #include "transaction_pool.h"
@@ -59,6 +59,9 @@ namespace Token{
         virtual MessageType GetMessageType() const{
             return MessageType::kUnknownMessageType;
         }
+
+        virtual size_t GetBufferSize() const = 0;
+        virtual bool Encode(ByteBuffer* bytes) const = 0;
 
         std::string ToString() const{
             std::stringstream ss;
@@ -212,20 +215,23 @@ namespace Token{
     class Proposal;
     class PaxosMessage : public Message{
     protected:
+        MessageType type_; //TODO: remove this bs
         std::string node_;
         Proposal* proposal_;
 
-        PaxosMessage(const std::string& node, Proposal* proposal):
+        PaxosMessage(MessageType type, const std::string& node, Proposal* proposal):
             Message(),
+            type_(type),
             node_(node),
             proposal_(nullptr){
             WriteBarrier(&proposal_, proposal);
         }
-
-        template<typename T>
-        static Handle<T> NewInstance(ByteBuffer* bytes);
     public:
         virtual ~PaxosMessage() = default;
+
+        MessageType GetMessageType() const{
+            return type_;
+        }
 
         size_t GetBufferSize() const;
         bool Encode(ByteBuffer* bytes) const;
@@ -241,85 +247,70 @@ namespace Token{
 
     class PrepareMessage : public PaxosMessage{
     private:
-        PrepareMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(node_id, proposal){}
+        PrepareMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(Message::kPrepareMessageType, node_id, proposal){}
     public:
         ~PrepareMessage(){}
 
         DECLARE_MESSAGE(Prepare);
 
-        static Handle<PrepareMessage> NewInstance(ByteBuffer* bytes){
-            return PaxosMessage::NewInstance<PrepareMessage>(bytes);
-        }
-
-        static Handle<PrepareMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
+        static Handle<PrepareMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<PrepareMessage> NewInstance(Proposal* proposal, const std::string& node_id){
             return new PrepareMessage(node_id, proposal);
         }
     };
 
     class PromiseMessage : public PaxosMessage{
     private:
-        PromiseMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(node_id, proposal){}
+        PromiseMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(Message::kPromiseMessageType, node_id, proposal){}
     public:
         ~PromiseMessage(){}
 
         DECLARE_MESSAGE(Promise);
 
-        static Handle<PromiseMessage> NewInstance(ByteBuffer* bytes){
-            return PaxosMessage::NewInstance<PromiseMessage>(bytes);
-        }
-
-        static Handle<PromiseMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
+        static Handle<PromiseMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<PromiseMessage> NewInstance(Proposal* proposal, const std::string& node_id){
             return new PromiseMessage(node_id, proposal);
         }
     };
 
     class CommitMessage : public PaxosMessage{
     private:
-        CommitMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(node_id, proposal){}
+        CommitMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(Message::kCommitMessageType, node_id, proposal){}
     public:
         ~CommitMessage(){}
 
         DECLARE_MESSAGE(Commit);
 
-        static Handle<CommitMessage> NewInstance(ByteBuffer* bytes){
-            return PaxosMessage::NewInstance<CommitMessage>(bytes);
-        }
-
-        static Handle<CommitMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
+        static Handle<CommitMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<CommitMessage> NewInstance(Proposal* proposal, const std::string& node_id){
             return new CommitMessage(node_id, proposal);
         }
     };
 
     class AcceptedMessage : public PaxosMessage{
     private:
-        AcceptedMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(node_id, proposal){}
+        AcceptedMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(Message::kAcceptedMessageType, node_id, proposal){}
     public:
         ~AcceptedMessage(){}
 
         DECLARE_MESSAGE(Accepted);
 
-        static Handle<AcceptedMessage> NewInstance(ByteBuffer* bytes){
-            return PaxosMessage::NewInstance<AcceptedMessage>(bytes);
-        }
-
-        static Handle<AcceptedMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
+        static Handle<AcceptedMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<AcceptedMessage> NewInstance(Proposal* proposal, const std::string& node_id){
             return new AcceptedMessage(node_id, proposal);
         }
     };
 
     class RejectedMessage : public PaxosMessage{
     private:
-        RejectedMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(node_id, proposal){}
+        RejectedMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(Message::kRejectedMessageType, node_id, proposal){}
     public:
         ~RejectedMessage(){}
 
         DECLARE_MESSAGE(Rejected);
 
-        static Handle<RejectedMessage> NewInstance(ByteBuffer* bytes){
-            return PaxosMessage::NewInstance<RejectedMessage>(bytes);
-        }
-
-        static Handle<RejectedMessage> NewInstance(Proposal* proposal, const std::string& node_id=Server::GetID()){
+        static Handle<RejectedMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<RejectedMessage> NewInstance(Proposal* proposal, const std::string& node_id){
             return new RejectedMessage(node_id, proposal);
         }
     };
@@ -470,6 +461,7 @@ namespace Token{
     };
 
     class InventoryMessage : public Message{
+    public:
         static const size_t kMaxAmountOfItemsPerMessage = 50;
     private:
         std::vector<InventoryItem> items_;
@@ -531,7 +523,7 @@ namespace Token{
         static Handle<GetDataMessage> NewInstance(ByteBuffer* bytes);
 
         static Handle<GetDataMessage> NewInstance(std::vector<InventoryItem>& items){
-            return nullptr; //TODO: implement
+            return new GetDataMessage(items);
         }
     };
 

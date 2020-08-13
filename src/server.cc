@@ -217,14 +217,9 @@ namespace Token{
 
         std::vector<Handle<Message>> messages;
         do{
-            uint32_t mtype = 0;
-            memcpy(&mtype, &buff->base[offset + Message::kTypeOffset], Message::kTypeLength);
-
-            uint64_t msize = 0;
-            memcpy(&msize, &buff->base[offset + Message::kSizeOffset], Message::kSizeLength);
-
-            ByteBuffer bytes((uint8_t*)&buff->base[offset + Message::kDataOffset], (size_t)msize);
-
+            ByteBuffer bytes((uint8_t*)buff->base, buff->len);
+            uint32_t mtype = bytes.GetInt();
+            uint64_t msize = bytes.GetLong();
             Handle<Message> msg = Message::Decode(static_cast<Message::MessageType>(mtype), &bytes);
             LOG(INFO) << "decoded message: " << msg->ToString(); //TODO: handle decode failures
             messages.push_back(msg);

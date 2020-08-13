@@ -5,6 +5,7 @@
 #include <uv.h>
 #include "allocator.h"
 #include "address.h"
+#include "message.h"
 #include "vthread.h"
 
 namespace Token{
@@ -109,6 +110,11 @@ namespace Token{
             LoadPeers();
             return Thread::Start("ServerThread", &HandleThread, 0) == 0;
         }
+
+#define DECLARE_BROADCAST(Name) \
+        static void Broadcast(const Handle<Name##Message>& msg){ Broadcast(msg.CastTo<Message>()); }
+        FOR_EACH_MESSAGE_TYPE(DECLARE_BROADCAST)
+#undef DECLARE_BROADCAST
     };
 }
 

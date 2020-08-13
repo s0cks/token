@@ -85,7 +85,7 @@ namespace Token{
             ss << "Couldn't read hash from snapshot file: " << GetFilename();
             CrashReport::GenerateAndExit(ss);
         }
-        return uint256_t((uint8_t*)bytes);//TODO: fix sign-casting
+        return uint256_t((uint8_t*)bytes);
     }
 
     std::string SnapshotReader::ReadString(){

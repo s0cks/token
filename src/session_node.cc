@@ -2,7 +2,6 @@
 #include "server.h"
 #include "session.h"
 #include "proposal.h"
-#include "proposer.h"
 #include "block_pool.h"
 #include "transaction_pool.h"
 #include "unclaimed_transaction_pool.h"
@@ -103,12 +102,12 @@ namespace Token{
         Handle<PrepareMessage> msg = task->GetMessage().CastTo<PrepareMessage>();
 
         Handle<Proposal> proposal = msg->GetProposal();
-        if(ProposerThread::HasProposal()){
-            session->Send(RejectedMessage::NewInstance(proposal));
+        /*if(ProposerThread::HasProposal()){
+            session->Send(RejectedMessage::NewInstance(proposal, Server::GetID()));
             return;
-        }
+        }*/
 
-        ProposerThread::SetProposal(proposal);
+        //ProposerThread::SetProposal(proposal);
         proposal->SetPhase(Proposal::kVotingPhase);
         std::vector<Handle<Message>> response;
         if(!BlockPool::HasBlock(proposal->GetHash())){
@@ -117,7 +116,7 @@ namespace Token{
             };
             response.push_back(GetDataMessage::NewInstance(items).CastTo<Message>());
         }
-        response.push_back(PromiseMessage::NewInstance(proposal).CastTo<Message>());
+        response.push_back(PromiseMessage::NewInstance(proposal, Server::GetID()).CastTo<Message>());
         session->Send(response);
     }
 
@@ -132,10 +131,10 @@ namespace Token{
 
         if(!BlockPool::HasBlock(hash)){
             LOG(WARNING) << "couldn't find block " << hash << " in pool, rejecting request to commit proposal....";
-            session->Send(RejectedMessage::NewInstance(proposal));
+            session->Send(RejectedMessage::NewInstance(proposal, Server::GetID()));
         } else{
             proposal->SetPhase(Proposal::kCommitPhase);
-            session->Send(AcceptedMessage::NewInstance(proposal));
+            session->Send(AcceptedMessage::NewInstance(proposal, Server::GetID()));
         }
     }
 

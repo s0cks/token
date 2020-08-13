@@ -24,19 +24,20 @@ namespace Token{
     };
 
     class ClientCommand;
+    class ClientCommandHandler;
     class ClientSession : public Session{
+        //TODO: add client command handler
         friend class ClientSessionInfo;
+        friend class ClientCommandHandler;
     private:
-        uv_loop_t* loop_;
         uv_signal_t sigterm_;
         uv_signal_t sigint_;
         uv_tcp_t stream_;
         uv_timer_t hb_timer_;
         uv_timer_t hb_timeout_;
         uv_connect_t connection_;
-        uv_pipe_t stdin_;
-        uv_pipe_t stdout_;
 
+        // Info
         NodeAddress paddress_;
         std::string pid_;
         BlockHeader head_;
@@ -67,30 +68,23 @@ namespace Token{
 
         static void OnConnect(uv_connect_t* conn, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
-        static void OnCommandReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
         static void OnSignal(uv_signal_t* handle, int signum);
         static void OnHeartbeatTick(uv_timer_t* handle);
         static void OnHeartbeatTimeout(uv_timer_t* handle);
 
+        virtual uv_loop_t* GetLoop(){
+            return stream_.loop;
+        }
+
         virtual uv_stream_t* GetStream(){
             return (uv_stream_t*)&stream_;
         }
-
-        inline uv_stream_t*
-        GetStdinPipe(){
-            return (uv_stream_t*)&stdin_;
-        }
     public:
-        ClientSession():
+        ClientSession(bool use_stdin):
             stream_(),
-            loop_(uv_loop_new()),
             sigterm_(),
             sigint_(),
-            stdin_(),
-            stdout_(),
             Session(&stream_){
-            stdin_.data = this;
-            stdout_.data = this;
             stream_.data = this;
             connection_.data = this;
             hb_timer_.data = this;
@@ -107,16 +101,13 @@ namespace Token{
         FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
 
-#define DECLARE_COMMAND_HANDLER(Name, Text, Parameters) \
-        void Handle##Name##Command(ClientCommand* cmd);
-        FOR_EACH_CLIENT_COMMAND(DECLARE_COMMAND_HANDLER);
-#undef DECLARE_COMMAND_HANDLER
-
         void Connect(const NodeAddress& addr);
+        void Disconnect();
     };
 
     class ClientCommand{
         friend class ClientSession;
+        friend class ClientCommandHandler;
     public:
         enum class Type{
             kUnknownType=0,
@@ -200,6 +191,51 @@ namespace Token{
             stream << ")";
             return stream;
         }
+    };
+
+    class ClientCommandHandler{
+    private:
+        ClientSession* session_;
+        uv_pipe_t stdin_;
+
+        ClientCommandHandler(ClientSession* session):
+            session_(session),
+            stdin_(){
+            stdin_.data = this;
+        }
+
+        inline void
+        Send(const Handle<Message>& msg){
+            GetSession()->Send(msg);
+        }
+
+        inline void
+        Send(std::vector<Handle<Message>>& messages){
+            GetSession()->Send(messages);
+        }
+
+#define DEFINE_SEND(Name) \
+        inline void \
+        Send(const Handle<Name##Message>& msg){ \
+            Send(msg.CastTo<Message>()); \
+        }
+        FOR_EACH_MESSAGE_TYPE(DEFINE_SEND)
+#undef DEFINE_SEND
+
+        static void OnCommandReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
+    public:
+        ~ClientCommandHandler() = default;
+
+        ClientSession* GetSession() const{
+            return session_;
+        }
+
+#define DECLARE_COMMAND_HANDLER(Name, Text, Parameters) \
+        void Handle##Name##Command(ClientCommand* cmd);
+        FOR_EACH_CLIENT_COMMAND(DECLARE_COMMAND_HANDLER);
+#undef DECLARE_COMMAND_HANDLER
+
+        void Start();
     };
 }
 

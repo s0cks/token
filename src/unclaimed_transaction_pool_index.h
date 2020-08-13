@@ -13,6 +13,7 @@ namespace Token{
         static void Initialize();
         static Handle<UnclaimedTransaction> GetData(const uint256_t& hash);
         static size_t GetNumberOfUnclaimedTransactions();
+        static bool RemoveData(const uint256_t& hash);
         static bool PutData(const Handle<UnclaimedTransaction>& utxo);
         static bool HasData(const uint256_t& hash);
 
