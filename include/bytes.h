@@ -23,6 +23,10 @@ namespace Token{
         void Resize(size_t size){
             if(size > cap_){
                 uint8_t* ndata = (uint8_t*)realloc(data_, sizeof(uint8_t)*size);
+                if(!ndata){
+                    LOG(WARNING) << "couldn't resize buffer to size: " << size;
+                    return;
+                }
                 data_ = ndata;
                 cap_ = size;
             }
@@ -65,7 +69,9 @@ namespace Token{
             wpos_(0){
             if(max > 0){
                 max = RoundUpPowTwo(max);
-                data_ = (uint8_t*)malloc(sizeof(uint8_t)*max);
+                if(!(data_ = (uint8_t*)malloc(sizeof(uint8_t)*max))){
+                    LOG(WARNING) << "couldn't allocate new buffer of size: " << max;
+                }
                 memset(data_, 0, sizeof(uint8_t)*max);
             }
             cap_ = max;
@@ -76,9 +82,14 @@ namespace Token{
             rpos_(0),
             wpos_(0){
             if(size > 0){
-                data_ = (uint8_t*)malloc(sizeof(uint8_t)*size);
+                if(!(data_ = (uint8_t*)malloc(sizeof(uint8_t)*size))){
+                    LOG(WARNING) << "couldn't malloc new buffer of size: " << size;
+                    return;
+                }
                 memcpy(data_, data, sizeof(uint8_t)*size);
                 cap_ = size;
+            } else{
+                LOG(WARNING) << "allocating empty buffer, requested size: " << size;
             }
         }
         ~ByteBuffer(){
