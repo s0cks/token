@@ -38,49 +38,63 @@ namespace Token{
 
     class TransactionPoolBlockBuilder : public TransactionPoolVisitor{
     private:
+        size_t block_size_;
         size_t num_transactions_;
-        size_t index_;
+        size_t max_transactions_;
         Transaction** transactions_;
-
-        inline void
-        AddTransaction(const Handle<Transaction>& tx){
-            transactions_[index_++] = tx;
-        }
 
         inline void
         RemoveTransactionFromPool(const Handle<Transaction>& tx){
             TransactionPool::RemoveTransaction(tx->GetHash());
         }
+
+        inline void
+        AddTransaction(const Handle<Transaction>& tx){
+            transactions_[num_transactions_++] = tx;
+        }
+
+        static bool
+        CompareTimestamp(Transaction* a, Transaction* b){
+            return a->GetTimestamp() < b->GetTimestamp();
+        }
     public:
-        TransactionPoolBlockBuilder():
+        TransactionPoolBlockBuilder(size_t size=Block::kMaxTransactionsForBlock, size_t max_transactions=TransactionPool::GetNumberOfTransactions()):
             TransactionPoolVisitor(),
-            num_transactions_(GetNumberOfTransactionsInPool()),
-            index_(0),
+            num_transactions_(0),
+            max_transactions_(max_transactions),
+            block_size_(size),
             transactions_(nullptr){
-            if(num_transactions_ > 0){
-                transactions_ = (Transaction**)malloc(sizeof(Transaction*)*num_transactions_);
-                memset(transactions_, 0, sizeof(Transaction*)*num_transactions_);
+            if(max_transactions > 0){
+                transactions_ = (Transaction**)malloc(sizeof(Transaction*)*max_transactions);
+                memset(transactions_, 0, sizeof(Transaction*)*max_transactions);
             }
         }
         ~TransactionPoolBlockBuilder(){
-            if(num_transactions_ > 0 && transactions_) free(transactions_);
+            if(transactions_) free(transactions_);
         }
 
         Handle<Block> GetBlock() const{
+            // Get the Parent Block
             BlockHeader parent = BlockChain::GetHead();
-            return Block::NewInstance(parent, transactions_, num_transactions_);
+            // Sort the Transactions by Timestamp
+            std::sort(transactions_, transactions_+num_transactions_, CompareTimestamp);
+            // Return a New Block of size Block::kMaxTransactionsForBlock, using sorted Transactions
+            return Block::NewInstance(parent, transactions_, block_size_);
         }
 
         bool Visit(const Handle<Transaction>& tx){
             if(TransactionValidator::IsValid(tx)){
                 AddTransaction(tx);
                 RemoveTransactionFromPool(tx);
+            } else{
+                LOG(WARNING) << "removing invalid transaction from pool: " << tx->GetHash();
+                RemoveTransactionFromPool(tx);
             }
             return true;
         }
 
-        static Handle<Block> Build(){
-            TransactionPoolBlockBuilder builder;
+        static Handle<Block> Build(size_t size){
+            TransactionPoolBlockBuilder builder(size);
             TransactionPool::Accept(&builder);
             Handle<Block> block = builder.GetBlock();
             BlockPool::PutBlock(block);
@@ -142,8 +156,8 @@ namespace Token{
 
     }
 
-    Handle<Block> BlockDiscoveryThread::CreateNewBlock(){
-        Handle<Block> blk = TransactionPoolBlockBuilder::Build();
+    Handle<Block> BlockDiscoveryThread::CreateNewBlock(size_t size){
+        Handle<Block> blk = TransactionPoolBlockBuilder::Build(size);
         SetBlock(blk);
         return blk;
     }
@@ -200,7 +214,7 @@ namespace Token{
 
             if(GetNumberOfTransactionsInPool() >= 2){
                 LOG(INFO) << "creating new block from transaction pool";
-                Handle<Block> block = CreateNewBlock();
+                Handle<Block> block = CreateNewBlock(2);
 
                 BlockValidator validator(block);
                 if(!validator.IsValid()){

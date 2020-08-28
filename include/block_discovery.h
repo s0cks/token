@@ -19,7 +19,7 @@ namespace Token{
         static void OnAccepted(const Handle<Proposal>& proposal);
         static void OnRejected(const Handle<Proposal>& proposal);
         static Handle<Proposal> CreateNewProposal(const Handle<Block>& blk);
-        static Handle<Block> CreateNewBlock();
+        static Handle<Block> CreateNewBlock(size_t size);
     public:
         ~BlockDiscoveryThread() = delete;
 
