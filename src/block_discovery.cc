@@ -198,7 +198,9 @@ namespace Token{
                 LOG(INFO) << "block discovery thread is resuming.";
             }
 
+            LOG(INFO) << "checking number of transactions in the pool...";
             if(GetNumberOfTransactionsInPool() >= 2){
+                LOG(INFO) << "creating new block from transaction pool";
                 Handle<Block> block = CreateNewBlock();
 
                 BlockValidator validator(block);
