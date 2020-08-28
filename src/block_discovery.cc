@@ -44,11 +44,6 @@ namespace Token{
         Transaction** transactions_;
 
         inline void
-        RemoveTransactionFromPool(const Handle<Transaction>& tx){
-            TransactionPool::RemoveTransaction(tx->GetHash());
-        }
-
-        inline void
         AddTransaction(const Handle<Transaction>& tx){
             transactions_[num_transactions_++] = tx;
         }
@@ -85,10 +80,6 @@ namespace Token{
         bool Visit(const Handle<Transaction>& tx){
             if(TransactionValidator::IsValid(tx)){
                 AddTransaction(tx);
-                RemoveTransactionFromPool(tx);
-            } else{
-                LOG(WARNING) << "removing invalid transaction from pool: " << tx->GetHash();
-                RemoveTransactionFromPool(tx);
             }
             return true;
         }

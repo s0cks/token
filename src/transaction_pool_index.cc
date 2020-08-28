@@ -67,6 +67,8 @@ namespace Token{
     void TransactionPoolIndex::RemoveData(const uint256_t& hash){
         if(!HasData(hash)) return;
 
+        LOG(INFO) << "removing transaction " << hash << " from pool";
+
         leveldb::WriteOptions options;
         options.sync = true;
         std::string key = KEY(hash);
