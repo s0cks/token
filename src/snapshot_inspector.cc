@@ -1,4 +1,7 @@
 #include "snapshot_inspector.h"
+#include "snapshot_prologue.h"
+#include "snapshot_block_chain.h"
+#include "snapshot_unclaimed_transaction_pool.h"
 
 namespace Token{
     static void
@@ -29,11 +32,11 @@ namespace Token{
 
     void SnapshotInspector::PrintSnapshot(Snapshot* snapshot){
         LOG(INFO) << "Snapshot: " << snapshot->GetFilename();
-        LOG(INFO) << "Created: " << GetTimestampFormattedReadable(snapshot->prologue_.GetTimestamp());
-        LOG(INFO) << "Version: " << snapshot->prologue_.GetVersion();
+        LOG(INFO) << "Created: " << GetTimestampFormattedReadable(snapshot->GetPrologueSection()->GetTimestamp());
+        LOG(INFO) << "Version: " << snapshot->GetPrologueSection()->GetVersion();
         LOG(INFO) << "Size: " << GetFilesize(snapshot->GetFilename()) << " Bytes";
-        LOG(INFO) << "Number of Blocks: " << snapshot->blocks_.GetNumberOfReferences();
-        LOG(INFO) << "Number of Unclaimed Transactions: " << snapshot->utxos_.GetNumberOfReferences();
+        LOG(INFO) << "Number of Blocks: " << snapshot->GetBlockChainSection()->GetNumberOfReferences();
+        LOG(INFO) << "Number of Unclaimed Transactions: " << snapshot->GetUnclaimedTransactionPoolSection()->GetNumberOfReferences();
     }
 
     void SnapshotInspector::SetSnapshot(Snapshot* snapshot){

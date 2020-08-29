@@ -1,5 +1,5 @@
-FROM token-base:0.0.1
-# Install Latest Dependencies
+FROM token-base:0.0.5
+# Install Dependencies
 RUN apt-get update && apt-get install -y \
     libdevmapper-dev \
     libpopt-dev \
@@ -17,18 +17,13 @@ RUN apt-get update && apt-get install -y \
 RUN mkdir -p /usr/src/libtoken-ledger/build
 COPY cmake /usr/src/libtoken-ledger/cmake/
 COPY include /usr/src/libtoken-ledger/include/
-COPY protos /usr/src/libtoken-ledger/protos/
 COPY src /usr/src/libtoken-ledger/src/
 COPY tests /usr/src/libtoken-ledger/tests/
-COPY CMakeLists.txt main.cc client.cc tests.cc /usr/src/libtoken-ledger/
+COPY CMakeLists.txt main.cc client.cc tests.cc inspector.cc /usr/src/libtoken-ledger/
 
 # Create the Token User
 RUN useradd token \
     && passwd -d token
-
-# Create the Logging Directory
-RUN mkdir -p /var/log/token \
-    && chown token:token /var/log/token
 
 # Create the Ledger Directory
 RUN mkdir -p /opt/token/ledger \

@@ -1,44 +1,9 @@
 #include "snapshot_writer.h"
+#include "snapshot_prologue.h"
+#include "snapshot_block_chain.h"
+#include "snapshot_unclaimed_transaction_pool.h"
 
 namespace Token{
-#define CHECK_FILE_POINTER \
-    if(GetFilePointer() == NULL){ \
-        LOG(WARNING) << "snapshot file " << GetFilename() << " is not opened"; \
-        return; \
-    }
-#define CHECK_WRITTEN(Written, Expected, Size) \
-    if((Written) != (Expected)) \
-        LOG(WARNING) << "could only write " << ((Written)*(Size)) << "/" << ((Expected)*(Size)) << " bytes to snapshot file: " << GetFilename();
-
-    void SnapshotWriter::Close(){
-        CHECK_FILE_POINTER;
-        int err;
-        if((err = fclose(GetFilePointer())) != 0)
-            LOG(WARNING) << "couldn't close snapshot file " << GetFilename() << ": " << strerror(err);
-    }
-
-    void SnapshotWriter::SetCurrentPosition(int64_t pos){
-        CHECK_FILE_POINTER;
-        int err;
-        if((err = fseek(GetFilePointer(), pos, SEEK_SET)) != 0)
-            LOG(WARNING) << "couldn't seek to " << pos << " in snapshot " << GetFilename() << ": " << strerror(err);
-    }
-
-    void SnapshotWriter::Flush(){
-        CHECK_FILE_POINTER;
-        int err;
-        if((err = fflush(GetFilePointer())) != 0)
-            LOG(WARNING) << "couldn't flush snapshot file " << GetFilename() << ": " << strerror(err);
-    }
-
-    int64_t SnapshotWriter::GetCurrentPosition(){
-        if(GetFilePointer() == NULL){
-            LOG(WARNING) << "snapshot file " << GetFilename() << " is not opened";
-            return 0;
-        }
-        return ftell(GetFilePointer());
-    }
-
     void SnapshotWriter::WriteHeader(SnapshotSection* section){
         WriteInt(section->GetSectionId());
         WriteLong(section->GetSize());
@@ -58,72 +23,35 @@ namespace Token{
         Snapshot* snapshot = GetSnapshot();
         {
             int64_t offset = GetCurrentPosition();
-            snapshot->prologue_.SetRegion(offset, 0);
-            WriteHeader(&snapshot->prologue_);
-            snapshot->prologue_.Accept(this);//TODO: check result
+            snapshot->GetPrologueSection()->SetRegion(offset, 0);
+            WriteHeader(snapshot->GetPrologueSection());
+            snapshot->GetPrologueSection()->Accept(this);
             int64_t size = (GetCurrentPosition() - offset);
-            snapshot->prologue_.SetRegion(offset, size);
-            UpdateHeader(&snapshot->prologue_);
+            snapshot->GetPrologueSection()->SetRegion(offset, size);
+            UpdateHeader(snapshot->GetPrologueSection());
         }
 
         {
             int64_t offset = GetCurrentPosition();
-            WriteHeader(&snapshot->blocks_);
-            snapshot->blocks_.Accept(this); //TODO: check result
+            WriteHeader(snapshot->GetBlockChainSection());
+            snapshot->GetBlockChainSection()->Accept(this); //TODO: check result
             int64_t size = (GetCurrentPosition() - offset);
-            snapshot->blocks_.SetRegion(offset, size);
-            UpdateHeader(&snapshot->blocks_);
+            snapshot->GetBlockChainSection()->SetRegion(offset, size);
+            UpdateHeader(snapshot->GetBlockChainSection());
         }
 
         {
             int64_t offset = GetCurrentPosition();
-            WriteHeader(&snapshot->utxos_);
-            snapshot->utxos_.Accept(this); //TODO: check result
+            WriteHeader(snapshot->GetUnclaimedTransactionPoolSection());
+            snapshot->GetUnclaimedTransactionPoolSection()->Accept(this); //TODO: check result
             int64_t size = (GetCurrentPosition() - offset);
-            snapshot->utxos_.SetRegion(offset, size);
-            UpdateHeader(&snapshot->utxos_);
+            snapshot->GetUnclaimedTransactionPoolSection()->SetRegion(offset, size);
+            UpdateHeader(snapshot->GetUnclaimedTransactionPoolSection());
         }
         return true;
     }
 
-    void SnapshotWriter::WriteBytes(uint8_t* bytes, size_t size){
-        CHECK_FILE_POINTER;
-        CHECK_WRITTEN(fwrite(bytes, sizeof(uint8_t), size, GetFilePointer()), size, sizeof(uint8_t));
-        Flush();
-    }
 
-    void SnapshotWriter::WriteInt(int32_t value){
-        CHECK_FILE_POINTER;
-        CHECK_WRITTEN(fwrite(&value, sizeof(int32_t), 1, GetFilePointer()), 1, sizeof(int32_t));
-        Flush();
-    }
-
-    void SnapshotWriter::WriteUnsignedInt(uint32_t value){
-        CHECK_FILE_POINTER;
-        CHECK_WRITTEN(fwrite(&value, sizeof(uint32_t), 1, GetFilePointer()), 1, sizeof(uint32_t));
-        Flush();
-    }
-
-    void SnapshotWriter::WriteLong(int64_t value){
-        CHECK_FILE_POINTER;
-        CHECK_WRITTEN(fwrite(&value, sizeof(int64_t), 1, GetFilePointer()), 1, sizeof(int64_t));
-        Flush();
-    }
-
-    void SnapshotWriter::WriteUnsignedLong(uint64_t value){
-        CHECK_FILE_POINTER;
-        CHECK_WRITTEN(fwrite(&value, sizeof(uint64_t), 1, GetFilePointer()), 1, sizeof(uint64_t));
-        Flush();
-    }
-
-    void SnapshotWriter::WriteHash(const uint256_t& hash){
-        WriteBytes((uint8_t*)hash.data(), uint256_t::kSize);
-    }
-
-    void SnapshotWriter::WriteString(const std::string& value){
-        WriteInt(value.length());
-        WriteBytes((uint8_t*)value.data(), value.length());
-    }
 
     void SnapshotWriter::WriteReference(const IndexReference& ref){
         WriteHash(ref.GetHash());

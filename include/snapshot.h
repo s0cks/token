@@ -55,34 +55,6 @@ namespace Token{
         virtual bool Accept(SnapshotReader* reader) = 0;
     };
 
-    class SnapshotPrologueSection : public SnapshotSection{
-    private:
-        std::string version_;
-        uint64_t timestamp_;
-    public:
-        SnapshotPrologueSection():
-            SnapshotSection(SnapshotSection::kPrologueSection),
-            version_(Token::GetVersion()),
-            timestamp_(GetCurrentTimestamp()){}
-        ~SnapshotPrologueSection() = default;
-
-        std::string GetVersion() const{
-            return version_;
-        }
-
-        uint64_t GetTimestamp() const{
-            return timestamp_;
-        }
-
-        bool Accept(SnapshotWriter* writer);
-        bool Accept(SnapshotReader* reader);
-
-        void operator=(const SnapshotPrologueSection& prologue){
-            version_ = prologue.version_;
-            timestamp_ = prologue.timestamp_;
-        }
-    };
-
     class IndexReference{
     private:
         uint256_t hash_;
@@ -184,37 +156,88 @@ namespace Token{
         }
     };
 
-    class SnapshotBlockChainSection : public IndexedSection{
-        friend class Snapshot;
+    class IndexTableWriter{
     protected:
-        bool WriteIndexTable(SnapshotWriter* writer);
-        bool WriteData(SnapshotWriter* writer);
-        bool LinkIndexTable(SnapshotWriter* writer);
-    public:
-        SnapshotBlockChainSection(): IndexedSection(SnapshotSection::kBlockChainDataSection){}
-        ~SnapshotBlockChainSection() = default;
+        SnapshotWriter* writer_;
+        IndexTable& table_;
 
-        void operator=(const SnapshotBlockChainSection& section){
-            IndexedSection::operator=(section);
+        IndexTableWriter(SnapshotWriter* writer, IndexTable& table):
+                writer_(writer),
+                table_(table){}
+
+        SnapshotWriter* GetWriter() const{
+            return writer_;
         }
+
+        bool HasReference(const uint256_t& hash){
+            return table_.find(hash) != table_.end();
+        }
+
+        IndexReference* GetReference(const uint256_t& hash){
+            auto pos = table_.find(hash);
+            return &pos->second;
+        }
+
+        IndexReference* CreateNewReference(const uint256_t& hash);
+    public:
+        virtual ~IndexTableWriter() = default;
     };
 
-    class SnapshotUnclaimedTransactionPoolSection : public IndexedSection{
-        friend class Snapshot;
+    class IndexTableDataWriter{
     protected:
-        bool WriteIndexTable(SnapshotWriter* writer);
-        bool WriteData(SnapshotWriter* writer);
-        bool LinkIndexTable(SnapshotWriter* writer);
-    public:
-        SnapshotUnclaimedTransactionPoolSection():
-            IndexedSection(SnapshotSection::kUnclaimedTransactionPoolSection){}
-        ~SnapshotUnclaimedTransactionPoolSection() = default;
+        SnapshotWriter* writer_;
+        IndexTable& table_;
 
-        void operator=(const SnapshotUnclaimedTransactionPoolSection& section){
-            IndexedSection::operator=(section);
+        IndexTableDataWriter(SnapshotWriter* writer, IndexTable& table):
+                writer_(writer),
+                table_(table){}
+
+        SnapshotWriter* GetWriter() const{
+            return writer_;
         }
+
+        bool HasReference(const uint256_t& hash){
+            return table_.find(hash) != table_.end();
+        }
+
+        IndexReference* GetReference(const uint256_t& hash){
+            auto pos = table_.find(hash);
+            return &pos->second;
+        }
+
+        void WriteData(ByteBuffer* bytes, size_t size);
+    public:
+        virtual ~IndexTableDataWriter() = default;
     };
 
+    class IndexTableLinker{
+    protected:
+        SnapshotWriter* writer_;
+        IndexTable& table_;
+
+        IndexTableLinker(SnapshotWriter* writer, IndexTable& table):
+                writer_(writer),
+                table_(table){}
+
+        SnapshotWriter* GetWriter() const{
+            return writer_;
+        }
+
+        bool HasReference(const uint256_t& hash){
+            return table_.find(hash) != table_.end();
+        }
+
+        IndexReference* GetReference(const uint256_t& hash){
+            auto pos = table_.find(hash);
+            return &pos->second;
+        }
+    public:
+        virtual ~IndexTableLinker() = default;
+    };
+
+    class SnapshotPrologueSection;
+    class SnapshotBlockChainSection;
+    class SnapshotUnclaimedTransactionPoolSection;
     class SnapshotBlockDataVisitor;
     class SnapshotUnclaimedTransactionDataVisitor;
     class Snapshot{
@@ -225,9 +248,9 @@ namespace Token{
         friend class SnapshotInspector;
     private:
         std::string filename_;
-        SnapshotPrologueSection prologue_;
-        SnapshotBlockChainSection blocks_;
-        SnapshotUnclaimedTransactionPoolSection utxos_;
+        SnapshotPrologueSection* prologue_;
+        SnapshotBlockChainSection* block_chain_;
+        SnapshotUnclaimedTransactionPoolSection* utxos_;
 
         IndexReference* GetReference(const uint256_t& hash);
         Handle<Block> GetBlock(const IndexReference& ref);
@@ -244,27 +267,35 @@ namespace Token{
             if(!ref) return nullptr;
             return GetUnclaimedTransaction((*ref));
         }
+
+        static inline void
+        CheckSnapshotDirectory(){
+            std::string filename = GetSnapshotDirectory();
+            if(!FileExists(filename)){
+                if(!CreateDirectory(filename)){
+                    std::stringstream ss;
+                    ss << "Couldn't create snapshots repository: " << filename;
+                    CrashReport::GenerateAndExit(ss);
+                }
+            }
+        }
     public:
-        Snapshot():
-            filename_(),
-            prologue_(),
-            blocks_(),
-            utxos_(){}
-        ~Snapshot() = default;
+        Snapshot();
+        ~Snapshot();
 
         std::string GetFilename() const{
             return filename_;
         }
 
-        SnapshotPrologueSection GetPrologueSection() const{
+        SnapshotPrologueSection* GetPrologueSection() const{
             return prologue_;
         }
 
-        SnapshotBlockChainSection GetBlockChainSection() const{
-            return blocks_;
+        SnapshotBlockChainSection* GetBlockChainSection() const{
+            return block_chain_;
         }
 
-        SnapshotUnclaimedTransactionPoolSection GetUnclaimedTransactionPoolSection() const{
+        SnapshotUnclaimedTransactionPoolSection* GetUnclaimedTransactionPoolSection() const{
             return utxos_;
         }
 
@@ -274,6 +305,11 @@ namespace Token{
         static bool WriteSnapshot(Snapshot* snapshot);
         static bool WriteNewSnapshot();
         static Snapshot* ReadSnapshot(const std::string& filename);
+
+        static inline std::string
+        GetSnapshotDirectory(){
+            return (TOKEN_BLOCKCHAIN_HOME + "/snapshots");
+        }
     };
 
     class SnapshotBlockDataVisitor{

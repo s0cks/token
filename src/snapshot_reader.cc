@@ -1,4 +1,7 @@
 #include "snapshot_reader.h"
+#include "snapshot_prologue.h"
+#include "snapshot_block_chain.h"
+#include "snapshot_unclaimed_transaction_pool.h"
 
 namespace Token{
 #define CHECK_FILE_POINTER \
@@ -122,17 +125,17 @@ namespace Token{
         Snapshot* snapshot = new Snapshot();
         snapshot->filename_ = GetFilename();
         {
-            ReadHeader(&snapshot->prologue_);
-            snapshot->prologue_.Accept(this);
+            ReadHeader(snapshot->GetPrologueSection());
+            snapshot->GetPrologueSection()->Accept(this);
         }
         {
-            ReadHeader(&snapshot->blocks_);
-            snapshot->blocks_.Accept(this);
-            SkipData(&snapshot->blocks_);
+            ReadHeader(snapshot->GetBlockChainSection());
+            snapshot->GetBlockChainSection()->Accept(this);
+            SkipData(snapshot->GetBlockChainSection());
         }
         {
-            ReadHeader(&snapshot->utxos_);
-            snapshot->utxos_.Accept(this);
+            ReadHeader(snapshot->GetUnclaimedTransactionPoolSection());
+            snapshot->GetUnclaimedTransactionPoolSection()->Accept(this);
         }
         return snapshot;
     }
