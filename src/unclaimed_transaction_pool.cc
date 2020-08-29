@@ -120,24 +120,20 @@ namespace Token{
     }
 
     Handle<UnclaimedTransaction> UnclaimedTransactionPool::GetUnclaimedTransaction(const uint256_t &tx_hash, uint32_t tx_index){
-        std::vector<uint256_t> utxos;
-        if(!GetUnclaimedTransactions(utxos)) {
-            std::stringstream ss;
-            ss << "Couldn't get all unclaimed transactions from pool";
-            CrashReport::GenerateAndExit(ss);
-        }
+        LOCK_GUARD;
+        DIR* dir;
+        struct dirent* ent;
+        if((dir = opendir(GetDataDirectory().c_str())) != NULL){
+            while((ent = readdir(dir)) != NULL){
+                std::string name(ent->d_name);
+                std::string filename = (GetDataDirectory() + "/" + name);
+                if(!EndsWith(filename, ".dat")) continue;
 
-        for(auto& it : utxos){
-            //TODO: refactor
-            UnclaimedTransaction* utxo;
-            if(!(utxo = GetUnclaimedTransaction(it))){
-                std::stringstream ss;
-                ss << "Couldn't get unclaimed transaction " << it << " from pool";
-                CrashReport::GenerateAndExit(ss);
+                Handle<UnclaimedTransaction> utxo = UnclaimedTransaction::NewInstance(filename);
+                if(utxo->GetTransaction() == tx_hash && utxo->GetIndex() == tx_index) return utxo;
             }
-            if(utxo->GetTransaction() == tx_hash && utxo->GetIndex() == tx_index) return utxo;
+            closedir(dir);
         }
-
         LOG(WARNING) << "couldn't find unclaimed transaction: " << tx_hash << "[" << tx_index << "]";
         return nullptr;
     }
