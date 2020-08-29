@@ -49,7 +49,7 @@ namespace Token{
         }
 
         friend int operator<(const UserID& a, const std::string& b){
-            return strncmp(a.data_, b.data(), std::min(b.length(), kMaxLength))
+            return strncmp(a.data_, b.data(), std::min(b.length(), kMaxLength));
         }
 
         friend std::ostream& operator<<(std::ostream& stream, const UserID& user){
