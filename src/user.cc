@@ -3,7 +3,10 @@
 namespace Token{
     UserID::UserID(const std::string& value):
         data_(){
-        strncpy(data_, value.data(), 64);
+        strncpy(data_, value.data(), value.length());
+        if(value.length() < 64){
+            memset(&data_[value.length()], 0, 64-value.length());
+        }
     }
 
     UserID::UserID(ByteBuffer* bytes):
