@@ -66,11 +66,17 @@ namespace Token{
     class ObjectPointerVisitor;
     class WeakObjectPointerVisitor;
     class Allocator{
-        friend class RawObject;
         friend class Object;
+        friend class RawObject;
         friend class Scavenger;
         friend class HandleBase;
+        friend class HeapDumpWriter;
         friend class MemoryInformationSection;
+    public:
+        static const size_t kNumberOfHeaps;
+        static const size_t kTotalSize;
+        static const size_t kHeapSize;
+        static const size_t kSemispaceSize;
     private:
         Allocator() = delete;
 
@@ -79,7 +85,7 @@ namespace Token{
         static void FreeRoot(RawObject** root);
         static void UntrackRoot(RawObject* root);
 
-        static void VisitRoots(WeakObjectPointerVisitor* vis);
+        static bool VisitRoots(WeakObjectPointerVisitor* vis);
         static void Initialize(RawObject* obj);
     public:
         ~Allocator(){}
@@ -90,6 +96,9 @@ namespace Token{
         static void* Allocate(size_t size);
         static Heap* GetEdenHeap();
         static Heap* GetSurvivorHeap();
+
+        static size_t GetNumberOfStackSpaceObjects();
+        static size_t GetStackSpaceSize();
     };
 
     class WeakObjectPointerVisitor{
@@ -184,14 +193,16 @@ namespace Token{
     class RawObject{
         friend class Heap;
         friend class Thread;
+        friend class RootPage;
         friend class Allocator;
         friend class Scavenger;
         friend class Semispace;
-        friend class RootPage;
+        friend class HeapDumpWriter;
         friend class ObjectFinalizer;
         friend class ObjectRelocator;
         friend class LiveObjectMarker;
         friend class LiveObjectCopier;
+        friend class StackSpaceSizeCalculator;
         friend class LiveObjectReferenceUpdater;
         friend class RootObjectReferenceUpdater;
     private:
@@ -287,6 +298,10 @@ namespace Token{
         }
 
         virtual std::string ToString() const = 0;
+
+        static void* operator new(size_t size){
+            return Allocator::Allocate(size);
+        }
     };
 }
 

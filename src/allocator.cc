@@ -8,10 +8,10 @@
 #include "scavenger.h"
 
 namespace Token{
-    static const size_t kNumberOfHeaps = 3;
-    static const size_t kTotalSize = FLAGS_heap_size;
-    static const size_t kHeapSize = kTotalSize/kNumberOfHeaps;
-    static const size_t kSemispaceSize = kHeapSize/2;
+    const size_t Allocator::kNumberOfHeaps = 3;
+    const size_t Allocator::kTotalSize = FLAGS_heap_size;
+    const size_t Allocator::kHeapSize = kTotalSize/kNumberOfHeaps;
+    const size_t Allocator::kSemispaceSize = kHeapSize/2;
 
     class RootPage{
     public:
@@ -19,13 +19,11 @@ namespace Token{
     private:
         RootPage* next_;
         std::bitset<kNumberOfRootsPerPage> test_;
-        size_t size_;
         RawObject* roots_[kNumberOfRootsPerPage];
     public:
         RootPage():
             next_(nullptr),
-            test_(),
-            size_(0){
+            test_(){
             for(size_t idx = 0; idx < kNumberOfRootsPerPage; idx++){
                 roots_[idx] = nullptr;
             }
@@ -40,7 +38,6 @@ namespace Token{
             for(size_t i = 0; i < kNumberOfRootsPerPage; i++){
                 if(!test_.test(i)){
                     test_.set(i);
-                    size_++;
                     return &roots_[i];
                 }
             }
@@ -63,11 +60,10 @@ namespace Token{
             if(offset >= 0 && offset < static_cast<int>(kNumberOfRootsPerPage)){
                 Write(ptr, nullptr);
                 test_.reset(offset);
-                size_--;
             } else{
                 if(next_){
                     next_->Free(ptr);
-                    if(!next_->size_){
+                    if(next_){
                         RootPage* tmp = next_;
                         next_ = tmp->next_;
                         tmp->next_ = nullptr;
@@ -77,27 +73,26 @@ namespace Token{
             }
         }
 
-        void Accept(WeakObjectPointerVisitor* vis){
-            if (size_) {
-                for (size_t i = 0; i < kNumberOfRootsPerPage; i++){
-                    RawObject* data = roots_[i];
-                    if(data && !data->IsInStackSpace()){
-                        vis->Visit(&roots_[i]);
-                    }
+        bool Accept(WeakObjectPointerVisitor* vis){
+            for (size_t i = 0; i < kNumberOfRootsPerPage; i++){
+                RawObject* data = roots_[i];
+                if(data && data->IsInStackSpace()){
+                    vis->Visit(&roots_[i]);
                 }
             }
+            return true; //TODO: investigate proper implementation
         }
     };
 
-    static std::mutex mutex_;
+    static std::recursive_mutex mutex_;
     static std::condition_variable cond_;
     static Heap* eden_ = nullptr;
     static Heap* survivor_ = nullptr;
     static Heap* tenured_ = nullptr;
     static RootPage* roots_ = nullptr;
 
-#define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
-#define LOCK std::unique_lock<std::mutex> lock(mutex_)
+#define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
+#define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
 #define WAIT cond_.wait(lock)
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
@@ -106,16 +101,19 @@ namespace Token{
     static void* allocating_ = nullptr;
 
     void Allocator::Initialize(){
+        LOCK_GUARD;
         eden_ = new Heap(Space::kEdenSpace, kSemispaceSize);
         survivor_ = new Heap(Space::kSurvivorSpace, kSemispaceSize);
         tenured_ = new Heap(Space::kTenuredSpace, kSemispaceSize);
     }
 
     Heap* Allocator::GetEdenHeap(){
+        LOCK_GUARD;
         return eden_;
     }
 
     Heap* Allocator::GetSurvivorHeap(){
+        LOCK_GUARD;
         return survivor_;
     }
 
@@ -134,12 +132,14 @@ namespace Token{
         //TODO: implement
     }
 
-    void Allocator::VisitRoots(WeakObjectPointerVisitor* vis){
+    bool Allocator::VisitRoots(WeakObjectPointerVisitor* vis){
+        LOCK_GUARD;
         RootPage* current = roots_;
         while(current != nullptr){
-            current->Accept(vis);
+            if(!current->Accept(vis)) return false;
             current = current->GetNext();
         }
+        return true;
     }
 
 #define ALIGN(Size) (((Size)+7)&~7)
@@ -171,6 +171,7 @@ namespace Token{
     }
 
     void Allocator::MinorCollect(){
+        LOG(INFO) << "performing minor garbage collection....";
         LOCK_GUARD;
         Scavenger::Scavenge(GetEdenHeap());
         Scavenger::Scavenge(GetSurvivorHeap());
@@ -178,6 +179,47 @@ namespace Token{
 
     void Allocator::MajorCollect(){
 
+    }
+
+    class StackSpaceSizeCalculator : public WeakObjectPointerVisitor{
+    private:
+        size_t size_;
+        size_t num_objects_;
+    public:
+        StackSpaceSizeCalculator():
+            WeakObjectPointerVisitor(),
+            size_(0),
+            num_objects_(0){}
+        ~StackSpaceSizeCalculator() = default;
+
+        size_t GetSize() const{
+            return size_;
+        }
+
+        size_t GetNumberOfObjects() const{
+            return num_objects_;
+        }
+
+        bool Visit(RawObject** root){
+            LOG(INFO) << "visiting root: " << (*root);
+            size_ += (*root)->GetAllocatedSize();
+            num_objects_++;
+            return true;
+        }
+    };
+
+    size_t Allocator::GetStackSpaceSize(){
+        LOCK_GUARD;
+        StackSpaceSizeCalculator calc;
+        if(!VisitRoots(&calc)) return 0;
+        return calc.GetSize();
+    }
+
+    size_t Allocator::GetNumberOfStackSpaceObjects(){
+        LOCK_GUARD;
+        StackSpaceSizeCalculator calc;
+        if(!VisitRoots(&calc)) return 0;
+        return calc.GetNumberOfObjects();
     }
 
     void RawObject::SetSpace(Space space){

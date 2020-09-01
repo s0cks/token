@@ -78,7 +78,7 @@ namespace Token{
         WriteBytes((uint8_t*)value.data(), value.length());
     }
 
-    void FileWriter::WriteObject(Object* value){
+    void BinaryFileWriter::WriteObject(RawObject* value){
         //TODO: implement
     }
 }

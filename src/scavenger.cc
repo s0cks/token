@@ -81,6 +81,7 @@ namespace Token{
             if(!obj) {
                 return true;
             }
+            LOG(INFO) << "visiting root: " << obj->ToString();
             (*root) = (RawObject*)obj->ptr_;
             return true;
         }

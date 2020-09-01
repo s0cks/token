@@ -20,12 +20,15 @@ namespace Token{
         }
     }
 
-    void Heap::Accept(ObjectPointerVisitor* vis){
+    bool Heap::Accept(ObjectPointerVisitor* vis){
+        std::lock_guard<std::recursive_mutex> guard(mutex_);
         uword current = GetStartAddress();
         while(current < GetEndAddress()){
             RawObject* obj = (RawObject*)current;
-            if(!obj || obj->GetAllocatedSize() == 0 || !vis->Visit(obj)) return;
+            if(!obj || obj->GetAllocatedSize() == 0) break;
+            if(!vis->Visit(obj)) return false;
             current += obj->GetAllocatedSize();
         }
+        return true;
     }
 }

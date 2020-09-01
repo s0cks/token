@@ -2,53 +2,23 @@
 #define TOKEN_SNAPSHOT_READER_H
 
 #include "snapshot.h"
+#include "file_reader.h"
 #include "crash_report.h"
 
 namespace Token{
     class Snapshot;
-    class SnapshotReader{
+    class SnapshotReader : public BinaryFileReader{
         friend class Snapshot;
     private:
-        std::string filename_;
-        FILE* file_;
-
-        inline FILE*
-        GetFilePointer() const{
-            return file_;
-        }
-
-        int64_t GetCurrentPosition();
         void SkipData(SnapshotSection* section);
-        void SetCurrentPosition(int64_t pos);
         void ReadHeader(SnapshotSection* section);
     public:
         SnapshotReader(const std::string& filename):
-            filename_(filename),
-            file_(NULL){
-            if((file_ = fopen(filename.c_str(), "rb")) == NULL){
-                std::stringstream ss;
-                ss << "Couldn't open snapshot file: " << filename << ": " << strerror(errno);
-                CrashReport::GenerateAndExit(ss);
-            }
-        }
-        ~SnapshotReader(){
-            if(GetFilePointer() != NULL) Close();
-        }
-
-        std::string GetFilename() const{
-            return filename_;
-        }
+            BinaryFileReader(filename){}
+        ~SnapshotReader() = default;
 
         Snapshot* ReadSnapshot();
-        bool ReadBytes(uint8_t* bytes, size_t size);
-        std::string ReadString();
-        uint256_t ReadHash();
-        int32_t ReadInt();
-        uint32_t ReadUnsignedInt();
-        int64_t ReadLong();
-        uint64_t ReadUnsignedLong();
         IndexReference ReadReference();
-        void Close();
     };
 }
 

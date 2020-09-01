@@ -2,10 +2,11 @@
 #include <time.h>
 #include <execinfo.h>
 
+#include "heap.h"
 #include "token.h"
+#include "server.h"
 #include "crash_report.h"
 #include "block_chain.h"
-#include "server.h"
 
 namespace Token{
     class CrashReportSection{
@@ -172,12 +173,16 @@ namespace Token{
         inline std::string
         GetTotalMemoryUsed() const{
             std::stringstream ss;
+            ss << (Allocator::GetEdenHeap()->GetAllocatedSize() +
+                   Allocator::GetSurvivorHeap()->GetAllocatedSize());
             return ss.str();
         }
 
         inline std::string
         GetTotalMemoryFree() const{
             std::stringstream ss;
+            ss << (Allocator::GetEdenHeap()->GetUnallocatedSize() +
+                  Allocator::GetSurvivorHeap()->GetUnallocatedSize());
             return ss.str();
         }
 

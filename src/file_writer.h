@@ -29,15 +29,9 @@ namespace Token{
         void WriteUnsignedLong(uint64_t value);
         void WriteHash(const uint256_t& value);
         void WriteString(const std::string& value);
-        void WriteObject(Object* value);
         void SetCurrentPosition(int64_t pos);
         void Flush();
         void Close();
-
-        template<typename T>
-        void WriteObject(const Handle<T>& obj){
-            WriteObject((Object*)obj);
-        }
     };
 
     class TextFileWriter : public FileWriter{
@@ -61,6 +55,13 @@ namespace Token{
     public:
         virtual ~BinaryFileWriter(){
             if(file_ != NULL) Close();
+        }
+
+        void WriteObject(RawObject* obj);
+
+        template<typename T>
+        void WriteObject(const Handle<T>& obj){
+            WriteObject((RawObject*)obj);
         }
     };
 }

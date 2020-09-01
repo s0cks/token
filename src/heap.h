@@ -76,12 +76,14 @@ namespace Token{
     class HeapVisitor;
     class Heap{
     private:
+        std::recursive_mutex mutex_;
         MemoryRegion region_;
         Space space_;
         Semispace from_space_;
         Semispace to_space_;
     public:
         Heap(Space space, size_t semi_size):
+            mutex_(),
             region_(semi_size*2),
             space_(space),
             from_space_(GetStartAddress(), semi_size),
@@ -133,27 +135,32 @@ namespace Token{
             return region_.GetSize();
         }
 
-        size_t GetAllocatedSize() const{
+        size_t GetAllocatedSize(){
+            std::lock_guard<std::recursive_mutex> guard(mutex_);
             return from_space_.GetAllocatedSize();
         }
 
-        size_t GetUnallocatedSize() const{
+        size_t GetUnallocatedSize(){
+            std::lock_guard<std::recursive_mutex> guard(mutex_);
             return from_space_.GetUnallocatedSize();
         }
 
         void SwapSpaces(){
+            std::lock_guard<std::recursive_mutex> guard(mutex_);
             std::swap(from_space_, to_space_);
         }
 
         void Reset(){
+            std::lock_guard<std::recursive_mutex> guard(mutex_);
             GetRegion()->Clear();
         }
 
         void* Allocate(size_t size){
+            std::lock_guard<std::recursive_mutex> guard(mutex_);
             return from_space_.Allocate(size);
         }
 
-        void Accept(ObjectPointerVisitor* vis);
+        bool Accept(ObjectPointerVisitor* vis);
     };
 }
 

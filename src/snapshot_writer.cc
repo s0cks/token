@@ -51,8 +51,6 @@ namespace Token{
         return true;
     }
 
-
-
     void SnapshotWriter::WriteReference(const IndexReference& ref){
         WriteHash(ref.GetHash());
         WriteInt(ref.GetSize());
