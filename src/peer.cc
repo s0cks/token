@@ -9,7 +9,7 @@ namespace Token{
         SessionInfo(session){
     }
 
-    BlockHeader PeerInfo::GetHead() const{
+    Handle<Block> PeerInfo::GetHead() const{
         return ((PeerSession*)GetSession())->GetHead();
     }
 
@@ -163,8 +163,8 @@ namespace Token{
         response.push_back(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), callback).CastTo<Message>());
 
         if(IsConnecting()){
-            BlockHeader local_head = BlockChain::GetHead();
-            BlockHeader remote_head = msg->GetHead();
+            Handle<Block> local_head = BlockChain::GetHead();
+            Handle<Block> remote_head = msg->GetHead();
             if(local_head < remote_head){
                 response.push_back(GetBlocksMessage::NewInstance().CastTo<Message>());
                 Handle<SynchronizeBlockChainTask> sync_task = SynchronizeBlockChainTask::NewInstance(session->GetLoop(), session, msg->GetHead());
@@ -270,7 +270,7 @@ namespace Token{
             if(item.IsBlock()){
                 if(BlockChain::HasBlock(hash)){
                     LOG(INFO) << "item " << hash << " found in block chain";
-                    response.push_back(BlockMessage::NewInstance(BlockChain::GetBlockData(hash)).CastTo<Message>());
+                    response.push_back(BlockMessage::NewInstance(BlockChain::GetBlock(hash)).CastTo<Message>());
                     continue;
                 }
 

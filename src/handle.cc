@@ -23,12 +23,12 @@ namespace Token{
     }
 
     void HandleBase::operator=(RawObject* obj){
-        if(!ptr_) ptr_ = Allocator::TrackRoot(obj);
+        ptr_ = Allocator::TrackRoot(obj);
     }
 
     void HandleBase::operator=(const HandleBase& h){
         if(h.ptr_){
-            ptr_ = Allocator::TrackRoot(*h.ptr_);
+            ptr_ = Allocator::TrackRoot(h.GetPointer());
         } else{
             ptr_ = nullptr;
         }

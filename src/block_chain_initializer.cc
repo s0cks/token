@@ -1,0 +1,126 @@
+#include "block_chain_initializer.h"
+#include "common.h"
+#include "block_pool.h"
+#include "node.h"
+#include "block_chain.h"
+#include "configuration.h"
+#include "transaction_pool.h"
+#include "block_chain_index.h"
+#include "unclaimed_transaction_pool.h"
+
+namespace Token{
+    void BlockChainInitializer::SetGenesisNode(const Handle<Block>& blk){
+        BlockChain::SetGenesis(blk);
+    }
+
+    void BlockChainInitializer::SetHeadNode(const Handle<Block>& blk){
+        BlockChain::SetHead(blk);
+    }
+
+    bool BlockChainInitializer::Initialize(){
+        LOG(INFO) << "initializing block chain in directory: " << TOKEN_BLOCKCHAIN_HOME;
+        BlockChain::SetState(BlockChain::State::kInitializing);
+        if(!FileExists(TOKEN_BLOCKCHAIN_HOME)){
+            if(!CreateDirectory(TOKEN_BLOCKCHAIN_HOME)){
+                LOG(WARNING) << "couldn't initialize the block chain directory: " << TOKEN_BLOCKCHAIN_HOME;
+                return false;
+            }
+        }
+
+        Keychain::Initialize();
+        BlockChainConfiguration::Initialize();
+        BlockChainIndex::Initialize();
+        BlockPool::Initialize();
+        TransactionPool::Initialize();
+        UnclaimedTransactionPool::Initialize();
+        if(!DoInitialization()){
+            LOG(WARNING) << "couldn't initialize the block chain in directory: " << TOKEN_BLOCKCHAIN_HOME;
+            return false;
+        }
+
+        LOG(INFO) << "block chain initialized!";
+        BlockChain::SetState(BlockChain::kInitialized);
+        return true;
+    }
+
+    class SnapshotBlockDataInitializer : public SnapshotBlockDataVisitor{
+    private:
+        SnapshotBlockChainInitializer* parent_;
+    public:
+        SnapshotBlockDataInitializer(SnapshotBlockChainInitializer* parent):
+            SnapshotBlockDataVisitor(),
+            parent_(parent){}
+        ~SnapshotBlockDataInitializer(){}
+
+        SnapshotBlockChainInitializer* GetParent() const{
+            return parent_;
+        }
+
+        bool Visit(const Handle<Block>& blk){
+            LOG(INFO) << "loading block: " << blk;
+            return true;
+        }
+
+        bool Initialize(){
+            return GetParent()->GetSnapshot()->Accept(this);
+        }
+    };
+
+    bool SnapshotBlockChainInitializer::DoInitialization(){
+        Snapshot* snapshot = GetSnapshot();
+        LOG(INFO) << "loading block chain from snapshot: " << snapshot->GetFilename();
+
+        SnapshotBlockDataInitializer blk_init(this);
+        if(!blk_init.Initialize()){
+            LOG(WARNING) << "couldn't load block data from snapshot: " << snapshot->GetFilename();
+        }
+
+        return true;
+    }
+
+    bool DefaultBlockChainInitializer::DoInitialization(){
+        if(!BlockChainIndex::HasBlockData()){
+            LOG(INFO) << "generating new block chain in: " << TOKEN_BLOCKCHAIN_HOME;
+            Handle<Block> genesis = Block::Genesis();
+            SetGenesisNode(genesis);
+            SetHeadNode(genesis);
+            BlockChainIndex::PutBlockData(genesis);
+
+            for(uint32_t idx = 0; idx < genesis->GetNumberOfTransactions(); idx++){
+                Transaction* it = genesis->GetTransaction(idx);
+                for(uint32_t out_idx = 0; out_idx < it->GetNumberOfOutputs(); out_idx++){
+                    Handle<Output> out_it = it->GetOutput(out_idx);
+                    Handle<UnclaimedTransaction> out_utxo = UnclaimedTransaction::NewInstance(it->GetHash(), out_idx, out_it->GetUser());
+                    UnclaimedTransactionPool::PutUnclaimedTransaction(out_utxo);
+                }
+            }
+            BlockChainIndex::PutReference("<HEAD>", genesis->GetHash());
+            return true;
+        }
+
+        LOG(INFO) << "loading block chain data from " << TOKEN_BLOCKCHAIN_HOME << "....";
+        uint256_t hash = BlockChainIndex::GetReference("<HEAD>");
+        Handle<Block> block = BlockChainIndex::GetBlockData(hash);
+        LOG(INFO) << "loading <HEAD> block: " << block->GetHeader();
+        SetHeadNode(block);
+        while(true){
+            hash = block->GetPreviousHash();
+            if(hash.IsNull()){
+                SetGenesisNode(block);
+                break;
+            }
+
+            Handle<Block> current = BlockChainIndex::GetBlockData(hash);
+            LOG(INFO) << "loading block: " << block->GetHeader();
+            block->SetPrevious(current.CastTo<Node>());
+            current->SetNext(block.CastTo<Node>());
+
+            if(block->IsGenesis()){
+                SetGenesisNode(block);
+                break;
+            }
+            block = current;
+        }
+        return true;
+    }
+}

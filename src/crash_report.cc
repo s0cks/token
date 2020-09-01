@@ -261,17 +261,17 @@ namespace Token{
                 WriteLine("Block Chain:");
                 Indent();
                 {
-                    BlockHeader head = BlockChain::GetHead();
+                    Handle<Block> head = BlockChain::GetHead();
                     WriteLine("Head:");
                     Indent();
                     {
                         std::stringstream height;
-                        height << "Height: " << head.GetHeight();
+                        height << "Height: " << head->GetHeight();
                         WriteLine(height); //TODO: fixme, weird design
-                        WriteLine("Hash: " + HexString(head.GetHash()));
-                        WriteLine("Previous Hash: " + HexString(head.GetPreviousHash()));
-                        WriteLine("Merkle Root: " + HexString(head.GetMerkleRoot()));
-                        WriteLine("Timestamp: " + GetTimestampFormatted(head.GetTimestamp()));
+                        WriteLine("Hash: " + HexString(head->GetHash()));
+                        WriteLine("Previous Hash: " + HexString(head->GetPreviousHash()));
+                        WriteLine("Merkle Root: " + HexString(head->GetMerkleRoot()));
+                        WriteLine("Timestamp: " + GetTimestampFormatted(head->GetTimestamp()));
                     }
                     DeIndent();
                     WriteNewline();

@@ -160,10 +160,10 @@ namespace Token{
 
     void Allocator::Initialize(RawObject* obj){
         if(allocating_ != obj){
+            LOG(INFO) << "initializing stack object: " << std::hex << obj;
             obj->SetSpace(Space::kStackSpace);
             return;
         }
-
         obj->SetObjectSize(allocating_size_);
         obj->SetSpace(Space::kEdenSpace);
         allocating_size_ = 0;

@@ -143,9 +143,9 @@ namespace Token{
 
     class SynchronizeBlockChainTask : public AsyncSessionTask{
     private:
-        BlockHeader head_;
+        Handle<Block> head_; //TODO: convert to pointer, handle WeakReferenceVisitor
 
-        SynchronizeBlockChainTask(uv_loop_t* loop, Session* session, const BlockHeader& head):
+        SynchronizeBlockChainTask(uv_loop_t* loop, Session* session, const Handle<Block>& head):
             AsyncSessionTask(loop, session),
             head_(head){}
 
@@ -164,10 +164,10 @@ namespace Token{
         DEFINE_ASYNC_TASK(SynchronizeBlockChain);
 
         InventoryItem GetHead() const{
-            return InventoryItem(InventoryItem::kBlock, head_.GetHash());
+            return InventoryItem(InventoryItem::kBlock, head_->GetHash());
         }
 
-        static Handle<SynchronizeBlockChainTask> NewInstance(uv_loop_t* loop, Session* session, const BlockHeader& head){
+        static Handle<SynchronizeBlockChainTask> NewInstance(uv_loop_t* loop, Session* session, const Handle<Block>& head){
             return new SynchronizeBlockChainTask(loop, session, head);
         }
     };

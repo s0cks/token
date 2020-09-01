@@ -60,9 +60,9 @@ namespace Token{
             uint256_t hash = item.GetHash();
             if(item.ItemExists()){
                 if(item.IsBlock()){
-                    Block* block = nullptr;
+                    Handle<Block> block = nullptr;
                     if(BlockChain::HasBlock(hash)){
-                        block = BlockChain::GetBlockData(hash);
+                        block = BlockChain::GetBlock(hash);
                     } else if(BlockPool::HasBlock(hash)){
                         block = BlockPool::GetBlock(hash);
                     } else{
@@ -253,16 +253,16 @@ namespace Token{
 
         std::vector<InventoryItem> items;
         if(stop.IsNull()){
-            size_t amt = std::min(GetBlocksMessage::kMaxNumberOfBlocks, BlockChain::GetHead().GetHeight());
+            size_t amt = std::min(GetBlocksMessage::kMaxNumberOfBlocks, (size_t)BlockChain::GetHead()->GetHeight());
             LOG(INFO) << "sending " << (amt + 1) << " blocks...";
 
-            BlockHeader start_block = BlockChain::GetBlock(start);
-            BlockHeader stop_block = BlockChain::GetBlock(start_block.GetHeight() > amt ? start_block.GetHeight() + amt : amt);
+            Handle<Block> start_block = BlockChain::GetBlock(start);
+            Handle<Block> stop_block = BlockChain::GetBlock(start_block->GetHeight() > amt ? start_block->GetHeight() + amt : amt);
 
-            for(uint32_t idx = start_block.GetHeight() + 1;
-                idx <= stop_block.GetHeight();
+            for(uint32_t idx = start_block->GetHeight() + 1;
+                idx <= stop_block->GetHeight();
                 idx++){
-                BlockHeader block = BlockChain::GetBlock(idx);
+                Handle<Block> block = BlockChain::GetBlock(idx);
                 LOG(INFO) << "adding " << block;
                 items.push_back(InventoryItem(block));
             }

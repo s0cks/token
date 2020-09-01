@@ -17,7 +17,7 @@ namespace Token{
     public:
         ~ClientSessionInfo(){}
 
-        BlockHeader GetHead() const;
+        Handle<Block> GetHead() const;
         NodeAddress GetPeerAddress() const;
         std::string GetPeerID() const;
         void operator=(const ClientSessionInfo& info);
@@ -40,13 +40,13 @@ namespace Token{
         // Info
         NodeAddress paddress_;
         std::string pid_;
-        BlockHeader head_;
+        Handle<Block> head_;
 
-        void SetHead(const BlockHeader& head){
+        void SetHead(const Handle<Block>& head){
             head_ = head;
         }
 
-        BlockHeader GetHead() const{
+        Handle<Block> GetHead() const{
             return head_;
         }
 

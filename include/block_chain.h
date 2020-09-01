@@ -11,11 +11,12 @@
 #include "unclaimed_transaction.h"
 
 namespace Token{
-    class BlockNode;
+    class Node;
     class BlockChainVisitor;
     class BlockChainDataVisitor;
     class BlockChain{
         friend class Server;
+        friend class BlockChainInitializer;
     public:
         enum State{
             kUninitialized,
@@ -25,22 +26,23 @@ namespace Token{
     private:
         BlockChain() = delete;
 
+        static void SetHead(const Handle<Block>& blk);
+        static void SetGenesis(const Handle<Block>& blk);
         static void SetState(State state);
     public:
         ~BlockChain() = delete;
 
         static State GetState();
-        static void Initialize();
-        static void Append(Block* block);
+        static bool Initialize();
+        static void Append(const Handle<Block>& blk);
         static void Accept(BlockChainVisitor* vis);
         static void Accept(BlockChainDataVisitor* vis);
         static bool HasBlock(const uint256_t& hash);
         static bool HasTransaction(const uint256_t& hash);
-        static BlockHeader GetHead();
-        static BlockHeader GetGenesis();
-        static BlockHeader GetBlock(const uint256_t& hash);
-        static BlockHeader GetBlock(uint32_t height);
-        static Handle<Block> GetBlockData(const uint256_t& hash);
+        static Handle<Block> GetHead();
+        static Handle<Block> GetGenesis();
+        static Handle<Block> GetBlock(const uint256_t& hash);
+        static Handle<Block> GetBlock(uint32_t height);
 
         static inline bool
         IsUninitialized(){

@@ -20,7 +20,7 @@ namespace Token{
         SessionInfo(session){
     }
 
-    BlockHeader ClientSessionInfo::GetHead() const{
+    Handle<Block> ClientSessionInfo::GetHead() const{
         return ((ClientSession*)GetSession())->GetHead();
     }
 

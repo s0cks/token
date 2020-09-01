@@ -14,7 +14,7 @@ namespace Token{
     public:
         ~PeerInfo(){}
 
-        BlockHeader GetHead() const;
+        Handle<Block> GetHead() const;
         void operator=(const PeerInfo& info);
     };
 
@@ -30,13 +30,13 @@ namespace Token{
         uv_async_t shutdown_;
 
         // info
-        BlockHeader head_;
+        Handle<Block> head_;
 
-        void SetHead(const BlockHeader& head){
+        void SetHead(const Handle<Block>& head){
             head_ = head;
         }
 
-        BlockHeader GetHead() const{
+        Handle<Block> GetHead() const{
             return head_;
         }
 

@@ -2,51 +2,31 @@
 #include <glog/logging.h>
 
 #include "common.h"
-#include "keychain.h"
 #include "crash_report.h"
 #include "configuration.h"
-
 #include "block_chain.h"
-#include "block_node.h"
+#include "node.h"
 #include "block_chain_index.h"
-#include "block_pool.h"
-#include "transaction_pool.h"
+#include "block_chain_initializer.h"
 #include "unclaimed_transaction_pool.h"
 
 namespace Token{
     static std::recursive_mutex mutex_;
     static BlockChain::State state_;
-    static BlockNode* head_ = nullptr;
-    static BlockNode* genesis_ = nullptr;
+    static Block* head_ = nullptr;
+    static Block* genesis_ = nullptr;
 
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_);
 
-    static BlockNode* GetGenesisNode(){
-        return genesis_;
+    void BlockChain::SetHead(const Handle<Block>& blk){
+        LOCK_GUARD;
+        head_ = blk;
+        BlockChainIndex::PutReference("<HEAD>", blk->GetHash());
     }
 
-    static BlockNode* GetHeadNode(){
-        return head_;
-    }
-
-    static inline BlockNode*
-    GetNode(const uint256_t& hash){
-        BlockNode* current = GetHeadNode();
-        while(current != nullptr){
-            if(current->GetHash() == hash) return current;
-            current = current->GetPrevious();
-        }
-        return nullptr;
-    }
-
-    static inline BlockNode*
-    GetNode(uint32_t height){
-        BlockNode* current = GetHeadNode();
-        while(current != nullptr){
-            if(current->GetHeight() == height) return current;
-            current = current->GetPrevious();
-        }
-        return nullptr;
+    void BlockChain::SetGenesis(const Handle<Block>& blk){
+        LOCK_GUARD;
+        genesis_ = blk;
     }
 
     void BlockChain::SetState(BlockChain::State state){
@@ -59,128 +39,89 @@ namespace Token{
         return state_;
     }
 
-    void BlockChain::Initialize(){
-        SetState(State::kInitializing);
+    static inline bool
+    ShouldLoadSnapshot(){
+        return !FLAGS_snapshot.empty();
+    }
 
-        if(!FileExists(TOKEN_BLOCKCHAIN_HOME)){
-            if(!CreateDirectory(TOKEN_BLOCKCHAIN_HOME)){
-                std::stringstream ss;
-                ss << "Couldn't initialize block chain in directory: " << TOKEN_BLOCKCHAIN_HOME;
-                CrashReport::GenerateAndExit(ss);
-            }
+    bool BlockChain::Initialize(){
+        if(IsInitialized()){
+            LOG(WARNING) << "cannot reinitialize the block chain!";
+            return false;
         }
 
-        Keychain::Initialize();
-        BlockChainConfiguration::Initialize();
-        BlockChainIndex::Initialize();
-
-        BlockPool::Initialize();
-        TransactionPool::Initialize();
-        UnclaimedTransactionPool::Initialize();
-
-        LOCK_GUARD;
-        if(!BlockChainIndex::HasBlockData()){
-            Handle<Block> genesis = Block::Genesis();
-            head_ = genesis_ = BlockNode::NewInstance(genesis);
-            BlockChainIndex::PutBlockData(genesis);
-
-            for(uint32_t idx = 0; idx < genesis->GetNumberOfTransactions(); idx++){
-                Transaction* it = genesis->GetTransaction(idx);
-
-                for(uint32_t out_idx = 0; out_idx < it->GetNumberOfOutputs(); out_idx++){
-                    Handle<Output> out_it = it->GetOutput(out_idx);
-                    Handle<UnclaimedTransaction> out_utxo = UnclaimedTransaction::NewInstance(it->GetHash(), out_idx, out_it->GetUser());
-                    UnclaimedTransactionPool::PutUnclaimedTransaction(out_utxo);
-                }
+        if(ShouldLoadSnapshot()){
+            Snapshot* snapshot = nullptr;
+            if(!(snapshot = Snapshot::ReadSnapshot(FLAGS_snapshot))){
+                LOG(WARNING) << "couldn't load snapshot: " << FLAGS_snapshot;
+                return false;
             }
 
-            BlockChainIndex::PutReference("<HEAD>", genesis->GetHash());
-            SetState(State::kInitialized);
-            return;
+            SnapshotBlockChainInitializer initializer(snapshot);
+            if(!initializer.Initialize()){
+                LOG(WARNING) << "couldn't initialize block chain from snapshot: " << FLAGS_snapshot;
+                return false;
+            }
+            return true;
         }
 
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << "loading block chain....";
-#endif//TOKEN_DEBUG
-
-        uint256_t hash = BlockChainIndex::GetReference("<HEAD>");
-        Block* block = BlockChainIndex::GetBlockData(hash);
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << "loading block: " << block->GetHeader();
-#endif//TOKEN_DEBUG
-
-        BlockNode* node = BlockNode::NewInstance(block);
-
-        head_ = node;
-        while(true){
-            hash = block->GetPreviousHash();
-            if(hash.IsNull()){
-                genesis_ = node;
-                break;
-            }
-
-            block = BlockChainIndex::GetBlockData(hash);
-#ifdef TOKEN_DEBUG
-            LOG(INFO) << "loading block: " << block->GetHeader();
-#endif//TOKEN_DEBUG
-            BlockNode* current = BlockNode::NewInstance(block);
-
-            node->SetPrevious(current);
-            current->SetNext(node);
-
-            if(block->IsGenesis()){
-                genesis_ = current;
-                break;
-            }
-            node = current;
+        DefaultBlockChainInitializer initializer;
+        if(!initializer.Initialize()){
+            LOG(WARNING) << "block chain wasn't initialized";
+            return false;
         }
-        SetState(kInitialized);
+        return true;
     }
 
-    BlockHeader BlockChain::GetHead(){
+    Handle<Block> BlockChain::GetHead(){
         LOCK_GUARD;
-        return GetHeadNode()->GetBlock();
+        return head_;
     }
 
-    BlockHeader BlockChain::GetGenesis(){
+    Handle<Block> BlockChain::GetGenesis(){
         LOCK_GUARD;
-        return GetGenesisNode()->GetBlock();
+        return genesis_;
     }
 
-    BlockHeader BlockChain::GetBlock(uint32_t height){
+    Handle<Block> BlockChain::GetBlock(uint32_t height){
         LOCK_GUARD;
-        return GetNode(height)->GetBlock();
+        Handle<Block> node = GetGenesis();
+        while(node != nullptr){
+            if(node->GetHeight() == height) return node;
+            node = node->GetNext().CastTo<Block>();
+        }
+        return nullptr;
     }
 
-    BlockHeader BlockChain::GetBlock(const uint256_t& hash){
+    Handle<Block> BlockChain::GetBlock(const uint256_t& hash){
         LOCK_GUARD;
-        return GetNode(hash)->GetBlock();
-    }
-
-    Handle<Block> BlockChain::GetBlockData(const uint256_t& hash){
-        return BlockChainIndex::GetBlockData(hash);
+        Handle<Block> node = GetGenesis();
+        while(node != nullptr){
+            if(node->GetHash() == hash) return node;
+            node = node->GetNext().CastTo<Block>();
+        }
+        return nullptr;
     }
 
     bool BlockChain::HasBlock(const uint256_t& hash){
         LOCK_GUARD;
-        return GetNode(hash) != nullptr;
+        return !GetBlock(hash).IsNull();
     }
 
     bool BlockChain::HasTransaction(const uint256_t& hash){
         LOCK_GUARD;
-        BlockNode* node = GetGenesisNode();
+        Handle<Block> node = GetGenesis();
         while(node != nullptr){
-            Handle<Block> blk = node->GetData();
-            if(blk->Contains(hash)) return true;
-            node = node->GetNext();
+            if(node->Contains(hash)) return true;
+            node = node->GetNext().CastTo<Block>();
         }
         return false;
     }
 
-    void BlockChain::Append(Block* block){
+    void BlockChain::Append(const Handle<Block>& block){
         LOCK_GUARD;
 
-        BlockHeader head = BlockChain::GetHead();
+        Handle<Block> head = GetHead();
         uint256_t hash = block->GetHash();
         uint256_t phash = block->GetPreviousHash();
 
@@ -202,41 +143,38 @@ namespace Token{
             CrashReport::GenerateAndExit(ss.str());
         }
 
-        if(phash != head.GetHash()){
+        if(phash != head->GetHash()){
             std::stringstream ss;
-            ss << "Parent hash '" << phash << "' doesn't match <HEAD> hash: " << head.GetHash();
+            ss << "Parent hash '" << phash << "' doesn't match <HEAD> hash: " << head->GetHash();
             CrashReport::GenerateAndExit(ss.str());
         }
 
         BlockChainIndex::PutBlockData(block);
 
-        BlockNode* parent = GetNode(phash);
-        BlockNode* node = BlockNode::NewInstance(block);
-        node->SetNext(parent->GetNext());
-        node->SetPrevious(parent);
-        parent->SetNext(node);
-        if(head.GetHeight() < block->GetHeight()) {
-            BlockChainIndex::PutReference("<HEAD>", hash);
-            head_ = node;
-        }
+        Handle<Block> parent = GetBlock(phash);
+        parent->SetNext(block.CastTo<Node>());
+        block->SetNext(parent->GetNext());
+        block->SetPrevious(parent.CastTo<Node>());
+
+        if(head->GetHeight() < block->GetHeight())
+            SetHead(block);
     }
 
     void BlockChain::Accept(BlockChainVisitor* vis){
         if(!vis->VisitStart()) return;
-        BlockNode* node = GetHeadNode();
+        Handle<Block> node = GetHead();
         do{
-            if(!vis->Visit(node->GetBlock())) return;
-            node = node->GetPrevious();
+            if(!vis->Visit(node->GetHeader())) return;
+            node = node->GetPrevious().CastTo<Block>();
         }while(node != nullptr);
         if(!vis->VisitStart()) return;
     }
 
     void BlockChain::Accept(BlockChainDataVisitor* vis){
-        BlockNode* node = GetGenesisNode();
-        while(node != nullptr){
-            Handle<Block> blk = node->GetData();
-            if(!vis->Visit(blk)) return;
-            node = node->GetNext();
+        Handle<Block> current = GetHead();
+        while(current != nullptr){
+            if(!vis->Visit(current)) return;
+            current = current->GetPrevious().CastTo<Block>();
         }
     }
 

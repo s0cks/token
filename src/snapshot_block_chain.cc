@@ -1,15 +1,15 @@
 #include "snapshot_block_chain.h"
 
 namespace Token{
-    class BlockChainIndexTableWriter : public IndexTableWriter, public BlockChainVisitor{
+    class BlockChainIndexTableWriter : public IndexTableWriter, public BlockChainDataVisitor{
     public:
         BlockChainIndexTableWriter(SnapshotWriter* writer, IndexTable& table):
                 IndexTableWriter(writer, table),
-                BlockChainVisitor(){}
+                BlockChainDataVisitor(){}
         ~BlockChainIndexTableWriter() = default;
 
-        bool Visit(const BlockHeader& blk){
-            uint256_t hash = blk.GetHash();
+        bool Visit(const Handle<Block>& blk){
+            uint256_t hash = blk->GetHash();
             IndexReference* ref = CreateNewReference(hash);
             GetWriter()->WriteReference((*ref));
             return true;
@@ -26,12 +26,12 @@ namespace Token{
                 LOG(WARNING) << "couldn't serialize block to byte array";
                 return;
             }
-            GetWriter()->WriteBytes(bytes.data(), size);
+            WriteData(&bytes, size);
         }
     public:
         BlockChainIndexTableDataWriter(SnapshotWriter* writer, IndexTable& table):
-                IndexTableDataWriter(writer, table),
-                BlockChainDataVisitor(){}
+            IndexTableDataWriter(writer, table),
+            BlockChainDataVisitor(){}
         ~BlockChainIndexTableDataWriter() = default;
 
         bool Visit(const Handle<Block>& blk){
@@ -49,15 +49,15 @@ namespace Token{
         }
     };
 
-    class BlockChainIndexTableLinker : public IndexTableLinker, public BlockChainVisitor{
+    class BlockChainIndexTableLinker : public IndexTableLinker, public BlockChainDataVisitor{
     public:
         BlockChainIndexTableLinker(SnapshotWriter* writer, IndexTable& table):
-                IndexTableLinker(writer, table),
-                BlockChainVisitor(){}
+            IndexTableLinker(writer, table),
+            BlockChainDataVisitor(){}
         ~BlockChainIndexTableLinker() = default;
 
-        bool Visit(const BlockHeader& blk){
-            uint256_t hash = blk.GetHash();
+        bool Visit(const Handle<Block>& blk){
+            uint256_t hash = blk->GetHash();
             if(!HasReference(hash)){
                 LOG(WARNING) << "cannot find index table reference to: " << hash;
                 return false;
@@ -74,7 +74,7 @@ namespace Token{
     };
 
     bool SnapshotBlockChainSection::WriteIndexTable(SnapshotWriter* writer){
-        writer->WriteLong(BlockChain::GetHead().GetHeight() + 1); // num_references
+        writer->WriteLong(BlockChain::GetHead()->GetHeight() + 1); // num_references
         LOG(INFO) << "writing block chain index table to snapshot...";
         BlockChainIndexTableWriter tbl_writer(writer, index_);
         BlockChain::Accept(&tbl_writer);

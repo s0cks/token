@@ -12,6 +12,7 @@ namespace Token{
 
     IndexReference* IndexTableWriter::CreateNewReference(const Token::uint256_t& hash){
         if(HasReference(hash)) return GetReference(hash);
+        LOG(INFO) << "creating reference for: " << hash;
         uint64_t write_pos = GetWriter()->GetCurrentPosition();
         if(!table_.insert({ hash, IndexReference(hash, 0, write_pos, 0) }).second){
             LOG(WARNING) << "couldn't create index reference for " << hash << " @" << write_pos;
@@ -72,6 +73,7 @@ namespace Token{
 
     Handle<Block> Snapshot::GetBlock(const IndexReference& ref){
         SnapshotReader reader(GetFilename());
+        LOG(INFO) << "getting block: " << ref;
         reader.SetCurrentPosition(ref.GetDataPosition());
         size_t size = ref.GetSize();
         ByteBuffer bytes(size);
@@ -102,8 +104,10 @@ namespace Token{
 
     bool IndexedSection::ReadIndexTable(Token::SnapshotReader* reader){
         uint64_t num_references = reader->ReadLong();
+        LOG(INFO) << "reading " << num_references << " references....";
         for(uint64_t idx = 0; idx < num_references; idx++){
             IndexReference ref = reader->ReadReference();
+            LOG(INFO) << "registering reference: " << ref;
             if(!index_.insert({ ref.GetHash(), ref }).second){
                 LOG(WARNING) << "couldn't register new reference: " << ref;
                 return false;

@@ -25,7 +25,7 @@ namespace Token{
         bloom_(){} //TODO: decode(bloom_)
 
     Block* BlockHeader::GetData() const{
-        return BlockChain::GetBlockData(GetHash());
+        return BlockChain::GetBlock(GetHash());
     }
 
     bool BlockHeader::Encode(ByteBuffer* bytes) const{
