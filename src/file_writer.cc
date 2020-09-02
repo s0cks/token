@@ -99,8 +99,6 @@ namespace Token{
             LOG(WARNING) << "couldn't encode object: " << value->ToString();
             return false;
         }
-
-        LOG(INFO) << "writing " << type << " (" << size << " Bytes) @" << GetCurrentPosition();
         return WriteUnsignedLong(CreateObjectHeader(value)) && WriteBytes(&bytes);
     }
 }

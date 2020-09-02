@@ -88,7 +88,6 @@ namespace Token{
     static std::condition_variable cond_;
     static Heap* eden_ = nullptr;
     static Heap* survivor_ = nullptr;
-    static Heap* tenured_ = nullptr;
     static RootPage* roots_ = nullptr;
 
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
@@ -104,7 +103,6 @@ namespace Token{
         LOCK_GUARD;
         eden_ = new Heap(Space::kEdenSpace, kSemispaceSize);
         survivor_ = new Heap(Space::kSurvivorSpace, kSemispaceSize);
-        tenured_ = new Heap(Space::kTenuredSpace, kSemispaceSize);
     }
 
     Heap* Allocator::GetEdenHeap(){

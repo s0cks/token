@@ -116,49 +116,6 @@ namespace Token{
         header = ObjectSizeField::Update(size, header);
         return header;
     }
-
-    class HeapDumpWriter : public BinaryFileWriter, public WeakObjectPointerVisitor, public ObjectPointerVisitor{
-    private:
-        Heap* eden_;
-        Heap* survivor_;
-
-        bool WriteStackSpace();
-        bool WriteHeap(Heap* heap);
-    public:
-        HeapDumpWriter(const std::string& filename):
-            BinaryFileWriter(filename),
-            eden_(Allocator::GetEdenHeap()),
-            survivor_(Allocator::GetSurvivorHeap()){}
-        ~HeapDumpWriter() = default;
-
-        Heap* GetEdenHeap() const{
-            return eden_;
-        }
-
-        Heap* GetSurvivorHeap() const{
-            return survivor_;
-        }
-
-        bool Visit(RawObject* obj);
-        bool Visit(RawObject** root);
-        bool WriteHeapDump();
-    };
-
-    class HeapDumpReader : public BinaryFileReader{
-    private:
-        bool ReadMemoryRegion(MemoryRegion* region, size_t size);
-    public:
-        HeapDumpReader(const std::string& filename):
-            BinaryFileReader(filename){}
-        ~HeapDumpReader() = default;
-
-        inline HeapDumpSectionHeader
-        ReadSectionHeader(){
-            return (HeapDumpSectionHeader)ReadLong();
-        }
-
-        HeapDump* ReadHeapDump();
-    };
 }
 
 #endif //TOKEN_HEAP_DUMP_H

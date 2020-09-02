@@ -41,8 +41,8 @@ namespace Token{
         }
 
         inline bool
-        WriteBytes(MemoryRegion* region){
-            return WriteBytes((uint8_t*)region->GetStartAddress(), region->GetSize());
+        WriteBytes(MemoryRegion* region, size_t size){
+            return WriteBytes((uint8_t*)region->GetStartAddress(), size);
         }
     };
 

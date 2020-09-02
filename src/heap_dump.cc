@@ -1,6 +1,8 @@
 #include "heap_dump.h"
-#include "bitfield.h"
 #include "bytes.h"
+#include "bitfield.h"
+#include "heap_dump_reader.h"
+#include "heap_dump_writer.h"
 
 namespace Token{
     HeapDump::HeapDump(const std::string& filename, size_t semi_size):
@@ -19,8 +21,15 @@ namespace Token{
     }
 
     bool HeapDump::Accept(HeapDumpVisitor* vis){
-        if(!vis->Visit(GetEdenHeap())) return false;
-        if(!vis->Visit(GetSurvivorHeap())) return false;
+        if(!vis->Visit(GetEdenHeap())){
+            LOG(WARNING) << "couldn't visit eden heap";
+            return false;
+        }
+
+        if(!vis->Visit(GetSurvivorHeap())){
+            LOG(WARNING) << "couldn't visit survivor heap";
+            return false;
+        }
         return true;
     }
 
@@ -32,152 +41,5 @@ namespace Token{
     HeapDump* HeapDump::ReadHeapDump(const std::string& filename){
         HeapDumpReader reader(filename);
         return reader.ReadHeapDump();
-    }
-
-    bool HeapDumpWriter::Visit(RawObject* obj){
-        WriteUnsignedLong(CreateObjectHeader(0, obj->GetAllocatedSize()));
-        //TODO: WriteObject(obj);
-        return true;
-    }
-
-    bool HeapDumpWriter::Visit(RawObject** root){
-        RawObject* obj = (*root);
-        if(!obj) return false;
-        WriteUnsignedLong(CreateObjectHeader(0, obj->GetAllocatedSize()));
-        //TODO:WriteObject(obj);
-        return true;
-    }
-
-    bool HeapDumpWriter::WriteStackSpace(){
-        LOG(INFO) << "writing stack space to heap dump....";
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << "Size: " << Allocator::GetStackSpaceSize();
-        LOG(INFO) << "Number of Objects: " << Allocator::GetNumberOfStackSpaceObjects();
-#endif//TOKEN_DEBUG
-
-        // Write the Header
-        WriteUnsignedLong(CreateSectionHeader(Space::kStackSpace, Allocator::GetStackSpaceSize()));
-        // Write the Data
-        WriteUnsignedLong(Allocator::GetNumberOfStackSpaceObjects());
-        return Allocator::VisitRoots(this);
-    }
-
-    class HeapDumpHeapDataWriter : public ObjectPointerVisitor{
-    private:
-        HeapDumpWriter* writer_;
-        Heap* heap_;
-        ByteBuffer bytes_;
-    public:
-        HeapDumpHeapDataWriter(HeapDumpWriter* parent, Heap* heap):
-            ObjectPointerVisitor(),
-            writer_(parent),
-            bytes_(heap->GetTotalSize()){}
-        ~HeapDumpHeapDataWriter() = default;
-
-        HeapDumpWriter* GetWriter() const{
-            return writer_;
-        }
-
-        Heap* GetHeap() const{
-            return heap_;
-        }
-
-        bool Visit(RawObject* obj){
-            GetWriter()->WriteObject((Object*)obj);
-            return true;
-        }
-
-        bool Write(){
-            return GetHeap()->Accept(this);
-        }
-    };
-
-    bool HeapDumpWriter::WriteHeap(Heap* heap){
-        LOG(INFO) << "writing " << heap->GetSpace() << heap->GetTotalSize() << " space to heap dump....";
-
-        // Write the Header
-        LOG(INFO) << "writing heap section header....";
-        WriteUnsignedLong(CreateSectionHeader(heap->GetSpace(), heap->GetAllocatedSize()));
-
-        // Write the Data
-        LOG(INFO) << "writing heap section data....";
-        if(!WriteBytes(heap->GetRegion())){
-            LOG(WARNING) << "couldn't write heap memory region to section data";
-            return false;
-        }
-        return true;
-    }
-
-    bool HeapDumpWriter::WriteHeapDump(){
-        LOG(INFO) << "writing heap dump....";
-        WriteUnsignedLong(GetCurrentTimestamp()); // Generation Timestamp
-        WriteUnsignedLong(Allocator::kSemispaceSize); // Semispace Size
-
-        // Write Stack Space Section
-        LOG(INFO) << "writing stack space....";
-        if(!WriteStackSpace()){
-            LOG(WARNING) << "couldn't write heap dump stack space section";
-            return false;
-        }
-
-        // Write Eden Heap Section
-        LOG(INFO) << "writing eden heap....";
-        if(!WriteHeap(Allocator::GetEdenHeap())){
-            LOG(WARNING) << "couldn't write heap dump eden space section";
-            return false;
-        }
-
-        // Write Survivor Heap Section
-        LOG(INFO) << "writing survivor heap....";
-        if(!WriteHeap(Allocator::GetSurvivorHeap())){
-            LOG(WARNING) << "couldn't write heap dump survivor space section";
-            return false;
-        }
-
-        LOG(INFO) << "heap dump written to: " << GetFilename();
-        return true;
-    }
-
-    bool HeapDumpReader::ReadMemoryRegion(MemoryRegion* region, size_t size){
-        LOG(INFO) << "reading memory region of size: " << size << " from heap dump...";
-        return ReadBytes((uint8_t*)region->GetStartAddress(), size);
-    }
-
-    HeapDump* HeapDumpReader::ReadHeapDump(){
-        uint64_t timestamp = ReadUnsignedLong();
-        uint64_t semi_size = ReadUnsignedLong();
-
-        LOG(INFO) << "Timestamp: " << GetTimestampFormattedReadable(timestamp);
-        LOG(INFO) << "Semispace Size (Bytes): " << semi_size;
-
-        HeapDump* dump = new HeapDump(GetFilename(), semi_size);
-        while(true){
-            HeapDumpSectionHeader header = ReadSectionHeader();
-            size_t size = SectionSizeField::Decode(header);
-            Space space = SectionSpaceField::Decode(header);
-            switch(space){
-                case Space::kStackSpace:{
-                    size_t num_objects = ReadLong();
-                    LOG(INFO) << "reading " << num_objects << " stack space objects....";
-                    break;
-                }
-                case Space::kEdenSpace:{
-                    LOG(INFO) << "reading eden space....";
-                    Heap* heap = dump->GetEdenHeap();
-                    if(!ReadMemoryRegion(heap->GetRegion(), heap->GetTotalSize())){
-                        LOG(WARNING) << "couldn't read space memory region from file";
-                        delete dump;
-                        return nullptr;
-                    }
-                    heap->SetAllocatedSize(size);
-                    break;
-                }
-                case Space::kSurvivorSpace: return dump;
-                default:
-                    LOG(WARNING) << "unknown space: " << space;
-                    delete dump;
-                    return nullptr;
-            }
-        }
     }
 }

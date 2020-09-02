@@ -1,6 +1,7 @@
 #ifndef TOKEN_UNCLAIMED_TRANSACTION_POOL_H
 #define TOKEN_UNCLAIMED_TRANSACTION_POOL_H
 
+#include "object_cache.h"
 #include "unclaimed_transaction.h"
 
 namespace Token{
@@ -17,21 +18,28 @@ namespace Token{
     private:
         UnclaimedTransactionPool() = delete;
 
+        static ObjectCache<UnclaimedTransaction>* GetCache();
         static void SetState(State state);
     public:
         ~UnclaimedTransactionPool() = delete;
 
         static size_t GetNumberOfUnclaimedTransactions();
         static State GetState();
-        static void Initialize();
-        static void RemoveUnclaimedTransaction(const uint256_t& hash);
-        static void PutUnclaimedTransaction(const Handle<UnclaimedTransaction>& utxo);
+        static bool Initialize();
+        static bool PrintUnclaimedTransactions();
+        static bool RemoveUnclaimedTransaction(const uint256_t& hash);
+        static bool PutUnclaimedTransaction(const Handle<UnclaimedTransaction>& utxo);
         static bool HasUnclaimedTransaction(const uint256_t& hash);
         static bool GetUnclaimedTransactions(std::vector<uint256_t>& utxos);
         static bool GetUnclaimedTransactions(const std::string& user, std::vector<uint256_t>& utxos);
         static bool Accept(UnclaimedTransactionPoolVisitor* vis);
         static Handle<UnclaimedTransaction> GetUnclaimedTransaction(const uint256_t& tx_hash, uint32_t tx_index);
         static Handle<UnclaimedTransaction> GetUnclaimedTransaction(const uint256_t& hash);
+
+        static inline std::string
+        GetPath(){
+            return TOKEN_BLOCKCHAIN_HOME + "/unclaimed_transactions";
+        }
 
         static inline bool
         IsUninitialized(){
@@ -47,10 +55,6 @@ namespace Token{
         IsInitialized(){
             return GetState() == kInitialized;
         }
-
-#ifdef TOKEN_DEBUG
-        static void PrintUnclaimedTransactions();
-#endif//TOKEN_DEBUG
     };
 
     class UnclaimedTransactionPoolVisitor{

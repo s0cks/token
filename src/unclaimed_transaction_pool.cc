@@ -1,17 +1,17 @@
-#include "crash_report.h"
 #include "unclaimed_transaction_pool.h"
-#include "unclaimed_transaction_pool_index.h"
 
 namespace Token{
     static std::recursive_mutex mutex_;
     static UnclaimedTransactionPool::State state_ = UnclaimedTransactionPool::kUninitialized;
 
-    static inline std::string
-    GetDataDirectory(){
-        return FLAGS_path + "/utxos";
-    }
+    static ObjectCache<UnclaimedTransaction>* cache_ = nullptr;
 
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_);
+
+    ObjectCache<UnclaimedTransaction>* UnclaimedTransactionPool::GetCache(){
+        LOCK_GUARD;
+        return cache_;
+    }
 
     void UnclaimedTransactionPool::SetState(UnclaimedTransactionPool::State state){
         LOCK_GUARD;
@@ -23,51 +23,53 @@ namespace Token{
         return state_;
     }
 
-    void UnclaimedTransactionPool::Initialize(){
-        if(!IsUninitialized()){
-            std::stringstream ss;
-            ss << "Cannot re-initialize unclaimed transaction pool";
-            CrashReport::GenerateAndExit(ss);
+    bool UnclaimedTransactionPool::Initialize(){
+        if(IsInitialized()){
+            LOG(WARNING) << "cannot re-initialize the unclaimed transaction pool in: " << GetPath();
+            return false;
         }
 
+        LOG(INFO) << "initializing the unclaimed transaction pool....";
         SetState(kInitializing);
-        UnclaimedTransactionPoolIndex::Initialize();
+        if(!(cache_ = new ObjectCache<UnclaimedTransaction>(GetPath())) && !cache_->IsInitialized()){
+            LOG(WARNING) << "couldn't initialize unclaimed transaction pool object cache: " << GetPath();
+            SetState(UnclaimedTransactionPool::kUninitialized);
+            return false;
+        }
+
         SetState(kInitialized);
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << "initialized the unclaimed transaction pool";
-#endif//TOKEN_DEBUG
+        LOG(INFO) << "initialized the unclaimed transaction pool in: " << GetPath();
+        return true;
     }
 
     bool UnclaimedTransactionPool::HasUnclaimedTransaction(const uint256_t& hash){
         LOCK_GUARD;
-        return UnclaimedTransactionPoolIndex::HasData(hash);
+        return GetCache()->HasData(hash);
     }
 
     Handle<UnclaimedTransaction> UnclaimedTransactionPool::GetUnclaimedTransaction(const uint256_t& hash){
         LOCK_GUARD;
-        if(!UnclaimedTransactionPoolIndex::HasData(hash)) return Handle<UnclaimedTransaction>(); //null
-        return UnclaimedTransactionPoolIndex::GetData(hash);
+        return GetCache()->GetData(hash);
     }
 
-    void UnclaimedTransactionPool::RemoveUnclaimedTransaction(const uint256_t& hash){
+    bool UnclaimedTransactionPool::RemoveUnclaimedTransaction(const uint256_t& hash){
         LOCK_GUARD;
-        if(!HasUnclaimedTransaction(hash)) return;
-        UnclaimedTransactionPoolIndex::RemoveData(hash);
+        return GetCache()->RemoveData(hash);
     }
 
-    void UnclaimedTransactionPool::PutUnclaimedTransaction(const Handle<UnclaimedTransaction>& utxo){
+    bool UnclaimedTransactionPool::PutUnclaimedTransaction(const Handle<UnclaimedTransaction>& utxo){
         LOCK_GUARD;
-        UnclaimedTransactionPoolIndex::PutData(utxo);
+        return GetCache()->PutData(utxo);
     }
 
     bool UnclaimedTransactionPool::GetUnclaimedTransactions(std::vector<uint256_t>& utxos){
         LOCK_GUARD;
         DIR* dir;
         struct dirent* ent;
-        if((dir = opendir(GetDataDirectory().c_str())) != NULL){
+        if((dir = opendir(GetPath().c_str())) != NULL){
             while((ent = readdir(dir)) != NULL){
                 std::string name(ent->d_name);
-                std::string filename = (GetDataDirectory() + "/" + name);
+                std::string filename = (GetPath() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
 
                 Handle<UnclaimedTransaction> utxo = UnclaimedTransaction::NewInstance(filename);
@@ -84,10 +86,10 @@ namespace Token{
         LOCK_GUARD;
         DIR* dir;
         struct dirent* ent;
-        if((dir = opendir(GetDataDirectory().c_str())) != NULL){
+        if((dir = opendir(GetPath().c_str())) != NULL){
             while((ent = readdir(dir)) != NULL){
                 std::string name(ent->d_name);
-                std::string filename = (GetDataDirectory() + "/" + name);
+                std::string filename = (GetPath() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
                 Handle<UnclaimedTransaction> utxo = UnclaimedTransaction::NewInstance(filename);
 
@@ -110,10 +112,10 @@ namespace Token{
         LOCK_GUARD;
         DIR* dir;
         struct dirent* ent;
-        if((dir = opendir(GetDataDirectory().c_str())) != NULL){
+        if((dir = opendir(GetPath().c_str())) != NULL){
             while((ent = readdir(dir)) != NULL){
                 std::string name(ent->d_name);
-                std::string filename = (GetDataDirectory() + "/" + name);
+                std::string filename = (GetPath() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
                 Handle<UnclaimedTransaction> utxo = UnclaimedTransaction::NewInstance(filename);
                 if(!vis->Visit(utxo)) break;
@@ -128,10 +130,10 @@ namespace Token{
         LOCK_GUARD;
         DIR* dir;
         struct dirent* ent;
-        if((dir = opendir(GetDataDirectory().c_str())) != NULL){
+        if((dir = opendir(GetPath().c_str())) != NULL){
             while((ent = readdir(dir)) != NULL){
                 std::string name(ent->d_name);
-                std::string filename = (GetDataDirectory() + "/" + name);
+                std::string filename = (GetPath() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
 
                 Handle<UnclaimedTransaction> utxo = UnclaimedTransaction::NewInstance(filename);
@@ -149,10 +151,10 @@ namespace Token{
         LOCK_GUARD;
         DIR* dir;
         struct dirent* ent;
-        if((dir = opendir(GetDataDirectory().c_str())) != NULL){
+        if((dir = opendir(GetPath().c_str())) != NULL){
             while((ent = readdir(dir)) != NULL){
                 std::string name(ent->d_name);
-                std::string filename = (GetDataDirectory() + "/" + name);
+                std::string filename = (GetPath() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
                 size++;
             }
@@ -161,7 +163,6 @@ namespace Token{
         return size;
     }
 
-#ifdef TOKEN_DEBUG
     class UnclaimedTransactionPoolPrinter : public UnclaimedTransactionPoolVisitor{
     public:
         UnclaimedTransactionPoolPrinter(): UnclaimedTransactionPoolVisitor(){}
@@ -173,9 +174,8 @@ namespace Token{
         }
     };
 
-    void UnclaimedTransactionPool::PrintUnclaimedTransactions(){
+    bool UnclaimedTransactionPool::PrintUnclaimedTransactions(){
         UnclaimedTransactionPoolPrinter printer;
-        if(!Accept(&printer)) CrashReport::GenerateAndExit("Couldn't print unclaimed transactions in pool");
+        return Accept(&printer);
     }
-#endif//TOKEN_DEBUG
 }

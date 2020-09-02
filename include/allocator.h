@@ -13,6 +13,7 @@ namespace Token{
         kEdenSpace,
         kSurvivorSpace,
         kTenuredSpace,
+        kMemoryPool
     };
 
     static std::ostream& operator<<(std::ostream& stream, const Space& space){
@@ -28,6 +29,9 @@ namespace Token{
                 return stream;
             case Space::kTenuredSpace:
                 stream << "Tenured";
+                return stream;
+            case Space::kMemoryPool:
+                stream << "Memory Pool";
                 return stream;
             default:
                 stream << "<Unknown Space>";
