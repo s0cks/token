@@ -75,12 +75,18 @@ namespace Token{
 
     class HeapVisitor;
     class Heap{
+        friend class HeapDumpWriter;
+        friend class HeapDumpReader;
     private:
         std::recursive_mutex mutex_;
         MemoryRegion region_;
         Space space_;
         Semispace from_space_;
         Semispace to_space_;
+
+        void SetAllocatedSize(size_t size){
+            from_space_.current_ = (from_space_.start_ + size);
+        }
     public:
         Heap(Space space, size_t semi_size):
             mutex_(),

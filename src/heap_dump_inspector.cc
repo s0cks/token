@@ -19,4 +19,29 @@ namespace Token{
     void HeapDumpInspector::HandleGetHeapCommand(HeapDumpInspectorCommand* cmd){
 
     }
+
+    class HeapObjectPrinter : public ObjectPointerVisitor{
+    public:
+        HeapObjectPrinter() = default;
+        ~HeapObjectPrinter() = default;
+
+        bool Visit(RawObject* obj){
+            LOG(INFO) << " - " << obj->ToString();
+            return true;
+        }
+
+        static inline void
+        Print(Heap* heap){
+            HeapObjectPrinter printer;
+            if(!heap->Accept(&printer)){
+                LOG(WARNING) << "couldn't iterate over heap objects";
+            }
+        }
+    };
+
+    void HeapDumpInspector::HandleTestCommand(HeapDumpInspectorCommand* cmd){
+        Heap* heap = GetHeapByName(cmd->GetNextArgument());
+        PrintHeap(heap);
+        HeapObjectPrinter::Print(heap);
+    }
 }

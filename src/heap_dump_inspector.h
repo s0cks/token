@@ -8,7 +8,8 @@
 
 #define FOR_EACH_INSPECTOR_COMMAND(V) \
     V(Status, ".status", 0) \
-    V(GetHeap, "getheap", 1)
+    V(GetHeap, "getheap", 1) \
+    V(Test, "test", 1)
 
 namespace Token{
     class HeapDumpInspectorCommand : public Command{
@@ -33,11 +34,31 @@ namespace Token{
         void OnCommand(HeapDumpInspectorCommand* cmd){
 #define DEFINE_CHECK(Name, Text, ArgumentCount) \
             if(cmd->Is##Name##Command()){ \
+                if(cmd->GetArgumentCount() < (ArgumentCount)){ \
+                    LOG(WARNING) << cmd->GetName() << " expects " << ArgumentCount << " arguments, " << cmd->GetArgumentCount() << " found..."; \
+                    return; \
+                } \
                 Handle##Name##Command(cmd); \
                 return; \
             }
             FOR_EACH_INSPECTOR_COMMAND(DEFINE_CHECK)
 #undef DEFINE_CHECK
+        }
+
+        inline Heap*
+        GetHeapByName(const std::string& name){
+            std::string heap_name = name;
+            std::transform(heap_name.begin(), heap_name.end(), heap_name.begin(), [](unsigned char c){ return std::tolower(c); });
+            if(heap_name == "stack"){
+                return nullptr; //TODO:
+            } else if(heap_name == "eden"){
+                return GetData()->GetEdenHeap();
+            } else if(heap_name == "survivor"){
+                return GetData()->GetSurvivorHeap();
+            } else{
+                LOG(WARNING) << "unknown heap: " << heap_name;
+                return nullptr;
+            }
         }
     public:
         HeapDumpInspector():

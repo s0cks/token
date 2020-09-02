@@ -32,6 +32,7 @@ namespace Token{
     bool FileReader::ReadBytes(uint8_t* bytes, size_t size){
         //TODO: validate amount read
         size_t nread = fread(bytes, sizeof(uint8_t), size, GetFilePointer());
+        if(nread != size) LOG(WARNING) << "read " << nread << "/" << size << " bytes";
         return nread == size;
     }
 

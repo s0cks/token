@@ -4,6 +4,7 @@
 #include "common.h"
 #include "bytes.h"
 #include "object.h"
+#include "vmemory.h"
 #include "uint256_t.h"
 
 namespace Token{
@@ -23,20 +24,25 @@ namespace Token{
         }
 
         int64_t GetCurrentPosition();
-        void WriteBytes(uint8_t* bytes, size_t size);
-        void WriteInt(int32_t value);
-        void WriteUnsignedInt(uint32_t value);
-        void WriteLong(int64_t value);
-        void WriteUnsignedLong(uint64_t value);
-        void WriteHash(const uint256_t& value);
-        void WriteString(const std::string& value);
-        void SetCurrentPosition(int64_t pos);
-        void Flush();
-        void Close();
+        bool WriteBytes(uint8_t* bytes, size_t size);
+        bool WriteInt(int32_t value);
+        bool WriteUnsignedInt(uint32_t value);
+        bool WriteLong(int64_t value);
+        bool WriteUnsignedLong(uint64_t value);
+        bool WriteHash(const uint256_t& value);
+        bool WriteString(const std::string& value);
+        bool SetCurrentPosition(int64_t pos);
+        bool Flush();
+        bool Close();
 
-        inline void
+        inline bool
         WriteBytes(ByteBuffer* bytes){
-            WriteBytes(bytes->data(), bytes->GetWrittenBytes());
+            return WriteBytes(bytes->data(), bytes->GetWrittenBytes());
+        }
+
+        inline bool
+        WriteBytes(MemoryRegion* region){
+            return WriteBytes((uint8_t*)region->GetStartAddress(), region->GetSize());
         }
     };
 
@@ -63,11 +69,11 @@ namespace Token{
             if(file_ != NULL) Close();
         }
 
-        void WriteObject(Object* obj);
+        bool WriteObject(Object* obj);
 
         template<typename T>
-        void WriteObject(const Handle<T>& obj){
-            WriteObject((Object*)obj);
+        bool WriteObject(const Handle<T>& obj){
+            return WriteObject((Object*)obj);
         }
     };
 }

@@ -153,7 +153,7 @@ namespace Token{
 
         void PutHash(const uint256_t& value){
             if((wpos_ + uint256_t::kSize) >= GetCapacity())
-                Resize(GetCapacity() + wpos_ + uint256_t::kSize);
+                Resize(GetCapacity() + uint256_t::kSize);
             memcpy(&data_[wpos_], value.data(), uint256_t::kSize);
             wpos_ += uint256_t::kSize;
         }

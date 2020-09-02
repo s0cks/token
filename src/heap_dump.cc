@@ -24,7 +24,7 @@ namespace Token{
         return true;
     }
 
-    bool HeapDump::WriteHeapDump(const std::string& filename){
+    bool HeapDump::WriteNewHeapDump(const std::string& filename){
         HeapDumpWriter writer(filename);
         return writer.WriteHeapDump();
     }
@@ -83,7 +83,7 @@ namespace Token{
         }
 
         bool Visit(RawObject* obj){
-            //TODO: GetWriter()->WriteObject(obj);
+            GetWriter()->WriteObject((Object*)obj);
             return true;
         }
 
@@ -93,23 +93,23 @@ namespace Token{
     };
 
     bool HeapDumpWriter::WriteHeap(Heap* heap){
-        LOG(INFO) << "writing " << heap->GetSpace() << heap->GetAllocatedSize() << "/" << heap->GetTotalSize() << " space to heap dump....";
+        LOG(INFO) << "writing " << heap->GetSpace() << heap->GetTotalSize() << " space to heap dump....";
 
         // Write the Header
         LOG(INFO) << "writing heap section header....";
         WriteUnsignedLong(CreateSectionHeader(heap->GetSpace(), heap->GetAllocatedSize()));
 
         // Write the Data
-        LOG(INFO) << "writing heap data section....";
-        HeapDumpHeapDataWriter writer(this, heap);
-        if(!writer.Write()){
-            LOG(WARNING) << "couldn't write heap data to heap dump";
+        LOG(INFO) << "writing heap section data....";
+        if(!WriteBytes(heap->GetRegion())){
+            LOG(WARNING) << "couldn't write heap memory region to section data";
             return false;
         }
         return true;
     }
 
     bool HeapDumpWriter::WriteHeapDump(){
+        LOG(INFO) << "writing heap dump....";
         WriteUnsignedLong(GetCurrentTimestamp()); // Generation Timestamp
         WriteUnsignedLong(Allocator::kSemispaceSize); // Semispace Size
 
@@ -133,6 +133,8 @@ namespace Token{
             LOG(WARNING) << "couldn't write heap dump survivor space section";
             return false;
         }
+
+        LOG(INFO) << "heap dump written to: " << GetFilename();
         return true;
     }
 
@@ -162,18 +164,15 @@ namespace Token{
                 case Space::kEdenSpace:{
                     LOG(INFO) << "reading eden space....";
                     Heap* heap = dump->GetEdenHeap();
-                    if(!ReadMemoryRegion(heap->GetRegion(), size)){
+                    if(!ReadMemoryRegion(heap->GetRegion(), heap->GetTotalSize())){
                         LOG(WARNING) << "couldn't read space memory region from file";
                         delete dump;
                         return nullptr;
                     }
+                    heap->SetAllocatedSize(size);
                     break;
                 }
-                case Space::kSurvivorSpace:{
-                    LOG(INFO) << "reading survivor space....";
-                    //TODO: implement
-                    break;
-                }
+                case Space::kSurvivorSpace: return dump;
                 default:
                     LOG(WARNING) << "unknown space: " << space;
                     delete dump;

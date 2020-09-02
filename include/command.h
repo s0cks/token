@@ -31,6 +31,10 @@ namespace Token{
             return name_;
         }
 
+        size_t GetArgumentCount() const{
+            return args_.size();
+        }
+
         bool HasNextArgument() const{
             return !args_.empty();
         }

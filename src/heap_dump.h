@@ -45,7 +45,7 @@ namespace Token{
 
         bool Accept(HeapDumpVisitor* vis);
 
-        static bool WriteHeapDump(const std::string& filename=GenerateNewFilename());
+        static bool WriteNewHeapDump(const std::string& filename=GenerateNewFilename());
         static HeapDump* ReadHeapDump(const std::string& filename);
 
         static inline std::string
