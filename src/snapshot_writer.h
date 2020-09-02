@@ -7,10 +7,7 @@
 
 namespace Token{
     class SnapshotWriter : public BinaryFileWriter{
-        friend class SnapshotSection;
     private:
-        Snapshot* snapshot_; // TODO: remove snapshot_ instance
-
         static inline std::string
         GetNewSnapshotFilename(){
             std::stringstream filename;
@@ -19,20 +16,18 @@ namespace Token{
             return filename.str();
         }
 
-        void WriteHeader(SnapshotSection* section);
-        void UpdateHeader(SnapshotSection* section);
-    public:
-        SnapshotWriter(Snapshot* snapshot, const std::string& filename=GetNewSnapshotFilename()):
-            BinaryFileWriter(filename),
-            snapshot_(snapshot){}
-        ~SnapshotWriter() = default;
-
-        Snapshot* GetSnapshot() const{
-            return snapshot_;
+        inline void
+        WriteHeader(SnapshotSectionHeader header){
+            WriteUnsignedLong(header);
         }
 
+        bool WriteHeaderAt(int64_t pos, SnapshotSectionHeader header);
+    public:
+        SnapshotWriter(const std::string& filename=GetNewSnapshotFilename()):
+            BinaryFileWriter(filename){}
+        ~SnapshotWriter() = default;
+
         bool WriteSnapshot();
-        void WriteReference(const IndexReference& ref);
     };
 }
 

@@ -1,7 +1,33 @@
 #include "object.h"
 #include "bytes.h"
+#include "bitfield.h"
 
 namespace Token{
+    enum ObjectHeaderLayout{
+        kTypeFieldPosition = 0,
+        kTypeFieldSize = 16,
+        kSizeFieldPosition = kTypeFieldPosition+kTypeFieldSize,
+        kSizeFieldSize = 32
+    };
+
+    class ObjectHeaderTypeField : public BitField<ObjectHeader, Type, kTypeFieldPosition, kTypeFieldSize>{};
+    class ObjectHeaderSizeField : public BitField<ObjectHeader, uint32_t, kSizeFieldPosition, kSizeFieldSize>{};
+
+    ObjectHeader CreateObjectHeader(Object* obj){
+        ObjectHeader header = 0;
+        header = ObjectHeaderTypeField::Update(obj->GetType(), header);
+        header = ObjectHeaderSizeField::Update(obj->GetBufferSize(), header);
+        return header;
+    }
+
+    Type GetObjectHeaderType(ObjectHeader header){
+        return ObjectHeaderTypeField::Decode(header);
+    }
+
+    uint32_t GetObjectHeaderSize(ObjectHeader header){
+        return ObjectHeaderSizeField::Decode(header);
+    }
+
     bool Object::WriteToFile(std::fstream &file) const{
         size_t size = GetBufferSize();
         ByteBuffer bytes(size);

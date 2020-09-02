@@ -22,7 +22,7 @@ namespace Token{
         previous_hash_(bytes->GetHash()),
         merkle_root_(bytes->GetHash()),
         hash_(bytes->GetHash()),
-        bloom_(){} //TODO: decode(bloom_)
+        bloom_(){}
 
     Block* BlockHeader::GetData() const{
         return BlockChain::GetBlock(GetHash());

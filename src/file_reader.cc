@@ -1,5 +1,8 @@
 #include "file_reader.h"
+#include "bytes.h"
 #include "crash_report.h"
+
+#include "block.h"
 
 namespace Token{
 #define CHECK_FILE_POINTER \
@@ -29,7 +32,6 @@ namespace Token{
     bool FileReader::ReadBytes(uint8_t* bytes, size_t size){
         //TODO: validate amount read
         size_t nread = fread(bytes, sizeof(uint8_t), size, GetFilePointer());
-        LOG(INFO) << "read " << nread << "/" << size << " bytes from file";
         return nread == size;
     }
 
@@ -99,5 +101,29 @@ namespace Token{
         int err;
         if((err = fseek(GetFilePointer(), pos, SEEK_SET)) != 0)
             LOG(WARNING) << "couldn't seek to " << pos << " in file " << GetFilename() << ": " << strerror(err);
+    }
+
+    Handle<Object> BinaryFileReader::ReadObject(){
+        ObjectHeader header = ReadUnsignedLong();
+        Type type = GetObjectHeaderType(header);
+        uint32_t size = GetObjectHeaderSize(header);
+
+        LOG(INFO) << "reading object of type: " << type << " (" << size << " Bytes) @" << GetCurrentPosition();
+        ByteBuffer bytes(size);
+        if(!ReadBytes(&bytes, size)){
+            LOG(WARNING) << "couldn't read object";
+            return nullptr;
+        }
+
+        switch(GetObjectHeaderType(header)){
+#define DEFINE_DECODE(Name) \
+            case Type::k##Name##Type: return Name::NewInstance(&bytes).CastTo<Object>();
+            FOR_EACH_TYPE(DEFINE_DECODE);
+#undef DEFINE_DECODE
+            case Type::kUnknownType:
+            default:
+                LOG(WARNING) << "unknown object type: " << type;
+                return nullptr;
+        }
     }
 }

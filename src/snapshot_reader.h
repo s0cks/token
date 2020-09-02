@@ -10,15 +10,16 @@ namespace Token{
     class SnapshotReader : public BinaryFileReader{
         friend class Snapshot;
     private:
-        void SkipData(SnapshotSection* section);
-        void ReadHeader(SnapshotSection* section);
+        inline SnapshotSectionHeader
+        ReadSectionHeader(){
+            return ReadUnsignedLong();
+        }
     public:
         SnapshotReader(const std::string& filename):
             BinaryFileReader(filename){}
         ~SnapshotReader() = default;
 
         Snapshot* ReadSnapshot();
-        IndexReference ReadReference();
     };
 }
 

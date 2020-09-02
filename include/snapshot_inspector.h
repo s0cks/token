@@ -39,11 +39,6 @@ namespace Token{
             return GetSnapshot() != nullptr;
         }
 
-        inline Handle<Block>
-        GetBlock(const uint256_t& hash){
-            return GetSnapshot()->GetBlock(hash);
-        }
-
 #define DECLARE_HANDLER(Name, Text, Parameters) \
         void Handle##Name##Command(SnapshotInspectorCommand* cmd);
         FOR_EACH_INSPECTOR_COMMAND(DECLARE_HANDLER);

@@ -109,6 +109,20 @@ namespace Token{
     public:
         static const size_t kMaxTransactionsForBlock = 20;
         static const uint32_t kNumberOfGenesisOutputs = 32; // TODO: changeme
+
+        struct TimestampComparator{
+            bool operator()(Block* a, Block* b){
+                return a->GetTimestamp() < b->GetTimestamp();
+            }
+        };
+
+        struct HeightComparator{
+            bool operator()(Block* a, Block* b){
+                if(!a) return -1;
+                if(!b) return 1;
+                return a->GetHeight() < b->GetHeight();
+            }
+        };
     private:
         uint32_t timestamp_;
         uint32_t height_;
@@ -125,6 +139,7 @@ namespace Token{
             transactions_(nullptr),
             num_transactions_(num_txs),
             tx_bloom_(){
+            SetType(Type::kBlockType);
             transactions_ = (Transaction**)malloc(sizeof(Transaction*)*num_txs);
             memset(transactions_, 0, sizeof(Transaction*)*num_txs);
             for(size_t idx = 0; idx < num_txs; idx++){

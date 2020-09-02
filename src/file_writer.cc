@@ -1,4 +1,6 @@
 #include "file_writer.h"
+#include "bytes.h"
+#include "bitfield.h"
 
 namespace Token{
 #define CHECK_FILE_POINTER \
@@ -78,7 +80,18 @@ namespace Token{
         WriteBytes((uint8_t*)value.data(), value.length());
     }
 
-    void BinaryFileWriter::WriteObject(RawObject* value){
-        //TODO: implement
+    void BinaryFileWriter::WriteObject(Object* value){
+        Type type = value->GetType();
+        uint32_t size = value->GetBufferSize();
+
+        ByteBuffer bytes(size);
+        if(!value->Encode(&bytes)){
+            LOG(WARNING) << "couldn't encode object: " << value->ToString();
+            return;
+        }
+
+        LOG(INFO) << "writing " << type << " (" << size << " Bytes) @" << GetCurrentPosition();
+        WriteUnsignedLong(CreateObjectHeader(value));
+        WriteBytes(&bytes);
     }
 }

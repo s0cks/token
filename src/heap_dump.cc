@@ -36,7 +36,7 @@ namespace Token{
 
     bool HeapDumpWriter::Visit(RawObject* obj){
         WriteUnsignedLong(CreateObjectHeader(0, obj->GetAllocatedSize()));
-        WriteObject(obj);
+        //TODO: WriteObject(obj);
         return true;
     }
 
@@ -44,7 +44,7 @@ namespace Token{
         RawObject* obj = (*root);
         if(!obj) return false;
         WriteUnsignedLong(CreateObjectHeader(0, obj->GetAllocatedSize()));
-        WriteObject(obj);
+        //TODO:WriteObject(obj);
         return true;
     }
 
@@ -83,7 +83,7 @@ namespace Token{
         }
 
         bool Visit(RawObject* obj){
-            GetWriter()->WriteObject(obj);
+            //TODO: GetWriter()->WriteObject(obj);
             return true;
         }
 

@@ -1,60 +1,72 @@
 #include "snapshot_writer.h"
-#include "snapshot_prologue.h"
-#include "snapshot_block_chain.h"
-#include "snapshot_unclaimed_transaction_pool.h"
 
 namespace Token{
-    void SnapshotWriter::WriteHeader(SnapshotSection* section){
-        WriteInt(section->GetSectionId());
-        WriteLong(section->GetSize());
-    }
-
-    void SnapshotWriter::UpdateHeader(Token::SnapshotSection* section){
-        int64_t offset = section->GetOffset() + sizeof(uint32_t);
-
+    bool SnapshotWriter::WriteHeaderAt(int64_t pos, SnapshotSectionHeader header){
         int64_t last = GetCurrentPosition();
-        SetCurrentPosition(offset);
-        WriteLong(section->GetSize());
+        SetCurrentPosition(pos);
+        WriteHeader(header);
         SetCurrentPosition(last);
-        LOG(INFO) << "wrote section #" << section->GetSectionId() << " (" << section->GetSize() << ") @" << section->GetOffset();
-    }
-
-    bool SnapshotWriter::WriteSnapshot(){
-        Snapshot* snapshot = GetSnapshot();
-        {
-            int64_t offset = GetCurrentPosition();
-            snapshot->GetPrologueSection()->SetRegion(offset, 0);
-            WriteHeader(snapshot->GetPrologueSection());
-            snapshot->GetPrologueSection()->Accept(this);
-            int64_t size = (GetCurrentPosition() - offset);
-            snapshot->GetPrologueSection()->SetRegion(offset, size);
-            UpdateHeader(snapshot->GetPrologueSection());
-        }
-
-        {
-            int64_t offset = GetCurrentPosition();
-            WriteHeader(snapshot->GetBlockChainSection());
-            snapshot->GetBlockChainSection()->Accept(this); //TODO: check result
-            int64_t size = (GetCurrentPosition() - offset);
-            snapshot->GetBlockChainSection()->SetRegion(offset, size);
-            UpdateHeader(snapshot->GetBlockChainSection());
-        }
-
-        {
-            int64_t offset = GetCurrentPosition();
-            WriteHeader(snapshot->GetUnclaimedTransactionPoolSection());
-            snapshot->GetUnclaimedTransactionPoolSection()->Accept(this); //TODO: check result
-            int64_t size = (GetCurrentPosition() - offset);
-            snapshot->GetUnclaimedTransactionPoolSection()->SetRegion(offset, size);
-            UpdateHeader(snapshot->GetUnclaimedTransactionPoolSection());
-        }
         return true;
     }
 
-    void SnapshotWriter::WriteReference(const IndexReference& ref){
-        WriteHash(ref.GetHash());
-        WriteInt(ref.GetSize());
-        WriteLong(ref.GetIndexPosition());
-        WriteLong(ref.GetDataPosition());
+    bool SnapshotWriter::WriteSnapshot(){
+        LOG(INFO) << "writing new snapshot...";
+        {
+            LOG(INFO) << "writing the prologue section....";
+            // Encode the Prologue
+            // ------------------
+            // - u64: SectionHeader
+            // - u64: GenerationTime
+            // - u256: HeadHash
+            // ------------------
+            int64_t start = GetCurrentPosition();
+            WriteHeader(CreateSnapshotSectionHeader(kSnapshotPrologue, 0)); // Header
+            WriteUnsignedLong(GetCurrentTimestamp()); // Generation Time
+            WriteString(GetVersion());
+            WriteHash(BlockChain::GetHead()->GetHash()); // <HEAD>
+            int64_t size = (GetCurrentPosition() - start);
+            // update section header size
+            WriteHeaderAt(start, CreateSnapshotSectionHeader(kSnapshotPrologue, size));
+        }
+
+        {
+            LOG(INFO) << "writing the block chain section....";
+            // Encode the Block Chain
+            // ------------------------
+            // - u64: SectionHeader
+            // - u32: NumberOfBlocks
+            // - block: Block #N
+            // - block: Block #2
+            // - block: Block #1
+            // - block: Block #0
+            // ------------------------
+            int64_t start = GetCurrentPosition();
+            WriteHeader(CreateSnapshotSectionHeader(kSnapshotBlockChainData, 0)); // SnapshotHeader
+            WriteUnsignedInt(BlockChain::GetHead()->GetHeight());
+            Handle<Block> blk = BlockChain::GetHead();
+            while(true){
+                WriteObject(blk);
+                if(blk->IsGenesis()) break;
+                blk = blk->GetPrevious().CastTo<Block>();
+            }
+            int64_t size = (GetCurrentPosition() - start);
+            WriteHeaderAt(start, CreateSnapshotSectionHeader(kSnapshotBlockChainData, size));
+        }
+
+        {
+            // Encode the Unclaimed Transaction Pool
+            // ------------------------
+            // - u64: SectionHeader
+            // - u64: NumberOfBlocks
+            // - block: Block #1
+            // - block: Block #2
+            // - block: Block #N
+            // ------------------------
+            int64_t offset = GetCurrentPosition();
+            //TODO: write unclaimed transaction pool section
+        }
+
+        LOG(INFO) << "snapshot written to: " << GetFilename();
+        return true;
     }
 }

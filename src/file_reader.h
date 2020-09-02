@@ -2,6 +2,7 @@
 #define TOKEN_FILE_READER_H
 
 #include "common.h"
+#include "bytes.h"
 #include "object.h"
 #include "uint256_t.h"
 
@@ -31,6 +32,16 @@ namespace Token{
         int64_t ReadLong();
         uint64_t ReadUnsignedLong();
         void Close();
+
+        inline bool
+        ReadBytes(ByteBuffer* bytes, size_t size){
+            return ReadBytes(bytes->data(), size);
+        }
+
+        inline bool
+        ReadBytes(ByteBuffer* bytes){
+            return ReadBytes(bytes, bytes->GetCapacity());
+        }
     };
 
     class BinaryFileReader : public FileReader{
@@ -51,6 +62,8 @@ namespace Token{
         virtual ~BinaryFileReader(){
             if(file_ != NULL) Close();
         }
+
+        Handle<Object> ReadObject();
     };
 }
 

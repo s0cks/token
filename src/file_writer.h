@@ -2,8 +2,9 @@
 #define TOKEN_FILE_WRITER_H
 
 #include "common.h"
-#include "uint256_t.h"
+#include "bytes.h"
 #include "object.h"
+#include "uint256_t.h"
 
 namespace Token{
     class FileWriter{
@@ -32,6 +33,11 @@ namespace Token{
         void SetCurrentPosition(int64_t pos);
         void Flush();
         void Close();
+
+        inline void
+        WriteBytes(ByteBuffer* bytes){
+            WriteBytes(bytes->data(), bytes->GetWrittenBytes());
+        }
     };
 
     class TextFileWriter : public FileWriter{
@@ -57,11 +63,11 @@ namespace Token{
             if(file_ != NULL) Close();
         }
 
-        void WriteObject(RawObject* obj);
+        void WriteObject(Object* obj);
 
         template<typename T>
         void WriteObject(const Handle<T>& obj){
-            WriteObject((RawObject*)obj);
+            WriteObject((Object*)obj);
         }
     };
 }

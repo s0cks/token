@@ -227,10 +227,6 @@ namespace Token{
         size_t GetObjectSize() const;
         size_t GetReferenceCount() const;
 
-        size_t GetAllocatedSize() const{
-            return GetObjectSize();// refactor
-        }
-
         bool HasStackReferences() const{
             return GetReferenceCount() > 0;
         }
@@ -295,6 +291,10 @@ namespace Token{
     public:
         virtual ~RawObject(){
             if(IsInStackSpace()) Allocator::UntrackRoot(this);
+        }
+
+        size_t GetAllocatedSize() const{
+            return GetObjectSize();// refactor
         }
 
         virtual std::string ToString() const = 0;

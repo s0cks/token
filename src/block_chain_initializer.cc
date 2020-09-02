@@ -1,7 +1,7 @@
 #include "block_chain_initializer.h"
+#include "node.h"
 #include "common.h"
 #include "block_pool.h"
-#include "node.h"
 #include "block_chain.h"
 #include "configuration.h"
 #include "transaction_pool.h"
@@ -43,38 +43,24 @@ namespace Token{
         return true;
     }
 
-    class SnapshotBlockDataInitializer : public SnapshotBlockDataVisitor{
-    private:
-        SnapshotBlockChainInitializer* parent_;
-    public:
-        SnapshotBlockDataInitializer(SnapshotBlockChainInitializer* parent):
-            SnapshotBlockDataVisitor(),
-            parent_(parent){}
-        ~SnapshotBlockDataInitializer(){}
-
-        SnapshotBlockChainInitializer* GetParent() const{
-            return parent_;
-        }
-
-        bool Visit(const Handle<Block>& blk){
-            LOG(INFO) << "loading block: " << blk;
-            return true;
-        }
-
-        bool Initialize(){
-            return GetParent()->GetSnapshot()->Accept(this);
-        }
-    };
-
     bool SnapshotBlockChainInitializer::DoInitialization(){
+        //TODO: wipe existing block chain data
         Snapshot* snapshot = GetSnapshot();
         LOG(INFO) << "loading block chain from snapshot: " << snapshot->GetFilename();
 
-        SnapshotBlockDataInitializer blk_init(this);
-        if(!blk_init.Initialize()){
-            LOG(WARNING) << "couldn't load block data from snapshot: " << snapshot->GetFilename();
-        }
+        uint256_t head_hash = snapshot->GetHead();
+        Handle<Block> block = nullptr; //TODO: snapshot->GetBlock(head_hash);
+        LOG(INFO) << "loading <HEAD> block: " << block;
+        while(true){
+            uint256_t phash = block->GetPreviousHash();
+            if(phash.IsNull()) break;
 
+            Handle<Block> current = nullptr; //TODO: snapshot->GetBlock(phash);
+            LOG(INFO) << "loading block: " << current;
+
+            if(block->IsGenesis()) break;
+            block = current;
+        }
         return true;
     }
 
