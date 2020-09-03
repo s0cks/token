@@ -20,7 +20,7 @@ namespace Token{
         state_ = state;
     }
 
-    void TransactionPool::Accept(TransactionPoolVisitor* vis){
+    bool TransactionPool::Accept(TransactionPoolVisitor* vis){
         LOCK_GUARD;
         DIR* dir;
         struct dirent* ent;
@@ -31,10 +31,11 @@ namespace Token{
                 if(!EndsWith(filename, ".dat")) continue;
 
                 Handle<Transaction> tx = Transaction::NewInstance(filename);
-                if(!vis->Visit(tx)) break;
+                if(!vis->Visit(tx)) return false;
             }
             closedir(dir);
         }
+        return true;
     }
 
     bool TransactionPool::Initialize(){
