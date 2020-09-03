@@ -48,17 +48,31 @@ namespace Token{
         Snapshot* snapshot = GetSnapshot();
         LOG(INFO) << "loading block chain from snapshot: " << snapshot->GetFilename();
 
-        uint256_t head_hash = snapshot->GetHead();
-        Handle<Block> block = nullptr; //TODO: snapshot->GetBlock(head_hash);
+        SnapshotPrinter::Print(snapshot);
+
+        uint256_t hash = snapshot->GetHead();
+        Handle<Block> block = snapshot->GetBlock(hash);
+        BlockChainIndex::PutBlockData(block);
+
+        SetHeadNode(block);
         LOG(INFO) << "loading <HEAD> block: " << block;
         while(true){
-            uint256_t phash = block->GetPreviousHash();
-            if(phash.IsNull()) break;
+            hash = block->GetPreviousHash();
+            if(hash.IsNull()){
+                SetGenesisNode(block);
+                break;
+            }
 
-            Handle<Block> current = nullptr; //TODO: snapshot->GetBlock(phash);
-            LOG(INFO) << "loading block: " << current;
+            Handle<Block> current = snapshot->GetBlock(hash);
+            BlockChainIndex::PutBlockData(current);
+            LOG(INFO) << "loading block: " << block->GetHeader();
+            block->SetPrevious(current.CastTo<Node>());
+            current->SetNext(block.CastTo<Node>());
 
-            if(block->IsGenesis()) break;
+            if(block->IsGenesis()){
+                SetGenesisNode(block);
+                break;
+            }
             block = current;
         }
         return true;

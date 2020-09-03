@@ -37,42 +37,7 @@ namespace Token{
         //TODO: PrintBlock(GetBlock(hash));
     }
 
-    class SnapshotUnclaimedTransactionPrinter : public SnapshotUnclaimedTransactionDataVisitor{
-    private:
-        std::string user_;
-    public:
-        SnapshotUnclaimedTransactionPrinter(const std::string& user):
-            SnapshotUnclaimedTransactionDataVisitor(),
-            user_(user){}
-        SnapshotUnclaimedTransactionPrinter():
-            SnapshotUnclaimedTransactionDataVisitor(),
-            user_(){}
-        ~SnapshotUnclaimedTransactionPrinter() = default;
-
-        std::string GetTarget() const{
-            return user_;
-        }
-
-        bool Visit(const Handle<UnclaimedTransaction>& utxo){
-            if(utxo->GetUser() == GetTarget()) PrintUnclaimedTransaction(utxo);
-            return true;
-        }
-    };
-
-    void SnapshotInspector::HandleGetUnclaimedTransactionsCommand(Token::SnapshotInspectorCommand* cmd){
-        if(cmd->HasNextArgument()){
-            std::string user = cmd->GetNextArgument();
-            LOG(INFO) << "Unclaimed Transactions (" << user << "):";
-            SnapshotUnclaimedTransactionPrinter printer(user);
-            GetSnapshot()->Accept(&printer);
-        } else{
-            LOG(INFO) << "Unclaimed Transactions: ";
-            SnapshotUnclaimedTransactionPrinter printer;
-            GetSnapshot()->Accept(&printer);
-        }
-    }
-
-    class SnapshotBlockPrinter : public SnapshotBlockDataVisitor{
+    class SnapshotBlockPrinter : public SnapshotVisitor{
     public:
         SnapshotBlockPrinter() = default;
         ~SnapshotBlockPrinter() = default;

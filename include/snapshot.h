@@ -18,8 +18,7 @@ namespace Token{
     SnapshotSection GetSnapshotSection(SnapshotSectionHeader header);
     uint32_t GetSnapshotSectionSize(SnapshotSectionHeader header);
 
-    class SnapshotBlockDataVisitor;
-    class SnapshotUnclaimedTransactionDataVisitor;
+    class SnapshotVisitor;
     class Snapshot : public Object{
         //TODO:
         // - encode bloom filter to blocks
@@ -110,9 +109,15 @@ namespace Token{
             return blocks_[height];
         }
 
+        Handle<Block> GetBlock(const uint256_t& hash) const{
+            for(uint64_t idx = 0; idx < blocks_len_; idx++){
+                if(blocks_[idx]->GetHash() == hash) return blocks_[idx];
+            }
+            return nullptr;
+        }
+
         std::string ToString() const;
-        bool Accept(SnapshotBlockDataVisitor* vis);
-        bool Accept(SnapshotUnclaimedTransactionDataVisitor* vis);
+        bool Accept(SnapshotVisitor* vis);
         size_t GetBufferSize() const{ return 0; } //TODO: implement Snapshot::GetBufferSize()
         bool Encode(ByteBuffer* bytes) const{ return false; } //TODO: implement Snapshot::Encode(ByteBuffer*)
 
@@ -125,20 +130,39 @@ namespace Token{
         }
     };
 
-    class SnapshotBlockDataVisitor{
+    class SnapshotVisitor{
     protected:
-        SnapshotBlockDataVisitor() = default;
+        SnapshotVisitor() = default;
     public:
-        virtual ~SnapshotBlockDataVisitor() = default;
+        virtual ~SnapshotVisitor() = default;
+        virtual bool VisitStart(Snapshot* snapshot){ return true; }
         virtual bool Visit(const Handle<Block>& blk) = 0;
+        virtual bool VisitEnd(Snapshot* snapshot){ return true; }
     };
 
-    class SnapshotUnclaimedTransactionDataVisitor{
-    protected:
-        SnapshotUnclaimedTransactionDataVisitor() = default;
+    class SnapshotPrinter : public SnapshotVisitor{
+    private:
+        SnapshotPrinter():
+            SnapshotVisitor(){}
     public:
-        virtual ~SnapshotUnclaimedTransactionDataVisitor() = default;
-        virtual bool Visit(const Handle<UnclaimedTransaction>& utxo) = 0;
+        ~SnapshotPrinter() = default;
+
+        bool VisitStart(Snapshot* snapshot){
+            LOG(INFO) << "Snapshot: " << snapshot->GetFilename();
+            LOG(INFO) << "Generated: " << GetTimestampFormattedReadable(snapshot->GetTimestamp());
+            LOG(INFO) << "Blocks:";
+            return true;
+        }
+
+        bool Visit(const Handle<Block>& blk){
+            LOG(INFO) << " - " << blk;
+            return true;
+        }
+
+        static bool Print(Snapshot* snapshot){
+            SnapshotPrinter printer;
+            return snapshot->Accept(&printer);
+        }
     };
 }
 

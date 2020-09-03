@@ -1,5 +1,3 @@
-#include "token.h"
-#include "bytes.h"
 #include "bitfield.h"
 #include "snapshot.h"
 #include "snapshot_writer.h"
@@ -50,16 +48,12 @@ namespace Token{
         return reader.ReadSnapshot();
     }
 
-    bool Snapshot::Accept(SnapshotBlockDataVisitor* vis){
+    bool Snapshot::Accept(SnapshotVisitor* vis){
+        if(!vis->VisitStart(this)) return false;
         for(uint64_t idx = 0; idx < GetNumberOfBlocks(); idx++){
             if(!vis->Visit(GetBlock(idx)))
                 return false;
         }
-        return true;
-    }
-
-    bool Snapshot::Accept(SnapshotUnclaimedTransactionDataVisitor* vis){
-        //TODO: implement
-        return false;
+        return vis->VisitEnd(this);
     }
 }

@@ -42,7 +42,7 @@ namespace Token{
             // ------------------------
             int64_t start = GetCurrentPosition();
             WriteHeader(CreateSnapshotSectionHeader(kSnapshotBlockChainData, 0)); // SnapshotHeader
-            WriteUnsignedInt(BlockChain::GetHead()->GetHeight());
+            WriteUnsignedInt(BlockChain::GetHead()->GetHeight() + 1);
             Handle<Block> blk = BlockChain::GetHead();
             while(true){
                 WriteObject(blk);
