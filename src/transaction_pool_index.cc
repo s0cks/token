@@ -106,6 +106,7 @@ namespace Token{
             LOG(WARNING) << "couldn't index transaction: " << tx->GetHash();
             return false;
         }
+        return true;
     }
 
     size_t TransactionPoolIndex::GetNumberOfTransactions(){

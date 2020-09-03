@@ -49,6 +49,7 @@ namespace Token{
         TransactionPoolIndex::Initialize();
         SetState(State::kInitialized);
         LOG(INFO) << "initialized the transaction pool";
+        return true;
     }
 
     bool TransactionPool::HasTransaction(const uint256_t& hash){

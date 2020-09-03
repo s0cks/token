@@ -11,7 +11,6 @@ namespace Token{
     V(Status, ".status", 0) \
     V(GetData, "getdata", 1) \
     V(GetBlocks, "getblocks", 0) \
-    V(GetUnclaimedTransactions, "getutxos", 0) \
 
     class SnapshotInspectorCommand : public Command{
     public:
