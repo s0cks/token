@@ -22,10 +22,10 @@ namespace Token{
         ~TransactionPool() = delete;
 
         static State GetState();
-        static void Initialize();
-        static void Accept(TransactionPoolVisitor* vis);
-        static void RemoveTransaction(const uint256_t& hash);
-        static void PutTransaction(const Handle<Transaction>& tx);
+        static bool Initialize();
+        static bool Accept(TransactionPoolVisitor* vis);
+        static bool RemoveTransaction(const uint256_t& hash);
+        static bool PutTransaction(const Handle<Transaction>& tx);
         static bool HasTransaction(const uint256_t& hash);
         static bool GetTransactions(std::vector<uint256_t>& txs);
         static Handle<Transaction> GetTransaction(const uint256_t& hash);

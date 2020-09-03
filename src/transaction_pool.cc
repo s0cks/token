@@ -37,19 +37,17 @@ namespace Token{
         }
     }
 
-    void TransactionPool::Initialize(){
-        if(!IsUninitialized()){
-            std::stringstream ss;
-            ss << "Cannot reinitialize the transaction pool";
-            CrashReport::GenerateAndExit(ss);
+    bool TransactionPool::Initialize(){
+        if(IsInitialized()){
+            LOG(WARNING) << "couldn't re-initialize the transaction pool";
+            return false;
         }
 
+        LOG(INFO) << "initializing the transaction pool....";
         SetState(State::kInitializing);
         TransactionPoolIndex::Initialize();
         SetState(State::kInitialized);
-#ifdef TOKEN_DEBUG
         LOG(INFO) << "initialized the transaction pool";
-#endif//TOKEN_DEBUG
     }
 
     bool TransactionPool::HasTransaction(const uint256_t& hash){
@@ -63,15 +61,16 @@ namespace Token{
         return TransactionPoolIndex::GetData(hash);
     }
 
-    void TransactionPool::RemoveTransaction(const uint256_t& hash){
+    bool TransactionPool::RemoveTransaction(const uint256_t& hash){
         LOCK_GUARD;
-        if(!HasTransaction(hash)) return;
-        TransactionPoolIndex::RemoveData(hash);
+        if(!HasTransaction(hash)) return false;
+        return TransactionPoolIndex::RemoveData(hash);
     }
 
-    void TransactionPool::PutTransaction(const Handle<Transaction>& tx){
+    bool TransactionPool::PutTransaction(const Handle<Transaction>& tx){
         LOCK_GUARD;
-        TransactionPoolIndex::PutData(tx);
+        if(HasTransaction(tx->GetHash())) return false;
+        return TransactionPoolIndex::PutData(tx);
     }
 
     bool TransactionPool::GetTransactions(std::vector<uint256_t>& txs){

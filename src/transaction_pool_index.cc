@@ -64,8 +64,8 @@ namespace Token{
         }
     }
 
-    void TransactionPoolIndex::RemoveData(const uint256_t& hash){
-        if(!HasData(hash)) return;
+    bool TransactionPoolIndex::RemoveData(const uint256_t& hash){
+        if(!HasData(hash)) return false;
 
         LOG(INFO) << "removing transaction " << hash << " from pool";
 
@@ -75,38 +75,36 @@ namespace Token{
         std::string filename = GetDataFilename(hash);
         if(!GetIndex()->Delete(options, key).ok()){
             LOG(WARNING) << "couldn't remove index key: " << hash;
-            return;
+            return false;
         }
 
         if(!DeleteFile(filename)){
             LOG(WARNING) << "couldn't delete transaction pool data: " << filename;
-            return;
+            return false;
         }
+        return true;
     }
 
-    void TransactionPoolIndex::PutData(const Handle<Transaction>& tx){
+    bool TransactionPoolIndex::PutData(const Handle<Transaction>& tx){
         leveldb::WriteOptions options;
         options.sync = true;
         std::string key = KEY(tx->GetHash());
         std::string filename = GetNewDataFilename(tx->GetHash());
 
         if(FileExists(filename)){
-            std::stringstream ss;
-            ss << "Couldn't overwrite existing data: " << filename;
-            CrashReport::GenerateAndExit(ss);
+            LOG(WARNING) << "couldn't overwrite existing transaction pool data: " << filename;
+            return false;
         }
 
         std::fstream fd(filename, std::ios::out|std::ios::binary);
         if(!tx->WriteToFile(fd)){
-            std::stringstream ss;
-            ss << "Couldn't write transaction " << tx->GetHash() << " to file: " << filename;
-            CrashReport::GenerateAndExit(ss);
+            LOG(WARNING) << "couldn't write transaction " << tx->GetHash() << " data to file: " << filename;
+            return false;
         }
 
         if(!GetIndex()->Put(options, key, filename).ok()){
-            std::stringstream ss;
-            ss << "Couldn't index transaction: " << tx->GetHash();
-            CrashReport::GenerateAndExit(ss);
+            LOG(WARNING) << "couldn't index transaction: " << tx->GetHash();
+            return false;
         }
     }
 
