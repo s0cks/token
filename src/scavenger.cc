@@ -6,7 +6,8 @@ namespace Token{
     class LiveObjectMarker : public ObjectPointerVisitor{
     public:
         bool Visit(RawObject* obj){
-            if(obj->HasStackReferences()) obj->SetColor(Color::kMarked);
+            if(obj->HasStackReferences())
+                obj->SetColor(Color::kMarked);
             return true;
         }
     };

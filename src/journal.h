@@ -1,23 +1,14 @@
-#ifndef TOKEN_OBJECT_CACHE_H
-#define TOKEN_OBJECT_CACHE_H
+#ifndef TOKEN_JOURNAL_H
+#define TOKEN_JOURNAL_H
 
 #include <leveldb/db.h>
+#include <glog/logging.h>
 #include "handle.h"
-#include "uint256_t.h"
+#include "object.h"
 
 namespace Token{
     template<typename T>
-    class ObjectCacheVisitor{
-    protected:
-        ObjectCacheVisitor() = default;
-    public:
-        virtual ~ObjectCacheVisitor() = default;
-        virtual bool Visit(const Handle<T>& value) = 0;
-    };
-
-    template<typename T>
-    class ObjectCache{
-        //TODO: refactor this, bad implementation
+    class ObjectPoolJournal{
     protected:
         leveldb::DB* index_;
         std::string path_;
@@ -46,8 +37,8 @@ namespace Token{
             std::string key = HexString(hash);
             std::string filename;
             return GetIndex()->Get(options, key, &filename).ok() ?
-                    filename :
-                    GetNewDataFilename(hash);
+                   filename :
+                   GetNewDataFilename(hash);
         }
 
         bool Initialize(){
@@ -67,12 +58,12 @@ namespace Token{
             return true;
         }
     public:
-        ObjectCache(const std::string& path):
-            index_(nullptr),
-            path_(path){
+        ObjectPoolJournal(const std::string& path):
+                index_(nullptr),
+                path_(path){
             if(!Initialize()) LOG(WARNING) << "couldn't initialize object cache in directory: " << path;
         }
-        ~ObjectCache(){
+        ~ObjectPoolJournal(){
             if(index_) delete index_;
         }
 
@@ -164,26 +155,7 @@ namespace Token{
             }
             return count;
         }
-
-        bool Accept(ObjectCacheVisitor<T>* vis){
-            DIR* dir;
-            struct dirent* ent;
-            if((dir = opendir(GetPath().c_str())) != NULL){
-                while((ent = readdir(dir)) != NULL){
-                    std::string name(ent->d_name);
-                    std::string filename = (GetPath() + "/" + name);
-                    if(!EndsWith(filename, ".dat")) continue;
-
-                    Handle<T> data = T::NewInstance(filename);
-                    if(!vis->Visit(data)) return false;
-                }
-
-                closedir(dir);
-                return true;
-            }
-            return false;
-        }
     };
 }
 
-#endif //TOKEN_OBJECT_CACHE_H
+#endif //TOKEN_JOURNAL_H

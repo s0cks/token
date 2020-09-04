@@ -8,6 +8,10 @@ namespace Token{
         // - shutdown server thread
         // - shutdown proposer thread
         // - shutdown block discovery thread
+
+        uv_loop_t* loop = uv_default_loop();
+        uv_stop(loop);
+
         exit(0);
     }
 

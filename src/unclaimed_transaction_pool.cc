@@ -1,16 +1,16 @@
 #include "unclaimed_transaction_pool.h"
+#include "journal.h"
 
 namespace Token{
     static std::recursive_mutex mutex_;
     static UnclaimedTransactionPool::State state_ = UnclaimedTransactionPool::kUninitialized;
 
-    static ObjectCache<UnclaimedTransaction>* cache_ = nullptr;
-
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_);
 
-    ObjectCache<UnclaimedTransaction>* UnclaimedTransactionPool::GetCache(){
-        LOCK_GUARD;
-        return cache_;
+    static inline ObjectPoolJournal<UnclaimedTransaction>*
+    GetJournal(){
+        static ObjectPoolJournal<UnclaimedTransaction> journal(UnclaimedTransactionPool::GetPath());
+        return &journal;
     }
 
     void UnclaimedTransactionPool::SetState(UnclaimedTransactionPool::State state){
@@ -31,7 +31,7 @@ namespace Token{
 
         LOG(INFO) << "initializing the unclaimed transaction pool....";
         SetState(kInitializing);
-        if(!(cache_ = new ObjectCache<UnclaimedTransaction>(GetPath())) && !cache_->IsInitialized()){
+        if(!GetJournal()->IsInitialized()){
             LOG(WARNING) << "couldn't initialize unclaimed transaction pool object cache: " << GetPath();
             SetState(UnclaimedTransactionPool::kUninitialized);
             return false;
@@ -44,22 +44,27 @@ namespace Token{
 
     bool UnclaimedTransactionPool::HasUnclaimedTransaction(const uint256_t& hash){
         LOCK_GUARD;
-        return GetCache()->HasData(hash);
+        return GetJournal()->HasData(hash);
     }
 
     Handle<UnclaimedTransaction> UnclaimedTransactionPool::GetUnclaimedTransaction(const uint256_t& hash){
         LOCK_GUARD;
-        return GetCache()->GetData(hash);
+        return GetJournal()->GetData(hash);
     }
 
     bool UnclaimedTransactionPool::RemoveUnclaimedTransaction(const uint256_t& hash){
         LOCK_GUARD;
-        return GetCache()->RemoveData(hash);
+        return GetJournal()->RemoveData(hash);
     }
 
     bool UnclaimedTransactionPool::PutUnclaimedTransaction(const Handle<UnclaimedTransaction>& utxo){
         LOCK_GUARD;
-        return GetCache()->PutData(utxo);
+        return GetJournal()->PutData(utxo);
+    }
+
+    size_t UnclaimedTransactionPool::GetNumberOfUnclaimedTransactions(){
+        LOCK_GUARD;
+        return GetJournal()->GetNumberOfObjects();
     }
 
     bool UnclaimedTransactionPool::GetUnclaimedTransactions(std::vector<uint256_t>& utxos){
@@ -143,24 +148,6 @@ namespace Token{
         }
         LOG(WARNING) << "couldn't find unclaimed transaction: " << tx_hash << "[" << tx_index << "]";
         return nullptr;
-    }
-
-    size_t UnclaimedTransactionPool::GetNumberOfUnclaimedTransactions(){
-        size_t size = 0;
-
-        LOCK_GUARD;
-        DIR* dir;
-        struct dirent* ent;
-        if((dir = opendir(GetPath().c_str())) != NULL){
-            while((ent = readdir(dir)) != NULL){
-                std::string name(ent->d_name);
-                std::string filename = (GetPath() + "/" + name);
-                if(!EndsWith(filename, ".dat")) continue;
-                size++;
-            }
-            closedir(dir);
-        }
-        return size;
     }
 
     class UnclaimedTransactionPoolPrinter : public UnclaimedTransactionPoolVisitor{

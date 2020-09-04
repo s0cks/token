@@ -3,6 +3,7 @@
 
 #include <uv.h>
 #include "task.h"
+#include "snapshot.h"
 #include "proposal.h"
 
 namespace Token{
@@ -63,6 +64,16 @@ namespace Token{
         friend std::ostream& operator<<(std::ostream& stream, const Result& result){
             stream << "[" << result.status_ << "] " << result.message_;
             return stream;
+        }
+
+        static inline Result
+        Success(const std::string& msg){
+            return Result(Result::kSuccessful, msg);
+        }
+
+        static inline Result
+        Failed(const std::string& msg){
+            return Result(Result::kFailed, msg);
         }
     };
 
@@ -126,6 +137,54 @@ namespace Token{
         }
     };
 
+    class AsyncTaskThread : public Thread{
+    private:
+        AsyncTaskThread() = delete;
+
+        static void SetState(Thread::State state);
+        static void SetLoop(uv_loop_t* loop);
+        static void HandleThread(uword parameter);
+    public:
+        ~AsyncTaskThread() = delete;
+
+        static Thread::State GetState();
+        static void WaitForState(Thread::State state);
+        static uv_loop_t* GetLoop();
+
+        static inline bool
+        IsRunning(){
+            return GetState() == Thread::State::kRunning;
+        }
+
+        static inline bool
+        IsPaused(){
+            return GetState() == Thread::State::kPaused;
+        }
+
+        static inline bool
+        IsStopped(){
+            return GetState() == Thread::State::kStopped;
+        }
+
+        static bool Start(){
+            //TODO: fix parameter
+            return Thread::Start("AsyncTaskThread", &HandleThread, 0);
+        }
+
+        static bool Pause(){
+            if(!IsRunning()) return false;
+            LOG(INFO) << "pausing the async task thread....";
+            SetState(Thread::kPaused);
+            return true;
+        }
+
+        static bool Stop(){
+            //TODO: implement AsyncTaskThread::Stop
+            LOG(WARNING) << "cannot stop AsyncTaskThread";
+            return false;
+        }
+    };
+
     class AsyncSessionTask : public AsyncTask{
     protected:
         Session* session_;
@@ -169,6 +228,32 @@ namespace Token{
 
         static Handle<SynchronizeBlockChainTask> NewInstance(uv_loop_t* loop, Session* session, const Handle<Block>& head){
             return new SynchronizeBlockChainTask(loop, session, head);
+        }
+    };
+
+    class SnapshotTask : public AsyncTask{
+    protected:
+        SnapshotTask(uv_loop_t* loop):
+            AsyncTask(loop){}
+
+        Result DoWork(){
+            LOG(INFO) << "generating new snapshot....";
+            if(!Snapshot::WriteNewSnapshot()){
+                LOG(WARNING) << "couldn't write new snapshot!";
+                return Result::Failed("Couldn't write new snapshot!");
+            }
+            return Result::Success("Snapshot Written!");
+        }
+    public:
+        ~SnapshotTask() = default;
+
+        size_t GetBufferSize() const{ return 0; }//TODO: implement SnapshotTask::GetBufferSize()
+        bool Encode(ByteBuffer* bytes) const{ return false; } //TODO: implement SnapshotTask::Encode(ByteBuffer*)
+
+        DEFINE_ASYNC_TASK(Snapshot);
+
+        static Handle<SnapshotTask> NewInstance(uv_loop_t* loop=AsyncTaskThread::GetLoop()){
+            return new SnapshotTask(loop);
         }
     };
 }

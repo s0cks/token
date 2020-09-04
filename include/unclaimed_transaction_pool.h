@@ -1,7 +1,6 @@
 #ifndef TOKEN_UNCLAIMED_TRANSACTION_POOL_H
 #define TOKEN_UNCLAIMED_TRANSACTION_POOL_H
 
-#include "object_cache.h"
 #include "unclaimed_transaction.h"
 
 namespace Token{
@@ -18,7 +17,6 @@ namespace Token{
     private:
         UnclaimedTransactionPool() = delete;
 
-        static ObjectCache<UnclaimedTransaction>* GetCache();
         static void SetState(State state);
     public:
         ~UnclaimedTransactionPool() = delete;

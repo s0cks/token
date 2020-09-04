@@ -31,6 +31,11 @@ namespace Token{
         static Handle<Transaction> GetTransaction(const uint256_t& hash);
         static size_t GetNumberOfTransactions();
 
+        static inline std::string
+        GetPath(){
+            return TOKEN_BLOCKCHAIN_HOME + "/transactions";
+        }
+
         static inline bool
         IsUninitialized(){
             return GetState() == kUninitialized;

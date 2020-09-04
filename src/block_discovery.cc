@@ -1,7 +1,7 @@
 #include "block_discovery.h"
 #include "block_pool.h"
 #include "block_chain.h"
-#include "block_queue.h"
+#include "async_task.h"
 #include "block_validator.h"
 #include "block_handler.h"
 #include "transaction_pool.h"
@@ -107,6 +107,14 @@ namespace Token{
         BlockPool::RemoveBlock(hash);
     }
 
+    static inline void
+    ScheduleNewSnapshot(){
+        if(!FLAGS_enable_snapshots) return;
+        LOG(INFO) << "scheduling new snapshot....";
+        Handle<SnapshotTask> task = SnapshotTask::NewInstance();
+        if(!task->Submit()) LOG(WARNING) << "couldn't schedule new snapshot!";
+    }
+
     void BlockDiscoveryThread::HandleVotingPhase(const Handle<Proposal>& proposal){
         LOG(INFO) << "proposal " << proposal << " entering voting phase";
         proposal->SetPhase(Proposal::Phase::kVotingPhase);
@@ -140,6 +148,7 @@ namespace Token{
         }
         BlockPool::RemoveBlock(proposal->GetHash());
         BlockChain::Append(blk);
+        ScheduleNewSnapshot();
         SetProposal(nullptr);
     }
 

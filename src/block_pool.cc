@@ -1,17 +1,18 @@
-#include "crash_report.h"
 #include "block_pool.h"
-#include "block_pool_index.h"
+#include "journal.h"
+#include "crash_report.h"
 
 namespace Token{
     static std::recursive_mutex mutex_;
     static BlockPool::State state_ = BlockPool::kUninitialized;
 
-    static inline std::string
-    GetDataDirectory(){
-        return FLAGS_path + "/blocks";
-    }
-
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_);
+
+    static inline ObjectPoolJournal<Block>*
+    GetJournal(){
+        static ObjectPoolJournal<Block> journal(BlockPool::GetPath());
+        return &journal;
+    }
 
     void BlockPool::SetState(BlockPool::State state){
         LOCK_GUARD;
@@ -23,51 +24,58 @@ namespace Token{
         return state_;
     }
 
-    void BlockPool::Initialize(){
-        if(!IsUninitialized()){
-            std::stringstream ss;
-            ss << "Cannot re-initialize unclaimed transaction pool";
-            CrashReport::GenerateAndExit(ss);
+    bool BlockPool::Initialize(){
+        if(IsInitialized()){
+            LOG(WARNING) << "cannot re-initialize the block pool";
+            return false;
         }
 
-        SetState(kInitializing);
-        BlockPoolIndex::Initialize();
-        SetState(kInitialized);
-#ifdef TOKEN_DEBUG
+        SetState(BlockPool::kInitializing);
+        if(!GetJournal()->IsInitialized()){
+            LOG(WARNING) << "couldn't initialize the block pool journal in path: " << GetPath();
+            SetState(BlockPool::kUninitialized);
+            return false;
+        }
+
+        SetState(BlockPool::kInitialized);
         LOG(INFO) << "initialized the unclaimed transaction pool";
-#endif//TOKEN_DEBUG
+        return true;
     }
 
     bool BlockPool::HasBlock(const uint256_t& hash){
         LOCK_GUARD;
-        return BlockPoolIndex::HasData(hash);
+        return GetJournal()->HasData(hash);
     }
 
     Handle<Block> BlockPool::GetBlock(const uint256_t& hash){
         LOCK_GUARD;
-        if(!BlockPoolIndex::HasData(hash)) return Handle<Block>(); //null
-        return BlockPoolIndex::GetData(hash);
+        return GetJournal()->HasData(hash) ?
+                GetJournal()->GetData(hash) :
+                nullptr;
     }
 
-    void BlockPool::RemoveBlock(const uint256_t& hash){
+    bool BlockPool::RemoveBlock(const uint256_t& hash){
         LOCK_GUARD;
-        if(!HasBlock(hash)) return;
-
+        return GetJournal()->HasData(hash) ?
+                GetJournal()->RemoveData(hash) :
+                false;
     }
 
-    void BlockPool::PutBlock(const Handle<Block>& block){
+    bool BlockPool::PutBlock(const Handle<Block>& block){
         LOCK_GUARD;
-        BlockPoolIndex::PutData(block);
+        return !GetJournal()->HasData(block->GetHash()) ?
+                GetJournal()->PutData(block) :
+                false;
     }
 
     bool BlockPool::GetBlocks(std::vector<uint256_t>& blocks){
         LOCK_GUARD;
         DIR* dir;
         struct dirent* ent;
-        if((dir = opendir(GetDataDirectory().c_str())) != NULL){
+        if((dir = opendir(GetPath().c_str())) != NULL){
             while((ent = readdir(dir)) != NULL){
                 std::string name(ent->d_name);
-                std::string filename = (GetDataDirectory() + "/" + name);
+                std::string filename = (GetPath() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
 
                 Handle<Block> block = Block::NewInstance(filename);
@@ -85,10 +93,10 @@ namespace Token{
         LOCK_GUARD;
         DIR* dir;
         struct dirent* ent;
-        if((dir = opendir(GetDataDirectory().c_str())) != NULL){
+        if((dir = opendir(GetPath().c_str())) != NULL){
             while((ent = readdir(dir)) != NULL){
                 std::string name(ent->d_name);
-                std::string filename = (GetDataDirectory() + "/" + name);
+                std::string filename = (GetPath() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
 
                 Handle<Block> block = Block::NewInstance(filename);
@@ -100,7 +108,6 @@ namespace Token{
         return vis->VisitEnd();
     }
 
-#ifdef TOKEN_DEBUG
     class BlockPoolPrinter : public BlockPoolVisitor{
     public:
         BlockPoolPrinter(): BlockPoolVisitor(){}
@@ -118,5 +125,4 @@ namespace Token{
             //TODO: handle;
         }
     }
-#endif//TOKEN_DEBUG
 }
