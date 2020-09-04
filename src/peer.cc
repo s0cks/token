@@ -165,13 +165,15 @@ namespace Token{
         if(IsConnecting()){
             Handle<Block> local_head = BlockChain::GetHead();
             Handle<Block> remote_head = msg->GetHead();
-            if(local_head < remote_head){
+            if(local_head->GetHeader() == remote_head->GetHeader()){
+                LOG(INFO) << "skipping remote <HEAD> := " << remote_head;
+            } else if(local_head->GetHeader() < remote_head->GetHeader()){
                 response.push_back(GetBlocksMessage::NewInstance().CastTo<Message>());
-                Handle<SynchronizeBlockChainTask> sync_task = SynchronizeBlockChainTask::NewInstance(session->GetLoop(), session, msg->GetHead());
+                Handle<SynchronizeBlockChainTask> sync_task = SynchronizeBlockChainTask::NewInstance(session->GetLoop(), session, remote_head);
                 sync_task->Submit();
             }
+            session->Send(response);
         }
-        session->Send(response);
     }
 
     void PeerSession::HandleVerackMessage(const Handle<HandleMessageTask>& task){

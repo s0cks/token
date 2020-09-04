@@ -212,9 +212,9 @@ namespace Token{
                 LOG(INFO) << "block discovery thread is resuming.";
             }
 
-            if(GetNumberOfTransactionsInPool() >= 2){
+            if(GetNumberOfTransactionsInPool() >= 4){
                 LOG(INFO) << "creating new block from transaction pool";
-                Handle<Block> block = CreateNewBlock(2);
+                Handle<Block> block = CreateNewBlock(4);
 
                 BlockValidator validator(block);
                 if(!validator.IsValid()){

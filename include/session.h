@@ -23,6 +23,23 @@ namespace Token{
             kConnecting,
             kConnected
         };
+
+        friend std::ostream& operator<<(std::ostream& stream, const State& state){
+            switch(state){
+                case State::kConnecting:
+                    stream << "Connecting";
+                    return stream;
+                case State::kConnected:
+                    stream << "Connected";
+                    return stream;
+                case State::kDisconnected:
+                    stream << "Disconnected";
+                    return stream;
+                default:
+                    stream << "Unknown";
+                    return stream;
+            }
+        }
     protected:
         static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
         static void OnMessageSent(uv_write_t* req, int status);

@@ -1,6 +1,7 @@
 #include <glog/logging.h>
 #include <unordered_map>
 
+#include "cache.h"
 #include "journal.h"
 #include "crash_report.h"
 #include "transaction_pool.h"
@@ -15,6 +16,12 @@ namespace Token{
     GetJournal(){
         static ObjectPoolJournal<Transaction> journal(TransactionPool::GetPath());
         return &journal;
+    }
+
+    static inline Cache<Transaction, 1>*
+    GetCache(){
+        static Cache<Transaction, 1> cache;
+        return &cache;
     }
 
     TransactionPool::State TransactionPool::GetState(){
@@ -78,16 +85,41 @@ namespace Token{
 
     bool TransactionPool::RemoveTransaction(const uint256_t& hash){
         LOCK_GUARD;
-        return GetJournal()->HasData(hash) ?
-                GetJournal()->RemoveData(hash) :
-                false;
+        if(!GetJournal()->HasData(hash)) return false;
+
+        if(GetCache()->Contains(hash)){
+            if(!GetCache()->Remove(hash)){
+                LOG(WARNING) << "couldn't remove transaction " << hash << " from pool";
+                return false;
+            }
+        }
+
+        if(!GetJournal()->RemoveData(hash)){
+            LOG(WARNING) << "couldn't remove transaction " << hash << " data from pool";
+            return false;
+        }
+
+        LOG(INFO) << "removed transaction " << hash << " from pool";
+        return true;
     }
 
     bool TransactionPool::PutTransaction(const Handle<Transaction>& tx){
         LOCK_GUARD;
-        return !GetJournal()->HasData(tx->GetHash()) ?
-                GetJournal()->PutData(tx) :
-                false;
+        uint256_t hash = tx->GetHash();
+        if(GetJournal()->HasData(tx->GetHash())) return false;
+
+        if(!GetCache()->Put(hash, tx)){
+            LOG(WARNING) << "cannot put transaction " << hash << " in pool";
+            return false;
+        }
+
+        if(!GetJournal()->PutData(tx)){
+            LOG(WARNING) << "cannot put transaction data in pool";
+            return false;
+        }
+
+        LOG(INFO) << "added transaction " << hash << " to pool";
+        return true;
     }
 
     bool TransactionPool::GetTransactions(std::vector<uint256_t>& txs){
@@ -107,6 +139,32 @@ namespace Token{
             return true;
         }
         return false;
+    }
+
+    class ObjectPrinter : public ObjectPointerVisitor{
+    public:
+        ObjectPrinter():
+            ObjectPointerVisitor(){}
+        ~ObjectPrinter() = default;
+
+        bool Visit(RawObject* obj){
+            LOG(INFO) << obj->ToString();
+            return true;
+        }
+    };
+
+    void TransactionPool::PrintPool(bool cache_only){
+        ObjectPrinter printer;
+        if(cache_only){
+            LOG(INFO) << "Transaction Pool (Cache):";
+            if(!GetCache()->Accept(&printer)){
+                LOG(WARNING) << "couldn't print transaction pool cache";
+                return;
+            }
+        } else{
+            //TODO: implement TransactionPool::PrintPool(cache_only=false)
+            return;
+        }
     }
 
     size_t TransactionPool::GetNumberOfTransactions(){

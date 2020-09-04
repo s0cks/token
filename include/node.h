@@ -17,11 +17,6 @@ namespace Token{
             Object(),
             previous_(previous),
             next_(next){}
-
-        void Accept(WeakReferenceVisitor* vis){
-            vis->Visit(&previous_);
-            vis->Visit(&next_);
-        }
     public:
         ~Node(){}
 

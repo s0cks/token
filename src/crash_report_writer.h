@@ -8,6 +8,8 @@ namespace Token{
     class CrashReportWriter : public TextFileWriter{
     private:
         bool WriteBanner();
+        bool WriteSystemInformation();
+        bool WriteServerInformation();
     public:
         CrashReportWriter(const std::string& filename):
             TextFileWriter(filename){}

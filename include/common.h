@@ -148,6 +148,8 @@ namespace Token{
 DECLARE_string(path);
 DECLARE_uint32(port);
 DECLARE_uint32(heap_size);
+DECLARE_string(peer_address); //TODO: remove FLAG_peer_address
+DECLARE_uint32(peer_port); //TODO: remove FLAG_peer_port
 
 // Initialization Flags
 DECLARE_string(snapshot); //TODO: rename snapshot flag

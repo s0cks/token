@@ -83,6 +83,14 @@ namespace Token{
             return ss.str();
         }
 
+        virtual bool Equals(Object* obj) const{
+            return GetHash() == obj->GetHash();
+        }
+
+        virtual bool Compare(Object* obj) const{
+            return true;
+        }
+
         bool WriteToFile(const std::string& filename) const{
             std::fstream fd(filename, std::ios::out|std::ios::binary);
             return WriteToFile(fd);
@@ -91,6 +99,13 @@ namespace Token{
         bool WriteToFile(std::fstream& file) const;
         uint256_t GetHash() const;
         virtual size_t GetBufferSize() const = 0; //TODO: refactor
+
+#define DECLARE_TYPECHECK(Name) \
+        bool Is##Name() const{ \
+            return GetType() == Type::k##Name##Type; \
+        }
+        FOR_EACH_TYPE(DECLARE_TYPECHECK)
+#undef DECLARE_TYPECHECK
     };
 
     class ObjectPointerVisitor{

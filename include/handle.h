@@ -65,6 +65,14 @@ namespace Token{
 
         template<class S> friend class Handle;
 
+        friend bool operator==(const Handle<T>& a, const Handle<T>& b){
+            return a->Equals(b);
+        }
+
+        friend bool operator<(const Handle<T>& a, const Handle<T>& b){
+            return a->Compare(b);
+        }
+
         friend std::ostream& operator<<(std::ostream& stream, const Handle<T>& handle){
             stream << handle.operator->()->ToString();
             return stream;

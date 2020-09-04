@@ -255,6 +255,10 @@ namespace Token{
         static Handle<SnapshotTask> NewInstance(uv_loop_t* loop=AsyncTaskThread::GetLoop()){
             return new SnapshotTask(loop);
         }
+
+        static bool ScheduleNewTask(uv_loop_t* loop=AsyncTaskThread::GetLoop()){
+            return NewInstance(loop)->Submit();
+        }
     };
 }
 

@@ -64,7 +64,6 @@ namespace Token{
         }
 
         // try to load peer from flags
-        /*
         if(!FLAGS_peer_address.empty() || FLAGS_peer_port > 0){
             std::string address = !FLAGS_peer_address.empty() ?
                             FLAGS_peer_address :
@@ -77,7 +76,12 @@ namespace Token{
                 if(!ConnectTo(paddress)) LOG(WARNING) << "couldn't connect to peer: " << paddress;
             }
         }
-        */
+    }
+
+    bool Server::GetPeers(std::vector<PeerInfo>& peers){
+        for(auto& it : peers_)
+            peers.push_back(it.second->GetInfo());
+        return peers.size() == peers_.size();
     }
 
     void Server::SavePeers(){

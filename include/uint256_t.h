@@ -37,6 +37,19 @@ namespace Token{
             return true;
         }
 
+        unsigned long GetHashCode() const{
+            uint64_t a = ((uint64_t*)data_)[0];
+            uint64_t b = ((uint64_t*)data_)[1];
+            uint64_t c = ((uint64_t*)data_)[2];
+            uint64_t d = ((uint64_t*)data_)[3];
+            unsigned long h = 0;
+            h = 31 * h + a;
+            h = 31 * h + b;
+            h = 31 * h + c;
+            h = 31 * h + d;
+            return h;
+        }
+
         unsigned char* data() const{
             return (unsigned char*)data_;
         }

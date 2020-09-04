@@ -193,6 +193,12 @@ namespace Token{
         bool Contains(const uint256_t& hash) const;
         std::string ToString() const;
 
+        bool Equals(Object* obj) const{
+            if(!obj->IsBlock()) return false;
+            uint256_t hash = ((Block*)obj)->GetHash();
+            return GetHash() == hash;
+        }
+
         static Handle<Block> Genesis(); // genesis
         static Handle<Block> NewInstance(std::fstream& fd, size_t size);
         static Handle<Block> NewInstance(ByteBuffer* bytes);

@@ -3,7 +3,8 @@
 
 #include <sstream>
 #include <uv.h>
-#include "allocator.h"
+
+#include "peer.h"
 #include "address.h"
 #include "message.h"
 #include "vthread.h"
@@ -73,6 +74,7 @@ namespace Token{
         static bool ConnectTo(const NodeAddress& address);
         static bool Broadcast(const Handle<Message>& msg);
         static void WaitForState(State state);
+        static bool GetPeers(std::vector<PeerInfo>& peers);
 
         static inline bool
         ConnectTo(const std::string& address, uint32_t port){

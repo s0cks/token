@@ -16,6 +16,11 @@ namespace Token{
 
         Handle<Block> GetHead() const;
         void operator=(const PeerInfo& info);
+
+        friend std::ostream& operator<<(std::ostream& stream, const PeerInfo& info){
+            stream << info.GetID() << "(" << info.GetAddress() << "): " << info.GetState();
+            return stream;
+        }
     };
 
     class HandleMessageTask;
