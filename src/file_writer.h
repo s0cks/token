@@ -1,6 +1,7 @@
 #ifndef TOKEN_FILE_WRITER_H
 #define TOKEN_FILE_WRITER_H
 
+#include <iostream>
 #include "common.h"
 #include "bytes.h"
 #include "object.h"
@@ -12,18 +13,99 @@ namespace Token{
     private:
         std::string filename_;
     protected:
-        FileWriter(const std::string& filename):
-            filename_(filename){}
+        FILE* file_;
 
-        virtual FILE* GetFilePointer() const = 0;
+        FileWriter(const std::string& filename):
+            filename_(filename),
+            file_(nullptr){}
+
+        bool HasFilePointer() const{
+            return file_ != nullptr;
+        }
+
+        FILE* GetFilePointer() const{
+            return file_;
+        }
     public:
-        virtual ~FileWriter() = default;
+        virtual ~FileWriter(){
+            if(HasFilePointer()) Close();
+        }
 
         std::string GetFilename() const{
             return filename_;
         }
 
         int64_t GetCurrentPosition();
+        bool SetCurrentPosition(int64_t pos);
+        bool Flush();
+        bool Close();
+    };
+
+    class TextFileWriter : public FileWriter{
+    protected:
+        size_t indent_;
+
+        TextFileWriter(const std::string& filename):
+            FileWriter(filename),
+            indent_(0){
+            if((file_ = fopen(filename.c_str(), "w")) == NULL)
+                LOG(WARNING) << "couldn't create text file " << filename << ": " << strerror(errno);
+        }
+
+        inline void Indent(){
+            indent_++;
+        }
+
+        inline void DeIndent(){
+            indent_--;
+        }
+
+        size_t GetIndent() const{
+            return indent_;
+        }
+    public:
+        ~TextFileWriter() = default;
+
+        bool Write(const std::string& value);
+        bool Write(uint32_t value);
+        bool Write(int32_t value);
+        bool Write(uint64_t value);
+        bool Write(int64_t value);
+        bool Write(const uint256_t& hash);
+        bool Write(Object* obj);
+        bool NewLine();
+
+        inline bool
+        Write(const std::stringstream& ss){
+            return Write(ss.str());
+        }
+
+        template<typename T>
+        inline bool Write(const Handle<T>& obj){
+            return Write((Object*)obj);
+        }
+
+        inline bool
+        WriteLine(const std::string& value){
+            return Write(value + '\n');
+        }
+
+        inline bool
+        WriteLine(const std::stringstream& value){
+            return Write(value.str() + '\n');
+        }
+    };
+
+    class BinaryFileWriter : public FileWriter{
+    protected:
+        BinaryFileWriter(const std::string& filename):
+            FileWriter(filename){
+            if((file_ = fopen(filename.c_str(), "wb")) == NULL)
+                LOG(WARNING) << "couldn't create binary file " << filename << ": " << strerror(errno);
+        }
+    public:
+        ~BinaryFileWriter() = default;
+
         bool WriteBytes(uint8_t* bytes, size_t size);
         bool WriteInt(int32_t value);
         bool WriteUnsignedInt(uint32_t value);
@@ -31,9 +113,7 @@ namespace Token{
         bool WriteUnsignedLong(uint64_t value);
         bool WriteHash(const uint256_t& value);
         bool WriteString(const std::string& value);
-        bool SetCurrentPosition(int64_t pos);
-        bool Flush();
-        bool Close();
+        bool WriteObject(Object* obj);
 
         inline bool
         WriteBytes(ByteBuffer* bytes){
@@ -44,35 +124,9 @@ namespace Token{
         WriteBytes(MemoryRegion* region, size_t size){
             return WriteBytes((uint8_t*)region->GetStartAddress(), size);
         }
-    };
-
-    class TextFileWriter : public FileWriter{
-
-    };
-
-    class BinaryFileWriter : public FileWriter{
-    private:
-        FILE* file_;
-    protected:
-        BinaryFileWriter(const std::string& filename):
-            FileWriter(filename),
-            file_(NULL){
-            if((file_ = fopen(filename.c_str(), "wb")) == NULL)
-                LOG(WARNING) << "couldn't create binary file " << filename << ": " << strerror(errno);
-        }
-
-        virtual FILE* GetFilePointer() const{
-            return file_;
-        }
-    public:
-        virtual ~BinaryFileWriter(){
-            if(file_ != NULL) Close();
-        }
-
-        bool WriteObject(Object* obj);
 
         template<typename T>
-        bool WriteObject(const Handle<T>& obj){
+        inline bool WriteObject(const Handle<T>& obj){
             return WriteObject((Object*)obj);
         }
     };

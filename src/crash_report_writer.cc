@@ -1,0 +1,54 @@
+#include "crash_report_writer.h"
+#include "token.h"
+
+namespace Token{
+    bool CrashReportWriter::WriteBanner(){
+        // Print Debug Banner in Logs
+        std::string header = "Token v" + Token::GetVersion();
+        size_t total_size = 50;
+        size_t middle = (total_size - header.size()) / 2;
+
+        std::stringstream ss1;
+        for(size_t idx = 0; idx < total_size; idx++) ss1 << "#";
+
+        std::stringstream ss2;
+        ss2 << "#";
+        for(size_t idx = 0; idx < middle; idx++) ss2 << " ";
+        ss2 << header;
+        for(size_t idx = 0; idx < middle - 2; idx++) ss2 << " ";
+        ss2 << "#";
+
+        return WriteLine(ss1)
+            && WriteLine(ss2)
+            && WriteLine(ss1);
+    }
+
+    static inline std::string
+    GetStatus(bool status){
+        return status ?
+            "Enabled" :
+            "Disabled";
+    }
+
+    bool CrashReportWriter::WriteCrashReport(){
+        LOG(INFO) << "generating crash report....";
+        if(!WriteBanner()){
+            LOG(WARNING) << "couldn't write crash report banner";
+            return false;
+        }
+
+        WriteLine("Timestamp: " + GetTimestampFormattedReadable(GetCurrentTimestamp()));
+        WriteLine("Version: " + GetVersion());
+        WriteLine("Debug Mode: " + GetStatus(TOKEN_DEBUG));
+        WriteLine("Ledger Home: " + TOKEN_BLOCKCHAIN_HOME);
+
+        //TODO:
+        // - write block chain information
+        // - write server information
+        // - write thread information
+        // - write stack trace information
+
+        LOG(INFO) << "crash report generated: " << GetFilename();
+        return true;
+    }
+}

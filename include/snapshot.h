@@ -69,11 +69,8 @@ namespace Token{
         CheckSnapshotDirectory(){
             std::string filename = GetSnapshotDirectory();
             if(!FileExists(filename)){
-                if(!CreateDirectory(filename)){
-                    std::stringstream ss;
-                    ss << "Couldn't create snapshots repository: " << filename;
-                    CrashReport::GenerateAndExit(ss);
-                }
+                if(!CreateDirectory(filename))
+                    LOG(WARNING) << "couldn't create snapshots directory: " << filename;
             }
         }
     protected:

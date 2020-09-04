@@ -14,9 +14,8 @@ namespace Token{
         lock.unlock();
         cond_.notify_one();
         if(GetSize() > BlockQueue::kMaxBlockQueueSize){
-            std::stringstream ss;
-            ss << "Block Queue is full (" << GetSize() << " Blocks)";
-            CrashReport::GenerateAndExit(ss);
+            LOG(WARNING) << "Block Queue is full (" << GetSize() << " Blocks)";
+            return;
         }
     }
 

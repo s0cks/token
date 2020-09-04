@@ -132,21 +132,18 @@ namespace Token{
 #endif//TOKEN_DEBUG
 
         if(BlockChainIndex::HasBlockData(hash)){
-            std::stringstream ss;
-            ss << "Duplicate block found for: " << hash;
-            CrashReport::GenerateAndExit(ss);
+            LOG(WARNING) << "duplicate block found for: " << hash;
+            return;
         }
 
         if(block->IsGenesis()){
-            std::stringstream ss;
-            ss << "Cannot append genesis block: " << hash;
-            CrashReport::GenerateAndExit(ss.str());
+            LOG(WARNING) << "cannot append genesis block: " << hash;
+            return;
         }
 
         if(phash != head->GetHash()){
-            std::stringstream ss;
-            ss << "Parent hash '" << phash << "' doesn't match <HEAD> hash: " << head->GetHash();
-            CrashReport::GenerateAndExit(ss.str());
+            LOG(WARNING) << "parent hash '" << phash << "' doesn't match <HEAD> hash: " << head->GetHash();
+            return;
         }
 
         BlockChainIndex::PutBlockData(block);

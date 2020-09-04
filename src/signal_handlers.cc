@@ -15,9 +15,9 @@ namespace Token{
         exit(0);
     }
 
-    void SignalHandlers::HandleSegfault(int signnum){
+    void SignalHandlers::HandleSegfault(int signum){
         std::stringstream ss;
-        ss << "Segfault";
-        CrashReport::GenerateAndExit(ss.str());
+        ss << "Segfault: " << signum;
+        CrashReport::WriteNewCrashReportAndExit(ss);
     }
 }

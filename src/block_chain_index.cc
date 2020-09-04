@@ -36,25 +36,14 @@ namespace Token{
 
         LOCK_GUARD;
         if(!GetIndex()->Get(options, key, &filename).ok()){
-            std::stringstream ss;
-            ss << "Couldn't find block " << hash << " in index";
-            CrashReport::GenerateAndExit(ss);
+            LOG(WARNING) << "couldn't find block " << hash << " in index";
+            return nullptr;
         }
 
         Block* block = Block::NewInstance(filename);
         if(hash != block->GetHash()){
-            std::stringstream ss;
-            ss << "Couldn't match block hash";
-            ss << std::endl;
-            ss << "\tExpected Hash: " << hash << std::endl;
-            ss << "\tBlock Information: " << std::endl;
-            ss << "\t  - Timestamp: " << block->GetTimestamp() << std::endl;
-            ss << "\t  - Height: " << block->GetHeight() << std::endl;
-            ss << "\t  - Previous Hash: " << block->GetPreviousHash() << std::endl;
-            ss << "\t  - Merkle Root: " << block->GetMerkleRoot() << std::endl;
-            ss << "\t  - Hash: " << block->GetHash() << std::endl;
-            ss << "\t  - Number of Transactions: " << block->GetNumberOfTransactions() << std::endl;
-            CrashReport::GenerateAndExit(ss);
+            LOG(WARNING) << "couldn't match block hashes: " << hash << " <=> " << block->GetHash();
+            return nullptr;
         }
 
         return block;
@@ -66,9 +55,8 @@ namespace Token{
 
         LOCK_GUARD;
         if(!GetIndex()->Put(options, name, HexString(hash)).ok()){
-            std::stringstream ss;
-            ss << "Couldn't put set reference " << name << " to : " << hash;
-            CrashReport::GenerateAndExit(ss);
+            LOG(WARNING) << "couldn't put set reference " << name << " to : " << hash;
+            return;
         }
 
 #ifdef TOKEN_DEBUG
@@ -88,9 +76,8 @@ namespace Token{
         std::string value;
         LOCK_GUARD;
         if(!GetIndex()->Get(options, name, &value).ok()){
-            std::stringstream ss;
-            ss << "Couldn't find reference: " << name;
-            CrashReport::GenerateAndExit(ss);
+            LOG(WARNING) << "couldn't find reference: " << name;
+            return uint256_t();
         }
         return HashFromHexString(value);
     }
@@ -105,34 +92,28 @@ namespace Token{
 
         LOCK_GUARD;
         if(FileExists(filename)){
-            std::stringstream ss;
-            ss << "Couldn't overwrite existing block data: " << filename;
-            CrashReport::GenerateAndExit(ss);
+            LOG(WARNING) << "couldn't overwrite existing block data: " << filename;
+            return;
         }
 
         if(!blk->WriteToFile(filename)){
-            std::stringstream ss;
-            ss << "Couldn't write block " << block << " to file: " << filename;
-            CrashReport::GenerateAndExit(ss);
+            LOG(WARNING) << "couldn't write block " << block << " to file: " << filename;
+            return;
         }
 
         if(!GetIndex()->Put(options, key, filename).ok()){
-            std::stringstream ss;
-            ss << "Couldn't index block: " << block;
-            CrashReport::GenerateAndExit(ss);
+            LOG(WARNING) << "couldn't index block: " << block;
+            return;
         }
 
-#ifdef TOKEN_DEBUG
         LOG(INFO) << "indexed block " << block << " to file: " << filename;
-#endif//TOKEN_DEBUG
     }
 
     void BlockChainIndex::Initialize(){
         if(!FileExists(GetDataDirectory())){
             if(!CreateDirectory(GetDataDirectory())){
-                std::stringstream ss;
-                ss << "Couldn't create block chain index in directory: " << GetDataDirectory();
-                CrashReport::GenerateAndExit(ss);
+                LOG(WARNING) << "couldn't create block chain index in directory: " << GetDataDirectory();
+                return;
             }
         }
 
@@ -140,9 +121,8 @@ namespace Token{
         leveldb::Options options;
         options.create_if_missing = true;
         if(!leveldb::DB::Open(options, GetIndexFilename(), &index_).ok()){
-            std::stringstream ss;
-            ss << "Couldn't initialize block chain index in file: " << GetIndexFilename();
-            CrashReport::GenerateAndExit(ss);
+            LOG(WARNING) << "couldn't initialize block chain index in file: " << GetIndexFilename();
+            return;
         }
     }
 
@@ -158,9 +138,8 @@ namespace Token{
             }
             closedir(dir);
         } else{
-            std::stringstream ss;
-            ss << "Couldn't list files in block chain index: " << GetDataDirectory();
-            CrashReport::GenerateAndExit(ss);
+            LOG(WARNING) << "couldn't list files in block chain index: " << GetDataDirectory();
+            return 0;
         }
 
         return count;

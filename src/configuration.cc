@@ -18,13 +18,9 @@ namespace Token{
         try{ // I hate try-catch in C++
             if(FileExists(filename)) GetConfiguration()->readFile(filename.c_str());
         } catch(const libconfig::ParseException& exc){
-            std::stringstream ss;
-            ss << "Failed to parse configuration from file " << filename << ": " << exc.what();
-            CrashReport::GenerateAndExit(ss);
+            LOG(WARNING) << "failed to parse configuration from file " << filename << ": " << exc.what();
         } catch(const libconfig::FileIOException& exc){
-            std::stringstream ss;
-            ss << "Failed to load configuration from file " << filename << ": " << exc.what();
-            CrashReport::GenerateAndExit(ss);
+            LOG(WARNING) << "failed to load configuration from file " << filename << ": " << exc.what();
         }
     }
 
@@ -33,9 +29,7 @@ namespace Token{
         try{
             GetConfiguration()->writeFile(filename.c_str());
         } catch(const libconfig::FileIOException& exc){
-            std::stringstream ss;
-            ss << "Failed to save configuration to file " << filename << ": " << exc.what();
-            CrashReport::GenerateAndExit(ss);
+            LOG(WARNING) << "failed to save configuration to file " << filename << ": " << exc.what();
         }
     }
 }

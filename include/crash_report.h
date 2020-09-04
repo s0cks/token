@@ -7,61 +7,47 @@
 namespace Token{
     class CrashReport{
     private:
-        std::fstream file_;
-        std::string message_;
+        std::string filename_;
+        std::string cause_;
 
-        inline std::fstream&
-        GetStream(){
-            return file_;
+        CrashReport(const std::string& filename, const std::string& cause):
+            filename_(filename),
+            cause_(cause){}
+
+        static inline std::string
+        GetNewCrashReportFilename(){
+            std::stringstream filename;
+            filename << CrashReport::GetCrashReportDirectory();
+            filename << "/crash-report-" << GetTimestampFormattedFileSafe(GetCurrentTimestamp()) << ".log";
+            return filename.str();
         }
-
-        CrashReport(const std::string& filename, const std::string& msg):
-            file_(filename, std::ios::out),
-            message_(msg){}
     public:
-        std::string GetMessage() const{
-            return message_;
+        ~CrashReport() = default;
+
+        std::string GetFilename() const{
+            return filename_;
         }
 
-        inline bool
-        WriteLine(const std::string& line){
-            GetStream() << line << std::endl;
-            return true;
+        std::string GetCause() const{
+            return cause_;
         }
 
-        inline bool
-        WriteLine(const std::stringstream& line){
-            GetStream() << line.str() << std::endl;
-            return true;
+        static bool WriteNewCrashReport(const std::string& cause);
+        static void WriteNewCrashReportAndExit(const std::string& cause);
+
+        static inline bool
+        WriteNewCrashReport(const std::stringstream& ss){
+            return WriteNewCrashReport(ss.str());
         }
 
-        inline bool
-        WriteNewline(){
-            GetStream() << std::endl;
-            return true;
+        static inline void
+        WriteNewCrashReportAndExit(const std::stringstream& ss){
+            return WriteNewCrashReportAndExit(ss.str());
         }
 
-        friend CrashReport& operator<<(CrashReport& stream, const std::string& line){
-            stream.GetStream() << line << std::endl;
-            return stream;
-        }
-
-        friend CrashReport& operator<<(CrashReport& stream, const std::stringstream& line){
-            stream.GetStream() << line.str() << std::endl;
-            return stream;
-        }
-
-        friend CrashReport& operator<<(CrashReport& stream, const bool& value){
-            stream.GetStream() << value;
-            return stream;
-        }
-
-        static bool Generate(const std::string& msg);
-        static int GenerateAndExit(const std::string& msg);
-
-        static inline int
-        GenerateAndExit(const std::stringstream& ss){
-            return GenerateAndExit(ss.str());
+        static inline std::string
+        GetCrashReportDirectory(){
+            return TOKEN_BLOCKCHAIN_HOME;
         }
     };
 }
