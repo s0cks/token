@@ -18,17 +18,17 @@ namespace Token{
 
         // Write the Data
         LOG(INFO) << "writing heap section data....";
-        if(!WriteBytes(heap->GetRegion(), heap->GetAllocatedSize())){
+        /*if(!WriteBytes(heap->GetRegion(), heap->GetAllocatedSize())){
             LOG(WARNING) << "couldn't write heap memory region to section data";
             return false;
-        }
+        }*/
         return true;
     }
 
     bool HeapDumpWriter::WriteHeapDump(){
         LOG(INFO) << "writing heap dump....";
         WriteUnsignedLong(GetCurrentTimestamp()); // Generation Timestamp
-        WriteUnsignedLong(Allocator::kSemispaceSize); // Semispace Size
+        //WriteUnsignedLong(Allocator::kSemispaceSize); // Semispace Size
 
         // Write Stack Space Section
         LOG(INFO) << "writing stack space....";

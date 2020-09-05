@@ -79,21 +79,23 @@ namespace Token{
         friend class HeapDumpReader;
     private:
         std::recursive_mutex mutex_;
-        MemoryRegion region_;
         Space space_;
         Semispace from_space_;
         Semispace to_space_;
+        size_t size_;
+        size_t semi_size_;
 
         void SetAllocatedSize(size_t size){
             from_space_.current_ = (from_space_.start_ + size);
         }
     public:
-        Heap(Space space, size_t semi_size):
+        Heap(Space space, uword start, size_t heap_size, size_t semispace_size):
             mutex_(),
-            region_(semi_size*2),
             space_(space),
-            from_space_(GetStartAddress(), semi_size),
-            to_space_(GetStartAddress() + semi_size, semi_size){}
+            size_(heap_size),
+            semi_size_(semispace_size),
+            from_space_(start, semispace_size),
+            to_space_(start + semispace_size, semispace_size){}
         ~Heap(){}
 
         Space GetSpace() const{
@@ -112,10 +114,6 @@ namespace Token{
             return GetSpace() == Space::kTenuredSpace;
         }
 
-        MemoryRegion* GetRegion(){
-            return &region_;
-        }
-
         Semispace GetFromSpace(){
             return from_space_;
         }
@@ -125,11 +123,11 @@ namespace Token{
         }
 
         uword GetStartAddress() const{
-            return region_.GetStartAddress();
+            return from_space_.GetStartAddress();
         }
 
         uword GetEndAddress() const{
-            return region_.GetEndAddress();
+            return GetStartAddress() + GetTotalSize();
         }
 
         bool Contains(uword address) const{
@@ -137,8 +135,12 @@ namespace Token{
                    address <= GetEndAddress();
         }
 
+        size_t GetSemispaceSize() const{
+            return semi_size_;
+        }
+
         size_t GetTotalSize() const{
-            return region_.GetSize();
+            return size_;
         }
 
         size_t GetAllocatedSize(){
@@ -154,11 +156,6 @@ namespace Token{
         void SwapSpaces(){
             std::lock_guard<std::recursive_mutex> guard(mutex_);
             std::swap(from_space_, to_space_);
-        }
-
-        void Reset(){
-            std::lock_guard<std::recursive_mutex> guard(mutex_);
-            GetRegion()->Clear();
         }
 
         void* Allocate(size_t size){

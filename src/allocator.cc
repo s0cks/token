@@ -8,11 +8,6 @@
 #include "scavenger.h"
 
 namespace Token{
-    const size_t Allocator::kNumberOfHeaps = 3;
-    const size_t Allocator::kTotalSize = FLAGS_heap_size;
-    const size_t Allocator::kHeapSize = kTotalSize/kNumberOfHeaps;
-    const size_t Allocator::kSemispaceSize = kHeapSize/2;
-
     class RootPage{
     public:
         static const size_t kNumberOfRootsPerPage = 1000;
@@ -86,6 +81,7 @@ namespace Token{
 
     static std::recursive_mutex mutex_;
     static std::condition_variable cond_;
+    static MemoryRegion* region_ = nullptr;
     static Heap* eden_ = nullptr;
     static Heap* survivor_ = nullptr;
     static RootPage* roots_ = nullptr;
@@ -101,8 +97,21 @@ namespace Token{
 
     void Allocator::Initialize(){
         LOCK_GUARD;
-        eden_ = new Heap(Space::kEdenSpace, kSemispaceSize);
-        survivor_ = new Heap(Space::kSurvivorSpace, kSemispaceSize);
+        size_t region_size = FLAGS_heap_size;
+        size_t heap_size = (region_size / 4);
+        size_t semispace_size = (heap_size / 2);
+        region_ = new MemoryRegion(region_size);
+
+        uword eden_start = region_->GetStartAddress();
+        uword survivor_start = region_->GetStartAddress() + heap_size;
+
+        eden_ = new Heap(Space::kEdenSpace, eden_start, heap_size, semispace_size);
+        survivor_ = new Heap(Space::kSurvivorSpace, survivor_start, heap_size, semispace_size);
+    }
+
+    MemoryRegion* Allocator::GetRegion(){
+        LOCK_GUARD;
+        return region_;
     }
 
     Heap* Allocator::GetEdenHeap(){

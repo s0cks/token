@@ -7,8 +7,8 @@
 namespace Token{
     HeapDump::HeapDump(const std::string& filename, size_t semi_size):
         filename_(filename),
-        eden_(new Heap(Space::kEdenSpace, semi_size)),
-        survivor_(new Heap(Space::kSurvivorSpace, semi_size)){}
+        eden_(nullptr),
+        survivor_(nullptr){}
 
     HeapDump::HeapDump(const std::string& filename):
         filename_(filename),

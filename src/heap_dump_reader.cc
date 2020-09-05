@@ -27,11 +27,11 @@ namespace Token{
                 case Space::kEdenSpace:{
                     LOG(INFO) << "reading eden space....";
                     Heap* heap = dump->GetEdenHeap();
-                    if(!ReadMemoryRegion(heap->GetRegion(), size)){
+                    /*if(!ReadMemoryRegion(heap->GetRegion(), size)){
                         LOG(WARNING) << "couldn't read space memory region from file";
                         delete dump;
                         return nullptr;
-                    }
+                    }*/
                     heap->SetAllocatedSize(size);
                     break;
                 }

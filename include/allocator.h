@@ -67,6 +67,7 @@ namespace Token{
 
     class Heap;
     class RawObject;
+    class MemoryRegion;
     class ObjectPointerVisitor;
     class WeakObjectPointerVisitor;
     class Allocator{
@@ -76,11 +77,6 @@ namespace Token{
         friend class HandleBase;
         friend class HeapDumpWriter;
         friend class MemoryInformationSection;
-    public:
-        static const size_t kNumberOfHeaps;
-        static const size_t kTotalSize;
-        static const size_t kHeapSize;
-        static const size_t kSemispaceSize;
     private:
         Allocator() = delete;
 
@@ -98,6 +94,7 @@ namespace Token{
         static void MinorCollect();
         static void MajorCollect();
         static void* Allocate(size_t size);
+        static MemoryRegion* GetRegion();
         static Heap* GetEdenHeap();
         static Heap* GetSurvivorHeap();
 
