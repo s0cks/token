@@ -98,11 +98,7 @@ namespace Token{
                 if(!EndsWith(filename, ".dat")) continue;
                 Handle<UnclaimedTransaction> utxo = UnclaimedTransaction::NewInstance(filename);
 
-                LOG(INFO) << "user: " << utxo->GetUser();
-                if(utxo->GetUser() != user){
-                    LOG(WARNING) << "skipping: " << utxo;
-                    continue;
-                }
+                if(utxo->GetUser() != user) continue;
                 utxos.push_back(utxo->GetHash());
             }
             closedir(dir);
