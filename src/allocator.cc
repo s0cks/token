@@ -84,6 +84,9 @@ namespace Token{
     static MemoryRegion* region_ = nullptr;
     static Heap* eden_ = nullptr;
     static Heap* survivor_ = nullptr;
+    static MemoryPool* utxo_pool_ = nullptr;
+    static MemoryPool* tx_pool_ = nullptr;
+    static MemoryPool* block_pool_ = nullptr;
     static RootPage* roots_ = nullptr;
 
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
@@ -107,6 +110,31 @@ namespace Token{
 
         eden_ = new Heap(Space::kEdenSpace, eden_start, heap_size, semispace_size);
         survivor_ = new Heap(Space::kSurvivorSpace, survivor_start, heap_size, semispace_size);
+
+        uword memory_pool_start = survivor_start + heap_size;
+        uword memory_pool_size = (region_size / 2) / 3;
+        uword tx_pool_start = memory_pool_start;
+        uword utxo_pool_start = (tx_pool_start + memory_pool_size);
+        uword block_pool_start = (utxo_pool_start + memory_pool_size);
+
+        utxo_pool_ = new MemoryPool(utxo_pool_start, memory_pool_size);
+        tx_pool_ = new MemoryPool(tx_pool_start, memory_pool_size);
+        block_pool_ = new MemoryPool(block_pool_start, memory_pool_size);
+    }
+
+    MemoryPool* Allocator::GetUnclaimedTransactionPoolMemory(){
+        LOCK_GUARD;
+        return utxo_pool_;
+    }
+
+    MemoryPool* Allocator::GetTransactionPoolMemory(){
+        LOCK_GUARD;
+        return tx_pool_;
+    }
+
+    MemoryPool* Allocator::GetBlockPoolMemory(){
+        LOCK_GUARD;
+        return block_pool_;
     }
 
     MemoryRegion* Allocator::GetRegion(){

@@ -2,8 +2,9 @@
 #define TOKEN_UNCLAIMED_TRANSACTION_H
 
 #include "common.h"
-#include "object.h"
+
 #include "user.h"
+#include "object.h"
 
 namespace Token{
     class Output;

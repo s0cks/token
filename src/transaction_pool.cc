@@ -18,9 +18,10 @@ namespace Token{
         return &journal;
     }
 
-    static inline Cache<Transaction, 1>*
+    static inline MemoryPoolCache*
     GetCache(){
-        static Cache<Transaction, 1> cache;
+        static MemoryPool* pool = Allocator::GetTransactionPoolMemory();
+        static MemoryPoolCache cache(pool, pool->GetSize() / sizeof(Transaction));
         return &cache;
     }
 
@@ -73,52 +74,51 @@ namespace Token{
 
     bool TransactionPool::HasTransaction(const uint256_t& hash){
         LOCK_GUARD;
-        return GetJournal()->HasData(hash);
+        return GetCache()->ContainsItem(hash)
+            || GetJournal()->HasData(hash);
     }
 
     Handle<Transaction> TransactionPool::GetTransaction(const uint256_t& hash){
         LOCK_GUARD;
-        return GetJournal()->HasData(hash) ?
-                GetJournal()->GetData(hash) :
-                nullptr;
+        if(GetCache()->ContainsItem(hash)){
+            return (Transaction*)GetCache()->GetItem(hash);
+        }
+
+        if(GetJournal()->HasData(hash)){
+            Handle<Transaction> utxo = GetJournal()->GetData(hash);
+            if(!GetCache()->PutItem(utxo)) LOG(WARNING) << "cannot put transaction " << hash << " into pool cache";
+            return utxo;
+        }
+
+        return nullptr;
     }
 
     bool TransactionPool::RemoveTransaction(const uint256_t& hash){
         LOCK_GUARD;
-        if(!GetJournal()->HasData(hash)) return false;
-
-        if(GetCache()->Contains(hash)){
-            if(!GetCache()->Remove(hash)){
-                LOG(WARNING) << "couldn't remove transaction " << hash << " from pool";
-                return false;
-            }
-        }
-
-        if(!GetJournal()->RemoveData(hash)){
-            LOG(WARNING) << "couldn't remove transaction " << hash << " data from pool";
-            return false;
-        }
-
-        LOG(INFO) << "removed transaction " << hash << " from pool";
-        return true;
+        if(GetCache()->ContainsItem(hash))
+            GetCache()->RemoveItem(hash);
+        return GetJournal()->RemoveData(hash);
     }
 
     bool TransactionPool::PutTransaction(const Handle<Transaction>& tx){
         LOCK_GUARD;
         uint256_t hash = tx->GetHash();
-        if(GetJournal()->HasData(tx->GetHash())) return false;
-
-        if(!GetCache()->Put(hash, tx)){
-            LOG(WARNING) << "cannot put transaction " << hash << " in pool";
+        if(GetCache()->ContainsItem(hash) || GetJournal()->HasData(hash))
+            return false;
+        if(!GetCache()->PutItem(tx)) {
+            LOG(WARNING) << "couldn't put transaction " << hash << " in pool cache";
             return false;
         }
 
         if(!GetJournal()->PutData(tx)){
-            LOG(WARNING) << "cannot put transaction data in pool";
+            LOG(WARNING) << "couldn't write transaction " << hash << " to disk";
+            if(!GetCache()->RemoveItem(hash)){
+                LOG(WARNING) << "couldn't remove transaction " << hash << " from pool cache";
+                return false;
+            }
             return false;
         }
 
-        LOG(INFO) << "added transaction " << hash << " to pool";
         return true;
     }
 
@@ -153,7 +153,7 @@ namespace Token{
         }
     };
 
-    void TransactionPool::PrintPool(bool cache_only){
+    void TransactionPool::Print(bool cache_only){
         ObjectPrinter printer;
         if(cache_only){
             LOG(INFO) << "Transaction Pool (Cache):";
@@ -167,7 +167,7 @@ namespace Token{
         }
     }
 
-    size_t TransactionPool::GetNumberOfTransactions(){
+    size_t TransactionPool::GetSize(){
         size_t size = 0;
 
         LOCK_GUARD;
@@ -183,5 +183,13 @@ namespace Token{
             closedir(dir);
         }
         return size;
+    }
+
+    size_t TransactionPool::GetCacheSize(){
+        return GetCache()->GetSize();
+    }
+
+    size_t TransactionPool::GetMaxCacheSize(){
+        return GetCache()->GetMaxSize();
     }
 }

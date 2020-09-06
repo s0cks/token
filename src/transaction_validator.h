@@ -15,8 +15,8 @@ namespace Token{
         ~TransactionValidator(){}
 
         bool VisitInput(Input* input){
-            UnclaimedTransaction* utxo;
-            if(!(utxo = input->GetUnclaimedTransaction())){
+            Handle<UnclaimedTransaction> utxo = input->GetUnclaimedTransaction();
+            if(utxo.IsNull()){
                 LOG(WARNING) << "couldn't find unclaimed transaction for input: " << input->ToString();
                 return false;
             }

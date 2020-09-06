@@ -12,6 +12,6 @@
 !/tests/
 !/*.cc
 !/README.md
-!/Dockerfile
+!/images/base/Dockerfile
 !/.gitignore
 !/CMakeLists.txt

@@ -12,8 +12,6 @@ namespace Token{
             kInitializing,
             kInitialized,
         };
-
-        static const size_t kMaxPoolSize = 128;
     private:
         BlockPool() = delete;
 
@@ -21,12 +19,16 @@ namespace Token{
     public:
         ~BlockPool() = delete;
 
+        static size_t GetSize();
+        static size_t GetCacheSize();
+        static size_t GetMaxCacheSize();
         static State GetState();
         static bool Initialize();
+        static bool Print(bool cache_only=false);
+        static bool Accept(BlockPoolVisitor* vis);
         static bool RemoveBlock(const uint256_t& hash);
         static bool PutBlock(const Handle<Block>& block);
         static bool HasBlock(const uint256_t& hash);
-        static bool Accept(BlockPoolVisitor* vis);
         static bool GetBlocks(std::vector<uint256_t>& blocks);
         static Handle<Block> GetBlock(const uint256_t& hash);
 
@@ -49,8 +51,6 @@ namespace Token{
         IsInitialized(){
             return GetState() == kInitialized;
         }
-
-        static void PrintBlocks();
     };
 
     class BlockPoolVisitor{

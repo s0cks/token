@@ -97,7 +97,7 @@ namespace Token{
         }
 
         bool WriteToFile(std::fstream& file) const;
-        uint256_t GetHash() const;
+        virtual uint256_t GetHash() const;
         virtual size_t GetBufferSize() const = 0; //TODO: refactor
 
 #define DECLARE_TYPECHECK(Name) \

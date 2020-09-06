@@ -117,7 +117,7 @@ namespace Token{
     void ClientSession::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
         ClientSession* session = (ClientSession*)stream->data;
         if(nread == UV_EOF){
-            LOG(ERROR) << "client disconnected!";
+            LOG(ERROR) << "client disconnected!: " << std::string(uv_strerror(nread));
             return;
         } else if(nread < 0){
             LOG(ERROR) << "[" << nread << "] client read error: " << std::string(uv_strerror(nread));

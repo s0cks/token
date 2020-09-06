@@ -33,7 +33,7 @@ namespace Token{
 
     static inline size_t
     GetNumberOfTransactionsInPool(){
-        return TransactionPool::GetNumberOfTransactions();
+        return TransactionPool::GetSize();
     }
 
     class TransactionPoolBlockBuilder : public TransactionPoolVisitor{
@@ -53,7 +53,7 @@ namespace Token{
             return a->GetTimestamp() < b->GetTimestamp();
         }
     public:
-        TransactionPoolBlockBuilder(size_t size=Block::kMaxTransactionsForBlock, size_t max_transactions=TransactionPool::GetNumberOfTransactions()):
+        TransactionPoolBlockBuilder(size_t size=Block::kMaxTransactionsForBlock, size_t max_transactions=TransactionPool::GetSize()):
             TransactionPoolVisitor(),
             num_transactions_(0),
             max_transactions_(max_transactions),
@@ -212,9 +212,9 @@ namespace Token{
                 LOG(INFO) << "block discovery thread is resuming.";
             }
 
-            if(GetNumberOfTransactionsInPool() >= 4){
+            if(GetNumberOfTransactionsInPool() >= 2){
                 LOG(INFO) << "creating new block from transaction pool";
-                Handle<Block> block = CreateNewBlock(4);
+                Handle<Block> block = CreateNewBlock(2);
 
                 BlockValidator validator(block);
                 if(!validator.IsValid()){

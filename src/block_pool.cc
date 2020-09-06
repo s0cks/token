@@ -14,6 +14,21 @@ namespace Token{
         return &journal;
     }
 
+    static inline MemoryPoolCache*
+    GetCache(){
+        static MemoryPool* pool = Allocator::GetBlockPoolMemory();
+        static MemoryPoolCache cache(pool, pool->GetSize() / sizeof(Block));
+        return &cache;
+    }
+
+    size_t BlockPool::GetCacheSize(){
+        return GetCache()->GetSize();
+    }
+
+    size_t BlockPool::GetMaxCacheSize(){
+        return GetCache()->GetMaxSize();
+    }
+
     void BlockPool::SetState(BlockPool::State state){
         LOCK_GUARD;
         state_ = state;
@@ -68,6 +83,23 @@ namespace Token{
                 false;
     }
 
+    size_t BlockPool::GetSize(){
+        LOCK_GUARD;
+        size_t size = 0;
+        DIR* dir;
+        struct dirent* ent;
+        if((dir = opendir(GetPath().c_str())) != NULL){
+            while((ent = readdir(dir)) != NULL){
+                std::string name(ent->d_name);
+                std::string filename = (GetPath() + "/" + name);
+                if(!EndsWith(filename, ".dat")) continue;
+                size++;
+            }
+            closedir(dir);
+        }
+        return size;
+    }
+
     bool BlockPool::GetBlocks(std::vector<uint256_t>& blocks){
         LOCK_GUARD;
         DIR* dir;
@@ -108,21 +140,25 @@ namespace Token{
         return vis->VisitEnd();
     }
 
-    class BlockPoolPrinter : public BlockPoolVisitor{
+    class BlockPoolPrinter : public BlockPoolVisitor, public ObjectPointerVisitor{
     public:
         BlockPoolPrinter(): BlockPoolVisitor(){}
         ~BlockPoolPrinter() = default;
 
-        bool Visit(const Handle<Block>& blk){
-            //TODO: implement
+        bool Visit(RawObject* obj){
+            //TODO: implement BlockPoolPrinter::Visit(RawObject*)
             return true;
+        }
+
+        bool Visit(const Handle<Block>& blk){
+            return Visit((RawObject*)blk);
         }
     };
 
-    void BlockPool::PrintBlocks(){
+    bool BlockPool::Print(bool cache_only){
         BlockPoolPrinter printer;
-        if(!Accept(&printer)){
-            //TODO: handle;
-        }
+        return cache_only
+             ? GetCache()->Accept(&printer)
+             : Accept(&printer);
     }
 }

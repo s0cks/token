@@ -2,6 +2,7 @@
 #define TOKEN_UNCLAIMED_TRANSACTION_POOL_H
 
 #include "unclaimed_transaction.h"
+#include "memory_pool.h"
 
 namespace Token{
     class UnclaimedTransactionPoolVisitor;
@@ -12,8 +13,6 @@ namespace Token{
             kInitializing,
             kInitialized
         };
-
-        static const size_t kMaxPoolSize = 128;
     private:
         UnclaimedTransactionPool() = delete;
 
@@ -21,16 +20,18 @@ namespace Token{
     public:
         ~UnclaimedTransactionPool() = delete;
 
-        static size_t GetNumberOfUnclaimedTransactions();
+        static size_t GetSize();
+        static size_t GetCacheSize();
+        static size_t GetMaxCacheSize();
         static State GetState();
         static bool Initialize();
-        static bool PrintUnclaimedTransactions();
+        static bool Print(bool cache_only=false);
+        static bool Accept(UnclaimedTransactionPoolVisitor* vis);
         static bool RemoveUnclaimedTransaction(const uint256_t& hash);
         static bool PutUnclaimedTransaction(const Handle<UnclaimedTransaction>& utxo);
         static bool HasUnclaimedTransaction(const uint256_t& hash);
         static bool GetUnclaimedTransactions(std::vector<uint256_t>& utxos);
         static bool GetUnclaimedTransactions(const std::string& user, std::vector<uint256_t>& utxos);
-        static bool Accept(UnclaimedTransactionPoolVisitor* vis);
         static Handle<UnclaimedTransaction> GetUnclaimedTransaction(const uint256_t& tx_hash, uint32_t tx_index);
         static Handle<UnclaimedTransaction> GetUnclaimedTransaction(const uint256_t& hash);
 

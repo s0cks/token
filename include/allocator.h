@@ -6,6 +6,7 @@
 #include <condition_variable>
 #include "common.h"
 #include "handle.h"
+#include "memory_pool.h"
 
 namespace Token{
     enum class Space{
@@ -91,12 +92,18 @@ namespace Token{
         ~Allocator(){}
 
         static void Initialize();
+
         static void MinorCollect();
         static void MajorCollect();
+
         static void* Allocate(size_t size);
+
         static MemoryRegion* GetRegion();
         static Heap* GetEdenHeap();
         static Heap* GetSurvivorHeap();
+        static MemoryPool* GetUnclaimedTransactionPoolMemory();
+        static MemoryPool* GetTransactionPoolMemory();
+        static MemoryPool* GetBlockPoolMemory();
 
         static size_t GetNumberOfStackSpaceObjects();
         static size_t GetStackSpaceSize();
@@ -298,6 +305,7 @@ namespace Token{
             return GetObjectSize();// refactor
         }
 
+        virtual uint256_t GetHash() const = 0;
         virtual std::string ToString() const = 0;
 
         static void* operator new(size_t size){
