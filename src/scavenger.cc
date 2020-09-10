@@ -100,7 +100,7 @@ namespace Token{
         LOG(INFO) << "relocating live objects....";
         switch(GetHeap()->GetSpace()){
             case Space::kEdenSpace:{
-                ObjectRelocator relocator(GetToSpace(), Allocator::GetSurvivorHeap());
+                ObjectRelocator relocator(GetToSpace(), Allocator::GetNewSpace());
                 GetFromSpace().Accept(&relocator);
                 break;
             }

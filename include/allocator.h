@@ -97,10 +97,9 @@ namespace Token{
         static void MajorCollect();
 
         static void* Allocate(size_t size);
-
         static MemoryRegion* GetRegion();
-        static Heap* GetEdenHeap();
-        static Heap* GetSurvivorHeap();
+        static Heap* GetNewSpace();
+        static Heap* GetOldSpace();
         static MemoryPool* GetUnclaimedTransactionPoolMemory();
         static MemoryPool* GetTransactionPoolMemory();
         static MemoryPool* GetBlockPoolMemory();

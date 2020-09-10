@@ -14,8 +14,8 @@ namespace Token{
     public:
         HeapDumpWriter(const std::string& filename):
             BinaryFileWriter(filename),
-            eden_(Allocator::GetEdenHeap()),
-            survivor_(Allocator::GetSurvivorHeap()){}
+            eden_(Allocator::GetNewSpace()),
+            survivor_(Allocator::GetOldSpace()){}
         ~HeapDumpWriter() = default;
 
         Heap* GetEdenHeap() const{

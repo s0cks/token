@@ -82,8 +82,8 @@ namespace Token{
     static std::recursive_mutex mutex_;
     static std::condition_variable cond_;
     static MemoryRegion* region_ = nullptr;
-    static Heap* eden_ = nullptr;
-    static Heap* survivor_ = nullptr;
+    static Heap* new_space_ = nullptr;
+    static Heap* old_space_ = nullptr;
     static MemoryPool* utxo_pool_ = nullptr;
     static MemoryPool* tx_pool_ = nullptr;
     static MemoryPool* block_pool_ = nullptr;
@@ -105,13 +105,13 @@ namespace Token{
         size_t semispace_size = (heap_size / 2);
         region_ = new MemoryRegion(region_size);
 
-        uword eden_start = region_->GetStartAddress();
-        uword survivor_start = region_->GetStartAddress() + heap_size;
+        uword new_start = region_->GetStartAddress();
+        uword old_start = region_->GetStartAddress() + heap_size;
 
-        eden_ = new Heap(Space::kEdenSpace, eden_start, heap_size, semispace_size);
-        survivor_ = new Heap(Space::kSurvivorSpace, survivor_start, heap_size, semispace_size);
+        new_space_ = new Heap(Space::kEdenSpace, new_start, heap_size, semispace_size);
+        old_space_ = new Heap(Space::kSurvivorSpace, old_start, heap_size, semispace_size);
 
-        uword memory_pool_start = survivor_start + heap_size;
+        uword memory_pool_start = old_start + heap_size;
         uword memory_pool_size = (region_size / 2) / 3;
         uword tx_pool_start = memory_pool_start;
         uword utxo_pool_start = (tx_pool_start + memory_pool_size);
@@ -142,14 +142,14 @@ namespace Token{
         return region_;
     }
 
-    Heap* Allocator::GetEdenHeap(){
+    Heap* Allocator::GetNewSpace(){
         LOCK_GUARD;
-        return eden_;
+        return new_space_;
     }
 
-    Heap* Allocator::GetSurvivorHeap(){
+    Heap* Allocator::GetOldSpace(){
         LOCK_GUARD;
-        return survivor_;
+        return old_space_;
     }
 
     RawObject** Allocator::TrackRoot(RawObject* obj){
@@ -182,10 +182,10 @@ namespace Token{
     void* Allocator::Allocate(size_t alloc_size){
         LOCK_GUARD;
         size_t total_size = ALIGN(alloc_size);
-        void* ptr = GetEdenHeap()->Allocate(total_size);
+        void* ptr = GetNewSpace()->Allocate(total_size);
         if(!ptr){
             MinorCollect();
-            ptr = GetEdenHeap()->Allocate(total_size);
+            ptr = GetNewSpace()->Allocate(total_size);
             assert(ptr);
         }
         allocating_size_ = alloc_size;
@@ -208,8 +208,7 @@ namespace Token{
     void Allocator::MinorCollect(){
         LOG(INFO) << "performing minor garbage collection....";
         LOCK_GUARD;
-        Scavenger::Scavenge(GetEdenHeap());
-        Scavenger::Scavenge(GetSurvivorHeap());
+        Scavenger::Scavenge(GetNewSpace());
     }
 
     void Allocator::MajorCollect(){

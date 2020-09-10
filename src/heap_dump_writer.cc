@@ -39,14 +39,14 @@ namespace Token{
 
         // Write Eden Heap Section
         LOG(INFO) << "writing eden heap....";
-        if(!WriteHeap(Allocator::GetEdenHeap())){
+        if(!WriteHeap(Allocator::GetNewSpace())){
             LOG(WARNING) << "couldn't write heap dump eden space section";
             return false;
         }
 
         // Write Survivor Heap Section
         LOG(INFO) << "writing survivor heap....";
-        if(!WriteHeap(Allocator::GetSurvivorHeap())){
+        if(!WriteHeap(Allocator::GetOldSpace())){
             LOG(WARNING) << "couldn't write heap dump survivor space section";
             return false;
         }

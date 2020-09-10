@@ -12,8 +12,8 @@ namespace Token{
 
     HeapDump::HeapDump(const std::string& filename):
         filename_(filename),
-        eden_(Allocator::GetEdenHeap()),
-        survivor_(Allocator::GetSurvivorHeap()){}
+        eden_(Allocator::GetNewSpace()),
+        survivor_(Allocator::GetOldSpace()){}
 
     HeapDump::~HeapDump(){
         delete eden_;
