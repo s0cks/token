@@ -88,7 +88,6 @@ namespace Token{
         ~Allocator(){}
 
         static void Initialize();
-
         static void MinorCollect();
         static void MajorCollect();
 
@@ -98,9 +97,9 @@ namespace Token{
         static MemoryPool* GetUnclaimedTransactionPoolMemory();
         static MemoryPool* GetTransactionPoolMemory();
         static MemoryPool* GetBlockPoolMemory();
-
         static size_t GetNumberOfStackSpaceObjects();
         static size_t GetStackSpaceSize();
+        static void PrintHeap();
     };
 
     class WeakObjectPointerVisitor{
@@ -111,6 +110,7 @@ namespace Token{
         virtual bool Visit(RawObject** root) = 0;
     };
 
+    //TODO: remove GCStats
     class GCStats{
         friend class Allocator;
         friend class Scavenger;
@@ -188,6 +188,7 @@ namespace Token{
 
     typedef uint64_t ObjectHeader;
 
+    //TODO: remove RawObject
     class RawObject{
         friend class Heap;
         friend class Thread;

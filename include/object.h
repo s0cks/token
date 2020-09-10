@@ -115,6 +115,17 @@ namespace Token{
         virtual ~ObjectPointerVisitor() = default;
         virtual bool Visit(RawObject* obj) = 0;
     };
+
+    class ObjectPrinter : public ObjectPointerVisitor{
+    public:
+        ObjectPrinter() = default;
+        ~ObjectPrinter() = default;
+
+        bool Visit(RawObject* obj){
+            LOG(INFO) << "[" << std::hex << (uword) obj << "] := " << obj->ToString();
+            return true;
+        }
+    };
 }
 
 #endif //TOKEN_OBJECT_H

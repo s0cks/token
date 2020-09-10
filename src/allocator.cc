@@ -98,6 +98,12 @@ namespace Token{
     static size_t allocating_size_ = 0;
     static void* allocating_ = nullptr;
 
+    void Allocator::PrintHeap(){
+        LOCK_GUARD;
+        ObjectPrinter printer;
+        if(!GetHeap()->Accept(&printer)) LOG(WARNING) << "couldn't print heap.";
+    }
+
     void Allocator::Initialize(){
         LOCK_GUARD;
         size_t region_size = FLAGS_heap_size;

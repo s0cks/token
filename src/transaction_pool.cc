@@ -141,18 +141,6 @@ namespace Token{
         return false;
     }
 
-    class ObjectPrinter : public ObjectPointerVisitor{
-    public:
-        ObjectPrinter():
-            ObjectPointerVisitor(){}
-        ~ObjectPrinter() = default;
-
-        bool Visit(RawObject* obj){
-            LOG(INFO) << obj->ToString();
-            return true;
-        }
-    };
-
     void TransactionPool::Print(bool cache_only){
         ObjectPrinter printer;
         if(cache_only){

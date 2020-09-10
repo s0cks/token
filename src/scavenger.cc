@@ -7,7 +7,7 @@ namespace Token{
     public:
         bool Visit(RawObject* obj){
             if(obj->HasStackReferences()){
-                LOG(INFO) << "marking object @" << std::hex << (uword)obj;
+                LOG(INFO) << "marking object: [" << std::hex << (uword)obj << "] := " << obj->ToString();
                 obj->SetColor(Color::kMarked);
             }
             return true;
@@ -18,6 +18,7 @@ namespace Token{
     public:
         bool Visit(RawObject* obj){
             if(obj->IsGarbage()){
+                LOG(INFO) << "finalizing object @" << std::hex << (uword)obj;
                 obj->~RawObject();//TODO: call finalizer
                 obj->ptr_ = 0;
             }
@@ -35,21 +36,11 @@ namespace Token{
 
         bool Visit(RawObject* obj){
             if(obj->IsMarked()){
-                LOG(INFO) << "relocating object @" << (uword)obj;
+                LOG(INFO) << "relocating object @" << std::hex << (uword)obj;
                 size_t size = obj->GetAllocatedSize();
                 void* nptr = dest_->Allocate(size);
                 obj->ptr_ = reinterpret_cast<uword>(nptr);
-            }
-            return true;
-        }
-    };
-
-    class LiveObjectCopier : public ObjectPointerVisitor{
-    public:
-        bool Visit(RawObject* obj){
-            if(obj->IsMarked()){
-                obj->SetColor(Color::kFree);
-                memcpy((void*)obj->ptr_, (void*)obj, obj->GetAllocatedSize());
+                memcpy((void*)obj->ptr_, (void*)obj, size);
             }
             return true;
         }
@@ -105,10 +96,6 @@ namespace Token{
         LOG(INFO) << "updating references....";
         LiveObjectReferenceUpdater ref_updater;
         GetFromSpace()->Accept(&ref_updater);
-
-        LOG(INFO) << "copying live objects...";
-        LiveObjectCopier copier;
-        GetFromSpace()->Accept(&copier);
 
         LOG(INFO) << "cleaning....";
         GetFromSpace()->Reset();
