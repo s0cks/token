@@ -15,8 +15,7 @@ namespace Token{
         friend class HeapDumpReader;
     private:
         std::string filename_;
-        Heap* eden_;
-        Heap* survivor_;
+        Heap* heap_;
 
         HeapDump(const std::string& filename, size_t semi_size);
         HeapDump(const std::string& filename);
@@ -35,12 +34,8 @@ namespace Token{
             return filename_;
         }
 
-        Heap* GetEdenHeap() const{
-            return eden_;
-        }
-
-        Heap* GetSurvivorHeap() const{
-            return survivor_;
+        Heap* GetHeap() const{
+            return heap_;
         }
 
         bool Accept(HeapDumpVisitor* vis);
@@ -88,8 +83,8 @@ namespace Token{
             case Space::kStackSpace:
                 stream << "Stack Space (" << SectionSizeField::Decode(header) << " Bytes)";
                 break;
-            case Space::kEdenSpace:
-                stream << "Eden Space (" << SectionSizeField::Decode(header) << " Bytes)";
+            case Space::kNewSpace:
+                stream << "New Space (" << SectionSizeField::Decode(header) << " Bytes)";
                 break;
             default:
                 stream << "Unknown Space (" << SectionSizeField::Decode(header) << " Bytes)";

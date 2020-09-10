@@ -102,24 +102,20 @@ namespace Token{
             return space_;
         }
 
-        bool IsEdenSpace() const{
-            return GetSpace() == Space::kEdenSpace;
+        bool IsNewSpace() const{
+            return space_ == Space::kNewSpace;
         }
 
-        bool IsSurvivorSpace() const{
-            return GetSpace() == Space::kSurvivorSpace;
+        bool IsOldSpace() const{
+            return space_ == Space::kOldSpace;
         }
 
-        bool IsTenuredSpace() const{
-            return GetSpace() == Space::kTenuredSpace;
+        Semispace* GetFromSpace(){
+            return &from_space_;
         }
 
-        Semispace GetFromSpace(){
-            return from_space_;
-        }
-
-        Semispace GetToSpace(){
-            return to_space_;
+        Semispace* GetToSpace(){
+            return &to_space_;
         }
 
         uword GetStartAddress() const{

@@ -7,26 +7,23 @@
 namespace Token{
     HeapDump::HeapDump(const std::string& filename, size_t semi_size):
         filename_(filename),
-        eden_(nullptr),
-        survivor_(nullptr){}
+        heap_(nullptr){}
 
     HeapDump::HeapDump(const std::string& filename):
         filename_(filename),
-        eden_(Allocator::GetNewSpace()),
-        survivor_(Allocator::GetOldSpace()){}
+        heap_(Allocator::GetHeap()){}
 
     HeapDump::~HeapDump(){
-        delete eden_;
-        delete survivor_;
+        delete heap_;
     }
 
     bool HeapDump::Accept(HeapDumpVisitor* vis){
-        if(!vis->Visit(GetEdenHeap())){
+        if(!vis->Visit(GetHeap())){
             LOG(WARNING) << "couldn't visit eden heap";
             return false;
         }
 
-        if(!vis->Visit(GetSurvivorHeap())){
+        if(!vis->Visit(GetHeap())){
             LOG(WARNING) << "couldn't visit survivor heap";
             return false;
         }

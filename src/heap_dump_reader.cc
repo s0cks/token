@@ -24,9 +24,9 @@ namespace Token{
                     LOG(INFO) << "reading " << num_objects << " stack space objects....";
                     break;
                 }
-                case Space::kEdenSpace:{
-                    LOG(INFO) << "reading eden space....";
-                    Heap* heap = dump->GetEdenHeap();
+                case Space::kNewSpace:{
+                    LOG(INFO) << "reading new space....";
+                    Heap* heap = dump->GetHeap();
                     /*if(!ReadMemoryRegion(heap->GetRegion(), size)){
                         LOG(WARNING) << "couldn't read space memory region from file";
                         delete dump;
@@ -35,7 +35,7 @@ namespace Token{
                     heap->SetAllocatedSize(size);
                     break;
                 }
-                case Space::kSurvivorSpace: return dump;
+                case Space::kOldSpace: return dump;
                 default:
                     LOG(WARNING) << "unknown space: " << space;
                     delete dump;

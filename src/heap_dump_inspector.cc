@@ -12,8 +12,7 @@ namespace Token{
     void HeapDumpInspector::HandleStatusCommand(HeapDumpInspectorCommand* cmd){
         LOG(INFO) << "Heap Dump:";
         LOG(INFO) << "Filename: " << GetData()->GetFilename();
-        PrintHeap(GetData()->GetEdenHeap());
-        PrintHeap(GetData()->GetSurvivorHeap());
+        PrintHeap(GetData()->GetHeap());
     }
 
     void HeapDumpInspector::HandleGetHeapCommand(HeapDumpInspectorCommand* cmd){

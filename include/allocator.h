@@ -11,9 +11,8 @@
 namespace Token{
     enum class Space{
         kStackSpace = 1,
-        kEdenSpace,
-        kSurvivorSpace,
-        kTenuredSpace,
+        kNewSpace,
+        kOldSpace,
         kMemoryPool
     };
 
@@ -22,14 +21,11 @@ namespace Token{
             case Space::kStackSpace:
                 stream << "Stack";
                 return stream;
-            case Space::kEdenSpace:
-                stream << "Eden";
+            case Space::kNewSpace:
+                stream << "New";
                 return stream;
-            case Space::kSurvivorSpace:
-                stream << "Survivor";
-                return stream;
-            case Space::kTenuredSpace:
-                stream << "Tenured";
+            case Space::kOldSpace:
+                stream << "Old";
                 return stream;
             case Space::kMemoryPool:
                 stream << "Memory Pool";
@@ -98,8 +94,7 @@ namespace Token{
 
         static void* Allocate(size_t size);
         static MemoryRegion* GetRegion();
-        static Heap* GetNewSpace();
-        static Heap* GetOldSpace();
+        static Heap* GetHeap();
         static MemoryPool* GetUnclaimedTransactionPoolMemory();
         static MemoryPool* GetTransactionPoolMemory();
         static MemoryPool* GetBlockPoolMemory();
@@ -135,7 +130,7 @@ namespace Token{
             object_size_(0),
             num_collections_(0),
             num_references_(0){}
-        GCStats(): GCStats(Space::kEdenSpace){}
+        GCStats(): GCStats(Space::kNewSpace){}
         ~GCStats(){}
 
         size_t GetNumberOfCollectionsSurvived() const{
@@ -162,16 +157,12 @@ namespace Token{
             return GetSpace() == Space::kStackSpace;
         }
 
-        bool InEdenSpace() const{
-            return GetSpace() == Space::kEdenSpace;
+        bool IsNewSpace() const{
+            return GetSpace() == Space::kNewSpace;
         }
 
-        bool IsSurvivorSpace() const{
-            return GetSpace() == Space::kSurvivorSpace;
-        }
-
-        bool IsTenuredSpace() const{
-            return GetSpace() == Space::kTenuredSpace;
+        bool IsOldSpace() const{
+            return GetSpace() == Space::kOldSpace;
         }
 
         GCStats& operator=(const GCStats& other){
@@ -259,15 +250,11 @@ namespace Token{
         }
 
         bool IsInEdenSpace() const{
-            return stats_.GetSpace() == Space::kEdenSpace;
+            return stats_.GetSpace() == Space::kNewSpace;
         }
 
         bool IsInSurvivorSpace() const{
-            return stats_.GetSpace() == Space::kSurvivorSpace;
-        }
-
-        bool IsInTenuredSpace() const{
-            return stats_.GetSpace() == Space::kTenuredSpace;
+            return stats_.GetSpace() == Space::kOldSpace;
         }
     protected:
         RawObject():

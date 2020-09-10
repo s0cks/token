@@ -6,8 +6,10 @@ namespace Token{
     class LiveObjectMarker : public ObjectPointerVisitor{
     public:
         bool Visit(RawObject* obj){
-            if(obj->HasStackReferences())
+            if(obj->HasStackReferences()){
+                LOG(INFO) << "marking object @" << std::hex << (uword)obj;
                 obj->SetColor(Color::kMarked);
+            }
             return true;
         }
     };
@@ -25,24 +27,17 @@ namespace Token{
 
     class ObjectRelocator : public ObjectPointerVisitor{
     private:
-        Semispace dest_;
-        Heap* promotion_;
+        Semispace* dest_;
     public:
-        ObjectRelocator(const Semispace& dest, Heap* promotion):
+        ObjectRelocator(Semispace* dest):
             ObjectPointerVisitor(),
-            dest_(dest),
-            promotion_(promotion){}
+            dest_(dest){}
 
         bool Visit(RawObject* obj){
             if(obj->IsMarked()){
+                LOG(INFO) << "relocating object @" << (uword)obj;
                 size_t size = obj->GetAllocatedSize();
-                void* nptr = nullptr;
-                if(obj->IsReadyForPromotion()){
-                    nptr = promotion_->Allocate(size);
-                } else{
-                    nptr = dest_.Allocate(size);
-                }
-
+                void* nptr = dest_->Allocate(size);
                 obj->ptr_ = reinterpret_cast<uword>(nptr);
             }
             return true;
@@ -88,34 +83,18 @@ namespace Token{
         }
     };
 
-    void Scavenger::ScavengeMemory(){
+    bool Scavenger::Scavenge(){
         LOG(INFO) << "marking live objects....";
         LiveObjectMarker marker;
-        GetFromSpace().Accept(&marker);
+        GetFromSpace()->Accept(&marker);
 
         LOG(INFO) << "finalizing objects....";
         ObjectFinalizer finalizer;
-        GetFromSpace().Accept(&finalizer);
+        GetFromSpace()->Accept(&finalizer);
 
         LOG(INFO) << "relocating live objects....";
-        switch(GetHeap()->GetSpace()){
-            case Space::kEdenSpace:{
-                ObjectRelocator relocator(GetToSpace(), Allocator::GetNewSpace());
-                GetFromSpace().Accept(&relocator);
-                break;
-            }
-            case Space::kSurvivorSpace:{
-                //TODO:
-                //ObjectPromoter promoter(Allocator::GetTenuredHeap());
-                //GetFromSpace().Accept(&promoter);
-                break;
-            }
-            case Space::kTenuredSpace: break; // cannot promote any further
-            case Space::kStackSpace:
-            default:
-                LOG(WARNING) << "unknown heap space " << GetHeap()->GetSpace() << " during scavenging";
-                return;
-        }
+        ObjectRelocator relocator(GetToSpace());
+        GetFromSpace()->Accept(&relocator);
 
         //TODO: notify references?
 
@@ -125,14 +104,15 @@ namespace Token{
 
         LOG(INFO) << "updating references....";
         LiveObjectReferenceUpdater ref_updater;
-        GetFromSpace().Accept(&ref_updater);
+        GetFromSpace()->Accept(&ref_updater);
 
         LOG(INFO) << "copying live objects...";
         LiveObjectCopier copier;
-        GetFromSpace().Accept(&copier);
+        GetFromSpace()->Accept(&copier);
 
         LOG(INFO) << "cleaning....";
-        GetFromSpace().Reset();
+        GetFromSpace()->Reset();
         GetHeap()->SwapSpaces();
+        return true;
     }
 }

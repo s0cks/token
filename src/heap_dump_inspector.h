@@ -51,13 +51,8 @@ namespace Token{
             std::transform(heap_name.begin(), heap_name.end(), heap_name.begin(), [](unsigned char c){ return std::tolower(c); });
             if(heap_name == "stack"){
                 return nullptr; //TODO:
-            } else if(heap_name == "eden"){
-                return GetData()->GetEdenHeap();
-            } else if(heap_name == "survivor"){
-                return GetData()->GetSurvivorHeap();
-            } else{
-                LOG(WARNING) << "unknown heap: " << heap_name;
-                return nullptr;
+            } else if(heap_name == "heap"){
+                //TODO: implement
             }
         }
     public:

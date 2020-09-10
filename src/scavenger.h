@@ -6,35 +6,26 @@
 namespace Token{
     class Scavenger{
     private:
-        Heap* heap_;
-        Semispace from_space_;
-        Semispace to_space_;
+        Scavenger() = delete;
 
-        Scavenger(Heap* heap):
-            heap_(heap),
-            from_space_(heap->GetFromSpace()),
-            to_space_(heap->GetToSpace()){}
+        static inline Heap*
+        GetHeap(){
+            return Allocator::GetHeap();
+        }
 
-        void ScavengeMemory();
+        static inline Semispace*
+        GetFromSpace(){
+            return GetHeap()->GetFromSpace();
+        }
+
+        static inline Semispace*
+        GetToSpace(){
+            return GetHeap()->GetToSpace();
+        }
     public:
-        ~Scavenger(){}
+        ~Scavenger() = delete;
 
-        Heap* GetHeap() const{
-            return heap_;
-        }
-
-        Semispace GetFromSpace() const{
-            return from_space_;
-        }
-
-        Semispace GetToSpace() const{
-            return to_space_;
-        }
-
-        static void Scavenge(Heap* heap){
-            Scavenger scavenger(heap);
-            scavenger.ScavengeMemory();
-        }
+        static bool Scavenge();
     };
 }
 

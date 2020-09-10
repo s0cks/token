@@ -108,8 +108,8 @@ namespace Token{
         uword new_start = region_->GetStartAddress();
         uword old_start = region_->GetStartAddress() + heap_size;
 
-        new_space_ = new Heap(Space::kEdenSpace, new_start, heap_size, semispace_size);
-        old_space_ = new Heap(Space::kSurvivorSpace, old_start, heap_size, semispace_size);
+        new_space_ = new Heap(Space::kOldSpace, new_start, heap_size, semispace_size);
+        old_space_ = new Heap(Space::kNewSpace, old_start, heap_size, semispace_size);
 
         uword memory_pool_start = old_start + heap_size;
         uword memory_pool_size = (region_size / 2) / 3;
@@ -142,14 +142,9 @@ namespace Token{
         return region_;
     }
 
-    Heap* Allocator::GetNewSpace(){
+    Heap* Allocator::GetHeap(){
         LOCK_GUARD;
         return new_space_;
-    }
-
-    Heap* Allocator::GetOldSpace(){
-        LOCK_GUARD;
-        return old_space_;
     }
 
     RawObject** Allocator::TrackRoot(RawObject* obj){
@@ -182,10 +177,10 @@ namespace Token{
     void* Allocator::Allocate(size_t alloc_size){
         LOCK_GUARD;
         size_t total_size = ALIGN(alloc_size);
-        void* ptr = GetNewSpace()->Allocate(total_size);
+        void* ptr = GetHeap()->Allocate(total_size);
         if(!ptr){
             MinorCollect();
-            ptr = GetNewSpace()->Allocate(total_size);
+            ptr = GetHeap()->Allocate(total_size);
             assert(ptr);
         }
         allocating_size_ = alloc_size;
@@ -200,7 +195,7 @@ namespace Token{
             return;
         }
         obj->SetObjectSize(allocating_size_);
-        obj->SetSpace(Space::kEdenSpace);
+        obj->SetSpace(Space::kNewSpace);
         allocating_size_ = 0;
         allocating_ = nullptr;
     }
@@ -208,7 +203,7 @@ namespace Token{
     void Allocator::MinorCollect(){
         LOG(INFO) << "performing minor garbage collection....";
         LOCK_GUARD;
-        Scavenger::Scavenge(GetNewSpace());
+        Scavenger::Scavenge();
     }
 
     void Allocator::MajorCollect(){
