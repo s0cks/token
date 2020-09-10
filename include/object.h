@@ -8,6 +8,7 @@
 #include "common.h"
 #include "handle.h"
 #include "bitfield.h"
+#include "allocator.h"
 #include "uint256_t.h"
 
 namespace Token{
@@ -54,12 +55,12 @@ namespace Token{
         //TODO:
         // - track references using Reference class?
         // - create ObjectFile + ObjectBuffer classes for serialization purposes?
+        friend class Semispace;
         friend class Allocator;
-        friend class LiveObjectMarker;
+        friend class Scavenger;
         friend class ObjectFinalizer;
         friend class ObjectRelocator;
-        friend class LiveObjectReferenceUpdater;
-        friend class RootObjectReferenceUpdater;
+        friend class ReferenceNotifier;
         friend class BinaryFileWriter;
     private:
         enum ObjectLayoutBits{
@@ -89,11 +90,16 @@ namespace Token{
     protected:
         Object():
             tag_(0){
+            Allocator::Initialize(this);
             SetType(Type::kUnknownType);
         }
 
         uint32_t GetTag() const{
             return tag_;
+        }
+
+        void SetForwardingAddress(uword ptr){
+            ptr_ = ptr;
         }
 
         void SetType(Type type){
@@ -153,6 +159,14 @@ namespace Token{
             return SizeBits::Decode(GetTag());
         }
 
+        uword GetStartAddress() const{
+            return (uword)ptr_;
+        }
+
+        uword GetEndAddress() const{
+            return GetStartAddress() + GetSize();
+        }
+
         virtual std::string ToString() const{
             std::stringstream ss;
             ss << "Object(" << std::hex << this << ")";
@@ -190,6 +204,10 @@ namespace Token{
         }
         FOR_EACH_TYPE(DECLARE_TYPECHECK)
 #undef DECLARE_TYPECHECK
+
+        static void* operator new(size_t size){
+            return Allocator::Allocate(size);
+        }
     };
 
     class ObjectPointerVisitor{

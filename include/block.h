@@ -139,7 +139,9 @@ namespace Token{
             transactions_(nullptr),
             num_transactions_(num_txs),
             tx_bloom_(){
+            SetSize(sizeof(Block));
             SetType(Type::kBlockType);
+
             transactions_ = (Transaction**)malloc(sizeof(Transaction*)*num_txs);
             memset(transactions_, 0, sizeof(Transaction*)*num_txs);
             for(size_t idx = 0; idx < num_txs; idx++){

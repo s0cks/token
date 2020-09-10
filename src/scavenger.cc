@@ -3,22 +3,11 @@
 #include "transaction.h"
 
 namespace Token{
-    class LiveObjectMarker : public ObjectPointerVisitor{
-    public:
-        bool Visit(Object* obj){
-            if(obj->HasStackReferences()){
-                LOG(INFO) << "marking object: [" << std::hex << (uword)obj << "] := " << obj->ToString();
-                obj->SetMarkedBit();
-            }
-            return true;
-        }
-    };
-
     class ObjectFinalizer : public ObjectPointerVisitor{
     public:
         bool Visit(Object* obj){
             if(!obj->IsMarked()){
-                LOG(INFO) << "finalizing object @" << std::hex << (uword)obj;
+                LOG(INFO) << "finalizing object [" << std::hex << obj << "] := " << obj->ToString();
                 obj->~Object();//TODO: call finalizer
                 obj->ptr_ = 0;
             }
@@ -35,67 +24,110 @@ namespace Token{
             dest_(dest){}
 
         bool Visit(Object* obj){
-            if(obj->IsMarked()){
-                LOG(INFO) << "relocating object @" << std::hex << (uword)obj;
-                size_t size = obj->GetSize();
-                void* nptr = dest_->Allocate(size);
-                obj->ptr_ = reinterpret_cast<uword>(nptr);
-                memcpy((void*)obj->ptr_, (void*)obj, size);
-            }
+            LOG(INFO) << "relocating object [" << std::hex << obj << "] := " << obj->ToString();
+            size_t size = obj->GetSize();
+            void* nptr = dest_->Allocate(size);
+            obj->ptr_ = reinterpret_cast<uword>(nptr);
+            memcpy((void*)obj->ptr_, (void*)obj, size);
             return true;
         }
     };
 
-    class LiveObjectReferenceUpdater : public ObjectPointerVisitor,
-                                              WeakReferenceVisitor{
+    class ReferenceNotifier : public ObjectPointerVisitor,
+                              public WeakReferenceVisitor,
+                              public WeakObjectPointerVisitor{
     public:
         bool Visit(Object** field) const{
             Object* obj = (*field);
+            LOG(INFO) << "visiting root: " << obj->ToString();
             if(obj) (*field) = (Object*)obj->ptr_;
             return true;
         }
 
         bool Visit(Object* obj){
-            if(!obj->IsMarked()) obj->Accept(this);
+            obj->Accept(this);
             return true;
         }
-    };
 
-    class RootObjectReferenceUpdater : public WeakObjectPointerVisitor{
-    public:
         bool Visit(Object** root){
             Object* obj = (*root);
-            if(!obj) {
-                return true;
-            }
             LOG(INFO) << "visiting root: " << obj->ToString();
             (*root) = (Object*)obj->ptr_;
             return true;
         }
     };
 
+    class ScavengerMarker : public ObjectPointerVisitor,
+                            public WeakObjectPointerVisitor,
+                            public WeakReferenceVisitor{
+    private:
+        std::vector<uword>& stack_;
+    public:
+        ScavengerMarker(std::vector<uword>& stack):
+            ObjectPointerVisitor(),
+            stack_(stack){}
+        ~ScavengerMarker() = default;
+
+        bool Visit(Object** ptr) const{
+            if((*ptr)) stack_.push_back((uword)(*ptr));
+            return true;
+        }
+
+        bool Visit(Object** ptr){
+            if((*ptr)) stack_.push_back((uword)(*ptr));
+            return true;
+        }
+
+        bool Visit(Object* object){
+            stack_.push_back((uword)object);
+            return true;
+        }
+    };
+
     bool Scavenger::Scavenge(){
-        LOG(INFO) << "marking live objects....";
-        LiveObjectMarker marker;
-        GetFromSpace()->Accept(&marker);
+        LOG(INFO) << "marking objects....";
+        std::vector<uword> stack;
+        ScavengerMarker marker(stack);
+
+        if(!Allocator::VisitRoots(&marker)){
+            LOG(ERROR) << "couldn't mark roots.";
+            return false;
+        }
+
+        while(!stack.empty()){
+            uword address = stack.back();
+            stack.pop_back();
+
+            Object* obj = (Object*)address;
+
+            if(!obj->IsMarked()){
+                LOG(INFO) << "marking object [" << std::hex << obj << "] := " << obj->ToString();
+                obj->SetMarkedBit();
+                LOG(INFO) << std::hex << obj << " marked?: " << (obj->IsMarked() ? 'y' : 'n');
+                if(!obj->Accept(&marker)){
+                    LOG(ERROR) << "couldn't get references for object @" << std::hex << obj->GetStartAddress();
+                    return false;
+                }
+            }
+        }
+
+        LOG(INFO) << "relocating marked objects....";
+        ObjectRelocator relocator(GetToSpace());
+        if(!GetFromSpace()->VisitMarkedObjects(&relocator)){
+            LOG(ERROR) << "couldn't relocate marked objects.";
+            return false;
+        }
+
+        LOG(INFO) << "notifying references....";
+        ReferenceNotifier notifier;
+        if(!GetFromSpace()->VisitMarkedObjects(&notifier)){
+            LOG(ERROR) << "couldn't notify references.";
+            return false;
+        }
 
         LOG(INFO) << "finalizing objects....";
         ObjectFinalizer finalizer;
         GetFromSpace()->Accept(&finalizer);
-
-        LOG(INFO) << "relocating live objects....";
-        ObjectRelocator relocator(GetToSpace());
-        GetFromSpace()->Accept(&relocator);
-
-        //TODO: notify references?
-
-        LOG(INFO) << "updating root references....";
-        RootObjectReferenceUpdater root_updater;
-        Allocator::VisitRoots(&root_updater);
-
-        LOG(INFO) << "updating references....";
-        LiveObjectReferenceUpdater ref_updater;
-        GetFromSpace()->Accept(&ref_updater);
 
         LOG(INFO) << "cleaning....";
         GetFromSpace()->Reset();

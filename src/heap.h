@@ -64,6 +64,7 @@ namespace Token{
 
         void* Allocate(size_t size);
         void Accept(ObjectPointerVisitor* vis);
+        bool VisitMarkedObjects(ObjectPointerVisitor* vis);
 
         Semispace& operator=(const Semispace& other){
             start_ = other.start_;

@@ -72,18 +72,28 @@ namespace Token{
             for (size_t i = 0; i < kNumberOfRootsPerPage; i++){
                 Object* data = roots_[i];
                 if(data){
+                    LOG(INFO) << "visiting " << data->ToString() << "...";
                     vis->Visit(&roots_[i]);
                 }
             }
             return true; //TODO: investigate proper implementation
+        }
+
+        bool GetRoots(std::vector<uword>& roots){
+            for(size_t idx = 0;
+                        idx < kNumberOfRootsPerPage;
+                        idx++){
+                Object* data = roots_[idx];
+                if(data) roots.push_back(data->GetStartAddress());
+            }
+            return true;
         }
     };
 
     static std::recursive_mutex mutex_;
     static std::condition_variable cond_;
     static MemoryRegion* region_ = nullptr;
-    static Heap* new_space_ = nullptr;
-    static Heap* old_space_ = nullptr;
+    static Heap* heap_ = nullptr;
     static MemoryPool* utxo_pool_ = nullptr;
     static MemoryPool* tx_pool_ = nullptr;
     static MemoryPool* block_pool_ = nullptr;
@@ -111,13 +121,10 @@ namespace Token{
         size_t semispace_size = (heap_size / 2);
         region_ = new MemoryRegion(region_size);
 
-        uword new_start = region_->GetStartAddress();
-        uword old_start = region_->GetStartAddress() + heap_size;
+        uword heap_start = region_->GetStartAddress();
+        heap_ = new Heap(heap_start, heap_size, semispace_size);
 
-        new_space_ = new Heap(new_start, heap_size, semispace_size);
-        old_space_ = new Heap(old_start, heap_size, semispace_size);
-
-        uword memory_pool_start = old_start + heap_size;
+        uword memory_pool_start = heap_start + heap_size;
         uword memory_pool_size = (region_size / 2) / 3;
         uword tx_pool_start = memory_pool_start;
         uword utxo_pool_start = (tx_pool_start + memory_pool_size);
@@ -150,7 +157,7 @@ namespace Token{
 
     Heap* Allocator::GetHeap(){
         LOCK_GUARD;
-        return new_space_;
+        return heap_;
     }
 
     Object** Allocator::TrackRoot(Object* obj){
@@ -178,6 +185,17 @@ namespace Token{
         return true;
     }
 
+    bool Allocator::GetRoots(std::vector<uword>& roots){
+        LOCK_GUARD;
+        RootPage* current = roots_;
+        while(current != nullptr){
+            if(!current->GetRoots(roots))
+                return false;
+            current = current->GetNext();
+        }
+        return true;
+    }
+
 #define ALIGN(Size) (((Size)+7)&~7)
 
     void* Allocator::Allocate(size_t alloc_size){
@@ -199,6 +217,7 @@ namespace Token{
             LOG(INFO) << "initializing stack object: " << std::hex << obj;
             return;
         }
+        obj->SetForwardingAddress((uword)allocating_);
         obj->SetSize(allocating_size_);
         allocating_size_ = 0;
         allocating_ = nullptr;

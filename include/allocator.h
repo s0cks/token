@@ -84,6 +84,8 @@ namespace Token{
 
         static bool VisitRoots(WeakObjectPointerVisitor* vis);
         static void Initialize(Object* obj);
+
+        static bool GetRoots(std::vector<uword>& roots);
     public:
         ~Allocator(){}
 

@@ -15,9 +15,22 @@ namespace Token{
         uword current = GetStartAddress();
         while(current < GetCurrentAddress()){
             Object* obj = (Object*)current;
+            if(!obj || obj->GetSize() == 0) break;
             if(!vis->Visit(obj)) return;
             current += obj->GetSize();
         }
+    }
+
+    bool Semispace::VisitMarkedObjects(ObjectPointerVisitor* vis){
+        uword current = GetStartAddress();
+        while(current < GetCurrentAddress()){
+            Object* obj = (Object*)current;
+            if(!obj || obj->GetSize() == 0) break;
+            if(obj->IsMarked() && !vis->Visit(obj))
+                return false;
+            current += obj->GetSize();
+        }
+        return true;
     }
 
     bool Heap::Accept(ObjectPointerVisitor* vis){

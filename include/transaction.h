@@ -18,7 +18,10 @@ namespace Token{
         Input(const uint256_t& tx_hash, uint32_t index, const UserID& user):
             hash_(tx_hash),
             user_(user),
-            index_(index){}
+            index_(index){
+            SetSize(sizeof(Input));
+            SetType(Type::kInputType);
+        }
     public:
         ~Input(){}
 
@@ -58,7 +61,10 @@ namespace Token{
 
         Output(const UserID& user, const std::string& token):
             user_(user),
-            token_(token){}
+            token_(token){
+            SetSize(sizeof(Output));
+            SetType(Type::kOutputType);
+        }
     public:
         ~Output(){}
 
@@ -107,6 +113,8 @@ namespace Token{
             outputs_(nullptr),
             num_outputs_(num_outputs),
             signature_(){
+            SetType(Type::kTransactionType);
+
             inputs_ = (Input**)malloc(sizeof(Input*)*num_inputs);
             memset(inputs_, 0, sizeof(Input*)*num_inputs);
             for(size_t idx = 0; idx < num_inputs; idx++) WriteBarrier(&inputs_[idx], inputs[idx]);
