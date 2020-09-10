@@ -1,6 +1,7 @@
 #include "block_chain_initializer.h"
 #include "node.h"
 #include "common.h"
+#include "keychain.h"
 #include "block_pool.h"
 #include "block_chain.h"
 #include "configuration.h"

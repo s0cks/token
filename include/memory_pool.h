@@ -68,9 +68,9 @@ namespace Token{
             CacheNode* previous_;
             CacheNode* next_;
             uint256_t key_;
-            RawObject* value_;
+            Object* value_;
 
-            CacheNode(RawObject* value);
+            CacheNode(Object* value);
 
             void SetNext(CacheNode* node){
                 next_ = node;
@@ -81,7 +81,7 @@ namespace Token{
             }
 
             inline static void
-            WriteBarrier(RawObject** slot, RawObject* value){
+            WriteBarrier(Object** slot, Object* value){
                 (*slot) = value;
             }
 
@@ -113,7 +113,7 @@ namespace Token{
                 return key_;
             }
 
-            RawObject* GetValue() const{
+            Object* GetValue() const{
                 return value_;
             }
         };
@@ -153,7 +153,7 @@ namespace Token{
             return true;
         }
 
-        bool PutNode(const uint256_t& hash, RawObject* value){
+        bool PutNode(const uint256_t& hash, Object* value){
             unsigned long bucket = hash.GetHashCode() % size_;
             CacheNode* previous = nullptr;
             CacheNode* entry = nodes_[bucket];
@@ -191,7 +191,7 @@ namespace Token{
                 LOG(WARNING) << "cannot initialize memory pool cache of size: " << size;
                 return;
             }
-            memset(nodes_, 0, sizeof(RawObject*)*size);
+            memset(nodes_, 0, sizeof(Object*)*size);
         }
         ~MemoryPoolCache(){
             if(nodes_){
@@ -228,7 +228,7 @@ namespace Token{
             return RemoveNode(hash);
         }
 
-        RawObject* GetItem(const uint256_t& hash){
+        Object* GetItem(const uint256_t& hash){
             if(!ContainsItem(hash)) return nullptr;
             std::deque<uint256_t>::iterator it = items_.begin();
             while((*it) != hash) it++;
@@ -237,7 +237,7 @@ namespace Token{
             return GetNode(hash)->GetValue();
         }
 
-        bool PutItem(RawObject* value);
+        bool PutItem(Object* value);
         bool Accept(ObjectPointerVisitor* vis);
     };
 }

@@ -2,6 +2,7 @@
 #define TOKEN_SCAVENGER_H
 
 #include "heap.h"
+#include "allocator.h"
 
 namespace Token{
     class Scavenger{

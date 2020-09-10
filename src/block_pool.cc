@@ -145,13 +145,13 @@ namespace Token{
         BlockPoolPrinter(): BlockPoolVisitor(){}
         ~BlockPoolPrinter() = default;
 
-        bool Visit(RawObject* obj){
+        bool Visit(Object* obj){
             //TODO: implement BlockPoolPrinter::Visit(RawObject*)
             return true;
         }
 
         bool Visit(const Handle<Block>& blk){
-            return Visit((RawObject*)blk);
+            return Visit((Object*)blk);
         }
     };
 

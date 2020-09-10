@@ -14,7 +14,7 @@ namespace Token{
     private:
         RootPage* next_;
         std::bitset<kNumberOfRootsPerPage> test_;
-        RawObject* roots_[kNumberOfRootsPerPage];
+        Object* roots_[kNumberOfRootsPerPage];
     public:
         RootPage():
             next_(nullptr),
@@ -29,7 +29,7 @@ namespace Token{
             return next_;
         }
 
-        RawObject** Allocate(){
+        Object** Allocate(){
             for(size_t i = 0; i < kNumberOfRootsPerPage; i++){
                 if(!test_.test(i)){
                     test_.set(i);
@@ -40,17 +40,17 @@ namespace Token{
             return next_->Allocate();
         }
 
-        void Write(RawObject** ptr, RawObject* data){
-            if(data && !data->IsInStackSpace()){
+        void Write(Object** ptr, Object* data){
+            if(data){
                 data->IncrementReferenceCount();
             }
-            if((*ptr) && !(*ptr)->IsInStackSpace()){
+            if((*ptr)){
                 (*ptr)->DecrementReferenceCount();
             }
             (*ptr) = data;
         }
 
-        void Free(RawObject** ptr){
+        void Free(Object** ptr){
             ptrdiff_t offset = ptr - roots_;
             if(offset >= 0 && offset < static_cast<int>(kNumberOfRootsPerPage)){
                 Write(ptr, nullptr);
@@ -70,8 +70,8 @@ namespace Token{
 
         bool Accept(WeakObjectPointerVisitor* vis){
             for (size_t i = 0; i < kNumberOfRootsPerPage; i++){
-                RawObject* data = roots_[i];
-                if(data && data->IsInStackSpace()){
+                Object* data = roots_[i];
+                if(data){
                     vis->Visit(&roots_[i]);
                 }
             }
@@ -114,8 +114,8 @@ namespace Token{
         uword new_start = region_->GetStartAddress();
         uword old_start = region_->GetStartAddress() + heap_size;
 
-        new_space_ = new Heap(Space::kOldSpace, new_start, heap_size, semispace_size);
-        old_space_ = new Heap(Space::kNewSpace, old_start, heap_size, semispace_size);
+        new_space_ = new Heap(new_start, heap_size, semispace_size);
+        old_space_ = new Heap(old_start, heap_size, semispace_size);
 
         uword memory_pool_start = old_start + heap_size;
         uword memory_pool_size = (region_size / 2) / 3;
@@ -153,18 +153,18 @@ namespace Token{
         return new_space_;
     }
 
-    RawObject** Allocator::TrackRoot(RawObject* obj){
+    Object** Allocator::TrackRoot(Object* obj){
         if(!roots_) roots_ = new RootPage();
-        RawObject** ptr = roots_->Allocate();
+        Object** ptr = roots_->Allocate();
         roots_->Write(ptr, obj);
         return ptr;
     }
 
-    void Allocator::FreeRoot(RawObject** obj){
+    void Allocator::FreeRoot(Object** obj){
         if(roots_) roots_->Free(obj);
     }
 
-    void Allocator::UntrackRoot(RawObject* root){
+    void Allocator::UntrackRoot(Object* root){
         //TODO: implement
     }
 
@@ -194,14 +194,12 @@ namespace Token{
         return ptr;
     }
 
-    void Allocator::Initialize(RawObject* obj){
+    void Allocator::Initialize(Object* obj){
         if(allocating_ != obj){
             LOG(INFO) << "initializing stack object: " << std::hex << obj;
-            obj->SetSpace(Space::kStackSpace);
             return;
         }
-        obj->SetObjectSize(allocating_size_);
-        obj->SetSpace(Space::kNewSpace);
+        obj->SetSize(allocating_size_);
         allocating_size_ = 0;
         allocating_ = nullptr;
     }
@@ -235,9 +233,9 @@ namespace Token{
             return num_objects_;
         }
 
-        bool Visit(RawObject** root){
+        bool Visit(Object** root){
             LOG(INFO) << "visiting root: " << (*root);
-            size_ += (*root)->GetAllocatedSize();
+            size_ += (*root)->GetSize();
             num_objects_++;
             return true;
         }
@@ -255,37 +253,5 @@ namespace Token{
         StackSpaceSizeCalculator calc;
         if(!VisitRoots(&calc)) return 0;
         return calc.GetNumberOfObjects();
-    }
-
-    void RawObject::SetSpace(Space space){
-        stats_.space_ = space;
-    }
-
-    void RawObject::SetColor(Color color){
-        stats_.color_ = color;
-    }
-
-    Color RawObject::GetColor() const{
-        return stats_.color_;
-    }
-
-    void RawObject::SetObjectSize(size_t size){
-        stats_.object_size_ = size;
-    }
-
-    size_t RawObject::GetObjectSize() const{
-        return stats_.object_size_;
-    }
-
-    void RawObject::IncrementReferenceCount(){
-        stats_.num_references_++;
-    }
-
-    void RawObject::DecrementReferenceCount(){
-        stats_.num_references_--;
-    }
-
-    size_t RawObject::GetReferenceCount() const{
-        return stats_.num_references_;
     }
 }

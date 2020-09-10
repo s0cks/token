@@ -4,17 +4,17 @@
 #include <glog/logging.h>
 
 namespace Token{
-    class RawObject;
+    class Object;
     class HandleBase{ //TODO: remove
     private:
-        RawObject** ptr_;
+        Object** ptr_;
     protected:
         HandleBase();
-        HandleBase(RawObject* obj);
+        HandleBase(Object* obj);
         HandleBase(const HandleBase& h);
         ~HandleBase();
 
-        RawObject* GetPointer() const{
+        Object* GetPointer() const{
             return ptr_ ? (*ptr_) : nullptr;
         }
 
@@ -22,7 +22,7 @@ namespace Token{
             return ptr_ == nullptr;
         }
 
-        void operator=(RawObject* obj);
+        void operator=(Object* obj);
         void operator=(const HandleBase& h);
     };
 
@@ -30,7 +30,7 @@ namespace Token{
     class Handle : HandleBase{
     public:
         Handle(): HandleBase(){}
-        Handle(T* obj): HandleBase((RawObject*)obj){}
+        Handle(T* obj): HandleBase((Object*)obj){}
         Handle(const Handle& h): HandleBase(h){}
 
         void operator=(T* obj){

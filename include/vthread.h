@@ -26,12 +26,11 @@ namespace Token{
 
         static size_t GetMaxStackSize();
         static int Start(const char* name, ThreadHandlerFunction function, uword parameter);
-
-        static void WriteBarrier(RawObject** slot, RawObject* data);
+        static void WriteBarrier(Object** slot, Object* data);
 
         template<typename T>
         static void WriteBarrier(T** slot, const Handle<T>& handle){
-            WriteBarrier((RawObject**)slot, (RawObject*)handle);
+            WriteBarrier((Object**)slot, (Object*)handle);
         }
     public:
         virtual ~Thread() = delete;

@@ -79,7 +79,6 @@ namespace Token{
         friend class HeapDumpReader;
     private:
         std::recursive_mutex mutex_;
-        Space space_;
         Semispace from_space_;
         Semispace to_space_;
         size_t size_;
@@ -89,26 +88,13 @@ namespace Token{
             from_space_.current_ = (from_space_.start_ + size);
         }
     public:
-        Heap(Space space, uword start, size_t heap_size, size_t semispace_size):
+        Heap(uword start, size_t heap_size, size_t semispace_size):
             mutex_(),
-            space_(space),
             size_(heap_size),
             semi_size_(semispace_size),
             from_space_(start, semispace_size),
             to_space_(start + semispace_size, semispace_size){}
         ~Heap(){}
-
-        Space GetSpace() const{
-            return space_;
-        }
-
-        bool IsNewSpace() const{
-            return space_ == Space::kNewSpace;
-        }
-
-        bool IsOldSpace() const{
-            return space_ == Space::kOldSpace;
-        }
 
         Semispace* GetFromSpace(){
             return &from_space_;

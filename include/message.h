@@ -325,8 +325,8 @@ namespace Token{
             WriteBarrier(&data_, tx);
         }
     protected:
-        void Accept(WeakReferenceVisitor* vis){
-            vis->Visit(&data_);
+        bool Accept(WeakReferenceVisitor* vis){
+            return vis->Visit(&data_);
         }
     public:
         ~TransactionMessage(){}
@@ -355,8 +355,8 @@ namespace Token{
             WriteBarrier(&data_, blk);
         }
     protected:
-        void Accept(WeakReferenceVisitor* vis){
-            vis->Visit(&data_);
+        bool Accept(WeakReferenceVisitor* vis){
+            return vis->Visit(&data_);
         }
     public:
         ~BlockMessage(){}

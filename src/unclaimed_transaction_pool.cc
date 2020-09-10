@@ -1,5 +1,6 @@
 #include "unclaimed_transaction_pool.h"
 #include "journal.h"
+#include "allocator.h"
 
 namespace Token{
     static std::mutex mutex_;
@@ -205,7 +206,7 @@ namespace Token{
         UnclaimedTransactionPoolPrinter(): UnclaimedTransactionPoolVisitor(){}
         ~UnclaimedTransactionPoolPrinter() = default;
 
-        bool Visit(RawObject* obj){
+        bool Visit(Object* obj){
             Handle<UnclaimedTransaction> utxo = ((UnclaimedTransaction*)obj);
             return Visit(utxo);
         }

@@ -5,10 +5,10 @@
 namespace Token{
     class LiveObjectMarker : public ObjectPointerVisitor{
     public:
-        bool Visit(RawObject* obj){
+        bool Visit(Object* obj){
             if(obj->HasStackReferences()){
                 LOG(INFO) << "marking object: [" << std::hex << (uword)obj << "] := " << obj->ToString();
-                obj->SetColor(Color::kMarked);
+                obj->SetMarkedBit();
             }
             return true;
         }
@@ -16,10 +16,10 @@ namespace Token{
 
     class ObjectFinalizer : public ObjectPointerVisitor{
     public:
-        bool Visit(RawObject* obj){
-            if(obj->IsGarbage()){
+        bool Visit(Object* obj){
+            if(!obj->IsMarked()){
                 LOG(INFO) << "finalizing object @" << std::hex << (uword)obj;
-                obj->~RawObject();//TODO: call finalizer
+                obj->~Object();//TODO: call finalizer
                 obj->ptr_ = 0;
             }
             return true;
@@ -34,10 +34,10 @@ namespace Token{
             ObjectPointerVisitor(),
             dest_(dest){}
 
-        bool Visit(RawObject* obj){
+        bool Visit(Object* obj){
             if(obj->IsMarked()){
                 LOG(INFO) << "relocating object @" << std::hex << (uword)obj;
-                size_t size = obj->GetAllocatedSize();
+                size_t size = obj->GetSize();
                 void* nptr = dest_->Allocate(size);
                 obj->ptr_ = reinterpret_cast<uword>(nptr);
                 memcpy((void*)obj->ptr_, (void*)obj, size);
@@ -49,27 +49,27 @@ namespace Token{
     class LiveObjectReferenceUpdater : public ObjectPointerVisitor,
                                               WeakReferenceVisitor{
     public:
-        bool Visit(RawObject** field) const{
-            RawObject* obj = (*field);
-            if(obj) (*field) = (RawObject*)obj->ptr_;
+        bool Visit(Object** field) const{
+            Object* obj = (*field);
+            if(obj) (*field) = (Object*)obj->ptr_;
             return true;
         }
 
-        bool Visit(RawObject* obj){
-            if(!obj->IsGarbage()) obj->Accept(this);
+        bool Visit(Object* obj){
+            if(!obj->IsMarked()) obj->Accept(this);
             return true;
         }
     };
 
     class RootObjectReferenceUpdater : public WeakObjectPointerVisitor{
     public:
-        bool Visit(RawObject** root){
-            RawObject* obj = (*root);
+        bool Visit(Object** root){
+            Object* obj = (*root);
             if(!obj) {
                 return true;
             }
             LOG(INFO) << "visiting root: " << obj->ToString();
-            (*root) = (RawObject*)obj->ptr_;
+            (*root) = (Object*)obj->ptr_;
             return true;
         }
     };

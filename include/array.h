@@ -25,7 +25,7 @@ namespace Token{
             return length_;
         }
     public:
-        void Accept(WeakReferenceVisitor* vis);
+        bool Accept(WeakReferenceVisitor* vis);
 
         std::string ToString() const;
     };

@@ -148,11 +148,12 @@ namespace Token{
             }
         }
     protected:
-        virtual void Accept(WeakReferenceVisitor* vis){
+        bool Accept(WeakReferenceVisitor* vis){
             Node::Accept(vis);
             for(size_t idx = 0; idx < num_transactions_; idx++){
                 vis->Visit(&transactions_[idx]);
             }
+            return true;
         }
     public:
         ~Block() = default;

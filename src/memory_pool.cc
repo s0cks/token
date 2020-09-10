@@ -3,13 +3,13 @@
 #include "allocator.h"
 
 namespace Token{
-    MemoryPoolCache::CacheNode::CacheNode(RawObject* value):
+    MemoryPoolCache::CacheNode::CacheNode(Object* value):
         previous_(nullptr),
         next_(nullptr),
         key_(value->GetHash()),
         value_(value){}
 
-    bool MemoryPoolCache::PutItem(RawObject* value){
+    bool MemoryPoolCache::PutItem(Object* value){
         uint256_t hash = value->GetHash();
         if(!ContainsItem(hash)){
             if(GetSize() > GetMaxSize()){
@@ -28,9 +28,9 @@ namespace Token{
     bool MemoryPool::Accept(ObjectPointerVisitor* vis){
         uword current = GetStartAddress();
         while(current < current_){
-            RawObject* obj = (RawObject*)current;
+            Object* obj = (Object*)current;
             if(!vis->Visit(obj)) return false;
-            current += obj->GetAllocatedSize();
+            current += obj->GetSize();
         }
         return true;
     }

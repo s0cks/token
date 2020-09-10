@@ -4,6 +4,7 @@
 #include "common.h"
 #include "object.h"
 #include "uint256_t.h"
+#include "allocator.h"
 #include "unclaimed_transaction.h"
 
 namespace Token{
@@ -115,13 +116,14 @@ namespace Token{
             for(size_t idx = 0; idx < num_outputs; idx++) WriteBarrier(&outputs_[idx], outputs[idx]);
         }
     protected:
-        void Accept(WeakReferenceVisitor* vis){
+        bool Accept(WeakReferenceVisitor* vis){
             for(size_t idx = 0; idx < num_inputs_; idx++){
                 if(!vis->Visit(&inputs_[idx])) break;
             }
             for(size_t idx = 0; idx < num_outputs_; idx++){
                 if(!vis->Visit(&outputs_[idx])) break;
             }
+            return true;
         }
     public:
         ~Transaction() = default;

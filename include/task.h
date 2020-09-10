@@ -46,8 +46,8 @@ namespace Token{
             WriteBarrier(&message_, message);
         }
     protected:
-        virtual void Accept(WeakReferenceVisitor* vis){
-            vis->Visit(&message_);
+        bool Accept(WeakReferenceVisitor* vis){
+            return vis->Visit(&message_);
         }
     public:
         ~HandleMessageTask() = default;

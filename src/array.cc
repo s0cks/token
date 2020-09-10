@@ -1,4 +1,5 @@
 #include "array.h"
+#include "allocator.h"
 
 namespace Token{
     ArrayBase::ArrayBase(size_t length): length_(length){
@@ -7,10 +8,11 @@ namespace Token{
         }
     }
 
-    void ArrayBase::Accept(WeakReferenceVisitor* vis) {
-        for (size_t i = 0; i < Length(); i++) {
+    bool ArrayBase::Accept(WeakReferenceVisitor* vis) {
+        for (size_t i = 0; i < Length(); i++){
             vis->Visit(&slots_[i]);
         }
+        return true;
     }
 
     std::string ArrayBase::ToString() const{

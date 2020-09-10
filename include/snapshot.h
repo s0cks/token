@@ -74,10 +74,12 @@ namespace Token{
             }
         }
     protected:
-        void Accept(WeakReferenceVisitor* vis){
+        bool Accept(WeakReferenceVisitor* vis){
             for(uint64_t idx = 0; idx < blocks_len_; idx++){
-                if(!vis->Visit(&blocks_[idx])) return;
+                if(!vis->Visit(&blocks_[idx]))
+                    return false;
             }
+            return true;
         }
     public:
         ~Snapshot();

@@ -78,12 +78,12 @@ namespace Token{
         Allocator() = delete;
 
         //TODO: refactor roots again
-        static RawObject** TrackRoot(RawObject* value);
-        static void FreeRoot(RawObject** root);
-        static void UntrackRoot(RawObject* root);
+        static Object** TrackRoot(Object* value);
+        static void FreeRoot(Object** root);
+        static void UntrackRoot(Object* root);
 
         static bool VisitRoots(WeakObjectPointerVisitor* vis);
-        static void Initialize(RawObject* obj);
+        static void Initialize(Object* obj);
     public:
         ~Allocator(){}
 
@@ -107,7 +107,7 @@ namespace Token{
         WeakObjectPointerVisitor() = default;
     public:
         virtual ~WeakObjectPointerVisitor() = default;
-        virtual bool Visit(RawObject** root) = 0;
+        virtual bool Visit(Object** root) = 0;
     };
 
     //TODO: remove GCStats
@@ -178,125 +178,11 @@ namespace Token{
         WeakReferenceVisitor() = default;
     public:
         virtual ~WeakReferenceVisitor() = default;
-        virtual bool Visit(RawObject** field) const = 0;
+        virtual bool Visit(Object** field) const = 0;
 
         template<typename T>
         bool Visit(T** field) const{
-            return Visit((RawObject**)field);
-        }
-    };
-
-    typedef uint64_t ObjectHeader;
-
-    //TODO: remove RawObject
-    class RawObject{
-        friend class Heap;
-        friend class Thread;
-        friend class RootPage;
-        friend class Allocator;
-        friend class Scavenger;
-        friend class Semispace;
-        friend class HeapDumpWriter;
-        friend class ObjectFinalizer;
-        friend class ObjectRelocator;
-        friend class LiveObjectMarker;
-        friend class LiveObjectCopier;
-        friend class StackSpaceSizeCalculator;
-        friend class LiveObjectReferenceUpdater;
-        friend class RootObjectReferenceUpdater;
-    private:
-        ObjectHeader header_;
-        GCStats stats_;
-        uword ptr_;
-
-        ObjectHeader GetAllocationHeader() const{
-            return header_;
-        }
-
-        void SetAllocationHeader(ObjectHeader header){
-            header_ = header;
-        }
-
-        void SetSpace(Space space);
-        void SetColor(Color color);
-        void SetObjectSize(size_t size);
-        void IncrementReferenceCount();
-        void DecrementReferenceCount();
-        Color GetColor() const;
-        size_t GetObjectSize() const;
-        size_t GetReferenceCount() const;
-
-        bool HasStackReferences() const{
-            return GetReferenceCount() > 0;
-        }
-
-        bool IsGarbage() const{
-            return GetColor() == Color::kFree;
-        }
-
-        bool IsMarked() const{
-            return GetColor() == Color::kMarked;
-        }
-
-        bool IsReadyForPromotion() const{
-            return stats_.GetNumberOfCollectionsSurvived() >= GCStats::kNumberOfCollectionsRequiredForPromotion;
-        }
-
-        Space GetSpace() const{
-            return stats_.GetSpace();
-        }
-
-        bool IsInStackSpace() const{
-            return stats_.GetSpace() == Space::kStackSpace;
-        }
-
-        bool IsInEdenSpace() const{
-            return stats_.GetSpace() == Space::kNewSpace;
-        }
-
-        bool IsInSurvivorSpace() const{
-            return stats_.GetSpace() == Space::kOldSpace;
-        }
-    protected:
-        RawObject():
-            header_(0),
-            stats_(),
-            ptr_(0){
-            Allocator::Initialize(this);
-        }
-
-        virtual void NotifyWeakReferences(RawObject** field){}
-        virtual void Accept(WeakReferenceVisitor* vis){}
-
-        void WriteBarrier(RawObject** slot, RawObject* data){
-            if(data) data->IncrementReferenceCount();
-            if((*slot))(*slot)->DecrementReferenceCount();
-            (*slot) = data;
-        }
-
-        template<typename T, typename U>
-        void WriteBarrier(T** slot, U* data){
-            WriteBarrier((RawObject**)slot, (RawObject*)data);
-        }
-
-        template<typename T>
-        void WriteBarrier(T** slot, const Handle<T>& handle){
-            WriteBarrier((RawObject**)slot, (RawObject*)handle);
-        }
-    public:
-        virtual ~RawObject(){
-            if(IsInStackSpace()) Allocator::UntrackRoot(this);
-        }
-
-        size_t GetAllocatedSize() const{
-            return GetObjectSize();// refactor
-        }
-
-        virtual uint256_t GetHash() const = 0;
-        virtual std::string ToString() const = 0;
-
-        static void* operator new(size_t size){
-            return Allocator::Allocate(size);
+            return Visit((Object**)field);
         }
     };
 }

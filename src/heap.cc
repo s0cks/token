@@ -14,9 +14,9 @@ namespace Token{
     void Semispace::Accept(ObjectPointerVisitor* vis){
         uword current = GetStartAddress();
         while(current < GetCurrentAddress()){
-            RawObject* obj = (RawObject*)current;
+            Object* obj = (Object*)current;
             if(!vis->Visit(obj)) return;
-            current += obj->GetAllocatedSize();
+            current += obj->GetSize();
         }
     }
 
@@ -24,10 +24,10 @@ namespace Token{
         std::lock_guard<std::recursive_mutex> guard(mutex_);
         uword current = GetStartAddress();
         while(current < GetEndAddress()){
-            RawObject* obj = (RawObject*)current;
-            if(!obj || obj->GetAllocatedSize() == 0) break;
+            Object* obj = (Object*)current;
+            if(!obj || obj->GetSize() == 0) break;
             if(!vis->Visit(obj)) return false;
-            current += obj->GetAllocatedSize();
+            current += obj->GetSize();
         }
         return true;
     }

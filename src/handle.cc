@@ -1,12 +1,13 @@
 #include "handle.h"
 #include "object.h"
+#include "allocator.h"
 
 namespace Token{
     HandleBase::HandleBase(){
         ptr_ = nullptr;
     }
 
-    HandleBase::HandleBase(RawObject* obj){
+    HandleBase::HandleBase(Object* obj){
         ptr_ = Allocator::TrackRoot(obj);
     }
 
@@ -22,7 +23,7 @@ namespace Token{
         if(ptr_) Allocator::FreeRoot(ptr_);
     }
 
-    void HandleBase::operator=(RawObject* obj){
+    void HandleBase::operator=(Object* obj){
         ptr_ = Allocator::TrackRoot(obj);
     }
 
