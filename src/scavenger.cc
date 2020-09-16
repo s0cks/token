@@ -3,6 +3,19 @@
 #include "transaction.h"
 
 namespace Token{
+    ScavengerStats::ScavengerStats(Scavenger* parent, Heap* heap):
+        parent_(parent),
+        heap_(heap),
+        start_time_(GetCurrentTimestamp()),
+        stop_time_(0),
+        start_size_(heap->GetAllocatedSize()),
+        stop_size_(0){}
+
+    void ScavengerStats::CollectionFinished(){
+        stop_time_ = GetCurrentTimestamp();
+        stop_size_ = GetHeap()->GetAllocatedSize();
+    }
+
     class LiveObjectMarker : public ObjectPointerVisitor{
     public:
         bool Visit(RawObject* obj){
@@ -86,6 +99,10 @@ namespace Token{
     };
 
     bool Scavenger::ScavengeMemory(){
+#if defined(TOKEN_DEBUG)
+        ScavengerStats new_heap_stats(this, Allocator::GetNewHeap());
+#endif//TOKEN_DEBUG
+
         //TODO: apply major collection steps to Scavenger::ScavengeMemory()
         LOG(INFO) << "marking live objects....";
         LiveObjectMarker marker;
@@ -131,5 +148,13 @@ namespace Token{
         //TODO fix scavenger cleanup routine
         Allocator::GetNewHeap()->GetFromSpace().Reset();
         Allocator::GetNewHeap()->SwapSpaces();
+
+#if defined(TOKEN_DEBUG)
+        new_heap_stats.CollectionFinished();
+        LOG(INFO) << "Scavenger Stats (New Heap):";
+        LOG(INFO) << "  - Collection Time (Milliseconds): " << new_heap_stats.GetTotalCollectionTimeMilliseconds();
+        LOG(INFO) << "  - Total Bytes Collected: " << new_heap_stats.GetTotalBytesCollected();
+#endif//TOKEN_DEBUG
+        return true;
     }
 }
