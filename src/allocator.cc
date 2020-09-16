@@ -180,8 +180,7 @@ namespace Token{
     void Allocator::MinorCollect(){
         LOG(INFO) << "performing minor garbage collection....";
         LOCK_GUARD;
-        Scavenger::Scavenge(GetNewHeap());
-        Scavenger::Scavenge(GetOldHeap());
+        Scavenger::Scavenge(false);
     }
 
     void Allocator::MajorCollect(){

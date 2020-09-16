@@ -141,30 +141,17 @@ namespace Token{
         return false;
     }
 
-    class ObjectPrinter : public ObjectPointerVisitor{
+    class TransactionPrinter : public TransactionPoolVisitor{
     public:
-        ObjectPrinter():
-            ObjectPointerVisitor(){}
-        ~ObjectPrinter() = default;
-
-        bool Visit(RawObject* obj){
-            LOG(INFO) << obj->ToString();
+        bool Visit(const Handle<Transaction>& tx){
+            LOG(INFO) << " - " << tx->GetHash();
             return true;
         }
     };
 
-    void TransactionPool::PrintPool(bool cache_only){
-        ObjectPrinter printer;
-        if(cache_only){
-            LOG(INFO) << "Transaction Pool (Cache):";
-            if(!GetCache()->Accept(&printer)){
-                LOG(WARNING) << "couldn't print transaction pool cache";
-                return;
-            }
-        } else{
-            //TODO: implement TransactionPool::PrintPool(cache_only=false)
-            return;
-        }
+    bool TransactionPool::PrintPool(){
+        TransactionPrinter printer;
+        return Accept(&printer);
     }
 
     size_t TransactionPool::GetNumberOfTransactions(){

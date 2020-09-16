@@ -1,5 +1,5 @@
+#include "heap.h"
 #include "scavenger.h"
-
 #include "transaction.h"
 
 namespace Token{
@@ -26,24 +26,18 @@ namespace Token{
     };
 
     class ObjectRelocator : public ObjectPointerVisitor{
-    private:
-        Semispace dest_;
-        Heap* promotion_;
     public:
-        ObjectRelocator(const Semispace& dest, Heap* promotion):
-            ObjectPointerVisitor(),
-            dest_(dest),
-            promotion_(promotion){}
-
         bool Visit(RawObject* obj){
             if(obj->IsMarked()){
                 LOG(INFO) << "relocating object: " << obj->ToString();
                 size_t size = obj->GetAllocatedSize();
                 void* nptr = nullptr;
                 if(obj->IsReadyForPromotion()){
-                    nptr = promotion_->Allocate(size);
+                    //TODO: properly re-allocate object in old heap
+                    nptr = Allocator::GetOldHeap()->Allocate(size);
                 } else{
-                    nptr = dest_.Allocate(size);
+                    //TODO: properly re-allocate object in to space
+                    nptr = Allocator::GetNewHeap()->GetToSpace().Allocate(size);
                 }
 
                 obj->ptr_ = reinterpret_cast<uword>(nptr);
@@ -91,44 +85,51 @@ namespace Token{
         }
     };
 
-    void Scavenger::ScavengeMemory(){
+    bool Scavenger::ScavengeMemory(){
+        //TODO: apply major collection steps to Scavenger::ScavengeMemory()
         LOG(INFO) << "marking live objects....";
         LiveObjectMarker marker;
-        GetFromSpace().Accept(&marker);
+        if(!Allocator::GetNewHeap()->Accept(&marker)){
+            LOG(ERROR) << "couldn't visit new heap.";
+            return false;
+        }
 
         LOG(INFO) << "finalizing objects....";
         ObjectFinalizer finalizer;
-        GetFromSpace().Accept(&finalizer);
+        if(!Allocator::GetNewHeap()->Accept(&finalizer)){
+            LOG(ERROR) << "couldn't visit new heap.";
+            return false;
+        }
 
         LOG(INFO) << "relocating live objects....";
-        switch(GetHeap()->GetSpace()){
-            case Space::kNewHeap:{
-                ObjectRelocator relocator(GetToSpace(), Allocator::GetOldHeap());
-                GetFromSpace().Accept(&relocator);
-                break;
-            }
-            case Space::kStackSpace:
-            default:
-                LOG(WARNING) << "unknown heap space " << GetHeap()->GetSpace() << " during scavenging";
-                return;
+        ObjectRelocator relocator;
+        if(!Allocator::GetNewHeap()->Accept(&relocator)){
+            LOG(ERROR) << "couldn't visit new heap.";
+            return false;
         }
 
         //TODO: notify references?
-
         LOG(INFO) << "updating root references....";
         RootObjectReferenceUpdater root_updater;
         Allocator::VisitRoots(&root_updater);
 
         LOG(INFO) << "updating references....";
         LiveObjectReferenceUpdater ref_updater;
-        GetFromSpace().Accept(&ref_updater);
+        if(!Allocator::GetNewHeap()->Accept(&ref_updater)){
+            LOG(ERROR) << "couldn't visit new heap.";
+            return false;
+        }
 
         LOG(INFO) << "copying live objects...";
         LiveObjectCopier copier;
-        GetFromSpace().Accept(&copier);
+        if(!Allocator::GetNewHeap()->Accept(&copier)){
+            LOG(ERROR) << "couldn't visit new heap.";
+            return false;
+        }
 
         LOG(INFO) << "cleaning....";
-        GetFromSpace().Reset();
-        GetHeap()->SwapSpaces();
+        //TODO fix scavenger cleanup routine
+        Allocator::GetNewHeap()->GetFromSpace().Reset();
+        Allocator::GetNewHeap()->SwapSpaces();
     }
 }

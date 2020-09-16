@@ -23,8 +23,8 @@ namespace Token{
 
         static size_t GetNumberOfUnclaimedTransactions();
         static State GetState();
+        static bool Print();
         static bool Initialize();
-        static bool PrintUnclaimedTransactions();
         static bool RemoveUnclaimedTransaction(const uint256_t& hash);
         static bool PutUnclaimedTransaction(const Handle<UnclaimedTransaction>& utxo);
         static bool HasUnclaimedTransaction(const uint256_t& hash);

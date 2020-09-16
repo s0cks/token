@@ -157,7 +157,7 @@ namespace Token{
         }
     };
 
-    bool UnclaimedTransactionPool::PrintUnclaimedTransactions(){
+    bool UnclaimedTransactionPool::Print(){
         UnclaimedTransactionPoolPrinter printer;
         return Accept(&printer);
     }

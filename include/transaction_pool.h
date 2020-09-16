@@ -31,7 +31,7 @@ namespace Token{
         static Handle<Transaction> GetTransaction(const uint256_t& hash);
         static size_t GetNumberOfTransactions();
 
-        static void PrintPool(bool cache_only=false);
+        static bool PrintPool();
 
         static inline std::string
         GetPath(){
