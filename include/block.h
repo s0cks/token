@@ -100,7 +100,7 @@ namespace Token{
     };
 
     class BlockVisitor;
-    class Block : public Node{
+    class Block : public Object{
         //TODO:
         // - validation logic
         friend class BlockHeader;
@@ -132,7 +132,7 @@ namespace Token{
         BloomFilter tx_bloom_; // transient
 
         Block(uint32_t timestamp, uint32_t height, const uint256_t& phash, Transaction** txs, size_t num_txs):
-            Node(),
+            Object(),
             timestamp_(timestamp),
             height_(height),
             previous_hash_(phash),
@@ -149,7 +149,6 @@ namespace Token{
         }
     protected:
         virtual void Accept(WeakReferenceVisitor* vis){
-            Node::Accept(vis);
             for(size_t idx = 0; idx < num_transactions_; idx++){
                 vis->Visit(&transactions_[idx]);
             }

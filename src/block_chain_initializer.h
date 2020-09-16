@@ -11,8 +11,8 @@ namespace Token{
 
         virtual bool DoInitialization() = 0;
 
-        static void SetGenesisNode(const Handle<Block>& blk);
-        static void SetHeadNode(const Handle<Block>& blk);
+        static void SetGenesisNode(BlockNode* node);
+        static void SetHeadNode(BlockNode* node);
     public:
         virtual ~BlockChainInitializer() = default;
 
@@ -32,7 +32,10 @@ namespace Token{
     private:
         Snapshot* snapshot_;
     protected:
-        bool DoInitialization();
+        bool DoInitialization(){
+            LOG(WARNING) << "SnapshotBlockChainInitializer::DoInitialization() not implemented yet";
+            return false;
+        }
     public:
         SnapshotBlockChainInitializer(Snapshot* snapshot):
             BlockChainInitializer(),

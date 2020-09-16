@@ -4,8 +4,8 @@
 #include "common.h"
 #include "crash_report.h"
 #include "configuration.h"
+#include "block_node.h"
 #include "block_chain.h"
-#include "node.h"
 #include "block_chain_index.h"
 #include "block_chain_initializer.h"
 #include "unclaimed_transaction_pool.h"
@@ -13,20 +13,31 @@
 namespace Token{
     static std::recursive_mutex mutex_;
     static BlockChain::State state_;
-    static Block* head_ = nullptr;
-    static Block* genesis_ = nullptr;
+    static BlockNode* head_ = nullptr;
+    static BlockNode* genesis_ = nullptr;
 
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_);
 
-    void BlockChain::SetHead(const Handle<Block>& blk){
+    BlockNode* BlockChain::GetHeadNode(){
         LOCK_GUARD;
-        head_ = blk;
-        BlockChainIndex::PutReference("<HEAD>", blk->GetHash());
+        return head_;
     }
 
-    void BlockChain::SetGenesis(const Handle<Block>& blk){
+    void BlockChain::SetHeadNode(BlockNode* node){
         LOCK_GUARD;
-        genesis_ = blk;
+        head_ = node;
+        BlockChainIndex::PutReference("<HEAD>", node->GetValue().GetHash());
+    }
+
+    BlockNode* BlockChain::GetGenesisNode(){
+        LOCK_GUARD;
+        return genesis_;
+    }
+
+    void BlockChain::SetGenesisNode(BlockNode* node){
+        LOCK_GUARD;
+        genesis_ = node;
+        BlockChainIndex::PutReference("<GENESIS>", node->GetValue().GetHash());
     }
 
     void BlockChain::SetState(BlockChain::State state){
@@ -75,30 +86,41 @@ namespace Token{
 
     Handle<Block> BlockChain::GetHead(){
         LOCK_GUARD;
-        return head_;
+        return GetHeadNode()->GetValue().GetData();
     }
 
     Handle<Block> BlockChain::GetGenesis(){
         LOCK_GUARD;
-        return genesis_;
+        return GetGenesisNode()->GetValue().GetData();
     }
 
     Handle<Block> BlockChain::GetBlock(uint32_t height){
         LOCK_GUARD;
-        Handle<Block> node = GetGenesis();
+        BlockNode* node = GetGenesisNode();
         while(node != nullptr){
-            if(node->GetHeight() == height) return node;
-            node = node->GetNext().CastTo<Block>();
+            BlockHeader blk = node->GetValue();
+            if(blk.GetHeight() == height)
+                return node->GetValue().GetData();
+            node = node->GetNext();
         }
         return nullptr;
     }
 
     Handle<Block> BlockChain::GetBlock(const uint256_t& hash){
+        BlockNode* node = GetNode(hash);
+        return node ?
+                node->GetValue().GetData() :
+                nullptr;
+    }
+
+    BlockNode* BlockChain::GetNode(const uint256_t& hash){
         LOCK_GUARD;
-        Handle<Block> node = GetGenesis();
+        BlockNode* node = GetGenesisNode();
         while(node != nullptr){
-            if(node->GetHash() == hash) return node;
-            node = node->GetNext().CastTo<Block>();
+            BlockHeader blk = node->GetValue();
+            if(blk.GetHash() == hash)
+                return node;
+            node = node->GetNext();
         }
         return nullptr;
     }
@@ -110,11 +132,7 @@ namespace Token{
 
     bool BlockChain::HasTransaction(const uint256_t& hash){
         LOCK_GUARD;
-        Handle<Block> node = GetGenesis();
-        while(node != nullptr){
-            if(node->Contains(hash)) return true;
-            node = node->GetNext().CastTo<Block>();
-        }
+        LOG(WARNING) << "BlockChain::HasTransaction(const uint256_t&) not implemented";
         return false;
     }
 
@@ -148,30 +166,34 @@ namespace Token{
 
         BlockChainIndex::PutBlockData(block);
 
-        Handle<Block> parent = GetBlock(phash);
-        parent->SetNext(block.CastTo<Node>());
-        block->SetNext(parent->GetNext());
-        block->SetPrevious(parent.CastTo<Node>());
-
+        BlockNode* node = new BlockNode(block);
+        BlockNode* pnode = GetNode(phash);
+        pnode->SetNext(node);
+        node->SetNext(pnode->GetNext());
+        node->SetPrevious(pnode);
         if(head->GetHeight() < block->GetHeight())
-            SetHead(block);
+            SetHeadNode(node);
     }
 
     void BlockChain::Accept(BlockChainVisitor* vis){
         if(!vis->VisitStart()) return;
-        Handle<Block> node = GetHead();
+        BlockNode* node = GetHeadNode();
         do{
-            if(!vis->Visit(node->GetHeader())) return;
-            node = node->GetPrevious().CastTo<Block>();
-        }while(node != nullptr);
+            BlockHeader blk = node->GetValue();
+            if(!vis->Visit(blk))
+                return;
+            node = node->GetPrevious();
+        } while(node != nullptr);
         if(!vis->VisitStart()) return;
     }
 
     void BlockChain::Accept(BlockChainDataVisitor* vis){
-        Handle<Block> current = GetHead();
-        while(current != nullptr){
-            if(!vis->Visit(current)) return;
-            current = current->GetPrevious().CastTo<Block>();
+        BlockNode* node = GetHeadNode();
+        while(node != nullptr){
+            BlockHeader blk = node->GetValue();
+            if(!vis->Visit(blk.GetData()))
+                return;
+            node = node->GetPrevious();
         }
     }
 
