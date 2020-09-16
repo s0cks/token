@@ -59,13 +59,15 @@ namespace Token{
         return x + 1;
     }
 
-    static uint64_t
+    typedef intptr_t Timestamp;
+
+    static Timestamp
     GetCurrentTimestamp(){
         return time(NULL);
     }
 
     static inline std::string
-    GetTimestampFormattedReadable(uint64_t timestamp){
+    GetTimestampFormattedReadable(Timestamp timestamp){
         //TODO: fix usage of gmtime
         struct tm* timeinfo = gmtime((time_t*)&timestamp);
         char buff[256];
@@ -74,17 +76,12 @@ namespace Token{
     }
 
     static inline std::string
-    GetTimestampFormattedFileSafe(uint64_t timestamp){
+    GetTimestampFormattedFileSafe(Timestamp timestamp){
         //TODO: fix usage of gmtime
         struct tm* timeinfo = gmtime((time_t*)&timestamp);
         char buff[256];
         strftime(buff, sizeof(buff), "%Y%m%d-%H%M%S", timeinfo);
         return std::string(buff);
-    }
-
-    static uint32_t
-    GetCurrentTime(){ //TODO: remove
-        return time(NULL);
     }
 
     static inline std::string

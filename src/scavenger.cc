@@ -16,24 +16,21 @@ namespace Token{
         stop_size_ = GetHeap()->GetAllocatedSize();
     }
 
-    class LiveObjectMarker : public ObjectPointerVisitor{
+    class LiveObjectMarker : public ObjectPointerVisitor,
+                             public WeakObjectPointerVisitor{
+    private:
+        std::vector<uword>& stack_;
     public:
-        bool Visit(RawObject* obj){
-            if(obj->HasStackReferences()){
-                LOG(INFO) << "marking object: " << obj->ToString();
-                obj->SetMarked();
-            }
-            return true;
-        }
-    };
+        LiveObjectMarker(std::vector<uword>& stack):
+            ObjectPointerVisitor(),
+            stack_(stack){}
 
-    class ObjectFinalizer : public ObjectPointerVisitor{
-    public:
+        bool Visit(RawObject** ptr){
+            return Visit(*ptr);
+        }
+
         bool Visit(RawObject* obj){
-            if(!obj->IsMarked()){
-                obj->~RawObject();//TODO: call finalizer
-                obj->ptr_ = 0;
-            }
+            stack_.push_back((uword)obj);
             return true;
         }
     };
@@ -41,18 +38,22 @@ namespace Token{
     class ObjectRelocator : public ObjectPointerVisitor{
     public:
         bool Visit(RawObject* obj){
-            if(obj->IsMarked()){
-                LOG(INFO) << "relocating object: " << obj->ToString();
-                size_t size = obj->GetAllocatedSize();
+            if(!obj->IsMarked()){
+                LOG(INFO) << "finalizing object [" << std::hex << obj << ":" << std::dec << obj->GetObjectSize() << "]";
+                obj->~RawObject(); //TODO: Call finalizer for obj
+                obj->ptr_ = 0;
+            } else{
+                intptr_t size = obj->GetAllocatedSize();
                 void* nptr = nullptr;
                 if(obj->IsReadyForPromotion()){
+                    LOG(INFO) << "promoting object [" << std::hex << obj << ":" << std::dec << obj->GetObjectSize() << "]";
                     //TODO: properly re-allocate object in old heap
                     nptr = Allocator::GetOldHeap()->Allocate(size);
                 } else{
+                    LOG(INFO) << "scavenging object [" << std::hex << obj << ":" << std::dec << obj->GetObjectSize() << "]";
                     //TODO: properly re-allocate object in to space
                     nptr = Allocator::GetNewHeap()->GetToSpace().Allocate(size);
                 }
-
                 obj->ptr_ = reinterpret_cast<uword>(nptr);
             }
             return true;
@@ -63,6 +64,7 @@ namespace Token{
     public:
         bool Visit(RawObject* obj){
             if(obj->IsMarked()){
+                obj->IncrementCollectionsCounter();
                 obj->ClearMarked();
                 memcpy((void*)obj->ptr_, (void*)obj, obj->GetAllocatedSize());
             }
@@ -71,11 +73,11 @@ namespace Token{
     };
 
     class LiveObjectReferenceUpdater : public ObjectPointerVisitor,
-                                              WeakReferenceVisitor{
+                                       public WeakObjectPointerVisitor{
     public:
-        bool Visit(RawObject** field) const{
+        bool Visit(RawObject** field){
             RawObject* obj = (*field);
-            if(obj) (*field) = (RawObject*)obj->ptr_;
+            (*field) = (RawObject*)obj->ptr_;
             return true;
         }
 
@@ -85,40 +87,36 @@ namespace Token{
         }
     };
 
-    class RootObjectReferenceUpdater : public WeakObjectPointerVisitor{
-    public:
-        bool Visit(RawObject** root){
-            RawObject* obj = (*root);
-            if(!obj) {
-                return true;
-            }
-            LOG(INFO) << "visiting root: " << obj->ToString();
-            (*root) = (RawObject*)obj->ptr_;
-            return true;
-        }
-    };
-
     bool Scavenger::ScavengeMemory(){
+        //TODO: apply major collection steps to Scavenger::ScavengeMemory()
 #if defined(TOKEN_DEBUG)
         ScavengerStats new_heap_stats(this, Allocator::GetNewHeap());
+        LOG(INFO) << "starting garbage collection @" << GetTimestampFormattedReadable(new_heap_stats.GetStartTime());
 #endif//TOKEN_DEBUG
 
-        //TODO: apply major collection steps to Scavenger::ScavengeMemory()
+        std::vector<uword> stack;
+        LiveObjectMarker marker(stack);
+        if(!Allocator::VisitRoots(&marker)){
+            LOG(ERROR) << "couldn't visit roots.";
+            return false;
+        }
+
         LOG(INFO) << "marking live objects....";
-        LiveObjectMarker marker;
-        if(!Allocator::GetNewHeap()->Accept(&marker)){
-            LOG(ERROR) << "couldn't visit new heap.";
-            return false;
+        while(!stack.empty()){
+            Object* obj = (Object*) stack.back();
+            stack.pop_back();
+
+            if (!obj->IsMarked()) {
+                LOG(INFO) << "marking object [" << std::hex << obj << ":" << std::dec << obj->GetObjectSize() << "]";
+                obj->SetMarked();
+                if (!obj->Accept(&marker)) {
+                    LOG(WARNING) << "couldn't visit object references.";
+                    continue;
+                }
+            }
         }
 
-        LOG(INFO) << "finalizing objects....";
-        ObjectFinalizer finalizer;
-        if(!Allocator::GetNewHeap()->Accept(&finalizer)){
-            LOG(ERROR) << "couldn't visit new heap.";
-            return false;
-        }
-
-        LOG(INFO) << "relocating live objects....";
+        LOG(INFO) << "scavenging memory....";
         ObjectRelocator relocator;
         if(!Allocator::GetNewHeap()->Accept(&relocator)){
             LOG(ERROR) << "couldn't visit new heap.";
@@ -126,10 +124,6 @@ namespace Token{
         }
 
         //TODO: notify references?
-        LOG(INFO) << "updating root references....";
-        RootObjectReferenceUpdater root_updater;
-        Allocator::VisitRoots(&root_updater);
-
         LOG(INFO) << "updating references....";
         LiveObjectReferenceUpdater ref_updater;
         if(!Allocator::GetNewHeap()->Accept(&ref_updater)){

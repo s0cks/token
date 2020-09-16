@@ -89,7 +89,7 @@ namespace Token{
         friend class Block;
         friend class TransactionMessage;
     private:
-        uint32_t timestamp_;
+        Timestamp timestamp_;
         uint32_t index_;
         Input** inputs_;
         size_t num_inputs_;
@@ -97,7 +97,7 @@ namespace Token{
         size_t num_outputs_;
         std::string signature_;
 
-        Transaction(uint32_t timestamp, uint32_t index, Input** inputs, size_t num_inputs, Output** outputs, size_t num_outputs):
+        Transaction(Timestamp timestamp, uint32_t index, Input** inputs, size_t num_inputs, Output** outputs, size_t num_outputs):
             Object(),
             timestamp_(timestamp),
             index_(index),
@@ -115,18 +115,22 @@ namespace Token{
             for(size_t idx = 0; idx < num_outputs; idx++) WriteBarrier(&outputs_[idx], outputs[idx]);
         }
     protected:
-        void Accept(WeakReferenceVisitor* vis){
+        bool Accept(WeakObjectPointerVisitor* vis){
             for(size_t idx = 0; idx < num_inputs_; idx++){
-                if(!vis->Visit(&inputs_[idx])) break;
+                if(!vis->Visit(&inputs_[idx]))
+                    return false;
             }
             for(size_t idx = 0; idx < num_outputs_; idx++){
-                if(!vis->Visit(&outputs_[idx])) break;
+                if(!vis->Visit(&outputs_[idx]))
+                    return false;
             }
+
+            return true;
         }
     public:
         ~Transaction() = default;
 
-        uint32_t GetTimestamp() const{
+        Timestamp GetTimestamp() const{
             return timestamp_;
         }
 
@@ -173,7 +177,7 @@ namespace Token{
         static Handle<Transaction> NewInstance(ByteBuffer* bytes);
         static Handle<Transaction> NewInstance(std::fstream& fd, size_t size);
 
-        static Handle<Transaction> NewInstance(uint32_t index, Input** inputs, size_t num_inputs, Output** outputs, size_t num_outputs, uint32_t timestamp=GetCurrentTime()){
+        static Handle<Transaction> NewInstance(uint32_t index, Input** inputs, size_t num_inputs, Output** outputs, size_t num_outputs, Timestamp timestamp=GetCurrentTimestamp()){
             return new Transaction(timestamp, index, inputs, num_inputs, outputs, num_outputs);
         }
 

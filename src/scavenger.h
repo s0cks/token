@@ -9,8 +9,8 @@ namespace Token{
         Scavenger* parent_;
         Heap* heap_;
 
-        intptr_t start_time_;
-        intptr_t stop_time_;
+        Timestamp start_time_;
+        Timestamp stop_time_;
 
         intptr_t start_size_;
         intptr_t stop_size_;
@@ -27,11 +27,11 @@ namespace Token{
             return heap_;
         }
 
-        intptr_t GetStartTime() const{
+        Timestamp GetStartTime() const{
             return start_time_;
         }
 
-        intptr_t GetStopTime() const{
+        Timestamp GetStopTime() const{
             return stop_time_;
         }
 

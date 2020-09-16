@@ -72,12 +72,9 @@ namespace Token{
     private:
         Allocator() = delete;
 
-        //TODO: refactor roots again
-        static RawObject** TrackRoot(RawObject* value);
-        static void FreeRoot(RawObject** root);
-        static void UntrackRoot(RawObject* root);
-
-        static bool VisitRoots(WeakObjectPointerVisitor* vis);
+        static bool VisitRoots(ObjectPointerVisitor* vis);
+        static void RegisterRoot(uword address);
+        static void UnregisterRoot(uword address);
         static void Initialize(RawObject* obj);
     public:
         ~Allocator(){}
@@ -91,8 +88,6 @@ namespace Token{
         static MemoryRegion* GetRegion();
         static Heap* GetNewHeap();
         static Heap* GetOldHeap();
-        static size_t GetNumberOfStackSpaceObjects();
-        static size_t GetStackSpaceSize();
     };
 
     class WeakObjectPointerVisitor{
@@ -101,27 +96,19 @@ namespace Token{
     public:
         virtual ~WeakObjectPointerVisitor() = default;
         virtual bool Visit(RawObject** root) = 0;
-    };
-
-    class WeakReferenceVisitor{
-    protected:
-        WeakReferenceVisitor() = default;
-    public:
-        virtual ~WeakReferenceVisitor() = default;
-        virtual bool Visit(RawObject** field) const = 0;
 
         template<typename T>
-        bool Visit(T** field) const{
-            return Visit((RawObject**)field);
+        bool Visit(T** ptr){
+            return Visit((RawObject**)ptr);
         }
     };
 
-    typedef uint64_t ObjectHeader;
+    typedef uint64_t ObjectHeader; //TODO: Remove ObjectHeader
 
-    class RawObject{
+    class RawObject{ //TODO: Remove RawObject
         friend class Heap;
         friend class Thread;
-        friend class RootPage;
+        friend class HandleGroup;
         friend class Allocator;
         friend class Scavenger;
         friend class Semispace;
@@ -180,6 +167,10 @@ namespace Token{
             return collections_survived_;
         }
 
+        void IncrementCollectionsCounter(){
+            collections_survived_++;
+        }
+
         void SetMarked(){
             marked_ = true;
         }
@@ -224,7 +215,7 @@ namespace Token{
         }
 
         virtual void NotifyWeakReferences(RawObject** field){}
-        virtual void Accept(WeakReferenceVisitor* vis){}
+        virtual bool Accept(WeakObjectPointerVisitor* vis){ return true; }
 
         void WriteBarrier(RawObject** slot, RawObject* data){
             if(data) data->IncrementReferenceCount();
@@ -243,7 +234,7 @@ namespace Token{
         }
     public:
         virtual ~RawObject(){
-            if(IsInStackSpace()) Allocator::UntrackRoot(this);
+            //TODO: needed? if(IsInStackSpace()) Allocator::UntrackRoot(this);
         }
 
         size_t GetAllocatedSize() const{

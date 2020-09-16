@@ -69,7 +69,7 @@ namespace Token{
             type_ = type;
         }
 
-        virtual bool Encode(ByteBuffer* bytes) const = 0;
+        virtual bool Encode(ByteBuffer* bytes) const{ return false; }
     public:
         virtual ~Object() = default;
 
@@ -98,7 +98,7 @@ namespace Token{
 
         bool WriteToFile(std::fstream& file) const;
         uint256_t GetHash() const;
-        virtual size_t GetBufferSize() const = 0; //TODO: refactor
+        virtual size_t GetBufferSize() const{ return 0; }
 
 #define DECLARE_TYPECHECK(Name) \
         bool Is##Name() const{ \

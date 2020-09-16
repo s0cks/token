@@ -7,10 +7,13 @@ namespace Token{
         }
     }
 
-    void ArrayBase::Accept(WeakReferenceVisitor* vis) {
-        for (size_t i = 0; i < Length(); i++) {
-            vis->Visit(&slots_[i]);
+    bool ArrayBase::Accept(WeakObjectPointerVisitor* vis) {
+        for (size_t i = 0; i < Length(); i++){
+            if(!vis->Visit(&slots_[i]))
+                return false;
         }
+
+        return true;
     }
 
     std::string ArrayBase::ToString() const{

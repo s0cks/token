@@ -2,7 +2,7 @@
 #include "heap.h"
 
 namespace Token{
-    void* Semispace::Allocate(size_t alloc_size){
+    void* Semispace::Allocate(intptr_t alloc_size){
         if((GetAllocatedSize() + alloc_size) > GetTotalSize()) return nullptr;
         void* ptr = (void*)current_;
         if(!ptr) return nullptr;

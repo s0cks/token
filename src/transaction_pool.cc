@@ -1,7 +1,6 @@
 #include <glog/logging.h>
 #include <unordered_map>
 
-#include "cache.h"
 #include "journal.h"
 #include "crash_report.h"
 #include "transaction_pool.h"
@@ -16,12 +15,6 @@ namespace Token{
     GetJournal(){
         static ObjectPoolJournal<Transaction> journal(TransactionPool::GetPath());
         return &journal;
-    }
-
-    static inline Cache<Transaction, 1>*
-    GetCache(){
-        static Cache<Transaction, 1> cache;
-        return &cache;
     }
 
     TransactionPool::State TransactionPool::GetState(){
@@ -86,14 +79,6 @@ namespace Token{
     bool TransactionPool::RemoveTransaction(const uint256_t& hash){
         LOCK_GUARD;
         if(!GetJournal()->HasData(hash)) return false;
-
-        if(GetCache()->Contains(hash)){
-            if(!GetCache()->Remove(hash)){
-                LOG(WARNING) << "couldn't remove transaction " << hash << " from pool";
-                return false;
-            }
-        }
-
         if(!GetJournal()->RemoveData(hash)){
             LOG(WARNING) << "couldn't remove transaction " << hash << " data from pool";
             return false;
@@ -107,12 +92,6 @@ namespace Token{
         LOCK_GUARD;
         uint256_t hash = tx->GetHash();
         if(GetJournal()->HasData(tx->GetHash())) return false;
-
-        if(!GetCache()->Put(hash, tx)){
-            LOG(WARNING) << "cannot put transaction " << hash << " in pool";
-            return false;
-        }
-
         if(!GetJournal()->PutData(tx)){
             LOG(WARNING) << "cannot put transaction data in pool";
             return false;
