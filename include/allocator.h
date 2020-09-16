@@ -97,7 +97,6 @@ namespace Token{
         static MemoryRegion* GetRegion();
         static Heap* GetEdenHeap();
         static Heap* GetSurvivorHeap();
-
         static size_t GetNumberOfStackSpaceObjects();
         static size_t GetStackSpaceSize();
     };
