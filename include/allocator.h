@@ -10,10 +10,8 @@
 namespace Token{
     enum class Space{
         kStackSpace = 1,
-        kEdenSpace,
-        kSurvivorSpace,
-        kTenuredSpace,
-        kMemoryPool
+        kNewHeap,
+        kOldHeap,
     };
 
     static std::ostream& operator<<(std::ostream& stream, const Space& space){
@@ -21,17 +19,11 @@ namespace Token{
             case Space::kStackSpace:
                 stream << "Stack";
                 return stream;
-            case Space::kEdenSpace:
-                stream << "Eden";
+            case Space::kNewHeap:
+                stream << "New Heap";
                 return stream;
-            case Space::kSurvivorSpace:
-                stream << "Survivor";
-                return stream;
-            case Space::kTenuredSpace:
-                stream << "Tenured";
-                return stream;
-            case Space::kMemoryPool:
-                stream << "Memory Pool";
+            case Space::kOldHeap:
+                stream << "Old Heap";
                 return stream;
             default:
                 stream << "<Unknown Space>";
@@ -91,12 +83,14 @@ namespace Token{
         ~Allocator(){}
 
         static void Initialize();
+        static void PrintNewHeap();
+        static void PrintOldHeap();
         static void MinorCollect();
         static void MajorCollect();
         static void* Allocate(size_t size);
         static MemoryRegion* GetRegion();
-        static Heap* GetEdenHeap();
-        static Heap* GetSurvivorHeap();
+        static Heap* GetNewHeap();
+        static Heap* GetOldHeap();
         static size_t GetNumberOfStackSpaceObjects();
         static size_t GetStackSpaceSize();
     };
@@ -107,72 +101,6 @@ namespace Token{
     public:
         virtual ~WeakObjectPointerVisitor() = default;
         virtual bool Visit(RawObject** root) = 0;
-    };
-
-    class GCStats{
-        friend class Allocator;
-        friend class Scavenger;
-        friend class RawObject;
-    public:
-        static const size_t kNumberOfCollectionsRequiredForPromotion = 3;
-    private:
-        Space space_;
-        Color color_;
-        size_t object_size_;
-        size_t num_collections_;
-        size_t num_references_;
-    public:
-        GCStats(Space space):
-            space_(space),
-            color_(Color::kWhite),
-            object_size_(0),
-            num_collections_(0),
-            num_references_(0){}
-        GCStats(): GCStats(Space::kEdenSpace){}
-        ~GCStats(){}
-
-        size_t GetNumberOfCollectionsSurvived() const{
-            return num_collections_;
-        }
-
-        size_t GetNumberOfReferences() const{
-            return num_references_;
-        }
-
-        size_t GetSize() const{
-            return object_size_;
-        }
-
-        Color GetColor() const{
-            return color_;
-        }
-
-        Space GetSpace() const{
-            return space_;
-        }
-
-        bool IsStackSpace() const{
-            return GetSpace() == Space::kStackSpace;
-        }
-
-        bool InEdenSpace() const{
-            return GetSpace() == Space::kEdenSpace;
-        }
-
-        bool IsSurvivorSpace() const{
-            return GetSpace() == Space::kSurvivorSpace;
-        }
-
-        bool IsTenuredSpace() const{
-            return GetSpace() == Space::kTenuredSpace;
-        }
-
-        GCStats& operator=(const GCStats& other){
-            space_ = other.space_;
-            num_collections_ = other.num_collections_;
-            num_references_ = other.num_references_;
-            return (*this);
-        }
     };
 
     class WeakReferenceVisitor{
@@ -197,7 +125,7 @@ namespace Token{
         friend class Allocator;
         friend class Scavenger;
         friend class Semispace;
-        friend class HeapDumpWriter;
+        friend class ObjectPointerPrinter;
         friend class ObjectFinalizer;
         friend class ObjectRelocator;
         friend class LiveObjectMarker;
@@ -205,9 +133,15 @@ namespace Token{
         friend class StackSpaceSizeCalculator;
         friend class LiveObjectReferenceUpdater;
         friend class RootObjectReferenceUpdater;
+    public:
+        static const intptr_t kNumberOfCollectionsRequiredForPromotion = 3;
     private:
         ObjectHeader header_;
-        GCStats stats_;
+        Space space_;
+        bool marked_;
+        intptr_t size_;
+        intptr_t collections_survived_;
+        intptr_t num_references_;
         uword ptr_;
 
         ObjectHeader GetAllocationHeader() const{
@@ -218,54 +152,73 @@ namespace Token{
             header_ = header;
         }
 
-        void SetSpace(Space space);
-        void SetColor(Color color);
-        void SetObjectSize(size_t size);
-        void IncrementReferenceCount();
-        void DecrementReferenceCount();
-        Color GetColor() const;
-        size_t GetObjectSize() const;
-        size_t GetReferenceCount() const;
+        void SetSpace(Space space){
+            space_ = space;
+        }
+
+        void SetObjectSize(intptr_t size){
+            size_ = size;
+        }
+
+        void IncrementReferenceCount(){
+            num_references_++;
+        }
+
+        void DecrementReferenceCount(){
+            num_references_--;
+        }
+
+        intptr_t GetObjectSize() const{
+            return size_;
+        }
+
+        intptr_t GetReferenceCount() const{
+            return num_references_;
+        }
+
+        intptr_t GetNumberOfCollectionsSurvived() const{
+            return collections_survived_;
+        }
+
+        void SetMarked(){
+            marked_ = true;
+        }
+
+        void ClearMarked(){
+            marked_ = false;
+        }
 
         bool HasStackReferences() const{
             return GetReferenceCount() > 0;
         }
 
-        bool IsGarbage() const{
-            return GetColor() == Color::kFree;
-        }
-
         bool IsMarked() const{
-            return GetColor() == Color::kMarked;
+            return marked_;
         }
 
         bool IsReadyForPromotion() const{
-            return stats_.GetNumberOfCollectionsSurvived() >= GCStats::kNumberOfCollectionsRequiredForPromotion;
+            return collections_survived_ >= kNumberOfCollectionsRequiredForPromotion;
         }
 
         Space GetSpace() const{
-            return stats_.GetSpace();
+            return space_;
         }
 
         bool IsInStackSpace() const{
-            return stats_.GetSpace() == Space::kStackSpace;
+            return space_ == Space::kStackSpace;
         }
 
-        bool IsInEdenSpace() const{
-            return stats_.GetSpace() == Space::kEdenSpace;
-        }
-
-        bool IsInSurvivorSpace() const{
-            return stats_.GetSpace() == Space::kSurvivorSpace;
-        }
-
-        bool IsInTenuredSpace() const{
-            return stats_.GetSpace() == Space::kTenuredSpace;
+        bool IsNewHeap() const{
+            return space_ == Space::kNewHeap;
         }
     protected:
         RawObject():
             header_(0),
-            stats_(),
+            space_(),
+            collections_survived_(0),
+            num_references_(0),
+            size_(0),
+            marked_(false),
             ptr_(0){
             Allocator::Initialize(this);
         }

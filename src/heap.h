@@ -102,18 +102,6 @@ namespace Token{
             return space_;
         }
 
-        bool IsEdenSpace() const{
-            return GetSpace() == Space::kEdenSpace;
-        }
-
-        bool IsSurvivorSpace() const{
-            return GetSpace() == Space::kSurvivorSpace;
-        }
-
-        bool IsTenuredSpace() const{
-            return GetSpace() == Space::kTenuredSpace;
-        }
-
         Semispace GetFromSpace(){
             return from_space_;
         }

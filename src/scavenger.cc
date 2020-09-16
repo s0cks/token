@@ -6,8 +6,10 @@ namespace Token{
     class LiveObjectMarker : public ObjectPointerVisitor{
     public:
         bool Visit(RawObject* obj){
-            if(obj->HasStackReferences())
-                obj->SetColor(Color::kMarked);
+            if(obj->HasStackReferences()){
+                LOG(INFO) << "marking object: " << obj->ToString();
+                obj->SetMarked();
+            }
             return true;
         }
     };
@@ -15,7 +17,7 @@ namespace Token{
     class ObjectFinalizer : public ObjectPointerVisitor{
     public:
         bool Visit(RawObject* obj){
-            if(obj->IsGarbage()){
+            if(!obj->IsMarked()){
                 obj->~RawObject();//TODO: call finalizer
                 obj->ptr_ = 0;
             }
@@ -35,6 +37,7 @@ namespace Token{
 
         bool Visit(RawObject* obj){
             if(obj->IsMarked()){
+                LOG(INFO) << "relocating object: " << obj->ToString();
                 size_t size = obj->GetAllocatedSize();
                 void* nptr = nullptr;
                 if(obj->IsReadyForPromotion()){
@@ -53,7 +56,7 @@ namespace Token{
     public:
         bool Visit(RawObject* obj){
             if(obj->IsMarked()){
-                obj->SetColor(Color::kFree);
+                obj->ClearMarked();
                 memcpy((void*)obj->ptr_, (void*)obj, obj->GetAllocatedSize());
             }
             return true;
@@ -70,7 +73,7 @@ namespace Token{
         }
 
         bool Visit(RawObject* obj){
-            if(!obj->IsGarbage()) obj->Accept(this);
+            if(obj->IsMarked()) obj->Accept(this);
             return true;
         }
     };
@@ -99,18 +102,11 @@ namespace Token{
 
         LOG(INFO) << "relocating live objects....";
         switch(GetHeap()->GetSpace()){
-            case Space::kEdenSpace:{
-                ObjectRelocator relocator(GetToSpace(), Allocator::GetSurvivorHeap());
+            case Space::kNewHeap:{
+                ObjectRelocator relocator(GetToSpace(), Allocator::GetOldHeap());
                 GetFromSpace().Accept(&relocator);
                 break;
             }
-            case Space::kSurvivorSpace:{
-                //TODO:
-                //ObjectPromoter promoter(Allocator::GetTenuredHeap());
-                //GetFromSpace().Accept(&promoter);
-                break;
-            }
-            case Space::kTenuredSpace: break; // cannot promote any further
             case Space::kStackSpace:
             default:
                 LOG(WARNING) << "unknown heap space " << GetHeap()->GetSpace() << " during scavenging";

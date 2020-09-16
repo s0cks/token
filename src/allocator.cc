@@ -82,9 +82,9 @@ namespace Token{
     static std::recursive_mutex mutex_;
     static std::condition_variable cond_;
     static MemoryRegion* region_ = nullptr;
-    static Heap* eden_ = nullptr;
-    static Heap* survivor_ = nullptr;
     static RootPage* roots_ = nullptr;
+    static Heap* new_heap_ = nullptr;
+    static Heap* old_heap_ = nullptr;
 
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
 #define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
@@ -102,11 +102,11 @@ namespace Token{
         size_t semispace_size = (heap_size / 2);
         region_ = new MemoryRegion(region_size);
 
-        uword eden_start = region_->GetStartAddress();
-        uword survivor_start = region_->GetStartAddress() + heap_size;
+        uword new_start = region_->GetStartAddress();
+        uword old_start = region_->GetStartAddress() + heap_size;
 
-        eden_ = new Heap(Space::kEdenSpace, eden_start, heap_size, semispace_size);
-        survivor_ = new Heap(Space::kSurvivorSpace, survivor_start, heap_size, semispace_size);
+        new_heap_ = new Heap(Space::kNewHeap, new_start, heap_size, semispace_size);
+        old_heap_ = new Heap(Space::kOldHeap, old_start, heap_size, semispace_size);
     }
 
     MemoryRegion* Allocator::GetRegion(){
@@ -114,14 +114,14 @@ namespace Token{
         return region_;
     }
 
-    Heap* Allocator::GetEdenHeap(){
+    Heap* Allocator::GetNewHeap(){
         LOCK_GUARD;
-        return eden_;
+        return new_heap_;
     }
 
-    Heap* Allocator::GetSurvivorHeap(){
+    Heap* Allocator::GetOldHeap(){
         LOCK_GUARD;
-        return survivor_;
+        return old_heap_;
     }
 
     RawObject** Allocator::TrackRoot(RawObject* obj){
@@ -154,10 +154,10 @@ namespace Token{
     void* Allocator::Allocate(size_t alloc_size){
         LOCK_GUARD;
         size_t total_size = ALIGN(alloc_size);
-        void* ptr = GetEdenHeap()->Allocate(total_size);
+        void* ptr = GetNewHeap()->Allocate(total_size);
         if(!ptr){
             MinorCollect();
-            ptr = GetEdenHeap()->Allocate(total_size);
+            ptr = GetNewHeap()->Allocate(total_size);
             assert(ptr);
         }
         allocating_size_ = alloc_size;
@@ -172,7 +172,7 @@ namespace Token{
             return;
         }
         obj->SetObjectSize(allocating_size_);
-        obj->SetSpace(Space::kEdenSpace);
+        obj->SetSpace(Space::kNewHeap);
         allocating_size_ = 0;
         allocating_ = nullptr;
     }
@@ -180,12 +180,20 @@ namespace Token{
     void Allocator::MinorCollect(){
         LOG(INFO) << "performing minor garbage collection....";
         LOCK_GUARD;
-        Scavenger::Scavenge(GetEdenHeap());
-        Scavenger::Scavenge(GetSurvivorHeap());
+        Scavenger::Scavenge(GetNewHeap());
+        Scavenger::Scavenge(GetOldHeap());
     }
 
     void Allocator::MajorCollect(){
 
+    }
+
+    void Allocator::PrintNewHeap(){
+        LOCK_GUARD;
+        LOG(INFO) << "New Heap:";
+        ObjectPointerPrinter printer;
+        if(!Allocator::GetNewHeap()->Accept(&printer))
+            LOG(WARNING) << "couldn't print new heap";
     }
 
     class StackSpaceSizeCalculator : public WeakObjectPointerVisitor{
@@ -227,37 +235,5 @@ namespace Token{
         StackSpaceSizeCalculator calc;
         if(!VisitRoots(&calc)) return 0;
         return calc.GetNumberOfObjects();
-    }
-
-    void RawObject::SetSpace(Space space){
-        stats_.space_ = space;
-    }
-
-    void RawObject::SetColor(Color color){
-        stats_.color_ = color;
-    }
-
-    Color RawObject::GetColor() const{
-        return stats_.color_;
-    }
-
-    void RawObject::SetObjectSize(size_t size){
-        stats_.object_size_ = size;
-    }
-
-    size_t RawObject::GetObjectSize() const{
-        return stats_.object_size_;
-    }
-
-    void RawObject::IncrementReferenceCount(){
-        stats_.num_references_++;
-    }
-
-    void RawObject::DecrementReferenceCount(){
-        stats_.num_references_--;
-    }
-
-    size_t RawObject::GetReferenceCount() const{
-        return stats_.num_references_;
     }
 }
