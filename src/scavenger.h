@@ -73,10 +73,10 @@ namespace Token{
         bool ProcessRoots();
         bool ScavengeMemory();
         bool NotifyReferences();
-        bool Visit(RawObject* obj);
-        bool FinalizeObject(RawObject* obj);
-        bool PromoteObject(RawObject* obj);
-        bool ScavengeObject(RawObject* obj);
+        bool Visit(Object* obj);
+        bool FinalizeObject(Object* obj);
+        bool PromoteObject(Object* obj);
+        bool ScavengeObject(Object* obj);
     public:
         ~Scavenger() = default;
 

@@ -50,31 +50,112 @@ namespace Token{
     Type GetObjectHeaderType(ObjectHeader header);
     uint32_t GetObjectHeaderSize(ObjectHeader header);
 
-    class Object : public RawObject{
+    class Object{
         //TODO:
         // - track references using Reference class?
         // - create ObjectFile + ObjectBuffer classes for serialization purposes?
+
+        friend class Thread;
+        friend class Allocator;
+        friend class Scavenger;
+        friend class HandleGroup;
         friend class BinaryFileWriter;
+        friend class ReferenceNotifier;
+    public:
+        static const intptr_t kNumberOfCollectionsRequiredForPromotion = 3;
     protected:
         Type type_;
+        bool marked_;
+        intptr_t size_;
+        intptr_t collections_survived_;
+        intptr_t num_references_;
+        uword ptr_;
 
         Object():
-                RawObject(),
-                type_(Type::kUnknownType){}
-        Object(Type type):
-                RawObject(),
-                type_(type){}
+            type_(Type::kUnknownType),
+            collections_survived_(0),
+            num_references_(0),
+            size_(0),
+            marked_(false),
+            ptr_(0){
+            Allocator::Initialize(this);
+        }
 
         void SetType(Type type){
             type_ = type;
         }
 
+        void SetSize(intptr_t size){
+            size_ = size;
+        }
+
+        void IncrementReferenceCount(){
+            num_references_++;
+        }
+
+        void DecrementReferenceCount(){
+            num_references_--;
+        }
+
+        void IncrementCollectionsCounter(){
+            collections_survived_++;
+        }
+
+        void SetMarked(){
+            marked_ = true;
+        }
+
+        void ClearMarked(){
+            marked_ = false;
+        }
+
         virtual bool Encode(ByteBuffer* bytes) const{ return false; }
+        virtual bool Accept(WeakObjectPointerVisitor* vis){ return true; }
+
+        void WriteBarrier(Object** slot, Object* data){
+            if(data) data->IncrementReferenceCount();
+            if((*slot))(*slot)->DecrementReferenceCount();
+            (*slot) = data;
+        }
+
+        template<typename T, typename U>
+        void WriteBarrier(T** slot, U* data){
+            WriteBarrier((Object**)slot, (Object*)data);
+        }
+
+        template<typename T>
+        void WriteBarrier(T** slot, const Handle<T>& handle){
+            WriteBarrier((Object**)slot, (Object*)handle);
+        }
     public:
         virtual ~Object() = default;
 
         Type GetType() const{
             return type_;
+        }
+
+        intptr_t GetSize() const{
+            return size_;
+        }
+
+        intptr_t GetReferenceCount() const{
+            return num_references_;
+        }
+
+        intptr_t GetNumberOfCollectionsSurvived() const{
+            return collections_survived_;
+        }
+
+        bool HasStackReferences() const{
+            return num_references_ > 0;
+        }
+
+        bool IsMarked() const{
+            return marked_;
+        }
+
+        bool IsReadyForPromotion() const{
+            return collections_survived_ >= kNumberOfCollectionsRequiredForPromotion;
         }
 
         virtual std::string ToString() const{
@@ -106,6 +187,15 @@ namespace Token{
         }
         FOR_EACH_TYPE(DECLARE_TYPECHECK)
 #undef DECLARE_TYPECHECK
+
+        static void* operator new(size_t size){
+            return Allocator::Allocate(size);
+        }
+
+        static void* operator new[](size_t) = delete;
+        static void operator delete(void*){
+            assert(0);
+        }
     };
 
     class ObjectPointerVisitor{
@@ -113,7 +203,7 @@ namespace Token{
         ObjectPointerVisitor() = default;
     public:
         virtual ~ObjectPointerVisitor() = default;
-        virtual bool Visit(RawObject* obj) = 0;
+        virtual bool Visit(Object* obj) = 0;
     };
 
     class ObjectPointerPrinter : public ObjectPointerVisitor{
@@ -121,8 +211,8 @@ namespace Token{
         ObjectPointerPrinter() = default;
         ~ObjectPointerPrinter() = default;
 
-        bool Visit(RawObject* obj){
-            LOG(INFO) << "[" << std::hex << obj << ":" << obj->GetAllocatedSize() << "] (Marked: " << (obj->IsMarked() ? 'y' : 'n') << "): " << obj->ToString();
+        bool Visit(Object* obj){
+            LOG(INFO) << "[" << std::hex << obj << ":" << obj->GetSize() << "] (Marked: " << (obj->IsMarked() ? 'y' : 'n') << "): " << obj->ToString();
             return true;
         }
     };

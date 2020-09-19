@@ -69,13 +69,11 @@ namespace Token{
         return ptr;
     }
 
-    void Allocator::Initialize(RawObject* obj){
+    void Allocator::Initialize(Object* obj){
         if(allocating_ != obj){
-            obj->SetSpace(Space::kStackSpace);
             return;
         }
-        obj->SetObjectSize(allocating_size_);
-        obj->SetSpace(Space::kNewHeap);
+        obj->SetSize(allocating_size_);
         allocating_size_ = 0;
         allocating_ = nullptr;
     }

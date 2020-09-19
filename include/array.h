@@ -28,7 +28,7 @@ namespace Token{
         static void* operator new(size_t size) = delete;
         static void* operator new(size_t size, size_t length, bool);
         static void operator delete(void*, size_t, bool);
-        using RawObject::operator delete;
+        using Object::operator delete;
     public:
         bool Accept(WeakObjectPointerVisitor* vis);
         std::string ToString() const;

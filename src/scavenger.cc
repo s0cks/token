@@ -22,19 +22,19 @@ namespace Token{
             ObjectPointerVisitor(),
             stack_(stack){}
 
-        bool Visit(RawObject** ptr){
+        bool Visit(Object** ptr){
             return Visit(*ptr);
         }
 
-        bool Visit(RawObject* obj){
+        bool Visit(Object* obj){
             stack_.push_back((uword)obj);
             return true;
         }
     };
 
-    bool Scavenger::ScavengeObject(RawObject* obj){
-        LOG(INFO) << "scavenging object [" << std::hex << obj << ":" << std::dec << obj->GetObjectSize() << "]";
-        intptr_t size = obj->GetAllocatedSize();
+    bool Scavenger::ScavengeObject(Object* obj){
+        LOG(INFO) << "scavenging object [" << std::hex << obj << ":" << std::dec << obj->GetSize() << "]";
+        intptr_t size = obj->GetSize();
         void* nptr = Allocator::GetNewHeap()->GetToSpace()->Allocate(size);
         obj->ptr_ = (uword)nptr;
         obj->IncrementCollectionsCounter();
@@ -42,9 +42,9 @@ namespace Token{
         return true;
     }
 
-    bool Scavenger::PromoteObject(RawObject* obj){
-        LOG(INFO) << "promoting object [" << std::hex << obj << ":" << std::dec << obj->GetObjectSize() << "]";
-        intptr_t size = obj->GetAllocatedSize();
+    bool Scavenger::PromoteObject(Object* obj){
+        LOG(INFO) << "promoting object [" << std::hex << obj << ":" << std::dec << obj->GetSize() << "]";
+        intptr_t size = obj->GetSize();
         void* nptr = Allocator::GetOldHeap()->Allocate(size);
         memcpy(nptr, (void*)obj, size); // is this safe to do????
         obj->ptr_ = (uword)nptr;
@@ -52,9 +52,9 @@ namespace Token{
         return true;
     }
 
-    bool Scavenger::FinalizeObject(RawObject* obj){
-        LOG(INFO) << "finalizing object [" << std::hex << obj << ":" << std::dec << obj->GetObjectSize() << "]";
-        obj->~RawObject(); //TODO: Call finalizer for obj
+    bool Scavenger::FinalizeObject(Object* obj){
+        LOG(INFO) << "finalizing object [" << std::hex << obj << ":" << std::dec << obj->GetSize() << "]";
+        obj->~Object(); //TODO: Call finalizer for obj
         obj->ptr_ = 0;
         return true;
     }
@@ -73,7 +73,7 @@ namespace Token{
             work_.pop_back();
 
             if (!obj->IsMarked()) {
-                LOG(INFO) << "marking object [" << std::hex << obj << ":" << std::dec << obj->GetObjectSize() << "]";
+                LOG(INFO) << "marking object [" << std::hex << obj << ":" << std::dec << obj->GetSize() << "]";
                 obj->SetMarked();
                 if (!obj->Accept(&marker)) {
                     LOG(WARNING) << "couldn't visit object references.";
@@ -95,7 +95,7 @@ namespace Token{
         return true;
     }
 
-    bool Scavenger::Visit(RawObject* obj){
+    bool Scavenger::Visit(Object* obj){
         if(obj->IsMarked()){
             if(obj->IsReadyForPromotion()){
                 if(!PromoteObject(obj)){
@@ -122,14 +122,14 @@ namespace Token{
             public ObjectPointerVisitor,
             public WeakObjectPointerVisitor{
     public:
-        bool Visit(RawObject* obj){
+        bool Visit(Object* obj){
             return obj->Accept(this);
         }
 
-        bool Visit(RawObject** field){
-            RawObject* obj = (*field);
+        bool Visit(Object** field){
+            Object* obj = (*field);
             if(obj->IsMarked()){
-                (*field) = (RawObject*)obj->ptr_;
+                (*field) = (Object*)obj->ptr_;
             }
             return true;
         }

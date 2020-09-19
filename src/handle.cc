@@ -11,15 +11,15 @@ namespace Token{
         std::bitset<kHandlesPerGroup> bitmap_;
         HandleGroup* next_ = nullptr;
         size_t size_ = 0;
-        RawObject* handles_[kHandlesPerGroup];
+        Object* handles_[kHandlesPerGroup];
     protected:
         bool Accept(WeakObjectPointerVisitor* vis){
             if(size_){
                 for(size_t idx = 0;
                     idx < kHandlesPerGroup;
                     idx++){
-                    RawObject* data = handles_[idx];
-                    if(data && !data->IsInStackSpace()){
+                    Object* data = handles_[idx];
+                    if(data){
                         if(!vis->Visit(&handles_[idx]))
                             return false;
                     }
@@ -36,7 +36,7 @@ namespace Token{
             }
         }
 
-        RawObject** Allocate(){
+        Object** Allocate(){
             for(size_t idx = 0;
                 idx < kHandlesPerGroup;
                 idx++){
@@ -51,7 +51,7 @@ namespace Token{
             return next_->Allocate();
         }
 
-        void Free(RawObject** ptr){
+        void Free(Object** ptr){
             ptrdiff_t offset = ptr - handles_;
             if(offset >= 0 && offset < kHandlesPerGroup){
                 Write(ptr, nullptr);
@@ -68,12 +68,12 @@ namespace Token{
             }
         }
 
-        void Write(RawObject** ptr, RawObject* data){
-            if(data && data->IsInStackSpace()){
+        void Write(Object** ptr, Object* data){
+            if(data){
                 data->IncrementReferenceCount();
             }
 
-            if((*ptr) && (*ptr)->IsInStackSpace()){
+            if((*ptr)){
                 (*ptr)->DecrementReferenceCount();
             }
 
@@ -96,7 +96,7 @@ namespace Token{
         ptr_ = nullptr;
     }
 
-    HandleBase::HandleBase(RawObject* obj){
+    HandleBase::HandleBase(Object* obj){
         if(!root_) root_ = new HandleGroup();
         ptr_ = root_->Allocate();
         root_->Write(ptr_, obj);
@@ -117,7 +117,7 @@ namespace Token{
         }
     }
 
-    void HandleBase::operator=(RawObject* obj){
+    void HandleBase::operator=(Object* obj){
         if(!ptr_)
             ptr_ = root_->Allocate();
         root_->Write(ptr_, obj);
