@@ -1,11 +1,11 @@
 #include <set>
 #include <bitset>
 #include <cassert>
-#include <algorithm>
 
-#include "allocator.h"
 #include "heap.h"
 #include "bitfield.h"
+#include "reference.h"
+#include "allocator.h"
 #include "scavenger.h"
 
 namespace Token{
@@ -37,26 +37,6 @@ namespace Token{
 
         new_heap_ = new Heap(Space::kNewHeap, new_start, heap_size, semispace_size);
         old_heap_ = new Heap(Space::kOldHeap, old_start, heap_size, semispace_size);
-    }
-
-    void Allocator::RegisterRoot(uword address){
-        LOG(INFO) << "registering root @" << address;
-        LOCK_GUARD;
-        roots_.insert(address);
-    }
-
-    void Allocator::UnregisterRoot(uword address){
-        LOCK_GUARD;
-        roots_.erase(address);
-    }
-
-    bool Allocator::VisitRoots(ObjectPointerVisitor* vis){
-        LOCK_GUARD;
-        for(auto& root : roots_){
-            if(!vis->Visit((RawObject*)root))
-                return false;
-        }
-        return true;
     }
 
     MemoryRegion* Allocator::GetRegion(){

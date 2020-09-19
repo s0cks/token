@@ -52,7 +52,7 @@ namespace Token{
                 } else{
                     LOG(INFO) << "scavenging object [" << std::hex << obj << ":" << std::dec << obj->GetObjectSize() << "]";
                     //TODO: properly re-allocate object in to space
-                    nptr = Allocator::GetNewHeap()->GetToSpace().Allocate(size);
+                    nptr = Allocator::GetNewHeap()->GetToSpace()->Allocate(size);
                 }
                 obj->ptr_ = reinterpret_cast<uword>(nptr);
             }
@@ -77,7 +77,9 @@ namespace Token{
     public:
         bool Visit(RawObject** field){
             RawObject* obj = (*field);
-            (*field) = (RawObject*)obj->ptr_;
+            if(obj->IsMarked()){
+                (*field) = (RawObject*)obj->ptr_;
+            }
             return true;
         }
 
@@ -96,8 +98,8 @@ namespace Token{
 
         std::vector<uword> stack;
         LiveObjectMarker marker(stack);
-        if(!Allocator::VisitRoots(&marker)){
-            LOG(ERROR) << "couldn't visit roots.";
+        if(!HandleBase::VisitHandles(&marker)){
+            LOG(WARNING) << "couldn't visit current handles.";
             return false;
         }
 
@@ -131,6 +133,11 @@ namespace Token{
             return false;
         }
 
+        if(!HandleBase::VisitHandles(&ref_updater)){
+            LOG(ERROR) << "couldn't visit handles.";
+            return false;
+        }
+
         LOG(INFO) << "copying live objects...";
         LiveObjectCopier copier;
         if(!Allocator::GetNewHeap()->Accept(&copier)){
@@ -140,7 +147,7 @@ namespace Token{
 
         LOG(INFO) << "cleaning....";
         //TODO fix scavenger cleanup routine
-        Allocator::GetNewHeap()->GetFromSpace().Reset();
+        Allocator::GetNewHeap()->GetFromSpace()->Reset();
         Allocator::GetNewHeap()->SwapSpaces();
 
 #if defined(TOKEN_DEBUG)

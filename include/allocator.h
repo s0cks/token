@@ -71,10 +71,6 @@ namespace Token{
         friend class MemoryInformationSection;
     private:
         Allocator() = delete;
-
-        static bool VisitRoots(ObjectPointerVisitor* vis);
-        static void RegisterRoot(uword address);
-        static void UnregisterRoot(uword address);
         static void Initialize(RawObject* obj);
     public:
         ~Allocator(){}

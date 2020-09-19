@@ -1,9 +1,11 @@
 #include <bitset>
 #include "handle.h"
 #include "object.h"
+#include "allocator.h"
 
 namespace Token{
     class HandleGroup : public Object{
+        friend class HandleBase;
     private:
         static const size_t kHandlesPerGroup = 1000;
         std::bitset<kHandlesPerGroup> bitmap_;
@@ -98,14 +100,12 @@ namespace Token{
         if(!root_) root_ = new HandleGroup();
         ptr_ = root_->Allocate();
         root_->Write(ptr_, obj);
-        Allocator::RegisterRoot((uword)GetPointer());
     }
 
     HandleBase::HandleBase(const HandleBase& h){
         if(h.ptr_){
             ptr_ = root_->Allocate();
             root_->Write(ptr_, (*h.ptr_));
-            Allocator::RegisterRoot((uword)GetPointer());
         } else{
             ptr_ = nullptr;
         }
@@ -113,7 +113,6 @@ namespace Token{
 
     HandleBase::~HandleBase(){
         if(ptr_){
-            Allocator::UnregisterRoot((uword)GetPointer());
             root_->Free(ptr_);
         }
     }
@@ -131,5 +130,15 @@ namespace Token{
         } else{
             ptr_ = nullptr;
         }
+    }
+
+    bool HandleBase::VisitHandles(WeakObjectPointerVisitor* vis){
+        HandleGroup* group = root_;
+        while(group != nullptr){
+            if(!group->Accept(vis))
+                return false;
+            group = group->next_;
+        }
+        return true;
     }
 }

@@ -5,9 +5,13 @@
 
 namespace Token{
     class RawObject;
+    class WeakObjectPointerVisitor;
     class HandleBase{ //TODO: remove
+        friend class Scavenger;
     private:
         RawObject** ptr_;
+
+        static bool VisitHandles(WeakObjectPointerVisitor* vis);
     protected:
         HandleBase();
         HandleBase(RawObject* obj);
