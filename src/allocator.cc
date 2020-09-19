@@ -71,7 +71,6 @@ namespace Token{
 
     void Allocator::Initialize(RawObject* obj){
         if(allocating_ != obj){
-            LOG(INFO) << "initializing stack object: " << std::hex << obj;
             obj->SetSpace(Space::kStackSpace);
             return;
         }
@@ -81,14 +80,14 @@ namespace Token{
         allocating_ = nullptr;
     }
 
-    void Allocator::MinorCollect(){
-        LOG(INFO) << "performing minor garbage collection....";
+    bool Allocator::MinorCollect(){
         LOCK_GUARD;
-        Scavenger::Scavenge(false);
+        return Scavenger::Scavenge(false);
     }
 
-    void Allocator::MajorCollect(){
-
+    bool Allocator::MajorCollect(){
+        LOCK_GUARD;
+        return Scavenger::Scavenge(true);
     }
 
     void Allocator::PrintNewHeap(){

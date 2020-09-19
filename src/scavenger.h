@@ -2,41 +2,20 @@
 #define TOKEN_SCAVENGER_H
 
 namespace Token{
-    class Scavenger;
     class ScavengerStats{
         friend class Scavenger;
     private:
-        Scavenger* parent_;
         Heap* heap_;
-
-        Timestamp start_time_;
-        Timestamp stop_time_;
 
         intptr_t start_size_;
         intptr_t stop_size_;
 
-        ScavengerStats(Scavenger* scavenger, Heap* heap);
+        ScavengerStats(Heap* heap);
     public:
         ~ScavengerStats() = default;
 
-        Scavenger* GetParent() const{
-            return parent_;
-        }
-
         Heap* GetHeap() const{
             return heap_;
-        }
-
-        Timestamp GetStartTime() const{
-            return start_time_;
-        }
-
-        Timestamp GetStopTime() const{
-            return stop_time_;
-        }
-
-        intptr_t GetTotalCollectionTimeMilliseconds() const{
-            return GetStopTime() - GetStartTime();
         }
 
         intptr_t GetStartSize() const{
@@ -54,21 +33,53 @@ namespace Token{
         void CollectionFinished();
     };
 
-    class Scavenger{
+    class Scavenger : public ObjectPointerVisitor{
+    public:
+        enum Phase{
+            kMarkPhase,
+            kSweepPhase
+        };
+
+        friend std::ostream& operator<<(std::ostream& stream, const Phase& phase){
+            switch(phase){
+                case Phase::kMarkPhase:
+                    stream << "Mark";
+                    return stream;
+                case Phase::kSweepPhase:
+                    stream << "Sweep";
+                    return stream;
+            }
+        }
     private:
-        bool is_major_;
+        std::vector<uword> work_;
+        Phase phase_;
 
-        Scavenger(bool is_major):
-            is_major_(is_major){}
+        Scavenger():
+            work_(),
+            phase_(Phase::kMarkPhase){}
 
+        bool HasWork() const{
+            return !work_.empty();
+        }
+
+        Phase GetPhase() const{
+            return phase_;
+        }
+
+        void SetPhase(Phase phase){
+            phase_ = phase;
+        }
+
+        bool ProcessRoots();
         bool ScavengeMemory();
+        bool Visit(RawObject* obj);
+        bool FinalizeObject(RawObject* obj);
+        bool PromoteObject(RawObject* obj);
+        bool ScavengeObject(RawObject* obj);
     public:
         ~Scavenger() = default;
 
-        static bool Scavenge(bool is_major){
-            Scavenger scavenger(is_major);
-            return scavenger.ScavengeMemory();
-        }
+        static bool Scavenge(bool is_major);
     };
 }
 
