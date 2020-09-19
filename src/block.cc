@@ -42,32 +42,32 @@ namespace Token{
 //                                          Block
 //######################################################################################################################
     Handle<Block> Block::Genesis(){
-        Input* cb_inputs[0];
-        Output* cb_outputs_a[Block::kNumberOfGenesisOutputs];
+        Handle<Array<Input>> inputs = Array<Input>::New(0);
+        Handle<Array<Output>> outputs_a = Array<Output>::New(Block::kNumberOfGenesisOutputs);
         for(size_t idx = 0; idx < Block::kNumberOfGenesisOutputs; idx++){
             std::string user = "VenueA";
             std::string token = "TestToken";
-            cb_outputs_a[idx] = Output::NewInstance(user, token);
+            outputs_a->Put(idx, Output::NewInstance(user, token));
         }
 
-        Output* cb_outputs_b[Block::kNumberOfGenesisOutputs];
+        Handle<Array<Output>> outputs_b = Array<Output>::New(Block::kNumberOfGenesisOutputs);
         for(size_t idx = 0; idx < Block::kNumberOfGenesisOutputs; idx++){
             std::string user = "VenueB";
             std::string token = "TestToken";
-            cb_outputs_b[idx] = Output::NewInstance(user, token);
+            outputs_b->Put(idx, Output::NewInstance(user, token));
         }
 
-        Output* cb_outputs_c[Block::kNumberOfGenesisOutputs];
+        Handle<Array<Output>> outputs_c = Array<Output>::New(Block::kNumberOfGenesisOutputs);
         for(size_t idx = 0; idx < Block::kNumberOfGenesisOutputs; idx++){
             std::string user = "VenueC";
             std::string token = "TestToken";
-            cb_outputs_c[idx] = Output::NewInstance(user, token);
+            outputs_c->Put(idx, Output::NewInstance(user, token));
         }
 
         Transaction* txs[3] = {
-            Transaction::NewInstance(0, cb_inputs, 0, cb_outputs_a, Block::kNumberOfGenesisOutputs, 0),
-            Transaction::NewInstance(1, cb_inputs, 0, cb_outputs_b, Block::kNumberOfGenesisOutputs, 0),
-            Transaction::NewInstance(2, cb_inputs, 0, cb_outputs_c, Block::kNumberOfGenesisOutputs, 0),
+            Transaction::NewInstance(0, inputs, outputs_a, 0),
+            Transaction::NewInstance(1, inputs, outputs_b, 0),
+            Transaction::NewInstance(2, inputs, outputs_c, 0),
         };
         return NewInstance(0, uint256_t(), txs, 3, 0);
     }

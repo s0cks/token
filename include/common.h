@@ -4,6 +4,7 @@
 #include <time.h>
 #include <cstdint>
 #include <cstdlib>
+#include <cassert>
 #include <chrono>
 #include <vector>
 #include <random>

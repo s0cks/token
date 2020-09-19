@@ -38,7 +38,7 @@ namespace Token{
         void* nptr = Allocator::GetNewHeap()->GetToSpace()->Allocate(size);
         obj->ptr_ = (uword)nptr;
         obj->IncrementCollectionsCounter();
-        memcpy(nptr, (void*)obj, size); // is this safe to do????
+        memcpy((void*)obj->ptr_, (void*)obj, size); // is this safe to do???? no
         return true;
     }
 
@@ -48,7 +48,7 @@ namespace Token{
         void* nptr = Allocator::GetOldHeap()->Allocate(size);
         memcpy(nptr, (void*)obj, size); // is this safe to do????
         obj->ptr_ = (uword)nptr;
-        memcpy((void*)obj->ptr_, (void*)obj, obj->GetAllocatedSize());
+        memcpy((void*)obj->ptr_, (void*)obj, size);
         return true;
     }
 
@@ -118,19 +118,19 @@ namespace Token{
         return true;
     }
 
-    class ReferenceNotifier : public ObjectPointerVisitor,
-                              public WeakObjectPointerVisitor{
+    class ReferenceNotifier :
+            public ObjectPointerVisitor,
+            public WeakObjectPointerVisitor{
     public:
+        bool Visit(RawObject* obj){
+            return obj->Accept(this);
+        }
+
         bool Visit(RawObject** field){
             RawObject* obj = (*field);
             if(obj->IsMarked()){
                 (*field) = (RawObject*)obj->ptr_;
             }
-            return true;
-        }
-
-        bool Visit(RawObject* obj){
-            if(obj->IsMarked()) obj->Accept(this);
             return true;
         }
     };
@@ -174,13 +174,13 @@ namespace Token{
         //TODO: notify references?
         LOG(INFO) << "updating references....";
         ReferenceNotifier ref_updater;
-        if(!Allocator::GetNewHeap()->VisitMarkedObjects(&ref_updater)){
-            LOG(ERROR) << "couldn't visit new heap.";
+        if(!HandleBase::VisitHandles(&ref_updater)){
+            LOG(ERROR) << "couldn't visit handles.";
             return false;
         }
 
-        if(!HandleBase::VisitHandles(&ref_updater)){
-            LOG(ERROR) << "couldn't visit handles.";
+        if(!Allocator::GetNewHeap()->VisitObjects(&ref_updater)){
+            LOG(ERROR) << "couldn't visit new heap.";
             return false;
         }
 

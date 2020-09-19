@@ -76,15 +76,19 @@ namespace Token{
     Handle<Transaction> Transaction::NewInstance(ByteBuffer* bytes){
         uint64_t timestamp = bytes->GetLong();
         uint32_t index = bytes->GetInt();
+
+        // parse inputs
         uint32_t num_inputs = bytes->GetInt();
-        Input* inputs[num_inputs];
+        Handle<Array<Input>> inputs = Array<Input>::New(num_inputs);
         for(uint32_t idx = 0; idx < num_inputs; idx++)
-            inputs[idx] = Input::NewInstance(bytes);
+            inputs->Put(idx, Input::NewInstance(bytes));
+
+        // parse outputs
         uint32_t num_outputs = bytes->GetInt();
-        Output* outputs[num_outputs];
+        Handle<Array<Output>> outputs = Array<Output>::New(num_outputs);
         for(uint32_t idx = 0; idx < num_outputs; idx++)
-            outputs[idx] = Output::NewInstance(bytes);
-        return new Transaction(timestamp, index, inputs, num_inputs, outputs, num_outputs);
+            outputs->Put(idx, Output::NewInstance(bytes));
+        return new Transaction(timestamp, index, inputs, outputs);
     }
 
     Handle<Transaction> Transaction::NewInstance(std::fstream& fd, size_t size){
@@ -99,26 +103,32 @@ namespace Token{
         size += sizeof(uint32_t); // index_
         size += sizeof(uint32_t); // num_inputs_
         for(uint32_t idx = 0; idx < GetNumberOfInputs(); idx++)
-            size += inputs_[idx]->GetBufferSize(); // inputs_[idx]
+            size += GetInput(idx)->GetBufferSize(); // inputs_[idx]
         size += sizeof(uint32_t); // num_outputs_
         for(uint32_t idx = 0; idx < GetNumberOfOutputs(); idx++)
-            size += outputs_[idx]->GetBufferSize(); // outputs_[idx]
+            size += GetOutput(idx)->GetBufferSize(); // outputs_[idx]
         return size;
     }
 
     bool Transaction::Encode(ByteBuffer* bytes) const{
         bytes->PutLong(timestamp_);
         bytes->PutInt(index_);
-        bytes->PutInt(num_inputs_);
+
+        size_t num_inputs = GetNumberOfInputs();
+        bytes->PutInt(num_inputs);
         uint32_t idx;
-        for(idx = 0; idx < num_inputs_; idx++){
-            Input* input = inputs_[idx];
-            if(!input->Encode(bytes)) return false;
+        for(idx = 0; idx < num_inputs; idx++){
+            Handle<Input> input = GetInput(idx);
+            if(!input->Encode(bytes))
+                return false;
         }
-        bytes->PutInt(num_outputs_);
-        for(idx = 0; idx < num_outputs_; idx++){
-            Output* output = outputs_[idx];
-            if(!output->Encode(bytes)) return false;
+
+        size_t num_outputs = GetNumberOfOutputs();
+        bytes->PutInt(num_outputs);
+        for(idx = 0; idx < num_outputs; idx++){
+            Handle<Output> output = GetOutput(idx);
+            if(!output->Encode(bytes))
+                return false;
         }
         return true;
     }

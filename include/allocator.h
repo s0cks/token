@@ -1,8 +1,8 @@
 #ifndef TOKEN_ALLOCATOR_H
 #define TOKEN_ALLOCATOR_H
 
-#include <iostream>
 #include <vector>
+#include <iostream>
 #include <condition_variable>
 #include "common.h"
 #include "handle.h"
@@ -233,6 +233,11 @@ namespace Token{
 
         static void* operator new(size_t size){
             return Allocator::Allocate(size);
+        }
+
+        static void* operator new[](size_t) = delete;
+        static void operator delete(void*){
+            assert(0);
         }
     };
 }
