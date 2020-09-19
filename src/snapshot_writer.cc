@@ -43,12 +43,13 @@ namespace Token{
             int64_t start = GetCurrentPosition();
             WriteHeader(CreateSnapshotSectionHeader(kSnapshotBlockChainData, 0)); // SnapshotHeader
             WriteUnsignedInt(BlockChain::GetHead()->GetHeight() + 1);
+            /*TODO: fixme SnapshotWriter::WriteBlockChain()
             Handle<Block> blk = BlockChain::GetHead();
             while(true){
                 WriteObject(blk);
                 if(blk->IsGenesis()) break;
                 blk = blk->GetPrevious().CastTo<Block>();
-            }
+            }*/
             int64_t size = (GetCurrentPosition() - start);
             WriteHeaderAt(start, CreateSnapshotSectionHeader(kSnapshotBlockChainData, size));
         }

@@ -102,7 +102,7 @@ namespace Token{
 
     std::string Block::ToString() const{
         std::stringstream stream;
-        stream << "Block(#" << GetHeight() << ":" << GetHash() << ")";
+        stream << "Block(" << GetHeight() << ":" << GetHash() << "; " << GetNumberOfTransactions() << " Transactions)";
         return stream.str();
     }
 

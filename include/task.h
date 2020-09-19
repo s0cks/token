@@ -46,7 +46,7 @@ namespace Token{
             WriteBarrier(&message_, message);
         }
     protected:
-        bool Accept(WeakReferenceVisitor* vis){
+        bool Accept(WeakObjectPointerVisitor* vis){
             return vis->Visit(&message_);
         }
     public:

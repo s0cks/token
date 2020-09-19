@@ -11,7 +11,7 @@
 #include "unclaimed_transaction.h"
 
 namespace Token{
-    class Node;
+    class BlockNode;
     class BlockChainVisitor;
     class BlockChainDataVisitor;
     class BlockChain{
@@ -26,9 +26,12 @@ namespace Token{
     private:
         BlockChain() = delete;
 
-        static void SetHead(const Handle<Block>& blk);
-        static void SetGenesis(const Handle<Block>& blk);
         static void SetState(State state);
+        static void SetHeadNode(BlockNode* node);
+        static void SetGenesisNode(BlockNode* node);
+        static BlockNode* GetHeadNode();
+        static BlockNode* GetGenesisNode();
+        static BlockNode* GetNode(const uint256_t& hash);
     public:
         ~BlockChain() = delete;
 

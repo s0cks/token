@@ -1,8 +1,7 @@
-#include <algorithm>
 #include "heap.h"
 
 namespace Token{
-    void* Semispace::Allocate(size_t alloc_size){
+    void* Semispace::Allocate(intptr_t alloc_size){
         if((GetAllocatedSize() + alloc_size) > GetTotalSize()) return nullptr;
         void* ptr = (void*)current_;
         if(!ptr) return nullptr;
@@ -14,33 +13,34 @@ namespace Token{
     void Semispace::Accept(ObjectPointerVisitor* vis){
         uword current = GetStartAddress();
         while(current < GetCurrentAddress()){
-            Object* obj = (Object*)current;
-            if(!obj || obj->GetSize() == 0) break;
+            RawObject* obj = (RawObject*)current;
             if(!vis->Visit(obj)) return;
-            current += obj->GetSize();
+            current += obj->GetAllocatedSize();
         }
     }
 
-    bool Semispace::VisitMarkedObjects(ObjectPointerVisitor* vis){
+    bool Heap::VisitObjects(ObjectPointerVisitor* vis){
+        std::lock_guard<std::recursive_mutex> guard(mutex_);
         uword current = GetStartAddress();
-        while(current < GetCurrentAddress()){
-            Object* obj = (Object*)current;
-            if(!obj || obj->GetSize() == 0) break;
-            if(obj->IsMarked() && !vis->Visit(obj))
+        while(current < GetEndAddress()){
+            RawObject* obj = (RawObject*)current;
+            if(!obj || obj->GetAllocatedSize() == 0) break;
+            if(!vis->Visit(obj))
                 return false;
-            current += obj->GetSize();
+            current += obj->GetAllocatedSize();
         }
         return true;
     }
 
-    bool Heap::Accept(ObjectPointerVisitor* vis){
+    bool Heap::VisitMarkedObjects(ObjectPointerVisitor* vis){
         std::lock_guard<std::recursive_mutex> guard(mutex_);
         uword current = GetStartAddress();
         while(current < GetEndAddress()){
-            Object* obj = (Object*)current;
-            if(!obj || obj->GetSize() == 0) break;
-            if(!vis->Visit(obj)) return false;
-            current += obj->GetSize();
+            RawObject* obj = (RawObject*)current;
+            if(!obj || obj->GetAllocatedSize() == 0) break;
+            if(obj->IsMarked() && !vis->Visit(obj))
+                return false;
+            current += obj->GetAllocatedSize();
         }
         return true;
     }

@@ -8,9 +8,10 @@ namespace Token{
         }
     }
 
-    bool ArrayBase::Accept(WeakReferenceVisitor* vis) {
+    bool ArrayBase::Accept(WeakObjectPointerVisitor* vis) {
         for (size_t i = 0; i < Length(); i++){
-            vis->Visit(&slots_[i]);
+            if(!vis->Visit(&slots_[i]))
+                return false;
         }
         return true;
     }

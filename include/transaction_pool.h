@@ -20,11 +20,9 @@ namespace Token{
         ~TransactionPool() = delete;
 
         static size_t GetSize();
-        static size_t GetCacheSize();
-        static size_t GetMaxCacheSize();
         static State GetState();
+        static bool Print();
         static bool Initialize();
-        static void Print(bool cache_only=false);
         static bool Accept(TransactionPoolVisitor* vis);
         static bool RemoveTransaction(const uint256_t& hash);
         static bool PutTransaction(const Handle<Transaction>& tx);

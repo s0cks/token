@@ -6,14 +6,12 @@
 #include <condition_variable>
 #include "common.h"
 #include "handle.h"
-#include "memory_pool.h"
 
 namespace Token{
     enum class Space{
         kStackSpace = 1,
-        kNewSpace,
-        kOldSpace,
-        kMemoryPool
+        kNewHeap,
+        kOldHeap,
     };
 
     static std::ostream& operator<<(std::ostream& stream, const Space& space){
@@ -21,14 +19,11 @@ namespace Token{
             case Space::kStackSpace:
                 stream << "Stack";
                 return stream;
-            case Space::kNewSpace:
-                stream << "New";
+            case Space::kNewHeap:
+                stream << "New Heap";
                 return stream;
-            case Space::kOldSpace:
-                stream << "Old";
-                return stream;
-            case Space::kMemoryPool:
-                stream << "Memory Pool";
+            case Space::kOldHeap:
+                stream << "Old Heap";
                 return stream;
             default:
                 stream << "<Unknown Space>";
@@ -71,37 +66,21 @@ namespace Token{
         friend class Object;
         friend class RawObject;
         friend class Scavenger;
-        friend class HandleBase;
-        friend class HeapDumpWriter;
-        friend class MemoryInformationSection;
     private:
         Allocator() = delete;
-
-        //TODO: refactor roots again
-        static Object** TrackRoot(Object* value);
-        static void FreeRoot(Object** root);
-        static void UntrackRoot(Object* root);
-
-        static bool VisitRoots(WeakObjectPointerVisitor* vis);
-        static void Initialize(Object* obj);
-
-        static bool GetRoots(std::vector<uword>& roots);
+        static void Initialize(RawObject* obj);
     public:
         ~Allocator(){}
 
         static void Initialize();
-        static void MinorCollect();
-        static void MajorCollect();
-
+        static bool MinorCollect();
+        static bool MajorCollect();
         static void* Allocate(size_t size);
         static MemoryRegion* GetRegion();
-        static Heap* GetHeap();
-        static MemoryPool* GetUnclaimedTransactionPoolMemory();
-        static MemoryPool* GetTransactionPoolMemory();
-        static MemoryPool* GetBlockPoolMemory();
-        static size_t GetNumberOfStackSpaceObjects();
-        static size_t GetStackSpaceSize();
-        static void PrintHeap();
+        static Heap* GetNewHeap();
+        static Heap* GetOldHeap();
+        static void PrintNewHeap();
+        static void PrintOldHeap();
     };
 
     class WeakObjectPointerVisitor{
@@ -109,84 +88,153 @@ namespace Token{
         WeakObjectPointerVisitor() = default;
     public:
         virtual ~WeakObjectPointerVisitor() = default;
-        virtual bool Visit(Object** root) = 0;
+        virtual bool Visit(RawObject** root) = 0;
+
+        template<typename T>
+        bool Visit(T** ptr){
+            return Visit((RawObject**)ptr);
+        }
     };
 
-    //TODO: remove GCStats
-    class GCStats{
+    typedef uint64_t ObjectHeader; //TODO: Remove ObjectHeader
+
+    class RawObject{ //TODO: Remove RawObject
+        friend class Heap;
+        friend class Thread;
+        friend class Marker;
         friend class Allocator;
         friend class Scavenger;
-        friend class RawObject;
+        friend class Semispace;
+        friend class HandleGroup;
+        friend class ReferenceNotifier;
+        friend class ObjectPointerPrinter;
     public:
-        static const size_t kNumberOfCollectionsRequiredForPromotion = 3;
+        static const intptr_t kNumberOfCollectionsRequiredForPromotion = 3;
     private:
+        ObjectHeader header_;
         Space space_;
-        Color color_;
-        size_t object_size_;
-        size_t num_collections_;
-        size_t num_references_;
-    public:
-        GCStats(Space space):
-            space_(space),
-            color_(Color::kWhite),
-            object_size_(0),
-            num_collections_(0),
-            num_references_(0){}
-        GCStats(): GCStats(Space::kNewSpace){}
-        ~GCStats(){}
+        bool marked_;
+        intptr_t size_;
+        intptr_t collections_survived_;
+        intptr_t num_references_;
+        uword ptr_;
 
-        size_t GetNumberOfCollectionsSurvived() const{
-            return num_collections_;
+        ObjectHeader GetAllocationHeader() const{
+            return header_;
         }
 
-        size_t GetNumberOfReferences() const{
+        void SetAllocationHeader(ObjectHeader header){
+            header_ = header;
+        }
+
+        void SetSpace(Space space){
+            space_ = space;
+        }
+
+        void SetObjectSize(intptr_t size){
+            size_ = size;
+        }
+
+        void IncrementReferenceCount(){
+            num_references_++;
+        }
+
+        void DecrementReferenceCount(){
+            num_references_--;
+        }
+
+        intptr_t GetObjectSize() const{
+            return size_;
+        }
+
+        intptr_t GetReferenceCount() const{
             return num_references_;
         }
 
-        size_t GetSize() const{
-            return object_size_;
+        intptr_t GetNumberOfCollectionsSurvived() const{
+            return collections_survived_;
         }
 
-        Color GetColor() const{
-            return color_;
+        void IncrementCollectionsCounter(){
+            collections_survived_++;
+        }
+
+        void SetMarked(){
+            marked_ = true;
+        }
+
+        void ClearMarked(){
+            marked_ = false;
+        }
+
+        bool HasStackReferences() const{
+            return GetReferenceCount() > 0;
+        }
+
+        bool IsMarked() const{
+            return marked_;
+        }
+
+        bool IsReadyForPromotion() const{
+            return collections_survived_ >= kNumberOfCollectionsRequiredForPromotion;
         }
 
         Space GetSpace() const{
             return space_;
         }
 
-        bool IsStackSpace() const{
-            return GetSpace() == Space::kStackSpace;
+        bool IsInStackSpace() const{
+            return space_ == Space::kStackSpace;
         }
 
-        bool IsNewSpace() const{
-            return GetSpace() == Space::kNewSpace;
+        bool IsNewHeap() const{
+            return space_ == Space::kNewHeap;
         }
-
-        bool IsOldSpace() const{
-            return GetSpace() == Space::kOldSpace;
-        }
-
-        GCStats& operator=(const GCStats& other){
-            space_ = other.space_;
-            num_collections_ = other.num_collections_;
-            num_references_ = other.num_references_;
-            return (*this);
-        }
-    };
-
-    class WeakReferenceVisitor{
     protected:
-        WeakReferenceVisitor() = default;
-    public:
-        virtual ~WeakReferenceVisitor() = default;
-        virtual bool Visit(Object** field) const = 0;
+        RawObject():
+                header_(0),
+                space_(),
+                collections_survived_(0),
+                num_references_(0),
+                size_(0),
+                marked_(false),
+                ptr_(0){
+            Allocator::Initialize(this);
+        }
+
+        virtual void NotifyWeakReferences(RawObject** field){}
+        virtual bool Accept(WeakObjectPointerVisitor* vis){ return true; }
+
+        void WriteBarrier(RawObject** slot, RawObject* data){
+            if(data) data->IncrementReferenceCount();
+            if((*slot))(*slot)->DecrementReferenceCount();
+            (*slot) = data;
+        }
+
+        template<typename T, typename U>
+        void WriteBarrier(T** slot, U* data){
+            WriteBarrier((RawObject**)slot, (RawObject*)data);
+        }
 
         template<typename T>
-        bool Visit(T** field) const{
-            return Visit((Object**)field);
+        void WriteBarrier(T** slot, const Handle<T>& handle){
+            WriteBarrier((RawObject**)slot, (RawObject*)handle);
+        }
+    public:
+        virtual ~RawObject(){
+            //TODO: needed? if(IsInStackSpace()) Allocator::UntrackRoot(this);
+        }
+
+        size_t GetAllocatedSize() const{
+            return GetObjectSize();// refactor
+        }
+
+        virtual std::string ToString() const = 0;
+
+        static void* operator new(size_t size){
+            return Allocator::Allocate(size);
         }
     };
 }
 
-#endif //TOKEN_ALLOCATOR_H
+#endif//TOKEN_ALLOCATOR_H

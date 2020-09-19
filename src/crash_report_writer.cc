@@ -35,10 +35,7 @@ namespace Token{
         return WriteLine("Timestamp: " + GetTimestampFormattedReadable(GetCurrentTimestamp()))
             && WriteLine("Version: " + GetVersion())
             && WriteLine("Debug Mode: " + GetStatus(TOKEN_DEBUG))
-            && WriteLine("Ledger Home: " + TOKEN_BLOCKCHAIN_HOME)
-            && WritePool<BlockPool>("Block")
-            && WritePool<TransactionPool>("Transaction")
-            && WritePool<UnclaimedTransactionPool>("UnclaimedTransaction");
+            && WriteLine("Ledger Home: " + TOKEN_BLOCKCHAIN_HOME);
     }
 
     bool CrashReportWriter::WriteServerInformation(){

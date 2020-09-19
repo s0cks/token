@@ -3,6 +3,7 @@
 #include "common.h"
 #include "keychain.h"
 #include "block_pool.h"
+#include "block_node.h"
 #include "block_chain.h"
 #include "configuration.h"
 #include "transaction_pool.h"
@@ -10,12 +11,12 @@
 #include "unclaimed_transaction_pool.h"
 
 namespace Token{
-    void BlockChainInitializer::SetGenesisNode(const Handle<Block>& blk){
-        BlockChain::SetGenesis(blk);
+    void BlockChainInitializer::SetHeadNode(BlockNode* node){
+        BlockChain::SetHeadNode(node);
     }
 
-    void BlockChainInitializer::SetHeadNode(const Handle<Block>& blk){
-        BlockChain::SetHead(blk);
+    void BlockChainInitializer::SetGenesisNode(BlockNode* node){
+        BlockChain::SetGenesisNode(node);
     }
 
     bool BlockChainInitializer::Initialize(){
@@ -44,47 +45,13 @@ namespace Token{
         return true;
     }
 
-    bool SnapshotBlockChainInitializer::DoInitialization(){
-        //TODO: wipe existing block chain data
-        Snapshot* snapshot = GetSnapshot();
-        LOG(INFO) << "loading block chain from snapshot: " << snapshot->GetFilename();
-
-        SnapshotPrinter::Print(snapshot);
-
-        uint256_t hash = snapshot->GetHead();
-        Handle<Block> block = snapshot->GetBlock(hash);
-        BlockChainIndex::PutBlockData(block);
-
-        SetHeadNode(block);
-        LOG(INFO) << "loading <HEAD> block: " << block;
-        while(true){
-            hash = block->GetPreviousHash();
-            if(hash.IsNull()){
-                SetGenesisNode(block);
-                break;
-            }
-
-            Handle<Block> current = snapshot->GetBlock(hash);
-            BlockChainIndex::PutBlockData(current);
-            LOG(INFO) << "loading block: " << block->GetHeader();
-            block->SetPrevious(current.CastTo<Node>());
-            current->SetNext(block.CastTo<Node>());
-
-            if(block->IsGenesis()){
-                SetGenesisNode(block);
-                break;
-            }
-            block = current;
-        }
-        return true;
-    }
-
     bool DefaultBlockChainInitializer::DoInitialization(){
         if(!BlockChainIndex::HasBlockData()){
             LOG(INFO) << "generating new block chain in: " << TOKEN_BLOCKCHAIN_HOME;
             Handle<Block> genesis = Block::Genesis();
-            SetGenesisNode(genesis);
-            SetHeadNode(genesis);
+            BlockNode* node = new BlockNode(genesis);
+            SetGenesisNode(node);
+            SetHeadNode(node);
             BlockChainIndex::PutBlockData(genesis);
 
             for(uint32_t idx = 0; idx < genesis->GetNumberOfTransactions(); idx++){
@@ -102,24 +69,22 @@ namespace Token{
         LOG(INFO) << "loading block chain data from " << TOKEN_BLOCKCHAIN_HOME << "....";
         uint256_t hash = BlockChainIndex::GetReference("<HEAD>");
         Handle<Block> block = BlockChainIndex::GetBlockData(hash);
-        LOG(INFO) << "loading <HEAD> block: " << block->GetHeader();
-        SetHeadNode(block);
+        BlockNode* node = new BlockNode(block);
+
+        SetHeadNode(node);
         while(true){
             hash = block->GetPreviousHash();
             if(hash.IsNull()){
-                SetGenesisNode(block);
+                SetGenesisNode(node);
                 break;
             }
 
             Handle<Block> current = BlockChainIndex::GetBlockData(hash);
-            LOG(INFO) << "loading block: " << block->GetHeader();
-            block->SetPrevious(current.CastTo<Node>());
-            current->SetNext(block.CastTo<Node>());
+            BlockNode* next = new BlockNode(current);
 
-            if(block->IsGenesis()){
-                SetGenesisNode(block);
-                break;
-            }
+            LOG(INFO) << "loading block: " << block->GetHeader();
+            node->SetPrevious(next);
+            next->SetNext(node);
             block = current;
         }
         return true;

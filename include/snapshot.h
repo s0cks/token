@@ -74,7 +74,7 @@ namespace Token{
             }
         }
     protected:
-        bool Accept(WeakReferenceVisitor* vis){
+        bool Accept(WeakObjectPointerVisitor* vis){
             for(uint64_t idx = 0; idx < blocks_len_; idx++){
                 if(!vis->Visit(&blocks_[idx]))
                     return false;

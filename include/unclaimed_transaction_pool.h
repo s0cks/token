@@ -21,11 +21,9 @@ namespace Token{
         ~UnclaimedTransactionPool() = delete;
 
         static size_t GetSize();
-        static size_t GetCacheSize();
-        static size_t GetMaxCacheSize();
         static State GetState();
+        static bool Print();
         static bool Initialize();
-        static bool Print(bool cache_only=false);
         static bool Accept(UnclaimedTransactionPoolVisitor* vis);
         static bool RemoveUnclaimedTransaction(const uint256_t& hash);
         static bool PutUnclaimedTransaction(const Handle<UnclaimedTransaction>& utxo);

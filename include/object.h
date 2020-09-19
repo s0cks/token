@@ -7,7 +7,7 @@
 
 #include "common.h"
 #include "handle.h"
-#include "bitfield.h"
+#include "keychain.h"
 #include "allocator.h"
 #include "uint256_t.h"
 
@@ -16,10 +16,10 @@ namespace Token{
     class ByteBuffer;
 
 #define FOR_EACH_TYPE(V) \
+    V(Block) \
+    V(Transaction) \
     V(Input) \
     V(Output) \
-    V(Transaction) \
-    V(Block) \
     V(UnclaimedTransaction)
 
     enum class Type{
@@ -35,7 +35,7 @@ namespace Token{
             case Type::k##Name##Type: \
                 stream << #Name; \
                 return stream;
-        FOR_EACH_TYPE(DEFINE_TOSTRING)
+            FOR_EACH_TYPE(DEFINE_TOSTRING)
             case Type::kUnknownType:
             default:
                 stream << "Unknown";
@@ -50,121 +50,31 @@ namespace Token{
     Type GetObjectHeaderType(ObjectHeader header);
     uint32_t GetObjectHeaderSize(ObjectHeader header);
 
-    class WeakReferenceVisitor;
-    class Object{
+    class Object : public RawObject{
         //TODO:
         // - track references using Reference class?
         // - create ObjectFile + ObjectBuffer classes for serialization purposes?
-        friend class Semispace;
-        friend class Allocator;
-        friend class Scavenger;
-        friend class ObjectFinalizer;
-        friend class ObjectRelocator;
-        friend class ReferenceNotifier;
         friend class BinaryFileWriter;
-    private:
-        enum ObjectLayoutBits{
-            kMarkedBit = 0,
-            kReservedTagPosition = 1,
-            kReservedTagSize = 2,
-
-            kSizeFieldPosition = kReservedTagPosition+kReservedTagSize,
-            kSizeFieldSize = 8,
-
-            kTypeFieldPosition = kSizeFieldPosition+kSizeFieldSize,
-            kTypeFieldSize = 16
-        };
-
-        class SizeBits : public BitField<uint32_t, intptr_t, kSizeFieldPosition, kSizeFieldSize>{};
-        class TypeBits : public BitField<uint32_t, Type, kTypeFieldPosition, kTypeFieldSize>{};
-        class ReservedBits : public BitField<uint32_t, intptr_t, kReservedTagPosition, kReservedTagSize>{};
-        class MarkedBit : public BitField<uint32_t, bool, kMarkedBit, 1>{};
-
-        uint32_t tag_;
-        uint32_t num_references_; //TODO: remove Object::num_references_
-        uword ptr_; //TODO: refactor
-
-        void SetTag(uint32_t tag){
-            tag_ = tag;
-        }
     protected:
+        Type type_;
+
         Object():
-            tag_(0){
-            Allocator::Initialize(this);
-            SetType(Type::kUnknownType);
-        }
-
-        uint32_t GetTag() const{
-            return tag_;
-        }
-
-        void SetForwardingAddress(uword ptr){
-            ptr_ = ptr;
-        }
+                RawObject(),
+                type_(Type::kUnknownType){}
+        Object(Type type):
+                RawObject(),
+                type_(type){}
 
         void SetType(Type type){
-            SetTag(TypeBits::Update(type, GetTag()));
+            type_ = type;
         }
 
-        void SetSize(intptr_t size){
-            SetTag(SizeBits::Update(size, GetTag()));
-        }
-
-        void SetMarkedBit(){
-            SetTag(MarkedBit::Update(true, GetTag()));
-        }
-
-        void ClearMarkedBit(){
-            SetTag(MarkedBit::Update(false, GetTag()));
-        }
-
-        bool IsMarked() const{
-            return MarkedBit::Decode(GetTag());
-        }
-
-        virtual bool Encode(ByteBuffer* bytes) const = 0;
-        virtual bool Accept(WeakReferenceVisitor* vis){ return true; }
-
-        void WriteBarrier(Object** slot, Object* data){
-            if(data)data->IncrementReferenceCount();
-            if((*slot))(*slot)->DecrementReferenceCount();
-            (*slot) = data;
-        }
-
-        template<typename T, typename U>
-        void WriteBarrier(T** slot, U* data){
-            WriteBarrier((Object**)slot, (Object*)data);
-        }
-
-        template<typename T>
-        void WriteBarrier(T** slot, const Handle<T>& handle){
-            WriteBarrier((Object**)slot, (Object*)handle);
-        }
-
-        uint32_t GetReferenceCount() const{
-            return num_references_;
-        }
-
-        bool HasStackReferences() const{
-            return num_references_ > 0;
-        }
+        virtual bool Encode(ByteBuffer* bytes) const{ return false; }
     public:
         virtual ~Object() = default;
 
         Type GetType() const{
-            return TypeBits::Decode(GetTag());
-        }
-
-        intptr_t GetSize() const{
-            return SizeBits::Decode(GetTag());
-        }
-
-        uword GetStartAddress() const{
-            return (uword)ptr_;
-        }
-
-        uword GetEndAddress() const{
-            return GetStartAddress() + GetSize();
+            return type_;
         }
 
         virtual std::string ToString() const{
@@ -186,17 +96,9 @@ namespace Token{
             return WriteToFile(fd);
         }
 
-        void IncrementReferenceCount(){
-            num_references_++;
-        }
-
-        void DecrementReferenceCount(){
-            num_references_--;
-        }
-
         bool WriteToFile(std::fstream& file) const;
-        virtual uint256_t GetHash() const;
-        virtual size_t GetBufferSize() const = 0; //TODO: refactor
+        uint256_t GetHash() const;
+        virtual size_t GetBufferSize() const{ return 0; }
 
 #define DECLARE_TYPECHECK(Name) \
         bool Is##Name() const{ \
@@ -204,10 +106,6 @@ namespace Token{
         }
         FOR_EACH_TYPE(DECLARE_TYPECHECK)
 #undef DECLARE_TYPECHECK
-
-        static void* operator new(size_t size){
-            return Allocator::Allocate(size);
-        }
     };
 
     class ObjectPointerVisitor{
@@ -215,16 +113,16 @@ namespace Token{
         ObjectPointerVisitor() = default;
     public:
         virtual ~ObjectPointerVisitor() = default;
-        virtual bool Visit(Object* obj) = 0;
+        virtual bool Visit(RawObject* obj) = 0;
     };
 
-    class ObjectPrinter : public ObjectPointerVisitor{
+    class ObjectPointerPrinter : public ObjectPointerVisitor{
     public:
-        ObjectPrinter() = default;
-        ~ObjectPrinter() = default;
+        ObjectPointerPrinter() = default;
+        ~ObjectPointerPrinter() = default;
 
-        bool Visit(Object* obj){
-            LOG(INFO) << "[" << std::hex << (uword) obj << "] := " << obj->ToString();
+        bool Visit(RawObject* obj){
+            LOG(INFO) << "[" << std::hex << obj << ":" << obj->GetAllocatedSize() << "] (Marked: " << (obj->IsMarked() ? 'y' : 'n') << "): " << obj->ToString();
             return true;
         }
     };

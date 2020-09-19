@@ -1,137 +1,203 @@
+#include "heap.h"
+#include "timeline.h"
 #include "scavenger.h"
-
 #include "transaction.h"
 
 namespace Token{
-    class ObjectFinalizer : public ObjectPointerVisitor{
-    public:
-        bool Visit(Object* obj){
-            if(!obj->IsMarked()){
-                LOG(INFO) << "finalizing object [" << std::hex << obj << "] := " << obj->ToString();
-                obj->~Object();//TODO: call finalizer
-                obj->ptr_ = 0;
-            }
-            return true;
-        }
-    };
+    ScavengerStats::ScavengerStats(Heap* heap):
+            heap_(heap),
+            start_size_(heap->GetAllocatedSize()),
+            stop_size_(0){}
 
-    class ObjectRelocator : public ObjectPointerVisitor{
-    private:
-        Semispace* dest_;
-    public:
-        ObjectRelocator(Semispace* dest):
-            ObjectPointerVisitor(),
-            dest_(dest){}
+    void ScavengerStats::CollectionFinished(){
+        stop_size_ = GetHeap()->GetAllocatedSize();
+    }
 
-        bool Visit(Object* obj){
-            LOG(INFO) << "relocating object [" << std::hex << obj << "] := " << obj->ToString();
-            size_t size = obj->GetSize();
-            void* nptr = dest_->Allocate(size);
-            obj->ptr_ = reinterpret_cast<uword>(nptr);
-            memcpy((void*)obj->ptr_, (void*)obj, size);
-            return true;
-        }
-    };
-
-    class ReferenceNotifier : public ObjectPointerVisitor,
-                              public WeakReferenceVisitor,
-                              public WeakObjectPointerVisitor{
-    public:
-        bool Visit(Object** field) const{
-            Object* obj = (*field);
-            LOG(INFO) << "visiting root: " << obj->ToString();
-            if(obj) (*field) = (Object*)obj->ptr_;
-            return true;
-        }
-
-        bool Visit(Object* obj){
-            obj->Accept(this);
-            return true;
-        }
-
-        bool Visit(Object** root){
-            Object* obj = (*root);
-            LOG(INFO) << "visiting root: " << obj->ToString();
-            (*root) = (Object*)obj->ptr_;
-            return true;
-        }
-    };
-
-    class ScavengerMarker : public ObjectPointerVisitor,
-                            public WeakObjectPointerVisitor,
-                            public WeakReferenceVisitor{
+    class Marker : public ObjectPointerVisitor,
+                   public WeakObjectPointerVisitor{
     private:
         std::vector<uword>& stack_;
     public:
-        ScavengerMarker(std::vector<uword>& stack):
+        Marker(std::vector<uword>& stack):
             ObjectPointerVisitor(),
             stack_(stack){}
-        ~ScavengerMarker() = default;
 
-        bool Visit(Object** ptr) const{
-            if((*ptr)) stack_.push_back((uword)(*ptr));
-            return true;
+        bool Visit(RawObject** ptr){
+            return Visit(*ptr);
         }
 
-        bool Visit(Object** ptr){
-            if((*ptr)) stack_.push_back((uword)(*ptr));
-            return true;
-        }
-
-        bool Visit(Object* object){
-            stack_.push_back((uword)object);
+        bool Visit(RawObject* obj){
+            stack_.push_back((uword)obj);
             return true;
         }
     };
 
-    bool Scavenger::Scavenge(){
-        LOG(INFO) << "marking objects....";
-        std::vector<uword> stack;
-        ScavengerMarker marker(stack);
+    bool Scavenger::ScavengeObject(RawObject* obj){
+        LOG(INFO) << "scavenging object [" << std::hex << obj << ":" << std::dec << obj->GetObjectSize() << "]";
+        intptr_t size = obj->GetAllocatedSize();
+        void* nptr = Allocator::GetNewHeap()->GetToSpace()->Allocate(size);
+        obj->ptr_ = (uword)nptr;
+        obj->IncrementCollectionsCounter();
+        memcpy(nptr, (void*)obj, size); // is this safe to do????
+        return true;
+    }
 
-        if(!Allocator::VisitRoots(&marker)){
-            LOG(ERROR) << "couldn't mark roots.";
+    bool Scavenger::PromoteObject(RawObject* obj){
+        LOG(INFO) << "promoting object [" << std::hex << obj << ":" << std::dec << obj->GetObjectSize() << "]";
+        intptr_t size = obj->GetAllocatedSize();
+        void* nptr = Allocator::GetOldHeap()->Allocate(size);
+        memcpy(nptr, (void*)obj, size); // is this safe to do????
+        obj->ptr_ = (uword)nptr;
+        memcpy((void*)obj->ptr_, (void*)obj, obj->GetAllocatedSize());
+        return true;
+    }
+
+    bool Scavenger::FinalizeObject(RawObject* obj){
+        LOG(INFO) << "finalizing object [" << std::hex << obj << ":" << std::dec << obj->GetObjectSize() << "]";
+        obj->~RawObject(); //TODO: Call finalizer for obj
+        obj->ptr_ = 0;
+        return true;
+    }
+
+    bool Scavenger::ProcessRoots(){
+        SetPhase(Phase::kMarkPhase);
+
+        Marker marker(work_);
+        if(!HandleBase::VisitHandles(&marker)){
+            LOG(WARNING) << "couldn't visit current handles.";
             return false;
         }
 
-        while(!stack.empty()){
-            uword address = stack.back();
-            stack.pop_back();
+        while(HasWork()){
+            Object* obj = (Object*)work_.back();
+            work_.pop_back();
 
-            Object* obj = (Object*)address;
-
-            if(!obj->IsMarked()){
-                LOG(INFO) << "marking object [" << std::hex << obj << "] := " << obj->ToString();
-                obj->SetMarkedBit();
-                LOG(INFO) << std::hex << obj << " marked?: " << (obj->IsMarked() ? 'y' : 'n');
-                if(!obj->Accept(&marker)){
-                    LOG(ERROR) << "couldn't get references for object @" << std::hex << obj->GetStartAddress();
-                    return false;
+            if (!obj->IsMarked()) {
+                LOG(INFO) << "marking object [" << std::hex << obj << ":" << std::dec << obj->GetObjectSize() << "]";
+                obj->SetMarked();
+                if (!obj->Accept(&marker)) {
+                    LOG(WARNING) << "couldn't visit object references.";
+                    continue;
                 }
             }
         }
 
-        LOG(INFO) << "relocating marked objects....";
-        ObjectRelocator relocator(GetToSpace());
-        if(!GetFromSpace()->VisitMarkedObjects(&relocator)){
-            LOG(ERROR) << "couldn't relocate marked objects.";
+        return true;
+    }
+
+    bool Scavenger::ScavengeMemory(){
+        SetPhase(Phase::kSweepPhase);
+        if(!Allocator::GetNewHeap()->VisitObjects(this)){
+            LOG(ERROR) << "couldn't scavenge memory.";
             return false;
         }
 
-        LOG(INFO) << "notifying references....";
-        ReferenceNotifier notifier;
-        if(!GetFromSpace()->VisitMarkedObjects(&notifier)){
-            LOG(ERROR) << "couldn't notify references.";
+        return true;
+    }
+
+    bool Scavenger::Visit(RawObject* obj){
+        if(obj->IsMarked()){
+            if(obj->IsReadyForPromotion()){
+                if(!PromoteObject(obj)){
+                    LOG(ERROR) << "couldn't promote object.";
+                    return false;
+                }
+            } else{
+                if(!ScavengeObject(obj)){
+                    LOG(ERROR) << "couldn't scavenge object.";
+                    return false;
+                }
+            }
+        } else{
+            if(!FinalizeObject(obj)){
+                LOG(ERROR) << "couldn't finalize object.";
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    class ReferenceNotifier : public ObjectPointerVisitor,
+                              public WeakObjectPointerVisitor{
+    public:
+        bool Visit(RawObject** field){
+            RawObject* obj = (*field);
+            if(obj->IsMarked()){
+                (*field) = (RawObject*)obj->ptr_;
+            }
+            return true;
+        }
+
+        bool Visit(RawObject* obj){
+            if(obj->IsMarked()) obj->Accept(this);
+            return true;
+        }
+    };
+
+    bool Scavenger::Scavenge(bool is_major){
+        if(is_major){
+            LOG(INFO) << "performing major garbage collection...";
+        } else{
+            LOG(INFO) << "performing minor garbage collection...";
+        }
+
+        //TODO: apply major collection steps to Scavenger::ScavengeMemory()
+#if defined(TOKEN_DEBUG)
+        Timeline timeline(is_major ? "MajorGC" : "MinorGC");
+        timeline.Push("Start");
+        ScavengerStats stats(Allocator::GetNewHeap());
+#endif//TOKEN_DEBUG
+
+        //TODO: do we need an instance of Scavenger here?
+        Scavenger scavenger;
+        {
+            sleep(1);
+            // Mark Phase
+            LOG(INFO) << "marking objects....";
+            timeline.Push("Mark Objects");
+            if(!scavenger.ProcessRoots()){
+                return false;//TODO: handle error
+            }
+        }
+
+        {
+            // Sweep Phase
+            sleep(1);
+            timeline.Push("Scavenge Memory");
+            LOG(INFO) << "scavenging memory....";
+            if(!scavenger.ScavengeMemory()){
+                return false;//TODO: handle error
+            }
+        }
+
+        //TODO: notify references?
+        LOG(INFO) << "updating references....";
+        ReferenceNotifier ref_updater;
+        if(!Allocator::GetNewHeap()->VisitMarkedObjects(&ref_updater)){
+            LOG(ERROR) << "couldn't visit new heap.";
             return false;
         }
 
-        LOG(INFO) << "finalizing objects....";
-        ObjectFinalizer finalizer;
-        GetFromSpace()->Accept(&finalizer);
+        if(!HandleBase::VisitHandles(&ref_updater)){
+            LOG(ERROR) << "couldn't visit handles.";
+            return false;
+        }
 
         LOG(INFO) << "cleaning....";
-        GetFromSpace()->Reset();
-        GetHeap()->SwapSpaces();
+        //TODO fix scavenger cleanup routine
+        Allocator::GetNewHeap()->GetFromSpace()->Reset();
+        Allocator::GetNewHeap()->SwapSpaces();
+
+#if defined(TOKEN_DEBUG)
+        sleep(1);
+        timeline.Push("Stop");
+        stats.CollectionFinished();
+        LOG(INFO) << "Scavenger Stats (New Heap):";
+        LOG(INFO) << "  - Bytes Collected: " << stats.GetTotalBytesCollected();
+        LOG(INFO) << "Timeline (New Heap):";
+        if(!timeline.Print()) LOG(WARNING) << "couldn't print timeline";
+#endif//TOKEN_DEBUG
         return true;
     }
 }

@@ -20,11 +20,9 @@ namespace Token{
         ~BlockPool() = delete;
 
         static size_t GetSize();
-        static size_t GetCacheSize();
-        static size_t GetMaxCacheSize();
         static State GetState();
         static bool Initialize();
-        static bool Print(bool cache_only=false);
+        static bool Print();
         static bool Accept(BlockPoolVisitor* vis);
         static bool RemoveBlock(const uint256_t& hash);
         static bool PutBlock(const Handle<Block>& block);

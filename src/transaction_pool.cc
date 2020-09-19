@@ -1,7 +1,6 @@
 #include <glog/logging.h>
 #include <unordered_map>
 
-#include "cache.h"
 #include "journal.h"
 #include "crash_report.h"
 #include "transaction_pool.h"
@@ -16,13 +15,6 @@ namespace Token{
     GetJournal(){
         static ObjectPoolJournal<Transaction> journal(TransactionPool::GetPath());
         return &journal;
-    }
-
-    static inline MemoryPoolCache*
-    GetCache(){
-        static MemoryPool* pool = Allocator::GetTransactionPoolMemory();
-        static MemoryPoolCache cache(pool, pool->GetSize() / sizeof(Transaction));
-        return &cache;
     }
 
     TransactionPool::State TransactionPool::GetState(){
@@ -74,51 +66,38 @@ namespace Token{
 
     bool TransactionPool::HasTransaction(const uint256_t& hash){
         LOCK_GUARD;
-        return GetCache()->ContainsItem(hash)
-            || GetJournal()->HasData(hash);
+        return GetJournal()->HasData(hash);
     }
 
     Handle<Transaction> TransactionPool::GetTransaction(const uint256_t& hash){
         LOCK_GUARD;
-        if(GetCache()->ContainsItem(hash)){
-            return (Transaction*)GetCache()->GetItem(hash);
-        }
-
-        if(GetJournal()->HasData(hash)){
-            Handle<Transaction> utxo = GetJournal()->GetData(hash);
-            if(!GetCache()->PutItem(utxo)) LOG(WARNING) << "cannot put transaction " << hash << " into pool cache";
-            return utxo;
-        }
-
-        return nullptr;
+        return GetJournal()->HasData(hash) ?
+               GetJournal()->GetData(hash) :
+               nullptr;
     }
 
     bool TransactionPool::RemoveTransaction(const uint256_t& hash){
         LOCK_GUARD;
-        if(GetCache()->ContainsItem(hash))
-            GetCache()->RemoveItem(hash);
-        return GetJournal()->RemoveData(hash);
+        if(!GetJournal()->HasData(hash)) return false;
+        if(!GetJournal()->RemoveData(hash)){
+            LOG(WARNING) << "couldn't remove transaction " << hash << " data from pool";
+            return false;
+        }
+
+        LOG(INFO) << "removed transaction " << hash << " from pool";
+        return true;
     }
 
     bool TransactionPool::PutTransaction(const Handle<Transaction>& tx){
         LOCK_GUARD;
         uint256_t hash = tx->GetHash();
-        if(GetCache()->ContainsItem(hash) || GetJournal()->HasData(hash))
-            return false;
-        if(!GetCache()->PutItem(tx)) {
-            LOG(WARNING) << "couldn't put transaction " << hash << " in pool cache";
-            return false;
-        }
-
+        if(GetJournal()->HasData(tx->GetHash())) return false;
         if(!GetJournal()->PutData(tx)){
-            LOG(WARNING) << "couldn't write transaction " << hash << " to disk";
-            if(!GetCache()->RemoveItem(hash)){
-                LOG(WARNING) << "couldn't remove transaction " << hash << " from pool cache";
-                return false;
-            }
+            LOG(WARNING) << "cannot put transaction data in pool";
             return false;
         }
 
+        LOG(INFO) << "added transaction " << hash << " to pool";
         return true;
     }
 
@@ -141,18 +120,17 @@ namespace Token{
         return false;
     }
 
-    void TransactionPool::Print(bool cache_only){
-        ObjectPrinter printer;
-        if(cache_only){
-            LOG(INFO) << "Transaction Pool (Cache):";
-            if(!GetCache()->Accept(&printer)){
-                LOG(WARNING) << "couldn't print transaction pool cache";
-                return;
-            }
-        } else{
-            //TODO: implement TransactionPool::PrintPool(cache_only=false)
-            return;
+    class TransactionPrinter : public TransactionPoolVisitor{
+    public:
+        bool Visit(const Handle<Transaction>& tx){
+            LOG(INFO) << " - " << tx->GetHash();
+            return true;
         }
+    };
+
+    bool TransactionPool::Print(){
+        TransactionPrinter printer;
+        return Accept(&printer);
     }
 
     size_t TransactionPool::GetSize(){
@@ -171,13 +149,5 @@ namespace Token{
             closedir(dir);
         }
         return size;
-    }
-
-    size_t TransactionPool::GetCacheSize(){
-        return GetCache()->GetSize();
-    }
-
-    size_t TransactionPool::GetMaxCacheSize(){
-        return GetCache()->GetMaxSize();
     }
 }

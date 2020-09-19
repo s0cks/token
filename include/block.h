@@ -100,7 +100,7 @@ namespace Token{
     };
 
     class BlockVisitor;
-    class Block : public Node{
+    class Block : public Object{
         //TODO:
         // - validation logic
         friend class BlockHeader;
@@ -124,22 +124,21 @@ namespace Token{
             }
         };
     private:
-        uint32_t timestamp_;
+        Timestamp timestamp_;
         uint32_t height_;
         uint256_t previous_hash_;
         Transaction** transactions_;
         size_t num_transactions_;
         BloomFilter tx_bloom_; // transient
 
-        Block(uint32_t timestamp, uint32_t height, const uint256_t& phash, Transaction** txs, size_t num_txs):
-            Node(),
+        Block(Timestamp timestamp, uint32_t height, const uint256_t& phash, Transaction** txs, size_t num_txs):
+            Object(),
             timestamp_(timestamp),
             height_(height),
             previous_hash_(phash),
             transactions_(nullptr),
             num_transactions_(num_txs),
             tx_bloom_(){
-            SetSize(sizeof(Block));
             SetType(Type::kBlockType);
 
             transactions_ = (Transaction**)malloc(sizeof(Transaction*)*num_txs);
@@ -150,10 +149,10 @@ namespace Token{
             }
         }
     protected:
-        bool Accept(WeakReferenceVisitor* vis){
-            Node::Accept(vis);
+        bool Accept(WeakObjectPointerVisitor* vis){
             for(size_t idx = 0; idx < num_transactions_; idx++){
-                vis->Visit(&transactions_[idx]);
+                if(!vis->Visit(&transactions_[idx]))
+                    return false;
             }
             return true;
         }
@@ -176,7 +175,7 @@ namespace Token{
             return num_transactions_;
         }
 
-        uint32_t GetTimestamp() const{
+        Timestamp GetTimestamp() const{
             return timestamp_;
         }
 
@@ -206,11 +205,11 @@ namespace Token{
         static Handle<Block> NewInstance(std::fstream& fd, size_t size);
         static Handle<Block> NewInstance(ByteBuffer* bytes);
 
-        static Handle<Block> NewInstance(uint32_t height, const uint256_t& phash, Transaction** txs, size_t num_txs, uint64_t timestamp=GetCurrentTime()){
+        static Handle<Block> NewInstance(uint32_t height, const uint256_t& phash, Transaction** txs, size_t num_txs, Timestamp timestamp=GetCurrentTimestamp()){
             return new Block(timestamp, height, phash, txs, num_txs);
         }
 
-        static Handle<Block> NewInstance(const BlockHeader& previous, Transaction** txs, size_t num_txs, uint64_t timestamp=GetCurrentTimestamp()){
+        static Handle<Block> NewInstance(const BlockHeader& previous, Transaction** txs, size_t num_txs, Timestamp timestamp=GetCurrentTimestamp()){
             return new Block(timestamp, previous.GetHeight() + 1, previous.GetHash(), txs, num_txs);
         }
 

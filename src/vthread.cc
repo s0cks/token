@@ -3,7 +3,7 @@
 #include "allocator.h"
 
 namespace Token{
-    void Thread::WriteBarrier(Object** slot, Object* value){
+    void Thread::WriteBarrier(RawObject** slot, RawObject* value){
         if(value) value->IncrementReferenceCount();
         if((*slot))(*slot)->DecrementReferenceCount();
         (*slot) = value;

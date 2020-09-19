@@ -14,21 +14,6 @@ namespace Token{
         return &journal;
     }
 
-    static inline MemoryPoolCache*
-    GetCache(){
-        static MemoryPool* pool = Allocator::GetBlockPoolMemory();
-        static MemoryPoolCache cache(pool, pool->GetSize() / sizeof(Block));
-        return &cache;
-    }
-
-    size_t BlockPool::GetCacheSize(){
-        return GetCache()->GetSize();
-    }
-
-    size_t BlockPool::GetMaxCacheSize(){
-        return GetCache()->GetMaxSize();
-    }
-
     void BlockPool::SetState(BlockPool::State state){
         LOCK_GUARD;
         state_ = state;
@@ -145,7 +130,7 @@ namespace Token{
         BlockPoolPrinter(): BlockPoolVisitor(){}
         ~BlockPoolPrinter() = default;
 
-        bool Visit(Object* obj){
+        bool Visit(RawObject* obj){
             //TODO: implement BlockPoolPrinter::Visit(RawObject*)
             return true;
         }
@@ -155,10 +140,8 @@ namespace Token{
         }
     };
 
-    bool BlockPool::Print(bool cache_only){
+    bool BlockPool::Print(){
         BlockPoolPrinter printer;
-        return cache_only
-             ? GetCache()->Accept(&printer)
-             : Accept(&printer);
+        return Accept(&printer);
     }
 }

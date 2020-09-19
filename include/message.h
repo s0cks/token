@@ -92,14 +92,14 @@ namespace Token{
 
     class VersionMessage : public Message{
     private:
-        uint64_t timestamp_;
+        Timestamp timestamp_;
         ClientType client_type_; //TODO: refactor this field
         std::string version_;
         std::string nonce_;
         std::string node_id_;
         Handle<Block> head_; //TODO: convert to pointer, handle WeakReferenceVisitor
 
-        VersionMessage(ClientType type, const std::string& version, const std::string& node_id, uint64_t timestamp, const std::string& nonce, const Handle<Block>& head):
+        VersionMessage(ClientType type, const std::string& version, const std::string& node_id, Timestamp timestamp, const std::string& nonce, const Handle<Block>& head):
             Message(),
             client_type_(type),
             version_(version),
@@ -146,7 +146,7 @@ namespace Token{
         DECLARE_MESSAGE(Version);
 
         static Handle<VersionMessage> NewInstance(ByteBuffer* bytes);
-        static Handle<VersionMessage> NewInstance(ClientType type, const std::string& node_id, const std::string& version=Token::GetVersion(), const std::string& nonce=GenerateNonce(), const Handle<Block>& head=BlockChain::GetHead(), uint64_t timestamp=GetCurrentTime()){
+        static Handle<VersionMessage> NewInstance(ClientType type, const std::string& node_id, const std::string& version=Token::GetVersion(), const std::string& nonce=GenerateNonce(), const Handle<Block>& head=BlockChain::GetHead(), Timestamp timestamp=GetCurrentTimestamp()){
             return new VersionMessage(type, version, node_id, timestamp, nonce, head);
         }
 
@@ -157,7 +157,7 @@ namespace Token{
 
     class VerackMessage : public Message{
     private:
-        uint64_t timestamp_;
+        Timestamp timestamp_;
         std::string node_id_;
         std::string version_;
         std::string nonce_;
@@ -165,7 +165,7 @@ namespace Token{
         NodeAddress callback_;
         Handle<Block> head_; //TODO: convert to pointer, handle WeakReferenceVisitor
 
-        VerackMessage(ClientType type, const std::string& node_id, const std::string& nonce, const NodeAddress& address, const Handle<Block>& head, uint64_t timestamp):
+        VerackMessage(ClientType type, const std::string& node_id, const std::string& nonce, const NodeAddress& address, const Handle<Block>& head, Timestamp timestamp):
             Message(),
             client_type_(type),
             node_id_(node_id),
@@ -203,7 +203,7 @@ namespace Token{
         DECLARE_MESSAGE(Verack);
 
         static Handle<VerackMessage> NewInstance(ByteBuffer* bytes);
-        static Handle<VerackMessage> NewInstance(ClientType type, const std::string& node_id, const NodeAddress& address, const Handle<Block>& head=BlockChain::GetHead(), const std::string& nonce=GenerateNonce(), uint64_t timestamp=GetCurrentTimestamp()){
+        static Handle<VerackMessage> NewInstance(ClientType type, const std::string& node_id, const NodeAddress& address, const Handle<Block>& head=BlockChain::GetHead(), const std::string& nonce=GenerateNonce(), Timestamp timestamp=GetCurrentTimestamp()){
             return new VerackMessage(type, node_id, nonce, address, head, timestamp);
         }
 
@@ -325,7 +325,7 @@ namespace Token{
             WriteBarrier(&data_, tx);
         }
     protected:
-        bool Accept(WeakReferenceVisitor* vis){
+        bool Accept(WeakObjectPointerVisitor* vis){
             return vis->Visit(&data_);
         }
     public:
@@ -355,7 +355,7 @@ namespace Token{
             WriteBarrier(&data_, blk);
         }
     protected:
-        bool Accept(WeakReferenceVisitor* vis){
+        bool Accept(WeakObjectPointerVisitor* vis){
             return vis->Visit(&data_);
         }
     public:
