@@ -16,12 +16,12 @@ namespace Token{
         stop_size_ = GetHeap()->GetAllocatedSize();
     }
 
-    class LiveObjectMarker : public ObjectPointerVisitor,
-                             public WeakObjectPointerVisitor{
+    class Marker : public ObjectPointerVisitor,
+                   public WeakObjectPointerVisitor{
     private:
         std::vector<uword>& stack_;
     public:
-        LiveObjectMarker(std::vector<uword>& stack):
+        Marker(std::vector<uword>& stack):
             ObjectPointerVisitor(),
             stack_(stack){}
 
@@ -97,7 +97,7 @@ namespace Token{
 #endif//TOKEN_DEBUG
 
         std::vector<uword> stack;
-        LiveObjectMarker marker(stack);
+        Marker marker(stack);
         if(!HandleBase::VisitHandles(&marker)){
             LOG(WARNING) << "couldn't visit current handles.";
             return false;

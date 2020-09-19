@@ -66,9 +66,6 @@ namespace Token{
         friend class Object;
         friend class RawObject;
         friend class Scavenger;
-        friend class HandleBase;
-        friend class HeapDumpWriter;
-        friend class MemoryInformationSection;
     private:
         Allocator() = delete;
         static void Initialize(RawObject* obj);
@@ -111,7 +108,7 @@ namespace Token{
         friend class ObjectPointerPrinter;
         friend class ObjectFinalizer;
         friend class ObjectRelocator;
-        friend class LiveObjectMarker;
+        friend class Marker;
         friend class LiveObjectCopier;
         friend class StackSpaceSizeCalculator;
         friend class LiveObjectReferenceUpdater;

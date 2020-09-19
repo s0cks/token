@@ -4,7 +4,6 @@
 
 #include "heap.h"
 #include "bitfield.h"
-#include "reference.h"
 #include "allocator.h"
 #include "scavenger.h"
 
@@ -14,7 +13,6 @@ namespace Token{
     static MemoryRegion* region_ = nullptr;
     static Heap* new_heap_ = nullptr;
     static Heap* old_heap_ = nullptr;
-    static std::set<uword> roots_;
 
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
 #define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
@@ -99,5 +97,14 @@ namespace Token{
         ObjectPointerPrinter printer;
         if(!Allocator::GetNewHeap()->Accept(&printer))
             LOG(WARNING) << "couldn't print new heap";
+    }
+
+    void Allocator::PrintOldHeap(){
+        LOCK_GUARD;
+        LOG(INFO) << "Old Heap:";
+        ObjectPointerPrinter printer;
+        if(!Allocator::GetOldHeap()->Accept(&printer)){
+            LOG(WARNING) << "couldn't print old heap";
+        }
     }
 }
