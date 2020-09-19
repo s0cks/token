@@ -194,11 +194,8 @@ namespace Token{
         timeline.Push("Stop");
         stats.CollectionFinished();
         LOG(INFO) << "Scavenger Stats (New Heap):";
-        LOG(INFO) << "  - Start Time: " << GetTimestampFormattedReadable(timeline.GetStartTime());
-        LOG(INFO) << "  - Stop Time: " << GetTimestampFormattedReadable(timeline.GetStopTime());
-        LOG(INFO) << "  - Total Time (Milliseconds): " << timeline.GetTotalTime();
         LOG(INFO) << "  - Bytes Collected: " << stats.GetTotalBytesCollected();
-
+        LOG(INFO) << "Timeline (New Heap):";
         if(!timeline.Print()) LOG(WARNING) << "couldn't print timeline";
 #endif//TOKEN_DEBUG
         return true;

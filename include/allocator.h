@@ -73,16 +73,12 @@ namespace Token{
         ~Allocator(){}
 
         static void Initialize();
-
         static bool MinorCollect();
         static bool MajorCollect();
-
         static void* Allocate(size_t size);
-
         static MemoryRegion* GetRegion();
         static Heap* GetNewHeap();
         static Heap* GetOldHeap();
-
         static void PrintNewHeap();
         static void PrintOldHeap();
     };
