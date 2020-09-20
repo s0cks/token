@@ -7,7 +7,6 @@
 !/include/
 !/protos/
 !/src/
-!/scripts/
 !/terraform/
 !/tests/
 !/*.cc

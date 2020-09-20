@@ -50,8 +50,6 @@ namespace Token{
 
     //TODO: there seems to be some memory issues
     void Session::Send(const Handle<Message>& msg){
-        LOG(INFO) << "sending " << msg->ToString();
-
         uint32_t type = static_cast<uint32_t>(msg->GetMessageType());
         uint64_t size = msg->GetBufferSize();
         uint64_t total_size = Message::kHeaderSize + size;

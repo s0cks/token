@@ -9,7 +9,7 @@ namespace Token{
         SessionInfo(session){
     }
 
-    Handle<Block> PeerInfo::GetHead() const{
+    BlockHeader PeerInfo::GetHead() const{
         return ((PeerSession*)GetSession())->GetHead();
     }
 
@@ -163,11 +163,11 @@ namespace Token{
         response.push_back(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), callback).CastTo<Message>());
 
         if(IsConnecting()){
-            Handle<Block> local_head = BlockChain::GetHead();
-            Handle<Block> remote_head = msg->GetHead();
-            if(local_head->GetHeader() == remote_head->GetHeader()){
+            BlockHeader local_head = BlockChain::GetHead();
+            BlockHeader remote_head = msg->GetHead();
+            if(local_head == remote_head){
                 LOG(INFO) << "skipping remote <HEAD> := " << remote_head;
-            } else if(local_head->GetHeader() < remote_head->GetHeader()){
+            } else if(local_head < remote_head){
                 response.push_back(GetBlocksMessage::NewInstance().CastTo<Message>());
                 Handle<SynchronizeBlockChainTask> sync_task = SynchronizeBlockChainTask::NewInstance(session->GetLoop(), session, remote_head);
                 sync_task->Submit();

@@ -84,9 +84,9 @@ namespace Token{
         return true;
     }
 
-    Handle<Block> BlockChain::GetHead(){
+    BlockHeader BlockChain::GetHead(){
         LOCK_GUARD;
-        return GetHeadNode()->GetValue().GetData();
+        return GetHeadNode()->GetValue();
     }
 
     Handle<Block> BlockChain::GetGenesis(){
@@ -107,10 +107,8 @@ namespace Token{
     }
 
     Handle<Block> BlockChain::GetBlock(const uint256_t& hash){
-        BlockNode* node = GetNode(hash);
-        return node ?
-                node->GetValue().GetData() :
-                nullptr;
+        if(!BlockChainIndex::HasBlockData(hash)) return nullptr;
+        return BlockChainIndex::GetBlockData(hash);
     }
 
     BlockNode* BlockChain::GetNode(const uint256_t& hash){
@@ -127,7 +125,7 @@ namespace Token{
 
     bool BlockChain::HasBlock(const uint256_t& hash){
         LOCK_GUARD;
-        return !GetBlock(hash).IsNull();
+        return !BlockChainIndex::HasBlockData(hash);
     }
 
     bool BlockChain::HasTransaction(const uint256_t& hash){
@@ -138,8 +136,7 @@ namespace Token{
 
     void BlockChain::Append(const Handle<Block>& block){
         LOCK_GUARD;
-
-        Handle<Block> head = GetHead();
+        BlockHeader head = GetHead();
         uint256_t hash = block->GetHash();
         uint256_t phash = block->GetPreviousHash();
 
@@ -159,8 +156,8 @@ namespace Token{
             return;
         }
 
-        if(phash != head->GetHash()){
-            LOG(WARNING) << "parent hash '" << phash << "' doesn't match <HEAD> hash: " << head->GetHash();
+        if(phash != head.GetHash()){
+            LOG(WARNING) << "parent hash '" << phash << "' doesn't match <HEAD> hash: " << head.GetHash();
             return;
         }
 
@@ -171,46 +168,56 @@ namespace Token{
         pnode->SetNext(node);
         node->SetNext(pnode->GetNext());
         node->SetPrevious(pnode);
-        if(head->GetHeight() < block->GetHeight())
+        if(head.GetHeight() < block->GetHeight())
             SetHeadNode(node);
     }
 
-    void BlockChain::Accept(BlockChainVisitor* vis){
-        if(!vis->VisitStart()) return;
+    bool BlockChain::Accept(BlockChainVisitor* vis){
+        if(!vis->VisitStart()) return false;
         BlockNode* node = GetHeadNode();
         do{
             BlockHeader blk = node->GetValue();
             if(!vis->Visit(blk))
-                return;
+                return false;
             node = node->GetPrevious();
         } while(node != nullptr);
-        if(!vis->VisitStart()) return;
+        return vis->VisitEnd();
     }
 
-    void BlockChain::Accept(BlockChainDataVisitor* vis){
+    bool BlockChain::Accept(BlockChainDataVisitor* vis){
         BlockNode* node = GetHeadNode();
         while(node != nullptr){
             BlockHeader blk = node->GetValue();
             if(!vis->Visit(blk.GetData()))
-                return;
+                return false;
             node = node->GetPrevious();
         }
+        return true;
     }
 
-#ifdef TOKEN_DEBUG
-    class BlockChainPrinter : public BlockChainVisitor{
+    class DefaultBlockChainPrinter : public BlockChainVisitor{
     public:
-        BlockChainPrinter(): BlockChainVisitor(){}
-
         bool Visit(const BlockHeader& block){
             LOG(INFO) << " - " << block;
             return true;
         }
     };
 
-    void BlockChain::PrintBlockChain(){
-        BlockChainPrinter printer;
-        Accept(&printer);
+    class DetailedBlockChainPrinter : public BlockChainDataVisitor{
+    public:
+        bool Visit(const Handle<Block>& blk){
+            LOG(INFO) << blk;
+            return true;
+        }
+    };
+
+    bool BlockChain::Print(bool is_detailed){
+        if(is_detailed){
+            DetailedBlockChainPrinter printer;
+            return Accept(&printer);
+        } else{
+            DefaultBlockChainPrinter printer;
+            return Accept(&printer);
+        }
     }
-#endif//TOKEN_DEBUG
 }

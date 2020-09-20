@@ -1,7 +1,7 @@
 #ifndef TOKEN_TRANSACTION_H
 #define TOKEN_TRANSACTION_H
 
-#include "array.h"
+#include "common.h"
 #include "object.h"
 #include "uint256_t.h"
 #include "allocator.h"
@@ -56,9 +56,9 @@ namespace Token{
         friend class Transaction;
     private:
         UserID user_;
-        std::string token_;
+        TokenID token_;
 
-        Output(const UserID& user, const std::string& token):
+        Output(const UserID& user, const TokenID& token):
             user_(user),
             token_(token){
             SetType(Type::kOutputType);
@@ -70,7 +70,7 @@ namespace Token{
             return user_;
         }
 
-        std::string GetToken() const{
+        TokenID GetToken() const{
             return token_;
         }
 
@@ -80,12 +80,12 @@ namespace Token{
 
         static Handle<Output> NewInstance(ByteBuffer* bytes);
 
-        static Handle<Output> NewInstance(const UserID& user, const std::string& token){
+        static Handle<Output> NewInstance(const UserID& user, const TokenID& token){
             return new Output(user, token);
         }
 
         static Handle<Output> NewInstance(const std::string& user, const std::string& token){
-            return new Output(user, token);
+            return new Output(UserID(user), TokenID(token));
         }
     };
 
@@ -94,39 +94,51 @@ namespace Token{
         friend class Block;
         friend class TransactionMessage;
     private:
-        Timestamp timestamp_;
+        uint32_t timestamp_;
         uint32_t index_;
-        Array<Input>* inputs_;
-        Array<Output>* outputs_;
+        Input** inputs_;
+        size_t num_inputs_;
+        Output** outputs_;
+        size_t num_outputs_;
         std::string signature_;
 
-        Transaction(Timestamp timestamp, uint32_t index, const Handle<Array<Input>>& inputs, const Handle<Array<Output>>& outputs):
-            Object(),
-            timestamp_(timestamp),
-            index_(index),
-            inputs_(),
-            outputs_(),
-            signature_(){
+        Transaction(uint32_t timestamp, uint32_t index, Input** inputs, size_t num_inputs, Output** outputs, size_t num_outputs):
+                Object(),
+                timestamp_(timestamp),
+                index_(index),
+                inputs_(nullptr),
+                num_inputs_(num_inputs),
+                outputs_(nullptr),
+                num_outputs_(num_outputs),
+                signature_(){
             SetType(Type::kTransactionType);
 
-            WriteBarrier(&inputs_, inputs);
-            WriteBarrier(&outputs_, outputs);
+            inputs_ = (Input**)malloc(sizeof(Input*)*num_inputs);
+            memset(inputs_, 0, sizeof(Input*)*num_inputs);
+            for(size_t idx = 0; idx < num_inputs; idx++)
+                WriteBarrier(&inputs_[idx], inputs[idx]);
+
+            outputs_ = (Output**)malloc(sizeof(Output*)*num_outputs);
+            memset(outputs_, 0, sizeof(Output*)*num_outputs);
+            for(size_t idx = 0; idx < num_outputs; idx++)
+                WriteBarrier(&outputs_[idx], outputs[idx]);
         }
     protected:
         bool Accept(WeakObjectPointerVisitor* vis){
-            if(!vis->Visit(&inputs_)){
-                return false;
+            for(size_t idx = 0; idx < num_inputs_; idx++){
+                if(!vis->Visit(&inputs_[idx]))
+                    return false;
             }
-
-            if(!vis->Visit(&outputs_)){
-                return false;
+            for(size_t idx = 0; idx < num_outputs_; idx++){
+                if(!vis->Visit(&outputs_[idx]))
+                    return false;
             }
             return true;
         }
     public:
         ~Transaction() = default;
 
-        Timestamp GetTimestamp() const{
+        uint32_t GetTimestamp() const{
             return timestamp_;
         }
 
@@ -135,21 +147,21 @@ namespace Token{
         }
 
         uint32_t GetNumberOfInputs() const{
-            return inputs_->Length();
+            return num_inputs_;
         }
 
         Handle<Input> GetInput(uint32_t idx) const{
             if(idx < 0 || idx > GetNumberOfInputs()) return nullptr;
-            return inputs_->Get(idx);
+            return inputs_[idx];
         }
 
         Handle<Output> GetOutput(uint32_t idx) const{
             if(idx < 0 || idx > GetNumberOfOutputs()) return nullptr;
-            return outputs_->Get(idx);
+            return outputs_[idx];
         }
 
         uint32_t GetNumberOfOutputs() const{
-            return outputs_->Length();
+            return num_outputs_;
         }
 
         std::string GetSignature() const{
@@ -173,8 +185,8 @@ namespace Token{
         static Handle<Transaction> NewInstance(ByteBuffer* bytes);
         static Handle<Transaction> NewInstance(std::fstream& fd, size_t size);
 
-        static Handle<Transaction> NewInstance(uint32_t index, const Handle<Array<Input>>& inputs, const Handle<Array<Output>>& outputs, Timestamp timestamp=GetCurrentTimestamp()){
-            return new Transaction(timestamp, index, inputs, outputs);
+        static Handle<Transaction> NewInstance(uint32_t index, Input** inputs, size_t num_inputs, Output** outputs, size_t num_outputs, Timestamp timestamp=GetCurrentTimestamp()){
+            return new Transaction(timestamp, index, inputs, num_inputs, outputs, num_outputs);
         }
 
         static inline Handle<Transaction> NewInstance(const std::string& filename){

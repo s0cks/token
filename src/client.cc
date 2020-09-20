@@ -4,23 +4,11 @@
 #include "bytes.h"
 
 namespace Token{
-    std::string ClientCommand::GetCommandName() const{
-        switch(GetType()){
-#define DECLARE_CHECK(Name, Text, Parameters) \
-            case ClientCommand::Type::k##Name##Type: return #Text;
-            FOR_EACH_CLIENT_COMMAND(DECLARE_CHECK)
-#undef DECLARE_CHECK
-            case ClientCommand::Type::kUnknownType:
-            default:
-                return "Unknown";
-        }
-    }
-
     ClientSessionInfo::ClientSessionInfo(ClientSession* session):
         SessionInfo(session){
     }
 
-    Handle<Block> ClientSessionInfo::GetHead() const{
+    BlockHeader ClientSessionInfo::GetHead() const{
         return ((ClientSession*)GetSession())->GetHead();
     }
 
@@ -34,6 +22,21 @@ namespace Token{
 
     void ClientSessionInfo::operator=(const ClientSessionInfo& info){
         SessionInfo::operator=(info);
+    }
+
+    ClientSession::ClientSession(bool use_stdin):
+        stream_(),
+        sigterm_(),
+        sigint_(),
+        handler_(nullptr),
+        Session(&stream_){
+        stream_.data = this;
+        connection_.data = this;
+        hb_timer_.data = this;
+        hb_timeout_.data = this;
+        if(use_stdin){
+            handler_ = new ClientCommandHandler(this);
+        }
     }
 
     void ClientSession::OnSignal(uv_signal_t* handle, int signum){
@@ -85,6 +88,10 @@ namespace Token{
             goto cleanup;
         }
 
+        if(handler_ != nullptr){
+            handler_->Start();
+        }
+
         uv_run(loop, UV_RUN_DEFAULT);
         uv_signal_stop(&sigterm_);
         uv_signal_stop(&sigint_);
@@ -131,16 +138,11 @@ namespace Token{
         }
 
         uint32_t offset = 0;
-        std::vector<Message*> messages;
+        std::vector<Handle<Message>> messages;
         do{
-            uint32_t mtype = 0;
-            memcpy(&mtype, &buff->base[offset + Message::kTypeOffset], Message::kTypeLength);
-
-            uint64_t msize = 0;
-            memcpy(&msize, &buff->base[offset + Message::kSizeOffset], Message::kSizeLength);
-
-            ByteBuffer bytes((uint8_t*)&buff->base[offset + Message::kDataOffset], msize);
-
+            ByteBuffer bytes((uint8_t*)buff->base, buff->len);
+            uint32_t mtype = bytes.GetInt();
+            uint64_t msize = bytes.GetLong();
             Handle<Message> msg = Message::Decode(static_cast<Message::MessageType>(mtype), &bytes);
             LOG(INFO) << "decoded message: " << msg->ToString(); //TODO: handle decode failures
             messages.push_back(msg);
@@ -289,22 +291,24 @@ namespace Token{
 
     void ClientCommandHandler::HandleTransactionCommand(ClientCommand* cmd){
         uint256_t tx_hash = cmd->GetNextArgumentHash();
-        uint32_t index = cmd->GetNextArgumentUInt32();
+        uint32_t index = cmd->GetNextArgumentUnsignedInt();
         std::string user = cmd->GetNextArgument();
 
-        Handle<Array<Input>> inputs = Array<Input>::New(1);
-        inputs->Put(0, Input::NewInstance(tx_hash, index, "TestUser"));
+        Input* inputs[] = {
+            Input::NewInstance(tx_hash, index, "TestUser"),
+        };
 
-        Handle<Array<Output>> outputs = Array<Output>::New(1);
-        outputs->Put(0, Output::NewInstance(user, "TestToken"));
+        Output* outputs[] = {
+            Output::NewInstance(user, "TestToken"),
+        };
 
-        Handle<Transaction> tx = Transaction::NewInstance(0, inputs, outputs);
+        Handle<Transaction> tx = Transaction::NewInstance(0, inputs, 1, outputs, 1);
         Handle<TransactionMessage> msg = TransactionMessage::NewInstance(tx);
         LOG(INFO) << "sending transaction: " << tx->GetHash();
         Send(msg);
     }
 
-    void ClientCommandHandler::OnCommandReceived(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf){
+    void ClientCommandHandler::OnCommandReceived(uv_stream_t *stream, ssize_t nread, const uv_buf_t* buff){
         ClientCommandHandler* handler = (ClientCommandHandler*)stream->data;
         ClientSession* client = handler->GetSession();
 
@@ -322,22 +326,17 @@ namespace Token{
             return;
         }
 
-        std::string line(buf->base, nread - 1);
+        std::string line(buff->base, nread-1);
         std::deque<std::string> args;
         SplitString(line, args, ' ');
 
         ClientCommand cmd(args);
-        switch(cmd.GetType()){
-#define DECLARE_HANDLER(Name, Text, Parameters) \
-            case ClientCommand::Type::k##Name##Type: \
+#define DECLARE_CHECK(Name, Text, ArgumentCount) \
+            if(cmd.Is##Name##Command()){ \
                 handler->Handle##Name##Command(&cmd); \
-                break;
-            FOR_EACH_CLIENT_COMMAND(DECLARE_HANDLER);
-            case ClientCommand::Type::kUnknownType:
-#undef DECLARE_HANDLER
-            default:
-                LOG(WARNING) << "unable to handle command: " << cmd;
-                return;
-        }
+                return; \
+            }
+        FOR_EACH_CLIENT_COMMAND(DECLARE_CHECK);
+#undef DECLARE_CHECK
     }
 }

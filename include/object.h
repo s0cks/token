@@ -60,7 +60,9 @@ namespace Token{
         friend class Scavenger;
         friend class HandleGroup;
         friend class BinaryFileWriter;
+        friend class ReferenceUpdater;
         friend class ReferenceNotifier;
+        friend class StackReferenceNotifier;
     public:
         static const intptr_t kNumberOfCollectionsRequiredForPromotion = 3;
     protected:
@@ -79,6 +81,14 @@ namespace Token{
             marked_(false),
             ptr_(0){
             Allocator::Initialize(this);
+        }
+
+        uword GetStartAddress() const{
+            return (uword)this;
+        }
+
+        uword GetEndAddress() const{
+            return GetStartAddress() + GetSize();
         }
 
         void SetType(Type type){
@@ -109,9 +119,6 @@ namespace Token{
             marked_ = false;
         }
 
-        virtual bool Encode(ByteBuffer* bytes) const{ return false; }
-        virtual bool Accept(WeakObjectPointerVisitor* vis){ return true; }
-
         void WriteBarrier(Object** slot, Object* data){
             if(data) data->IncrementReferenceCount();
             if((*slot))(*slot)->DecrementReferenceCount();
@@ -127,6 +134,9 @@ namespace Token{
         void WriteBarrier(T** slot, const Handle<T>& handle){
             WriteBarrier((Object**)slot, (Object*)handle);
         }
+
+        virtual bool Encode(ByteBuffer* bytes) const{ return false; }
+        virtual bool Accept(WeakObjectPointerVisitor* vis){ return true; }
     public:
         virtual ~Object() = default;
 
@@ -144,6 +154,10 @@ namespace Token{
 
         intptr_t GetNumberOfCollectionsSurvived() const{
             return collections_survived_;
+        }
+
+        bool IsForwarding() const{
+            return ptr_ > 0;
         }
 
         bool HasStackReferences() const{

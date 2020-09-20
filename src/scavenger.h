@@ -6,11 +6,13 @@ namespace Token{
         friend class Scavenger;
     private:
         Heap* heap_;
+        intptr_t bytes_collected_;
+        intptr_t bytes_promoted_;
 
-        intptr_t start_size_;
-        intptr_t stop_size_;
-
-        ScavengerStats(Heap* heap);
+        ScavengerStats(Heap* heap):
+            heap_(heap),
+            bytes_collected_(0),
+            bytes_promoted_(0){}
     public:
         ~ScavengerStats() = default;
 
@@ -18,20 +20,16 @@ namespace Token{
             return heap_;
         }
 
-        intptr_t GetStartSize() const{
-            return start_size_;
+        intptr_t GetBytesCollected() const{
+            return bytes_collected_;
         }
 
-        intptr_t GetStopSize() const{
-            return stop_size_;
+        intptr_t GetBytesPromoted() const{
+            return bytes_promoted_;
         }
-
-        intptr_t GetTotalBytesCollected() const{
-            return GetStartSize() - GetStopSize();
-        }
-
-        void CollectionFinished();
     };
+
+    typedef Object* ObjectPtr;
 
     class Scavenger : public ObjectPointerVisitor{
     public:
@@ -70,9 +68,10 @@ namespace Token{
             phase_ = phase;
         }
 
+        void ScavengePointer(ObjectPtr* ptr);
+
         bool ProcessRoots();
         bool ScavengeMemory();
-        bool NotifyReferences();
         bool Visit(Object* obj);
         bool FinalizeObject(Object* obj);
         bool PromoteObject(Object* obj);

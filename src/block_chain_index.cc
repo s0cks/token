@@ -29,7 +29,7 @@ namespace Token{
         return index_;
     }
 
-    Block* BlockChainIndex::GetBlockData(const uint256_t& hash){
+    Handle<Block> BlockChainIndex::GetBlockData(const uint256_t& hash){
         leveldb::ReadOptions options;
         std::string key = KEY(hash);
         std::string filename;
@@ -40,7 +40,7 @@ namespace Token{
             return nullptr;
         }
 
-        Block* block = Block::NewInstance(filename);
+        Handle<Block> block = Block::NewInstance(filename);
         if(hash != block->GetHash()){
             LOG(WARNING) << "couldn't match block hashes: " << hash << " <=> " << block->GetHash();
             return nullptr;
@@ -82,7 +82,7 @@ namespace Token{
         return HashFromHexString(value);
     }
 
-    void BlockChainIndex::PutBlockData(Block* blk){
+    void BlockChainIndex::PutBlockData(const Handle<Block>& blk){
         BlockHeader block = blk->GetHeader();
 
         leveldb::WriteOptions options;

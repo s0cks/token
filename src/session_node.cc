@@ -253,7 +253,7 @@ namespace Token{
 
         std::vector<InventoryItem> items;
         if(stop.IsNull()){
-            size_t amt = std::min(GetBlocksMessage::kMaxNumberOfBlocks, (size_t)BlockChain::GetHead()->GetHeight());
+            size_t amt = std::min(GetBlocksMessage::kMaxNumberOfBlocks, (size_t)BlockChain::GetHead().GetHeight());
             LOG(INFO) << "sending " << (amt + 1) << " blocks...";
 
             Handle<Block> start_block = BlockChain::GetBlock(start);

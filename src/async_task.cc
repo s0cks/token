@@ -78,13 +78,13 @@ namespace Token{
     }
 
     Result SynchronizeBlockChainTask::DoWork(){
-        if(!BlockPool::HasBlock(head_->GetHash())){
+        if(!BlockPool::HasBlock(head_.GetHash())){
             LOG(INFO) << "waiting for new <HEAD>: " << head_;
             GetSession()->WaitForItem(GetHead());
         }
 
         std::deque<uint256_t> work; // we are queuing the blocks just in-case there is an unresolved previous hash
-        work.push_back(head_->GetHash());
+        work.push_back(head_.GetHash());
         do{
             uint256_t hash = work.front();
             work.pop_front();

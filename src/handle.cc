@@ -14,15 +14,27 @@ namespace Token{
         Object* handles_[kHandlesPerGroup];
     protected:
         bool Accept(WeakObjectPointerVisitor* vis){
-            if(size_){
-                for(size_t idx = 0;
-                    idx < kHandlesPerGroup;
-                    idx++){
-                    Object* data = handles_[idx];
-                    if(data){
-                        if(!vis->Visit(&handles_[idx]))
-                            return false;
-                    }
+            for(size_t idx = 0;
+                idx < kHandlesPerGroup;
+                idx++){
+                Object* data = handles_[idx];
+                if(data){
+                    LOG(INFO) << "visiting (@" << data << "): " << data->ToString();
+                    if(!vis->Visit(&handles_[idx]))
+                        return false;
+                }
+            }
+            return true;
+        }
+
+        bool Accept(ObjectPointerVisitor* vis){
+            for(size_t idx = 0;
+                idx < kHandlesPerGroup;
+                idx++){
+                Object* data = handles_[idx];
+                if(data){
+                    if(!vis->Visit(data))
+                        return false;
                 }
             }
             return true;
@@ -133,6 +145,16 @@ namespace Token{
     }
 
     bool HandleBase::VisitHandles(WeakObjectPointerVisitor* vis){
+        HandleGroup* group = root_;
+        while(group != nullptr){
+            if(!group->Accept(vis))
+                return false;
+            group = group->next_;
+        }
+        return true;
+    }
+
+    bool HandleBase::VisitHandles(ObjectPointerVisitor* vis){
         HandleGroup* group = root_;
         while(group != nullptr){
             if(!group->Accept(vis))

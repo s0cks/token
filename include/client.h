@@ -2,6 +2,7 @@
 #define TOKEN_CLIENT_H
 
 #include "session.h"
+#include "command.h"
 
 namespace Token{
 #define FOR_EACH_CLIENT_COMMAND(V) \
@@ -17,7 +18,7 @@ namespace Token{
     public:
         ~ClientSessionInfo(){}
 
-        Handle<Block> GetHead() const;
+        BlockHeader GetHead() const;
         NodeAddress GetPeerAddress() const;
         std::string GetPeerID() const;
         void operator=(const ClientSessionInfo& info);
@@ -36,17 +37,18 @@ namespace Token{
         uv_timer_t hb_timer_;
         uv_timer_t hb_timeout_;
         uv_connect_t connection_;
+        ClientCommandHandler* handler_;
 
         // Info
         NodeAddress paddress_;
         std::string pid_;
-        Handle<Block> head_;
+        BlockHeader head_;
 
-        void SetHead(const Handle<Block>& head){
+        void SetHead(const BlockHeader& head){
             head_ = head;
         }
 
-        Handle<Block> GetHead() const{
+        BlockHeader GetHead() const{
             return head_;
         }
 
@@ -80,16 +82,7 @@ namespace Token{
             return (uv_stream_t*)&stream_;
         }
     public:
-        ClientSession(bool use_stdin):
-            stream_(),
-            sigterm_(),
-            sigint_(),
-            Session(&stream_){
-            stream_.data = this;
-            connection_.data = this;
-            hb_timer_.data = this;
-            hb_timeout_.data = this;
-        }
+        ClientSession(bool use_stdin);
         ~ClientSession(){}
 
         ClientSessionInfo GetInfo() const{
@@ -105,95 +98,19 @@ namespace Token{
         void Disconnect();
     };
 
-    class ClientCommand{
-        friend class ClientSession;
-        friend class ClientCommandHandler;
+    class ClientCommand : public Command{
     public:
-        enum class Type{
-            kUnknownType=0,
-#define DECLARE_TYPE(Name, Text, Parameters) k##Name##Type,
-            FOR_EACH_CLIENT_COMMAND(DECLARE_TYPE)
-#undef DECLARE_TYPE
-        };
-    private:
-        Type type_;
-        std::deque<std::string> args_;
-
-        ClientCommand(Type type, std::deque<std::string>& args):
-            type_(type),
-            args_(args){}
-        ClientCommand(const std::string& name, std::deque<std::string>& args):
-            type_(GetCommand(name)),
-            args_(args){}
-        ClientCommand(std::deque<std::string>& args):
-            type_(GetCommand(args)),
-            args_(args){}
-
-        inline Type
-        GetType() const{
-            return type_;
-        }
-
-        static inline Type
-        GetCommand(const std::string& name){
-#define DECLARE_CHECK(Name, Text, Parameters) \
-            if(!strncmp(name.c_str(), (Text), strlen(Text))){ \
-                return Type::k##Name##Type; \
-            }
-            FOR_EACH_CLIENT_COMMAND(DECLARE_CHECK)
-#undef DECLARE_CHECK
-            return Type::kUnknownType;
-        }
-
-        static inline Type
-        GetCommand(std::deque<std::string>& args){
-            std::string name = args.front();
-            args.pop_front();
-            return GetCommand(name);
-        }
-    public:
+        ClientCommand(std::deque<std::string>& args): Command(args){}
         ~ClientCommand() = default;
 
-        std::string GetCommandName() const;
-
-#define DECLARE_CHECK(Name, Text, Parameters) \
-        bool Is##Name##Command() const{ return GetType() == ClientCommand::Type::k##Name##Type; }
-        FOR_EACH_CLIENT_COMMAND(DECLARE_CHECK)
-#undef DECLARE_CHECK
-
-        bool HasNextArgument() const{
-            return !args_.empty();
-        }
-
-        std::string GetNextArgument(){
-            std::string arg = args_.front();
-            args_.pop_front();
-            return arg;
-        }
-
-        uint256_t GetNextArgumentHash(){
-            return HashFromHexString(GetNextArgument());
-        }
-
-        uint32_t GetNextArgumentUInt32(){
-            std::string arg = GetNextArgument();
-            return (uint32_t)atol(arg.c_str());
-        }
-
-        friend std::ostream& operator<<(std::ostream& stream, const ClientCommand& cmd){
-            std::vector<std::string> args(cmd.args_.begin(), cmd.args_.end());
-            stream << cmd.GetCommandName();
-            stream << "(";
-            for(size_t idx = 0; idx < args.size(); idx++){
-                stream << args[idx];
-                if(idx < (args.size() - 1)) stream << ",";
-            }
-            stream << ")";
-            return stream;
-        }
+#define DEFINE_TYPE_CHECK(Name, Text, ArgumentCount) \
+        bool Is##Name##Command() const{ return !strncmp(name_.data(), (Text), strlen((Text))); }
+        FOR_EACH_CLIENT_COMMAND(DEFINE_TYPE_CHECK)
+#undef DEFINE_TYPE_CHECK
     };
 
     class ClientCommandHandler{
+        friend class ClientSession;
     private:
         ClientSession* session_;
         uv_pipe_t stdin_;

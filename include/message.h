@@ -97,9 +97,9 @@ namespace Token{
         std::string version_;
         std::string nonce_;
         std::string node_id_;
-        Handle<Block> head_; //TODO: convert to pointer, handle WeakReferenceVisitor
+        BlockHeader head_;
 
-        VersionMessage(ClientType type, const std::string& version, const std::string& node_id, Timestamp timestamp, const std::string& nonce, const Handle<Block>& head):
+        VersionMessage(ClientType type, const std::string& version, const std::string& node_id, Timestamp timestamp, const std::string& nonce, const BlockHeader& head):
             Message(),
             client_type_(type),
             version_(version),
@@ -113,7 +113,7 @@ namespace Token{
             return timestamp_;
         }
 
-        Handle<Block> GetHead() const{
+        BlockHeader GetHead() const{
             return head_;
         }
 
@@ -146,12 +146,12 @@ namespace Token{
         DECLARE_MESSAGE(Version);
 
         static Handle<VersionMessage> NewInstance(ByteBuffer* bytes);
-        static Handle<VersionMessage> NewInstance(ClientType type, const std::string& node_id, const std::string& version=Token::GetVersion(), const std::string& nonce=GenerateNonce(), const Handle<Block>& head=BlockChain::GetHead(), Timestamp timestamp=GetCurrentTimestamp()){
+        static Handle<VersionMessage> NewInstance(ClientType type, const std::string& node_id, const std::string& version=Token::GetVersion(), const std::string& nonce=GenerateNonce(), const BlockHeader& head=BlockChain::GetHead(), Timestamp timestamp=GetCurrentTimestamp()){
             return new VersionMessage(type, version, node_id, timestamp, nonce, head);
         }
 
         static Handle<VersionMessage> NewInstance(const std::string& node_id){
-            return NewInstance(ClientType::kClient, node_id, Token::GetVersion(), GenerateNonce(), Block::Genesis());
+            return NewInstance(ClientType::kClient, node_id, Token::GetVersion(), GenerateNonce(), Block::Genesis()->GetHeader());
         }
     };
 
@@ -163,9 +163,9 @@ namespace Token{
         std::string nonce_;
         ClientType client_type_;
         NodeAddress callback_;
-        Handle<Block> head_; //TODO: convert to pointer, handle WeakReferenceVisitor
+        BlockHeader head_;
 
-        VerackMessage(ClientType type, const std::string& node_id, const std::string& nonce, const NodeAddress& address, const Handle<Block>& head, Timestamp timestamp):
+        VerackMessage(ClientType type, const std::string& node_id, const std::string& nonce, const NodeAddress& address, const BlockHeader& head, Timestamp timestamp):
             Message(),
             client_type_(type),
             node_id_(node_id),
@@ -194,7 +194,7 @@ namespace Token{
             return callback_;
         }
 
-        Handle<Block> GetHead() const{
+        BlockHeader GetHead() const{
             return head_;
         }
 
@@ -203,12 +203,12 @@ namespace Token{
         DECLARE_MESSAGE(Verack);
 
         static Handle<VerackMessage> NewInstance(ByteBuffer* bytes);
-        static Handle<VerackMessage> NewInstance(ClientType type, const std::string& node_id, const NodeAddress& address, const Handle<Block>& head=BlockChain::GetHead(), const std::string& nonce=GenerateNonce(), Timestamp timestamp=GetCurrentTimestamp()){
+        static Handle<VerackMessage> NewInstance(ClientType type, const std::string& node_id, const NodeAddress& address, const BlockHeader& head=BlockChain::GetHead(), const std::string& nonce=GenerateNonce(), Timestamp timestamp=GetCurrentTimestamp()){
             return new VerackMessage(type, node_id, nonce, address, head, timestamp);
         }
 
         static Handle<VerackMessage> NewInstance(const std::string& node_id){
-            return NewInstance(ClientType::kClient, node_id, NodeAddress(), Block::Genesis());
+            return NewInstance(ClientType::kClient, node_id, NodeAddress(), Block::Genesis()->GetHeader());
         }
     };
 
@@ -557,7 +557,7 @@ namespace Token{
         DECLARE_MESSAGE(GetBlocks);
 
         static Handle<GetBlocksMessage> NewInstance(ByteBuffer* bytes);
-        static Handle<GetBlocksMessage> NewInstance(const uint256_t& start_hash=BlockChain::GetHead()->GetHash(), const uint256_t& stop_hash=uint256_t()){
+        static Handle<GetBlocksMessage> NewInstance(const uint256_t& start_hash=BlockChain::GetHead().GetHash(), const uint256_t& stop_hash=uint256_t()){
             return new GetBlocksMessage(start_hash, stop_hash);
         }
     };

@@ -5,6 +5,7 @@
 
 namespace Token{
     class Object;
+    class ObjectPointerVisitor;
     class WeakObjectPointerVisitor;
     class HandleBase{ //TODO: remove
         friend class Scavenger;
@@ -13,6 +14,7 @@ namespace Token{
         Object** ptr_;
 
         static bool VisitHandles(WeakObjectPointerVisitor* vis);
+        static bool VisitHandles(ObjectPointerVisitor* vis);
     protected:
         HandleBase();
         HandleBase(Object* obj);

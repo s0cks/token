@@ -70,11 +70,17 @@ namespace Token{
 
         Handle<Block> GetBlock() const{
             // Get the Parent Block
-            Handle<Block> parent = BlockChain::GetHead();
+            BlockHeader parent = BlockChain::GetHead();
             // Sort the Transactions by Timestamp
             std::sort(transactions_, transactions_+num_transactions_, CompareTimestamp);
             // Return a New Block of size Block::kMaxTransactionsForBlock, using sorted Transactions
-            return Block::NewInstance(parent->GetHeader(), transactions_, block_size_);
+
+            Handle<Array<Transaction>> txs = Array<Transaction>::New(num_transactions_);
+            for(size_t idx = 0; idx < num_transactions_; idx++){
+                txs->Put(idx, transactions_[idx]);
+            }
+
+            return Block::NewInstance(parent, txs);
         }
 
         bool Visit(const Handle<Transaction>& tx){

@@ -64,7 +64,7 @@ namespace Token{
             return hash_;
         }
 
-        Block* GetData() const;
+        Handle<Block> GetData() const;
 
         bool Contains(const uint256_t& hash) const{
             return bloom_.Contains(hash);
@@ -127,34 +127,23 @@ namespace Token{
         Timestamp timestamp_;
         uint32_t height_;
         uint256_t previous_hash_;
-        Transaction** transactions_;
-        size_t num_transactions_;
+        Array<Transaction>* transactions_;
         BloomFilter tx_bloom_; // transient
 
-        Block(Timestamp timestamp, uint32_t height, const uint256_t& phash, Transaction** txs, size_t num_txs):
+        Block(Timestamp timestamp, uint32_t height, const uint256_t& phash, const Handle<Array<Transaction>>& txs):
             Object(),
             timestamp_(timestamp),
             height_(height),
             previous_hash_(phash),
             transactions_(nullptr),
-            num_transactions_(num_txs),
             tx_bloom_(){
             SetType(Type::kBlockType);
-
-            transactions_ = (Transaction**)malloc(sizeof(Transaction*)*num_txs);
-            memset(transactions_, 0, sizeof(Transaction*)*num_txs);
-            for(size_t idx = 0; idx < num_txs; idx++){
-                WriteBarrier(&transactions_[idx], txs[idx]);
-                tx_bloom_.Put(txs[idx]->GetHash());
-            }
+            WriteBarrier(&transactions_, txs);
+            //TODO: tx_bloom_.Put(txs[idx]->GetHash());
         }
     protected:
         bool Accept(WeakObjectPointerVisitor* vis){
-            for(size_t idx = 0; idx < num_transactions_; idx++){
-                if(!vis->Visit(&transactions_[idx]))
-                    return false;
-            }
-            return true;
+            return vis->Visit(&transactions_);
         }
     public:
         ~Block() = default;
@@ -172,7 +161,7 @@ namespace Token{
         }
 
         uint32_t GetNumberOfTransactions() const{
-            return num_transactions_;
+            return transactions_->Length();
         }
 
         Timestamp GetTimestamp() const{
@@ -180,8 +169,9 @@ namespace Token{
         }
 
         Handle<Transaction> GetTransaction(uint32_t idx) const{
-            if(idx < 0 || idx > GetNumberOfTransactions()) return Handle<Transaction>();
-            return transactions_[idx];
+            if(idx < 0 || idx > GetNumberOfTransactions())
+                return Handle<Transaction>();
+            return transactions_->Get(idx);
         }
 
         bool IsGenesis(){
@@ -205,12 +195,12 @@ namespace Token{
         static Handle<Block> NewInstance(std::fstream& fd, size_t size);
         static Handle<Block> NewInstance(ByteBuffer* bytes);
 
-        static Handle<Block> NewInstance(uint32_t height, const uint256_t& phash, Transaction** txs, size_t num_txs, Timestamp timestamp=GetCurrentTimestamp()){
-            return new Block(timestamp, height, phash, txs, num_txs);
+        static Handle<Block> NewInstance(uint32_t height, const uint256_t& phash, const Handle<Array<Transaction>>& txs, Timestamp timestamp=GetCurrentTimestamp()){
+            return new Block(timestamp, height, phash, txs);
         }
 
-        static Handle<Block> NewInstance(const BlockHeader& previous, Transaction** txs, size_t num_txs, Timestamp timestamp=GetCurrentTimestamp()){
-            return new Block(timestamp, previous.GetHeight() + 1, previous.GetHash(), txs, num_txs);
+        static Handle<Block> NewInstance(const BlockHeader& previous, const Handle<Array<Transaction>>& txs, Timestamp timestamp=GetCurrentTimestamp()){
+            return new Block(timestamp, previous.GetHeight() + 1, previous.GetHash(), txs);
         }
 
         static inline Handle<Block> NewInstance(const std::string& filename){
@@ -227,6 +217,25 @@ namespace Token{
         virtual bool VisitStart(){ return true; }
         virtual bool Visit(const Handle<Transaction>& tx) = 0;
         virtual bool VisitEnd(){ return true; }
+    };
+
+    class BlockPrinter : public BlockVisitor{
+    private:
+        bool detailed_;
+    public:
+        BlockPrinter(bool is_detailed=false):
+            BlockVisitor(),
+            detailed_(is_detailed){}
+        ~BlockPrinter() = default;
+
+        bool IsDetailed() const{
+            return detailed_;
+        }
+
+        bool Visit(const Handle<Transaction>& tx){
+            LOG(INFO) << "#" << tx->GetIndex() << ". " << tx->GetHash();
+            return true;
+        }
     };
 }
 

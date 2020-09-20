@@ -53,7 +53,7 @@ namespace Token{
         for(auto& it : peers){
             std::stringstream ss;
             ss << "  - " << it << std::endl;
-            ss << "\t<HEAD> := " << it.GetHead()->GetHeader() << std::endl;
+            ss << "\t<HEAD> := " << it.GetHead() << std::endl;
             if(!Write(ss)) return false;
         }
         return true;

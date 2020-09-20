@@ -4,7 +4,6 @@
 #include "allocator.h"
 
 #include "snapshot_inspector.h"
-#include "heap_dump_inspector.h"
 
 static inline void
 InitializeLogging(char* arg0){
@@ -38,17 +37,7 @@ main(int argc, char** argv){
         Snapshot* snapshot = Snapshot::ReadSnapshot(inspector_path);
         inspector.Inspect(snapshot);
     } else if(FLAGS_inspector_tool == "heap-dump"){
-        LOG(INFO) << "Please enter a valid heap dump to inspect (type .exit to quit):";
-        std::cin >> inspector_path;
-
-        if(inspector_path == ".exit") return EXIT_SUCCESS;
-        if(!FileExists(inspector_path)){
-            LOG(WARNING) << "Heap Dump " << inspector_path << " doesn't exist, please enter a valid heap dump path";
-            return EXIT_FAILURE;
-        }
-
-        HeapDumpInspector inspector;
-        HeapDump* dump = HeapDump::ReadHeapDump(inspector_path);
-        inspector.Inspect(dump);
+        LOG(WARNING) << "not implemented yet";
+        return EXIT_FAILURE;
     }
 }

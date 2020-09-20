@@ -24,7 +24,7 @@ namespace Token{
         hash_(bytes->GetHash()),
         bloom_(){}
 
-    Block* BlockHeader::GetData() const{
+    Handle<Block> BlockHeader::GetData() const{
         return BlockChain::GetBlock(GetHash());
     }
 
@@ -34,7 +34,6 @@ namespace Token{
         bytes->PutHash(previous_hash_);
         bytes->PutHash(merkle_root_);
         bytes->PutHash(hash_);
-        //TODO: encode(bloom_)
         return true;
     }
 
@@ -42,34 +41,33 @@ namespace Token{
 //                                          Block
 //######################################################################################################################
     Handle<Block> Block::Genesis(){
-        Handle<Array<Input>> inputs = Array<Input>::New(0);
-        Handle<Array<Output>> outputs_a = Array<Output>::New(Block::kNumberOfGenesisOutputs);
+        Input* inputs[0];
+        Output* outputs_a[Block::kNumberOfGenesisOutputs];
         for(size_t idx = 0; idx < Block::kNumberOfGenesisOutputs; idx++){
             std::string user = "VenueA";
             std::string token = "TestToken";
-            outputs_a->Put(idx, Output::NewInstance(user, token));
+            outputs_a[idx] = Output::NewInstance(user, token);
         }
 
-        Handle<Array<Output>> outputs_b = Array<Output>::New(Block::kNumberOfGenesisOutputs);
+        Output* outputs_b[Block::kNumberOfGenesisOutputs];
         for(size_t idx = 0; idx < Block::kNumberOfGenesisOutputs; idx++){
             std::string user = "VenueB";
             std::string token = "TestToken";
-            outputs_b->Put(idx, Output::NewInstance(user, token));
+            outputs_b[idx] = Output::NewInstance(user, token);
         }
 
-        Handle<Array<Output>> outputs_c = Array<Output>::New(Block::kNumberOfGenesisOutputs);
+        Output* outputs_c[Block::kNumberOfGenesisOutputs];
         for(size_t idx = 0; idx < Block::kNumberOfGenesisOutputs; idx++){
             std::string user = "VenueC";
             std::string token = "TestToken";
-            outputs_c->Put(idx, Output::NewInstance(user, token));
+            outputs_c[idx] = Output::NewInstance(user, token);
         }
 
-        Transaction* txs[3] = {
-            Transaction::NewInstance(0, inputs, outputs_a, 0),
-            Transaction::NewInstance(1, inputs, outputs_b, 0),
-            Transaction::NewInstance(2, inputs, outputs_c, 0),
-        };
-        return NewInstance(0, uint256_t(), txs, 3, 0);
+        Handle<Array<Transaction>> txs = Array<Transaction>::New(3);
+        txs->Put(0, Transaction::NewInstance(0, inputs, 0, outputs_a, Block::kNumberOfGenesisOutputs, 0));
+        txs->Put(1,Transaction::NewInstance(1, inputs, 0, outputs_b, Block::kNumberOfGenesisOutputs, 0));
+        txs->Put(2,Transaction::NewInstance(2, inputs, 0, outputs_c, Block::kNumberOfGenesisOutputs, 0));
+        return NewInstance(0, uint256_t(), txs, 0);
     }
 
     Handle<Block> Block::NewInstance(std::fstream& fd, size_t size){
@@ -83,10 +81,11 @@ namespace Token{
         uint32_t height = bytes->GetInt();
         uint256_t phash = bytes->GetHash();
         uint32_t num_txs = bytes->GetInt();
-        Transaction* txs[num_txs];
+
+        Handle<Array<Transaction>> txs = Array<Transaction>::New(num_txs);
         for(uint32_t idx = 0; idx < num_txs; idx++)
-            txs[idx] = Transaction::NewInstance(bytes);
-        return new Block(timestamp, height, phash, txs, num_txs);
+            txs->Put(idx, Transaction::NewInstance(bytes));
+        return new Block(timestamp, height, phash, txs);
     }
 
     size_t Block::GetBufferSize() const{
@@ -95,8 +94,8 @@ namespace Token{
         size += sizeof(uint32_t); // height_
         size += uint256_t::kSize; // previous_hash_
         size += sizeof(uint32_t); // num_transactions_;
-        for(uint32_t idx = 0; idx < num_transactions_; idx++)
-            size += transactions_[idx]->GetBufferSize(); // transactions_[idx]
+        for(uint32_t idx = 0; idx < transactions_->Length(); idx++)
+            size += transactions_->Get(idx)->GetBufferSize(); // transactions_[idx]
         return size;
     }
 
@@ -110,9 +109,10 @@ namespace Token{
         bytes->PutLong(timestamp_);
         bytes->PutInt(height_);
         bytes->PutHash(previous_hash_);
-        bytes->PutInt(num_transactions_);
-        for(uint32_t idx = 0; idx < num_transactions_; idx++)
-            if(!transactions_[idx]->Encode(bytes)) return false;
+        bytes->PutInt(static_cast<uint32_t>(transactions_->Length()));
+        for(uint32_t idx = 0; idx < transactions_->Length(); idx++)
+            if(!transactions_->Get(idx)->Encode(bytes))
+                return false;
         return true;
     }
 

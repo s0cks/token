@@ -86,6 +86,7 @@ namespace Token{
             node->SetPrevious(next);
             next->SetNext(node);
             block = current;
+            node = next;
         }
         return true;
     }

@@ -37,12 +37,13 @@ namespace Token{
 
         static State GetState();
         static bool Initialize();
+        static bool Print(bool is_detailed=false);
+        static bool Accept(BlockChainVisitor* vis);
+        static bool Accept(BlockChainDataVisitor* vis);
         static void Append(const Handle<Block>& blk);
-        static void Accept(BlockChainVisitor* vis);
-        static void Accept(BlockChainDataVisitor* vis);
         static bool HasBlock(const uint256_t& hash);
         static bool HasTransaction(const uint256_t& hash);
-        static Handle<Block> GetHead();
+        static BlockHeader GetHead();
         static Handle<Block> GetGenesis();
         static Handle<Block> GetBlock(const uint256_t& hash);
         static Handle<Block> GetBlock(uint32_t height);
@@ -61,10 +62,6 @@ namespace Token{
         IsInitialized(){
             return GetState() == kInitialized;
         }
-
-#ifdef TOKEN_DEBUG
-        static void PrintBlockChain();
-#endif//TOKEN_DEBUG
     };
 
     class BlockChainVisitor{

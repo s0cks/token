@@ -14,7 +14,7 @@ namespace Token{
     public:
         ~PeerInfo(){}
 
-        Handle<Block> GetHead() const;
+        BlockHeader GetHead() const;
         void operator=(const PeerInfo& info);
 
         friend std::ostream& operator<<(std::ostream& stream, const PeerInfo& info){
@@ -35,13 +35,13 @@ namespace Token{
         uv_async_t shutdown_;
 
         // info
-        Handle<Block> head_;
+        BlockHeader head_;
 
-        void SetHead(const Handle<Block>& head){
+        void SetHead(const BlockHeader& head){
             head_ = head;
         }
 
-        Handle<Block> GetHead() const{
+        BlockHeader GetHead() const{
             return head_;
         }
 

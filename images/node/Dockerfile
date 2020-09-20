@@ -1,4 +1,4 @@
-FROM token-ledger-base:1.0.2
+FROM token-ledger-base:1.1.0
 VOLUME /usr/share/token/ledger
 RUN mkdir -p /usr/src/token-node/
 COPY entrypoint.sh /usr/src/token-node/

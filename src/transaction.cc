@@ -47,21 +47,20 @@ namespace Token{
 //######################################################################################################################
     Handle<Output> Output::NewInstance(ByteBuffer* bytes){
         UserID user(bytes);
-        std::string token = bytes->GetString();
+        TokenID token(bytes);
         return new Output(user, token);
     }
 
     size_t Output::GetBufferSize() const{
         size_t size = 0;
         size += UserID::kSize;
-        size += sizeof(uint32_t); // length(token_)
-        size += token_.length();
+        size += TokenID::kSize;
         return size;
     }
 
     bool Output::Encode(ByteBuffer* bytes) const{
         user_.Encode(bytes);
-        bytes->PutString(token_);
+        token_.Encode(bytes);
         return true;
     }
 
@@ -79,16 +78,16 @@ namespace Token{
 
         // parse inputs
         uint32_t num_inputs = bytes->GetInt();
-        Handle<Array<Input>> inputs = Array<Input>::New(num_inputs);
+        Input* inputs[num_inputs];
         for(uint32_t idx = 0; idx < num_inputs; idx++)
-            inputs->Put(idx, Input::NewInstance(bytes));
+            inputs[idx] = Input::NewInstance(bytes);
 
         // parse outputs
         uint32_t num_outputs = bytes->GetInt();
-        Handle<Array<Output>> outputs = Array<Output>::New(num_outputs);
+        Output* outputs[num_outputs];
         for(uint32_t idx = 0; idx < num_outputs; idx++)
-            outputs->Put(idx, Output::NewInstance(bytes));
-        return new Transaction(timestamp, index, inputs, outputs);
+            outputs[idx] = Output::NewInstance(bytes);
+        return new Transaction(timestamp, index, inputs, num_inputs, outputs, num_outputs);
     }
 
     Handle<Transaction> Transaction::NewInstance(std::fstream& fd, size_t size){

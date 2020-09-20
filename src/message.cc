@@ -10,7 +10,7 @@ namespace Token{
         std::string version = bytes->GetString();
         std::string nonce = bytes->GetString();
         std::string node_id = bytes->GetString();
-        Handle<Block> head = Block::NewInstance(bytes);
+        BlockHeader head = BlockHeader(bytes);
         return new VersionMessage(client_type, version, node_id, timestamp, nonce, head);
     }
 
@@ -34,7 +34,7 @@ namespace Token{
         bytes->PutString(version_);
         bytes->PutString(nonce_);
         bytes->PutString(node_id_);
-        head_->Encode(bytes);
+        head_.Encode(bytes);
         return true;
     }
 
@@ -45,7 +45,7 @@ namespace Token{
         std::string nonce = bytes->GetString();
         ClientType client_type = static_cast<ClientType>(bytes->GetShort());
         NodeAddress address; //TODO: decode callback_
-        Handle<Block> head = Block::NewInstance(bytes);
+        BlockHeader head = BlockHeader(bytes);
         return new VerackMessage(client_type, node_id, nonce, address, head, timestamp);
     }
 
@@ -69,7 +69,7 @@ namespace Token{
         bytes->PutString(version_);
         bytes->PutString(nonce_);
         //TODO: encode(callback_)
-        head_->Encode(bytes);
+        head_.Encode(bytes);
         return true;
     }
 
