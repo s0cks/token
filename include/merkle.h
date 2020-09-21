@@ -25,25 +25,25 @@ namespace Token{
         uint256_t ComputeHash() const;
     public:
         MerkleNode(const uint256_t& hash):
-                parent_(nullptr),
-                left_(nullptr),
-                right_(nullptr),
-                hash_(hash){}
+            parent_(nullptr),
+            left_(nullptr),
+            right_(nullptr),
+            hash_(hash){}
         MerkleNode(MerkleNode* node):
-                parent_(nullptr),
-                left_(nullptr),
-                right_(nullptr),
-                hash_(){
+            parent_(nullptr),
+            left_(nullptr),
+            right_(nullptr),
+            hash_(uint256_t::Null()){
             SetParent(node->GetParent());
             SetLeft(node->GetLeft());
             SetRight(node->GetRight());
             hash_ = ComputeHash();
         }
         MerkleNode(MerkleNode* left, MerkleNode* right):
-                parent_(nullptr),
-                left_(nullptr),
-                right_(nullptr),
-                hash_(){
+            parent_(nullptr),
+            left_(nullptr),
+            right_(nullptr),
+            hash_(uint256_t::Null()){
             SetLeft(left);
             SetRight(right);
             hash_ = ComputeHash();
@@ -65,10 +65,6 @@ namespace Token{
 
         MerkleNode* GetLeft() const{
             return left_;
-        }
-
-        bool Finalize(){
-            return true;
         }
 
         bool HasLeft() const{
@@ -106,7 +102,7 @@ namespace Token{
 
         bool VerifyHash() const;
 
-        uint64_t GetLeaves() const{
+        intptr_t GetLeaves() const{
             if(IsLeaf()) return 1;
             return GetLeft()->GetLeaves() + GetRight()->GetLeaves();
         }
@@ -172,9 +168,9 @@ namespace Token{
         MerkleNode* BuildMerkleTree(std::vector<uint256_t>& leaves);
     public:
         MerkleTree(std::vector<uint256_t>& leaves):
-                root_(nullptr),
-                nodes_(),
-                leaves_(){
+            root_(nullptr),
+            leaves_(),
+            nodes_(){
             root_ = BuildMerkleTree(leaves);
         }
         ~MerkleTree() = default;
@@ -205,7 +201,8 @@ namespace Token{
         }
 
         uint256_t GetMerkleRootHash() const{
-            if(!HasMerkleRoot()) return uint256_t();
+            if(!HasMerkleRoot())
+                return uint256_t::Null();
             return GetMerkleRoot()->GetHash();
         }
 
@@ -218,7 +215,7 @@ namespace Token{
         bool BuildAuditProof(const uint256_t& hash, std::vector<MerkleProofHash>& trail);
         bool VerifyAuditProof(const uint256_t& root, const uint256_t& leaf, std::vector<MerkleProofHash>& trail);
 
-        bool BuildConsistencyProof(uint64_t num_nodes, std::vector<MerkleProofHash>& trail);
+        bool BuildConsistencyProof(intptr_t num_nodes, std::vector<MerkleProofHash>& trail);
         bool BuildConsistencyAuditProof(const uint256_t& hash, std::vector<MerkleProofHash>& trail);
         bool VerifyConsistencyProof(const uint256_t& root, std::vector<MerkleProofHash>& trail);
     };

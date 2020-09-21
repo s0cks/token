@@ -46,7 +46,7 @@ namespace Token{
         }
 
         uint256_t GetNextArgumentHash(){
-            return HashFromHexString(GetNextArgument());
+            return uint256_t::FromHexString(GetNextArgument());
         }
 
         uint32_t GetNextArgumentUnsignedInt(){

@@ -65,7 +65,7 @@ namespace Token{
 
         void Free(Object** ptr){
             ptrdiff_t offset = ptr - handles_;
-            if(offset >= 0 && offset < kHandlesPerGroup){
+            if(offset >= 0 && offset < (ptrdiff_t)kHandlesPerGroup){
                 Write(ptr, nullptr);
                 bitmap_.reset(offset);
                 size_--;

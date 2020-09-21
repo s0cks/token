@@ -1,7 +1,7 @@
 #include "message.h"
 #include "proposal.h"
 
-#include "bytes.h"
+#include "byte_buffer.h"
 
 namespace Token{
     Handle<VersionMessage> VersionMessage::NewInstance(ByteBuffer* bytes){
@@ -46,7 +46,7 @@ namespace Token{
         ClientType client_type = static_cast<ClientType>(bytes->GetShort());
         NodeAddress address; //TODO: decode callback_
         BlockHeader head = BlockHeader(bytes);
-        return new VerackMessage(client_type, node_id, nonce, address, head, timestamp);
+        return new VerackMessage(client_type, node_id, version, nonce, address, head, timestamp);
     }
 
     size_t VerackMessage::GetBufferSize() const{
@@ -180,7 +180,7 @@ namespace Token{
         return new GetDataMessage(items);
     }
 
-    const size_t GetBlocksMessage::kMaxNumberOfBlocks = 32;
+    const intptr_t GetBlocksMessage::kMaxNumberOfBlocks = 32;
 
     Handle<GetBlocksMessage> GetBlocksMessage::NewInstance(ByteBuffer* bytes){
         uint256_t start = bytes->GetHash();

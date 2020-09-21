@@ -59,8 +59,8 @@ namespace Token{
         PeerSession(const NodeAddress& address):
             Session(address),
             thread_(),
-            socket_(),
             conn_(),
+            socket_(),
             hb_timer_(),
             hb_timeout_(){
             hb_timer_.data = this;

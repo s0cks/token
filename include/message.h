@@ -165,14 +165,15 @@ namespace Token{
         NodeAddress callback_;
         BlockHeader head_;
 
-        VerackMessage(ClientType type, const std::string& node_id, const std::string& nonce, const NodeAddress& address, const BlockHeader& head, Timestamp timestamp):
+        VerackMessage(ClientType type, const std::string& node_id, const std::string& version, const std::string& nonce, const NodeAddress& address, const BlockHeader& head, Timestamp timestamp):
             Message(),
-            client_type_(type),
+            timestamp_(timestamp),
             node_id_(node_id),
+            version_(version),
             nonce_(nonce),
+            client_type_(type),
             callback_(address),
-            head_(head),
-            timestamp_(timestamp){}
+            head_(head){}
     public:
         ClientType GetClientType() const{
             return client_type_;
@@ -203,8 +204,8 @@ namespace Token{
         DECLARE_MESSAGE(Verack);
 
         static Handle<VerackMessage> NewInstance(ByteBuffer* bytes);
-        static Handle<VerackMessage> NewInstance(ClientType type, const std::string& node_id, const NodeAddress& address, const BlockHeader& head=BlockChain::GetHead(), const std::string& nonce=GenerateNonce(), Timestamp timestamp=GetCurrentTimestamp()){
-            return new VerackMessage(type, node_id, nonce, address, head, timestamp);
+        static Handle<VerackMessage> NewInstance(ClientType type, const std::string& node_id, const NodeAddress& address, const BlockHeader& head=BlockChain::GetHead(), const std::string& version=Token::GetVersion(), const std::string& nonce=GenerateNonce(), Timestamp timestamp=GetCurrentTimestamp()){
+            return new VerackMessage(type, node_id, version, nonce, address, head, timestamp);
         }
 
         static Handle<VerackMessage> NewInstance(const std::string& node_id){
@@ -391,7 +392,7 @@ namespace Token{
     public:
         InventoryItem():
             type_(kUnknown),
-            hash_(){}
+            hash_(uint256_t::Null()){}
         InventoryItem(Type type, const uint256_t& hash):
             type_(type),
             hash_(hash){}
@@ -416,7 +417,7 @@ namespace Token{
             switch(type_){
                 case kTransaction: return TransactionPool::HasTransaction(hash_);
                 case kBlock: return BlockChain::HasBlock(hash_) || BlockPool::HasBlock(hash_);
-                case kUnclaimedTransaction: UnclaimedTransactionPool::HasUnclaimedTransaction(hash_);
+                case kUnclaimedTransaction: return UnclaimedTransactionPool::HasUnclaimedTransaction(hash_);
                 default: return false;
             }
         }
@@ -529,7 +530,7 @@ namespace Token{
 
     class GetBlocksMessage : public Message{
     public:
-        static const size_t kMaxNumberOfBlocks;
+        static const intptr_t kMaxNumberOfBlocks;
     private:
         uint256_t start_;
         uint256_t stop_;
@@ -557,7 +558,7 @@ namespace Token{
         DECLARE_MESSAGE(GetBlocks);
 
         static Handle<GetBlocksMessage> NewInstance(ByteBuffer* bytes);
-        static Handle<GetBlocksMessage> NewInstance(const uint256_t& start_hash=BlockChain::GetHead().GetHash(), const uint256_t& stop_hash=uint256_t()){
+        static Handle<GetBlocksMessage> NewInstance(const uint256_t& start_hash=BlockChain::GetHead().GetHash(), const uint256_t& stop_hash=uint256_t::Null()){
             return new GetBlocksMessage(start_hash, stop_hash);
         }
     };

@@ -10,7 +10,7 @@ namespace Token{
         LOG(INFO) << "  - Previous Hash: " << blk->GetPreviousHash();
         LOG(INFO) << "  - Merkle Root: " << blk->GetMerkleRoot();
         LOG(INFO) << "  - Transactions: ";
-        for(size_t idx = 0; idx < blk->GetNumberOfTransactions(); idx++){
+        for(intptr_t idx = 0; idx < blk->GetNumberOfTransactions(); idx++){
             Handle<Transaction> tx = blk->GetTransaction(idx);
             LOG(INFO) << "      * #" << tx->GetIndex() << ": " << tx->GetHash();
         }
@@ -33,7 +33,6 @@ namespace Token{
     }
 
     void SnapshotInspector::HandleGetDataCommand(Token::SnapshotInspectorCommand* cmd){
-        uint256_t hash = cmd->GetNextArgumentHash();
         //TODO: PrintBlock(GetBlock(hash));
     }
 

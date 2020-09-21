@@ -38,9 +38,9 @@ namespace Token{
 
     class TransactionPoolBlockBuilder : public TransactionPoolVisitor{
     private:
-        size_t block_size_;
-        size_t num_transactions_;
-        size_t max_transactions_;
+        intptr_t block_size_;
+        intptr_t num_transactions_;
+        intptr_t max_transactions_;
         Transaction** transactions_;
 
         inline void
@@ -53,11 +53,11 @@ namespace Token{
             return a->GetTimestamp() < b->GetTimestamp();
         }
     public:
-        TransactionPoolBlockBuilder(size_t size=Block::kMaxTransactionsForBlock, size_t max_transactions=TransactionPool::GetSize()):
+        TransactionPoolBlockBuilder(intptr_t size=Block::kMaxTransactionsForBlock, intptr_t max_transactions=TransactionPool::GetSize()):
             TransactionPoolVisitor(),
+            block_size_(size),
             num_transactions_(0),
             max_transactions_(max_transactions),
-            block_size_(size),
             transactions_(nullptr){
             if(max_transactions > 0){
                 transactions_ = (Transaction**)malloc(sizeof(Transaction*)*max_transactions);
@@ -76,7 +76,7 @@ namespace Token{
             // Return a New Block of size Block::kMaxTransactionsForBlock, using sorted Transactions
 
             Handle<Array<Transaction>> txs = Array<Transaction>::New(num_transactions_);
-            for(size_t idx = 0; idx < num_transactions_; idx++){
+            for(intptr_t idx = 0; idx < num_transactions_; idx++){
                 txs->Put(idx, transactions_[idx]);
             }
 
@@ -90,7 +90,7 @@ namespace Token{
             return true;
         }
 
-        static Handle<Block> Build(size_t size){
+        static Handle<Block> Build(intptr_t size){
             TransactionPoolBlockBuilder builder(size);
             TransactionPool::Accept(&builder);
             Handle<Block> block = builder.GetBlock();
@@ -162,7 +162,7 @@ namespace Token{
 
     }
 
-    Handle<Block> BlockDiscoveryThread::CreateNewBlock(size_t size){
+    Handle<Block> BlockDiscoveryThread::CreateNewBlock(intptr_t size){
         Handle<Block> blk = TransactionPoolBlockBuilder::Build(size);
         SetBlock(blk);
         return blk;

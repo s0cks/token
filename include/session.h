@@ -16,7 +16,7 @@ namespace Token{
     public:
         static const uint32_t kHeartbeatIntervalMilliseconds = 30 * 1000;
         static const uint32_t kHeartbeatTimeoutMilliseconds = 1 * 60 * 1000;
-        static const size_t kBufferSize = 4096*2;//bad?
+        static const intptr_t kBufferSize = 4096*2;//bad?
 
         enum State{
             kDisconnected = 0,
@@ -53,18 +53,18 @@ namespace Token{
         Session(const NodeAddress& address):
             mutex_(),
             cond_(),
-            state_(kDisconnected),
             uuid_(),
-            address_(address){
+            address_(address),
+            state_(kDisconnected){
             uuid_generate_time_safe(uuid_);
         }
 
         Session(uv_tcp_t* handle):
             mutex_(),
             cond_(),
-            state_(kDisconnected),
             uuid_(),
-            address_(handle){
+            address_(handle),
+            state_(kDisconnected){
             uuid_generate_time_safe(uuid_);
         }
 
@@ -166,9 +166,9 @@ namespace Token{
         uv_timer_t heartbeat_;
 
         NodeSession():
+            Session(&handle_),
             handle_(),
-            heartbeat_(),
-            Session(&handle_){
+            heartbeat_(){
             handle_.data = this;
             heartbeat_.data = this;
         }

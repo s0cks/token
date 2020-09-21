@@ -90,6 +90,7 @@ message("Compiling Token w/ the following libraries: ${TOKEN_LIBRARIES}")
 add_library("token-ledger" SHARED ${TOKEN_HEADERS} ${TOKEN_SOURCES})
 set_target_properties("token-ledger" PROPERTIES PUBLIC_HEADER "${TOKEN_HEADERS}")
 target_link_libraries("${PROJECT_NAME}-ledger" ${TOKEN_LIBRARIES})
+target_compile_options(token-ledger PRIVATE -Werror -Wall -Wextra)
 
 # Token Server Executable
 add_executable("token-node" main.cc)

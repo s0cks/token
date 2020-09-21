@@ -183,10 +183,10 @@ namespace Token{
         }
     public:
         MemoryPoolCache(MemoryPool* pool, size_t size):
-            size_(size),
-            items_(),
             pool_(pool),
-            nodes_(nullptr){
+            items_(),
+            nodes_(nullptr),
+            size_(size){
             if(!(nodes_ = (CacheNode**)malloc(sizeof(CacheNode*)*size))){
                 LOG(WARNING) << "cannot initialize memory pool cache of size: " << size;
                 return;

@@ -1,5 +1,5 @@
 #include "unclaimed_transaction.h"
-#include "bytes.h"
+#include "byte_buffer.h"
 #include "block_chain.h"
 #include "crash_report.h"
 

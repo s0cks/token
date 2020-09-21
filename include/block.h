@@ -14,14 +14,14 @@ namespace Token{
     class Block;
     class BlockHeader{
     public:
-        static const size_t kSize = sizeof(uint64_t) +
-                                    sizeof(uint64_t) +
+        static const size_t kSize = sizeof(Timestamp) +
+                                    sizeof(intptr_t) +
                                     uint256_t::kSize +
                                     uint256_t::kSize +
                                     uint256_t::kSize;
     private:
-        uint64_t timestamp_;
-        uint64_t height_;
+        Timestamp timestamp_;
+        intptr_t height_;
         uint256_t previous_hash_;
         uint256_t merkle_root_;
         uint256_t hash_;
@@ -30,10 +30,18 @@ namespace Token{
         BlockHeader():
             timestamp_(0),
             height_(0),
-            previous_hash_(uint256_t()),
-            merkle_root_(), // fill w/ genesis's merkle root
-            hash_(){} //TODO: fill w/ genesis's hash
-        BlockHeader(uint32_t timestamp, uint32_t height, const uint256_t& phash, const uint256_t& merkle_root, const uint256_t& hash, const BloomFilter& tx_bloom):
+            previous_hash_(uint256_t::Null()),
+            merkle_root_(uint256_t::Null()), // fill w/ genesis's merkle root
+            hash_(uint256_t::Null()), //TODO: fill w/ genesis's hash
+            bloom_(){}
+        BlockHeader(const BlockHeader& blk):
+            timestamp_(blk.timestamp_),
+            height_(blk.height_),
+            previous_hash_(blk.previous_hash_),
+            merkle_root_(blk.merkle_root_),
+            hash_(blk.hash_),
+            bloom_(blk.bloom_){}
+        BlockHeader(Timestamp timestamp, intptr_t height, const uint256_t& phash, const uint256_t& merkle_root, const uint256_t& hash, const BloomFilter& tx_bloom):
             timestamp_(timestamp),
             height_(height),
             previous_hash_(phash),
@@ -44,11 +52,11 @@ namespace Token{
         BlockHeader(ByteBuffer* bytes);
         ~BlockHeader(){}
 
-        uint64_t GetTimestamp() const{
+        Timestamp GetTimestamp() const{
             return timestamp_;
         }
 
-        uint64_t GetHeight() const{
+        intptr_t GetHeight() const{
             return height_;
         }
 
@@ -64,12 +72,11 @@ namespace Token{
             return hash_;
         }
 
-        Handle<Block> GetData() const;
-
         bool Contains(const uint256_t& hash) const{
             return bloom_.Contains(hash);
         }
 
+        Handle<Block> GetData() const;
         bool Encode(ByteBuffer* bytes) const;
 
         BlockHeader& operator=(const BlockHeader& other){
@@ -125,7 +132,7 @@ namespace Token{
         };
     private:
         Timestamp timestamp_;
-        uint32_t height_;
+        intptr_t height_;
         uint256_t previous_hash_;
         Array<Transaction>* transactions_;
         BloomFilter tx_bloom_; // transient
@@ -156,11 +163,11 @@ namespace Token{
             return previous_hash_;
         }
 
-        uint32_t GetHeight() const{
+        intptr_t GetHeight() const{
             return height_;
         }
 
-        uint32_t GetNumberOfTransactions() const{
+        intptr_t GetNumberOfTransactions() const{
             return transactions_->Length();
         }
 
@@ -168,9 +175,9 @@ namespace Token{
             return timestamp_;
         }
 
-        Handle<Transaction> GetTransaction(uint32_t idx) const{
+        Handle<Transaction> GetTransaction(intptr_t idx) const{
             if(idx < 0 || idx > GetNumberOfTransactions())
-                return Handle<Transaction>();
+                return nullptr;
             return transactions_->Get(idx);
         }
 
@@ -195,7 +202,7 @@ namespace Token{
         static Handle<Block> NewInstance(std::fstream& fd, size_t size);
         static Handle<Block> NewInstance(ByteBuffer* bytes);
 
-        static Handle<Block> NewInstance(uint32_t height, const uint256_t& phash, const Handle<Array<Transaction>>& txs, Timestamp timestamp=GetCurrentTimestamp()){
+        static Handle<Block> NewInstance(intptr_t height, const uint256_t& phash, const Handle<Array<Transaction>>& txs, Timestamp timestamp=GetCurrentTimestamp()){
             return new Block(timestamp, height, phash, txs);
         }
 

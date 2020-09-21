@@ -1,5 +1,5 @@
 #include "file_reader.h"
-#include "bytes.h"
+#include "byte_buffer.h"
 #include "crash_report.h"
 
 #include "block.h"
@@ -76,9 +76,10 @@ namespace Token{
         uint8_t bytes[uint256_t::kSize];
         if(!ReadBytes(bytes, uint256_t::kSize)){
             LOG(WARNING) << "couldn't read hash from file: " << GetFilename();
-            return uint256_t();
+            return uint256_t::Null();
         }
-        return uint256_t((uint8_t*)bytes);
+
+        return uint256_t::FromBytes(bytes);
     }
 
     std::string FileReader::ReadString(){

@@ -1,5 +1,5 @@
-#ifndef TOKEN_BYTES_H
-#define TOKEN_BYTES_H
+#ifndef TOKEN_BYTE_BUFFER_H
+#define TOKEN_BYTE_BUFFER_H
 
 #include <cstdint>
 #include <cstring>
@@ -8,11 +8,10 @@
 
 #include "object.h"
 
-//TODO:
-// - research benefits of signed vs unsigned
 namespace Token{
     class ByteBuffer{
         //TODO:
+        // - research benefits of signed vs unsigned
         // - convert to object instance
     private:
         uint8_t* data_;
@@ -65,8 +64,8 @@ namespace Token{
         ByteBuffer(size_t max):
             data_(nullptr),
             cap_(0),
-            rpos_(0),
-            wpos_(0){
+            wpos_(0),
+            rpos_(0){
             if(max > 0){
                 max = RoundUpPowTwo(max);
                 if(!(data_ = (uint8_t*)malloc(sizeof(uint8_t)*max))){
@@ -79,8 +78,8 @@ namespace Token{
         ByteBuffer(uint8_t* data, size_t size):
             data_(nullptr),
             cap_(0),
-            rpos_(0),
-            wpos_(0){
+            wpos_(0),
+            rpos_(0){
             if(size > 0){
                 if(!(data_ = (uint8_t*)malloc(sizeof(uint8_t)*size))){
                     LOG(WARNING) << "couldn't malloc new buffer of size: " << size;
@@ -160,10 +159,10 @@ namespace Token{
 
         uint256_t
         GetHash(){
-            uint256_t hash;
-            memcpy(hash.data(), &data_[rpos_], uint256_t::kSize);
+            uint8_t bytes[uint256_t::kSize];
+            memcpy(bytes, &data_[rpos_], uint256_t::kSize);;
             rpos_ += uint256_t::kSize;
-            return hash;
+            return uint256_t::FromBytes(bytes);
         }
 
         size_t GetWrittenBytes() const{
@@ -180,9 +179,8 @@ namespace Token{
 
         void operator=(const ByteBuffer& other){
             if(data_)free(data_);
-
         }
     };
 }
 
-#endif //TOKEN_BYTES_H
+#endif //TOKEN_BYTE_BUFFER_H

@@ -18,7 +18,7 @@ namespace Token{
         if(IsLeaf()) return hash_;
         uint256_t left = GetLeft()->GetHash();
         uint256_t right = GetRight()->GetHash();
-        return ConcatHashes(left, right);
+        return uint256_t::Concat(left, right);
     }
 
     MerkleNode* MerkleTree::BuildMerkleTree(std::vector<uint256_t>& leaves){
@@ -49,7 +49,7 @@ namespace Token{
                 rchild = BuildMerkleTree(height - 1, nodes);
             }
 
-            uint256_t hash = ConcatHashes(lchild->GetHash(), rchild->GetHash());
+            uint256_t hash = uint256_t::Concat(lchild->GetHash(), rchild->GetHash());
             MerkleNode* node = new MerkleNode(hash);
             node->SetLeft(lchild);
             node->SetRight(rchild);
@@ -116,14 +116,14 @@ namespace Token{
         uint256_t testHash = leaf;
         for(auto& it : trail){
             testHash = it.IsLeft() ?
-                    ConcatHashes(testHash, it.GetHash()) :
-                    ConcatHashes(it.GetHash(), testHash);
+                    uint256_t::Concat(testHash, it.GetHash()) :
+                    uint256_t::Concat(it.GetHash(), testHash);
         }
         return testHash == root;
     }
 
-    bool MerkleTree::BuildConsistencyProof(uint64_t m, std::vector<MerkleProofHash>& trail){
-        uint64_t idx = log2l(m);
+    bool MerkleTree::BuildConsistencyProof(intptr_t m, std::vector<MerkleProofHash>& trail){
+        intptr_t idx = log2l(m);
 
         MerkleNode* node = leaves_[0];
         while(idx > 0){
@@ -131,7 +131,7 @@ namespace Token{
             idx--;
         }
 
-        int k = node->GetLeaves();
+        intptr_t k = node->GetLeaves();
         LOG(INFO) << "node leaves: " << k;
         if(m != k){
             MerkleNode* sn = node->GetParent()->GetRight();
@@ -165,15 +165,19 @@ namespace Token{
     }
 
     bool MerkleTree::VerifyConsistencyProof(const uint256_t& root, std::vector<MerkleProofHash>& proof){
-        uint256_t hash, lhash, rhash;
+        uint256_t hash = uint256_t::Null();
+        uint256_t lhash = uint256_t::Null();
+        uint256_t rhash = uint256_t::Null();
         if(proof.size() > 1){
             lhash = proof[proof.size() - 2].GetHash();
             int hidx = proof.size() - 1;
-            hash = rhash = ConcatHashes(lhash, proof[hidx].GetHash());
+            hash = uint256_t::Concat(lhash, proof[hidx].GetHash());
+            rhash = hash;
             hidx -= 2;
             while(hidx >= 0){
                 lhash = proof[hidx].GetHash();
-                hash = rhash = ConcatHashes(lhash, rhash);
+                hash = uint256_t::Concat(lhash, rhash);
+                rhash = hash;
                 hidx--;
             }
         } else{

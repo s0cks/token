@@ -1,5 +1,5 @@
 #include "object.h"
-#include "bytes.h"
+#include "byte_buffer.h"
 #include "bitfield.h"
 
 namespace Token{
@@ -47,11 +47,12 @@ namespace Token{
         ByteBuffer bytes(size);
         if(!Encode(&bytes)){
             LOG(WARNING) << "couldn't encode object to bytes";
-            return uint256_t();
+            return uint256_t::Null();
         }
 
         CryptoPP::SecByteBlock hash(CryptoPP::SHA256::DIGESTSIZE);
         CryptoPP::ArraySource source(bytes.data(), bytes.GetWrittenBytes(), true, new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(hash.data(), hash.size())));
-        return uint256_t(hash.data());
+        return uint256_t::FromBytes(hash.data());
+
     }
 }

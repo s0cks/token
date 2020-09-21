@@ -2,7 +2,7 @@
 #include "task.h"
 #include "async_task.h"
 #include "block_pool.h"
-#include "bytes.h"
+#include "byte_buffer.h"
 
 namespace Token{
     PeerInfo::PeerInfo(PeerSession* session):
@@ -196,7 +196,6 @@ namespace Token{
     void PeerSession::HandlePrepareMessage(const Handle<HandleMessageTask>& task){}
 
     void PeerSession::HandlePromiseMessage(const Handle<HandleMessageTask>& task){
-        PeerSession* session = (PeerSession*)task->GetSession();
         Handle<PromiseMessage> msg = task->GetMessage().CastTo<PromiseMessage>();
 
         /*
@@ -217,7 +216,6 @@ namespace Token{
     void PeerSession::HandleCommitMessage(const Handle<HandleMessageTask>& task){}
 
     void PeerSession::HandleAcceptedMessage(const Handle<HandleMessageTask>& task){
-        PeerSession* session = (PeerSession*)task->GetSession();
         Handle<AcceptedMessage> msg = task->GetMessage().CastTo<AcceptedMessage>();
 
         /*
@@ -236,7 +234,6 @@ namespace Token{
     }
 
     void PeerSession::HandleRejectedMessage(const Handle<HandleMessageTask>& task){
-        PeerSession* session = (PeerSession*)task->GetSession();
         Handle<RejectedMessage> msg = task->GetMessage().CastTo<RejectedMessage>();
 
         /*

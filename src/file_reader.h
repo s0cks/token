@@ -2,7 +2,7 @@
 #define TOKEN_FILE_READER_H
 
 #include "common.h"
-#include "bytes.h"
+#include "byte_buffer.h"
 #include "object.h"
 #include "uint256_t.h"
 

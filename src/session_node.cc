@@ -139,7 +139,6 @@ namespace Token{
     }
 
     void NodeSession::HandleAcceptedMessage(const Handle<HandleMessageTask>& task){
-        NodeSession* session = (NodeSession*)task->GetSession();
         Handle<AcceptedMessage> msg = task->GetMessage().CastTo<AcceptedMessage>();
         Handle<Proposal> proposal = msg->GetProposal();
 
@@ -150,7 +149,6 @@ namespace Token{
     void NodeSession::HandleRejectedMessage(const Handle<HandleMessageTask>& task){}
 
     void NodeSession::HandleBlockMessage(const Handle<HandleMessageTask>& task){
-        NodeSession* session = (NodeSession*)task->GetSession();
         Handle<BlockMessage> msg = task->GetMessage().CastTo<BlockMessage>();
 
         Block* block = msg->GetBlock();
@@ -163,7 +161,6 @@ namespace Token{
     }
 
     void NodeSession::HandleTransactionMessage(const Handle<HandleMessageTask>& task){
-        NodeSession* session = (NodeSession*)task->GetSession();
         Handle<TransactionMessage> msg = task->GetMessage().CastTo<TransactionMessage>();
 
         Transaction* tx = msg->GetTransaction();
@@ -253,7 +250,7 @@ namespace Token{
 
         std::vector<InventoryItem> items;
         if(stop.IsNull()){
-            size_t amt = std::min(GetBlocksMessage::kMaxNumberOfBlocks, (size_t)BlockChain::GetHead().GetHeight());
+            intptr_t amt = std::min(GetBlocksMessage::kMaxNumberOfBlocks, BlockChain::GetHead().GetHeight());
             LOG(INFO) << "sending " << (amt + 1) << " blocks...";
 
             Handle<Block> start_block = BlockChain::GetBlock(start);

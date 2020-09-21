@@ -21,7 +21,8 @@ namespace Token{
             kRunning,
             kSynchronizing,
             kStopping,
-            kStopped
+            kStopped,
+            kError
         };
 
         friend std::ostream& operator<<(std::ostream& stream, const State& state){

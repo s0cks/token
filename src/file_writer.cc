@@ -1,5 +1,5 @@
 #include "file_writer.h"
-#include "bytes.h"
+#include "byte_buffer.h"
 #include "bitfield.h"
 
 namespace Token{
@@ -90,7 +90,7 @@ namespace Token{
     }
 
     bool TextFileWriter::Write(const uint256_t& hash){
-        return Write(HexString(hash));
+        return Write(hash.HexString());
     }
 
     bool TextFileWriter::Write(Object* obj){
@@ -140,14 +140,7 @@ namespace Token{
     }
 
     bool BinaryFileWriter::WriteObject(Object* value){
-        Type type = value->GetType();
-        uint32_t size = value->GetBufferSize();
-
-        ByteBuffer bytes(size);
-        if(!value->Encode(&bytes)){
-            LOG(WARNING) << "couldn't encode object: " << value->ToString();
-            return false;
-        }
-        return WriteUnsignedLong(CreateObjectHeader(value)) && WriteBytes(&bytes);
+        LOG(WARNING) << "BinaryFileWriter::WriteObject(Object*) - not implemented yet!";
+        return false; //TODO: implement BinaryFileWriter::WriteObject(Object*)
     }
 }

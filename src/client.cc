@@ -1,7 +1,7 @@
 #include "server.h"
 #include "task.h"
 #include "client.h"
-#include "bytes.h"
+#include "byte_buffer.h"
 
 namespace Token{
     ClientSessionInfo::ClientSessionInfo(ClientSession* session):
@@ -25,11 +25,11 @@ namespace Token{
     }
 
     ClientSession::ClientSession(bool use_stdin):
-        stream_(),
+        Session(&stream_),
         sigterm_(),
         sigint_(),
-        handler_(nullptr),
-        Session(&stream_){
+        stream_(),
+        handler_(nullptr){
         stream_.data = this;
         connection_.data = this;
         hb_timer_.data = this;
@@ -40,7 +40,6 @@ namespace Token{
     }
 
     void ClientSession::OnSignal(uv_signal_t* handle, int signum){
-        ClientSession* client = (ClientSession*)handle->data;
         uv_stop(handle->loop);
     }
 
@@ -189,7 +188,6 @@ namespace Token{
     }
 
     void ClientSession::HandleBlockMessage(const Handle<HandleMessageTask>& task){
-        ClientSession* client = (ClientSession*)task->GetSession();
         Handle<BlockMessage> msg = task->GetMessage().CastTo<BlockMessage>();
 
         Block* blk = msg->GetBlock();
@@ -197,7 +195,6 @@ namespace Token{
     }
 
     void ClientSession::HandleInventoryMessage(const Handle<HandleMessageTask>& task){
-        ClientSession* session = (ClientSession*)task->GetSession();
         Handle<InventoryMessage> msg = task->GetMessage().CastTo<InventoryMessage>();
 
         std::vector<InventoryItem> items;
@@ -310,7 +307,6 @@ namespace Token{
 
     void ClientCommandHandler::OnCommandReceived(uv_stream_t *stream, ssize_t nread, const uv_buf_t* buff){
         ClientCommandHandler* handler = (ClientCommandHandler*)stream->data;
-        ClientSession* client = handler->GetSession();
 
         if(nread == UV_EOF){
             LOG(ERROR) << "client disconnected!";

@@ -20,8 +20,8 @@ namespace Token{
         friend class Heap;
     public:
         MemoryRegion():
-            size_(0),
-            start_(nullptr){}
+            start_(nullptr),
+            size_(0){}
         MemoryRegion(uintptr_t size);
         MemoryRegion(void* ptr, uintptr_t size):
             MemoryRegion(size){

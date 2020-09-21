@@ -63,7 +63,6 @@ namespace Token{
             // - block: Block #2
             // - block: Block #N
             // ------------------------
-            int64_t offset = GetCurrentPosition();
             //TODO: write unclaimed transaction pool section
         }
 

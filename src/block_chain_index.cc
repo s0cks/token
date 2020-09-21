@@ -6,7 +6,7 @@ namespace Token{
     static leveldb::DB* index_ = nullptr;
 
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
-#define KEY(Hash) HexString((Hash))
+#define KEY(Hash) (Hash).HexString()
 
     static inline std::string
     GetDataDirectory(){
@@ -54,7 +54,7 @@ namespace Token{
         options.sync = true;
 
         LOCK_GUARD;
-        if(!GetIndex()->Put(options, name, HexString(hash)).ok()){
+        if(!GetIndex()->Put(options, name, KEY(hash)).ok()){
             LOG(WARNING) << "couldn't put set reference " << name << " to : " << hash;
             return;
         }
@@ -77,9 +77,10 @@ namespace Token{
         LOCK_GUARD;
         if(!GetIndex()->Get(options, name, &value).ok()){
             LOG(WARNING) << "couldn't find reference: " << name;
-            return uint256_t();
+            return uint256_t::Null();
         }
-        return HashFromHexString(value);
+
+        return uint256_t::FromHexString(value);
     }
 
     void BlockChainIndex::PutBlockData(const Handle<Block>& blk){

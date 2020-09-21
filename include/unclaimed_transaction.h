@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-#include "user.h"
+#include "user_id.h"
 #include "object.h"
 
 namespace Token{
@@ -17,8 +17,8 @@ namespace Token{
 
         UnclaimedTransaction(const uint256_t& hash, uint32_t idx, const UserID& user):
             hash_(hash),
-            user_(user),
-            index_(idx){}
+            index_(idx),
+            user_(user){}
     public:
         ~UnclaimedTransaction(){}
 

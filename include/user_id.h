@@ -1,58 +1,10 @@
-#ifndef TOKEN_USER_H
-#define TOKEN_USER_H
+#ifndef TOKEN_USER_ID_H
+#define TOKEN_USER_ID_H
 
 #include "common.h"
-#include "bytes.h"
+#include "byte_buffer.h"
 
 namespace Token{
-    class TokenID{
-    public:
-        static const size_t kSize = 64; // alias
-    private:
-        char data_[kSize];
-    public:
-        TokenID() = default;
-        TokenID(const std::string& value);
-        TokenID(ByteBuffer* bytes);
-        ~TokenID() = default;
-
-        std::string Get() const;
-        bool Encode(ByteBuffer* bytes) const;
-
-        void operator=(const TokenID& token){
-            memcpy(data_, token.data_, kSize);
-        }
-
-        friend bool operator==(const TokenID& a, const TokenID& b){
-            return strncmp(a.data_, b.data_, 64) == 0;
-        }
-
-        friend bool operator==(const TokenID& a, const std::string& b){
-            return strncmp(a.data_, b.data(), std::min(b.length(), (unsigned long)64)) == 0;
-        }
-
-        friend bool operator!=(const TokenID& a, const TokenID& b){
-            return !operator==(a, b);
-        }
-
-        friend bool operator!=(const TokenID& a, const std::string& b){
-            return strncmp(a.data_, b.data(), std::min(b.length(), (unsigned long)64)) != 0;
-        }
-
-        friend int operator<(const TokenID& a, const TokenID& b){
-            return strncmp(a.data_, b.data_, 64);
-        }
-
-        friend int operator<(const TokenID& a, const std::string& b){
-            return strncmp(a.data_, b.data(), std::min(b.length(), (unsigned long)64));
-        }
-
-        friend std::ostream& operator<<(std::ostream& stream, const TokenID& user){
-            stream << std::string(user.data_, 64);
-            return stream;
-        }
-    };
-
     class UserID{
     public:
         static const size_t kSize = 64; // alias
@@ -60,6 +12,10 @@ namespace Token{
         char data_[64];
     public:
         UserID() = default;
+        UserID(const UserID& user):
+            data_(){
+            memcpy(data_, user.data_, kSize);
+        }
         UserID(const std::string& value);
         UserID(ByteBuffer* bytes);
         ~UserID() = default;
@@ -106,4 +62,4 @@ namespace Token{
     };
 }
 
-#endif //TOKEN_USER_H
+#endif //TOKEN_USER_ID_H

@@ -13,8 +13,8 @@ namespace Token{
     public:
         BlockHandler(Block* block, bool clean):
             BlockVisitor(),
-            clean_(clean),
-            block_(block){}
+            block_(block),
+            clean_(clean){}
         ~BlockHandler(){}
 
         bool ShouldRemoveTransactionFromPool() const{

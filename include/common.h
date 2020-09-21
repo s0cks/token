@@ -25,6 +25,9 @@
 #include <cryptopp/pssr.h>
 #include <iomanip>
 
+
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+
 //TODO: cleanup
 namespace Token{
 #if defined(_M_X64) || defined(__x86_64__)

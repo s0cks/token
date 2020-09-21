@@ -22,7 +22,7 @@ namespace Token{
         }
 
         std::string GetNewDataFilename(const uint256_t& hash){
-            std::string hashString = HexString(hash);
+            std::string hashString = hash.HexString();
             std::string front = hashString.substr(0, 8);
             std::string tail = hashString.substr(hashString.length() - 8, hashString.length());
             std::string filename = GetPath() + "/" + front + ".dat";
@@ -34,7 +34,7 @@ namespace Token{
 
         std::string GetDataFilename(const uint256_t& hash){
             leveldb::ReadOptions options;
-            std::string key = HexString(hash);
+            std::string key = hash.HexString();
             std::string filename;
             return GetIndex()->Get(options, key, &filename).ok() ?
                    filename :
@@ -81,7 +81,7 @@ namespace Token{
 
         bool HasData(const uint256_t& hash) const{
             leveldb::ReadOptions options;
-            std::string key = HexString(hash);
+            std::string key = hash.HexString();
             std::string filename;
             return GetIndex()->Get(options, key, &filename).ok();
         }
@@ -89,7 +89,7 @@ namespace Token{
         bool PutData(const Handle<T>& data){
             leveldb::WriteOptions options;
             options.sync = true;
-            std::string key = HexString(data->GetHash());
+            std::string key = data->GetHash().HexString();
             std::string filename = GetNewDataFilename(data->GetHash());
 
             if(FileExists(filename)){
@@ -114,7 +114,7 @@ namespace Token{
             if(!HasData(hash)) return false;
             leveldb::WriteOptions options;
             options.sync = true;
-            std::string key = HexString(hash);
+            std::string key = hash.HexString();
             std::string filename = GetDataFilename(hash);
             if(!GetIndex()->Delete(options, key).ok()){
                 LOG(WARNING) << "couldn't remove object from cache index: " << hash;
@@ -129,7 +129,7 @@ namespace Token{
 
         Handle<T> GetData(const uint256_t& hash) const{
             leveldb::ReadOptions options;
-            std::string key = HexString(hash);
+            std::string key = hash.HexString();
             std::string filename;
             if(!GetIndex()->Get(options, key, &filename).ok()){
                 LOG(WARNING) << "couldn't find object in cache: " << hash;

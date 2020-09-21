@@ -1,8 +1,9 @@
 #ifndef TOKEN_TRANSACTION_H
 #define TOKEN_TRANSACTION_H
 
-#include "common.h"
 #include "object.h"
+#include "user_id.h"
+#include "token_id.h"
 #include "uint256_t.h"
 #include "allocator.h"
 #include "unclaimed_transaction.h"
@@ -17,8 +18,8 @@ namespace Token{
 
         Input(const uint256_t& tx_hash, uint32_t index, const UserID& user):
             hash_(tx_hash),
-            user_(user),
-            index_(index){
+            index_(index),
+            user_(user){
             SetType(Type::kInputType);
         }
     public:
@@ -94,15 +95,15 @@ namespace Token{
         friend class Block;
         friend class TransactionMessage;
     private:
-        uint32_t timestamp_;
-        uint32_t index_;
+        Timestamp timestamp_;
+        intptr_t index_;
         Input** inputs_;
-        size_t num_inputs_;
+        intptr_t num_inputs_;
         Output** outputs_;
-        size_t num_outputs_;
+        intptr_t num_outputs_;
         std::string signature_;
 
-        Transaction(uint32_t timestamp, uint32_t index, Input** inputs, size_t num_inputs, Output** outputs, size_t num_outputs):
+        Transaction(Timestamp timestamp, intptr_t index, Input** inputs, intptr_t num_inputs, Output** outputs, intptr_t num_outputs):
                 Object(),
                 timestamp_(timestamp),
                 index_(index),
@@ -115,21 +116,21 @@ namespace Token{
 
             inputs_ = (Input**)malloc(sizeof(Input*)*num_inputs);
             memset(inputs_, 0, sizeof(Input*)*num_inputs);
-            for(size_t idx = 0; idx < num_inputs; idx++)
+            for(intptr_t idx = 0; idx < num_inputs; idx++)
                 WriteBarrier(&inputs_[idx], inputs[idx]);
 
             outputs_ = (Output**)malloc(sizeof(Output*)*num_outputs);
             memset(outputs_, 0, sizeof(Output*)*num_outputs);
-            for(size_t idx = 0; idx < num_outputs; idx++)
+            for(intptr_t idx = 0; idx < num_outputs; idx++)
                 WriteBarrier(&outputs_[idx], outputs[idx]);
         }
     protected:
         bool Accept(WeakObjectPointerVisitor* vis){
-            for(size_t idx = 0; idx < num_inputs_; idx++){
+            for(intptr_t idx = 0; idx < num_inputs_; idx++){
                 if(!vis->Visit(&inputs_[idx]))
                     return false;
             }
-            for(size_t idx = 0; idx < num_outputs_; idx++){
+            for(intptr_t idx = 0; idx < num_outputs_; idx++){
                 if(!vis->Visit(&outputs_[idx]))
                     return false;
             }
@@ -138,29 +139,31 @@ namespace Token{
     public:
         ~Transaction() = default;
 
-        uint32_t GetTimestamp() const{
+        Timestamp GetTimestamp() const{
             return timestamp_;
         }
 
-        uint32_t GetIndex() const{
+        intptr_t GetIndex() const{
             return index_;
         }
 
-        uint32_t GetNumberOfInputs() const{
+        intptr_t GetNumberOfInputs() const{
             return num_inputs_;
         }
 
-        Handle<Input> GetInput(uint32_t idx) const{
-            if(idx < 0 || idx > GetNumberOfInputs()) return nullptr;
+        Handle<Input> GetInput(intptr_t idx) const{
+            if(idx < 0 || idx > GetNumberOfInputs())
+                return nullptr;
             return inputs_[idx];
         }
 
-        Handle<Output> GetOutput(uint32_t idx) const{
-            if(idx < 0 || idx > GetNumberOfOutputs()) return nullptr;
+        Handle<Output> GetOutput(intptr_t idx) const{
+            if(idx < 0 || idx > GetNumberOfOutputs())
+                return nullptr;
             return outputs_[idx];
         }
 
-        uint32_t GetNumberOfOutputs() const{
+        intptr_t GetNumberOfOutputs() const{
             return num_outputs_;
         }
 

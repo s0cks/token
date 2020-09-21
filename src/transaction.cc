@@ -4,7 +4,7 @@
 #include "server.h"
 #include "unclaimed_transaction_pool.h"
 
-#include "bytes.h"
+#include "byte_buffer.h"
 
 namespace Token{
 //######################################################################################################################
@@ -143,7 +143,7 @@ namespace Token{
         // visit the inputs
         {
             if(!vis->VisitInputsStart()) return false;
-            for(uint64_t idx = 0; idx < GetNumberOfInputs(); idx++){
+            for(intptr_t idx = 0; idx < GetNumberOfInputs(); idx++){
                 Handle<Input> it = GetInput(idx);
                 if(!vis->VisitInput(it)) return false;
             }
@@ -152,7 +152,7 @@ namespace Token{
         // visit the outputs
         {
             if(!vis->VisitOutputsStart()) return false;
-            for(uint64_t idx = 0; idx < GetNumberOfOutputs(); idx++){
+            for(intptr_t idx = 0; idx < GetNumberOfOutputs(); idx++){
                 Handle<Output> it = GetOutput(idx);
                 if(!vis->VisitOutput(it)) return false;
             }
@@ -176,7 +176,7 @@ namespace Token{
         Keychain::LoadKeys(&privateKey, &publicKey);
 
         try{
-            LOG(INFO) << "signing transaction: " << HexString(GetHash());
+            LOG(INFO) << "signing transaction: " << GetHash();
             CryptoPP::RSASS<CryptoPP::PSS, CryptoPP::SHA256>::Signer signer(privateKey);
             CryptoPP::AutoSeededRandomPool rng;
             CryptoPP::SecByteBlock sigData(signer.MaxSignatureLength());

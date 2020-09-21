@@ -16,8 +16,8 @@ namespace Token{
     public:
         BlockValidator(Block* block):
             block_(block),
-            invalid_txs_(),
-            valid_txs_(){}
+            valid_txs_(),
+            invalid_txs_(){}
         ~BlockValidator(){}
 
         Block* GetBlock() const{
@@ -47,15 +47,16 @@ namespace Token{
         }
 
         bool IsValid() const{
-            if(!GetBlock()->Accept((BlockVisitor*)this)) return false;
+            if(!GetBlock()->Accept((BlockVisitor*)this))
+                return false;
             return GetNumberOfValidTransactions() == GetBlock()->GetNumberOfTransactions();
         }
 
-        uint64_t GetNumberOfInvalidTransactions() const{
+        intptr_t GetNumberOfInvalidTransactions() const{
             return invalid_txs_.size();
         }
 
-        uint64_t GetNumberOfValidTransactions() const{
+        intptr_t GetNumberOfValidTransactions() const{
             return valid_txs_.size();
         }
 

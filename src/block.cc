@@ -1,5 +1,5 @@
 #include "block.h"
-#include "bytes.h"
+#include "byte_buffer.h"
 #include "server.h"
 #include "block_chain.h"
 #include "crash_report.h"
@@ -67,7 +67,7 @@ namespace Token{
         txs->Put(0, Transaction::NewInstance(0, inputs, 0, outputs_a, Block::kNumberOfGenesisOutputs, 0));
         txs->Put(1,Transaction::NewInstance(1, inputs, 0, outputs_b, Block::kNumberOfGenesisOutputs, 0));
         txs->Put(2,Transaction::NewInstance(2, inputs, 0, outputs_c, Block::kNumberOfGenesisOutputs, 0));
-        return NewInstance(0, uint256_t(), txs, 0);
+        return NewInstance(0, uint256_t::Null(), txs, 0);
     }
 
     Handle<Block> Block::NewInstance(std::fstream& fd, size_t size){
@@ -118,7 +118,7 @@ namespace Token{
 
     bool Block::Accept(BlockVisitor* vis) const{
         if(!vis->VisitStart()) return false;
-        for(size_t idx = 0;
+        for(intptr_t idx = 0;
             idx < GetNumberOfTransactions();
             idx++){
             Handle<Transaction> tx = GetTransaction(idx);
@@ -159,7 +159,7 @@ namespace Token{
 
     uint256_t Block::GetMerkleRoot() const{
         BlockMerkleTreeBuilder builder(this);
-        if(!builder.BuildTree()) return uint256_t();
+        if(!builder.BuildTree()) return uint256_t::Null();
         MerkleTree* tree = builder.GetTree();
         return tree->GetMerkleRootHash();
     }

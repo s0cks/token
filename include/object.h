@@ -75,10 +75,10 @@ namespace Token{
 
         Object():
             type_(Type::kUnknownType),
+            marked_(false),
+            size_(0),
             collections_survived_(0),
             num_references_(0),
-            size_(0),
-            marked_(false),
             ptr_(0){
             Allocator::Initialize(this);
         }
@@ -135,7 +135,7 @@ namespace Token{
             WriteBarrier((Object**)slot, (Object*)handle);
         }
 
-        virtual bool Encode(ByteBuffer* bytes) const{ return false; }
+        virtual bool Encode(ByteBuffer* bytes)const{ return false; }
         virtual bool Accept(WeakObjectPointerVisitor* vis){ return true; }
     public:
         virtual ~Object() = default;

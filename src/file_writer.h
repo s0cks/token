@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include "common.h"
-#include "bytes.h"
+#include "byte_buffer.h"
 #include "object.h"
 #include "vmemory.h"
 #include "uint256_t.h"

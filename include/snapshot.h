@@ -39,7 +39,7 @@ namespace Token{
             filename_(filename),
             timestamp_(),
             version_(),
-            head_(),
+            head_(uint256_t::Null()),
             blocks_(nullptr){}
 
         void SetTimestamp(uint64_t timestamp){

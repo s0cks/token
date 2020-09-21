@@ -88,9 +88,9 @@ namespace Token{
         Result result_;
 
         AsyncTask(uv_loop_t* loop):
-                result_(Result::kFailed, "Task did not execute"),
-                loop_(loop),
-                handle_(){
+            loop_(loop),
+            handle_(),
+            result_(Result::kFailed, "Task did not execute"){
             handle_.data = this;
         }
 

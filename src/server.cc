@@ -8,10 +8,9 @@
 #include "task.h"
 #include "configuration.h"
 #include "peer.h"
-#include "bytes.h"
+#include "byte_buffer.h"
 
 namespace Token{
-    static pthread_t thread_ = 0;
     static uv_tcp_t handle_;
     static uv_async_t aterm_;
 
@@ -91,8 +90,8 @@ namespace Token{
 
         libconfig::Setting& peers = root.add("Peers", libconfig::Setting::TypeArray);
         for(auto& it : peers_){
-            //NodeAddress address = it.second->GetAddress();
-            //peers.add(libconfig::Setting::TypeString) = address.ToString();
+            NodeAddress address = it.second->GetAddress();
+            peers.add(libconfig::Setting::TypeString) = address.ToString();
         }
 
         BlockChainConfiguration::SaveConfiguration();
