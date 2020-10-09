@@ -3,6 +3,7 @@
 #include "crash_report.h"
 
 #include "block.h"
+#include "vmemory.h"
 
 namespace Token{
 #define CHECK_FILE_POINTER \
@@ -121,5 +122,9 @@ namespace Token{
                 LOG(WARNING) << "unknown object type: " << type;
                 return nullptr;
         }
+    }
+
+    bool BinaryFileReader::ReadRegion(MemoryRegion* region, intptr_t nbytes){
+        return ReadBytes((uint8_t*)region->GetPointer(), nbytes);
     }
 }

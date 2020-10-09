@@ -121,8 +121,13 @@ namespace Token{
         }
 
         inline bool
-        WriteBytes(MemoryRegion* region, size_t size){
-            return WriteBytes((uint8_t*)region->GetStartAddress(), size);
+        WriteRegion(MemoryRegion* region, intptr_t nbytes){
+            return WriteBytes((uint8_t*)region->GetStartAddress(), nbytes);
+        }
+
+        inline bool
+        WriteRegion(MemoryRegion* region){
+            return WriteBytes((uint8_t*)region->GetStartAddress(), region->GetSize());
         }
 
         template<typename T>

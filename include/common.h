@@ -71,7 +71,7 @@ namespace Token{
     }
 
     static inline std::string
-    GetTimestampFormattedReadable(Timestamp timestamp){
+    GetTimestampFormattedReadable(Timestamp timestamp=GetCurrentTimestamp()){
         //TODO: fix usage of gmtime
         struct tm* timeinfo = gmtime((time_t*)&timestamp);
         char buff[256];
@@ -80,7 +80,7 @@ namespace Token{
     }
 
     static inline std::string
-    GetTimestampFormattedFileSafe(Timestamp timestamp){
+    GetTimestampFormattedFileSafe(Timestamp timestamp=GetCurrentTimestamp()){
         //TODO: fix usage of gmtime
         struct tm* timeinfo = gmtime((time_t*)&timestamp);
         char buff[256];

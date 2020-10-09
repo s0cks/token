@@ -3,6 +3,7 @@
 #include "command.h"
 #include "allocator.h"
 
+#include "heap_dump.h"
 #include "snapshot_inspector.h"
 
 static inline void
@@ -37,7 +38,19 @@ main(int argc, char** argv){
         Snapshot* snapshot = Snapshot::ReadSnapshot(inspector_path);
         inspector.Inspect(snapshot);
     } else if(FLAGS_inspector_tool == "heap-dump"){
-        LOG(WARNING) << "not implemented yet";
-        return EXIT_FAILURE;
+        LOG(INFO) << "Please enter a heap dump to inspect (type .exit to quit):";
+        std::cin >> inspector_path;
+
+        if(inspector_path == ".exit") return EXIT_SUCCESS;
+        if(!FileExists(inspector_path)){
+            LOG(ERROR) << "Heap Dump " << inspector_path << " doesn't exist, please enter a valid path";
+            return EXIT_FAILURE;
+        }
+
+        HeapDumpInspector inspector;
+        HeapDump* dump = HeapDump::ReadHeapDump(inspector_path);
+        inspector.Inspect(dump);
     }
+
+    return EXIT_SUCCESS;
 }

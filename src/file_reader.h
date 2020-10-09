@@ -63,6 +63,7 @@ namespace Token{
             if(file_ != NULL) Close();
         }
 
+        bool ReadRegion(MemoryRegion* region, intptr_t nbytes);
         Handle<Object> ReadObject();
     };
 }
