@@ -4,7 +4,7 @@
 #include "object.h"
 #include "user.h"
 #include "product.h"
-#include "Hash.h"
+#include "hash.h"
 #include "allocator.h"
 #include "unclaimed_transaction.h"
 

@@ -3,7 +3,7 @@
 
 #include <bitset>
 #include "common.h"
-#include "Hash.h"
+#include "hash.h"
 
 namespace Token{
     class BloomFilter{

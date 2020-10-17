@@ -2,7 +2,7 @@
 #define TOKEN_BLOCK_H
 
 #include "common.h"
-#include "Hash.h"
+#include "hash.h"
 #include "bloom.h"
 
 #include "allocator.h"

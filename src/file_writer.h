@@ -6,7 +6,7 @@
 #include "byte_buffer.h"
 #include "object.h"
 #include "vmemory.h"
-#include "Hash.h"
+#include "hash.h"
 
 namespace Token{
     class FileWriter{

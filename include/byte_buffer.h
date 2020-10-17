@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
-#include "Hash.h"
+#include "hash.h"
 
 namespace Token {
     class ByteBuffer {

@@ -4,7 +4,7 @@
 #include <vector>
 #include "allocator.h"
 #include "object.h"
-#include "Hash.h"
+#include "hash.h"
 
 namespace Token{
     class BlockVisitor;

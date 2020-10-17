@@ -9,7 +9,7 @@
 #include "handle.h"
 #include "keychain.h"
 #include "allocator.h"
-#include "Hash.h"
+#include "hash.h"
 #include "byte_buffer.h"
 
 namespace Token{

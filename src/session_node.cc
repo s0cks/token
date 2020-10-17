@@ -92,7 +92,7 @@ namespace Token{
                     response.push_back(TransactionMessage::NewInstance(tx).CastTo<Message>());
                 }
             } else{
-                Send(NotFoundMessage::NewInstance(item));
+                Send(NotFoundMessage::NewInstance());
                 return;
             }
         }
@@ -234,7 +234,7 @@ namespace Token{
 
         if(items.empty()){
             LOG(WARNING) << "no unclaimed transactions found for user: " << user;
-            //TODO: send not found?
+            session->Send(NotFoundMessage::NewInstance());
             return;
         }
 

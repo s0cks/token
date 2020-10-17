@@ -553,9 +553,8 @@ namespace Token{
         InventoryItem item_;
         std::string message_;
 
-        NotFoundMessage(const InventoryItem& item, const std::string& message):
+        NotFoundMessage(const std::string& message):
             Message(),
-            item_(item),
             message_(message){}
     public:
         ~NotFoundMessage() = default;
@@ -564,15 +563,11 @@ namespace Token{
             return message_;
         }
 
-        InventoryItem GetItem() const{
-            return item_;
-        }
-
         DECLARE_MESSAGE(NotFound);
 
         static Handle<NotFoundMessage> NewInstance(ByteBuffer* bytes);
-        static Handle<NotFoundMessage> NewInstance(const InventoryItem& item, const std::string& message="Not Found"){
-            return new NotFoundMessage(item, message);
+        static Handle<NotFoundMessage> NewInstance(const std::string& message="Not Found"){
+            return new NotFoundMessage(message);
         }
     };
 
@@ -597,6 +592,6 @@ namespace Token{
             return new GetUnclaimedTransactionsMessage(user);
         }
     };
-}
+};
 
 #endif //TOKEN_MESSAGE_H

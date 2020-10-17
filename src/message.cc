@@ -217,10 +217,8 @@ namespace Token{
     }
 
     Handle<NotFoundMessage> NotFoundMessage::NewInstance(ByteBuffer* bytes){
-        InventoryItem::Type item_type = static_cast<InventoryItem::Type>(bytes->GetShort());
-        Hash item_hash = bytes->GetHash();
         std::string message = bytes->GetString();
-        return new NotFoundMessage(InventoryItem(item_type, item_hash), message);
+        return new NotFoundMessage(message);
     }
 
     intptr_t NotFoundMessage::GetMessageSize() const{

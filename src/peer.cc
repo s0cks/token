@@ -291,7 +291,7 @@ namespace Token{
                 }
 
                 LOG(WARNING) << "couldn't find requested block: " << hash;
-                response.push_back(NotFoundMessage::NewInstance(item).CastTo<Message>());
+                response.push_back(NotFoundMessage::NewInstance().CastTo<Message>());
             } else if(item.IsTransaction()){
                 if(TransactionPool::HasTransaction(hash)){
                     LOG(INFO) << "item " << hash << " found in transaction pool";
@@ -300,7 +300,7 @@ namespace Token{
                 }
 
                 LOG(WARNING) << "couldn't find requested transaction: " << hash;
-                response.push_back(NotFoundMessage::NewInstance(item).CastTo<Message>());
+                response.push_back(NotFoundMessage::NewInstance().CastTo<Message>());
             }
         }
         session->Send(response);
@@ -325,9 +325,7 @@ namespace Token{
     void PeerSession::HandleNotFoundMessage(const Handle<HandleMessageTask>& task){
         PeerSession* session = (PeerSession*)task->GetSession();
         Handle<NotFoundMessage> msg = task->GetMessage().CastTo<NotFoundMessage>();
-
-        InventoryItem item = msg->GetItem();
-        LOG(WARNING) << "peer " << session->GetID() << " has no record of item: " << item;
+        LOG(WARNING) << "(" << session->GetInfo().GetID() << "): " << msg->GetMessage();
     }
 
     void PeerSession::HandleInventoryMessage(const Handle<HandleMessageTask>& task){

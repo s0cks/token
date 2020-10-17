@@ -4,7 +4,7 @@
 #include "common.h"
 #include "byte_buffer.h"
 #include "object.h"
-#include "Hash.h"
+#include "hash.h"
 
 namespace Token{
     class FileReader{

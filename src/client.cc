@@ -290,6 +290,31 @@ namespace Token{
         return true; // no acknowledgement from server
     }
 
+    Handle<UnclaimedTransaction> BlockChainClient::GetUnclaimedTransaction(const Hash& hash){
+        LOG(INFO) << "getting unclaimed transactions " << hash;
+        ClientSession* session = GetSession();
+        if(session->IsConnecting()){
+            LOG(INFO) << "waiting for client to connect...";
+            session->WaitForState(Session::kConnected);
+        }
+
+        std::vector<InventoryItem> items = {
+            InventoryItem(InventoryItem::kUnclaimedTransaction, hash),
+        };
+        session->Send(GetDataMessage::NewInstance(items));
+        do{
+            session->WaitForNextMessage();
+            Handle<Message> next = session->GetNextMessage();
+            //TODO: implement
+            if(next->IsNotFoundMessage()){
+                return Handle<UnclaimedTransaction>();
+            } else{
+                LOG(WARNING) << "cannot handle " << next;
+                continue;
+            }
+        } while(true);
+    }
+
     bool BlockChainClient::GetUnclaimedTransactions(const User& user, std::vector<Hash>& utxos){
         LOG(INFO) << "getting unclaimed transactions for " << user;
         ClientSession* session = GetSession();
@@ -315,6 +340,8 @@ namespace Token{
                 for(auto& item : items)
                     utxos.push_back(item.GetHash());
                 return utxos.size() == items.size();
+            } else if(next->IsNotFoundMessage()){
+                return false;
             } else{
                 LOG(WARNING) << "cannot handle " << next;
                 continue;

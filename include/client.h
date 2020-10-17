@@ -119,6 +119,7 @@ namespace Token{
 
         bool Connect();
         bool Disconnect();
+        Handle<UnclaimedTransaction> GetUnclaimedTransaction(const Hash& hash);
         bool GetUnclaimedTransactions(const User& user, std::vector<Hash>& utxos);
         bool Send(const Handle<Transaction>& tx);
     };

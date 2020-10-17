@@ -3,7 +3,7 @@
 
 #include <deque>
 #include <string>
-#include "Hash.h"
+#include "hash.h"
 
 namespace Token{
     class Command{
