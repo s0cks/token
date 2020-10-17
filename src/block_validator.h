@@ -9,10 +9,10 @@ namespace Token{
     class BlockVerifier : public BlockVisitor{
     private:
         bool strict_;
-        std::vector<uint256_t>& valid_;
-        std::vector<uint256_t>& invalid_;
+        std::vector<Hash>& valid_;
+        std::vector<Hash>& invalid_;
 
-        BlockVerifier(bool strict, std::vector<uint256_t>& valid, std::vector<uint256_t>& invalid):
+        BlockVerifier(bool strict, std::vector<Hash>& valid, std::vector<Hash>& invalid):
             strict_(strict),
             valid_(valid),
             invalid_(invalid){}
@@ -24,7 +24,7 @@ namespace Token{
         }
 
         bool Visit(const Handle<Transaction>& tx){
-            uint256_t hash = tx->GetHash();
+            Hash hash = tx->GetHash();
             if(tx->GetNumberOfInputs() <= 0){
                 invalid_.push_back(hash);
                 LOG(WARNING) << "transaction " << hash << " is invalid, no inputs.";
@@ -50,8 +50,8 @@ namespace Token{
 
         static bool IsValid(const Handle<Block>& blk, bool strict=false){
             LOG(INFO) << "verifying block " << blk->GetHash();
-            std::vector<uint256_t> valid;
-            std::vector<uint256_t> invalid;
+            std::vector<Hash> valid;
+            std::vector<Hash> invalid;
             BlockVerifier verifier(strict, valid, invalid);
             if(!blk->Accept(&verifier))
                 return false;

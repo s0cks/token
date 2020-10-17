@@ -28,10 +28,18 @@ client->WaitForState(ClientSession::State::kDisconnected);
     BlockChainClient* client = new BlockChainClient(NodeAddress(FLAGS_peer_address, FLAGS_peer_port));
     client->Connect();
 
-    LOG(INFO) << "Head: " << client->GetHead();
+    User user("VenueA");
 
-    uint256_t hash = client->GetHead().GetHash();
-    Handle<Block> block = client->GetBlock(hash);
-    LOG(INFO) << "Block: " << block;
+    std::vector<Hash> utxos;
+    if(!client->GetUnclaimedTransactions(user, utxos)){
+        LOG(ERROR) << "cannot get unclaimed transactions for user: " << user;
+        return EXIT_FAILURE;
+    }
+
+    LOG(INFO) << "Unclaimed Transactions:";
+    for(auto& utxo : utxos){
+        LOG(INFO) << " - " << utxo;
+    }
+
     return EXIT_SUCCESS;
 }

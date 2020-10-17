@@ -33,7 +33,7 @@ namespace Token{
         TrieNode():
             parent_(nullptr),
             children_(),
-            key_(uint256_t::Null()),
+            key_(),
             value_(nullptr),
             is_epsilon_(false){
             for(size_t idx = 0; idx < kAlphabetSize; idx++)

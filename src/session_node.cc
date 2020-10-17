@@ -57,8 +57,12 @@ namespace Token{
 
         std::vector<Handle<Message>> response;
         for(auto& item : items){
-            uint256_t hash = item.GetHash();
+            Hash hash = item.GetHash();
             LOG(INFO) << "searching for: " << hash;
+            if(BlockChain::HasBlock(hash)){
+                LOG(INFO) << "found!";
+            }
+
             if(item.ItemExists()){
                 if(item.IsBlock()){
                     Handle<Block> block = nullptr;
@@ -126,7 +130,7 @@ namespace Token{
         Handle<CommitMessage> msg = task->GetMessage().CastTo<CommitMessage>();
 
         Proposal* proposal = msg->GetProposal();
-        uint256_t hash = proposal->GetHash();
+        Hash hash = proposal->GetHash();
 
         if(!BlockPool::HasBlock(hash)){
             LOG(WARNING) << "couldn't find block " << hash << " in pool, rejecting request to commit proposal....";
@@ -151,7 +155,7 @@ namespace Token{
         Handle<BlockMessage> msg = task->GetMessage().CastTo<BlockMessage>();
 
         Block* block = msg->GetBlock();
-        uint256_t hash = block->GetHash();
+        Hash hash = block->GetHash();
 
         if(!BlockPool::HasBlock(hash)){
             BlockPool::PutBlock(block);
@@ -163,7 +167,7 @@ namespace Token{
         Handle<TransactionMessage> msg = task->GetMessage().CastTo<TransactionMessage>();
 
         Transaction* tx = msg->GetTransaction();
-        uint256_t hash = tx->GetHash();
+        Hash hash = tx->GetHash();
 
 #ifdef TOKEN_DEBUG
         LOG(INFO) << "received transaction: " << hash;
@@ -197,20 +201,21 @@ namespace Token{
     class UserUnclaimedTransactionCollector : public UnclaimedTransactionPoolVisitor{
     private:
         std::vector<InventoryItem>& items_;
-        std::string target_;
+        User user_;
     public:
-        UserUnclaimedTransactionCollector(std::vector<InventoryItem>& items, const std::string& target):
+        UserUnclaimedTransactionCollector(std::vector<InventoryItem>& items, const User& user):
             UnclaimedTransactionPoolVisitor(),
             items_(items),
-            target_(target){}
+            user_(user){}
         ~UserUnclaimedTransactionCollector(){}
 
-        std::string GetTarget() const{
-            return target_;
+        User GetUser() const{
+            return user_;
         }
 
         bool Visit(const Handle<UnclaimedTransaction>& utxo){
-            if(utxo->GetUser() == GetTarget()) items_.push_back(InventoryItem(utxo));
+            if(utxo->GetUser() == GetUser())
+                items_.push_back(InventoryItem(utxo));
             return true;
         }
     };
@@ -219,7 +224,7 @@ namespace Token{
         NodeSession* session = (NodeSession*)task->GetSession();
         Handle<GetUnclaimedTransactionsMessage> msg = task->GetMessage().CastTo<GetUnclaimedTransactionsMessage>();
 
-        std::string user = msg->GetUser();
+        User user = msg->GetUser();
         LOG(INFO) << "getting unclaimed transactions for " << user << "....";
 
         std::vector<InventoryItem> items;
@@ -244,8 +249,8 @@ namespace Token{
         NodeSession* session = (NodeSession*)task->GetSession();
         Handle<GetBlocksMessage> msg = task->GetMessage().CastTo<GetBlocksMessage>();
 
-        uint256_t start = msg->GetHeadHash();
-        uint256_t stop = msg->GetStopHash();
+        Hash start = msg->GetHeadHash();
+        Hash stop = msg->GetStopHash();
 
         std::vector<InventoryItem> items;
         if(stop.IsNull()){

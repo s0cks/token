@@ -18,6 +18,16 @@ namespace Token{
         while(!item.ItemExists()) WAIT;
     }
 
+    void Session::WaitForNextMessage(){
+        LOCK;
+        while(next_ == nullptr) WAIT;
+    }
+
+    void Session::WaitForNextMessage(Message::MessageType type){
+        LOCK;
+        while(next_ == nullptr || next_->GetMessageType() != type) WAIT;
+    }
+
     void Session::OnItemReceived(const InventoryItem& item){
         LOCK;// wuuuuuuuuut???
         SIGNAL_ALL;
@@ -31,7 +41,9 @@ namespace Token{
 
     Handle<Message> Session::GetNextMessage(){
         LOCK;
-        return next_;
+        Message* next = next_;
+        next_ = nullptr; // weird design?
+        return next;
     }
 
     void Session::SetState(Session::State state){
@@ -43,10 +55,6 @@ namespace Token{
     Session::State Session::GetState() {
         LOCK_GUARD;
         return state_;
-    }
-
-    void Session::SetID(const std::string& id){
-        uuid_parse(id.c_str(), uuid_);
     }
 
     void Session::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){

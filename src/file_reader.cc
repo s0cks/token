@@ -73,14 +73,14 @@ namespace Token{
         return (*(uint64_t*)bytes);
     }
 
-    uint256_t FileReader::ReadHash(){
-        uint8_t bytes[uint256_t::kSize];
-        if(!ReadBytes(bytes, uint256_t::kSize)){
-            LOG(WARNING) << "couldn't read hash from file: " << GetFilename();
-            return uint256_t::Null();
+    Hash FileReader::ReadHash(){
+        uint8_t bytes[Hash::kSize];
+        if(!ReadBytes(bytes, Hash::kSize)){
+            LOG(WARNING) << "couldn't read Hash from file: " << GetFilename();
+            return Hash();
         }
 
-        return uint256_t::FromBytes(bytes);
+        return Hash::FromBytes(bytes);
     }
 
     std::string FileReader::ReadString(){

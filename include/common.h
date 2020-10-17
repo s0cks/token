@@ -88,16 +88,6 @@ namespace Token{
         return std::string(buff);
     }
 
-    static inline std::string
-    GenerateNonce(){
-        CryptoPP::SecByteBlock nonce(64);
-        CryptoPP::AutoSeededRandomPool prng;
-        prng.GenerateBlock(nonce, nonce.size());
-        std::string digest;
-        CryptoPP::ArraySource source(nonce, nonce.size(), true, new CryptoPP::HexEncoder(new CryptoPP::StringSink(digest)));
-        return digest;
-    }
-
     static bool
     EndsWith(const std::string& str, const std::string& suffix){
         return str.size() >= suffix.size() &&

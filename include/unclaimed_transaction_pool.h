@@ -24,13 +24,13 @@ namespace Token{
         static bool Print();
         static bool Initialize();
         static bool Accept(UnclaimedTransactionPoolVisitor* vis);
-        static bool RemoveUnclaimedTransaction(const uint256_t& hash);
+        static bool RemoveUnclaimedTransaction(const Hash& hash);
         static bool PutUnclaimedTransaction(const Handle<UnclaimedTransaction>& utxo);
-        static bool HasUnclaimedTransaction(const uint256_t& hash);
-        static bool GetUnclaimedTransactions(std::vector<uint256_t>& utxos);
-        static bool GetUnclaimedTransactions(const std::string& user, std::vector<uint256_t>& utxos);
-        static Handle<UnclaimedTransaction> GetUnclaimedTransaction(const uint256_t& tx_hash, uint32_t tx_index);
-        static Handle<UnclaimedTransaction> GetUnclaimedTransaction(const uint256_t& hash);
+        static bool HasUnclaimedTransaction(const Hash& hash);
+        static bool GetUnclaimedTransactions(std::vector<Hash>& utxos);
+        static bool GetUnclaimedTransactions(const std::string& user, std::vector<Hash>& utxos);
+        static Handle<UnclaimedTransaction> GetUnclaimedTransaction(const Hash& tx_hash, uint32_t tx_index);
+        static Handle<UnclaimedTransaction> GetUnclaimedTransaction(const Hash& hash);
 
         static inline std::string
         GetPath(){

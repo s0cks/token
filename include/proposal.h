@@ -41,7 +41,7 @@ namespace Token{
 
         std::string proposer_;
         uint32_t height_;
-        uint256_t hash_;
+        Hash hash_;
 
         std::set<std::string> accepted_;
         std::set<std::string> rejected_;
@@ -49,7 +49,7 @@ namespace Token{
         void SetPhase(Phase phase);
         void SetStatus(Status status);
 
-        Proposal(const std::string& proposer, const uint256_t& hash, uint32_t height):
+        Proposal(const std::string& proposer, const Hash& hash, uint32_t height):
             phase_(kProposalPhase),
             status_(Status::kUnknownStatus),
             proposer_(proposer),
@@ -68,7 +68,7 @@ namespace Token{
             return height_;
         }
 
-        uint256_t GetHash() const{
+        Hash GetHash() const{
             return hash_;
         }
 
@@ -118,7 +118,7 @@ namespace Token{
         }
 
         static Handle<Proposal> NewInstance(ByteBuffer* bytes);
-        static Handle<Proposal> NewInstance(uint32_t height, const uint256_t& hash, const std::string& proposer);
+        static Handle<Proposal> NewInstance(uint32_t height, const Hash& hash, const std::string& proposer);
 
         static Handle<Proposal> NewInstance(Block* block, const std::string& proposer){
             return NewInstance(block->GetHeight(), block->GetHash(), proposer);

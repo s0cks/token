@@ -30,7 +30,7 @@ namespace Token{
         std::string filename_;
         uint64_t timestamp_;
         std::string version_;
-        uint256_t head_;
+        Hash head_;
 
         uint64_t blocks_len_;
         Block** blocks_;
@@ -39,7 +39,7 @@ namespace Token{
             filename_(filename),
             timestamp_(),
             version_(),
-            head_(uint256_t::Null()),
+            head_(),
             blocks_(nullptr){}
 
         void SetTimestamp(uint64_t timestamp){
@@ -50,7 +50,7 @@ namespace Token{
             version_ = version;
         }
 
-        void SetHead(const uint256_t& hash){
+        void SetHead(const Hash& hash){
             head_ = hash;
         }
 
@@ -96,7 +96,7 @@ namespace Token{
             return version_;
         }
 
-        uint256_t GetHead() const{
+        Hash GetHead() const{
             return head_;
         }
 
@@ -108,7 +108,7 @@ namespace Token{
             return blocks_[height];
         }
 
-        Handle<Block> GetBlock(const uint256_t& hash) const{
+        Handle<Block> GetBlock(const Hash& hash) const{
             for(uint64_t idx = 0; idx < blocks_len_; idx++){
                 if(blocks_[idx]->GetHash() == hash) return blocks_[idx];
             }

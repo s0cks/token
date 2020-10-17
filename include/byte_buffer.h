@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
-#include "uint256_t.h"
+#include "Hash.h"
 
 namespace Token {
     class ByteBuffer {
@@ -166,19 +166,19 @@ namespace Token {
             return std::string((char*)data, len);
         }
 
-        void PutHash(const uint256_t& value){
-            if((wpos_ + uint256_t::kSize) >= GetCapacity())
-                Resize(GetCapacity() + uint256_t::kSize);
-            memcpy(&data_[wpos_], value.data(), uint256_t::kSize);
-            wpos_ += uint256_t::kSize;
+        void PutHash(const Hash& value){
+            if((wpos_ + Hash::kSize) >= GetCapacity())
+                Resize(GetCapacity() + Hash::kSize);
+            memcpy(&data_[wpos_], value.data(), Hash::kSize);
+            wpos_ += Hash::kSize;
         }
 
-        uint256_t
+        Hash
         GetHash(){
-            uint8_t bytes[uint256_t::kSize];
-            memcpy(bytes, &data_[rpos_], uint256_t::kSize);
-            rpos_ += uint256_t::kSize;
-            return uint256_t::FromBytes(bytes);
+            uint8_t bytes[Hash::kSize];
+            memcpy(bytes, &data_[rpos_], Hash::kSize);
+            rpos_ += Hash::kSize;
+            return Hash::FromBytes(bytes);
         }
 
         size_t GetWrittenBytes() const{

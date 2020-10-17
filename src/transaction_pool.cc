@@ -64,19 +64,19 @@ namespace Token{
         return true;
     }
 
-    bool TransactionPool::HasTransaction(const uint256_t& hash){
+    bool TransactionPool::HasTransaction(const Hash& hash){
         LOCK_GUARD;
         return GetJournal()->HasData(hash);
     }
 
-    Handle<Transaction> TransactionPool::GetTransaction(const uint256_t& hash){
+    Handle<Transaction> TransactionPool::GetTransaction(const Hash& hash){
         LOCK_GUARD;
         return GetJournal()->HasData(hash) ?
                GetJournal()->GetData(hash) :
                nullptr;
     }
 
-    bool TransactionPool::RemoveTransaction(const uint256_t& hash){
+    bool TransactionPool::RemoveTransaction(const Hash& hash){
         LOCK_GUARD;
         if(!GetJournal()->HasData(hash)) return false;
         if(!GetJournal()->RemoveData(hash)){
@@ -90,7 +90,7 @@ namespace Token{
 
     bool TransactionPool::PutTransaction(const Handle<Transaction>& tx){
         LOCK_GUARD;
-        uint256_t hash = tx->GetHash();
+        Hash hash = tx->GetHash();
         if(GetJournal()->HasData(tx->GetHash())) return false;
         if(!GetJournal()->PutData(tx)){
             LOG(WARNING) << "cannot put transaction data in pool";
@@ -101,7 +101,7 @@ namespace Token{
         return true;
     }
 
-    bool TransactionPool::GetTransactions(std::vector<uint256_t>& txs){
+    bool TransactionPool::GetTransactions(std::vector<Hash>& txs){
         LOCK_GUARD;
         DIR* dir;
         struct dirent* ent;

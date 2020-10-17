@@ -17,7 +17,7 @@ namespace Token{
         return ((ClientSession*)GetSession())->GetPeerAddress();
     }
 
-    std::string ClientSessionInfo::GetPeerID() const{
+    UUID ClientSessionInfo::GetPeerID() const{
         return ((ClientSession*)GetSession())->GetPeerID();
     }
 
@@ -35,7 +35,7 @@ namespace Token{
         hb_timeout_(),
         shutdown_(),
         address_(address),
-        pid_(),
+        peer_id_(),
         head_(){
         shutdown_.data = this;
         stream_.data = this;
@@ -213,7 +213,6 @@ namespace Token{
             client->SetState(State::kConnected);
         }
 
-        LOG(INFO) << "head: " << msg->GetHead();
         client->SetHead(msg->GetHead());
         client->SetPeerID(msg->GetID());
         client->SetPeerAddress(msg->GetCallbackAddress());
@@ -280,7 +279,39 @@ namespace Token{
         return true;//TODO: better response for BlockChainClient::Disconnect()
     }
 
-    Handle<Block> BlockChainClient::GetBlock(const uint256_t& hash){
+    bool BlockChainClient::GetUnclaimedTransactions(const User& user, std::vector<Hash>& utxos){
+        LOG(INFO) << "getting unclaimed transactions for " << user;
+        ClientSession* session = GetSession();
+        if(session->IsConnecting()){
+            LOG(INFO) << "waiting for client to connect...";
+            session->WaitForState(Session::kConnected);
+        }
+
+        session->Send(GetUnclaimedTransactionsMessage::NewInstance(user));
+        do{
+            session->WaitForNextMessage();
+            Handle<Message> next = session->GetNextMessage();
+            if(next->IsInventoryMessage()){
+                Handle<InventoryMessage> inv = next.CastTo<InventoryMessage>();
+
+                std::vector<InventoryItem> items;
+                if(!inv->GetItems(items)){
+                    LOG(ERROR) << "cannot get items from inventory";
+                    return false;
+                }
+
+                LOG(INFO) << "received inventory of " << items.size() << " items";
+                for(auto& item : items)
+                    utxos.push_back(item.GetHash());
+                return utxos.size() == items.size();
+            } else{
+                LOG(WARNING) << "cannot handle " << next;
+                continue;
+            }
+        } while(true);
+    }
+
+    Handle<Block> BlockChainClient::GetBlock(const Hash& hash){
         LOG(INFO) << "getting block: " << hash;
         ClientSession* session = GetSession();
         if(session->IsConnecting()){
@@ -292,15 +323,17 @@ namespace Token{
             InventoryItem(InventoryItem::kBlock, hash)
         };
         session->Send(GetDataMessage::NewInstance(items));
-        //TODO:session->WaitForNextMessage();
-        Handle<Message> next = session->GetNextMessage();
-        if(next->IsBlockMessage()){
-            return next.CastTo<BlockMessage>()->GetBlock();
-        } else if(next->IsNotFoundMessage()){
-            return Handle<Block>();
-        } else{
-            LOG(ERROR) << "couldn't handle: " << next;
-            return nullptr;
-        }
+        do{
+            session->WaitForNextMessage();
+            Handle<Message> next = session->GetNextMessage();
+            if(next->IsBlockMessage()){
+                return next.CastTo<BlockMessage>()->GetBlock();
+            } else if(next->IsNotFoundMessage()){
+                return Handle<Block>();
+            } else{
+                LOG(WARNING) << "cannot handle " << next;
+                continue;
+            }
+        } while(true);
     }
 }

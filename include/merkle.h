@@ -4,7 +4,7 @@
 #include <vector>
 #include "allocator.h"
 #include "object.h"
-#include "uint256_t.h"
+#include "Hash.h"
 
 namespace Token{
     class BlockVisitor;
@@ -16,15 +16,15 @@ namespace Token{
         MerkleNode* parent_;
         MerkleNode* left_;
         MerkleNode* right_;
-        uint256_t hash_;
+        Hash hash_;
 
         void SetParent(MerkleNode* node){
             parent_ = node;
         }
 
-        uint256_t ComputeHash() const;
+        Hash ComputeHash() const;
     public:
-        MerkleNode(const uint256_t& hash):
+        MerkleNode(const Hash& hash):
             parent_(nullptr),
             left_(nullptr),
             right_(nullptr),
@@ -33,7 +33,7 @@ namespace Token{
             parent_(nullptr),
             left_(nullptr),
             right_(nullptr),
-            hash_(uint256_t::Null()){
+            hash_(){
             SetParent(node->GetParent());
             SetLeft(node->GetLeft());
             SetRight(node->GetRight());
@@ -43,7 +43,7 @@ namespace Token{
             parent_(nullptr),
             left_(nullptr),
             right_(nullptr),
-            hash_(uint256_t::Null()){
+            hash_(){
             SetLeft(left);
             SetRight(right);
             hash_ = ComputeHash();
@@ -88,7 +88,7 @@ namespace Token{
             return !HasLeft() && !HasRight();
         }
 
-        uint256_t GetHash() const{
+        Hash GetHash() const{
             return hash_;
         }
 
@@ -118,9 +118,9 @@ namespace Token{
         };
     private:
         Direction direction_;
-        uint256_t hash_;
+        Hash hash_;
     public:
-        MerkleProofHash(Direction direction, const uint256_t& hash):
+        MerkleProofHash(Direction direction, const Hash& hash):
                 direction_(direction),
                 hash_(hash){}
         MerkleProofHash(Direction direction, const MerkleNode& node):
@@ -147,7 +147,7 @@ namespace Token{
             return GetDirection() == Direction::kRight;
         }
 
-        uint256_t GetHash() const{
+        Hash GetHash() const{
             return hash_;
         }
 
@@ -162,12 +162,12 @@ namespace Token{
     private:
         MerkleNode* root_;
         std::vector<MerkleNode*> leaves_;
-        std::map<uint256_t, MerkleNode*> nodes_;
+        std::map<Hash, MerkleNode*> nodes_;
 
         MerkleNode* BuildMerkleTree(size_t height, std::vector<MerkleNode*>& nodes);
-        MerkleNode* BuildMerkleTree(std::vector<uint256_t>& leaves);
+        MerkleNode* BuildMerkleTree(std::vector<Hash>& leaves);
     public:
-        MerkleTree(std::vector<uint256_t>& leaves):
+        MerkleTree(std::vector<Hash>& leaves):
             root_(nullptr),
             leaves_(),
             nodes_(){
@@ -194,36 +194,36 @@ namespace Token{
             return root_;
         }
 
-        bool GetLeaves(std::vector<uint256_t>& leaves) const{
+        bool GetLeaves(std::vector<Hash>& leaves) const{
             if(leaves_.empty()) return false;
             for(auto& it : leaves_) leaves.push_back(it->GetHash());
             return leaves.size() > 0;
         }
 
-        uint256_t GetMerkleRootHash() const{
+        Hash GetMerkleRootHash() const{
             if(!HasMerkleRoot())
-                return uint256_t::Null();
+                return Hash();
             return GetMerkleRoot()->GetHash();
         }
 
         std::string ToString() const;
-        MerkleNode* GetNode(const uint256_t& hash) const;
-        MerkleNode* GetLeafNode(const uint256_t& hash) const;
+        MerkleNode* GetNode(const Hash& hash) const;
+        MerkleNode* GetLeafNode(const Hash& hash) const;
         bool Finalize();
         bool Append(const MerkleTree& tree);
 
-        bool BuildAuditProof(const uint256_t& hash, std::vector<MerkleProofHash>& trail);
-        bool VerifyAuditProof(const uint256_t& root, const uint256_t& leaf, std::vector<MerkleProofHash>& trail);
+        bool BuildAuditProof(const Hash& hash, std::vector<MerkleProofHash>& trail);
+        bool VerifyAuditProof(const Hash& root, const Hash& leaf, std::vector<MerkleProofHash>& trail);
 
         bool BuildConsistencyProof(intptr_t num_nodes, std::vector<MerkleProofHash>& trail);
-        bool BuildConsistencyAuditProof(const uint256_t& hash, std::vector<MerkleProofHash>& trail);
-        bool VerifyConsistencyProof(const uint256_t& root, std::vector<MerkleProofHash>& trail);
+        bool BuildConsistencyAuditProof(const Hash& hash, std::vector<MerkleProofHash>& trail);
+        bool VerifyConsistencyProof(const Hash& root, std::vector<MerkleProofHash>& trail);
     };
 
     //TODO: refactor MerkleTreeBuilder class?
     class MerkleTreeBuilder{
     protected:
-        std::vector<uint256_t> leaves_;
+        std::vector<Hash> leaves_;
         MerkleTree* tree_;
 
         bool CreateTree(){
@@ -233,7 +233,7 @@ namespace Token{
             return HasTree();
         }
 
-        bool AddLeaf(const uint256_t& hash){
+        bool AddLeaf(const Hash& hash){
             leaves_.push_back(hash);
             return true; //maybe check if value is in vector?
         }

@@ -67,7 +67,7 @@ namespace Token{
         }
 
         LOG(INFO) << "loading block chain data from " << TOKEN_BLOCKCHAIN_HOME << "....";
-        uint256_t hash = BlockChainIndex::GetReference("<HEAD>");
+        Hash hash = BlockChainIndex::GetReference("<HEAD>");
         Handle<Block> block = BlockChainIndex::GetBlockData(hash);
         BlockNode* node = new BlockNode(block);
 

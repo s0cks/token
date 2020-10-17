@@ -229,7 +229,7 @@ namespace Token{
 #define DEFINE_DECODE(Name) \
                 case Message::MessageType::k##Name##MessageType:{ \
                     Handle<Message> msg = Name##Message::NewInstance(&bytes).CastTo<Message>(); \
-                    LOG(INFO) << "decoded: " << msg; \
+                    LOG(INFO) << "decoded: " << msg << "(" << msize << " bytes)"; \
                     messages.push_back(msg); \
                     break; \
                 }

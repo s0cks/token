@@ -42,17 +42,17 @@ namespace Token{
         return true;
     }
 
-    bool UnclaimedTransactionPool::HasUnclaimedTransaction(const uint256_t& hash){
+    bool UnclaimedTransactionPool::HasUnclaimedTransaction(const Hash& hash){
         LOCK_GUARD;
         return GetJournal()->HasData(hash);
     }
 
-    Handle<UnclaimedTransaction> UnclaimedTransactionPool::GetUnclaimedTransaction(const uint256_t& hash){
+    Handle<UnclaimedTransaction> UnclaimedTransactionPool::GetUnclaimedTransaction(const Hash& hash){
         LOCK_GUARD;
         return GetJournal()->GetData(hash);
     }
 
-    bool UnclaimedTransactionPool::RemoveUnclaimedTransaction(const uint256_t& hash){
+    bool UnclaimedTransactionPool::RemoveUnclaimedTransaction(const Hash& hash){
         LOCK_GUARD;
         return GetJournal()->RemoveData(hash);
     }
@@ -67,7 +67,7 @@ namespace Token{
         return GetJournal()->GetNumberOfObjects();
     }
 
-    bool UnclaimedTransactionPool::GetUnclaimedTransactions(std::vector<uint256_t>& utxos){
+    bool UnclaimedTransactionPool::GetUnclaimedTransactions(std::vector<Hash>& utxos){
         LOCK_GUARD;
         DIR* dir;
         struct dirent* ent;
@@ -87,7 +87,7 @@ namespace Token{
         return false;
     }
 
-    bool UnclaimedTransactionPool::GetUnclaimedTransactions(const std::string& user, std::vector<uint256_t>& utxos){
+    bool UnclaimedTransactionPool::GetUnclaimedTransactions(const std::string& user, std::vector<Hash>& utxos){
         LOCK_GUARD;
         DIR* dir;
         struct dirent* ent;
@@ -127,7 +127,7 @@ namespace Token{
         return vis->VisitEnd();
     }
 
-    Handle<UnclaimedTransaction> UnclaimedTransactionPool::GetUnclaimedTransaction(const uint256_t &tx_hash, uint32_t tx_index){
+    Handle<UnclaimedTransaction> UnclaimedTransactionPool::GetUnclaimedTransaction(const Hash &tx_hash, uint32_t tx_index){
         LOCK_GUARD;
         DIR* dir;
         struct dirent* ent;

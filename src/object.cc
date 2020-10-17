@@ -17,17 +17,17 @@ namespace Token{
         return true;
     }
 
-    uint256_t BinaryObject::GetHash() const{
+    Hash BinaryObject::GetHash() const{
         CryptoPP::SHA256 func;
 
         ByteBuffer bytes;
         if(!Write(&bytes)){
             LOG(WARNING) << "couldn't encode object to bytes";
-            return uint256_t::Null();
+            return Hash();
         }
 
         CryptoPP::SecByteBlock hash(CryptoPP::SHA256::DIGESTSIZE);
         CryptoPP::ArraySource source(bytes.data(), bytes.GetWrittenBytes(), true, new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(hash.data(), hash.size())));
-        return uint256_t::FromBytes(hash.data());
+        return Hash::FromBytes(hash.data());
     }
 }

@@ -83,10 +83,10 @@ namespace Token{
             GetSession()->WaitForItem(GetHead());
         }
 
-        std::deque<uint256_t> work; // we are queuing the blocks just in-case there is an unresolved previous hash
+        std::deque<Hash> work; // we are queuing the blocks just in-case there is an unresolved previous Hash
         work.push_back(head_.GetHash());
         do{
-            uint256_t hash = work.front();
+            Hash hash = work.front();
             work.pop_front();
 
             if(!BlockPool::HasBlock(hash)){
@@ -95,7 +95,7 @@ namespace Token{
             }
 
             Handle<Block> blk = BlockPool::GetBlock(hash);
-            uint256_t phash = blk->GetPreviousHash();
+            Hash phash = blk->GetPreviousHash();
             if(!BlockChain::HasBlock(phash)){
                 LOG(WARNING) << "parent block " << phash << " not found, resolving...";
                 work.push_front(hash);

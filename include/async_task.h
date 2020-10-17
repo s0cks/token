@@ -209,7 +209,7 @@ namespace Token{
             head_(head){}
 
         static inline InventoryItem
-        GetItem(const uint256_t hash){
+        GetItem(const Hash hash){
             return InventoryItem(InventoryItem::kBlock, hash);
         }
 

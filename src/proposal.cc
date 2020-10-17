@@ -10,19 +10,19 @@ namespace Token{
 #define SIGNAL_ALL cond_.notify_all()
     Handle<Proposal> Proposal::NewInstance(ByteBuffer* bytes){
         uint32_t height = bytes->GetInt();
-        uint256_t hash = bytes->GetHash();
+        Hash hash = bytes->GetHash();
         std::string proposer = bytes->GetString();
         return new Proposal(proposer, hash, height);
     }
 
-    Handle<Proposal> Proposal::NewInstance(uint32_t height, const uint256_t& hash, const std::string& proposer){
+    Handle<Proposal> Proposal::NewInstance(uint32_t height, const Hash& hash, const std::string& proposer){
         return new Proposal(proposer, hash, height);
     }
 
     size_t Proposal::GetBufferSize() const{
         size_t size = 0;
         size += sizeof(uint32_t);
-        size += uint256_t::kSize;
+        size += Hash::kSize;
         size += (sizeof(uint32_t) + proposer_.length());
         return size;
     }

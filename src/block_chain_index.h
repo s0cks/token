@@ -13,12 +13,12 @@ namespace Token{
 
         static void Initialize();
         static void PutBlockData(const Handle<Block>& blk);
-        static void PutReference(const std::string& name, const uint256_t& hash);
+        static void PutReference(const std::string& name, const Hash& hash);
         static leveldb::DB* GetIndex();
-        static Handle<Block> GetBlockData(const uint256_t& hash);
-        static uint256_t GetReference(const std::string& name);
+        static Handle<Block> GetBlockData(const Hash& hash);
+        static Hash GetReference(const std::string& name);
         static uint32_t GetNumberOfBlocks();
-        static bool HasBlockData(const uint256_t& hash);
+        static bool HasBlockData(const Hash& hash);
         static bool HasReference(const std::string& name);
 
         static bool HasBlockData(){

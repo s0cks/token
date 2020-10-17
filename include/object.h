@@ -9,7 +9,7 @@
 #include "handle.h"
 #include "keychain.h"
 #include "allocator.h"
-#include "uint256_t.h"
+#include "Hash.h"
 #include "byte_buffer.h"
 
 namespace Token{
@@ -193,7 +193,7 @@ namespace Token{
         BinaryObject(): Object(){}
         virtual ~BinaryObject() = default;
 
-        uint256_t GetHash() const;
+        Hash GetHash() const;
         virtual bool Write(ByteBuffer* bytes) const = 0;
         virtual bool WriteToFile(std::fstream& fd) const;
 

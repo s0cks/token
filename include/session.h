@@ -17,7 +17,7 @@ namespace Token{
     public:
         static const uint32_t kHeartbeatIntervalMilliseconds = 30 * 1000;
         static const uint32_t kHeartbeatTimeoutMilliseconds = 1 * 60 * 1000;
-        static const intptr_t kBufferSize = 4096*2;//bad?
+        static const intptr_t kBufferSize = 65536; //bad?
 
         enum State{
             kDisconnected = 0,
@@ -47,44 +47,42 @@ namespace Token{
 
         std::recursive_mutex mutex_;
         std::condition_variable_any cond_;
-        uuid_t uuid_;
-        NodeAddress address_;
         State state_;
 
+        UUID uuid_;
+        NodeAddress address_;
         Message* next_;
 
         Session(const NodeAddress& address):
             mutex_(),
             cond_(),
+            state_(kDisconnected),
             uuid_(),
             address_(address),
-            state_(kDisconnected),
-            next_(nullptr){
-            uuid_generate_time_safe(uuid_);
-        }
+            next_(nullptr){}
 
         Session(uv_tcp_t* handle):
             mutex_(),
             cond_(),
+            state_(kDisconnected),
             uuid_(),
             address_(handle),
-            state_(kDisconnected){
-            uuid_generate_time_safe(uuid_);
-        }
+            next_(nullptr){}
 
         virtual uv_stream_t* GetStream() = 0;
         void SetState(State state);
-        void SetID(const std::string& id);
         void OnItemReceived(const InventoryItem& item);
         void OnNextMessageReceived(const Handle<Message>& msg);
         Handle<Message> GetNextMessage();
 
+        void SetID(const UUID& uuid){
+            uuid_ = uuid;
+        }
+
         friend class Server;
     public:
-        std::string GetID() const{
-            char uuid_str[37];
-            uuid_unparse(uuid_, uuid_str);
-            return std::string(uuid_str);
+        UUID GetID() const{
+            return uuid_;
         }
 
         NodeAddress GetAddress() const{
@@ -104,6 +102,8 @@ namespace Token{
         }
 
         State GetState();
+        void WaitForNextMessage();
+        void WaitForNextMessage(Message::MessageType type);
         void WaitForState(State state);
         void WaitForItem(const InventoryItem& item);
         void Send(std::vector<Handle<Message>>& messages);
@@ -134,8 +134,8 @@ namespace Token{
             return session_;
         }
 
-        std::string GetID() const{
-            return session_->GetID();
+        UUID GetID() const{
+            return GetSession()->GetID();
         }
 
         NodeAddress GetAddress() const{

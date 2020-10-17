@@ -89,7 +89,7 @@ namespace Token{
         return Write(ss);
     }
 
-    bool TextFileWriter::Write(const uint256_t& hash){
+    bool TextFileWriter::Write(const Hash& hash){
         return Write(hash.HexString());
     }
 
@@ -131,8 +131,8 @@ namespace Token{
         return Flush();
     }
 
-    bool BinaryFileWriter::WriteHash(const uint256_t& hash){
-        return WriteBytes((uint8_t*)hash.data(), uint256_t::kSize);
+    bool BinaryFileWriter::WriteHash(const Hash& hash){
+        return WriteBytes((uint8_t*)hash.data(), Hash::kSize);
     }
 
     bool BinaryFileWriter::WriteString(const std::string& value){

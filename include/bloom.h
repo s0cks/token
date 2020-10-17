@@ -3,7 +3,7 @@
 
 #include <bitset>
 #include "common.h"
-#include "uint256_t.h"
+#include "Hash.h"
 
 namespace Token{
     class BloomFilter{
@@ -23,14 +23,14 @@ namespace Token{
             bits_(filter.bits_){}
         ~BloomFilter(){}
 
-        void Put(const uint256_t& hash){
+        void Put(const Hash& hash){
             uint16_t* hashes = (uint16_t*)hash.data();
             for(size_t idx = 0; idx < num_hashes_; idx++){
                 bits_[hashes[idx]] = true;
             }
         }
 
-        bool Contains(const uint256_t& hash) const{
+        bool Contains(const Hash& hash) const{
             uint16_t* hashes = (uint16_t*)hash.data();
             for(size_t idx = 0; idx < num_hashes_; idx++){
                 if(!bits_[hashes[idx]]) return false;

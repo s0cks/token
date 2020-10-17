@@ -33,7 +33,7 @@ namespace Token{
     }
 
     void SnapshotInspector::HandleGetDataCommand(Token::SnapshotInspectorCommand* cmd){
-        //TODO: PrintBlock(GetBlock(hash));
+        //TODO: PrintBlock(GetBlock(Hash));
     }
 
     class SnapshotBlockPrinter : public SnapshotVisitor{

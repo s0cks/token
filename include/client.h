@@ -20,7 +20,7 @@ namespace Token{
 
         BlockHeader GetHead() const;
         NodeAddress GetPeerAddress() const;
-        std::string GetPeerID() const;
+        UUID GetPeerID() const;
         void operator=(const ClientSessionInfo& info);
     };
 
@@ -38,7 +38,7 @@ namespace Token{
 
         // Info
         NodeAddress address_;
-        std::string pid_;
+        UUID peer_id_;
         BlockHeader head_;
 
         void SetHead(const BlockHeader& head){
@@ -57,12 +57,12 @@ namespace Token{
             return address_;
         }
 
-        void SetPeerID(const std::string& id){
-            pid_ = id;
+        UUID GetPeerID() const{
+            return peer_id_;
         }
 
-        std::string GetPeerID() const{
-            return pid_;
+        void SetPeerID(const UUID& id){
+            peer_id_ = id;
         }
 
         static void* ClientSessionThread(void* data);
@@ -119,7 +119,8 @@ namespace Token{
 
         bool Connect();
         bool Disconnect();
-        Handle<Block> GetBlock(const uint256_t& hash);
+        Handle<Block> GetBlock(const Hash& hash);
+        bool GetUnclaimedTransactions(const User& user, std::vector<Hash>& utxos);
     };
 }
 

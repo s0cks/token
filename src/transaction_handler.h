@@ -12,7 +12,7 @@ namespace Token{
 
         inline Handle<UnclaimedTransaction>
         CreateUnclaimedTransaction(const User& user){
-            uint256_t tx_hash = transaction_->GetHash();
+            Hash tx_hash = transaction_->GetHash();
             return UnclaimedTransaction::NewInstance(tx_hash, out_idx_++, user);
         }
     public:

@@ -24,11 +24,11 @@ namespace Token{
         static bool Initialize();
         static bool Print();
         static bool Accept(BlockPoolVisitor* vis);
-        static bool RemoveBlock(const uint256_t& hash);
+        static bool RemoveBlock(const Hash& hash);
         static bool PutBlock(const Handle<Block>& block);
-        static bool HasBlock(const uint256_t& hash);
-        static bool GetBlocks(std::vector<uint256_t>& blocks);
-        static Handle<Block> GetBlock(const uint256_t& hash);
+        static bool HasBlock(const Hash& hash);
+        static bool GetBlocks(std::vector<Hash>& blocks);
+        static Handle<Block> GetBlock(const Hash& hash);
 
         static inline std::string
         GetPath(){

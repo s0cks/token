@@ -4,7 +4,7 @@
 #include "common.h"
 #include "byte_buffer.h"
 #include "object.h"
-#include "uint256_t.h"
+#include "Hash.h"
 
 namespace Token{
     class FileReader{
@@ -26,7 +26,7 @@ namespace Token{
 
         bool ReadBytes(uint8_t* bytes, size_t size);
         std::string ReadString();
-        uint256_t ReadHash();
+        Hash ReadHash();
         int32_t ReadInt();
         uint32_t ReadUnsignedInt();
         int64_t ReadLong();

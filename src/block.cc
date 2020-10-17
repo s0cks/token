@@ -28,7 +28,7 @@ namespace Token{
         return BlockChain::GetBlock(GetHash());
     }
 
-    bool BlockHeader::Encode(ByteBuffer* bytes) const{
+    bool BlockHeader::Write(ByteBuffer* bytes) const{
         bytes->PutLong(timestamp_);
         bytes->PutLong(height_);
         bytes->PutHash(previous_hash_);
@@ -68,7 +68,7 @@ namespace Token{
             Transaction::NewInstance(1, inputs, 0, outputs_b, Block::kNumberOfGenesisOutputs, 0),
             Transaction::NewInstance(2, inputs, 0, outputs_c, Block::kNumberOfGenesisOutputs, 0),
         };
-        return NewInstance(0, uint256_t::Null(), transactions, 3, 0);
+        return NewInstance(0, Hash(), transactions, 3, 0);
     }
 
     Handle<Block> Block::NewInstance(std::fstream& fd, size_t size){
@@ -80,7 +80,7 @@ namespace Token{
     Handle<Block> Block::NewInstance(ByteBuffer* bytes){
         Timestamp timestamp = bytes->GetLong();
         intptr_t height = bytes->GetLong();
-        uint256_t phash = bytes->GetHash();
+        Hash phash = bytes->GetHash();
         intptr_t num_txs = bytes->GetLong();
 
         LOG(INFO) << "reading " << num_txs << " transactions for block";
@@ -108,7 +108,7 @@ namespace Token{
         return vis->VisitEnd();
     }
 
-    bool Block::Contains(const uint256_t& hash) const{
+    bool Block::Contains(const Hash& hash) const{
         return tx_bloom_.Contains(hash);
     }
 
@@ -138,9 +138,9 @@ namespace Token{
         }
     };
 
-    uint256_t Block::GetMerkleRoot() const{
+    Hash Block::GetMerkleRoot() const{
         BlockMerkleTreeBuilder builder(this);
-        if(!builder.BuildTree()) return uint256_t::Null();
+        if(!builder.BuildTree()) return Hash();
         MerkleTree* tree = builder.GetTree();
         return tree->GetMerkleRootHash();
     }

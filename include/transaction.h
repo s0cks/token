@@ -4,7 +4,7 @@
 #include "object.h"
 #include "user.h"
 #include "product.h"
-#include "uint256_t.h"
+#include "Hash.h"
 #include "allocator.h"
 #include "unclaimed_transaction.h"
 
@@ -12,17 +12,25 @@ namespace Token{
     class Input : public Object{
         friend class Transaction;
     private:
-        uint256_t hash_;
+        Hash hash_;
         uint32_t index_;
         User user_;
 
-        Input(const uint256_t& tx_hash, uint32_t index, const User& user):
+        Input(const Hash& tx_hash, uint32_t index, const User& user):
             hash_(tx_hash),
             index_(index),
             user_(user){
             SetType(Type::kInputType);
         }
     protected:
+        intptr_t GetMessageSize() const{
+            intptr_t size = 0;
+            size += Hash::kSize;
+            size += sizeof(uint32_t);
+            size += User::kSize;
+            return size;
+        }
+
         bool Write(ByteBuffer* bytes) const{
             bytes->PutHash(hash_);
             bytes->PutInt(index_);
@@ -36,7 +44,7 @@ namespace Token{
             return index_;
         }
 
-        uint256_t GetTransactionHash() const{
+        Hash GetTransactionHash() const{
             return hash_;
         }
 
@@ -48,11 +56,11 @@ namespace Token{
         std::string ToString() const;
 
         static Handle<Input> NewInstance(ByteBuffer* bytes);
-        static Handle<Input> NewInstance(const uint256_t& hash, uint32_t index, const User& user){
+        static Handle<Input> NewInstance(const Hash& hash, uint32_t index, const User& user){
             return new Input(hash, index, user);
         }
 
-        static Handle<Input> NewInstance(const uint256_t& hash, uint32_t index, const std::string& user){
+        static Handle<Input> NewInstance(const Hash& hash, uint32_t index, const std::string& user){
             return new Input(hash, index, User(user));
         }
     };
@@ -69,6 +77,13 @@ namespace Token{
             SetType(Type::kOutputType);
         }
     protected:
+        intptr_t GetMessageSize() const{
+            intptr_t size = 0;
+            size += User::kSize;
+            size += Product::kSize;
+            return size;
+        }
+
         bool Write(ByteBuffer* bytes) const{
             user_.Encode(bytes);
             product_.Encode(bytes);
@@ -142,6 +157,19 @@ namespace Token{
                     return false;
             }
             return true;
+        }
+
+        intptr_t GetMessageSize() const{
+            intptr_t size = 0;
+            size += sizeof(Timestamp);
+            size += sizeof(intptr_t);
+            size += sizeof(intptr_t);
+            for(intptr_t idx = 0; idx < num_inputs_; idx++)
+                size += inputs_[idx]->GetMessageSize();
+            size += sizeof(intptr_t);
+            for(intptr_t idx = 0; idx < num_outputs_; idx++)
+                size += outputs_[idx]->GetMessageSize();
+            return size;
         }
 
         bool Write(ByteBuffer* bytes) const{

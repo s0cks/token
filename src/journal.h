@@ -21,7 +21,7 @@ namespace Token{
             return GetPath() + "/index";
         }
 
-        std::string GetNewDataFilename(const uint256_t& hash){
+        std::string GetNewDataFilename(const Hash& hash){
             std::string hashString = hash.HexString();
             std::string front = hashString.substr(0, 8);
             std::string tail = hashString.substr(hashString.length() - 8, hashString.length());
@@ -32,7 +32,7 @@ namespace Token{
             return filename;
         }
 
-        std::string GetDataFilename(const uint256_t& hash){
+        std::string GetDataFilename(const Hash& hash){
             leveldb::ReadOptions options;
             std::string key = hash.HexString();
             std::string filename;
@@ -79,7 +79,7 @@ namespace Token{
             return GetNumberOfObjects() > 0;
         }
 
-        bool HasData(const uint256_t& hash) const{
+        bool HasData(const Hash& hash) const{
             leveldb::ReadOptions options;
             std::string key = hash.HexString();
             std::string filename;
@@ -110,7 +110,7 @@ namespace Token{
             return true;
         }
 
-        bool RemoveData(const uint256_t& hash){
+        bool RemoveData(const Hash& hash){
             if(!HasData(hash)) return false;
             leveldb::WriteOptions options;
             options.sync = true;
@@ -127,7 +127,7 @@ namespace Token{
             return true;
         }
 
-        Handle<T> GetData(const uint256_t& hash) const{
+        Handle<T> GetData(const Hash& hash) const{
             leveldb::ReadOptions options;
             std::string key = hash.HexString();
             std::string filename;

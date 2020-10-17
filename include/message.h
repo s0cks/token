@@ -1,8 +1,10 @@
 #ifndef TOKEN_MESSAGE_H
 #define TOKEN_MESSAGE_H
 
+#include "uuid.h"
 #include "token.h"
 #include "common.h"
+#include "version.h"
 #include "address.h"
 #include "block_pool.h"
 #include "block_chain.h"
@@ -88,12 +90,12 @@ namespace Token{
     private:
         Timestamp timestamp_;
         ClientType client_type_; //TODO: refactor this field
-        std::string version_;
-        std::string nonce_;
-        std::string node_id_;
+        Version version_;
+        Hash nonce_;
+        UUID node_id_;
         BlockHeader head_;
 
-        VersionMessage(ClientType type, const std::string& version, const std::string& node_id, Timestamp timestamp, const std::string& nonce, const BlockHeader& head):
+        VersionMessage(ClientType type, const Version& version, const UUID& node_id, Timestamp timestamp, const Hash& nonce, const BlockHeader& head):
             Message(),
             client_type_(type),
             version_(version),
@@ -111,15 +113,15 @@ namespace Token{
             return head_;
         }
 
-        std::string GetVersion() const{
+        Version GetVersion() const{
             return version_;
         }
 
-        std::string GetNonce() const{
+        Hash GetNonce() const{
             return nonce_;
         }
 
-        std::string GetID() const{
+        UUID GetID() const{
             return node_id_;
         }
 
@@ -138,26 +140,26 @@ namespace Token{
         DECLARE_MESSAGE(Version);
 
         static Handle<VersionMessage> NewInstance(ByteBuffer* bytes);
-        static Handle<VersionMessage> NewInstance(ClientType type, const std::string& node_id, const std::string& version=Token::GetVersion(), const std::string& nonce=GenerateNonce(), const BlockHeader& head=BlockChain::GetHead(), Timestamp timestamp=GetCurrentTimestamp()){
+        static Handle<VersionMessage> NewInstance(ClientType type, const UUID& node_id, const Version& version=Version(), const Hash& nonce=Hash::GenerateNonce(), const BlockHeader& head=BlockChain::GetHead(), Timestamp timestamp=GetCurrentTimestamp()){
             return new VersionMessage(type, version, node_id, timestamp, nonce, head);
         }
 
-        static Handle<VersionMessage> NewInstance(const std::string& node_id){
-            return NewInstance(ClientType::kClient, node_id, Token::GetVersion(), GenerateNonce(), Block::Genesis()->GetHeader());
+        static Handle<VersionMessage> NewInstance(const UUID& node_id){
+            return NewInstance(ClientType::kClient, node_id, Version(), Hash::GenerateNonce(), Block::Genesis()->GetHeader());
         }
     };
 
     class VerackMessage : public Message{
     private:
         Timestamp timestamp_;
-        std::string node_id_;
-        std::string version_;
-        std::string nonce_;
+        UUID node_id_;
+        Version version_;
+        Hash nonce_;
         ClientType client_type_;
         NodeAddress callback_;
         BlockHeader head_;
 
-        VerackMessage(ClientType type, const std::string& node_id, const std::string& version, const std::string& nonce, const NodeAddress& address, const BlockHeader& head, Timestamp timestamp):
+        VerackMessage(ClientType type, const UUID& node_id, const Version& version, const Hash& nonce, const NodeAddress& address, const BlockHeader& head, Timestamp timestamp):
             Message(),
             timestamp_(timestamp),
             node_id_(node_id),
@@ -183,7 +185,7 @@ namespace Token{
             return GetClientType() == ClientType::kClient;
         }
 
-        std::string GetID() const{
+        UUID GetID() const{
             return node_id_;
         }
 
@@ -198,11 +200,11 @@ namespace Token{
         DECLARE_MESSAGE(Verack);
 
         static Handle<VerackMessage> NewInstance(ByteBuffer* bytes);
-        static Handle<VerackMessage> NewInstance(ClientType type, const std::string& node_id, const NodeAddress& address, const BlockHeader& head=BlockChain::GetHead(), const std::string& version=Token::GetVersion(), const std::string& nonce=GenerateNonce(), Timestamp timestamp=GetCurrentTimestamp()){
+        static Handle<VerackMessage> NewInstance(ClientType type, const UUID& node_id, const NodeAddress& address, const BlockHeader& head=BlockChain::GetHead(), const Version& version=Version(), const Hash& nonce=Hash::GenerateNonce(), Timestamp timestamp=GetCurrentTimestamp()){
             return new VerackMessage(type, node_id, version, nonce, address, head, timestamp);
         }
 
-        static Handle<VerackMessage> NewInstance(const std::string& node_id){
+        static Handle<VerackMessage> NewInstance(const UUID& node_id){
             return NewInstance(ClientType::kClient, node_id, NodeAddress(), Block::Genesis()->GetHeader());
         }
     };
@@ -376,15 +378,15 @@ namespace Token{
             kUnclaimedTransaction
         };
 
-        static const size_t kBufferSize = sizeof(uint16_t) + uint256_t::kSize;
+        static const size_t kSize = sizeof(int32_t) + Hash::kSize;
     private:
         Type type_;
-        uint256_t hash_;
+        Hash hash_;
     public:
         InventoryItem():
             type_(kUnknown),
-            hash_(uint256_t::Null()){}
-        InventoryItem(Type type, const uint256_t& hash):
+            hash_(){}
+        InventoryItem(Type type, const Hash& hash):
             type_(type),
             hash_(hash){}
         InventoryItem(const Handle<Transaction>& tx): InventoryItem(kTransaction, tx->GetHash()){}
@@ -400,7 +402,7 @@ namespace Token{
             return type_;
         }
 
-        uint256_t GetHash() const{
+        Hash GetHash() const{
             return hash_;
         }
 
@@ -455,9 +457,9 @@ namespace Token{
     class InventoryMessage : public Message{
     public:
         static const size_t kMaxAmountOfItemsPerMessage = 50;
-    private:
-        std::vector<InventoryItem> items_;
     protected:
+        std::vector<InventoryItem> items_;
+
         InventoryMessage(const std::vector<InventoryItem>& items):
             Message(),
             items_(items){
@@ -475,9 +477,8 @@ namespace Token{
         }
 
         bool GetItems(std::vector<InventoryItem>& items){
-            items.resize(items_.size());
-            items.insert(items.end(), items_.begin(), items_.end());
-            return items.size() > 0;
+            std::copy(items_.begin(), items_.end(), std::back_inserter(items));
+            return items.size() == items_.size();
         }
 
         DECLARE_MESSAGE(Inventory);
@@ -521,28 +522,28 @@ namespace Token{
     public:
         static const intptr_t kMaxNumberOfBlocks;
     private:
-        uint256_t start_;
-        uint256_t stop_;
+        Hash start_;
+        Hash stop_;
 
-        GetBlocksMessage(const uint256_t& start_hash, const uint256_t& stop_hash):
+        GetBlocksMessage(const Hash& start_hash, const Hash& stop_hash):
             Message(),
             start_(start_hash),
             stop_(stop_hash){}
     public:
         ~GetBlocksMessage(){}
 
-        uint256_t GetHeadHash() const{
+        Hash GetHeadHash() const{
             return start_;
         }
 
-        uint256_t GetStopHash() const{
+        Hash GetStopHash() const{
             return stop_;
         }
 
         DECLARE_MESSAGE(GetBlocks);
 
         static Handle<GetBlocksMessage> NewInstance(ByteBuffer* bytes);
-        static Handle<GetBlocksMessage> NewInstance(const uint256_t& start_hash=BlockChain::GetHead().GetHash(), const uint256_t& stop_hash=uint256_t::Null()){
+        static Handle<GetBlocksMessage> NewInstance(const Hash& start_hash=BlockChain::GetHead().GetHash(), const Hash& stop_hash=Hash()){
             return new GetBlocksMessage(start_hash, stop_hash);
         }
     };
@@ -575,30 +576,24 @@ namespace Token{
         }
     };
 
-    //@SideClientServerOnly
     class GetUnclaimedTransactionsMessage : public Message{
     private:
-        std::string user_;
+        User user_;
 
-        GetUnclaimedTransactionsMessage(const std::string& user):
+        GetUnclaimedTransactionsMessage(const User& user):
             Message(),
             user_(user){}
     public:
         ~GetUnclaimedTransactionsMessage() = default;
 
-        std::string GetUser() const{
+        User GetUser() const{
             return user_;
-        }
-
-        bool Encode(uint8_t* bytes, uintptr_t size) const{
-            memcpy(bytes, user_.c_str(), size);
-            return true;
         }
 
         DECLARE_MESSAGE(GetUnclaimedTransactions);
 
         static Handle<GetUnclaimedTransactionsMessage> NewInstance(ByteBuffer* bytes);
-        static Handle<GetUnclaimedTransactionsMessage> NewInstance(const std::string& user){
+        static Handle<GetUnclaimedTransactionsMessage> NewInstance(const User& user){
             return new GetUnclaimedTransactionsMessage(user);
         }
     };

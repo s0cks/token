@@ -1,5 +1,5 @@
-#ifndef TOKEN_UINT256_T_H
-#define TOKEN_UINT256_T_H
+#ifndef TOKEN_HASH_H
+#define TOKEN_HASH_H
 
 #include <cstdint>
 #include <cstdlib>
@@ -7,31 +7,24 @@
 #include "common.h"
 
 namespace Token{
-    class uint256_t{
+    class Hash{
     public:
         static const size_t kSize = 256 / 8;
     private:
         uint8_t data_[kSize];
 
-        uint256_t():
-            data_(){
-            SetNull();
-        }
-        uint256_t(const unsigned char* data):
+
+        Hash(const unsigned char* data):
             data_(){
             memcpy(data_, data, sizeof(data_));
         }
-        uint256_t(uint8_t* data):
-            data_(){
-            memcpy(data_, data, kSize);
-        }
 
-        uint256_t(const std::string& hex):
+        Hash(const std::string& hex):
             data_(){
             CryptoPP::StringSource source(hex, true, new CryptoPP::HexDecoder(new CryptoPP::ArraySink(data_, kSize)));
         }
 
-        uint256_t(const uint256_t& first, const uint256_t& second):
+        Hash(const Hash& first, const Hash& second):
             data_(){
             size_t size = first.size() + second.size();
             uint8_t bytes[size];
@@ -41,10 +34,19 @@ namespace Token{
             CryptoPP::ArraySource source(bytes, size, true, new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(data_, kSize)));
         }
     public:
-        uint256_t(const uint256_t& hash):
+        Hash():
+            data_(){
+            SetNull();
+        }
+        Hash(uint8_t* data):
+            data_(){
+            memcpy(data_, data, kSize);
+        }
+        Hash(const Hash& hash):
             data_(){
             memcpy(data_, hash.data_, kSize);
         }
+        ~Hash() = default;
 
         void SetNull(){
             memset(data_, 0, sizeof(data_));
@@ -84,51 +86,56 @@ namespace Token{
             return hash;
         }
 
-        inline int Compare(const uint256_t& other) const{
+        inline int Compare(const Hash& other) const{
             return memcmp(data_, other.data_, sizeof(data_));
         }
 
-        friend inline bool operator==(const uint256_t& a, const uint256_t& b){
+        friend inline bool operator==(const Hash& a, const Hash& b){
             return a.Compare(b) == 0;
         }
 
-        friend inline bool operator!=(const uint256_t& a, const uint256_t& b){
+        friend inline bool operator!=(const Hash& a, const Hash& b){
             return a.Compare(b) != 0;
         }
 
-        friend inline bool operator<(const uint256_t& a, const uint256_t& b){
+        friend inline bool operator<(const Hash& a, const Hash& b){
             return a.Compare(b) < 0;
         }
 
-        void operator=(const uint256_t& other){
+        void operator=(const Hash& other){
             memcpy(data_, other.data_, sizeof(data_));
         }
 
-        static uint256_t
-        Null(){
-            return uint256_t();
+        static Hash
+        GenerateNonce(){
+            CryptoPP::SecByteBlock nonce(kSize);
+            CryptoPP::AutoSeededRandomPool prng;
+            prng.GenerateBlock(nonce, nonce.size());
+            uint8_t data[kSize];
+            CryptoPP::ArraySource source(nonce, nonce.size(), true, new CryptoPP::HexEncoder(new CryptoPP::ArraySink(data, kSize)));
+            return Hash(data);
         }
 
-        static uint256_t
+        static Hash
         FromBytes(uint8_t* bytes){
-            return uint256_t(bytes);
+            return Hash(bytes);
         }
 
-        static uint256_t
+        static Hash
         FromHexString(const std::string& hex){
-            return uint256_t(hex);
+            return Hash(hex);
         }
 
-        static uint256_t
-        Concat(const uint256_t& first, const uint256_t& second){
-            return uint256_t(first, second);
+        static Hash
+        Concat(const Hash& first, const Hash& second){
+            return Hash(first, second);
         }
 
-        friend std::ostream& operator<<(std::ostream& stream, const uint256_t& hash){
+        friend std::ostream& operator<<(std::ostream& stream, const Hash& hash){
             stream << hash.HexString();
             return stream;
         }
     };
 }
 
-#endif //TOKEN_UINT256_T_H
+#endif //TOKEN_HASH_H

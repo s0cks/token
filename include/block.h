@@ -2,7 +2,7 @@
 #define TOKEN_BLOCK_H
 
 #include "common.h"
-#include "uint256_t.h"
+#include "Hash.h"
 #include "bloom.h"
 
 #include "allocator.h"
@@ -16,23 +16,23 @@ namespace Token{
     public:
         static const size_t kSize = sizeof(Timestamp) +
                                     sizeof(intptr_t) +
-                                    uint256_t::kSize +
-                                    uint256_t::kSize +
-                                    uint256_t::kSize;
+                                    Hash::kSize +
+                                    Hash::kSize +
+                                    Hash::kSize;
     private:
         Timestamp timestamp_;
         intptr_t height_;
-        uint256_t previous_hash_;
-        uint256_t merkle_root_;
-        uint256_t hash_;
+        Hash previous_hash_;
+        Hash merkle_root_;
+        Hash hash_;
         BloomFilter bloom_;
     public:
         BlockHeader():
             timestamp_(0),
             height_(0),
-            previous_hash_(uint256_t::Null()),
-            merkle_root_(uint256_t::Null()), // fill w/ genesis's merkle root
-            hash_(uint256_t::Null()), //TODO: fill w/ genesis's hash
+            previous_hash_(),
+            merkle_root_(), // fill w/ genesis's merkle root
+            hash_(), //TODO: fill w/ genesis's Hash
             bloom_(){}
         BlockHeader(const BlockHeader& blk):
             timestamp_(blk.timestamp_),
@@ -41,7 +41,7 @@ namespace Token{
             merkle_root_(blk.merkle_root_),
             hash_(blk.hash_),
             bloom_(blk.bloom_){}
-        BlockHeader(Timestamp timestamp, intptr_t height, const uint256_t& phash, const uint256_t& merkle_root, const uint256_t& hash, const BloomFilter& tx_bloom):
+        BlockHeader(Timestamp timestamp, intptr_t height, const Hash& phash, const Hash& merkle_root, const Hash& hash, const BloomFilter& tx_bloom):
             timestamp_(timestamp),
             height_(height),
             previous_hash_(phash),
@@ -60,24 +60,24 @@ namespace Token{
             return height_;
         }
 
-        uint256_t GetPreviousHash() const{
+        Hash GetPreviousHash() const{
             return previous_hash_;
         }
 
-        uint256_t GetMerkleRoot() const{
+        Hash GetMerkleRoot() const{
             return merkle_root_;
         }
 
-        uint256_t GetHash() const{
+        Hash GetHash() const{
             return hash_;
         }
 
-        bool Contains(const uint256_t& hash) const{
+        bool Contains(const Hash& hash) const{
             return bloom_.Contains(hash);
         }
 
         Handle<Block> GetData() const;
-        bool Encode(ByteBuffer* bytes) const;
+        bool Write(ByteBuffer* bytes) const;
 
         BlockHeader& operator=(const BlockHeader& other){
             timestamp_ = other.timestamp_;
@@ -133,12 +133,12 @@ namespace Token{
     private:
         Timestamp timestamp_;
         intptr_t height_;
-        uint256_t previous_hash_;
+        Hash previous_hash_;
         Transaction** transactions_;
         intptr_t num_transactions_;
         BloomFilter tx_bloom_; // transient
 
-        Block(Timestamp timestamp, uint32_t height, const uint256_t& phash, Transaction** txs, intptr_t num_txs):
+        Block(Timestamp timestamp, uint32_t height, const Hash& phash, Transaction** txs, intptr_t num_txs):
             BinaryObject(),
             timestamp_(timestamp),
             height_(height),
@@ -163,6 +163,17 @@ namespace Token{
             return vis->Visit(&transactions_);
         }
 
+        intptr_t GetMessageSize() const{
+            intptr_t size = 0;
+            size += sizeof(Timestamp);
+            size += sizeof(uint32_t);
+            size += Hash::kSize;
+            size += sizeof(intptr_t);
+            for(intptr_t idx = 0; idx < num_transactions_; idx++)
+                size += transactions_[idx]->GetMessageSize();
+            return size;
+        }
+
         bool Write(ByteBuffer* bytes) const{
             bytes->PutLong(timestamp_);
             bytes->PutLong(height_);
@@ -182,7 +193,7 @@ namespace Token{
             return BlockHeader(timestamp_, height_, previous_hash_, GetMerkleRoot(), GetHash(), tx_bloom_);
         }
 
-        uint256_t GetPreviousHash() const{
+        Hash GetPreviousHash() const{
             return previous_hash_;
         }
 
@@ -208,16 +219,16 @@ namespace Token{
             return GetHeight() == 0;
         }
 
-        uint256_t GetMerkleRoot() const;
+        Hash GetMerkleRoot() const;
         bool Accept(BlockVisitor* vis) const;
-        bool Contains(const uint256_t& hash) const;
+        bool Contains(const Hash& hash) const;
         std::string ToString() const;
 
         static Handle<Block> Genesis(); // genesis
         static Handle<Block> NewInstance(std::fstream& fd, size_t size);
         static Handle<Block> NewInstance(ByteBuffer* bytes);
 
-        static Handle<Block> NewInstance(intptr_t height, const uint256_t& phash, Transaction** txs, size_t num_txs, Timestamp timestamp=GetCurrentTimestamp()){
+        static Handle<Block> NewInstance(intptr_t height, const Hash& phash, Transaction** txs, size_t num_txs, Timestamp timestamp=GetCurrentTimestamp()){
             return new Block(timestamp, height, phash, txs, num_txs);
         }
 

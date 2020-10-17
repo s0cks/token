@@ -5,11 +5,11 @@
 
 namespace Token{
     Handle<VersionMessage> VersionMessage::NewInstance(ByteBuffer* bytes){
-        uint64_t timestamp = bytes->GetLong();
-        ClientType client_type = static_cast<ClientType>(bytes->GetShort());
-        std::string version = bytes->GetString();
-        std::string nonce = bytes->GetString();
-        std::string node_id = bytes->GetString();
+        Timestamp timestamp = bytes->GetLong();
+        ClientType client_type = static_cast<ClientType>(bytes->GetInt());
+        Version version(bytes);
+        Hash nonce = bytes->GetHash();
+        UUID node_id(bytes);
         BlockHeader head = BlockHeader(bytes);
         return new VersionMessage(client_type, version, node_id, timestamp, nonce, head);
     }
@@ -17,36 +17,30 @@ namespace Token{
     intptr_t VersionMessage::GetMessageSize() const{
         intptr_t size = 0;
         size += sizeof(Timestamp); // timestamp_
-        size += sizeof(uint32_t); // client_type_
-        // TODO: don't encode string values
-        size += sizeof(uint32_t) + version_.length(); // version_
-        size += sizeof(uint32_t) + nonce_.length(); // nonce_
-        size += sizeof(uint32_t) + node_id_.length(); // node_id
-        size += BlockHeader::kSize;
+        size += sizeof(int32_t); // client_type_
+        size += Version::kSize; // version_
+        size += Hash::kSize; // nonce_
+        size += UUID::kSize; // node_id_
+        size += BlockHeader::kSize; // head_
         return size;
     }
 
     bool VersionMessage::WriteMessage(ByteBuffer* bytes) const{
         bytes->PutLong(timestamp_);
-        bytes->PutShort(static_cast<uint16_t>(client_type_));
-        bytes->PutString(version_);
-        bytes->PutString(nonce_);
-        bytes->PutString(node_id_);
-        head_.Encode(bytes);
+        bytes->PutInt(static_cast<int32_t>(client_type_));
+        version_.Write(bytes);
+        bytes->PutHash(nonce_);
+        node_id_.Write(bytes);
+        head_.Write(bytes);
         return true;
     }
 
     Handle<VerackMessage> VerackMessage::NewInstance(ByteBuffer* bytes){
-        //Timestamp timestamp = bytes->GetLong();
-        /*std::string node_id = bytes->GetString();
-        std::string version = bytes->GetString();
-        std::string nonce = bytes->GetString();*/
-        Timestamp timestamp = GetCurrentTimestamp();
-        std::string node_id = "";
-        std::string version = "";
-        std::string nonce = "";
-        ClientType client_type = ClientType::kClient; //static_cast<ClientType>(bytes->GetUnsignedInt());
-
+        Timestamp timestamp = bytes->GetLong();
+        ClientType client_type = static_cast<ClientType>(bytes->GetInt());
+        Version version(bytes);
+        Hash nonce = bytes->GetHash();
+        UUID node_id(bytes);
         NodeAddress address; //TODO: decode callback_
         BlockHeader head = BlockHeader(bytes);
         return new VerackMessage(client_type, node_id, version, nonce, address, head, timestamp);
@@ -54,24 +48,23 @@ namespace Token{
 
     intptr_t VerackMessage::GetMessageSize() const{
         intptr_t size = 0;
-        //size += sizeof(Timestamp); // timestamp_
-        /*size += sizeof(uint32_t) + node_id_.length(); // node_id_
-        size += sizeof(uint32_t) + version_.length(); // version_
-        size += sizeof(uint32_t) + nonce_.length(); // nonce_*/
-        //size += sizeof(uint32_t); // client_type
+        size += sizeof(Timestamp); // timestamp_
+        size += sizeof(int32_t); // client_type_
+        size += Version::kSize; // version_
+        size += Hash::kSize; // nonce_
+        size += UUID::kSize; // node_id_
         //TODO: calculate sizeof(callback_)
-        size += BlockHeader::kSize;
+        size += BlockHeader::kSize; // head_
         return size;
     }
 
     bool VerackMessage::WriteMessage(ByteBuffer* bytes) const{
-        //bytes->PutLong(timestamp_);
-        /*bytes->PutString(node_id_);
-        bytes->PutString(version_);
-        bytes->PutString(nonce_);*/
-        //bytes->PutUnsignedInt(static_cast<uint32_t>(GetClientType()));
-        //TODO: encode(callback_)
-        head_.Encode(bytes);
+        bytes->PutLong(timestamp_);
+        bytes->PutInt(static_cast<int32_t>(GetClientType()));
+        version_.Write(bytes);
+        bytes->PutHash(nonce_);
+        node_id_.Write(bytes);
+        head_.Write(bytes);
         return true;
     }
 
@@ -137,11 +130,12 @@ namespace Token{
     }
 
     intptr_t BlockMessage::GetMessageSize() const{
-        return 0; //TODO: implement BlockMessage::GetMessageSize()
+        return data_->GetMessageSize();
     }
 
     bool BlockMessage::WriteMessage(ByteBuffer* bytes) const{
-        return false; //TODO: implement BlockMessage::WriteMessage(ByteBuffer*)
+        data_->Write(bytes);
+        return true;
     }
 
     Handle<InventoryMessage> InventoryMessage::NewInstance(ByteBuffer* bytes){
@@ -154,7 +148,7 @@ namespace Token{
     void InventoryMessage::DecodeItems(Token::ByteBuffer* bytes, std::vector<InventoryItem>& items, uint32_t num_items){
         for(uint32_t idx = 0; idx < num_items; idx++){
             InventoryItem::Type type = static_cast<InventoryItem::Type>(bytes->GetShort());
-            uint256_t hash = bytes->GetHash();
+            Hash hash = bytes->GetHash();
             items.push_back(InventoryItem(type, hash));
         }
     }
@@ -162,7 +156,7 @@ namespace Token{
     intptr_t InventoryMessage::GetMessageSize() const{
         intptr_t size = 0;
         size += sizeof(uint32_t); // length(items_)
-        size += (items_.size() * InventoryItem::kBufferSize);
+        size += (items_.size() * InventoryItem::kSize);
         return size;
     }
 
@@ -175,18 +169,44 @@ namespace Token{
         return true;
     }
 
+    bool GetDataMessage::WriteMessage(ByteBuffer* bytes) const{
+        bytes->PutLong(items_.size());
+        for(auto& it : items_){
+            bytes->PutInt(static_cast<int32_t>(it.GetType()));
+            bytes->PutHash(it.GetHash());
+        }
+        return true;
+    }
+
+    intptr_t GetDataMessage::GetMessageSize() const{
+        intptr_t size = 0;
+        size += sizeof(int64_t); // sizeof(items_);
+        size += items_.size() * InventoryItem::kSize; // items;
+        return size;
+    }
+
     Handle<GetDataMessage> GetDataMessage::NewInstance(ByteBuffer* bytes){
-        uint32_t num_items = bytes->GetInt();
         std::vector<InventoryItem> items;
-        DecodeItems(bytes, items, num_items);
+        int64_t num_items = bytes->GetLong();
+        LOG(INFO) << "reading " << num_items << " items";
+        for(int64_t n = 0; n < num_items; n++){
+            int32_t type = bytes->GetInt();
+            Hash hash = bytes->GetHash();
+
+            LOG(INFO) << "type: " << type;
+            LOG(INFO) << "hash: " << hash;
+            InventoryItem item(static_cast<InventoryItem::Type>(type), hash);
+            LOG(INFO) << "parsed item: " << item;
+            items.push_back(item);
+        }
         return new GetDataMessage(items);
     }
 
     const intptr_t GetBlocksMessage::kMaxNumberOfBlocks = 32;
 
     Handle<GetBlocksMessage> GetBlocksMessage::NewInstance(ByteBuffer* bytes){
-        uint256_t start = bytes->GetHash();
-        uint256_t stop = bytes->GetHash();
+        Hash start = bytes->GetHash();
+        Hash stop = bytes->GetHash();
         return new GetBlocksMessage(start, stop);
     }
 
@@ -198,14 +218,14 @@ namespace Token{
 
     Handle<NotFoundMessage> NotFoundMessage::NewInstance(ByteBuffer* bytes){
         InventoryItem::Type item_type = static_cast<InventoryItem::Type>(bytes->GetShort());
-        uint256_t item_hash = bytes->GetHash();
+        Hash item_hash = bytes->GetHash();
         std::string message = bytes->GetString();
         return new NotFoundMessage(InventoryItem(item_type, item_hash), message);
     }
 
     intptr_t NotFoundMessage::GetMessageSize() const{
         intptr_t size = 0;
-        size += InventoryItem::kBufferSize; // item_
+        size += InventoryItem::kSize; // item_
         size += sizeof(uint32_t); // length(message_)
         size += message_.length(); // message_
         return size;
@@ -219,19 +239,18 @@ namespace Token{
     }
 
     Handle<GetUnclaimedTransactionsMessage> GetUnclaimedTransactionsMessage::NewInstance(ByteBuffer* bytes){
-        std::string user = bytes->GetString();
+        User user(bytes);
         return new GetUnclaimedTransactionsMessage(user);
     }
 
     intptr_t GetUnclaimedTransactionsMessage::GetMessageSize() const{
         intptr_t size = 0;
-        size += sizeof(uint32_t); // length(user_)
-        size += user_.length();
+        size += User::kSize;
         return size;
     }
 
     bool GetUnclaimedTransactionsMessage::WriteMessage(ByteBuffer* bytes) const{
-        bytes->PutString(user_);
+        user_.Encode(bytes);
         return true;
     }
 
@@ -292,14 +311,6 @@ namespace Token{
     }
 
     intptr_t GetBlocksMessage::GetMessageSize() const{
-        return uint256_t::kSize * 2;
-    }
-
-    intptr_t GetDataMessage::GetMessageSize() const{
-        return uint256_t::kSize;//TODO fixme
-    }
-
-    bool GetDataMessage::WriteMessage(ByteBuffer* bytes) const{
-        return false; //TODO: fixme
+        return Hash::kSize * 2;
     }
 }

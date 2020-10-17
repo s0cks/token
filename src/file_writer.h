@@ -6,7 +6,7 @@
 #include "byte_buffer.h"
 #include "object.h"
 #include "vmemory.h"
-#include "uint256_t.h"
+#include "Hash.h"
 
 namespace Token{
     class FileWriter{
@@ -71,7 +71,7 @@ namespace Token{
         bool Write(int32_t value);
         bool Write(uint64_t value);
         bool Write(int64_t value);
-        bool Write(const uint256_t& hash);
+        bool Write(const Hash& hash);
         bool Write(Object* obj);
         bool NewLine();
 
@@ -111,7 +111,7 @@ namespace Token{
         bool WriteUnsignedInt(uint32_t value);
         bool WriteLong(int64_t value);
         bool WriteUnsignedLong(uint64_t value);
-        bool WriteHash(const uint256_t& value);
+        bool WriteHash(const Hash& value);
         bool WriteString(const std::string& value);
         bool WriteObject(Object* obj);
 

@@ -3,7 +3,7 @@
 
 #include <deque>
 #include <string>
-#include "uint256_t.h"
+#include "Hash.h"
 
 namespace Token{
     class Command{
@@ -45,8 +45,8 @@ namespace Token{
             return arg;
         }
 
-        uint256_t GetNextArgumentHash(){
-            return uint256_t::FromHexString(GetNextArgument());
+        Hash GetNextArgumentHash(){
+            return Hash::FromHexString(GetNextArgument());
         }
 
         uint32_t GetNextArgumentUnsignedInt(){

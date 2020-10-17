@@ -106,12 +106,12 @@ namespace Token{
         return nullptr;
     }
 
-    Handle<Block> BlockChain::GetBlock(const uint256_t& hash){
+    Handle<Block> BlockChain::GetBlock(const Hash& hash){
         if(!BlockChainIndex::HasBlockData(hash)) return nullptr;
         return BlockChainIndex::GetBlockData(hash);
     }
 
-    BlockNode* BlockChain::GetNode(const uint256_t& hash){
+    BlockNode* BlockChain::GetNode(const Hash& hash){
         LOCK_GUARD;
         BlockNode* node = GetGenesisNode();
         while(node != nullptr){
@@ -123,22 +123,22 @@ namespace Token{
         return nullptr;
     }
 
-    bool BlockChain::HasBlock(const uint256_t& hash){
+    bool BlockChain::HasBlock(const Hash& hash){
         LOCK_GUARD;
-        return !BlockChainIndex::HasBlockData(hash);
+        return BlockChainIndex::HasBlockData(hash);
     }
 
-    bool BlockChain::HasTransaction(const uint256_t& hash){
+    bool BlockChain::HasTransaction(const Hash& hash){
         LOCK_GUARD;
-        LOG(WARNING) << "BlockChain::HasTransaction(const uint256_t&) not implemented";
+        LOG(WARNING) << "BlockChain::HasTransaction(const Hash&) not implemented";
         return false;
     }
 
     void BlockChain::Append(const Handle<Block>& block){
         LOCK_GUARD;
         BlockHeader head = GetHead();
-        uint256_t hash = block->GetHash();
-        uint256_t phash = block->GetPreviousHash();
+        Hash hash = block->GetHash();
+        Hash phash = block->GetPreviousHash();
 
 #ifdef TOKEN_DEBUG
         LOG(INFO) << "appending new block:";
@@ -157,7 +157,7 @@ namespace Token{
         }
 
         if(phash != head.GetHash()){
-            LOG(WARNING) << "parent hash '" << phash << "' doesn't match <HEAD> hash: " << head.GetHash();
+            LOG(WARNING) << "parent Hash '" << phash << "' doesn't match <HEAD> Hash: " << head.GetHash();
             return;
         }
 

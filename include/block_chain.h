@@ -31,7 +31,7 @@ namespace Token{
         static void SetGenesisNode(BlockNode* node);
         static BlockNode* GetHeadNode();
         static BlockNode* GetGenesisNode();
-        static BlockNode* GetNode(const uint256_t& hash);
+        static BlockNode* GetNode(const Hash& hash);
     public:
         ~BlockChain() = delete;
 
@@ -41,11 +41,11 @@ namespace Token{
         static bool Accept(BlockChainVisitor* vis);
         static bool Accept(BlockChainDataVisitor* vis);
         static void Append(const Handle<Block>& blk);
-        static bool HasBlock(const uint256_t& hash);
-        static bool HasTransaction(const uint256_t& hash);
+        static bool HasBlock(const Hash& hash);
+        static bool HasTransaction(const Hash& hash);
         static BlockHeader GetHead();
         static Handle<Block> GetGenesis();
-        static Handle<Block> GetBlock(const uint256_t& hash);
+        static Handle<Block> GetBlock(const Hash& hash);
         static Handle<Block> GetBlock(uint32_t height);
 
         static inline bool

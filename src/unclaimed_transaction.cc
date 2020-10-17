@@ -8,7 +8,7 @@ namespace Token{
 //                                          Unclaimed Transaction
 //######################################################################################################################
     Handle<UnclaimedTransaction> UnclaimedTransaction::NewInstance(ByteBuffer* bytes){
-        uint256_t hash = bytes->GetHash();
+        Hash hash = bytes->GetHash();
         uint32_t index = bytes->GetInt();
         User user = User(bytes);
         return new UnclaimedTransaction(hash, index, user);

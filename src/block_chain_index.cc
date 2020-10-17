@@ -29,7 +29,7 @@ namespace Token{
         return index_;
     }
 
-    Handle<Block> BlockChainIndex::GetBlockData(const uint256_t& hash){
+    Handle<Block> BlockChainIndex::GetBlockData(const Hash& hash){
         leveldb::ReadOptions options;
         std::string key = KEY(hash);
         std::string filename;
@@ -49,7 +49,7 @@ namespace Token{
         return block;
     }
 
-    void BlockChainIndex::PutReference(const std::string& name, const uint256_t& hash){
+    void BlockChainIndex::PutReference(const std::string& name, const Hash& hash){
         leveldb::WriteOptions options;
         options.sync = true;
 
@@ -71,16 +71,16 @@ namespace Token{
         return GetIndex()->Get(options, name, &value).ok();
     }
 
-    uint256_t BlockChainIndex::GetReference(const std::string& name){
+    Hash BlockChainIndex::GetReference(const std::string& name){
         leveldb::ReadOptions options;
         std::string value;
         LOCK_GUARD;
         if(!GetIndex()->Get(options, name, &value).ok()){
             LOG(WARNING) << "couldn't find reference: " << name;
-            return uint256_t::Null();
+            return Hash();
         }
 
-        return uint256_t::FromHexString(value);
+        return Hash::FromHexString(value);
     }
 
     void BlockChainIndex::PutBlockData(const Handle<Block>& blk){
@@ -146,12 +146,19 @@ namespace Token{
         return count;
     }
 
-    bool BlockChainIndex::HasBlockData(const uint256_t& hash){
+    bool BlockChainIndex::HasBlockData(const Hash& hash){
         leveldb::ReadOptions options;
         std::string key = KEY(hash);
         std::string filename;
 
         LOCK_GUARD;
-        return GetIndex()->Get(options, key, &filename).ok();
+        leveldb::Status status = GetIndex()->Get(options, key, &filename);
+        if(!status.ok()){
+            LOG(WARNING) << "couldn't find block " << hash << ": " << status.ToString();
+            return false;
+        }
+
+        LOG(INFO) << "found " << hash;
+        return true;
     }
 }

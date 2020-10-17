@@ -42,19 +42,19 @@ namespace Token{
         return true;
     }
 
-    bool BlockPool::HasBlock(const uint256_t& hash){
+    bool BlockPool::HasBlock(const Hash& hash){
         LOCK_GUARD;
         return GetJournal()->HasData(hash);
     }
 
-    Handle<Block> BlockPool::GetBlock(const uint256_t& hash){
+    Handle<Block> BlockPool::GetBlock(const Hash& hash){
         LOCK_GUARD;
         return GetJournal()->HasData(hash) ?
                 GetJournal()->GetData(hash) :
                 nullptr;
     }
 
-    bool BlockPool::RemoveBlock(const uint256_t& hash){
+    bool BlockPool::RemoveBlock(const Hash& hash){
         LOCK_GUARD;
         return GetJournal()->HasData(hash) ?
                 GetJournal()->RemoveData(hash) :
@@ -85,7 +85,7 @@ namespace Token{
         return size;
     }
 
-    bool BlockPool::GetBlocks(std::vector<uint256_t>& blocks){
+    bool BlockPool::GetBlocks(std::vector<Hash>& blocks){
         LOCK_GUARD;
         DIR* dir;
         struct dirent* ent;

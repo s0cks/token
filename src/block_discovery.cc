@@ -95,14 +95,14 @@ namespace Token{
 
     static inline void
     OrphanTransaction(const Handle<Transaction>& tx){
-        uint256_t hash = tx->GetHash();
+        Hash hash = tx->GetHash();
         LOG(WARNING) << "orphaning transaction: " << hash;
         TransactionPool::RemoveTransaction(hash);
     }
 
     static inline void
     OrphanBlock(const Handle<Block>& blk){
-        uint256_t hash = blk->GetHash();
+        Hash hash = blk->GetHash();
         LOG(WARNING) << "orphaning block: " << hash;
         BlockPool::RemoveBlock(hash);
     }

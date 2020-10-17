@@ -275,7 +275,7 @@ namespace Token{
         LOG(INFO) << "getting " << items.size() << " items....";
         std::vector<Handle<Message>> response;
         for(auto& item : items){
-            uint256_t hash = item.GetHash();
+            Hash hash = item.GetHash();
             LOG(INFO) << "resolving item : " << hash;
             if(item.IsBlock()){
                 if(BlockChain::HasBlock(hash)){
@@ -311,7 +311,7 @@ namespace Token{
         Handle<BlockMessage> msg = task->GetMessage().CastTo<BlockMessage>();
 
         Block* block = msg->GetBlock();
-        uint256_t hash = block->GetHash();
+        Hash hash = block->GetHash();
         BlockPool::PutBlock(block);
 
         LOG(INFO) << "downloaded block: " << block->GetHeader();
