@@ -13,6 +13,7 @@ namespace Token{
     // - scope?
     class HandleMessageTask;
     class Session{
+        friend class BlockChainClient; //TODO: revoke access to Session from BlockChainClient
     public:
         static const uint32_t kHeartbeatIntervalMilliseconds = 30 * 1000;
         static const uint32_t kHeartbeatTimeoutMilliseconds = 1 * 60 * 1000;
@@ -50,12 +51,15 @@ namespace Token{
         NodeAddress address_;
         State state_;
 
+        Message* next_;
+
         Session(const NodeAddress& address):
             mutex_(),
             cond_(),
             uuid_(),
             address_(address),
-            state_(kDisconnected){
+            state_(kDisconnected),
+            next_(nullptr){
             uuid_generate_time_safe(uuid_);
         }
 
@@ -72,6 +76,8 @@ namespace Token{
         void SetState(State state);
         void SetID(const std::string& id);
         void OnItemReceived(const InventoryItem& item);
+        void OnNextMessageReceived(const Handle<Message>& msg);
+        Handle<Message> GetNextMessage();
 
         friend class Server;
     public:
@@ -104,12 +110,10 @@ namespace Token{
         void Send(const Handle<Message>& msg);
         void SendInventory(std::vector<InventoryItem>& items);
 
-#define DECLARE_MESSAGE_SEND(Name) \
-        inline void Send(const Handle<Name##Message>& msg){ \
-            Send(msg.CastTo<Message>()); \
-        }
-        FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_SEND)
-#undef DECLARE_MESSAGE_SEND
+#define DEFINE_SEND_MESSAGE(Name) \
+        void Send(const Handle<Name##Message>& msg){ Send(msg.CastTo<Message>()); }
+        FOR_EACH_MESSAGE_TYPE(DEFINE_SEND_MESSAGE)
+#undef DEFINE_SEND_MESSAGE
 
 #define DECLARE_MESSAGE_HANDLER(Name) \
     virtual void Handle##Name##Message(const Handle<HandleMessageTask>& task) = 0;

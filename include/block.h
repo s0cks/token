@@ -107,7 +107,7 @@ namespace Token{
     };
 
     class BlockVisitor;
-    class Block : public Object{
+    class Block : public BinaryObject{
         //TODO:
         // - validation logic
         friend class BlockHeader;
@@ -134,23 +134,46 @@ namespace Token{
         Timestamp timestamp_;
         intptr_t height_;
         uint256_t previous_hash_;
-        Array<Transaction>* transactions_;
+        Transaction** transactions_;
+        intptr_t num_transactions_;
         BloomFilter tx_bloom_; // transient
 
-        Block(Timestamp timestamp, uint32_t height, const uint256_t& phash, const Handle<Array<Transaction>>& txs):
-            Object(),
+        Block(Timestamp timestamp, uint32_t height, const uint256_t& phash, Transaction** txs, intptr_t num_txs):
+            BinaryObject(),
             timestamp_(timestamp),
             height_(height),
             previous_hash_(phash),
             transactions_(nullptr),
+            num_transactions_(num_txs),
             tx_bloom_(){
             SetType(Type::kBlockType);
-            WriteBarrier(&transactions_, txs);
+
+            if(num_txs > 0){
+                transactions_ = (Transaction**)malloc(sizeof(Transaction*)*num_txs);
+                memset(transactions_, 0, sizeof(Transaction*)*num_txs);
+                for(intptr_t idx = 0; idx < num_txs; idx++){
+                    WriteBarrier(&transactions_[idx], txs[idx]);
+                }
+            }
+
             //TODO: tx_bloom_.Put(txs[idx]->GetHash());
         }
     protected:
         bool Accept(WeakObjectPointerVisitor* vis){
             return vis->Visit(&transactions_);
+        }
+
+        bool Write(ByteBuffer* bytes) const{
+            bytes->PutLong(timestamp_);
+            bytes->PutLong(height_);
+            bytes->PutHash(previous_hash_);
+            bytes->PutLong(num_transactions_);
+            for(intptr_t idx = 0;
+                idx < num_transactions_;
+                idx++){
+                transactions_[idx]->Write(bytes);
+            }
+            return true;
         }
     public:
         ~Block() = default;
@@ -168,7 +191,7 @@ namespace Token{
         }
 
         intptr_t GetNumberOfTransactions() const{
-            return transactions_->Length();
+            return num_transactions_;
         }
 
         Timestamp GetTimestamp() const{
@@ -178,7 +201,7 @@ namespace Token{
         Handle<Transaction> GetTransaction(intptr_t idx) const{
             if(idx < 0 || idx > GetNumberOfTransactions())
                 return nullptr;
-            return transactions_->Get(idx);
+            return transactions_[idx];
         }
 
         bool IsGenesis(){
@@ -186,32 +209,25 @@ namespace Token{
         }
 
         uint256_t GetMerkleRoot() const;
-        size_t GetBufferSize() const;
-        bool Encode(ByteBuffer* bytes) const;
         bool Accept(BlockVisitor* vis) const;
         bool Contains(const uint256_t& hash) const;
         std::string ToString() const;
-
-        bool Equals(Object* obj) const{
-            if(!obj->IsBlock()) return false;
-            uint256_t hash = ((Block*)obj)->GetHash();
-            return GetHash() == hash;
-        }
 
         static Handle<Block> Genesis(); // genesis
         static Handle<Block> NewInstance(std::fstream& fd, size_t size);
         static Handle<Block> NewInstance(ByteBuffer* bytes);
 
-        static Handle<Block> NewInstance(intptr_t height, const uint256_t& phash, const Handle<Array<Transaction>>& txs, Timestamp timestamp=GetCurrentTimestamp()){
-            return new Block(timestamp, height, phash, txs);
+        static Handle<Block> NewInstance(intptr_t height, const uint256_t& phash, Transaction** txs, size_t num_txs, Timestamp timestamp=GetCurrentTimestamp()){
+            return new Block(timestamp, height, phash, txs, num_txs);
         }
 
-        static Handle<Block> NewInstance(const BlockHeader& previous, const Handle<Array<Transaction>>& txs, Timestamp timestamp=GetCurrentTimestamp()){
-            return new Block(timestamp, previous.GetHeight() + 1, previous.GetHash(), txs);
+        static Handle<Block> NewInstance(const BlockHeader& previous, Transaction** txs, size_t num_txs, Timestamp timestamp=GetCurrentTimestamp()){
+            return new Block(timestamp, previous.GetHeight() + 1, previous.GetHash(), txs, num_txs);
         }
 
         static inline Handle<Block> NewInstance(const std::string& filename){
             std::fstream fd(filename, std::ios::in|std::ios::binary);
+            LOG(INFO) << "reading " << GetFilesize(filename) << " bytes from file";
             return NewInstance(fd, GetFilesize(filename));//TODO: refactor?
         }
     };

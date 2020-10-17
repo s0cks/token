@@ -100,30 +100,6 @@ namespace Token{
             LOG(WARNING) << "couldn't seek to " << pos << " in file " << GetFilename() << ": " << strerror(err);
     }
 
-    Handle<Object> BinaryFileReader::ReadObject(){
-        ObjectHeader header = ReadUnsignedLong();
-        Type type = GetObjectHeaderType(header);
-        uint32_t size = GetObjectHeaderSize(header);
-
-        LOG(INFO) << "reading object of type: " << type << " (" << size << " Bytes) @" << GetCurrentPosition();
-        ByteBuffer bytes(size);
-        if(!ReadBytes(&bytes, size)){
-            LOG(WARNING) << "couldn't read object";
-            return nullptr;
-        }
-
-        switch(GetObjectHeaderType(header)){
-#define DEFINE_DECODE(Name) \
-            case Type::k##Name##Type: return Name::NewInstance(&bytes).CastTo<Object>();
-            FOR_EACH_TYPE(DEFINE_DECODE);
-#undef DEFINE_DECODE
-            case Type::kUnknownType:
-            default:
-                LOG(WARNING) << "unknown object type: " << type;
-                return nullptr;
-        }
-    }
-
     bool BinaryFileReader::ReadRegion(MemoryRegion* region, intptr_t nbytes){
         return ReadBytes((uint8_t*)region->GetPointer(), nbytes);
     }

@@ -24,23 +24,20 @@ namespace Token{
         void operator=(const ClientSessionInfo& info);
     };
 
-    class ClientCommand;
-    class ClientCommandHandler;
     class ClientSession : public Session{
         //TODO: add client command handler
         friend class ClientSessionInfo;
-        friend class ClientCommandHandler;
     private:
+        pthread_t thread_;
         uv_signal_t sigterm_;
         uv_signal_t sigint_;
         uv_tcp_t stream_;
         uv_timer_t hb_timer_;
         uv_timer_t hb_timeout_;
-        uv_connect_t connection_;
-        ClientCommandHandler* handler_;
+        uv_async_t shutdown_;
 
         // Info
-        NodeAddress paddress_;
+        NodeAddress address_;
         std::string pid_;
         BlockHeader head_;
 
@@ -53,11 +50,11 @@ namespace Token{
         }
 
         void SetPeerAddress(const NodeAddress& address){
-            paddress_ = address;
+            address_ = address;
         }
 
         NodeAddress GetPeerAddress() const{
-            return paddress_;
+            return address_;
         }
 
         void SetPeerID(const std::string& id){
@@ -68,6 +65,8 @@ namespace Token{
             return pid_;
         }
 
+        static void* ClientSessionThread(void* data);
+        static void OnShutdown(uv_async_t* handle);
         static void OnConnect(uv_connect_t* conn, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
         static void OnSignal(uv_signal_t* handle, int signum);
@@ -82,7 +81,7 @@ namespace Token{
             return (uv_stream_t*)&stream_;
         }
     public:
-        ClientSession(bool use_stdin);
+        ClientSession(const NodeAddress& address);
         ~ClientSession(){}
 
         ClientSessionInfo GetInfo() const{
@@ -94,65 +93,33 @@ namespace Token{
         FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
 
-        void Connect(const NodeAddress& addr);
+        bool Connect();
         void Disconnect();
     };
 
-    class ClientCommand : public Command{
-    public:
-        ClientCommand(std::deque<std::string>& args): Command(args){}
-        ~ClientCommand() = default;
-
-#define DEFINE_TYPE_CHECK(Name, Text, ArgumentCount) \
-        bool Is##Name##Command() const{ return !strncmp(name_.data(), (Text), strlen((Text))); }
-        FOR_EACH_CLIENT_COMMAND(DEFINE_TYPE_CHECK)
-#undef DEFINE_TYPE_CHECK
-    };
-
-    class ClientCommandHandler{
-        friend class ClientSession;
+    class BlockChainClient{
     private:
         ClientSession* session_;
-        uv_pipe_t stdin_;
-
-        ClientCommandHandler(ClientSession* session):
-            session_(session),
-            stdin_(){
-            stdin_.data = this;
-        }
-
-        inline void
-        Send(const Handle<Message>& msg){
-            GetSession()->Send(msg);
-        }
-
-        inline void
-        Send(std::vector<Handle<Message>>& messages){
-            GetSession()->Send(messages);
-        }
-
-#define DEFINE_SEND(Name) \
-        inline void \
-        Send(const Handle<Name##Message>& msg){ \
-            Send(msg.CastTo<Message>()); \
-        }
-        FOR_EACH_MESSAGE_TYPE(DEFINE_SEND)
-#undef DEFINE_SEND
-
-        static void OnCommandReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
-    public:
-        ~ClientCommandHandler() = default;
 
         ClientSession* GetSession() const{
             return session_;
         }
+    public:
+        BlockChainClient(const NodeAddress& address):
+            session_(new ClientSession(address)){}
+        ~BlockChainClient() = default;
 
-#define DECLARE_COMMAND_HANDLER(Name, Text, Parameters) \
-        void Handle##Name##Command(ClientCommand* cmd);
-        FOR_EACH_CLIENT_COMMAND(DECLARE_COMMAND_HANDLER);
-#undef DECLARE_COMMAND_HANDLER
+        ClientSessionInfo GetInfo() const{
+            return GetSession()->GetInfo();
+        }
 
-        void Start();
+        BlockHeader GetHead() const{
+            return GetInfo().GetHead();
+        }
+
+        bool Connect();
+        bool Disconnect();
+        Handle<Block> GetBlock(const uint256_t& hash);
     };
 }
 

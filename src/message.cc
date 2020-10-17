@@ -14,21 +14,19 @@ namespace Token{
         return new VersionMessage(client_type, version, node_id, timestamp, nonce, head);
     }
 
-    size_t VersionMessage::GetBufferSize() const{
-        size_t size = 0;
-        size += sizeof(uint64_t); // timestamp_
-        size += sizeof(uint16_t); // client_type_
-        size += sizeof(uint32_t); // length(version_)
-        size += version_.length(); // version_
-        size += sizeof(uint32_t); // length(nonce_) TODO: don't encode string values
-        size += nonce_.length(); // nonce_
-        size += sizeof(uint32_t); // length(node_id_) TODO: don't encode string values
-        size += node_id_.length(); // node_id_
+    intptr_t VersionMessage::GetMessageSize() const{
+        intptr_t size = 0;
+        size += sizeof(Timestamp); // timestamp_
+        size += sizeof(uint32_t); // client_type_
+        // TODO: don't encode string values
+        size += sizeof(uint32_t) + version_.length(); // version_
+        size += sizeof(uint32_t) + nonce_.length(); // nonce_
+        size += sizeof(uint32_t) + node_id_.length(); // node_id
         size += BlockHeader::kSize;
         return size;
     }
 
-    bool VersionMessage::Encode(ByteBuffer* bytes) const{
+    bool VersionMessage::WriteMessage(ByteBuffer* bytes) const{
         bytes->PutLong(timestamp_);
         bytes->PutShort(static_cast<uint16_t>(client_type_));
         bytes->PutString(version_);
@@ -39,48 +37,52 @@ namespace Token{
     }
 
     Handle<VerackMessage> VerackMessage::NewInstance(ByteBuffer* bytes){
-        uint64_t timestamp = bytes->GetLong();
-        std::string node_id = bytes->GetString();
+        //Timestamp timestamp = bytes->GetLong();
+        /*std::string node_id = bytes->GetString();
         std::string version = bytes->GetString();
-        std::string nonce = bytes->GetString();
-        ClientType client_type = static_cast<ClientType>(bytes->GetShort());
+        std::string nonce = bytes->GetString();*/
+        Timestamp timestamp = GetCurrentTimestamp();
+        std::string node_id = "";
+        std::string version = "";
+        std::string nonce = "";
+        ClientType client_type = ClientType::kClient; //static_cast<ClientType>(bytes->GetUnsignedInt());
+
         NodeAddress address; //TODO: decode callback_
         BlockHeader head = BlockHeader(bytes);
         return new VerackMessage(client_type, node_id, version, nonce, address, head, timestamp);
     }
 
-    size_t VerackMessage::GetBufferSize() const{
-        size_t size = 0;
-        size += sizeof(uint64_t); // timestamp_
-        size += sizeof(uint32_t); // length(node_id_)
-        size += node_id_.length(); // node_id_
-        size += sizeof(uint32_t); // length(version_)
-        size += version_.length(); // version_
-        size += sizeof(uint32_t); // length(nonce_)
-        size += nonce_.length(); // nonce_
+    intptr_t VerackMessage::GetMessageSize() const{
+        intptr_t size = 0;
+        //size += sizeof(Timestamp); // timestamp_
+        /*size += sizeof(uint32_t) + node_id_.length(); // node_id_
+        size += sizeof(uint32_t) + version_.length(); // version_
+        size += sizeof(uint32_t) + nonce_.length(); // nonce_*/
+        //size += sizeof(uint32_t); // client_type
         //TODO: calculate sizeof(callback_)
         size += BlockHeader::kSize;
         return size;
     }
 
-    bool VerackMessage::Encode(ByteBuffer* bytes) const{
-        bytes->PutLong(timestamp_);
-        bytes->PutString(node_id_);
+    bool VerackMessage::WriteMessage(ByteBuffer* bytes) const{
+        //bytes->PutLong(timestamp_);
+        /*bytes->PutString(node_id_);
         bytes->PutString(version_);
-        bytes->PutString(nonce_);
+        bytes->PutString(nonce_);*/
+        //bytes->PutUnsignedInt(static_cast<uint32_t>(GetClientType()));
         //TODO: encode(callback_)
         head_.Encode(bytes);
         return true;
     }
 
-    size_t PaxosMessage::GetBufferSize() const{
-        size_t size = 0;
+    intptr_t PaxosMessage::GetMessageSize() const{
+        intptr_t size = 0;
         size += (sizeof(uint32_t) + node_.length()); // node_
         size += proposal_->GetBufferSize();
         return size;
     }
 
-    bool PaxosMessage::Encode(ByteBuffer* bytes) const{
+    bool PaxosMessage::WriteMessage(ByteBuffer* bytes) const{
         bytes->PutString(node_);
         proposal_->Encode(bytes);
         return true;
@@ -121,12 +123,12 @@ namespace Token{
         return new TransactionMessage(tx);
     }
 
-    size_t TransactionMessage::GetBufferSize() const{
-        return data_->GetBufferSize();
+    intptr_t TransactionMessage::GetMessageSize() const{
+        return 0; //TODO: implement TransactionMessage::GetMessageSize()
     }
 
-    bool TransactionMessage::Encode(ByteBuffer* bytes) const{
-        return data_->Encode(bytes);
+    bool TransactionMessage::WriteMessage(ByteBuffer* bytes) const{
+        return false; //TODO: implement TransactionMessage::WriteMessage(ByteBuffer*)
     }
 
     Handle<BlockMessage> BlockMessage::NewInstance(ByteBuffer* bytes){
@@ -134,12 +136,12 @@ namespace Token{
         return new BlockMessage(blk);
     }
 
-    size_t BlockMessage::GetBufferSize() const{
-        return data_->GetBufferSize();
+    intptr_t BlockMessage::GetMessageSize() const{
+        return 0; //TODO: implement BlockMessage::GetMessageSize()
     }
 
-    bool BlockMessage::Encode(ByteBuffer* bytes) const{
-        return data_->Encode(bytes);
+    bool BlockMessage::WriteMessage(ByteBuffer* bytes) const{
+        return false; //TODO: implement BlockMessage::WriteMessage(ByteBuffer*)
     }
 
     Handle<InventoryMessage> InventoryMessage::NewInstance(ByteBuffer* bytes){
@@ -157,14 +159,14 @@ namespace Token{
         }
     }
 
-    size_t InventoryMessage::GetBufferSize() const{
-        size_t size = 0;
+    intptr_t InventoryMessage::GetMessageSize() const{
+        intptr_t size = 0;
         size += sizeof(uint32_t); // length(items_)
         size += (items_.size() * InventoryItem::kBufferSize);
         return size;
     }
 
-    bool InventoryMessage::Encode(ByteBuffer* bytes) const{
+    bool InventoryMessage::WriteMessage(ByteBuffer* bytes) const{
         bytes->PutInt(items_.size());
         for(auto& it : items_){
             bytes->PutShort(static_cast<uint16_t>(it.GetType()));
@@ -188,7 +190,7 @@ namespace Token{
         return new GetBlocksMessage(start, stop);
     }
 
-    bool GetBlocksMessage::Encode(ByteBuffer* bytes) const{
+    bool GetBlocksMessage::WriteMessage(ByteBuffer* bytes) const{
         bytes->PutHash(start_);
         bytes->PutHash(stop_);
         return true;
@@ -201,15 +203,15 @@ namespace Token{
         return new NotFoundMessage(InventoryItem(item_type, item_hash), message);
     }
 
-    size_t NotFoundMessage::GetBufferSize() const{
-        size_t size = 0;
+    intptr_t NotFoundMessage::GetMessageSize() const{
+        intptr_t size = 0;
         size += InventoryItem::kBufferSize; // item_
         size += sizeof(uint32_t); // length(message_)
         size += message_.length(); // message_
         return size;
     }
 
-    bool NotFoundMessage::Encode(ByteBuffer* bytes) const{
+    bool NotFoundMessage::WriteMessage(ByteBuffer* bytes) const{
         bytes->PutShort(static_cast<uint16_t>(item_.GetType()));
         bytes->PutHash(item_.GetHash());
         bytes->PutString(message_);
@@ -221,31 +223,16 @@ namespace Token{
         return new GetUnclaimedTransactionsMessage(user);
     }
 
-    size_t GetUnclaimedTransactionsMessage::GetBufferSize() const{
-        size_t size = 0;
+    intptr_t GetUnclaimedTransactionsMessage::GetMessageSize() const{
+        intptr_t size = 0;
         size += sizeof(uint32_t); // length(user_)
         size += user_.length();
         return size;
     }
 
-    bool GetUnclaimedTransactionsMessage::Encode(ByteBuffer* bytes) const{
+    bool GetUnclaimedTransactionsMessage::WriteMessage(ByteBuffer* bytes) const{
         bytes->PutString(user_);
         return true;
-    }
-
-    Handle<Message> Message::Decode(Message::MessageType type, ByteBuffer* bytes){
-#define DECLARE_DECODE(Name) \
-        case Message::MessageType::k##Name##MessageType:{ \
-            return Name##Message::NewInstance(bytes).CastTo<Message>(); \
-        }
-        switch(type){
-            FOR_EACH_MESSAGE_TYPE(DECLARE_DECODE)
-            default:{
-                LOG(ERROR) << "invalid message of type " << static_cast<uint16_t>(type);
-                return nullptr;
-            }
-        }
-#undef DECLARE_DECODE
     }
 
     Handle<Proposal> PaxosMessage::GetProposal() const{
@@ -262,5 +249,57 @@ namespace Token{
         }
         */
         return proposal_;
+    }
+
+    intptr_t PrepareMessage::GetMessageSize() const{
+        return PaxosMessage::GetMessageSize();
+    }
+
+    bool PrepareMessage::WriteMessage(ByteBuffer* bytes) const{
+        return PaxosMessage::WriteMessage(bytes);
+    }
+
+    intptr_t PromiseMessage::GetMessageSize() const{
+        return PaxosMessage::GetMessageSize();
+    }
+
+    bool PromiseMessage::WriteMessage(ByteBuffer* bytes) const{
+        return PaxosMessage::WriteMessage(bytes);
+    }
+
+    intptr_t CommitMessage::GetMessageSize() const{
+        return PaxosMessage::GetMessageSize();
+    }
+
+    bool CommitMessage::WriteMessage(ByteBuffer* bytes) const{
+        return PaxosMessage::WriteMessage(bytes);
+    }
+
+    intptr_t AcceptedMessage::GetMessageSize() const{
+        return PaxosMessage::GetMessageSize();
+    }
+
+    bool AcceptedMessage::WriteMessage(ByteBuffer* bytes) const{
+        return PaxosMessage::WriteMessage(bytes);
+    }
+
+    intptr_t RejectedMessage::GetMessageSize() const{
+        return PaxosMessage::GetMessageSize();
+    }
+
+    bool RejectedMessage::WriteMessage(ByteBuffer* bytes) const{
+        return PaxosMessage::WriteMessage(bytes);
+    }
+
+    intptr_t GetBlocksMessage::GetMessageSize() const{
+        return uint256_t::kSize * 2;
+    }
+
+    intptr_t GetDataMessage::GetMessageSize() const{
+        return uint256_t::kSize;//TODO fixme
+    }
+
+    bool GetDataMessage::WriteMessage(ByteBuffer* bytes) const{
+        return false; //TODO: fixme
     }
 }

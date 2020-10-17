@@ -64,7 +64,6 @@ namespace Token{
         }
 
         bool ReadRegion(MemoryRegion* region, intptr_t nbytes);
-        Handle<Object> ReadObject();
     };
 }
 

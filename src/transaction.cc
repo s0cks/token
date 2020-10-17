@@ -13,23 +13,8 @@ namespace Token{
     Handle<Input> Input::NewInstance(ByteBuffer* bytes){
         uint256_t hash = bytes->GetHash();
         uint32_t index = bytes->GetInt();
-        UserID user(bytes);
+        User user(bytes);
         return new Input(hash, index, user);
-    }
-
-    size_t Input::GetBufferSize() const{
-        size_t size = 0;
-        size += uint256_t::kSize; // hash_
-        size += sizeof(uint32_t); // index_
-        size += UserID::kSize;
-        return size;
-    }
-
-    bool Input::Encode(ByteBuffer* bytes) const{
-        bytes->PutHash(hash_);
-        bytes->PutInt(index_);
-        user_.Encode(bytes);
-        return true;
     }
 
     std::string Input::ToString() const{
@@ -46,44 +31,29 @@ namespace Token{
 //                                          Output
 //######################################################################################################################
     Handle<Output> Output::NewInstance(ByteBuffer* bytes){
-        UserID user(bytes);
-        TokenID token(bytes);
-        return new Output(user, token);
-    }
-
-    size_t Output::GetBufferSize() const{
-        size_t size = 0;
-        size += UserID::kSize;
-        size += TokenID::kSize;
-        return size;
-    }
-
-    bool Output::Encode(ByteBuffer* bytes) const{
-        user_.Encode(bytes);
-        token_.Encode(bytes);
-        return true;
+        User user(bytes);
+        Product product(bytes);
+        return new Output(user, product);
     }
 
     std::string Output::ToString() const{
         std::stringstream stream;
-        stream << "Output(" << GetUser() << "; " << GetToken() << ")";
+        stream << "Output(" << GetUser() << "; " << GetProduct() << ")";
         return stream.str();
     }
 //######################################################################################################################
 //                                          Transaction
 //######################################################################################################################
     Handle<Transaction> Transaction::NewInstance(ByteBuffer* bytes){
-        uint64_t timestamp = bytes->GetLong();
-        uint32_t index = bytes->GetInt();
-
-        // parse inputs
-        uint32_t num_inputs = bytes->GetInt();
+        Timestamp timestamp = bytes->GetLong();
+        intptr_t index = bytes->GetLong();
+        intptr_t num_inputs = bytes->GetLong();
         Input* inputs[num_inputs];
         for(uint32_t idx = 0; idx < num_inputs; idx++)
             inputs[idx] = Input::NewInstance(bytes);
 
         // parse outputs
-        uint32_t num_outputs = bytes->GetInt();
+        intptr_t num_outputs = bytes->GetLong();
         Output* outputs[num_outputs];
         for(uint32_t idx = 0; idx < num_outputs; idx++)
             outputs[idx] = Output::NewInstance(bytes);
@@ -94,42 +64,6 @@ namespace Token{
         ByteBuffer bytes(size);
         fd.read((char*)bytes.data(), size);
         return NewInstance(&bytes);
-    }
-
-    size_t Transaction::GetBufferSize() const{
-        size_t size = 0;
-        size += sizeof(uint64_t); // timestamp_
-        size += sizeof(uint32_t); // index_
-        size += sizeof(uint32_t); // num_inputs_
-        for(uint32_t idx = 0; idx < GetNumberOfInputs(); idx++)
-            size += GetInput(idx)->GetBufferSize(); // inputs_[idx]
-        size += sizeof(uint32_t); // num_outputs_
-        for(uint32_t idx = 0; idx < GetNumberOfOutputs(); idx++)
-            size += GetOutput(idx)->GetBufferSize(); // outputs_[idx]
-        return size;
-    }
-
-    bool Transaction::Encode(ByteBuffer* bytes) const{
-        bytes->PutLong(timestamp_);
-        bytes->PutInt(index_);
-
-        size_t num_inputs = GetNumberOfInputs();
-        bytes->PutInt(num_inputs);
-        uint32_t idx;
-        for(idx = 0; idx < num_inputs; idx++){
-            Handle<Input> input = GetInput(idx);
-            if(!input->Encode(bytes))
-                return false;
-        }
-
-        size_t num_outputs = GetNumberOfOutputs();
-        bytes->PutInt(num_outputs);
-        for(idx = 0; idx < num_outputs; idx++){
-            Handle<Output> output = GetOutput(idx);
-            if(!output->Encode(bytes))
-                return false;
-        }
-        return true;
     }
 
     std::string Transaction::ToString() const{

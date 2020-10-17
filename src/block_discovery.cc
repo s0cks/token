@@ -74,13 +74,7 @@ namespace Token{
             // Sort the Transactions by Timestamp
             std::sort(transactions_, transactions_+num_transactions_, CompareTimestamp);
             // Return a New Block of size Block::kMaxTransactionsForBlock, using sorted Transactions
-
-            Handle<Array<Transaction>> txs = Array<Transaction>::New(num_transactions_);
-            for(intptr_t idx = 0; idx < num_transactions_; idx++){
-                txs->Put(idx, transactions_[idx]);
-            }
-
-            return Block::NewInstance(parent, txs);
+            return Block::NewInstance(parent, transactions_, num_transactions_);
         }
 
         bool Visit(const Handle<Transaction>& tx){
@@ -222,18 +216,11 @@ namespace Token{
                 LOG(INFO) << "creating new block from transaction pool";
                 Handle<Block> block = CreateNewBlock(2);
 
-                BlockValidator validator(block);
-                if(!validator.IsValid()){
-                    LOG(WARNING) << "invalid block discovered: " << block;
-                    LOG(WARNING) << "removing " << validator.GetNumberOfInvalidTransactions() << " invalid transactions from pool....";
-                    auto iter = validator.invalid_begin();
-                    while(iter != validator.invalid_end()){
-                        Handle<Transaction> invalid_tx = (*iter);
-                        OrphanTransaction(invalid_tx);
-                        iter++;
-                    }
-                    OrphanBlock(block);
-                    continue;
+                LOG(INFO) << "validating block: " << block;
+                if(!BlockVerifier::IsValid(block)){
+                    //TODO: orphan block properly
+                    LOG(WARNING) << "block " << block << " is invalid, orphaning....";
+                    return;
                 }
 
                 LOG(INFO) << "discovered block " << block << ", creating proposal....";

@@ -2,7 +2,6 @@
 #define TOKEN_UNCLAIMED_TRANSACTION_POOL_H
 
 #include "unclaimed_transaction.h"
-#include "memory_pool.h"
 
 namespace Token{
     class UnclaimedTransactionPoolVisitor;

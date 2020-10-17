@@ -23,7 +23,7 @@ namespace Token{
         }
         uint256_t(uint8_t* data):
             data_(){
-            memcpy(data_, data, sizeof(data_));
+            memcpy(data_, data, kSize);
         }
 
         uint256_t(const std::string& hex):

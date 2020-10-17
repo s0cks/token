@@ -8,6 +8,7 @@ namespace Token{
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
 
     void Session::WaitForState(State state){
+        //TODO: add a timeout to Session::WaitForState(State)
         LOCK;
         while(state_ != state) WAIT;
     }
@@ -20,6 +21,17 @@ namespace Token{
     void Session::OnItemReceived(const InventoryItem& item){
         LOCK;// wuuuuuuuuut???
         SIGNAL_ALL;
+    }
+
+    void Session::OnNextMessageReceived(const Handle<Message>& msg){
+        LOCK;
+        next_ = msg;
+        SIGNAL_ALL;
+    }
+
+    Handle<Message> Session::GetNextMessage(){
+        LOCK;
+        return next_;
     }
 
     void Session::SetState(Session::State state){
@@ -51,13 +63,15 @@ namespace Token{
     //TODO: there seems to be some memory issues
     void Session::Send(const Handle<Message>& msg){
         uint32_t type = static_cast<uint32_t>(msg->GetMessageType());
-        uint64_t size = msg->GetBufferSize();
-        uint64_t total_size = Message::kHeaderSize + size;
+        intptr_t size = msg->GetMessageSize();
+        intptr_t total_size = Message::kHeaderSize + size;
+
+        LOG(INFO) << "sending " << msg << " (" << size << " bytes)";
 
         ByteBuffer bytes(total_size);
         bytes.PutInt(type);
         bytes.PutLong(size);
-        if(!msg->Encode(&bytes)){
+        if(!msg->WriteMessage(&bytes)){
             LOG(WARNING) << "couldn't encode message: " << msg->ToString();
             return;
         }
@@ -84,13 +98,13 @@ namespace Token{
             LOG(INFO) << "sending " << msg->ToString();
 
             uint32_t type = static_cast<uint32_t>(msg->GetMessageType());
-            uint64_t size = msg->GetBufferSize();
-            uint64_t total_size = Message::kHeaderSize + size;
+            intptr_t size = msg->GetMessageSize();
+            intptr_t total_size = Message::kHeaderSize + size;
 
-            ByteBuffer* bytes = new ByteBuffer(total_size);
+            ByteBuffer* bytes = new ByteBuffer(total_size); // this is bad?
             bytes->PutInt(type);
             bytes->PutLong(size);
-            if(!msg->Encode(bytes)){
+            if(!msg->WriteMessage(bytes)){
                 LOG(WARNING) << "couldn't encode message: " << msg->ToString();
                 return;
             }

@@ -1,5 +1,6 @@
 #include "server.h"
 #include "task.h"
+#include "vthread.h"
 #include "client.h"
 #include "byte_buffer.h"
 
@@ -24,30 +25,38 @@ namespace Token{
         SessionInfo::operator=(info);
     }
 
-    ClientSession::ClientSession(bool use_stdin):
+    ClientSession::ClientSession(const NodeAddress& address):
         Session(&stream_),
+        thread_(),
         sigterm_(),
         sigint_(),
         stream_(),
-        handler_(nullptr){
+        hb_timer_(),
+        hb_timeout_(),
+        shutdown_(),
+        address_(address),
+        pid_(),
+        head_(){
+        shutdown_.data = this;
         stream_.data = this;
-        connection_.data = this;
         hb_timer_.data = this;
         hb_timeout_.data = this;
-        if(use_stdin){
-            handler_ = new ClientCommandHandler(this);
-        }
     }
 
     void ClientSession::OnSignal(uv_signal_t* handle, int signum){
         uv_stop(handle->loop);
     }
 
+    void ClientSession::OnShutdown(uv_async_t* handle){
+        PeerSession* session = (PeerSession*)handle->data;
+        session->Disconnect();
+    }
+
     void ClientSession::OnHeartbeatTick(uv_timer_t* handle){
         ClientSession* client = (ClientSession*)handle->data;
 
         LOG(INFO) << "sending ping to peer....";
-        client->Send(VersionMessage::NewInstance(client->GetID()));
+        client->Send(VerackMessage::NewInstance(client->GetID()));
         uv_timer_start(&client->hb_timeout_, &OnHeartbeatTimeout, Session::kHeartbeatTimeoutMilliseconds, 0);
     }
 
@@ -58,66 +67,76 @@ namespace Token{
         //TODO: disconnect client
     }
 
-    void ClientSession::Connect(const NodeAddress& addr){
-        LOG(INFO) << "connecting to server: " << addr;
-        SetState(State::kConnecting);
+    void* ClientSession::ClientSessionThread(void* data){
+        ClientSession* session = (ClientSession*)data;
+        NodeAddress address = session->GetPeerAddress();
+        LOG(INFO) << "connecting to peer " << address << "....";
 
         uv_loop_t* loop = uv_loop_new();
         uv_loop_init(loop);
-        uv_timer_init(loop, &hb_timer_);
-        uv_timer_init(loop, &hb_timeout_);
-        uv_signal_init(loop, &sigterm_);
-        uv_signal_start(&sigterm_, &OnSignal, SIGTERM);
+        uv_timer_init(loop, &session->hb_timer_);
+        uv_timer_init(loop, &session->hb_timeout_);
+        uv_signal_init(loop, &session->sigterm_);
+        uv_signal_start(&session->sigterm_, &OnSignal, SIGTERM);
 
-        uv_signal_init(loop, &sigint_);
-        uv_signal_start(&sigterm_, &OnSignal, SIGINT);
+        uv_signal_init(loop, &session->sigint_);
+        uv_signal_start(&session->sigterm_, &OnSignal, SIGINT);
 
-        uv_tcp_init(loop, &stream_);
-        uv_tcp_keepalive(&stream_, 1, 60);
+        uv_async_init(loop, &session->shutdown_, &OnShutdown);
 
-        struct sockaddr_in address;
-        if(!addr.Get(&address)){
-            LOG(WARNING) << "couldn't resolved address '" << addr;
-            goto cleanup;
-        }
+        uv_tcp_init(loop, &session->stream_);
+
+        struct sockaddr_in addr;
+        uv_ip4_addr(address.GetAddress().c_str(), address.GetPort(), &addr);
+
+        uv_connect_t request;
+        request.data = session;
 
         int err;
-        if((err = uv_tcp_connect(&connection_, &stream_, (const struct sockaddr*)&address, &OnConnect)) != 0){
+        if((err = uv_tcp_connect(&request, &session->stream_, (const struct sockaddr*)&addr, &OnConnect)) != 0){
             LOG(WARNING) << "couldn't connect to peer: " << uv_strerror(err);
             goto cleanup;
         }
 
-        if(handler_ != nullptr){
-            handler_->Start();
-        }
-
         uv_run(loop, UV_RUN_DEFAULT);
-        uv_signal_stop(&sigterm_);
-        uv_signal_stop(&sigint_);
+        uv_signal_stop(&session->sigterm_);
+        uv_signal_stop(&session->sigint_);
     cleanup:
         uv_loop_close(loop);
+        LOG(INFO) << "disconnected from peer: " << address;
+        pthread_exit(0);
+    }
+
+    bool ClientSession::Connect(){
+        int ret;
+        if((ret = pthread_create(&thread_, NULL, &ClientSessionThread, this)) != 0){
+            LOG(ERROR) << "couldn't start client thread: " << strerror(ret);
+            return false;
+        }
+        return true;
     }
 
     void ClientSession::OnConnect(uv_connect_t* conn, int status){
+        ClientSession* session = (ClientSession*)conn->data;
         if(status != 0){
-            LOG(WARNING) << "error connecting to server: " << uv_strerror(status);
+            LOG(WARNING) << "client accept error: " << uv_strerror(status);
+            session->Disconnect();
+            return;
+        }
+
+        session->SetState(Session::kConnecting);
+        if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
+            LOG(WARNING) << "client read error: " << uv_strerror(status);
+            session->Disconnect();
+            return;
+        }
+
+        if((status = uv_timer_start(&session->hb_timer_, &OnHeartbeatTick, 0, Session::kHeartbeatIntervalMilliseconds)) != 0){
+            LOG(WARNING) << "couldn't start the heartbeat timer: " << uv_strerror(status);
             return; //TODO: terminate connection
         }
 
-        ClientSession* client = (ClientSession*)conn->data;
-
-        int err;
-        if((err = uv_read_start(client->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
-            LOG(ERROR) << " client read error: " << uv_strerror(err);
-            return; //TODO: terminate connection
-        }
-
-        if((err = uv_timer_start(&client->hb_timer_, &OnHeartbeatTick, 0, Session::kHeartbeatIntervalMilliseconds)) != 0){
-            LOG(WARNING) << "couldn't start the heartbeat timer: " << uv_strerror(err);
-            return; //TODO: terminate connection
-        }
-
-        client->Send(VersionMessage::NewInstance(client->GetID()));
+        session->Send(VersionMessage::NewInstance(session->GetID()));
     }
 
     void ClientSession::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
@@ -138,19 +157,33 @@ namespace Token{
 
         uint32_t offset = 0;
         std::vector<Handle<Message>> messages;
+        ByteBuffer bytes((uint8_t*)buff->base, buff->len);
         do{
-            ByteBuffer bytes((uint8_t*)buff->base, buff->len);
             uint32_t mtype = bytes.GetInt();
-            uint64_t msize = bytes.GetLong();
-            Handle<Message> msg = Message::Decode(static_cast<Message::MessageType>(mtype), &bytes);
-            LOG(INFO) << "decoded message: " << msg->ToString(); //TODO: handle decode failures
-            messages.push_back(msg);
+            intptr_t msize = bytes.GetLong();
+
+            switch(mtype) {
+#define DEFINE_DECODE(Name) \
+                case Message::MessageType::k##Name##MessageType:{ \
+                    Handle<Message> msg = Name##Message::NewInstance(&bytes).CastTo<Message>(); \
+                    LOG(INFO) << "decoded: " << msg << " (" << msize << " bytes)"; \
+                    messages.push_back(msg); \
+                    break; \
+                }
+                FOR_EACH_MESSAGE_TYPE(DEFINE_DECODE)
+#undef DEFINE_DECODE
+                case Message::MessageType::kUnknownMessageType:
+                default:
+                    LOG(ERROR) << "unknown message type " << mtype << " of size " << msize;
+                    break;
+            }
 
             offset += (msize + Message::kHeaderSize);
         } while((offset + Message::kHeaderSize) < nread);
 
         for(size_t idx = 0; idx < messages.size(); idx++){
-            Handle<Message> msg = messages[idx];
+            Handle<Message> msg = session->next_ = messages[idx];
+            session->OnNextMessageReceived(msg);
             Handle<HandleMessageTask> task = HandleMessageTask::NewInstance(session, msg);
             switch(msg->GetMessageType()){
 #define DEFINE_HANDLER_CASE(Name) \
@@ -179,6 +212,8 @@ namespace Token{
             LOG(INFO) << "client connected!";
             client->SetState(State::kConnected);
         }
+
+        LOG(INFO) << "head: " << msg->GetHead();
         client->SetHead(msg->GetHead());
         client->SetPeerID(msg->GetID());
         client->SetPeerAddress(msg->GetCallbackAddress());
@@ -220,119 +255,52 @@ namespace Token{
     void ClientSession::HandleGetUnclaimedTransactionsMessage(const Handle<HandleMessageTask>& task){}
 
     void ClientSession::Disconnect(){
-        LOG(WARNING) << "disconnecting...";
-        uv_read_stop(GetStream());
-        uv_stop(GetLoop());
-        uv_loop_close(GetLoop());
-        SetState(State::kDisconnected);
-    }
-
-    //TODO:
-    // need to wait
-    // in order to wait:
-    //   - send_gethead()
-    //   - spawn_response_handler_task() ------------> - wait_for(cv_)
-    //   - continue                               /        .....
-    //      .....                               /          .....
-    //   - receive_head                       /            .....
-    //   - signal_all() --------------------/          - log_head()
-
-    void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
-        //TODO: buff->base = (char*)Allocator::Allocate(kBufferSize);
-        buff->base = (char*)malloc(2048);
-        buff->len = 2048;
-    }
-
-    void ClientCommandHandler::Start(){
-        ClientSession* client = GetSession();
-        uv_loop_t* loop = client->GetLoop();
-
-        uv_pipe_init(loop, &stdin_, 0);
-        uv_pipe_open(&stdin_, 0);
-
-        int err;
-        if((err = uv_read_start((uv_stream_t*)&stdin_, &AllocBuffer, &OnCommandReceived)) != 0){
-            LOG(ERROR) << "couldn't start reading from stdin-pipe: " << uv_strerror(err);
-            return; //TODO: terminate connection
+        if(pthread_self() == thread_){
+            // Inside Session OSThreadBase
+            uv_read_stop((uv_stream_t*)&stream_);
+            uv_stop(stream_.loop);
+            uv_loop_close(stream_.loop);
+            SetState(State::kDisconnected);
+        } else{
+            // Outside Session OSThreadBase
+            uv_async_send(&shutdown_);
         }
     }
 
-    void ClientCommandHandler::HandleStatusCommand(ClientCommand* cmd){
-        ClientSessionInfo info = GetSession()->GetInfo();
-        LOG(INFO) << "Client ID: " << info.GetID();
-        switch(info.GetState()){
-            case Session::State::kDisconnected:
-                LOG(INFO) << "Disconnected!";
-                break;
-            case Session::State::kConnecting:
-                LOG(INFO) << "Connecting....";
-                break;
-            case Session::State::kConnected:
-                LOG(INFO) << "Connected.";
-                break;
-            default:
-                LOG(WARNING) << "Unknown Connection Status!";
-                break;
-        }
-        LOG(INFO) << "Peer Information:";
-        LOG(INFO) << "  - ID: " << info.GetPeerID();
-        LOG(INFO) << "  - Address: " << info.GetPeerAddress();
-        LOG(INFO) << "  - Head: " << info.GetHead();
-
+    bool BlockChainClient::Connect(){
+        if(!GetSession()->Connect())
+            return false;
+        // this will cause an indefinite wait if the connection fails before the state hits kConnected
+        GetSession()->WaitForState(Session::kConnected);
+        return true;
     }
 
-    void ClientCommandHandler::HandleDisconnectCommand(ClientCommand* cmd){
-        uv_read_stop((uv_stream_t*)&stdin_);
+    bool BlockChainClient::Disconnect(){
         GetSession()->Disconnect();
+        return true;//TODO: better response for BlockChainClient::Disconnect()
     }
 
-    void ClientCommandHandler::HandleTransactionCommand(ClientCommand* cmd){
-        uint256_t tx_hash = cmd->GetNextArgumentHash();
-        uint32_t index = cmd->GetNextArgumentUnsignedInt();
-        std::string user = cmd->GetNextArgument();
-
-        Input* inputs[] = {
-            Input::NewInstance(tx_hash, index, "TestUser"),
-        };
-
-        Output* outputs[] = {
-            Output::NewInstance(user, "TestToken"),
-        };
-
-        Handle<Transaction> tx = Transaction::NewInstance(0, inputs, 1, outputs, 1);
-        Handle<TransactionMessage> msg = TransactionMessage::NewInstance(tx);
-        LOG(INFO) << "sending transaction: " << tx->GetHash();
-        Send(msg);
-    }
-
-    void ClientCommandHandler::OnCommandReceived(uv_stream_t *stream, ssize_t nread, const uv_buf_t* buff){
-        ClientCommandHandler* handler = (ClientCommandHandler*)stream->data;
-
-        if(nread == UV_EOF){
-            LOG(ERROR) << "client disconnected!";
-            return;
-        } else if(nread < 0){
-            LOG(ERROR) << "[" << nread << "] client read error: " << std::string(uv_strerror(nread));
-            return;
-        } else if(nread == 0){
-            LOG(WARNING) << "zero message size received";
-            return;
-        } else if(nread >= 4096){
-            LOG(ERROR) << "too large of a buffer";
-            return;
+    Handle<Block> BlockChainClient::GetBlock(const uint256_t& hash){
+        LOG(INFO) << "getting block: " << hash;
+        ClientSession* session = GetSession();
+        if(session->IsConnecting()){
+            LOG(INFO) << "waiting for client to connect...";
+            session->WaitForState(Session::kConnected);
         }
 
-        std::string line(buff->base, nread-1);
-        std::deque<std::string> args;
-        SplitString(line, args, ' ');
-
-        ClientCommand cmd(args);
-#define DECLARE_CHECK(Name, Text, ArgumentCount) \
-            if(cmd.Is##Name##Command()){ \
-                handler->Handle##Name##Command(&cmd); \
-                return; \
-            }
-        FOR_EACH_CLIENT_COMMAND(DECLARE_CHECK);
-#undef DECLARE_CHECK
+        std::vector<InventoryItem> items = {
+            InventoryItem(InventoryItem::kBlock, hash)
+        };
+        session->Send(GetDataMessage::NewInstance(items));
+        //TODO:session->WaitForNextMessage();
+        Handle<Message> next = session->GetNextMessage();
+        if(next->IsBlockMessage()){
+            return next.CastTo<BlockMessage>()->GetBlock();
+        } else if(next->IsNotFoundMessage()){
+            return Handle<Block>();
+        } else{
+            LOG(ERROR) << "couldn't handle: " << next;
+            return nullptr;
+        }
     }
 }

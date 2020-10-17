@@ -6,79 +6,71 @@
 #include "transaction_validator.h"
 
 namespace Token{
-    class BlockValidator : public BlockVisitor{
-    public:
-        typedef std::vector<Transaction*> TransactionList;
+    class BlockVerifier : public BlockVisitor{
     private:
-        Block* block_;
-        TransactionList valid_txs_;
-        TransactionList invalid_txs_;
+        bool strict_;
+        std::vector<uint256_t>& valid_;
+        std::vector<uint256_t>& invalid_;
+
+        BlockVerifier(bool strict, std::vector<uint256_t>& valid, std::vector<uint256_t>& invalid):
+            strict_(strict),
+            valid_(valid),
+            invalid_(invalid){}
     public:
-        BlockValidator(Block* block):
-            block_(block),
-            valid_txs_(),
-            invalid_txs_(){}
-        ~BlockValidator(){}
+        ~BlockVerifier() = default;
 
-        Block* GetBlock() const{
-            return block_;
-        }
-
-        bool IsValid(const Handle<Transaction>& tx){
-            uint256_t hash = tx->GetHash();
-            if(tx->GetNumberOfInputs() <= 0){
-                LOG(WARNING) << "transaction " << hash << " has no inputs";
-                return false;
-            } else if(tx->GetNumberOfOutputs() <= 0){
-                LOG(WARNING) << "transaction " << hash << " has no outputs";
-                return false;
-            }
-            return TransactionValidator::IsValid(tx);
+        bool IsStrict() const{
+            return strict_;
         }
 
         bool Visit(const Handle<Transaction>& tx){
-            if(!IsValid(tx)){
-                invalid_txs_.push_back(tx);
+            uint256_t hash = tx->GetHash();
+            if(tx->GetNumberOfInputs() <= 0){
+                invalid_.push_back(hash);
+                LOG(WARNING) << "transaction " << hash << " is invalid, no inputs.";
+                return false;
+            } else if(tx->GetNumberOfOutputs() <= 0){
+                invalid_.push_back(hash);
+                LOG(WARNING) << "transaction " << hash << " is invalid, no outputs.";
                 return false;
             }
 
-            valid_txs_.push_back(tx);
+            if(IsStrict()){
+                if(!TransactionValidator::IsValid(tx)){
+                    invalid_.push_back(hash);
+                    LOG(WARNING) << "transaction " << hash << " is invalid, invalid data";
+                    return false;
+                }
+            }
+
+            valid_.push_back(hash);
+            LOG(INFO) << "transaction " << hash << " is valid";
             return true;
         }
 
-        bool IsValid() const{
-            if(!GetBlock()->Accept((BlockVisitor*)this))
+        static bool IsValid(const Handle<Block>& blk, bool strict=false){
+            LOG(INFO) << "verifying block " << blk->GetHash();
+            std::vector<uint256_t> valid;
+            std::vector<uint256_t> invalid;
+            BlockVerifier verifier(strict, valid, invalid);
+            if(!blk->Accept(&verifier))
                 return false;
-            return GetNumberOfValidTransactions() == GetBlock()->GetNumberOfTransactions();
-        }
 
-        intptr_t GetNumberOfInvalidTransactions() const{
-            return invalid_txs_.size();
-        }
-
-        intptr_t GetNumberOfValidTransactions() const{
-            return valid_txs_.size();
-        }
-
-        TransactionList::const_iterator valid_begin() const{
-            return valid_txs_.begin();
-        }
-
-        TransactionList::const_iterator valid_end() const{
-            return valid_txs_.end();
-        }
-
-        TransactionList::const_iterator invalid_begin() const{
-            return invalid_txs_.begin();
-        }
-
-        TransactionList::const_iterator invalid_end() const{
-            return invalid_txs_.end();
-        }
-
-        static bool IsValid(Block* block){
-            BlockValidator validator(block);
-            return validator.IsValid();
+            if(valid.empty()){
+                LOG(WARNING) << "block " << blk->GetHash() << " is invalid, no valid transactions.";
+                return false;
+            } else if(invalid.size() > valid.size()){
+                LOG(WARNING) << "block " << blk->GetHash() << " is invalid, more invalid than valid transactions.";
+                return false;
+            } else if(invalid.empty()){
+                LOG(INFO) << "block " << blk->GetHash() << " is valid.";
+                return true;
+            } else{
+                LOG(INFO) << "block " << blk->GetHash() << " is partially invalid.";
+                LOG(INFO) << blk << " valid transactions: " << valid.size();
+                LOG(INFO) << blk << " invalid transactions: " << invalid.size();
+                return true;
+            }
         }
     };
 }

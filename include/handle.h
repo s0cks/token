@@ -81,7 +81,12 @@ namespace Token{
         }
 
         friend std::ostream& operator<<(std::ostream& stream, const Handle<T>& handle){
-            stream << handle.operator->()->ToString();
+            Object* ptr = handle.GetPointer();
+            if(!ptr){
+                stream << "Null";
+            } else{
+                stream << ((T*)ptr)->ToString();
+            }
             return stream;
         }
     };

@@ -10,10 +10,10 @@
 #include "keychain.h"
 #include "allocator.h"
 #include "uint256_t.h"
+#include "byte_buffer.h"
 
 namespace Token{
     class Object;
-    class ByteBuffer;
 
 #define FOR_EACH_TYPE(V) \
     V(Block) \
@@ -43,12 +43,6 @@ namespace Token{
 #undef DEFINE_TOSTRING
         }
     }
-
-    typedef uint64_t ObjectHeader;
-
-    ObjectHeader CreateObjectHeader(Object* obj);
-    Type GetObjectHeaderType(ObjectHeader header);
-    uint32_t GetObjectHeaderSize(ObjectHeader header);
 
     class Object{
         //TODO:
@@ -135,7 +129,6 @@ namespace Token{
             WriteBarrier((Object**)slot, (Object*)handle);
         }
 
-        virtual bool Encode(ByteBuffer* bytes)const{ return false; }
         virtual bool Accept(WeakObjectPointerVisitor* vis){ return true; }
     public:
         virtual ~Object() = default;
@@ -178,23 +171,6 @@ namespace Token{
             return ss.str();
         }
 
-        virtual bool Equals(Object* obj) const{
-            return GetHash() == obj->GetHash();
-        }
-
-        virtual bool Compare(Object* obj) const{
-            return true;
-        }
-
-        bool WriteToFile(const std::string& filename) const{
-            std::fstream fd(filename, std::ios::out|std::ios::binary);
-            return WriteToFile(fd);
-        }
-
-        bool WriteToFile(std::fstream& file) const;
-        uint256_t GetHash() const;
-        virtual size_t GetBufferSize() const{ return 0; }
-
 #define DECLARE_TYPECHECK(Name) \
         bool Is##Name() const{ \
             return GetType() == Type::k##Name##Type; \
@@ -209,6 +185,21 @@ namespace Token{
         static void* operator new[](size_t) = delete;
         static void operator delete(void*){
             assert(0);
+        }
+    };
+
+    class BinaryObject : public Object{
+    public:
+        BinaryObject(): Object(){}
+        virtual ~BinaryObject() = default;
+
+        uint256_t GetHash() const;
+        virtual bool Write(ByteBuffer* bytes) const = 0;
+        virtual bool WriteToFile(std::fstream& fd) const;
+
+        bool WriteToFile(const std::string& filename) const{
+            std::fstream fd(filename, std::ios::binary|std::ios::out);
+            return WriteToFile(fd);
         }
     };
 

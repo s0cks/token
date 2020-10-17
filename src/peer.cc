@@ -121,14 +121,26 @@ namespace Token{
 
         uint32_t offset = 0;
         std::vector<Handle<Message>> messages;
+        ByteBuffer bytes((uint8_t*)buff->base, buff->len);
         do{
-            ByteBuffer bytes((uint8_t*)buff->base, buff->len);
             uint32_t mtype = bytes.GetInt();
-            uint64_t msize = bytes.GetLong();
+            intptr_t msize = bytes.GetLong();
 
-            Handle<Message> msg = Message::Decode(static_cast<Message::MessageType>(mtype), &bytes);
-            LOG(INFO) << "decoded message: " << msg->ToString(); //TODO: handle decode failures
-            messages.push_back(msg);
+            switch(mtype) {
+#define DEFINE_DECODE(Name) \
+                case Message::MessageType::k##Name##MessageType:{ \
+                    Handle<Message> msg = Name##Message::NewInstance(&bytes).CastTo<Message>(); \
+                    LOG(INFO) << "decoded: " << msg; \
+                    messages.push_back(msg); \
+                    break; \
+                }
+                FOR_EACH_MESSAGE_TYPE(DEFINE_DECODE)
+#undef DEFINE_DECODE
+                case Message::MessageType::kUnknownMessageType:
+                default:
+                    LOG(ERROR) << "unknown message type " << mtype << " of size " << msize;
+                    break;
+            }
 
             offset += (msize + Message::kHeaderSize);
         } while((offset + Message::kHeaderSize) < nread);
@@ -158,35 +170,34 @@ namespace Token{
         Handle<VersionMessage> msg = task->GetMessage().CastTo<VersionMessage>();
 
         NodeAddress callback("127.0.0.1", FLAGS_port);//TODO: dynamically lookup callback address
-
-        std::vector<Handle<Message>> response;
-        response.push_back(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), callback).CastTo<Message>());
-
-        if(IsConnecting()){
-            BlockHeader local_head = BlockChain::GetHead();
-            BlockHeader remote_head = msg->GetHead();
-            if(local_head == remote_head){
-                LOG(INFO) << "skipping remote <HEAD> := " << remote_head;
-            } else if(local_head < remote_head){
-                response.push_back(GetBlocksMessage::NewInstance().CastTo<Message>());
-                Handle<SynchronizeBlockChainTask> sync_task = SynchronizeBlockChainTask::NewInstance(session->GetLoop(), session, remote_head);
-                sync_task->Submit();
-            }
-            session->Send(response);
-        }
+        session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), callback).CastTo<Message>());
     }
 
     void PeerSession::HandleVerackMessage(const Handle<HandleMessageTask>& task){
         PeerSession* session = (PeerSession*)task->GetSession();
         Handle<VerackMessage> msg = task->GetMessage().CastTo<VerackMessage>();
 
+        LOG(INFO) << "remote timestamp: " << GetTimestampFormattedReadable(msg->GetTimestamp());
+        LOG(INFO) << "remote <HEAD>: " << msg->GetHead();
+
+        session->SetHead(msg->GetHead());
         if(IsConnecting()){
             LOG(INFO) << "connected to peer: " << session->GetID() << "[" << session->GetAddress() << "]";
             Server::RegisterPeer(session);
             session->SetID(msg->GetID());
             session->SetState(Session::kConnected);
+
+            BlockHeader local_head = BlockChain::GetHead();
+            BlockHeader remote_head = msg->GetHead();
+            if(local_head == remote_head){
+                LOG(INFO) << "skipping remote <HEAD> := " << remote_head;
+            } else if(local_head < remote_head){
+                Handle<SynchronizeBlockChainTask> sync_task = SynchronizeBlockChainTask::NewInstance(session->GetLoop(), session, remote_head);
+                sync_task->Submit();
+
+                session->Send(GetBlocksMessage::NewInstance().CastTo<Message>());
+            }
         }
-        session->SetHead(msg->GetHead());
 
         //TODO:
         // - nonce check

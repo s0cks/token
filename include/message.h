@@ -30,7 +30,9 @@ namespace Token{
     FOR_EACH_MESSAGE_TYPE(FORWARD_DECLARE)
 #undef FORWARD_DECLARE
 
+    //TODO: better encoding/decoding
     class Message : public Object{
+        friend class Session;
     public:
         enum MessageType{
             kUnknownMessageType = 0,
@@ -39,16 +41,12 @@ namespace Token{
 #undef DECLARE_MESSAGE_TYPE
         };
 
-        enum{
-            kTypeOffset = 0,
-            kTypeLength = 1,// should this be 2?
-            kSizeOffset = kTypeLength,
-            kSizeLength = 4,
-            kDataOffset = (kTypeLength + kSizeLength),
-            kHeaderSize = kDataOffset,
-        };
+        static const intptr_t kHeaderSize = sizeof(uint32_t) + sizeof(intptr_t);
     protected:
-        Message(){}
+        Message() = default;
+
+        virtual intptr_t GetMessageSize() const = 0;
+        virtual bool WriteMessage(ByteBuffer* bytes) const = 0;
     public:
         virtual ~Message() = default;
 
@@ -60,27 +58,23 @@ namespace Token{
             return MessageType::kUnknownMessageType;
         }
 
-        virtual size_t GetBufferSize() const = 0;
-        virtual bool Encode(ByteBuffer* bytes) const = 0;
-
-        std::string ToString() const{
-            std::stringstream ss;
-            ss << GetName() << "Message(" << GetBufferSize() << " Bytes)";
-            return ss.str();
-        }
-
 #define DECLARE_TYPECHECK(Name) \
     bool Is##Name##Message(){ return GetMessageType() == Message::k##Name##MessageType; }
         FOR_EACH_MESSAGE_TYPE(DECLARE_TYPECHECK)
 #undef DECLARE_TYPECHECK
-
-        static Handle<Message> Decode(MessageType type, ByteBuffer* bytes);
     };
 
 #define DECLARE_MESSAGE(Name) \
     public: \
+        virtual intptr_t GetMessageSize() const; \
+        virtual bool WriteMessage(ByteBuffer* bytes) const; \
         virtual MessageType GetMessageType() const{ return Message::k##Name##MessageType; } \
-        virtual const char* GetName() const{ return #Name; }
+        virtual const char* GetName() const{ return #Name; } \
+        virtual std::string ToString() const{ \
+            std::stringstream ss; \
+            ss << #Name << "Message()"; \
+            return ss.str(); \
+        }
 
     //TODO:
     // - refactor this
@@ -109,7 +103,7 @@ namespace Token{
     public:
         ~VersionMessage() = default;
 
-        int64_t GetTimestamp() const{
+        Timestamp GetTimestamp() const{
             return timestamp_;
         }
 
@@ -141,8 +135,6 @@ namespace Token{
             return GetClientType() == ClientType::kClient;
         }
 
-        size_t GetBufferSize() const;
-        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(Version);
 
         static Handle<VersionMessage> NewInstance(ByteBuffer* bytes);
@@ -175,6 +167,10 @@ namespace Token{
             callback_(address),
             head_(head){}
     public:
+        Timestamp GetTimestamp() const{
+            return timestamp_;
+        }
+
         ClientType GetClientType() const{
             return client_type_;
         }
@@ -199,8 +195,6 @@ namespace Token{
             return head_;
         }
 
-        size_t GetBufferSize() const;
-        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(Verack);
 
         static Handle<VerackMessage> NewInstance(ByteBuffer* bytes);
@@ -227,6 +221,9 @@ namespace Token{
             proposal_(nullptr){
             WriteBarrier(&proposal_, proposal);
         }
+
+        intptr_t GetMessageSize() const;
+        bool WriteMessage(ByteBuffer* bytes) const;
     public:
         virtual ~PaxosMessage() = default;
 
@@ -234,8 +231,6 @@ namespace Token{
             return type_;
         }
 
-        size_t GetBufferSize() const;
-        bool Encode(ByteBuffer* bytes) const;
         Handle<Proposal> GetProposal() const;
 
         //TODO:
@@ -336,8 +331,6 @@ namespace Token{
             return data_;
         }
 
-        size_t GetBufferSize() const;
-        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(Transaction);
 
         static Handle<TransactionMessage> NewInstance(ByteBuffer* bytes);
@@ -366,8 +359,6 @@ namespace Token{
             return data_;
         }
 
-        size_t GetBufferSize() const;
-        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(Block);
 
         static Handle<BlockMessage> NewInstance(ByteBuffer* bytes);
@@ -489,8 +480,6 @@ namespace Token{
             return items.size() > 0;
         }
 
-        size_t GetBufferSize() const;
-        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(Inventory);
 
         static Handle<InventoryMessage> NewInstance(ByteBuffer* bytes);
@@ -550,11 +539,6 @@ namespace Token{
             return stop_;
         }
 
-        size_t GetBufferSize() const{
-            return uint256_t::kSize * 2;
-        }
-
-        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(GetBlocks);
 
         static Handle<GetBlocksMessage> NewInstance(ByteBuffer* bytes);
@@ -583,8 +567,6 @@ namespace Token{
             return item_;
         }
 
-        size_t GetBufferSize() const;
-        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(NotFound);
 
         static Handle<NotFoundMessage> NewInstance(ByteBuffer* bytes);
@@ -608,17 +590,11 @@ namespace Token{
             return user_;
         }
 
-        uintptr_t GetMessageSize() const{
-            return user_.size();
-        }
-
         bool Encode(uint8_t* bytes, uintptr_t size) const{
             memcpy(bytes, user_.c_str(), size);
             return true;
         }
 
-        size_t GetBufferSize() const;
-        bool Encode(ByteBuffer* bytes) const;
         DECLARE_MESSAGE(GetUnclaimedTransactions);
 
         static Handle<GetUnclaimedTransactionsMessage> NewInstance(ByteBuffer* bytes);

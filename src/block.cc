@@ -63,11 +63,12 @@ namespace Token{
             outputs_c[idx] = Output::NewInstance(user, token);
         }
 
-        Handle<Array<Transaction>> txs = Array<Transaction>::New(3);
-        txs->Put(0, Transaction::NewInstance(0, inputs, 0, outputs_a, Block::kNumberOfGenesisOutputs, 0));
-        txs->Put(1,Transaction::NewInstance(1, inputs, 0, outputs_b, Block::kNumberOfGenesisOutputs, 0));
-        txs->Put(2,Transaction::NewInstance(2, inputs, 0, outputs_c, Block::kNumberOfGenesisOutputs, 0));
-        return NewInstance(0, uint256_t::Null(), txs, 0);
+        Transaction* transactions[3] = {
+            Transaction::NewInstance(0, inputs, 0, outputs_a, Block::kNumberOfGenesisOutputs, 0),
+            Transaction::NewInstance(1, inputs, 0, outputs_b, Block::kNumberOfGenesisOutputs, 0),
+            Transaction::NewInstance(2, inputs, 0, outputs_c, Block::kNumberOfGenesisOutputs, 0),
+        };
+        return NewInstance(0, uint256_t::Null(), transactions, 3, 0);
     }
 
     Handle<Block> Block::NewInstance(std::fstream& fd, size_t size){
@@ -77,43 +78,23 @@ namespace Token{
     }
 
     Handle<Block> Block::NewInstance(ByteBuffer* bytes){
-        uint64_t timestamp = bytes->GetLong();
-        uint32_t height = bytes->GetInt();
+        Timestamp timestamp = bytes->GetLong();
+        intptr_t height = bytes->GetLong();
         uint256_t phash = bytes->GetHash();
-        uint32_t num_txs = bytes->GetInt();
+        intptr_t num_txs = bytes->GetLong();
 
-        Handle<Array<Transaction>> txs = Array<Transaction>::New(num_txs);
+        LOG(INFO) << "reading " << num_txs << " transactions for block";
+
+        Transaction* transactions[num_txs];
         for(uint32_t idx = 0; idx < num_txs; idx++)
-            txs->Put(idx, Transaction::NewInstance(bytes));
-        return new Block(timestamp, height, phash, txs);
-    }
-
-    size_t Block::GetBufferSize() const{
-        size_t size = 0;
-        size += sizeof(uint64_t); // timestamp_
-        size += sizeof(uint32_t); // height_
-        size += uint256_t::kSize; // previous_hash_
-        size += sizeof(uint32_t); // num_transactions_;
-        for(uint32_t idx = 0; idx < transactions_->Length(); idx++)
-            size += transactions_->Get(idx)->GetBufferSize(); // transactions_[idx]
-        return size;
+            transactions[idx] = Transaction::NewInstance(bytes);
+        return new Block(timestamp, height, phash, transactions, num_txs);
     }
 
     std::string Block::ToString() const{
         std::stringstream stream;
         stream << "Block(" << GetHeight() << ":" << GetHash() << "; " << GetNumberOfTransactions() << " Transactions)";
         return stream.str();
-    }
-
-    bool Block::Encode(ByteBuffer* bytes) const{
-        bytes->PutLong(timestamp_);
-        bytes->PutInt(height_);
-        bytes->PutHash(previous_hash_);
-        bytes->PutInt(static_cast<uint32_t>(transactions_->Length()));
-        for(uint32_t idx = 0; idx < transactions_->Length(); idx++)
-            if(!transactions_->Get(idx)->Encode(bytes))
-                return false;
-        return true;
     }
 
     bool Block::Accept(BlockVisitor* vis) const{

@@ -219,15 +219,27 @@ namespace Token{
         }
 
         uint32_t offset = 0;
-
         std::vector<Handle<Message>> messages;
+        ByteBuffer bytes((uint8_t*)buff->base, buff->len);
         do{
-            ByteBuffer bytes((uint8_t*)buff->base, buff->len);
             uint32_t mtype = bytes.GetInt();
-            uint64_t msize = bytes.GetLong();
-            Handle<Message> msg = Message::Decode(static_cast<Message::MessageType>(mtype), &bytes);
-            LOG(INFO) << "decoded message: " << msg->ToString(); //TODO: handle decode failures
-            messages.push_back(msg);
+            intptr_t msize = bytes.GetLong();
+
+            switch(mtype) {
+#define DEFINE_DECODE(Name) \
+                case Message::MessageType::k##Name##MessageType:{ \
+                    Handle<Message> msg = Name##Message::NewInstance(&bytes).CastTo<Message>(); \
+                    LOG(INFO) << "decoded: " << msg; \
+                    messages.push_back(msg); \
+                    break; \
+                }
+                FOR_EACH_MESSAGE_TYPE(DEFINE_DECODE)
+#undef DEFINE_DECODE
+                case Message::MessageType::kUnknownMessageType:
+                default:
+                    LOG(ERROR) << "unknown message type " << mtype << " of size " << msize;
+                    break;
+            }
 
             offset += (msize + Message::kHeaderSize);
         } while((offset + Message::kHeaderSize) < nread);

@@ -58,6 +58,7 @@ namespace Token{
         std::vector<Handle<Message>> response;
         for(auto& item : items){
             uint256_t hash = item.GetHash();
+            LOG(INFO) << "searching for: " << hash;
             if(item.ItemExists()){
                 if(item.IsBlock()){
                     Handle<Block> block = nullptr;
@@ -87,10 +88,8 @@ namespace Token{
                     response.push_back(TransactionMessage::NewInstance(tx).CastTo<Message>());
                 }
             } else{
-                //TODO: return 500
-#ifdef TOKEN_DEBUG
-                LOG(WARNING) << "item is invalid: " << item;
-#endif//TOKEN_DEBUG
+                Send(NotFoundMessage::NewInstance(item));
+                return;
             }
         }
 

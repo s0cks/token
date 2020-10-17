@@ -19,7 +19,7 @@ namespace Token{
                     snapshot->SetNumberOfBlocks(num_blocks);
                     LOG(INFO) << "reading " << num_blocks << " blocks from snapshot....";
                     for(uint64_t idx = 0; idx < num_blocks; idx++)
-                        snapshot->SetBlock(idx, ReadObject().CastTo<Block>());
+                        //TODO: snapshot->SetBlock(idx, ReadObject().CastTo<Block>());
                     std::sort(snapshot->blocks_, snapshot->blocks_+num_blocks, Block::HeightComparator());
                     return snapshot;
                 }
