@@ -15,9 +15,8 @@ message("Using Modules: ${TOKEN_CMAKE_MODULES}")
 
 # Monkey Patching for Debug Mode
 if (CMAKE_BUILD_TYPE MATCHES Debug)
-        message("Compiling token w/ debug mode and unit tests")
+        message("Compiling token w/ debug mode")
         add_compile_definitions(TOKEN_DEBUG)
-        # TODO: Enable tests set(TOKEN_BUILD_TESTS True)
 endif (CMAKE_BUILD_TYPE MATCHES Debug)
 
 # Compiles w/ health check support:
@@ -37,34 +36,27 @@ find_package(LevelDB REQUIRED)
 find_package(Glog REQUIRED)
 find_package(Gflags REQUIRED)
 find_package(Libuv REQUIRED)
+find_package(GTest REQUIRED)
 
 if(TOKEN_HEALTHCHECK_SUPPORT)
         find_package(HttpParser REQUIRED)
 endif(TOKEN_HEALTHCHECK_SUPPORT)
 
-if(TOKEN_BUILD_TESTS)
-        find_package(GTest REQUIRED)
-endif(TOKEN_BUILD_TESTS)
-
 # Include Directories
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(include)
 include_directories(src)
-if(TOKEN_BUILD_TESTS)
-        include_directories(tests)
-endif(TOKEN_BUILD_TESTS)
+include_directories(tests)
 
 # Source Sets
 file(GLOB_RECURSE TOKEN_HEADERS include/*.h)
 file(GLOB_RECURSE TOKEN_SOURCES src/*.h src/*.cc)
 file(GLOB_RECURSE TOKEN_PROTOS protos/*.proto)
-if(TOKEN_BUILD_TESTS)
-        file(GLOB_RECURSE TOKEN_TEST_SOURCES tests/*.h tests/*.cc)
-endif(TOKEN_BUILD_TESTS)
+file(GLOB_RECURSE TOKEN_TEST_SOURCES tests/*.h tests/*.cc)
 
 # Define Libraries
 set(TOKEN_LIBRARIES
-        ${CMAKE_THREAD_LIBS_INIT} # pthread
+        ${GTEST_BOTH_LIBRARIES} # gtest
         ${CRYPTO++_LIBRARIES} # crypto++
         ${GLOG_LIBRARIES} # glog
         ${LevelDB_LIBRARY} # leveldb
@@ -72,12 +64,8 @@ set(TOKEN_LIBRARIES
         ${GFLAGS_LIBRARIES} # gflags
         config++ # config++
         ${UUID_LIBRARIES} # uuid
+        ${CMAKE_THREAD_LIBS_INIT} # pthread
 )
-
-# Optionally add testing libraries
-if(TOKEN_BUILD_TESTS)
-        list(APPEND TOKEN_LIBRARIES ${GTEST_LIBRARIES})
-endif(TOKEN_BUILD_TESTS)
 
 # Optionally add health check libraries
 if(TOKEN_HEALTHCHECK_SUPPORT)
@@ -103,6 +91,11 @@ target_link_libraries("token-client" "token-ledger" ${TOKEN_LIBRARIES})
 # Token Inspect Client Executable
 add_executable("token-inspector" inspector.cc)
 target_link_libraries("token-inspector" "token-ledger" ${TOKEN_LIBRARIES})
+
+# Token Unit Tests
+#add_executable("token-tests" tests.cc ${TOKEN_TEST_SOURCES})
+#target_link_libraries("token-tests" "token-ledger" ${TOKEN_LIBRARIES})
+#add_test("token-tests" "token-tests")
 
 # should we remove this?
 # Install Token Node
