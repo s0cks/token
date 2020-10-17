@@ -279,6 +279,17 @@ namespace Token{
         return true;//TODO: better response for BlockChainClient::Disconnect()
     }
 
+    bool BlockChainClient::Send(const Handle<Transaction>& tx){
+        LOG(INFO) << "sending transaction " << tx->GetHash();
+        ClientSession* session = GetSession();
+        if(session->IsConnecting()){
+            LOG(INFO) << "waiting for client to connect...";
+            session->WaitForState(Session::kConnected);
+        }
+        session->Send(TransactionMessage::NewInstance(tx));
+        return true; // no acknowledgement from server
+    }
+
     bool BlockChainClient::GetUnclaimedTransactions(const User& user, std::vector<Hash>& utxos){
         LOG(INFO) << "getting unclaimed transactions for " << user;
         ClientSession* session = GetSession();
@@ -304,32 +315,6 @@ namespace Token{
                 for(auto& item : items)
                     utxos.push_back(item.GetHash());
                 return utxos.size() == items.size();
-            } else{
-                LOG(WARNING) << "cannot handle " << next;
-                continue;
-            }
-        } while(true);
-    }
-
-    Handle<Block> BlockChainClient::GetBlock(const Hash& hash){
-        LOG(INFO) << "getting block: " << hash;
-        ClientSession* session = GetSession();
-        if(session->IsConnecting()){
-            LOG(INFO) << "waiting for client to connect...";
-            session->WaitForState(Session::kConnected);
-        }
-
-        std::vector<InventoryItem> items = {
-            InventoryItem(InventoryItem::kBlock, hash)
-        };
-        session->Send(GetDataMessage::NewInstance(items));
-        do{
-            session->WaitForNextMessage();
-            Handle<Message> next = session->GetNextMessage();
-            if(next->IsBlockMessage()){
-                return next.CastTo<BlockMessage>()->GetBlock();
-            } else if(next->IsNotFoundMessage()){
-                return Handle<Block>();
             } else{
                 LOG(WARNING) << "cannot handle " << next;
                 continue;

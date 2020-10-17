@@ -166,13 +166,10 @@ namespace Token{
     void NodeSession::HandleTransactionMessage(const Handle<HandleMessageTask>& task){
         Handle<TransactionMessage> msg = task->GetMessage().CastTo<TransactionMessage>();
 
-        Transaction* tx = msg->GetTransaction();
+        Handle<Transaction> tx = msg->GetTransaction();
         Hash hash = tx->GetHash();
 
-#ifdef TOKEN_DEBUG
         LOG(INFO) << "received transaction: " << hash;
-#endif//TOKEN_DEBUG
-
         if(!TransactionPool::HasTransaction(hash)){
             TransactionPool::PutTransaction(tx);
             Server::Broadcast(InventoryMessage::NewInstance(tx).CastTo<Message>());
