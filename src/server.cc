@@ -9,6 +9,7 @@
 #include "configuration.h"
 #include "peer.h"
 #include "byte_buffer.h"
+#include "proposal.h"
 
 namespace Token{
     static uv_tcp_t handle_;
@@ -17,9 +18,8 @@ namespace Token{
     static std::recursive_mutex mutex_;
     static std::condition_variable_any cond_;
     static Server::State state_ = Server::State::kStopped;
-    static std::string node_id_;
-
-    static std::map<NodeAddress, PeerSession*> peers_;
+    static UUID node_id_;
+    static std::map<UUID, PeerSession*> peers_;
 
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
 #define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
@@ -27,81 +27,11 @@ namespace Token{
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
 
-    static inline std::string
-    GenerateNewUUID(){
-        uuid_t uuid;
-        uuid_generate_time_safe(uuid);
-        char uuid_str[37];
-        uuid_unparse(uuid, uuid_str);
-        return std::string(uuid_str);
-    }
-
-    void Server::LoadNodeInformation(){
-        LOCK_GUARD;
-        libconfig::Setting& node = BlockChainConfiguration::GetProperty("Server", libconfig::Setting::TypeGroup);
-        if(!node.exists("id")){
-            node_id_ = GenerateNewUUID();
-            node.add("id", libconfig::Setting::TypeString) = node_id_;
-            BlockChainConfiguration::SaveConfiguration();
-            return;
-        }
-
-        node.lookupValue("id", node_id_);
-    }
-
-    void Server::LoadPeers(){
-        LOCK_GUARD;
-        // load peers from configuration
-        libconfig::Setting& peers = BlockChainConfiguration::GetProperty("Peers", libconfig::Setting::TypeArray);
-        auto iter = peers.begin();
-        while(iter != peers.end()){
-            NodeAddress address((*iter));
-            if(!HasPeer(address)){
-                if(!ConnectTo(address)) LOG(WARNING) << "couldn't connect to peer: " << address;
-            }
-            iter++;
-        }
-
-        // try to load peer from flags
-        if(!FLAGS_peer_address.empty() || FLAGS_peer_port > 0){
-            std::string address = !FLAGS_peer_address.empty() ?
-                            FLAGS_peer_address :
-                            "127.0.0.1";
-            uint32_t port = FLAGS_peer_port > 0 ?
-                            FLAGS_peer_port :
-                            8080;
-            NodeAddress paddress(address, port);
-            if(!HasPeer(paddress)){
-                if(!ConnectTo(paddress)) LOG(WARNING) << "couldn't connect to peer: " << paddress;
-            }
-        }
-    }
-
-    bool Server::GetPeers(std::vector<PeerInfo>& peers){
-        for(auto& it : peers_)
-            peers.push_back(it.second->GetInfo());
-        return peers.size() == peers_.size();
-    }
-
-    void Server::SavePeers(){
-        LOCK_GUARD;
-        libconfig::Setting& root = BlockChainConfiguration::GetRoot();
-        if(root.exists("Peers")) root.remove("Peers");
-
-        libconfig::Setting& peers = root.add("Peers", libconfig::Setting::TypeArray);
-        for(auto& it : peers_){
-            NodeAddress address = it.second->GetAddress();
-            peers.add(libconfig::Setting::TypeString) = address.ToString();
-        }
-
-        BlockChainConfiguration::SaveConfiguration();
-    }
-
     uv_tcp_t* Server::GetHandle(){
         return &handle_;
     }
 
-    std::string Server::GetID(){
+    UUID Server::GetID(){
         LOCK_GUARD;
         return node_id_;
     }
@@ -139,11 +69,6 @@ namespace Token{
         return state_;
     }
 
-    size_t Server::GetNumberOfPeers(){
-        LOCK_GUARD;
-        return peers_.size();
-    }
-
     void Server::HandleTerminateCallback(uv_async_t* handle){
         uv_stop(handle->loop);
     }
@@ -169,11 +94,7 @@ namespace Token{
             pthread_exit(0);
         }
 
-#ifdef TOKEN_DEBUG
         LOG(INFO) << "server " << GetID() << " listening @" << FLAGS_port;
-#else
-        LOG(INFO) << "server listening @" << FLAGS_port;
-#endif//TOKEN_DEBUG
         SetState(State::kRunning);
         uv_run(loop, UV_RUN_DEFAULT);
 
@@ -187,7 +108,7 @@ namespace Token{
             return;
         }
 
-        NodeSession* session = new NodeSession();
+        ServerSession* session = new ServerSession();
         uv_tcp_init(stream->loop, (uv_tcp_t*)session->GetStream());
         LOG(INFO) << "client is connecting...";
         if((status = uv_accept(stream, (uv_stream_t*)session->GetStream())) != 0){
@@ -203,7 +124,7 @@ namespace Token{
     }
 
     void Server::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
-        NodeSession* session = (NodeSession*)stream->data;
+        ServerSession* session = (ServerSession*)stream->data;
         if(nread == UV_EOF){
             LOG(ERROR) << "client disconnected!";
             return;
@@ -267,18 +188,316 @@ namespace Token{
         return true;
     }
 
-    bool Server::HasPeer(const std::string& node_id){
+    void ServerSession::HandleNotFoundMessage(const Handle<HandleMessageTask>& task){
+        //TODO: implement HandleNotFoundMessage
+        LOG(WARNING) << "not implemented";
+        return;
+    }
+
+    void ServerSession::HandleVersionMessage(const Handle<HandleMessageTask>& task){
+        ServerSession* session = (ServerSession*)task->GetSession();
+        //TODO:
+        // - state check
+        // - version check
+        // - echo nonce
+        session->Send(VersionMessage::NewInstance(Server::GetID()));
+    }
+
+    //TODO:
+    // - verify nonce
+    void ServerSession::HandleVerackMessage(const Handle<HandleMessageTask>& task){
+        ServerSession* session = (ServerSession*)task->GetSession();
+        Handle<VerackMessage> msg = task->GetMessage().CastTo<VerackMessage>();
+
+        NodeAddress callback("127.0.0.1", FLAGS_port); //TODO: obtain address dynamically
+        session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), callback));
+
+        if(session->IsConnecting()){
+            session->SetState(Session::State::kConnected);
+            if(msg->IsNode()){
+                NodeAddress paddr = msg->GetCallbackAddress();
+                if(!Server::IsConnectedTo(callback)){
+                    LOG(WARNING) << "couldn't find peer: " << msg->GetID() << ", connecting to peer " << paddr << "....";
+                    if(!Server::ConnectTo(paddr)){
+                        LOG(WARNING) << "couldn't connect to peer: " << paddr;
+                    }
+                }
+            }
+        }
+    }
+
+    void ServerSession::HandleGetDataMessage(const Handle<HandleMessageTask>& task){
+        ServerSession* session = (ServerSession*)task->GetSession();
+        Handle<GetDataMessage> msg = task->GetMessage().CastTo<GetDataMessage>();
+
+        std::vector<InventoryItem> items;
+        if(!msg->GetItems(items)){
+            LOG(WARNING) << "cannot get items from message";
+            return;
+        }
+
+        std::vector<Handle<Message>> response;
+        for(auto& item : items){
+            Hash hash = item.GetHash();
+            LOG(INFO) << "searching for: " << hash;
+            if(item.ItemExists()){
+                if(item.IsBlock()){
+                    Handle<Block> block = nullptr;
+                    if(BlockChain::HasBlock(hash)){
+                        block = BlockChain::GetBlock(hash);
+                    } else if(BlockPool::HasBlock(hash)){
+                        block = BlockPool::GetBlock(hash);
+                    } else{
+                        LOG(WARNING) << "cannot find block: " << hash;
+                        response.push_back(NotFoundMessage::NewInstance().CastTo<Message>());
+                        break;
+                    }
+
+                    response.push_back(BlockMessage::NewInstance(block).CastTo<Message>());
+                } else if(item.IsTransaction()){
+                    if(!TransactionPool::HasTransaction(hash)){
+                        LOG(WARNING) << "cannot find transaction: " << hash;
+                        response.push_back(NotFoundMessage::NewInstance().CastTo<Message>());
+                        break;
+                    }
+
+                    Handle<Transaction> tx = TransactionPool::GetTransaction(hash);
+                    response.push_back(TransactionMessage::NewInstance(tx).CastTo<Message>());
+                } else if(item.IsUnclaimedTransaction()){
+                    if(!UnclaimedTransactionPool::HasUnclaimedTransaction(hash)){
+                        LOG(WARNING) << "couldn't find unclaimed transaction: " << hash;
+                        response.push_back(NotFoundMessage::NewInstance().CastTo<Message>());
+                        break;
+                    }
+
+                    Handle<UnclaimedTransaction> utxo = UnclaimedTransactionPool::GetUnclaimedTransaction(hash);
+                    response.push_back(UnclaimedTransactionMessage::NewInstance(utxo).CastTo<Message>());
+                }
+            } else{
+                Send(NotFoundMessage::NewInstance());
+                return;
+            }
+        }
+
+        session->Send(response);
+    }
+
+    void ServerSession::HandlePrepareMessage(const Handle<HandleMessageTask>& task){
+        ServerSession* session = (ServerSession*)task->GetSession();
+        Handle<PrepareMessage> msg = task->GetMessage().CastTo<PrepareMessage>();
+
+        Handle<Proposal> proposal = msg->GetProposal();
+        /*if(ProposerThread::HasProposal()){
+            session->Send(RejectedMessage::NewInstance(proposal, Server::GetID()));
+            return;
+        }*/
+
+        //ProposerThread::SetProposal(proposal);
+        proposal->SetPhase(Proposal::kVotingPhase);
+        std::vector<Handle<Message>> response;
+        if(!BlockPool::HasBlock(proposal->GetHash())){
+            std::vector<InventoryItem> items = {
+                    InventoryItem(InventoryItem::kBlock, proposal->GetHash())
+            };
+            response.push_back(GetDataMessage::NewInstance(items).CastTo<Message>());
+        }
+        response.push_back(PromiseMessage::NewInstance(proposal, Server::GetID()).CastTo<Message>());
+        session->Send(response);
+    }
+
+    void ServerSession::HandlePromiseMessage(const Handle<HandleMessageTask>& task){}
+
+    void ServerSession::HandleCommitMessage(const Handle<HandleMessageTask>& task){
+        ServerSession* session = (ServerSession*)task->GetSession();
+        Handle<CommitMessage> msg = task->GetMessage().CastTo<CommitMessage>();
+
+        Proposal* proposal = msg->GetProposal();
+        Hash hash = proposal->GetHash();
+
+        if(!BlockPool::HasBlock(hash)){
+            LOG(WARNING) << "couldn't find block " << hash << " in pool, rejecting request to commit proposal....";
+            session->Send(RejectedMessage::NewInstance(proposal, Server::GetID()));
+        } else{
+            proposal->SetPhase(Proposal::kCommitPhase);
+            session->Send(AcceptedMessage::NewInstance(proposal, Server::GetID()));
+        }
+    }
+
+    void ServerSession::HandleAcceptedMessage(const Handle<HandleMessageTask>& task){
+        Handle<AcceptedMessage> msg = task->GetMessage().CastTo<AcceptedMessage>();
+        Handle<Proposal> proposal = msg->GetProposal();
+
+        // validate proposal still?
+        proposal->SetPhase(Proposal::kQuorumPhase);
+    }
+
+    void ServerSession::HandleRejectedMessage(const Handle<HandleMessageTask>& task){}
+
+    void ServerSession::HandleBlockMessage(const Handle<HandleMessageTask>& task){
+        Handle<BlockMessage> msg = task->GetMessage().CastTo<BlockMessage>();
+
+        Block* block = msg->GetBlock();
+        Hash hash = block->GetHash();
+
+        if(!BlockPool::HasBlock(hash)){
+            BlockPool::PutBlock(block);
+            Server::Broadcast(InventoryMessage::NewInstance(block).CastTo<Message>());
+        }
+    }
+
+    void ServerSession::HandleTransactionMessage(const Handle<HandleMessageTask>& task){
+        Handle<TransactionMessage> msg = task->GetMessage().CastTo<TransactionMessage>();
+
+        Handle<Transaction> tx = msg->GetTransaction();
+        Hash hash = tx->GetHash();
+
+        LOG(INFO) << "received transaction: " << hash;
+        if(!TransactionPool::HasTransaction(hash)){
+            TransactionPool::PutTransaction(tx);
+            Server::Broadcast(InventoryMessage::NewInstance(tx).CastTo<Message>());
+        }
+    }
+
+    void ServerSession::HandleUnclaimedTransactionMessage(const Handle<HandleMessageTask>& task){
+
+    }
+
+    void ServerSession::HandleInventoryMessage(const Handle<HandleMessageTask>& task){
+        ServerSession* session = (ServerSession*)task->GetSession();
+        Handle<InventoryMessage> msg = task->GetMessage().CastTo<InventoryMessage>();
+
+        std::vector<InventoryItem> items;
+        if(!msg->GetItems(items)){
+            LOG(WARNING) << "couldn't get items from inventory message";
+            return;
+        }
+
+        std::vector<InventoryItem> needed;
+        for(auto& item : items){
+            if(!item.ItemExists()) needed.push_back(item);
+        }
+
+        LOG(INFO) << "downloading " << needed.size() << "/" << items.size() << " items from inventory....";
+        if(!needed.empty()) session->Send(GetDataMessage::NewInstance(needed));
+    }
+
+    class UserUnclaimedTransactionCollector : public UnclaimedTransactionPoolVisitor{
+    private:
+        std::vector<InventoryItem>& items_;
+        User user_;
+    public:
+        UserUnclaimedTransactionCollector(std::vector<InventoryItem>& items, const User& user):
+                UnclaimedTransactionPoolVisitor(),
+                items_(items),
+                user_(user){}
+        ~UserUnclaimedTransactionCollector(){}
+
+        User GetUser() const{
+            return user_;
+        }
+
+        bool Visit(const Handle<UnclaimedTransaction>& utxo){
+            if(utxo->GetUser() == GetUser())
+                items_.push_back(InventoryItem(utxo));
+            return true;
+        }
+    };
+
+    void ServerSession::HandleGetUnclaimedTransactionsMessage(const Token::Handle<Token::HandleMessageTask>& task){
+        ServerSession* session = (ServerSession*)task->GetSession();
+        Handle<GetUnclaimedTransactionsMessage> msg = task->GetMessage().CastTo<GetUnclaimedTransactionsMessage>();
+
+        User user = msg->GetUser();
+        LOG(INFO) << "getting unclaimed transactions for " << user << "....";
+
+        std::vector<InventoryItem> items;
+        UserUnclaimedTransactionCollector collector(items, user);
+        if(!UnclaimedTransactionPool::Accept(&collector)){
+            LOG(WARNING) << "couldn't visit unclaimed transaction pool";
+            //TODO: send not found?
+            return;
+        }
+
+        if(items.empty()){
+            LOG(WARNING) << "no unclaimed transactions found for user: " << user;
+            session->Send(NotFoundMessage::NewInstance());
+            return;
+        }
+
+        LOG(INFO) << "sending inventory of " << items.size() << " items";
+        session->SendInventory(items);
+    }
+
+    void ServerSession::HandleGetBlocksMessage(const Handle<HandleMessageTask>& task){
+        ServerSession* session = (ServerSession*)task->GetSession();
+        Handle<GetBlocksMessage> msg = task->GetMessage().CastTo<GetBlocksMessage>();
+
+        Hash start = msg->GetHeadHash();
+        Hash stop = msg->GetStopHash();
+
+        std::vector<InventoryItem> items;
+        if(stop.IsNull()){
+            intptr_t amt = std::min(GetBlocksMessage::kMaxNumberOfBlocks, BlockChain::GetHead().GetHeight());
+            LOG(INFO) << "sending " << (amt + 1) << " blocks...";
+
+            Handle<Block> start_block = BlockChain::GetBlock(start);
+            Handle<Block> stop_block = BlockChain::GetBlock(start_block->GetHeight() > amt ? start_block->GetHeight() + amt : amt);
+
+            for(uint32_t idx = start_block->GetHeight() + 1;
+                idx <= stop_block->GetHeight();
+                idx++){
+                Handle<Block> block = BlockChain::GetBlock(idx);
+                LOG(INFO) << "adding " << block;
+                items.push_back(InventoryItem(block));
+            }
+        }
+
+        session->Send(InventoryMessage::NewInstance(items));
+    }
+
+#define CONFIG_KEY_ID "Id"
+#define CONFIG_KEY_PEERS "Peers"
+
+    bool Server::Initialize(){
+        LOG(INFO) << "initializing the server....";
+        LOCK_GUARD;
+        libconfig::Setting& config = BlockChainConfiguration::GetProperty("Server", libconfig::Setting::TypeGroup);
+        if(!config.exists(CONFIG_KEY_ID)){
+            node_id_ = UUID();
+            config.add(CONFIG_KEY_ID, libconfig::Setting::TypeString) = node_id_.ToString();
+            BlockChainConfiguration::SaveConfiguration();
+        } else{
+            std::string node_id;
+            config.lookupValue(CONFIG_KEY_ID, node_id);
+            node_id_ = UUID(node_id);
+        }
+
+        if(!config.exists(CONFIG_KEY_PEERS)){
+            config.add(CONFIG_KEY_PEERS, libconfig::Setting::TypeArray);
+            BlockChainConfiguration::SaveConfiguration();
+        } else{
+            libconfig::Setting& peers = config.lookup(CONFIG_KEY_PEERS);
+            auto iter = peers.begin();
+            while(iter != peers.end()){
+                NodeAddress address((*iter));
+
+                //TODO: connect to peer
+
+                iter++;
+            }
+        }
+
+        return true;
+    }
+
+    bool Server::HasPeer(const UUID& uuid){
         LOCK_GUARD;
         for(auto& it : peers_){
             PeerSession* peer = it.second;
-            if(peer->GetID() == node_id) return true;
+            if(peer->GetID() == uuid)
+                return true;
         }
         return false;
-    }
-
-    bool Server::HasPeer(const NodeAddress& address){
-        LOCK_GUARD;
-        return peers_.find(address) != peers_.end();
     }
 
     bool Server::ConnectTo(const NodeAddress &address){
@@ -288,19 +507,63 @@ namespace Token{
         return (new PeerSession(address))->Connect();
     }
 
-    void Server::RegisterPeer(PeerSession* peer){
+    bool Server::IsConnectedTo(const NodeAddress& address){
         LOCK_GUARD;
-        NodeAddress paddr = peer->GetAddress();
-        auto pos = peers_.find(paddr);
-        if(pos != peers_.end()) return;
-        peers_.insert({ paddr, peer });
+        for(auto& it : peers_){
+            PeerSession* peer = it.second;
+            if(peer->GetAddress() == address)
+                return true;
+        }
+        return false;
     }
 
-    void Server::UnregisterPeer(PeerSession* peer){
+    PeerSession* Server::GetPeer(const UUID& uuid){
         LOCK_GUARD;
-        NodeAddress paddr = peer->GetAddress();
-        auto pos = peers_.find(paddr);
-        if(pos == peers_.end()) return;
-        peers_.insert({ paddr, peer });
+        for(auto& it : peers_){
+            PeerSession* peer = it.second;
+            if(peer->GetID() == uuid)
+                return peer;
+        }
+        return nullptr;
     }
+
+    bool Server::GetPeers(std::vector<UUID>& peers){
+        LOCK_GUARD;
+        for(auto& it : peers_){
+            PeerSession* peer = it.second;
+            peers.push_back(peer->GetID());
+        }
+        return true;
+    }
+
+    int Server::GetNumberOfPeers(){
+        LOCK_GUARD;
+        return peers_.size();
+    }
+
+    bool Server::RegisterPeer(PeerSession* session){
+        LOCK_GUARD;
+        return peers_.insert({ session->GetID(), session }).second;
+    }
+
+    bool Server::UnregisterPeer(PeerSession* session){
+        LOCK_GUARD;
+        return peers_.erase(session->GetID());
+    }
+
+    /*
+    void Server::SavePeers(){
+        LOCK_GUARD;
+        libconfig::Setting& root = BlockChainConfiguration::GetRoot();
+        if(root.exists("Peers")) root.remove("Peers");
+
+        libconfig::Setting& peers = root.add("Peers", libconfig::Setting::TypeArray);
+        for(auto& it : peers_){
+            NodeAddress address = it.second->GetAddress();
+            peers.add(libconfig::Setting::TypeString) = address.ToString();
+        }
+
+        BlockChainConfiguration::SaveConfiguration();
+    }
+     */
 }

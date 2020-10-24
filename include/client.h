@@ -10,23 +10,8 @@ namespace Token{
     V(Disconnect, ".disconnect", 0) \
     V(Transaction, "tx", 3)
 
-    class ClientSession;
-    class ClientSessionInfo : public SessionInfo{
-        friend class ClientSession;
-    protected:
-        ClientSessionInfo(ClientSession* session);
-    public:
-        ~ClientSessionInfo(){}
-
-        BlockHeader GetHead() const;
-        NodeAddress GetPeerAddress() const;
-        UUID GetPeerID() const;
-        void operator=(const ClientSessionInfo& info);
-    };
-
     class ClientSession : public Session{
         //TODO: add client command handler
-        friend class ClientSessionInfo;
     private:
         pthread_t thread_;
         uv_signal_t sigterm_;
@@ -36,33 +21,12 @@ namespace Token{
         uv_timer_t hb_timeout_;
         uv_async_t shutdown_;
 
-        // Info
-        NodeAddress address_;
-        UUID peer_id_;
-        BlockHeader head_;
-
-        void SetHead(const BlockHeader& head){
-            head_ = head;
-        }
-
-        BlockHeader GetHead() const{
-            return head_;
-        }
-
         void SetPeerAddress(const NodeAddress& address){
             address_ = address;
         }
 
         NodeAddress GetPeerAddress() const{
             return address_;
-        }
-
-        UUID GetPeerID() const{
-            return peer_id_;
-        }
-
-        void SetPeerID(const UUID& id){
-            peer_id_ = id;
         }
 
         static void* ClientSessionThread(void* data);
@@ -84,10 +48,6 @@ namespace Token{
         ClientSession(const NodeAddress& address);
         ~ClientSession(){}
 
-        ClientSessionInfo GetInfo() const{
-            return ClientSessionInfo(const_cast<ClientSession*>(this));
-        }
-
 #define DECLARE_MESSAGE_HANDLER(Name) \
     virtual void Handle##Name##Message(const Handle<HandleMessageTask>& task);
         FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
@@ -108,14 +68,6 @@ namespace Token{
         BlockChainClient(const NodeAddress& address):
             session_(new ClientSession(address)){}
         ~BlockChainClient() = default;
-
-        ClientSessionInfo GetInfo() const{
-            return GetSession()->GetInfo();
-        }
-
-        BlockHeader GetHead() const{
-            return GetInfo().GetHead();
-        }
 
         bool Connect();
         bool Disconnect();

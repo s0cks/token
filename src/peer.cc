@@ -5,18 +5,6 @@
 #include "byte_buffer.h"
 
 namespace Token{
-    PeerInfo::PeerInfo(PeerSession* session):
-        SessionInfo(session){
-    }
-
-    BlockHeader PeerInfo::GetHead() const{
-        return ((PeerSession*)GetSession())->GetHead();
-    }
-
-    void PeerInfo::operator=(const PeerInfo& info){
-        SessionInfo::operator=(info);
-    }
-
     void PeerSession::OnShutdown(uv_async_t* handle){
         PeerSession* session = (PeerSession*)handle->data;
         session->Disconnect();
@@ -329,7 +317,7 @@ namespace Token{
     void PeerSession::HandleNotFoundMessage(const Handle<HandleMessageTask>& task){
         PeerSession* session = (PeerSession*)task->GetSession();
         Handle<NotFoundMessage> msg = task->GetMessage().CastTo<NotFoundMessage>();
-        LOG(WARNING) << "(" << session->GetInfo().GetID() << "): " << msg->GetMessage();
+        LOG(WARNING) << "(" << session->GetID() << "): " << msg->GetMessage();
     }
 
     void PeerSession::HandleInventoryMessage(const Handle<HandleMessageTask>& task){

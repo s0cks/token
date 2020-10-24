@@ -11,11 +11,11 @@ namespace Token{
     Handle<Proposal> Proposal::NewInstance(ByteBuffer* bytes){
         uint32_t height = bytes->GetInt();
         Hash hash = bytes->GetHash();
-        std::string proposer = bytes->GetString();
+        UUID proposer(bytes);
         return new Proposal(proposer, hash, height);
     }
 
-    Handle<Proposal> Proposal::NewInstance(uint32_t height, const Hash& hash, const std::string& proposer){
+    Handle<Proposal> Proposal::NewInstance(uint32_t height, const Hash& hash, const UUID& proposer){
         return new Proposal(proposer, hash, height);
     }
 
@@ -23,14 +23,14 @@ namespace Token{
         size_t size = 0;
         size += sizeof(uint32_t);
         size += Hash::kSize;
-        size += (sizeof(uint32_t) + proposer_.length());
+        size += UUID::kSize;
         return size;
     }
 
     bool Proposal::Encode(ByteBuffer* bytes) const{
         bytes->PutInt(height_);
         bytes->PutHash(hash_);
-        bytes->PutString(proposer_);
+        proposer_.Write(bytes);
         return true;
     }
 

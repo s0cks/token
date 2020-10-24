@@ -39,23 +39,13 @@ namespace Token{
     }
 
     bool CrashReportWriter::WriteServerInformation(){
-        std::vector<PeerInfo> peers;
+        std::vector<UUID> peers;
         if(!Server::GetPeers(peers)){
             LOG(WARNING) << "couldn't get peer info from server";
             return false;
         }
 
-        {
-            std::stringstream ss;
-            ss << "Peers (" << peers.size() << ") ";
-            if(!WriteLine(ss)) return false;
-        }
-        for(auto& it : peers){
-            std::stringstream ss;
-            ss << "  - " << it << std::endl;
-            ss << "\t<HEAD> := " << it.GetHead() << std::endl;
-            if(!Write(ss)) return false;
-        }
+        //TODO: write peer information
         return true;
     }
 

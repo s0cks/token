@@ -10,8 +10,8 @@
 namespace Token{
     class PrepareMessage;
     class Proposal : public Object{
+        friend class ServerSession;
         friend class BlockDiscoveryThread;
-        friend class NodeSession; //TODO: revoke friendship
     public:
         enum Phase{
             kProposalPhase,
@@ -39,7 +39,7 @@ namespace Token{
         Phase phase_;
         Status status_;
 
-        std::string proposer_;
+        UUID proposer_;
         uint32_t height_;
         Hash hash_;
 
@@ -49,7 +49,7 @@ namespace Token{
         void SetPhase(Phase phase);
         void SetStatus(Status status);
 
-        Proposal(const std::string& proposer, const Hash& hash, uint32_t height):
+        Proposal(const UUID& proposer, const Hash& hash, uint32_t height):
             phase_(kProposalPhase),
             status_(Status::kUnknownStatus),
             proposer_(proposer),
@@ -60,7 +60,7 @@ namespace Token{
     public:
         ~Proposal() = default;
 
-        std::string GetProposer() const{
+        UUID GetProposer() const{
             return proposer_;
         }
 
@@ -118,13 +118,13 @@ namespace Token{
         }
 
         static Handle<Proposal> NewInstance(ByteBuffer* bytes);
-        static Handle<Proposal> NewInstance(uint32_t height, const Hash& hash, const std::string& proposer);
+        static Handle<Proposal> NewInstance(uint32_t height, const Hash& hash, const UUID& proposer);
 
-        static Handle<Proposal> NewInstance(Block* block, const std::string& proposer){
+        static Handle<Proposal> NewInstance(Block* block, const UUID& proposer){
             return NewInstance(block->GetHeight(), block->GetHash(), proposer);
         }
 
-        static Handle<Proposal> NewInstance(const BlockHeader& block, const std::string& proposer){
+        static Handle<Proposal> NewInstance(const BlockHeader& block, const UUID& proposer){
             return NewInstance(block.GetHeight(), block.GetHash(), proposer);
         }
     };

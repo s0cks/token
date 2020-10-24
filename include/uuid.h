@@ -45,20 +45,16 @@ namespace Token{
             uuid_copy(uuid_, other.uuid_);
         }
 
-        bool operator==(const UUID& other){
-            return uuid_compare(uuid_, other.uuid_) == 0;
+        friend bool operator==(const UUID& a, const UUID& b){
+            return uuid_compare(a.uuid_, b.uuid_) == 0;
         }
 
-        bool operator!=(const UUID& other){
-            return uuid_compare(uuid_, other.uuid_) != 0;
+        friend bool operator!=(const UUID& a, const UUID& b){
+            return uuid_compare(a.uuid_, b.uuid_) != 0;
         }
 
-        bool operator<(const UUID& other){
-            return uuid_compare(uuid_, other.uuid_) < 0;
-        }
-
-        bool operator>(const UUID& other){
-            return uuid_compare(uuid_, other.uuid_) > 0;
+        friend bool operator<(const UUID& a, const UUID& b){
+            return uuid_compare(a.uuid_, b.uuid_) < 0;
         }
 
         friend std::ostream& operator<<(std::ostream& stream, const UUID& uuid){

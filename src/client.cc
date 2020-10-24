@@ -5,26 +5,6 @@
 #include "byte_buffer.h"
 
 namespace Token{
-    ClientSessionInfo::ClientSessionInfo(ClientSession* session):
-        SessionInfo(session){
-    }
-
-    BlockHeader ClientSessionInfo::GetHead() const{
-        return ((ClientSession*)GetSession())->GetHead();
-    }
-
-    NodeAddress ClientSessionInfo::GetPeerAddress() const{
-        return ((ClientSession*)GetSession())->GetPeerAddress();
-    }
-
-    UUID ClientSessionInfo::GetPeerID() const{
-        return ((ClientSession*)GetSession())->GetPeerID();
-    }
-
-    void ClientSessionInfo::operator=(const ClientSessionInfo& info){
-        SessionInfo::operator=(info);
-    }
-
     ClientSession::ClientSession(const NodeAddress& address):
         Session(&stream_),
         thread_(),
@@ -33,10 +13,7 @@ namespace Token{
         stream_(),
         hb_timer_(),
         hb_timeout_(),
-        shutdown_(),
-        address_(address),
-        peer_id_(),
-        head_(){
+        shutdown_(){
         shutdown_.data = this;
         stream_.data = this;
         hb_timer_.data = this;
@@ -214,7 +191,7 @@ namespace Token{
         }
 
         client->SetHead(msg->GetHead());
-        client->SetPeerID(msg->GetID());
+        client->SetID(msg->GetID());
         client->SetPeerAddress(msg->GetCallbackAddress());
         if(IsConnected()){
             uv_timer_stop(&client->hb_timeout_);

@@ -53,13 +53,12 @@ namespace Token{
     private:
         Server() = delete;
 
-        static void LoadNodeInformation();
-        static void SavePeers();
-        static void LoadPeers();
-        static void RegisterPeer(PeerSession* peer);
-        static void UnregisterPeer(PeerSession* peer);
-        static void SetState(State state);
         static uv_tcp_t* GetHandle();
+        static bool Initialize();
+        static bool RegisterPeer(PeerSession* session);
+        static bool UnregisterPeer(PeerSession* session);
+
+        static void SetState(State state);
         static void HandleThread(uword parameter);
         static void HandleTerminateCallback(uv_async_t* handle);
         static void OnNewConnection(uv_stream_t* stream, int status);
@@ -68,14 +67,15 @@ namespace Token{
         ~Server() = delete;
 
         static State GetState();
-        static std::string GetID();
-        static size_t GetNumberOfPeers();
-        static bool HasPeer(const NodeAddress& address);
-        static bool HasPeer(const std::string& id);
-        static bool ConnectTo(const NodeAddress& address);
-        static bool Broadcast(const Handle<Message>& msg);
+        static UUID GetID();
         static void WaitForState(State state);
-        static bool GetPeers(std::vector<PeerInfo>& peers);
+        static bool Broadcast(const Handle<Message>& msg);
+        static bool HasPeer(const UUID& uuid);
+        static bool ConnectTo(const NodeAddress& address);
+        static bool IsConnectedTo(const NodeAddress& address);
+        static bool GetPeers(std::vector<UUID>& peers);
+        static int GetNumberOfPeers();
+        static PeerSession* GetPeer(const UUID& uuid);
 
         static inline bool
         ConnectTo(const std::string& address, uint32_t port){
@@ -108,9 +108,12 @@ namespace Token{
         }
 
         static bool Start(){
-            if(!IsStopped()) return false;
-            LoadNodeInformation();
-            LoadPeers();
+            if(!IsStopped())
+                return false;
+            if(!Initialize()){
+                LOG(ERROR) << "couldn't initialize the server.";
+                return false;
+            }
             return Thread::Start("ServerThread", &HandleThread, 0) == 0;
         }
 
@@ -118,6 +121,29 @@ namespace Token{
         static void Broadcast(const Handle<Name##Message>& msg){ Broadcast(msg.CastTo<Message>()); }
         FOR_EACH_MESSAGE_TYPE(DECLARE_BROADCAST)
 #undef DECLARE_BROADCAST
+    };
+
+    class ServerSession : public Session{
+        friend class Server;
+    private:
+        uv_tcp_t handle_;
+
+        ServerSession():
+            Session(&handle_),
+            handle_(){
+            handle_.data = this;
+        }
+    protected:
+        virtual uv_stream_t* GetStream(){
+            return (uv_stream_t*)&handle_;
+        }
+
+#define DECLARE_MESSAGE_HANDLER(Name) \
+        virtual void Handle##Name##Message(const Handle<HandleMessageTask>& task);
+        FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
+#undef DECLARE_MESSAGE_HANDLER
+    public:
+        ~ServerSession() = default;
     };
 }
 

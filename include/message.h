@@ -214,13 +214,13 @@ namespace Token{
     class PaxosMessage : public Message{
     protected:
         MessageType type_; //TODO: remove this bs
-        std::string node_;
+        UUID proposer_;
         Proposal* proposal_;
 
-        PaxosMessage(MessageType type, const std::string& node, Proposal* proposal):
+        PaxosMessage(MessageType type, const UUID& proposer, Proposal* proposal):
             Message(),
             type_(type),
-            node_(node),
+            proposer_(proposer),
             proposal_(nullptr){
             WriteBarrier(&proposal_, proposal);
         }
@@ -236,81 +236,83 @@ namespace Token{
 
         Handle<Proposal> GetProposal() const;
 
-        //TODO:
-        // - NodeInfo GetProposer()
-        // - NodeInfo GetSubmitter()
-        std::string GetProposer() const{
-            return node_;
+        UUID GetProposer() const{
+            return proposer_;
         }
     };
 
     class PrepareMessage : public PaxosMessage{
     private:
-        PrepareMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(Message::kPrepareMessageType, node_id, proposal){}
+        PrepareMessage(const UUID& proposer, Proposal* proposal):
+            PaxosMessage(Message::kPrepareMessageType, proposer, proposal){}
     public:
         ~PrepareMessage(){}
 
         DECLARE_MESSAGE(Prepare);
 
         static Handle<PrepareMessage> NewInstance(ByteBuffer* bytes);
-        static Handle<PrepareMessage> NewInstance(Proposal* proposal, const std::string& node_id){
-            return new PrepareMessage(node_id, proposal);
+        static Handle<PrepareMessage> NewInstance(Proposal* proposal, const UUID& proposer){
+            return new PrepareMessage(proposer, proposal);
         }
     };
 
     class PromiseMessage : public PaxosMessage{
     private:
-        PromiseMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(Message::kPromiseMessageType, node_id, proposal){}
+        PromiseMessage(const UUID& proposer, Proposal* proposal):
+            PaxosMessage(MessageType::kPromiseMessageType, proposer, proposal){}
     public:
         ~PromiseMessage(){}
 
         DECLARE_MESSAGE(Promise);
 
         static Handle<PromiseMessage> NewInstance(ByteBuffer* bytes);
-        static Handle<PromiseMessage> NewInstance(Proposal* proposal, const std::string& node_id){
-            return new PromiseMessage(node_id, proposal);
+        static Handle<PromiseMessage> NewInstance(Proposal* proposal, const UUID& proposer){
+            return new PromiseMessage(proposer, proposal);
         }
     };
 
     class CommitMessage : public PaxosMessage{
     private:
-        CommitMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(Message::kCommitMessageType, node_id, proposal){}
+        CommitMessage(const UUID& proposer, Proposal* proposal):
+            PaxosMessage(Message::kCommitMessageType, proposer, proposal){}
     public:
         ~CommitMessage(){}
 
         DECLARE_MESSAGE(Commit);
 
         static Handle<CommitMessage> NewInstance(ByteBuffer* bytes);
-        static Handle<CommitMessage> NewInstance(Proposal* proposal, const std::string& node_id){
-            return new CommitMessage(node_id, proposal);
+        static Handle<CommitMessage> NewInstance(Proposal* proposal, const UUID& proposer){
+            return new CommitMessage(proposer, proposal);
         }
     };
 
     class AcceptedMessage : public PaxosMessage{
     private:
-        AcceptedMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(Message::kAcceptedMessageType, node_id, proposal){}
+        AcceptedMessage(const UUID& proposer, Proposal* proposal):
+            PaxosMessage(Message::kAcceptedMessageType, proposer, proposal){}
     public:
         ~AcceptedMessage(){}
 
         DECLARE_MESSAGE(Accepted);
 
         static Handle<AcceptedMessage> NewInstance(ByteBuffer* bytes);
-        static Handle<AcceptedMessage> NewInstance(Proposal* proposal, const std::string& node_id){
-            return new AcceptedMessage(node_id, proposal);
+        static Handle<AcceptedMessage> NewInstance(Proposal* proposal, const UUID& proposer){
+            return new AcceptedMessage(proposer, proposal);
         }
     };
 
     class RejectedMessage : public PaxosMessage{
     private:
-        RejectedMessage(const std::string& node_id, Proposal* proposal): PaxosMessage(Message::kRejectedMessageType, node_id, proposal){}
+        RejectedMessage(const UUID& proposer, Proposal* proposal):
+            PaxosMessage(Message::kRejectedMessageType, proposer, proposal){}
     public:
         ~RejectedMessage(){}
 
         DECLARE_MESSAGE(Rejected);
 
         static Handle<RejectedMessage> NewInstance(ByteBuffer* bytes);
-        static Handle<RejectedMessage> NewInstance(Proposal* proposal, const std::string& node_id){
-            return new RejectedMessage(node_id, proposal);
+        static Handle<RejectedMessage> NewInstance(Proposal* proposal, const UUID& proposer){
+            return new RejectedMessage(proposer, proposal);
         }
     };
 

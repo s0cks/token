@@ -70,45 +70,45 @@ namespace Token{
 
     intptr_t PaxosMessage::GetMessageSize() const{
         intptr_t size = 0;
-        size += (sizeof(uint32_t) + node_.length()); // node_
+        size += UUID::kSize;
         size += proposal_->GetBufferSize();
         return size;
     }
 
     bool PaxosMessage::WriteMessage(ByteBuffer* bytes) const{
-        bytes->PutString(node_);
+        proposer_.Write(bytes);
         proposal_->Encode(bytes);
         return true;
     }
 
     Handle<PrepareMessage> PrepareMessage::NewInstance(ByteBuffer* bytes){
-        std::string node_id = bytes->GetString();
+        UUID proposer(bytes);
         Handle<Proposal> proposal = Proposal::NewInstance(bytes);
-        return new PrepareMessage(node_id, proposal);
+        return new PrepareMessage(proposer, proposal);
     }
 
     Handle<PromiseMessage> PromiseMessage::NewInstance(ByteBuffer* bytes){
-        std::string node_id = bytes->GetString();
+        UUID proposer(bytes);
         Handle<Proposal> proposal = Proposal::NewInstance(bytes);
-        return new PromiseMessage(node_id, proposal);
+        return new PromiseMessage(proposer, proposal);
     }
 
     Handle<CommitMessage> CommitMessage::NewInstance(ByteBuffer* bytes){
-        std::string node_id = bytes->GetString();
+        UUID proposer(bytes);
         Handle<Proposal> proposal = Proposal::NewInstance(bytes);
-        return new CommitMessage(node_id, proposal);
+        return new CommitMessage(proposer, proposal);
     }
 
     Handle<AcceptedMessage> AcceptedMessage::NewInstance(ByteBuffer* bytes){
-        std::string node_id = bytes->GetString();
+        UUID proposer(bytes);
         Handle<Proposal> proposal = Proposal::NewInstance(bytes);
-        return new AcceptedMessage(node_id, proposal);
+        return new AcceptedMessage(proposer, proposal);
     }
 
     Handle<RejectedMessage> RejectedMessage::NewInstance(ByteBuffer* bytes){
-        std::string node_id = bytes->GetString();
+        UUID proposer(bytes);
         Handle<Proposal> proposal = Proposal::NewInstance(bytes);
-        return new RejectedMessage(node_id, proposal);
+        return new RejectedMessage(proposer, proposal);
     }
 
     Handle<TransactionMessage> TransactionMessage::NewInstance(ByteBuffer* bytes){

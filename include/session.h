@@ -11,6 +11,7 @@ namespace Token{
     //TODO:
     // - create + use Bytes class
     // - scope?
+    class SessionInfo;
     class HandleMessageTask;
     class Session{
         friend class BlockChainClient; //TODO: revoke access to Session from BlockChainClient
@@ -48,9 +49,9 @@ namespace Token{
         std::recursive_mutex mutex_;
         std::condition_variable_any cond_;
         State state_;
-
         UUID uuid_;
         NodeAddress address_;
+        BlockHeader head_;
         Message* next_;
 
         Session(const NodeAddress& address):
@@ -59,14 +60,15 @@ namespace Token{
             state_(kDisconnected),
             uuid_(),
             address_(address),
+            head_(),
             next_(nullptr){}
-
         Session(uv_tcp_t* handle):
             mutex_(),
             cond_(),
             state_(kDisconnected),
             uuid_(),
             address_(handle),
+            head_(),
             next_(nullptr){}
 
         virtual uv_stream_t* GetStream() = 0;
@@ -79,8 +81,16 @@ namespace Token{
             uuid_ = uuid;
         }
 
+        void SetHead(const BlockHeader& head){
+            head_ = head;
+        }
+
         friend class Server;
     public:
+        BlockHeader GetHead() const{
+            return head_;
+        }
+
         UUID GetID() const{
             return uuid_;
         }
@@ -119,76 +129,6 @@ namespace Token{
     virtual void Handle##Name##Message(const Handle<HandleMessageTask>& task) = 0;
     FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
-    };
-
-    class SessionInfo{
-    protected:
-        Session* session_;
-
-        SessionInfo(Session* session):
-            session_(session){}
-    public:
-        ~SessionInfo() = default;
-
-        Session* GetSession() const{
-            return session_;
-        }
-
-        UUID GetID() const{
-            return GetSession()->GetID();
-        }
-
-        NodeAddress GetAddress() const{
-            return session_->GetAddress();
-        }
-
-        Session::State GetState() const{
-            return session_->GetState();
-        }
-
-        bool IsDisconnected() const{
-            return GetState() == Session::State::kDisconnected;
-        }
-
-        bool IsConnected() const{
-            return GetState() == Session::State::kConnected;
-        }
-
-        bool IsConnecting() const{
-            return GetState() == Session::State::kConnecting;
-        }
-
-        void operator=(const SessionInfo& info){
-            session_ = info.session_;
-        }
-    };
-
-    //TODO: add heartbeat?
-    class NodeSession : public Session{
-    private:
-        uv_tcp_t handle_;
-        uv_timer_t heartbeat_;
-
-        NodeSession():
-            Session(&handle_),
-            handle_(),
-            heartbeat_(){
-            handle_.data = this;
-            heartbeat_.data = this;
-        }
-
-        virtual uv_stream_t* GetStream(){
-            return (uv_stream_t*)&handle_;
-        }
-
-#define DECLARE_MESSAGE_HANDLER(Name) \
-    virtual void Handle##Name##Message(const Handle<HandleMessageTask>& task);
-        FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
-#undef DECLARE_MESSAGE_HANDLER
-
-        friend class Server;
-    public:
-        ~NodeSession(){}
     };
 }
 
