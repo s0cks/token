@@ -39,7 +39,7 @@ namespace Token{
     }
 
     bool CrashReportWriter::WriteServerInformation(){
-        std::vector<UUID> peers;
+        PeerList peers;
         if(!Server::GetPeers(peers)){
             LOG(WARNING) << "couldn't get peer info from server";
             return false;

@@ -24,12 +24,14 @@ namespace Token{
         }
     }
 
-    void BlockChainConfiguration::SaveConfiguration(){
+    bool BlockChainConfiguration::SaveConfiguration(){
         std::string filename = GetConfigurationFilename();
         try{
             GetConfiguration()->writeFile(filename.c_str());
+            return true;
         } catch(const libconfig::FileIOException& exc){
             LOG(WARNING) << "failed to save configuration to file " << filename << ": " << exc.what();
+            return false;
         }
     }
 }

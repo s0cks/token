@@ -347,4 +347,12 @@ namespace Token{
         }
         return true;
     }
+
+    void PeerSession::HandleGetPeersMessage(const Handle<HandleMessageTask>& task){
+        //TODO: implement PeerSession::HandleGetPeersMessage(const Handle<HandleMessageTask>&);
+    }
+
+    void PeerSession::HandlePeerListMessage(const Handle<HandleMessageTask>& task){
+        //TODO: implement PeerSession::HandlePeerListMessage(const Handle<HandleMessageTask>&);
+    }
 }

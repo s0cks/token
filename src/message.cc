@@ -325,4 +325,46 @@ namespace Token{
     intptr_t GetBlocksMessage::GetMessageSize() const{
         return Hash::kSize * 2;
     }
+
+    Handle<PeerListMessage> PeerListMessage::NewInstance(ByteBuffer* bytes){
+        PeerList peers;
+
+        int32_t npeers = bytes->GetInt();
+        for(int32_t idx = 0; idx < npeers; idx++){
+            Peer peer(bytes);
+            if(!peers.insert(peer).second){
+                LOG(WARNING) << "couldn't insert peer: " << peer;
+                return nullptr;
+            }
+        }
+
+        return new PeerListMessage(peers);
+    }
+
+    intptr_t PeerListMessage::GetMessageSize() const{
+        intptr_t size = 0;
+        size += sizeof(int32_t);
+        size += (GetNumberOfPeers() * Peer::kSize);
+        return size;
+    }
+
+    bool PeerListMessage::WriteMessage(ByteBuffer* bytes) const{
+        bytes->PutInt(GetNumberOfPeers());
+        for(auto it = peers_begin();
+            it != peers_end();
+            it++){
+            it->Write(bytes);
+        }
+        return true;
+    }
+
+    intptr_t GetPeersMessage::GetMessageSize() const{
+        //TODO: implement GetPeersMessage::GetMessageSize()
+        return 0;
+    }
+
+    bool GetPeersMessage::WriteMessage(ByteBuffer* bytes) const{
+        //TODO: implement GetPeersMessage::WriteMessage(ByteBuffer*)
+        return true;
+    }
 }

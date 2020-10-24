@@ -73,7 +73,7 @@ namespace Token{
         static bool HasPeer(const UUID& uuid);
         static bool ConnectTo(const NodeAddress& address);
         static bool IsConnectedTo(const NodeAddress& address);
-        static bool GetPeers(std::vector<UUID>& peers);
+        static bool GetPeers(PeerList& peers);
         static int GetNumberOfPeers();
         static PeerSession* GetPeer(const UUID& uuid);
 

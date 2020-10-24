@@ -11,7 +11,7 @@ namespace Token{
         ~BlockChainConfiguration() = delete;
 
         static void Initialize();
-        static void SaveConfiguration();
+        static bool SaveConfiguration();
         static libconfig::Config* GetConfiguration();
 
         static inline libconfig::Setting& GetRoot(){

@@ -1,6 +1,7 @@
 #ifndef TOKEN_MESSAGE_H
 #define TOKEN_MESSAGE_H
 
+#include <set>
 #include "uuid.h"
 #include "token.h"
 #include "common.h"
@@ -27,7 +28,9 @@ namespace Token{
     V(UnclaimedTransaction) \
     V(Inventory) \
     V(NotFound) \
-    V(GetUnclaimedTransactions)
+    V(GetUnclaimedTransactions)  \
+    V(GetPeers) \
+    V(PeerList)
 
 #define FORWARD_DECLARE(Name) class Name##Message;
     FOR_EACH_MESSAGE_TYPE(FORWARD_DECLARE)
@@ -625,6 +628,128 @@ namespace Token{
             return new GetUnclaimedTransactionsMessage(user);
         }
     };
-};
+
+    class GetPeersMessage : public Message {
+    private:
+        GetPeersMessage() = default;
+    public:
+        ~GetPeersMessage() = default;
+
+        DECLARE_MESSAGE(GetPeers);
+
+        static Handle<GetPeersMessage> NewInstance(ByteBuffer* bytes){
+            return new GetPeersMessage();
+        }
+
+        static Handle<GetPeersMessage> NewInstance(){
+            return new GetPeersMessage();
+        }
+    };
+
+    class Peer{
+        friend class PeerListMessage;
+    public:
+        static const intptr_t kSize = UUID::kSize + NodeAddress::kSize;
+
+        struct IDComparator{
+            bool operator()(const Peer& a, const Peer& b){
+                return a.uuid_ < b.uuid_;
+            }
+        };
+
+        struct AddressComparator{
+            bool operator()(const Peer& a, const Peer& b){
+                return a.address_ < b.address_;
+            }
+        };
+    private:
+        UUID uuid_;
+        NodeAddress address_;
+    protected:
+        bool Write(ByteBuffer* bytes) const{
+            uuid_.Write(bytes);
+            address_.Write(bytes);
+            return true;
+        }
+    public:
+        Peer(const UUID& uuid, const NodeAddress& address):
+            uuid_(uuid),
+            address_(address){}
+        Peer(ByteBuffer* bytes):
+            uuid_(bytes),
+            address_(bytes){}
+        ~Peer() = default;
+
+        UUID GetID() const{
+            return uuid_;
+        }
+
+        NodeAddress GetAddress() const{
+            return address_;
+        }
+
+        void operator=(const Peer& other){
+            uuid_ = other.uuid_;
+            address_ = other.address_;
+        }
+
+        friend bool operator==(const Peer& a, const Peer& b){
+            return a.uuid_ == b.uuid_
+                && a.address_ == b.address_;
+        }
+
+        friend bool operator!=(const Peer& a, const Peer& b){
+            return !operator==(a, b);
+        }
+
+        friend std::ostream& operator<<(std::ostream& stream, const Peer& peer){
+            stream << peer.GetID() << "(" << peer.GetAddress() << ")";
+            return stream;
+        }
+    };
+
+    typedef std::set<Peer, Peer::AddressComparator> PeerList;
+
+    class PeerListMessage : public Message{
+    private:
+        PeerList peers_;
+
+        PeerListMessage(const PeerList& peers):
+            Message(),
+            peers_(peers){
+            if(peers_.empty())
+                LOG(WARNING) << "sending empty peer list";
+        }
+    public:
+        ~PeerListMessage() = default;
+
+        int32_t GetNumberOfPeers() const{
+            return peers_.size();
+        }
+
+        PeerList::iterator peers_begin(){
+            return peers_.begin();
+        }
+
+        PeerList::const_iterator peers_begin() const{
+            return peers_.begin();
+        }
+
+        PeerList::iterator peers_end(){
+            return peers_.end();
+        }
+
+        PeerList::const_iterator peers_end() const{
+            return peers_.end();
+        }
+
+        DECLARE_MESSAGE(PeerList);
+
+        static Handle<PeerListMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<PeerListMessage> NewInstance(const PeerList& peers){
+            return new PeerListMessage(peers);
+        }
+    };
+}
 
 #endif //TOKEN_MESSAGE_H

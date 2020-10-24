@@ -17,35 +17,25 @@ main(int argc, char** argv){
         return EXIT_FAILURE;
     }
 
-    Allocator::Initialize();
-
-/*
-ClientSession* client = new ClientSession(true);
-client->Connect(NodeAddress(FLAGS_peer_address, FLAGS_peer_port));
-client->WaitForState(ClientSession::State::kDisconnected);
-*/
-
-    BlockChainClient* client = new BlockChainClient(NodeAddress(FLAGS_peer_address, FLAGS_peer_port));
-    client->Connect();
-
-    User user("VenueA");
-
-    std::vector<Hash> utxos;
-    if(!client->GetUnclaimedTransactions(user, utxos)){
-        LOG(ERROR) << "cannot get unclaimed transactions for user: " << user;
+    if(FLAGS_peer.empty()){
+        LOG(WARNING) << "please specify a peer address using --peer";
         return EXIT_FAILURE;
     }
 
-    intptr_t idx = 1;
-    LOG(INFO) << "Unclaimed Transactions:";
-    for(auto& it : utxos){
-        Handle<UnclaimedTransaction> utxo = client->GetUnclaimedTransaction(it);
-        if(it.IsNull()){
-            LOG(WARNING) << (idx++) << ": Not Found";
-        } else{
-            LOG(INFO) << (idx++) << ": " << utxo;
-        }
+    Allocator::Initialize();
+
+    BlockChainClient* client = new BlockChainClient(NodeAddress(FLAGS_peer));
+    client->Connect();
+
+    PeerList peers;
+    if(!client->GetPeers(peers)){
+        LOG(WARNING) << "couldn't get a list of peers from the peer.";
+        return EXIT_FAILURE;
     }
 
+    LOG(INFO) << "Peers (" << peers.size() << "):";
+    for(auto& peer : peers){
+        LOG(INFO) << " - " << peer;
+    }
     return EXIT_SUCCESS;
 }

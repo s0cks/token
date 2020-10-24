@@ -13,7 +13,8 @@ namespace Token{
         stream_(),
         hb_timer_(),
         hb_timeout_(),
-        shutdown_(){
+        shutdown_(),
+        paddress_(address){
         shutdown_.data = this;
         stream_.data = this;
         hb_timer_.data = this;
@@ -231,6 +232,14 @@ namespace Token{
     void ClientSession::HandleNotFoundMessage(const Handle<HandleMessageTask>& msg){}
     void ClientSession::HandleGetUnclaimedTransactionsMessage(const Handle<HandleMessageTask>& task){}
 
+    void ClientSession::HandleGetPeersMessage(const Handle<HandleMessageTask>& task){
+        //TODO: implement ClientSession::HandleGetPeersMessage(const Handle<HandleMessageTask>&);
+    }
+
+    void ClientSession::HandlePeerListMessage(const Handle<HandleMessageTask>& task){
+        //TODO: implement ClientSession::HandlePeerListMessage(const Handle<HandleMessageTask>&);
+    }
+
     void ClientSession::Disconnect(){
         if(pthread_self() == thread_){
             // Inside Session OSThreadBase
@@ -289,6 +298,30 @@ namespace Token{
             } else if(next->IsNotFoundMessage()){
                 return Handle<UnclaimedTransaction>();
             } else{
+                LOG(WARNING) << "cannot handle " << next;
+                continue;
+            }
+        } while(true);
+    }
+
+    bool BlockChainClient::GetPeers(PeerList& peers){
+        LOG(INFO) << "getting peers....";
+        ClientSession* session = GetSession();
+        if(session->IsConnecting()){
+            LOG(INFO) << "waiting for client to connect....";
+            session->WaitForState(Session::kConnected);
+        }
+
+        session->Send(GetPeersMessage::NewInstance());
+        do{
+            session->WaitForNextMessage();
+            Handle<Message> next = session->GetNextMessage();
+            if(next->IsPeerListMessage()){
+                Handle<PeerListMessage> resp = next.CastTo<PeerListMessage>();
+                std::copy(resp->peers_begin(), resp->peers_end(), std::inserter(peers, peers.begin()));
+                return true;
+            } else{
+                //TODO: handle a better error response, this causes an infinite loop if the peer doesn't respond
                 LOG(WARNING) << "cannot handle " << next;
                 continue;
             }

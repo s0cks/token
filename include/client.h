@@ -20,13 +20,10 @@ namespace Token{
         uv_timer_t hb_timer_;
         uv_timer_t hb_timeout_;
         uv_async_t shutdown_;
+        NodeAddress paddress_;
 
         void SetPeerAddress(const NodeAddress& address){
-            address_ = address;
-        }
-
-        NodeAddress GetPeerAddress() const{
-            return address_;
+            paddress_ = address;
         }
 
         static void* ClientSessionThread(void* data);
@@ -53,6 +50,10 @@ namespace Token{
         FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
 
+        NodeAddress GetPeerAddress() const {
+            return paddress_;
+        }
+
         bool Connect();
         void Disconnect();
     };
@@ -71,9 +72,10 @@ namespace Token{
 
         bool Connect();
         bool Disconnect();
-        Handle<UnclaimedTransaction> GetUnclaimedTransaction(const Hash& hash);
+        bool GetPeers(PeerList& peers);
         bool GetUnclaimedTransactions(const User& user, std::vector<Hash>& utxos);
         bool Send(const Handle<Transaction>& tx);
+        Handle<UnclaimedTransaction> GetUnclaimedTransaction(const Hash& hash);
     };
 }
 

@@ -188,6 +188,158 @@ namespace Token{
         return true;
     }
 
+#define CONFIG_KEY_SERVER "Server"
+#define CONFIG_KEY_ID "Id"
+#define CONFIG_KEY_PEERS "Peers"
+
+    static inline bool
+    LoadConfiguration(libconfig::Setting& config){
+        LOG(INFO) << "loading the server configuration....";
+        if(!config.exists(CONFIG_KEY_ID)){
+            node_id_ = UUID();
+            config.add(CONFIG_KEY_ID, libconfig::Setting::TypeString) = node_id_.ToString();
+            BlockChainConfiguration::SaveConfiguration();
+        } else{
+            std::string node_id;
+            config.lookupValue(CONFIG_KEY_ID, node_id);
+            node_id_ = UUID(node_id);
+        }
+        return true;
+    }
+
+    static inline bool
+    LoadPeers(libconfig::Setting& config){
+        LOG(INFO) << "loading peers....";
+        if(!config.exists(CONFIG_KEY_PEERS)){
+            config.add(CONFIG_KEY_PEERS, libconfig::Setting::TypeArray);
+            BlockChainConfiguration::SaveConfiguration();
+        } else{
+            libconfig::Setting& peers = config.lookup(CONFIG_KEY_PEERS);
+            auto iter = peers.begin();
+            while(iter != peers.end()){
+                std::string paddress(iter->c_str());
+                if(!Server::ConnectTo(NodeAddress(paddress))){
+                    LOG(WARNING) << "couldn't connect to peer";
+                    return false;
+                }
+                iter++;
+            }
+        }
+        return true;
+    }
+
+    bool Server::Initialize(){
+        LOG(INFO) << "initializing the server....";
+        LOCK_GUARD;
+        libconfig::Setting& config = BlockChainConfiguration::GetProperty(CONFIG_KEY_SERVER, libconfig::Setting::TypeGroup);
+        if(!LoadConfiguration(config)){
+            LOG(WARNING) << "couldn't load server information from the configuration.";
+            return false;
+        }
+        if(!LoadPeers(config)){
+            LOG(WARNING) << "couldn't load peers from the configuration.";
+            return false;
+        }
+
+        if(!FLAGS_peer.empty()){
+            NodeAddress paddress(FLAGS_peer);
+            if(!ConnectTo(paddress)){
+                LOG(WARNING) << "cannot connect to peer: " << paddress;
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool Server::HasPeer(const UUID& uuid){
+        LOCK_GUARD;
+        for(auto& it : peers_){
+            PeerSession* peer = it.second;
+            if(peer->GetID() == uuid)
+                return true;
+        }
+        return false;
+    }
+
+    bool Server::ConnectTo(const NodeAddress &address){
+        //-- Attention! --
+        // this is not a memory leak, the memory will be freed upon
+        // the session being closed
+        return (new PeerSession(address))->Connect();
+    }
+
+    bool Server::IsConnectedTo(const NodeAddress& address){
+        LOCK_GUARD;
+        for(auto& it : peers_){
+            PeerSession* peer = it.second;
+            if(peer->GetAddress() == address)
+                return true;
+        }
+        return false;
+    }
+
+    PeerSession* Server::GetPeer(const UUID& uuid){
+        LOCK_GUARD;
+        for(auto& it : peers_){
+            PeerSession* peer = it.second;
+            if(peer->GetID() == uuid)
+                return peer;
+        }
+        return nullptr;
+    }
+
+    bool Server::GetPeers(PeerList& peers){
+        LOCK_GUARD;
+        for(auto& it : peers_){
+            PeerSession* psession = it.second;
+            Peer peer(psession->GetID(), psession->GetAddress());
+            if(!(peers.insert(peer).second)){
+                LOG(WARNING) << "cannot add peer: " << peer;
+                return false;
+            }
+        }
+        return true;
+    }
+
+    int Server::GetNumberOfPeers(){
+        LOCK_GUARD;
+        return peers_.size();
+    }
+
+    static inline bool
+    SavePeers(){
+        LOG(INFO) << "saving peers....";
+        libconfig::Setting& config = BlockChainConfiguration::GetProperty(CONFIG_KEY_SERVER, libconfig::Setting::TypeGroup);
+        if(config.exists(CONFIG_KEY_PEERS)){
+            config.remove(CONFIG_KEY_PEERS);
+        }
+
+        libconfig::Setting& peers = config.add(CONFIG_KEY_PEERS, libconfig::Setting::TypeArray);
+        for(auto peer : peers_){
+            NodeAddress paddress = peer.second->GetAddress();
+            peers.add(libconfig::Setting::TypeString) = paddress.ToString();
+        }
+        return BlockChainConfiguration::SaveConfiguration();
+    }
+
+    bool Server::RegisterPeer(PeerSession* session){
+        LOCK_GUARD;
+        if(!(peers_.insert({ session->GetID(), session }).second)){
+            LOG(WARNING) << "cannot register peer: " << session->GetID();
+            return false;
+        }
+        return SavePeers();
+    }
+
+    bool Server::UnregisterPeer(PeerSession* session){
+        LOCK_GUARD;
+        if(!(peers_.erase(session->GetID()))){
+            LOG(WARNING) << "cannot unregister peer: " << session->GetID();
+            return false;
+        }
+        return SavePeers();
+    }
+
     void ServerSession::HandleNotFoundMessage(const Handle<HandleMessageTask>& task){
         //TODO: implement HandleNotFoundMessage
         LOG(WARNING) << "not implemented";
@@ -455,115 +607,22 @@ namespace Token{
         session->Send(InventoryMessage::NewInstance(items));
     }
 
-#define CONFIG_KEY_ID "Id"
-#define CONFIG_KEY_PEERS "Peers"
+    void ServerSession::HandleGetPeersMessage(const Handle<HandleMessageTask>& task){
+        ServerSession* session = (ServerSession*)task->GetSession();
+        Handle<GetPeersMessage> msg = task->GetMessage().CastTo<GetPeersMessage>();
 
-    bool Server::Initialize(){
-        LOG(INFO) << "initializing the server....";
-        LOCK_GUARD;
-        libconfig::Setting& config = BlockChainConfiguration::GetProperty("Server", libconfig::Setting::TypeGroup);
-        if(!config.exists(CONFIG_KEY_ID)){
-            node_id_ = UUID();
-            config.add(CONFIG_KEY_ID, libconfig::Setting::TypeString) = node_id_.ToString();
-            BlockChainConfiguration::SaveConfiguration();
-        } else{
-            std::string node_id;
-            config.lookupValue(CONFIG_KEY_ID, node_id);
-            node_id_ = UUID(node_id);
+        LOG(INFO) << "getting peers....";
+
+        PeerList peers;
+        if(!Server::GetPeers(peers)){
+            LOG(ERROR) << "couldn't get list of peers from the server.";
+            return;
         }
 
-        if(!config.exists(CONFIG_KEY_PEERS)){
-            config.add(CONFIG_KEY_PEERS, libconfig::Setting::TypeArray);
-            BlockChainConfiguration::SaveConfiguration();
-        } else{
-            libconfig::Setting& peers = config.lookup(CONFIG_KEY_PEERS);
-            auto iter = peers.begin();
-            while(iter != peers.end()){
-                NodeAddress address((*iter));
-
-                //TODO: connect to peer
-
-                iter++;
-            }
-        }
-
-        return true;
+        session->Send(PeerListMessage::NewInstance(peers));
     }
 
-    bool Server::HasPeer(const UUID& uuid){
-        LOCK_GUARD;
-        for(auto& it : peers_){
-            PeerSession* peer = it.second;
-            if(peer->GetID() == uuid)
-                return true;
-        }
-        return false;
+    void ServerSession::HandlePeerListMessage(const Handle<HandleMessageTask>& task){
+        //TODO: implement ServerSession::HandlePeerListMessage(const Handle<HandleMessageTask>&);
     }
-
-    bool Server::ConnectTo(const NodeAddress &address){
-        //-- Attention! --
-        // this is not a memory leak, the memory will be freed upon
-        // the session being closed
-        return (new PeerSession(address))->Connect();
-    }
-
-    bool Server::IsConnectedTo(const NodeAddress& address){
-        LOCK_GUARD;
-        for(auto& it : peers_){
-            PeerSession* peer = it.second;
-            if(peer->GetAddress() == address)
-                return true;
-        }
-        return false;
-    }
-
-    PeerSession* Server::GetPeer(const UUID& uuid){
-        LOCK_GUARD;
-        for(auto& it : peers_){
-            PeerSession* peer = it.second;
-            if(peer->GetID() == uuid)
-                return peer;
-        }
-        return nullptr;
-    }
-
-    bool Server::GetPeers(std::vector<UUID>& peers){
-        LOCK_GUARD;
-        for(auto& it : peers_){
-            PeerSession* peer = it.second;
-            peers.push_back(peer->GetID());
-        }
-        return true;
-    }
-
-    int Server::GetNumberOfPeers(){
-        LOCK_GUARD;
-        return peers_.size();
-    }
-
-    bool Server::RegisterPeer(PeerSession* session){
-        LOCK_GUARD;
-        return peers_.insert({ session->GetID(), session }).second;
-    }
-
-    bool Server::UnregisterPeer(PeerSession* session){
-        LOCK_GUARD;
-        return peers_.erase(session->GetID());
-    }
-
-    /*
-    void Server::SavePeers(){
-        LOCK_GUARD;
-        libconfig::Setting& root = BlockChainConfiguration::GetRoot();
-        if(root.exists("Peers")) root.remove("Peers");
-
-        libconfig::Setting& peers = root.add("Peers", libconfig::Setting::TypeArray);
-        for(auto& it : peers_){
-            NodeAddress address = it.second->GetAddress();
-            peers.add(libconfig::Setting::TypeString) = address.ToString();
-        }
-
-        BlockChainConfiguration::SaveConfiguration();
-    }
-     */
 }
