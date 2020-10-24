@@ -59,10 +59,6 @@ namespace Token{
         for(auto& item : items){
             Hash hash = item.GetHash();
             LOG(INFO) << "searching for: " << hash;
-            if(BlockChain::HasBlock(hash)){
-                LOG(INFO) << "found!";
-            }
-
             if(item.ItemExists()){
                 if(item.IsBlock()){
                     Handle<Block> block = nullptr;
@@ -71,25 +67,30 @@ namespace Token{
                     } else if(BlockPool::HasBlock(hash)){
                         block = BlockPool::GetBlock(hash);
                     } else{
-                        //TODO: return 404
-#ifdef TOKEN_DEBUG
                         LOG(WARNING) << "cannot find block: " << hash;
-#endif//TOKEN_DEBUG
-                        return;
+                        response.push_back(NotFoundMessage::NewInstance().CastTo<Message>());
+                        break;
                     }
+
                     response.push_back(BlockMessage::NewInstance(block).CastTo<Message>());
                 } else if(item.IsTransaction()){
-                    Transaction* tx = nullptr;
-                    if(TransactionPool::HasTransaction(hash)){
-                        tx = TransactionPool::GetTransaction(hash);
-                    } else{
-                        //TODO: return 404
-#ifdef TOKEN_DEBUG
-                        LOG(WARNING) << "couldn't find transaction: " << hash;
-#endif//TOKEN_DEBUG
-                        return;
+                    if(!TransactionPool::HasTransaction(hash)){
+                        LOG(WARNING) << "cannot find transaction: " << hash;
+                        response.push_back(NotFoundMessage::NewInstance().CastTo<Message>());
+                        break;
                     }
+
+                    Handle<Transaction> tx = TransactionPool::GetTransaction(hash);
                     response.push_back(TransactionMessage::NewInstance(tx).CastTo<Message>());
+                } else if(item.IsUnclaimedTransaction()){
+                    if(!UnclaimedTransactionPool::HasUnclaimedTransaction(hash)){
+                        LOG(WARNING) << "couldn't find unclaimed transaction: " << hash;
+                        response.push_back(NotFoundMessage::NewInstance().CastTo<Message>());
+                        break;
+                    }
+
+                    Handle<UnclaimedTransaction> utxo = UnclaimedTransactionPool::GetUnclaimedTransaction(hash);
+                    response.push_back(UnclaimedTransactionMessage::NewInstance(utxo).CastTo<Message>());
                 }
             } else{
                 Send(NotFoundMessage::NewInstance());
@@ -174,6 +175,10 @@ namespace Token{
             TransactionPool::PutTransaction(tx);
             Server::Broadcast(InventoryMessage::NewInstance(tx).CastTo<Message>());
         }
+    }
+
+    void NodeSession::HandleUnclaimedTransactionMessage(const Handle<HandleMessageTask>& task){
+
     }
 
     void NodeSession::HandleInventoryMessage(const Handle<HandleMessageTask>& task){

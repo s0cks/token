@@ -9,9 +9,6 @@ namespace Token{
             LOG(WARNING) << "couldn't encode object to bytes";
             return false;
         }
-
-        LOG(INFO) << "writing " << bytes.GetWrittenBytes() << " bytes to file";
-
         file.write((char*)bytes.data(), bytes.GetWrittenBytes());
         file.flush();
         return true;

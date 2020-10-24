@@ -13,7 +13,7 @@ namespace Token{
     public:
         Product() = default;
         Product(const Product& Product):
-                data_(){
+            data_(){
             memcpy(data_, Product.data_, kSize);
         }
         Product(const std::string& value);

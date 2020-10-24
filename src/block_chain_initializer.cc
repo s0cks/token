@@ -58,7 +58,7 @@ namespace Token{
                 Transaction* it = genesis->GetTransaction(idx);
                 for(uint32_t out_idx = 0; out_idx < it->GetNumberOfOutputs(); out_idx++){
                     Handle<Output> out_it = it->GetOutput(out_idx);
-                    Handle<UnclaimedTransaction> out_utxo = UnclaimedTransaction::NewInstance(it->GetHash(), out_idx, out_it->GetUser());
+                    Handle<UnclaimedTransaction> out_utxo = UnclaimedTransaction::NewInstance(it->GetHash(), out_idx, out_it->GetUser(), out_it->GetProduct());
                     UnclaimedTransactionPool::PutUnclaimedTransaction(out_utxo);
                 }
             }

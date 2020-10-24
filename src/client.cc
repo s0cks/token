@@ -245,6 +245,7 @@ namespace Token{
     void ClientSession::HandleGetDataMessage(const Handle<HandleMessageTask>& task){}
     void ClientSession::HandleGetBlocksMessage(const Handle<HandleMessageTask>& msg){}
     void ClientSession::HandleTransactionMessage(const Handle<HandleMessageTask>& msg){}
+    void ClientSession::HandleUnclaimedTransactionMessage(const Handle<HandleMessageTask>& task){}
     void ClientSession::HandleCommitMessage(const Handle<HandleMessageTask>& msg){}
     void ClientSession::HandlePrepareMessage(const Handle<HandleMessageTask>& msg){}
     void ClientSession::HandlePromiseMessage(const Handle<HandleMessageTask>& msg){}
@@ -305,8 +306,10 @@ namespace Token{
         do{
             session->WaitForNextMessage();
             Handle<Message> next = session->GetNextMessage();
-            //TODO: implement
-            if(next->IsNotFoundMessage()){
+
+            if(next->IsUnclaimedTransactionMessage()){
+                return next.CastTo<UnclaimedTransactionMessage>()->GetUnclaimedTransaction();
+            } else if(next->IsNotFoundMessage()){
                 return Handle<UnclaimedTransaction>();
             } else{
                 LOG(WARNING) << "cannot handle " << next;

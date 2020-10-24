@@ -36,9 +36,15 @@ client->WaitForState(ClientSession::State::kDisconnected);
         return EXIT_FAILURE;
     }
 
+    intptr_t idx = 1;
     LOG(INFO) << "Unclaimed Transactions:";
-    for(auto& utxo : utxos){
-        LOG(INFO) << " - " << utxo;
+    for(auto& it : utxos){
+        Handle<UnclaimedTransaction> utxo = client->GetUnclaimedTransaction(it);
+        if(it.IsNull()){
+            LOG(WARNING) << (idx++) << ": Not Found";
+        } else{
+            LOG(INFO) << (idx++) << ": " << utxo;
+        }
     }
 
     return EXIT_SUCCESS;

@@ -138,6 +138,20 @@ namespace Token{
         return true;
     }
 
+    Handle<UnclaimedTransactionMessage> UnclaimedTransactionMessage::NewInstance(ByteBuffer* bytes){
+        Handle<UnclaimedTransaction> utxo = UnclaimedTransaction::NewInstance(bytes);
+        return new UnclaimedTransactionMessage(utxo);
+    }
+
+    intptr_t UnclaimedTransactionMessage::GetMessageSize() const{
+        return data_->GetMessageSize();
+    }
+
+    bool UnclaimedTransactionMessage::WriteMessage(ByteBuffer* bytes) const{
+        data_->Write(bytes);
+        return true;
+    }
+
     Handle<InventoryMessage> InventoryMessage::NewInstance(ByteBuffer* bytes){
         uint32_t num_items = bytes->GetInt();
         std::vector<InventoryItem> items;

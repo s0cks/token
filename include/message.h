@@ -24,6 +24,7 @@ namespace Token{
     V(GetBlocks) \
     V(Block) \
     V(Transaction) \
+    V(UnclaimedTransaction) \
     V(Inventory) \
     V(NotFound) \
     V(GetUnclaimedTransactions)
@@ -369,6 +370,34 @@ namespace Token{
         }
     };
 
+    class UnclaimedTransactionMessage : public Message {
+    private:
+        UnclaimedTransaction* data_;
+
+        UnclaimedTransactionMessage(const Handle<UnclaimedTransaction>& utxo):
+            Message(),
+            data_(nullptr){
+            WriteBarrier(&data_, utxo);
+        }
+    protected:
+        bool Accept(WeakObjectPointerVisitor* vis){
+            return vis->Visit(&data_);
+        }
+    public:
+        ~UnclaimedTransactionMessage() = default;
+
+        Handle<UnclaimedTransaction> GetUnclaimedTransaction() const{
+            return data_;
+        }
+
+        DECLARE_MESSAGE(UnclaimedTransaction);
+
+        static Handle<UnclaimedTransactionMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<UnclaimedTransactionMessage> NewInstance(const Handle<UnclaimedTransaction>& utxo){
+            return new UnclaimedTransactionMessage(utxo);
+        }
+    };
+
     class InventoryItem{
     public:
         enum Type{
@@ -447,6 +476,8 @@ namespace Token{
                 stream << "Block(" << item.GetHash() << ")";
             } else if(item.IsTransaction()){
                 stream << "Transaction(" << item.GetHash() << ")";
+            } else if(item.IsUnclaimedTransaction()){
+                stream << "UnclaimedTransaction(" << item.GetHash() << ")";
             } else{
                 stream << "Unknown(" << item.GetHash() << ")";
             }

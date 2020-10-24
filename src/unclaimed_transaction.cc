@@ -11,7 +11,8 @@ namespace Token{
         Hash hash = bytes->GetHash();
         uint32_t index = bytes->GetInt();
         User user = User(bytes);
-        return new UnclaimedTransaction(hash, index, user);
+        Product product = Product(bytes);
+        return new UnclaimedTransaction(hash, index, user, product);
     }
 
     Handle<UnclaimedTransaction> UnclaimedTransaction::NewInstance(std::fstream& fd, size_t size){

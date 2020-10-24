@@ -15,7 +15,7 @@ namespace Token{
     }
 
     std::string Product::Get() const{
-        return std::string(data_, kSize);
+        return std::string(data_, strlen(data_));
     }
 
     bool Product::Encode(ByteBuffer* bytes) const{

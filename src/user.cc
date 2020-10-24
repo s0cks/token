@@ -16,7 +16,7 @@ namespace Token{
     }
 
     std::string User::Get() const{
-        return std::string(data_, 64);
+        return std::string(data_, strlen(data_));
     }
 
     bool User::Encode(ByteBuffer* bytes) const{

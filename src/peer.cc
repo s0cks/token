@@ -322,6 +322,10 @@ namespace Token{
 
     }
 
+    void PeerSession::HandleUnclaimedTransactionMessage(const Handle<HandleMessageTask>& task){
+
+    }
+
     void PeerSession::HandleNotFoundMessage(const Handle<HandleMessageTask>& task){
         PeerSession* session = (PeerSession*)task->GetSession();
         Handle<NotFoundMessage> msg = task->GetMessage().CastTo<NotFoundMessage>();
