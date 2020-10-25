@@ -4,13 +4,16 @@
 
 # Except These
 !/cmake/
-!/include/
-!/protos/
-!/src/
-!/terraform/
-!/tests/
-!/*.cc
-!/README.md
 !/images/
+!/include/
+!/src/
+!/tests/
 !/.gitignore
+!/client.cc
 !/CMakeLists.txt
+!/Dockerfile
+!/entrypoint.sh
+!/inspector.cc
+!/main.cc
+!/README.md
+!/tests.cc
