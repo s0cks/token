@@ -55,6 +55,7 @@ namespace Token{
 
         static uv_tcp_t* GetHandle();
         static bool Initialize();
+        static bool HasPeer(const NodeAddress& address);
         static bool RegisterPeer(PeerSession* session);
         static bool UnregisterPeer(PeerSession* session);
 

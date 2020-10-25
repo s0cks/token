@@ -22,20 +22,22 @@ main(int argc, char** argv){
         return EXIT_FAILURE;
     }
 
-    Allocator::Initialize();
-
-    BlockChainClient* client = new BlockChainClient(NodeAddress(FLAGS_peer));
-    client->Connect();
-
-    PeerList peers;
-    if(!client->GetPeers(peers)){
-        LOG(WARNING) << "couldn't get a list of peers from the peer.";
+    if(!BlockChainClient::Initialize()){
+        LOG(ERROR) << "couldn't initialize the client.";
         return EXIT_FAILURE;
     }
 
-    LOG(INFO) << "Peers (" << peers.size() << "):";
-    for(auto& peer : peers){
-        LOG(INFO) << " - " << peer;
+    NodeAddress address;
+    BlockChainClient* client = new BlockChainClient(address);
+    if(!client->Connect()){
+        LOG(ERROR) << "couldn't connect to the peer: " << address;
+        return EXIT_FAILURE;
+    }
+
+    PeerList peers;
+    if(!client->GetPeers(peers)){
+        LOG(WARNING) << "couldn't get peer list from peer.";
+        return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
 }

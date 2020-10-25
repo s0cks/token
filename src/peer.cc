@@ -81,6 +81,7 @@ namespace Token{
             return;
         }
 
+        Server::RegisterPeer(session);
         session->SetState(Session::kConnecting);
         session->Send(VersionMessage::NewInstance(Server::GetID()));
         if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
@@ -171,7 +172,6 @@ namespace Token{
         session->SetHead(msg->GetHead());
         if(IsConnecting()){
             LOG(INFO) << "connected to peer: " << session->GetID() << "[" << session->GetAddress() << "]";
-            Server::RegisterPeer(session);
             session->SetID(msg->GetID());
             session->SetState(Session::kConnected);
 
@@ -182,7 +182,6 @@ namespace Token{
             } else if(local_head < remote_head){
                 Handle<SynchronizeBlockChainTask> sync_task = SynchronizeBlockChainTask::NewInstance(session->GetLoop(), session, remote_head);
                 sync_task->Submit();
-
                 session->Send(GetBlocksMessage::NewInstance().CastTo<Message>());
             }
         }
@@ -198,6 +197,7 @@ namespace Token{
         Handle<PromiseMessage> msg = task->GetMessage().CastTo<PromiseMessage>();
 
         /*
+        TODO:
         if(!ProposerThread::HasProposal()){
             LOG(WARNING) << "no active proposal found";
             return;
@@ -218,7 +218,8 @@ namespace Token{
         Handle<AcceptedMessage> msg = task->GetMessage().CastTo<AcceptedMessage>();
 
         /*
-        if(!ProposerThread::HasProposal()){
+        TODO:
+         if(!ProposerThread::HasProposal()){
             LOG(WARNING) << "no active proposal found";
             return;
         }
@@ -236,7 +237,8 @@ namespace Token{
         Handle<RejectedMessage> msg = task->GetMessage().CastTo<RejectedMessage>();
 
         /*
-        if(!ProposerThread::HasProposal()){
+        TODO:
+         if(!ProposerThread::HasProposal()){
             LOG(WARNING) << "no active proposal found";
             return;
         }

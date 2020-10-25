@@ -12,7 +12,6 @@ namespace Token{
         uint32_t address_;
         uint32_t port_;
     public:
-        NodeAddress();
         NodeAddress(const std::string& address);
         NodeAddress(const std::string& address, uint32_t port);
         NodeAddress(const uv_tcp_t* stream);
@@ -20,6 +19,9 @@ namespace Token{
         NodeAddress(ByteBuffer* bytes):
             address_(bytes->GetUnsignedInt()),
             port_(bytes->GetUnsignedInt()){}
+        NodeAddress():
+            address_(0),
+            port_(0){}
         ~NodeAddress() = default;
 
         uint32_t GetPort() const{
@@ -43,7 +45,12 @@ namespace Token{
         }
 
         friend bool operator==(const NodeAddress& a, const NodeAddress& b){
-            return a.address_ == b.address_ && a.port_ == b.port_;
+            LOG(INFO) << "a.address_ := " << a.address_;
+            LOG(INFO) << "a.port_ := " << a.port_;
+            LOG(INFO) << "b.address_ := " << b.address_;
+            LOG(INFO) << "b.port_ := " << b.port_;
+            return a.address_ == b.address_
+                && a.port_ == b.port_;
         }
 
         friend bool operator!=(const NodeAddress& a, const NodeAddress& b){

@@ -15,14 +15,14 @@ namespace Token{
     static uv_tcp_t handle_;
     static uv_async_t aterm_;
 
-    static std::recursive_mutex mutex_;
-    static std::condition_variable_any cond_;
+    static std::mutex mutex_;
+    static std::condition_variable cond_;
     static Server::State state_ = Server::State::kStopped;
     static UUID node_id_;
     static std::map<UUID, PeerSession*> peers_;
 
-#define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
-#define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
+#define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
+#define LOCK std::unique_lock<std::mutex> lock(mutex_)
 #define WAIT cond_.wait(lock)
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
@@ -109,6 +109,8 @@ namespace Token{
         }
 
         ServerSession* session = new ServerSession();
+        session->SetState(Session::kConnecting);
+
         uv_tcp_init(stream->loop, (uv_tcp_t*)session->GetStream());
         LOG(INFO) << "client is connecting...";
         if((status = uv_accept(stream, (uv_stream_t*)session->GetStream())) != 0){
@@ -208,20 +210,16 @@ namespace Token{
     }
 
     static inline bool
-    LoadPeers(libconfig::Setting& config){
+    LoadPeers(libconfig::Setting& config, std::set<NodeAddress>& peers){
         LOG(INFO) << "loading peers....";
         if(!config.exists(CONFIG_KEY_PEERS)){
             config.add(CONFIG_KEY_PEERS, libconfig::Setting::TypeArray);
             BlockChainConfiguration::SaveConfiguration();
         } else{
-            libconfig::Setting& peers = config.lookup(CONFIG_KEY_PEERS);
-            auto iter = peers.begin();
-            while(iter != peers.end()){
-                std::string paddress(iter->c_str());
-                if(!Server::ConnectTo(NodeAddress(paddress))){
-                    LOG(WARNING) << "couldn't connect to peer";
-                    return false;
-                }
+            libconfig::Setting& pcfg = config.lookup(CONFIG_KEY_PEERS);
+            auto iter = pcfg.begin();
+            while(iter != pcfg.end()){
+                peers.insert(NodeAddress(std::string(iter->c_str())));
                 iter++;
             }
         }
@@ -236,16 +234,23 @@ namespace Token{
             LOG(WARNING) << "couldn't load server information from the configuration.";
             return false;
         }
-        if(!LoadPeers(config)){
+
+        std::set<NodeAddress> peers;
+        if(!LoadPeers(config, peers)){
             LOG(WARNING) << "couldn't load peers from the configuration.";
             return false;
         }
-
         if(!FLAGS_peer.empty()){
-            NodeAddress paddress(FLAGS_peer);
-            if(!ConnectTo(paddress)){
-                LOG(WARNING) << "cannot connect to peer: " << paddress;
-                return false;
+            peers.insert(NodeAddress(FLAGS_peer));
+        }
+
+        for(auto& peer : peers){
+            if(!HasPeer(peer)){
+                if(!ConnectTo(peer)){
+                    LOG(WARNING) << "cannot connect to peer: " << peer;
+                }
+            } else{
+                LOG(WARNING) << "already connected to peer: " << peer;
             }
         }
         return true;
@@ -272,8 +277,10 @@ namespace Token{
         LOCK_GUARD;
         for(auto& it : peers_){
             PeerSession* peer = it.second;
-            if(peer->GetAddress() == address)
+            LOG(INFO) << "checking: " << peer->GetAddress() << " == " << address;
+            if(peer->GetAddress() == address){
                 return true;
+            }
         }
         return false;
     }
@@ -322,6 +329,17 @@ namespace Token{
         return BlockChainConfiguration::SaveConfiguration();
     }
 
+    bool Server::HasPeer(const NodeAddress& address){
+        for(auto& it : peers_){
+            PeerSession* peer = it.second;
+            LOG(INFO) << "checking: " << peer->GetAddress();
+            if(peer->GetAddress() == address){
+                return true;
+            }
+        }
+        return false;
+    }
+
     bool Server::RegisterPeer(PeerSession* session){
         LOCK_GUARD;
         if(!(peers_.insert({ session->GetID(), session }).second)){
@@ -333,7 +351,7 @@ namespace Token{
 
     bool Server::UnregisterPeer(PeerSession* session){
         LOCK_GUARD;
-        if(!(peers_.erase(session->GetID()))){
+        if(peers_.erase(session->GetID()) != 1){
             LOG(WARNING) << "cannot unregister peer: " << session->GetID();
             return false;
         }
@@ -364,11 +382,13 @@ namespace Token{
         NodeAddress callback("127.0.0.1", FLAGS_port); //TODO: obtain address dynamically
         session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), callback));
 
+        LOG(INFO) << "State: " << session->GetState();
         if(session->IsConnecting()){
             session->SetState(Session::State::kConnected);
             if(msg->IsNode()){
                 NodeAddress paddr = msg->GetCallbackAddress();
-                if(!Server::IsConnectedTo(callback)){
+                LOG(INFO) << "peer connected from: " << paddr;
+                if(!Server::IsConnectedTo(paddr)){
                     LOG(WARNING) << "couldn't find peer: " << msg->GetID() << ", connecting to peer " << paddr << "....";
                     if(!Server::ConnectTo(paddr)){
                         LOG(WARNING) << "couldn't connect to peer: " << paddr;

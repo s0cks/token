@@ -41,9 +41,9 @@ namespace Token{
         Version version(bytes);
         Hash nonce = bytes->GetHash();
         UUID node_id(bytes);
-        NodeAddress address; //TODO: decode callback_
+        NodeAddress callback(bytes);
         BlockHeader head = BlockHeader(bytes);
-        return new VerackMessage(client_type, node_id, version, nonce, address, head, timestamp);
+        return new VerackMessage(client_type, node_id, version, nonce, callback, head, timestamp);
     }
 
     intptr_t VerackMessage::GetMessageSize() const{
@@ -53,7 +53,7 @@ namespace Token{
         size += Version::kSize; // version_
         size += Hash::kSize; // nonce_
         size += UUID::kSize; // node_id_
-        //TODO: calculate sizeof(callback_)
+        size += NodeAddress::kSize; // callback_
         size += BlockHeader::kSize; // head_
         return size;
     }
@@ -64,6 +64,7 @@ namespace Token{
         version_.Write(bytes);
         bytes->PutHash(nonce_);
         node_id_.Write(bytes);
+        callback_.Write(bytes);
         head_.Write(bytes);
         return true;
     }

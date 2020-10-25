@@ -52,10 +52,6 @@ namespace Token{
         return atoi(port.c_str());
     }
 
-    NodeAddress::NodeAddress():
-        address_(0),
-        port_(0){}
-
     NodeAddress::NodeAddress(const std::string& address):
         address_(0),
         port_(0){

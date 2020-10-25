@@ -253,6 +253,15 @@ namespace Token{
         }
     }
 
+    void BlockChainClient::HandleTermination(int signum){
+        LOG(INFO) << "terminating the client....";
+        //TODO: implement BlockChainClient::HandleTermination(int)
+    }
+
+    void BlockChainClient::HandleSegfault(int signum){
+        //TODO: implement BlockChainClient::HandleSegfault(int)
+    }
+
     bool BlockChainClient::Connect(){
         if(!GetSession()->Connect())
             return false;
@@ -264,6 +273,11 @@ namespace Token{
     bool BlockChainClient::Disconnect(){
         GetSession()->Disconnect();
         return true;//TODO: better response for BlockChainClient::Disconnect()
+    }
+
+    bool BlockChainClient::WaitForDisconnect(){
+        GetSession()->WaitForState(Session::kDisconnected);
+        return true; //TODO: better response for BlockChainClient::WaitForDisconnect()
     }
 
     bool BlockChainClient::Send(const Handle<Transaction>& tx){
