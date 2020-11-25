@@ -19,6 +19,6 @@ spec:
       containers:
         - name: token-ledger-node
           imagePullPolicy: IfNotPresent
-          image: gcr.io/tkn-events/token-ledger:1.3.5
+          image: gcr.io/tkn-events/token-ledger:1.4.0
           ports:
             - containerPort: 8080
