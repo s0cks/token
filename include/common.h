@@ -138,7 +138,7 @@ namespace Token{
 // Command Line Flags
 DECLARE_string(path);
 DECLARE_uint32(port);
-DECLARE_uint32(heap_size);
+DECLARE_string(heap_size);
 DECLARE_string(peer);
 
 // Initialization Flags

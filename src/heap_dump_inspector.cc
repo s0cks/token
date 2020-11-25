@@ -1,3 +1,4 @@
+#include "heap.h"
 #include "heap_dump.h"
 
 namespace Token{
@@ -13,5 +14,32 @@ namespace Token{
 
     void HeapDumpInspector::HandleStatusCommand(HeapDumpInspectorCommand* cmd){
         PrintHeapDump(GetHeapDump());
+    }
+
+    void HeapDumpInspector::HandlePrintObjectsCommand(HeapDumpInspectorCommand* cmd){
+        ObjectPointerPrinter printer;
+        Space space = cmd->GetNextArgumentSpace();
+        switch(space){
+            case Space::kOldHeap:{
+                LOG(INFO) << "Old Heap:";
+                if(!GetNewHeap()->VisitObjects(&printer)){
+                    LOG(ERROR) << "cannot print old heap objects.";
+                    return;
+                }
+                return;
+            }
+            case Space::kNewHeap:{
+                LOG(INFO) << "New Heap:";
+                if(!GetNewHeap()->VisitObjects(&printer)){
+                    LOG(ERROR) << "cannot print new heap objects.";
+                    return;
+                }
+                return;
+            }
+            case Space::kStackSpace:
+                //TODO: implement
+                LOG(WARNING) << "not implemented yet";
+                return;
+        }
     }
 }

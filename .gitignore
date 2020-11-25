@@ -6,6 +6,7 @@
 !/cmake/
 !/images/
 !/include/
+!/manifests/
 !/src/
 !/tests/
 !/.gitignore

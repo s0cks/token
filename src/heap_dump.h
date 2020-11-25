@@ -61,13 +61,31 @@ namespace Token{
     };
 
 #define FOR_EACH_HEAP_INSPECTOR_COMMAND(V) \
-    V(Status, ".status", 0)
+    V(Status, ".status", 0) \
+    V(PrintObjects, "print-objects", 1)
 
     class HeapDumpInspectorCommand : public Command{
     public:
         HeapDumpInspectorCommand(std::deque<std::string>& args):
             Command(args){}
         ~HeapDumpInspectorCommand() = default;
+
+        Space GetNextArgumentSpace(){
+            std::string next = GetNextArgument();
+            std::transform(next.begin(), next.end(), next.begin(), [](unsigned char c){
+                return std::tolower(c);
+            });
+            if(next == "stack"){
+                return Space::kStackSpace;
+            } else if(next == "new"){
+                return Space::kNewHeap;
+            } else if(next == "old"){
+                return Space::kNewHeap;
+            }
+
+            LOG(WARNING) << "unknown space: " << next;
+            return Space::kNewHeap;
+        }
 
 #define DEFINE_TYPE_CHECK(Name, Text, ArgumentCount) \
         bool Is##Name##Command() const{ return !strncmp(name_.data(), Text, strlen(Text)); }
@@ -85,6 +103,14 @@ namespace Token{
         inline bool
         HasHeapDump() const{
             return data_ != nullptr;
+        }
+
+        inline Heap* GetOldHeap() const{
+            return GetHeapDump()->GetOldHeap();
+        }
+
+        inline Heap* GetNewHeap() const{
+            return GetHeapDump()->GetNewHeap();
         }
 
 #define DECLARE_HANDLER(Name, Text, Parameters) \

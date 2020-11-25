@@ -30,6 +30,7 @@ namespace Token{
         intptr_t size = obj->GetSize();
         void* nptr = Allocator::GetNewHeap()->GetToSpace()->Allocate(size);
         obj->ptr_ = (uword)nptr;
+        ((Object*)nptr)->size_ = size;
         obj->IncrementCollectionsCounter();
         LOG(INFO) << "new destination: [" << std::hex << nptr << ":" << std::dec << size << "]";
         return true;
@@ -62,8 +63,7 @@ namespace Token{
         while(HasWork()){
             Object* obj = (Object*)work_.back();
             work_.pop_back();
-
-            if (!obj->IsMarked()) {
+            if (!obj->IsMarked() && Allocator::GetNewHeap()->Contains((uword)obj)) {
                 LOG(INFO) << "marking object " << ObjectLocation(obj);
                 obj->SetMarked();
                 if (!obj->Accept(&marker)) {

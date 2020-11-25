@@ -158,8 +158,7 @@ namespace Token{
         PeerSession* session = (PeerSession*)task->GetSession();
         Handle<VersionMessage> msg = task->GetMessage().CastTo<VersionMessage>();
 
-        NodeAddress callback("127.0.0.1", FLAGS_port);//TODO: dynamically lookup callback address
-        session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), callback).CastTo<Message>());
+        session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), Server::GetCallbackAddress()).CastTo<Message>());
     }
 
     void PeerSession::HandleVerackMessage(const Handle<HandleMessageTask>& task){

@@ -65,6 +65,9 @@ namespace Token{
     class Allocator{
         friend class Object;
         friend class Scavenger;
+    public:
+        static const intptr_t kDefaultHeapSize;
+        static const char* kDefaultHeapSizeAsString;
     private:
         Allocator() = delete;
         static void Initialize(Object* obj);

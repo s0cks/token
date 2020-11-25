@@ -19,6 +19,18 @@ namespace Token{
                                     Hash::kSize +
                                     Hash::kSize +
                                     Hash::kSize;
+
+        struct TimestampComparator{
+            bool operator()(const BlockHeader& a, const BlockHeader& b){
+                return a.timestamp_ < b.timestamp_;
+            }
+        };
+
+        struct HeightComparator{
+            bool operator()(const BlockHeader& a, const BlockHeader& b){
+                return a.height_ < b.height_;
+            }
+        };
     private:
         Timestamp timestamp_;
         intptr_t height_;
@@ -160,7 +172,9 @@ namespace Token{
         }
     protected:
         bool Accept(WeakObjectPointerVisitor* vis){
-            return vis->Visit(&transactions_);
+            for(intptr_t idx = 0; idx < num_transactions_; idx++)
+                if(!vis->Visit(&transactions_[idx])) return false;
+            return true;
         }
 
         intptr_t GetMessageSize() const{

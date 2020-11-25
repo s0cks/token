@@ -68,8 +68,6 @@ namespace Token{
             phase_ = phase;
         }
 
-        void ScavengePointer(ObjectPtr* ptr);
-
         bool ProcessRoots();
         bool ScavengeMemory();
         bool Visit(Object* obj);

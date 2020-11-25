@@ -26,7 +26,7 @@ namespace Token{
     }
 
     void ClientSession::OnShutdown(uv_async_t* handle){
-        PeerSession* session = (PeerSession*)handle->data;
+        ClientSession* session = (ClientSession*)handle->data;
         session->Disconnect();
     }
 
@@ -206,20 +206,7 @@ namespace Token{
         LOG(INFO) << "received block: " << blk->GetHeader();
     }
 
-    void ClientSession::HandleInventoryMessage(const Handle<HandleMessageTask>& task){
-        Handle<InventoryMessage> msg = task->GetMessage().CastTo<InventoryMessage>();
-
-        std::vector<InventoryItem> items;
-        if(!msg->GetItems(items)){
-            LOG(WARNING) << "couldn't read inventory from peer";
-            return;
-        }
-
-        for(auto& item : items){
-            LOG(INFO) << "  - " << item.GetHash();
-        }
-    }
-
+    void ClientSession::HandleInventoryMessage(const Handle<HandleMessageTask>& task){}
     void ClientSession::HandleGetDataMessage(const Handle<HandleMessageTask>& task){}
     void ClientSession::HandleGetBlocksMessage(const Handle<HandleMessageTask>& msg){}
     void ClientSession::HandleTransactionMessage(const Handle<HandleMessageTask>& msg){}
@@ -291,6 +278,34 @@ namespace Token{
         return true; // no acknowledgement from server
     }
 
+    Handle<Block> BlockChainClient::GetBlock(const Hash& hash){
+        LOG(INFO) << "getting block: " << hash;
+
+        ClientSession* session = GetSession();
+        if(session->IsConnecting()){
+            LOG(INFO) << "waiting for the client to connect....";
+            session->WaitForState(Session::kConnected);
+        }
+
+        std::vector<InventoryItem> items = {
+            InventoryItem(InventoryItem::kBlock, hash),
+        };
+        session->Send(GetDataMessage::NewInstance(items));
+        do{
+            session->WaitForNextMessage();
+            Handle<Message> next = session->GetNextMessage();
+
+            if(next->IsBlockMessage()){
+                return next.CastTo<BlockMessage>()->GetBlock();
+            } else if(next->IsNotFoundMessage()){
+                return Handle<Block>();
+            } else{
+                LOG(WARNING) << "cannot handle " << next;
+                continue;
+            }
+        } while(true);
+    }
+
     Handle<UnclaimedTransaction> BlockChainClient::GetUnclaimedTransaction(const Hash& hash){
         LOG(INFO) << "getting unclaimed transactions " << hash;
         ClientSession* session = GetSession();
@@ -336,6 +351,50 @@ namespace Token{
                 return true;
             } else{
                 //TODO: handle a better error response, this causes an infinite loop if the peer doesn't respond
+                LOG(WARNING) << "cannot handle " << next;
+                continue;
+            }
+        } while(true);
+    }
+
+    bool BlockChainClient::GetBlockChain(std::set<Hash>& blocks){
+        LOG(INFO) << "getting a list of blocks from the peer";
+
+        ClientSession* session = GetSession();
+        if(session->IsConnecting()){
+            LOG(INFO) << "waiting for the client to connect....";
+            session->WaitForState(Session::kConnected);
+        }
+
+        BlockHeader local_head = Block::Genesis()->GetHeader();
+        BlockHeader remote_head = session->GetHead();
+
+        session->Send(GetBlocksMessage::NewInstance(local_head.GetHash()));
+        do{
+            session->WaitForNextMessage();
+
+            Handle<Message> next = session->GetNextMessage();
+            if(next->IsInventoryMessage()){
+                Handle<InventoryMessage> inv = next.CastTo<InventoryMessage>();
+
+                std::vector<InventoryItem> items;
+                if(!inv->GetItems(items)){
+                    LOG(ERROR) << "cannot get items from inventory";
+                    return false;
+                }
+
+                LOG(INFO) << "received inventory of " << items.size() << " items";
+                for(auto& item : items){
+                    blocks.insert(item.GetHash());
+                    if(item.GetHash() == remote_head.GetHash()){
+                        return true;
+                    }
+                }
+
+                continue;
+            } else if(next->IsNotFoundMessage()){
+                return false;
+            } else{
                 LOG(WARNING) << "cannot handle " << next;
                 continue;
             }

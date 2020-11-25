@@ -13,12 +13,13 @@
 
 namespace Token{
     static uv_tcp_t handle_;
-    static uv_async_t aterm_;
+    static uv_async_t shutdown_;
 
     static std::mutex mutex_;
     static std::condition_variable cond_;
     static Server::State state_ = Server::State::kStopped;
     static UUID node_id_;
+    static NodeAddress callback_;
     static std::map<UUID, PeerSession*> peers_;
 
 #define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
@@ -26,6 +27,88 @@ namespace Token{
 #define WAIT cond_.wait(lock)
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
+
+#define CONFIG_KEY_SERVER "Server"
+#define CONFIG_KEY_ID "Id"
+#define CONFIG_KEY_PEERS "Peers"
+#define CONFIG_KEY_CALLBACK "CallbackAddress"
+
+    static inline bool
+    LoadServerConfiguration(libconfig::Setting& config){
+        if(!config.exists(CONFIG_KEY_ID)){
+            node_id_ = UUID();
+            config.add(CONFIG_KEY_ID, libconfig::Setting::TypeString) = node_id_.ToString();
+            BlockChainConfiguration::SaveConfiguration();
+        } else{
+            std::string node_id;
+            config.lookupValue(CONFIG_KEY_ID, node_id);
+            node_id_ = UUID(node_id);
+        }
+
+        if(!config.exists(CONFIG_KEY_CALLBACK)){
+            callback_ = NodeAddress("127.0.0.1", FLAGS_port);
+            config.add(CONFIG_KEY_CALLBACK, libconfig::Setting::TypeString) = callback_.ToString();
+            BlockChainConfiguration::SaveConfiguration();
+        } else{
+            std::string address;
+            config.lookupValue(CONFIG_KEY_CALLBACK, address);
+            callback_ = NodeAddress(address);
+        }
+        return true;
+    }
+
+    static inline bool
+    LoadPeersConfiguration(libconfig::Setting& config, std::set<NodeAddress>& peers){
+        if(!config.exists(CONFIG_KEY_PEERS)){
+            config.add(CONFIG_KEY_PEERS, libconfig::Setting::TypeArray);
+            BlockChainConfiguration::SaveConfiguration();
+        } else{
+            libconfig::Setting& pcfg = config.lookup(CONFIG_KEY_PEERS);
+            auto iter = pcfg.begin();
+            while(iter != pcfg.end()){
+                peers.insert(NodeAddress(std::string(iter->c_str())));
+                iter++;
+            }
+        }
+        return true;
+    }
+
+    static inline bool
+    LoadConfiguration(std::set<NodeAddress>& peers){
+        LOG(INFO) << "loading the server configuration....";
+
+        LOCK_GUARD;
+        libconfig::Setting& config = BlockChainConfiguration::GetProperty(CONFIG_KEY_SERVER, libconfig::Setting::TypeGroup);
+        if(!LoadServerConfiguration(config)){
+            LOG(WARNING) << "couldn't load server information from the configuration.";
+            return false;
+        }
+
+        LOG(INFO) << "loading peers....";
+        if(!FLAGS_peer.empty())
+            peers.insert(NodeAddress(FLAGS_peer));
+        if(!LoadPeersConfiguration(config, peers)){
+            LOG(WARNING) << "couldn't load peers from the configuration.";
+            return false;
+        }
+        return true;
+    }
+
+    static inline bool
+    SavePeers(){
+        LOG(INFO) << "saving peers....";
+        libconfig::Setting& config = BlockChainConfiguration::GetProperty(CONFIG_KEY_SERVER, libconfig::Setting::TypeGroup);
+        if(config.exists(CONFIG_KEY_PEERS)){
+            config.remove(CONFIG_KEY_PEERS);
+        }
+
+        libconfig::Setting& peers = config.add(CONFIG_KEY_PEERS, libconfig::Setting::TypeArray);
+        for(auto peer : peers_){
+            NodeAddress paddress = peer.second->GetAddress();
+            peers.add(libconfig::Setting::TypeString) = paddress.ToString();
+        }
+        return BlockChainConfiguration::SaveConfiguration();
+    }
 
     uv_tcp_t* Server::GetHandle(){
         return &handle_;
@@ -69,35 +152,83 @@ namespace Token{
         return state_;
     }
 
+    NodeAddress Server::GetCallbackAddress(){
+        LOCK_GUARD;
+        return callback_;
+    }
+
     void Server::HandleTerminateCallback(uv_async_t* handle){
         uv_stop(handle->loop);
+    }
+
+    static inline void
+    ConnectToPeers(const std::set<NodeAddress>& peers){
+        for(auto& peer : peers){
+            if(Server::HasPeer(peer)){
+                LOG(WARNING) << "already connected to peer: " << peer;
+                continue;
+            }
+            if(!Server::ConnectTo(peer))
+                LOG(WARNING) << "cannot connect to peer: " << peer;
+        }
+    }
+
+    bool Server::Initialize(){
+        if(!IsStopped()){
+            LOG(WARNING) << "the server needs to be stopped first";
+            return false;
+        }
+
+        LOG(INFO) << "initializing the server....";
+        std::set<NodeAddress> peers;
+        if(!LoadConfiguration(peers)){
+            LOG(ERROR) << "couldn't load the server configuration.";
+            return false;
+        }
+
+        LOG(INFO) << "connecting to peers....";
+        ConnectToPeers(peers);
+        return Thread::Start("ServerThread", &HandleThread, 0) == 0;
+    }
+
+    bool Server::Shutdown(){
+        //TODO: implement Server::Shutdown()
+        LOG(WARNING) << "Server::Shutdown() not implemented yet.";
+        if(pthread_self() == uv_thread_self()){
+            // Inside OSThreadBase
+        } else{
+            // Outside OSThreadBase
+            uv_async_send(&shutdown_);
+        }
+        return false;
     }
 
     void Server::HandleThread(uword parameter){
         LOG(INFO) << "starting server...";
         SetState(State::kStarting);
         uv_loop_t* loop = uv_loop_new();
-        uv_async_init(loop, &aterm_, &HandleTerminateCallback);
+        uv_async_init(loop, &shutdown_, &HandleTerminateCallback);
 
         struct sockaddr_in addr;
         uv_ip4_addr("0.0.0.0", FLAGS_port, &addr);
         uv_tcp_init(loop, GetHandle());
         uv_tcp_keepalive(GetHandle(), 1, 60);
+
         int err;
         if((err = uv_tcp_bind(GetHandle(), (const struct sockaddr*)&addr, 0)) != 0){
-            LOG(ERROR) << ""; //TODO:
-            pthread_exit(0);
+            LOG(ERROR) << "couldn't bind the server: " << uv_strerror(err);
+            goto exit;
         }
 
         if((err = uv_listen((uv_stream_t*)GetHandle(), 100, &OnNewConnection)) != 0){
-            LOG(ERROR) << ""; //TODO:
-            pthread_exit(0);
+            LOG(ERROR) << "server couldn't listen: " << uv_strerror(err);
+            goto exit;
         }
 
         LOG(INFO) << "server " << GetID() << " listening @" << FLAGS_port;
         SetState(State::kRunning);
         uv_run(loop, UV_RUN_DEFAULT);
-
+    exit:
         uv_loop_close(loop);
         pthread_exit(0);
     }
@@ -190,72 +321,6 @@ namespace Token{
         return true;
     }
 
-#define CONFIG_KEY_SERVER "Server"
-#define CONFIG_KEY_ID "Id"
-#define CONFIG_KEY_PEERS "Peers"
-
-    static inline bool
-    LoadConfiguration(libconfig::Setting& config){
-        LOG(INFO) << "loading the server configuration....";
-        if(!config.exists(CONFIG_KEY_ID)){
-            node_id_ = UUID();
-            config.add(CONFIG_KEY_ID, libconfig::Setting::TypeString) = node_id_.ToString();
-            BlockChainConfiguration::SaveConfiguration();
-        } else{
-            std::string node_id;
-            config.lookupValue(CONFIG_KEY_ID, node_id);
-            node_id_ = UUID(node_id);
-        }
-        return true;
-    }
-
-    static inline bool
-    LoadPeers(libconfig::Setting& config, std::set<NodeAddress>& peers){
-        LOG(INFO) << "loading peers....";
-        if(!config.exists(CONFIG_KEY_PEERS)){
-            config.add(CONFIG_KEY_PEERS, libconfig::Setting::TypeArray);
-            BlockChainConfiguration::SaveConfiguration();
-        } else{
-            libconfig::Setting& pcfg = config.lookup(CONFIG_KEY_PEERS);
-            auto iter = pcfg.begin();
-            while(iter != pcfg.end()){
-                peers.insert(NodeAddress(std::string(iter->c_str())));
-                iter++;
-            }
-        }
-        return true;
-    }
-
-    bool Server::Initialize(){
-        LOG(INFO) << "initializing the server....";
-        LOCK_GUARD;
-        libconfig::Setting& config = BlockChainConfiguration::GetProperty(CONFIG_KEY_SERVER, libconfig::Setting::TypeGroup);
-        if(!LoadConfiguration(config)){
-            LOG(WARNING) << "couldn't load server information from the configuration.";
-            return false;
-        }
-
-        std::set<NodeAddress> peers;
-        if(!LoadPeers(config, peers)){
-            LOG(WARNING) << "couldn't load peers from the configuration.";
-            return false;
-        }
-        if(!FLAGS_peer.empty()){
-            peers.insert(NodeAddress(FLAGS_peer));
-        }
-
-        for(auto& peer : peers){
-            if(!HasPeer(peer)){
-                if(!ConnectTo(peer)){
-                    LOG(WARNING) << "cannot connect to peer: " << peer;
-                }
-            } else{
-                LOG(WARNING) << "already connected to peer: " << peer;
-            }
-        }
-        return true;
-    }
-
     bool Server::HasPeer(const UUID& uuid){
         LOCK_GUARD;
         for(auto& it : peers_){
@@ -313,22 +378,6 @@ namespace Token{
         return peers_.size();
     }
 
-    static inline bool
-    SavePeers(){
-        LOG(INFO) << "saving peers....";
-        libconfig::Setting& config = BlockChainConfiguration::GetProperty(CONFIG_KEY_SERVER, libconfig::Setting::TypeGroup);
-        if(config.exists(CONFIG_KEY_PEERS)){
-            config.remove(CONFIG_KEY_PEERS);
-        }
-
-        libconfig::Setting& peers = config.add(CONFIG_KEY_PEERS, libconfig::Setting::TypeArray);
-        for(auto peer : peers_){
-            NodeAddress paddress = peer.second->GetAddress();
-            peers.add(libconfig::Setting::TypeString) = paddress.ToString();
-        }
-        return BlockChainConfiguration::SaveConfiguration();
-    }
-
     bool Server::HasPeer(const NodeAddress& address){
         for(auto& it : peers_){
             PeerSession* peer = it.second;
@@ -379,8 +428,7 @@ namespace Token{
         ServerSession* session = (ServerSession*)task->GetSession();
         Handle<VerackMessage> msg = task->GetMessage().CastTo<VerackMessage>();
 
-        NodeAddress callback("127.0.0.1", FLAGS_port); //TODO: obtain address dynamically
-        session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), callback));
+        session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), Server::GetCallbackAddress()));
 
         LOG(INFO) << "State: " << session->GetState();
         if(session->IsConnecting()){

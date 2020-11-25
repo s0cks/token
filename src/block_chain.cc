@@ -89,9 +89,9 @@ namespace Token{
         return GetHeadNode()->GetValue();
     }
 
-    Handle<Block> BlockChain::GetGenesis(){
+    BlockHeader BlockChain::GetGenesis(){
         LOCK_GUARD;
-        return GetGenesisNode()->GetValue().GetData();
+        return GetGenesisNode()->GetValue();
     }
 
     Handle<Block> BlockChain::GetBlock(uint32_t height){
@@ -104,6 +104,17 @@ namespace Token{
             node = node->GetNext();
         }
         return nullptr;
+    }
+
+    bool BlockChain::GetHeaders(std::set<BlockHeader>& blocks){
+        LOCK_GUARD;
+        BlockNode* node = GetGenesisNode();
+        while(node != nullptr){
+            BlockHeader blk = node->GetValue();
+            blocks.insert(blk);
+            node = node->GetNext();
+        }
+        return !blocks.empty();
     }
 
     Handle<Block> BlockChain::GetBlock(const Hash& hash){

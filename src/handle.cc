@@ -19,7 +19,6 @@ namespace Token{
                 idx++){
                 Object* data = handles_[idx];
                 if(data){
-                    LOG(INFO) << "visiting (@" << data << "): " << data->ToString();
                     if(!vis->Visit(&handles_[idx]))
                         return false;
                 }

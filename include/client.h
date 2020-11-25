@@ -76,6 +76,8 @@ namespace Token{
         bool Connect();
         bool Disconnect();
         bool WaitForDisconnect();
+        Handle<Block> GetBlock(const Hash& hash);
+        bool GetBlockChain(std::set<Hash>& blocks);
         bool GetPeers(PeerList& peers);
         bool GetUnclaimedTransactions(const User& user, std::vector<Hash>& utxos);
         bool Send(const Handle<Transaction>& tx);

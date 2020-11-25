@@ -54,8 +54,6 @@ namespace Token{
         Server() = delete;
 
         static uv_tcp_t* GetHandle();
-        static bool Initialize();
-        static bool HasPeer(const NodeAddress& address);
         static bool RegisterPeer(PeerSession* session);
         static bool UnregisterPeer(PeerSession* session);
 
@@ -67,11 +65,13 @@ namespace Token{
     public:
         ~Server() = delete;
 
+        static NodeAddress GetCallbackAddress();
         static State GetState();
         static UUID GetID();
         static void WaitForState(State state);
         static bool Broadcast(const Handle<Message>& msg);
         static bool HasPeer(const UUID& uuid);
+        static bool HasPeer(const NodeAddress& address);
         static bool ConnectTo(const NodeAddress& address);
         static bool IsConnectedTo(const NodeAddress& address);
         static bool GetPeers(PeerList& peers);
@@ -108,15 +108,8 @@ namespace Token{
             return GetState() == kStopped;
         }
 
-        static bool Start(){
-            if(!IsStopped())
-                return false;
-            if(!Initialize()){
-                LOG(ERROR) << "couldn't initialize the server.";
-                return false;
-            }
-            return Thread::Start("ServerThread", &HandleThread, 0) == 0;
-        }
+        static bool Initialize();
+        static bool Shutdown();
 
 #define DECLARE_BROADCAST(Name) \
         static void Broadcast(const Handle<Name##Message>& msg){ Broadcast(msg.CastTo<Message>()); }

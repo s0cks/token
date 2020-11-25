@@ -27,17 +27,24 @@ main(int argc, char** argv){
         return EXIT_FAILURE;
     }
 
-    NodeAddress address;
+    NodeAddress address(FLAGS_peer);
     BlockChainClient* client = new BlockChainClient(address);
     if(!client->Connect()){
         LOG(ERROR) << "couldn't connect to the peer: " << address;
         return EXIT_FAILURE;
     }
 
-    PeerList peers;
-    if(!client->GetPeers(peers)){
-        LOG(WARNING) << "couldn't get peer list from peer.";
+    std::set<Hash> blocks;
+    if(!client->GetBlockChain(blocks)){
+        LOG(ERROR) << "couldn't get the list of blocks from the peer: " << address;
         return EXIT_FAILURE;
     }
+
+    for(auto& it : blocks){
+        LOG(INFO) << " - " << it;
+    }
+
+    client->Disconnect();
+    client->WaitForDisconnect();
     return EXIT_SUCCESS;
 }

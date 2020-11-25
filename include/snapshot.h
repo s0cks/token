@@ -19,9 +19,7 @@ namespace Token{
     uint32_t GetSnapshotSectionSize(SnapshotSectionHeader header);
 
     class SnapshotVisitor;
-    class Snapshot : public Object{
-        //TODO:
-        // - encode bloom filter to blocks
+    class Snapshot{
         friend class SnapshotWriter;
         friend class SnapshotReader;
         friend class SnapshotInspector;
@@ -40,6 +38,7 @@ namespace Token{
             timestamp_(),
             version_(),
             head_(),
+            blocks_len_(0),
             blocks_(nullptr){}
 
         void SetTimestamp(uint64_t timestamp){
@@ -61,10 +60,6 @@ namespace Token{
             blocks_len_ = num_blocks;
         }
 
-        void SetBlock(uint64_t idx, const Handle<Block>& blk){
-            WriteBarrier(&blocks_[idx], blk);
-        }
-
         static inline void
         CheckSnapshotDirectory(){
             std::string filename = GetSnapshotDirectory();
@@ -82,7 +77,7 @@ namespace Token{
             return true;
         }
     public:
-        ~Snapshot();
+        ~Snapshot() = default;
 
         std::string GetFilename() const{
             return filename_;
@@ -115,10 +110,7 @@ namespace Token{
             return nullptr;
         }
 
-        std::string ToString() const;
         bool Accept(SnapshotVisitor* vis);
-        size_t GetBufferSize() const{ return 0; } //TODO: implement Snapshot::GetBufferSize()
-        bool Encode(ByteBuffer* bytes) const{ return false; } //TODO: implement Snapshot::Encode(ByteBuffer*)
 
         static bool WriteNewSnapshot();
         static Snapshot* ReadSnapshot(const std::string& filename);

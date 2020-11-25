@@ -11,7 +11,7 @@ namespace Token{
         GetNewHeapDumpFilename(){
             std::stringstream filename;
             filename << HeapDump::GetHeapDumpDirectory();
-            filename << "/dump-" << GetTimestampFormattedFileSafe();
+            filename << "/dump-" << GetTimestampFormattedFileSafe() << ".dat";
             return filename.str();
         }
     public:

@@ -23,9 +23,33 @@ namespace Token{
     static intptr_t allocating_size_ = 0;
     static void* allocating_ = nullptr;
 
+#define MB_SIZE 1000000
+#define GB_SIZE 1000000000
+
+    static inline intptr_t
+    ParseHeapSize(const std::string& size){
+        intptr_t scalar = atoll(size.substr(0, size.size()-1).data());
+        char last = tolower(size[size.size() - 1]);
+        if(last == 'b'){
+            return scalar;
+        } else if(last == 'm'){
+            return scalar * MB_SIZE;
+        } else if(last == 'g'){
+            return scalar * GB_SIZE;
+        } else{
+            LOG(ERROR) << "cannot parse heap size: " << size;
+            //TODO: Properly shutdown the system?
+            return Allocator::kDefaultHeapSize;
+        }
+    }
+
+    const intptr_t Allocator::kDefaultHeapSize = 8 * MB_SIZE;
+    const char* Allocator::kDefaultHeapSizeAsString = "8m";
+
     void Allocator::Initialize(){
         LOCK_GUARD;
-        intptr_t region_size = FLAGS_heap_size;
+
+        intptr_t region_size = ParseHeapSize(FLAGS_heap_size);
         intptr_t heap_size = (region_size / 4);
         intptr_t semispace_size = (heap_size / 2);
         region_ = new MemoryRegion(region_size);

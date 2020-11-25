@@ -29,14 +29,6 @@ namespace Token{
         return SnapshotSectionSizeField::Decode(header);
     }
 
-    Snapshot::~Snapshot(){}
-
-    std::string Snapshot::ToString() const{
-        std::stringstream ss;
-        ss << "Snapshot(" << GetFilename() << ")";
-        return ss.str();
-    }
-
     bool Snapshot::WriteNewSnapshot(){
         CheckSnapshotDirectory();
         SnapshotWriter writer;

@@ -1,8 +1,9 @@
 #ifndef TOKEN_BLOCK_CHAIN_H
 #define TOKEN_BLOCK_CHAIN_H
 
-#include <leveldb/db.h>
 #include <map>
+#include <set>
+#include <leveldb/db.h>
 
 #include "common.h"
 #include "merkle.h"
@@ -44,9 +45,11 @@ namespace Token{
         static bool HasBlock(const Hash& hash);
         static bool HasTransaction(const Hash& hash);
         static BlockHeader GetHead();
-        static Handle<Block> GetGenesis();
+        static BlockHeader GetGenesis();
         static Handle<Block> GetBlock(const Hash& hash);
         static Handle<Block> GetBlock(uint32_t height);
+
+        static bool GetHeaders(std::set<BlockHeader>& blocks);
 
         static inline bool
         IsUninitialized(){
