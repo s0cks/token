@@ -76,6 +76,8 @@ namespace Token{
             session_(session),
             code_(code),
             message_(message){}
+        HttpResponse(HttpSession* session, int code, const std::stringstream& ss):
+            HttpResponse(session, code, ss.str()){}
         ~HttpResponse() = default;
 
         HttpSession* GetSession() const{

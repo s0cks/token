@@ -10,7 +10,7 @@ namespace Token {
     class ByteBuffer {
         //TODO:
         // - research benefits of signed vs unsigned
-        // - convert to object instance
+        // - convert to Buffer object instance
     private:
         uint8_t* data_;
         size_t cap_;

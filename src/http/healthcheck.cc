@@ -94,9 +94,8 @@ namespace Token{
     }
 
     void HealthCheckService::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
-        //TODO: buff->base = (char*)Allocator::Allocate(kBufferSize);
-        buff->base = (char*)malloc(HttpSession::kBufferSize);
-        buff->len = HttpSession::kBufferSize;
+        Handle<HttpSession> session = (HttpSession*)handle->data;
+        session->InitReadBuffer(buff);
     }
 
     void HealthCheckService::HandleServiceThread(uword parameter){
@@ -135,7 +134,7 @@ namespace Token{
 
     void HealthCheckService::OnNewConnection(uv_stream_t* stream, int status){
         LOG(INFO) << "client is connecting....";
-        HttpSession* session = new HttpSession(stream->loop);
+        Handle<HttpSession> session = HttpSession::NewInstance(stream->loop);
 
         int err;
         if((err = uv_accept(stream, session->GetStream())) != 0){
@@ -156,21 +155,15 @@ namespace Token{
             HttpRequest request(session, buff->base, buff->len);
             HealthCheckEndpoint endpoint = GetHealthCheckEndpoint(request.GetPath());
             switch(endpoint){
-                case HealthCheckEndpoint::kReadyEndpoint:{
-                    HttpResponse response(session, 200, "Hello World");
-                    session->Send(&response);
-                    //TODO: return ready status
+#define DEFINE_ENDPOINT_HANDLER(Name, Path) \
+                case HealthCheckEndpoint::k##Name##Endpoint: \
+                    Handle##Name##Endpoint(session, &request); \
                     return;
-                }
-                case HealthCheckEndpoint::kLiveEndpoint:
-                    //TODO: return live status
-                    return;
-                case HealthCheckEndpoint::kHealthEndpoint:
-                    //TODO: return health status
-                    return;
+                FOR_EACH_HEALTHCHECK_ENDPOINT(DEFINE_ENDPOINT_HANDLER)
+#undef DEFINE_ENDPOINT_HANDLER
                 case HealthCheckEndpoint::kUnknownEndpoint:
                 default:
-                    //TODO: return 404
+                    HandleUnknownEndpoint(session, &request);
                     return;
             }
         } else{
@@ -178,9 +171,42 @@ namespace Token{
                 // fallthrough
             } else{
                 LOG(WARNING) << "server read failure: " << uv_strerror(nread);
-                uv_close((uv_handle_t*)stream, nullptr);
+                session->Close();
                 return;
             }
         }
+    }
+
+    void HealthCheckService::HandleUnknownEndpoint(HttpSession* session, HttpRequest* request){
+        std::stringstream ss;
+        ss << "Unknown Endpoint: " << request->GetPath();
+        HttpResponse response(session, 404, ss);
+        session->Send(&response);
+    }
+
+    void HealthCheckService::HandleReadyEndpoint(HttpSession* session, HttpRequest* request){
+        std::stringstream ss;
+        ss << "Ok";
+
+        HttpResponse response(session, 200, ss);
+        session->Send(&response);
+    }
+
+    void HealthCheckService::HandleLiveEndpoint(HttpSession* session, HttpRequest* request){
+        LOG(INFO) << "handling /live endpoint....";
+
+        std::stringstream ss;
+        ss << "Ok";
+
+        HttpResponse response(session, 200, ss);
+        session->Send(&response);
+    }
+
+    void HealthCheckService::HandleHealthEndpoint(HttpSession* session, HttpRequest* request){
+        std::stringstream ss;
+        ss << "Ok";
+
+        HttpResponse response(session, 200, ss);
+        session->Send(&response);
     }
 }

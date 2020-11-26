@@ -4,7 +4,10 @@
 #include <uv.h>
 #include <libconfig.h++>
 
+#include "object.h"
 #include "vthread.h"
+#include "http/session.h"
+#include "http/request.h"
 
 namespace Token{
 #define FOR_EACH_HEALTHCHECK_SERVER_STATE(V) \
@@ -100,10 +103,15 @@ namespace Token{
         static void SetState(State state);
         static void SetStatus(Status status);
         static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
-        static void OnNewConnection(uv_stream_t* stream, int status);
         static void OnShutdown(uv_shutdown_t* req, int status);
+        static void OnNewConnection(uv_stream_t* stream, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
         static void HandleServiceThread(uword parameter);
+        static void HandleUnknownEndpoint(HttpSession* session, HttpRequest* request);
+#define DECLARE_ENDPOINT_HANDLER(Name, Path) \
+        static void Handle##Name##Endpoint(HttpSession* session, HttpRequest* request);
+        FOR_EACH_HEALTHCHECK_ENDPOINT(DECLARE_ENDPOINT_HANDLER)
+#undef DECLARE_ENDPOINT_HANDLER
     public:
         ~HealthCheckService() = delete;
 

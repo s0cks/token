@@ -8,9 +8,14 @@ namespace Token{
         ss << "Content-Length: " << response->GetContentLength() << "\r\n";
         ss << "\r\n";
         ss << response->GetBody();
-
         std::string resp = ss.str();
-        uv_buf_t buff = uv_buf_init((char*)resp.data(), resp.size());
+
+        Handle<Buffer> buffer = GetWriteBuffer();
+        buffer->PutString(ss.str());
+
+        uv_buf_t buff;
+        buffer->Initialize(&buff);
+
         uv_write_t* req = (uv_write_t*)malloc(sizeof(uv_write_t));
         req->data = this;
         uv_write(req, (uv_stream_t*)&handle_, &buff, 1, &OnResponseSent);
@@ -28,7 +33,5 @@ namespace Token{
         uv_close((uv_handle_t*)&handle_, OnClose);
     }
 
-    void HttpSession::OnClose(uv_handle_t* handle){
-        free(handle->data);
-    }
+    void HttpSession::OnClose(uv_handle_t* handle){}
 }

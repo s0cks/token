@@ -20,7 +20,9 @@ namespace Token{
     V(Transaction) \
     V(Input) \
     V(Output) \
-    V(UnclaimedTransaction)
+    V(UnclaimedTransaction) \
+    V(HttpSession)       \
+    V(Buffer)
 
     enum class Type{
         kUnknownType=0,
