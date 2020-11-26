@@ -175,7 +175,7 @@ namespace Token{
 
     bool Server::Initialize(){
         if(!IsStopped()){
-            LOG(WARNING) << "the server needs to be stopped first";
+            LOG(WARNING) << "the server is already running.";
             return false;
         }
 

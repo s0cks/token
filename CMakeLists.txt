@@ -19,9 +19,6 @@ if (CMAKE_BUILD_TYPE MATCHES Debug)
         add_compile_definitions(TOKEN_DEBUG)
 endif (CMAKE_BUILD_TYPE MATCHES Debug)
 
-# Compiles w/ health check support:
-# set(TOKEN_HEALTHCHECK_SUPPORT True)
-
 # Changes garbage collector algorithm to Cheney's Mark-Copy Algorithm:
 # set(TOKEN_USE_KOA True)
 
@@ -37,10 +34,7 @@ find_package(Glog REQUIRED)
 find_package(Gflags REQUIRED)
 find_package(Libuv REQUIRED)
 find_package(GTest REQUIRED)
-
-if(TOKEN_HEALTHCHECK_SUPPORT)
-        find_package(HttpParser REQUIRED)
-endif(TOKEN_HEALTHCHECK_SUPPORT)
+find_package(HttpParser REQUIRED)
 
 # Include Directories
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -65,12 +59,8 @@ set(TOKEN_LIBRARIES
         config++ # config++
         ${UUID_LIBRARIES} # uuid
         ${CMAKE_THREAD_LIBS_INIT} # pthread
+        ${HTTPPARSER_LIBRARIES} # http-parser
 )
-
-# Optionally add health check libraries
-if(TOKEN_HEALTHCHECK_SUPPORT)
-        list(APPEND TOKEN_LIBRARIES ${HTTPPARSER_LIBRARIES})
-endif(TOKEN_HEALTHCHECK_SUPPORT)
 
 message("Compiling Token w/ the following libraries: ${TOKEN_LIBRARIES}")
 
