@@ -63,7 +63,7 @@ namespace Token{
         return x + 1;
     }
 
-    typedef intptr_t Timestamp;
+    typedef int64_t Timestamp;
 
     static Timestamp
     GetCurrentTimestamp(){

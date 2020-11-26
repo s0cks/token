@@ -1,6 +1,5 @@
-#include "file_writer.h"
-#include "byte_buffer.h"
 #include "bitfield.h"
+#include "file_writer.h"
 
 namespace Token{
 #define CHECK_FILE_POINTER \
@@ -101,9 +100,9 @@ namespace Token{
         return Write("\n");
     }
 
-    bool BinaryFileWriter::WriteBytes(uint8_t* bytes, size_t size){
+    bool BinaryFileWriter::WriteBytes(uint8_t* bytes, intptr_t size){
         CHECK_FILE_POINTER;
-        CHECK_WRITTEN(fwrite(bytes, sizeof(uint8_t), size, GetFilePointer()), size, sizeof(uint8_t));
+        CHECK_WRITTEN(fwrite(bytes, sizeof(uint8_t), (size_t)size, GetFilePointer()), (size_t)size, sizeof(uint8_t));
         return Flush();
     }
 

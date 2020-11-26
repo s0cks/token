@@ -2,7 +2,6 @@
 #include "task.h"
 #include "async_task.h"
 #include "block_pool.h"
-#include "byte_buffer.h"
 
 namespace Token{
     void PeerSession::OnShutdown(uv_async_t* handle){
@@ -10,22 +9,19 @@ namespace Token{
         session->Disconnect();
     }
 
-    uv_loop_t* PeerSession::GetLoop() const{
-        return socket_.loop;// is this safe?
-    }
-
-    void PeerSession::Disconnect(){
+    bool PeerSession::Disconnect(){
         if(pthread_self() == thread_){
             // Inside Session OSThreadBase
-            uv_read_stop((uv_stream_t*)&socket_);
-            uv_stop(socket_.loop);
-            uv_loop_close(socket_.loop);
+            uv_read_stop(GetStream());
+            uv_stop(GetLoop());
+            uv_loop_close(GetLoop());
             Server::UnregisterPeer(this);
             SetState(State::kDisconnected);
         } else{
             // Outside Session OSThreadBase
             uv_async_send(&shutdown_);
         }
+        return true;
     }
 
     void PeerSession::OnHeartbeatTick(uv_timer_t* handle){
@@ -44,24 +40,25 @@ namespace Token{
     void* PeerSession::PeerSessionThread(void* data){
         Server::WaitForState(Server::kRunning);
 
-        PeerSession* session = (PeerSession*)data;
+        uv_loop_t* loop = uv_loop_new();
+        Handle<PeerSession> session = PeerSession::NewInstance(loop, NodeAddress());
+
         NodeAddress address = session->GetAddress();
         LOG(INFO) << "connecting to peer " << address << "....";
 
-        uv_loop_t* loop = uv_loop_new();
         uv_timer_init(loop, &session->hb_timer_);
         uv_timer_init(loop, &session->hb_timeout_);
         uv_async_init(loop, &session->shutdown_, &OnShutdown);
-        uv_tcp_init(loop, &session->socket_);
-        uv_tcp_keepalive(&session->socket_, 1, 60);
-
         uv_timer_start(&session->hb_timer_, &OnHeartbeatTick, 90 * 1000, Session::kHeartbeatIntervalMilliseconds);
 
         struct sockaddr_in addr;
         uv_ip4_addr(address.GetAddress().c_str(), address.GetPort(), &addr);
 
+
+        uv_connect_t conn;
+
         int err;
-        if((err = uv_tcp_connect(&session->conn_, &session->socket_, (const struct sockaddr*)&addr, &OnConnect)) != 0){
+        if((err = uv_tcp_connect(&conn, session->GetHandle(), (const struct sockaddr*)&addr, &PeerSession::OnConnect)) != 0){
             LOG(WARNING) << "couldn't connect to peer " << address << ": " << uv_strerror(err);
             session->Disconnect();
             goto cleanup;
@@ -110,15 +107,16 @@ namespace Token{
 
         uint32_t offset = 0;
         std::vector<Handle<Message>> messages;
-        ByteBuffer bytes((uint8_t*)buff->base, buff->len);
+
+        Handle<Buffer> buffer = session->GetReadBuffer();
         do{
-            uint32_t mtype = bytes.GetInt();
-            intptr_t msize = bytes.GetLong();
+            uint32_t mtype = buffer->GetInt();
+            intptr_t msize = buffer->GetLong();
 
             switch(mtype) {
 #define DEFINE_DECODE(Name) \
                 case Message::MessageType::k##Name##MessageType:{ \
-                    Handle<Message> msg = Name##Message::NewInstance(&bytes).CastTo<Message>(); \
+                    Handle<Message> msg = Name##Message::NewInstance(buffer).CastTo<Message>(); \
                     LOG(INFO) << "decoded: " << msg; \
                     messages.push_back(msg); \
                     break; \
@@ -155,21 +153,21 @@ namespace Token{
     void PeerSession::HandleGetUnclaimedTransactionsMessage(const Handle<HandleMessageTask>& task){}
 
     void PeerSession::HandleVersionMessage(const Handle<HandleMessageTask>& task){
-        PeerSession* session = (PeerSession*)task->GetSession();
+        Handle<PeerSession> session = task->GetSession().CastTo<PeerSession>();
         Handle<VersionMessage> msg = task->GetMessage().CastTo<VersionMessage>();
 
         session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), Server::GetCallbackAddress()).CastTo<Message>());
     }
 
     void PeerSession::HandleVerackMessage(const Handle<HandleMessageTask>& task){
-        PeerSession* session = (PeerSession*)task->GetSession();
+        Handle<PeerSession> session = task->GetSession().CastTo<PeerSession>();
         Handle<VerackMessage> msg = task->GetMessage().CastTo<VerackMessage>();
 
         LOG(INFO) << "remote timestamp: " << GetTimestampFormattedReadable(msg->GetTimestamp());
         LOG(INFO) << "remote <HEAD>: " << msg->GetHead();
 
         session->SetHead(msg->GetHead());
-        if(IsConnecting()){
+        if(session->IsConnecting()){
             LOG(INFO) << "connected to peer: " << session->GetID() << "[" << session->GetAddress() << "]";
             session->SetID(msg->GetID());
             session->SetState(Session::kConnected);
@@ -252,7 +250,7 @@ namespace Token{
     }
 
     void PeerSession::HandleGetDataMessage(const Handle<HandleMessageTask>& task){
-        PeerSession* session = (PeerSession*)task->GetSession();
+        Handle<PeerSession> session = task->GetSession().CastTo<PeerSession>();
         Handle<GetDataMessage> msg = task->GetMessage().CastTo<GetDataMessage>();
 
         std::vector<InventoryItem> items;
@@ -296,7 +294,7 @@ namespace Token{
     }
 
     void PeerSession::HandleBlockMessage(const Handle<HandleMessageTask>& task){
-        PeerSession* session = (PeerSession*)task->GetSession();
+        Handle<PeerSession> session = task->GetSession().CastTo<PeerSession>();
         Handle<BlockMessage> msg = task->GetMessage().CastTo<BlockMessage>();
 
         Block* block = msg->GetBlock();
@@ -304,7 +302,7 @@ namespace Token{
         BlockPool::PutBlock(block);
 
         LOG(INFO) << "downloaded block: " << block->GetHeader();
-        session->OnItemReceived(InventoryItem(InventoryItem::kBlock, hash));
+        //TODO: session->OnItemReceived(InventoryItem(InventoryItem::kBlock, hash));
     }
 
     void PeerSession::HandleTransactionMessage(const Handle<HandleMessageTask>& task){
@@ -316,13 +314,13 @@ namespace Token{
     }
 
     void PeerSession::HandleNotFoundMessage(const Handle<HandleMessageTask>& task){
-        PeerSession* session = (PeerSession*)task->GetSession();
+        Handle<PeerSession> session = task->GetSession().CastTo<PeerSession>();
         Handle<NotFoundMessage> msg = task->GetMessage().CastTo<NotFoundMessage>();
         LOG(WARNING) << "(" << session->GetID() << "): " << msg->GetMessage();
     }
 
     void PeerSession::HandleInventoryMessage(const Handle<HandleMessageTask>& task){
-        PeerSession* session = (PeerSession*)task->GetSession();
+        Handle<PeerSession> session = task->GetSession().CastTo<PeerSession>();
         Handle<InventoryMessage> msg = task->GetMessage().CastTo<InventoryMessage>();
 
         std::vector<InventoryItem> items;

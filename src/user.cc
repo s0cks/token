@@ -3,24 +3,13 @@
 namespace Token{
     User::User(const std::string& value):
         data_(){
-        strncpy(data_, value.data(), value.length());
-        if(value.length() < 64){
-            memset(&data_[value.length()], 0, 64-value.length());
+        memcpy(data_, value.data(), value.length());
+        if(value.length() < kSize){
+            memset(&data_[value.length()], 0, kSize-value.length()-1);
         }
     }
 
-    User::User(ByteBuffer* bytes):
-        data_(){
-        if(!bytes->GetBytes((uint8_t*)data_, 64))
-            LOG(WARNING) << "failed to parse user id from byte array";
-    }
-
     std::string User::Get() const{
-        return std::string(data_, strlen(data_));
-    }
-
-    bool User::Encode(ByteBuffer* bytes) const{
-        bytes->PutBytes((uint8_t*)data_, 64);
-        return true;
+        return std::string(data(), kSize);
     }
 }

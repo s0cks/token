@@ -1,13 +1,12 @@
 #ifndef TOKEN_BLOCK_H
 #define TOKEN_BLOCK_H
 
-#include "common.h"
 #include "hash.h"
-#include "bloom.h"
-
-#include "allocator.h"
-#include "array.h"
 #include "node.h"
+#include "bloom.h"
+#include "array.h"
+#include "buffer.h"
+#include "allocator.h"
 #include "transaction.h"
 
 namespace Token{
@@ -61,7 +60,7 @@ namespace Token{
             hash_(hash),
             bloom_(tx_bloom){}
         BlockHeader(Block* blk);
-        BlockHeader(ByteBuffer* bytes);
+        BlockHeader(const Handle<Buffer>& buff);
         ~BlockHeader(){}
 
         Timestamp GetTimestamp() const{
@@ -89,7 +88,7 @@ namespace Token{
         }
 
         Handle<Block> GetData() const;
-        bool Write(ByteBuffer* bytes) const;
+        bool Write(const Handle<Buffer>& buff) const;
 
         BlockHeader& operator=(const BlockHeader& other){
             timestamp_ = other.timestamp_;
@@ -146,8 +145,8 @@ namespace Token{
         Timestamp timestamp_;
         intptr_t height_;
         Hash previous_hash_;
-        Transaction** transactions_;
         intptr_t num_transactions_;
+        Transaction** transactions_;
         BloomFilter tx_bloom_; // transient
 
         Block(Timestamp timestamp, uint32_t height, const Hash& phash, Transaction** txs, intptr_t num_txs):
@@ -155,8 +154,8 @@ namespace Token{
             timestamp_(timestamp),
             height_(height),
             previous_hash_(phash),
-            transactions_(nullptr),
             num_transactions_(num_txs),
+            transactions_(nullptr),
             tx_bloom_(){
             SetType(Type::kBlockType);
 
@@ -177,29 +176,18 @@ namespace Token{
             return true;
         }
 
-        intptr_t GetMessageSize() const{
+        intptr_t GetBufferSize() const{
             intptr_t size = 0;
-            size += sizeof(Timestamp);
-            size += sizeof(uint32_t);
-            size += Hash::kSize;
-            size += sizeof(intptr_t);
+            size += sizeof(Timestamp); // timestamp_
+            size += sizeof(intptr_t); // height_
+            size += Hash::kSize; // previous_hash_
+            size += sizeof(intptr_t); // num_transactions
             for(intptr_t idx = 0; idx < num_transactions_; idx++)
-                size += transactions_[idx]->GetMessageSize();
+                size += transactions_[idx]->GetBufferSize(); // transactions_[idx]
             return size;
         }
 
-        bool Write(ByteBuffer* bytes) const{
-            bytes->PutLong(timestamp_);
-            bytes->PutLong(height_);
-            bytes->PutHash(previous_hash_);
-            bytes->PutLong(num_transactions_);
-            for(intptr_t idx = 0;
-                idx < num_transactions_;
-                idx++){
-                transactions_[idx]->Write(bytes);
-            }
-            return true;
-        }
+        bool Write(const Handle<Buffer>& buff) const;
     public:
         ~Block() = default;
 
@@ -233,6 +221,15 @@ namespace Token{
             return GetHeight() == 0;
         }
 
+        Handle<Buffer> ToBuffer() const{
+            Handle<Buffer> buff = Buffer::NewInstance(GetBufferSize());
+            if(!Write(buff)){
+                LOG(WARNING) << "couldn't write block to buffer";
+                return Handle<Buffer>();
+            }
+            return buff;
+        }
+
         Hash GetMerkleRoot() const;
         bool Accept(BlockVisitor* vis) const;
         bool Contains(const Hash& hash) const;
@@ -240,7 +237,7 @@ namespace Token{
 
         static Handle<Block> Genesis(); // genesis
         static Handle<Block> NewInstance(std::fstream& fd, size_t size);
-        static Handle<Block> NewInstance(ByteBuffer* bytes);
+        static Handle<Block> NewInstance(const Handle<Buffer>& buff);
 
         static Handle<Block> NewInstance(intptr_t height, const Hash& phash, Transaction** txs, size_t num_txs, Timestamp timestamp=GetCurrentTimestamp()){
             return new Block(timestamp, height, phash, txs, num_txs);

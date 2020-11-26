@@ -1,24 +1,20 @@
 #include "unclaimed_transaction.h"
-#include "byte_buffer.h"
-#include "block_chain.h"
+#include "buffer.h"
 #include "crash_report.h"
 
 namespace Token{
-//######################################################################################################################
-//                                          Unclaimed Transaction
-//######################################################################################################################
-    Handle<UnclaimedTransaction> UnclaimedTransaction::NewInstance(ByteBuffer* bytes){
-        Hash hash = bytes->GetHash();
-        uint32_t index = bytes->GetInt();
-        User user = User(bytes);
-        Product product = Product(bytes);
+    Handle<UnclaimedTransaction> UnclaimedTransaction::NewInstance(const Handle<Buffer>& buff){
+        Hash hash = buff->GetHash();
+        uint32_t index = buff->GetInt();
+        User user = buff->GetUser();
+        Product product = buff->GetProduct();
         return new UnclaimedTransaction(hash, index, user, product);
     }
 
     Handle<UnclaimedTransaction> UnclaimedTransaction::NewInstance(std::fstream& fd, size_t size){
-        ByteBuffer bytes(size);
-        fd.read((char*)bytes.data(), size);
-        return NewInstance(&bytes);
+        Handle<Buffer> buff = Buffer::NewInstance(size);
+        fd.read((char*)buff->data(), size);
+        return NewInstance(buff);
     }
 
     std::string UnclaimedTransaction::ToString() const{

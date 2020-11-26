@@ -1,8 +1,7 @@
 #ifndef TOKEN_ADDRESS_H
 #define TOKEN_ADDRESS_H
 
-#include "common.h"
-#include "byte_buffer.h"
+#include "buffer.h"
 
 namespace Token{
     class NodeAddress{
@@ -16,9 +15,9 @@ namespace Token{
         NodeAddress(const std::string& address, uint32_t port);
         NodeAddress(const uv_tcp_t* stream);
         NodeAddress(const NodeAddress& other);
-        NodeAddress(ByteBuffer* bytes):
-            address_(bytes->GetUnsignedInt()),
-            port_(bytes->GetUnsignedInt()){}
+        NodeAddress(const Handle<Buffer>& buff):
+            address_(buff->GetUnsignedInt()),
+            port_(buff->GetUnsignedInt()){}
         NodeAddress():
             address_(0),
             port_(0){}
@@ -32,9 +31,9 @@ namespace Token{
         std::string ToString() const;
         bool Get(struct sockaddr_in* addr) const;
 
-        bool Write(ByteBuffer* bytes) const{
-            bytes->PutUnsignedInt(address_);
-            bytes->PutUnsignedInt(port_);
+        bool Write(const Handle<Buffer>& buff) const{
+            buff->PutUnsignedInt(address_);
+            buff->PutUnsignedInt(port_);
             return true;
         }
 

@@ -2,8 +2,10 @@
 #define TOKEN_MESSAGE_H
 
 #include <set>
+
 #include "uuid.h"
 #include "token.h"
+#include "buffer.h"
 #include "common.h"
 #include "version.h"
 #include "address.h"
@@ -39,6 +41,7 @@ namespace Token{
     //TODO: better encoding/decoding
     class Message : public Object{
         friend class Session;
+        friend class Session;
     public:
         enum MessageType{
             kUnknownMessageType = 0,
@@ -52,7 +55,7 @@ namespace Token{
         Message() = default;
 
         virtual intptr_t GetMessageSize() const = 0;
-        virtual bool WriteMessage(ByteBuffer* bytes) const = 0;
+        virtual bool Write(const Handle<Buffer>& buffer) const = 0;
     public:
         virtual ~Message() = default;
 
@@ -73,7 +76,7 @@ namespace Token{
 #define DECLARE_MESSAGE(Name) \
     public: \
         virtual intptr_t GetMessageSize() const; \
-        virtual bool WriteMessage(ByteBuffer* bytes) const; \
+        virtual bool Write(const Handle<Buffer>& buff) const; \
         virtual MessageType GetMessageType() const{ return Message::k##Name##MessageType; } \
         virtual const char* GetName() const{ return #Name; } \
         virtual std::string ToString() const{ \
@@ -143,7 +146,7 @@ namespace Token{
 
         DECLARE_MESSAGE(Version);
 
-        static Handle<VersionMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<VersionMessage> NewInstance(const Handle<Buffer>& buff);
         static Handle<VersionMessage> NewInstance(ClientType type, const UUID& node_id, const Version& version=Version(), const Hash& nonce=Hash::GenerateNonce(), const BlockHeader& head=BlockChain::GetHead(), Timestamp timestamp=GetCurrentTimestamp()){
             return new VersionMessage(type, version, node_id, timestamp, nonce, head);
         }
@@ -203,7 +206,7 @@ namespace Token{
 
         DECLARE_MESSAGE(Verack);
 
-        static Handle<VerackMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<VerackMessage> NewInstance(const Handle<Buffer>& buff);
         static Handle<VerackMessage> NewInstance(ClientType type, const UUID& node_id, const NodeAddress& address, const BlockHeader& head=BlockChain::GetHead(), const Version& version=Version(), const Hash& nonce=Hash::GenerateNonce(), Timestamp timestamp=GetCurrentTimestamp()){
             return new VerackMessage(type, node_id, version, nonce, address, head, timestamp);
         }
@@ -229,7 +232,7 @@ namespace Token{
         }
 
         intptr_t GetMessageSize() const;
-        bool WriteMessage(ByteBuffer* bytes) const;
+        bool Write(const Handle<Buffer>& buff) const;
     public:
         virtual ~PaxosMessage() = default;
 
@@ -253,7 +256,7 @@ namespace Token{
 
         DECLARE_MESSAGE(Prepare);
 
-        static Handle<PrepareMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<PrepareMessage> NewInstance(const Handle<Buffer>& buff);
         static Handle<PrepareMessage> NewInstance(Proposal* proposal, const UUID& proposer){
             return new PrepareMessage(proposer, proposal);
         }
@@ -268,7 +271,7 @@ namespace Token{
 
         DECLARE_MESSAGE(Promise);
 
-        static Handle<PromiseMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<PromiseMessage> NewInstance(const Handle<Buffer>& buff);
         static Handle<PromiseMessage> NewInstance(Proposal* proposal, const UUID& proposer){
             return new PromiseMessage(proposer, proposal);
         }
@@ -283,7 +286,7 @@ namespace Token{
 
         DECLARE_MESSAGE(Commit);
 
-        static Handle<CommitMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<CommitMessage> NewInstance(const Handle<Buffer>& buff);
         static Handle<CommitMessage> NewInstance(Proposal* proposal, const UUID& proposer){
             return new CommitMessage(proposer, proposal);
         }
@@ -298,7 +301,7 @@ namespace Token{
 
         DECLARE_MESSAGE(Accepted);
 
-        static Handle<AcceptedMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<AcceptedMessage> NewInstance(const Handle<Buffer>& buff);
         static Handle<AcceptedMessage> NewInstance(Proposal* proposal, const UUID& proposer){
             return new AcceptedMessage(proposer, proposal);
         }
@@ -313,7 +316,7 @@ namespace Token{
 
         DECLARE_MESSAGE(Rejected);
 
-        static Handle<RejectedMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<RejectedMessage> NewInstance(const Handle<Buffer>& buff);
         static Handle<RejectedMessage> NewInstance(Proposal* proposal, const UUID& proposer){
             return new RejectedMessage(proposer, proposal);
         }
@@ -341,7 +344,7 @@ namespace Token{
 
         DECLARE_MESSAGE(Transaction);
 
-        static Handle<TransactionMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<TransactionMessage> NewInstance(const Handle<Buffer>& buff);
         static Handle<TransactionMessage> NewInstance(const Handle<Transaction>& tx){
             return new TransactionMessage(tx);
         }
@@ -369,7 +372,7 @@ namespace Token{
 
         DECLARE_MESSAGE(Block);
 
-        static Handle<BlockMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<BlockMessage> NewInstance(const Handle<Buffer>& buff);
         static Handle<BlockMessage> NewInstance(Block* blk){
             return new BlockMessage(blk);
         }
@@ -397,7 +400,7 @@ namespace Token{
 
         DECLARE_MESSAGE(UnclaimedTransaction);
 
-        static Handle<UnclaimedTransactionMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<UnclaimedTransactionMessage> NewInstance(const Handle<Buffer>& buff);
         static Handle<UnclaimedTransactionMessage> NewInstance(const Handle<UnclaimedTransaction>& utxo){
             return new UnclaimedTransactionMessage(utxo);
         }
@@ -503,7 +506,7 @@ namespace Token{
                 LOG(WARNING) << "inventory created w/ zero size";
         }
 
-        static void DecodeItems(ByteBuffer* bytes, std::vector<InventoryItem>& items, uint32_t num_items);
+        static void DecodeItems(const Handle<Buffer>& buff, std::vector<InventoryItem>& items, uint32_t num_items);
     public:
 
         ~InventoryMessage(){}
@@ -519,7 +522,7 @@ namespace Token{
 
         DECLARE_MESSAGE(Inventory);
 
-        static Handle<InventoryMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<InventoryMessage> NewInstance(const Handle<Buffer>& buff);
         static Handle<InventoryMessage> NewInstance(std::vector<InventoryItem>& items){
             return new InventoryMessage(items);
         }
@@ -547,7 +550,7 @@ namespace Token{
 
         DECLARE_MESSAGE(GetData);
 
-        static Handle<GetDataMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<GetDataMessage> NewInstance(const Handle<Buffer>& buff);
 
         static Handle<GetDataMessage> NewInstance(std::vector<InventoryItem>& items){
             return new GetDataMessage(items);
@@ -578,7 +581,7 @@ namespace Token{
 
         DECLARE_MESSAGE(GetBlocks);
 
-        static Handle<GetBlocksMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<GetBlocksMessage> NewInstance(const Handle<Buffer>& buff);
         static Handle<GetBlocksMessage> NewInstance(const Hash& start_hash=BlockChain::GetHead().GetHash(), const Hash& stop_hash=Hash()){
             return new GetBlocksMessage(start_hash, stop_hash);
         }
@@ -601,7 +604,7 @@ namespace Token{
 
         DECLARE_MESSAGE(NotFound);
 
-        static Handle<NotFoundMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<NotFoundMessage> NewInstance(const Handle<Buffer>& buff);
         static Handle<NotFoundMessage> NewInstance(const std::string& message="Not Found"){
             return new NotFoundMessage(message);
         }
@@ -623,7 +626,7 @@ namespace Token{
 
         DECLARE_MESSAGE(GetUnclaimedTransactions);
 
-        static Handle<GetUnclaimedTransactionsMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<GetUnclaimedTransactionsMessage> NewInstance(const Handle<Buffer>& buff);
         static Handle<GetUnclaimedTransactionsMessage> NewInstance(const User& user){
             return new GetUnclaimedTransactionsMessage(user);
         }
@@ -637,7 +640,7 @@ namespace Token{
 
         DECLARE_MESSAGE(GetPeers);
 
-        static Handle<GetPeersMessage> NewInstance(ByteBuffer* bytes){
+        static Handle<GetPeersMessage> NewInstance(const Handle<Buffer>& buff){
             return new GetPeersMessage();
         }
 
@@ -666,18 +669,18 @@ namespace Token{
         UUID uuid_;
         NodeAddress address_;
     protected:
-        bool Write(ByteBuffer* bytes) const{
-            uuid_.Write(bytes);
-            address_.Write(bytes);
+        bool Write(const Handle<Buffer>& buff) const{
+            uuid_.Write(buff);
+            address_.Write(buff);
             return true;
         }
     public:
         Peer(const UUID& uuid, const NodeAddress& address):
             uuid_(uuid),
             address_(address){}
-        Peer(ByteBuffer* bytes):
-            uuid_(bytes),
-            address_(bytes){}
+        Peer(const Handle<Buffer>& buff):
+            uuid_(buff),
+            address_(buff){}
         ~Peer() = default;
 
         UUID GetID() const{
@@ -745,7 +748,7 @@ namespace Token{
 
         DECLARE_MESSAGE(PeerList);
 
-        static Handle<PeerListMessage> NewInstance(ByteBuffer* bytes);
+        static Handle<PeerListMessage> NewInstance(const Handle<Buffer>& buff);
         static Handle<PeerListMessage> NewInstance(const PeerList& peers){
             return new PeerListMessage(peers);
         }

@@ -2,8 +2,7 @@
 #define TOKEN_UUID_H
 
 #include <uuid/uuid.h>
-#include "common.h"
-#include "byte_buffer.h"
+#include "buffer.h"
 
 namespace Token{
     class UUID{
@@ -24,15 +23,15 @@ namespace Token{
             uuid_(){
             uuid_copy(uuid_, other.uuid_);
         }
-        UUID(ByteBuffer* bytes):
+        UUID(const Handle<Buffer>& buff):
             uuid_(){
-            if(!bytes->GetBytes((uint8_t*)uuid_, kSize))
+            if(!buff->GetBytes((uint8_t*)uuid_, kSize))
                 LOG(WARNING) << "cannot read uuid from bytes";
         }
         ~UUID() = default;
 
-        void Write(ByteBuffer* bytes) const{
-            bytes->PutBytes((uint8_t*)uuid_, kSize);
+        void Write(const Handle<Buffer>& buff) const{
+            buff->PutBytes((uint8_t*)uuid_, kSize);
         }
 
         std::string ToString() const{

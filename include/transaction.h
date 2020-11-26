@@ -11,36 +11,27 @@
 namespace Token{
     class Input : public Object{
         friend class Transaction;
+    public:
+        static const intptr_t kSize = Hash::kSize
+                                    + sizeof(int32_t)
+                                    + User::kSize;
     private:
         Hash hash_;
-        uint32_t index_;
+        int32_t index_;
         User user_;
 
-        Input(const Hash& tx_hash, uint32_t index, const User& user):
+        Input(const Hash& tx_hash, int32_t index, const User& user):
             hash_(tx_hash),
             index_(index),
             user_(user){
             SetType(Type::kInputType);
         }
     protected:
-        intptr_t GetMessageSize() const{
-            intptr_t size = 0;
-            size += Hash::kSize;
-            size += sizeof(uint32_t);
-            size += User::kSize;
-            return size;
-        }
-
-        bool Write(ByteBuffer* bytes) const{
-            bytes->PutHash(hash_);
-            bytes->PutInt(index_);
-            user_.Encode(bytes);
-            return true;
-        }
+        bool Write(const Handle<Buffer>& buff) const;
     public:
         ~Input(){}
 
-        uint32_t GetOutputIndex() const{
+        int32_t GetOutputIndex() const{
             return index_;
         }
 
@@ -55,18 +46,21 @@ namespace Token{
         UnclaimedTransaction* GetUnclaimedTransaction() const;
         std::string ToString() const;
 
-        static Handle<Input> NewInstance(ByteBuffer* bytes);
-        static Handle<Input> NewInstance(const Hash& hash, uint32_t index, const User& user){
+        static Handle<Input> NewInstance(const Handle<Buffer>& buff);
+        static Handle<Input> NewInstance(const Hash& hash, int32_t index, const User& user){
             return new Input(hash, index, user);
         }
 
-        static Handle<Input> NewInstance(const Hash& hash, uint32_t index, const std::string& user){
+        static Handle<Input> NewInstance(const Hash& hash, int32_t index, const std::string& user){
             return new Input(hash, index, User(user));
         }
     };
 
     class Output : public Object{
         friend class Transaction;
+    public:
+        static const intptr_t kSize = User::kSize
+                                    + Product::kSize;
     private:
         User user_;
         Product product_;
@@ -77,18 +71,7 @@ namespace Token{
             SetType(Type::kOutputType);
         }
     protected:
-        intptr_t GetMessageSize() const{
-            intptr_t size = 0;
-            size += User::kSize;
-            size += Product::kSize;
-            return size;
-        }
-
-        bool Write(ByteBuffer* bytes) const{
-            user_.Encode(bytes);
-            product_.Encode(bytes);
-            return true;
-        }
+        bool Write(const Handle<Buffer>& buff) const;
     public:
         ~Output(){}
 
@@ -102,7 +85,7 @@ namespace Token{
 
         std::string ToString() const;
 
-        static Handle<Output> NewInstance(ByteBuffer* bytes);
+        static Handle<Output> NewInstance(const Handle<Buffer>& buff);
         static Handle<Output> NewInstance(const User& user, const Product& token){
             return new Output(user, token);
         }
@@ -112,28 +95,37 @@ namespace Token{
         }
     };
 
+    struct RawTransaction{
+        Timestamp timestamp_;
+        intptr_t index_;
+        intptr_t num_inputs_;
+        Input** inputs_;
+        intptr_t num_outputs_;
+        Output** outputs_;
+    };
+
     class TransactionVisitor;
     class Transaction : public BinaryObject{
         friend class Block;
         friend class TransactionMessage;
     private:
         Timestamp timestamp_;
-        intptr_t index_;
+        int64_t index_;
+        int64_t num_inputs_;
         Input** inputs_;
-        intptr_t num_inputs_;
+        int64_t num_outputs_;
         Output** outputs_;
-        intptr_t num_outputs_;
         std::string signature_;
 
         Transaction(Timestamp timestamp, intptr_t index, Input** inputs, intptr_t num_inputs, Output** outputs, intptr_t num_outputs):
-                BinaryObject(),
-                timestamp_(timestamp),
-                index_(index),
-                inputs_(nullptr),
-                num_inputs_(num_inputs),
-                outputs_(nullptr),
-                num_outputs_(num_outputs),
-                signature_(){
+            BinaryObject(),
+            timestamp_(timestamp),
+            index_(index),
+            num_inputs_(num_inputs),
+            inputs_(nullptr),
+            num_outputs_(num_outputs),
+            outputs_(nullptr),
+            signature_(){
             SetType(Type::kTransactionType);
 
             inputs_ = (Input**)malloc(sizeof(Input*)*num_inputs);
@@ -152,36 +144,12 @@ namespace Token{
                 if(!vis->Visit(&inputs_[idx]))
                     return false;
             }
+
             for(intptr_t idx = 0; idx < num_outputs_; idx++){
                 if(!vis->Visit(&outputs_[idx]))
                     return false;
             }
-            return true;
-        }
 
-        intptr_t GetMessageSize() const{
-            intptr_t size = 0;
-            size += sizeof(Timestamp);
-            size += sizeof(intptr_t);
-            size += sizeof(intptr_t);
-            for(intptr_t idx = 0; idx < num_inputs_; idx++)
-                size += inputs_[idx]->GetMessageSize();
-            size += sizeof(intptr_t);
-            for(intptr_t idx = 0; idx < num_outputs_; idx++)
-                size += outputs_[idx]->GetMessageSize();
-            return size;
-        }
-
-        bool Write(ByteBuffer* bytes) const{
-            bytes->PutLong(timestamp_);
-            bytes->PutLong(index_);
-            bytes->PutLong(num_inputs_);
-            for(intptr_t idx = 0; idx < num_inputs_; idx++)
-                inputs_[idx]->Write(bytes);
-            bytes->PutLong(num_outputs_);
-            for(intptr_t idx = 0; idx < num_outputs_; idx++)
-                outputs_[idx]->Write(bytes);
-            //TODO: serialize transaction signature
             return true;
         }
     public:
@@ -227,11 +195,22 @@ namespace Token{
             return GetIndex() == 0;
         }
 
+        Handle<Buffer> ToBuffer() const{
+            Handle<Buffer> buff = Buffer::NewInstance(GetBufferSize());
+            if(!Write(buff)){
+                LOG(WARNING) << "couldn't write transaction to buffer";
+                return Handle<Buffer>();
+            }
+            return buff;
+        }
+
         bool Sign();
         bool Accept(TransactionVisitor* visitor);
+        bool Write(const Handle<Buffer>& buff) const;
+        intptr_t GetBufferSize() const;
         std::string ToString() const;
 
-        static Handle<Transaction> NewInstance(ByteBuffer* bytes);
+        static Handle<Transaction> NewInstance(const Handle<Buffer>& buffer);
         static Handle<Transaction> NewInstance(std::fstream& fd, size_t size);
         static Handle<Transaction> NewInstance(uint32_t index, Input** inputs, size_t num_inputs, Output** outputs, size_t num_outputs, Timestamp timestamp=GetCurrentTimestamp()){
             return new Transaction(timestamp, index, inputs, num_inputs, outputs, num_outputs);

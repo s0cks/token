@@ -1,5 +1,4 @@
 #include "block.h"
-#include "byte_buffer.h"
 #include "server.h"
 #include "block_chain.h"
 #include "crash_report.h"
@@ -16,24 +15,25 @@ namespace Token{
         hash_(blk->GetHash()),
         bloom_(blk->tx_bloom_){}
 
-    BlockHeader::BlockHeader(ByteBuffer* bytes):
-        timestamp_(bytes->GetLong()),
-        height_(bytes->GetLong()),
-        previous_hash_(bytes->GetHash()),
-        merkle_root_(bytes->GetHash()),
-        hash_(bytes->GetHash()),
-        bloom_(){}
+    BlockHeader::BlockHeader(const Handle<Buffer>& buff):
+        timestamp_(buff->GetLong()),
+        height_(buff->GetLong()),
+        previous_hash_(buff->GetHash()),
+        merkle_root_(buff->GetHash()),
+        hash_(buff->GetHash()),
+        bloom_(){
+    }
 
     Handle<Block> BlockHeader::GetData() const{
         return BlockChain::GetBlock(GetHash());
     }
 
-    bool BlockHeader::Write(ByteBuffer* bytes) const{
-        bytes->PutLong(timestamp_);
-        bytes->PutLong(height_);
-        bytes->PutHash(previous_hash_);
-        bytes->PutHash(merkle_root_);
-        bytes->PutHash(hash_);
+    bool BlockHeader::Write(const Handle<Buffer>& buff) const{
+        buff->PutLong(timestamp_);
+        buff->PutLong(height_);
+        buff->PutHash(previous_hash_);
+        buff->PutHash(merkle_root_);
+        buff->PutHash(hash_);
         return true;
     }
 
@@ -45,22 +45,25 @@ namespace Token{
         Output* outputs_a[Block::kNumberOfGenesisOutputs];
         for(size_t idx = 0; idx < Block::kNumberOfGenesisOutputs; idx++){
             std::string user = "VenueA";
-            std::string token = "TestToken";
-            outputs_a[idx] = Output::NewInstance(user, token);
+            std::stringstream ss;
+            ss << "TestToken" << idx;
+            outputs_a[idx] = Output::NewInstance(user, ss.str());
         }
 
         Output* outputs_b[Block::kNumberOfGenesisOutputs];
         for(size_t idx = 0; idx < Block::kNumberOfGenesisOutputs; idx++){
             std::string user = "VenueB";
-            std::string token = "TestToken";
-            outputs_b[idx] = Output::NewInstance(user, token);
+            std::stringstream ss;
+            ss << "TestToken" << idx;
+            outputs_b[idx] = Output::NewInstance(user, ss.str());
         }
 
         Output* outputs_c[Block::kNumberOfGenesisOutputs];
         for(size_t idx = 0; idx < Block::kNumberOfGenesisOutputs; idx++){
             std::string user = "VenueC";
-            std::string token = "TestToken";
-            outputs_c[idx] = Output::NewInstance(user, token);
+            std::stringstream ss;
+            ss << "TestToken" << idx;
+            outputs_c[idx] = Output::NewInstance(user, ss.str());
         }
 
         Transaction* transactions[3] = {
@@ -72,28 +75,40 @@ namespace Token{
     }
 
     Handle<Block> Block::NewInstance(std::fstream& fd, size_t size){
-        ByteBuffer bytes(size);
-        fd.read((char*)bytes.data(), size);
-        return NewInstance(&bytes);
+        Handle<Buffer> buff = Buffer::NewInstance(size);
+        buff->ReadBytesFrom(fd, size);
+        return NewInstance(buff);
     }
 
-    Handle<Block> Block::NewInstance(ByteBuffer* bytes){
-        Timestamp timestamp = bytes->GetLong();
-        intptr_t height = bytes->GetLong();
-        Hash phash = bytes->GetHash();
-        intptr_t num_txs = bytes->GetLong();
-
-        LOG(INFO) << "reading " << num_txs << " transactions for block";
+    Handle<Block> Block::NewInstance(const Handle<Buffer>& buff){
+        Timestamp timestamp = buff->GetLong();
+        intptr_t height = buff->GetLong();
+        Hash phash = buff->GetHash();
+        intptr_t num_txs = buff->GetLong();
 
         Transaction* transactions[num_txs];
-        for(uint32_t idx = 0; idx < num_txs; idx++)
-            transactions[idx] = Transaction::NewInstance(bytes);
+        for(intptr_t idx = 0; idx < num_txs; idx++){
+            transactions[idx] = Transaction::NewInstance(buff);
+        }
         return new Block(timestamp, height, phash, transactions, num_txs);
+    }
+
+    bool Block::Write(const Handle<Buffer>& buff) const{
+        buff->PutLong(timestamp_);
+        buff->PutLong(height_);
+        buff->PutHash(previous_hash_);
+        buff->PutLong(num_transactions_);
+        for(intptr_t idx = 0;
+            idx < num_transactions_;
+            idx++){
+            transactions_[idx]->Write(buff);
+        }
+        return true;
     }
 
     std::string Block::ToString() const{
         std::stringstream stream;
-        stream << "Block(" << GetHeight() << ":" << GetHash() << "; " << GetNumberOfTransactions() << " Transactions)";
+        stream << "Block(#" << GetHeight() << ", " << GetNumberOfTransactions() << " Transactions)";
         return stream.str();
     }
 

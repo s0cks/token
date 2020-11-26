@@ -7,7 +7,7 @@
 namespace Token{
     class Version{
     public:
-        static const size_t kSize = sizeof(int16_t) // Major
+        static const intptr_t kSize = sizeof(int16_t) // Major
                                   + sizeof(int16_t) // Minor
                                   + sizeof(int16_t); // Revision
     private:
@@ -27,10 +27,10 @@ namespace Token{
             major_(other.major_),
             minor_(other.minor_),
             revision_(other.revision_){}
-        Version(ByteBuffer* bytes):
-            major_(bytes->GetShort()),
-            minor_(bytes->GetShort()),
-            revision_(bytes->GetShort()){}
+        Version(const Handle<Buffer>& buff):
+            major_(buff->GetShort()),
+            minor_(buff->GetShort()),
+            revision_(buff->GetShort()){}
         ~Version() = default;
 
         int16_t GetMajor() const{
@@ -45,10 +45,10 @@ namespace Token{
             return revision_;
         }
 
-        void Write(ByteBuffer* bytes) const{
-            bytes->PutShort(major_);
-            bytes->PutShort(minor_);
-            bytes->PutShort(revision_);
+        void Write(const Handle<Buffer>& buff) const{
+            buff->PutShort(major_);
+            buff->PutShort(minor_);
+            buff->PutShort(revision_);
         }
 
         std::string ToString() const{

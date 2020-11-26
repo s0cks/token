@@ -9,10 +9,9 @@
 namespace Token{
     class Hash{
     public:
-        static const size_t kSize = 256 / 8;
+        static const intptr_t kSize = 256 / 8;
     private:
         uint8_t data_[kSize];
-
 
         Hash(const unsigned char* data):
             data_(){

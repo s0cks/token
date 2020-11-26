@@ -2,39 +2,52 @@
 #define TOKEN_BUFFER_H
 
 #include "object.h"
+#include "user.h"
+#include "product.h"
 
 namespace Token{
     class Buffer : public Object{
     private:
-        intptr_t size_;
+        intptr_t bsize_;
         intptr_t wpos_;
         intptr_t rpos_;
-        uint8_t data_[1];
+
+        uint8_t* raw() {
+            return (uint8_t*)(&rpos_ + sizeof(intptr_t));
+        }
+
+        const uint8_t* raw() const{
+            return (uint8_t*)(&rpos_ + sizeof(intptr_t));
+        }
 
         Buffer(intptr_t size):
             Object(),
-            size_(size),
-            data_(){
+            bsize_(size),
+            wpos_(0),
+            rpos_(0){
             SetType(Type::kBufferType);
+            memset(data(), 0, GetBufferSize());
         }
 
         template<typename T>
         void Append(T value){
-            memcpy(&data_[wpos_], (uint8_t*) &value, sizeof(T));
+            memcpy(&raw()[wpos_], &value, sizeof(T));
             wpos_ += sizeof(T);
         }
 
         template<typename T>
         void Insert(T value, intptr_t idx){
-            memcpy(&data_[idx], (uint8_t*)&value, sizeof(T));
-            wpos_ = idx + sizeof(T);
+            memcpy(&raw()[idx], (uint8_t*)&value, sizeof(T));
+            wpos_ = idx + (intptr_t)sizeof(T);
         }
 
         template<typename T>
         T Read(intptr_t idx) {
-            if((intptr_t(idx + sizeof(T)) > GetBufferSize()))
+            if((idx + (intptr_t)sizeof(T)) > GetBufferSize()) {
+                LOG(INFO) << "cannot read " << sizeof(T) << " bytes from pos: " << idx;
                 return 0;
-            return (*((T*) &data_[idx]));
+            }
+            return *(T*)(raw() + idx);
         }
 
         template<typename T>
@@ -46,7 +59,9 @@ namespace Token{
     protected:
         static void* operator new(size_t size) = delete;
         static void* operator new(size_t size, size_t length, bool){
-            return Object::operator new(size + (sizeof(uint8_t) * length));
+            intptr_t buffer_size = (sizeof(uint8_t)*length);
+            intptr_t total_size = size + buffer_size;
+            return Object::operator new(total_size);
         }
         static void operator delete(void*, size_t, bool){}
         using Object::operator delete;
@@ -54,15 +69,23 @@ namespace Token{
         ~Buffer() = default;
 
         uint8_t operator[](intptr_t idx){
-            return data_[idx];
+            return (raw()[idx]);
         }
 
         char* data() const{
-            return (char*)data_;
+            return (char*)raw();
         }
 
         intptr_t GetBufferSize() const{
-            return size_;
+            return bsize_;
+        }
+
+        intptr_t GetWrittenBytes() const{
+            return wpos_;
+        }
+
+        intptr_t GetReadBytes() const{
+            return rpos_;
         }
 
         //@format:off
@@ -104,9 +127,80 @@ namespace Token{
         DEFINE_GET(Long, int64_t)
 #undef DEFINE_GET
 //@format:on
+        void WriteBytesTo(std::fstream& stream, intptr_t size){
+            uint8_t bytes[size];
+            GetBytes(bytes, size);
+            if(!stream.write((char*)bytes, size)){
+                LOG(WARNING) << "cannot read " << size << " bytes from file";
+                return;
+            }
+
+            if(!stream.flush()){
+                LOG(WARNING) << "cannot flush the file";
+                return;
+            }
+        }
+
+        void ReadBytesFrom(std::fstream& stream, intptr_t size){
+            uint8_t bytes[size];
+            if(!stream.read((char*)bytes, size)){
+                LOG(WARNING) << "cannot read " << size << " bytes from file";
+                return;
+            }
+            PutBytes(bytes, size);
+        }
+
+        void PutBytes(uint8_t* bytes, intptr_t size){
+            memcpy(&raw()[wpos_], bytes, size);
+            wpos_ += size;
+        }
+
+        bool GetBytes(uint8_t* result, intptr_t size){
+            if((rpos_ + size) >= GetBufferSize()) {
+                LOG(WARNING) << "cannot read " << size << " bytes from buffer of size: " << GetBufferSize();
+                return false;
+            }
+            memcpy(result, &raw()[rpos_], size);
+            rpos_ += size;
+            return true;
+        }
+
+        void PutUser(const User& user) {
+            memcpy(&raw()[wpos_], user.data(), User::kSize);
+            wpos_ += User::kSize;
+        }
+
+        User GetUser(){
+            User user(&raw()[rpos_]);
+            rpos_ += User::kSize;
+            return user;
+        }
+
+        void PutProduct(const Product& product){
+            memcpy(&raw()[wpos_], product.data(), Product::kSize);
+            wpos_ += Product::kSize;
+        }
+
+        Product GetProduct(){
+            Product product(&raw()[rpos_]);
+            rpos_ += Product::kSize;
+            return product;
+        }
+
+        void PutHash(const Hash& value){
+            memcpy(&raw()[wpos_], value.data(), Hash::kSize);
+            wpos_ += Hash::kSize;
+        }
+
+        Hash
+        GetHash(){
+            Hash hash(&raw()[rpos_]);
+            rpos_ += Hash::kSize;
+            return hash;
+        }
 
         void PutString(const std::string& value){
-            memcpy(&data_[wpos_], value.data(), value.length());
+            memcpy(&raw()[wpos_], value.data(), value.length());
             wpos_ += value.length();
         }
 
@@ -122,7 +216,8 @@ namespace Token{
         }
 
         static Handle<Buffer> NewInstance(intptr_t size){
-            return new (size, false)Buffer(size);
+            size = RoundUpPowTwo(size);
+            return new (size, false) Buffer(size);
         }
     };
 }

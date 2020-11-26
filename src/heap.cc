@@ -24,7 +24,7 @@ namespace Token{
         uword current = GetStartAddress();
         while(current < GetEndAddress()){
             Object* obj = (Object*)current;
-            if(!obj || obj->GetSize() == 0) break;
+            if(!obj || !Contains((uword)obj) || obj->GetSize() == 0) break;
             if(!vis->Visit(obj))
                 return false;
             current += obj->GetSize();

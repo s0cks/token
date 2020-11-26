@@ -2,11 +2,11 @@
 #include "task.h"
 #include "vthread.h"
 #include "client.h"
-#include "byte_buffer.h"
 
+/*
 namespace Token{
     ClientSession::ClientSession(const NodeAddress& address):
-        Session(&stream_),
+        Session(address):
         thread_(),
         sigterm_(),
         sigint_(),
@@ -434,4 +434,4 @@ namespace Token{
             }
         } while(true);
     }
-}
+}*/

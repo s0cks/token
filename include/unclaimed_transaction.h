@@ -5,6 +5,7 @@
 #include "user.h"
 #include "object.h"
 #include "product.h"
+#include "buffer.h"
 
 namespace Token{
     class Output;
@@ -23,7 +24,7 @@ namespace Token{
             user_(user),
             product_(product){}
     protected:
-        intptr_t GetMessageSize() const{
+        intptr_t GetBufferSize() const{
             intptr_t size = 0;
             size += Hash::kSize;
             size += sizeof(uint32_t);
@@ -32,11 +33,11 @@ namespace Token{
             return size;
         }
 
-        bool Write(ByteBuffer* bytes) const{
-            bytes->PutHash(hash_);
-            bytes->PutInt(index_);
-            user_.Encode(bytes);
-            product_.Encode(bytes);
+        bool Write(const Handle<Buffer>& buff) const{
+            buff->PutHash(hash_);
+            buff->PutInt(index_);
+            buff->PutUser(user_);
+            buff->PutProduct(product_);
             return true;
         }
     public:
@@ -60,7 +61,7 @@ namespace Token{
 
         std::string ToString() const;
 
-        static Handle<UnclaimedTransaction> NewInstance(ByteBuffer* bytes);
+        static Handle<UnclaimedTransaction> NewInstance(const Handle<Buffer>& buff);
         static Handle<UnclaimedTransaction> NewInstance(std::fstream& fd, size_t size);
         static Handle<UnclaimedTransaction> NewInstance(const Hash &hash, uint32_t index, const std::string& user, const std::string& product){
             return new UnclaimedTransaction(hash, index, User(user), Product(product));

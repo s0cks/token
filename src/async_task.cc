@@ -80,7 +80,7 @@ namespace Token{
     Result SynchronizeBlockChainTask::DoWork(){
         if(!BlockPool::HasBlock(head_.GetHash())){
             LOG(INFO) << "waiting for new <HEAD>: " << head_;
-            GetSession()->WaitForItem(GetHead());
+            //TODO: GetSession()->WaitForItem(GetHead());
         }
 
         std::deque<Hash> work; // we are queuing the blocks just in-case there is an unresolved previous Hash
@@ -91,7 +91,7 @@ namespace Token{
 
             if(!BlockPool::HasBlock(hash)){
                 LOG(INFO) << "waiting for: " << hash;
-                GetSession()->WaitForItem(GetItem(hash));
+                //TODO: GetSession()->WaitForItem(GetItem(hash));
             }
 
             Handle<Block> blk = BlockPool::GetBlock(hash);

@@ -10,7 +10,6 @@
 #include "keychain.h"
 #include "allocator.h"
 #include "hash.h"
-#include "byte_buffer.h"
 
 namespace Token{
     class Object;
@@ -21,8 +20,12 @@ namespace Token{
     V(Input) \
     V(Output) \
     V(UnclaimedTransaction) \
+    V(Session)           \
     V(HttpSession)       \
-    V(Buffer)
+    V(ServerSession)     \
+    V(PeerSession)       \
+    V(Buffer)            \
+    V(Task)
 
     enum class Type{
         kUnknownType=0,
@@ -190,13 +193,15 @@ namespace Token{
         }
     };
 
+    class Buffer;
     class BinaryObject : public Object{
     public:
         BinaryObject(): Object(){}
         virtual ~BinaryObject() = default;
 
         Hash GetHash() const;
-        virtual bool Write(ByteBuffer* bytes) const = 0;
+        virtual intptr_t GetBufferSize() const = 0;
+        virtual bool Write(const Handle<Buffer>& buff) const = 0;
         virtual bool WriteToFile(std::fstream& fd) const;
 
         bool WriteToFile(const std::string& filename) const{
@@ -219,7 +224,7 @@ namespace Token{
         ~ObjectPointerPrinter() = default;
 
         bool Visit(Object* obj){
-            LOG(INFO) << "[" << std::hex << obj << ":" << obj->GetSize() << "] (Marked: " << (obj->IsMarked() ? 'y' : 'n') << "): " << obj->ToString();
+            LOG(INFO) << "[" << std::hex << obj << ":" << std::dec << obj->GetSize() << "] (Marked: " << (obj->IsMarked() ? 'y' : 'n') << "): " << obj->ToString();
             return true;
         }
     };

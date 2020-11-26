@@ -8,7 +8,6 @@
 #include "task.h"
 #include "configuration.h"
 #include "peer.h"
-#include "byte_buffer.h"
 #include "proposal.h"
 
 namespace Token{
@@ -239,19 +238,19 @@ namespace Token{
             return;
         }
 
-        ServerSession* session = new ServerSession();
+        Handle<ServerSession> session = ServerSession::NewInstance(stream->loop);
         session->SetState(Session::kConnecting);
-
-        uv_tcp_init(stream->loop, (uv_tcp_t*)session->GetStream());
         LOG(INFO) << "client is connecting...";
-        if((status = uv_accept(stream, (uv_stream_t*)session->GetStream())) != 0){
-            LOG(ERROR) << "client accept error: " << uv_strerror(status);
+
+        int err;
+        if((err = uv_accept(stream, (uv_stream_t*)session->GetStream())) != 0){
+            LOG(ERROR) << "client accept error: " << uv_strerror(err);
             return;
         }
 
         LOG(INFO) << "client connected";
-        if((status = uv_read_start(session->GetStream(), &Session::AllocBuffer, &OnMessageReceived)) != 0){
-            LOG(ERROR) << "client read error: " << uv_strerror(status);
+        if((err = uv_read_start(session->GetStream(), &ServerSession::AllocBuffer, &OnMessageReceived)) != 0){
+            LOG(ERROR) << "client read error: " << uv_strerror(err);
             return;
         }
     }
@@ -272,17 +271,18 @@ namespace Token{
             return;
         }
 
+        Handle<Buffer> buffer = session->GetReadBuffer();
+
         uint32_t offset = 0;
         std::vector<Handle<Message>> messages;
-        ByteBuffer bytes((uint8_t*)buff->base, buff->len);
         do{
-            uint32_t mtype = bytes.GetInt();
-            intptr_t msize = bytes.GetLong();
+            uint32_t mtype = buffer->GetInt();
+            intptr_t msize = buffer->GetLong();
 
             switch(mtype) {
 #define DEFINE_DECODE(Name) \
                 case Message::MessageType::k##Name##MessageType:{ \
-                    Handle<Message> msg = Name##Message::NewInstance(&bytes).CastTo<Message>(); \
+                    Handle<Message> msg = Name##Message::NewInstance(buffer).CastTo<Message>(); \
                     LOG(INFO) << "decoded: " << msg << "(" << msize << " bytes)"; \
                     messages.push_back(msg); \
                     break; \
@@ -335,7 +335,8 @@ namespace Token{
         //-- Attention! --
         // this is not a memory leak, the memory will be freed upon
         // the session being closed
-        return (new PeerSession(address))->Connect();
+        //TODO: return PeerSession::NewInstance();
+        return false;
     }
 
     bool Server::IsConnectedTo(const NodeAddress& address){
@@ -414,7 +415,7 @@ namespace Token{
     }
 
     void ServerSession::HandleVersionMessage(const Handle<HandleMessageTask>& task){
-        ServerSession* session = (ServerSession*)task->GetSession();
+        Handle<ServerSession> session = task->GetSession().CastTo<ServerSession>();
         //TODO:
         // - state check
         // - version check
@@ -425,7 +426,7 @@ namespace Token{
     //TODO:
     // - verify nonce
     void ServerSession::HandleVerackMessage(const Handle<HandleMessageTask>& task){
-        ServerSession* session = (ServerSession*)task->GetSession();
+        Handle<ServerSession> session = task->GetSession().CastTo<ServerSession>();
         Handle<VerackMessage> msg = task->GetMessage().CastTo<VerackMessage>();
 
         session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), Server::GetCallbackAddress()));
@@ -447,7 +448,7 @@ namespace Token{
     }
 
     void ServerSession::HandleGetDataMessage(const Handle<HandleMessageTask>& task){
-        ServerSession* session = (ServerSession*)task->GetSession();
+        Handle<ServerSession> session = task->GetSession().CastTo<ServerSession>();
         Handle<GetDataMessage> msg = task->GetMessage().CastTo<GetDataMessage>();
 
         std::vector<InventoryItem> items;
@@ -494,7 +495,7 @@ namespace Token{
                     response.push_back(UnclaimedTransactionMessage::NewInstance(utxo).CastTo<Message>());
                 }
             } else{
-                Send(NotFoundMessage::NewInstance());
+                session->Send(NotFoundMessage::NewInstance());
                 return;
             }
         }
@@ -503,7 +504,7 @@ namespace Token{
     }
 
     void ServerSession::HandlePrepareMessage(const Handle<HandleMessageTask>& task){
-        ServerSession* session = (ServerSession*)task->GetSession();
+        Handle<ServerSession> session = task->GetSession().CastTo<ServerSession>();
         Handle<PrepareMessage> msg = task->GetMessage().CastTo<PrepareMessage>();
 
         Handle<Proposal> proposal = msg->GetProposal();
@@ -528,7 +529,7 @@ namespace Token{
     void ServerSession::HandlePromiseMessage(const Handle<HandleMessageTask>& task){}
 
     void ServerSession::HandleCommitMessage(const Handle<HandleMessageTask>& task){
-        ServerSession* session = (ServerSession*)task->GetSession();
+        Handle<ServerSession> session = task->GetSession().CastTo<ServerSession>();
         Handle<CommitMessage> msg = task->GetMessage().CastTo<CommitMessage>();
 
         Proposal* proposal = msg->GetProposal();
@@ -583,7 +584,7 @@ namespace Token{
     }
 
     void ServerSession::HandleInventoryMessage(const Handle<HandleMessageTask>& task){
-        ServerSession* session = (ServerSession*)task->GetSession();
+        Handle<ServerSession> session = task->GetSession().CastTo<ServerSession>();
         Handle<InventoryMessage> msg = task->GetMessage().CastTo<InventoryMessage>();
 
         std::vector<InventoryItem> items;
@@ -624,7 +625,7 @@ namespace Token{
     };
 
     void ServerSession::HandleGetUnclaimedTransactionsMessage(const Token::Handle<Token::HandleMessageTask>& task){
-        ServerSession* session = (ServerSession*)task->GetSession();
+        Handle<ServerSession> session = task->GetSession().CastTo<ServerSession>();
         Handle<GetUnclaimedTransactionsMessage> msg = task->GetMessage().CastTo<GetUnclaimedTransactionsMessage>();
 
         User user = msg->GetUser();
@@ -645,11 +646,11 @@ namespace Token{
         }
 
         LOG(INFO) << "sending inventory of " << items.size() << " items";
-        session->SendInventory(items);
+        //TODO: session->SendInventory(items);
     }
 
     void ServerSession::HandleGetBlocksMessage(const Handle<HandleMessageTask>& task){
-        ServerSession* session = (ServerSession*)task->GetSession();
+        Handle<ServerSession> session = task->GetSession().CastTo<ServerSession>();
         Handle<GetBlocksMessage> msg = task->GetMessage().CastTo<GetBlocksMessage>();
 
         Hash start = msg->GetHeadHash();
@@ -676,7 +677,7 @@ namespace Token{
     }
 
     void ServerSession::HandleGetPeersMessage(const Handle<HandleMessageTask>& task){
-        ServerSession* session = (ServerSession*)task->GetSession();
+        Handle<ServerSession> session = task->GetSession().CastTo<ServerSession>();
         Handle<GetPeersMessage> msg = task->GetMessage().CastTo<GetPeersMessage>();
 
         LOG(INFO) << "getting peers....";

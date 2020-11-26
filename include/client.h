@@ -4,6 +4,7 @@
 #include "session.h"
 #include "command.h"
 
+/*
 namespace Token{
 #define FOR_EACH_CLIENT_COMMAND(V) \
     V(Status, ".status", 0) \
@@ -34,13 +35,6 @@ namespace Token{
         static void OnHeartbeatTick(uv_timer_t* handle);
         static void OnHeartbeatTimeout(uv_timer_t* handle);
 
-        virtual uv_loop_t* GetLoop(){
-            return stream_.loop;
-        }
-
-        virtual uv_stream_t* GetStream(){
-            return (uv_stream_t*)&stream_;
-        }
     public:
         ClientSession(const NodeAddress& address);
         ~ClientSession(){}
@@ -84,7 +78,7 @@ namespace Token{
         Handle<UnclaimedTransaction> GetUnclaimedTransaction(const Hash& hash);
 
         BlockHeader GetHead(){
-            return GetSession()->GetHead();
+            return Block::Genesis()->GetHeader();//TODO: fix ClientSession::GetHead()
         }
 
         static bool Initialize(){
@@ -118,5 +112,6 @@ namespace Token{
         }
     };
 }
+*/
 
 #endif //TOKEN_CLIENT_H

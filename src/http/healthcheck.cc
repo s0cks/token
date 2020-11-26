@@ -3,8 +3,8 @@
 #include "common.h"
 #include "http/session.h"
 #include "http/healthcheck.h"
-
 #include "configuration.h"
+#include "block_chain.h"
 
 namespace Token{
 #define CONFIG_KEY_HEALTHCHECK_SERVICE "HealthCheck"
@@ -204,9 +204,8 @@ namespace Token{
 
     void HealthCheckService::HandleHealthEndpoint(HttpSession* session, HttpRequest* request){
         std::stringstream ss;
-        ss << "Ok";
-
-        HttpResponse response(session, 200, ss);
+        ss << "{\"head\": \"" << BlockChain::GetHead().GetHash() << "\"}";
+        HttpResponse response(session, 200, CONTENT_APPLICATION_JSON, ss);
         session->Send(&response);
     }
 }

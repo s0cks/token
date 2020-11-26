@@ -1,7 +1,7 @@
 #include "file_reader.h"
-#include "byte_buffer.h"
 #include "crash_report.h"
 
+#include "buffer.h"
 #include "block.h"
 #include "vmemory.h"
 

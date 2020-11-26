@@ -17,7 +17,7 @@ main(int argc, char** argv){
         return EXIT_FAILURE;
     }
 
-    if(FLAGS_peer.empty()){
+    /*if(FLAGS_peer.empty()){
         LOG(WARNING) << "please specify a peer address using --peer";
         return EXIT_FAILURE;
     }
@@ -45,6 +45,6 @@ main(int argc, char** argv){
     }
 
     client->Disconnect();
-    client->WaitForDisconnect();
+    client->WaitForDisconnect();*/
     return EXIT_SUCCESS;
 }

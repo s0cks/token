@@ -1,30 +1,32 @@
 #include "object.h"
-#include "byte_buffer.h"
+#include "buffer.h"
 #include "bitfield.h"
 
 namespace Token{
-    bool BinaryObject::WriteToFile(std::fstream &file) const{
-        ByteBuffer bytes;
-        if(!Write(&bytes)){
+    bool BinaryObject::WriteToFile(std::fstream& fd) const{
+        intptr_t size = GetBufferSize();
+        Handle<Buffer> buff = Buffer::NewInstance(size);
+        if(!Write(buff)){
             LOG(WARNING) << "couldn't encode object to bytes";
             return false;
         }
-        file.write((char*)bytes.data(), bytes.GetWrittenBytes());
-        file.flush();
+
+        buff->WriteBytesTo(fd, size);
         return true;
     }
 
     Hash BinaryObject::GetHash() const{
-        CryptoPP::SHA256 func;
+        intptr_t size = GetBufferSize();
 
-        ByteBuffer bytes;
-        if(!Write(&bytes)){
+        CryptoPP::SHA256 func;
+        Handle<Buffer> buff = Buffer::NewInstance(size);
+        if(!Write(buff)){
             LOG(WARNING) << "couldn't encode object to bytes";
             return Hash();
         }
 
         CryptoPP::SecByteBlock hash(CryptoPP::SHA256::DIGESTSIZE);
-        CryptoPP::ArraySource source(bytes.data(), bytes.GetWrittenBytes(), true, new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(hash.data(), hash.size())));
+        CryptoPP::ArraySource source((uint8_t*)buff->data(), size, true, new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(hash.data(), hash.size())));
         return Hash::FromBytes(hash.data());
     }
 }

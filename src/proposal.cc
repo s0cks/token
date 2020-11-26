@@ -8,10 +8,10 @@ namespace Token{
 #define WAIT cond_.wait(lock)
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
-    Handle<Proposal> Proposal::NewInstance(ByteBuffer* bytes){
-        uint32_t height = bytes->GetInt();
-        Hash hash = bytes->GetHash();
-        UUID proposer(bytes);
+    Handle<Proposal> Proposal::NewInstance(const Handle<Buffer>& buff){
+        uint32_t height = buff->GetInt();
+        Hash hash = buff->GetHash();
+        UUID proposer(buff);
         return new Proposal(proposer, hash, height);
     }
 
@@ -27,10 +27,10 @@ namespace Token{
         return size;
     }
 
-    bool Proposal::Encode(ByteBuffer* bytes) const{
-        bytes->PutInt(height_);
-        bytes->PutHash(hash_);
-        proposer_.Write(bytes);
+    bool Proposal::Encode(const Handle<Buffer>& buff) const{
+        buff->PutInt(height_);
+        buff->PutHash(hash_);
+        proposer_.Write(buff);
         return true;
     }
 

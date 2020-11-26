@@ -120,24 +120,19 @@ namespace Token{
     class ServerSession : public Session{
         friend class Server;
     private:
-        uv_tcp_t handle_;
-
-        ServerSession():
-            Session(&handle_),
-            handle_(){
-            handle_.data = this;
-        }
-    protected:
-        virtual uv_stream_t* GetStream(){
-            return (uv_stream_t*)&handle_;
+        ServerSession(uv_loop_t* loop):
+            Session(loop){
+            SetType(Type::kServerSessionType);
         }
 
 #define DECLARE_MESSAGE_HANDLER(Name) \
-        virtual void Handle##Name##Message(const Handle<HandleMessageTask>& task);
+        static void Handle##Name##Message(const Handle<HandleMessageTask>& task);
         FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
     public:
-        ~ServerSession() = default;
+        static Handle<ServerSession> NewInstance(uv_loop_t* loop){
+            return new ServerSession(loop);
+        }
     };
 }
 

@@ -245,9 +245,6 @@ namespace Token{
     public:
         ~SnapshotTask() = default;
 
-        size_t GetBufferSize() const{ return 0; }//TODO: implement SnapshotTask::GetBufferSize()
-        bool Encode(ByteBuffer* bytes) const{ return false; } //TODO: implement SnapshotTask::Encode(ByteBuffer*)
-
         DEFINE_ASYNC_TASK(Snapshot);
 
         static Handle<SnapshotTask> NewInstance(uv_loop_t* loop=AsyncTaskThread::GetLoop()){

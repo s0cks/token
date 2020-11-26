@@ -2,11 +2,9 @@
 #define TOKEN_FILE_WRITER_H
 
 #include <iostream>
-#include "common.h"
-#include "byte_buffer.h"
 #include "object.h"
+#include "buffer.h"
 #include "vmemory.h"
-#include "hash.h"
 
 namespace Token{
     class FileWriter{
@@ -106,7 +104,7 @@ namespace Token{
     public:
         ~BinaryFileWriter() = default;
 
-        bool WriteBytes(uint8_t* bytes, size_t size);
+        bool WriteBytes(uint8_t* bytes, intptr_t size);
         bool WriteInt(int32_t value);
         bool WriteUnsignedInt(uint32_t value);
         bool WriteLong(int64_t value);
@@ -116,8 +114,8 @@ namespace Token{
         bool WriteObject(Object* obj);
 
         inline bool
-        WriteBytes(ByteBuffer* bytes){
-            return WriteBytes(bytes->data(), bytes->GetWrittenBytes());
+        WriteBytes(const Handle<Buffer>& buff){
+            return WriteBytes((uint8_t*)buff->data(), buff->GetWrittenBytes());
         }
 
         inline bool

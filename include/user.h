@@ -2,26 +2,31 @@
 #define TOKEN_USER_H
 
 #include "common.h"
-#include "byte_buffer.h"
 
 namespace Token{
     class User{
     public:
-        static const size_t kSize = 64; // alias
+        static const intptr_t kSize = 64; // alias
     private:
-        char data_[64];
+        uint8_t data_[kSize];
     public:
         User() = default;
+        User(const uint8_t* bytes):
+            data_(){
+            memcpy(data_, bytes, kSize);
+        }
         User(const User& user):
             data_(){
             memcpy(data_, user.data_, kSize);
         }
         User(const std::string& value);
-        User(ByteBuffer* bytes);
         ~User() = default;
 
+        const char* data() const{
+            return (char*)data_;
+        }
+
         std::string Get() const;
-        bool Encode(ByteBuffer* bytes) const;
 
         void operator=(const User& user){
             memcpy(data_, user.data_, 64);
@@ -32,11 +37,11 @@ namespace Token{
         }
 
         friend bool operator==(const User& a, const User& b){
-            return strncmp(a.data_, b.data_, 64) == 0;
+            return memcmp(a.data_, b.data_, kSize) == 0;
         }
 
         friend bool operator==(const User& a, const std::string& b){
-            return strncmp(a.data_, b.data(), std::min(b.length(), (unsigned long)64)) == 0;
+            return memcmp(a.data_, b.data(), std::min(b.length(), (unsigned long)kSize)) == 0;
         }
 
         friend bool operator!=(const User& a, const User& b){
@@ -44,19 +49,19 @@ namespace Token{
         }
 
         friend bool operator!=(const User& a, const std::string& b){
-            return strncmp(a.data_, b.data(), std::min(b.length(), (unsigned long)64)) != 0;
+            return memcmp(a.data_, b.data(), std::min(b.length(), (unsigned long)kSize)) != 0;
         }
 
         friend int operator<(const User& a, const User& b){
-            return strncmp(a.data_, b.data_, 64);
+            return memcmp(a.data_, b.data(), kSize);
         }
 
         friend int operator<(const User& a, const std::string& b){
-            return strncmp(a.data_, b.data(), std::min(b.length(), (unsigned long)64));
+            return memcmp(a.data_, b.data(), std::min(b.length(), (unsigned long)kSize));
         }
 
         friend std::ostream& operator<<(std::ostream& stream, const User& user){
-            stream << std::string(user.data_, 64);
+            stream << std::string((char*)user.data_, kSize);
             return stream;
         }
     };

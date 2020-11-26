@@ -7,10 +7,10 @@
 namespace Token{
     class Task : public Object{
     protected:
-        Task() = default;
-
-        size_t GetBufferSize() const{ return 0; }
-        bool Encode(uint8_t* bytes) const{ return false; }
+        Task():
+            Object(){
+            SetType(Type::kTaskType);
+        }
     public:
         ~Task() = default;
     };
@@ -19,13 +19,24 @@ namespace Token{
     protected:
         Session* session_;
 
-        SessionTask(Session* session):
+        SessionTask(const Handle<Session>& session):
             Task(),
-            session_(session){}
+            session_(nullptr){
+            WriteBarrier(&session_, session);
+        }
+
+        bool Accept(WeakObjectPointerVisitor* vis){
+            if(!vis->Visit(&session_)){
+                LOG(WARNING) << "couldn't visit SessionTask's session.";
+                return false;
+            }
+
+            return true;
+        }
     public:
         ~SessionTask() = default;
 
-        Session* GetSession() const{
+        Handle<Session> GetSession() const{
             return session_;
         }
     };
@@ -34,20 +45,27 @@ namespace Token{
     public: \
         const char* GetName() const{ return #Name; }
 
-
-
     class HandleMessageTask : public SessionTask{
     private:
         Message* message_;
 
-        HandleMessageTask(Session* session, const Handle<Message>& message):
+        HandleMessageTask(const Handle<Session>& session, const Handle<Message>& message):
             SessionTask(session),
-            message_(){
+            message_(nullptr){
             WriteBarrier(&message_, message);
         }
     protected:
         bool Accept(WeakObjectPointerVisitor* vis){
-            return vis->Visit(&message_);
+            if(!SessionTask::Accept(vis)){
+                return false;
+            }
+
+            if(!vis->Visit(&message_)){
+                LOG(WARNING) << "couldn't visit HandleMessageTask's session.";
+                return false;
+            }
+
+            return true;
         }
     public:
         ~HandleMessageTask() = default;
@@ -56,10 +74,7 @@ namespace Token{
             return message_;
         }
 
-        size_t GetBufferSize() const{ return 0; } //TODO: implement
-        bool Encode(ByteBuffer* bytes) const{ return false; } // TODO: implement
-
-        static Handle<HandleMessageTask> NewInstance(Session* session, const Handle<Message>& msg){
+        static Handle<HandleMessageTask> NewInstance(const Handle<Session>& session, const Handle<Message>& msg){
             return new HandleMessageTask(session, msg);
         }
     };

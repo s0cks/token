@@ -4,17 +4,22 @@
 #include "server.h"
 #include "unclaimed_transaction_pool.h"
 
-#include "byte_buffer.h"
-
 namespace Token{
 //######################################################################################################################
 //                                          Input
 //######################################################################################################################
-    Handle<Input> Input::NewInstance(ByteBuffer* bytes){
-        Hash hash = bytes->GetHash();
-        uint32_t index = bytes->GetInt();
-        User user(bytes);
+    Handle<Input> Input::NewInstance(const Handle<Buffer>& buff){
+        Hash hash = buff->GetHash();
+        int32_t index = buff->GetInt();
+        User user = buff->GetUser();
         return new Input(hash, index, user);
+    }
+
+    bool Input::Write(const Handle<Buffer>& buff) const{
+        buff->PutHash(hash_);
+        buff->PutInt(index_);
+        buff->PutUser(user_);
+        return true;
     }
 
     std::string Input::ToString() const{
@@ -24,16 +29,22 @@ namespace Token{
     }
 
     UnclaimedTransaction* Input::GetUnclaimedTransaction() const{
-        return UnclaimedTransactionPool::GetUnclaimedTransaction(hash_, index_);
+        return UnclaimedTransactionPool::GetUnclaimedTransaction(GetTransactionHash(), GetOutputIndex());
     }
 
 //######################################################################################################################
 //                                          Output
 //######################################################################################################################
-    Handle<Output> Output::NewInstance(ByteBuffer* bytes){
-        User user(bytes);
-        Product product(bytes);
+    Handle<Output> Output::NewInstance(const Handle<Buffer>& buff){
+        User user = buff->GetUser();
+        Product product = buff->GetProduct();
         return new Output(user, product);
+    }
+
+    bool Output::Write(const Handle<Buffer>& buff) const{
+        buff->PutUser(user_);
+        buff->PutProduct(product_);
+        return true;
     }
 
     std::string Output::ToString() const{
@@ -44,31 +55,58 @@ namespace Token{
 //######################################################################################################################
 //                                          Transaction
 //######################################################################################################################
-    Handle<Transaction> Transaction::NewInstance(ByteBuffer* bytes){
-        Timestamp timestamp = bytes->GetLong();
-        intptr_t index = bytes->GetLong();
-        intptr_t num_inputs = bytes->GetLong();
+    Handle<Transaction> Transaction::NewInstance(std::fstream& fd, size_t size){
+        Handle<Buffer> buff = Buffer::NewInstance(size);
+        buff->ReadBytesFrom(fd, size);
+        return NewInstance(buff);
+    }
+
+    Handle<Transaction> Transaction::NewInstance(const Handle<Buffer>& buff){
+        Timestamp timestamp = buff->GetLong();
+        intptr_t index = buff->GetLong();
+        intptr_t num_inputs = buff->GetLong();
         Input* inputs[num_inputs];
         for(uint32_t idx = 0; idx < num_inputs; idx++)
-            inputs[idx] = Input::NewInstance(bytes);
+            inputs[idx] = Input::NewInstance(buff);
 
-        // parse outputs
-        intptr_t num_outputs = bytes->GetLong();
+
+        intptr_t num_outputs = buff->GetLong();
         Output* outputs[num_outputs];
-        for(uint32_t idx = 0; idx < num_outputs; idx++)
-            outputs[idx] = Output::NewInstance(bytes);
+        for(uint32_t idx = 0; idx < num_outputs; idx++){
+            outputs[idx] = Output::NewInstance(buff);
+        }
         return new Transaction(timestamp, index, inputs, num_inputs, outputs, num_outputs);
     }
 
-    Handle<Transaction> Transaction::NewInstance(std::fstream& fd, size_t size){
-        ByteBuffer bytes(size);
-        fd.read((char*)bytes.data(), size);
-        return NewInstance(&bytes);
+    intptr_t Transaction::GetBufferSize() const{
+        intptr_t size = 0;
+        size += sizeof(Timestamp); // timestamp_
+        size += sizeof(int64_t); // index_
+        size += sizeof(int64_t); // num_inputs_
+        size += (num_inputs_ * Input::kSize); // inputs_
+        size += sizeof(int64_t); // num_outputs
+        size += (num_outputs_ * Output::kSize); // outputs_
+        return size;
+    }
+
+    bool Transaction::Write(const Handle<Buffer>& buff) const{
+        buff->PutLong(timestamp_);
+        buff->PutLong(index_);
+        buff->PutLong(num_inputs_);
+        for(intptr_t idx = 0; idx < num_inputs_; idx++){
+            inputs_[idx]->Write(buff);
+        }
+        buff->PutLong(num_outputs_);
+        for(intptr_t idx = 0; idx < num_outputs_; idx++){
+            outputs_[idx]->Write(buff);
+        }
+        //TODO: serialize transaction signature
+        return true;
     }
 
     std::string Transaction::ToString() const{
         std::stringstream stream;
-        stream << "Transaction(" << GetHash() << ")";
+        stream << "Transaction(#" << GetIndex() << "," << GetNumberOfInputs() << " Inputs, " << GetNumberOfOutputs() << " Outputs)";
         return stream.str();
     }
 

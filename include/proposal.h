@@ -73,7 +73,7 @@ namespace Token{
         }
 
         size_t GetBufferSize() const;
-        bool Encode(ByteBuffer* bytes) const;
+        bool Encode(const Handle<Buffer>& buff) const;
         void AcceptProposal(const std::string& node);
         void RejectProposal(const std::string& node);
         void WaitForPhase(Phase phase);
@@ -117,7 +117,7 @@ namespace Token{
             return GetStatus() == Status::kRejectedStatus;
         }
 
-        static Handle<Proposal> NewInstance(ByteBuffer* bytes);
+        static Handle<Proposal> NewInstance(const Handle<Buffer>& buff);
         static Handle<Proposal> NewInstance(uint32_t height, const Hash& hash, const UUID& proposer);
 
         static Handle<Proposal> NewInstance(Block* block, const UUID& proposer){

@@ -1,10 +1,9 @@
 #ifndef TOKEN_FILE_READER_H
 #define TOKEN_FILE_READER_H
 
-#include "common.h"
-#include "byte_buffer.h"
-#include "object.h"
 #include "hash.h"
+#include "object.h"
+#include "buffer.h"
 
 namespace Token{
     class FileReader{
@@ -34,13 +33,13 @@ namespace Token{
         void Close();
 
         inline bool
-        ReadBytes(ByteBuffer* bytes, size_t size){
-            return ReadBytes(bytes->data(), size);
+        ReadBytes(const Handle<Buffer>& buff, size_t size){
+            return ReadBytes((uint8_t*)buff->data(), size);
         }
 
         inline bool
-        ReadBytes(ByteBuffer* bytes){
-            return ReadBytes(bytes, bytes->GetCapacity());
+        ReadBytes(const Handle<Buffer>& buff){
+            return ReadBytes(buff, buff->GetBufferSize());
         }
     };
 

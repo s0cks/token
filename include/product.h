@@ -2,26 +2,31 @@
 #define TOKEN_PRODUCT_H
 
 #include "common.h"
-#include "byte_buffer.h"
 
 namespace Token{
     class Product{
     public:
-        static const size_t kSize = 64; // alias
+        static const intptr_t kSize = 64; // alias
     private:
         char data_[64];
     public:
         Product() = default;
+        Product(const uint8_t* bytes):
+            data_(){
+            memcpy(data_, bytes, kSize);
+        }
         Product(const Product& Product):
             data_(){
             memcpy(data_, Product.data_, kSize);
         }
         Product(const std::string& value);
-        Product(ByteBuffer* bytes);
         ~Product() = default;
 
+        const char* data() const{
+            return data_;
+        }
+
         std::string Get() const;
-        bool Encode(ByteBuffer* bytes) const;
 
         void operator=(const Product& Product){
             memcpy(data_, Product.data_, 64);
@@ -55,8 +60,8 @@ namespace Token{
             return strncmp(a.data_, b.data(), std::min(b.length(), (unsigned long)64));
         }
 
-        friend std::ostream& operator<<(std::ostream& stream, const Product& Product){
-            stream << std::string(Product.data_, 64);
+        friend std::ostream& operator<<(std::ostream& stream, const Product& product){
+            stream << std::string(product.data_, std::min((unsigned long)64, strlen(product.data_)));
             return stream;
         }
     };
