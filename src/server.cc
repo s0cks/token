@@ -266,18 +266,18 @@ namespace Token{
         } else if(nread == 0){
             LOG(WARNING) << "zero message size received";
             return;
-        } else if(nread >= 4096){
-            LOG(ERROR) << "too large of a buffer";
+        } else if(nread > Session::kBufferSize){
+            LOG(ERROR) << "too large of a buffer: " << nread;
             return;
         }
 
         Handle<Buffer> buffer = session->GetReadBuffer();
 
-        uint32_t offset = 0;
+        intptr_t offset = 0;
         std::vector<Handle<Message>> messages;
         do{
-            uint32_t mtype = buffer->GetInt();
-            intptr_t msize = buffer->GetLong();
+            int32_t mtype = buffer->GetInt();
+            int64_t  msize = buffer->GetLong();
 
             switch(mtype) {
 #define DEFINE_DECODE(Name) \
@@ -646,7 +646,7 @@ namespace Token{
         }
 
         LOG(INFO) << "sending inventory of " << items.size() << " items";
-        //TODO: session->SendInventory(items);
+        session->SendInventory(items);
     }
 
     void ServerSession::HandleGetBlocksMessage(const Handle<HandleMessageTask>& task){

@@ -30,7 +30,6 @@ namespace Token{
             hb_timeout_(),
             shutdown_(){
             SetType(Type::kPeerSessionType);
-            uv_tcp_keepalive(GetHandle(), 1, 60);
         }
 
         void SetHead(const BlockHeader& head){

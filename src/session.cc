@@ -9,7 +9,9 @@ namespace Token{
 
     void Session::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
         Handle<Session> session = (Session*)handle->data;
-        session->GetReadBuffer()->Initialize(buff);
+        Handle<Buffer> rbuff = session->GetReadBuffer();
+        buff->len = suggested_size;
+        buff->base = rbuff->data();
     }
 
     void Session::SetState(Session::State state){
@@ -24,6 +26,18 @@ namespace Token{
         SIGNAL_ALL;
     }
 
+    bool Session::WaitForState(State state, intptr_t timeout){
+        LOCK;
+        while(state_ != state) WAIT;
+        return true;
+    }
+
+    bool Session::WaitForStatus(Status status, intptr_t timeout){
+        LOCK;
+        while(status_ != status) WAIT;
+        return true;
+    }
+
     Session::State Session::GetState(){
         LOCK_GUARD;
         return state_;
@@ -36,21 +50,22 @@ namespace Token{
 
     void Session::Send(const Handle<Message>& msg){
         // TODO: convert to message header struct
-        uint32_t type = static_cast<uint32_t>(msg->GetType());
-        intptr_t size = msg->GetMessageSize();
-        intptr_t total_size = Message::kHeaderSize + size;
+        int32_t type = msg->GetMessageType();
+        int64_t size = msg->GetMessageSize();
+        int64_t total_size = Message::kHeaderSize + size;
 
         LOG(INFO) << "sending " << msg << " (" << total_size << " bytes)";
-        Handle<Buffer> buffer = GetWriteBuffer();
-        buffer->PutUnsignedInt(type);
-        buffer->PutLong(size);
-        if(!msg->Write(buffer)){
+        Handle<Buffer> wbuff = GetWriteBuffer();
+        wbuff->PutInt(type);
+        wbuff->PutLong(size);
+        if(!msg->Write(wbuff)){
             LOG(WARNING) << "couldn't encode message: " << msg->ToString();
             return;
         }
 
         uv_buf_t buff;
-        buffer->Initialize(&buff);
+        buff.len = total_size;
+        buff.base = wbuff->data();
 
         uv_write_t* req = (uv_write_t*)malloc(sizeof(uv_write_t));
         req->data = this;
@@ -70,35 +85,70 @@ namespace Token{
         for(size_t idx = 0; idx < total_messages; idx++){
             Handle<Message> msg = messages[idx];
 
-
             uint32_t type = static_cast<uint32_t>(msg->GetMessageType());
             intptr_t size = msg->GetMessageSize();
             intptr_t total_size = Message::kHeaderSize + size;
 
             LOG(INFO) << "sending " << msg->ToString() << " (" << total_size << " Bytes)";
 
-            Handle<Buffer> buffer = GetWriteBuffer();
-            buffer->PutInt(type);
-            buffer->PutLong(size);
-            if(!msg->Write(buffer)){
+            Handle<Buffer> wbuff = GetWriteBuffer();
+            wbuff->PutInt(type);
+            wbuff->PutLong(size);
+            if(!msg->Write(wbuff)){
                 LOG(WARNING) << "couldn't encode message: " << msg->ToString();
                 return;
             }
 
-            buffer->Initialize(&buffers[idx]);
+            buffers[idx].len = total_size;
+            buffers[idx].base = &wbuff->data()[0];
         }
         messages.clear();
 
         uv_write_t* req = (uv_write_t*)malloc(sizeof(uv_write_t));
         req->data = this;
         uv_write(req, GetStream(), buffers, total_messages, &OnMessageSent);
-
-        for(size_t idx = 0; idx < total_messages; idx++) free(buffers[idx].base);
     }
 
     void Session::OnMessageSent(uv_write_t* req, int status){
+        Handle<Session> session = (Session*)req->data;
+        session->GetWriteBuffer()->Reset();
         if(status != 0)
             LOG(ERROR) << "failed to send message: " << uv_strerror(status);
         free(req);
+    }
+
+    void Session::SendInventory(std::vector<InventoryItem>& items){
+        std::vector<Handle<Message>> data;
+
+        size_t n = InventoryMessage::kMaxAmountOfItemsPerMessage;
+        size_t size = (items.size() - 1) / n + 1;
+        for(size_t idx = 0; idx < size; idx++){
+            auto start = std::next(items.cbegin(), idx*n);
+            auto end = std::next(items.cbegin(), idx*n+n);
+
+            std::vector<InventoryItem> inv(n);
+            if(idx*n+n > items.size()){
+                end = items.cend();
+                inv.resize(items.size()-idx*n);
+            }
+            std::copy(start, end, inv.begin());
+
+            data.push_back(InventoryMessage::NewInstance(inv).CastTo<Message>());
+        }
+        Send(data);
+    }
+
+    bool ThreadedSession::Disconnect(){
+        if(pthread_self() == thread_){
+            // Inside Session OSThreadBase
+            uv_read_stop(GetStream());
+            uv_stop(GetLoop());
+            uv_loop_close(GetLoop());
+            SetState(State::kDisconnected);
+        } else{
+            // Outside Session OSThreadBase
+            uv_async_send(&shutdown_);
+        }
+        return true;
     }
 }

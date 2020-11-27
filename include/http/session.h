@@ -1,5 +1,5 @@
-#ifndef TOKEN_SESSION_H
-#define TOKEN_SESSION_H
+#ifndef TOKEN_HTTP_SESSION_H
+#define TOKEN_HTTP_SESSION_H
 
 #include <uv.h>
 #include <glog/logging.h>
@@ -17,11 +17,15 @@ namespace Token{
         Buffer* write_buffer_;
 
         void InitReadBuffer(uv_buf_t* buff){
-            GetReadBuffer()->Initialize(buff);
+            Handle<Buffer> rbuff = GetReadBuffer();
+            buff->len = rbuff->GetBufferSize();
+            buff->base = rbuff->data();
         }
 
         void InitWriteBuffer(uv_buf_t* buff){
-            GetWriteBuffer()->Initialize(buff);
+            Handle<Buffer> wbuff = GetWriteBuffer();
+            buff->len = wbuff->GetBufferSize();
+            buff->base = wbuff->data();
         }
 
         static void OnResponseSent(uv_write_t* req, int status);
@@ -85,4 +89,4 @@ namespace Token{
     };
 }
 
-#endif //TOKEN_SESSION_H
+#endif //TOKEN_HTTP_SESSION_H

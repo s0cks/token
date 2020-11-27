@@ -17,34 +17,25 @@ main(int argc, char** argv){
         return EXIT_FAILURE;
     }
 
-    /*if(FLAGS_peer.empty()){
+    if(FLAGS_peer.empty()){
         LOG(WARNING) << "please specify a peer address using --peer";
         return EXIT_FAILURE;
     }
 
-    if(!BlockChainClient::Initialize()){
-        LOG(ERROR) << "couldn't initialize the client.";
-        return EXIT_FAILURE;
-    }
+    Allocator::Initialize();
 
     NodeAddress address(FLAGS_peer);
-    BlockChainClient* client = new BlockChainClient(address);
+    Handle<ClientSession> client = ClientSession::NewInstance(address);
     if(!client->Connect()){
         LOG(ERROR) << "couldn't connect to the peer: " << address;
         return EXIT_FAILURE;
     }
 
-    std::set<Hash> blocks;
-    if(!client->GetBlockChain(blocks)){
-        LOG(ERROR) << "couldn't get the list of blocks from the peer: " << address;
+    std::vector<Hash> utxos;
+    if(!client->GetUnclaimedTransactions(User("VenueA"), utxos)){
+        LOG(ERROR) << "couldn't get the list of unclaimed transactions from the peer: " << address;
         return EXIT_FAILURE;
     }
-
-    for(auto& it : blocks){
-        LOG(INFO) << " - " << it;
-    }
-
     client->Disconnect();
-    client->WaitForDisconnect();*/
     return EXIT_SUCCESS;
 }

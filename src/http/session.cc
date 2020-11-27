@@ -10,11 +10,12 @@ namespace Token{
         ss << response->GetBody();
         std::string resp = ss.str();
 
-        Handle<Buffer> buffer = GetWriteBuffer();
-        buffer->PutString(ss.str());
+        Handle<Buffer> wbuff = GetWriteBuffer();
+        wbuff->PutString(ss.str());
 
         uv_buf_t buff;
-        buffer->Initialize(&buff);
+        buff.len = wbuff->GetBufferSize();
+        buff.base = wbuff->data();
 
         uv_write_t* req = (uv_write_t*)malloc(sizeof(uv_write_t));
         req->data = this;

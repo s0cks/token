@@ -41,7 +41,6 @@ namespace Token{
     //TODO: better encoding/decoding
     class Message : public Object{
         friend class Session;
-        friend class Session;
     public:
         enum MessageType{
             kUnknownMessageType = 0,
@@ -50,9 +49,13 @@ namespace Token{
 #undef DECLARE_MESSAGE_TYPE
         };
 
-        static const intptr_t kHeaderSize = sizeof(uint32_t) + sizeof(intptr_t);
+        static const intptr_t kHeaderSize = sizeof(int32_t)
+                                          + sizeof(int64_t);
     protected:
-        Message() = default;
+        Message():
+            Object(){
+            SetType(Type::kMessageType);
+        }
 
         virtual intptr_t GetMessageSize() const = 0;
         virtual bool Write(const Handle<Buffer>& buffer) const = 0;

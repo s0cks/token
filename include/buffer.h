@@ -61,7 +61,7 @@ namespace Token{
         static void* operator new(size_t size, size_t length, bool){
             intptr_t buffer_size = (sizeof(uint8_t)*length);
             intptr_t total_size = size + buffer_size;
-            return Object::operator new(total_size);
+            return Allocator::Allocate(total_size);
         }
         static void operator delete(void*, size_t, bool){}
         using Object::operator delete;
@@ -204,9 +204,10 @@ namespace Token{
             wpos_ += value.length();
         }
 
-        void Initialize(uv_buf_t* buff){
-            buff->len = size_;
-            buff->base = data();
+        void Reset(){
+            memset(data(), 0, GetBufferSize());
+            rpos_ = 0;
+            wpos_ = 0;
         }
 
         std::string ToString() const{

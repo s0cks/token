@@ -25,7 +25,9 @@ namespace Token{
     V(ServerSession)     \
     V(PeerSession)       \
     V(Buffer)            \
-    V(Task)
+    V(Task)              \
+    V(Message)
+
 
     enum class Type{
         kUnknownType=0,

@@ -24,7 +24,7 @@ namespace Token{
     public:
         static const uint32_t kHeartbeatIntervalMilliseconds = 30 * 1000; //TODO: remove Session::kHeartbeatIntervalMilliseconds
         static const uint32_t kHeartbeatTimeoutMilliseconds = 1 * 60 * 1000; //TODO: remove Session::kHeartbeatTimeoutMilliseconds
-        static const intptr_t kBufferSize = 4096;
+        static const intptr_t kBufferSize = 65536;
 
         enum State{
 #define DEFINE_STATE(Name) k##Name,
@@ -65,7 +65,7 @@ namespace Token{
                     return stream;
             }
         }
-    private:
+    protected:
         std::mutex mutex_;
         std::condition_variable cond_;
         State state_;
@@ -74,7 +74,7 @@ namespace Token{
         uv_tcp_t handle_;
         Buffer* rbuffer_;
         Buffer* wbuffer_;
-    protected:
+
         Session(uv_loop_t* loop):
             Object(),
             mutex_(),
@@ -88,6 +88,7 @@ namespace Token{
             SetType(Type::kSessionType);
             handle_.data = this;
 
+            uv_tcp_keepalive(GetHandle(), 1, 60);
             int err;
             if((err = uv_tcp_init(loop, &handle_)) != 0){
                 LOG(WARNING) << "couldn't initialize the session handle: " << uv_strerror(err);
@@ -122,23 +123,26 @@ namespace Token{
             return loop_;
         }
 
-        Handle<Buffer> GetReadBuffer() const{
-            return rbuffer_;
-        }
-
+        void SetState(State state);
+        void SetStatus(Status status);
+        bool WaitForState(State state, intptr_t timeout=0);
+        bool WaitForStatus(Status status, intptr_t timeout=0);
+        static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
+        static void OnMessageSent(uv_write_t* req, int status);
+    public:
         Handle<Buffer> GetWriteBuffer() const{
             return wbuffer_;
         }
 
-        void SetState(State state);
-        void SetStatus(Status status);
-        static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
-        static void OnMessageSent(uv_write_t* req, int status);
-    public:
+        Handle<Buffer> GetReadBuffer() const{
+            return rbuffer_;
+        }
+
         State GetState();
         Status GetStatus();
         void Send(const Handle<Message>& msg);
         void Send(std::vector<Handle<Message>>& messages);
+        void SendInventory(std::vector<InventoryItem>& items);
 
 #define DEFINE_SEND_MESSAGE(Name) \
         void Send(const Handle<Name##Message>& msg){ Send(msg.CastTo<Message>()); }
@@ -154,6 +158,25 @@ namespace Token{
         bool Is##Name(){ return GetStatus() == Status::k##Name; }
         FOR_EACH_SESSION_STATUS(DEFINE_STATUS_CHECK)
 #undef DEFINE_STATUS_CHECK
+
+#define DEFINE_STATE_WAITER(Name) \
+        bool WaitFor##Name##State(intptr_t timeout=30){ return WaitForState(State::k##Name, timeout); }
+        FOR_EACH_SESSION_STATE(DEFINE_STATE_WAITER)
+#undef DEFINE_STATE_WAITER
+    };
+
+    class ThreadedSession : public Session{
+    protected:
+        pthread_t thread_;
+        uv_async_t shutdown_;
+
+        ThreadedSession(uv_loop_t* loop):
+            Session(loop),
+            thread_(){}
+    public:
+        virtual ~ThreadedSession() = default;
+        virtual bool Connect() = 0;
+        bool Disconnect();
     };
 }
 
