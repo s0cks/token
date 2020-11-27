@@ -4,7 +4,6 @@
 #include "common.h"
 #include "crash_report.h"
 #include "configuration.h"
-#include "block_node.h"
 #include "block_chain.h"
 #include "block_chain_index.h"
 #include "block_chain_initializer.h"
@@ -18,23 +17,23 @@ namespace Token{
 
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_);
 
-    BlockNode* BlockChain::GetHeadNode(){
+    Handle<BlockNode> BlockChain::GetHeadNode(){
         LOCK_GUARD;
         return head_;
     }
 
-    void BlockChain::SetHeadNode(BlockNode* node){
+    void BlockChain::SetHeadNode(const Handle<BlockNode>& node){
         LOCK_GUARD;
         head_ = node;
         BlockChainIndex::PutReference("<HEAD>", node->GetValue().GetHash());
     }
 
-    BlockNode* BlockChain::GetGenesisNode(){
+    Handle<BlockNode> BlockChain::GetGenesisNode(){
         LOCK_GUARD;
         return genesis_;
     }
 
-    void BlockChain::SetGenesisNode(BlockNode* node){
+    void BlockChain::SetGenesisNode(const Handle<BlockNode>& node){
         LOCK_GUARD;
         genesis_ = node;
         BlockChainIndex::PutReference("<GENESIS>", node->GetValue().GetHash());
@@ -122,9 +121,9 @@ namespace Token{
         return BlockChainIndex::GetBlockData(hash);
     }
 
-    BlockNode* BlockChain::GetNode(const Hash& hash){
+    Handle<BlockNode> BlockChain::GetNode(const Hash& hash){
         LOCK_GUARD;
-        BlockNode* node = GetGenesisNode();
+        Handle<BlockNode> node = GetGenesisNode();
         while(node != nullptr){
             BlockHeader blk = node->GetValue();
             if(blk.GetHash() == hash)
@@ -174,8 +173,8 @@ namespace Token{
 
         BlockChainIndex::PutBlockData(block);
 
-        BlockNode* node = new BlockNode(block);
-        BlockNode* pnode = GetNode(phash);
+        Handle<BlockNode> node = BlockNode::NewInstance(block);
+        Handle<BlockNode> pnode = GetNode(phash);
         pnode->SetNext(node);
         node->SetNext(pnode->GetNext());
         node->SetPrevious(pnode);
@@ -185,7 +184,7 @@ namespace Token{
 
     bool BlockChain::Accept(BlockChainVisitor* vis){
         if(!vis->VisitStart()) return false;
-        BlockNode* node = GetHeadNode();
+        Handle<BlockNode> node = GetHeadNode();
         do{
             BlockHeader blk = node->GetValue();
             if(!vis->Visit(blk))
@@ -195,8 +194,19 @@ namespace Token{
         return vis->VisitEnd();
     }
 
+    bool BlockChain::Accept(BlockChainNodeVisitor* vis){
+        if(!vis->VisitStart()) return false;
+        Handle<BlockNode> node = GetGenesisNode();
+        do{
+            if(!vis->Visit(node))
+                return false;
+            node = node->GetPrevious();
+        } while(node != nullptr);
+        return vis->VisitEnd();
+    }
+
     bool BlockChain::Accept(BlockChainDataVisitor* vis){
-        BlockNode* node = GetHeadNode();
+        Handle<BlockNode> node = GetHeadNode();
         while(node != nullptr){
             BlockHeader blk = node->GetValue();
             if(!vis->Visit(blk.GetData()))

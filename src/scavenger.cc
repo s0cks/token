@@ -1,7 +1,8 @@
 #include "heap.h"
 #include "timeline.h"
 #include "scavenger.h"
-#include "transaction.h"
+
+#include "block_chain.h"
 
 namespace Token{
     static inline std::string
@@ -11,16 +12,42 @@ namespace Token{
         return ss.str();
     }
 
-    class Marker : public WeakObjectPointerVisitor{
-    private:
+    class Marker{
+    protected:
         std::vector<uword>& stack_;
+
+        void MarkObject(Object* obj){
+            stack_.push_back((uword)obj);
+        }
     public:
         Marker(std::vector<uword>& stack):
             stack_(stack){}
+        virtual ~Marker() = default;
+    };
+
+    class RootObjectMarker : public Marker, public WeakObjectPointerVisitor{
+    public:
+        RootObjectMarker(std::vector<uword>& stack):
+            Marker(stack),
+            WeakObjectPointerVisitor(){}
+        ~RootObjectMarker() = default;
 
         bool Visit(Object** obj){
             Object* data = (*obj);
-            stack_.push_back((uword)data);
+            MarkObject(data);
+            return true;
+        }
+    };
+
+    class BlockChainMarker : public Marker, public BlockChainNodeVisitor{
+    public:
+        BlockChainMarker(std::vector<uword>& stack):
+            Marker(stack),
+            BlockChainNodeVisitor(){}
+        ~BlockChainMarker() = default;
+
+        bool Visit(const Handle<BlockNode>& node){
+            MarkObject(node.operator->());
             return true;
         }
     };
@@ -53,13 +80,25 @@ namespace Token{
 
     bool Scavenger::ProcessRoots(){
         SetPhase(Phase::kMarkPhase);
-
-        Marker marker(work_);
-        if(!HandleBase::VisitHandles(&marker)){
-            LOG(WARNING) << "couldn't visit current handles.";
-            return false;
+        {
+            // Mark the BlockChain Roots (used BlockNodes)
+            BlockChainMarker marker(work_);
+            if(!BlockChain::Accept(&marker)){
+                LOG(WARNING) << "couldn't visit the block chain";
+                return false;
+            }
         }
 
+        {
+            // Mark the Stack Roots
+            RootObjectMarker marker(work_);
+            if(!HandleBase::VisitHandles(&marker)){
+                LOG(WARNING) << "couldn't visit current handles.";
+                return false;
+            }
+        }
+
+        RootObjectMarker marker(work_);
         while(HasWork()){
             Object* obj = (Object*)work_.back();
             work_.pop_back();
@@ -227,8 +266,6 @@ namespace Token{
 #if defined(TOKEN_DEBUG)
         sleep(1);
         timeline.Push("Stop");
-
-
         LOG(INFO) << "Scavenger Stats (New Heap):";
         LOG(INFO) << " - Scavenged (Bytes): " << stats.GetBytesCollected();
         LOG(INFO) << " - Promoted (Bytes): " << stats.GetBytesPromoted();

@@ -12,8 +12,73 @@
 #include "unclaimed_transaction.h"
 
 namespace Token{
-    class BlockNode;
+    class BlockNode : public Object{
+    private:
+        BlockNode* previous_;
+        BlockNode* next_;
+        BlockHeader value_;
+
+        BlockNode(const BlockHeader& value):
+            Object(),
+            previous_(nullptr),
+            next_(nullptr),
+            value_(value){
+            SetType(Type::kBlockNodeType);
+        }
+    protected:
+        bool Accept(WeakObjectPointerVisitor* vis){
+            if(HasNext() && !vis->Visit(&next_)){
+                LOG(WARNING) << "couldn't visit next_";
+                return false;
+            }
+            return true;
+        }
+    public:
+        bool HasPrevious() const{
+            return previous_ != nullptr;
+        }
+
+        Handle<BlockNode> GetPrevious() const{
+            return previous_;
+        }
+
+        void SetPrevious(const Handle<BlockNode>& node){
+            WriteBarrier(&previous_, node);
+        }
+
+        bool HasNext() const{
+            return next_ != nullptr;
+        }
+
+        Handle<BlockNode> GetNext() const{
+            return next_;
+        }
+
+        void SetNext(const Handle<BlockNode>& next){
+            WriteBarrier(&next_, next);
+        }
+
+        BlockHeader GetValue() const{
+            return value_;
+        }
+
+        std::string ToString() const{
+            std::stringstream ss;
+            ss << "BlockNode(" << GetValue() << ")";
+            return ss.str();
+        }
+
+        static Handle<BlockNode> NewInstance(const BlockHeader& blk){
+            return new BlockNode(blk);
+        }
+
+        static Handle<BlockNode> NewInstance(const Handle<Block>& blk){
+            return new BlockNode(blk->GetHeader());
+        }
+    };
+
     class BlockChainVisitor;
+    class BlockChainNodeVisitor;
     class BlockChainDataVisitor;
     class BlockChain{
         friend class Server;
@@ -28,11 +93,11 @@ namespace Token{
         BlockChain() = delete;
 
         static void SetState(State state);
-        static void SetHeadNode(BlockNode* node);
-        static void SetGenesisNode(BlockNode* node);
-        static BlockNode* GetHeadNode();
-        static BlockNode* GetGenesisNode();
-        static BlockNode* GetNode(const Hash& hash);
+        static void SetHeadNode(const Handle<BlockNode>& node);
+        static void SetGenesisNode(const Handle<BlockNode>& node);
+        static Handle<BlockNode> GetHeadNode();
+        static Handle<BlockNode> GetGenesisNode();
+        static Handle<BlockNode> GetNode(const Hash& hash);
     public:
         ~BlockChain() = delete;
 
@@ -41,6 +106,7 @@ namespace Token{
         static bool Print(bool is_detailed=false);
         static bool Accept(BlockChainVisitor* vis);
         static bool Accept(BlockChainDataVisitor* vis);
+        static bool Accept(BlockChainNodeVisitor* vis);
         static void Append(const Handle<Block>& blk);
         static bool HasBlock(const Hash& hash);
         static bool HasTransaction(const Hash& hash);
@@ -72,6 +138,16 @@ namespace Token{
         virtual ~BlockChainVisitor() = default;
         virtual bool VisitStart() const{ return true; }
         virtual bool Visit(const BlockHeader& block) = 0;
+        virtual bool VisitEnd() const{ return true; }
+    };
+
+    class BlockChainNodeVisitor{
+    protected:
+        BlockChainNodeVisitor() = default;
+    public:
+        virtual ~BlockChainNodeVisitor() = default;
+        virtual bool VisitStart() const{ return true; }
+        virtual bool Visit(const Handle<BlockNode>& node) = 0;
         virtual bool VisitEnd() const{ return true; }
     };
 

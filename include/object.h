@@ -20,6 +20,7 @@ namespace Token{
     V(Input) \
     V(Output) \
     V(UnclaimedTransaction) \
+    V(BlockNode)         \
     V(Session)           \
     V(HttpSession)       \
     V(ServerSession)     \

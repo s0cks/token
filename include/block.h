@@ -2,7 +2,6 @@
 #define TOKEN_BLOCK_H
 
 #include "hash.h"
-#include "node.h"
 #include "bloom.h"
 #include "array.h"
 #include "buffer.h"

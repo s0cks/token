@@ -1,9 +1,7 @@
 #include "block_chain_initializer.h"
-#include "node.h"
 #include "common.h"
 #include "keychain.h"
 #include "block_pool.h"
-#include "block_node.h"
 #include "block_chain.h"
 #include "configuration.h"
 #include "transaction_pool.h"
@@ -49,7 +47,7 @@ namespace Token{
         if(!BlockChainIndex::HasBlockData()){
             LOG(INFO) << "generating new block chain in: " << TOKEN_BLOCKCHAIN_HOME;
             Handle<Block> genesis = Block::Genesis();
-            BlockNode* node = new BlockNode(genesis);
+            Handle<BlockNode> node = BlockNode::NewInstance(genesis);
             SetGenesisNode(node);
             SetHeadNode(node);
             BlockChainIndex::PutBlockData(genesis);
@@ -69,7 +67,7 @@ namespace Token{
         LOG(INFO) << "loading block chain data from " << TOKEN_BLOCKCHAIN_HOME << "....";
         Hash hash = BlockChainIndex::GetReference("<HEAD>");
         Handle<Block> block = BlockChainIndex::GetBlockData(hash);
-        BlockNode* node = new BlockNode(block);
+        Handle<BlockNode> node = BlockNode::NewInstance(block);
 
         SetHeadNode(node);
         while(true){
@@ -80,7 +78,7 @@ namespace Token{
             }
 
             Handle<Block> current = BlockChainIndex::GetBlockData(hash);
-            BlockNode* next = new BlockNode(current);
+            Handle<BlockNode> next = BlockNode::NewInstance(current);
 
             LOG(INFO) << "loading block: " << block->GetHeader();
             node->SetPrevious(next);
