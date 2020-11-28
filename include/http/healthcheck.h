@@ -71,7 +71,7 @@ namespace Token{
         static void HandleUnknownEndpoint(HttpSession* session, HttpRequest* request);
         static void HandleReadyEndpoint(HttpSession* session, HttpRequest* request);
         static void HandleLiveEndpoint(HttpSession* session, HttpRequest* request);
-        static void HandleHealthEndpoint(HttpSession* session, HttpRequest* request);
+        static void HandleStatusEndpoint(HttpSession* session, HttpRequest* request);
     public:
         ~HealthCheckService() = delete;
 

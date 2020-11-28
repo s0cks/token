@@ -44,13 +44,42 @@ namespace Token{
     static std::recursive_mutex mutex_;
     static std::condition_variable cond_;
     static BlockChain::State state_;
+    static BlockChain::Status status_;
     static leveldb::DB* index_ = nullptr;
+    static std::string error_;
 
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
 #define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
 #define WAIT cond_.wait(lock)
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
+
+    std::string BlockChain::GetStatusMessage(){
+        std::stringstream ss;
+        LOCK_GUARD;
+
+        ss << "[";
+        switch(state_){
+#define DEFINE_STATE_MESSAGE(Name) \
+            case BlockChain::k##Name: \
+                ss << #Name; \
+                break;
+            FOR_EACH_BLOCKCHAIN_STATE(DEFINE_STATE_MESSAGE)
+#undef DEFINE_STATE_MESSAGE
+        }
+        ss << "] ";
+
+        switch(status_){
+#define DEFINE_STATUS_MESSAGE(Name) \
+            case BlockChain::k##Name:{ \
+                ss << #Name; \
+                break; \
+            }
+            FOR_EACH_BLOCKCHAIN_STATUS(DEFINE_STATUS_MESSAGE)
+#undef DEFINE_STATUS_MESSAGE
+        }
+        return ss.str();
+    }
 
     leveldb::DB* BlockChain::GetIndex(){
         return index_;
@@ -93,13 +122,13 @@ namespace Token{
         }*/
 
         LOG(INFO) << "initializing block chain in directory: " << TOKEN_BLOCKCHAIN_HOME;
-        BlockChain::SetState(BlockChain::State::kInitializing);
+        SetState(BlockChain::kInitializing);
+        SetStatus(BlockChain::kOk);
 
         Keychain::Initialize();
         BlockPool::Initialize();
         TransactionPool::Initialize();
         UnclaimedTransactionPool::Initialize();
-
         if(!HasBlocks()){
             Handle<Block> blk = Block::Genesis();
             Hash hash = blk->GetHash();
@@ -127,6 +156,17 @@ namespace Token{
     void BlockChain::SetState(State state){
         LOCK_GUARD;
         state_ = state;
+        SIGNAL_ALL;
+    }
+
+    BlockChain::Status BlockChain::GetStatus(){
+        LOCK_GUARD;
+        return status_;
+    }
+
+    void BlockChain::SetStatus(Status status){
+        LOCK_GUARD;
+        status_ = status;
         SIGNAL_ALL;
     }
 

@@ -6,6 +6,8 @@
 #include "configuration.h"
 #include "block_chain.h"
 
+#include "server.h"
+
 namespace Token{
     static std::mutex mutex_;
     static std::condition_variable cond_;
@@ -64,7 +66,7 @@ namespace Token{
         HttpRouter* router = new HttpRouter(&HandleUnknownEndpoint);
         router->Get("/ready", &HandleReadyEndpoint);
         router->Get("/live", &HandleLiveEndpoint);
-        router->Get("/health", &HandleHealthEndpoint);
+        router->Get("/status", &HandleStatusEndpoint);
         SetRouter(router);
         return Thread::Start("HealthCheckService", &HandleServiceThread, 0);
     }
@@ -136,7 +138,7 @@ namespace Token{
     }
 
     static inline void
-    SendInternalServerError(HttpSession* session, const std::string& msg){
+    SendInternalServerError(HttpSession* session, const std::string& msg="Internal Server Error"){
         std::stringstream ss;
         ss << "Internal Server Error: " << msg;
         HttpResponse response(session, STATUS_CODE_INTERNAL_SERVER_ERROR, ss);
@@ -197,15 +199,29 @@ namespace Token{
         SendOk(session);
     }
 
-    void HealthCheckService::HandleHealthEndpoint(HttpSession* session, HttpRequest* request){
+    static inline bool
+    GetRuntimeStatus(Json::Value& value){
+        value["BlockChain"] = BlockChain::GetStatusMessage();
+        value["Server"] = Server::GetStatusMessage();
+        return true;
+    }
+
+    void HealthCheckService::HandleStatusEndpoint(HttpSession* session, HttpRequest* request){
         Json::Value head;
         if(!BlockChain::GetHead()->ToJson(head)){
-            LOG(WARNING) << "couldn't serialize <HEAD> to Json";
+            SendInternalServerError(session);
+            return;
+        }
+
+        Json::Value status;
+        if(!GetRuntimeStatus(status)){
+            SendInternalServerError(session);
             return;
         }
 
         Json::Value doc;
         doc["head"] = head;
+        doc["status"] = status;
         SendJson(session, doc);
     }
 }

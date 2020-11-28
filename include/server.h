@@ -10,6 +10,18 @@
 #include "vthread.h"
 
 namespace Token{
+#define FOR_EACH_SERVER_STATE(V) \
+    V(Starting) \
+    V(Running) \
+    V(Synchronizing) \
+    V(Stopping) \
+    V(Stopped)
+
+#define FOR_EACH_SERVER_STATUS(V) \
+    V(Ok)                         \
+    V(Warning)                    \
+    V(Error)
+
     class Message;
     class PeerSession;
     class HandleMessageTask;
@@ -18,36 +30,37 @@ namespace Token{
         friend class Scavenger;
     public:
         enum State{
-            kStarting,
-            kRunning,
-            kSynchronizing,
-            kStopping,
-            kStopped,
-            kError
+#define DEFINE_SERVER_STATE(Name) k##Name,
+            FOR_EACH_SERVER_STATE(DEFINE_SERVER_STATE)
+#undef DEFINE_SERVER_STATE
         };
 
         friend std::ostream& operator<<(std::ostream& stream, const State& state){
             switch(state){
-                case kStarting:
-                    stream << "Starting";
-                    break;
-                case kRunning:
-                    stream << "Running";
-                    break;
-                case kSynchronizing:
-                    stream << "Synchronizing";
-                    break;
-                case kStopping:
-                    stream << "Stopping";
-                    break;
-                case kStopped:
-                    stream << "Stopped";
-                    break;
-                default:
-                    stream << "Unknown";
-                    break;
+#define DEFINE_TOSTRING(Name) \
+                case Server::k##Name: \
+                    stream << #Name; \
+                    return stream;
+                FOR_EACH_SERVER_STATE(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
             }
-            return stream;
+        }
+
+        enum Status{
+#define DEFINE_SERVER_STATUS(Name) k##Name,
+            FOR_EACH_SERVER_STATUS(DEFINE_SERVER_STATUS)
+#undef DEFINE_SERVER_STATUS
+        };
+
+        friend std::ostream& operator<<(std::ostream& stream, const Status& status){
+            switch(status){
+#define DEFINE_TOSTRING(Name) \
+                case Server::k##Name: \
+                    stream << #Name; \
+                    return stream;
+                FOR_EACH_SERVER_STATUS(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
+            }
         }
 
         static const size_t kMaxNumberOfPeers = 16;
@@ -59,6 +72,7 @@ namespace Token{
         static bool RegisterPeer(const Handle<PeerSession>& session);
         static bool UnregisterPeer(const Handle<PeerSession>& session);
         static bool SavePeerList();
+        static void SetStatus(Status status);
         static void SetState(State state);
         static void HandleThread(uword parameter);
         static void HandleTerminateCallback(uv_async_t* handle);
@@ -69,8 +83,12 @@ namespace Token{
 
         static NodeAddress GetCallbackAddress();
         static State GetState();
+        static Status GetStatus();
+        static std::string GetStatusMessage();
         static UUID GetID();
         static void WaitForState(State state);
+        static bool Initialize();
+        static bool Shutdown();
         static bool Broadcast(const Handle<Message>& msg);
         static bool ConnectTo(const NodeAddress& address);
         static bool IsConnectedTo(const NodeAddress& address);
@@ -85,33 +103,16 @@ namespace Token{
             return ConnectTo(NodeAddress(address, port));
         }
 
-        static inline bool
-        IsStarting(){
-            return GetState() == kStarting;
-        }
+#define DEFINE_STATE_CHECK(Name) \
+        static inline bool Is##Name(){ return GetState() == Server::k##Name; }
+        FOR_EACH_SERVER_STATE(DEFINE_STATE_CHECK)
+#undef DEFINE_STATE_CHECK
 
-        static inline bool
-        IsRunning(){
-            return GetState() == kRunning;
-        }
+#define DEFINE_STATUS_CHECK(Name) \
+        static inline bool Is##Name(){ return GetStatus() == Server::k##Name; }
+        FOR_EACH_SERVER_STATUS(DEFINE_STATUS_CHECK)
+#undef DEFINE_STATUS_CHECK
 
-        static inline bool
-        IsSynchronizing(){
-            return GetState() == kSynchronizing;
-        }
-
-        static inline bool
-        IsStopping(){
-            return GetState() == kStopping;
-        }
-
-        static inline bool
-        IsStopped(){
-            return GetState() == kStopped;
-        }
-
-        static bool Initialize();
-        static bool Shutdown();
 
 #define DECLARE_BROADCAST(Name) \
         static void Broadcast(const Handle<Name##Message>& msg){ Broadcast(msg.CastTo<Message>()); }

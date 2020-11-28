@@ -10,11 +10,8 @@
 !/src/
 !/tests/
 !/.gitignore
-!/client.cc
 !/CMakeLists.txt
 !/Dockerfile
-!/entrypoint.sh
-!/inspector.cc
-!/main.cc
-!/README.md
-!/tests.cc
+!/*.md
+!/*.cc
+!/*.sh

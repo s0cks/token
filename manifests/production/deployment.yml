@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: token-ledger
+  labels:
+    app: token
+    component: ledger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: ledger
+  template:
+    metadata:
+      labels:
+        app: token
+        component: ledger
+    spec:
+      containers:
+        - name: token-ledger-node
+          imagePullPolicy: IfNotPresent
+          image: gcr.io/tkn-events/token-ledger:1.5.3
+          ports:
+            - name: rpc
+              containerPort: 8080
+            - name: health
+              containerPort: 8081
+          readinessProbe:
+            httpGet:
+              port: 8081
+              path: /ready
+              scheme: HTTP
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            successThreshold: 1
+            failureThreshold: 1
+            timeoutSeconds: 1
+          livenessProbe:
+            httpGet:
+              port: 8081
+              path: /live
+              scheme: HTTP
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            successThreshold: 1
+            failureThreshold: 1
+            timeoutSeconds: 1

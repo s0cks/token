@@ -1,4 +1,4 @@
-FROM token-ledger-base:1.5.2
+FROM token-ledger-base:1.5.3
 # Data
 EXPOSE 8080
 # Health Check

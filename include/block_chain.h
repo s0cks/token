@@ -12,9 +12,19 @@
 #include "unclaimed_transaction.h"
 
 namespace Token{
+#define FOR_EACH_BLOCKCHAIN_STATE(V) \
+    V(Uninitialized)                 \
+    V(Initializing)                  \
+    V(Initialized)                   \
+    V(Synchronizing)                 \
+
+#define FOR_EACH_BLOCKCHAIN_STATUS(V) \
+    V(Ok)                             \
+    V(Warning)                        \
+    V(Error)
+
 #define BLOCKCHAIN_REFERENCE_GENESIS "<GENESIS>"
 #define BLOCKCHAIN_REFERENCE_HEAD "<HEAD>"
-
     class BlockChainVisitor;
     class BlockChain{
         friend class Server;
@@ -22,14 +32,21 @@ namespace Token{
         friend class BlockDiscoveryThread; //TODO: revoke access
     public:
         enum State{
-            kUninitialized,
-            kInitializing,
-            kInitialized
+#define DEFINE_STATE(Name) k##Name,
+            FOR_EACH_BLOCKCHAIN_STATE(DEFINE_STATE)
+#undef DEFINE_STATE
+        };
+
+        enum Status{
+#define DEFINE_STATUS(Name) k##Name,
+            FOR_EACH_BLOCKCHAIN_STATUS(DEFINE_STATUS)
+#undef DEFINE_STATUS
         };
     private:
         BlockChain() = delete;
         static leveldb::DB* GetIndex();
         static void SetState(State state);
+        static void SetStatus(Status status);
         static bool PutBlock(const Hash& hash, const Handle<Block>& blk);
         static bool PutReference(const std::string& name, const Hash& hash);
         static Hash GetReference(const std::string& name);
@@ -39,34 +56,31 @@ namespace Token{
         ~BlockChain() = delete;
 
         static State GetState();
+        static Status GetStatus();
+        static std::string GetStatusMessage();
         static bool Initialize();
         static bool HasBlock(const Hash& hash);
+        static bool Accept(BlockChainVisitor* vis);
+        static bool Print(bool is_detailed=false);
         static Handle<Block> GetBlock(const Hash& hash);
         static Handle<Block> GetBlock(int64_t height);
         static Handle<Block> GetHead();
         static Handle<Block> GetGenesis();
-        static bool Accept(BlockChainVisitor* vis);
-        static bool Print(bool is_detailed=false);
         static int64_t GetNumberOfBlocks();
 
         static inline bool HasBlocks(){
             return GetNumberOfBlocks() > 0;
         }
 
-        static inline bool
-        IsUninitialized(){
-            return GetState() == kUninitialized;
-        }
+#define DEFINE_STATE_CHECK(Name) \
+        static inline bool Is##Name(){ return GetState() == State::k##Name; }
+        FOR_EACH_BLOCKCHAIN_STATE(DEFINE_STATE_CHECK)
+#undef DEFINE_STATE_CHECK
 
-        static inline bool
-        IsInitializing(){
-            return GetState() == kInitializing;
-        }
-
-        static inline bool
-        IsInitialized(){
-            return GetState() == kInitialized;
-        }
+#define DEFINE_STATUS_CHECK(Name) \
+        static inline bool Is##Name(){ return GetStatus() == Status::k##Name; }
+        FOR_EACH_BLOCKCHAIN_STATUS(DEFINE_STATUS_CHECK)
+#undef DEFINE_STATUS_CHECK
     };
 
     class BlockChainVisitor{

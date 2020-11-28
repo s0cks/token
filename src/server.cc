@@ -21,6 +21,7 @@ namespace Token{
     static std::mutex mutex_;
     static std::condition_variable cond_;
     static Server::State state_ = Server::State::kStopped;
+    static Server::Status status_ = Server::Status::kOk;
     static UUID node_id_;
     static NodeAddress callback_;
     static PeerSession* peers_[Server::kMaxNumberOfPeers];
@@ -67,20 +68,57 @@ namespace Token{
         return true;
     }
 
+    void Server::WaitForState(Server::State state){
+        LOCK;
+        while(state_ != state) WAIT;
+    }
+
     void Server::SetState(Server::State state){
         LOCK;
         state_ = state;
         SIGNAL_ALL;
     }
 
-    void Server::WaitForState(Server::State state){
-        LOCK;
-        while(state_ != state) WAIT;
-    }
-
     Server::State Server::GetState() {
         LOCK_GUARD;
         return state_;
+    }
+
+    void Server::SetStatus(Server::Status status){
+        LOCK;
+        status_ = status;
+        SIGNAL_ALL;
+    }
+
+    Server::Status Server::GetStatus(){
+        LOCK_GUARD;
+        return status_;
+    }
+
+    std::string Server::GetStatusMessage(){
+        std::stringstream ss;
+        LOCK_GUARD;
+        ss << "[";
+        switch(state_){
+#define DEFINE_STATE_MESSAGE(Name) \
+            case Server::k##Name: \
+                ss << #Name; \
+                break;
+            FOR_EACH_SERVER_STATE(DEFINE_STATE_MESSAGE)
+#undef DEFINE_STATE_MESSAGE
+        }
+        ss << "] ";
+
+        switch(status_){
+#define DEFINE_STATUS_MESSAGE(Name) \
+            case Server::k##Name:{ \
+                ss << #Name; \
+                break; \
+            }
+            FOR_EACH_SERVER_STATUS(DEFINE_STATUS_MESSAGE)
+#undef DEFINE_STATUS_MESSAGE
+        }
+        return ss.str();
     }
 
     NodeAddress Server::GetCallbackAddress(){

@@ -2,10 +2,9 @@
 
 VERSION="$1"
 PROJECT="tkn-events"
-COMPONENT="token-ledger-base"
+COMPONENT="token-ledger"
 REGISTRY_HOSTNAME="gcr.io"
 echo "building $VERSION...."
 docker build . \
-  -f images/base/Dockerfile \
   -t "$COMPONENT":"$VERSION" \
   -t "$REGISTRY_HOSTNAME"/"$PROJECT"/"$COMPONENT":"$VERSION"
