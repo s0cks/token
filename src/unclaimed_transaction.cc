@@ -5,7 +5,7 @@
 namespace Token{
     Handle<UnclaimedTransaction> UnclaimedTransaction::NewInstance(const Handle<Buffer>& buff){
         Hash hash = buff->GetHash();
-        uint32_t index = buff->GetInt();
+        int32_t index = buff->GetInt();
         User user = buff->GetUser();
         Product product = buff->GetProduct();
         return new UnclaimedTransaction(hash, index, user, product);

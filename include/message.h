@@ -33,7 +33,6 @@ namespace Token{
     FOR_EACH_MESSAGE_TYPE(FORWARD_DECLARE)
 #undef FORWARD_DECLARE
 
-    //TODO: better encoding/decoding
     class Message : public Object{
         friend class Session;
     public:

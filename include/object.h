@@ -53,10 +53,6 @@ namespace Token{
     }
 
     class Object{
-        //TODO:
-        // - track references using Reference class?
-        // - create ObjectFile + ObjectBuffer classes for serialization purposes?
-
         friend class Thread;
         friend class Allocator;
         friend class Scavenger;
