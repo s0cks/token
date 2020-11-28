@@ -98,7 +98,6 @@ namespace Token{
             }
         }
 
-        LOCK_GUARD;
         leveldb::Options options;
         options.create_if_missing = true;
         if(!leveldb::DB::Open(options, GetIndexFilename(), &index_).ok()){

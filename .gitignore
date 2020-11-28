@@ -4,9 +4,9 @@
 
 # Except These
 !/cmake/
-!/images/
 !/include/
 !/manifests/
+!/scripts/
 !/src/
 !/tests/
 !/.gitignore
