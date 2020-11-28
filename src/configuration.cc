@@ -91,6 +91,7 @@ namespace Token{
         LOCK_GUARD;
         if(!FLAGS_peer.empty())
             results.insert(NodeAddress(FLAGS_peer));
+
         libconfig::Setting& peers = GetServerProperties().lookup(PROPERTY_SERVER_PEER_LIST);
         auto iter = peers.begin();
         while(iter != peers.end()){
@@ -130,7 +131,7 @@ namespace Token{
             server.remove(PROPERTY_SERVER_PEER_LIST);
         libconfig::Setting& property = server.add(PROPERTY_SERVER_PEER_LIST, libconfig::Setting::TypeList);
         for(auto& it : peers){
-            property.add(it.ToString(), libconfig::Setting::TypeString);
+            property.add(libconfig::Setting::TypeString) = it.ToString();
         }
 
         if(!SaveConfiguration()){

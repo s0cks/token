@@ -39,6 +39,7 @@ namespace Token{
 
 
         uv_connect_t conn;
+        conn.data = data;
 
         int err;
         if((err = uv_tcp_connect(&conn, session->GetHandle(), (const struct sockaddr*)&addr, &PeerSession::OnConnect)) != 0){

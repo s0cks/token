@@ -15,13 +15,11 @@ namespace Token{
     }
 
     void Session::SetState(Session::State state){
-        LOCK;
         state_ = state;
         SIGNAL_ALL;
     }
 
     void Session::SetStatus(Session::Status status){
-        LOCK;
         status_ = status;
         SIGNAL_ALL;
     }

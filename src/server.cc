@@ -89,6 +89,7 @@ namespace Token{
                 LOG(WARNING) << "already connected to peer: " << peer;
                 continue;
             }
+
             if(!Server::ConnectTo(peer))
                 LOG(WARNING) << "cannot connect to peer: " << peer;
         }
@@ -146,6 +147,8 @@ namespace Token{
             goto exit;
         }
 
+
+
         LOG(INFO) << "server " << GetID() << " listening @" << FLAGS_port;
         SetState(State::kRunning);
         uv_run(loop, UV_RUN_DEFAULT);
@@ -193,18 +196,18 @@ namespace Token{
             return;
         }
 
-        Handle<Buffer> buffer = session->GetReadBuffer();
+        Handle<Buffer> rbuff = session->GetReadBuffer();
 
         intptr_t offset = 0;
         std::vector<Handle<Message>> messages;
         do{
-            int32_t mtype = buffer->GetInt();
-            int64_t  msize = buffer->GetLong();
+            int32_t mtype = rbuff->GetInt();
+            int64_t  msize = rbuff->GetLong();
 
             switch(mtype) {
 #define DEFINE_DECODE(Name) \
                 case Message::MessageType::k##Name##MessageType:{ \
-                    Handle<Message> msg = Name##Message::NewInstance(buffer).CastTo<Message>(); \
+                    Handle<Message> msg = Name##Message::NewInstance(rbuff).CastTo<Message>(); \
                     LOG(INFO) << "decoded: " << msg << "(" << msize << " bytes)"; \
                     messages.push_back(msg); \
                     break; \
@@ -235,6 +238,8 @@ namespace Token{
                     break;
             }
         }
+
+        rbuff->Reset();
     }
 
     bool Server::Broadcast(const Handle<Message>& msg){
@@ -243,12 +248,12 @@ namespace Token{
         return true;
     }
 
-    bool Server::ConnectTo(const NodeAddress &address){
+    bool Server::ConnectTo(const NodeAddress& address){
         //-- Attention! --
         // this is not a memory leak, the memory will be freed upon
         // the session being closed
-        //TODO: return PeerSession::NewInstance();
-        return false;
+        Handle<PeerSession> session = PeerSession::NewInstance(uv_loop_new(), address);
+        return session->Connect();
     }
 
     bool Server::IsConnectedTo(const NodeAddress& address){

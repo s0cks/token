@@ -98,14 +98,25 @@ namespace Token{
             int32_t mtype = rbuff->GetInt();
             int64_t msize = rbuff->GetLong();
             switch(mtype) {
-#define DEFINE_DECODE(Name) \
-                case Message::MessageType::k##Name##MessageType:{ \
-                    Handle<Message> msg = Name##Message::NewInstance(rbuff).CastTo<Message>(); \
-                    client->SetNextMessage(msg); \
-                    break; \
-                }
-                FOR_EACH_MESSAGE_TYPE(DEFINE_DECODE)
-#undef DEFINE_DECODE
+                case Message::MessageType::kVersionMessageType:
+                    client->Send(VerackMessage::NewInstance(client->GetID()));
+                    break;
+                case Message::MessageType::kVerackMessageType:
+                    client->SetState(Session::kConnected);
+                    LOG(INFO) << "client is connected";
+                    break;
+                case Message::MessageType::kNotFoundMessageType:
+                    client->SetNextMessage(NotFoundMessage::NewInstance(rbuff).CastTo<Message>());
+                    break;
+                case Message::MessageType::kBlockMessageType:
+                    client->SetNextMessage(BlockMessage::NewInstance(rbuff).CastTo<Message>());
+                    break;
+                case Message::MessageType::kUnclaimedTransactionMessageType:
+                    client->SetNextMessage(UnclaimedTransactionMessage::NewInstance(rbuff).CastTo<Message>());
+                    break;
+                case Message::MessageType::kInventoryMessageType:
+                    client->SetNextMessage(InventoryMessage::NewInstance(rbuff).CastTo<Message>());
+                    break;
                 case Message::MessageType::kUnknownMessageType:
                 default:
                     LOG(ERROR) << "unknown message type " << mtype << " of size " << msize;
@@ -209,7 +220,7 @@ namespace Token{
 
     bool ClientSession::GetUnclaimedTransactions(const User& user, std::vector<Hash>& utxos){
         LOG(INFO) << "getting unclaimed transactions for " << user;
-        if(IsConnecting()){
+        if(!IsConnected()){
             LOG(INFO) << "waiting for client to connect...";
             WaitForState(Session::kConnected);
         }

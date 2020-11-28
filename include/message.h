@@ -157,20 +157,20 @@ namespace Token{
     class VerackMessage : public Message{
     private:
         Timestamp timestamp_;
-        UUID node_id_;
+        ClientType client_type_;
         Version version_;
         Hash nonce_;
-        ClientType client_type_;
+        UUID node_id_;
         NodeAddress callback_;
         BlockHeader head_;
 
         VerackMessage(ClientType type, const UUID& node_id, const Version& version, const Hash& nonce, const NodeAddress& address, const BlockHeader& head, Timestamp timestamp):
             Message(),
             timestamp_(timestamp),
-            node_id_(node_id),
+            client_type_(type),
             version_(version),
             nonce_(nonce),
-            client_type_(type),
+            node_id_(node_id),
             callback_(address),
             head_(head){}
     public:

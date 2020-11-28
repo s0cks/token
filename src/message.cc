@@ -39,13 +39,24 @@ namespace Token{
 
     Handle<VerackMessage> VerackMessage::NewInstance(const Handle<Buffer>& buff){
         Timestamp timestamp = buff->GetLong();
-        ClientType client_type = static_cast<ClientType>(buff->GetInt());
+        ClientType client_type = (ClientType)buff->GetInt();
         Version version(buff);
         Hash nonce = buff->GetHash();
         UUID node_id(buff);
         NodeAddress callback(buff);
         BlockHeader head = BlockHeader(buff);
         return new VerackMessage(client_type, node_id, version, nonce, callback, head, timestamp);
+    }
+
+    bool VerackMessage::Write(const Handle<Buffer>& buff) const{
+        buff->PutLong(timestamp_);
+        buff->PutInt(static_cast<int32_t>(GetClientType()));
+        version_.Write(buff);
+        buff->PutHash(nonce_);
+        node_id_.Write(buff);
+        callback_.Write(buff);
+        head_.Write(buff);
+        return true;
     }
 
     intptr_t VerackMessage::GetMessageSize() const{
@@ -58,17 +69,6 @@ namespace Token{
         size += NodeAddress::kSize; // callback_
         size += BlockHeader::kSize; // head_
         return size;
-    }
-
-    bool VerackMessage::Write(const Handle<Buffer>& buff) const{
-        buff->PutLong(timestamp_);
-        buff->PutInt(static_cast<int32_t>(GetClientType()));
-        version_.Write(buff);
-        buff->PutHash(nonce_);
-        node_id_.Write(buff);
-        callback_.Write(buff);
-        head_.Write(buff);
-        return true;
     }
 
     intptr_t PaxosMessage::GetMessageSize() const{
