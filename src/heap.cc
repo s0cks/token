@@ -20,7 +20,7 @@ namespace Token{
     }
 
     bool Heap::VisitObjects(ObjectPointerVisitor* vis){
-        std::lock_guard<std::recursive_mutex> guard(mutex_);
+        std::lock_guard<std::mutex> guard(mutex_);
         uword current = GetStartAddress();
         while(current < GetEndAddress()){
             Object* obj = (Object*)current;
@@ -33,7 +33,7 @@ namespace Token{
     }
 
     bool Heap::VisitMarkedObjects(ObjectPointerVisitor* vis){
-        std::lock_guard<std::recursive_mutex> guard(mutex_);
+        std::lock_guard<std::mutex> guard(mutex_);
         uword current = GetStartAddress();
         while(current < GetEndAddress()){
             Object* obj = (Object*)current;

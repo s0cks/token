@@ -49,13 +49,21 @@ RUN git clone https://github.com/weidai11/cryptopp \
  && make libcryptopp.a libcryptopp.so cryptest.exe \
  && make install PREFIX=/usr/local
 
-# Build Http Parser
+# Build and Install HttpParser
 RUN git clone https://github.com/nodejs/http-parser \
  && cd http-parser \
  && make \
  && make install PREFIX=/usr/local
 
-# Build GTest Library
+# Build and Install jsoncpp
+RUN git clone https://github.com/open-source-parsers/jsoncpp.git \
+ && cd jsoncpp \
+ && mkdir -p build \
+ && cd build \
+ && cmake -DBUILD_STATIC_LIBS=OFF -DBUILD_SHARED_LIBS=ON -DARCHIVE_INSTALL_DIR=. .. \
+ && cmake --build . --target install
+
+# Build and Install GTest
 WORKDIR /usr/src/googletest
 RUN cmake . \
     && cmake --build . --target install

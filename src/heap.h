@@ -14,17 +14,17 @@ namespace Token{
         intptr_t size_;
     public:
         Semispace():
-                start_(0),
-                current_(0),
-                size_(0){}
+            start_(0),
+            current_(0),
+            size_(0){}
         Semispace(uword start, intptr_t size):
-                start_(start),
-                current_(start),
-                size_(size){}
+            start_(start),
+            current_(start),
+            size_(size){}
         Semispace(const Semispace& other):
-                start_(other.start_),
-                current_(other.current_),
-                size_(other.size_){}
+            start_(other.start_),
+            current_(other.current_),
+            size_(other.size_){}
         ~Semispace() = default;
 
         uword GetStartAddress() const{
@@ -74,7 +74,7 @@ namespace Token{
 
     class Heap{
     private:
-        std::recursive_mutex mutex_;
+        std::mutex mutex_;
         Space space_;
         uword start_;
         intptr_t size_;
@@ -87,13 +87,13 @@ namespace Token{
         }
     public:
         Heap(Space space, uword start, intptr_t heap_size, intptr_t semispace_size):
-                mutex_(),
-                space_(space),
-                start_(start),
-                size_(heap_size),
-                semispace_size_(semispace_size),
-                from_space_(start, semispace_size),
-                to_space_(start + semispace_size, semispace_size){}
+            mutex_(),
+            space_(space),
+            start_(start),
+            size_(heap_size),
+            semispace_size_(semispace_size),
+            from_space_(start, semispace_size),
+            to_space_(start + semispace_size, semispace_size){}
         ~Heap(){}
 
         Space GetSpace() const{
@@ -130,22 +130,22 @@ namespace Token{
         }
 
         intptr_t GetAllocatedSize(){
-            std::lock_guard<std::recursive_mutex> guard(mutex_);
+            std::lock_guard<std::mutex> guard(mutex_);
             return from_space_.GetAllocatedSize();
         }
 
         intptr_t GetUnallocatedSize(){
-            std::lock_guard<std::recursive_mutex> guard(mutex_);
+            std::lock_guard<std::mutex> guard(mutex_);
             return from_space_.GetUnallocatedSize();
         }
 
         void SwapSpaces(){
-            std::lock_guard<std::recursive_mutex> guard(mutex_);
+            std::lock_guard<std::mutex> guard(mutex_);
             std::swap(from_space_, to_space_);
         }
 
         void* Allocate(intptr_t size){
-            std::lock_guard<std::recursive_mutex> guard(mutex_);
+            std::lock_guard<std::mutex> guard(mutex_);
             return from_space_.Allocate(size);
         }
 

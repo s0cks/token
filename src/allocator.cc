@@ -8,14 +8,14 @@
 #include "scavenger.h"
 
 namespace Token{
-    static std::recursive_mutex mutex_;
+    static std::mutex mutex_;
     static std::condition_variable cond_;
     static MemoryRegion* region_ = nullptr;
     static Heap* new_heap_ = nullptr;
     static Heap* old_heap_ = nullptr;
 
-#define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
-#define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
+#define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
+#define LOCK std::unique_lock<std::mutex> lock(mutex_)
 #define WAIT cond_.wait(lock)
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
@@ -62,17 +62,14 @@ namespace Token{
     }
 
     MemoryRegion* Allocator::GetRegion(){
-        LOCK_GUARD;
         return region_;
     }
 
     Heap* Allocator::GetNewHeap(){
-        LOCK_GUARD;
         return new_heap_;
     }
 
     Heap* Allocator::GetOldHeap(){
-        LOCK_GUARD;
         return old_heap_;
     }
 

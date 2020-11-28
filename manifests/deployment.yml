@@ -19,6 +19,29 @@ spec:
       containers:
         - name: token-ledger-node
           imagePullPolicy: IfNotPresent
-          image: gcr.io/tkn-events/token-ledger:1.4.1
+          image: gcr.io/tkn-events/token-ledger:1.5.2
           ports:
-            - containerPort: 8080
+            - name: rpc
+              containerPort: 8080
+            - name: health
+              containerPort: 8081
+          readinessProbe:
+            httpGet:
+              port: 8081
+              path: /ready
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            successThreshold: 1
+            failureThreshold: 1
+            timeoutSeconds: 1
+          livenessProbe:
+            httpGet:
+              port: 8081
+              path: /live
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            successThreshold: 1
+            failureThreshold: 1
+            timeoutSeconds: 1
