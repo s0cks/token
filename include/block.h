@@ -1,6 +1,7 @@
 #ifndef TOKEN_BLOCK_H
 #define TOKEN_BLOCK_H
 
+#include <json/json.h>
 #include "hash.h"
 #include "bloom.h"
 #include "array.h"
@@ -234,6 +235,7 @@ namespace Token{
         bool Contains(const Hash& hash) const;
         bool Equals(const Handle<Block>& b) const;
         bool Compare(const Handle<Block>& b) const;
+        bool ToJson(Json::Value& value) const;
         std::string ToString() const;
 
         static Handle<Block> Genesis(); // genesis

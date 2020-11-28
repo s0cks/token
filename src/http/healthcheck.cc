@@ -129,6 +129,45 @@ namespace Token{
         }
     }
 
+    static inline void
+    SendOk(HttpSession* session){
+        HttpResponse response(session, STATUS_CODE_OK, "Ok");
+        session->Send(&response);
+    }
+
+    static inline void
+    SendInternalServerError(HttpSession* session, const std::string& msg){
+        std::stringstream ss;
+        ss << "Internal Server Error: " << msg;
+        HttpResponse response(session, STATUS_CODE_INTERNAL_SERVER_ERROR, ss);
+        session->Send(&response);
+    }
+
+    static inline void
+    SendNotFound(HttpSession* session, const std::string& path){
+        std::stringstream ss;
+        ss << "Not Found: " << path;
+        HttpResponse response(session, STATUS_CODE_NOTFOUND, ss);
+        session->Send(&response);
+    }
+
+    static inline std::string
+    Json2String(Json::Value& value){
+        Json::StreamWriterBuilder builder;
+        builder["commentStyle"] = "None";
+        builder["indentation"] = "";
+        std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
+        std::ostringstream os;
+        writer->write(value, &os);
+        return os.str();
+    }
+
+    static inline void
+    SendJson(HttpSession* session, Json::Value& value, int status=STATUS_CODE_OK){
+        HttpResponse response(session, status, CONTENT_APPLICATION_JSON, Json2String(value));
+        session->Send(&response);
+    }
+
     void HealthCheckService::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
         HttpSession* session = (HttpSession*)stream->data;
         if(nread >= 0){
@@ -147,49 +186,26 @@ namespace Token{
     }
 
     void HealthCheckService::HandleUnknownEndpoint(HttpSession* session, HttpRequest* request){
-        std::stringstream ss;
-        ss << "Unknown Endpoint: " << request->GetPath();
-        HttpResponse response(session, 404, ss);
-        session->Send(&response);
+        SendNotFound(session, request->GetPath());
     }
 
     void HealthCheckService::HandleReadyEndpoint(HttpSession* session, HttpRequest* request){
-        std::stringstream ss;
-        ss << "Ok";
-
-        HttpResponse response(session, 200, ss);
-        session->Send(&response);
+        SendOk(session);
     }
 
     void HealthCheckService::HandleLiveEndpoint(HttpSession* session, HttpRequest* request){
-        LOG(INFO) << "handling /live endpoint....";
-
-        std::stringstream ss;
-        ss << "Ok";
-
-        HttpResponse response(session, 200, ss);
-        session->Send(&response);
-    }
-
-    static inline std::string
-    Block2Json(const Handle<Block>& blk){
-        std::stringstream ss;
-        ss << "{";
-        ss << "\"timestamp\": " << blk->GetTimestamp() << ",";
-        ss << "\"height\": " << blk->GetHeight() << ",";
-        ss << "\"previous_hash\": \"" << blk->GetPreviousHash() << "\",";
-        ss << "\"merkle_root\": \"" << blk->GetMerkleRoot() << "\",";
-        ss << "\"hash\": \"" << blk->GetHash() << "\"";
-        ss << "}";
-        return ss.str();
+        SendOk(session);
     }
 
     void HealthCheckService::HandleHealthEndpoint(HttpSession* session, HttpRequest* request){
-        std::stringstream ss;
-        ss << "{";
-        ss << "\"head\": " << Block2Json(BlockChain::GetHead());
-        ss << "}";
-        HttpResponse response(session, 200, CONTENT_APPLICATION_JSON, ss);
-        session->Send(&response);
+        Json::Value head;
+        if(!BlockChain::GetHead()->ToJson(head)){
+            LOG(WARNING) << "couldn't serialize <HEAD> to Json";
+            return;
+        }
+
+        Json::Value doc;
+        doc["head"] = head;
+        SendJson(session, doc);
     }
 }

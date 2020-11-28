@@ -114,6 +114,15 @@ namespace Token{
         return GetHash() == b->GetHash();
     }
 
+    bool Block::ToJson(Json::Value& value) const{
+        value["timestamp"] = GetTimestamp();
+        value["height"] = GetHeight();
+        value["previous_hash"] = GetPreviousHash().HexString();
+        value["merkle_root"] = GetMerkleRoot().HexString();
+        value["hash"] = GetHash().HexString();
+        return true;
+    }
+
     std::string Block::ToString() const{
         std::stringstream stream;
         stream << "Block(#" << GetHeight() << ", " << GetNumberOfTransactions() << " Transactions)";
