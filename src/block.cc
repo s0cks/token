@@ -110,6 +110,10 @@ namespace Token{
         return GetHeight() < b->GetHeight();
     }
 
+    bool Block::Equals(const Handle<Block>& b) const{
+        return GetHash() == b->GetHash();
+    }
+
     std::string Block::ToString() const{
         std::stringstream stream;
         stream << "Block(#" << GetHeight() << ", " << GetNumberOfTransactions() << " Transactions)";

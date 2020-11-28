@@ -207,6 +207,8 @@ namespace Token{
         bool Sign();
         bool Accept(TransactionVisitor* visitor);
         bool Write(const Handle<Buffer>& buff) const;
+        bool Equals(const Handle<Transaction>& b) const;
+        bool Compare(const Handle<Transaction>& b) const;
         intptr_t GetBufferSize() const;
         std::string ToString() const;
 

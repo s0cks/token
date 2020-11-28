@@ -1,10 +1,13 @@
 #include <gtest/gtest.h>
-#include "token_tests.h"
+#include "tests/test_suite.h"
+#include "allocator.h"
 
 int
 main(int argc, char** argv){
-    //::google::SetStderrLogging(google::INFO);
-    //::google::InitGoogleLogging(argv[0]);
+    using namespace Token;
+    ::google::SetStderrLogging(google::INFO);
+    ::google::InitGoogleLogging(argv[0]);
     ::testing::InitGoogleTest(&argc, argv);
+    Allocator::Initialize();
     return RUN_ALL_TESTS();
 }

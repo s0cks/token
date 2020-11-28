@@ -232,6 +232,7 @@ namespace Token{
         Hash GetMerkleRoot() const;
         bool Accept(BlockVisitor* vis) const;
         bool Contains(const Hash& hash) const;
+        bool Equals(const Handle<Block>& b) const;
         bool Compare(const Handle<Block>& b) const;
         std::string ToString() const;
 

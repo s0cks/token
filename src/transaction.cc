@@ -133,6 +133,22 @@ namespace Token{
         return vis->VisitEnd();
     }
 
+    bool Transaction::Equals(const Handle<Transaction>& b) const{
+        //TODO: update Transaction::Equals(const Handle<Transaction>&) to have more depth
+        return timestamp_ == b->timestamp_
+               && index_ == b->index_
+               && num_inputs_ == b->num_inputs_
+               && num_outputs_ == b->num_outputs_;
+    }
+
+    bool Transaction::Compare(const Handle<Transaction>& b) const{
+        //TODO: update Transaction::Compare(const Handle<Transaction>&) to have more depth
+        return timestamp_ == b->timestamp_
+            && index_ == b->index_
+            && num_inputs_ == b->num_inputs_
+            && num_outputs_ == b->num_outputs_;
+    }
+
     bool Transaction::Sign(){
         CryptoPP::SecByteBlock bytes;
         /*
