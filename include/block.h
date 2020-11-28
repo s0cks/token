@@ -260,7 +260,7 @@ namespace Token{
     public:
         virtual ~BlockVisitor() = default;
         virtual bool VisitStart(){ return true; }
-        virtual bool Visit(const Handle<Transaction>& tx) = 0;
+        virtual bool Visit(const Handle<Transaction>& tx) = 0; //TODO: convert to const
         virtual bool VisitEnd(){ return true; }
     };
 

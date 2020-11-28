@@ -3,7 +3,7 @@
 #include "block_chain.h"
 #include "async_task.h"
 #include "block_validator.h"
-#include "block_handler.h"
+#include "block_processor.h"
 #include "transaction_pool.h"
 #include "transaction_validator.h"
 
@@ -142,7 +142,8 @@ namespace Token{
 
     void BlockDiscoveryThread::OnAccepted(const Handle<Proposal>& proposal){
         Handle<Block> blk = GetBlock();
-        if(!BlockHandler::ProcessBlock(blk, true)){
+        DefaultBlockProcessor processor;
+        if(!blk->Accept(&processor)){
             LOG(WARNING) << "couldn't process block: " << blk;
             return;
         }

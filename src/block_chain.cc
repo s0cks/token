@@ -7,6 +7,7 @@
 #include "configuration.h"
 #include "block_chain.h"
 #include "block_pool.h"
+#include "block_processor.h"
 #include "transaction_pool.h"
 #include "unclaimed_transaction_pool.h"
 
@@ -105,6 +106,12 @@ namespace Token{
             PutBlock(hash, blk);
             PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
             PutReference(BLOCKCHAIN_REFERENCE_GENESIS, hash);
+
+            GenesisBlockProcessor processor;
+            if(!blk->Accept(&processor)){
+                LOG(ERROR) << "couldn't process the genesis block.";
+                return false;
+            }
         }
 
         LOG(INFO) << "block chain initialized!";

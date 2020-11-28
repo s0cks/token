@@ -1,5 +1,5 @@
 #include "async_task.h"
-#include "block_handler.h"
+#include "block_processor.h"
 #include "proposal.h"
 
 #include "block_pool.h"
@@ -71,8 +71,8 @@ namespace Token{
     bool SynchronizeBlockChainTask::ProcessBlock(const Handle<Block>& block){
         BlockHeader header = block->GetHeader();
         Hash hash = header.GetHash();
-
-        if(!BlockHandler::ProcessBlock(block, false)){
+        DefaultBlockProcessor processor;
+        if(!block->Accept(&processor)){
             LOG(WARNING) << "couldn't process block: " << header;
             return false;
         }
