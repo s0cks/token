@@ -49,8 +49,7 @@ namespace Token{
         static void SetStatus(Status status);
         static bool PutBlock(const Hash& hash, const Handle<Block>& blk);
         static bool PutReference(const std::string& name, const Hash& hash);
-        static Hash GetReference(const std::string& name);
-        static bool HasReference(const std::string& name);
+        static bool RemoveReference(const std::string& name);
         static bool Append(const Handle<Block>& blk);
     public:
         ~BlockChain() = delete;
@@ -62,6 +61,8 @@ namespace Token{
         static bool HasBlock(const Hash& hash);
         static bool Accept(BlockChainVisitor* vis);
         static bool Print(bool is_detailed=false);
+        static bool HasReference(const std::string& name);
+        static Hash GetReference(const std::string& name);
         static Handle<Block> GetBlock(const Hash& hash);
         static Handle<Block> GetBlock(int64_t height);
         static Handle<Block> GetHead();
@@ -70,6 +71,16 @@ namespace Token{
 
         static inline bool HasBlocks(){
             return GetNumberOfBlocks() > 0;
+        }
+
+        static inline bool
+        HasHead(){
+            return !GetReference(BLOCKCHAIN_REFERENCE_HEAD).IsNull();
+        }
+
+        static inline bool
+        HasGenesis(){
+            return !GetReference(BLOCKCHAIN_REFERENCE_GENESIS).IsNull();
         }
 
 #define DEFINE_STATE_CHECK(Name) \

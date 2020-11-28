@@ -9,7 +9,7 @@
 #include "block_pool.h"
 #include "block_processor.h"
 #include "transaction_pool.h"
-#include "unclaimed_transaction_pool.h"
+#include "unclaimed_transaction.h"
 
 namespace Token{
     static inline bool
@@ -184,8 +184,9 @@ namespace Token{
         std::string filename;
 
         LOCK_GUARD;
-        if(!GetIndex()->Get(options, key, &filename).ok()){
-            LOG(WARNING) << "couldn't find block " << hash << " in index";
+        leveldb::Status status = GetIndex()->Get(options, key, &filename);
+        if(!status.ok()){
+            LOG(WARNING) << "couldn't find block " << hash << " in index: " << status.ToString();
             return nullptr;
         }
 
@@ -203,11 +204,11 @@ namespace Token{
         std::string filename;
 
         LOCK_GUARD;
-        if(!GetIndex()->Get(options, key, &filename).ok()){
-            LOG(WARNING) << "couldn't find block #" << height << " in index";
+        leveldb::Status status = GetIndex()->Get(options, key, &filename);
+        if(!status.ok()){
+            LOG(WARNING) << "couldn't find block #" << height << " in index: " << status.ToString();
             return nullptr;
         }
-
         return Block::NewInstance(filename);
     }
 
@@ -218,16 +219,32 @@ namespace Token{
         return GetIndex()->Get(options, name, &value).ok();
     }
 
+    bool BlockChain::RemoveReference(const std::string& name){
+        leveldb::WriteOptions options;
+        std::string value;
+        LOCK_GUARD;
+        leveldb::Status status = GetIndex()->Delete(options, name);
+        if(!status.ok()){
+            LOG(WARNING) << "couldn't remove reference " << name << ": " << status.ToString();
+            return false;
+        }
+
+        LOG(INFO) << "removed reference: " << name;
+        return true;
+    }
+
     bool BlockChain::PutReference(const std::string& name, const Hash& hash){
         leveldb::WriteOptions options;
         options.sync = true;
 
         LOCK_GUARD;
-        if(!GetIndex()->Put(options, name, hash.HexString()).ok()){
-            LOG(WARNING) << "couldn't put set reference " << name << " to : " << hash;
+        leveldb::Status status = GetIndex()->Put(options, name, hash.HexString());
+        if(!status.ok()){
+            LOG(WARNING) << "couldn't set reference " << name << " to " << hash << ": " << status.ToString();
             return false;
         }
 
+        LOG(INFO) << "set reference " << name << " := " << hash;
         return true;
     }
 
@@ -235,8 +252,9 @@ namespace Token{
         leveldb::ReadOptions options;
         std::string value;
         LOCK_GUARD;
-        if(!GetIndex()->Get(options, name, &value).ok()){
-            LOG(WARNING) << "couldn't find reference: " << name;
+        leveldb::Status status = GetIndex()->Get(options, name, &value);
+        if(!status.ok()){
+            LOG(WARNING) << "couldn't find reference " << name << ": " << status.ToString();
             return Hash();
         }
         return Hash::FromHexString(value);
@@ -261,9 +279,15 @@ namespace Token{
             return false;
         }
 
-        if(!GetIndex()->Put(options, key, filename).ok() ||
-            !GetIndex()->Put(options, GetBlockHeightKey(blk->GetHeight()), filename).ok()){
-            LOG(WARNING) << "couldn't index block: " << block;
+        leveldb::Status status = GetIndex()->Put(options, key, filename);
+        if(!status.ok()){
+            LOG(WARNING) << "couldn't index block " << block << " by hash: " << status.ToString();
+            return false;
+        }
+
+        status = GetIndex()->Put(options, GetBlockHeightKey(blk->GetHeight()), filename);
+        if(!status.ok()){
+            LOG(WARNING) << "couldn't index block " << block << " by height: " << status.ToString();
             return false;
         }
 
@@ -310,11 +334,7 @@ namespace Token{
         }
 
         PutBlock(hash, block);
-        if(head < block){
-            PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
-            LOG(INFO) << "new " << BLOCKCHAIN_REFERENCE_HEAD << " := " << hash;
-        }
-
+        if(head < block) PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
         return true;
     }
 

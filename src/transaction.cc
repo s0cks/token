@@ -2,7 +2,7 @@
 #include "keychain.h"
 #include "block_chain.h"
 #include "server.h"
-#include "unclaimed_transaction_pool.h"
+#include "unclaimed_transaction.h"
 
 namespace Token{
 //######################################################################################################################

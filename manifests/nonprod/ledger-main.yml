@@ -6,7 +6,7 @@ metadata:
     app: token
     component: ledger
 spec:
-  serviceName: nginx
+  serviceName: token-ledger-svc
   replicas: 1
   selector:
     matchLabels:
@@ -15,6 +15,7 @@ spec:
     metadata:
       labels:
         app: token
+        component: ledger
     spec:
       containers:
         - name: token-ledger-node
@@ -56,6 +57,3 @@ spec:
         resources:
           requests:
             storage: 5Gi
-        selector:
-          matchLabels:
-            type: local

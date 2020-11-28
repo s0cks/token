@@ -64,6 +64,8 @@ namespace Token{
     public:
         static const intptr_t kNumberOfCollectionsRequiredForPromotion = 3;
     protected:
+        std::mutex mutex_; //TODO: remove?
+
         Type type_;
         bool marked_;
         intptr_t size_;
@@ -98,10 +100,12 @@ namespace Token{
         }
 
         void IncrementReferenceCount(){
+            std::unique_lock<std::mutex> guard(mutex_);
             num_references_++;
         }
 
         void DecrementReferenceCount(){
+            std::unique_lock<std::mutex> guard(mutex_);
             num_references_--;
         }
 
@@ -145,7 +149,8 @@ namespace Token{
             return size_;
         }
 
-        intptr_t GetReferenceCount() const{
+        intptr_t GetReferenceCount(){
+            std::unique_lock<std::mutex> guard(mutex_);
             return num_references_;
         }
 
@@ -157,7 +162,8 @@ namespace Token{
             return ptr_ > 0;
         }
 
-        bool HasStackReferences() const{
+        bool HasStackReferences(){
+            std::unique_lock<std::mutex> guard(mutex_);
             return num_references_ > 0;
         }
 
@@ -183,7 +189,7 @@ namespace Token{
 #undef DECLARE_TYPECHECK
 
         static void* operator new(size_t size){
-            return Allocator::Allocate(size);
+            return Allocator::AllocateObject(size);
         }
 
         static void* operator new[](size_t) = delete;

@@ -172,7 +172,8 @@ namespace Token{
     protected:
         bool Accept(WeakObjectPointerVisitor* vis){
             for(intptr_t idx = 0; idx < num_transactions_; idx++)
-                if(!vis->Visit(&transactions_[idx])) return false;
+                if(!vis->Visit(&transactions_[idx]))
+                    return false;
             return true;
         }
 

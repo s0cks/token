@@ -184,8 +184,16 @@ namespace Token{
             return num_survived_;
         }
 
+        float GetObjectsSurvivedPercentage() const{
+            return (num_processed_ / num_survived_) * 100;
+        }
+
         int64_t GetObjectsCollected() const{
             return num_collected_;
+        }
+
+        float GetObjectsCollectedPercentage() const{
+            return (num_processed_ / num_collected_) * 100;
         }
     };
 
@@ -248,6 +256,11 @@ namespace Token{
         bool FinalizeObject(Object* obj);
         bool PromoteObject(Object* obj);
         bool ScavengeObject(Object* obj);
+
+#ifdef TOKEN_DEBUG
+        void PrintNewHeap();
+        void PrintOldHeap();
+#endif//TOKEN_DEBUG
     public:
         ~Scavenger() = default;
 

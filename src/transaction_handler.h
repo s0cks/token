@@ -2,7 +2,7 @@
 #define TOKEN_TRANSACTION_HANDLER_H
 
 #include "transaction.h"
-#include "unclaimed_transaction_pool.h"
+#include "unclaimed_transaction.h"
 
 namespace Token{
     class TransactionHandler : public TransactionVisitor{
@@ -29,7 +29,8 @@ namespace Token{
         }
 
         bool VisitOutput(Output* output){
-            UnclaimedTransactionPool::PutUnclaimedTransaction(CreateUnclaimedTransaction(output->GetUser(), output->GetProduct()));
+            Handle<UnclaimedTransaction> utxo = CreateUnclaimedTransaction(output->GetUser(), output->GetProduct());
+            UnclaimedTransactionPool::PutUnclaimedTransaction(utxo->GetHash(), utxo);
             return true;
         }
 

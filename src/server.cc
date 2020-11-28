@@ -12,7 +12,7 @@
 
 #include "block_pool.h"
 #include "transaction_pool.h"
-#include "unclaimed_transaction_pool.h"
+#include "unclaimed_transaction.h"
 
 namespace Token{
     static uv_tcp_t handle_;

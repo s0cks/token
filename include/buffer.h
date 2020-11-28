@@ -61,7 +61,7 @@ namespace Token{
         static void* operator new(size_t size, size_t length, bool){
             intptr_t buffer_size = (sizeof(uint8_t)*length);
             intptr_t total_size = size + buffer_size;
-            return Allocator::Allocate(total_size);
+            return Allocator::AllocateObject(total_size);
         }
         static void operator delete(void*, size_t, bool){}
         using Object::operator delete;

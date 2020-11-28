@@ -23,6 +23,7 @@ namespace Token{
     static intptr_t allocating_size_ = 0;
     static void* allocating_ = nullptr;
 
+#define KB_SiZE 1000
 #define MB_SIZE 1000000
 #define GB_SIZE 1000000000
 
@@ -75,17 +76,22 @@ namespace Token{
 
 #define ALIGN(Size) (((Size)+7)&~7)
 
-    void* Allocator::Allocate(size_t alloc_size){
+    void* Allocator::Allocate(int64_t size){
         LOCK_GUARD;
-        size_t total_size = ALIGN(alloc_size);
-        void* ptr = GetNewHeap()->Allocate(total_size);
+        LOG(INFO) << "allocating: " << size;
+        return GetNewHeap()->Allocate(size);
+    }
+
+    void* Allocator::AllocateObject(int64_t size){
+        int64_t total_size = ALIGN(size);
+        void* ptr = Allocate(total_size);
         if(!ptr){
             MinorCollect();
-            ptr = GetNewHeap()->Allocate(total_size);
+            ptr = Allocate(total_size);
             assert(ptr);
         }
 
-        allocating_size_ = alloc_size;
+        allocating_size_ = size;
         allocating_ = ptr;
         return ptr;
     }
@@ -110,19 +116,20 @@ namespace Token{
     }
 
     void Allocator::PrintNewHeap(){
-        LOCK_GUARD;
         LOG(INFO) << "New Heap:";
+
+        LOCK_GUARD;
         ObjectPointerPrinter printer;
         if(!Allocator::GetNewHeap()->VisitObjects(&printer))
             LOG(WARNING) << "couldn't print new heap";
     }
 
     void Allocator::PrintOldHeap(){
-        LOCK_GUARD;
         LOG(INFO) << "Old Heap:";
+
+        LOCK_GUARD;
         ObjectPointerPrinter printer;
-        if(!Allocator::GetOldHeap()->VisitObjects(&printer)){
+        if(!Allocator::GetOldHeap()->VisitObjects(&printer))
             LOG(WARNING) << "couldn't print old heap";
-        }
     }
 }

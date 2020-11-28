@@ -1,4 +1,5 @@
 #include "http/session.h"
+#include "http/healthcheck.h"
 
 namespace Token{
     void HttpSession::Send(HttpResponse* response){
@@ -31,8 +32,14 @@ namespace Token{
     }
 
     void HttpSession::Close(){
+        if(uv_is_closing((uv_handle_t*)&handle_))
+            return;
         uv_close((uv_handle_t*)&handle_, OnClose);
     }
 
-    void HttpSession::OnClose(uv_handle_t* handle){}
+    void HttpSession::OnClose(uv_handle_t* handle){
+        Handle<HttpSession> session = (HttpSession*)handle->data;
+        if(!HealthCheckService::UnregisterSession(session))
+            LOG(WARNING) << "couldn't unregister http session from health check service";
+    }
 }

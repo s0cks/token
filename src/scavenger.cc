@@ -1,6 +1,7 @@
 #include "heap.h"
 #include "scavenger.h"
 #include "server.h"
+#include "http/healthcheck.h"
 
 namespace Token{
     static inline std::string
@@ -86,6 +87,14 @@ namespace Token{
             LOG(INFO) << "marking the server peer sessions....";
             if(!Server::Accept(&marker)){
                 LOG(WARNING) << "couldn't visit the current peer sessions.";
+                return false;
+            }
+        }
+        {
+            // Mark the active http sessions
+            LOG(INFO) << "marking the active http sessions....";
+            if(!HealthCheckService::Accept(&marker)){
+                LOG(WARNING) << "couldn't visit the http sessions.";
                 return false;
             }
         }
@@ -204,6 +213,10 @@ namespace Token{
             LOG(ERROR) << "couldn't notify server peer sessions.";
             return false;
         }
+        if(!HealthCheckService::Accept(&notifier)){
+            LOG(ERROR) << "couldn't notify the health check http sessions.";
+            return false;
+        }
 
         LOG(INFO) << "updating references....";
         ReferenceUpdater updater;
@@ -217,6 +230,10 @@ namespace Token{
         }
         if(!Server::Accept(&updater)){
             LOG(ERROR) << "couldn't update server peer sessions.";
+            return false;
+        }
+        if(!HealthCheckService::Accept(&updater)){
+            LOG(ERROR) << "couldn't update the health check service http sessions.";
             return false;
         }
 
@@ -251,6 +268,22 @@ namespace Token{
         return true;
     }
 
+#ifdef TOKEN_DEBUG
+    void Scavenger::PrintNewHeap(){
+        LOG(INFO) << "New Heap:";
+        ObjectPointerPrinter printer;
+        if(!Allocator::GetNewHeap()->VisitObjects(&printer))
+            LOG(WARNING) << "couldn't print new heap";
+    }
+
+    void Scavenger::PrintOldHeap(){
+        LOG(INFO) << "Old Heap:";
+        ObjectPointerPrinter printer;
+        if(!Allocator::GetOldHeap()->VisitObjects(&printer))
+            LOG(WARNING) << "couldn't print old heap";
+    }
+#endif//TOKEN_DEBUG
+
     bool Scavenger::Scavenge(bool is_major){
         if(is_major){
             LOG(INFO) << "performing major garbage collection...";
@@ -258,13 +291,12 @@ namespace Token{
             LOG(INFO) << "performing minor garbage collection...";
         }
 
-#ifdef TOKEN_DEBUG
-        Allocator::PrintNewHeap();
-        Allocator::PrintOldHeap();
-#endif//TOKEN_DEBUG
-
         //TODO: apply major collection steps to Scavenger::ScavengeMemory()
         Scavenger scavenger(is_major);
+#ifdef TOKEN_DEBUG
+        scavenger.PrintNewHeap();
+        scavenger.PrintOldHeap();
+#endif//TOKEN_DEBUG
         {
             // Mark Phase
             LOG(INFO) << "marking objects....";
@@ -293,8 +325,8 @@ namespace Token{
         LOG(INFO) << scavenger.GetTimeline();
         LOG(INFO) << scavenger.GetNewStats();
         LOG(INFO) << scavenger.GetOldStats();
-        Allocator::PrintNewHeap();
-        Allocator::PrintOldHeap();
+        scavenger.PrintNewHeap();
+        scavenger.PrintOldHeap();
 #endif//TOKEN_DEBUG
         return true;
     }

@@ -7,10 +7,10 @@ metadata:
     component: ledger
 spec:
   ports:
-    - name: http
-      port: 80
+    - name: rpc
+      port: 8080
       targetPort: 8080
       protocol: TCP
-  type: NodePort
+  type: LoadBalancer
   selector:
     component: ledger

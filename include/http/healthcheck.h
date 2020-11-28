@@ -23,6 +23,8 @@ namespace Token{
     V(Error)
 
     class HealthCheckService : public Thread{
+        friend class Scavenger;
+        friend class HttpSession;
     public:
         enum State{
 #define DECLARE_STATE(Name) k##Name,
@@ -57,9 +59,14 @@ namespace Token{
 #undef DECLARE_TOSTRING
             }
         }
+
+        static const int64_t kMaxNumberOfSessions = 64;
     private:
         HealthCheckService() = delete;
         static HttpRouter* GetRouter();
+        static bool RegisterSession(const Handle<HttpSession>& session);
+        static bool UnregisterSession(const Handle<HttpSession>& session);
+        static bool Accept(WeakObjectPointerVisitor* vis);
         static void SetRouter(HttpRouter* router);
         static void SetState(State state);
         static void SetStatus(Status status);

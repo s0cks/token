@@ -30,6 +30,7 @@ RUN apt-get update && apt-get install -y \
     libuv1-dev \
     uuid-dev
 
+RUN useradd -ms /bin/bash token
 RUN git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
 
 # Build CMake
@@ -69,20 +70,28 @@ RUN git clone https://github.com/open-source-parsers/jsoncpp.git -b ${JSONLIB_VE
  && cmake --build . --target install
 
 # Build and Install the Token Ledger
-RUN git clone https://github.com/tokenevents/libtoken-ledger.git -b $TOKEN_VERSION \
- && cd libtoken-ledger \
- && mkdir -p build \
- && cd build \
- && cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/usr/local .. \
+#RUN git clone https://github.com/tokenevents/libtoken-ledger.git -b $TOKEN_VERSION \
+# && cd libtoken-ledger \
+# && mkdir -p build \
+# && cd build \
+# && cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/usr/local .. \
+# && cmake --build . --target install \
+# && ldconfig
+
+# Copy The Ledger Source
+RUN mkdir -p /usr/src/libtoken-ledger/build
+COPY cmake /usr/src/libtoken-ledger/cmake/
+COPY include /usr/src/libtoken-ledger/include/
+COPY src /usr/src/libtoken-ledger/src/
+COPY tests /usr/src/libtoken-ledger/tests/
+COPY CMakeLists.txt main.cc client.cc tests.cc inspector.cc /usr/src/libtoken-ledger/
+WORKDIR /usr/src/libtoken-ledger/build
+RUN cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/usr/local ..\
  && cmake --build . --target install \
- && chown token:token 0750 entrypoint.sh \
  && ldconfig
 
-WORKDIR libtoken-ledger/
-RUN useradd -ms /bin/bash token
-
 USER root
-CMD [ "/bin/bash", "entrypoint.sh" ]
+CMD [ "token-node", "--path", "/usr/share/ledger", "--port", "8080" ]
 # Expose the RPC Service
 EXPOSE 8080
 # Expose the HealthCheck Service

@@ -114,10 +114,44 @@ namespace Token{
 
     }
 
-    void HealthCheckService::OnNewConnection(uv_stream_t* stream, int status){
-        LOG(INFO) << "client is connecting....";
-        Handle<HttpSession> session = HttpSession::NewInstance(stream->loop);
+    static HttpSession* sessions_[HealthCheckService::kMaxNumberOfSessions];
 
+    bool HealthCheckService::RegisterSession(const Handle<HttpSession>& session){
+        for(int64_t idx = 0; idx < HealthCheckService::kMaxNumberOfSessions; idx++){
+            if(!sessions_[idx]){
+                sessions_[idx] = session;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool HealthCheckService::UnregisterSession(const Handle<HttpSession>& session){
+        for(int64_t idx = 0; idx < HealthCheckService::kMaxNumberOfSessions; idx++){
+            //TODO: fix HealthCheckService::UnregisterSession(const Handle<HttpSession>&);
+            if(sessions_[idx] && sessions_[idx]->GetStartAddress() == session->GetStartAddress()){
+                sessions_[idx] = nullptr;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool HealthCheckService::Accept(WeakObjectPointerVisitor* vis){
+        for(int64_t idx = 0; idx < HealthCheckService::kMaxNumberOfSessions; idx++){
+            if(sessions_[idx] && !vis->Visit(&sessions_[idx])){
+                LOG(WARNING) << "couldn't visit session #" << idx;
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void HealthCheckService::OnNewConnection(uv_stream_t* stream, int status){
+        Handle<HttpSession> session = HttpSession::NewInstance(stream->loop);
+        RegisterSession(session);
+
+        LOG(INFO) << "client is connecting....";
         int err;
         if((err = uv_accept(stream, session->GetStream())) != 0){
             LOG(WARNING) << "server accept failure: " << uv_strerror(err);
@@ -133,12 +167,16 @@ namespace Token{
 
     static inline void
     SendOk(HttpSession* session){
+        LOG(INFO) << "sending Ok()";
+
         HttpResponse response(session, STATUS_CODE_OK, "Ok");
         session->Send(&response);
     }
 
     static inline void
     SendInternalServerError(HttpSession* session, const std::string& msg="Internal Server Error"){
+        LOG(INFO) << "sending InternalServerError(" << msg << ")";
+
         std::stringstream ss;
         ss << "Internal Server Error: " << msg;
         HttpResponse response(session, STATUS_CODE_INTERNAL_SERVER_ERROR, ss);
@@ -147,6 +185,8 @@ namespace Token{
 
     static inline void
     SendNotFound(HttpSession* session, const std::string& path){
+        LOG(WARNING) << "sending NotFound(" << path << ")";
+
         std::stringstream ss;
         ss << "Not Found: " << path;
         HttpResponse response(session, STATUS_CODE_NOTFOUND, ss);
@@ -201,14 +241,21 @@ namespace Token{
 
     static inline bool
     GetRuntimeStatus(Json::Value& value){
-        value["BlockChain"] = BlockChain::GetStatusMessage();
+        value["Block Chain"] = BlockChain::GetStatusMessage();
         value["Server"] = Server::GetStatusMessage();
+        value["Unclaimed Transaction Pool"] = UnclaimedTransactionPool::GetStatusMessage();
         return true;
+    }
+
+    static inline bool
+    GetBlockChainHead(Json::Value& value){
+        Handle<Block> head = BlockChain::GetHead();
+        return head->ToJson(value);
     }
 
     void HealthCheckService::HandleStatusEndpoint(HttpSession* session, HttpRequest* request){
         Json::Value head;
-        if(!BlockChain::GetHead()->ToJson(head)){
+        if(!GetBlockChainHead(head)){
             SendInternalServerError(session);
             return;
         }
@@ -220,7 +267,8 @@ namespace Token{
         }
 
         Json::Value doc;
-        doc["head"] = head;
+        doc["head"] = BlockChain::GetReference(BLOCKCHAIN_REFERENCE_HEAD).HexString();
+        doc["genesis"] = BlockChain::GetReference(BLOCKCHAIN_REFERENCE_GENESIS).HexString();
         doc["status"] = status;
         SendJson(session, doc);
     }

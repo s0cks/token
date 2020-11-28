@@ -62,7 +62,10 @@ namespace Token{
             return true;
         }
     public:
-        ~HttpSession() = default;
+        ~HttpSession(){
+            LOG(ERROR) << "destroying http session";
+            Close();
+        }
 
         uv_stream_t* GetStream() const{
             return (uv_stream_t*)&handle_;

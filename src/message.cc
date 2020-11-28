@@ -3,7 +3,7 @@
 
 #include "block_pool.h"
 #include "transaction_pool.h"
-#include "unclaimed_transaction_pool.h"
+#include "unclaimed_transaction.h"
 
 namespace Token{
     Handle<VersionMessage> VersionMessage::NewInstance(const Handle<Buffer>& buff){
