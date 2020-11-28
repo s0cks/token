@@ -4,7 +4,7 @@
 #include <sstream>
 #include <uv.h>
 
-#include "peer.h"
+#include "peer_session.h"
 #include "address.h"
 #include "message.h"
 #include "vthread.h"
@@ -54,9 +54,9 @@ namespace Token{
         Server() = delete;
 
         static uv_tcp_t* GetHandle();
-        static bool RegisterPeer(PeerSession* session);
-        static bool UnregisterPeer(PeerSession* session);
-
+        static bool RegisterPeer(const Handle<PeerSession>& session);
+        static bool UnregisterPeer(const Handle<PeerSession>& session);
+        static bool SavePeerList();
         static void SetState(State state);
         static void HandleThread(uword parameter);
         static void HandleTerminateCallback(uv_async_t* handle);
@@ -70,13 +70,13 @@ namespace Token{
         static UUID GetID();
         static void WaitForState(State state);
         static bool Broadcast(const Handle<Message>& msg);
-        static bool HasPeer(const UUID& uuid);
-        static bool HasPeer(const NodeAddress& address);
         static bool ConnectTo(const NodeAddress& address);
         static bool IsConnectedTo(const NodeAddress& address);
+        static bool IsConnectedTo(const UUID& uuid);
         static bool GetPeers(PeerList& peers);
         static int GetNumberOfPeers();
-        static PeerSession* GetPeer(const UUID& uuid);
+        static Handle<PeerSession> GetPeer(const NodeAddress& address);
+        static Handle<PeerSession> GetPeer(const UUID& uuid);
 
         static inline bool
         ConnectTo(const std::string& address, uint32_t port){

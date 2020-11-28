@@ -2,17 +2,12 @@
 #define TOKEN_MESSAGE_H
 
 #include <set>
-
+#include "object.h"
 #include "uuid.h"
-#include "token.h"
-#include "buffer.h"
-#include "common.h"
-#include "version.h"
+#include "peer.h"
 #include "address.h"
-#include "block_pool.h"
+#include "version.h"
 #include "block_chain.h"
-#include "transaction_pool.h"
-#include "unclaimed_transaction_pool.h"
 
 namespace Token{
 #define FOR_EACH_MESSAGE_TYPE(V) \
@@ -107,6 +102,7 @@ namespace Token{
 
         VersionMessage(ClientType type, const Version& version, const UUID& node_id, Timestamp timestamp, const Hash& nonce, const BlockHeader& head):
             Message(),
+            timestamp_(timestamp),
             client_type_(type),
             version_(version),
             nonce_(nonce),
@@ -150,7 +146,7 @@ namespace Token{
         DECLARE_MESSAGE(Version);
 
         static Handle<VersionMessage> NewInstance(const Handle<Buffer>& buff);
-        static Handle<VersionMessage> NewInstance(ClientType type, const UUID& node_id, const Version& version=Version(), const Hash& nonce=Hash::GenerateNonce(), const BlockHeader& head=BlockChain::GetHead(), Timestamp timestamp=GetCurrentTimestamp()){
+        static Handle<VersionMessage> NewInstance(ClientType type, const UUID& node_id, const Version& version=Version(), const Hash& nonce=Hash::GenerateNonce(), const BlockHeader& head=BlockChain::GetHead()->GetHeader(), Timestamp timestamp=GetCurrentTimestamp()){
             return new VersionMessage(type, version, node_id, timestamp, nonce, head);
         }
 
@@ -210,7 +206,7 @@ namespace Token{
         DECLARE_MESSAGE(Verack);
 
         static Handle<VerackMessage> NewInstance(const Handle<Buffer>& buff);
-        static Handle<VerackMessage> NewInstance(ClientType type, const UUID& node_id, const NodeAddress& address, const BlockHeader& head=BlockChain::GetHead(), const Version& version=Version(), const Hash& nonce=Hash::GenerateNonce(), Timestamp timestamp=GetCurrentTimestamp()){
+        static Handle<VerackMessage> NewInstance(ClientType type, const UUID& node_id, const NodeAddress& address, const BlockHeader& head=BlockChain::GetHead()->GetHeader(), const Version& version=Version(), const Hash& nonce=Hash::GenerateNonce(), Timestamp timestamp=GetCurrentTimestamp()){
             return new VerackMessage(type, node_id, version, nonce, address, head, timestamp);
         }
 
@@ -446,14 +442,7 @@ namespace Token{
             return hash_;
         }
 
-        bool ItemExists() const{
-            switch(type_){
-                case kTransaction: return TransactionPool::HasTransaction(hash_);
-                case kBlock: return BlockChain::HasBlock(hash_) || BlockPool::HasBlock(hash_);
-                case kUnclaimedTransaction: return UnclaimedTransactionPool::HasUnclaimedTransaction(hash_);
-                default: return false;
-            }
-        }
+        bool ItemExists() const;
 
         bool IsUnclaimedTransaction() const{
             return type_ == kUnclaimedTransaction;
@@ -585,7 +574,7 @@ namespace Token{
         DECLARE_MESSAGE(GetBlocks);
 
         static Handle<GetBlocksMessage> NewInstance(const Handle<Buffer>& buff);
-        static Handle<GetBlocksMessage> NewInstance(const Hash& start_hash=BlockChain::GetHead().GetHash(), const Hash& stop_hash=Hash()){
+        static Handle<GetBlocksMessage> NewInstance(const Hash& start_hash=BlockChain::GetHead()->GetHash(), const Hash& stop_hash=Hash()){
             return new GetBlocksMessage(start_hash, stop_hash);
         }
     };
@@ -651,70 +640,6 @@ namespace Token{
             return new GetPeersMessage();
         }
     };
-
-    class Peer{
-        friend class PeerListMessage;
-    public:
-        static const intptr_t kSize = UUID::kSize + NodeAddress::kSize;
-
-        struct IDComparator{
-            bool operator()(const Peer& a, const Peer& b){
-                return a.uuid_ < b.uuid_;
-            }
-        };
-
-        struct AddressComparator{
-            bool operator()(const Peer& a, const Peer& b){
-                return a.address_ < b.address_;
-            }
-        };
-    private:
-        UUID uuid_;
-        NodeAddress address_;
-    protected:
-        bool Write(const Handle<Buffer>& buff) const{
-            uuid_.Write(buff);
-            address_.Write(buff);
-            return true;
-        }
-    public:
-        Peer(const UUID& uuid, const NodeAddress& address):
-            uuid_(uuid),
-            address_(address){}
-        Peer(const Handle<Buffer>& buff):
-            uuid_(buff),
-            address_(buff){}
-        ~Peer() = default;
-
-        UUID GetID() const{
-            return uuid_;
-        }
-
-        NodeAddress GetAddress() const{
-            return address_;
-        }
-
-        void operator=(const Peer& other){
-            uuid_ = other.uuid_;
-            address_ = other.address_;
-        }
-
-        friend bool operator==(const Peer& a, const Peer& b){
-            return a.uuid_ == b.uuid_
-                && a.address_ == b.address_;
-        }
-
-        friend bool operator!=(const Peer& a, const Peer& b){
-            return !operator==(a, b);
-        }
-
-        friend std::ostream& operator<<(std::ostream& stream, const Peer& peer){
-            stream << peer.GetID() << "(" << peer.GetAddress() << ")";
-            return stream;
-        }
-    };
-
-    typedef std::set<Peer, Peer::AddressComparator> PeerList;
 
     class PeerListMessage : public Message{
     private:

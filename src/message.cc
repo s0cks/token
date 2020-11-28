@@ -1,6 +1,10 @@
 #include "message.h"
 #include "proposal.h"
 
+#include "block_pool.h"
+#include "transaction_pool.h"
+#include "unclaimed_transaction_pool.h"
+
 namespace Token{
     Handle<VersionMessage> VersionMessage::NewInstance(const Handle<Buffer>& buff){
         Timestamp timestamp = buff->GetLong();
@@ -149,6 +153,15 @@ namespace Token{
     bool UnclaimedTransactionMessage::Write(const Handle<Buffer>& buff) const{
         data_->Write(buff);
         return true;
+    }
+
+    bool InventoryItem::ItemExists() const{
+        switch(type_){
+            case kTransaction: return TransactionPool::HasTransaction(hash_);
+            case kBlock: return BlockChain::HasBlock(hash_) || BlockPool::HasBlock(hash_);
+            case kUnclaimedTransaction: return UnclaimedTransactionPool::HasUnclaimedTransaction(hash_);
+            default: return false;
+        }
     }
 
     Handle<InventoryMessage> InventoryMessage::NewInstance(const Handle<Buffer>& buff){

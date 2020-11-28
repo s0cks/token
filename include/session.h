@@ -7,6 +7,7 @@
 #include <condition_variable>
 
 #include "buffer.h"
+#include "object.h"
 #include "message.h"
 
 namespace Token{

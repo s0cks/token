@@ -23,7 +23,7 @@ namespace Token{
             WriteHeader(CreateSnapshotSectionHeader(kSnapshotPrologue, 0)); // Header
             WriteUnsignedLong(GetCurrentTimestamp()); // Generation Time
             WriteString(GetVersion());
-            WriteHash(BlockChain::GetHead().GetHash()); // <HEAD>
+            WriteHash(BlockChain::GetHead()->GetHash()); // <HEAD>
             int64_t size = (GetCurrentPosition() - start);
             // update section header size
             WriteHeaderAt(start, CreateSnapshotSectionHeader(kSnapshotPrologue, size));
@@ -42,7 +42,7 @@ namespace Token{
             // ------------------------
             int64_t start = GetCurrentPosition();
             WriteHeader(CreateSnapshotSectionHeader(kSnapshotBlockChainData, 0)); // SnapshotHeader
-            WriteUnsignedInt(BlockChain::GetHead().GetHeight() + 1);
+            WriteUnsignedInt(BlockChain::GetHead()->GetHeight() + 1);
             /*TODO: fixme SnapshotWriter::WriteBlockChain()
             Handle<Block> blk = BlockChain::GetHead();
             while(true){

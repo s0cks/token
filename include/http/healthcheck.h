@@ -6,6 +6,7 @@
 
 #include "object.h"
 #include "vthread.h"
+#include "http/router.h"
 #include "http/session.h"
 #include "http/request.h"
 
@@ -20,44 +21,6 @@ namespace Token{
     V(Ok)                                     \
     V(Warning)                                \
     V(Error)
-
-#define FOR_EACH_HEALTHCHECK_ENDPOINT(V) \
-    V(Live, "/live")                     \
-    V(Ready, "/ready")                   \
-    V(Health, "/health")
-
-    enum class HealthCheckEndpoint{
-#define DEFINE_HEALTHCHECK_ENDPOINT(Name, Path) k##Name##Endpoint,
-        FOR_EACH_HEALTHCHECK_ENDPOINT(DEFINE_HEALTHCHECK_ENDPOINT)
-#undef DEFINE_HEALTHCHECK_ENDPOINT
-        kUnknownEndpoint,
-    };
-
-    static std::ostream& operator<<(std::ostream& stream, const HealthCheckEndpoint& endpoint){
-        switch(endpoint){
-#define DEFINE_TOSTRING(Name, Path) \
-            case HealthCheckEndpoint::k##Name##Endpoint: \
-                stream << Path; \
-                return stream;
-            FOR_EACH_HEALTHCHECK_ENDPOINT(DEFINE_TOSTRING)
-#undef DEFINE_TOSTRING
-            case HealthCheckEndpoint::kUnknownEndpoint:
-            default:
-                stream << "unknown";
-                return stream;
-        }
-    }
-
-    static inline HealthCheckEndpoint
-    GetHealthCheckEndpoint(const std::string& path){
-        LOG(INFO) << "path: " << path;
-#define DEFINE_ENDPOINT_CHECK(Name, Path) \
-        if(!strncmp(path.data(), Path, path.size())) \
-            return HealthCheckEndpoint::k##Name##Endpoint;
-        FOR_EACH_HEALTHCHECK_ENDPOINT(DEFINE_ENDPOINT_CHECK)
-#undef DEFINE_ENDPOINT_CHECK
-        return HealthCheckEndpoint::kUnknownEndpoint;
-    }
 
     class HealthCheckService : public Thread{
     public:
@@ -96,10 +59,8 @@ namespace Token{
         }
     private:
         HealthCheckService() = delete;
-
-        static void LoadConfiguration(libconfig::Setting& config);
-        static void SaveConfiguration(libconfig::Setting& config);
-        static void SetServicePort(int port);
+        static HttpRouter* GetRouter();
+        static void SetRouter(HttpRouter* router);
         static void SetState(State state);
         static void SetStatus(Status status);
         static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
@@ -108,14 +69,12 @@ namespace Token{
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
         static void HandleServiceThread(uword parameter);
         static void HandleUnknownEndpoint(HttpSession* session, HttpRequest* request);
-#define DECLARE_ENDPOINT_HANDLER(Name, Path) \
-        static void Handle##Name##Endpoint(HttpSession* session, HttpRequest* request);
-        FOR_EACH_HEALTHCHECK_ENDPOINT(DECLARE_ENDPOINT_HANDLER)
-#undef DECLARE_ENDPOINT_HANDLER
+        static void HandleReadyEndpoint(HttpSession* session, HttpRequest* request);
+        static void HandleLiveEndpoint(HttpSession* session, HttpRequest* request);
+        static void HandleHealthEndpoint(HttpSession* session, HttpRequest* request);
     public:
         ~HealthCheckService() = delete;
 
-        static int GetServicePort();
         static State GetState();
         static Status GetStatus();
         static void WaitForState(State state);

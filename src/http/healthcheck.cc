@@ -7,9 +7,6 @@
 #include "block_chain.h"
 
 namespace Token{
-#define CONFIG_KEY_HEALTHCHECK_SERVICE "HealthCheck"
-#define CONFIG_KEY_SERVICE_PORT "Port"
-
     static std::mutex mutex_;
     static std::condition_variable cond_;
 
@@ -21,7 +18,17 @@ namespace Token{
 
     static HealthCheckService::State state_ = HealthCheckService::kStopped;
     static HealthCheckService::Status status_ = HealthCheckService::kOk;
-    static unsigned int service_port_ = 0;
+    static HttpRouter* router_;
+
+    HttpRouter* HealthCheckService::GetRouter(){
+        LOCK_GUARD;
+        return router_;
+    }
+
+    void HealthCheckService::SetRouter(HttpRouter* router){
+        LOCK_GUARD;
+        router_ = router;
+    }
 
     HealthCheckService::State HealthCheckService::GetState(){
         LOCK_GUARD;
@@ -43,16 +50,6 @@ namespace Token{
         status_ = status;
     }
 
-    int HealthCheckService::GetServicePort(){
-        LOCK_GUARD;
-        return service_port_;
-    }
-
-    void HealthCheckService::SetServicePort(int port){
-        LOCK_GUARD;
-        service_port_ = port;
-    }
-
     void HealthCheckService::WaitForState(State state){
         LOCK;
         while(state_ != state) WAIT;
@@ -63,10 +60,12 @@ namespace Token{
             LOG(WARNING) << "the health check service is already running.";
             return false;
         }
-
         LOG(INFO) << "initializing the health check service....";
-        libconfig::Setting& config = BlockChainConfiguration::GetProperty(CONFIG_KEY_HEALTHCHECK_SERVICE, libconfig::Setting::TypeGroup);
-        LoadConfiguration(config);
+        HttpRouter* router = new HttpRouter(&HandleUnknownEndpoint);
+        router->Get("/ready", &HandleReadyEndpoint);
+        router->Get("/live", &HandleLiveEndpoint);
+        router->Get("/health", &HandleHealthEndpoint);
+        SetRouter(router);
         return Thread::Start("HealthCheckService", &HandleServiceThread, 0);
     }
 
@@ -75,37 +74,18 @@ namespace Token{
         return false;
     }
 
-    void HealthCheckService::LoadConfiguration(libconfig::Setting& config){
-        if(!config.exists(CONFIG_KEY_SERVICE_PORT)){
-            int port = FLAGS_port + 1;
-            SetServicePort(port);
-            config.add(CONFIG_KEY_SERVICE_PORT, libconfig::Setting::TypeInt) = port;
-            BlockChainConfiguration::SaveConfiguration();
-        } else{
-            int port;
-            config.lookupValue(CONFIG_KEY_SERVICE_PORT, port);
-            SetServicePort(port);
-        }
-    }
-
-    void HealthCheckService::SaveConfiguration(libconfig::Setting& config){
-        LOCK_GUARD;
-        //TODO: implement HealthCheckService::SaveConfiguration(libconfig::Setting&)
-    }
-
     void HealthCheckService::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
         Handle<HttpSession> session = (HttpSession*)handle->data;
         session->InitReadBuffer(buff);
     }
 
     void HealthCheckService::HandleServiceThread(uword parameter){
-        int port = GetServicePort();
-
         SetState(HealthCheckService::kStarting);
         uv_loop_t* loop = uv_loop_new();
         uv_tcp_t server;
         uv_tcp_init(loop, &server);
 
+        int32_t port = BlockChainConfiguration::GetHealthCheckPort();
         sockaddr_in bind_address;
         uv_ip4_addr("0.0.0.0", port, &bind_address);
         uv_tcp_init(loop, &server);
@@ -153,19 +133,8 @@ namespace Token{
         HttpSession* session = (HttpSession*)stream->data;
         if(nread >= 0){
             HttpRequest request(session, buff->base, buff->len);
-            HealthCheckEndpoint endpoint = GetHealthCheckEndpoint(request.GetPath());
-            switch(endpoint){
-#define DEFINE_ENDPOINT_HANDLER(Name, Path) \
-                case HealthCheckEndpoint::k##Name##Endpoint: \
-                    Handle##Name##Endpoint(session, &request); \
-                    return;
-                FOR_EACH_HEALTHCHECK_ENDPOINT(DEFINE_ENDPOINT_HANDLER)
-#undef DEFINE_ENDPOINT_HANDLER
-                case HealthCheckEndpoint::kUnknownEndpoint:
-                default:
-                    HandleUnknownEndpoint(session, &request);
-                    return;
-            }
+            HttpRouter::HttpRoute route = GetRouter()->GetRouteOrDefault(&request);
+            route(session, &request);
         } else{
             if(nread == UV_EOF){
                 // fallthrough
@@ -202,9 +171,24 @@ namespace Token{
         session->Send(&response);
     }
 
+    static inline std::string
+    Block2Json(const Handle<Block>& blk){
+        std::stringstream ss;
+        ss << "{";
+        ss << "\"timestamp\": " << blk->GetTimestamp() << ",";
+        ss << "\"height\": " << blk->GetHeight() << ",";
+        ss << "\"previous_hash\": \"" << blk->GetPreviousHash() << "\",";
+        ss << "\"merkle_root\": \"" << blk->GetMerkleRoot() << "\",";
+        ss << "\"hash\": \"" << blk->GetHash() << "\"";
+        ss << "}";
+        return ss.str();
+    }
+
     void HealthCheckService::HandleHealthEndpoint(HttpSession* session, HttpRequest* request){
         std::stringstream ss;
-        ss << "{\"head\": \"" << BlockChain::GetHead().GetHash() << "\"}";
+        ss << "{";
+        ss << "\"head\": " << Block2Json(BlockChain::GetHead());
+        ss << "}";
         HttpResponse response(session, 200, CONTENT_APPLICATION_JSON, ss);
         session->Send(&response);
     }

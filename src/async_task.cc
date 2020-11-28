@@ -2,6 +2,8 @@
 #include "block_handler.h"
 #include "proposal.h"
 
+#include "block_pool.h"
+
 namespace Token{
     static std::mutex mutex_;
     static std::condition_variable cond_;
@@ -68,11 +70,13 @@ namespace Token{
 
     bool SynchronizeBlockChainTask::ProcessBlock(const Handle<Block>& block){
         BlockHeader header = block->GetHeader();
+        Hash hash = header.GetHash();
+
         if(!BlockHandler::ProcessBlock(block, false)){
             LOG(WARNING) << "couldn't process block: " << header;
             return false;
         }
-        BlockPool::RemoveBlock(header.GetHash());
+        BlockPool::RemoveBlock(hash);
         BlockChain::Append(block);
         return true;
     }

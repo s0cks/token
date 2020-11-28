@@ -10,11 +10,9 @@ namespace Token{
     class HandleBase{ //TODO: remove
         friend class Scavenger;
     private:
-
         Object** ptr_;
 
         static bool VisitHandles(WeakObjectPointerVisitor* vis);
-        static bool VisitHandles(ObjectPointerVisitor* vis);
     protected:
         HandleBase();
         HandleBase(Object* obj);

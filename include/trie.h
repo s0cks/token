@@ -1,21 +1,45 @@
 #ifndef TOKEN_TRIE_H
 #define TOKEN_TRIE_H
 
-#include "common.h"
-#include "block.h"
+#include <string>
+#include <cstdint>
+
+#include <hash.h>
 
 namespace Token{
-    template<typename Key, typename Value>
-    class TrieNode{
-        template<typename TKey, typename TValue>
-        friend class Trie;
-    public:
-        static const intptr_t kAlphabetSize = 64;
+    template<typename KeyType>
+    class TrieKey{
     private:
-        TrieNode<Key, Value>* parent_;
-        TrieNode<Key, Value>* children_[kAlphabetSize];
-        Key key_;
-        Value* value_;
+        KeyType value_;
+    public:
+        TrieKey():
+            value_(){}
+        TrieKey(const KeyType& value):
+            value_(value){}
+        ~TrieKey() = default;
+
+        friend bool operator==(const TrieKey<KeyType>& a, const TrieKey<KeyType>& b){
+            return a.value_ == b.value_;
+        }
+
+        friend bool operator!=(const TrieKey<KeyType>& a, const TrieKey<KeyType>& b){
+            return a.value_ != b.value_;
+        }
+
+        friend bool operator<(const TrieKey<KeyType>& a, const TrieKey<KeyType>& b){
+            return a.value_ < b.value_;
+        }
+    };
+
+    template<typename Key, typename Value, int64_t kAlphabetSize>
+    class TrieNode{
+        template<typename TKey, typename TValue, int64_t tkAlphabetSize>
+        friend class Trie;
+    private:
+        TrieNode<Key, Value, kAlphabetSize>* parent_;
+        TrieNode<Key, Value, kAlphabetSize>* children_[kAlphabetSize];
+        TrieKey<Key> key_;
+        Value value_;
         bool is_epsilon_;
 
         void SetEpsilon(){
@@ -26,7 +50,7 @@ namespace Token{
             is_epsilon_ = false;
         }
 
-        void SetValue(const Handle<Value>& value){
+        void SetValue(Value value){
             value_ = value;
         }
     public:
@@ -34,7 +58,16 @@ namespace Token{
             parent_(nullptr),
             children_(),
             key_(),
-            value_(nullptr),
+            value_(),
+            is_epsilon_(false){
+            for(size_t idx = 0; idx < kAlphabetSize; idx++)
+                children_[idx] = nullptr;
+        }
+        TrieNode(const Key& key, Value value):
+            parent_(nullptr),
+            children_(),
+            key_(TrieKey<Key>(key)),
+            value_(value),
             is_epsilon_(false){
             for(size_t idx = 0; idx < kAlphabetSize; idx++)
                 children_[idx] = nullptr;
@@ -49,11 +82,11 @@ namespace Token{
             return children_[idx];
         }
 
-        Key GetKey() const{
+        TrieKey<Key> GetKey() const{
             return key_;
         }
 
-        Handle<Value> GetValue() const{
+        Value GetValue() const{
             return value_;
         }
 
@@ -66,20 +99,19 @@ namespace Token{
         }
     };
 
-    template<typename Key, typename Value>
+    template<typename Key, typename Value, int64_t kAlphabetSize>
     class Trie{
     private:
-        TrieNode<Key, Value>* root_;
+        TrieNode<Key, Value, kAlphabetSize>* root_;
 
-        void Insert(TrieNode<Key, Value>* node, const Key& key, const Handle<Value>& value){
-            TrieNode<Key, Value>* curr = node;
-            std::string prefix = key.HexString();
-            for(size_t idx = 0; idx < prefix.size(); idx++){
-                char next = tolower(prefix[idx]);
-                TrieNode<Key, Value>* n = curr->children_[next];
+        void Insert(TrieNode<Key, Value, kAlphabetSize>* node, const Key& key, Value value){
+            TrieNode<Key, Value, kAlphabetSize>* curr = node;
+            for(size_t idx = 0; idx < key.size(); idx++){
+                char next = tolower(key[idx]);
+                TrieNode<Key, Value, kAlphabetSize>* n = curr->children_[(int)next];
                 if(!n){
-                    n = new TrieNode<Key, Value>();
-                    curr->children_[next] = n;
+                    n = new TrieNode<Key, Value, kAlphabetSize>(key, value);
+                    curr->children_[(int)next] = n;
                 }
                 curr = n;
             }
@@ -88,9 +120,8 @@ namespace Token{
             curr->SetEpsilon();
         }
 
-        TrieNode<Key, Value>* Search(TrieNode<Key, Value>* node, const Key& key){
-            std::string prefix = key.HexString();
-            const char* word = prefix.data();
+        TrieNode<Key, Value, kAlphabetSize>* Search(TrieNode<Key, Value, kAlphabetSize>* node, const Key& key){
+            const char* word = key.data();
 
             while((*word) != '\0'){
                 if(node->children_[tolower((*word))]){
@@ -106,24 +137,25 @@ namespace Token{
                  : nullptr;
         }
     public:
-        Trie(): root_(new TrieNode<Key, Value>()){}
+        Trie():
+            root_(new TrieNode<Key, Value, kAlphabetSize>()){}
         ~Trie() = default;
 
-        TrieNode<Key, Value>* GetRoot() const{
+        TrieNode<Key, Value, kAlphabetSize>* GetRoot() const{
             return root_;
         }
 
-        void Insert(const Key& key, const Handle<Value>& value){
+        void Insert(const Key& key, Value value){
             Insert(GetRoot(), key, value);
         }
 
         bool Contains(const Key& key){
-            TrieNode<Key, Value>* node = Search(GetRoot(), key);
+            TrieNode<Key, Value, kAlphabetSize>* node = Search(GetRoot(), key);
             return node != nullptr;
         }
 
-        Handle<Value> Search(const Key& key){
-            TrieNode<Key, Value>* node = Search(GetRoot(), key);
+        Value Search(const Key& key){
+            TrieNode<Key, Value, kAlphabetSize>* node = Search(GetRoot(), key);
             return node != nullptr
                  ? node->GetValue()
                  : nullptr;

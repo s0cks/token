@@ -1,27 +1,13 @@
-#include "peer.h"
+#include "peer_session.h"
 #include "task.h"
 #include "async_task.h"
 #include "block_pool.h"
+#include "transaction_pool.h"
 
 namespace Token{
     void PeerSession::OnShutdown(uv_async_t* handle){
         PeerSession* session = (PeerSession*)handle->data;
         session->Disconnect();
-    }
-
-    bool PeerSession::Disconnect(){
-        if(pthread_self() == thread_){
-            // Inside Session OSThreadBase
-            uv_read_stop(GetStream());
-            uv_stop(GetLoop());
-            uv_loop_close(GetLoop());
-            Server::UnregisterPeer(this);
-            SetState(State::kDisconnected);
-        } else{
-            // Outside Session OSThreadBase
-            uv_async_send(&shutdown_);
-        }
-        return true;
     }
 
     void PeerSession::OnHeartbeatTick(uv_timer_t* handle){
@@ -33,16 +19,13 @@ namespace Token{
 
     void PeerSession::OnHeartbeatTimeout(uv_timer_t* handle){
         PeerSession* session = (PeerSession*)handle->data;
-        LOG(WARNING) << "peer " << session->GetID() << " timed out, disconnecting...";
+        LOG(WARNING) << "peer " << session->GetInfo() << " timed out, disconnecting...";
         session->Disconnect();
     }
 
-    void* PeerSession::PeerSessionThread(void* data){
-        Server::WaitForState(Server::kRunning);
-
-        uv_loop_t* loop = uv_loop_new();
-        Handle<PeerSession> session = PeerSession::NewInstance(loop, NodeAddress());
-
+    void* PeerSession::SessionThread(void* data){
+        Handle<PeerSession> session = (PeerSession*)data;
+        uv_loop_t* loop = session->GetLoop();
         NodeAddress address = session->GetAddress();
         LOG(INFO) << "connecting to peer " << address << "....";
 
@@ -166,13 +149,13 @@ namespace Token{
         LOG(INFO) << "remote timestamp: " << GetTimestampFormattedReadable(msg->GetTimestamp());
         LOG(INFO) << "remote <HEAD>: " << msg->GetHead();
 
-        session->SetHead(msg->GetHead());
+        //TODO: session->SetHead(msg->GetHead());
         if(session->IsConnecting()){
-            LOG(INFO) << "connected to peer: " << session->GetID() << "[" << session->GetAddress() << "]";
-            session->SetID(msg->GetID());
+            session->SetInfo(Peer(msg->GetID(), msg->GetCallbackAddress()));
+            LOG(INFO) << "connected to peer: " << session->GetInfo();
             session->SetState(Session::kConnected);
 
-            BlockHeader local_head = BlockChain::GetHead();
+            BlockHeader local_head = BlockChain::GetHead()->GetHeader();
             BlockHeader remote_head = msg->GetHead();
             if(local_head == remote_head){
                 LOG(INFO) << "skipping remote <HEAD> := " << remote_head;
@@ -316,7 +299,7 @@ namespace Token{
     void PeerSession::HandleNotFoundMessage(const Handle<HandleMessageTask>& task){
         Handle<PeerSession> session = task->GetSession().CastTo<PeerSession>();
         Handle<NotFoundMessage> msg = task->GetMessage().CastTo<NotFoundMessage>();
-        LOG(WARNING) << "(" << session->GetID() << "): " << msg->GetMessage();
+        LOG(WARNING) << "(" << session->GetInfo() << "): " << msg->GetMessage();
     }
 
     void PeerSession::HandleInventoryMessage(const Handle<HandleMessageTask>& task){
@@ -336,15 +319,6 @@ namespace Token{
 
         LOG(INFO) << "downloading " << needed.size() << "/" << items.size() << " items from inventory....";
         session->Send(GetDataMessage::NewInstance(items));
-    }
-
-    bool PeerSession::Connect(){
-        int ret;
-        if((ret = pthread_create(&thread_, NULL, &PeerSessionThread, this)) != 0){
-            LOG(WARNING) << "couldn't start peer thread: " << strerror(ret);
-            return false;
-        }
-        return true;
     }
 
     void PeerSession::HandleGetPeersMessage(const Handle<HandleMessageTask>& task){

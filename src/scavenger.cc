@@ -1,5 +1,4 @@
 #include "heap.h"
-#include "timeline.h"
 #include "scavenger.h"
 
 #include "block_chain.h"
@@ -39,56 +38,47 @@ namespace Token{
         }
     };
 
-    class BlockChainMarker : public Marker, public BlockChainNodeVisitor{
-    public:
-        BlockChainMarker(std::vector<uword>& stack):
-            Marker(stack),
-            BlockChainNodeVisitor(){}
-        ~BlockChainMarker() = default;
-
-        bool Visit(const Handle<BlockNode>& node){
-            MarkObject(node.operator->());
-            return true;
-        }
-    };
-
     bool Scavenger::ScavengeObject(Object* obj){
-        LOG(INFO) << "scavenging object " << ObjectLocation(obj);
         intptr_t size = obj->GetSize();
-        void* nptr = Allocator::GetNewHeap()->GetToSpace()->Allocate(size);
-        obj->ptr_ = (uword)nptr;
-        ((Object*)nptr)->size_ = size;
+
+        Object* nobj = (Object*)Allocator::GetNewHeap()->GetToSpace()->Allocate(size);
+        nobj->SetType(obj->GetType());
+        nobj->SetSize(obj->GetSize());
+        LOG(INFO) << "relocating object: " << ObjectLocation(obj) << " => " << ObjectLocation(nobj);
+
+        obj->ptr_ = (uword)nobj;
         obj->IncrementCollectionsCounter();
-        LOG(INFO) << "new destination: [" << std::hex << nptr << ":" << std::dec << size << "]";
+        new_stats_.num_survived_++;
+        new_stats_.bytes_survived_ += size;
         return true;
     }
 
     bool Scavenger::PromoteObject(Object* obj){
         LOG(INFO) << "promoting object " << ObjectLocation(obj);
         intptr_t size = obj->GetSize();
+
         void* nptr = Allocator::GetOldHeap()->Allocate(size);
         obj->ptr_ = (uword)nptr;
+
+        new_stats_.num_promoted_++;
+        new_stats_.bytes_promoted_ += size;
         return true;
     }
 
     bool Scavenger::FinalizeObject(Object* obj){
         LOG(INFO) << "finalizing object " << ObjectLocation(obj);
+        intptr_t size = obj->GetSize();
+
         obj->~Object(); //TODO: Call finalizer for obj
         obj->ptr_ = 0;
+
+        new_stats_.num_collected_++;
+        new_stats_.bytes_collected_ += size;
         return true;
     }
 
     bool Scavenger::ProcessRoots(){
         SetPhase(Phase::kMarkPhase);
-        {
-            // Mark the BlockChain Roots (used BlockNodes)
-            BlockChainMarker marker(work_);
-            if(!BlockChain::Accept(&marker)){
-                LOG(WARNING) << "couldn't visit the block chain";
-                return false;
-            }
-        }
-
         {
             // Mark the Stack Roots
             RootObjectMarker marker(work_);
@@ -124,25 +114,13 @@ namespace Token{
 
         bool Visit(Object** field){
             Object* obj = (*field);
-            if(obj->IsMarked()){
-                LOG(INFO) << "relocating " << ObjectLocation(obj) << " => " << ObjectLocation((Object*)obj->ptr_);
-                (*field) = (Object*)obj->ptr_;
+            if(!obj || obj->IsMarked()){
+                return true;
             }
-            return true;
-        }
-    };
-
-    class StackReferenceNotifier : public WeakObjectPointerVisitor,
-                                   public ObjectPointerVisitor{
-    public:
-        bool Visit(Object* obj){
-            return obj->Accept(this);
-        }
-
-        bool Visit(Object** field){
-            Object* obj = (*field);
-            LOG(INFO) << "relocating " << ObjectLocation(obj) << " => " << ObjectLocation((Object*)obj->ptr_);
-            (*field) = (Object*)obj->ptr_;
+            if(!obj->ptr_){
+                LOG(INFO) << "notifying: " << ObjectLocation(obj);
+                (*field) = nullptr;
+            }
             return true;
         }
     };
@@ -160,46 +138,85 @@ namespace Token{
         } while(size > 0);
     }
 
-    class ReferenceUpdater : public ObjectPointerVisitor{
+    class ReferenceUpdater : public ObjectPointerVisitor, public WeakObjectPointerVisitor{
     public:
         bool Visit(Object* obj){
-            if(obj->IsMarked()){
-                LOG(INFO) << "updating " << ObjectLocation(obj);
-                objcpy((void*)obj->ptr_, (const void*)obj, static_cast<size_t>(obj->GetSize()));
-            }
+            if(!obj || !obj->IsMarked()) return true;
+            LOG(INFO) << "updating " << ObjectLocation(obj);
+            memcpy((void*)obj->ptr_, (void*)(obj + sizeof(Object)), obj->GetSize()-sizeof(Object));
+            obj->ClearMarked();
+            return true;
+        }
+
+        bool Visit(Object** field){
+            return Visit(*field);
+        }
+    };
+
+    class ObjectSweeper : public ObjectPointerVisitor{
+    private:
+        Scavenger* parent_;
+    public:
+        ObjectSweeper(Scavenger* parent):
+            ObjectPointerVisitor(),
+            parent_(parent){}
+        ~ObjectSweeper() = default;
+
+        Scavenger* GetParent() const{
+            return parent_;
+        }
+
+        bool Visit(Object* obj){
+            if(obj->IsMarked()) return true; // skip
+            GetParent()->FinalizeObject(obj);
             return true;
         }
     };
 
     bool Scavenger::ScavengeMemory(){
         SetPhase(Phase::kSweepPhase);
+        LOG(INFO) << "relocating live objects....";
         if(!Allocator::GetNewHeap()->VisitObjects(this)){
-            LOG(ERROR) << "couldn't scavenge memory.";
-            return false;
-        }
-        LOG(INFO) << "notifying references....";
-        StackReferenceNotifier stack_notifier;
-        if(!HandleBase::VisitHandles((WeakObjectPointerVisitor*)&stack_notifier)){
-            LOG(ERROR) << "couldn't visit current handles.";
+            LOG(ERROR) << "couldn't relocate live objects.";
             return false;
         }
 
-        ReferenceNotifier ref_notifier;
-        if(!Allocator::GetNewHeap()->VisitObjects(&ref_notifier)){
-            LOG(ERROR) << "couldn't visit objects in new heap.";
+        LOG(INFO) << "notifying references....";
+        ReferenceNotifier notifier;
+        if(!Allocator::GetNewHeap()->VisitObjects(&notifier)){
+            LOG(ERROR) << "couldn't notify weak references.";
+            return false;
+        }
+        if(!HandleBase::VisitHandles(&notifier)){
+            LOG(ERROR) << "couldn't notify stack references.";
             return false;
         }
 
         LOG(INFO) << "updating references....";
         ReferenceUpdater updater;
+        if(!HandleBase::VisitHandles(&updater)){
+            LOG(ERROR) << "couldn't update stack references.";
+            return false;
+        }
         if(!Allocator::GetNewHeap()->VisitObjects(&updater)){
-            LOG(WARNING) << "couldn't visit current handles.";
+            LOG(ERROR) << "couldn't update weak references.";
+            return false;
+        }
+
+        LOG(INFO) << "sweeping objects....";
+        ObjectSweeper sweeper(this);
+        if(!Allocator::GetNewHeap()->VisitObjects(&sweeper)){
+            LOG(ERROR) << "couldn't sweep objects.";
             return false;
         }
         return true;
     }
 
     bool Scavenger::Visit(Object* obj){
+        intptr_t size = obj->GetSize();
+
+        new_stats_.num_processed_++;
+        new_stats_.bytes_processed_ += size;
         if(obj->IsMarked()){
             if(obj->IsReadyForPromotion()){
                 if(!PromoteObject(obj)){
@@ -211,11 +228,6 @@ namespace Token{
                     LOG(ERROR) << "couldn't scavenge object.";
                     return false;
                 }
-            }
-        } else{
-            if(!FinalizeObject(obj)){
-                LOG(ERROR) << "couldn't finalize object.";
-                return false;
             }
         }
 
@@ -230,32 +242,23 @@ namespace Token{
         }
 
         //TODO: apply major collection steps to Scavenger::ScavengeMemory()
-#if defined(TOKEN_DEBUG)
-        Timeline timeline(is_major ? "MajorGC" : "MinorGC");
-        timeline.Push("Start");
-        ScavengerStats stats(Allocator::GetNewHeap());
-#endif//TOKEN_DEBUG
-
-        //TODO: do we need an instance of Scavenger here?
-        Scavenger scavenger;
+        Scavenger scavenger(is_major);
         {
-            sleep(1);
             // Mark Phase
             LOG(INFO) << "marking objects....";
-            timeline.Push("Mark Objects");
             if(!scavenger.ProcessRoots()){
                 return false;//TODO: handle error
             }
+            scavenger.GetTimeline().Push("Mark Objects");
         }
 
         {
             // Sweep Phase
-            sleep(1);
-            timeline.Push("Scavenge Memory");
             LOG(INFO) << "scavenging memory....";
             if(!scavenger.ScavengeMemory()){
                 return false;//TODO: handle error
             }
+            scavenger.GetTimeline().Push("Scavenge Memory");
         }
 
         LOG(INFO) << "cleaning....";
@@ -265,15 +268,9 @@ namespace Token{
 
 #if defined(TOKEN_DEBUG)
         sleep(1);
-        timeline.Push("Stop");
-        LOG(INFO) << "Scavenger Stats (New Heap):";
-        LOG(INFO) << " - Scavenged (Bytes): " << stats.GetBytesCollected();
-        LOG(INFO) << " - Promoted (Bytes): " << stats.GetBytesPromoted();
-        LOG(INFO) << " - Timeline (" << timeline.GetTotalTime() << "ms): ";
-        size_t idx = 0;
-        for(auto& event : timeline){
-            LOG(INFO) << "     " << idx << ". " << event.GetName() << ": " << GetTimestampFormattedReadable(event.GetTimestamp());
-        }
+        LOG(INFO) << scavenger.GetTimeline();
+        LOG(INFO) << scavenger.GetNewStats();
+        LOG(INFO) << scavenger.GetOldStats();
 #endif//TOKEN_DEBUG
         return true;
     }

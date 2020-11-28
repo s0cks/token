@@ -1,71 +1,80 @@
 #ifndef TOKEN_PEER_H
 #define TOKEN_PEER_H
 
-#include <uuid/uuid.h>
+#include <set>
+#include "uuid.h"
 #include "address.h"
-#include "session.h"
 
 namespace Token{
-    class HandleMessageTask;
-
-    class PeerSession : public Session{
-        friend class Server;
-    private:
-        pthread_t thread_;
-        UUID id_;
-        NodeAddress address_;
-        BlockHeader head_;
-
-        uv_timer_t hb_timer_; //TODO: remove PeerSession::hb_timer_
-        uv_timer_t hb_timeout_; //TODO: remove PeerSession::hb_timeout_
-        uv_async_t shutdown_; //TODO: remove PeerSession::shutdown_
-
-        PeerSession(uv_loop_t* loop, const NodeAddress& address):
-            Session(loop),
-            thread_(),
-            id_(),
-            address_(address),
-            head_(),
-            hb_timer_(),
-            hb_timeout_(),
-            shutdown_(){
-            SetType(Type::kPeerSessionType);
-        }
-
-        void SetHead(const BlockHeader& head){
-            head_ = head;
-        }
-
-        void SetID(const UUID& id){
-            id_ = id;
-        }
-
-        static void* PeerSessionThread(void* data);
-        static void OnConnect(uv_connect_t* conn, int status);
-        static void OnShutdown(uv_async_t* handle);
-        static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
-        static void OnHeartbeatTick(uv_timer_t* handle);
-        static void OnHeartbeatTimeout(uv_timer_t* handle);
-#define DECLARE_MESSAGE_HANDLER(Name) \
-        static void Handle##Name##Message(const Handle<HandleMessageTask>& task);
-        FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
-#undef DECLARE_MESSAGE_HANDLER
+    class Peer{
     public:
+        static const intptr_t kSize = UUID::kSize + NodeAddress::kSize;
+
+        struct IDComparator{
+            bool operator()(const Peer& a, const Peer& b){
+                return a.uuid_ < b.uuid_;
+            }
+        };
+
+        struct AddressComparator{
+            bool operator()(const Peer& a, const Peer& b){
+                return a.address_ < b.address_;
+            }
+        };
+    private:
+        UUID uuid_;
+        NodeAddress address_;
+    public:
+        Peer(const UUID& uuid, const NodeAddress& address):
+            uuid_(uuid),
+            address_(address){}
+        Peer(const Handle<Buffer>& buff):
+            uuid_(buff),
+            address_(buff){}
+        Peer(const Peer& other):
+            uuid_(other.uuid_),
+            address_(other.address_){}
+        ~Peer() = default;
+
         UUID GetID() const{
-            return id_;
+            return uuid_;
         }
 
         NodeAddress GetAddress() const{
             return address_;
         }
 
-        bool Connect();
-        bool Disconnect();
+        bool Write(const Handle<Buffer>& buff) const{
+            uuid_.Write(buff);
+            address_.Write(buff);
+            return true;
+        }
 
-        static Handle<PeerSession> NewInstance(uv_loop_t* loop, const NodeAddress& address){
-            return new PeerSession(loop, address);
+        void operator=(const Peer& other){
+            uuid_ = other.uuid_;
+            address_ = other.address_;
+        }
+
+        friend bool operator==(const Peer& a, const Peer& b){
+            return a.uuid_ == b.uuid_
+                   && a.address_ == b.address_;
+        }
+
+        friend bool operator!=(const Peer& a, const Peer& b){
+            return !operator==(a, b);
+        }
+
+        friend bool operator<(const Peer& a, const Peer& b){
+            return a.address_ < b.address_;
+        }
+
+        friend std::ostream& operator<<(std::ostream& stream, const Peer& peer){
+            stream << peer.GetID() << "(" << peer.GetAddress() << ")";
+            return stream;
         }
     };
+
+    typedef std::set<Peer, Peer::AddressComparator> PeerList;
 }
 
 #endif //TOKEN_PEER_H

@@ -2,12 +2,12 @@
 #define TOKEN_VERSION_H
 
 #include "token.h"
-#include "common.h"
+#include "buffer.h"
 
 namespace Token{
     class Version{
     public:
-        static const intptr_t kSize = sizeof(int16_t) // Major
+        static const int64_t kSize = sizeof(int16_t) // Major
                                   + sizeof(int16_t) // Minor
                                   + sizeof(int16_t); // Revision
     private:

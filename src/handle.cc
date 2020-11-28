@@ -18,7 +18,7 @@ namespace Token{
                 idx < kHandlesPerGroup;
                 idx++){
                 Object* data = handles_[idx];
-                if(data){
+                if(data && !data->IsMarked()){
                     if(!vis->Visit(&handles_[idx]))
                         return false;
                 }
@@ -144,16 +144,6 @@ namespace Token{
     }
 
     bool HandleBase::VisitHandles(WeakObjectPointerVisitor* vis){
-        HandleGroup* group = root_;
-        while(group != nullptr){
-            if(!group->Accept(vis))
-                return false;
-            group = group->next_;
-        }
-        return true;
-    }
-
-    bool HandleBase::VisitHandles(ObjectPointerVisitor* vis){
         HandleGroup* group = root_;
         while(group != nullptr){
             if(!group->Accept(vis))

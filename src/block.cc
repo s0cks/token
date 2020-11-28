@@ -106,6 +106,10 @@ namespace Token{
         return true;
     }
 
+    bool Block::Compare(const Handle<Block>& b) const{
+        return GetHeight() < b->GetHeight();
+    }
+
     std::string Block::ToString() const{
         std::stringstream stream;
         stream << "Block(#" << GetHeight() << ", " << GetNumberOfTransactions() << " Transactions)";
