@@ -29,6 +29,7 @@ namespace Token{
         static bool HasBlock(const Hash& hash);
         static bool GetBlocks(std::vector<Hash>& blocks);
         static Handle<Block> GetBlock(const Hash& hash);
+        static void WaitForBlock(const Hash& hash);
 
         static inline std::string
         GetPath(){

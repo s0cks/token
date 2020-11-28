@@ -141,6 +141,12 @@ namespace Token{
         return true;
     }
 
+    std::string BlockMessage::ToString() const{
+        std::stringstream ss;
+        ss << "BlockMessage(" << GetBlock() << ")";
+        return ss.str();
+    }
+
     Handle<UnclaimedTransactionMessage> UnclaimedTransactionMessage::NewInstance(const Handle<Buffer>& buff){
         Handle<UnclaimedTransaction> utxo = UnclaimedTransaction::NewInstance(buff);
         return new UnclaimedTransactionMessage(utxo);

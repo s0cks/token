@@ -64,6 +64,12 @@ namespace Token{
             return MessageType::kUnknownMessageType;
         }
 
+        virtual std::string ToString() const{
+            std::stringstream ss;
+            ss << GetName() << "Message(" << GetMessageSize() << " Bytes)";
+            return ss.str();
+        }
+
 #define DECLARE_TYPECHECK(Name) \
     bool Is##Name##Message(){ return GetMessageType() == Message::k##Name##MessageType; }
         FOR_EACH_MESSAGE_TYPE(DECLARE_TYPECHECK)
@@ -75,12 +81,7 @@ namespace Token{
         virtual intptr_t GetMessageSize() const; \
         virtual bool Write(const Handle<Buffer>& buff) const; \
         virtual MessageType GetMessageType() const{ return Message::k##Name##MessageType; } \
-        virtual const char* GetName() const{ return #Name; } \
-        virtual std::string ToString() const{ \
-            std::stringstream ss; \
-            ss << #Name << "Message()"; \
-            return ss.str(); \
-        }
+        virtual const char* GetName() const{ return #Name; }
 
     //TODO:
     // - refactor this
@@ -368,6 +369,7 @@ namespace Token{
             return data_;
         }
 
+        std::string ToString() const;
         DECLARE_MESSAGE(Block);
 
         static Handle<BlockMessage> NewInstance(const Handle<Buffer>& buff);

@@ -10,7 +10,7 @@ namespace Token{
     public:
         typedef void (*HttpRoute)(HttpSession*, HttpRequest*);
     private:
-        typedef Trie<std::string, HttpRoute, 64> HttpRouteTrie;
+        typedef Trie<std::string, HttpRoute, 128> HttpRouteTrie;
 
         HttpRouteTrie trie_;
         HttpRoute default_;

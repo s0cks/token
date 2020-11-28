@@ -4,9 +4,15 @@
 
 namespace Token{
     static std::recursive_mutex mutex_;
+    static std::condition_variable_any cond_;
     static BlockPool::State state_ = BlockPool::kUninitialized;
 
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_);
+#define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
+#define UNLOCK lock.unlock()
+#define WAIT cond_.wait(lock)
+#define SIGNAL_ONE cond_.notify_one()
+#define SIGNAL_ALL cond_.notify_all()
 
     static inline ObjectPoolJournal<Block>*
     GetJournal(){
@@ -63,9 +69,15 @@ namespace Token{
 
     bool BlockPool::PutBlock(const Handle<Block>& block){
         LOCK_GUARD;
-        return !GetJournal()->HasData(block->GetHash()) ?
-                GetJournal()->PutData(block) :
-                false;
+        Hash hash = block->GetHash();
+        if(GetJournal()->HasData(hash))
+            return false;
+        if(!GetJournal()->PutData(block)){
+            LOG(WARNING) << "couldn't put block " << hash << " in pool.";
+            return false;
+        }
+        SIGNAL_ALL;
+        return true;
     }
 
     size_t BlockPool::GetSize(){
@@ -123,6 +135,11 @@ namespace Token{
         }
 
         return vis->VisitEnd();
+    }
+
+    void BlockPool::WaitForBlock(const Hash& hash){
+        LOCK;
+        while(!HasBlock(hash)) WAIT;
     }
 
     class BlockPoolPrinter : public BlockPoolVisitor, public ObjectPointerVisitor{

@@ -92,15 +92,15 @@ namespace Token{
         uint32_t offset = 0;
         std::vector<Handle<Message>> messages;
 
-        Handle<Buffer> buffer = session->GetReadBuffer();
+        Handle<Buffer> rbuff = session->GetReadBuffer();
         do{
-            uint32_t mtype = buffer->GetInt();
-            intptr_t msize = buffer->GetLong();
+            uint32_t mtype = rbuff->GetInt();
+            intptr_t msize = rbuff->GetLong();
 
             switch(mtype) {
 #define DEFINE_DECODE(Name) \
                 case Message::MessageType::k##Name##MessageType:{ \
-                    Handle<Message> msg = Name##Message::NewInstance(buffer).CastTo<Message>(); \
+                    Handle<Message> msg = Name##Message::NewInstance(rbuff).CastTo<Message>(); \
                     LOG(INFO) << "decoded: " << msg; \
                     messages.push_back(msg); \
                     break; \
@@ -131,6 +131,7 @@ namespace Token{
                     break;
             }
         }
+        rbuff->Reset();
     }
 
     void PeerSession::HandleGetBlocksMessage(const Handle<HandleMessageTask>& task){}
@@ -281,12 +282,9 @@ namespace Token{
         Handle<PeerSession> session = task->GetSession().CastTo<PeerSession>();
         Handle<BlockMessage> msg = task->GetMessage().CastTo<BlockMessage>();
 
-        Block* block = msg->GetBlock();
-        Hash hash = block->GetHash();
-        BlockPool::PutBlock(block);
-
-        LOG(INFO) << "downloaded block: " << block->GetHeader();
-        //TODO: session->OnItemReceived(InventoryItem(InventoryItem::kBlock, hash));
+        Handle<Block> blk = msg->GetBlock();
+        BlockPool::PutBlock(blk);
+        LOG(INFO) << "received block: " << blk;
     }
 
     void PeerSession::HandleTransactionMessage(const Handle<HandleMessageTask>& task){

@@ -222,7 +222,6 @@ namespace Token{
         }
     private:
         bool is_major_;
-        std::vector<uword> work_;
         Phase phase_;
         ScavengerTimeline timeline_;
         ScavengerStats old_stats_;
@@ -230,16 +229,10 @@ namespace Token{
 
         Scavenger(bool is_major):
             is_major_(is_major),
-            work_(),
             phase_(Phase::kMarkPhase),
             timeline_(is_major ? "Major GC" : "Minor GC"),
             old_stats_(Allocator::GetOldHeap()),
             new_stats_(Allocator::GetNewHeap()){}
-
-
-        bool HasWork() const{
-            return !work_.empty();
-        }
 
         Phase GetPhase() const{
             return phase_;

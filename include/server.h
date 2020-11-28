@@ -15,6 +15,7 @@ namespace Token{
     class HandleMessageTask;
     class Server : public Thread{
         friend class PeerSession;
+        friend class Scavenger;
     public:
         enum State{
             kStarting,
@@ -54,6 +55,7 @@ namespace Token{
         Server() = delete;
 
         static uv_tcp_t* GetHandle();
+        static bool Accept(WeakObjectPointerVisitor* vis);
         static bool RegisterPeer(const Handle<PeerSession>& session);
         static bool UnregisterPeer(const Handle<PeerSession>& session);
         static bool SavePeerList();

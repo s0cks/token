@@ -71,7 +71,7 @@ namespace Token{
     bool SynchronizeBlockChainTask::ProcessBlock(const Handle<Block>& block){
         BlockHeader header = block->GetHeader();
         Hash hash = header.GetHash();
-        DefaultBlockProcessor processor;
+        SynchronizeBlockProcessor processor;
         if(!block->Accept(&processor)){
             LOG(WARNING) << "couldn't process block: " << header;
             return false;
@@ -81,12 +81,8 @@ namespace Token{
         return true;
     }
 
-    Result SynchronizeBlockChainTask::DoWork(){
-        if(!BlockPool::HasBlock(head_.GetHash())){
-            LOG(INFO) << "waiting for new <HEAD>: " << head_;
-            //TODO: GetSession()->WaitForItem(GetHead());
-        }
 
+    Result SynchronizeBlockChainTask::DoWork(){
         std::deque<Hash> work; // we are queuing the blocks just in-case there is an unresolved previous Hash
         work.push_back(head_.GetHash());
         do{
@@ -95,7 +91,7 @@ namespace Token{
 
             if(!BlockPool::HasBlock(hash)){
                 LOG(INFO) << "waiting for: " << hash;
-                //TODO: GetSession()->WaitForItem(GetItem(hash));
+                BlockPool::WaitForBlock(hash);
             }
 
             Handle<Block> blk = BlockPool::GetBlock(hash);

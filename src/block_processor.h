@@ -28,6 +28,21 @@ namespace Token{
         }
     };
 
+    class SynchronizeBlockProcessor : public BlockProcessor{
+    public:
+        SynchronizeBlockProcessor() = default;
+        ~SynchronizeBlockProcessor() = default;
+
+        bool Visit(const Handle<Transaction>& tx){
+            Hash hash = tx->GetHash();
+            if(!TransactionHandler::ProcessTransaction(tx)){
+                LOG(WARNING) << "couldn't process transaction: " << hash;
+                return false;
+            }
+            return true;
+        }
+    };
+
     class DefaultBlockProcessor : public BlockProcessor{
     public:
         DefaultBlockProcessor() = default;

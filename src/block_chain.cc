@@ -243,8 +243,6 @@ namespace Token{
             LOG(WARNING) << "couldn't find block " << hash << ": " << status.ToString();
             return false;
         }
-
-        LOG(INFO) << "found " << hash;
         return true;
     }
 

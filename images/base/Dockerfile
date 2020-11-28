@@ -49,6 +49,12 @@ RUN git clone https://github.com/weidai11/cryptopp \
  && make libcryptopp.a libcryptopp.so cryptest.exe \
  && make install PREFIX=/usr/local
 
+# Build Http Parser
+RUN git clone https://github.com/nodejs/http-parser \
+ && cd http-parser \
+ && make \
+ && make install PREFIX=/usr/local
+
 # Build GTest Library
 WORKDIR /usr/src/googletest
 RUN cmake . \

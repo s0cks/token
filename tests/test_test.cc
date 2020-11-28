@@ -4,6 +4,6 @@
 
 namespace Token{
     TEST(TestTest, test_test){
-        ASSERT_EQ(Token::GetVersion(), "1.0.1");
+        ASSERT_EQ(Token::GetVersion(), "1.0.0");
     }
 }

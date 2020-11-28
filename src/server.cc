@@ -23,8 +23,7 @@ namespace Token{
     static Server::State state_ = Server::State::kStopped;
     static UUID node_id_;
     static NodeAddress callback_;
-    static std::map<Peer, PeerSession*> peers_;
-
+    static PeerSession* peers_[Server::kMaxNumberOfPeers];
 #define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
 #define LOCK std::unique_lock<std::mutex> lock(mutex_)
 #define WAIT cond_.wait(lock)
@@ -56,6 +55,17 @@ namespace Token{
         return true;
     }
     */
+
+    bool Server::Accept(WeakObjectPointerVisitor* vis){
+        LOCK_GUARD;
+        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
+            if(peers_[idx] && !vis->Visit(&peers_[idx])){
+                LOG(WARNING) << "cannot visit peer #" << idx;
+                return false;
+            }
+        }
+        return true;
+    }
 
     void Server::SetState(Server::State state){
         LOCK;
@@ -244,7 +254,10 @@ namespace Token{
 
     bool Server::Broadcast(const Handle<Message>& msg){
         LOCK_GUARD;
-        for(auto& it : peers_) it.second->Send(msg);
+        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
+            if(peers_[idx])
+                peers_[idx]->Send(msg);
+        }
         return true;
     }
 
@@ -258,30 +271,35 @@ namespace Token{
 
     bool Server::IsConnectedTo(const NodeAddress& address){
         LOCK_GUARD;
-        for(auto& it : peers_){
-            Peer peer = it.first;
-            if(peer.GetAddress() == address)
-                return true;
+        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
+            if(peers_[idx]){
+                Peer peer = peers_[idx]->GetInfo();
+                if(peer.GetAddress() == address)
+                    return true;
+            }
         }
         return false;
     }
 
     bool Server::IsConnectedTo(const UUID& uuid){
         LOCK_GUARD;
-        for(auto& it : peers_){
-            Peer peer = it.first;
-            if(peer.GetID() == uuid)
-                return true;
+        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
+            if(peers_[idx]){
+                Peer peer = peers_[idx]->GetInfo();
+                if(peer.GetID() == uuid)
+                    return true;
+            }
         }
         return false;
     }
 
     Handle<PeerSession> Server::GetPeer(const UUID& uuid){
         LOCK_GUARD;
-        for(auto& it : peers_){
-            Peer peer = it.first;
-            if(peer.GetID() == uuid){
-                return it.second;
+        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
+            if(peers_[idx]){
+                Peer peer = peers_[idx]->GetInfo();
+                if(peer.GetID() == uuid)
+                    return peers_[idx];
             }
         }
         return nullptr;
@@ -289,11 +307,13 @@ namespace Token{
 
     bool Server::GetPeers(PeerList& peers){
         LOCK_GUARD;
-        for(auto& it : peers_){
-            Peer peer = it.first;
-            if(!peers.insert(peer).second){
-                LOG(WARNING) << "cannot add peer: " << peer;
-                return false;
+        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
+            if(peers_[idx]){
+                Peer peer = peers_[idx]->GetInfo();
+                if(!peers.insert(peer).second){
+                    LOG(WARNING) << "cannot add peer: " << peer;
+                    return false;
+                }
             }
         }
         return true;
@@ -301,13 +321,20 @@ namespace Token{
 
     int Server::GetNumberOfPeers(){
         LOCK_GUARD;
-        return peers_.size();
+        int count = 0;
+        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++) {
+            if(peers_[idx])
+                count++;
+        }
+        return count;
     }
 
     bool Server::SavePeerList(){
         std::set<NodeAddress> peers;
-        for(auto& it : peers_)
-            peers.insert(it.first.GetAddress());
+        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++) {
+            if(peers_[idx])
+                peers.insert(peers_[idx]->GetAddress());
+        }
 
         if(!BlockChainConfiguration::SetPeerList(peers)){
             LOG(WARNING) << "cannot save the server peer list.";
@@ -318,20 +345,26 @@ namespace Token{
 
     bool Server::RegisterPeer(const Handle<PeerSession>& session){
         LOCK_GUARD;
-        if(!(peers_.insert({ session->GetInfo(), session }).second)){
-            LOG(WARNING) << "cannot register peer: " << session->GetInfo();
-            return false;
+        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
+            if(!peers_[idx]){
+                peers_[idx] = session;
+                return SavePeerList();
+            }
         }
-        return SavePeerList();
+        LOG(WARNING) << "cannot register peer: " << session->GetInfo();
+        return false;
     }
 
     bool Server::UnregisterPeer(const Handle<PeerSession>& session){
         LOCK_GUARD;
-        if(peers_.erase(session->GetInfo()) != 1){
-            LOG(WARNING) << "cannot unregister peer: " << session->GetInfo();
-            return false;
+        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
+            if(peers_[idx] && peers_[idx]->GetInfo() == session->GetInfo()){
+                peers_[idx] = nullptr;
+                return SavePeerList();
+            }
         }
-        return SavePeerList();
+        LOG(WARNING) << "cannot unregister peer: " << session->GetInfo();
+        return false;
     }
 
     void ServerSession::HandleNotFoundMessage(const Handle<HandleMessageTask>& task){

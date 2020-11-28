@@ -1,7 +1,6 @@
 #include "heap.h"
 #include "scavenger.h"
-
-#include "block_chain.h"
+#include "server.h"
 
 namespace Token{
     static inline std::string
@@ -79,19 +78,29 @@ namespace Token{
 
     bool Scavenger::ProcessRoots(){
         SetPhase(Phase::kMarkPhase);
+
+        std::vector<uword> work;
+        RootObjectMarker marker(work);
+        {
+            // Mark the active peers
+            LOG(INFO) << "marking the server peer sessions....";
+            if(!Server::Accept(&marker)){
+                LOG(WARNING) << "couldn't visit the current peer sessions.";
+                return false;
+            }
+        }
         {
             // Mark the Stack Roots
-            RootObjectMarker marker(work_);
+            LOG(INFO) << "marking the stack roots....";
             if(!HandleBase::VisitHandles(&marker)){
                 LOG(WARNING) << "couldn't visit current handles.";
                 return false;
             }
         }
 
-        RootObjectMarker marker(work_);
-        while(HasWork()){
-            Object* obj = (Object*)work_.back();
-            work_.pop_back();
+        while(!work.empty()){
+            Object* obj = (Object*)work.back();
+            work.pop_back();
             if (!obj->IsMarked() && Allocator::GetNewHeap()->Contains((uword)obj)) {
                 LOG(INFO) << "marking object " << ObjectLocation(obj);
                 obj->SetMarked();
@@ -191,6 +200,10 @@ namespace Token{
             LOG(ERROR) << "couldn't notify stack references.";
             return false;
         }
+        if(!Server::Accept(&notifier)){
+            LOG(ERROR) << "couldn't notify server peer sessions.";
+            return false;
+        }
 
         LOG(INFO) << "updating references....";
         ReferenceUpdater updater;
@@ -200,6 +213,10 @@ namespace Token{
         }
         if(!Allocator::GetNewHeap()->VisitObjects(&updater)){
             LOG(ERROR) << "couldn't update weak references.";
+            return false;
+        }
+        if(!Server::Accept(&updater)){
+            LOG(ERROR) << "couldn't update server peer sessions.";
             return false;
         }
 
@@ -241,6 +258,11 @@ namespace Token{
             LOG(INFO) << "performing minor garbage collection...";
         }
 
+#ifdef TOKEN_DEBUG
+        Allocator::PrintNewHeap();
+        Allocator::PrintOldHeap();
+#endif//TOKEN_DEBUG
+
         //TODO: apply major collection steps to Scavenger::ScavengeMemory()
         Scavenger scavenger(is_major);
         {
@@ -266,11 +288,13 @@ namespace Token{
         Allocator::GetNewHeap()->GetFromSpace()->Reset();
         Allocator::GetNewHeap()->SwapSpaces();
 
-#if defined(TOKEN_DEBUG)
+#ifdef TOKEN_DEBUG
         sleep(1);
         LOG(INFO) << scavenger.GetTimeline();
         LOG(INFO) << scavenger.GetNewStats();
         LOG(INFO) << scavenger.GetOldStats();
+        Allocator::PrintNewHeap();
+        Allocator::PrintOldHeap();
 #endif//TOKEN_DEBUG
         return true;
     }

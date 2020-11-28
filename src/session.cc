@@ -71,7 +71,6 @@ namespace Token{
     }
 
     void Session::Send(std::vector<Handle<Message>>& messages){
-        //TODO: fix SessionBase::Send(std::vector<Handle<Message>>&)
         size_t total_messages = messages.size();
         if(total_messages <= 0){
             LOG(WARNING) << "not sending any messages!";
@@ -79,17 +78,16 @@ namespace Token{
         }
 
         LOG(INFO) << "sending " << total_messages << " messages....";
+        Handle<Buffer> wbuff = GetWriteBuffer();
+        int64_t offset = 0;
         uv_buf_t buffers[total_messages];
         for(size_t idx = 0; idx < total_messages; idx++){
             Handle<Message> msg = messages[idx];
-
-            uint32_t type = static_cast<uint32_t>(msg->GetMessageType());
+            int32_t type = (int32_t)msg->GetMessageType();
             intptr_t size = msg->GetMessageSize();
             intptr_t total_size = Message::kHeaderSize + size;
-
             LOG(INFO) << "sending " << msg->ToString() << " (" << total_size << " Bytes)";
 
-            Handle<Buffer> wbuff = GetWriteBuffer();
             wbuff->PutInt(type);
             wbuff->PutLong(size);
             if(!msg->Write(wbuff)){
@@ -98,7 +96,8 @@ namespace Token{
             }
 
             buffers[idx].len = total_size;
-            buffers[idx].base = &wbuff->data()[0];
+            buffers[idx].base = &wbuff->data()[offset];
+            offset += total_size;
         }
         messages.clear();
 
