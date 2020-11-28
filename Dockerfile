@@ -1,5 +1,6 @@
 FROM ubuntu:18.04
 ARG GITHUB_TOKEN
+ARG TOKEN_VERSION
 
 ENV CMAKE_VERSION=3.17.2
 ENV NODE_VERSION=12.15.0
@@ -68,16 +69,20 @@ RUN git clone https://github.com/open-source-parsers/jsoncpp.git -b ${JSONLIB_VE
  && cmake --build . --target install
 
 # Build and Install the Token Ledger
-RUN git clone https://github.com/tokenevents/libtoken-ledger.git \
+RUN git clone https://github.com/tokenevents/libtoken-ledger.git -b $TOKEN_VERSION \
  && cd libtoken-ledger \
  && mkdir -p build \
  && cd build \
  && cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/usr/local .. \
  && cmake --build . --target install \
+ && chown token:token 0750 entrypoint.sh \
  && ldconfig
 
-VOLUME /usr/share/ledger
-CMD [ "token-node", "--path", "/usr/share/ledger", "--port", "8080" ]
+WORKDIR libtoken-ledger/
+RUN useradd -ms /bin/bash token
+
+USER root
+CMD [ "/bin/bash", "entrypoint.sh" ]
 # Expose the RPC Service
 EXPOSE 8080
 # Expose the HealthCheck Service

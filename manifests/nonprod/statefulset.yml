@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: token-ledger
+  labels:
+    app: token
+    component: ledger
+spec:
+  serviceName: nginx
+  replicas: 1
+  selector:
+    matchLabels:
+      app: token
+  template:
+    metadata:
+      labels:
+        app: token
+    spec:
+      containers:
+        - name: token-ledger-node
+          imagePullPolicy: IfNotPresent
+          image: gcr.io/tkn-events/token-ledger:latest
+          ports:
+            - name: rpc
+              containerPort: 8080
+            - name: health
+              containerPort: 8081
+          volumeMounts:
+            - name: ledger
+              mountPath: /usr/share/ledger
+          readinessProbe:
+            httpGet:
+              port: 8081
+              path: /ready
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            successThreshold: 1
+            failureThreshold: 3
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              port: 8081
+              path: /live
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            successThreshold: 1
+            failureThreshold: 3
+            timeoutSeconds: 5
+  volumeClaimTemplates:
+    - metadata:
+        name: ledger
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 5Gi
+        selector:
+          matchLabels:
+            type: local

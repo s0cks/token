@@ -16,15 +16,28 @@ spec:
         app: token
         component: ledger
     spec:
+      securityContext:
+        runAsUser: 0
+      volumes:
+        - name: ledger-storage
+          hostPath:
+            path: /data/ledger-test
+            type: DirectoryOrCreate
       containers:
         - name: token-ledger-node
           imagePullPolicy: IfNotPresent
           image: gcr.io/tkn-events/token-ledger:latest
+          securityContext:
+            runAsUser: 0
+            privileged: true
           ports:
             - name: rpc
               containerPort: 8080
             - name: health
               containerPort: 8081
+          volumeMounts:
+            - name: ledger-storage
+              mountPath: /usr/share/ledger
           readinessProbe:
             httpGet:
               port: 8081
