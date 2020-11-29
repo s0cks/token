@@ -78,17 +78,17 @@ namespace Token{
 
 #define ALIGN(Size) (((Size)+7)&~7)
 
-    void* Allocator::Allocate(int64_t size){
+    void* Allocator::AllocateMemory(int64_t size){
         LOCK_GUARD;
         return GetNewHeap()->Allocate(size);
     }
 
-    void* Allocator::AllocateObject(int64_t size){
+    void* Allocator::Allocate(int64_t size){
         int64_t total_size = ALIGN(size);
-        void* ptr = Allocate(total_size);
+        void* ptr = AllocateMemory(total_size);
         if(!ptr){
             MinorCollect();
-            ptr = Allocate(total_size);
+            ptr = AllocateMemory(total_size);
             assert(ptr);
         }
 

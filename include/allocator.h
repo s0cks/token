@@ -79,12 +79,12 @@ namespace Token{
         static bool MinorCollect();
         static bool MajorCollect();
         static void Initialize(Object* obj); //TODO: remove
-        static void* Allocate(int64_t size);
+        static void* AllocateMemory(int64_t size);
     public:
         ~Allocator(){}
 
         static void Initialize();
-        static void* AllocateObject(int64_t size);
+        static void* Allocate(int64_t size);
         static void PrintNewHeap();
         static void PrintOldHeap();
     };

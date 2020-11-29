@@ -186,7 +186,7 @@ namespace Token{
 
 #ifndef TOKEN_GCMODE_NONE
         static void* operator new(size_t size){
-            return Allocator::AllocateObject(size);
+            return Allocator::Allocate(size);
         }
 
         static void* operator new[](size_t) = delete;
