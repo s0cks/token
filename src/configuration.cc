@@ -13,6 +13,8 @@ namespace Token{
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
 
+#define ENVIRONMENT_TOKEN_LEDGER "TOKEN_LEDGER"
+
     bool BlockChainConfiguration::GenerateConfiguration(){
         GetProperty(PROPERTY_HEALTHCHECK, libconfig::Setting::TypeGroup);
         SetHealthCheckPort(PROPERTY_HEALTHCHECK_PORT_DEFAULT);
@@ -87,10 +89,71 @@ namespace Token{
         return root.add(name, type);
     }
 
+    static inline bool
+    HasEnvironmentVariable(const std::string& name){
+        char* val = getenv(name.data());
+        return val != NULL;
+    }
+
+    static inline std::string
+    GetEnvironmentVariable(const std::string& name){
+        char* val = getenv(name.data());
+        if(val == NULL) return "";
+        return std::string(val);
+    }
+
+    static inline bool
+    ResolvePeers(const std::string& hostname, std::set<NodeAddress>& peers){
+        void *ptr;
+
+        struct addrinfo hints;
+        memset(&hints, 0, sizeof (hints));
+        hints.ai_family = PF_UNSPEC;
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_flags |= AI_CANONNAME;
+
+        struct addrinfo* res;
+        int err;
+        if((err = getaddrinfo(hostname.data(), NULL, &hints, &res)) != 0){
+            LOG(WARNING) << "couldn't get " << hostname << "'s ip: " << strerror(err);
+            return -1;
+        }
+
+        char addrstr[100];
+        while(res){
+            inet_ntop(res->ai_family, res->ai_addr->sa_data, addrstr, 100);
+            switch (res->ai_family){
+                case AF_INET:
+                    ptr = &((struct sockaddr_in *)res->ai_addr)->sin_addr;
+                    break;
+                case AF_INET6:
+                    ptr = &((struct sockaddr_in6 *)res->ai_addr)->sin6_addr;
+                    break;
+            }
+            inet_ntop(res->ai_family, ptr, addrstr, 100);
+            NodeAddress paddr(std::string(addrstr), FLAGS_port); //TODO: Fixme
+            LOG(INFO) << "peer: " << paddr;
+            peers.insert(paddr);
+            res = res->ai_next;
+        }
+
+        return 0;
+    }
+
     bool BlockChainConfiguration::GetPeerList(std::set<NodeAddress>& results){
         LOCK_GUARD;
         if(!FLAGS_peer.empty())
             results.insert(NodeAddress(FLAGS_peer));
+
+        if(HasEnvironmentVariable(ENVIRONMENT_TOKEN_LEDGER)){
+            std::string phostname = GetEnvironmentVariable(ENVIRONMENT_TOKEN_LEDGER);
+            if(!phostname.empty()){
+                NodeAddress paddress(phostname);
+                if(paddress != NodeAddress()){
+                    ResolvePeers(phostname, results);
+                }
+            }
+        }
 
         libconfig::Setting& peers = GetServerProperties().lookup(PROPERTY_SERVER_PEER_LIST);
         auto iter = peers.begin();

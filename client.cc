@@ -24,6 +24,8 @@ main(int argc, char** argv){
 
     Allocator::Initialize();
 
+    LOG(INFO) << "peer: " << FLAGS_peer;
+
     NodeAddress address(FLAGS_peer);
     Handle<ClientSession> client = ClientSession::NewInstance(address);
     if(!client->Connect()){

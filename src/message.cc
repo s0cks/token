@@ -171,14 +171,14 @@ namespace Token{
     }
 
     Handle<InventoryMessage> InventoryMessage::NewInstance(const Handle<Buffer>& buff){
-        uint32_t num_items = buff->GetInt();
+        int32_t num_items = buff->GetInt();
         std::vector<InventoryItem> items;
         DecodeItems(buff, items, num_items);
         return new InventoryMessage(items);
     }
 
-    void InventoryMessage::DecodeItems(const Handle<Buffer>& buff, std::vector<InventoryItem>& items, uint32_t num_items){
-        for(uint32_t idx = 0; idx < num_items; idx++){
+    void InventoryMessage::DecodeItems(const Handle<Buffer>& buff, std::vector<InventoryItem>& items, int32_t num_items){
+        for(int32_t idx = 0; idx < num_items; idx++){
             InventoryItem::Type type = static_cast<InventoryItem::Type>(buff->GetShort());
             Hash hash = buff->GetHash();
             items.push_back(InventoryItem(type, hash));
@@ -187,7 +187,7 @@ namespace Token{
 
     intptr_t InventoryMessage::GetMessageSize() const{
         intptr_t size = 0;
-        size += sizeof(uint32_t); // length(items_)
+        size += sizeof(int32_t); // length(items_)
         size += (items_.size() * InventoryItem::kSize);
         return size;
     }
@@ -212,7 +212,7 @@ namespace Token{
 
     intptr_t GetDataMessage::GetMessageSize() const{
         intptr_t size = 0;
-        size += sizeof(int64_t); // sizeof(items_);
+        size += sizeof(int32_t); // sizeof(items_);
         size += items_.size() * InventoryItem::kSize; // items;
         return size;
     }

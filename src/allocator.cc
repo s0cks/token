@@ -78,7 +78,6 @@ namespace Token{
 
     void* Allocator::Allocate(int64_t size){
         LOCK_GUARD;
-        LOG(INFO) << "allocating: " << size;
         return GetNewHeap()->Allocate(size);
     }
 

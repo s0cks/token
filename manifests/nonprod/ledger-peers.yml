@@ -27,6 +27,9 @@ spec:
         - name: token-ledger-node
           imagePullPolicy: IfNotPresent
           image: gcr.io/tkn-events/token-ledger:latest
+          env:
+            - name: TOKEN_LEDGER
+              value: token-ledger-master-svc
           securityContext:
             runAsUser: 0
             privileged: true

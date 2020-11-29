@@ -4,18 +4,18 @@ metadata:
   name: token-ledger
   labels:
     app: token
-    component: ledger
+    component: ledger-master
 spec:
-  serviceName: token-ledger-svc
+  serviceName: token-ledger-master-svc
   replicas: 1
   selector:
     matchLabels:
-      app: token
+      component: ledger-master
   template:
     metadata:
       labels:
         app: token
-        component: ledger
+        component: ledger-master
     spec:
       containers:
         - name: token-ledger-node

@@ -499,12 +499,12 @@ namespace Token{
                 LOG(WARNING) << "inventory created w/ zero size";
         }
 
-        static void DecodeItems(const Handle<Buffer>& buff, std::vector<InventoryItem>& items, uint32_t num_items);
+        static void DecodeItems(const Handle<Buffer>& buff, std::vector<InventoryItem>& items, int32_t num_items);
     public:
 
         ~InventoryMessage(){}
 
-        size_t GetNumberOfItems() const{
+        int32_t GetNumberOfItems() const{
             return items_.size();
         }
 
