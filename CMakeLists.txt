@@ -11,8 +11,10 @@ message("Using Modules: ${TOKEN_CMAKE_MODULES}")
 
 # Monkey Patching for Debug Mode
 if(CMAKE_BUILD_TYPE MATCHES Debug)
-  message("Compiling token w/ debug mode")
+  message("Compiling Token w/ Debug")
   add_compile_definitions(TOKEN_DEBUG)
+else()
+  message("Compiling Token w/o Debug")
 endif (CMAKE_BUILD_TYPE MATCHES Debug)
 
 # Packages

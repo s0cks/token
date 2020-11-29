@@ -25,7 +25,6 @@
 #include <cryptopp/pssr.h>
 #include <iomanip>
 
-
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
 //TODO: cleanup

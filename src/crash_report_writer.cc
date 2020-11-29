@@ -25,16 +25,18 @@ namespace Token{
     }
 
     static inline std::string
-    GetStatus(bool status){
-        return status ?
-            "Enabled" :
-            "Disabled";
+    GetDebugStatus(){
+#ifdef TOKEN_DEBUG
+        return "Enabled";
+#else
+        return "Disabled";
+#endif//TOKEN_DEBUG
     }
 
     bool CrashReportWriter::WriteSystemInformation(){
         return WriteLine("Timestamp: " + GetTimestampFormattedReadable(GetCurrentTimestamp()))
             && WriteLine("Version: " + GetVersion())
-            && WriteLine("Debug Mode: " + GetStatus(TOKEN_DEBUG))
+            && WriteLine("Debug Mode: " + GetDebugStatus())
             && WriteLine("Ledger Home: " + TOKEN_BLOCKCHAIN_HOME);
     }
 
