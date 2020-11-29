@@ -5,7 +5,7 @@
 #include "hash.h"
 #include "bloom.h"
 #include "buffer.h"
-#include "allocator.h"
+#include "alloc/allocator.h"
 #include "transaction.h"
 
 namespace Token{

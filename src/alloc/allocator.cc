@@ -6,7 +6,7 @@
 
 #include "heap.h"
 #include "bitfield.h"
-#include "allocator.h"
+#include "alloc/allocator.h"
 #include "scavenger.h"
 
 namespace Token{
@@ -77,11 +77,6 @@ namespace Token{
     }
 
 #define ALIGN(Size) (((Size)+7)&~7)
-
-    bool Allocator::IsAllocating(){
-        LOCK_GUARD;
-        return allocating_ != nullptr;
-    }
 
     void* Allocator::AllocateMemory(int64_t size, Space space){
         LOCK_GUARD;

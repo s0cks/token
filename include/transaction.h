@@ -5,7 +5,7 @@
 #include "user.h"
 #include "product.h"
 #include "hash.h"
-#include "allocator.h"
+#include "alloc/allocator.h"
 #include "unclaimed_transaction.h"
 
 namespace Token{

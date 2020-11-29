@@ -1,7 +1,7 @@
 #include <bitset>
 #include "handle.h"
 #include "object.h"
-#include "allocator.h"
+#include "alloc/allocator.h"
 
 namespace Token{
 #ifndef TOKEN_GCMODE_NONE

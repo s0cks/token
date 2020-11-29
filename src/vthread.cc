@@ -1,6 +1,6 @@
 #include "vthread.h"
 #include "object.h"
-#include "allocator.h"
+#include "alloc/allocator.h"
 
 namespace Token{
     void Thread::WriteBarrier(Object** slot, Object* value){

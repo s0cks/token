@@ -1,9 +1,9 @@
 #include "token.h"
 #include "common.h"
 #include "command.h"
-#include "allocator.h"
+#include "alloc/allocator.h"
 
-#include "heap_dump.h"
+#include "alloc/heap_dump.h"
 #include "snapshot_inspector.h"
 
 static inline void

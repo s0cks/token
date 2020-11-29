@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "tests/test_suite.h"
-#include "allocator.h"
+#include "alloc/allocator.h"
 
 int
 main(int argc, char** argv){

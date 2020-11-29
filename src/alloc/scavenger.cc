@@ -1,6 +1,6 @@
 #ifndef TOKEN_GCMODE_NONE
 
-#include "heap.h"
+#include "alloc/heap.h"
 #include "scavenger.h"
 #include "server.h"
 #include "http/healthcheck.h"

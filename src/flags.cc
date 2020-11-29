@@ -1,5 +1,5 @@
 #include "common.h"
-#include "allocator.h"
+#include "alloc/allocator.h"
 
 // BlockChain flags
 DEFINE_string(path, "", "The FS path for the BlockChain");

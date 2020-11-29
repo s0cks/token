@@ -4,7 +4,7 @@
 #include <iostream>
 #include "object.h"
 #include "buffer.h"
-#include "vmemory.h"
+#include "alloc/vmemory.h"
 
 namespace Token{
     class FileWriter{

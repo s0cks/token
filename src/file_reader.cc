@@ -3,7 +3,7 @@
 
 #include "buffer.h"
 #include "block.h"
-#include "vmemory.h"
+#include "alloc/vmemory.h"
 
 namespace Token{
 #define CHECK_FILE_POINTER \

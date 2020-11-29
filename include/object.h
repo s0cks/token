@@ -8,7 +8,7 @@
 #include "common.h"
 #include "handle.h"
 #include "keychain.h"
-#include "allocator.h"
+#include "alloc/allocator.h"
 #include "hash.h"
 
 namespace Token{
