@@ -64,8 +64,6 @@ namespace Token{
     public:
         static const intptr_t kNumberOfCollectionsRequiredForPromotion = 3;
     protected:
-        std::mutex mutex_; //TODO: remove?
-
         Type type_;
         bool marked_;
         intptr_t size_;
@@ -80,7 +78,9 @@ namespace Token{
             collections_survived_(0),
             num_references_(0),
             ptr_(0){
+#ifndef TOKEN_GCMODE_NONE
             Allocator::Initialize(this);
+#endif//TOKEN_GCMODE_NONE
         }
 
         uword GetStartAddress() const{
@@ -100,12 +100,10 @@ namespace Token{
         }
 
         void IncrementReferenceCount(){
-            std::unique_lock<std::mutex> guard(mutex_);
             num_references_++;
         }
 
         void DecrementReferenceCount(){
-            std::unique_lock<std::mutex> guard(mutex_);
             num_references_--;
         }
 
@@ -150,7 +148,6 @@ namespace Token{
         }
 
         intptr_t GetReferenceCount(){
-            std::unique_lock<std::mutex> guard(mutex_);
             return num_references_;
         }
 
@@ -163,7 +160,6 @@ namespace Token{
         }
 
         bool HasStackReferences(){
-            std::unique_lock<std::mutex> guard(mutex_);
             return num_references_ > 0;
         }
 
@@ -188,6 +184,7 @@ namespace Token{
         FOR_EACH_TYPE(DECLARE_TYPECHECK)
 #undef DECLARE_TYPECHECK
 
+#ifndef TOKEN_GCMODE_NONE
         static void* operator new(size_t size){
             return Allocator::AllocateObject(size);
         }
@@ -196,6 +193,7 @@ namespace Token{
         static void operator delete(void*){
             assert(0);
         }
+#endif//!TOKEN_GCMODE_NONE
     };
 
     class Buffer;

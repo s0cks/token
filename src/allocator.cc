@@ -1,3 +1,5 @@
+#ifndef TOKEN_GCMODE_NONE
+
 #include <set>
 #include <bitset>
 #include <cassert>
@@ -132,3 +134,5 @@ namespace Token{
             LOG(WARNING) << "couldn't print old heap";
     }
 }
+
+#endif//TOKEN_GCMODE_NONE

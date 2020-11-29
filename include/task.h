@@ -25,6 +25,7 @@ namespace Token{
             WriteBarrier(&session_, session);
         }
 
+#ifndef TOKEN_GCMODE_NONE
         bool Accept(WeakObjectPointerVisitor* vis){
             if(!vis->Visit(&session_)){
                 LOG(WARNING) << "couldn't visit SessionTask's session.";
@@ -33,6 +34,7 @@ namespace Token{
 
             return true;
         }
+#endif//TOKEN_GCMODE_NONE
     public:
         ~SessionTask() = default;
 
@@ -54,6 +56,8 @@ namespace Token{
             message_(nullptr){
             WriteBarrier(&message_, message);
         }
+
+#ifndef TOKEN_GCMODE_NONE
     protected:
         bool Accept(WeakObjectPointerVisitor* vis){
             if(!SessionTask::Accept(vis)){
@@ -67,6 +71,7 @@ namespace Token{
 
             return true;
         }
+#endif//TOKEN_GCMODE_NONE
     public:
         ~HandleMessageTask() = default;
 

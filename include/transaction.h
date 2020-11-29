@@ -139,6 +139,7 @@ namespace Token{
                 WriteBarrier(&outputs_[idx], outputs[idx]);
         }
     protected:
+#ifndef TOKEN_GCMODE_NONE
         bool Accept(WeakObjectPointerVisitor* vis){
             for(intptr_t idx = 0; idx < num_inputs_; idx++){
                 if(!vis->Visit(&inputs_[idx]))
@@ -152,6 +153,7 @@ namespace Token{
 
             return true;
         }
+#endif//TOKEN_GCMODE_NONE
     public:
         ~Transaction() = default;
 

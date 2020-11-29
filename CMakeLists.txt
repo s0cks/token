@@ -17,6 +17,29 @@ else()
   message("Compiling Token w/o Debug")
 endif (CMAKE_BUILD_TYPE MATCHES Debug)
 
+# Memory Management Options:
+# -------------------------
+#   - Default:
+#       set(TOKEN_GCMODE Default)
+#   - NO-OP:
+#       set(TOKEN_GCMODE NoOp)
+#   - None:
+#       set(TOKEN_GCMODE None)
+#---------------------------
+if(TOKEN_GCMODE MATCHES None)
+  message("Compiling Token w/o a garbage collector")
+  add_compile_definitions(TOKEN_GCMODE_NONE)
+elseif(TOKEN_GCMODE MATCHES NoOp)
+  message("Compiling Token w/ a no-op garbage collector")
+  add_compile_definitions(TOKEN_GCMODE_NOOP)
+elseif(TOKEN_GCMODE MATCHES Default)
+  message("Compiling Token w/ the default garbage collector")
+  add_compile_definitions(TOKEN_GCMODE_DEFAULT)
+else()
+  message("Compiling Token w/ the default garbage collector")
+  add_compile_definitions(TOKEN_GCMODE_DEFAULT)
+endif(TOKEN_GCMODE MATCHES None)
+
 # Packages
 find_package(Threads)
 find_package(UUID REQUIRED)

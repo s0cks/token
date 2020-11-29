@@ -57,17 +57,6 @@ namespace Token{
     }
     */
 
-    bool Server::Accept(WeakObjectPointerVisitor* vis){
-        LOCK_GUARD;
-        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
-            if(peers_[idx] && !vis->Visit(&peers_[idx])){
-                LOG(WARNING) << "cannot visit peer #" << idx;
-                return false;
-            }
-        }
-        return true;
-    }
-
     void Server::WaitForState(Server::State state){
         LOCK;
         while(state_ != state) WAIT;
@@ -691,4 +680,17 @@ namespace Token{
     void ServerSession::HandlePeerListMessage(const Handle<HandleMessageTask>& task){
         //TODO: implement ServerSession::HandlePeerListMessage(const Handle<HandleMessageTask>&);
     }
+
+#ifndef TOKEN_GCMODE_NONE
+    bool Server::Accept(WeakObjectPointerVisitor* vis){
+        LOCK_GUARD;
+        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
+            if(peers_[idx] && !vis->Visit(&peers_[idx])){
+                LOG(WARNING) << "cannot visit peer #" << idx;
+                return false;
+            }
+        }
+        return true;
+    }
+#endif//TOKEN_GCMODE_NONE
 }

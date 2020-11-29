@@ -1,3 +1,4 @@
+#ifndef TOKEN_GCMODE_NONE
 #ifndef TOKEN_HEAP_DUMP_WRITER_H
 #define TOKEN_HEAP_DUMP_WRITER_H
 
@@ -24,3 +25,4 @@ namespace Token{
 }
 
 #endif //TOKEN_HEAP_DUMP_WRITER_H
+#endif//TOKEN_GCMODE_NONE

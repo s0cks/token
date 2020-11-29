@@ -1,14 +1,17 @@
+#include <mutex>
+#include <condition_variable>
+
 #include "block_pool.h"
 #include "journal.h"
 #include "crash_report.h"
 
 namespace Token{
-    static std::recursive_mutex mutex_;
-    static std::condition_variable_any cond_;
+    static std::mutex mutex_;
+    static std::condition_variable cond_;
     static BlockPool::State state_ = BlockPool::kUninitialized;
 
-#define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_);
-#define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
+#define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_);
+#define LOCK std::unique_lock<std::mutex> lock(mutex_)
 #define UNLOCK lock.unlock()
 #define WAIT cond_.wait(lock)
 #define SIGNAL_ONE cond_.notify_one()

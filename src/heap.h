@@ -1,3 +1,4 @@
+#ifndef TOKEN_GCMODE_NONE
 #ifndef TOKEN_HEAP_H
 #define TOKEN_HEAP_H
 
@@ -155,3 +156,4 @@ namespace Token{
 }
 
 #endif//TOKEN_HEAP_H
+#endif//!TOKEN_GCMODE_NONE

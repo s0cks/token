@@ -10,9 +10,13 @@ namespace Token{
     class HandleBase{ //TODO: remove
         friend class Scavenger;
     private:
+#ifdef TOKEN_GCMODE_NONE
+        Object* ptr_;
+#else
         Object** ptr_;
 
         static bool VisitHandles(WeakObjectPointerVisitor* vis);
+#endif//TOKEN_GCMODE_NONE
     protected:
         HandleBase();
         HandleBase(Object* obj);
@@ -20,7 +24,11 @@ namespace Token{
         ~HandleBase();
 
         Object* GetPointer() const{
+#ifdef TOKEN_GCMODE_NONE
+            return ptr_;
+#else
             return ptr_ ? (*ptr_) : nullptr;
+#endif//TOKEN_GCMODE_NONE
         }
 
         bool IsNull() const{

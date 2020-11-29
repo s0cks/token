@@ -68,7 +68,10 @@ namespace Token{
         Server() = delete;
 
         static uv_tcp_t* GetHandle();
+#ifndef TOKEN_GCMODE_NONE
         static bool Accept(WeakObjectPointerVisitor* vis);
+#endif//TOKEN_GCMODE_NONE
+
         static bool RegisterPeer(const Handle<PeerSession>& session);
         static bool UnregisterPeer(const Handle<PeerSession>& session);
         static bool SavePeerList();

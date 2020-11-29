@@ -100,6 +100,7 @@ namespace Token{
             WriteBarrier(&wbuffer_, Buffer::NewInstance(kBufferSize));
         }
 
+#ifndef TOKEN_GCMODE_NONE
         bool Accept(WeakObjectPointerVisitor* vis){
             if(!vis->Visit(&rbuffer_)){
                 LOG(WARNING) << "couldn't visit the session read buffer";
@@ -111,6 +112,7 @@ namespace Token{
             }
             return true;
         }
+#endif//TOKEN_GCMODE_NONE
 
         uv_tcp_t* GetHandle() const{
             return (uv_tcp_t*)&handle_;

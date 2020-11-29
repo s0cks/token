@@ -1,3 +1,5 @@
+#include <mutex>
+#include <condition_variable>
 #include <leveldb/db.h>
 #include "buffer.h"
 #include "unclaimed_transaction.h"

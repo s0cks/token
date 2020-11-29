@@ -1,3 +1,5 @@
+#ifndef TOKEN_GCMODE_NONE
+
 #include "heap_dump_reader.h"
 
 namespace Token{
@@ -18,3 +20,5 @@ namespace Token{
         return new HeapDump(GetFilename(), version, timestamp, region, heap_size, semispace_size);
     }
 }
+
+#endif//TTOKEN_GCMODE_NONE

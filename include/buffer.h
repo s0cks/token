@@ -11,13 +11,24 @@ namespace Token{
         intptr_t bsize_;
         intptr_t wpos_;
         intptr_t rpos_;
+#ifdef TOKEN_GCMODE_NONE
+        uint8_t* data_;
+#endif//TOKEN_GCMODE_NONE
 
         uint8_t* raw() {
+#ifdef TOKEN_GCMODE_NONE
+            return data_;
+#else
             return (uint8_t*)(&rpos_ + sizeof(intptr_t));
+#endif//TOKEN_GCMODE_NONE
         }
 
         const uint8_t* raw() const{
+#ifdef TOKEN_GCMODE_NONE
+            return data_;
+#else
             return (uint8_t*)(&rpos_ + sizeof(intptr_t));
+#endif//TOKEN_GCMODE_NONE
         }
 
         Buffer(intptr_t size):
@@ -26,6 +37,9 @@ namespace Token{
             wpos_(0),
             rpos_(0){
             SetType(Type::kBufferType);
+#ifdef TOKEN_GCMODE_NONE
+            data_ = (uint8_t*)malloc(sizeof(uint8_t)*size);
+#endif//TOKEN_GCMODE_NONE
             memset(data(), 0, GetBufferSize());
         }
 
@@ -57,6 +71,7 @@ namespace Token{
             return data;
         }
     protected:
+#ifndef TOKEN_GCMODE_NONE
         static void* operator new(size_t size) = delete;
         static void* operator new(size_t size, size_t length, bool){
             intptr_t buffer_size = (sizeof(uint8_t)*length);
@@ -65,6 +80,7 @@ namespace Token{
         }
         static void operator delete(void*, size_t, bool){}
         using Object::operator delete;
+#endif//!TOKEN_GCMODE_NONE
     public:
         ~Buffer() = default;
 
@@ -218,7 +234,11 @@ namespace Token{
 
         static Handle<Buffer> NewInstance(intptr_t size){
             size = RoundUpPowTwo(size);
+#ifdef TOKEN_GCMODE_NONE
+            return new Buffer(size);
+#else
             return new (size, false) Buffer(size);
+#endif//TOKEN_GCMODE_NONE
         }
     };
 }

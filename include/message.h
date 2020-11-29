@@ -331,9 +331,11 @@ namespace Token{
             WriteBarrier(&data_, tx);
         }
     protected:
+#ifndef TOKEN_GCMODE_NONE
         bool Accept(WeakObjectPointerVisitor* vis){
             return vis->Visit(&data_);
         }
+#endif//TOKEN_GCMODE_NONE
     public:
         ~TransactionMessage(){}
 
@@ -359,9 +361,11 @@ namespace Token{
             WriteBarrier(&data_, blk);
         }
     protected:
+#ifndef TOKEN_GCMODE_NONE
         bool Accept(WeakObjectPointerVisitor* vis){
             return vis->Visit(&data_);
         }
+#endif//TOKEN_GCMODE_NONE
     public:
         ~BlockMessage(){}
 
@@ -388,9 +392,11 @@ namespace Token{
             WriteBarrier(&data_, utxo);
         }
     protected:
+#ifndef TOKEN_GCMODE_NONE
         bool Accept(WeakObjectPointerVisitor* vis){
             return vis->Visit(&data_);
         }
+#endif//TOKEN_GCMODE_NONE
     public:
         ~UnclaimedTransactionMessage() = default;
 

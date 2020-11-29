@@ -4,6 +4,7 @@
 #include "allocator.h"
 
 namespace Token{
+#ifndef TOKEN_GCMODE_NONE
     class HandleGroup : public Object{
         friend class HandleBase;
     private:
@@ -102,21 +103,33 @@ namespace Token{
 
     static HandleGroup* root_ = nullptr;
 
+#endif//TOKEN_GCMODE_NONE
+
     HandleBase::HandleBase(){
+#ifndef TOKEN_GCMODE_NONE
         if(!root_) root_ = new HandleGroup();
+#endif//TOKEN_GCMODE_NONE
         ptr_ = nullptr;
     }
 
     HandleBase::HandleBase(Object* obj){
+#ifdef TOKEN_GCMODE_NONE
+        ptr_ = obj;
+#else
         if(!root_) root_ = new HandleGroup();
         ptr_ = root_->Allocate();
         root_->Write(ptr_, obj);
+#endif//TOKEN_GCMODE_NONE
     }
 
     HandleBase::HandleBase(const HandleBase& h){
         if(h.ptr_){
+#ifdef TOKEN_GCMODE_NONE
+            ptr_ = h.ptr_;
+#else
             ptr_ = root_->Allocate();
             root_->Write(ptr_, (*h.ptr_));
+#endif//TOKEN_GCMODE_NONE
         } else{
             ptr_ = nullptr;
         }
@@ -124,25 +137,38 @@ namespace Token{
 
     HandleBase::~HandleBase(){
         if(ptr_){
+#ifdef TOKEN_GCMODE_NONE
+            delete ptr_;
+#else
             root_->Free(ptr_);
+#endif//TOKEN_GCMODE_NONE
         }
     }
 
     void HandleBase::operator=(Object* obj){
+#ifdef TOKEN_GCMODE_NONE
+        ptr_ = obj;
+#else
         if(!ptr_)
             ptr_ = root_->Allocate();
         root_->Write(ptr_, obj);
+#endif//TOKEN_GCMODE_NONE
     }
 
     void HandleBase::operator=(const HandleBase& h){
+#ifdef TOKEN_GCMODE_NONE
+        ptr_ = h.ptr_ ? h.ptr_ : nullptr;
+#else
         if(h.ptr_){
             ptr_ = root_->Allocate();
             root_->Write(ptr_, (*h.ptr_));
         } else{
             ptr_ = nullptr;
         }
+#endif//TOKEN_GCMODE_NONE
     }
 
+#ifndef TOKEN_GCMODE_NONE
     bool HandleBase::VisitHandles(WeakObjectPointerVisitor* vis){
         HandleGroup* group = root_;
         while(group != nullptr){
@@ -152,4 +178,5 @@ namespace Token{
         }
         return true;
     }
+#endif//TOKEN_GCMODE_NONE
 }

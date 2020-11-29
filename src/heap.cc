@@ -1,3 +1,5 @@
+#ifndef TOKEN_GCMODE_NONE
+
 #include "heap.h"
 
 namespace Token{
@@ -45,3 +47,5 @@ namespace Token{
         return true;
     }
 }
+
+#endif//!TOKEN_GCMODE_NONE

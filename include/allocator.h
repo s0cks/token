@@ -1,3 +1,5 @@
+#ifdef TOKEN_GCMODE_DEFAULT
+
 #ifndef TOKEN_ALLOCATOR_H
 #define TOKEN_ALLOCATOR_H
 
@@ -102,3 +104,5 @@ namespace Token{
 }
 
 #endif//TOKEN_ALLOCATOR_H
+
+#endif//TOKEN_GCMODE_DEFAULT

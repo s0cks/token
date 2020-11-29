@@ -68,6 +68,7 @@ namespace Token{
                     LOG(WARNING) << "couldn't create snapshots directory: " << filename;
             }
         }
+#ifndef TOKEN_GCMODE_NONE
     protected:
         bool Accept(WeakObjectPointerVisitor* vis){
             for(uint64_t idx = 0; idx < blocks_len_; idx++){
@@ -76,6 +77,7 @@ namespace Token{
             }
             return true;
         }
+#endif//TOKEN_GCMODE_NONE
     public:
         ~Snapshot() = default;
 

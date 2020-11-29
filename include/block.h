@@ -4,7 +4,6 @@
 #include <json/json.h>
 #include "hash.h"
 #include "bloom.h"
-#include "array.h"
 #include "buffer.h"
 #include "allocator.h"
 #include "transaction.h"
@@ -170,12 +169,14 @@ namespace Token{
             //TODO: tx_bloom_.Put(txs[idx]->GetHash());
         }
     protected:
+#ifndef TOKEN_GCMODE_NONE
         bool Accept(WeakObjectPointerVisitor* vis){
             for(intptr_t idx = 0; idx < num_transactions_; idx++)
                 if(!vis->Visit(&transactions_[idx]))
                     return false;
             return true;
         }
+#endif//TOKEN_GCMODE_NONE
 
         intptr_t GetBufferSize() const{
             intptr_t size = 0;

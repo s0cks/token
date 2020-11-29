@@ -1,3 +1,4 @@
+#ifndef TOKEN_GCMODE_NONE
 #ifndef TOKEN_SCAVENGER_H
 #define TOKEN_SCAVENGER_H
 
@@ -285,3 +286,4 @@ namespace Token{
 }
 
 #endif //TOKEN_SCAVENGER_H
+#endif//TOKEN_GCMODE_NONE

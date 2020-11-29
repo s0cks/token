@@ -1,6 +1,7 @@
-#include "common.h"
+#include <mutex>
+#include <condition_variable>
+
 #include "configuration.h"
-#include "crash_report.h"
 
 namespace Token{
     static std::mutex mutex_;

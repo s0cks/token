@@ -1,3 +1,5 @@
+#ifndef TOKEN_GCMODE_NONE
+
 #include "heap.h"
 #include "scavenger.h"
 #include "server.h"
@@ -331,3 +333,5 @@ namespace Token{
         return true;
     }
 }
+
+#endif//TOKEN_GCMODE_NONE

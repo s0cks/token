@@ -100,7 +100,9 @@ namespace Token{
             LOG(WARNING) << "couldn't seek to " << pos << " in file " << GetFilename() << ": " << strerror(err);
     }
 
+#ifndef TOKEN_GCMODE_NONE
     bool BinaryFileReader::ReadRegion(MemoryRegion* region, intptr_t nbytes){
         return ReadBytes((uint8_t*)region->GetPointer(), nbytes);
     }
+#endif//TOKEN_GCMODE_NONE
 }

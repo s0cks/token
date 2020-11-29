@@ -66,7 +66,11 @@ namespace Token{
         static HttpRouter* GetRouter();
         static bool RegisterSession(const Handle<HttpSession>& session);
         static bool UnregisterSession(const Handle<HttpSession>& session);
+
+#ifndef TOKEN_GCMODE_NONE
         static bool Accept(WeakObjectPointerVisitor* vis);
+#endif//TOKEN_GCMODE_NONE
+
         static void SetRouter(HttpRouter* router);
         static void SetState(State state);
         static void SetStatus(Status status);

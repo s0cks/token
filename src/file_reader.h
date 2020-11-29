@@ -62,7 +62,9 @@ namespace Token{
             if(file_ != NULL) Close();
         }
 
+#ifndef TOKEN_GCMODE_NONE
         bool ReadRegion(MemoryRegion* region, intptr_t nbytes);
+#endif//TOKEN_GC_MODE_NONE
     };
 }
 

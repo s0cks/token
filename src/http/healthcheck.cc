@@ -137,6 +137,7 @@ namespace Token{
         return false;
     }
 
+#ifndef TOKEN_GCMODE_NONE
     bool HealthCheckService::Accept(WeakObjectPointerVisitor* vis){
         for(int64_t idx = 0; idx < HealthCheckService::kMaxNumberOfSessions; idx++){
             if(sessions_[idx] && !vis->Visit(&sessions_[idx])){
@@ -146,6 +147,7 @@ namespace Token{
         }
         return true;
     }
+#endif//TOKEN_GCMODE_NONE
 
     void HealthCheckService::OnNewConnection(uv_stream_t* stream, int status){
         Handle<HttpSession> session = HttpSession::NewInstance(stream->loop);

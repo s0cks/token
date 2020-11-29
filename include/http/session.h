@@ -49,6 +49,7 @@ namespace Token{
             WriteBarrier(&write_buffer_, Buffer::NewInstance(kBufferSize));
         }
 
+#ifndef TOKEN_GCMODE_NONE
         bool Accept(WeakObjectPointerVisitor* vis){
             if(!vis->Visit(&read_buffer_)){
                 LOG(ERROR) << "couldn't visit the read buffer.";
@@ -61,6 +62,7 @@ namespace Token{
             }
             return true;
         }
+#endif//TOKEN_GCMODE_NONE
     public:
         ~HttpSession(){
             LOG(ERROR) << "destroying http session";

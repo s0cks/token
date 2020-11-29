@@ -1,3 +1,5 @@
+#ifndef TOKEN_GCMODE_NONE
+
 #include "token.h"
 #include "heap_dump_writer.h"
 
@@ -17,3 +19,5 @@ namespace Token{
         return true;
     }
 }
+
+#endif//TOKEN_GCMODE_NONE
