@@ -332,6 +332,95 @@ namespace Token{
 #endif//TOKEN_DEBUG
         return true;
     }
+
+    static std::mutex mutex_;
+    static std::condition_variable cond_;
+    static ConcurrentScavenger::State state_;
+    static ConcurrentScavenger::Status status_;
+
+#define SCAVENGER_OK_STATUS(Status, Message) \
+    LOG(INFO) << (Message);             \
+    SetStatus((Status));
+#define SCAVENGER_OK(Message) \
+    SCAVENGER_OK_STATUS(ConcurrentScavenger::kOk, (Message));
+#define SCAVENGER_WARNING_STATUS(Status, Message) \
+    LOG(WARNING) << (Message);               \
+    SetStatus((Status));
+#define SCAVENGER_WARNING(Message) \
+    SCAVENGER_WARNING_STATUS(ConcurrentScavenger::kWarning, (Message))
+#define SCAVENGER_ERROR_STATUS(Status, Message) \
+    LOG(ERROR) << (Message);               \
+    SetStatus((Status));
+#define SCAVENGER_ERROR(Message) \
+    SCAVENGER_ERROR_STATUS(ConcurrentScavenger::kError, (Message))
+
+#define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
+#define LOCK std::unique_lock<std::mutex> lock(mutex_)
+#define WAIT cond_.wait(lock)
+#define SIGNAL_ONE cond_.notify_one()
+#define SIGNAL_ALL cond_.notify_all()
+
+    ConcurrentScavenger::State ConcurrentScavenger::GetState(){
+        LOCK_GUARD;
+        return state_;
+    }
+
+    void ConcurrentScavenger::SetState(const ConcurrentScavenger::State& state){
+        LOCK;
+        state_ = state;
+        SIGNAL_ALL;
+    }
+
+    ConcurrentScavenger::Status ConcurrentScavenger::GetStatus(){
+        LOCK_GUARD;
+        return status_;
+    }
+
+    void ConcurrentScavenger::SetStatus(const Status& status){
+        LOCK;
+        status_ = status;
+        SIGNAL_ALL;
+    }
+
+    std::string ConcurrentScavenger::GetStatusMessage(){
+        std::stringstream ss;
+        LOCK_GUARD;
+
+        ss << "[";
+        switch(state_){
+#define DEFINE_STATE_MESSAGE(Name) \
+            case ConcurrentScavenger::k##Name: \
+                ss << #Name; \
+                break;
+            FOR_EACH_SCAVENGER_STATE(DEFINE_STATE_MESSAGE)
+#undef DEFINE_STATE_MESSAGE
+        }
+        ss << "] ";
+
+        switch(status_){
+#define DEFINE_STATUS_MESSAGE(Name) \
+            case ConcurrentScavenger::k##Name:{ \
+                ss << #Name; \
+                break; \
+            }
+            FOR_EACH_SCAVENGER_STATUS(DEFINE_STATUS_MESSAGE)
+#undef DEFINE_STATUS_MESSAGE
+        }
+        return ss.str();
+    }
+
+    void ConcurrentScavenger::ScavengerThread(uword parameter){
+        LOG(INFO) << "starting the concurrent scavenger....";
+
+    }
+
+    bool ConcurrentScavenger::Initialize(){
+        if(IsRunning() || IsStarting()) {
+            SCAVENGER_WARNING("cannot re-initialize the concurrent scavenger.");
+            return false;
+        }
+        return Thread::Start("ScavengerThread", &ScavengerThread, 0) == 0;
+    }
 }
 
 #endif//TOKEN_GCMODE_NONE

@@ -4,6 +4,8 @@
 
 #include <set>
 
+#include "vthread.h"
+
 namespace Token{
     class Event{
     public:
@@ -282,6 +284,54 @@ namespace Token{
         }
 
         static bool Scavenge(bool is_major);
+    };
+
+#define FOR_EACH_SCAVENGER_STATE(V) \
+    V(Starting)                     \
+    V(Running)                      \
+    V(MinorCollection)              \
+    V(MajorCollection)              \
+    V(Stopping)                     \
+    V(Stopped)
+
+#define FOR_EACH_SCAVENGER_STATUS(V) \
+    V(Ok)                            \
+    V(Warning)                       \
+    V(Error)
+
+
+    class ConcurrentScavenger : public Thread{
+    public:
+        enum State{
+#define DEFINE_STATE(Name) k##Name,
+            FOR_EACH_SCAVENGER_STATE(DEFINE_STATE)
+#undef DEFINE_STATE
+        };
+
+        enum Status{
+#define DEFINE_STATUS(Name) k##Name,
+            FOR_EACH_SCAVENGER_STATUS(DEFINE_STATUS)
+#undef DEFINE_STATUS
+        };
+    private:
+        static void SetState(const State& state);
+        static void SetStatus(const Status& status);
+        static void ScavengerThread(uword parameter);
+    public:
+        static State GetState();
+        static Status GetStatus();
+        static std::string GetStatusMessage();
+        static bool Initialize();
+
+#define DEFINE_STATE_CHECK(Name)  \
+        static inline bool Is##Name(){ return GetState() == ConcurrentScavenger::k##Name; }
+        FOR_EACH_SCAVENGER_STATE(DEFINE_STATE_CHECK)
+#undef DEFINE_STATE_CHECK
+
+#define DEFINE_STATUS_CHECK(Name) \
+        static inline bool Is##Name(){ return GetStatus() == ConcurrentScavenger::k##Name; }
+        FOR_EACH_SCAVENGER_STATUS(DEFINE_STATUS_CHECK)
+#undef DEFINE_STATUS_CHECK
     };
 }
 

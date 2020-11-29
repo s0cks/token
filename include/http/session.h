@@ -62,6 +62,12 @@ namespace Token{
             }
             return true;
         }
+
+        static void* operator new(size_t size){
+            return Allocator::Allocate(size);
+        }
+        static void operator delete(void*, size_t, bool){}
+        using Object::operator delete;
 #endif//TOKEN_GCMODE_NONE
     public:
         ~HttpSession(){
