@@ -79,11 +79,12 @@ add_test("token-tests" "token-tests")
 
 # should we remove this?
 # Install Token Node
+
 install(
-  TARGETS token-ledger
-  LIBRARY DESTINATION lib
-  INCLUDES DESTINATION include
-  PUBLIC_HEADER DESTINATION include/token
+  DIRECTORY "include/" # source directory
+  DESTINATION "include/token" # target directory
+  FILES_MATCHING # install only matched files
+  PATTERN "*.h" # select header files
 )
 install(
   TARGETS token-node
