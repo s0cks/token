@@ -33,7 +33,7 @@ namespace Token{
             return size;
         }
 
-        bool Write(Buffer* buff) const{
+        bool Encode(Buffer* buff) const{
             buff->PutHash(hash_);
             buff->PutInt(index_);
             buff->PutUser(user_);

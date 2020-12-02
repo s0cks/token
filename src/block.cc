@@ -41,37 +41,46 @@ namespace Token{
 //                                          Block
 //######################################################################################################################
     Block* Block::Genesis(){
-        Input* inputs[0];
-        Output* outputs_a[Block::kNumberOfGenesisOutputs];
-        for(size_t idx = 0; idx < Block::kNumberOfGenesisOutputs; idx++){
+        InputList inputs;
+
+        int64_t idx;
+
+        OutputList outputs_a;
+        for(idx = 0;
+            idx < Block::kNumberOfGenesisOutputs;
+            idx++){
             std::string user = "VenueA";
             std::stringstream ss;
             ss << "TestToken" << idx;
-            outputs_a[idx] = Output::NewInstance(user, ss.str());
+            outputs_a.push_back(Output(user, ss.str()));
         }
 
-        Output* outputs_b[Block::kNumberOfGenesisOutputs];
-        for(size_t idx = 0; idx < Block::kNumberOfGenesisOutputs; idx++){
+        OutputList outputs_b;
+        for(idx = 0;
+            idx < Block::kNumberOfGenesisOutputs;
+            idx++){
             std::string user = "VenueB";
             std::stringstream ss;
             ss << "TestToken" << idx;
-            outputs_b[idx] = Output::NewInstance(user, ss.str());
+            outputs_b.push_back(Output(user, ss.str()));
         }
 
-        Output* outputs_c[Block::kNumberOfGenesisOutputs];
-        for(size_t idx = 0; idx < Block::kNumberOfGenesisOutputs; idx++){
+        OutputList outputs_c;
+        for(idx = 0;
+            idx < Block::kNumberOfGenesisOutputs;
+            idx++){
             std::string user = "VenueC";
             std::stringstream ss;
             ss << "TestToken" << idx;
-            outputs_c[idx] = Output::NewInstance(user, ss.str());
+            outputs_c.push_back(Output(user, ss.str()));
         }
 
-        Transaction* transactions[3] = {
-            Transaction::NewInstance(0, inputs, 0, outputs_a, Block::kNumberOfGenesisOutputs, 0),
-            Transaction::NewInstance(1, inputs, 0, outputs_b, Block::kNumberOfGenesisOutputs, 0),
-            Transaction::NewInstance(2, inputs, 0, outputs_c, Block::kNumberOfGenesisOutputs, 0),
+        TransactionList transactions = {
+            Transaction(0, inputs, outputs_a, 0),
+            Transaction(1, inputs, outputs_b, 0),
+            Transaction(2, inputs, outputs_c, 0),
         };
-        return NewInstance(0, Hash(), transactions, 3, 0);
+        return new Block(0, Hash(), transactions, 0);
     }
 
     Block* Block::NewInstance(std::fstream& fd, int64_t size){
@@ -86,32 +95,13 @@ namespace Token{
         Hash phash = buff->GetHash();
         intptr_t num_txs = buff->GetLong();
 
-        Transaction* transactions[num_txs];
-        for(intptr_t idx = 0; idx < num_txs; idx++){
-            transactions[idx] = Transaction::NewInstance(buff);
-        }
-        return new Block(timestamp, height, phash, transactions, num_txs);
-    }
-
-    bool Block::Write(Buffer* buff) const{
-        buff->PutLong(timestamp_);
-        buff->PutLong(height_);
-        buff->PutHash(previous_hash_);
-        buff->PutLong(num_transactions_);
-        for(intptr_t idx = 0;
-            idx < num_transactions_;
+        TransactionList transactions;
+        for(int64_t idx = 0;
+            idx < num_txs;
             idx++){
-            transactions_[idx]->Write(buff);
+            transactions.push_back(Transaction(buff));
         }
-        return true;
-    }
-
-    bool Block::Compare(Block* b) const{
-        return GetHeight() < b->GetHeight();
-    }
-
-    bool Block::Equals(Block* b) const{
-        return GetHash() == b->GetHash();
+        return new Block(height, phash, transactions, timestamp);
     }
 
     bool Block::ToJson(Json::Value& value) const{
@@ -123,20 +113,18 @@ namespace Token{
         return true;
     }
 
-    std::string Block::ToString() const{
-        std::stringstream stream;
-        stream << "Block(#" << GetHeight() << ", " << GetNumberOfTransactions() << " Transactions)";
-        return stream.str();
-    }
-
     bool Block::Accept(BlockVisitor* vis) const{
-        if(!vis->VisitStart()) return false;
-        for(intptr_t idx = 0;
+        if(!vis->VisitStart())
+            return false;
+
+        int64_t idx;
+        for(idx = 0;
             idx < GetNumberOfTransactions();
             idx++){
-            Transaction* tx = GetTransaction(idx);
-            if(!vis->Visit(tx)) return false;
+            if(!vis->Visit(transactions_[idx]))
+                return false;
         }
+
         return vis->VisitEnd();
     }
 
@@ -144,37 +132,12 @@ namespace Token{
         return tx_bloom_.Contains(hash);
     }
 
-    class BlockMerkleTreeBuilder : public BlockVisitor,
-                                   public MerkleTreeBuilder{
-    private:
-        const Block* block_;
-    public:
-        BlockMerkleTreeBuilder(const Block* block):
-                BlockVisitor(),
-                MerkleTreeBuilder(),
-                block_(block){}
-        ~BlockMerkleTreeBuilder(){}
-
-        const Block* GetBlock() const{
-            return block_;
-        }
-
-        bool Visit(Transaction* tx){
-            return AddLeaf(tx->GetHash());
-        }
-
-        bool BuildTree(){
-            if(HasTree()) return false;
-            if(!GetBlock()->Accept(this)) return false;
-            return CreateTree();
-        }
-    };
-
     Hash Block::GetMerkleRoot() const{
-        BlockMerkleTreeBuilder builder(this);
-        if(!builder.BuildTree()) return Hash();
-        MerkleTree* tree = builder.GetTree();
-        return tree->GetMerkleRootHash();
+        std::vector<Hash> hashes;
+        for(auto& it : transactions_)
+            hashes.push_back(it.GetHash());
+        MerkleTree tree(hashes);
+        return tree.GetMerkleRootHash();
     }
 
     static std::mutex mutex_;

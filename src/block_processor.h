@@ -2,7 +2,6 @@
 #define TOKEN_BLOCK_PROCESSOR_H
 
 #include "block.h"
-#include "transaction_pool.h"
 #include "transaction_handler.h"
 
 namespace Token{
@@ -18,8 +17,8 @@ namespace Token{
         GenesisBlockProcessor() = default;
         ~GenesisBlockProcessor() = default;
 
-        bool Visit(Transaction* tx){
-            Hash hash = tx->GetHash();
+        bool Visit(const Transaction& tx) const{
+            Hash hash = tx.GetHash();
             if(!TransactionHandler::ProcessTransaction(tx)){
                 LOG(WARNING) << "couldn't process transaction: " << hash;
                 return false;
@@ -33,8 +32,8 @@ namespace Token{
         SynchronizeBlockProcessor() = default;
         ~SynchronizeBlockProcessor() = default;
 
-        bool Visit(Transaction* tx){
-            Hash hash = tx->GetHash();
+        bool Visit(const Transaction& tx) const{
+            Hash hash = tx.GetHash();
             if(!TransactionHandler::ProcessTransaction(tx)){
                 LOG(WARNING) << "couldn't process transaction: " << hash;
                 return false;
@@ -48,18 +47,16 @@ namespace Token{
         DefaultBlockProcessor() = default;
         ~DefaultBlockProcessor() = default;
 
-        bool Visit(Transaction* tx){
-            Hash hash = tx->GetHash();
+        bool Visit(const Transaction& tx) const{
+            Hash hash = tx.GetHash();
             if(!TransactionHandler::ProcessTransaction(tx)){
                 LOG(WARNING) << "couldn't process transaction: " << hash;
                 return false;
             }
-
             if(!TransactionPool::RemoveTransaction(hash)){
                 LOG(WARNING) << "couldn't remove transaction " << hash << " from pool.";
                 return false;
             }
-
             return true;
         }
     };

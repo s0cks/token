@@ -10,9 +10,13 @@ namespace Token{
         LOG(INFO) << "  - Previous Hash: " << blk->GetPreviousHash();
         LOG(INFO) << "  - Merkle Root: " << blk->GetMerkleRoot();
         LOG(INFO) << "  - Transactions: ";
-        for(intptr_t idx = 0; idx < blk->GetNumberOfTransactions(); idx++){
-            Transaction* tx = blk->GetTransaction(idx);
-            LOG(INFO) << "      * #" << tx->GetIndex() << ": " << tx->GetHash();
+
+        int64_t idx;
+        for(idx = 0;
+            idx < blk->GetNumberOfTransactions();
+            idx++){
+            Transaction& tx = blk->transactions()[idx];
+            LOG(INFO) << "      * #" << tx.GetIndex() << ": " << tx.GetHash();
         }
     }
 

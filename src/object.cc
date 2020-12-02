@@ -6,7 +6,7 @@ namespace Token{
     bool BinaryObject::WriteToFile(std::fstream& fd) const{
         intptr_t size = GetBufferSize();
         Buffer buff(size);
-        if(!Write(&buff)){
+        if(!Encode(&buff)){
             LOG(WARNING) << "couldn't encode object to bytes";
             return false;
         }
@@ -19,7 +19,7 @@ namespace Token{
 
         CryptoPP::SHA256 func;
         Buffer buff(size);
-        if(!Write(&buff)){
+        if(!Encode(&buff)){
             LOG(WARNING) << "couldn't encode object to bytes";
             return Hash();
         }

@@ -1,7 +1,6 @@
 #include "peer_session.h"
 #include "task.h"
 #include "async_task.h"
-#include "transaction_pool.h"
 
 namespace Token{
     void PeerSession::OnShutdown(uv_async_t* handle){

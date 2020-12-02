@@ -1,6 +1,5 @@
 #include "message.h"
 #include "proposal.h"
-#include "transaction_pool.h"
 #include "unclaimed_transaction.h"
 
 namespace Token{
@@ -113,8 +112,7 @@ namespace Token{
     }
 
     TransactionMessage* TransactionMessage::NewInstance(Buffer* buff){
-        Transaction* tx = Transaction::NewInstance(buff);
-        return new TransactionMessage(tx);
+        return new TransactionMessage(new Transaction(buff));
     }
 
     intptr_t TransactionMessage::GetMessageSize() const{
@@ -135,7 +133,7 @@ namespace Token{
     }
 
     bool BlockMessage::Write(Buffer* buff) const{
-        data_->Write(buff);
+        data_->Encode(buff);
         return true;
     }
 
@@ -155,7 +153,7 @@ namespace Token{
     }
 
     bool UnclaimedTransactionMessage::Write(Buffer* buff) const{
-        data_->Write(buff);
+        data_->Encode(buff);
         return true;
     }
 

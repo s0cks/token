@@ -9,7 +9,6 @@
 #include "configuration.h"
 #include "peer_session.h"
 #include "proposal.h"
-#include "transaction_pool.h"
 #include "unclaimed_transaction.h"
 
 namespace Token{

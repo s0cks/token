@@ -7,31 +7,31 @@
 namespace Token{
     class TransactionValidator : public TransactionVisitor{
     private:
-        Transaction* transaction_;
+        const Transaction& transaction_;
     public:
-        TransactionValidator(Transaction* tx):
+        TransactionValidator(const Transaction& transaction):
             TransactionVisitor(),
-            transaction_(tx){}
+            transaction_(transaction){}
         ~TransactionValidator(){}
 
-        bool VisitInput(Input* input){
+        bool VisitInput(const Input& input) const{
             UnclaimedTransaction* utxo;
-            if(!(utxo = input->GetUnclaimedTransaction())){
-                LOG(WARNING) << "couldn't get unclaimed transaction for input: " << input->ToString();
+            if(!(utxo = input.GetUnclaimedTransaction())){
+                LOG(WARNING) << "couldn't get unclaimed transaction for input: " << input.ToString();
                 return false;
             }
-            return input->GetUser() == utxo->GetUser();
+            return input.GetUser() == utxo->GetUser();
         }
 
-        bool VisitOutput(Output* output){
+        bool VisitOutput(const Output& output) const{
             //TODO: check for valid token?
             //TODO: check for valid user?
             return true;
         }
 
-        static bool IsValid(Transaction* tx){
+        static bool IsValid(const Transaction& tx){
             TransactionValidator validator(tx);
-            return tx->Accept(&validator);
+            return tx.Accept(&validator);
         }
     };
 }

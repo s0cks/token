@@ -123,8 +123,8 @@ namespace Token{
         friend class BlockChain;
         friend class BlockMessage;
     public:
-        static const size_t kMaxTransactionsForBlock = 20;
-        static const uint32_t kNumberOfGenesisOutputs = 32; // TODO: changeme
+        static const int64_t kMaxTransactionsForBlock = 20;
+        static const int64_t kNumberOfGenesisOutputs = 32; // TODO: changeme
 
         struct TimestampComparator{
             bool operator()(Block* a, Block* b){
@@ -141,71 +141,97 @@ namespace Token{
         };
     private:
         Timestamp timestamp_;
-        intptr_t height_;
+        int64_t height_;
         Hash previous_hash_;
-        intptr_t num_transactions_;
-        Transaction** transactions_;
+        TransactionList transactions_;
         BloomFilter tx_bloom_; // transient
+    protected:
+        int64_t GetBufferSize() const{
+            int64_t size = 0;
+            size += sizeof(Timestamp); // timestamp_
+            size += sizeof(int64_t); // height_
+            size += Hash::kSize; // previous_hash_
+            size += sizeof(int64_t); // num_transactions
+            for(auto& it : transactions_)
+                size += it.GetBufferSize();
+            return size;
+        }
 
-        Block(Timestamp timestamp, uint32_t height, const Hash& phash, Transaction** txs, intptr_t num_txs):
+        bool Encode(Buffer* buff) const{
+            buff->PutLong(timestamp_);
+            buff->PutLong(height_);
+            buff->PutHash(previous_hash_);
+            buff->PutLong(GetNumberOfTransactions());
+            for(auto& it : transactions_)
+                it.Encode(buff);
+            return true;
+        }
+    public:
+        Block(int64_t height, const Hash& phash, const TransactionList& transactions, Timestamp timestamp=GetCurrentTimestamp()):
             BinaryObject(Type::kBlockType),
             timestamp_(timestamp),
             height_(height),
             previous_hash_(phash),
-            num_transactions_(num_txs),
-            transactions_(nullptr),
+            transactions_(transactions),
             tx_bloom_(){
-
-            if(num_txs > 0){
-                transactions_ = (Transaction**)malloc(sizeof(Transaction*)*num_txs);
-                memset(transactions_, 0, sizeof(Transaction*)*num_txs);
-                for(intptr_t idx = 0; idx < num_txs; idx++){
-                    transactions_[idx] = txs[idx];
-                    tx_bloom_.Put(txs[idx]->GetHash());
-                }
+            if(!transactions.empty()){
+                for(auto& it : transactions)
+                    tx_bloom_.Put(it.GetHash());
             }
-
-            //TODO: tx_bloom_.Put(txs[idx]->GetHash());
         }
-    protected:
-        intptr_t GetBufferSize() const{
-            intptr_t size = 0;
-            size += sizeof(Timestamp); // timestamp_
-            size += sizeof(intptr_t); // height_
-            size += Hash::kSize; // previous_hash_
-            size += sizeof(intptr_t); // num_transactions
-            for(intptr_t idx = 0; idx < num_transactions_; idx++)
-                size += transactions_[idx]->GetBufferSize(); // transactions_[idx]
-            return size;
-        }
-
-        bool Write(Buffer* buff) const;
-    public:
+        Block(const BlockHeader& parent, const TransactionList& transactions, Timestamp timestamp=GetCurrentTimestamp()):
+            Block(parent.GetHeight(), parent.GetHash(), transactions, timestamp){}
         ~Block() = default;
 
         BlockHeader GetHeader() const{
             return BlockHeader(timestamp_, height_, previous_hash_, GetMerkleRoot(), GetHash(), tx_bloom_);
         }
 
-        Hash GetPreviousHash() const{
-            return previous_hash_;
-        }
-
-        intptr_t GetHeight() const{
-            return height_;
-        }
-
-        intptr_t GetNumberOfTransactions() const{
-            return num_transactions_;
-        }
-
         Timestamp GetTimestamp() const{
             return timestamp_;
         }
 
-        Transaction* GetTransaction(int64_t idx) const{
-            if(idx < 0 || idx > GetNumberOfTransactions())
-                return nullptr;
+        int64_t GetHeight() const{
+            return height_;
+        }
+
+        Hash GetPreviousHash() const{
+            return previous_hash_;
+        }
+
+        int64_t GetNumberOfTransactions() const{
+            return transactions_.size();
+        }
+
+        TransactionList& transactions(){
+            return transactions_;
+        }
+
+        TransactionList transactions() const{
+            return transactions_;
+        }
+
+        TransactionList::iterator transactions_begin(){
+            return transactions_.begin();
+        }
+
+        TransactionList::const_iterator transactions_begin() const{
+            return transactions_.begin();
+        }
+
+        TransactionList::iterator transactions_end(){
+            return transactions_.end();
+        }
+
+        TransactionList::const_iterator transactions_end() const{
+            return transactions_.end();
+        }
+
+        Transaction& operator[](int64_t idx){
+            return transactions_[idx];
+        }
+
+        Transaction operator[](int64_t idx) const{
             return transactions_[idx];
         }
 
@@ -215,7 +241,7 @@ namespace Token{
 
         Buffer* ToBuffer() const{
             Buffer* buff = new Buffer(GetBufferSize());
-            if(!Write(buff)){
+            if(!Encode(buff)){
                 LOG(WARNING) << "couldn't encode block to buffer";
                 delete buff;
                 return nullptr;
@@ -226,22 +252,17 @@ namespace Token{
         Hash GetMerkleRoot() const;
         bool Accept(BlockVisitor* vis) const;
         bool Contains(const Hash& hash) const;
-        bool Equals(Block* block) const;
-        bool Compare(Block* block) const;
         bool ToJson(Json::Value& value) const;
-        std::string ToString() const;
+
+        std::string ToString() const{
+            std::stringstream stream;
+            stream << "Block(#" << GetHeight() << ", " << GetNumberOfTransactions() << " Transactions)";
+            return stream.str();
+        }
 
         static Block* Genesis();
         static Block* NewInstance(std::fstream& fd, int64_t nbytes);
         static Block* NewInstance(Buffer* buff);
-
-        static Block* NewInstance(intptr_t height, const Hash& phash, Transaction** txs, size_t num_txs, Timestamp timestamp=GetCurrentTimestamp()){
-            return new Block(timestamp, height, phash, txs, num_txs);
-        }
-
-        static Block* NewInstance(const BlockHeader& previous, Transaction** txs, size_t num_txs, Timestamp timestamp=GetCurrentTimestamp()){
-            return new Block(timestamp, previous.GetHeight() + 1, previous.GetHash(), txs, num_txs);
-        }
 
         static Block* NewInstance(const std::string& filename){
             std::fstream fd(filename, std::ios::in|std::ios::binary);
@@ -256,27 +277,8 @@ namespace Token{
     public:
         virtual ~BlockVisitor() = default;
         virtual bool VisitStart(){ return true; }
-        virtual bool Visit(Transaction* tx) = 0; //TODO: convert to const
+        virtual bool Visit(const Transaction& tx) const = 0;
         virtual bool VisitEnd(){ return true; }
-    };
-
-    class BlockPrinter : public BlockVisitor{
-    private:
-        bool detailed_;
-    public:
-        BlockPrinter(bool is_detailed=false):
-            BlockVisitor(),
-            detailed_(is_detailed){}
-        ~BlockPrinter() = default;
-
-        bool IsDetailed() const{
-            return detailed_;
-        }
-
-        bool Visit(Transaction* tx){
-            LOG(INFO) << "#" << tx->GetIndex() << ". " << tx->GetHash();
-            return true;
-        }
     };
 
 #define FOR_EACH_BLOCK_POOL_STATE(V) \

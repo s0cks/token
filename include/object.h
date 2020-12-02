@@ -85,8 +85,8 @@ namespace Token{
         virtual ~BinaryObject() = default;
 
         Hash GetHash() const;
-        virtual intptr_t GetBufferSize() const = 0;
-        virtual bool Write(Buffer* buffer) const = 0;
+        virtual int64_t GetBufferSize() const = 0;
+        virtual bool Encode(Buffer* buffer) const = 0;
         virtual bool WriteToFile(std::fstream& fd) const;
 
         bool WriteToFile(const std::string& filename) const{

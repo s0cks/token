@@ -5,52 +5,8 @@
 #include "unclaimed_transaction.h"
 
 namespace Token{
-//######################################################################################################################
-//                                          Input
-//######################################################################################################################
-    Input* Input::NewInstance(Buffer* buff){
-        Hash hash = buff->GetHash();
-        int32_t index = buff->GetInt();
-        User user = buff->GetUser();
-        return new Input(hash, index, user);
-    }
-
-    bool Input::Write(Buffer* buff) const{
-        buff->PutHash(hash_);
-        buff->PutInt(index_);
-        buff->PutUser(user_);
-        return true;
-    }
-
-    std::string Input::ToString() const{
-        std::stringstream stream;
-        stream << "Input(" << GetTransactionHash() << "[" << GetOutputIndex() << "]" << ", " << GetUser() << ")";
-        return stream.str();
-    }
-
     UnclaimedTransaction* Input::GetUnclaimedTransaction() const{
         return UnclaimedTransactionPool::GetUnclaimedTransaction(GetTransactionHash(), GetOutputIndex());
-    }
-
-//######################################################################################################################
-//                                          Output
-//######################################################################################################################
-    Output* Output::NewInstance(Buffer* buff){
-        User user = buff->GetUser();
-        Product product = buff->GetProduct();
-        return new Output(user, product);
-    }
-
-    bool Output::Write(Buffer* buff) const{
-        buff->PutUser(user_);
-        buff->PutProduct(product_);
-        return true;
-    }
-
-    std::string Output::ToString() const{
-        std::stringstream stream;
-        stream << "Output(" << GetUser() << "; " << GetProduct() << ")";
-        return stream.str();
     }
 //######################################################################################################################
 //                                          Transaction
@@ -58,95 +14,36 @@ namespace Token{
     Transaction* Transaction::NewInstance(std::fstream& fd, size_t size){
         Buffer buff(size);
         buff.ReadBytesFrom(fd, size);
-        return NewInstance(&buff);
+        return new Transaction(&buff);
     }
 
-    Transaction* Transaction::NewInstance(Buffer* buff){
-        Timestamp timestamp = buff->GetLong();
-        intptr_t index = buff->GetLong();
-        intptr_t num_inputs = buff->GetLong();
-        Input* inputs[num_inputs];
-        for(uint32_t idx = 0; idx < num_inputs; idx++)
-            inputs[idx] = Input::NewInstance(buff);
-
-
-        intptr_t num_outputs = buff->GetLong();
-        Output* outputs[num_outputs];
-        for(uint32_t idx = 0; idx < num_outputs; idx++){
-            outputs[idx] = Output::NewInstance(buff);
-        }
-        return new Transaction(timestamp, index, inputs, num_inputs, outputs, num_outputs);
-    }
-
-    intptr_t Transaction::GetBufferSize() const{
-        intptr_t size = 0;
-        size += sizeof(Timestamp); // timestamp_
-        size += sizeof(int64_t); // index_
-        size += sizeof(int64_t); // num_inputs_
-        size += (num_inputs_ * Input::kSize); // inputs_
-        size += sizeof(int64_t); // num_outputs
-        size += (num_outputs_ * Output::kSize); // outputs_
-        return size;
-    }
-
-    bool Transaction::Write(Buffer* buff) const{
-        buff->PutLong(timestamp_);
-        buff->PutLong(index_);
-        buff->PutLong(num_inputs_);
-        for(intptr_t idx = 0; idx < num_inputs_; idx++){
-            inputs_[idx]->Write(buff);
-        }
-        buff->PutLong(num_outputs_);
-        for(intptr_t idx = 0; idx < num_outputs_; idx++){
-            outputs_[idx]->Write(buff);
-        }
-        //TODO: serialize transaction signature
-        return true;
-    }
-
-    std::string Transaction::ToString() const{
-        std::stringstream stream;
-        stream << "Transaction(#" << GetIndex() << "," << GetNumberOfInputs() << " Inputs, " << GetNumberOfOutputs() << " Outputs)";
-        return stream.str();
-    }
-
-    bool Transaction::Accept(Token::TransactionVisitor* vis){
+    bool Transaction::Accept(TransactionVisitor* vis) const{
         if(!vis->VisitStart()) return false;
+
+        int64_t idx;
         // visit the inputs
         {
             if(!vis->VisitInputsStart()) return false;
-            for(intptr_t idx = 0; idx < GetNumberOfInputs(); idx++){
-                Input* it = GetInput(idx);
-                if(!vis->VisitInput(it)) return false;
+            for(idx = 0;
+                idx < GetNumberOfInputs();
+                idx++){
+                if(!vis->VisitInput(inputs_[idx]))
+                    return false;
             }
             if(!vis->VisitInputsEnd()) return false;
         }
         // visit the outputs
         {
             if(!vis->VisitOutputsStart()) return false;
-            for(intptr_t idx = 0; idx < GetNumberOfOutputs(); idx++){
-                Output* it = GetOutput(idx);
-                if(!vis->VisitOutput(it)) return false;
+            for(idx = 0;
+                idx < GetNumberOfOutputs();
+                idx++){
+                if(!vis->VisitOutput(outputs_[idx]))
+                    return false;
             }
             if(!vis->VisitOutputsEnd()) return false;
         }
         return vis->VisitEnd();
-    }
-
-    bool Transaction::Equals(Transaction* b) const{
-        //TODO: update Transaction::Equals(Transaction*) to have more depth
-        return timestamp_ == b->timestamp_
-               && index_ == b->index_
-               && num_inputs_ == b->num_inputs_
-               && num_outputs_ == b->num_outputs_;
-    }
-
-    bool Transaction::Compare(Transaction* b) const{
-        //TODO: update Transaction::Compare(Transaction*) to have more depth
-        return timestamp_ == b->timestamp_
-            && index_ == b->index_
-            && num_inputs_ == b->num_inputs_
-            && num_outputs_ == b->num_outputs_;
     }
 
     bool Transaction::Sign(){

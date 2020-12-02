@@ -3,7 +3,6 @@
 #include "async_task.h"
 #include "block_validator.h"
 #include "block_processor.h"
-#include "transaction_pool.h"
 #include "transaction_validator.h"
 
 namespace Token{
@@ -37,48 +36,38 @@ namespace Token{
 
     class TransactionPoolBlockBuilder : public TransactionPoolVisitor{
     private:
-        intptr_t block_size_;
-        intptr_t num_transactions_;
-        intptr_t max_transactions_;
-        Transaction** transactions_;
-
-        inline void
-        AddTransaction(Transaction* tx){
-            transactions_[num_transactions_++] = tx;
-        }
-
-        static bool
-        CompareTimestamp(Transaction* a, Transaction* b){
-            return a->GetTimestamp() < b->GetTimestamp();
-        }
+        int64_t size_;
+        TransactionList transactions_;
     public:
-        TransactionPoolBlockBuilder(intptr_t size=Block::kMaxTransactionsForBlock, intptr_t max_transactions=TransactionPool::GetSize()):
+        TransactionPoolBlockBuilder(int64_t size=Block::kMaxTransactionsForBlock):
             TransactionPoolVisitor(),
-            block_size_(size),
-            num_transactions_(0),
-            max_transactions_(max_transactions),
-            transactions_(nullptr){
-            if(max_transactions > 0){
-                transactions_ = (Transaction**)malloc(sizeof(Transaction*)*max_transactions);
-                memset(transactions_, 0, sizeof(Transaction*)*max_transactions);
-            }
-        }
-        ~TransactionPoolBlockBuilder(){
-            if(transactions_) free(transactions_);
-        }
+            size_(size),
+            transactions_(){}
+        ~TransactionPoolBlockBuilder(){}
 
         Block* GetBlock() const{
             // Get the Parent Block
             BlockHeader parent = BlockChain::GetHead()->GetHeader();
             // Sort the Transactions by Timestamp
-            std::sort(transactions_, transactions_+num_transactions_, CompareTimestamp);
+            //TODO: remove copy
+            TransactionList transactions(transactions_);
+            std::sort(transactions.begin(), transactions.end(), Transaction::TimestampComparator());
             // Return a New Block of size Block::kMaxTransactionsForBlock, using sorted Transactions
-            return Block::NewInstance(parent, transactions_, num_transactions_);
+            return new Block(parent, transactions);
+        }
+
+        int64_t GetBlockSize() const{
+            return size_;
+        }
+
+        int64_t GetNumberOfTransactions() const{
+            return transactions_.size();
         }
 
         bool Visit(Transaction* tx){
-            if(TransactionValidator::IsValid(tx))
-                AddTransaction(tx);
+            if((GetNumberOfTransactions() + 1) >= GetBlockSize())
+                return false;
+            transactions_.push_back(Transaction(*tx));
             return true;
         }
 

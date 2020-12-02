@@ -1,6 +1,7 @@
 #ifndef TOKEN_TRANSACTION_H
 #define TOKEN_TRANSACTION_H
 
+#include <set>
 #include "hash.h"
 #include "user.h"
 #include "object.h"
@@ -18,15 +19,26 @@ namespace Token{
         Hash hash_;
         int32_t index_;
         User user_;
-
+    protected:
+        bool Encode(Buffer* buff) const{
+            buff->PutHash(hash_);
+            buff->PutInt(index_);
+            buff->PutUser(user_);
+            return true;
+        }
+    public:
         Input(const Hash& tx_hash, int32_t index, const User& user):
             Object(Type::kInputType),
             hash_(tx_hash),
             index_(index),
             user_(user){}
-    protected:
-        bool Write(Buffer* buff) const;
-    public:
+        Input(const Hash& tx_hash, int32_t index, const std::string& user):
+            Input(tx_hash, index, User(user)){}
+        Input(Buffer* buff):
+            Object(Type::kInputType),
+            hash_(buff->GetHash()),
+            index_(buff->GetInt()),
+            user_(buff->GetUser()){}
         ~Input(){}
 
         int32_t GetOutputIndex() const{
@@ -42,15 +54,35 @@ namespace Token{
         }
 
         UnclaimedTransaction* GetUnclaimedTransaction() const;
-        std::string ToString() const;
 
-        static Input* NewInstance(Buffer* buff);
-        static Input* NewInstance(const Hash& hash, int32_t index, const User& user){
-            return new Input(hash, index, user);
+        std::string ToString() const{
+            std::stringstream stream;
+            stream << "Input(" << GetTransactionHash() << "[" << GetOutputIndex() << "]" << ", " << GetUser() << ")";
+            return stream.str();
         }
 
-        static Input* NewInstance(const Hash& hash, int32_t index, const std::string& user){
-            return new Input(hash, index, User(user));
+        void operator=(const Input& other){
+            hash_ = other.hash_;
+            user_ = other.user_;
+            index_ = other.index_;
+        }
+
+        friend bool operator==(const Input& a, const Input& b){
+            return a.hash_ == b.hash_
+                && a.index_ == b.index_
+                && a.user_ == b.user_;
+        }
+
+        friend bool operator!=(const Input& a, const Input& b){
+            return a.hash_ != b.hash_
+                && a.index_ != b.index_
+                && a.user_ != b.user_;
+        }
+
+        friend bool operator<(const Input& a, const Input& b){
+            if(a.hash_ == b.hash_)
+                return a.index_ < b.index_;
+            return a.hash_ < b.hash_;
         }
     };
 
@@ -62,14 +94,23 @@ namespace Token{
     private:
         User user_;
         Product product_;
-
+    protected:
+        bool Encode(Buffer* buff) const{
+            buff->PutUser(user_);
+            buff->PutProduct(product_);
+            return true;
+        }
+    public:
         Output(const User& user, const Product& product):
             Object(Type::kOutputType),
             user_(user),
             product_(product){}
-    protected:
-        bool Write(Buffer* buff) const;
-    public:
+        Output(const std::string& user, const std::string& product):
+            Output(User(user), Product(product)){}
+        Output(Buffer* buff):
+            Object(Type::kOutputType),
+            user_(buff->GetUser()),
+            product_(buff->GetProduct()){}
         ~Output(){}
 
         User GetUser() const{
@@ -80,89 +121,143 @@ namespace Token{
             return product_;
         }
 
-        std::string ToString() const;
-
-        static Output* NewInstance(Buffer* buff);
-        static Output* NewInstance(const User& user, const Product& token){
-            return new Output(user, token);
+        std::string ToString() const{
+            std::stringstream stream;
+            stream << "Output(" << GetUser() << "; " << GetProduct() << ")";
+            return stream.str();
         }
 
-        static Output* NewInstance(const std::string& user, const std::string& token){
-            return new Output(User(user), Product(token));
+        void operator=(const Output& other){
+            user_ = other.user_;
+            product_ = other.product_;
+        }
+
+        friend bool operator==(const Output& a, const Output& b){
+            return a.user_ == b.user_
+                && a.product_ == b.product_;
+        }
+
+        friend bool operator!=(const Output& a, const Output& b){
+            return a.user_ != b.user_
+                && a.product_ != b.product_;
+        }
+
+        friend bool operator<(const Output& a, const Output& b){
+            if(a.user_ == b.user_)
+                return a.product_ < b.product_;
+            return a.user_ < b.user_;
         }
     };
 
-    struct RawTransaction{
-        Timestamp timestamp_;
-        intptr_t index_;
-        intptr_t num_inputs_;
-        Input** inputs_;
-        intptr_t num_outputs_;
-        Output** outputs_;
-    };
+    typedef std::vector<Input> InputList;
+    typedef std::vector<Output> OutputList;
 
     class TransactionVisitor;
     class Transaction : public BinaryObject{
         friend class Block;
         friend class TransactionMessage;
+    public:
+        struct TimestampComparator{
+            bool operator()(const Transaction& a, const Transaction& b){
+                return a.timestamp_ < b.timestamp_;
+            }
+        };
+
+        struct IndexComparator{
+            bool operator()(const Transaction& a, const Transaction& b){
+                return a.index_ < b.index_;
+            }
+        };
     private:
         Timestamp timestamp_;
         int64_t index_;
-        int64_t num_inputs_;
-        Input** inputs_;
-        int64_t num_outputs_;
-        Output** outputs_;
+        InputList inputs_;
+        OutputList outputs_;
         std::string signature_;
-
-        Transaction(Timestamp timestamp, intptr_t index, Input** inputs, intptr_t num_inputs, Output** outputs, intptr_t num_outputs):
+    public:
+        Transaction(int64_t index, const InputList& inputs, const OutputList& outputs, Timestamp timestamp=GetCurrentTimestamp()):
             BinaryObject(Type::kTransactionType),
             timestamp_(timestamp),
             index_(index),
-            num_inputs_(num_inputs),
-            inputs_(nullptr),
-            num_outputs_(num_outputs),
-            outputs_(nullptr),
+            inputs_(inputs),
+            outputs_(outputs),
+            signature_(){}
+        Transaction(Buffer* buff):
+            BinaryObject(Type::kTransactionType),
+            timestamp_(buff->GetLong()),
+            index_(buff->GetLong()),
+            inputs_(),
+            outputs_(),
             signature_(){
-
-            inputs_ = (Input**)malloc(sizeof(Input*)*num_inputs);
-            memset(inputs_, 0, sizeof(Input*)*num_inputs);
-            for(intptr_t idx = 0; idx < num_inputs; idx++)
-                inputs_[idx] = inputs[idx];
-
-            outputs_ = (Output**)malloc(sizeof(Output*)*num_outputs);
-            memset(outputs_, 0, sizeof(Output*)*num_outputs);
-            for(intptr_t idx = 0; idx < num_outputs; idx++)
-                outputs_[idx] = outputs[idx];
+            int64_t idx;
+            for(idx = 0;
+                idx < buff->GetLong();
+                idx++)
+                inputs_.push_back(Input(buff));
+            for(idx = 0;
+                idx < buff->GetLong();
+                idx++)
+                outputs_.push_back(Output(buff));
         }
-    public:
+        Transaction(const Transaction& tx):
+            BinaryObject(Type::kTransactionType),
+            timestamp_(tx.timestamp_),
+            index_(tx.index_),
+            inputs_(tx.inputs_),
+            outputs_(tx.outputs_),
+            signature_(tx.signature_){}
         ~Transaction() = default;
 
         Timestamp GetTimestamp() const{
             return timestamp_;
         }
 
-        intptr_t GetIndex() const{
+        int64_t GetIndex() const{
             return index_;
         }
 
-        intptr_t GetNumberOfInputs() const{
-            return num_inputs_;
+        int64_t GetNumberOfInputs() const{
+            return inputs_.size();
         }
 
-        Input* GetInput(intptr_t idx) const{
-            if(idx < 0 || idx > GetNumberOfInputs())
-                return nullptr;
-            return inputs_[idx];
+        InputList inputs() const{
+            return inputs_;
         }
 
-        Output* GetOutput(intptr_t idx) const{
-            if(idx < 0 || idx > GetNumberOfOutputs())
-                return nullptr;
-            return outputs_[idx];
+        InputList::iterator inputs_begin(){
+            return inputs_.begin();
         }
 
-        intptr_t GetNumberOfOutputs() const{
-            return num_outputs_;
+        InputList::const_iterator inputs_begin() const{
+            return inputs_.begin();
+        }
+
+        InputList::iterator inputs_end(){
+            return inputs_.end();
+        }
+
+        InputList::const_iterator inputs_end() const{
+            return inputs_.end();
+        }
+
+        int64_t GetNumberOfOutputs() const{
+            return outputs_.size();
+        }
+
+        OutputList::iterator outputs_begin(){
+            return outputs_.begin();
+        }
+
+        OutputList::const_iterator outputs_begin() const{
+            return outputs_.begin();
+        }
+
+        OutputList::iterator outputs_end(){
+            return outputs_.end();
+        }
+
+        OutputList::const_iterator outputs_end() const{
+            return outputs_.end();
         }
 
         std::string GetSignature() const{
@@ -178,24 +273,78 @@ namespace Token{
         }
 
         bool Sign();
-        bool Accept(TransactionVisitor* visitor);
-        bool Write(Buffer* buff) const;
-        bool Equals(Transaction* b) const;
-        bool Compare(Transaction* b) const;
-        intptr_t GetBufferSize() const;
-        std::string ToString() const;
+        bool Accept(TransactionVisitor* vis) const;
 
-        static Transaction* NewInstance(Buffer* buffer);
-        static Transaction* NewInstance(std::fstream& fd, size_t size);
-        static Transaction* NewInstance(uint32_t index, Input** inputs, size_t num_inputs, Output** outputs, size_t num_outputs, Timestamp timestamp=GetCurrentTimestamp()){
-            return new Transaction(timestamp, index, inputs, num_inputs, outputs, num_outputs);
+        bool Encode(Buffer* buff) const{
+            buff->PutLong(timestamp_);
+            buff->PutLong(index_);
+
+            int64_t idx;
+            buff->PutLong(GetNumberOfInputs());
+            for(idx = 0;
+                idx < GetNumberOfInputs();
+                idx++){
+                inputs_[idx].Encode(buff);
+            }
+            buff->PutLong(GetNumberOfOutputs());
+            for(idx = 0;
+                idx < GetNumberOfOutputs();
+                idx++){
+                outputs_[idx].Encode(buff);
+            }
+            //TODO: serialize transaction signature
+            return true;
         }
 
+        int64_t GetBufferSize() const{
+            intptr_t size = 0;
+            size += sizeof(Timestamp); // timestamp_
+            size += sizeof(int64_t); // index_
+            size += sizeof(int64_t); // num_inputs_
+            size += GetNumberOfInputs() * Input::kSize; // inputs_
+            size += sizeof(int64_t); // num_outputs
+            size += GetNumberOfOutputs() * Output::kSize; // outputs_
+            return size;
+        }
+
+        std::string ToString() const{
+            std::stringstream stream;
+            stream << "Transaction(#" << GetIndex() << "," << GetNumberOfInputs() << " Inputs, " << GetNumberOfOutputs() << " Outputs)";
+            return stream.str();
+        }
+
+        void operator=(const Transaction& other){
+            timestamp_ = other.timestamp_;
+            index_ = other.index_;
+            inputs_ = other.inputs_;
+            outputs_ = other.outputs_;
+            //TODO: copy transaction signature
+        }
+
+        bool operator==(const Transaction& other){
+            return timestamp_ == other.timestamp_
+                && index_ == other.index_
+                && inputs_ == other.inputs_
+                && outputs_ == other.outputs_;
+            //TODO: compare transaction signature
+        }
+
+        bool operator!=(const Transaction& other){
+            return timestamp_ != other.timestamp_
+                && index_ != other.index_
+                && inputs_ != other.inputs_
+                && outputs_ != other.outputs_;
+            //TODO: compare transaction signature
+        }
+
+        static Transaction* NewInstance(std::fstream& fd, size_t size);
         static inline Transaction* NewInstance(const std::string& filename){
             std::fstream fd(filename, std::ios::in|std::ios::binary);
             return NewInstance(fd, GetFilesize(filename));
         }
     };
+
+    typedef std::vector<Transaction> TransactionList;
 
     class TransactionVisitor{
     public:
@@ -203,10 +352,10 @@ namespace Token{
 
         virtual bool VisitStart(){ return true; }
         virtual bool VisitInputsStart(){ return true; }
-        virtual bool VisitInput(Input* input) = 0;
+        virtual bool VisitInput(const Input& input) const = 0;
         virtual bool VisitInputsEnd(){ return true; }
         virtual bool VisitOutputsStart(){ return true; }
-        virtual bool VisitOutput(Output* output) = 0;
+        virtual bool VisitOutput(const Output& output) const = 0;
         virtual bool VisitOutputsEnd(){ return true; }
         virtual bool VisitEnd(){ return true; }
     };

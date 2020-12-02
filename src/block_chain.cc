@@ -9,7 +9,6 @@
 
 #include "block_chain.h"
 #include "block_processor.h"
-#include "transaction_pool.h"
 #include "unclaimed_transaction.h"
 
 namespace Token{

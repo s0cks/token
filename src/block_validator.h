@@ -23,13 +23,13 @@ namespace Token{
             return strict_;
         }
 
-        bool Visit(Transaction* tx){
-            Hash hash = tx->GetHash();
-            if(tx->GetNumberOfInputs() <= 0){
+        bool Visit(const Transaction& tx) const{
+            Hash hash = tx.GetHash();
+            if(tx.GetNumberOfInputs() <= 0){
                 invalid_.push_back(hash);
                 LOG(WARNING) << "transaction " << hash << " is invalid, no inputs.";
                 return false;
-            } else if(tx->GetNumberOfOutputs() <= 0){
+            } else if(tx.GetNumberOfOutputs() <= 0){
                 invalid_.push_back(hash);
                 LOG(WARNING) << "transaction " << hash << " is invalid, no outputs.";
                 return false;
