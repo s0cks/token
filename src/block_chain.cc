@@ -4,7 +4,9 @@
 #include <glog/logging.h>
 #include <condition_variable>
 
+#include "keychain.h"
 #include "configuration.h"
+
 #include "block_chain.h"
 #include "block_pool.h"
 #include "block_processor.h"

@@ -5,11 +5,10 @@
 #include <vector>
 #include <string>
 
-#include "common.h"
-#include "handle.h"
-#include "keychain.h"
-#include "alloc/allocator.h"
 #include "hash.h"
+#include "handle.h"
+#include "alloc/allocator.h"
+#include "alloc/allocator_stats.h"
 
 namespace Token{
     class Object;
@@ -61,22 +60,18 @@ namespace Token{
         friend class ReferenceUpdater;
         friend class ReferenceNotifier;
         friend class StackReferenceNotifier;
-    public:
-        static const intptr_t kNumberOfCollectionsRequiredForPromotion = 3;
     protected:
         Type type_;
         bool marked_;
         intptr_t size_;
-        intptr_t collections_survived_;
-        intptr_t num_references_;
+        AllocatorObjectStats alloc_stats_;
         uword ptr_;
 
         Object():
             type_(Type::kUnknownType),
             marked_(false),
             size_(0),
-            collections_survived_(0),
-            num_references_(0),
+            alloc_stats_(),
             ptr_(0){
 #ifndef TOKEN_GCMODE_NONE
             Allocator::Initialize(this);
@@ -97,18 +92,6 @@ namespace Token{
 
         void SetSize(intptr_t size){
             size_ = size;
-        }
-
-        void IncrementReferenceCount(){
-            num_references_++;
-        }
-
-        void DecrementReferenceCount(){
-            num_references_--;
-        }
-
-        void IncrementCollectionsCounter(){
-            collections_survived_++;
         }
 
         void SetMarked(){
@@ -135,6 +118,30 @@ namespace Token{
             WriteBarrier((Object**)slot, (Object*)handle);
         }
 
+        void IncrementReferenceCount(){
+            alloc_stats_.num_references_++;
+        }
+
+        void DecrementReferenceCount(){
+            alloc_stats_.num_references_--;
+        }
+
+        void IncrementCollectionsCounter(){
+            alloc_stats_.num_collections_++;
+        }
+
+        bool IsReadyForPromotion() const{
+#ifdef TOKEN_GCMODE_NONE
+            return false;
+#else
+            return alloc_stats_.GetNumberOfCollectionsSurvived() > Allocator::kNumberOfCollectionsRequiredForPromotion;
+#endif//TOKEN_GCMODE_NONE
+        }
+
+        AllocatorObjectStats& GetAllocationStats(){
+            return alloc_stats_;
+        }
+
         virtual bool Accept(WeakObjectPointerVisitor* vis){ return true; }
     public:
         virtual ~Object() = default;
@@ -147,28 +154,12 @@ namespace Token{
             return size_;
         }
 
-        intptr_t GetReferenceCount(){
-            return num_references_;
-        }
-
-        intptr_t GetNumberOfCollectionsSurvived() const{
-            return collections_survived_;
-        }
-
         bool IsForwarding() const{
             return ptr_ > 0;
         }
 
-        bool HasStackReferences(){
-            return num_references_ > 0;
-        }
-
         bool IsMarked() const{
             return marked_;
-        }
-
-        bool IsReadyForPromotion() const{
-            return collections_survived_ >= kNumberOfCollectionsRequiredForPromotion;
         }
 
         virtual std::string ToString() const{

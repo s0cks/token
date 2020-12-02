@@ -15,8 +15,8 @@ namespace Token{
 #else
         Object** ptr_;
 
-        static bool VisitHandles(WeakObjectPointerVisitor* vis);
 #endif//TOKEN_GCMODE_NONE
+        static bool VisitHandles(WeakObjectPointerVisitor* vis);
     protected:
         HandleBase();
         HandleBase(Object* obj);

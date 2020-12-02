@@ -681,7 +681,6 @@ namespace Token{
         //TODO: implement ServerSession::HandlePeerListMessage(const Handle<HandleMessageTask>&);
     }
 
-#ifndef TOKEN_GCMODE_NONE
     bool Server::Accept(WeakObjectPointerVisitor* vis){
         LOCK_GUARD;
         for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
@@ -692,5 +691,4 @@ namespace Token{
         }
         return true;
     }
-#endif//TOKEN_GCMODE_NONE
 }

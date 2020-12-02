@@ -4,7 +4,6 @@
 #include "alloc/allocator.h"
 
 namespace Token{
-#ifndef TOKEN_GCMODE_NONE
     class HandleGroup : public Object{
         friend class HandleBase;
     private:
@@ -103,8 +102,6 @@ namespace Token{
 
     static HandleGroup* root_ = nullptr;
 
-#endif//TOKEN_GCMODE_NONE
-
     HandleBase::HandleBase(){
 #ifndef TOKEN_GCMODE_NONE
         if(!root_) root_ = new HandleGroup();
@@ -168,7 +165,6 @@ namespace Token{
 #endif//TOKEN_GCMODE_NONE
     }
 
-#ifndef TOKEN_GCMODE_NONE
     bool HandleBase::VisitHandles(WeakObjectPointerVisitor* vis){
         HandleGroup* group = root_;
         while(group != nullptr){
@@ -178,5 +174,4 @@ namespace Token{
         }
         return true;
     }
-#endif//TOKEN_GCMODE_NONE
 }

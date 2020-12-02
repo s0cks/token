@@ -77,7 +77,7 @@ namespace Token{
     }
 
     void HealthCheckService::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
-        Handle<HttpSession> session = (HttpSession*)handle->data;
+        HttpSession* session = (HttpSession*)handle->data;
         session->InitReadBuffer(buff);
     }
 
@@ -116,7 +116,7 @@ namespace Token{
 
     static HttpSession* sessions_[HealthCheckService::kMaxNumberOfSessions];
 
-    bool HealthCheckService::RegisterSession(const Handle<HttpSession>& session){
+    bool HealthCheckService::RegisterSession(HttpSession* session){
         for(int64_t idx = 0; idx < HealthCheckService::kMaxNumberOfSessions; idx++){
             if(!sessions_[idx]){
                 sessions_[idx] = session;
@@ -126,10 +126,10 @@ namespace Token{
         return false;
     }
 
-    bool HealthCheckService::UnregisterSession(const Handle<HttpSession>& session){
+    bool HealthCheckService::UnregisterSession(HttpSession* session){
         for(int64_t idx = 0; idx < HealthCheckService::kMaxNumberOfSessions; idx++){
             //TODO: fix HealthCheckService::UnregisterSession(const Handle<HttpSession>&);
-            if(sessions_[idx] && sessions_[idx]->GetStartAddress() == session->GetStartAddress()){
+            if(sessions_[idx] && sessions_[idx]->GetSessionID() == session->GetSessionID()){
                 sessions_[idx] = nullptr;
                 return true;
             }
@@ -137,7 +137,6 @@ namespace Token{
         return false;
     }
 
-#ifndef TOKEN_GCMODE_NONE
     bool HealthCheckService::Accept(WeakObjectPointerVisitor* vis){
         for(int64_t idx = 0; idx < HealthCheckService::kMaxNumberOfSessions; idx++){
             if(sessions_[idx] && !vis->Visit(&sessions_[idx])){
@@ -147,10 +146,9 @@ namespace Token{
         }
         return true;
     }
-#endif//TOKEN_GCMODE_NONE
 
     void HealthCheckService::OnNewConnection(uv_stream_t* stream, int status){
-        Handle<HttpSession> session = HttpSession::NewInstance(stream->loop);
+        HttpSession* session = new HttpSession(stream->loop);
         RegisterSession(session);
 
         LOG(INFO) << "client is connecting....";

@@ -1,5 +1,3 @@
-#ifdef TOKEN_GCMODE_DEFAULT
-
 #ifndef TOKEN_ALLOCATOR_H
 #define TOKEN_ALLOCATOR_H
 
@@ -69,7 +67,8 @@ namespace Token{
         friend class Scavenger;
         friend class HeapDumpWriter;
     public:
-        static const intptr_t kDefaultHeapSize;
+        static const int64_t kNumberOfCollectionsRequiredForPromotion = 3;
+        static const int64_t kDefaultHeapSize;
         static const char* kDefaultHeapSizeAsString;
     private:
         Allocator() = delete;
@@ -104,5 +103,3 @@ namespace Token{
 }
 
 #endif//TOKEN_ALLOCATOR_H
-
-#endif//TOKEN_GCMODE_DEFAULT

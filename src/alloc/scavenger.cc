@@ -1,5 +1,3 @@
-#ifndef TOKEN_GCMODE_NONE
-
 #include "alloc/heap.h"
 #include "scavenger.h"
 #include "server.h"
@@ -422,5 +420,3 @@ namespace Token{
         return Thread::Start("ScavengerThread", &ScavengerThread, 0) == 0;
     }
 }
-
-#endif//TOKEN_GCMODE_NONE

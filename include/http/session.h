@@ -5,13 +5,15 @@
 #include <glog/logging.h>
 #include "buffer.h"
 #include "http/request.h"
+#include "uuid.h"
 
 namespace Token{
-    class HttpSession : public Object{
+    class HttpSession{
         friend class HealthCheckService;
     public:
         static const size_t kBufferSize = 4096;
     private:
+        UUID session_id_;
         uv_tcp_t handle_;
         Buffer* read_buffer_;
         Buffer* write_buffer_;
@@ -31,24 +33,6 @@ namespace Token{
         static void OnResponseSent(uv_write_t* req, int status);
         static void OnClose(uv_handle_t* handle);
     protected:
-        HttpSession(uv_loop_t* loop):
-            Object(),
-            handle_(),
-            read_buffer_(nullptr),
-            write_buffer_(nullptr){
-            SetType(Type::kHttpSessionType);
-
-            handle_.data = this;
-            int err;
-            if((err = uv_tcp_init(loop, &handle_)) != 0){
-                LOG(WARNING) << "couldn't initialize the HttpSession::handle: " << uv_strerror(err);
-                return;
-            }
-
-            WriteBarrier(&read_buffer_, Buffer::NewInstance(kBufferSize));
-            WriteBarrier(&write_buffer_, Buffer::NewInstance(kBufferSize));
-        }
-
 #ifndef TOKEN_GCMODE_NONE
         bool Accept(WeakObjectPointerVisitor* vis){
             if(!vis->Visit(&read_buffer_)){
@@ -62,17 +46,30 @@ namespace Token{
             }
             return true;
         }
-
-        static void* operator new(size_t size){
-            return Allocator::Allocate(size);
-        }
-        static void operator delete(void*, size_t, bool){}
-        using Object::operator delete;
 #endif//TOKEN_GCMODE_NONE
     public:
+        HttpSession(uv_loop_t* loop):
+            session_id_(),
+            handle_(),
+            read_buffer_(nullptr),
+            write_buffer_(nullptr){
+            handle_.data = this;
+            int err;
+            if((err = uv_tcp_init(loop, &handle_)) != 0){
+                LOG(WARNING) << "couldn't initialize the HttpSession::handle: " << uv_strerror(err);
+                return;
+            }
+
+            read_buffer_ = Buffer::NewInstance(kBufferSize);
+            write_buffer_ = Buffer::NewInstance(kBufferSize);
+        }
         ~HttpSession(){
             LOG(ERROR) << "destroying http session";
             Close();
+        }
+
+        UUID GetSessionID() const{
+            return session_id_;
         }
 
         uv_stream_t* GetStream() const{
@@ -92,10 +89,6 @@ namespace Token{
 
         std::string ToString() const{
             return "HttpSession()";
-        }
-
-        static Handle<HttpSession> NewInstance(uv_loop_t* loop){
-            return new HttpSession(loop);
         }
     };
 }
