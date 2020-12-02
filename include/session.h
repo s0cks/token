@@ -77,7 +77,7 @@ namespace Token{
         Buffer* wbuffer_;
 
         Session(uv_loop_t* loop):
-            Object(),
+            Object(Type::kSessionType),
             mutex_(),
             cond_(),
             state_(State::kDisconnected),
@@ -86,7 +86,6 @@ namespace Token{
             handle_(),
             rbuffer_(nullptr),
             wbuffer_(nullptr){
-            SetType(Type::kSessionType);
             handle_.data = this;
 
             uv_tcp_keepalive(GetHandle(), 1, 60);
@@ -96,23 +95,9 @@ namespace Token{
                 return;
             }
 
-            WriteBarrier(&rbuffer_, Buffer::NewInstance(kBufferSize));
-            WriteBarrier(&wbuffer_, Buffer::NewInstance(kBufferSize));
+            rbuffer_ = new Buffer(kBufferSize);
+            wbuffer_ = new Buffer(kBufferSize);
         }
-
-#ifndef TOKEN_GCMODE_NONE
-        bool Accept(WeakObjectPointerVisitor* vis){
-            if(!vis->Visit(&rbuffer_)){
-                LOG(WARNING) << "couldn't visit the session read buffer";
-                return false;
-            }
-            if(!vis->Visit(&wbuffer_)){
-                LOG(WARNING) << "couldn't visit the session write buffer";
-                return false;
-            }
-            return true;
-        }
-#endif//TOKEN_GCMODE_NONE
 
         uv_tcp_t* GetHandle() const{
             return (uv_tcp_t*)&handle_;
@@ -133,22 +118,22 @@ namespace Token{
         static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
         static void OnMessageSent(uv_write_t* req, int status);
     public:
-        Handle<Buffer> GetWriteBuffer() const{
+        Buffer* GetWriteBuffer() const{
             return wbuffer_;
         }
 
-        Handle<Buffer> GetReadBuffer() const{
+        Buffer* GetReadBuffer() const{
             return rbuffer_;
         }
 
         State GetState();
         Status GetStatus();
-        void Send(const Handle<Message>& msg);
-        void Send(std::vector<Handle<Message>>& messages);
+        void Send(Message* msg);
+        void Send(std::vector<Message*>& messages);
         void SendInventory(std::vector<InventoryItem>& items);
 
 #define DEFINE_SEND_MESSAGE(Name) \
-        void Send(const Handle<Name##Message>& msg){ Send(msg.CastTo<Message>()); }
+        void Send(Name##Message* msg){ Send(msg); }
         FOR_EACH_MESSAGE_TYPE(DEFINE_SEND_MESSAGE)
 #undef DEFINE_SEND_MESSAGE
 

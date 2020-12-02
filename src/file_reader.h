@@ -31,16 +31,6 @@ namespace Token{
         int64_t ReadLong();
         uint64_t ReadUnsignedLong();
         void Close();
-
-        inline bool
-        ReadBytes(const Handle<Buffer>& buff, size_t size){
-            return ReadBytes((uint8_t*)buff->data(), size);
-        }
-
-        inline bool
-        ReadBytes(const Handle<Buffer>& buff){
-            return ReadBytes(buff, buff->GetBufferSize());
-        }
     };
 
     class BinaryFileReader : public FileReader{
@@ -61,10 +51,6 @@ namespace Token{
         virtual ~BinaryFileReader(){
             if(file_ != NULL) Close();
         }
-
-#ifndef TOKEN_GCMODE_NONE
-        bool ReadRegion(MemoryRegion* region, intptr_t nbytes);
-#endif//TOKEN_GC_MODE_NONE
     };
 }
 

@@ -8,9 +8,9 @@ namespace Token{
     static std::condition_variable cond_;
     static std::deque<Block*> queue_;
 
-    void BlockQueue::Queue(const Handle<Block>& blk){
+    void BlockQueue::Queue(Block* blk){
         std::unique_lock<std::mutex> lock(mutex_);
-        queue_.push_back(blk.operator->());
+        queue_.push_back(blk);
         lock.unlock();
         cond_.notify_one();
         if(GetSize() > BlockQueue::kMaxBlockQueueSize){
@@ -19,7 +19,7 @@ namespace Token{
         }
     }
 
-    Handle<Block> BlockQueue::DeQueue(){
+    Block* BlockQueue::DeQueue(){
         std::unique_lock<std::mutex> lock(mutex_);
         while(queue_.empty()) cond_.wait(lock);
         auto item = queue_.front();

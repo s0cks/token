@@ -10,7 +10,7 @@ namespace Token{
         Transaction* transaction_;
         uint32_t out_idx_;
 
-        inline Handle<UnclaimedTransaction>
+        inline UnclaimedTransaction*
         CreateUnclaimedTransaction(const User& user, const Product& product){
             Hash tx_hash = transaction_->GetHash();
             return UnclaimedTransaction::NewInstance(tx_hash, out_idx_++, user, product);
@@ -29,7 +29,7 @@ namespace Token{
         }
 
         bool VisitOutput(Output* output){
-            Handle<UnclaimedTransaction> utxo = CreateUnclaimedTransaction(output->GetUser(), output->GetProduct());
+            UnclaimedTransaction* utxo = CreateUnclaimedTransaction(output->GetUser(), output->GetProduct());
             UnclaimedTransactionPool::PutUnclaimedTransaction(utxo->GetHash(), utxo);
             return true;
         }

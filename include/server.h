@@ -68,9 +68,8 @@ namespace Token{
         Server() = delete;
 
         static uv_tcp_t* GetHandle();
-        static bool Accept(WeakObjectPointerVisitor* vis);
-        static bool RegisterPeer(const Handle<PeerSession>& session);
-        static bool UnregisterPeer(const Handle<PeerSession>& session);
+        static bool RegisterPeer(PeerSession* session);
+        static bool UnregisterPeer(PeerSession* session);
         static bool SavePeerList();
         static void SetStatus(Status status);
         static void SetState(State state);
@@ -89,14 +88,14 @@ namespace Token{
         static void WaitForState(State state);
         static bool Initialize();
         static bool Shutdown();
-        static bool Broadcast(const Handle<Message>& msg);
+        static bool Broadcast(Message* msg);
         static bool ConnectTo(const NodeAddress& address);
         static bool IsConnectedTo(const NodeAddress& address);
         static bool IsConnectedTo(const UUID& uuid);
         static bool GetPeers(PeerList& peers);
         static int GetNumberOfPeers();
-        static Handle<PeerSession> GetPeer(const NodeAddress& address);
-        static Handle<PeerSession> GetPeer(const UUID& uuid);
+        static PeerSession* GetPeer(const NodeAddress& address);
+        static PeerSession* GetPeer(const UUID& uuid);
 
         static inline bool
         ConnectTo(const std::string& address, uint32_t port){
@@ -115,7 +114,7 @@ namespace Token{
 
 
 #define DECLARE_BROADCAST(Name) \
-        static void Broadcast(const Handle<Name##Message>& msg){ Broadcast(msg.CastTo<Message>()); }
+        static void Broadcast(Name##Message* msg){ Broadcast(msg); }
         FOR_EACH_MESSAGE_TYPE(DECLARE_BROADCAST)
 #undef DECLARE_BROADCAST
     };
@@ -124,16 +123,14 @@ namespace Token{
         friend class Server;
     private:
         ServerSession(uv_loop_t* loop):
-            Session(loop){
-            SetType(Type::kServerSessionType);
-        }
+            Session(loop){}
 
 #define DECLARE_MESSAGE_HANDLER(Name) \
-        static void Handle##Name##Message(const Handle<HandleMessageTask>& task);
+        static void Handle##Name##Message(HandleMessageTask* task);
         FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
     public:
-        static Handle<ServerSession> NewInstance(uv_loop_t* loop){
+        static ServerSession* NewInstance(uv_loop_t* loop){
             return new ServerSession(loop);
         }
     };

@@ -17,9 +17,9 @@ namespace Token{
             id_(),
             next_(nullptr){}
 
-        void SetNextMessage(const Handle<Message>& msg);
+        void SetNextMessage(Message* msg);
         void WaitForNextMessage();
-        Handle<Message> GetNextMessage();
+        Message* GetNextMessage();
         static void OnConnect(uv_connect_t* conn, int status);
         static void OnShutdown(uv_async_t* handle);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
@@ -42,18 +42,18 @@ namespace Token{
             return id_;
         }
 
-        Handle<Block> GetBlock(const Hash& hash);
+        Block* GetBlock(const Hash& hash);
         bool GetBlockChain(std::set<Hash>& blocks);
         bool GetPeers(PeerList& peers);
         bool GetUnclaimedTransactions(const User& user, std::vector<Hash>& utxos);
-        bool SendTransaction(const Handle<Transaction>& tx);
-        Handle<UnclaimedTransaction> GetUnclaimedTransaction(const Hash& hash);
+        bool SendTransaction(Transaction* tx);
+        UnclaimedTransaction* GetUnclaimedTransaction(const Hash& hash);
 
-        static Handle<ClientSession> NewInstance(uv_loop_t* loop, const NodeAddress& address){
+        static ClientSession* NewInstance(uv_loop_t* loop, const NodeAddress& address){
             return new ClientSession(loop, address);
         }
 
-        static Handle<ClientSession> NewInstance(const NodeAddress& address){
+        static ClientSession* NewInstance(const NodeAddress& address){
             return new ClientSession(uv_loop_new(), address);
         }
     };

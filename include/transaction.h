@@ -1,11 +1,10 @@
 #ifndef TOKEN_TRANSACTION_H
 #define TOKEN_TRANSACTION_H
 
-#include "object.h"
-#include "user.h"
-#include "product.h"
 #include "hash.h"
-#include "alloc/allocator.h"
+#include "user.h"
+#include "object.h"
+#include "product.h"
 #include "unclaimed_transaction.h"
 
 namespace Token{
@@ -21,13 +20,12 @@ namespace Token{
         User user_;
 
         Input(const Hash& tx_hash, int32_t index, const User& user):
+            Object(Type::kInputType),
             hash_(tx_hash),
             index_(index),
-            user_(user){
-            SetType(Type::kInputType);
-        }
+            user_(user){}
     protected:
-        bool Write(const Handle<Buffer>& buff) const;
+        bool Write(Buffer* buff) const;
     public:
         ~Input(){}
 
@@ -46,12 +44,12 @@ namespace Token{
         UnclaimedTransaction* GetUnclaimedTransaction() const;
         std::string ToString() const;
 
-        static Handle<Input> NewInstance(const Handle<Buffer>& buff);
-        static Handle<Input> NewInstance(const Hash& hash, int32_t index, const User& user){
+        static Input* NewInstance(Buffer* buff);
+        static Input* NewInstance(const Hash& hash, int32_t index, const User& user){
             return new Input(hash, index, user);
         }
 
-        static Handle<Input> NewInstance(const Hash& hash, int32_t index, const std::string& user){
+        static Input* NewInstance(const Hash& hash, int32_t index, const std::string& user){
             return new Input(hash, index, User(user));
         }
     };
@@ -66,12 +64,11 @@ namespace Token{
         Product product_;
 
         Output(const User& user, const Product& product):
+            Object(Type::kOutputType),
             user_(user),
-            product_(product){
-            SetType(Type::kOutputType);
-        }
+            product_(product){}
     protected:
-        bool Write(const Handle<Buffer>& buff) const;
+        bool Write(Buffer* buff) const;
     public:
         ~Output(){}
 
@@ -85,12 +82,12 @@ namespace Token{
 
         std::string ToString() const;
 
-        static Handle<Output> NewInstance(const Handle<Buffer>& buff);
-        static Handle<Output> NewInstance(const User& user, const Product& token){
+        static Output* NewInstance(Buffer* buff);
+        static Output* NewInstance(const User& user, const Product& token){
             return new Output(user, token);
         }
 
-        static Handle<Output> NewInstance(const std::string& user, const std::string& token){
+        static Output* NewInstance(const std::string& user, const std::string& token){
             return new Output(User(user), Product(token));
         }
     };
@@ -118,7 +115,7 @@ namespace Token{
         std::string signature_;
 
         Transaction(Timestamp timestamp, intptr_t index, Input** inputs, intptr_t num_inputs, Output** outputs, intptr_t num_outputs):
-            BinaryObject(),
+            BinaryObject(Type::kTransactionType),
             timestamp_(timestamp),
             index_(index),
             num_inputs_(num_inputs),
@@ -126,34 +123,17 @@ namespace Token{
             num_outputs_(num_outputs),
             outputs_(nullptr),
             signature_(){
-            SetType(Type::kTransactionType);
 
             inputs_ = (Input**)malloc(sizeof(Input*)*num_inputs);
             memset(inputs_, 0, sizeof(Input*)*num_inputs);
             for(intptr_t idx = 0; idx < num_inputs; idx++)
-                WriteBarrier(&inputs_[idx], inputs[idx]);
+                inputs_[idx] = inputs[idx];
 
             outputs_ = (Output**)malloc(sizeof(Output*)*num_outputs);
             memset(outputs_, 0, sizeof(Output*)*num_outputs);
             for(intptr_t idx = 0; idx < num_outputs; idx++)
-                WriteBarrier(&outputs_[idx], outputs[idx]);
+                outputs_[idx] = outputs[idx];
         }
-    protected:
-#ifndef TOKEN_GCMODE_NONE
-        bool Accept(WeakObjectPointerVisitor* vis){
-            for(intptr_t idx = 0; idx < num_inputs_; idx++){
-                if(!vis->Visit(&inputs_[idx]))
-                    return false;
-            }
-
-            for(intptr_t idx = 0; idx < num_outputs_; idx++){
-                if(!vis->Visit(&outputs_[idx]))
-                    return false;
-            }
-
-            return true;
-        }
-#endif//TOKEN_GCMODE_NONE
     public:
         ~Transaction() = default;
 
@@ -169,13 +149,13 @@ namespace Token{
             return num_inputs_;
         }
 
-        Handle<Input> GetInput(intptr_t idx) const{
+        Input* GetInput(intptr_t idx) const{
             if(idx < 0 || idx > GetNumberOfInputs())
                 return nullptr;
             return inputs_[idx];
         }
 
-        Handle<Output> GetOutput(intptr_t idx) const{
+        Output* GetOutput(intptr_t idx) const{
             if(idx < 0 || idx > GetNumberOfOutputs())
                 return nullptr;
             return outputs_[idx];
@@ -197,30 +177,21 @@ namespace Token{
             return GetIndex() == 0;
         }
 
-        Handle<Buffer> ToBuffer() const{
-            Handle<Buffer> buff = Buffer::NewInstance(GetBufferSize());
-            if(!Write(buff)){
-                LOG(WARNING) << "couldn't write transaction to buffer";
-                return Handle<Buffer>();
-            }
-            return buff;
-        }
-
         bool Sign();
         bool Accept(TransactionVisitor* visitor);
-        bool Write(const Handle<Buffer>& buff) const;
-        bool Equals(const Handle<Transaction>& b) const;
-        bool Compare(const Handle<Transaction>& b) const;
+        bool Write(Buffer* buff) const;
+        bool Equals(Transaction* b) const;
+        bool Compare(Transaction* b) const;
         intptr_t GetBufferSize() const;
         std::string ToString() const;
 
-        static Handle<Transaction> NewInstance(const Handle<Buffer>& buffer);
-        static Handle<Transaction> NewInstance(std::fstream& fd, size_t size);
-        static Handle<Transaction> NewInstance(uint32_t index, Input** inputs, size_t num_inputs, Output** outputs, size_t num_outputs, Timestamp timestamp=GetCurrentTimestamp()){
+        static Transaction* NewInstance(Buffer* buffer);
+        static Transaction* NewInstance(std::fstream& fd, size_t size);
+        static Transaction* NewInstance(uint32_t index, Input** inputs, size_t num_inputs, Output** outputs, size_t num_outputs, Timestamp timestamp=GetCurrentTimestamp()){
             return new Transaction(timestamp, index, inputs, num_inputs, outputs, num_outputs);
         }
 
-        static inline Handle<Transaction> NewInstance(const std::string& filename){
+        static inline Transaction* NewInstance(const std::string& filename){
             std::fstream fd(filename, std::ios::in|std::ios::binary);
             return NewInstance(fd, GetFilesize(filename));
         }
@@ -238,6 +209,95 @@ namespace Token{
         virtual bool VisitOutput(Output* output) = 0;
         virtual bool VisitOutputsEnd(){ return true; }
         virtual bool VisitEnd(){ return true; }
+    };
+
+#define FOR_EACH_TX_POOL_STATE(V) \
+    V(Uninitialized)              \
+    V(Initializing)               \
+    V(Initialized)
+
+#define FOR_EACH_TX_POOL_STATUS(V) \
+    V(Ok)                          \
+    V(Warning)                     \
+    V(Error)
+
+    class TransactionPoolVisitor;
+    class TransactionPool{
+    public:
+        enum State{
+#define DEFINE_STATE(Name) k##Name,
+            FOR_EACH_TX_POOL_STATE(DEFINE_STATE)
+#undef DEFINE_STATE
+        };
+
+        friend std::ostream& operator<<(std::ostream& stream, const State& state){
+            switch(state){
+#define DEFINE_TOSTRING(Name) \
+                case State::k##Name: \
+                    stream << #Name; \
+                    return stream;
+                FOR_EACH_TX_POOL_STATE(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
+            }
+        }
+
+        enum Status{
+#define DEFINE_STATUS(Name) k##Name,
+            FOR_EACH_TX_POOL_STATUS(DEFINE_STATUS)
+#undef DEFINE_STATUS
+        };
+
+        friend std::ostream& operator<<(std::ostream& stream, const Status& status){
+            switch(status){
+#define DEFINE_TOSTRING(Name) \
+                case Status::k##Name: \
+                    stream << #Name; \
+                    return stream;
+                FOR_EACH_TX_POOL_STATUS(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
+
+            }
+        }
+    private:
+        TransactionPool() = delete;
+
+        static void SetState(const State& state);
+        static void SetStatus(const Status& status);
+    public:
+        ~TransactionPool() = delete;
+
+        static size_t GetSize();
+        static State GetState();
+        static Status GetStatus();
+        static std::string GetStatusMessage();
+        static bool Print();
+        static bool Initialize();
+        static bool Accept(TransactionPoolVisitor* vis);
+        static bool RemoveTransaction(const Hash& hash);
+        static bool PutTransaction(const Hash& hash, Transaction* tx);
+        static bool HasTransaction(const Hash& hash);
+        static bool GetTransactions(std::vector<Hash>& txs);
+        static Transaction* GetTransaction(const Hash& hash);
+
+#define DEFINE_STATE_CHECK(Name) \
+        static inline bool Is##Name(){ return GetState() == State::k##Name; }
+        FOR_EACH_TX_POOL_STATE(DEFINE_STATE_CHECK)
+#undef DEFINE_STATE_CHECK
+
+#define DEFINE_STATUS_CHECK(Name) \
+        static inline bool Is##Name(){ return GetStatus() == Status::k##Name; }
+        FOR_EACH_TX_POOL_STATUS(DEFINE_STATUS_CHECK)
+#undef DEFINE_STATUS_CHECK
+    };
+
+    class TransactionPoolVisitor{
+    protected:
+        TransactionPoolVisitor() = default;
+    public:
+        virtual ~TransactionPoolVisitor() = default;
+        virtual bool VisitStart() const{ return true; }
+        virtual bool Visit(Transaction* tx) = 0;
+        virtual bool VisitEnd() const{ return true; }
     };
 }
 

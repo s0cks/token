@@ -18,7 +18,7 @@ namespace Token{
         GenesisBlockProcessor() = default;
         ~GenesisBlockProcessor() = default;
 
-        bool Visit(const Handle<Transaction>& tx){
+        bool Visit(Transaction* tx){
             Hash hash = tx->GetHash();
             if(!TransactionHandler::ProcessTransaction(tx)){
                 LOG(WARNING) << "couldn't process transaction: " << hash;
@@ -33,7 +33,7 @@ namespace Token{
         SynchronizeBlockProcessor() = default;
         ~SynchronizeBlockProcessor() = default;
 
-        bool Visit(const Handle<Transaction>& tx){
+        bool Visit(Transaction* tx){
             Hash hash = tx->GetHash();
             if(!TransactionHandler::ProcessTransaction(tx)){
                 LOG(WARNING) << "couldn't process transaction: " << hash;
@@ -48,7 +48,7 @@ namespace Token{
         DefaultBlockProcessor() = default;
         ~DefaultBlockProcessor() = default;
 
-        bool Visit(const Handle<Transaction>& tx){
+        bool Visit(Transaction* tx){
             Hash hash = tx->GetHash();
             if(!TransactionHandler::ProcessTransaction(tx)){
                 LOG(WARNING) << "couldn't process transaction: " << hash;

@@ -137,16 +137,6 @@ namespace Token{
         return false;
     }
 
-    bool HealthCheckService::Accept(WeakObjectPointerVisitor* vis){
-        for(int64_t idx = 0; idx < HealthCheckService::kMaxNumberOfSessions; idx++){
-            if(sessions_[idx] && !vis->Visit(&sessions_[idx])){
-                LOG(WARNING) << "couldn't visit session #" << idx;
-                return false;
-            }
-        }
-        return true;
-    }
-
     void HealthCheckService::OnNewConnection(uv_stream_t* stream, int status){
         HttpSession* session = new HttpSession(stream->loop);
         RegisterSession(session);
@@ -249,7 +239,7 @@ namespace Token{
 
     static inline bool
     GetBlockChainHead(Json::Value& value){
-        Handle<Block> head = BlockChain::GetHead();
+        Block* head = BlockChain::GetHead();
         return head->ToJson(value);
     }
 

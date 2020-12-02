@@ -27,7 +27,7 @@ namespace Token{
             major_(other.major_),
             minor_(other.minor_),
             revision_(other.revision_){}
-        Version(const Handle<Buffer>& buff):
+        Version(Buffer* buff):
             major_(buff->GetShort()),
             minor_(buff->GetShort()),
             revision_(buff->GetShort()){}
@@ -45,7 +45,7 @@ namespace Token{
             return revision_;
         }
 
-        void Write(const Handle<Buffer>& buff) const{
+        void Write(Buffer* buff) const{
             buff->PutShort(major_);
             buff->PutShort(minor_);
             buff->PutShort(revision_);

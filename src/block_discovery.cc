@@ -1,5 +1,4 @@
 #include "block_discovery.h"
-#include "block_pool.h"
 #include "block_chain.h"
 #include "async_task.h"
 #include "block_validator.h"
@@ -44,7 +43,7 @@ namespace Token{
         Transaction** transactions_;
 
         inline void
-        AddTransaction(const Handle<Transaction>& tx){
+        AddTransaction(Transaction* tx){
             transactions_[num_transactions_++] = tx;
         }
 
@@ -68,7 +67,7 @@ namespace Token{
             if(transactions_) free(transactions_);
         }
 
-        Handle<Block> GetBlock() const{
+        Block* GetBlock() const{
             // Get the Parent Block
             BlockHeader parent = BlockChain::GetHead()->GetHeader();
             // Sort the Transactions by Timestamp
@@ -77,31 +76,30 @@ namespace Token{
             return Block::NewInstance(parent, transactions_, num_transactions_);
         }
 
-        bool Visit(const Handle<Transaction>& tx){
-            if(TransactionValidator::IsValid(tx)){
+        bool Visit(Transaction* tx){
+            if(TransactionValidator::IsValid(tx))
                 AddTransaction(tx);
-            }
             return true;
         }
 
-        static Handle<Block> Build(intptr_t size){
+        static Block* Build(intptr_t size){
             TransactionPoolBlockBuilder builder(size);
             TransactionPool::Accept(&builder);
-            Handle<Block> block = builder.GetBlock();
-            BlockPool::PutBlock(block);
+            Block* block = builder.GetBlock();
+            BlockPool::PutBlock(block->GetHash(), block);
             return block;
         }
     };
 
     static inline void
-    OrphanTransaction(const Handle<Transaction>& tx){
+    OrphanTransaction(Transaction* tx){
         Hash hash = tx->GetHash();
         LOG(WARNING) << "orphaning transaction: " << hash;
         TransactionPool::RemoveTransaction(hash);
     }
 
     static inline void
-    OrphanBlock(const Handle<Block>& blk){
+    OrphanBlock(Block* blk){
         Hash hash = blk->GetHash();
         LOG(WARNING) << "orphaning block: " << hash;
         BlockPool::RemoveBlock(hash);
@@ -111,11 +109,12 @@ namespace Token{
     ScheduleNewSnapshot(){
         if(!FLAGS_enable_snapshots) return;
         LOG(INFO) << "scheduling new snapshot....";
-        Handle<SnapshotTask> task = SnapshotTask::NewInstance();
-        if(!task->Submit()) LOG(WARNING) << "couldn't schedule new snapshot!";
+        SnapshotTask* task = SnapshotTask::NewInstance();
+        if(!task->Submit())
+            LOG(WARNING) << "couldn't schedule new snapshot!";
     }
 
-    void BlockDiscoveryThread::HandleVotingPhase(const Handle<Proposal>& proposal){
+    void BlockDiscoveryThread::HandleVotingPhase(Proposal* proposal){
         LOG(INFO) << "proposal " << proposal << " entering voting phase";
         proposal->SetPhase(Proposal::Phase::kVotingPhase);
         Server::Broadcast(PrepareMessage::NewInstance(proposal, Server::GetID()));
@@ -123,7 +122,7 @@ namespace Token{
         CHECK_STATUS(proposal);
     }
 
-    void BlockDiscoveryThread::HandleCommitPhase(const Handle<Proposal>& proposal){
+    void BlockDiscoveryThread::HandleCommitPhase(Proposal* proposal){
         LOG(INFO) << "proposal " << proposal << " entering commit phase";
         proposal->SetPhase(Proposal::Phase::kCommitPhase);
         Server::Broadcast(CommitMessage::NewInstance(proposal, Server::GetID()));
@@ -131,7 +130,7 @@ namespace Token{
         CHECK_STATUS(proposal);
     }
 
-    void BlockDiscoveryThread::HandleQuorumPhase(const Handle<Proposal>& proposal){
+    void BlockDiscoveryThread::HandleQuorumPhase(Proposal* proposal){
         LOG(INFO) << "proposal " << proposal << " entering quorum phase";
         proposal->SetPhase(Proposal::Phase::kQuorumPhase);
         CHECK_FOR_REJECTION(proposal);
@@ -140,8 +139,8 @@ namespace Token{
         OnAccepted(proposal);
     }
 
-    void BlockDiscoveryThread::OnAccepted(const Handle<Proposal>& proposal){
-        Handle<Block> blk = GetBlock();
+    void BlockDiscoveryThread::OnAccepted(Proposal* proposal){
+        Block* blk = GetBlock();
         DefaultBlockProcessor processor;
         if(!blk->Accept(&processor)){
             LOG(WARNING) << "couldn't process block: " << blk;
@@ -153,28 +152,28 @@ namespace Token{
         SetProposal(nullptr);
     }
 
-    void BlockDiscoveryThread::OnRejected(const Handle<Proposal>& proposal){
-
+    void BlockDiscoveryThread::OnRejected(Proposal* proposal){
+        //TODO: implement BlockDiscoveryThread::OnRejected(Proposal*)
     }
 
-    Handle<Block> BlockDiscoveryThread::CreateNewBlock(intptr_t size){
-        Handle<Block> blk = TransactionPoolBlockBuilder::Build(size);
+    Block* BlockDiscoveryThread::CreateNewBlock(intptr_t size){
+        Block* blk = TransactionPoolBlockBuilder::Build(size);
         SetBlock(blk);
         return blk;
     }
 
-    Handle<Proposal> BlockDiscoveryThread::CreateNewProposal(const Handle<Block>& blk){
-        Handle<Proposal> proposal = Proposal::NewInstance(blk, Server::GetID());
+    Proposal* BlockDiscoveryThread::CreateNewProposal(Block* blk){
+        Proposal* proposal = Proposal::NewInstance(blk, Server::GetID());
         SetProposal(proposal);
         return proposal;
     }
 
-    void BlockDiscoveryThread::SetBlock(const Handle<Block>& blk){
+    void BlockDiscoveryThread::SetBlock(Block* blk){
         LOCK_GUARD;
         block_ = blk;
     }
 
-    void BlockDiscoveryThread::SetProposal(const Handle<Proposal>& proposal){
+    void BlockDiscoveryThread::SetProposal(Proposal* proposal){
         LOCK_GUARD;
         proposal_ = proposal;
     }
@@ -184,12 +183,12 @@ namespace Token{
         return proposal_ != nullptr;
     }
 
-    Handle<Block> BlockDiscoveryThread::GetBlock(){
+    Block* BlockDiscoveryThread::GetBlock(){
         LOCK_GUARD;
         return block_;
     }
 
-    Handle<Proposal> BlockDiscoveryThread::GetProposal(){
+    Proposal* BlockDiscoveryThread::GetProposal(){
         LOCK_GUARD;
         return proposal_;
     }
@@ -215,7 +214,7 @@ namespace Token{
 
             if(GetNumberOfTransactionsInPool() >= 2){
                 LOG(INFO) << "creating new block from transaction pool";
-                Handle<Block> block = CreateNewBlock(2);
+                Block* block = CreateNewBlock(2);
 
                 LOG(INFO) << "validating block: " << block;
                 if(!BlockVerifier::IsValid(block)){
@@ -225,7 +224,7 @@ namespace Token{
                 }
 
                 LOG(INFO) << "discovered block " << block << ", creating proposal....";
-                Handle<Proposal> proposal = CreateNewProposal(block);
+                Proposal* proposal = CreateNewProposal(block);
 
                 HandleVotingPhase(proposal);
                 CHECK_FOR_REJECTION(proposal);

@@ -8,9 +8,7 @@ namespace Token{
     class Task : public Object{
     protected:
         Task():
-            Object(){
-            SetType(Type::kTaskType);
-        }
+            Object(Type::kTaskType){}
     public:
         ~Task() = default;
     };
@@ -19,27 +17,19 @@ namespace Token{
     protected:
         Session* session_;
 
-        SessionTask(const Handle<Session>& session):
+        SessionTask(Session* session):
             Task(),
-            session_(nullptr){
-            WriteBarrier(&session_, session);
-        }
-
-#ifndef TOKEN_GCMODE_NONE
-        bool Accept(WeakObjectPointerVisitor* vis){
-            if(!vis->Visit(&session_)){
-                LOG(WARNING) << "couldn't visit SessionTask's session.";
-                return false;
-            }
-
-            return true;
-        }
-#endif//TOKEN_GCMODE_NONE
+            session_(session){}
     public:
         ~SessionTask() = default;
 
-        Handle<Session> GetSession() const{
+        Session* GetSession() const{
             return session_;
+        }
+
+        template<typename T>
+        T* GetSession() const{
+            return (T*)session_;
         }
     };
 
@@ -51,35 +41,22 @@ namespace Token{
     private:
         Message* message_;
 
-        HandleMessageTask(const Handle<Session>& session, const Handle<Message>& message):
+        HandleMessageTask(Session* session, Message* msg):
             SessionTask(session),
-            message_(nullptr){
-            WriteBarrier(&message_, message);
-        }
-
-#ifndef TOKEN_GCMODE_NONE
-    protected:
-        bool Accept(WeakObjectPointerVisitor* vis){
-            if(!SessionTask::Accept(vis)){
-                return false;
-            }
-
-            if(!vis->Visit(&message_)){
-                LOG(WARNING) << "couldn't visit HandleMessageTask's session.";
-                return false;
-            }
-
-            return true;
-        }
-#endif//TOKEN_GCMODE_NONE
+            message_(msg){}
     public:
         ~HandleMessageTask() = default;
 
-        Handle<Message> GetMessage() const{
+        Message* GetMessage() const{
             return message_;
         }
 
-        static Handle<HandleMessageTask> NewInstance(const Handle<Session>& session, const Handle<Message>& msg){
+        template<typename T>
+        T* GetMessage() const{
+            return (T*)message_;
+        }
+
+        static HandleMessageTask* NewInstance(Session* session, Message* msg){
             return new HandleMessageTask(session, msg);
         }
     };

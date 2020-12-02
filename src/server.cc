@@ -9,8 +9,6 @@
 #include "configuration.h"
 #include "peer_session.h"
 #include "proposal.h"
-
-#include "block_pool.h"
 #include "transaction_pool.h"
 #include "unclaimed_transaction.h"
 
@@ -200,7 +198,7 @@ namespace Token{
             return;
         }
 
-        Handle<ServerSession> session = ServerSession::NewInstance(stream->loop);
+        ServerSession* session = ServerSession::NewInstance(stream->loop);
         session->SetState(Session::kConnecting);
         LOG(INFO) << "client is connecting...";
 
@@ -233,10 +231,10 @@ namespace Token{
             return;
         }
 
-        Handle<Buffer> rbuff = session->GetReadBuffer();
+        Buffer* rbuff = session->GetReadBuffer();
 
         intptr_t offset = 0;
-        std::vector<Handle<Message>> messages;
+        std::vector<Message*> messages;
         do{
             int32_t mtype = rbuff->GetInt();
             int64_t  msize = rbuff->GetLong();
@@ -244,7 +242,7 @@ namespace Token{
             switch(mtype) {
 #define DEFINE_DECODE(Name) \
                 case Message::MessageType::k##Name##MessageType:{ \
-                    Handle<Message> msg = Name##Message::NewInstance(rbuff).CastTo<Message>(); \
+                    Message* msg = Name##Message::NewInstance(rbuff); \
                     LOG(INFO) << "decoded: " << msg << "(" << msize << " bytes)"; \
                     messages.push_back(msg); \
                     break; \
@@ -261,8 +259,8 @@ namespace Token{
         } while((offset + Message::kHeaderSize) < nread);
 
         for(size_t idx = 0; idx < messages.size(); idx++){
-            Handle<Message> msg = messages[idx];
-            Handle<HandleMessageTask> task = HandleMessageTask::NewInstance(session, msg);
+            Message* msg = messages[idx];
+            HandleMessageTask* task = HandleMessageTask::NewInstance(session, msg);
             switch(msg->GetMessageType()){
 #define DEFINE_HANDLER_CASE(Name) \
             case Message::k##Name##MessageType: \
@@ -279,7 +277,7 @@ namespace Token{
         rbuff->Reset();
     }
 
-    bool Server::Broadcast(const Handle<Message>& msg){
+    bool Server::Broadcast(Message* msg){
         LOCK_GUARD;
         for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
             if(peers_[idx])
@@ -292,7 +290,7 @@ namespace Token{
         //-- Attention! --
         // this is not a memory leak, the memory will be freed upon
         // the session being closed
-        Handle<PeerSession> session = PeerSession::NewInstance(uv_loop_new(), address);
+        PeerSession* session = PeerSession::NewInstance(uv_loop_new(), address);
         return session->Connect();
     }
 
@@ -320,7 +318,7 @@ namespace Token{
         return false;
     }
 
-    Handle<PeerSession> Server::GetPeer(const UUID& uuid){
+    PeerSession* Server::GetPeer(const UUID& uuid){
         LOCK_GUARD;
         for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
             if(peers_[idx]){
@@ -370,7 +368,7 @@ namespace Token{
         return true;
     }
 
-    bool Server::RegisterPeer(const Handle<PeerSession>& session){
+    bool Server::RegisterPeer(PeerSession* session){
         LOCK_GUARD;
         for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
             if(!peers_[idx]){
@@ -382,7 +380,7 @@ namespace Token{
         return false;
     }
 
-    bool Server::UnregisterPeer(const Handle<PeerSession>& session){
+    bool Server::UnregisterPeer(PeerSession* session){
         LOCK_GUARD;
         for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
             if(peers_[idx] && peers_[idx]->GetInfo() == session->GetInfo()){
@@ -394,14 +392,14 @@ namespace Token{
         return false;
     }
 
-    void ServerSession::HandleNotFoundMessage(const Handle<HandleMessageTask>& task){
+    void ServerSession::HandleNotFoundMessage(HandleMessageTask* task){
         //TODO: implement HandleNotFoundMessage
         LOG(WARNING) << "not implemented";
         return;
     }
 
-    void ServerSession::HandleVersionMessage(const Handle<HandleMessageTask>& task){
-        Handle<ServerSession> session = task->GetSession().CastTo<ServerSession>();
+    void ServerSession::HandleVersionMessage(HandleMessageTask* task){
+        ServerSession* session = task->GetSession<ServerSession>();
         //TODO:
         // - state check
         // - version check
@@ -411,9 +409,9 @@ namespace Token{
 
     //TODO:
     // - verify nonce
-    void ServerSession::HandleVerackMessage(const Handle<HandleMessageTask>& task){
-        Handle<ServerSession> session = task->GetSession().CastTo<ServerSession>();
-        Handle<VerackMessage> msg = task->GetMessage().CastTo<VerackMessage>();
+    void ServerSession::HandleVerackMessage(HandleMessageTask* task){
+        ServerSession* session = task->GetSession<ServerSession>();
+        VerackMessage* msg = task->GetMessage<VerackMessage>();
 
         session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), Server::GetCallbackAddress()));
 
@@ -433,9 +431,9 @@ namespace Token{
         }
     }
 
-    void ServerSession::HandleGetDataMessage(const Handle<HandleMessageTask>& task){
-        Handle<ServerSession> session = task->GetSession().CastTo<ServerSession>();
-        Handle<GetDataMessage> msg = task->GetMessage().CastTo<GetDataMessage>();
+    void ServerSession::HandleGetDataMessage(HandleMessageTask* task){
+        ServerSession* session = task->GetSession<ServerSession>();
+        GetDataMessage* msg = task->GetMessage<GetDataMessage>();
 
         std::vector<InventoryItem> items;
         if(!msg->GetItems(items)){
@@ -443,42 +441,42 @@ namespace Token{
             return;
         }
 
-        std::vector<Handle<Message>> response;
+        std::vector<Message*> response;
         for(auto& item : items){
             Hash hash = item.GetHash();
             LOG(INFO) << "searching for: " << hash;
             if(item.ItemExists()){
                 if(item.IsBlock()){
-                    Handle<Block> block = nullptr;
+                    Block* block = nullptr;
                     if(BlockChain::HasBlock(hash)){
                         block = BlockChain::GetBlock(hash);
                     } else if(BlockPool::HasBlock(hash)){
                         block = BlockPool::GetBlock(hash);
                     } else{
                         LOG(WARNING) << "cannot find block: " << hash;
-                        response.push_back(NotFoundMessage::NewInstance().CastTo<Message>());
+                        response.push_back(NotFoundMessage::NewInstance());
                         break;
                     }
 
-                    response.push_back(BlockMessage::NewInstance(block).CastTo<Message>());
+                    response.push_back(BlockMessage::NewInstance(block));
                 } else if(item.IsTransaction()){
                     if(!TransactionPool::HasTransaction(hash)){
                         LOG(WARNING) << "cannot find transaction: " << hash;
-                        response.push_back(NotFoundMessage::NewInstance().CastTo<Message>());
+                        response.push_back(NotFoundMessage::NewInstance());
                         break;
                     }
 
-                    Handle<Transaction> tx = TransactionPool::GetTransaction(hash);
-                    response.push_back(TransactionMessage::NewInstance(tx).CastTo<Message>());
+                    Transaction* tx = TransactionPool::GetTransaction(hash);
+                    response.push_back(TransactionMessage::NewInstance(tx));
                 } else if(item.IsUnclaimedTransaction()){
                     if(!UnclaimedTransactionPool::HasUnclaimedTransaction(hash)){
                         LOG(WARNING) << "couldn't find unclaimed transaction: " << hash;
-                        response.push_back(NotFoundMessage::NewInstance().CastTo<Message>());
+                        response.push_back(NotFoundMessage::NewInstance());
                         break;
                     }
 
-                    Handle<UnclaimedTransaction> utxo = UnclaimedTransactionPool::GetUnclaimedTransaction(hash);
-                    response.push_back(UnclaimedTransactionMessage::NewInstance(utxo).CastTo<Message>());
+                    UnclaimedTransaction* utxo = UnclaimedTransactionPool::GetUnclaimedTransaction(hash);
+                    response.push_back(UnclaimedTransactionMessage::NewInstance(utxo));
                 }
             } else{
                 session->Send(NotFoundMessage::NewInstance());
@@ -489,11 +487,10 @@ namespace Token{
         session->Send(response);
     }
 
-    void ServerSession::HandlePrepareMessage(const Handle<HandleMessageTask>& task){
-        Handle<ServerSession> session = task->GetSession().CastTo<ServerSession>();
-        Handle<PrepareMessage> msg = task->GetMessage().CastTo<PrepareMessage>();
-
-        Handle<Proposal> proposal = msg->GetProposal();
+    void ServerSession::HandlePrepareMessage(HandleMessageTask* task){
+        ServerSession* session = task->GetSession<ServerSession>();
+        PrepareMessage* msg = task->GetMessage<PrepareMessage>();
+        Proposal* proposal = msg->GetProposal();
         /*if(ProposerThread::HasProposal()){
             session->Send(RejectedMessage::NewInstance(proposal, Server::GetID()));
             return;
@@ -501,22 +498,22 @@ namespace Token{
 
         //ProposerThread::SetProposal(proposal);
         proposal->SetPhase(Proposal::kVotingPhase);
-        std::vector<Handle<Message>> response;
+        std::vector<Message*> response;
         if(!BlockPool::HasBlock(proposal->GetHash())){
             std::vector<InventoryItem> items = {
                     InventoryItem(InventoryItem::kBlock, proposal->GetHash())
             };
-            response.push_back(GetDataMessage::NewInstance(items).CastTo<Message>());
+            response.push_back(GetDataMessage::NewInstance(items));
         }
-        response.push_back(PromiseMessage::NewInstance(proposal, Server::GetID()).CastTo<Message>());
+        response.push_back(PromiseMessage::NewInstance(proposal, Server::GetID()));
         session->Send(response);
     }
 
-    void ServerSession::HandlePromiseMessage(const Handle<HandleMessageTask>& task){}
+    void ServerSession::HandlePromiseMessage(HandleMessageTask* task){}
 
-    void ServerSession::HandleCommitMessage(const Handle<HandleMessageTask>& task){
-        Handle<ServerSession> session = task->GetSession().CastTo<ServerSession>();
-        Handle<CommitMessage> msg = task->GetMessage().CastTo<CommitMessage>();
+    void ServerSession::HandleCommitMessage(HandleMessageTask* task){
+        ServerSession* session = task->GetSession<ServerSession>();
+        CommitMessage* msg = task->GetMessage<CommitMessage>();
 
         Proposal* proposal = msg->GetProposal();
         Hash hash = proposal->GetHash();
@@ -530,48 +527,48 @@ namespace Token{
         }
     }
 
-    void ServerSession::HandleAcceptedMessage(const Handle<HandleMessageTask>& task){
-        Handle<AcceptedMessage> msg = task->GetMessage().CastTo<AcceptedMessage>();
-        Handle<Proposal> proposal = msg->GetProposal();
+    void ServerSession::HandleAcceptedMessage(HandleMessageTask* task){
+        AcceptedMessage* msg = task->GetMessage<AcceptedMessage>();
+        Proposal* proposal = msg->GetProposal();
 
         // validate proposal still?
         proposal->SetPhase(Proposal::kQuorumPhase);
     }
 
-    void ServerSession::HandleRejectedMessage(const Handle<HandleMessageTask>& task){}
+    void ServerSession::HandleRejectedMessage(HandleMessageTask* task){}
 
-    void ServerSession::HandleBlockMessage(const Handle<HandleMessageTask>& task){
-        Handle<BlockMessage> msg = task->GetMessage().CastTo<BlockMessage>();
+    void ServerSession::HandleBlockMessage(HandleMessageTask* task){
+        BlockMessage* msg = task->GetMessage<BlockMessage>();
 
-        Block* block = msg->GetBlock();
+        Block* block = msg->GetData();
         Hash hash = block->GetHash();
 
         if(!BlockPool::HasBlock(hash)){
-            BlockPool::PutBlock(block);
-            Server::Broadcast(InventoryMessage::NewInstance(block).CastTo<Message>());
+            BlockPool::PutBlock(hash, block);
+            Server::Broadcast(InventoryMessage::NewInstance(block));
         }
     }
 
-    void ServerSession::HandleTransactionMessage(const Handle<HandleMessageTask>& task){
-        Handle<TransactionMessage> msg = task->GetMessage().CastTo<TransactionMessage>();
+    void ServerSession::HandleTransactionMessage(HandleMessageTask* task){
+        TransactionMessage* msg = task->GetMessage<TransactionMessage>();
 
-        Handle<Transaction> tx = msg->GetTransaction();
+        Transaction* tx = msg->GetTransaction();
         Hash hash = tx->GetHash();
 
         LOG(INFO) << "received transaction: " << hash;
         if(!TransactionPool::HasTransaction(hash)){
-            TransactionPool::PutTransaction(tx);
-            Server::Broadcast(InventoryMessage::NewInstance(tx).CastTo<Message>());
+            TransactionPool::PutTransaction(hash, tx);
+            Server::Broadcast(InventoryMessage::NewInstance(tx));
         }
     }
 
-    void ServerSession::HandleUnclaimedTransactionMessage(const Handle<HandleMessageTask>& task){
+    void ServerSession::HandleUnclaimedTransactionMessage(HandleMessageTask* task){
 
     }
 
-    void ServerSession::HandleInventoryMessage(const Handle<HandleMessageTask>& task){
-        Handle<ServerSession> session = task->GetSession().CastTo<ServerSession>();
-        Handle<InventoryMessage> msg = task->GetMessage().CastTo<InventoryMessage>();
+    void ServerSession::HandleInventoryMessage(HandleMessageTask* task){
+        ServerSession* session = task->GetSession<ServerSession>();
+        InventoryMessage* msg = task->GetMessage<InventoryMessage>();
 
         std::vector<InventoryItem> items;
         if(!msg->GetItems(items)){
@@ -603,16 +600,16 @@ namespace Token{
             return user_;
         }
 
-        bool Visit(const Handle<UnclaimedTransaction>& utxo){
+        bool Visit(UnclaimedTransaction* utxo){
             if(utxo->GetUser() == GetUser())
                 items_.push_back(InventoryItem(utxo));
             return true;
         }
     };
 
-    void ServerSession::HandleGetUnclaimedTransactionsMessage(const Token::Handle<Token::HandleMessageTask>& task){
-        Handle<ServerSession> session = task->GetSession().CastTo<ServerSession>();
-        Handle<GetUnclaimedTransactionsMessage> msg = task->GetMessage().CastTo<GetUnclaimedTransactionsMessage>();
+    void ServerSession::HandleGetUnclaimedTransactionsMessage(HandleMessageTask* task){
+        ServerSession* session = task->GetSession<ServerSession>();
+        GetUnclaimedTransactionsMessage* msg = task->GetMessage<GetUnclaimedTransactionsMessage>();
 
         User user = msg->GetUser();
         LOG(INFO) << "getting unclaimed transactions for " << user << "....";
@@ -635,9 +632,9 @@ namespace Token{
         session->SendInventory(items);
     }
 
-    void ServerSession::HandleGetBlocksMessage(const Handle<HandleMessageTask>& task){
-        Handle<ServerSession> session = task->GetSession().CastTo<ServerSession>();
-        Handle<GetBlocksMessage> msg = task->GetMessage().CastTo<GetBlocksMessage>();
+    void ServerSession::HandleGetBlocksMessage(HandleMessageTask* task){
+        ServerSession* session = task->GetSession<ServerSession>();
+        GetBlocksMessage* msg = task->GetMessage<GetBlocksMessage>();
 
         Hash start = msg->GetHeadHash();
         Hash stop = msg->GetStopHash();
@@ -647,13 +644,13 @@ namespace Token{
             intptr_t amt = std::min(GetBlocksMessage::kMaxNumberOfBlocks, BlockChain::GetHead()->GetHeight());
             LOG(INFO) << "sending " << (amt + 1) << " blocks...";
 
-            Handle<Block> start_block = BlockChain::GetBlock(start);
-            Handle<Block> stop_block = BlockChain::GetBlock(start_block->GetHeight() > amt ? start_block->GetHeight() + amt : amt);
+            Block* start_block = BlockChain::GetBlock(start);
+            Block* stop_block = BlockChain::GetBlock(start_block->GetHeight() > amt ? start_block->GetHeight() + amt : amt);
 
             for(uint32_t idx = start_block->GetHeight() + 1;
                 idx <= stop_block->GetHeight();
                 idx++){
-                Handle<Block> block = BlockChain::GetBlock(idx);
+                Block* block = BlockChain::GetBlock(idx);
                 LOG(INFO) << "adding " << block;
                 items.push_back(InventoryItem(block));
             }
@@ -662,12 +659,9 @@ namespace Token{
         session->Send(InventoryMessage::NewInstance(items));
     }
 
-    void ServerSession::HandleGetPeersMessage(const Handle<HandleMessageTask>& task){
-        Handle<ServerSession> session = task->GetSession().CastTo<ServerSession>();
-        Handle<GetPeersMessage> msg = task->GetMessage().CastTo<GetPeersMessage>();
-
+    void ServerSession::HandleGetPeersMessage(HandleMessageTask* task){
+        ServerSession* session = task->GetSession<ServerSession>();
         LOG(INFO) << "getting peers....";
-
         PeerList peers;
         if(!Server::GetPeers(peers)){
             LOG(ERROR) << "couldn't get list of peers from the server.";
@@ -677,18 +671,7 @@ namespace Token{
         session->Send(PeerListMessage::NewInstance(peers));
     }
 
-    void ServerSession::HandlePeerListMessage(const Handle<HandleMessageTask>& task){
-        //TODO: implement ServerSession::HandlePeerListMessage(const Handle<HandleMessageTask>&);
-    }
-
-    bool Server::Accept(WeakObjectPointerVisitor* vis){
-        LOCK_GUARD;
-        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
-            if(peers_[idx] && !vis->Visit(&peers_[idx])){
-                LOG(WARNING) << "cannot visit peer #" << idx;
-                return false;
-            }
-        }
-        return true;
+    void ServerSession::HandlePeerListMessage(HandleMessageTask* task){
+        //TODO: implement ServerSession::HandlePeerListMessage(HandleMessageTask*);
     }
 }

@@ -8,8 +8,8 @@ namespace Token{
 #define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
 
     void Session::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
-        Handle<Session> session = (Session*)handle->data;
-        Handle<Buffer> rbuff = session->GetReadBuffer();
+        Session* session = (Session*)handle->data;
+        Buffer* rbuff = session->GetReadBuffer();
         buff->len = suggested_size;
         buff->base = rbuff->data();
     }
@@ -46,14 +46,14 @@ namespace Token{
         return status_;
     }
 
-    void Session::Send(const Handle<Message>& msg){
+    void Session::Send(Message* msg){
         // TODO: convert to message header struct
         int32_t type = msg->GetMessageType();
         int64_t size = msg->GetMessageSize();
         int64_t total_size = Message::kHeaderSize + size;
 
         LOG(INFO) << "sending " << msg << " (" << total_size << " bytes)";
-        Handle<Buffer> wbuff = GetWriteBuffer();
+        Buffer* wbuff = GetWriteBuffer();
         wbuff->PutInt(type);
         wbuff->PutLong(size);
         if(!msg->Write(wbuff)){
@@ -70,7 +70,7 @@ namespace Token{
         uv_write(req, GetStream(), &buff, 1, &OnMessageSent);
     }
 
-    void Session::Send(std::vector<Handle<Message>>& messages){
+    void Session::Send(std::vector<Message*>& messages){
         size_t total_messages = messages.size();
         if(total_messages <= 0){
             LOG(WARNING) << "not sending any messages!";
@@ -78,11 +78,11 @@ namespace Token{
         }
 
         LOG(INFO) << "sending " << total_messages << " messages....";
-        Handle<Buffer> wbuff = GetWriteBuffer();
+        Buffer* wbuff = GetWriteBuffer();
         int64_t offset = 0;
         uv_buf_t buffers[total_messages];
         for(size_t idx = 0; idx < total_messages; idx++){
-            Handle<Message> msg = messages[idx];
+            Message* msg = messages[idx];
             int32_t type = (int32_t)msg->GetMessageType();
             intptr_t size = msg->GetMessageSize();
             intptr_t total_size = Message::kHeaderSize + size;
@@ -107,7 +107,7 @@ namespace Token{
     }
 
     void Session::OnMessageSent(uv_write_t* req, int status){
-        Handle<Session> session = (Session*)req->data;
+        Session* session = (Session*)req->data;
         session->GetWriteBuffer()->Reset();
         if(status != 0)
             LOG(ERROR) << "failed to send message: " << uv_strerror(status);
@@ -115,7 +115,7 @@ namespace Token{
     }
 
     void Session::SendInventory(std::vector<InventoryItem>& items){
-        std::vector<Handle<Message>> data;
+        std::vector<Message*> data;
 
         size_t n = InventoryMessage::kMaxAmountOfItemsPerMessage;
         size_t size = (items.size() - 1) / n + 1;
@@ -130,7 +130,7 @@ namespace Token{
             }
             std::copy(start, end, inv.begin());
 
-            data.push_back(InventoryMessage::NewInstance(inv).CastTo<Message>());
+            data.push_back(InventoryMessage::NewInstance(inv));
         }
         Send(data);
     }

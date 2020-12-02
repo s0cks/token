@@ -50,6 +50,7 @@ namespace Token{
         void SetStatus(Status status);
 
         Proposal(const UUID& proposer, const Hash& hash, uint32_t height):
+            Object(Type::kProposalType),
             phase_(kProposalPhase),
             status_(Status::kUnknownStatus),
             proposer_(proposer),
@@ -73,7 +74,7 @@ namespace Token{
         }
 
         size_t GetBufferSize() const;
-        bool Encode(const Handle<Buffer>& buff) const;
+        bool Encode(Buffer* buff) const;
         void AcceptProposal(const std::string& node);
         void RejectProposal(const std::string& node);
         void WaitForPhase(Phase phase);
@@ -117,14 +118,14 @@ namespace Token{
             return GetStatus() == Status::kRejectedStatus;
         }
 
-        static Handle<Proposal> NewInstance(const Handle<Buffer>& buff);
-        static Handle<Proposal> NewInstance(uint32_t height, const Hash& hash, const UUID& proposer);
+        static Proposal* NewInstance(Buffer* buff);
+        static Proposal* NewInstance(uint32_t height, const Hash& hash, const UUID& proposer);
 
-        static Handle<Proposal> NewInstance(Block* block, const UUID& proposer){
+        static Proposal* NewInstance(Block* block, const UUID& proposer){
             return NewInstance(block->GetHeight(), block->GetHash(), proposer);
         }
 
-        static Handle<Proposal> NewInstance(const BlockHeader& block, const UUID& proposer){
+        static Proposal* NewInstance(const BlockHeader& block, const UUID& proposer){
             return NewInstance(block.GetHeight(), block.GetHash(), proposer);
         }
     };

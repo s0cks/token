@@ -15,21 +15,21 @@ namespace Token{
         while(next_ == nullptr) WAIT;
     }
 
-    void ClientSession::SetNextMessage(const Handle<Message>& msg){
+    void ClientSession::SetNextMessage(Message* msg){
         LOCK;
-        WriteBarrier(&next_, msg);
+        next_ = msg;
         SIGNAL_ALL;
     }
 
-    Handle<Message> ClientSession::GetNextMessage(){
+    Message* ClientSession::GetNextMessage(){
         LOCK;
         Message* next = next_;
-        WriteBarrier(&next_, (Message*)nullptr);
+        next_ = nullptr;
         return next;
     }
 
     void* ClientSession::SessionThread(void* data){
-        Handle<ClientSession> session = (ClientSession*)data;
+        ClientSession* session = (ClientSession*)data;
         uv_loop_t* loop = session->GetLoop();
         NodeAddress address = session->GetAddress();
         LOG(INFO) << "connecting to peer " << address << "....";
@@ -55,7 +55,7 @@ namespace Token{
     }
 
     void ClientSession::OnConnect(uv_connect_t* conn, int status){
-        Handle<ClientSession> session = (ClientSession*)conn->data;
+        ClientSession* session = (ClientSession*)conn->data;
         if(status != 0){
             LOG(WARNING) << "client accept error: " << uv_strerror(status);
             session->Disconnect();
@@ -72,12 +72,12 @@ namespace Token{
     }
 
     void ClientSession::OnShutdown(uv_async_t* handle){
-        Handle<ClientSession> client = (ClientSession*)handle->data;
+        ClientSession* client = (ClientSession*)handle->data;
         client->Disconnect();
     }
 
     void ClientSession::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
-        Handle<ClientSession> client = (ClientSession*)stream->data;
+        ClientSession* client = (ClientSession*)stream->data;
         if(nread == UV_EOF){
             LOG(ERROR) << "client disconnected!";
             return;
@@ -93,7 +93,7 @@ namespace Token{
         }
 
         intptr_t offset = 0;
-        Handle<Buffer> rbuff = client->GetReadBuffer();
+        Buffer* rbuff = client->GetReadBuffer();
         do{
             int32_t mtype = rbuff->GetInt();
             int64_t msize = rbuff->GetLong();
@@ -106,18 +106,18 @@ namespace Token{
                     LOG(INFO) << "client is connected";
                     break;
                 case Message::MessageType::kNotFoundMessageType:
-                    client->SetNextMessage(NotFoundMessage::NewInstance(rbuff).CastTo<Message>());
+                    client->SetNextMessage(NotFoundMessage::NewInstance(rbuff));
                     break;
                 case Message::MessageType::kBlockMessageType:
-                    client->SetNextMessage(BlockMessage::NewInstance(rbuff).CastTo<Message>());
+                    client->SetNextMessage(BlockMessage::NewInstance(rbuff));
                     break;
                 case Message::MessageType::kUnclaimedTransactionMessageType:
-                    client->SetNextMessage(UnclaimedTransactionMessage::NewInstance(rbuff).CastTo<Message>());
+                    client->SetNextMessage(UnclaimedTransactionMessage::NewInstance(rbuff));
                     break;
                 case Message::MessageType::kInventoryMessageType:{
-                    Handle<InventoryMessage> inv = InventoryMessage::NewInstance(rbuff);
+                    InventoryMessage* inv = InventoryMessage::NewInstance(rbuff);
                     LOG(INFO) << "received inventory of size: " << inv->GetNumberOfItems();
-                    client->SetNextMessage(inv.CastTo<Message>());
+                    client->SetNextMessage(inv);
                     break;
                 }
                 case Message::MessageType::kUnknownMessageType:
@@ -131,7 +131,7 @@ namespace Token{
         rbuff->Reset();
     }
 
-    bool ClientSession::SendTransaction(const Handle<Transaction>& tx){
+    bool ClientSession::SendTransaction(Transaction* tx){
         LOG(INFO) << "sending transaction " << tx->GetHash();
         if(IsConnecting()){
             LOG(INFO) << "waiting for client to connect...";
@@ -141,7 +141,7 @@ namespace Token{
         return true; // no acknowledgement from server
     }
 
-    Handle<Block> ClientSession::GetBlock(const Hash& hash){
+    Block* ClientSession::GetBlock(const Hash& hash){
         LOG(INFO) << "getting block: " << hash;
         if(IsConnecting()){
             LOG(INFO) << "waiting for the client to connect....";
@@ -154,12 +154,12 @@ namespace Token{
         Send(GetDataMessage::NewInstance(items));
         do{
             WaitForNextMessage();
-            Handle<Message> next = GetNextMessage();
+            Message* next = GetNextMessage();
 
             if(next->IsBlockMessage()){
-                return next.CastTo<BlockMessage>()->GetBlock();
+                return ((BlockMessage*)next)->GetData();
             } else if(next->IsNotFoundMessage()){
-                return Handle<Block>();
+                return nullptr;
             } else{
                 LOG(WARNING) << "cannot handle " << next;
                 continue;
@@ -167,7 +167,7 @@ namespace Token{
         } while(true);
     }
 
-    Handle<UnclaimedTransaction> ClientSession::GetUnclaimedTransaction(const Hash& hash){
+    UnclaimedTransaction* ClientSession::GetUnclaimedTransaction(const Hash& hash){
         LOG(INFO) << "getting unclaimed transactions " << hash;
         if(IsConnecting()){
             LOG(INFO) << "waiting for client to connect...";
@@ -180,12 +180,12 @@ namespace Token{
         Send(GetDataMessage::NewInstance(items));
         do{
             WaitForNextMessage();
-            Handle<Message> next = GetNextMessage();
+            Message* next = GetNextMessage();
 
             if(next->IsUnclaimedTransactionMessage()){
-                return next.CastTo<UnclaimedTransactionMessage>()->GetUnclaimedTransaction();
+                return ((UnclaimedTransactionMessage*)next)->GetUnclaimedTransaction();
             } else if(next->IsNotFoundMessage()){
-                return Handle<UnclaimedTransaction>();
+                return nullptr;
             } else{
                 LOG(WARNING) << "cannot handle " << next;
                 continue;
@@ -203,9 +203,9 @@ namespace Token{
         Send(GetPeersMessage::NewInstance());
         do{
             WaitForNextMessage();
-            Handle<Message> next = GetNextMessage();
+            Message* next = GetNextMessage();
             if(next->IsPeerListMessage()){
-                Handle<PeerListMessage> resp = next.CastTo<PeerListMessage>();
+                PeerListMessage* resp = ((PeerListMessage*)next);
                 std::copy(resp->peers_begin(), resp->peers_end(), std::inserter(peers, peers.begin()));
                 return true;
             } else{
@@ -231,10 +231,10 @@ namespace Token{
         Send(GetUnclaimedTransactionsMessage::NewInstance(user));
         do{
             WaitForNextMessage();
-            Handle<Message> next = GetNextMessage();
+            Message* next = GetNextMessage();
             LOG(INFO) << "next: " << next->GetName();
             if(next->IsInventoryMessage()){
-                Handle<InventoryMessage> inv = next.CastTo<InventoryMessage>();
+                InventoryMessage* inv = (InventoryMessage*)next;
 
                 std::vector<InventoryItem> items;
                 if(!inv->GetItems(items)){

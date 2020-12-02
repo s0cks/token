@@ -1,12 +1,10 @@
 #include "message.h"
 #include "proposal.h"
-
-#include "block_pool.h"
 #include "transaction_pool.h"
 #include "unclaimed_transaction.h"
 
 namespace Token{
-    Handle<VersionMessage> VersionMessage::NewInstance(const Handle<Buffer>& buff){
+    VersionMessage* VersionMessage::NewInstance(Buffer* buff){
         Timestamp timestamp = buff->GetLong();
         ClientType client_type = static_cast<ClientType>(buff->GetInt());
         Version version(buff);
@@ -27,7 +25,7 @@ namespace Token{
         return size;
     }
 
-    bool VersionMessage::Write(const Handle<Buffer>& buff) const{
+    bool VersionMessage::Write(Buffer* buff) const{
         buff->PutLong(timestamp_);
         buff->PutInt(static_cast<int32_t>(client_type_));
         version_.Write(buff);
@@ -37,7 +35,7 @@ namespace Token{
         return true;
     }
 
-    Handle<VerackMessage> VerackMessage::NewInstance(const Handle<Buffer>& buff){
+    VerackMessage* VerackMessage::NewInstance(Buffer* buff){
         Timestamp timestamp = buff->GetLong();
         ClientType client_type = (ClientType)buff->GetInt();
         Version version(buff);
@@ -48,7 +46,7 @@ namespace Token{
         return new VerackMessage(client_type, node_id, version, nonce, callback, head, timestamp);
     }
 
-    bool VerackMessage::Write(const Handle<Buffer>& buff) const{
+    bool VerackMessage::Write(Buffer* buff) const{
         buff->PutLong(timestamp_);
         buff->PutInt(static_cast<int32_t>(GetClientType()));
         version_.Write(buff);
@@ -78,44 +76,44 @@ namespace Token{
         return size;
     }
 
-    bool PaxosMessage::Write(const Handle<Buffer>& buff) const{
+    bool PaxosMessage::Write(Buffer* buff) const{
         proposer_.Write(buff);
         proposal_->Encode(buff);
         return true;
     }
 
-    Handle<PrepareMessage> PrepareMessage::NewInstance(const Handle<Buffer>& buff){
+    PrepareMessage* PrepareMessage::NewInstance(Buffer* buff){
         UUID proposer(buff);
-        Handle<Proposal> proposal = Proposal::NewInstance(buff);
+        Proposal* proposal = Proposal::NewInstance(buff);
         return new PrepareMessage(proposer, proposal);
     }
 
-    Handle<PromiseMessage> PromiseMessage::NewInstance(const Handle<Buffer>& buff){
+    PromiseMessage* PromiseMessage::NewInstance(Buffer* buff){
         UUID proposer(buff);
-        Handle<Proposal> proposal = Proposal::NewInstance(buff);
+        Proposal* proposal = Proposal::NewInstance(buff);
         return new PromiseMessage(proposer, proposal);
     }
 
-    Handle<CommitMessage> CommitMessage::NewInstance(const Handle<Buffer>& buff){
+    CommitMessage* CommitMessage::NewInstance(Buffer* buff){
         UUID proposer(buff);
-        Handle<Proposal> proposal = Proposal::NewInstance(buff);
+        Proposal* proposal = Proposal::NewInstance(buff);
         return new CommitMessage(proposer, proposal);
     }
 
-    Handle<AcceptedMessage> AcceptedMessage::NewInstance(const Handle<Buffer>& buff){
+    AcceptedMessage* AcceptedMessage::NewInstance(Buffer* buff){
         UUID proposer(buff);
-        Handle<Proposal> proposal = Proposal::NewInstance(buff);
+        Proposal* proposal = Proposal::NewInstance(buff);
         return new AcceptedMessage(proposer, proposal);
     }
 
-    Handle<RejectedMessage> RejectedMessage::NewInstance(const Handle<Buffer>& buff){
+    RejectedMessage* RejectedMessage::NewInstance(Buffer* buff){
         UUID proposer(buff);
-        Handle<Proposal> proposal = Proposal::NewInstance(buff);
+        Proposal* proposal = Proposal::NewInstance(buff);
         return new RejectedMessage(proposer, proposal);
     }
 
-    Handle<TransactionMessage> TransactionMessage::NewInstance(const Handle<Buffer>& buff){
-        Handle<Transaction> tx = Transaction::NewInstance(buff);
+    TransactionMessage* TransactionMessage::NewInstance(Buffer* buff){
+        Transaction* tx = Transaction::NewInstance(buff);
         return new TransactionMessage(tx);
     }
 
@@ -123,12 +121,12 @@ namespace Token{
         return 0; //TODO: implement TransactionMessage::GetMessageSize()
     }
 
-    bool TransactionMessage::Write(const Handle<Buffer>& buff) const{
+    bool TransactionMessage::Write(Buffer* buff) const{
         return false; //TODO: implement TransactionMessage::Write(ByteBuffer*)
     }
 
-    Handle<BlockMessage> BlockMessage::NewInstance(const Handle<Buffer>& buff){
-        Handle<Block> blk = Block::NewInstance(buff);
+    BlockMessage* BlockMessage::NewInstance(Buffer* buff){
+        Block* blk = Block::NewInstance(buff);
         return new BlockMessage(blk);
     }
 
@@ -136,19 +134,19 @@ namespace Token{
         return data_->GetBufferSize();
     }
 
-    bool BlockMessage::Write(const Handle<Buffer>& buff) const{
+    bool BlockMessage::Write(Buffer* buff) const{
         data_->Write(buff);
         return true;
     }
 
     std::string BlockMessage::ToString() const{
         std::stringstream ss;
-        ss << "BlockMessage(" << GetBlock() << ")";
+        ss << "BlockMessage(" << GetData()->GetHash() << ")";
         return ss.str();
     }
 
-    Handle<UnclaimedTransactionMessage> UnclaimedTransactionMessage::NewInstance(const Handle<Buffer>& buff){
-        Handle<UnclaimedTransaction> utxo = UnclaimedTransaction::NewInstance(buff);
+    UnclaimedTransactionMessage* UnclaimedTransactionMessage::NewInstance(Buffer* buff){
+        UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(buff);
         return new UnclaimedTransactionMessage(utxo);
     }
 
@@ -156,7 +154,7 @@ namespace Token{
         return data_->GetBufferSize();
     }
 
-    bool UnclaimedTransactionMessage::Write(const Handle<Buffer>& buff) const{
+    bool UnclaimedTransactionMessage::Write(Buffer* buff) const{
         data_->Write(buff);
         return true;
     }
@@ -170,14 +168,14 @@ namespace Token{
         }
     }
 
-    Handle<InventoryMessage> InventoryMessage::NewInstance(const Handle<Buffer>& buff){
+    InventoryMessage* InventoryMessage::NewInstance(Buffer* buff){
         int32_t num_items = buff->GetInt();
         std::vector<InventoryItem> items;
         DecodeItems(buff, items, num_items);
         return new InventoryMessage(items);
     }
 
-    void InventoryMessage::DecodeItems(const Handle<Buffer>& buff, std::vector<InventoryItem>& items, int32_t num_items){
+    void InventoryMessage::DecodeItems(Buffer* buff, std::vector<InventoryItem>& items, int32_t num_items){
         for(int32_t idx = 0; idx < num_items; idx++){
             InventoryItem::Type type = static_cast<InventoryItem::Type>(buff->GetShort());
             Hash hash = buff->GetHash();
@@ -192,7 +190,7 @@ namespace Token{
         return size;
     }
 
-    bool InventoryMessage::Write(const Handle<Buffer>& buff) const{
+    bool InventoryMessage::Write(Buffer* buff) const{
         buff->PutInt(items_.size());
         for(auto& it : items_){
             buff->PutShort(static_cast<uint16_t>(it.GetType()));
@@ -201,7 +199,7 @@ namespace Token{
         return true;
     }
 
-    bool GetDataMessage::Write(const Handle<Buffer>& buff) const{
+    bool GetDataMessage::Write(Buffer* buff) const{
         buff->PutLong(items_.size());
         for(auto& it : items_){
             buff->PutInt(static_cast<int32_t>(it.GetType()));
@@ -217,7 +215,7 @@ namespace Token{
         return size;
     }
 
-    Handle<GetDataMessage> GetDataMessage::NewInstance(const Handle<Buffer>& buff){
+    GetDataMessage* GetDataMessage::NewInstance(Buffer* buff){
         std::vector<InventoryItem> items;
         int64_t num_items = buff->GetLong();
         LOG(INFO) << "reading " << num_items << " items";
@@ -236,19 +234,19 @@ namespace Token{
 
     const intptr_t GetBlocksMessage::kMaxNumberOfBlocks = 32;
 
-    Handle<GetBlocksMessage> GetBlocksMessage::NewInstance(const Handle<Buffer>& buff){
+    GetBlocksMessage* GetBlocksMessage::NewInstance(Buffer* buff){
         Hash start = buff->GetHash();
         Hash stop = buff->GetHash();
         return new GetBlocksMessage(start, stop);
     }
 
-    bool GetBlocksMessage::Write(const Handle<Buffer>& buff) const{
+    bool GetBlocksMessage::Write(Buffer* buff) const{
         buff->PutHash(start_);
         buff->PutHash(stop_);
         return true;
     }
 
-    Handle<NotFoundMessage> NotFoundMessage::NewInstance(const Handle<Buffer>& buff){
+    NotFoundMessage* NotFoundMessage::NewInstance(Buffer* buff){
         std::string message = ""; //TODO: buff->GetString();
         return new NotFoundMessage(message);
     }
@@ -261,14 +259,14 @@ namespace Token{
         return size;
     }
 
-    bool NotFoundMessage::Write(const Handle<Buffer>& buff) const{
+    bool NotFoundMessage::Write(Buffer* buff) const{
         buff->PutShort(static_cast<uint16_t>(item_.GetType()));
         buff->PutHash(item_.GetHash());
         buff->PutString(message_);
         return true;
     }
 
-    Handle<GetUnclaimedTransactionsMessage> GetUnclaimedTransactionsMessage::NewInstance(const Handle<Buffer>& buff){
+    GetUnclaimedTransactionsMessage* GetUnclaimedTransactionsMessage::NewInstance(Buffer* buff){
         User user = buff->GetUser();
         return new GetUnclaimedTransactionsMessage(user);
     }
@@ -279,15 +277,15 @@ namespace Token{
         return size;
     }
 
-    bool GetUnclaimedTransactionsMessage::Write(const Handle<Buffer>& buff) const{
+    bool GetUnclaimedTransactionsMessage::Write(Buffer* buff) const{
         buff->PutUser(user_);
         return true;
     }
 
-    Handle<Proposal> PaxosMessage::GetProposal() const{
+    Proposal* PaxosMessage::GetProposal() const{
         /*
         if(ProposerThread::HasProposal()){
-            Handle<Proposal> proposal = ProposerThread::GetProposal();
+            Proposal* proposal = ProposerThread::GetProposal();
             if(proposal->GetHeight() == GetHeight() &&
                 proposal->GetHash() == GetHash()){
                 return proposal;
@@ -304,7 +302,7 @@ namespace Token{
         return PaxosMessage::GetMessageSize();
     }
 
-    bool PrepareMessage::Write(const Handle<Buffer>& buff) const{
+    bool PrepareMessage::Write(Buffer* buff) const{
         return PaxosMessage::Write(buff);
     }
 
@@ -312,7 +310,7 @@ namespace Token{
         return PaxosMessage::GetMessageSize();
     }
 
-    bool PromiseMessage::Write(const Handle<Buffer>& buff) const{
+    bool PromiseMessage::Write(Buffer* buff) const{
         return PaxosMessage::Write(buff);
     }
 
@@ -320,7 +318,7 @@ namespace Token{
         return PaxosMessage::GetMessageSize();
     }
 
-    bool CommitMessage::Write(const Handle<Buffer>& buff) const{
+    bool CommitMessage::Write(Buffer* buff) const{
         return PaxosMessage::Write(buff);
     }
 
@@ -328,7 +326,7 @@ namespace Token{
         return PaxosMessage::GetMessageSize();
     }
 
-    bool AcceptedMessage::Write(const Handle<Buffer>& buff) const{
+    bool AcceptedMessage::Write(Buffer* buff) const{
         return PaxosMessage::Write(buff);
     }
 
@@ -336,7 +334,7 @@ namespace Token{
         return PaxosMessage::GetMessageSize();
     }
 
-    bool RejectedMessage::Write(const Handle<Buffer>& buff) const{
+    bool RejectedMessage::Write(Buffer* buff) const{
         return PaxosMessage::Write(buff);
     }
 
@@ -344,7 +342,7 @@ namespace Token{
         return Hash::kSize * 2;
     }
 
-    Handle<PeerListMessage> PeerListMessage::NewInstance(const Handle<Buffer>& buff){
+    PeerListMessage* PeerListMessage::NewInstance(Buffer* buff){
         PeerList peers;
 
         int32_t npeers = buff->GetInt();
@@ -366,7 +364,7 @@ namespace Token{
         return size;
     }
 
-    bool PeerListMessage::Write(const Handle<Buffer>& buff) const{
+    bool PeerListMessage::Write(Buffer* buff) const{
         buff->PutInt(GetNumberOfPeers());
         for(auto it = peers_begin();
             it != peers_end();
@@ -381,7 +379,7 @@ namespace Token{
         return 0;
     }
 
-    bool GetPeersMessage::Write(const Handle<Buffer>& buff) const{
+    bool GetPeersMessage::Write(Buffer* buff) const{
         //TODO: implement GetPeersMessage::Write(ByteBuffer*)
         return true;
     }

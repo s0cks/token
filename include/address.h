@@ -15,7 +15,7 @@ namespace Token{
         NodeAddress(const std::string& address, uint32_t port);
         NodeAddress(const uv_tcp_t* stream);
         NodeAddress(const NodeAddress& other);
-        NodeAddress(const Handle<Buffer>& buff):
+        NodeAddress(Buffer* buff):
             address_(buff->GetUnsignedInt()),
             port_(buff->GetUnsignedInt()){}
         NodeAddress():
@@ -31,7 +31,7 @@ namespace Token{
         std::string ToString() const;
         bool Get(struct sockaddr_in* addr) const;
 
-        bool Write(const Handle<Buffer>& buff) const{
+        bool Write(Buffer* buff) const{
             buff->PutUnsignedInt(address_);
             buff->PutUnsignedInt(port_);
             return true;

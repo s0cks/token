@@ -23,7 +23,7 @@ namespace Token{
             return strict_;
         }
 
-        bool Visit(const Handle<Transaction>& tx){
+        bool Visit(Transaction* tx){
             Hash hash = tx->GetHash();
             if(tx->GetNumberOfInputs() <= 0){
                 invalid_.push_back(hash);
@@ -48,7 +48,7 @@ namespace Token{
             return true;
         }
 
-        static bool IsValid(const Handle<Block>& blk, bool strict=false){
+        static bool IsValid(Block* blk, bool strict=false){
             LOG(INFO) << "verifying block " << blk->GetHash();
             std::vector<Hash> valid;
             std::vector<Hash> invalid;

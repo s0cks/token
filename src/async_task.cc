@@ -1,8 +1,6 @@
+#include "proposal.h"
 #include "async_task.h"
 #include "block_processor.h"
-#include "proposal.h"
-
-#include "block_pool.h"
 
 namespace Token{
     static std::mutex mutex_;
@@ -68,7 +66,7 @@ namespace Token{
         return loop_;
     }
 
-    bool SynchronizeBlockChainTask::ProcessBlock(const Handle<Block>& block){
+    bool SynchronizeBlockChainTask::ProcessBlock(Block* block){
         BlockHeader header = block->GetHeader();
         Hash hash = header.GetHash();
         SynchronizeBlockProcessor processor;
@@ -94,7 +92,7 @@ namespace Token{
                 BlockPool::WaitForBlock(hash);
             }
 
-            Handle<Block> blk = BlockPool::GetBlock(hash);
+            Block* blk = BlockPool::GetBlock(hash);
             Hash phash = blk->GetPreviousHash();
             if(!BlockChain::HasBlock(phash)){
                 LOG(WARNING) << "parent block " << phash << " not found, resolving...";

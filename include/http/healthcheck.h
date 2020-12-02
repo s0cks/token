@@ -66,7 +66,6 @@ namespace Token{
         static HttpRouter* GetRouter();
         static bool RegisterSession(HttpSession* session);
         static bool UnregisterSession(HttpSession* session);
-        static bool Accept(WeakObjectPointerVisitor* vis);
         static void SetRouter(HttpRouter* router);
         static void SetState(State state);
         static void SetStatus(Status status);

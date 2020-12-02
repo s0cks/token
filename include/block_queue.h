@@ -12,8 +12,8 @@ namespace Token{
     public:
         ~BlockQueue() = delete;
 
-        static void Queue(const Handle<Block>& blk);
-        static Handle<Block> DeQueue();
+        static void Queue(Block* blk);
+        static Block* DeQueue();
         static size_t GetSize();
     };
 }

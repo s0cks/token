@@ -2,7 +2,6 @@
 #define TOKEN_MERKLE_H
 
 #include <vector>
-#include "alloc/allocator.h"
 #include "object.h"
 #include "hash.h"
 

@@ -8,7 +8,6 @@
 #include "configuration.h"
 
 #include "block_chain.h"
-#include "block_pool.h"
 #include "block_processor.h"
 #include "transaction_pool.h"
 #include "unclaimed_transaction.h"
@@ -30,7 +29,7 @@ namespace Token{
     }
 
     static inline std::string
-    GetNewBlockFilename(const Handle<Block>& blk){
+    GetNewBlockFilename(Block* blk){
         std::stringstream ss;
         ss << GetDataDirectory() + "/blk" << blk->GetHeight() << ".dat";
         return ss.str();
@@ -131,7 +130,7 @@ namespace Token{
         TransactionPool::Initialize();
         UnclaimedTransactionPool::Initialize();
         if(!HasBlocks()){
-            Handle<Block> blk = Block::Genesis();
+            Block* blk = Block::Genesis();
             Hash hash = blk->GetHash();
             PutBlock(hash, blk);
             PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
@@ -171,16 +170,16 @@ namespace Token{
         SIGNAL_ALL;
     }
 
-    Handle<Block> BlockChain::GetGenesis(){
+    Block* BlockChain::GetGenesis(){
         LOCK_GUARD;
         return GetBlock(GetReference(BLOCKCHAIN_REFERENCE_GENESIS));
     }
 
-    Handle<Block> BlockChain::GetHead(){
+    Block* BlockChain::GetHead(){
         return GetBlock(GetReference(BLOCKCHAIN_REFERENCE_HEAD));
     }
 
-    Handle<Block> BlockChain::GetBlock(const Hash& hash){
+    Block* BlockChain::GetBlock(const Hash& hash){
         leveldb::ReadOptions options;
         std::string key = hash.HexString();
         std::string filename;
@@ -192,7 +191,7 @@ namespace Token{
             return nullptr;
         }
 
-        Handle<Block> block = Block::NewInstance(filename);
+        Block* block = Block::NewInstance(filename);
         if(hash != block->GetHash()){
             LOG(WARNING) << "couldn't match block hashes: " << hash << " <=> " << block->GetHash();
             return nullptr;
@@ -200,7 +199,7 @@ namespace Token{
         return block;
     }
 
-    Handle<Block> BlockChain::GetBlock(int64_t height){
+    Block* BlockChain::GetBlock(int64_t height){
         leveldb::ReadOptions options;
         std::string key = GetBlockHeightKey(height);
         std::string filename;
@@ -262,7 +261,7 @@ namespace Token{
         return Hash::FromHexString(value);
     }
 
-    bool BlockChain::PutBlock(const Hash& hash, const Handle<Block>& blk){
+    bool BlockChain::PutBlock(const Hash& hash, Block* blk){
         BlockHeader block = blk->GetHeader();
 
         leveldb::WriteOptions options;
@@ -311,9 +310,9 @@ namespace Token{
         return true;
     }
 
-    bool BlockChain::Append(const Handle<Block>& block){
+    bool BlockChain::Append(Block* block){
         LOCK_GUARD;
-        Handle<Block> head = GetHead();
+        Block* head = GetHead();
         Hash hash = block->GetHash();
         Hash phash = block->GetPreviousHash();
 

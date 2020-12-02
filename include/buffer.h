@@ -11,36 +11,14 @@ namespace Token{
         intptr_t bsize_;
         intptr_t wpos_;
         intptr_t rpos_;
-#ifdef TOKEN_GCMODE_NONE
         uint8_t* data_;
-#endif//TOKEN_GCMODE_NONE
 
-        uint8_t* raw() {
-#ifdef TOKEN_GCMODE_NONE
+        uint8_t* raw(){
             return data_;
-#else
-            return (uint8_t*)(&rpos_ + sizeof(intptr_t));
-#endif//TOKEN_GCMODE_NONE
         }
 
         const uint8_t* raw() const{
-#ifdef TOKEN_GCMODE_NONE
             return data_;
-#else
-            return (uint8_t*)(&rpos_ + sizeof(intptr_t));
-#endif//TOKEN_GCMODE_NONE
-        }
-
-        Buffer(intptr_t size):
-            Object(),
-            bsize_(size),
-            wpos_(0),
-            rpos_(0){
-            SetType(Type::kBufferType);
-#ifdef TOKEN_GCMODE_NONE
-            data_ = (uint8_t*)malloc(sizeof(uint8_t)*size);
-#endif//TOKEN_GCMODE_NONE
-            memset(data(), 0, GetBufferSize());
         }
 
         template<typename T>
@@ -70,19 +48,19 @@ namespace Token{
             rpos_ += sizeof(T);
             return data;
         }
-    protected:
-#ifndef TOKEN_GCMODE_NONE
-        static void* operator new(size_t size) = delete;
-        static void* operator new(size_t size, size_t length, bool){
-            intptr_t buffer_size = (sizeof(uint8_t)*length);
-            intptr_t total_size = size + buffer_size;
-            return Allocator::Allocate(total_size);
-        }
-        static void operator delete(void*, size_t, bool){}
-        using Object::operator delete;
-#endif//!TOKEN_GCMODE_NONE
     public:
-        ~Buffer() = default;
+        Buffer(intptr_t size):
+            Object(Type::kBufferType),
+            bsize_(size),
+            wpos_(0),
+            rpos_(0){
+            data_ = (uint8_t*)malloc(sizeof(uint8_t)*size);
+            memset(data(), 0, GetBufferSize());
+        }
+        ~Buffer(){
+            if(data_)
+                free(data_);
+        }
 
         uint8_t operator[](intptr_t idx){
             return (raw()[idx]);
@@ -172,7 +150,7 @@ namespace Token{
         }
 
         bool GetBytes(uint8_t* result, intptr_t size){
-            if((rpos_ + size) >= GetBufferSize()) {
+            if((rpos_ + size) > GetBufferSize()) {
                 LOG(WARNING) << "cannot read " << size << " bytes from buffer of size: " << GetBufferSize();
                 return false;
             }
@@ -230,15 +208,6 @@ namespace Token{
             std::stringstream ss;
             ss << "Buffer(" << GetBufferSize() << ")";
             return ss.str();
-        }
-
-        static Handle<Buffer> NewInstance(intptr_t size){
-            size = RoundUpPowTwo(size);
-#ifdef TOKEN_GCMODE_NONE
-            return new Buffer(size);
-#else
-            return new (size, false) Buffer(size);
-#endif//TOKEN_GCMODE_NONE
         }
     };
 }

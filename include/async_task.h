@@ -213,7 +213,7 @@ namespace Token{
             return InventoryItem(InventoryItem::kBlock, hash);
         }
 
-        bool ProcessBlock(const Handle<Block>& block);
+        bool ProcessBlock(Block* blk);
         Result DoWork();
     public:
         ~SynchronizeBlockChainTask() = default;
@@ -224,7 +224,7 @@ namespace Token{
             return InventoryItem(InventoryItem::kBlock, head_.GetHash());
         }
 
-        static Handle<SynchronizeBlockChainTask> NewInstance(uv_loop_t* loop, Session* session, const BlockHeader& head){
+        static SynchronizeBlockChainTask* NewInstance(uv_loop_t* loop, Session* session, const BlockHeader& head){
             return new SynchronizeBlockChainTask(loop, session, head);
         }
     };
@@ -247,7 +247,7 @@ namespace Token{
 
         DEFINE_ASYNC_TASK(Snapshot);
 
-        static Handle<SnapshotTask> NewInstance(uv_loop_t* loop=AsyncTaskThread::GetLoop()){
+        static SnapshotTask* NewInstance(uv_loop_t* loop=AsyncTaskThread::GetLoop()){
             return new SnapshotTask(loop);
         }
 

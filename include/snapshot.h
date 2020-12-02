@@ -68,16 +68,6 @@ namespace Token{
                     LOG(WARNING) << "couldn't create snapshots directory: " << filename;
             }
         }
-#ifndef TOKEN_GCMODE_NONE
-    protected:
-        bool Accept(WeakObjectPointerVisitor* vis){
-            for(uint64_t idx = 0; idx < blocks_len_; idx++){
-                if(!vis->Visit(&blocks_[idx]))
-                    return false;
-            }
-            return true;
-        }
-#endif//TOKEN_GCMODE_NONE
     public:
         ~Snapshot() = default;
 
@@ -101,13 +91,14 @@ namespace Token{
             return blocks_len_;
         }
 
-        Handle<Block> GetBlock(uint64_t height) const{
+        Block* GetBlock(uint64_t height) const{
             return blocks_[height];
         }
 
-        Handle<Block> GetBlock(const Hash& hash) const{
+        Block* GetBlock(const Hash& hash) const{
             for(uint64_t idx = 0; idx < blocks_len_; idx++){
-                if(blocks_[idx]->GetHash() == hash) return blocks_[idx];
+                if(blocks_[idx]->GetHash() == hash)
+                    return blocks_[idx];
             }
             return nullptr;
         }
@@ -129,7 +120,7 @@ namespace Token{
     public:
         virtual ~SnapshotVisitor() = default;
         virtual bool VisitStart(Snapshot* snapshot){ return true; }
-        virtual bool Visit(const Handle<Block>& blk) = 0;
+        virtual bool Visit(Block* blk) = 0;
         virtual bool VisitEnd(Snapshot* snapshot){ return true; }
     };
 
@@ -147,8 +138,8 @@ namespace Token{
             return true;
         }
 
-        bool Visit(const Handle<Block>& blk){
-            LOG(INFO) << " - " << blk;
+        bool Visit(Block* blk){
+            LOG(INFO) << " - " << blk->GetHash();
             return true;
         }
 

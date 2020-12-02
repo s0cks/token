@@ -11,7 +11,7 @@ namespace Token{
         ss << response->GetBody();
         std::string resp = ss.str();
 
-        Handle<Buffer> wbuff = GetWriteBuffer();
+        Buffer* wbuff = GetWriteBuffer();
         wbuff->PutString(ss.str());
 
         uv_buf_t buff;
@@ -38,7 +38,7 @@ namespace Token{
     }
 
     void HttpSession::OnClose(uv_handle_t* handle){
-        Handle<HttpSession> session = (HttpSession*)handle->data;
+        HttpSession* session = (HttpSession*)handle->data;
         if(!HealthCheckService::UnregisterSession(session))
             LOG(WARNING) << "couldn't unregister http session from health check service";
     }

@@ -5,7 +5,6 @@
 #include "hash.h"
 #include "bloom.h"
 #include "buffer.h"
-#include "alloc/allocator.h"
 #include "transaction.h"
 
 namespace Token{
@@ -59,7 +58,7 @@ namespace Token{
             hash_(hash),
             bloom_(tx_bloom){}
         BlockHeader(Block* blk);
-        BlockHeader(const Handle<Buffer>& buff);
+        BlockHeader(Buffer* buff);
         ~BlockHeader(){}
 
         Timestamp GetTimestamp() const{
@@ -86,8 +85,8 @@ namespace Token{
             return bloom_.Contains(hash);
         }
 
-        Handle<Block> GetData() const;
-        bool Write(const Handle<Buffer>& buff) const;
+        Block* GetData() const;
+        bool Write(Buffer* buff) const;
 
         BlockHeader& operator=(const BlockHeader& other){
             timestamp_ = other.timestamp_;
@@ -149,35 +148,26 @@ namespace Token{
         BloomFilter tx_bloom_; // transient
 
         Block(Timestamp timestamp, uint32_t height, const Hash& phash, Transaction** txs, intptr_t num_txs):
-            BinaryObject(),
+            BinaryObject(Type::kBlockType),
             timestamp_(timestamp),
             height_(height),
             previous_hash_(phash),
             num_transactions_(num_txs),
             transactions_(nullptr),
             tx_bloom_(){
-            SetType(Type::kBlockType);
 
             if(num_txs > 0){
                 transactions_ = (Transaction**)malloc(sizeof(Transaction*)*num_txs);
                 memset(transactions_, 0, sizeof(Transaction*)*num_txs);
                 for(intptr_t idx = 0; idx < num_txs; idx++){
-                    WriteBarrier(&transactions_[idx], txs[idx]);
+                    transactions_[idx] = txs[idx];
+                    tx_bloom_.Put(txs[idx]->GetHash());
                 }
             }
 
             //TODO: tx_bloom_.Put(txs[idx]->GetHash());
         }
     protected:
-#ifndef TOKEN_GCMODE_NONE
-        bool Accept(WeakObjectPointerVisitor* vis){
-            for(intptr_t idx = 0; idx < num_transactions_; idx++)
-                if(!vis->Visit(&transactions_[idx]))
-                    return false;
-            return true;
-        }
-#endif//TOKEN_GCMODE_NONE
-
         intptr_t GetBufferSize() const{
             intptr_t size = 0;
             size += sizeof(Timestamp); // timestamp_
@@ -189,7 +179,7 @@ namespace Token{
             return size;
         }
 
-        bool Write(const Handle<Buffer>& buff) const;
+        bool Write(Buffer* buff) const;
     public:
         ~Block() = default;
 
@@ -213,7 +203,7 @@ namespace Token{
             return timestamp_;
         }
 
-        Handle<Transaction> GetTransaction(intptr_t idx) const{
+        Transaction* GetTransaction(int64_t idx) const{
             if(idx < 0 || idx > GetNumberOfTransactions())
                 return nullptr;
             return transactions_[idx];
@@ -223,11 +213,12 @@ namespace Token{
             return GetHeight() == 0;
         }
 
-        Handle<Buffer> ToBuffer() const{
-            Handle<Buffer> buff = Buffer::NewInstance(GetBufferSize());
+        Buffer* ToBuffer() const{
+            Buffer* buff = new Buffer(GetBufferSize());
             if(!Write(buff)){
-                LOG(WARNING) << "couldn't write block to buffer";
-                return Handle<Buffer>();
+                LOG(WARNING) << "couldn't encode block to buffer";
+                delete buff;
+                return nullptr;
             }
             return buff;
         }
@@ -235,24 +226,24 @@ namespace Token{
         Hash GetMerkleRoot() const;
         bool Accept(BlockVisitor* vis) const;
         bool Contains(const Hash& hash) const;
-        bool Equals(const Handle<Block>& b) const;
-        bool Compare(const Handle<Block>& b) const;
+        bool Equals(Block* block) const;
+        bool Compare(Block* block) const;
         bool ToJson(Json::Value& value) const;
         std::string ToString() const;
 
-        static Handle<Block> Genesis(); // genesis
-        static Handle<Block> NewInstance(std::fstream& fd, size_t size);
-        static Handle<Block> NewInstance(const Handle<Buffer>& buff);
+        static Block* Genesis();
+        static Block* NewInstance(std::fstream& fd, int64_t nbytes);
+        static Block* NewInstance(Buffer* buff);
 
-        static Handle<Block> NewInstance(intptr_t height, const Hash& phash, Transaction** txs, size_t num_txs, Timestamp timestamp=GetCurrentTimestamp()){
+        static Block* NewInstance(intptr_t height, const Hash& phash, Transaction** txs, size_t num_txs, Timestamp timestamp=GetCurrentTimestamp()){
             return new Block(timestamp, height, phash, txs, num_txs);
         }
 
-        static Handle<Block> NewInstance(const BlockHeader& previous, Transaction** txs, size_t num_txs, Timestamp timestamp=GetCurrentTimestamp()){
+        static Block* NewInstance(const BlockHeader& previous, Transaction** txs, size_t num_txs, Timestamp timestamp=GetCurrentTimestamp()){
             return new Block(timestamp, previous.GetHeight() + 1, previous.GetHash(), txs, num_txs);
         }
 
-        static inline Handle<Block> NewInstance(const std::string& filename){
+        static Block* NewInstance(const std::string& filename){
             std::fstream fd(filename, std::ios::in|std::ios::binary);
             LOG(INFO) << "reading " << GetFilesize(filename) << " bytes from file";
             return NewInstance(fd, GetFilesize(filename));//TODO: refactor?
@@ -265,7 +256,7 @@ namespace Token{
     public:
         virtual ~BlockVisitor() = default;
         virtual bool VisitStart(){ return true; }
-        virtual bool Visit(const Handle<Transaction>& tx) = 0; //TODO: convert to const
+        virtual bool Visit(Transaction* tx) = 0; //TODO: convert to const
         virtual bool VisitEnd(){ return true; }
     };
 
@@ -282,10 +273,99 @@ namespace Token{
             return detailed_;
         }
 
-        bool Visit(const Handle<Transaction>& tx){
+        bool Visit(Transaction* tx){
             LOG(INFO) << "#" << tx->GetIndex() << ". " << tx->GetHash();
             return true;
         }
+    };
+
+#define FOR_EACH_BLOCK_POOL_STATE(V) \
+    V(Uninitialized)                 \
+    V(Initializing)                  \
+    V(Initialized)
+
+#define FOR_EACH_BLOCK_POOL_STATUS(V) \
+    V(Ok)                             \
+    V(Warning)                        \
+    V(Error)
+
+    class BlockPoolVisitor;
+    class BlockPool{
+    public:
+        enum State{
+#define DEFINE_STATE(Name) k##Name,
+            FOR_EACH_BLOCK_POOL_STATE(DEFINE_STATE)
+#undef DEFINE_STATE
+        };
+
+        friend std::ostream& operator<<(std::ostream& stream, const State& state){
+            switch(state){
+#define DEFINE_TOSTRING(Name) \
+                case State::k##Name: \
+                    stream << #Name; \
+                    return stream;
+                FOR_EACH_BLOCK_POOL_STATE(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
+            }
+        }
+
+        enum Status{
+#define DEFINE_STATUS(Name) k##Name,
+            FOR_EACH_BLOCK_POOL_STATUS(DEFINE_STATUS)
+#undef DEFINE_STATUS
+        };
+
+        friend std::ostream& operator<<(std::ostream& stream, const Status& status){
+            switch(status){
+#define DEFINE_TOSTRING(Name) \
+                case Status::k##Name: \
+                    stream << #Name; \
+                    return stream;
+                FOR_EACH_BLOCK_POOL_STATUS(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
+            }
+        }
+    private:
+        BlockPool() = delete;
+
+        static void SetState(const State& state);
+        static void SetStatus(const Status& status);
+    public:
+        ~BlockPool() = delete;
+
+        static int64_t GetNumberOfBlocksInPool();
+        static State GetState();
+        static Status GetStatus();
+        static std::string GetStatusMessage();
+        static bool Initialize();
+        static bool Print();
+        static bool Accept(BlockPoolVisitor* vis);
+        static bool RemoveBlock(const Hash& hash);
+        static bool PutBlock(const Hash& hash, Block* block);
+        static bool HasBlock(const Hash& hash);
+        static bool GetBlocks(std::vector<Hash>& blocks);
+        static Block* GetBlock(const Hash& hash);
+        static void WaitForBlock(const Hash& hash);
+
+#define DEFINE_STATE_CHECK(Name) \
+        static inline bool Is##Name(){ return GetState() == State::k##Name; }
+        FOR_EACH_BLOCK_POOL_STATE(DEFINE_STATE_CHECK)
+#undef DEFINE_STATE_CHECK
+
+#define DEFINE_STATUS_CHECK(Name) \
+        static inline bool Is##Name(){ return GetStatus() == Status::k##Name; }
+        FOR_EACH_BLOCK_POOL_STATUS(DEFINE_STATUS_CHECK)
+#undef DEFINE_STATUS_CHECK
+    };
+
+    class BlockPoolVisitor{
+    protected:
+        BlockPoolVisitor() = default;
+    public:
+        virtual ~BlockPoolVisitor() = default;
+        virtual bool VisitStart(){ return true; }
+        virtual bool Visit(Block* block) = 0;
+        virtual bool VisitEnd(){ return true; }
     };
 }
 

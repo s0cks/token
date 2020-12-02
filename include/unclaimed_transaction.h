@@ -18,6 +18,7 @@ namespace Token{
         Product product_;
 
         UnclaimedTransaction(const Hash& hash, int32_t index, const User& user, const Product& product):
+            BinaryObject(Type::kUnclaimedTransactionType),
             hash_(hash),
             index_(index),
             user_(user),
@@ -32,7 +33,7 @@ namespace Token{
             return size;
         }
 
-        bool Write(const Handle<Buffer>& buff) const{
+        bool Write(Buffer* buff) const{
             buff->PutHash(hash_);
             buff->PutInt(index_);
             buff->PutUser(user_);
@@ -60,17 +61,17 @@ namespace Token{
 
         std::string ToString() const;
 
-        static Handle<UnclaimedTransaction> NewInstance(const Handle<Buffer>& buff);
-        static Handle<UnclaimedTransaction> NewInstance(std::fstream& fd, size_t size);
-        static Handle<UnclaimedTransaction> NewInstance(const Hash &hash, int32_t index, const std::string& user, const std::string& product){
+        static UnclaimedTransaction* NewInstance(Buffer* buff);
+        static UnclaimedTransaction* NewInstance(std::fstream& fd, size_t size);
+        static UnclaimedTransaction* NewInstance(const Hash &hash, int32_t index, const std::string& user, const std::string& product){
             return new UnclaimedTransaction(hash, index, User(user), Product(product));
         }
 
-        static Handle<UnclaimedTransaction> NewInstance(const Hash& hash, int32_t index, const User& user, const Product& product){
+        static UnclaimedTransaction* NewInstance(const Hash& hash, int32_t index, const User& user, const Product& product){
             return new UnclaimedTransaction(hash, index, user, product);
         }
 
-        static inline Handle<UnclaimedTransaction> NewInstance(const std::string& filename){
+        static inline UnclaimedTransaction* NewInstance(const std::string& filename){
             std::fstream fd(filename, std::ios::in|std::ios::binary);
             return NewInstance(fd, GetFilesize(filename));
         }
@@ -137,12 +138,12 @@ namespace Token{
         static bool Initialize();
         static bool Accept(UnclaimedTransactionPoolVisitor* vis);
         static bool RemoveUnclaimedTransaction(const Hash& hash);
-        static bool PutUnclaimedTransaction(const Hash& hash, const Handle<UnclaimedTransaction>& utxo);
+        static bool PutUnclaimedTransaction(const Hash& hash, UnclaimedTransaction* utxo);
         static bool HasUnclaimedTransaction(const Hash& hash);
         static bool GetUnclaimedTransactions(std::vector<Hash>& utxos);
         static bool GetUnclaimedTransactions(const std::string& user, std::vector<Hash>& utxos);
-        static Handle<UnclaimedTransaction> GetUnclaimedTransaction(const Hash& hash);
-        static Handle<UnclaimedTransaction> GetUnclaimedTransaction(const Hash& tx_hash, uint32_t tx_index);
+        static UnclaimedTransaction* GetUnclaimedTransaction(const Hash& hash);
+        static UnclaimedTransaction* GetUnclaimedTransaction(const Hash& tx_hash, uint32_t tx_index);
 
 #define DEFINE_STATE_CHECK(Name) \
         static inline bool Is##Name(){ return GetState() == UnclaimedTransactionPool::k##Name; }
@@ -162,7 +163,7 @@ namespace Token{
         virtual ~UnclaimedTransactionPoolVisitor() = default;
 
         virtual bool VisitStart() { return true; }
-        virtual bool Visit(const Handle<UnclaimedTransaction>& utxo) = 0;
+        virtual bool Visit(UnclaimedTransaction* utxo) = 0;
         virtual bool VisitEnd() { return true; };
     };
 }

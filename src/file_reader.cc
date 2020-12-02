@@ -3,7 +3,6 @@
 
 #include "buffer.h"
 #include "block.h"
-#include "alloc/vmemory.h"
 
 namespace Token{
 #define CHECK_FILE_POINTER \
@@ -99,10 +98,4 @@ namespace Token{
         if((err = fseek(GetFilePointer(), pos, SEEK_SET)) != 0)
             LOG(WARNING) << "couldn't seek to " << pos << " in file " << GetFilename() << ": " << strerror(err);
     }
-
-#ifndef TOKEN_GCMODE_NONE
-    bool BinaryFileReader::ReadRegion(MemoryRegion* region, intptr_t nbytes){
-        return ReadBytes((uint8_t*)region->GetPointer(), nbytes);
-    }
-#endif//TOKEN_GCMODE_NONE
 }

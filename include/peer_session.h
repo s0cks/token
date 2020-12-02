@@ -23,9 +23,7 @@ namespace Token{
             head_(),
             hb_timer_(),
             hb_timeout_(),
-            shutdown_(){
-            SetType(Type::kPeerSessionType);
-        }
+            shutdown_(){}
 
         void SetInfo(const Peer& info){
             info_ = info;
@@ -37,7 +35,7 @@ namespace Token{
         static void OnHeartbeatTick(uv_timer_t* handle);
         static void OnHeartbeatTimeout(uv_timer_t* handle);
 #define DECLARE_MESSAGE_HANDLER(Name) \
-        static void Handle##Name##Message(const Handle<HandleMessageTask>& task);
+        static void Handle##Name##Message(HandleMessageTask* task);
         FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
         static void* SessionThread(void* data);
@@ -63,7 +61,7 @@ namespace Token{
             return true;
         }
 
-        static Handle<PeerSession> NewInstance(uv_loop_t* loop, const NodeAddress& address){
+        static PeerSession* NewInstance(uv_loop_t* loop, const NodeAddress& address){
             return new PeerSession(loop, address);
         }
     };

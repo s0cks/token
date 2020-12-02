@@ -23,14 +23,14 @@ namespace Token{
             uuid_(){
             uuid_copy(uuid_, other.uuid_);
         }
-        UUID(const Handle<Buffer>& buff):
+        UUID(Buffer* buff):
             uuid_(){
             if(!buff->GetBytes((uint8_t*)uuid_, kSize))
                 LOG(WARNING) << "cannot read uuid from bytes";
         }
         ~UUID() = default;
 
-        void Write(const Handle<Buffer>& buff) const{
+        void Write(Buffer* buff) const{
             buff->PutBytes((uint8_t*)uuid_, kSize);
         }
 

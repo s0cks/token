@@ -2,7 +2,7 @@
 
 namespace Token{
     static inline void
-    PrintBlock(const Handle<Block>& blk){
+    PrintBlock(Block* blk){
         LOG(INFO) << "Block #" << blk->GetHeight();
         LOG(INFO) << "  - Timestamp: " << blk->GetTimestamp();
         LOG(INFO) << "  - Height: " << blk->GetHeight();
@@ -11,13 +11,13 @@ namespace Token{
         LOG(INFO) << "  - Merkle Root: " << blk->GetMerkleRoot();
         LOG(INFO) << "  - Transactions: ";
         for(intptr_t idx = 0; idx < blk->GetNumberOfTransactions(); idx++){
-            Handle<Transaction> tx = blk->GetTransaction(idx);
+            Transaction* tx = blk->GetTransaction(idx);
             LOG(INFO) << "      * #" << tx->GetIndex() << ": " << tx->GetHash();
         }
     }
 
     static inline void
-    PrintUnclaimedTransaction(const Handle<UnclaimedTransaction>& utxo){
+    PrintUnclaimedTransaction(UnclaimedTransaction* utxo){
         LOG(INFO) << "  - " << utxo << " => " << utxo->GetUser();
     }
 
@@ -41,7 +41,7 @@ namespace Token{
         SnapshotBlockPrinter() = default;
         ~SnapshotBlockPrinter() = default;
 
-        bool Visit(const Handle<Block>& blk){
+        bool Visit(Block* blk){
             PrintBlock(blk);
             return true;
         }

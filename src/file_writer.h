@@ -4,7 +4,6 @@
 #include <iostream>
 #include "object.h"
 #include "buffer.h"
-#include "alloc/vmemory.h"
 
 namespace Token{
     class FileWriter{
@@ -79,8 +78,8 @@ namespace Token{
         }
 
         template<typename T>
-        inline bool Write(const Handle<T>& obj){
-            return Write((Object*)obj);
+        inline bool Write(T* value){
+            return Write((Object*)value);
         }
 
         inline bool
@@ -114,23 +113,13 @@ namespace Token{
         bool WriteObject(Object* obj);
 
         inline bool
-        WriteBytes(const Handle<Buffer>& buff){
+        WriteBytes(Buffer* buff){
             return WriteBytes((uint8_t*)buff->data(), buff->GetWrittenBytes());
         }
 
-        inline bool
-        WriteRegion(MemoryRegion* region, intptr_t nbytes){
-            return WriteBytes((uint8_t*)region->GetStartAddress(), nbytes);
-        }
-
-        inline bool
-        WriteRegion(MemoryRegion* region){
-            return WriteBytes((uint8_t*)region->GetStartAddress(), region->GetSize());
-        }
-
         template<typename T>
-        inline bool WriteObject(const Handle<T>& obj){
-            return WriteObject((Object*)obj);
+        inline bool WriteObject(T* value){
+            return WriteObject((Object*)value);
         }
     };
 }
