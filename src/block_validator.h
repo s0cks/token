@@ -23,7 +23,7 @@ namespace Token{
             return strict_;
         }
 
-        bool Visit(const Transaction& tx) const{
+        bool Visit(const Transaction& tx){
             Hash hash = tx.GetHash();
             if(tx.GetNumberOfInputs() <= 0){
                 invalid_.push_back(hash);

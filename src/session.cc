@@ -52,7 +52,7 @@ namespace Token{
         int64_t size = msg->GetMessageSize();
         int64_t total_size = Message::kHeaderSize + size;
 
-        LOG(INFO) << "sending " << msg << " (" << total_size << " bytes)";
+        LOG(INFO) << "sending " << msg->ToString() << " (" << total_size << " bytes)";
         Buffer* wbuff = GetWriteBuffer();
         wbuff->PutInt(type);
         wbuff->PutLong(size);

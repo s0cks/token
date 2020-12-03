@@ -111,12 +111,6 @@ namespace Token{
         static inline bool Is##Name(){ return GetStatus() == Server::k##Name; }
         FOR_EACH_SERVER_STATUS(DEFINE_STATUS_CHECK)
 #undef DEFINE_STATUS_CHECK
-
-
-#define DECLARE_BROADCAST(Name) \
-        static void Broadcast(Name##Message* msg){ Broadcast(msg); }
-        FOR_EACH_MESSAGE_TYPE(DECLARE_BROADCAST)
-#undef DECLARE_BROADCAST
     };
 
     class ServerSession : public Session{

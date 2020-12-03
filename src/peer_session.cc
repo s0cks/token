@@ -62,7 +62,11 @@ namespace Token{
 
         Server::RegisterPeer(session);
         session->SetState(Session::kConnecting);
-        session->Send(VersionMessage::NewInstance(Server::GetID()));
+
+        Block* head = BlockChain::GetHead();
+        session->Send(VersionMessage::NewInstance(ClientType::kNode, Server::GetID(), head->GetHeader()));
+        delete head;
+
         if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
             LOG(WARNING) << "client read error: " << uv_strerror(status);
             session->Disconnect();
@@ -99,7 +103,6 @@ namespace Token{
 #define DEFINE_DECODE(Name) \
                 case Message::MessageType::k##Name##MessageType:{ \
                     Message* msg = Name##Message::NewInstance(rbuff); \
-                    LOG(INFO) << "decoded: " << msg; \
                     messages.push_back(msg); \
                     break; \
                 }
@@ -137,7 +140,10 @@ namespace Token{
 
     void PeerSession::HandleVersionMessage(HandleMessageTask* task){
         PeerSession* session = task->GetSession<PeerSession>();
-        session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), Server::GetCallbackAddress()));
+
+        Block* head = BlockChain::GetHead();
+        session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), Server::GetCallbackAddress(), head->GetHeader()));
+        delete head;
     }
 
     void PeerSession::HandleVerackMessage(HandleMessageTask* task){
@@ -244,29 +250,30 @@ namespace Token{
             Hash hash = item.GetHash();
             LOG(INFO) << "resolving item : " << hash;
             if(item.IsBlock()){
+                Block* block = nullptr;
                 if(BlockChain::HasBlock(hash)){
                     LOG(INFO) << "item " << hash << " found in block chain";
-                    response.push_back(BlockMessage::NewInstance(BlockChain::GetBlock(hash)));
-                    continue;
-                }
-
-                if(BlockPool::HasBlock(hash)){
+                    block = BlockChain::GetBlock(hash);
+                } else if(BlockPool::HasBlock(hash)){
                     LOG(INFO) << "item " << hash << " found in block pool";
-                    response.push_back(BlockMessage::NewInstance(BlockPool::GetBlock(hash)));
-                    continue;
+                    block = BlockPool::GetBlock(hash);
+                } else{
+                    LOG(WARNING) << "cannot find block: " << hash;
+                    response.push_back(NotFoundMessage::NewInstance());
+                    break;
                 }
-
-                LOG(WARNING) << "couldn't find requested block: " << hash;
-                response.push_back(NotFoundMessage::NewInstance());
+                response.push_back(new BlockMessage((*block)));
+                delete block;
             } else if(item.IsTransaction()){
-                if(TransactionPool::HasTransaction(hash)){
-                    LOG(INFO) << "item " << hash << " found in transaction pool";
-                    response.push_back(TransactionMessage::NewInstance(TransactionPool::GetTransaction(hash)));
-                    continue;
+                if(!TransactionPool::HasTransaction(hash)){
+                    LOG(WARNING) << "cannot find transaction: " << hash;
+                    response.push_back(NotFoundMessage::NewInstance());
+                    break;
                 }
 
-                LOG(WARNING) << "couldn't find requested transaction: " << hash;
-                response.push_back(NotFoundMessage::NewInstance());
+                Transaction* tx = TransactionPool::GetTransaction(hash);
+                response.push_back(new TransactionMessage((*tx)));
+                delete tx;
             }
         }
         session->Send(response);
@@ -274,9 +281,9 @@ namespace Token{
 
     void PeerSession::HandleBlockMessage(HandleMessageTask* task){
         BlockMessage* msg = (BlockMessage*)task->GetMessage();
-        Block* blk = msg->GetData();
-        Hash bhash = blk->GetHash();
-        BlockPool::PutBlock(bhash, blk);
+        Block& blk = msg->GetBlock();
+        Hash bhash = blk.GetHash();
+        BlockPool::PutBlock(bhash, &blk);
         LOG(INFO) << "received block: " << bhash;
     }
 

@@ -57,6 +57,15 @@ namespace Token{
             data_ = (uint8_t*)malloc(sizeof(uint8_t)*size);
             memset(data(), 0, GetBufferSize());
         }
+        Buffer(const Buffer& buff):
+            Object(Type::kBufferType),
+            bsize_(buff.bsize_),
+            wpos_(buff.wpos_),
+            rpos_(buff.rpos_),
+            data_(nullptr) {
+            data_ = (uint8_t*) malloc(sizeof(uint8_t)*buff.GetBufferSize());
+            memcpy(data(), buff.data(), buff.GetBufferSize());
+        }
         ~Buffer(){
             if(data_)
                 free(data_);
@@ -135,13 +144,14 @@ namespace Token{
             }
         }
 
-        void ReadBytesFrom(std::fstream& stream, intptr_t size){
+        bool ReadBytesFrom(std::fstream& stream, intptr_t size){
             uint8_t bytes[size];
             if(!stream.read((char*)bytes, size)){
                 LOG(WARNING) << "cannot read " << size << " bytes from file";
-                return;
+                return false;
             }
             PutBytes(bytes, size);
+            return true;
         }
 
         void PutBytes(uint8_t* bytes, intptr_t size){

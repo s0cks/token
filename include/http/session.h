@@ -50,7 +50,7 @@ namespace Token{
             Close();
         }
 
-        UUID GetSessionID() const{
+        UUID GetID() const{
             return session_id_;
         }
 
@@ -66,12 +66,14 @@ namespace Token{
             return &wbuff_;
         }
 
+        std::string ToString() const{
+            std::stringstream ss;
+            ss << "HttpSession(" << GetID() << ")";
+            return ss.str();
+        }
+
         void Send(HttpResponse* response);
         void Close();
-
-        std::string ToString() const{
-            return "HttpSession()";
-        }
     };
 }
 

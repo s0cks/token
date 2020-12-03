@@ -242,7 +242,6 @@ namespace Token{
 #define DEFINE_DECODE(Name) \
                 case Message::MessageType::k##Name##MessageType:{ \
                     Message* msg = Name##Message::NewInstance(rbuff); \
-                    LOG(INFO) << "decoded: " << msg << "(" << msize << " bytes)"; \
                     messages.push_back(msg); \
                     break; \
                 }
@@ -412,7 +411,9 @@ namespace Token{
         ServerSession* session = task->GetSession<ServerSession>();
         VerackMessage* msg = task->GetMessage<VerackMessage>();
 
-        session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), Server::GetCallbackAddress()));
+        Block* head = BlockChain::GetHead();
+        session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), Server::GetCallbackAddress(), head->GetHeader()));
+        delete head;
 
         LOG(INFO) << "State: " << session->GetState();
         if(session->IsConnecting()){
@@ -456,8 +457,8 @@ namespace Token{
                         response.push_back(NotFoundMessage::NewInstance());
                         break;
                     }
-
-                    response.push_back(BlockMessage::NewInstance(block));
+                    response.push_back(new BlockMessage((*block)));
+                    delete block;
                 } else if(item.IsTransaction()){
                     if(!TransactionPool::HasTransaction(hash)){
                         LOG(WARNING) << "cannot find transaction: " << hash;
@@ -466,7 +467,8 @@ namespace Token{
                     }
 
                     Transaction* tx = TransactionPool::GetTransaction(hash);
-                    response.push_back(TransactionMessage::NewInstance(tx));
+                    response.push_back(new TransactionMessage((*tx)));
+                    delete tx;
                 } else if(item.IsUnclaimedTransaction()){
                     if(!UnclaimedTransactionPool::HasUnclaimedTransaction(hash)){
                         LOG(WARNING) << "couldn't find unclaimed transaction: " << hash;
@@ -490,17 +492,16 @@ namespace Token{
         ServerSession* session = task->GetSession<ServerSession>();
         PrepareMessage* msg = task->GetMessage<PrepareMessage>();
         Proposal* proposal = msg->GetProposal();
-        /*if(ProposerThread::HasProposal()){
-            session->Send(RejectedMessage::NewInstance(proposal, Server::GetID()));
-            return;
-        }*/
+        LOG(INFO) << "received proposal: " << proposal->ToString();
 
-        //ProposerThread::SetProposal(proposal);
+        Hash hash = proposal->GetHash();
+
         proposal->SetPhase(Proposal::kVotingPhase);
         std::vector<Message*> response;
         if(!BlockPool::HasBlock(proposal->GetHash())){
+            LOG(INFO) << "requesting block " << hash << " from peer....";
             std::vector<InventoryItem> items = {
-                    InventoryItem(InventoryItem::kBlock, proposal->GetHash())
+                InventoryItem(InventoryItem::kBlock, hash)
             };
             response.push_back(GetDataMessage::NewInstance(items));
         }
@@ -539,24 +540,23 @@ namespace Token{
     void ServerSession::HandleBlockMessage(HandleMessageTask* task){
         BlockMessage* msg = task->GetMessage<BlockMessage>();
 
-        Block* block = msg->GetData();
-        Hash hash = block->GetHash();
+        Block& blk = msg->GetBlock();
+        Hash hash = blk.GetHash();
 
         if(!BlockPool::HasBlock(hash)){
-            BlockPool::PutBlock(hash, block);
-            Server::Broadcast(InventoryMessage::NewInstance(block));
+            BlockPool::PutBlock(hash, &blk);
+            Server::Broadcast(InventoryMessage::NewInstance(blk));
         }
     }
 
     void ServerSession::HandleTransactionMessage(HandleMessageTask* task){
         TransactionMessage* msg = task->GetMessage<TransactionMessage>();
-
-        Transaction* tx = msg->GetTransaction();
-        Hash hash = tx->GetHash();
+        Transaction& tx = msg->GetTransaction();
+        Hash hash = tx.GetHash();
 
         LOG(INFO) << "received transaction: " << hash;
         if(!TransactionPool::HasTransaction(hash)){
-            TransactionPool::PutTransaction(hash, tx);
+            TransactionPool::PutTransaction(hash, &tx);
             Server::Broadcast(InventoryMessage::NewInstance(tx));
         }
     }

@@ -101,6 +101,7 @@ namespace Token{
 
     static inline size_t
     GetFilesize(const std::string& filename){
+        //TODO: optimize function for std::fstream
         std::ifstream fd(filename, std::ios::binary|std::ios::ate);
         return fd.tellg();
     }

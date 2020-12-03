@@ -129,14 +129,14 @@ namespace Token{
         TransactionPool::Initialize();
         UnclaimedTransactionPool::Initialize();
         if(!HasBlocks()){
-            Block* blk = Block::Genesis();
-            Hash hash = blk->GetHash();
-            PutBlock(hash, blk);
+            Block genesis = Block::Genesis();
+            Hash hash = genesis.GetHash();
+            PutBlock(hash, &genesis);
             PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
             PutReference(BLOCKCHAIN_REFERENCE_GENESIS, hash);
 
             GenesisBlockProcessor processor;
-            if(!blk->Accept(&processor)){
+            if(!genesis.Accept(&processor)){
                 LOG(ERROR) << "couldn't process the genesis block.";
                 return false;
             }
@@ -193,6 +193,7 @@ namespace Token{
         Block* block = Block::NewInstance(filename);
         if(hash != block->GetHash()){
             LOG(WARNING) << "couldn't match block hashes: " << hash << " <=> " << block->GetHash();
+            delete block;
             return nullptr;
         }
         return block;

@@ -132,11 +132,6 @@ namespace Token{
         void Send(std::vector<Message*>& messages);
         void SendInventory(std::vector<InventoryItem>& items);
 
-#define DEFINE_SEND_MESSAGE(Name) \
-        void Send(Name##Message* msg){ Send(msg); }
-        FOR_EACH_MESSAGE_TYPE(DEFINE_SEND_MESSAGE)
-#undef DEFINE_SEND_MESSAGE
-
 #define DEFINE_STATE_CHECK(Name) \
         bool Is##Name(){ return GetState() == State::k##Name; }
         FOR_EACH_SESSION_STATE(DEFINE_STATE_CHECK)

@@ -129,7 +129,7 @@ namespace Token{
     bool HealthCheckService::UnregisterSession(HttpSession* session){
         for(int64_t idx = 0; idx < HealthCheckService::kMaxNumberOfSessions; idx++){
             //TODO: fix HealthCheckService::UnregisterSession(const Handle<HttpSession>&);
-            if(sessions_[idx] && sessions_[idx]->GetSessionID() == session->GetSessionID()){
+            if(sessions_[idx] && sessions_[idx]->GetID() == session->GetID()){
                 sessions_[idx] = nullptr;
                 return true;
             }
@@ -176,7 +176,6 @@ namespace Token{
     static inline void
     SendNotFound(HttpSession* session, const std::string& path){
         LOG(WARNING) << "sending NotFound(" << path << ")";
-
         std::stringstream ss;
         ss << "Not Found: " << path;
         HttpResponse response(session, STATUS_CODE_NOTFOUND, ss);
@@ -234,6 +233,8 @@ namespace Token{
         value["Block Chain"] = BlockChain::GetStatusMessage();
         value["Server"] = Server::GetStatusMessage();
         value["Unclaimed Transaction Pool"] = UnclaimedTransactionPool::GetStatusMessage();
+        value["Transaction Pool"] = TransactionPool::GetStatusMessage();
+        value["Block Pool"] = BlockPool::GetStatusMessage();
         return true;
     }
 

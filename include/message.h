@@ -144,12 +144,14 @@ namespace Token{
         DECLARE_MESSAGE(Version);
 
         static VersionMessage* NewInstance(Buffer* buff);
-        static VersionMessage* NewInstance(ClientType type, const UUID& node_id, const Version& version=Version(), const Hash& nonce=Hash::GenerateNonce(), const BlockHeader& head=BlockChain::GetHead()->GetHeader(), Timestamp timestamp=GetCurrentTimestamp()){
+        static VersionMessage* NewInstance(ClientType type, const UUID& node_id, const BlockHeader& head, const Version& version=Version(), const Hash& nonce=Hash::GenerateNonce(), Timestamp timestamp=GetCurrentTimestamp()){
             return new VersionMessage(type, version, node_id, timestamp, nonce, head);
         }
 
         static VersionMessage* NewInstance(const UUID& node_id){
-            return NewInstance(ClientType::kClient, node_id, Version(), Hash::GenerateNonce(), Block::Genesis()->GetHeader());
+            BlockHeader genesis = Block::Genesis().GetHeader();
+            LOG(INFO) << "Genesis: " << genesis;
+            return NewInstance(ClientType::kClient, node_id, genesis, Version(), Hash::GenerateNonce());
         }
     };
 
@@ -204,12 +206,19 @@ namespace Token{
         DECLARE_MESSAGE(Verack);
 
         static VerackMessage* NewInstance(Buffer* buff);
-        static VerackMessage* NewInstance(ClientType type, const UUID& node_id, const NodeAddress& address, const BlockHeader& head=BlockChain::GetHead()->GetHeader(), const Version& version=Version(), const Hash& nonce=Hash::GenerateNonce(), Timestamp timestamp=GetCurrentTimestamp()){
+        static VerackMessage* NewInstance(ClientType type,
+                                          const UUID& node_id,
+                                          const NodeAddress& address,
+                                          const BlockHeader& head,
+                                          const Version& version=Version(),
+                                          const Hash& nonce=Hash::GenerateNonce(),
+                                          Timestamp timestamp=GetCurrentTimestamp()){
             return new VerackMessage(type, node_id, version, nonce, address, head, timestamp);
         }
 
         static VerackMessage* NewInstance(const UUID& node_id){
-            return NewInstance(ClientType::kClient, node_id, NodeAddress(), Block::Genesis()->GetHeader());
+            Block genesis = Block::Genesis();
+            return NewInstance(ClientType::kClient, node_id, NodeAddress(), genesis.GetHeader());
         }
     };
 
@@ -319,47 +328,56 @@ namespace Token{
 
     class TransactionMessage : public Message{
     private:
-        Transaction* data_;
-
-        TransactionMessage(Transaction* tx):
+        Transaction data_;
+    public:
+        TransactionMessage(const Transaction& tx):
             Message(),
             data_(tx){}
-    public:
+        TransactionMessage(Buffer* buff):
+            Message(),
+            data_(buff){}
         ~TransactionMessage(){}
 
-        Transaction* GetTransaction() const{
+        Transaction& GetTransaction(){
             return data_;
+        }
+
+        std::string ToString() const{
+            std::stringstream ss;
+            ss << "TransactionMessage(" << data_.GetHash() << ")";
+            return ss.str();
         }
 
         DECLARE_MESSAGE(Transaction);
 
         static TransactionMessage* NewInstance(Buffer* buff);
-        static TransactionMessage* NewInstance(Transaction* tx){
-            return new TransactionMessage(tx);
-        }
     };
 
     class BlockMessage : public Message{
     private:
-        Block* data_;
-
-        BlockMessage(Block* blk):
+        Block data_;
+    public:
+        BlockMessage(const Block& blk):
             Message(),
             data_(blk){}
-    public:
-        ~BlockMessage(){}
+        BlockMessage(Buffer* buff):
+            Message(),
+            data_(buff){}
+        ~BlockMessage() = default;
 
-        Block* GetData() const{
+        Block& GetBlock(){
             return data_;
         }
 
-        std::string ToString() const;
+        std::string ToString() const{
+            std::stringstream ss;
+            ss << "BlockMessage(" << data_.GetHash() << ")";
+            return ss.str();
+        }
+
         DECLARE_MESSAGE(Block);
 
         static BlockMessage* NewInstance(Buffer* buff);
-        static BlockMessage* NewInstance(Block* blk){
-            return new BlockMessage(blk);
-        }
     };
 
     class UnclaimedTransactionMessage : public Message {
@@ -404,8 +422,8 @@ namespace Token{
         InventoryItem(Type type, const Hash& hash):
             type_(type),
             hash_(hash){}
-        InventoryItem(Transaction* tx): InventoryItem(kTransaction, tx->GetHash()){}
-        InventoryItem(Block* blk): InventoryItem(kBlock, blk->GetHash()){}
+        InventoryItem(const Transaction& tx): InventoryItem(kTransaction, tx.GetHash()){}
+        InventoryItem(const Block& blk): InventoryItem(kBlock, blk.GetHash()){}
         InventoryItem(UnclaimedTransaction* utxo): InventoryItem(kUnclaimedTransaction, utxo->GetHash()){}
         InventoryItem(const BlockHeader& blk): InventoryItem(kBlock, blk.GetHash()){}
         InventoryItem(const InventoryItem& item):
@@ -498,14 +516,14 @@ namespace Token{
             return new InventoryMessage(items);
         }
 
-        static InventoryMessage* NewInstance(Transaction* tx){
+        static InventoryMessage* NewInstance(const Transaction& tx){
             std::vector<InventoryItem> items = {
                 InventoryItem(tx)
             };
             return NewInstance(items);
         }
 
-        static InventoryMessage* NewInstance(Block* blk){
+        static InventoryMessage* NewInstance(const Block& blk){
             std::vector<InventoryItem> items = {
                 InventoryItem(blk)
             };

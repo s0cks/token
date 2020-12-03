@@ -40,10 +40,9 @@ namespace Token{
 //######################################################################################################################
 //                                          Block
 //######################################################################################################################
-    Block* Block::Genesis(){
-        InputList inputs;
-
+    Block Block::Genesis(){
         int64_t idx;
+        InputList inputs;
 
         OutputList outputs_a;
         for(idx = 0;
@@ -80,28 +79,7 @@ namespace Token{
             Transaction(1, inputs, outputs_b, 0),
             Transaction(2, inputs, outputs_c, 0),
         };
-        return new Block(0, Hash(), transactions, 0);
-    }
-
-    Block* Block::NewInstance(std::fstream& fd, int64_t size){
-        Buffer buff(size);
-        buff.ReadBytesFrom(fd, size);
-        return NewInstance(&buff);
-    }
-
-    Block* Block::NewInstance(Buffer* buff){
-        Timestamp timestamp = buff->GetLong();
-        intptr_t height = buff->GetLong();
-        Hash phash = buff->GetHash();
-        intptr_t num_txs = buff->GetLong();
-
-        TransactionList transactions;
-        for(int64_t idx = 0;
-            idx < num_txs;
-            idx++){
-            transactions.push_back(Transaction(buff));
-        }
-        return new Block(height, phash, transactions, timestamp);
+        return Block(0, Hash(), transactions, 0);
     }
 
     bool Block::ToJson(Json::Value& value) const{
@@ -133,11 +111,11 @@ namespace Token{
     }
 
     Hash Block::GetMerkleRoot() const{
-        std::vector<Hash> hashes;
-        for(auto& it : transactions_)
-            hashes.push_back(it.GetHash());
-        MerkleTree tree(hashes);
-        return tree.GetMerkleRootHash();
+        MerkleTreeBuilder builder;
+        if(!Accept(&builder))
+            return Hash();
+        std::shared_ptr<MerkleTree> tree = builder.Build();
+        return tree->GetRootHash();
     }
 
     static std::mutex mutex_;
@@ -284,7 +262,6 @@ namespace Token{
         std::string key = hash.HexString();
         std::string filename;
 
-        LOCK_GUARD;
         leveldb::Status status = GetIndex()->Get(options, key, &filename);
         if(!status.ok()){
             std::stringstream ss;
@@ -315,6 +292,7 @@ namespace Token{
             ss << "couldn't verify block hash: " << hash;
             POOL_WARNING(ss.str());
             //TODO: better validation + error handling for UnclaimedTransaction data
+            delete blk;
             return nullptr;
         }
         return blk;
@@ -414,6 +392,7 @@ namespace Token{
 
                 Block* blk = Block::NewInstance(filename);
                 blocks.push_back(blk->GetHash());
+                delete blk;
             }
             closedir(dir);
             return true;
@@ -434,8 +413,13 @@ namespace Token{
                 if(!EndsWith(filename, ".dat")) continue;
 
                 Block* blk = Block::NewInstance(filename);
-                if(!vis->Visit(blk))
+                if(!vis->Visit(blk)){
+                    delete blk;
                     break;
+                }
+
+                delete blk;
+                continue;
             }
             closedir(dir);
         }

@@ -167,6 +167,13 @@ namespace Token{
             return true;
         }
     public:
+        Block():
+            BinaryObject(Type::kBlockType),
+            timestamp_(0),
+            height_(0),
+            previous_hash_(),
+            transactions_(),
+            tx_bloom_(){}
         Block(int64_t height, const Hash& phash, const TransactionList& transactions, Timestamp timestamp=GetCurrentTimestamp()):
             BinaryObject(Type::kBlockType),
             timestamp_(timestamp),
@@ -179,8 +186,36 @@ namespace Token{
                     tx_bloom_.Put(it.GetHash());
             }
         }
+        Block(const Block& parent, const TransactionList& transactions, Timestamp timestamp=GetCurrentTimestamp()):
+            Block(parent.GetHeight(), parent.GetHash(), transactions, timestamp){}
+        Block(Block* parent, const TransactionList& transactions, Timestamp timestamp=GetCurrentTimestamp()):
+            Block(parent->GetHeight(), parent->GetHash(), transactions, timestamp){}
         Block(const BlockHeader& parent, const TransactionList& transactions, Timestamp timestamp=GetCurrentTimestamp()):
             Block(parent.GetHeight(), parent.GetHash(), transactions, timestamp){}
+        Block(Buffer* buff):
+            BinaryObject(Type::kBlockType),
+            timestamp_(buff->GetLong()),
+            height_(buff->GetLong()),
+            previous_hash_(buff->GetHash()),
+            transactions_(),
+            tx_bloom_(){
+            int64_t idx;
+            int64_t num_transactions = buff->GetLong();
+            for(idx = 0;
+                idx < num_transactions;
+                idx++){
+                Transaction tx(buff);
+                transactions_.push_back(tx);
+                tx_bloom_.Put(tx.GetHash());
+            }
+        }
+        Block(const Block& other):
+            BinaryObject(Type::kBlockType),
+            timestamp_(other.timestamp_),
+            height_(other.height_),
+            previous_hash_(other.previous_hash_),
+            transactions_(other.transactions_),
+            tx_bloom_(other.tx_bloom_){}
         ~Block() = default;
 
         BlockHeader GetHeader() const{
@@ -240,19 +275,13 @@ namespace Token{
         }
 
         Buffer* ToBuffer() const{
-            Buffer* buff = new Buffer(GetBufferSize());
-            if(!Encode(buff)){
+            Buffer buff(GetBufferSize());
+            if(!Encode(&buff)){
                 LOG(WARNING) << "couldn't encode block to buffer";
-                delete buff;
                 return nullptr;
             }
-            return buff;
+            return new Buffer(buff);
         }
-
-        Hash GetMerkleRoot() const;
-        bool Accept(BlockVisitor* vis) const;
-        bool Contains(const Hash& hash) const;
-        bool ToJson(Json::Value& value) const;
 
         std::string ToString() const{
             std::stringstream stream;
@@ -260,14 +289,49 @@ namespace Token{
             return stream.str();
         }
 
-        static Block* Genesis();
-        static Block* NewInstance(std::fstream& fd, int64_t nbytes);
-        static Block* NewInstance(Buffer* buff);
+        Hash GetMerkleRoot() const;
+        bool Accept(BlockVisitor* vis) const;
+        bool Contains(const Hash& hash) const;
+        bool ToJson(Json::Value& value) const;
 
-        static Block* NewInstance(const std::string& filename){
-            std::fstream fd(filename, std::ios::in|std::ios::binary);
-            LOG(INFO) << "reading " << GetFilesize(filename) << " bytes from file";
-            return NewInstance(fd, GetFilesize(filename));//TODO: refactor?
+        void operator=(const Block& other){
+            timestamp_ = other.timestamp_;
+            height_ = other.height_;
+            previous_hash_ = other.previous_hash_;
+            transactions_ = other.transactions_;
+        }
+
+        friend bool operator==(const Block& a, const Block& b){
+            return a.timestamp_ == b.timestamp_
+                && a.height_ == b.height_
+                && a.GetHash() == b.GetHash();
+        }
+
+        friend bool operator!=(const Block& a, const Block& b){
+            return !operator==(a, b);
+        }
+
+        friend bool operator<(const Block& a, const Block& b){
+            return a.height_ < b.height_;
+        }
+
+        friend std::ostream& operator<<(std::ostream& stream, const Block& blk){
+            stream << blk.ToString();
+            return stream;
+        }
+
+        static Block Genesis();
+
+        static inline Block*
+        NewInstance(const std::string& filename){
+            std::fstream fd(filename, std::ios::binary|std::ios::in);
+            int64_t total_size = GetFilesize(filename);
+            Buffer buffer(total_size);
+            if(!buffer.ReadBytesFrom(fd, total_size)){
+                LOG(WARNING) << "couldn't read block from file: " << filename;
+                return nullptr;
+            }
+            return new Block(&buffer);
         }
     };
 
@@ -276,9 +340,45 @@ namespace Token{
         BlockVisitor() = default;
     public:
         virtual ~BlockVisitor() = default;
-        virtual bool VisitStart(){ return true; }
-        virtual bool Visit(const Transaction& tx) const = 0;
-        virtual bool VisitEnd(){ return true; }
+        virtual bool VisitStart() const{ return true; }
+        virtual bool Visit(const Transaction& tx) = 0;
+        virtual bool VisitEnd() const{ return true; }
+    };
+
+    class BlockPrinter : public BlockVisitor{
+    private:
+        const Block& block_;
+
+        const Block&
+        block() const{
+            return block_;
+        }
+
+        BlockPrinter(const Block& blk):
+            block_(blk){}
+    public:
+        ~BlockPrinter() = default;
+
+        bool VisitStart() const{
+            LOG(INFO) << "Block #" << block().GetHeight();
+            LOG(INFO) << "  - Created: " << GetTimestampFormattedReadable(block().GetTimestamp());
+            LOG(INFO) << "  - Previous Hash: " << block().GetPreviousHash();
+            LOG(INFO) << "  - Merkle Root: " << block().GetMerkleRoot();
+            LOG(INFO) << "  - Hash: " << block().GetHash();
+            LOG(INFO) << "Transactions (" << block().GetNumberOfTransactions() << "):";
+            return true;
+        }
+
+        bool Visit(const Transaction& tx){
+            LOG(INFO) << "  - #" << tx.GetIndex() << ": " << tx.GetHash();
+            return true;
+        }
+
+        static inline bool
+        Print(const Block& blk){
+            BlockPrinter printer(blk);
+            return blk.Accept(&printer);
+        }
     };
 
 #define FOR_EACH_BLOCK_POOL_STATE(V) \

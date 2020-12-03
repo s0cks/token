@@ -1,9 +1,6 @@
 #include "token.h"
 #include "common.h"
 #include "command.h"
-#include "alloc/allocator.h"
-
-#include "alloc/heap_dump.h"
 #include "snapshot_inspector.h"
 
 static inline void
@@ -21,7 +18,6 @@ main(int argc, char** argv){
     SignalHandlers::Initialize();
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     InitializeLogging(argv[0]);
-    Allocator::Initialize();
 
     std::string inspector_path;
     if(FLAGS_inspector_tool == "snapshot"){
@@ -46,10 +42,6 @@ main(int argc, char** argv){
             LOG(ERROR) << "Heap Dump " << inspector_path << " doesn't exist, please enter a valid path";
             return EXIT_FAILURE;
         }
-
-        HeapDumpInspector inspector;
-        HeapDump* dump = HeapDump::ReadHeapDump(inspector_path);
-        inspector.Inspect(dump);
     }
 
     return EXIT_SUCCESS;

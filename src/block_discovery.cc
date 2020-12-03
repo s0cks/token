@@ -103,6 +103,12 @@ namespace Token{
             LOG(WARNING) << "couldn't schedule new snapshot!";
     }
 
+    static inline bool
+    Broadcast(Block* blk){
+        BlockMessage msg((*blk));
+        return Server::Broadcast(&msg);
+    }
+
     void BlockDiscoveryThread::HandleVotingPhase(Proposal* proposal){
         LOG(INFO) << "proposal " << proposal << " entering voting phase";
         proposal->SetPhase(Proposal::Phase::kVotingPhase);

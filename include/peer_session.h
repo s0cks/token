@@ -23,7 +23,10 @@ namespace Token{
             head_(),
             hb_timer_(),
             hb_timeout_(),
-            shutdown_(){}
+            shutdown_(){
+            hb_timer_.data = this;
+            hb_timeout_.data = this;
+        }
 
         void SetInfo(const Peer& info){
             info_ = info;

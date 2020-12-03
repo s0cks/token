@@ -46,7 +46,7 @@ namespace Token{
         bool GetBlockChain(std::set<Hash>& blocks);
         bool GetPeers(PeerList& peers);
         bool GetUnclaimedTransactions(const User& user, std::vector<Hash>& utxos);
-        bool SendTransaction(Transaction* tx);
+        bool SendTransaction(const Transaction& tx);
         UnclaimedTransaction* GetUnclaimedTransaction(const Hash& hash);
 
         static ClientSession* NewInstance(uv_loop_t* loop, const NodeAddress& address){

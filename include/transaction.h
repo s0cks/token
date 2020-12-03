@@ -190,12 +190,15 @@ namespace Token{
             outputs_(),
             signature_(){
             int64_t idx;
+
+            int64_t num_inputs = buff->GetLong();
             for(idx = 0;
-                idx < buff->GetLong();
+                idx < num_inputs;
                 idx++)
                 inputs_.push_back(Input(buff));
+            int64_t num_outputs = buff->GetLong();
             for(idx = 0;
-                idx < buff->GetLong();
+                idx < num_outputs;
                 idx++)
                 outputs_.push_back(Output(buff));
         }

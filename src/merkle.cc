@@ -21,60 +21,59 @@ namespace Token{
         return Hash::Concat(left, right);
     }
 
-    MerkleNode* MerkleTree::BuildMerkleTree(std::vector<Hash>& leaves){
-        std::vector<MerkleNode*> nodes;
-        for(auto& it : leaves){
-            MerkleNode* node = new MerkleNode(it);
-            leaves_.push_back(node);
-            nodes_.insert(std::make_pair(it, node));
+    MerkleNodePtr MerkleTree::BuildTree(std::vector<MerkleNodePtr>& nodes){
+        if(nodes.size() == 1){
+            return nodes.front();
+        }
+
+        std::vector<MerkleNodePtr> parents;
+        for(size_t idx = 0; idx < nodes.size(); idx += 2){
+            MerkleNodePtr lchild = nodes[idx];
+            MerkleNodePtr rchild = nodes[idx + 1];
+            parents.push_back(CreateNode(lchild, rchild));
+        }
+        return BuildTree(parents);
+    }
+
+    MerkleNodePtr MerkleTree::BuildTree(std::vector<Hash>& leaves){
+        std::vector<MerkleNodePtr> nodes;
+        for(auto& it : leaves)
+            nodes.push_back(CreateNode(it));
+        if((nodes.size() % 2) == 1){
+            MerkleNodePtr node = nodes.back();
             nodes.push_back(node);
         }
-        size_t height = std::ceil(log2(leaves.size())) + 1;
-        return BuildMerkleTree(height, nodes);
+        return BuildTree(nodes);
     }
 
-    MerkleNode* MerkleTree::BuildMerkleTree(size_t height, std::vector<MerkleNode*>& nodes){
-        if(height == 1 && !nodes.empty()){
-            MerkleNode* node = nodes.back();
-            nodes.pop_back();
-            Hash hash = node->GetHash();
-            nodes_.insert(std::make_pair(hash, node));
-            return node;
-        } else if(height > 1){
-            MerkleNode* lchild = BuildMerkleTree(height - 1, nodes);
-            MerkleNode* rchild;
-            if(nodes.empty()){
-                rchild = new MerkleNode(lchild);
-            } else{
-                rchild = BuildMerkleTree(height - 1, nodes);
-            }
-
-            Hash hash = Hash::Concat(lchild->GetHash(), rchild->GetHash());
-            MerkleNode* node = new MerkleNode(hash);
-            node->SetLeft(lchild);
-            node->SetRight(rchild);
-            nodes_.insert(std::make_pair(hash, node));
-            return node;
+    bool MerkleTree::VisitLeaves(MerkleTreeVisitor* vis) const{
+        if(!vis->VisitStart())
+            return false;
+        for(auto& it : leaves_){
+            MerkleNode* node;
+            if(!(node = GetNode(it)) || !vis->Visit(node))
+                return false;
         }
-        return nullptr;
+        return vis->VisitEnd();
     }
 
-    std::string MerkleTree::ToString() const{
-        std::stringstream ss;
-        ss << "MerkleTree(" << GetMerkleRootHash() << ")";
-        return ss.str();
+    bool MerkleTree::VisitNodes(MerkleTreeVisitor* vis) const{
+        if(!vis->VisitStart())
+            return false;
+        for(auto& it : nodes_){
+            if(!vis->Visit(it.second))
+                return false;
+        }
+        return vis->VisitEnd();
     }
 
-    bool MerkleTree::Finalize(){
-        return true;
-    }
-
-    bool MerkleTree::Append(const MerkleTree& tree){
+    bool MerkleTree::Append(const std::unique_ptr<MerkleTree>& tree){
         std::vector<Hash> leaves;
-        if(!GetLeaves(leaves)) return false;
-        if(!tree.GetLeaves(leaves)) return false;
+        std::copy(leaves_.begin(), leaves_.end(), std::back_inserter(leaves));
+        std::copy(tree->leaves_.begin(), tree->leaves_.end(), std::back_inserter(leaves));
         Clear();
-        root_ = BuildMerkleTree(leaves);
+        leaves_ = leaves;
+        root_ = BuildTree(leaves);
         return true;
     }
 
@@ -87,32 +86,28 @@ namespace Token{
             MerkleProofHash::Direction direction = parent->GetLeft()->Equals(child) ?
                     MerkleProofHash::Direction::kLeft :
                     MerkleProofHash::Direction::kRight;
-
             if(next) trail.push_back(MerkleProofHash(direction, next->GetHash()));
             BuildAuditTrail(trail, child->GetParent()->GetParent(), child->GetParent());
         }
     }
 
-    MerkleNode* MerkleTree::GetNode(const Hash& hash) const{
+    MerkleNodePtr MerkleTree::GetNode(const Hash& hash) const{
         auto pos = nodes_.find(hash);
-        if(pos == nodes_.end()) return nullptr;
+        if(pos == nodes_.end())
+            return nullptr;
         return pos->second;
     }
 
-    MerkleNode* MerkleTree::GetLeafNode(const Hash& hash) const{
-        for(auto& it : leaves_) if(it->GetHash() == hash) return it;
-        return nullptr;
-    }
-
-    bool MerkleTree::BuildAuditProof(const Hash& hash, std::vector<MerkleProofHash>& trail){
-        MerkleNode* leaf = GetLeafNode(hash);
-        if(!leaf) return false;
-        MerkleNode* parent = leaf->GetParent();
-        BuildAuditTrail(trail, parent, leaf);
+    bool MerkleTree::BuildAuditProof(const Hash& hash, MerkleProof& trail){
+        MerkleNode* node;
+        if(!(node = GetNode(hash)))
+            return false;
+        MerkleNodePtr parent = node->GetParent();
+        BuildAuditTrail(trail, parent, node);
         return true;
     }
 
-    bool MerkleTree::VerifyAuditProof(const Hash& root, const Hash& leaf, std::vector<MerkleProofHash>& trail){
+    bool MerkleTree::VerifyAuditProof(const Hash& root, const Hash& leaf, MerkleProof& trail){
         Hash testHash = leaf;
         for(auto& it : trail){
             testHash = it.IsLeft() ?
@@ -122,31 +117,33 @@ namespace Token{
         return testHash == root;
     }
 
-    bool MerkleTree::BuildConsistencyProof(intptr_t m, std::vector<MerkleProofHash>& trail){
-        intptr_t idx = log2l(m);
+    bool MerkleTree::BuildConsistencyProof(int64_t m, MerkleProof& trail){
+        int idx = (int)log2(m);
+        LOG(INFO) << "idx: " << idx;
 
-        MerkleNode* node = leaves_[0];
+        MerkleNode* node = GetNode(leaves_.front());
         while(idx > 0){
             node = node->GetParent();
             idx--;
         }
 
-        intptr_t k = node->GetLeaves();
-        LOG(INFO) << "node leaves: " << k;
+        int k = node->GetLeaves();
+        LOG(INFO) << "node: " << node->GetHash();
+        LOG(INFO) << "leaves: " << k;
+        LOG(INFO) << "m: " << m;
+        trail.push_back(MerkleProofHash(MerkleProofHash::kRoot, node->GetHash()));
+
         if(m != k){
-            MerkleNode* sn = node->GetParent()->GetRight();
+            MerkleNodePtr sn = node->GetParent()->GetRight();
             while(true){
                 int sncount = sn->GetLeaves();
-                LOG(INFO) << "sibling node leaves: " << sncount;
                 if(m - k == sncount){
-                    LOG(INFO) << "adding: " << sn->GetHash();
-                    trail.push_back(MerkleProofHash(MerkleProofHash::Direction::kRoot, sn->GetHash()));
+                    trail.push_back(MerkleProofHash(MerkleProofHash::kRoot, sn->GetHash()));
                     break;
                 }
 
                 if(m - k > sncount){
-                    LOG(INFO) << "adding: " << sn->GetHash();
-                    trail.push_back(MerkleProofHash(MerkleProofHash::Direction::kRoot, sn->GetHash()));
+                    trail.push_back(MerkleProofHash(MerkleProofHash::kRoot, sn->GetHash()));
                     sn = sn->GetParent()->GetRight();
                     k += sncount;
                 } else{
@@ -157,15 +154,20 @@ namespace Token{
         return true;
     }
 
-    bool MerkleTree::BuildConsistencyAuditProof(const Hash& hash, std::vector<MerkleProofHash>& trail){
-        MerkleNode* node = GetNode(hash);
-        MerkleNode* parent = node->GetParent();
+    bool MerkleTree::BuildConsistencyAuditProof(const Hash& hash, MerkleProof& trail){
+        MerkleNodePtr node = GetNode(hash);
+        MerkleNodePtr parent = node->GetParent();
         BuildAuditTrail(trail, parent, node);
         return true;
     }
 
-    bool MerkleTree::VerifyConsistencyProof(const Hash& root, std::vector<MerkleProofHash>& proof){
-        Hash hash, lhash, rhash;
+    bool MerkleTree::VerifyConsistencyProof(const Hash& root, MerkleProof& proof){
+        LOG(INFO) << "verifying consistency proof:";
+        PrintProof(proof);
+
+        Hash hash;
+        Hash lhash;
+        Hash rhash;
         if(proof.size() > 1){
             lhash = proof[proof.size() - 2].GetHash();
             int hidx = proof.size() - 1;
@@ -179,8 +181,11 @@ namespace Token{
                 hidx--;
             }
         } else{
-            hash = proof[0].GetHash();
+            hash = proof.front().GetHash();
         }
+
+        LOG(INFO) << "Hash: " << hash;
+        LOG(INFO) << "Expected: " << root;
         return hash == root;
     }
 }

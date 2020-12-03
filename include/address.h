@@ -44,10 +44,6 @@ namespace Token{
         }
 
         friend bool operator==(const NodeAddress& a, const NodeAddress& b){
-            LOG(INFO) << "a.address_ := " << a.address_;
-            LOG(INFO) << "a.port_ := " << a.port_;
-            LOG(INFO) << "b.address_ := " << b.address_;
-            LOG(INFO) << "b.port_ := " << b.port_;
             return a.address_ == b.address_
                 && a.port_ == b.port_;
         }

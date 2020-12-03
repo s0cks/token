@@ -112,35 +112,27 @@ namespace Token{
     }
 
     TransactionMessage* TransactionMessage::NewInstance(Buffer* buff){
-        return new TransactionMessage(new Transaction(buff));
+        return new TransactionMessage(buff);
     }
 
     intptr_t TransactionMessage::GetMessageSize() const{
-        return 0; //TODO: implement TransactionMessage::GetMessageSize()
+        return data_.GetBufferSize();
     }
 
     bool TransactionMessage::Write(Buffer* buff) const{
-        return false; //TODO: implement TransactionMessage::Write(ByteBuffer*)
+        return data_.Encode(buff);
     }
 
     BlockMessage* BlockMessage::NewInstance(Buffer* buff){
-        Block* blk = Block::NewInstance(buff);
-        return new BlockMessage(blk);
+        return new BlockMessage(buff);
     }
 
     intptr_t BlockMessage::GetMessageSize() const{
-        return data_->GetBufferSize();
+        return data_.GetBufferSize();
     }
 
     bool BlockMessage::Write(Buffer* buff) const{
-        data_->Encode(buff);
-        return true;
-    }
-
-    std::string BlockMessage::ToString() const{
-        std::stringstream ss;
-        ss << "BlockMessage(" << GetData()->GetHash() << ")";
-        return ss.str();
+        return data_.Encode(buff);
     }
 
     UnclaimedTransactionMessage* UnclaimedTransactionMessage::NewInstance(Buffer* buff){
