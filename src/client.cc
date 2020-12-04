@@ -99,7 +99,11 @@ namespace Token{
             int64_t msize = rbuff->GetLong();
             switch(mtype) {
                 case Message::MessageType::kVersionMessageType:{
-                    VerackMessage msg(ClientType::kClient, client->GetID());
+                    //TODO: convert to ClientVerack or something better than this garble
+                    Block genesis = Block::Genesis();
+                    NodeAddress callback;
+                    Version version;
+                    VerackMessage msg(ClientType::kClient, client->GetID(), genesis.GetHeader(), version, callback);
                     client->Send(&msg);
                     break;
                 }

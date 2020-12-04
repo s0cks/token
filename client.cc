@@ -22,12 +22,10 @@ main(int argc, char** argv){
         return EXIT_FAILURE;
     }
 
-    Allocator::Initialize();
-
     LOG(INFO) << "peer: " << FLAGS_peer;
 
     NodeAddress address(FLAGS_peer);
-    Handle<ClientSession> client = ClientSession::NewInstance(address);
+    ClientSession* client = new ClientSession(address);
     if(!client->Connect()){
         LOG(ERROR) << "couldn't connect to the peer: " << address;
         return EXIT_FAILURE;

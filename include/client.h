@@ -11,12 +11,6 @@ namespace Token{
         UUID id_;
         Message* next_;
 
-        ClientSession(uv_loop_t* loop, const NodeAddress& address):
-            ThreadedSession(loop),
-            address_(address),
-            id_(),
-            next_(nullptr){}
-
         void SetNextMessage(Message* msg);
         void WaitForNextMessage();
         Message* GetNextMessage();
@@ -25,6 +19,13 @@ namespace Token{
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
         static void* SessionThread(void* data);
     public:
+        ClientSession(const NodeAddress& address, uv_loop_t* loop=uv_loop_new()):
+            ThreadedSession(loop),
+            address_(address),
+            id_(),
+            next_(nullptr){}
+        ~ClientSession() = default;
+
         bool Connect(){
             int err;
             if((err = pthread_create(&thread_, NULL, &SessionThread, this)) != 0){
@@ -48,14 +49,6 @@ namespace Token{
         bool GetUnclaimedTransactions(const User& user, std::vector<Hash>& utxos);
         bool SendTransaction(const Transaction& tx);
         UnclaimedTransaction* GetUnclaimedTransaction(const Hash& hash);
-
-        static ClientSession* NewInstance(uv_loop_t* loop, const NodeAddress& address){
-            return new ClientSession(loop, address);
-        }
-
-        static ClientSession* NewInstance(const NodeAddress& address){
-            return new ClientSession(uv_loop_new(), address);
-        }
     };
 }
 
