@@ -63,7 +63,7 @@ namespace Token{
             }
         }
 
-        static const size_t kMaxNumberOfPeers = 16;
+        static const int kMaxNumberOfPeers = 16;
     private:
         Server() = delete;
 
@@ -80,7 +80,6 @@ namespace Token{
     public:
         ~Server() = delete;
 
-        static NodeAddress GetCallbackAddress();
         static State GetState();
         static Status GetStatus();
         static std::string GetStatusMessage();
@@ -89,6 +88,8 @@ namespace Token{
         static bool Initialize();
         static bool Shutdown();
         static bool Broadcast(Message* msg);
+        static bool BroadcastPrepare();
+        static bool BroadcastCommit();
         static bool ConnectTo(const NodeAddress& address);
         static bool IsConnectedTo(const NodeAddress& address);
         static bool IsConnectedTo(const UUID& uuid);
@@ -116,14 +117,25 @@ namespace Token{
     class ServerSession : public Session{
         friend class Server;
     private:
+        UUID uuid_;
+
         ServerSession(uv_loop_t* loop):
-            Session(loop){}
+            Session(loop),
+            uuid_(){}
+
+        void SetID(const UUID& uuid){
+            uuid_ = uuid;
+        }
 
 #define DECLARE_MESSAGE_HANDLER(Name) \
         static void Handle##Name##Message(HandleMessageTask* task);
         FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
     public:
+        UUID GetID() const{
+            return uuid_;
+        }
+
         static ServerSession* NewInstance(uv_loop_t* loop){
             return new ServerSession(loop);
         }

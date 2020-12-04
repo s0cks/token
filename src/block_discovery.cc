@@ -1,6 +1,7 @@
 #include "block_discovery.h"
 #include "block_chain.h"
 #include "async_task.h"
+#include "server.h"
 #include "block_validator.h"
 #include "block_processor.h"
 #include "transaction_validator.h"
@@ -26,7 +27,7 @@ namespace Token{
     }
 #define CHECK_STATUS(ProposalInstance) \
     if((ProposalInstance)->GetNumberOfRejected() > (ProposalInstance)->GetNumberOfAccepted()){ \
-        (ProposalInstance)->SetStatus(Proposal::Status::kRejectedStatus); \
+        (ProposalInstance)->SetStatus(Proposal::Result::kRejected); \
     }
 
     static inline size_t
@@ -112,7 +113,7 @@ namespace Token{
     void BlockDiscoveryThread::HandleVotingPhase(Proposal* proposal){
         LOG(INFO) << "proposal " << proposal << " entering voting phase";
         proposal->SetPhase(Proposal::Phase::kVotingPhase);
-        Server::Broadcast(PrepareMessage::NewInstance(proposal, Server::GetID()));
+        Server::BroadcastPrepare();
         proposal->WaitForRequiredResponses();
         CHECK_STATUS(proposal);
     }
@@ -120,7 +121,7 @@ namespace Token{
     void BlockDiscoveryThread::HandleCommitPhase(Proposal* proposal){
         LOG(INFO) << "proposal " << proposal << " entering commit phase";
         proposal->SetPhase(Proposal::Phase::kCommitPhase);
-        Server::Broadcast(CommitMessage::NewInstance(proposal, Server::GetID()));
+        Server::BroadcastCommit();
         proposal->WaitForRequiredResponses();
         CHECK_STATUS(proposal);
     }
@@ -130,7 +131,7 @@ namespace Token{
         proposal->SetPhase(Proposal::Phase::kQuorumPhase);
         CHECK_FOR_REJECTION(proposal);
         LOG(INFO) << "proposal " << proposal << " was accepted";
-        proposal->SetStatus(Proposal::Status::kAcceptedStatus);
+        proposal->SetStatus(Proposal::Result::kAccepted);
         OnAccepted(proposal);
     }
 
@@ -158,7 +159,7 @@ namespace Token{
     }
 
     Proposal* BlockDiscoveryThread::CreateNewProposal(Block* blk){
-        Proposal* proposal = Proposal::NewInstance(blk, Server::GetID());
+        Proposal* proposal = new Proposal(blk, Server::GetID());
         SetProposal(proposal);
         return proposal;
     }
@@ -207,6 +208,51 @@ namespace Token{
                 LOG(INFO) << "block discovery thread is resuming.";
             }
 
+            if(HasProposal()){
+                Proposal* proposal = GetProposal();
+                PeerSession* proposer = proposal->GetPeer();
+                Hash hash = proposal->GetHash();
+
+                LOG(INFO) << "proposal " << hash << " has been started by " << proposal->GetProposer();
+                if(!BlockPool::HasBlock(hash)){
+                    LOG(INFO) << hash << " cannot be found, requesting block from peer: " << proposer->GetID();
+                    std::vector<InventoryItem> items = {
+                        InventoryItem(InventoryItem::kBlock, hash)
+                    };
+                    proposer->Send(GetDataMessage::NewInstance(items));
+                    LOG(INFO) << "waiting....";
+                    BlockPool::WaitForBlock(hash); //TODO: add timeout
+                    if(!BlockPool::HasBlock(hash)){
+                        LOG(INFO) << "cannot resolve block " << hash << ", rejecting....";
+                        proposer->SendRejected();
+                        //TODO: abandon proposal
+                        return;
+                    }
+                }
+                proposer->SendPromise();
+                Block* blk = BlockPool::GetBlock(hash);
+                LOG(INFO) << "proposal " << hash << " has entered the voting phase.";
+                if(!BlockVerifier::IsValid(blk)){
+                    LOG(WARNING) << "cannot validate block " << hash << ", rejecting....";
+                    proposer->SendRejected();
+                    //TODO: abandon proposal
+                    return;
+                }
+
+                proposal->WaitForPhase(Proposal::kCommitPhase);
+                LOG(INFO) << "proposal " << hash << " has entered the commit phase.";
+                if(!BlockChain::Append(blk)){
+                    LOG(WARNING) << "couldn't append block " << hash << ", rejecting....";
+                    proposer->SendRejected();
+                    //TODO: abandon proposal
+                    return;
+                }
+                proposer->SendAccepted();
+
+                proposal->WaitForPhase(Proposal::kQuorumPhase);
+                LOG(INFO) << "proposal " << hash << " has finished, " << proposal->GetResult();
+            }
+
             if(GetNumberOfTransactionsInPool() >= 2){
                 LOG(INFO) << "creating new block from transaction pool";
                 Block* block = CreateNewBlock(2);
@@ -220,7 +266,6 @@ namespace Token{
 
                 LOG(INFO) << "discovered block " << block << ", creating proposal....";
                 Proposal* proposal = CreateNewProposal(block);
-
                 HandleVotingPhase(proposal);
                 CHECK_FOR_REJECTION(proposal);
                 HandleCommitPhase(proposal);
@@ -242,6 +287,7 @@ namespace Token{
 
     void BlockDiscoveryThread::WaitForState(Thread::State state){
         LOCK;
-        while(GetState() != state) WAIT;
+        while(state_ != state) WAIT;
+        UNLOCK;
     }
 }

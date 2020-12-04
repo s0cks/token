@@ -4,6 +4,19 @@
 #include "configuration.h"
 
 namespace Token{
+    static inline bool
+    HasEnvironmentVariable(const std::string& name){ //TODO: move HasEnvironmentVariable to common
+        char* val = getenv(name.data());
+        return val != NULL;
+    }
+
+    static inline std::string
+    GetEnvironmentVariable(const std::string& name){ //TODO: move GetEnvironmentVariable to common
+        char* val = getenv(name.data());
+        if(val == NULL) return "";
+        return std::string(val);
+    }
+
     static std::mutex mutex_;
     static std::condition_variable cond_;
     static libconfig::Config config_;
@@ -15,6 +28,7 @@ namespace Token{
 #define SIGNAL_ALL cond_.notify_all()
 
 #define ENVIRONMENT_TOKEN_LEDGER "TOKEN_LEDGER"
+#define ENVIRONMENT_TOKEN_CALLBACK_ADDRESS "TOKEN_CALLBACK_ADDRESS"
 
     bool BlockChainConfiguration::GenerateConfiguration(){
         GetProperty(PROPERTY_HEALTHCHECK, libconfig::Setting::TypeGroup);
@@ -22,7 +36,13 @@ namespace Token{
 
         GetProperty(PROPERTY_SERVER, libconfig::Setting::TypeGroup);
         SetServerID(PROPERTY_SERVER_ID_DEFAULT);
-        SetServerCallbackAddress(PROPERTY_SERVER_CALLBACK_ADDRESS_DEFAULT);
+
+        if(HasEnvironmentVariable(ENVIRONMENT_TOKEN_CALLBACK_ADDRESS)){
+            SetServerCallbackAddress(NodeAddress(GetEnvironmentVariable(ENVIRONMENT_TOKEN_CALLBACK_ADDRESS)));
+        } else{
+            SetServerCallbackAddress(NodeAddress());
+        }
+
         std::set<NodeAddress> peers;
         SetPeerList(peers);
         return true;
@@ -88,19 +108,6 @@ namespace Token{
         libconfig::Setting& root = GetRootProperty();
         if(root.exists(name)) return root.lookup(name);
         return root.add(name, type);
-    }
-
-    static inline bool
-    HasEnvironmentVariable(const std::string& name){
-        char* val = getenv(name.data());
-        return val != NULL;
-    }
-
-    static inline std::string
-    GetEnvironmentVariable(const std::string& name){
-        char* val = getenv(name.data());
-        if(val == NULL) return "";
-        return std::string(val);
     }
 
     static inline bool

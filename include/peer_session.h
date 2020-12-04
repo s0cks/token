@@ -17,15 +17,33 @@ namespace Token{
         uv_timer_t hb_timeout_; //TODO: remove PeerSession::hb_timeout_
         uv_async_t shutdown_; //TODO: remove PeerSession::shutdown_
 
+        uv_async_t prepare_;
+        uv_async_t promise_;
+        uv_async_t commit_;
+        uv_async_t accepted_;
+        uv_async_t rejected_;
+
         PeerSession(uv_loop_t* loop, const NodeAddress& address):
             ThreadedSession(loop),
             info_(UUID(), address),
             head_(),
             hb_timer_(),
             hb_timeout_(),
-            shutdown_(){
+            shutdown_(),
+            prepare_(),
+            promise_(),
+            commit_(),
+            accepted_(),
+            rejected_(){
+
             hb_timer_.data = this;
             hb_timeout_.data = this;
+
+            prepare_.data = this;
+            promise_.data = this;
+            commit_.data = this;
+            accepted_.data = this;
+            rejected_.data = this;
         }
 
         void SetInfo(const Peer& info){
@@ -34,6 +52,11 @@ namespace Token{
 
         static void OnConnect(uv_connect_t* conn, int status);
         static void OnShutdown(uv_async_t* handle);
+        static void OnPrepare(uv_async_t* handle);
+        static void OnPromise(uv_async_t* handle);
+        static void OnCommit(uv_async_t* handle);
+        static void OnAccepted(uv_async_t* handle);
+        static void OnRejected(uv_async_t* handle);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
         static void OnHeartbeatTick(uv_timer_t* handle);
         static void OnHeartbeatTimeout(uv_timer_t* handle);
@@ -62,6 +85,26 @@ namespace Token{
                 return false;
             }
             return true;
+        }
+
+        void SendPrepare(){
+            uv_async_send(&prepare_);
+        }
+
+        void SendPromise(){
+            uv_async_send(&promise_);
+        }
+
+        void SendAccepted(){
+            uv_async_send(&accepted_);
+        }
+
+        void SendRejected(){
+            uv_async_send(&rejected_);
+        }
+
+        void SendCommit(){
+            uv_async_send(&commit_);
         }
 
         static PeerSession* NewInstance(uv_loop_t* loop, const NodeAddress& address){

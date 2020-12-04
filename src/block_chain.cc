@@ -335,7 +335,8 @@ namespace Token{
         }
 
         PutBlock(hash, block);
-        if(head < block) PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
+        if(head->GetHeight() < block->GetHeight())
+            PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
         return true;
     }
 

@@ -1,40 +1,24 @@
-
+#include "server.h"
 #include "proposal.h"
 
 namespace Token{
-#define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
-#define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
+#define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
+#define LOCK std::unique_lock<std::mutex> lock(mutex_)
 #define UNLOCK lock.unlock()
 #define WAIT cond_.wait(lock)
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
-    Proposal* Proposal::NewInstance(Buffer* buff){
-        uint32_t height = buff->GetInt();
-        Hash hash = buff->GetHash();
-        UUID proposer(buff);
-        return new Proposal(proposer, hash, height);
+
+    PeerSession* Proposal::GetPeer() const{
+        return Server::GetPeer(GetProposer());
     }
 
-    Proposal* Proposal::NewInstance(uint32_t height, const Hash& hash, const UUID& proposer){
-        return new Proposal(proposer, hash, height);
+    Proposal::Phase Proposal::GetPhase(){
+        LOCK_GUARD;
+        return phase_;
     }
 
-    size_t Proposal::GetBufferSize() const{
-        size_t size = 0;
-        size += sizeof(uint32_t);
-        size += Hash::kSize;
-        size += UUID::kSize;
-        return size;
-    }
-
-    bool Proposal::Encode(Buffer* buff) const{
-        buff->PutInt(height_);
-        buff->PutHash(hash_);
-        proposer_.Write(buff);
-        return true;
-    }
-
-    void Proposal::SetPhase(Proposal::Phase phase){
+    void Proposal::SetPhase(const Proposal::Phase& phase){
         LOCK;
         phase_ = phase;
         accepted_.clear();
@@ -43,55 +27,51 @@ namespace Token{
         SIGNAL_ALL;
     }
 
-    void Proposal::SetStatus(Proposal::Status status){
+    void Proposal::WaitForPhase(const Phase& phase){
         LOCK;
-        status_ = status;
+        while(phase_ != phase) WAIT;
+        UNLOCK;
+    }
+
+    Proposal::Result Proposal::GetResult(){
+        LOCK_GUARD;
+        return result_;
+    }
+
+    void Proposal::SetStatus(const Proposal::Result& result){
+        LOCK;
+        result_ = result;
         UNLOCK;
         SIGNAL_ALL;
     }
 
-    void Proposal::WaitForPhase(Proposal::Phase phase){
-        LOG(INFO) << "waiting for " << phase << " phase....";
+    void Proposal::WaitForResult(const Result& result){
         LOCK;
-        while(phase_ != phase) WAIT;
+        while(result_ != result) WAIT;
+        UNLOCK;
     }
 
-    void Proposal::WaitForStatus(Proposal::Status status){
-        LOG(INFO) << "waiting for " << status << " status....";
-        LOCK;
-        while(status_ != status) WAIT;
-    }
-
-    void Proposal::WaitForRequiredResponses(uint32_t required){
+    void Proposal::WaitForRequiredResponses(int64_t required){
         LOG(INFO) << "waiting for " << required << " peers....";
 
         LOCK;
-        while(GetNumberOfResponses() < required) WAIT;
+        while((int64_t)(accepted_.size() + rejected_.size()) < required) WAIT;
+        UNLOCK;
     }
 
-    size_t Proposal::GetNumberOfAccepted(){
+    int64_t Proposal::GetNumberOfAccepted(){
         LOCK_GUARD;
         return accepted_.size();
     }
 
-    size_t Proposal::GetNumberOfRejected(){
+    int64_t Proposal::GetNumberOfRejected(){
         LOCK_GUARD;
         return rejected_.size();
     }
 
-    size_t Proposal::GetNumberOfResponses(){
+    int64_t Proposal::GetNumberOfResponses(){
         LOCK_GUARD;
         return accepted_.size() + rejected_.size();
-    }
-
-    Proposal::Phase Proposal::GetPhase(){
-        LOCK_GUARD;
-        return phase_;
-    }
-
-    Proposal::Status Proposal::GetStatus(){
-        LOCK_GUARD;
-        return status_;
     }
 
     void Proposal::AcceptProposal(const std::string& node){
@@ -122,9 +102,10 @@ namespace Token{
                 rejected_.find(node) != rejected_.end();
     }
 
-    std::string Proposal::ToString() const{
-        std::stringstream ss;
-        ss << "Proposal(#" << GetHeight() << ")";
-        return ss.str();
+    int64_t Proposal::GetRequiredNumberOfPeers(){
+        int64_t peers = Server::GetNumberOfPeers();
+        if(peers == 0) return 0;
+        else if(peers == 1) return 1;
+        return peers / 2;
     }
 }

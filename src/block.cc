@@ -266,7 +266,7 @@ namespace Token{
         if(!status.ok()){
             std::stringstream ss;
             ss << "couldn't find block " << hash << ": " << status.ToString();
-            POOL_WARNING(ss.str());
+            //TODO: This will deadlock a thread: POOL_WARNING(ss.str());
             return false;
         }
         return true;
@@ -336,7 +336,6 @@ namespace Token{
         std::string key = hash.HexString();
         std::string filename = GetNewDataFilename(hash);
 
-        LOCK_GUARD;
         if(FileExists(filename)){
             std::stringstream ss;
             ss << "cannot overwrite existing block pool data: " << filename;
@@ -359,6 +358,7 @@ namespace Token{
             return false;
         }
 
+        SIGNAL_ALL;
         LOG(INFO) << "added block to pool: " << hash;
         return true;
     }
@@ -430,6 +430,7 @@ namespace Token{
     void BlockPool::WaitForBlock(const Hash& hash){
         LOCK;
         while(!HasBlock(hash)) WAIT;
+        UNLOCK;
     }
 
     class BlockPoolPrinter : public BlockPoolVisitor{

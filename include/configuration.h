@@ -30,7 +30,7 @@ namespace Token{
  * Server.CallbackAddress = "localhost:${port}";
  */
 #define PROPERTY_SERVER_CALLBACK_ADDRESS "CallbackAddress"
-#define PROPERTY_SERVER_CALLBACK_ADDRESS_DEFAULT (NodeAddress())
+#define PROPERTY_SERVER_CALLBACK_ADDRESS_DEFAULT ()
 
 /*
  * Server.Peers := []

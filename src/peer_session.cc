@@ -1,11 +1,94 @@
 #include "peer_session.h"
 #include "task.h"
+#include "server.h"
 #include "async_task.h"
+#include "configuration.h"
+#include "block_discovery.h"
 
 namespace Token{
     void PeerSession::OnShutdown(uv_async_t* handle){
         PeerSession* session = (PeerSession*)handle->data;
         session->Disconnect();
+    }
+
+    void PeerSession::OnPrepare(uv_async_t* handle){
+        PeerSession* session = (PeerSession*)handle->data;
+        if(!BlockDiscoveryThread::HasProposal()){
+            LOG(WARNING) << "there is no active proposal.";
+            return;
+        }
+
+        Proposal* proposal = BlockDiscoveryThread::GetProposal();
+        PrepareMessage msg(proposal);
+        session->Send(&msg);
+    }
+
+    void PeerSession::OnPromise(uv_async_t* handle){
+        PeerSession* session = (PeerSession*)handle->data;
+        if(!BlockDiscoveryThread::HasProposal()){
+            LOG(WARNING) << "there is no active proposal.";
+            return;
+        }
+
+        Proposal* proposal = BlockDiscoveryThread::GetProposal();
+        if(!proposal->IsProposal()){
+            LOG(WARNING) << "cannot send another promise to the peer.";
+            return;
+        }
+
+        PromiseMessage msg(proposal);
+        session->Send(&msg);
+    }
+
+    void PeerSession::OnCommit(uv_async_t* handle){
+        PeerSession* session = (PeerSession*)handle->data;
+        if(!BlockDiscoveryThread::HasProposal()){
+            LOG(WARNING) << "there is no active proposal.";
+            return;
+        }
+
+        Proposal* proposal = BlockDiscoveryThread::GetProposal();
+        if(!proposal->IsCommit()){
+            LOG(WARNING) << "cannot send another commit to the peer.";
+            return;
+        }
+
+        CommitMessage msg(proposal);
+        session->Send(&msg);
+    }
+
+    void PeerSession::OnAccepted(uv_async_t* handle){
+        PeerSession* session = (PeerSession*)handle->data;
+        if(!BlockDiscoveryThread::HasProposal()){
+            LOG(WARNING) << "there is no active proposal.";
+            return;
+        }
+
+        Proposal* proposal = BlockDiscoveryThread::GetProposal();
+        if(!proposal->IsVoting() && !proposal->IsCommit()){
+            LOG(WARNING) << "cannot accept proposal #" << proposal->GetHeight() << " (" << proposal->GetPhase() << " [" << proposal->GetResult() << "])";
+            return;
+        }
+
+        AcceptedMessage msg(proposal);
+        session->Send(&msg);
+    }
+
+    void PeerSession::OnRejected(uv_async_t* handle){
+        PeerSession* session = (PeerSession*)handle->data;
+        if(!BlockDiscoveryThread::HasProposal()){
+            LOG(WARNING) << "there is no active proposal.";
+            return;
+        }
+
+        Proposal* proposal = BlockDiscoveryThread::GetProposal();
+        if(!proposal->IsVoting() && !proposal->IsCommit()){
+            LOG(WARNING) << "cannot reject proposal #" << proposal->GetHeight() << " (" << proposal->GetPhase() << " [" << proposal->GetResult() << "])";
+            return;
+        }
+
+        RejectedMessage msg(proposal);
+        session->Send(&msg);
     }
 
     void PeerSession::OnHeartbeatTick(uv_timer_t* handle){
@@ -30,6 +113,12 @@ namespace Token{
         uv_timer_init(loop, &session->hb_timer_);
         uv_timer_init(loop, &session->hb_timeout_);
         uv_async_init(loop, &session->shutdown_, &OnShutdown);
+
+        uv_async_init(loop, &session->prepare_, &OnPrepare);
+        uv_async_init(loop, &session->promise_, &OnPromise);
+        uv_async_init(loop, &session->commit_, &OnCommit);
+        uv_async_init(loop, &session->accepted_, &OnAccepted);
+        uv_async_init(loop, &session->rejected_, &OnRejected);
         uv_timer_start(&session->hb_timer_, &OnHeartbeatTick, 90 * 1000, Session::kHeartbeatIntervalMilliseconds);
 
         struct sockaddr_in addr;
@@ -140,21 +229,22 @@ namespace Token{
 
     void PeerSession::HandleVersionMessage(HandleMessageTask* task){
         PeerSession* session = task->GetSession<PeerSession>();
-
-        Block* head = BlockChain::GetHead();
-        session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), Server::GetCallbackAddress(), head->GetHeader()));
+        Block* head= BlockChain::GetHead();
+        VerackMessage msg(ClientType::kNode, Server::GetID(), head->GetHeader());
+        session->Send(&msg);
         delete head;
     }
 
     void PeerSession::HandleVerackMessage(HandleMessageTask* task){
-        PeerSession* session = (PeerSession*)task->GetSession();
-        VerackMessage* msg = (VerackMessage*)task->GetMessage();
+        PeerSession* session = task->GetSession<PeerSession>();
+        VerackMessage* msg = task->GetMessage<VerackMessage>();
 
         LOG(INFO) << "remote timestamp: " << GetTimestampFormattedReadable(msg->GetTimestamp());
         LOG(INFO) << "remote <HEAD>: " << msg->GetHead();
 
         //TODO: session->SetHead(msg->GetHead());
         if(session->IsConnecting()){
+            Server::RegisterPeer(session);
             session->SetInfo(Peer(msg->GetID(), msg->GetCallbackAddress()));
             LOG(INFO) << "connected to peer: " << session->GetInfo();
             session->SetState(Session::kConnected);
@@ -176,63 +266,10 @@ namespace Token{
     }
 
     void PeerSession::HandlePrepareMessage(HandleMessageTask* task){}
-
-    void PeerSession::HandlePromiseMessage(HandleMessageTask* task){
-
-        /*
-        TODO:
-        PromiseMessage* msg = (PromiseMessage*)task->GetMessage();
-        if(!ProposerThread::HasProposal()){
-            LOG(WARNING) << "no active proposal found";
-            return;
-        }
-
-        Proposal* proposal = ProposerThread::GetProposal();
-        std::string node_id = session->GetID();
-        proposal->AcceptProposal(node_id);
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << node_id << " voted for proposal: " << proposal->GetHash();
-#endif//TOKEN_DEBUG
-        */
-    }
-
+    void PeerSession::HandlePromiseMessage(HandleMessageTask* task){}
     void PeerSession::HandleCommitMessage(HandleMessageTask* task){}
-
-    void PeerSession::HandleAcceptedMessage(HandleMessageTask* task){
-
-        /*
-         AcceptedMessage* msg = (AcceptedMessage*)task->GetMessage();
-        TODO:
-         if(!ProposerThread::HasProposal()){
-            LOG(WARNING) << "no active proposal found";
-            return;
-        }
-
-        Proposal* proposal = ProposerThread::GetProposal();
-        std::string node_id = session->GetID();
-        proposal->AcceptProposal(node_id);
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << node_id << " accepted proposal: " << proposal->GetHash();
-#endif//TOKEN_DEBUG
-         */
-    }
-
-    void PeerSession::HandleRejectedMessage(HandleMessageTask* task){
-        /*
-        TODO:
-         RejectedMessage* msg = (RejectedMessage*)task->GetMessage();
-         if(!ProposerThread::HasProposal()){
-            LOG(WARNING) << "no active proposal found";
-            return;
-        }
-        Proposal* proposal = ProposerThread::GetProposal();
-        std::string node = msg->GetProposer();
-        proposal->RejectProposal(node);
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << node << " rejected proposal: " << proposal->GetHash();
-#endif//TOKEN_DEBUG
-    */
-    }
+    void PeerSession::HandleAcceptedMessage(HandleMessageTask* task){}
+    void PeerSession::HandleRejectedMessage(HandleMessageTask* task){}
 
     void PeerSession::HandleGetDataMessage(HandleMessageTask* task){
         PeerSession* session = (PeerSession*)task->GetSession();
@@ -313,7 +350,8 @@ namespace Token{
 
         std::vector<InventoryItem> needed;
         for(auto& item : items){
-            if(!item.ItemExists()) needed.push_back(item);
+            if(!item.ItemExists())
+                needed.push_back(item);
         }
 
         LOG(INFO) << "downloading " << needed.size() << "/" << items.size() << " items from inventory....";

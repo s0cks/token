@@ -1,5 +1,6 @@
 #include "message.h"
 #include "proposal.h"
+#include "block_discovery.h"
 #include "unclaimed_transaction.h"
 
 namespace Token{
@@ -42,7 +43,7 @@ namespace Token{
         UUID node_id(buff);
         NodeAddress callback(buff);
         BlockHeader head = BlockHeader(buff);
-        return new VerackMessage(client_type, node_id, version, nonce, callback, head, timestamp);
+        return new VerackMessage(client_type, node_id, head, version, callback, nonce, timestamp);
     }
 
     bool VerackMessage::Write(Buffer* buff) const{
@@ -66,49 +67,6 @@ namespace Token{
         size += NodeAddress::kSize; // callback_
         size += BlockHeader::kSize; // head_
         return size;
-    }
-
-    intptr_t PaxosMessage::GetMessageSize() const{
-        intptr_t size = 0;
-        size += UUID::kSize;
-        size += proposal_->GetBufferSize();
-        return size;
-    }
-
-    bool PaxosMessage::Write(Buffer* buff) const{
-        proposer_.Write(buff);
-        proposal_->Encode(buff);
-        return true;
-    }
-
-    PrepareMessage* PrepareMessage::NewInstance(Buffer* buff){
-        UUID proposer(buff);
-        Proposal* proposal = Proposal::NewInstance(buff);
-        return new PrepareMessage(proposer, proposal);
-    }
-
-    PromiseMessage* PromiseMessage::NewInstance(Buffer* buff){
-        UUID proposer(buff);
-        Proposal* proposal = Proposal::NewInstance(buff);
-        return new PromiseMessage(proposer, proposal);
-    }
-
-    CommitMessage* CommitMessage::NewInstance(Buffer* buff){
-        UUID proposer(buff);
-        Proposal* proposal = Proposal::NewInstance(buff);
-        return new CommitMessage(proposer, proposal);
-    }
-
-    AcceptedMessage* AcceptedMessage::NewInstance(Buffer* buff){
-        UUID proposer(buff);
-        Proposal* proposal = Proposal::NewInstance(buff);
-        return new AcceptedMessage(proposer, proposal);
-    }
-
-    RejectedMessage* RejectedMessage::NewInstance(Buffer* buff){
-        UUID proposer(buff);
-        Proposal* proposal = Proposal::NewInstance(buff);
-        return new RejectedMessage(proposer, proposal);
     }
 
     TransactionMessage* TransactionMessage::NewInstance(Buffer* buff){
@@ -159,67 +117,47 @@ namespace Token{
     }
 
     InventoryMessage* InventoryMessage::NewInstance(Buffer* buff){
-        int32_t num_items = buff->GetInt();
+        int64_t num_items = buff->GetLong();
         std::vector<InventoryItem> items;
-        DecodeItems(buff, items, num_items);
+        for(int64_t idx = 0; idx < num_items; idx++)
+            items.push_back(InventoryItem(buff));
         return new InventoryMessage(items);
-    }
-
-    void InventoryMessage::DecodeItems(Buffer* buff, std::vector<InventoryItem>& items, int32_t num_items){
-        for(int32_t idx = 0; idx < num_items; idx++){
-            InventoryItem::Type type = static_cast<InventoryItem::Type>(buff->GetShort());
-            Hash hash = buff->GetHash();
-            items.push_back(InventoryItem(type, hash));
-        }
     }
 
     intptr_t InventoryMessage::GetMessageSize() const{
         intptr_t size = 0;
-        size += sizeof(int32_t); // length(items_)
+        size += sizeof(int64_t); // length(items_)
         size += (items_.size() * InventoryItem::kSize);
         return size;
     }
 
     bool InventoryMessage::Write(Buffer* buff) const{
-        buff->PutInt(items_.size());
-        for(auto& it : items_){
-            buff->PutShort(static_cast<uint16_t>(it.GetType()));
-            buff->PutHash(it.GetHash());
-        }
+        buff->PutLong(GetNumberOfItems());
+        for(auto& it : items_)
+            it.Encode(buff);
         return true;
     }
 
     bool GetDataMessage::Write(Buffer* buff) const{
-        buff->PutLong(items_.size());
-        for(auto& it : items_){
-            buff->PutInt(static_cast<int32_t>(it.GetType()));
-            buff->PutHash(it.GetHash());
-        }
+        buff->PutLong(GetNumberOfItems());
+        for(auto& it : items_)
+            it.Encode(buff);
         return true;
+    }
+
+    GetDataMessage* GetDataMessage::NewInstance(Buffer* buff){
+        int64_t num_items = buff->GetLong();
+        std::vector<InventoryItem> items;
+        for(int64_t idx = 0; idx < num_items; idx++)
+            items.push_back(InventoryItem(buff));
+        return new GetDataMessage(items);
     }
 
     intptr_t GetDataMessage::GetMessageSize() const{
         intptr_t size = 0;
-        size += sizeof(int32_t); // sizeof(items_);
+        size += sizeof(int64_t); // sizeof(items_);
         size += items_.size() * InventoryItem::kSize; // items;
         return size;
-    }
-
-    GetDataMessage* GetDataMessage::NewInstance(Buffer* buff){
-        std::vector<InventoryItem> items;
-        int64_t num_items = buff->GetLong();
-        LOG(INFO) << "reading " << num_items << " items";
-        for(int64_t n = 0; n < num_items; n++){
-            int32_t type = buff->GetInt();
-            Hash hash = buff->GetHash();
-
-            LOG(INFO) << "type: " << type;
-            LOG(INFO) << "hash: " << hash;
-            InventoryItem item(static_cast<InventoryItem::Type>(type), hash);
-            LOG(INFO) << "parsed item: " << item;
-            items.push_back(item);
-        }
-        return new GetDataMessage(items);
     }
 
     const intptr_t GetBlocksMessage::kMaxNumberOfBlocks = 32;
@@ -273,19 +211,16 @@ namespace Token{
     }
 
     Proposal* PaxosMessage::GetProposal() const{
-        /*
-        if(ProposerThread::HasProposal()){
-            Proposal* proposal = ProposerThread::GetProposal();
-            if(proposal->GetHeight() == GetHeight() &&
-                proposal->GetHash() == GetHash()){
+        if(BlockDiscoveryThread::HasProposal()){
+            Proposal* proposal = BlockDiscoveryThread::GetProposal();
+            if(proposal->GetRaw() == GetRaw())
                 return proposal;
-            }
-
-            LOG(WARNING) << "current proposal #" << proposal->GetHeight() << "(" << proposal->GetHash() << ") is invalid";
-            LOG(WARNING) << "expected proposal #" << GetHeight() << "(" << GetHash() << ")";
+            return nullptr; //TODO: invalid state?
         }
-        */
-        return proposal_;
+
+        Proposal* proposal = new Proposal(raw_);
+        BlockDiscoveryThread::SetProposal(proposal);
+        return proposal;
     }
 
     intptr_t PrepareMessage::GetMessageSize() const{

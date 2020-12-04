@@ -3,69 +3,60 @@
 
 #include <set>
 #include <condition_variable>
-#include "object.h"
+#include "uuid.h"
 #include "block.h"
-#include "server.h"
 
 namespace Token{
-    class PrepareMessage;
-    class Proposal : public Object{
-        friend class ServerSession;
-        friend class BlockDiscoveryThread;
+    class RawProposal{
+        //TODO:
+        // - Merge RawProposal w/ BlockHeader?
     public:
-        enum Phase{
-            kProposalPhase,
-            kVotingPhase,
-            kCommitPhase,
-            kQuorumPhase
+        static const int64_t kSize = sizeof(int64_t)
+                                   + sizeof(int64_t)
+                                   + Hash::kSize
+                                   + UUID::kSize;
+
+        struct TimestampComparator{
+            bool operator()(const RawProposal& a, const RawProposal& b){
+                return a.GetTimestamp() < b.GetTimestamp();
+            }
         };
 
-        enum class Status{
-            kUnknownStatus = 0,
-            kAcceptedStatus,
-            kRejectedStatus
+        struct HeightComparator{
+            bool operator()(const RawProposal& a, const RawProposal& b){
+                return a.GetHeight() < b.GetHeight();
+            }
         };
-
-        static inline uint32_t
-        GetNumberOfRequiredResponses(){
-            uint32_t peers = Server::GetNumberOfPeers();
-            if(peers == 0) return 0;
-            else if(peers == 1) return 1;
-            return peers / 2;
-        }
     private:
-        std::recursive_mutex mutex_;
-        std::condition_variable_any cond_;
-        Phase phase_;
-        Status status_;
-
-        UUID proposer_;
-        uint32_t height_;
+        int64_t timestamp_;
+        int64_t height_;
         Hash hash_;
-
-        std::set<std::string> accepted_;
-        std::set<std::string> rejected_;
-
-        void SetPhase(Phase phase);
-        void SetStatus(Status status);
-
-        Proposal(const UUID& proposer, const Hash& hash, uint32_t height):
-            Object(Type::kProposalType),
-            phase_(kProposalPhase),
-            status_(Status::kUnknownStatus),
-            proposer_(proposer),
+        UUID proposer_;
+    public:
+        RawProposal(const UUID& proposer, int64_t height, const Hash& hash, int64_t timestamp=GetCurrentTimestamp()):
+            timestamp_(timestamp),
             height_(height),
             hash_(hash),
-            accepted_(),
-            rejected_(){}
-    public:
-        ~Proposal() = default;
+            proposer_(proposer){}
+        RawProposal(const UUID& proposer, const BlockHeader& blk, int64_t timestamp=GetCurrentTimestamp()):
+            RawProposal(proposer, blk.GetHeight(), blk.GetHash(), timestamp){}
+        RawProposal(Buffer* buff):
+            timestamp_(buff->GetLong()),
+            height_(buff->GetLong()),
+            hash_(buff->GetHash()),
+            proposer_(buff){}
+        RawProposal(const RawProposal& proposal):
+            timestamp_(proposal.GetTimestamp()),
+            height_(proposal.GetHeight()),
+            hash_(proposal.GetHash()),
+            proposer_(proposal.GetProposer()){}
+        ~RawProposal() = default;
 
-        UUID GetProposer() const{
-            return proposer_;
+        int64_t GetTimestamp() const{
+            return timestamp_;
         }
 
-        uint32_t GetHeight() const{
+        int64_t GetHeight() const{
             return height_;
         }
 
@@ -73,98 +64,185 @@ namespace Token{
             return hash_;
         }
 
-        size_t GetBufferSize() const;
-        bool Encode(Buffer* buff) const;
-        void AcceptProposal(const std::string& node);
-        void RejectProposal(const std::string& node);
-        void WaitForPhase(Phase phase);
-        void WaitForStatus(Status status);
-        void WaitForRequiredResponses(uint32_t required=GetNumberOfRequiredResponses());
-        bool HasResponseFrom(const std::string& node_id);
-        size_t GetNumberOfAccepted();
-        size_t GetNumberOfRejected();
-        size_t GetNumberOfResponses();
-        Phase GetPhase();
-        Status GetStatus();
-        std::string ToString() const;
-
-        inline bool
-        InProposingPhase(){
-            return GetPhase() == kProposalPhase;
+        UUID GetProposer() const{
+            return proposer_;
         }
 
-        inline bool
-        InVotingPhase(){
-            return GetPhase() == kVotingPhase;
+        bool Encode(Buffer* buff) const{
+            buff->PutLong(GetTimestamp());
+            buff->PutLong(GetHeight());
+            buff->PutHash(GetHash());
+            proposer_.Write(buff);
+            return true;
         }
 
-        inline bool
-        InCommitPhase(){
-            return GetPhase() == kCommitPhase;
+        void operator=(const RawProposal& proposal){
+            timestamp_ = proposal.GetTimestamp();
+            height_ = proposal.GetHeight();
+            hash_ = proposal.GetHash();
+            proposer_ = proposal.GetProposer();
         }
 
-        inline bool
-        InQuorumPhase(){
-            return GetPhase() == kQuorumPhase;
+        friend bool operator==(const RawProposal& a, const RawProposal& b){
+            return a.timestamp_ == b.timestamp_
+                && a.height_ == b.height_
+                && a.hash_ == b.hash_
+                && a.proposer_ == b.proposer_;
         }
 
-        inline bool
-        IsAccepted(){
-            return GetStatus() == Status::kAcceptedStatus;
-        }
-
-        inline bool
-        IsRejected(){
-            return GetStatus() == Status::kRejectedStatus;
-        }
-
-        static Proposal* NewInstance(Buffer* buff);
-        static Proposal* NewInstance(uint32_t height, const Hash& hash, const UUID& proposer);
-
-        static Proposal* NewInstance(Block* block, const UUID& proposer){
-            return NewInstance(block->GetHeight(), block->GetHash(), proposer);
-        }
-
-        static Proposal* NewInstance(const BlockHeader& block, const UUID& proposer){
-            return NewInstance(block.GetHeight(), block.GetHash(), proposer);
+        friend bool operator!=(const RawProposal& a, const RawProposal& b){
+            return !operator==(a, b);
         }
     };
 
-    static std::ostream& operator<<(std::ostream& stream, const Proposal::Status& status){
-        switch(status){
-            case Proposal::Status::kAcceptedStatus:
-                stream << "Accepted";
-                return stream;
-            case Proposal::Status::kRejectedStatus:
-                stream << "Rejected";
-                return stream;
-            case Proposal::Status::kUnknownStatus:
-            default:
-                stream << "Unknown";
-                return stream;
-        }
-    }
+#define FOR_EACH_PROPOSAL_PHASE(V) \
+    V(Proposal)                    \
+    V(Voting)                      \
+    V(Commit)                      \
+    V(Quorum)
 
-    static std::ostream& operator<<(std::ostream& stream, const Proposal::Phase& phase){
-        switch(phase){
-            case Proposal::Phase::kProposalPhase:
-                stream << "Proposal";
-                break;
-            case Proposal::Phase::kVotingPhase:
-                stream << "Voting";
-                break;
-            case Proposal::Phase::kCommitPhase:
-                stream << "Commit";
-                break;
-            case Proposal::Phase::kQuorumPhase:
-                stream << "Quorum";
-                break;
-            default:
-                stream << "Unknown";
-                break;
+#define FOR_EACH_PROPOSAL_RESULT(V) \
+    V(None)                         \
+    V(Accepted)                     \
+    V(Rejected)
+
+    class PeerSession;
+    class PrepareMessage;
+    class Proposal : public Object{
+        friend class ServerSession;
+        friend class BlockDiscoveryThread;
+    public:
+        enum Phase{
+#define DEFINE_PHASE(Name) k##Name##Phase,
+            FOR_EACH_PROPOSAL_PHASE(DEFINE_PHASE)
+#undef DEFINE_PHASE
+        };
+
+        friend std::ostream& operator<<(std::ostream& stream, const Phase& phase){
+            switch(phase){
+#define DEFINE_TOSTRING(Name) \
+                case Phase::k##Name##Phase: \
+                    stream << #Name; \
+                    return stream;
+                FOR_EACH_PROPOSAL_PHASE(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
+                default:
+                    stream << "Unknown";
+                    return stream;
+            }
         }
-        return stream;
-    }
+
+        enum Result{
+#define DEFINE_RESULT(Name) k##Name,
+            FOR_EACH_PROPOSAL_RESULT(DEFINE_RESULT)
+#undef DEFINE_RESULT
+        };
+
+        friend std::ostream& operator<<(std::ostream& stream, const Result& result){
+            switch(result){
+#define DEFINE_TOSTRING(Name) \
+                case Result::k##Name: \
+                    stream << #Name; \
+                    return stream;
+                FOR_EACH_PROPOSAL_RESULT(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
+                default:
+                    stream << "Unknown";
+                    return stream;
+            }
+        }
+    private:
+        std::mutex mutex_;
+        std::condition_variable cond_;
+        Phase phase_;
+        Result result_;
+        RawProposal raw_;
+        std::set<std::string> accepted_;
+        std::set<std::string> rejected_;
+
+        void SetPhase(const Phase& phase);
+        void SetStatus(const Result& result);
+
+        static int64_t GetRequiredNumberOfPeers();
+    public:
+        Proposal(const RawProposal& proposal):
+            Object(Type::kProposalType),
+            phase_(Proposal::kProposalPhase),
+            result_(Proposal::kNone),
+            raw_(proposal),
+            accepted_(),
+            rejected_(){}
+        Proposal(const UUID& proposer, int64_t height, const Hash& hash, int64_t timestamp=GetCurrentTimestamp()):
+            Object(Type::kProposalType),
+            phase_(Proposal::kProposalPhase),
+            result_(Proposal::kNone),
+            raw_(proposer, height, hash, timestamp),
+            accepted_(),
+            rejected_(){}
+        Proposal(Block* blk, const UUID& proposer, int64_t timestamp=GetCurrentTimestamp()):
+            Proposal(proposer, blk->GetHeight(), blk->GetHash(), timestamp){}
+        Proposal(const BlockHeader& blk, const UUID& proposer, int64_t timestamp=GetCurrentTimestamp()):
+            Proposal(proposer, blk.GetHeight(), blk.GetHash(), timestamp){}
+        Proposal(Buffer* buff):
+            Object(Type::kProposalType),
+            phase_(Proposal::kProposalPhase),
+            result_(Proposal::kNone),
+            raw_(buff),
+            accepted_(),
+            rejected_(){}
+        ~Proposal() = default;
+
+        RawProposal& GetRaw(){
+            return raw_;
+        }
+
+        int64_t GetTimestamp() const{
+            return raw_.GetTimestamp();
+        }
+
+        int64_t GetHeight() const{
+            return raw_.GetHeight();
+        }
+
+        Hash GetHash() const{
+            return raw_.GetHash();
+        }
+
+        UUID GetProposer() const{
+            return raw_.GetProposer();
+        }
+
+        int64_t GetBufferSize() const{
+            return RawProposal::kSize;
+        }
+
+        bool Encode(Buffer* buff) const{
+            return raw_.Encode(buff);
+        }
+
+        PeerSession* GetPeer() const;
+        Phase GetPhase();
+        Result GetResult();
+        int64_t GetNumberOfAccepted();
+        int64_t GetNumberOfRejected();
+        int64_t GetNumberOfResponses();
+        bool HasResponseFrom(const std::string& node_id);
+        void AcceptProposal(const std::string& node);
+        void RejectProposal(const std::string& node);
+        void WaitForPhase(const Phase& phase);
+        void WaitForResult(const Result& result);
+        void WaitForRequiredResponses(int64_t required=GetRequiredNumberOfPeers());
+
+#define DEFINE_PHASE_CHECK(Name) \
+        inline bool Is##Name() { return GetPhase() == Proposal::k##Name##Phase; }
+        FOR_EACH_PROPOSAL_PHASE(DEFINE_PHASE_CHECK)
+#undef DEFINE_PHASE_CHECK
+
+#define DEFINE_RESULT_CHECK(Name) \
+        inline bool Is##Name(){ return GetResult() == Proposal::k##Name; }
+        FOR_EACH_PROPOSAL_RESULT(DEFINE_RESULT_CHECK)
+#undef DEFINE_RESULT_CHECK
+    };
 }
 
 #endif //TOKEN_PROPOSAL_H

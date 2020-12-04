@@ -98,9 +98,11 @@ namespace Token{
             int32_t mtype = rbuff->GetInt();
             int64_t msize = rbuff->GetLong();
             switch(mtype) {
-                case Message::MessageType::kVersionMessageType:
-                    client->Send(VerackMessage::NewInstance(client->GetID()));
+                case Message::MessageType::kVersionMessageType:{
+                    VerackMessage msg(ClientType::kClient, client->GetID());
+                    client->Send(&msg);
                     break;
+                }
                 case Message::MessageType::kVerackMessageType:
                     client->SetState(Session::kConnected);
                     LOG(INFO) << "client is connected";

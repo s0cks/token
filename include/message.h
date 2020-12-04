@@ -7,7 +7,9 @@
 #include "peer.h"
 #include "address.h"
 #include "version.h"
+#include "proposal.h"
 #include "block_chain.h"
+#include "configuration.h"
 
 namespace Token{
 #define FOR_EACH_MESSAGE_TYPE(V) \
@@ -150,7 +152,6 @@ namespace Token{
 
         static VersionMessage* NewInstance(const UUID& node_id){
             BlockHeader genesis = Block::Genesis().GetHeader();
-            LOG(INFO) << "Genesis: " << genesis;
             return NewInstance(ClientType::kClient, node_id, genesis, Version(), Hash::GenerateNonce());
         }
     };
@@ -164,17 +165,23 @@ namespace Token{
         UUID node_id_;
         NodeAddress callback_;
         BlockHeader head_;
-
-        VerackMessage(ClientType type, const UUID& node_id, const Version& version, const Hash& nonce, const NodeAddress& address, const BlockHeader& head, Timestamp timestamp):
-            Message(),
-            timestamp_(timestamp),
-            client_type_(type),
-            version_(version),
-            nonce_(nonce),
-            node_id_(node_id),
-            callback_(address),
-            head_(head){}
     public:
+        VerackMessage(ClientType type,
+                      const UUID& node_id,
+                      const BlockHeader& head=BlockHeader(),
+                      const Version& version=Version(),
+                      const NodeAddress& callback=BlockChainConfiguration::GetServerCallbackAddress(),
+                      const Hash& nonce=Hash::GenerateNonce(),
+                      Timestamp timestamp=GetCurrentTimestamp()):
+                Message(),
+                timestamp_(timestamp),
+                client_type_(type),
+                version_(version),
+                nonce_(nonce),
+                node_id_(node_id),
+                callback_(callback),
+                head_(head){}
+
         Timestamp GetTimestamp() const{
             return timestamp_;
         }
@@ -206,37 +213,30 @@ namespace Token{
         DECLARE_MESSAGE(Verack);
 
         static VerackMessage* NewInstance(Buffer* buff);
-        static VerackMessage* NewInstance(ClientType type,
-                                          const UUID& node_id,
-                                          const NodeAddress& address,
-                                          const BlockHeader& head,
-                                          const Version& version=Version(),
-                                          const Hash& nonce=Hash::GenerateNonce(),
-                                          Timestamp timestamp=GetCurrentTimestamp()){
-            return new VerackMessage(type, node_id, version, nonce, address, head, timestamp);
-        }
-
-        static VerackMessage* NewInstance(const UUID& node_id){
-            Block genesis = Block::Genesis();
-            return NewInstance(ClientType::kClient, node_id, NodeAddress(), genesis.GetHeader());
-        }
     };
 
     class Proposal;
     class PaxosMessage : public Message{
     protected:
         MessageType type_; //TODO: remove this bs
-        UUID proposer_;
-        Proposal* proposal_;
+        RawProposal raw_;
 
-        PaxosMessage(MessageType type, const UUID& proposer, Proposal* proposal):
+        PaxosMessage(MessageType type, Proposal* proposal):
             Message(),
             type_(type),
-            proposer_(proposer),
-            proposal_(proposal){}
+            raw_(proposal->GetRaw()){}
+        PaxosMessage(MessageType type, Buffer* buff):
+            Message(),
+            type_(type),
+            raw_(buff){}
 
-        intptr_t GetMessageSize() const;
-        bool Write(Buffer* buff) const;
+        int64_t GetMessageSize() const{
+            return RawProposal::kSize;
+        }
+
+        bool Write(Buffer* buff) const{
+            return raw_.Encode(buff);
+        }
     public:
         virtual ~PaxosMessage() = default;
 
@@ -244,85 +244,75 @@ namespace Token{
             return type_;
         }
 
-        Proposal* GetProposal() const;
-
-        UUID GetProposer() const{
-            return proposer_;
+        RawProposal GetRaw() const{
+            return raw_;
         }
+
+        Proposal* GetProposal() const;
     };
 
     class PrepareMessage : public PaxosMessage{
-    private:
-        PrepareMessage(const UUID& proposer, Proposal* proposal):
-            PaxosMessage(Message::kPrepareMessageType, proposer, proposal){}
     public:
+        PrepareMessage(Proposal* proposal): PaxosMessage(Message::kPrepareMessageType, proposal){}
+        PrepareMessage(Buffer* buff): PaxosMessage(Message::kPrepareMessageType, buff){}
         ~PrepareMessage(){}
 
         DECLARE_MESSAGE(Prepare);
 
-        static PrepareMessage* NewInstance(Buffer* buff);
-        static PrepareMessage* NewInstance(Proposal* proposal, const UUID& proposer){
-            return new PrepareMessage(proposer, proposal);
+        static PrepareMessage* NewInstance(Buffer* buff){
+            return new PrepareMessage(buff);
         }
     };
 
     class PromiseMessage : public PaxosMessage{
-    private:
-        PromiseMessage(const UUID& proposer, Proposal* proposal):
-            PaxosMessage(MessageType::kPromiseMessageType, proposer, proposal){}
     public:
+        PromiseMessage(Proposal* proposal): PaxosMessage(Message::kPromiseMessageType, proposal){}
+        PromiseMessage(Buffer* buff): PaxosMessage(Message::kPromiseMessageType, buff){}
         ~PromiseMessage(){}
 
         DECLARE_MESSAGE(Promise);
 
-        static PromiseMessage* NewInstance(Buffer* buff);
-        static PromiseMessage* NewInstance(Proposal* proposal, const UUID& proposer){
-            return new PromiseMessage(proposer, proposal);
+        static PromiseMessage* NewInstance(Buffer* buff){
+            return new PromiseMessage(buff);
         }
     };
 
     class CommitMessage : public PaxosMessage{
-    private:
-        CommitMessage(const UUID& proposer, Proposal* proposal):
-            PaxosMessage(Message::kCommitMessageType, proposer, proposal){}
     public:
+        CommitMessage(Proposal* proposal): PaxosMessage(Message::kCommitMessageType, proposal){}
+        CommitMessage(Buffer* buff): PaxosMessage(Message::kCommitMessageType, buff){}
         ~CommitMessage(){}
 
         DECLARE_MESSAGE(Commit);
 
-        static CommitMessage* NewInstance(Buffer* buff);
-        static CommitMessage* NewInstance(Proposal* proposal, const UUID& proposer){
-            return new CommitMessage(proposer, proposal);
+        static CommitMessage* NewInstance(Buffer* buff){
+            return new CommitMessage(buff);
         }
     };
 
     class AcceptedMessage : public PaxosMessage{
-    private:
-        AcceptedMessage(const UUID& proposer, Proposal* proposal):
-            PaxosMessage(Message::kAcceptedMessageType, proposer, proposal){}
     public:
+        AcceptedMessage(Proposal* proposal): PaxosMessage(Message::kAcceptedMessageType, proposal){}
+        AcceptedMessage(Buffer* buff): PaxosMessage(Message::kAcceptedMessageType, buff){}
         ~AcceptedMessage(){}
 
         DECLARE_MESSAGE(Accepted);
 
-        static AcceptedMessage* NewInstance(Buffer* buff);
-        static AcceptedMessage* NewInstance(Proposal* proposal, const UUID& proposer){
-            return new AcceptedMessage(proposer, proposal);
+        static AcceptedMessage* NewInstance(Buffer* buff){
+            return new AcceptedMessage(buff);
         }
     };
 
     class RejectedMessage : public PaxosMessage{
-    private:
-        RejectedMessage(const UUID& proposer, Proposal* proposal):
-            PaxosMessage(Message::kRejectedMessageType, proposer, proposal){}
     public:
+        RejectedMessage(Proposal* proposal): PaxosMessage(Message::kRejectedMessageType, proposal){}
+        RejectedMessage(Buffer* buff): PaxosMessage(Message::kRejectedMessageType, buff){}
         ~RejectedMessage(){}
 
         DECLARE_MESSAGE(Rejected);
 
-        static RejectedMessage* NewInstance(Buffer* buff);
-        static RejectedMessage* NewInstance(Proposal* proposal, const UUID& proposer){
-            return new RejectedMessage(proposer, proposal);
+        static RejectedMessage* NewInstance(Buffer* buff){
+            return new RejectedMessage(buff);
         }
     };
 
@@ -429,6 +419,9 @@ namespace Token{
         InventoryItem(const InventoryItem& item):
             type_(item.type_),
             hash_(item.hash_){}
+        InventoryItem(Buffer* buff):
+            type_(static_cast<Type>(buff->GetShort())),
+            hash_(buff->GetHash()){}
         ~InventoryItem(){}
 
         Type GetType() const{
@@ -453,10 +446,15 @@ namespace Token{
             return type_ == kTransaction;
         }
 
-        InventoryItem& operator=(const InventoryItem& other){
+        bool Encode(Buffer* buff) const{
+            buff->PutShort(static_cast<int16_t>(GetType()));
+            buff->PutHash(GetHash());
+            return true;
+        }
+
+        void operator=(const InventoryItem& other){
             type_ = other.type_;
             hash_ = other.hash_;
-            return (*this);
         }
 
         friend bool operator==(const InventoryItem& a, const InventoryItem& b){
@@ -494,13 +492,11 @@ namespace Token{
             if(items_.empty())
                 LOG(WARNING) << "inventory created w/ zero size";
         }
-
-        static void DecodeItems(Buffer* buff, std::vector<InventoryItem>& items, int32_t num_items);
     public:
 
         ~InventoryMessage(){}
 
-        int32_t GetNumberOfItems() const{
+        int64_t GetNumberOfItems() const{
             return items_.size();
         }
 
@@ -531,18 +527,49 @@ namespace Token{
         }
     };
 
-    class GetDataMessage : public InventoryMessage{
-    private:
-        GetDataMessage(const std::vector<InventoryItem>& items): InventoryMessage(items){}
+    class GetDataMessage : public Message{
     public:
-        ~GetDataMessage(){}
+        static const size_t kMaxAmountOfItemsPerMessage = 50;
+    protected:
+        std::vector<InventoryItem> items_;
+
+        GetDataMessage(const std::vector<InventoryItem>& items):
+            Message(),
+            items_(items){
+            if(items_.empty())
+                LOG(WARNING) << "inventory created w/ zero size";
+        }
+    public:
+        ~GetDataMessage() = default;
+
+        int64_t GetNumberOfItems() const{
+            return items_.size();
+        }
+
+        bool GetItems(std::vector<InventoryItem>& items){
+            std::copy(items_.begin(), items_.end(), std::back_inserter(items));
+            return items.size() == items_.size();
+        }
 
         DECLARE_MESSAGE(GetData);
 
         static GetDataMessage* NewInstance(Buffer* buff);
-
         static GetDataMessage* NewInstance(std::vector<InventoryItem>& items){
             return new GetDataMessage(items);
+        }
+
+        static GetDataMessage* NewInstance(const Transaction& tx){
+            std::vector<InventoryItem> items = {
+                InventoryItem(tx)
+            };
+            return NewInstance(items);
+        }
+
+        static GetDataMessage* NewInstance(const Block& blk){
+            std::vector<InventoryItem> items = {
+                    InventoryItem(blk)
+            };
+            return NewInstance(items);
         }
     };
 

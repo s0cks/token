@@ -11,6 +11,8 @@
 #include "proposal.h"
 #include "unclaimed_transaction.h"
 
+#include "block_discovery.h"
+
 namespace Token{
     static uv_tcp_t handle_;
     static uv_async_t shutdown_;
@@ -105,11 +107,6 @@ namespace Token{
 #undef DEFINE_STATUS_MESSAGE
         }
         return ss.str();
-    }
-
-    NodeAddress Server::GetCallbackAddress(){
-        LOCK_GUARD;
-        return callback_;
     }
 
     void Server::HandleTerminateCallback(uv_async_t* handle){
@@ -242,6 +239,7 @@ namespace Token{
 #define DEFINE_DECODE(Name) \
                 case Message::MessageType::k##Name##MessageType:{ \
                     Message* msg = Name##Message::NewInstance(rbuff); \
+                    LOG(INFO) << "received message: " << msg->ToString(); \
                     messages.push_back(msg); \
                     break; \
                 }
@@ -284,6 +282,28 @@ namespace Token{
         return true;
     }
 
+    bool Server::BroadcastPrepare(){
+        LOCK_GUARD;
+        for(int idx = 0;
+            idx < Server::kMaxNumberOfPeers;
+            idx++){
+            if(peers_[idx])
+                peers_[idx]->SendPrepare();
+        }
+        return true;
+    }
+
+    bool Server::BroadcastCommit(){
+        LOCK_GUARD;
+        for(int idx = 0;
+            idx < Server::kMaxNumberOfPeers;
+            idx++){
+            if(peers_[idx])
+                peers_[idx]->SendCommit();
+        }
+        return true;
+    }
+
     bool Server::ConnectTo(const NodeAddress& address){
         //-- Attention! --
         // this is not a memory leak, the memory will be freed upon
@@ -316,11 +336,24 @@ namespace Token{
         return false;
     }
 
+    PeerSession* Server::GetPeer(const NodeAddress& address){
+        LOCK_GUARD;
+        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
+            if(peers_[idx]){
+                Peer peer = peers_[idx]->GetInfo();
+                if(peer.GetAddress() == address)
+                    return peers_[idx];
+            }
+        }
+        return nullptr;
+    }
+
     PeerSession* Server::GetPeer(const UUID& uuid){
         LOCK_GUARD;
         for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
             if(peers_[idx]){
                 Peer peer = peers_[idx]->GetInfo();
+                LOG(INFO) << peer.GetID() << " <=> " << uuid;
                 if(peer.GetID() == uuid)
                     return peers_[idx];
             }
@@ -412,17 +445,19 @@ namespace Token{
         VerackMessage* msg = task->GetMessage<VerackMessage>();
 
         Block* head = BlockChain::GetHead();
-        session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), Server::GetCallbackAddress(), head->GetHeader()));
+        VerackMessage verack(ClientType::kNode, Server::GetID(), head->GetHeader());
+        session->Send(&verack);
         delete head;
 
-        LOG(INFO) << "State: " << session->GetState();
+        UUID id = msg->GetID();
         if(session->IsConnecting()){
+            session->SetID(id);
             session->SetState(Session::State::kConnected);
             if(msg->IsNode()){
                 NodeAddress paddr = msg->GetCallbackAddress();
                 LOG(INFO) << "peer connected from: " << paddr;
                 if(!Server::IsConnectedTo(paddr)){
-                    LOG(WARNING) << "couldn't find peer: " << msg->GetID() << ", connecting to peer " << paddr << "....";
+                    LOG(WARNING) << "couldn't find peer: " << id << ", connecting to peer " << paddr << "....";
                     if(!Server::ConnectTo(paddr)){
                         LOG(WARNING) << "couldn't connect to peer: " << paddr;
                     }
@@ -489,53 +524,42 @@ namespace Token{
     }
 
     void ServerSession::HandlePrepareMessage(HandleMessageTask* task){
-        ServerSession* session = task->GetSession<ServerSession>();
         PrepareMessage* msg = task->GetMessage<PrepareMessage>();
         Proposal* proposal = msg->GetProposal();
-        LOG(INFO) << "received proposal: " << proposal->ToString();
-
-        Hash hash = proposal->GetHash();
-
-        proposal->SetPhase(Proposal::kVotingPhase);
-        std::vector<Message*> response;
-        if(!BlockPool::HasBlock(proposal->GetHash())){
-            LOG(INFO) << "requesting block " << hash << " from peer....";
-            std::vector<InventoryItem> items = {
-                InventoryItem(InventoryItem::kBlock, hash)
-            };
-            response.push_back(GetDataMessage::NewInstance(items));
-        }
-        response.push_back(PromiseMessage::NewInstance(proposal, Server::GetID()));
-        session->Send(response);
+        proposal->SetPhase(Proposal::kProposalPhase);
     }
 
-    void ServerSession::HandlePromiseMessage(HandleMessageTask* task){}
+    void ServerSession::HandlePromiseMessage(HandleMessageTask* task){
+        ServerSession* session = task->GetSession<ServerSession>();
+        PromiseMessage* msg = task->GetMessage<PromiseMessage>();
+        Proposal* proposal = msg->GetProposal();
+        proposal->SetPhase(Proposal::kVotingPhase);
+        proposal->AcceptProposal(session->GetID().ToString());//TODO: remove ToString()
+    }
 
     void ServerSession::HandleCommitMessage(HandleMessageTask* task){
         ServerSession* session = task->GetSession<ServerSession>();
         CommitMessage* msg = task->GetMessage<CommitMessage>();
-
         Proposal* proposal = msg->GetProposal();
-        Hash hash = proposal->GetHash();
-
-        if(!BlockPool::HasBlock(hash)){
-            LOG(WARNING) << "couldn't find block " << hash << " in pool, rejecting request to commit proposal....";
-            session->Send(RejectedMessage::NewInstance(proposal, Server::GetID()));
-        } else{
-            proposal->SetPhase(Proposal::kCommitPhase);
-            session->Send(AcceptedMessage::NewInstance(proposal, Server::GetID()));
-        }
+        proposal->SetPhase(Proposal::kCommitPhase);
+        proposal->AcceptProposal(session->GetID().ToString()); //TODO: remove ToString()
     }
 
     void ServerSession::HandleAcceptedMessage(HandleMessageTask* task){
+        ServerSession* session = task->GetSession<ServerSession>();
         AcceptedMessage* msg = task->GetMessage<AcceptedMessage>();
         Proposal* proposal = msg->GetProposal();
-
-        // validate proposal still?
         proposal->SetPhase(Proposal::kQuorumPhase);
+        proposal->AcceptProposal(session->GetID().ToString()); //TODO: remove ToString()
     }
 
-    void ServerSession::HandleRejectedMessage(HandleMessageTask* task){}
+    void ServerSession::HandleRejectedMessage(HandleMessageTask* task){
+        ServerSession* session = task->GetSession<ServerSession>();
+        AcceptedMessage* msg = task->GetMessage<AcceptedMessage>();
+        Proposal* proposal = msg->GetProposal();
+        proposal->SetPhase(Proposal::kQuorumPhase);
+        proposal->RejectProposal(session->GetID().ToString()); //TODO: remove ToString()
+    }
 
     void ServerSession::HandleBlockMessage(HandleMessageTask* task){
         BlockMessage* msg = task->GetMessage<BlockMessage>();
