@@ -8,6 +8,47 @@ namespace Token{
 #define SIGNAL_ALL cond_.notify_all()
 #define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
 
+#define SESSION_OK_STATUS(Status, Message) \
+    LOG(INFO) << (Message);             \
+    SetStatus((Status));
+#define SESSION_OK(Message) \
+    SESSION_OK_STATUS(Session::kOk, (Message));
+#define SESSION_WARNING_STATUS(Status, Message) \
+    LOG(WARNING) << (Message);               \
+    SetStatus((Status));
+#define SESSION_WARNING(Message) \
+    SESSION_WARNING_STATUS(Session::kWarning, (Message))
+#define SESSION_ERROR_STATUS(Status, Message) \
+    LOG(ERROR) << (Message);               \
+    SetStatus((Status));
+#define SESSION_ERROR(Message) \
+    SESSION_ERROR_STATUS(Session::kError, (Message))
+
+    Session::Session(uv_loop_t* loop):
+        Object(Type::kSessionType),
+        mutex_(),
+        cond_(),
+        state_(State::kDisconnected),
+        status_(Status::kOk),
+        loop_(loop),
+        handle_(),
+        rbuffer_(nullptr),
+        wbuffer_(nullptr){
+        handle_.data = this;
+
+        uv_tcp_keepalive(GetHandle(), 1, 60);
+        int err;
+        if((err = uv_tcp_init(loop, &handle_)) != 0){
+            std::stringstream ss;
+            ss << "couldn't initialize the session handle: " << uv_strerror(err);
+            SESSION_ERROR(ss.str());
+            return;
+        }
+
+        rbuffer_ = new Buffer(kBufferSize);
+        wbuffer_ = new Buffer(kBufferSize);
+    }
+
     void Session::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
         Session* session = (Session*)handle->data;
         Buffer* rbuff = session->GetReadBuffer();
@@ -60,7 +101,9 @@ namespace Token{
         wbuff->PutInt(type);
         wbuff->PutLong(size);
         if(!msg->Write(wbuff)){
-            LOG(WARNING) << "couldn't encode message: " << msg->ToString();
+            std::stringstream ss;
+            ss << "couldn't encode message: " << msg->ToString();
+            SESSION_WARNING(ss.str());
             return;
         }
 

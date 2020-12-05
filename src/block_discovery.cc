@@ -1,11 +1,11 @@
 #include "block_discovery.h"
 #include "block_chain.h"
 #include "async_task.h"
-#include "peer.h"
 #include "server.h"
 #include "block_validator.h"
 #include "block_processor.h"
 #include "transaction_validator.h"
+#include "peer/peer_session_manager.h"
 
 namespace Token{
     static std::recursive_mutex mutex_;

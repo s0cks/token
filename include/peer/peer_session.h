@@ -1,11 +1,11 @@
-#ifndef TOKEN_PEER_H
-#define TOKEN_PEER_H
+#ifndef TOKEN_PEER_SESSION_H
+#define TOKEN_PEER_SESSION_H
 
-#include <set>
+#include <cstdint>
 #include "uuid.h"
 #include "block.h"
-#include "session.h"
 #include "address.h"
+#include "session.h"
 #include "message.h"
 
 namespace Token{
@@ -29,14 +29,14 @@ namespace Token{
         NodeAddress address_;
     public:
         Peer(const UUID& uuid, const NodeAddress& address):
-            uuid_(uuid),
-            address_(address){}
+                uuid_(uuid),
+                address_(address){}
         Peer(Buffer* buff):
-            uuid_(buff),
-            address_(buff){}
+                uuid_(buff),
+                address_(buff){}
         Peer(const Peer& other):
-            uuid_(other.uuid_),
-            address_(other.address_){}
+                uuid_(other.uuid_),
+                address_(other.address_){}
         ~Peer() = default;
 
         UUID GetID() const{
@@ -178,24 +178,6 @@ namespace Token{
             uv_async_send(&commit_);
         }
     };
-
-    class PeerSessionManager{
-    private:
-        PeerSessionManager() = delete;
-    public:
-        ~PeerSessionManager() = delete;
-
-        static bool Initialize();
-        static bool Shutdown();
-        static bool IsConnectedTo(const UUID& uuid);
-        static bool IsConnectedTo(const NodeAddress& address);
-        static bool ConnectTo(const NodeAddress& address);
-        static int32_t GetNumberOfConnectedPeers();
-        static std::shared_ptr<PeerSession> GetSession(const UUID& uuid);
-        static std::shared_ptr<PeerSession> GetSession(const NodeAddress& address);
-        static void BroadcastPrepare();
-        static void BroadcastCommit();
-    };
 }
 
-#endif //TOKEN_PEER_H
+#endif //TOKEN_PEER_SESSION_H

@@ -75,28 +75,7 @@ namespace Token{
         Buffer* rbuffer_;
         Buffer* wbuffer_;
 
-        Session(uv_loop_t* loop):
-            Object(Type::kSessionType),
-            mutex_(),
-            cond_(),
-            state_(State::kDisconnected),
-            status_(Status::kOk),
-            loop_(loop),
-            handle_(),
-            rbuffer_(nullptr),
-            wbuffer_(nullptr){
-            handle_.data = this;
-
-            uv_tcp_keepalive(GetHandle(), 1, 60);
-            int err;
-            if((err = uv_tcp_init(loop, &handle_)) != 0){
-                LOG(WARNING) << "couldn't initialize the session handle: " << uv_strerror(err);
-                return;
-            }
-
-            rbuffer_ = new Buffer(kBufferSize);
-            wbuffer_ = new Buffer(kBufferSize);
-        }
+        Session(uv_loop_t* loop);
 
         uv_tcp_t* GetHandle() const{
             return (uv_tcp_t*)&handle_;

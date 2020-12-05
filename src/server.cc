@@ -2,16 +2,14 @@
 #include <algorithm>
 #include <random>
 #include <condition_variable>
-
 #include "server.h"
 #include "message.h"
 #include "task.h"
 #include "configuration.h"
-#include "peer.h"
 #include "proposal.h"
 #include "unclaimed_transaction.h"
-
 #include "block_discovery.h"
+#include "peer/peer_session_manager.h"
 
 namespace Token{
     static uv_tcp_t handle_;

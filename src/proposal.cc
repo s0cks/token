@@ -1,6 +1,6 @@
-#include "peer.h"
 #include "server.h"
 #include "proposal.h"
+#include "peer/peer_session_manager.h"
 
 namespace Token{
 #define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
