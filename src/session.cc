@@ -52,8 +52,10 @@ namespace Token{
         int32_t type = msg->GetMessageType();
         int64_t size = msg->GetMessageSize();
         int64_t total_size = Message::kHeaderSize + size;
-
+#ifdef TOKEN_DEBUG
         LOG(INFO) << "sending " << msg->ToString() << " (" << total_size << " bytes)";
+#endif//TOKEN_DEBUG
+
         Buffer* wbuff = GetWriteBuffer();
         wbuff->PutInt(type);
         wbuff->PutLong(size);
@@ -78,7 +80,6 @@ namespace Token{
             return;
         }
 
-        LOG(INFO) << "sending " << total_messages << " messages....";
         Buffer* wbuff = GetWriteBuffer();
         int64_t offset = 0;
         uv_buf_t buffers[total_messages];
@@ -87,7 +88,9 @@ namespace Token{
             int32_t type = (int32_t)msg->GetMessageType();
             intptr_t size = msg->GetMessageSize();
             intptr_t total_size = Message::kHeaderSize + size;
+#ifdef TOKEN_DEBUG
             LOG(INFO) << "sending " << msg->ToString() << " (" << total_size << " Bytes)";
+#endif//TOKEN_DEBUG
 
             wbuff->PutInt(type);
             wbuff->PutLong(size);

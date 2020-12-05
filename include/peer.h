@@ -83,10 +83,10 @@ namespace Token{
         friend class PeerSessionThread;
         friend class PeerSessionManager;
     private:
+        pthread_t thread_;
         Peer info_;
         BlockHeader head_;
         uv_async_t disconnect_;
-
         // Needed for Paxos
         uv_async_t prepare_;
         uv_async_t promise_;
@@ -102,30 +102,12 @@ namespace Token{
             //uv_timer_start(&session->hb_timer_, &OnHeartbeatTick, 90 * 1000, Session::kHeartbeatIntervalMilliseconds);
         }
 
-        bool Connect(){
-            //TODO: session->StartHeartbeatTimer();
-            NodeAddress paddr = GetAddress();
-
-            struct sockaddr_in addr;
-            uv_ip4_addr(paddr.GetAddress().c_str(), paddr.GetPort(), &addr);
-
-            uv_connect_t conn;
-            conn.data = this;
-
-            int err;
-            if((err = uv_tcp_connect(&conn, GetHandle(), (const struct sockaddr*)&addr, &PeerSession::OnConnect)) != 0){
-                LOG(WARNING) << "couldn't connect to peer " << paddr << ": " << uv_strerror(err);
-                //TODO: session->Disconnect();
-                return false;
-            }
-
-            uv_run(GetLoop(), UV_RUN_DEFAULT);
-            return true;
-        }
+        bool Connect();
+        bool Disconnect();
 
         static void OnConnect(uv_connect_t* conn, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
-        static void OnShutdown(uv_async_t* handle);
+        static void OnDisconnect(uv_async_t* handle);
         // Paxos
         static void OnPrepare(uv_async_t* handle);
         static void OnPromise(uv_async_t* handle);
@@ -140,6 +122,7 @@ namespace Token{
     public:
         PeerSession(uv_loop_t* loop, const NodeAddress& address):
             Session(loop),
+            thread_(pthread_self()),
             info_(UUID(), address),
             head_(),
             disconnect_(),
@@ -154,7 +137,7 @@ namespace Token{
             commit_.data = this;
             accepted_.data = this;
             rejected_.data = this;
-            uv_async_init(loop, &disconnect_, &OnShutdown);
+            uv_async_init(loop, &disconnect_, &OnDisconnect);
             uv_async_init(loop, &prepare_, &OnPrepare);
             uv_async_init(loop, &promise_, &OnPromise);
             uv_async_init(loop, &commit_, &OnCommit);
