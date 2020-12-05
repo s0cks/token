@@ -4,12 +4,11 @@
 
 namespace Token{
     TEST(TestBuffer, test_serialization){
-        Block blk1 = Block::Genesis();
+        BlockPtr blk1 = Block::Genesis();
 
-        Buffer* buff = blk1.ToBuffer();
-        Block blk2(buff);
-        delete buff;
+        Buffer* buff = blk1->ToBuffer();
+        BlockPtr blk2 = std::make_shared<Block>(buff);
 
-        ASSERT_TRUE(blk1 == blk2);
+        ASSERT_TRUE(blk1->GetHash() == blk2->GetHash());
     }
 }

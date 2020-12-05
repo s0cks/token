@@ -296,7 +296,7 @@ namespace Token{
         }
 
         static inline MerkleTreePtr
-        Build(Block* blk){
+        Build(const BlockPtr& blk){
             MerkleTreeBuilder builder;
             if(!blk->Accept(&builder)){
                 LOG(ERROR) << "couldn't build merkle tree for block";

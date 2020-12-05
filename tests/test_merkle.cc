@@ -3,8 +3,8 @@
 
 namespace Token{
     TEST(TestMerkle, test_tree){
-        Block genesis = Block::Genesis();
-        ASSERT_EQ(genesis.GetMerkleRoot(), Hash::FromHexString("2DB5DE14D700AFFF1D7B47796CC95F75D1CF66CF01DFB18A2345D63DFD6C8178"));
+        BlockPtr genesis = Block::Genesis();
+        ASSERT_EQ(genesis->GetMerkleRoot(), Hash::FromHexString("2DB5DE14D700AFFF1D7B47796CC95F75D1CF66CF01DFB18A2345D63DFD6C8178"));
     }
 
     static inline Transaction
@@ -20,10 +20,10 @@ namespace Token{
     }
 
     TEST(TestMerkle, test_audit_proof){
-        Block blk1 = Block::Genesis();
-        MerkleTreePtr tree1 = MerkleTreeBuilder::Build(&blk1);
+        BlockPtr blk1 = Block::Genesis();
+        MerkleTreePtr tree1 = MerkleTreeBuilder::Build(blk1);
 
-        Hash h1 = blk1.transactions()[0].GetHash();
+        Hash h1 = blk1->transactions()[0].GetHash();
         MerkleProof p1;
         ASSERT_TRUE(tree1->BuildAuditProof(h1, p1));
         ASSERT_TRUE(tree1->VerifyAuditProof(h1, p1));
@@ -34,8 +34,8 @@ namespace Token{
         ASSERT_FALSE(tree1->BuildAuditProof(h2, p2));
         ASSERT_FALSE(tree1->VerifyAuditProof(h2, p2));
 
-        Block blk2 = Block(blk1, { tx2 });
-        MerkleTreePtr tree2 = MerkleTreeBuilder::Build(&blk2);
+        BlockPtr blk2 = std::shared_ptr<Block>(new Block(blk1, { tx2 }));
+        MerkleTreePtr tree2 = MerkleTreeBuilder::Build(blk2);
 
         Hash h3 = tx2.GetHash();
         MerkleProof p3;
@@ -44,13 +44,13 @@ namespace Token{
     }
 
     TEST(TestMerkle, test_append){
-        Block genesis = Block::Genesis();
-        MerkleTreePtr tree1 = MerkleTreeBuilder::Build(&genesis);
+        BlockPtr genesis = Block::Genesis();
+        MerkleTreePtr tree1 = MerkleTreeBuilder::Build(genesis);
         ASSERT_EQ(tree1->GetRootHash(), Hash::FromHexString("2DB5DE14D700AFFF1D7B47796CC95F75D1CF66CF01DFB18A2345D63DFD6C8178"));
 
         Transaction tx = CreateTransaction(0, 1);
-        Block blk1(genesis, { tx });
-        MerkleTreePtr tree2 = MerkleTreeBuilder::Build(&blk1);
+        BlockPtr blk1 = std::shared_ptr<Block>(new Block(genesis, { tx }));
+        MerkleTreePtr tree2 = MerkleTreeBuilder::Build(blk1);
         tree1->Append(tree2);
 
         LOG(INFO) << "Merkle Tree #3 (Leaves) " << tree1->GetRootHash() << ":";

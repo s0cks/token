@@ -190,7 +190,7 @@ namespace Token{
         }
         Block(const Block& parent, const TransactionList& transactions, Timestamp timestamp=GetCurrentTimestamp()):
             Block(parent.GetHeight() + 1, parent.GetHash(), transactions, timestamp){}
-        Block(Block* parent, const TransactionList& transactions, Timestamp timestamp=GetCurrentTimestamp()):
+        Block(const BlockPtr& parent, const TransactionList& transactions, Timestamp timestamp=GetCurrentTimestamp()):
             Block(parent->GetHeight() + 1, parent->GetHash(), transactions, timestamp){}
         Block(const BlockHeader& parent, const TransactionList& transactions, Timestamp timestamp=GetCurrentTimestamp()):
             Block(parent.GetHeight() + 1, parent.GetHash(), transactions, timestamp){}
