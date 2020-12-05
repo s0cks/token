@@ -1,12 +1,11 @@
 #include <mutex>
 #include <condition_variable>
-#include "common.h"
-#include "http/session.h"
-#include "http/healthcheck.h"
-#include "configuration.h"
-#include "block_chain.h"
 
 #include "server.h"
+#include "block_chain.h"
+#include "configuration.h"
+#include "http/healthcheck.h"
+#include "peer/peer_session_manager.h"
 
 namespace Token{
     static std::mutex mutex_;
@@ -64,9 +63,9 @@ namespace Token{
         }
         LOG(INFO) << "initializing the health check service....";
         HttpRouter* router = new HttpRouter(&HandleUnknownEndpoint);
-        router->Get("/ready", &HandleReadyEndpoint);
-        router->Get("/live", &HandleLiveEndpoint);
-        router->Get("/status", &HandleStatusEndpoint);
+#define DEFINE_ENDPOINT_PATH(Method, Name, Path) router->Method(Path, &Handle##Name##Endpoint);
+        FOR_EACH_HEALTHCHECK_SERVICE_ENDPOINT(DEFINE_ENDPOINT_PATH)
+#undef DEFINE_ENDPOINT_PATH
         SetRouter(router);
         return Thread::Start("HealthCheckService", &HandleServiceThread, 0);
     }
@@ -238,29 +237,26 @@ namespace Token{
         return true;
     }
 
-    static inline bool
-    GetBlockChainHead(Json::Value& value){
-        Block* head = BlockChain::GetHead();
-        return head->ToJson(value);
+    void HealthCheckService::HandleBlockChainStatusEndpoint(HttpSession* session, HttpRequest* request){
+        Json::Value response;
+        response["Head"] = BlockChain::GetReference(BLOCKCHAIN_REFERENCE_HEAD).HexString();
+        response["Genesis"] = BlockChain::GetReference(BLOCKCHAIN_REFERENCE_GENESIS).HexString();
+        SendJson(session, response);
     }
 
-    void HealthCheckService::HandleStatusEndpoint(HttpSession* session, HttpRequest* request){
-        Json::Value head;
-        if(!GetBlockChainHead(head)){
-            SendInternalServerError(session);
+    void HealthCheckService::HandlePeerStatusEndpoint(HttpSession* session, HttpRequest* request){
+        Json::Value response;
+
+        std::vector<std::string> status;
+        if(!PeerSessionManager::GetStatus(status)){
+            response["message"] = "cannot get the peer statuses";
+            SendJson(session, response);
             return;
         }
 
-        Json::Value status;
-        if(!GetRuntimeStatus(status)){
-            SendInternalServerError(session);
-            return;
-        }
-
-        Json::Value doc;
-        doc["head"] = BlockChain::GetReference(BLOCKCHAIN_REFERENCE_HEAD).HexString();
-        doc["genesis"] = BlockChain::GetReference(BLOCKCHAIN_REFERENCE_GENESIS).HexString();
-        doc["status"] = status;
-        SendJson(session, doc);
+        for(auto& it : status)
+            response.append(Json::Value(it));
+        SendJson(session, response);
+        return;
     }
 }

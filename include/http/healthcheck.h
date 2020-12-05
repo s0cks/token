@@ -22,6 +22,12 @@ namespace Token{
     V(Warning)                                \
     V(Error)
 
+#define FOR_EACH_HEALTHCHECK_SERVICE_ENDPOINT(V) \
+    V(Get, Ready, "/ready")                           \
+    V(Get, Live, "/live")                             \
+    V(Get, PeerStatus, "/status/peers")               \
+    V(Get, BlockChainStatus, "/status/chain")
+
     class HealthCheckService : public Thread{
         friend class Scavenger;
         friend class HttpSession;
@@ -74,10 +80,12 @@ namespace Token{
         static void OnNewConnection(uv_stream_t* stream, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
         static void HandleServiceThread(uword parameter);
+
         static void HandleUnknownEndpoint(HttpSession* session, HttpRequest* request);
-        static void HandleReadyEndpoint(HttpSession* session, HttpRequest* request);
-        static void HandleLiveEndpoint(HttpSession* session, HttpRequest* request);
-        static void HandleStatusEndpoint(HttpSession* session, HttpRequest* request);
+#define DECLARE_ENDPOINT(Method, Name, Path) \
+        static void Handle##Name##Endpoint(HttpSession* session, HttpRequest* request);
+        FOR_EACH_HEALTHCHECK_SERVICE_ENDPOINT(DECLARE_ENDPOINT)
+#undef DECLARE_ENDPOINT
     public:
         ~HealthCheckService() = delete;
 
