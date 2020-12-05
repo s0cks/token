@@ -42,11 +42,6 @@ namespace Token{
 
     bool CrashReportWriter::WriteServerInformation(){
         PeerList peers;
-        if(!Server::GetPeers(peers)){
-            LOG(WARNING) << "couldn't get peer info from server";
-            return false;
-        }
-
         //TODO: write peer information
         return true;
     }

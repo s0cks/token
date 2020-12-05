@@ -78,65 +78,91 @@ namespace Token{
     };
 
     class HandleMessageTask;
-    class PeerSession : public ThreadedSession{
+    class PeerSession : public Session{
         friend class Server;
+        friend class PeerSessionThread;
+        friend class PeerSessionManager;
     private:
         Peer info_;
         BlockHeader head_;
+        uv_async_t disconnect_;
 
-        uv_timer_t hb_timer_; //TODO: remove PeerSession::hb_timer_
-        uv_timer_t hb_timeout_; //TODO: remove PeerSession::hb_timeout_
-        uv_async_t shutdown_; //TODO: remove PeerSession::shutdown_
-
+        // Needed for Paxos
         uv_async_t prepare_;
         uv_async_t promise_;
         uv_async_t commit_;
         uv_async_t accepted_;
         uv_async_t rejected_;
 
-        PeerSession(uv_loop_t* loop, const NodeAddress& address):
-            ThreadedSession(loop),
-            info_(UUID(), address),
-            head_(),
-            hb_timer_(),
-            hb_timeout_(),
-            shutdown_(),
-            prepare_(),
-            promise_(),
-            commit_(),
-            accepted_(),
-            rejected_(){
-
-            hb_timer_.data = this;
-            hb_timeout_.data = this;
-
-            prepare_.data = this;
-            promise_.data = this;
-            commit_.data = this;
-            accepted_.data = this;
-            rejected_.data = this;
-        }
-
         void SetInfo(const Peer& info){
             info_ = info;
         }
 
+        void StartHeartbeatTimer(){
+            //uv_timer_start(&session->hb_timer_, &OnHeartbeatTick, 90 * 1000, Session::kHeartbeatIntervalMilliseconds);
+        }
+
+        bool Connect(){
+            //TODO: session->StartHeartbeatTimer();
+            NodeAddress paddr = GetAddress();
+
+            struct sockaddr_in addr;
+            uv_ip4_addr(paddr.GetAddress().c_str(), paddr.GetPort(), &addr);
+
+            uv_connect_t conn;
+            conn.data = this;
+
+            int err;
+            if((err = uv_tcp_connect(&conn, GetHandle(), (const struct sockaddr*)&addr, &PeerSession::OnConnect)) != 0){
+                LOG(WARNING) << "couldn't connect to peer " << paddr << ": " << uv_strerror(err);
+                //TODO: session->Disconnect();
+                return false;
+            }
+
+            uv_run(GetLoop(), UV_RUN_DEFAULT);
+            return true;
+        }
+
         static void OnConnect(uv_connect_t* conn, int status);
+        static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
         static void OnShutdown(uv_async_t* handle);
+        // Paxos
         static void OnPrepare(uv_async_t* handle);
         static void OnPromise(uv_async_t* handle);
         static void OnCommit(uv_async_t* handle);
         static void OnAccepted(uv_async_t* handle);
         static void OnRejected(uv_async_t* handle);
-        static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
-        static void OnHeartbeatTick(uv_timer_t* handle);
-        static void OnHeartbeatTimeout(uv_timer_t* handle);
+
 #define DECLARE_MESSAGE_HANDLER(Name) \
         static void Handle##Name##Message(HandleMessageTask* task);
         FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
-        static void* SessionThread(void* data);
     public:
+        PeerSession(uv_loop_t* loop, const NodeAddress& address):
+            Session(loop),
+            info_(UUID(), address),
+            head_(),
+            disconnect_(),
+            prepare_(),
+            promise_(),
+            commit_(),
+            accepted_(),
+            rejected_(){
+            disconnect_.data = this;
+            prepare_.data = this;
+            promise_.data = this;
+            commit_.data = this;
+            accepted_.data = this;
+            rejected_.data = this;
+            uv_async_init(loop, &disconnect_, &OnShutdown);
+            uv_async_init(loop, &prepare_, &OnPrepare);
+            uv_async_init(loop, &promise_, &OnPromise);
+            uv_async_init(loop, &commit_, &OnCommit);
+            uv_async_init(loop, &accepted_, &OnAccepted);
+            uv_async_init(loop, &rejected_, &OnRejected);
+        }
+        ~PeerSession() = default;
+
         Peer GetInfo() const{
             return info_;
         }
@@ -147,15 +173,6 @@ namespace Token{
 
         NodeAddress GetAddress() const{
             return info_.GetAddress();
-        }
-
-        bool Connect(){
-            int err;
-            if((err = pthread_create(&thread_, NULL, &SessionThread, this)) != 0){
-                LOG(WARNING) << "couldn't start session thread: " << strerror(err);
-                return false;
-            }
-            return true;
         }
 
         void SendPrepare(){
@@ -177,10 +194,24 @@ namespace Token{
         void SendCommit(){
             uv_async_send(&commit_);
         }
+    };
 
-        static PeerSession* NewInstance(uv_loop_t* loop, const NodeAddress& address){
-            return new PeerSession(loop, address);
-        }
+    class PeerSessionManager{
+    private:
+        PeerSessionManager() = delete;
+    public:
+        ~PeerSessionManager() = delete;
+
+        static bool Initialize();
+        static bool Shutdown();
+        static bool IsConnectedTo(const UUID& uuid);
+        static bool IsConnectedTo(const NodeAddress& address);
+        static bool ConnectTo(const NodeAddress& address);
+        static int32_t GetNumberOfConnectedPeers();
+        static std::shared_ptr<PeerSession> GetSession(const UUID& uuid);
+        static std::shared_ptr<PeerSession> GetSession(const NodeAddress& address);
+        static void BroadcastPrepare();
+        static void BroadcastCommit();
     };
 }
 

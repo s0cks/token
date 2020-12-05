@@ -36,13 +36,12 @@ namespace Token{
 
         GetProperty(PROPERTY_SERVER, libconfig::Setting::TypeGroup);
         SetServerID(PROPERTY_SERVER_ID_DEFAULT);
-
+        SetMaxNumberOfPeers(PROPERTY_SERVER_MAXPEERS_DEFAULT);
         if(HasEnvironmentVariable(ENVIRONMENT_TOKEN_CALLBACK_ADDRESS)){
             SetServerCallbackAddress(NodeAddress(GetEnvironmentVariable(ENVIRONMENT_TOKEN_CALLBACK_ADDRESS)));
         } else{
             SetServerCallbackAddress(NodeAddress());
         }
-
         std::set<NodeAddress> peers;
         SetPeerList(peers);
         return true;
@@ -236,5 +235,20 @@ namespace Token{
             return false;
         }
         return true;
+    }
+
+    int32_t BlockChainConfiguration::GetMaxNumberOfPeers(){
+        return GetServerProperties().lookup(PROPERTY_SERVER_MAXPEERS);
+    }
+
+    bool BlockChainConfiguration::SetMaxNumberOfPeers(int32_t value){
+        LOCK_GUARD;
+        libconfig::Setting& server = GetServerProperties();
+        libconfig::Setting& property =
+                server.exists(PROPERTY_SERVER_MAXPEERS)
+              ? server.lookup(PROPERTY_SERVER_MAXPEERS)
+              : server.add(PROPERTY_SERVER_MAXPEERS, libconfig::Setting::TypeInt);
+        property = value;
+        return SaveConfiguration();
     }
 }

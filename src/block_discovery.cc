@@ -105,16 +105,10 @@ namespace Token{
             LOG(WARNING) << "couldn't schedule new snapshot!";
     }
 
-    static inline bool
-    Broadcast(Block* blk){
-        BlockMessage msg((*blk));
-        return Server::Broadcast(&msg);
-    }
-
     void BlockDiscoveryThread::HandleVotingPhase(Proposal* proposal){
         LOG(INFO) << "proposal " << proposal << " entering voting phase";
         proposal->SetPhase(Proposal::Phase::kVotingPhase);
-        Server::BroadcastPrepare();
+        PeerSessionManager::BroadcastPrepare();
         proposal->WaitForRequiredResponses();
         CHECK_STATUS(proposal);
     }
@@ -122,7 +116,7 @@ namespace Token{
     void BlockDiscoveryThread::HandleCommitPhase(Proposal* proposal){
         LOG(INFO) << "proposal " << proposal << " entering commit phase";
         proposal->SetPhase(Proposal::Phase::kCommitPhase);
-        Server::BroadcastCommit();
+        PeerSessionManager::BroadcastCommit();
         proposal->WaitForRequiredResponses();
         CHECK_STATUS(proposal);
     }
@@ -211,7 +205,7 @@ namespace Token{
 
             if(HasProposal()){
                 Proposal* proposal = GetProposal();
-                PeerSession* proposer = proposal->GetPeer();
+                std::shared_ptr<PeerSession> proposer = proposal->GetPeer();
                 Hash hash = proposal->GetHash();
 
                 LOG(INFO) << "proposal " << hash << " has been started by " << proposal->GetProposer();

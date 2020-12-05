@@ -1,3 +1,4 @@
+#include "peer.h"
 #include "server.h"
 #include "proposal.h"
 
@@ -9,8 +10,8 @@ namespace Token{
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
 
-    PeerSession* Proposal::GetPeer() const{
-        return Server::GetPeer(GetProposer());
+    std::shared_ptr<PeerSession> Proposal::GetPeer() const{
+        return PeerSessionManager::GetSession(GetProposer());
     }
 
     Proposal::Phase Proposal::GetPhase(){
@@ -51,11 +52,11 @@ namespace Token{
         UNLOCK;
     }
 
-    void Proposal::WaitForRequiredResponses(int64_t required){
+    void Proposal::WaitForRequiredResponses(int required){
         LOG(INFO) << "waiting for " << required << " peers....";
 
         LOCK;
-        while((int64_t)(accepted_.size() + rejected_.size()) < required) WAIT;
+        while((int)(accepted_.size() + rejected_.size()) < required) WAIT;
         UNLOCK;
     }
 
@@ -102,8 +103,8 @@ namespace Token{
                 rejected_.find(node) != rejected_.end();
     }
 
-    int64_t Proposal::GetRequiredNumberOfPeers(){
-        int64_t peers = Server::GetNumberOfPeers();
+    int Proposal::GetRequiredNumberOfPeers(){
+        int32_t peers = PeerSessionManager::GetNumberOfConnectedPeers();
         if(peers == 0) return 0;
         else if(peers == 1) return 1;
         return peers / 2;

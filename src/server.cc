@@ -23,7 +23,7 @@ namespace Token{
     static Server::Status status_ = Server::Status::kOk;
     static UUID node_id_;
     static NodeAddress callback_;
-    static PeerSession* peers_[Server::kMaxNumberOfPeers];
+
 #define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
 #define LOCK std::unique_lock<std::mutex> lock(mutex_)
 #define WAIT cond_.wait(lock)
@@ -113,19 +113,6 @@ namespace Token{
         uv_stop(handle->loop);
     }
 
-    static inline void
-    ConnectToPeers(const std::set<NodeAddress>& peers){
-        for(auto& peer : peers){
-            if(Server::IsConnectedTo(peer)){
-                LOG(WARNING) << "already connected to peer: " << peer;
-                continue;
-            }
-
-            if(!Server::ConnectTo(peer))
-                LOG(WARNING) << "cannot connect to peer: " << peer;
-        }
-    }
-
     bool Server::Initialize(){
         if(!IsStopped()){
             LOG(WARNING) << "the server is already running.";
@@ -140,7 +127,7 @@ namespace Token{
         }
 
         LOG(INFO) << "connecting to peers....";
-        ConnectToPeers(peers);
+        //TODO: ConnectToPeers(peers);
         return Thread::Start("ServerThread", &HandleThread, 0) == 0;
     }
 
@@ -273,156 +260,6 @@ namespace Token{
         rbuff->Reset();
     }
 
-    bool Server::Broadcast(Message* msg){
-        LOCK_GUARD;
-        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
-            if(peers_[idx])
-                peers_[idx]->Send(msg);
-        }
-        return true;
-    }
-
-    bool Server::BroadcastPrepare(){
-        LOCK_GUARD;
-        for(int idx = 0;
-            idx < Server::kMaxNumberOfPeers;
-            idx++){
-            if(peers_[idx])
-                peers_[idx]->SendPrepare();
-        }
-        return true;
-    }
-
-    bool Server::BroadcastCommit(){
-        LOCK_GUARD;
-        for(int idx = 0;
-            idx < Server::kMaxNumberOfPeers;
-            idx++){
-            if(peers_[idx])
-                peers_[idx]->SendCommit();
-        }
-        return true;
-    }
-
-    bool Server::ConnectTo(const NodeAddress& address){
-        //-- Attention! --
-        // this is not a memory leak, the memory will be freed upon
-        // the session being closed
-        PeerSession* session = PeerSession::NewInstance(uv_loop_new(), address);
-        return session->Connect();
-    }
-
-    bool Server::IsConnectedTo(const NodeAddress& address){
-        LOCK_GUARD;
-        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
-            if(peers_[idx]){
-                Peer peer = peers_[idx]->GetInfo();
-                if(peer.GetAddress() == address)
-                    return true;
-            }
-        }
-        return false;
-    }
-
-    bool Server::IsConnectedTo(const UUID& uuid){
-        LOCK_GUARD;
-        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
-            if(peers_[idx]){
-                Peer peer = peers_[idx]->GetInfo();
-                if(peer.GetID() == uuid)
-                    return true;
-            }
-        }
-        return false;
-    }
-
-    PeerSession* Server::GetPeer(const NodeAddress& address){
-        LOCK_GUARD;
-        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
-            if(peers_[idx]){
-                Peer peer = peers_[idx]->GetInfo();
-                if(peer.GetAddress() == address)
-                    return peers_[idx];
-            }
-        }
-        return nullptr;
-    }
-
-    PeerSession* Server::GetPeer(const UUID& uuid){
-        LOCK_GUARD;
-        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
-            if(peers_[idx]){
-                Peer peer = peers_[idx]->GetInfo();
-                LOG(INFO) << peer.GetID() << " <=> " << uuid;
-                if(peer.GetID() == uuid)
-                    return peers_[idx];
-            }
-        }
-        return nullptr;
-    }
-
-    bool Server::GetPeers(PeerList& peers){
-        LOCK_GUARD;
-        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
-            if(peers_[idx]){
-                NodeAddress paddr = peers_[idx]->GetAddress();
-                if(!peers.insert(paddr).second){
-                    LOG(WARNING) << "cannot add peer: " << peers_[idx]->GetInfo();
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    int Server::GetNumberOfPeers(){
-        LOCK_GUARD;
-        int count = 0;
-        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++) {
-            if(peers_[idx])
-                count++;
-        }
-        return count;
-    }
-
-    bool Server::SavePeerList(){
-        std::set<NodeAddress> peers;
-        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++) {
-            if(peers_[idx])
-                peers.insert(peers_[idx]->GetAddress());
-        }
-
-        if(!BlockChainConfiguration::SetPeerList(peers)){
-            LOG(WARNING) << "cannot save the server peer list.";
-            return false;
-        }
-        return true;
-    }
-
-    bool Server::RegisterPeer(PeerSession* session){
-        LOCK_GUARD;
-        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
-            if(!peers_[idx]){
-                peers_[idx] = session;
-                return SavePeerList();
-            }
-        }
-        LOG(WARNING) << "cannot register peer: " << session->GetInfo();
-        return false;
-    }
-
-    bool Server::UnregisterPeer(PeerSession* session){
-        LOCK_GUARD;
-        for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
-            if(peers_[idx] && peers_[idx]->GetInfo() == session->GetInfo()){
-                peers_[idx] = nullptr;
-                return SavePeerList();
-            }
-        }
-        LOG(WARNING) << "cannot unregister peer: " << session->GetInfo();
-        return false;
-    }
-
     void ServerSession::HandleNotFoundMessage(HandleMessageTask* task){
         //TODO: implement HandleNotFoundMessage
         LOG(WARNING) << "not implemented";
@@ -456,12 +293,7 @@ namespace Token{
             if(msg->IsNode()){
                 NodeAddress paddr = msg->GetCallbackAddress();
                 LOG(INFO) << "peer connected from: " << paddr;
-                if(!Server::IsConnectedTo(paddr)){
-                    LOG(WARNING) << "couldn't find peer: " << id << ", connecting to peer " << paddr << "....";
-                    if(!Server::ConnectTo(paddr)){
-                        LOG(WARNING) << "couldn't connect to peer: " << paddr;
-                    }
-                }
+                PeerSessionManager::ConnectTo(paddr);
             }
         }
     }
@@ -569,7 +401,7 @@ namespace Token{
 
         if(!BlockPool::HasBlock(hash)){
             BlockPool::PutBlock(hash, &blk);
-            Server::Broadcast(InventoryMessage::NewInstance(blk));
+            //TODO: Server::Broadcast(InventoryMessage::NewInstance(blk));
         }
     }
 
@@ -581,7 +413,7 @@ namespace Token{
         LOG(INFO) << "received transaction: " << hash;
         if(!TransactionPool::HasTransaction(hash)){
             TransactionPool::PutTransaction(hash, &tx);
-            Server::Broadcast(InventoryMessage::NewInstance(tx));
+            //TODO: Server::Broadcast(InventoryMessage::NewInstance(tx));
         }
     }
 
@@ -688,10 +520,13 @@ namespace Token{
         ServerSession* session = task->GetSession<ServerSession>();
         LOG(INFO) << "getting peers....";
         PeerList peers;
-        if(!Server::GetPeers(peers)){
-            LOG(ERROR) << "couldn't get list of peers from the server.";
-            return;
-        }
+        /*
+        TODO:
+            if(!Server::GetPeers(peers)){
+                LOG(ERROR) << "couldn't get list of peers from the server.";
+                return;
+            }
+         */
 
         session->Send(PeerListMessage::NewInstance(peers));
     }

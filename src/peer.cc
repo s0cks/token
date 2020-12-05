@@ -1,3 +1,5 @@
+#include <queue>
+
 #include "peer.h"
 #include "task.h"
 #include "server.h"
@@ -7,8 +9,8 @@
 
 namespace Token{
     void PeerSession::OnShutdown(uv_async_t* handle){
-        PeerSession* session = (PeerSession*)handle->data;
-        session->Disconnect();
+        //PeerSession* session = (PeerSession*)handle->data;
+        //TODO: session->Disconnect();
     }
 
     void PeerSession::OnPrepare(uv_async_t* handle){
@@ -91,65 +93,14 @@ namespace Token{
         session->Send(&msg);
     }
 
-    void PeerSession::OnHeartbeatTick(uv_timer_t* handle){
-        PeerSession* session = (PeerSession*)handle->data;
-        LOG(INFO) << "ping...";
-        session->Send(VersionMessage::NewInstance(Server::GetID()));
-        uv_timer_start(&session->hb_timeout_, &OnHeartbeatTimeout, Session::kHeartbeatTimeoutMilliseconds, 0);
-    }
-
-    void PeerSession::OnHeartbeatTimeout(uv_timer_t* handle){
-        PeerSession* session = (PeerSession*)handle->data;
-        LOG(WARNING) << "peer " << session->GetInfo() << " timed out, disconnecting...";
-        session->Disconnect();
-    }
-
-    void* PeerSession::SessionThread(void* data){
-        PeerSession* session = (PeerSession*)data;
-        uv_loop_t* loop = session->GetLoop();
-        NodeAddress address = session->GetAddress();
-        LOG(INFO) << "connecting to peer " << address << "....";
-
-        uv_timer_init(loop, &session->hb_timer_);
-        uv_timer_init(loop, &session->hb_timeout_);
-        uv_async_init(loop, &session->shutdown_, &OnShutdown);
-
-        uv_async_init(loop, &session->prepare_, &OnPrepare);
-        uv_async_init(loop, &session->promise_, &OnPromise);
-        uv_async_init(loop, &session->commit_, &OnCommit);
-        uv_async_init(loop, &session->accepted_, &OnAccepted);
-        uv_async_init(loop, &session->rejected_, &OnRejected);
-        uv_timer_start(&session->hb_timer_, &OnHeartbeatTick, 90 * 1000, Session::kHeartbeatIntervalMilliseconds);
-
-        struct sockaddr_in addr;
-        uv_ip4_addr(address.GetAddress().c_str(), address.GetPort(), &addr);
-
-
-        uv_connect_t conn;
-        conn.data = data;
-
-        int err;
-        if((err = uv_tcp_connect(&conn, session->GetHandle(), (const struct sockaddr*)&addr, &PeerSession::OnConnect)) != 0){
-            LOG(WARNING) << "couldn't connect to peer " << address << ": " << uv_strerror(err);
-            session->Disconnect();
-            goto cleanup;
-        }
-
-        uv_run(loop, UV_RUN_DEFAULT);
-    cleanup:
-        LOG(INFO) << "disconnected from peer: " << address;
-        pthread_exit(0);
-    }
-
     void PeerSession::OnConnect(uv_connect_t* conn, int status){
         PeerSession* session = (PeerSession*)conn->data;
         if(status != 0){
             LOG(WARNING) << "client accept error: " << uv_strerror(status);
-            session->Disconnect();
+            //TODO: session->Disconnect();
             return;
         }
 
-        Server::RegisterPeer(session);
         session->SetState(Session::kConnecting);
 
         Block* head = BlockChain::GetHead();
@@ -158,7 +109,7 @@ namespace Token{
 
         if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
             LOG(WARNING) << "client read error: " << uv_strerror(status);
-            session->Disconnect();
+            //TODO: session->Disconnect();
             return;
         }
     }
@@ -244,7 +195,6 @@ namespace Token{
 
         //TODO: session->SetHead(msg->GetHead());
         if(session->IsConnecting()){
-            Server::RegisterPeer(session);
             session->SetInfo(Peer(msg->GetID(), msg->GetCallbackAddress()));
             LOG(INFO) << "connected to peer: " << session->GetInfo();
             session->SetState(Session::kConnected);
@@ -364,5 +314,329 @@ namespace Token{
 
     void PeerSession::HandlePeerListMessage(HandleMessageTask* task){
         //TODO: implement PeerSession::HandlePeerListMessage(HandleMessageTask*);
+    }
+
+    static std::mutex session_queue_mutex_;
+    static std::condition_variable session_queue_cond_;
+    static std::queue<NodeAddress> session_queue_;
+
+    static inline bool Queue(const NodeAddress& paddress){
+        std::unique_lock<std::mutex> lock(session_queue_mutex_);
+        if((int32_t)session_queue_.size() == BlockChainConfiguration::GetMaxNumberOfPeers())
+            return false;
+        session_queue_.push(paddress);
+        session_queue_cond_.notify_one();
+        return true;
+    }
+
+    static inline NodeAddress Dequeue(){
+        std::unique_lock<std::mutex> lock(session_queue_mutex_);
+        while(session_queue_.empty())
+            session_queue_cond_.wait(lock);
+        NodeAddress next = session_queue_.front();
+        session_queue_.pop();
+        return next;
+    }
+
+#define FOR_EACH_PEER_SESSION_MANAGER_STATE(V) \
+    V(Starting)                                \
+    V(Idle)                                    \
+    V(Connected)                               \
+    V(Stopping)                               \
+    V(Stopped)
+
+#define FOR_EACH_PEER_SESSION_MANAGER_STATUS(V) \
+    V(Ok)                                       \
+    V(Warning)                                  \
+    V(Error)
+
+    class PeerSessionThread{
+    public:
+        enum State{
+#define DEFINE_STATE(Name) k##Name,
+            FOR_EACH_PEER_SESSION_MANAGER_STATE(DEFINE_STATE)
+#undef DEFINE_STATE
+        };
+
+        friend std::ostream& operator<<(std::ostream& stream, const State& state){
+            switch(state){
+#define DEFINE_TOSTRING(Name) \
+                case State::k##Name: \
+                    stream << #Name; \
+                    return stream;
+                FOR_EACH_PEER_SESSION_MANAGER_STATE(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
+                default:
+                    stream << "Unknown";
+                    return stream;
+            }
+        }
+
+        enum Status{
+#define DEFINE_STATUS(Name) k##Name,
+            FOR_EACH_PEER_SESSION_MANAGER_STATUS(DEFINE_STATUS)
+#undef DEFINE_STATUS
+        };
+
+        friend std::ostream& operator<<(std::ostream& stream, const Status& status){
+            switch(status){
+#define DEFINE_TOSTRING(Name) \
+                case Status::k##Name: \
+                    stream << #Name; \
+                    return stream;
+                FOR_EACH_PEER_SESSION_MANAGER_STATUS(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
+            }
+        }
+    private:
+        pthread_t thread_;
+        std::mutex mutex_;
+        std::condition_variable cond_;
+        State state_;
+        Status status_;
+        uv_loop_t* loop_;
+        std::shared_ptr<PeerSession> session_;
+
+        void SetCurrentSession(const std::shared_ptr<PeerSession>& session){
+            std::unique_lock<std::mutex> guard(mutex_);
+            session_ = session;
+        }
+
+        std::shared_ptr<PeerSession> CreateNewSession(const NodeAddress& address){
+            std::unique_lock<std::mutex> guard(mutex_);
+            session_ = std::make_shared<PeerSession>(GetLoop(), address);
+            return session_;
+        }
+
+        static void* HandleThread(void* data){
+            PeerSessionThread* thread = (PeerSessionThread*)data;
+            thread->SetState(State::kStarting);
+
+            // Startup logic here
+
+            thread->SetState(State::kIdle);
+            while(!thread->IsStopping()){
+                NodeAddress paddr = Dequeue();
+                LOG(INFO) << "connecting to peer: " << paddr;
+                std::shared_ptr<PeerSession> session = thread->CreateNewSession(paddr);
+                thread->SetState(State::kConnected); //TODO: fix this is not "connected" it's connecting...
+                if(!session->Connect()){
+                    LOG(WARNING) << "couldn't connect to peer " << paddr << ", rescheduling...";
+                    //TODO: reschedule peer connection
+                    continue;
+                }
+                LOG(INFO) << "disconnected from peer: " << paddr;
+            }
+
+            pthread_exit(0);
+        }
+    public:
+        PeerSessionThread(uv_loop_t* loop=uv_loop_new()):
+            thread_(),
+            mutex_(),
+            cond_(),
+            state_(),
+            status_(),
+            loop_(loop){}
+        ~PeerSessionThread(){
+            if(loop_)
+                uv_loop_delete(loop_);
+        }
+
+        uv_loop_t* GetLoop() const{
+            return loop_;
+        }
+
+        State GetState(){
+            std::lock_guard<std::mutex> guard(mutex_);
+            return state_;
+        }
+
+        void SetState(const State& state){
+            std::lock_guard<std::mutex> guard(mutex_);
+            state_ = state;
+        }
+
+        Status GetStatus(){
+            std::lock_guard<std::mutex> guard(mutex_);
+            return status_;
+        }
+
+        void SetStatus(const Status& status){
+            std::lock_guard<std::mutex> guard(mutex_);
+            status_ = status;
+        }
+
+        std::shared_ptr<PeerSession> GetCurrentSession(){
+            std::lock_guard<std::mutex> guard(mutex_);
+            return session_;
+        }
+
+#define DEFINE_CHECK(Name) \
+        bool Is##Name(){ return GetState() == State::k##Name; }
+        FOR_EACH_PEER_SESSION_MANAGER_STATE(DEFINE_CHECK)
+#undef DEFINE_CHECK
+
+#define DEFINE_CHECK(Name) \
+        bool Is##Name(){ return GetStatus() == Status::k##Name; }
+        FOR_EACH_PEER_SESSION_MANAGER_STATUS(DEFINE_CHECK)
+#undef DEFINE_CHECK
+
+        bool Start(){
+            int result;
+            pthread_attr_t thread_attr;
+            if((result = pthread_attr_init(&thread_attr)) != 0){
+                LOG(WARNING) << "couldn't initialize the thread attributes: " << strerror(result);
+                return false;
+            }
+
+            if((result = pthread_create(&thread_, &thread_attr, &HandleThread, this)) != 0){
+                LOG(WARNING) << "couldn't start the session thread: " << strerror(result);
+                return false;
+            }
+
+            if((result = pthread_attr_destroy(&thread_attr)) != 0){
+                LOG(WARNING) << "couldn't destroy the thread attributes: " << strerror(result);
+                return false;
+            }
+            return true;
+        }
+    };
+
+    static std::mutex mutex_;
+    static std::condition_variable cond_;
+    static std::unique_ptr<PeerSessionThread>* threads_;
+
+#define LOCK_GUARD std::lock_guard<std::mutex> __guard__(mutex_)
+#define LOCK std::unique_lock<std::mutex> __lock__(mutex_)
+#define WAIT cond_.wait(__lock__)
+#define SIGNAL_ONE cond_.notify_one()
+#define SIGNAL_ALL cond_.notify_all()
+
+    bool PeerSessionManager::Initialize(){
+        LOCK_GUARD;
+
+        int32_t nworkers = BlockChainConfiguration::GetMaxNumberOfPeers();
+        threads_ = new std::unique_ptr<PeerSessionThread>[nworkers];
+        for(int32_t idx = 0;
+            idx < nworkers;
+            idx++){
+#ifdef TOKEN_DEBUG
+            LOG(INFO) << "starting peer session thread #" << idx << "....";
+#endif//TOKEN_DEBUG
+            threads_[idx] = std::unique_ptr<PeerSessionThread>(new PeerSessionThread());
+            threads_[idx]->Start();
+        }
+
+        PeerList peers;
+        if(!BlockChainConfiguration::GetPeerList(peers)){
+            LOG(WARNING) << "couldn't get list of peers from the configuration.";
+            return true;
+        }
+
+        for(auto& it : peers)
+            Queue(it);
+        return true;
+    }
+
+    bool PeerSessionManager::Shutdown(){
+        LOG(WARNING) << "PeerSessionManager::Shutdown() - Not Implemented Yet."; //TODO: Implement PeerSessionManager::Shutdown;
+        return false;
+    }
+
+    std::shared_ptr<PeerSession> PeerSessionManager::GetSession(const NodeAddress& address){
+        int32_t nworkers = BlockChainConfiguration::GetMaxNumberOfPeers();
+
+        LOCK_GUARD;
+        for(int32_t idx = 0; idx < nworkers; idx++){
+            std::unique_ptr<PeerSessionThread>& thread = threads_[idx];
+            if(thread->IsConnected()){
+                std::shared_ptr<PeerSession> session = thread->GetCurrentSession();
+                if(session->GetAddress() == address)
+                    return session;
+            }
+        }
+        return nullptr;
+    }
+
+    std::shared_ptr<PeerSession> PeerSessionManager::GetSession(const UUID& uuid){
+        int32_t nworkers = BlockChainConfiguration::GetMaxNumberOfPeers();
+
+        LOCK_GUARD;
+        for(int32_t idx = 0; idx < nworkers; idx++){
+            std::unique_ptr<PeerSessionThread>& thread = threads_[idx];
+            if(thread->IsConnected()){
+                std::shared_ptr<PeerSession> session = thread->GetCurrentSession();
+                if(session->GetID() == uuid)
+                    return session;
+            }
+        }
+        return nullptr;
+    }
+
+    int32_t PeerSessionManager::GetNumberOfConnectedPeers(){
+        int32_t nworkers = BlockChainConfiguration::GetMaxNumberOfPeers();
+        int32_t count = 0;
+
+        LOCK_GUARD;
+        for(int32_t idx = 0; idx < nworkers; idx++){
+            if(threads_[idx]->IsConnected())
+                count++;
+        }
+        return count;
+    }
+
+    bool PeerSessionManager::ConnectTo(const NodeAddress& address){
+        if(IsConnectedTo(address))
+            return false;
+        return Queue(address);
+    }
+
+    bool PeerSessionManager::IsConnectedTo(const UUID& uuid){
+        int32_t nworkers = BlockChainConfiguration::GetMaxNumberOfPeers();
+        LOCK_GUARD;
+        for(int32_t idx = 0; idx < nworkers; idx++){
+            std::unique_ptr<PeerSessionThread>& thread = threads_[idx];
+            if(thread->IsConnected()){
+                std::shared_ptr<PeerSession> session = thread->GetCurrentSession();
+                if(session->GetID() == uuid)
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    bool PeerSessionManager::IsConnectedTo(const NodeAddress& address){
+        int32_t nworkers = BlockChainConfiguration::GetMaxNumberOfPeers();
+        LOCK_GUARD;
+        for(int32_t idx = 0; idx < nworkers; idx++){
+            std::unique_ptr<PeerSessionThread>& thread = threads_[idx];
+            if(thread->IsConnected()){
+                std::shared_ptr<PeerSession> session = thread->GetCurrentSession();
+                if(session->GetAddress() == address)
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    void PeerSessionManager::BroadcastPrepare(){
+        int32_t nworkers = BlockChainConfiguration::GetMaxNumberOfPeers();
+        LOCK_GUARD;
+        for(int32_t idx = 0; idx < nworkers; idx++){
+            std::unique_ptr<PeerSessionThread>& thread = threads_[idx];
+            if(thread->IsConnected())
+                thread->GetCurrentSession()->SendPrepare();
+        }
+    }
+
+    void PeerSessionManager::BroadcastCommit(){
+        int32_t nworkers = BlockChainConfiguration::GetMaxNumberOfPeers();
+        LOCK_GUARD;
+        for(int32_t idx = 0; idx < nworkers; idx++){
+            std::unique_ptr<PeerSessionThread>& thread = threads_[idx];
+            if(thread->IsConnected())
+                thread->GetCurrentSession()->SendCommit();
+        }
     }
 }

@@ -163,7 +163,7 @@ namespace Token{
         void SetPhase(const Phase& phase);
         void SetStatus(const Result& result);
 
-        static int64_t GetRequiredNumberOfPeers();
+        static int GetRequiredNumberOfPeers();
     public:
         Proposal(const RawProposal& proposal):
             Object(Type::kProposalType),
@@ -220,7 +220,7 @@ namespace Token{
             return raw_.Encode(buff);
         }
 
-        PeerSession* GetPeer() const;
+        std::shared_ptr<PeerSession> GetPeer() const;
         Phase GetPhase();
         Result GetResult();
         int64_t GetNumberOfAccepted();
@@ -231,7 +231,7 @@ namespace Token{
         void RejectProposal(const std::string& node);
         void WaitForPhase(const Phase& phase);
         void WaitForResult(const Result& result);
-        void WaitForRequiredResponses(int64_t required=GetRequiredNumberOfPeers());
+        void WaitForRequiredResponses(int required=GetRequiredNumberOfPeers());
 
 #define DEFINE_PHASE_CHECK(Name) \
         inline bool Is##Name() { return GetPhase() == Proposal::k##Name##Phase; }

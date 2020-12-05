@@ -60,15 +60,10 @@ namespace Token{
 #undef DEFINE_TOSTRING
             }
         }
-
-        static const int kMaxNumberOfPeers = 16;
     private:
         Server() = delete;
 
         static uv_tcp_t* GetHandle();
-        static bool RegisterPeer(PeerSession* session);
-        static bool UnregisterPeer(PeerSession* session);
-        static bool SavePeerList();
         static void SetStatus(Status status);
         static void SetState(State state);
         static void HandleThread(uword parameter);
@@ -85,21 +80,6 @@ namespace Token{
         static void WaitForState(State state);
         static bool Initialize();
         static bool Shutdown();
-        static bool Broadcast(Message* msg);
-        static bool BroadcastPrepare();
-        static bool BroadcastCommit();
-        static bool ConnectTo(const NodeAddress& address);
-        static bool IsConnectedTo(const NodeAddress& address);
-        static bool IsConnectedTo(const UUID& uuid);
-        static bool GetPeers(PeerList& peers);
-        static int GetNumberOfPeers();
-        static PeerSession* GetPeer(const NodeAddress& address);
-        static PeerSession* GetPeer(const UUID& uuid);
-
-        static inline bool
-        ConnectTo(const std::string& address, uint32_t port){
-            return ConnectTo(NodeAddress(address, port));
-        }
 
 #define DEFINE_STATE_CHECK(Name) \
         static inline bool Is##Name(){ return GetState() == Server::k##Name; }

@@ -38,6 +38,10 @@ namespace Token{
 #define PROPERTY_SERVER_PEER_LIST "Peers"
 #define PROPERTY_SERVER_PEER_LIST_DEFAULT ({})
 
+// Server.MaxNumberOfPeers := 16
+#define PROPERTY_SERVER_MAXPEERS "MaxNumberOfPeers"
+#define PROPERTY_SERVER_MAXPEERS_DEFAULT 16
+
     class BlockChainConfiguration{
     private:
         BlockChainConfiguration() = delete;
@@ -60,14 +64,25 @@ namespace Token{
     public:
         ~BlockChainConfiguration() = delete;
         static bool Initialize();
-        static bool GetPeerList(std::set<NodeAddress>& peers);
+
+        // Health Check Service
+        // HealthCheck.Port
         static int32_t GetHealthCheckPort();
-        static UUID GetSererID();
-        static NodeAddress GetServerCallbackAddress();
-        static bool SetPeerList(const std::set<NodeAddress>& peers);
         static bool SetHealthCheckPort(int32_t port);
+
+        // Server
+        // Server.Id
+        static UUID GetSererID();
         static bool SetServerID(const UUID& uuid);
+        // Server.CallbackAddress
+        static NodeAddress GetServerCallbackAddress();
         static bool SetServerCallbackAddress(const NodeAddress& address);
+        // Server.MaxNumberOfPeers
+        static int32_t GetMaxNumberOfPeers();
+        static bool SetMaxNumberOfPeers(int32_t value);
+        // Server.Peers
+        static bool GetPeerList(std::set<NodeAddress>& peers);
+        static bool SetPeerList(const std::set<NodeAddress>& peers);
 
         static inline std::string
         GetConfigurationFilename(){
