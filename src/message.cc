@@ -210,15 +210,15 @@ namespace Token{
         return true;
     }
 
-    Proposal* PaxosMessage::GetProposal() const{
+    ProposalPtr PaxosMessage::GetProposal() const{
         if(BlockDiscoveryThread::HasProposal()){
-            Proposal* proposal = BlockDiscoveryThread::GetProposal();
+            ProposalPtr proposal = BlockDiscoveryThread::GetProposal();
             if(proposal->GetRaw() == GetRaw())
                 return proposal;
             return nullptr; //TODO: invalid state?
         }
 
-        Proposal* proposal = new Proposal(raw_);
+        ProposalPtr proposal = std::make_shared<Proposal>(raw_);
         BlockDiscoveryThread::SetProposal(proposal);
         return proposal;
     }

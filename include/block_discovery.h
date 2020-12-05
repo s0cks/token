@@ -13,12 +13,7 @@ namespace Token{
 
         static void SetState(Thread::State state);
         static void HandleThread(uword parameter);
-        static void HandleVotingPhase(Proposal* proposal);
-        static void HandleCommitPhase(Proposal* proposal);
-        static void HandleQuorumPhase(Proposal* proposal);
-        static void OnAccepted(Proposal* proposal);
-        static void OnRejected(Proposal* proposal);
-        static Proposal* CreateNewProposal(Block* blk);
+        static ProposalPtr CreateNewProposal(Block* blk);
         static Block* CreateNewBlock(intptr_t size);
     public:
         ~BlockDiscoveryThread() = delete;
@@ -26,10 +21,15 @@ namespace Token{
         static Thread::State GetState();
         static void WaitForState(Thread::State state);
         static void SetBlock(Block* blk);
-        static void SetProposal(Proposal* proposal);
-        static bool HasProposal();
         static Block* GetBlock();
-        static Proposal* GetProposal();
+        static void SetProposal(const ProposalPtr& proposal);
+        static ProposalPtr GetProposal();
+        static bool HasProposal();
+
+        static inline void
+        ClearProposal(){
+            SetProposal(nullptr);
+        }
 
         static bool
         IsRunning(){

@@ -39,7 +39,7 @@ namespace Token{
         return result_;
     }
 
-    void Proposal::SetStatus(const Proposal::Result& result){
+    void Proposal::SetResult(const Proposal::Result& result){
         LOCK;
         result_ = result;
         UNLOCK;

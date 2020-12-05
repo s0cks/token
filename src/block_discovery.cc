@@ -2,8 +2,10 @@
 #include "block_chain.h"
 #include "async_task.h"
 #include "server.h"
+
 #include "block_validator.h"
 #include "block_processor.h"
+#include "proposal_handler.h"
 #include "transaction_validator.h"
 #include "peer/peer_session_manager.h"
 
@@ -13,7 +15,7 @@ namespace Token{
     static Thread::State state_ = Thread::State::kStopped;
 
     static Block* block_ = nullptr;
-    static Proposal* proposal_ = nullptr;
+    static ProposalPtr proposal_;
 
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
 #define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
@@ -89,72 +91,14 @@ namespace Token{
         TransactionPool::RemoveTransaction(hash);
     }
 
-    static inline void
-    OrphanBlock(Block* blk){
-        Hash hash = blk->GetHash();
-        LOG(WARNING) << "orphaning block: " << hash;
-        BlockPool::RemoveBlock(hash);
-    }
-
-    static inline void
-    ScheduleNewSnapshot(){
-        if(!FLAGS_enable_snapshots) return;
-        LOG(INFO) << "scheduling new snapshot....";
-        SnapshotTask* task = SnapshotTask::NewInstance();
-        if(!task->Submit())
-            LOG(WARNING) << "couldn't schedule new snapshot!";
-    }
-
-    void BlockDiscoveryThread::HandleVotingPhase(Proposal* proposal){
-        LOG(INFO) << "proposal " << proposal << " entering voting phase";
-        proposal->SetPhase(Proposal::Phase::kVotingPhase);
-        PeerSessionManager::BroadcastPrepare();
-        proposal->WaitForRequiredResponses();
-        CHECK_STATUS(proposal);
-    }
-
-    void BlockDiscoveryThread::HandleCommitPhase(Proposal* proposal){
-        LOG(INFO) << "proposal " << proposal << " entering commit phase";
-        proposal->SetPhase(Proposal::Phase::kCommitPhase);
-        PeerSessionManager::BroadcastCommit();
-        proposal->WaitForRequiredResponses();
-        CHECK_STATUS(proposal);
-    }
-
-    void BlockDiscoveryThread::HandleQuorumPhase(Proposal* proposal){
-        LOG(INFO) << "proposal " << proposal << " entering quorum phase";
-        proposal->SetPhase(Proposal::Phase::kQuorumPhase);
-        CHECK_FOR_REJECTION(proposal);
-        LOG(INFO) << "proposal " << proposal << " was accepted";
-        proposal->SetStatus(Proposal::Result::kAccepted);
-        OnAccepted(proposal);
-    }
-
-    void BlockDiscoveryThread::OnAccepted(Proposal* proposal){
-        Block* blk = GetBlock();
-        DefaultBlockProcessor processor;
-        if(!blk->Accept(&processor)){
-            LOG(WARNING) << "couldn't process block: " << blk;
-            return;
-        }
-        BlockPool::RemoveBlock(proposal->GetHash());
-        BlockChain::Append(blk);
-        ScheduleNewSnapshot();
-        SetProposal(nullptr);
-    }
-
-    void BlockDiscoveryThread::OnRejected(Proposal* proposal){
-        //TODO: implement BlockDiscoveryThread::OnRejected(Proposal*)
-    }
-
     Block* BlockDiscoveryThread::CreateNewBlock(intptr_t size){
         Block* blk = TransactionPoolBlockBuilder::Build(size);
         SetBlock(blk);
         return blk;
     }
 
-    Proposal* BlockDiscoveryThread::CreateNewProposal(Block* blk){
-        Proposal* proposal = new Proposal(blk, Server::GetID());
+    ProposalPtr BlockDiscoveryThread::CreateNewProposal(Block* blk){
+        ProposalPtr proposal = std::make_shared<Proposal>(blk, Server::GetID());
         SetProposal(proposal);
         return proposal;
     }
@@ -164,7 +108,7 @@ namespace Token{
         block_ = blk;
     }
 
-    void BlockDiscoveryThread::SetProposal(Proposal* proposal){
+    void BlockDiscoveryThread::SetProposal(const ProposalPtr& proposal){
         LOCK_GUARD;
         proposal_ = proposal;
     }
@@ -179,7 +123,7 @@ namespace Token{
         return block_;
     }
 
-    Proposal* BlockDiscoveryThread::GetProposal(){
+    ProposalPtr BlockDiscoveryThread::GetProposal(){
         LOCK_GUARD;
         return proposal_;
     }
@@ -204,68 +148,29 @@ namespace Token{
             }
 
             if(HasProposal()){
-                Proposal* proposal = GetProposal();
-                std::shared_ptr<PeerSession> proposer = proposal->GetPeer();
-                Hash hash = proposal->GetHash();
-
-                LOG(INFO) << "proposal " << hash << " has been started by " << proposal->GetProposer();
-                if(!BlockPool::HasBlock(hash)){
-                    LOG(INFO) << hash << " cannot be found, requesting block from peer: " << proposer->GetID();
-                    std::vector<InventoryItem> items = {
-                        InventoryItem(InventoryItem::kBlock, hash)
-                    };
-                    proposer->Send(GetDataMessage::NewInstance(items));
-                    LOG(INFO) << "waiting....";
-                    BlockPool::WaitForBlock(hash); //TODO: add timeout
-                    if(!BlockPool::HasBlock(hash)){
-                        LOG(INFO) << "cannot resolve block " << hash << ", rejecting....";
-                        proposer->SendRejected();
-                        //TODO: abandon proposal
-                        return;
-                    }
+                ProposalPtr proposal = GetProposal();
+                LOG(INFO) << "proposal #" << proposal->GetHeight() << " has been started by " << proposal->GetProposer();
+                PeerProposalHandler handler(proposal);
+                if(!handler.ProcessProposal()){
+                    LOG(WARNING) << "couldn't process proposal #" << proposal->GetHeight() << ".";
+                    return;
                 }
-                proposer->SendPromise();
-                Block* blk = BlockPool::GetBlock(hash);
-                LOG(INFO) << "proposal " << hash << " has entered the voting phase.";
+            } else if(GetNumberOfTransactionsInPool() >= 2){
+                Block* blk = CreateNewBlock(2);
+                Hash hash = blk->GetHash();
                 if(!BlockVerifier::IsValid(blk)){
-                    LOG(WARNING) << "cannot validate block " << hash << ", rejecting....";
-                    proposer->SendRejected();
-                    //TODO: abandon proposal
-                    return;
-                }
-
-                proposal->WaitForPhase(Proposal::kCommitPhase);
-                LOG(INFO) << "proposal " << hash << " has entered the commit phase.";
-                if(!BlockChain::Append(blk)){
-                    LOG(WARNING) << "couldn't append block " << hash << ", rejecting....";
-                    proposer->SendRejected();
-                    //TODO: abandon proposal
-                    return;
-                }
-                proposer->SendAccepted();
-
-                proposal->WaitForPhase(Proposal::kQuorumPhase);
-                LOG(INFO) << "proposal " << hash << " has finished, " << proposal->GetResult();
-            }
-
-            if(GetNumberOfTransactionsInPool() >= 2){
-                LOG(INFO) << "creating new block from transaction pool";
-                Block* block = CreateNewBlock(2);
-
-                LOG(INFO) << "validating block: " << block;
-                if(!BlockVerifier::IsValid(block)){
                     //TODO: orphan block properly
-                    LOG(WARNING) << "block " << block << " is invalid, orphaning....";
+                    LOG(WARNING) << "block " << blk << " is invalid, orphaning....";
                     return;
                 }
 
-                LOG(INFO) << "discovered block " << block << ", creating proposal....";
-                Proposal* proposal = CreateNewProposal(block);
-                HandleVotingPhase(proposal);
-                CHECK_FOR_REJECTION(proposal);
-                HandleCommitPhase(proposal);
-                CHECK_FOR_REJECTION(proposal);
-                HandleQuorumPhase(proposal);
+                LOG(INFO) << "discovered block " << hash << ", creating proposal....";
+                ProposalPtr proposal = CreateNewProposal(blk);
+                NewProposalHandler handler(proposal);
+                if(!handler.ProcessProposal()){
+                    LOG(WARNING) << "couldn't process proposal #" << proposal->GetHeight() << ".";
+                    return;
+                }
             }
         }
     }

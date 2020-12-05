@@ -345,7 +345,6 @@ namespace Token{
             POOL_ERROR(ss.str());
             return false;
         }
-
         LOG(INFO) << "added transaction to pool: " << hash;
         return true;
     }

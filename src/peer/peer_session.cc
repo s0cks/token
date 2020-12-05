@@ -90,7 +90,7 @@ namespace Token{
             return;
         }
 
-        Proposal* proposal = BlockDiscoveryThread::GetProposal();
+        ProposalPtr proposal = BlockDiscoveryThread::GetProposal();
         PrepareMessage msg(proposal);
         session->Send(&msg);
     }
@@ -102,7 +102,7 @@ namespace Token{
             return;
         }
 
-        Proposal* proposal = BlockDiscoveryThread::GetProposal();
+        ProposalPtr proposal = BlockDiscoveryThread::GetProposal();
         if(!proposal->IsProposal()){
             LOG(WARNING) << "cannot send another promise to the peer.";
             return;
@@ -119,7 +119,7 @@ namespace Token{
             return;
         }
 
-        Proposal* proposal = BlockDiscoveryThread::GetProposal();
+        ProposalPtr proposal = BlockDiscoveryThread::GetProposal();
         if(!proposal->IsCommit()){
             LOG(WARNING) << "cannot send another commit to the peer.";
             return;
@@ -136,8 +136,8 @@ namespace Token{
             return;
         }
 
-        Proposal* proposal = BlockDiscoveryThread::GetProposal();
-        if(!proposal->IsVoting() && !proposal->IsCommit()){
+        ProposalPtr proposal = BlockDiscoveryThread::GetProposal();
+        if(!proposal->IsProposal() && !proposal->IsVoting() && !proposal->IsCommit()){
             LOG(WARNING) << "cannot accept proposal #" << proposal->GetHeight() << " (" << proposal->GetPhase() << " [" << proposal->GetResult() << "])";
             return;
         }
@@ -153,8 +153,8 @@ namespace Token{
             return;
         }
 
-        Proposal* proposal = BlockDiscoveryThread::GetProposal();
-        if(!proposal->IsVoting() && !proposal->IsCommit()){
+        ProposalPtr proposal = BlockDiscoveryThread::GetProposal();
+        if(!proposal->IsProposal() && !proposal->IsVoting() && !proposal->IsCommit()){
             LOG(WARNING) << "cannot reject proposal #" << proposal->GetHeight() << " (" << proposal->GetPhase() << " [" << proposal->GetResult() << "])";
             return;
         }

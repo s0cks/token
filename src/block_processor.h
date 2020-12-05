@@ -28,6 +28,7 @@ namespace Token{
     };
 
     class SynchronizeBlockProcessor : public BlockProcessor{
+        //TODO: rename SynchronizeBlockProcessor
     public:
         SynchronizeBlockProcessor() = default;
         ~SynchronizeBlockProcessor() = default;

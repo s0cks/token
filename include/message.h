@@ -220,7 +220,7 @@ namespace Token{
         MessageType type_; //TODO: remove this bs
         RawProposal raw_;
 
-        PaxosMessage(MessageType type, Proposal* proposal):
+        PaxosMessage(MessageType type, ProposalPtr proposal):
             Message(),
             type_(type),
             raw_(proposal->GetRaw()){}
@@ -247,12 +247,12 @@ namespace Token{
             return raw_;
         }
 
-        Proposal* GetProposal() const;
+        ProposalPtr GetProposal() const;
     };
 
     class PrepareMessage : public PaxosMessage{
     public:
-        PrepareMessage(Proposal* proposal): PaxosMessage(Message::kPrepareMessageType, proposal){}
+        PrepareMessage(ProposalPtr proposal): PaxosMessage(Message::kPrepareMessageType, proposal){}
         PrepareMessage(Buffer* buff): PaxosMessage(Message::kPrepareMessageType, buff){}
         ~PrepareMessage(){}
 
@@ -265,7 +265,7 @@ namespace Token{
 
     class PromiseMessage : public PaxosMessage{
     public:
-        PromiseMessage(Proposal* proposal): PaxosMessage(Message::kPromiseMessageType, proposal){}
+        PromiseMessage(ProposalPtr proposal): PaxosMessage(Message::kPromiseMessageType, proposal){}
         PromiseMessage(Buffer* buff): PaxosMessage(Message::kPromiseMessageType, buff){}
         ~PromiseMessage(){}
 
@@ -278,7 +278,7 @@ namespace Token{
 
     class CommitMessage : public PaxosMessage{
     public:
-        CommitMessage(Proposal* proposal): PaxosMessage(Message::kCommitMessageType, proposal){}
+        CommitMessage(ProposalPtr proposal): PaxosMessage(Message::kCommitMessageType, proposal){}
         CommitMessage(Buffer* buff): PaxosMessage(Message::kCommitMessageType, buff){}
         ~CommitMessage(){}
 
@@ -291,7 +291,7 @@ namespace Token{
 
     class AcceptedMessage : public PaxosMessage{
     public:
-        AcceptedMessage(Proposal* proposal): PaxosMessage(Message::kAcceptedMessageType, proposal){}
+        AcceptedMessage(ProposalPtr proposal): PaxosMessage(Message::kAcceptedMessageType, proposal){}
         AcceptedMessage(Buffer* buff): PaxosMessage(Message::kAcceptedMessageType, buff){}
         ~AcceptedMessage(){}
 
@@ -304,7 +304,7 @@ namespace Token{
 
     class RejectedMessage : public PaxosMessage{
     public:
-        RejectedMessage(Proposal* proposal): PaxosMessage(Message::kRejectedMessageType, proposal){}
+        RejectedMessage(ProposalPtr proposal): PaxosMessage(Message::kRejectedMessageType, proposal){}
         RejectedMessage(Buffer* buff): PaxosMessage(Message::kRejectedMessageType, buff){}
         ~RejectedMessage(){}
 

@@ -110,6 +110,7 @@ namespace Token{
     class PrepareMessage;
     class Proposal : public Object{
         friend class ServerSession;
+        friend class ProposalHandler;
         friend class BlockDiscoveryThread;
     public:
         enum Phase{
@@ -161,7 +162,7 @@ namespace Token{
         std::set<std::string> rejected_;
 
         void SetPhase(const Phase& phase);
-        void SetStatus(const Result& result);
+        void SetResult(const Result& result);
 
         static int GetRequiredNumberOfPeers();
     public:
@@ -243,6 +244,8 @@ namespace Token{
         FOR_EACH_PROPOSAL_RESULT(DEFINE_RESULT_CHECK)
 #undef DEFINE_RESULT_CHECK
     };
+
+    typedef std::shared_ptr<Proposal> ProposalPtr;
 }
 
 #endif //TOKEN_PROPOSAL_H

@@ -355,39 +355,48 @@ namespace Token{
 
     void ServerSession::HandlePrepareMessage(HandleMessageTask* task){
         PrepareMessage* msg = task->GetMessage<PrepareMessage>();
-        Proposal* proposal = msg->GetProposal();
+        ProposalPtr proposal = msg->GetProposal();
+        if(!proposal){
+            LOG(ERROR) << "cannot get proposal from BlockDiscoveryThread.";
+            return;
+        }
+
         proposal->SetPhase(Proposal::kProposalPhase);
     }
 
     void ServerSession::HandlePromiseMessage(HandleMessageTask* task){
         ServerSession* session = task->GetSession<ServerSession>();
         PromiseMessage* msg = task->GetMessage<PromiseMessage>();
-        Proposal* proposal = msg->GetProposal();
-        proposal->SetPhase(Proposal::kVotingPhase);
-        proposal->AcceptProposal(session->GetID().ToString());//TODO: remove ToString()
+        ProposalPtr proposal = msg->GetProposal();
+        if(proposal->GetProposer() == Server::GetID()){
+            proposal->AcceptProposal(session->GetID().ToString());//TODO: remove ToString()
+        } else{
+            proposal->SetPhase(Proposal::kVotingPhase);
+        }
     }
 
     void ServerSession::HandleCommitMessage(HandleMessageTask* task){
         ServerSession* session = task->GetSession<ServerSession>();
         CommitMessage* msg = task->GetMessage<CommitMessage>();
-        Proposal* proposal = msg->GetProposal();
-        proposal->SetPhase(Proposal::kCommitPhase);
-        proposal->AcceptProposal(session->GetID().ToString()); //TODO: remove ToString()
+        ProposalPtr proposal = msg->GetProposal();
+        if(proposal->GetProposer() == Server::GetID()){
+            proposal->AcceptProposal(session->GetID().ToString());//TODO: remove ToString()
+        } else{
+            proposal->SetPhase(Proposal::kCommitPhase);
+        }
     }
 
     void ServerSession::HandleAcceptedMessage(HandleMessageTask* task){
         ServerSession* session = task->GetSession<ServerSession>();
         AcceptedMessage* msg = task->GetMessage<AcceptedMessage>();
-        Proposal* proposal = msg->GetProposal();
-        proposal->SetPhase(Proposal::kQuorumPhase);
+        ProposalPtr proposal = msg->GetProposal();
         proposal->AcceptProposal(session->GetID().ToString()); //TODO: remove ToString()
     }
 
     void ServerSession::HandleRejectedMessage(HandleMessageTask* task){
         ServerSession* session = task->GetSession<ServerSession>();
         AcceptedMessage* msg = task->GetMessage<AcceptedMessage>();
-        Proposal* proposal = msg->GetProposal();
-        proposal->SetPhase(Proposal::kQuorumPhase);
+        ProposalPtr proposal = msg->GetProposal();
         proposal->RejectProposal(session->GetID().ToString()); //TODO: remove ToString()
     }
 
