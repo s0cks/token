@@ -10,6 +10,7 @@ namespace Token{
         bool WriteBanner();
         bool WriteSystemInformation();
         bool WriteServerInformation();
+        bool WriteStackTrace();
     public:
         CrashReportWriter(const std::string& filename):
             TextFileWriter(filename){}

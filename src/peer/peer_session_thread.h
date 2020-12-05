@@ -12,8 +12,8 @@ namespace Token{
 #define FOR_EACH_PEER_SESSION_MANAGER_STATE(V) \
     V(Starting)                                \
     V(Idle)                                    \
-    V(Connected)                               \
-    V(Stopping)                               \
+    V(Running)                                 \
+    V(Stopping)                                \
     V(Stopped)
 
 #define FOR_EACH_PEER_SESSION_MANAGER_STATUS(V) \
@@ -58,6 +58,9 @@ namespace Token{
                     return stream;
                 FOR_EACH_PEER_SESSION_MANAGER_STATUS(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
+                default:
+                    stream << "Unknown";
+                    return stream;
             }
         }
 
@@ -131,6 +134,7 @@ namespace Token{
             return session_;
         }
 
+        std::string GetStatusMessage();
         bool Start();
         bool Stop();
 #define DEFINE_CHECK(Name) \

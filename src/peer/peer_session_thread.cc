@@ -2,6 +2,33 @@
 #include "peer/peer_session_manager.h"
 
 namespace Token{
+    std::string PeerSessionThread::GetStatusMessage(){
+        std::stringstream ss;
+        switch(GetState()){
+            case PeerSessionThread::kStarting:
+                ss << "Starting...";
+                break;
+            case PeerSessionThread::kIdle:
+                ss << "Idle.";
+                break;
+            case PeerSessionThread::kRunning:{
+                std::shared_ptr<PeerSession> session = GetCurrentSession();
+                ss << session->GetState() << " " << session->GetInfo();
+                break;
+            }
+            case PeerSessionThread::kStopped:
+                ss << "Stopped.";
+                break;
+            default:
+                ss << "Unknown!";
+                break;
+        }
+
+        ss << " ";
+        ss << "[" << GetStatus() << "]";
+        return ss.str();
+    }
+
     void* PeerSessionThread::HandleThread(void* data){
         PeerSessionThread* thread = (PeerSessionThread*)data;
         thread->SetState(State::kStarting);
@@ -11,32 +38,38 @@ namespace Token{
         pthread_setname_np(pthread_self(), truncated_name);
 
         // start-up logic here
-        thread->SetState(State::kIdle);
         while(!thread->IsStopping()){
+            thread->SetState(State::kIdle);
             PeerSessionManager::ConnectRequest request;
             if(PeerSessionManager::GetNextRequest(request, PeerSessionThread::kRequestTimeoutIntervalMilliseconds)){
                 NodeAddress paddr = request.GetAddress();
                 LOG(INFO) << "connecting to peer: " << paddr;
                 std::shared_ptr<PeerSession> session = thread->CreateNewSession(paddr);
-                thread->SetState(State::kConnected); //TODO: fix this is not "connected" it's connecting...
-                if(!session->Connect() && request.ShouldReschedule()){
-                    int32_t backoffs = request.GetNumberOfAttempts() * PeerSessionManager::kRetryBackoffSeconds;
-                    LOG(WARNING) << "couldn't connect to peer " << paddr << ", rescheduling (" << backoffs << "s)...";
-                    sleep(backoffs);
-                    if(!PeerSessionManager::RescheduleRequest(request))
-                        LOG(WARNING) << "couldn't reschedule peer: " << paddr;
+                thread->SetState(PeerSessionThread::kRunning);
+                if(!session->Connect()){
+                    if(request.ShouldReschedule()){
+                        int32_t backoffs = request.GetNumberOfAttempts() * PeerSessionManager::kRetryBackoffSeconds;
+                        LOG(WARNING) << "couldn't connect to peer " << paddr << ", rescheduling (" << backoffs << "s)...";
+                        sleep(backoffs);
+                        if(!PeerSessionManager::RescheduleRequest(request))
+                            LOG(WARNING) << "couldn't reschedule peer: " << paddr;
+                    } else{
+                        LOG(WARNING) << "couldn't connect to peer " << paddr << ".";
+                    }
                     continue;
                 }
 
                 if(session->IsError() && request.ShouldReschedule()){
-                    int32_t backoffs = request.GetNumberOfAttempts() * PeerSessionManager::kRetryBackoffSeconds;
-                    LOG(WARNING) << "couldn't connect to peer " << paddr << ", rescheduling (" << backoffs << "s)...";
-                    sleep(backoffs);
-                    if(!PeerSessionManager::RescheduleRequest(request))
-                        LOG(WARNING) << "couldn't reschedule peer: " << paddr;
-                    continue;
+                    if(request.ShouldReschedule()){
+                        int32_t backoffs = request.GetNumberOfAttempts() * PeerSessionManager::kRetryBackoffSeconds;
+                        LOG(WARNING) << "couldn't connect to peer " << paddr << ", rescheduling (" << backoffs << "s)...";
+                        sleep(backoffs);
+                        if(!PeerSessionManager::RescheduleRequest(request))
+                            LOG(WARNING) << "couldn't reschedule peer: " << paddr;
+                    } else{
+                        LOG(WARNING) << "couldn't connect to peer " << paddr << ".";
+                    }
                 }
-
                 LOG(INFO) << "disconnected from peer: " << paddr;
             }
         }
@@ -64,7 +97,7 @@ namespace Token{
     }
 
     bool PeerSessionThread::Stop(){
-        SetState(State::kStopping);
+        SetState(PeerSessionThread::kStopping);
 
         void** result = NULL;
         int err;

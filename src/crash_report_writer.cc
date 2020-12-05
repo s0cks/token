@@ -46,6 +46,20 @@ namespace Token{
         return true;
     }
 
+    bool CrashReportWriter::WriteStackTrace(){
+        Indent();
+        int32_t offset = 4;
+        int32_t depth = 20;
+        StackTrace trace(offset, depth);
+        for(int32_t idx = offset; idx < trace.GetNumberOfFrames(); idx++){
+            std::stringstream ss;
+            ss << (idx + 1 - offset) << ": " << trace[idx];
+            WriteLine(ss);
+        }
+        DeIndent();
+        return true;
+    }
+
     bool CrashReportWriter::WriteCrashReport(){
         LOG(INFO) << "generating crash report....";
         if(!WriteBanner()){
@@ -63,11 +77,14 @@ namespace Token{
             return false;
         }
 
+        if(!WriteStackTrace() || !NewLine()){
+            LOG(WARNING) << "couldn't write stack trace to crash report.";
+            return false;
+        }
+
         //TODO:
         // - write block chain information
         // - write thread information
-        // - write stack trace information
-
         LOG(INFO) << "crash report generated: " << GetFilename();
         return true;
     }

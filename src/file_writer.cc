@@ -97,7 +97,7 @@ namespace Token{
     }
 
     bool TextFileWriter::NewLine(){
-        return Write("\n");
+        return Write((const std::string&)"\n");
     }
 
     bool BinaryFileWriter::WriteBytes(uint8_t* bytes, intptr_t size){

@@ -29,6 +29,14 @@
 
 //TODO: cleanup
 namespace Token{
+#if defined(__linux__) || defined(__FreeBSD__)
+#define OS_IS_LINUX 1
+#elif defined(__APPLE__)
+#define OS_IS_OSX 1
+#elif defined(_WIN32)
+#define OS_IS_WINDOWS 1
+#endif
+
 #if defined(_M_X64) || defined(__x86_64__)
 #define ARCHITECTURE_IS_X64 1
 #elif defined(_M_IX86) || defined(__i386__)
