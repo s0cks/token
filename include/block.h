@@ -9,6 +9,8 @@
 
 namespace Token{
     class Block;
+    typedef std::shared_ptr<Block> BlockPtr;
+
     class BlockHeader{
     public:
         static const size_t kSize = sizeof(Timestamp) +
@@ -85,7 +87,7 @@ namespace Token{
             return bloom_.Contains(hash);
         }
 
-        Block* GetData() const;
+        BlockPtr GetData() const;
         bool Write(Buffer* buff) const;
 
         BlockHeader& operator=(const BlockHeader& other){
@@ -320,9 +322,9 @@ namespace Token{
             return stream;
         }
 
-        static Block Genesis();
+        static BlockPtr Genesis();
 
-        static inline Block*
+        static inline std::shared_ptr<Block>
         NewInstance(const std::string& filename){
             std::fstream fd(filename, std::ios::binary|std::ios::in);
             int64_t total_size = GetFilesize(filename);
@@ -331,7 +333,7 @@ namespace Token{
                 LOG(WARNING) << "couldn't read block from file: " << filename;
                 return nullptr;
             }
-            return new Block(&buffer);
+            return std::make_shared<Block>(&buffer);
         }
     };
 
@@ -439,14 +441,14 @@ namespace Token{
         static State GetState();
         static Status GetStatus();
         static std::string GetStatusMessage();
-        static bool Initialize();
         static bool Print();
+        static bool Initialize();
         static bool Accept(BlockPoolVisitor* vis);
         static bool RemoveBlock(const Hash& hash);
-        static bool PutBlock(const Hash& hash, Block* block);
+        static bool PutBlock(const Hash& hash, const BlockPtr& blk);
         static bool HasBlock(const Hash& hash);
         static bool GetBlocks(std::vector<Hash>& blocks);
-        static Block* GetBlock(const Hash& hash);
+        static BlockPtr GetBlock(const Hash& hash);
         static void WaitForBlock(const Hash& hash);
 
 #define DEFINE_STATE_CHECK(Name) \
@@ -466,7 +468,7 @@ namespace Token{
     public:
         virtual ~BlockPoolVisitor() = default;
         virtual bool VisitStart(){ return true; }
-        virtual bool Visit(Block* block) = 0;
+        virtual bool Visit(const BlockPtr& blk) = 0;
         virtual bool VisitEnd(){ return true; }
     };
 }

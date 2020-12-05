@@ -215,7 +215,7 @@ namespace Token{
             return InventoryItem(InventoryItem::kBlock, hash);
         }
 
-        bool ProcessBlock(Block* blk);
+        bool ProcessBlock(const BlockPtr& blk);
         Result DoWork();
     public:
         ~SynchronizeBlockChainTask() = default;

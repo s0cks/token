@@ -180,7 +180,7 @@ namespace Token{
             raw_(proposer, height, hash, timestamp),
             accepted_(),
             rejected_(){}
-        Proposal(Block* blk, const UUID& proposer, int64_t timestamp=GetCurrentTimestamp()):
+        Proposal(BlockPtr blk, const UUID& proposer, int64_t timestamp=GetCurrentTimestamp()):
             Proposal(proposer, blk->GetHeight(), blk->GetHash(), timestamp){}
         Proposal(const BlockHeader& blk, const UUID& proposer, int64_t timestamp=GetCurrentTimestamp()):
             Proposal(proposer, blk.GetHeight(), blk.GetHash(), timestamp){}

@@ -48,10 +48,10 @@ namespace Token{
         static leveldb::DB* GetIndex();
         static void SetState(State state);
         static void SetStatus(Status status);
-        static bool PutBlock(const Hash& hash, Block* blk);
+        static bool PutBlock(const Hash& hash, BlockPtr blk);
         static bool PutReference(const std::string& name, const Hash& hash);
         static bool RemoveReference(const std::string& name);
-        static bool Append(Block* blk);
+        static bool Append(const BlockPtr& blk);
     public:
         ~BlockChain() = delete;
 
@@ -64,10 +64,10 @@ namespace Token{
         static bool Print(bool is_detailed=false);
         static bool HasReference(const std::string& name);
         static Hash GetReference(const std::string& name);
-        static Block* GetBlock(const Hash& hash);
-        static Block* GetBlock(int64_t height);
-        static Block* GetHead();
-        static Block* GetGenesis();
+        static BlockPtr GetBlock(const Hash& hash);
+        static BlockPtr GetBlock(int64_t height);
+        static BlockPtr GetHead();
+        static BlockPtr GetGenesis();
         static int64_t GetNumberOfBlocks();
 
         static inline bool HasBlocks(){

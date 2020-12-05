@@ -48,7 +48,7 @@ namespace Token{
             return true;
         }
 
-        static bool IsValid(Block* blk, bool strict=false){
+        static bool IsValid(const BlockPtr& blk, bool strict=false){
             LOG(INFO) << "verifying block " << blk->GetHash();
             std::vector<Hash> valid;
             std::vector<Hash> invalid;

@@ -100,10 +100,10 @@ namespace Token{
             switch(mtype) {
                 case Message::MessageType::kVersionMessageType:{
                     //TODO: convert to ClientVerack or something better than this garble
-                    Block genesis = Block::Genesis();
+                    BlockPtr genesis = Block::Genesis();
                     NodeAddress callback;
                     Version version;
-                    VerackMessage msg(ClientType::kClient, client->GetID(), genesis.GetHeader(), version, callback);
+                    VerackMessage msg(ClientType::kClient, client->GetID(), genesis->GetHeader(), version, callback);
                     client->Send(&msg);
                     break;
                 }
@@ -147,7 +147,7 @@ namespace Token{
         return true; // no acknowledgement from server
     }
 
-    Block* ClientSession::GetBlock(const Hash& hash){
+    BlockPtr ClientSession::GetBlock(const Hash& hash){
         LOG(INFO) << "getting block: " << hash;
         if(IsConnecting()){
             LOG(INFO) << "waiting for the client to connect....";
@@ -163,7 +163,7 @@ namespace Token{
             Message* next = GetNextMessage();
 
             if(next->IsBlockMessage()){
-                return new Block(((BlockMessage*)next)->GetBlock());
+                return ((BlockMessage*)next)->GetBlock();
             } else if(next->IsNotFoundMessage()){
                 return nullptr;
             } else{

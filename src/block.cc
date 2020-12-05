@@ -24,7 +24,7 @@ namespace Token{
         bloom_(){
     }
 
-    Block* BlockHeader::GetData() const{
+    BlockPtr BlockHeader::GetData() const{
         return BlockChain::GetBlock(GetHash());
     }
 
@@ -40,7 +40,7 @@ namespace Token{
 //######################################################################################################################
 //                                          Block
 //######################################################################################################################
-    Block Block::Genesis(){
+    BlockPtr Block::Genesis(){
         int64_t idx;
         InputList inputs;
 
@@ -79,7 +79,7 @@ namespace Token{
             Transaction(1, inputs, outputs_b, 0),
             Transaction(2, inputs, outputs_c, 0),
         };
-        return Block(0, Hash(), transactions, 0);
+        return std::make_shared<Block>(0, Hash(), transactions, 0);
     }
 
     bool Block::ToJson(Json::Value& value) const{
@@ -199,6 +199,11 @@ namespace Token{
         status_ = status;
     }
 
+    BlockPool::Status BlockPool::GetStatus(){
+        LOCK_GUARD;
+        return status_;
+    }
+
     std::string BlockPool::GetStatusMessage(){
         std::stringstream ss;
         LOCK_GUARD;
@@ -272,7 +277,7 @@ namespace Token{
         return true;
     }
 
-    Block* BlockPool::GetBlock(const Hash& hash){
+    BlockPtr BlockPool::GetBlock(const Hash& hash){
         leveldb::ReadOptions options;
         std::string key = hash.HexString();
         std::string filename;
@@ -286,13 +291,12 @@ namespace Token{
             return nullptr;
         }
 
-        Block* blk = Block::NewInstance(filename);
+        BlockPtr blk = Block::NewInstance(filename);
         if(hash != blk->GetHash()){
             std::stringstream ss;
             ss << "couldn't verify block hash: " << hash;
             POOL_WARNING(ss.str());
             //TODO: better validation + error handling for UnclaimedTransaction data
-            delete blk;
             return nullptr;
         }
         return blk;
@@ -330,7 +334,7 @@ namespace Token{
         return true;
     }
 
-    bool BlockPool::PutBlock(const Hash& hash, Block* blk){
+    bool BlockPool::PutBlock(const Hash& hash, const BlockPtr& blk){
         leveldb::WriteOptions options;
         options.sync = true;
         std::string key = hash.HexString();
@@ -390,9 +394,8 @@ namespace Token{
                 std::string filename = (GetDataDirectory() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
 
-                Block* blk = Block::NewInstance(filename);
+                BlockPtr blk = Block::NewInstance(filename);
                 blocks.push_back(blk->GetHash());
-                delete blk;
             }
             closedir(dir);
             return true;
@@ -412,14 +415,9 @@ namespace Token{
                 std::string filename = (GetDataDirectory() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
 
-                Block* blk = Block::NewInstance(filename);
-                if(!vis->Visit(blk)){
-                    delete blk;
+                BlockPtr blk = Block::NewInstance(filename);
+                if(!vis->Visit(blk))
                     break;
-                }
-
-                delete blk;
-                continue;
             }
             closedir(dir);
         }
@@ -433,19 +431,8 @@ namespace Token{
         UNLOCK;
     }
 
-    class BlockPoolPrinter : public BlockPoolVisitor{
-    public:
-        BlockPoolPrinter() = default;
-        ~BlockPoolPrinter() = default;
-
-        bool Visit(Block* blk){
-            LOG(INFO) << blk->GetHash();
-            return true;
-        }
-    };
-
     bool BlockPool::Print(){
-        BlockPoolPrinter printer;
-        return Accept(&printer);
+        LOG(WARNING) << "BlockPool::Print() - Not Implemented Yet."; //TODO: Implement BlockPool::Print
+        return false;
     }
 }

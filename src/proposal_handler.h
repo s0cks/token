@@ -43,7 +43,7 @@ namespace Token{
             return proposal_->GetResult();
         }
 
-        virtual bool ProcessBlock(Block* blk) const = 0;
+        virtual bool ProcessBlock(const BlockPtr& blk) const = 0;
         virtual bool ProcessProposal() const = 0;
     };
 
@@ -53,7 +53,7 @@ namespace Token{
             ProposalHandler(proposal){}
         ~NewProposalHandler() = default;
 
-        bool ProcessBlock(Block* blk) const{
+        bool ProcessBlock(const BlockPtr& blk) const{
             DefaultBlockProcessor processor;
             return blk->Accept(&processor);
         }
@@ -88,7 +88,7 @@ namespace Token{
             ProposalHandler(proposal){}
         ~PeerProposalHandler() = default;
 
-        bool ProcessBlock(Block* blk) const{
+        bool ProcessBlock(const BlockPtr& blk) const{
             SynchronizeBlockProcessor processor;
             return blk->Accept(&processor);
         }
@@ -111,7 +111,7 @@ namespace Token{
                 }
             }
 
-            Block* blk = BlockPool::GetBlock(hash);
+            BlockPtr blk = BlockPool::GetBlock(hash);
             LOG(INFO) << "proposal " << hash << " has entered the voting phase.";
             if(!BlockVerifier::IsValid(blk)){
                 LOG(WARNING) << "cannot validate block " << hash << ", rejecting....";

@@ -66,7 +66,7 @@ namespace Token{
         return loop_;
     }
 
-    bool SynchronizeBlockChainTask::ProcessBlock(Block* block){
+    bool SynchronizeBlockChainTask::ProcessBlock(const BlockPtr& block){
         BlockHeader header = block->GetHeader();
         Hash hash = header.GetHash();
         SynchronizeBlockProcessor processor;
@@ -92,7 +92,7 @@ namespace Token{
                 BlockPool::WaitForBlock(hash);
             }
 
-            Block* blk = BlockPool::GetBlock(hash);
+            BlockPtr blk = BlockPool::GetBlock(hash);
             Hash phash = blk->GetPreviousHash();
             if(!BlockChain::HasBlock(phash)){
                 LOG(WARNING) << "parent block " << phash << " not found, resolving...";

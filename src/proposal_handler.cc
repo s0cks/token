@@ -4,7 +4,7 @@
 namespace Token{
     bool ProposalHandler::CommitProposal() const{
         Hash hash = GetProposal()->GetHash();
-        Block* blk = BlockPool::GetBlock(hash);
+        BlockPtr blk = BlockPool::GetBlock(hash);
         if(!ProcessBlock(blk)){
             LOG(WARNING) << "couldn't process block " << hash << ".";
             return false;

@@ -8,15 +8,33 @@ namespace Token{
 
         Printer(const google::LogSeverity& severity):
             severity_(severity){}
-
-        std::ostream& Stream(){
-            return LOG_AT_LEVEL(GetSeverity());
-        }
     public:
         virtual ~Printer() = default;
 
         google::LogSeverity GetSeverity() const{
             return severity_;
+        }
+    };
+
+    class ToStringPrinter : public Printer{
+    public:
+        ToStringPrinter(const google::LogSeverity& severity): Printer(severity){}
+        ~ToStringPrinter() = default;
+
+        bool Print(Object* obj) const{
+            LOG_AT_LEVEL(GetSeverity()) << obj->ToString();
+            return true;
+        }
+    };
+
+    class HashPrinter : public Printer{
+    public:
+        HashPrinter(const google::LogSeverity& severity): Printer(severity){}
+        ~HashPrinter() = default;
+
+        bool Print(BinaryObject* obj) const{
+            LOG_AT_LEVEL(GetSeverity()) << obj->GetHash();
+            return true;
         }
     };
 }

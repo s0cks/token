@@ -13,15 +13,15 @@ namespace Token{
 
         static void SetState(Thread::State state);
         static void HandleThread(uword parameter);
-        static ProposalPtr CreateNewProposal(Block* blk);
-        static Block* CreateNewBlock(intptr_t size);
+        static ProposalPtr CreateNewProposal(BlockPtr blk);
+        static BlockPtr CreateNewBlock(intptr_t size);
     public:
         ~BlockDiscoveryThread() = delete;
 
         static Thread::State GetState();
         static void WaitForState(Thread::State state);
-        static void SetBlock(Block* blk);
-        static Block* GetBlock();
+        static void SetBlock(BlockPtr blk);
+        static BlockPtr GetBlock();
         static void SetProposal(const ProposalPtr& proposal);
         static ProposalPtr GetProposal();
         static bool HasProposal();

@@ -279,10 +279,9 @@ namespace Token{
         ServerSession* session = task->GetSession<ServerSession>();
         VerackMessage* msg = task->GetMessage<VerackMessage>();
 
-        Block* head = BlockChain::GetHead();
+        BlockPtr head = BlockChain::GetHead();
         VerackMessage verack(ClientType::kNode, Server::GetID(), head->GetHeader());
         session->Send(&verack);
-        delete head;
 
         UUID id = msg->GetID();
         if(session->IsConnecting()){
@@ -312,7 +311,7 @@ namespace Token{
             LOG(INFO) << "searching for: " << hash;
             if(item.ItemExists()){
                 if(item.IsBlock()){
-                    Block* block = nullptr;
+                    BlockPtr block;
                     if(BlockChain::HasBlock(hash)){
                         block = BlockChain::GetBlock(hash);
                     } else if(BlockPool::HasBlock(hash)){
@@ -322,8 +321,7 @@ namespace Token{
                         response.push_back(NotFoundMessage::NewInstance());
                         break;
                     }
-                    response.push_back(new BlockMessage((*block)));
-                    delete block;
+                    response.push_back(new BlockMessage(block));
                 } else if(item.IsTransaction()){
                     if(!TransactionPool::HasTransaction(hash)){
                         LOG(WARNING) << "cannot find transaction: " << hash;
@@ -402,12 +400,10 @@ namespace Token{
 
     void ServerSession::HandleBlockMessage(HandleMessageTask* task){
         BlockMessage* msg = task->GetMessage<BlockMessage>();
-
-        Block& blk = msg->GetBlock();
-        Hash hash = blk.GetHash();
-
+        BlockPtr blk = msg->GetBlock();
+        Hash hash = blk->GetHash();
         if(!BlockPool::HasBlock(hash)){
-            BlockPool::PutBlock(hash, &blk);
+            BlockPool::PutBlock(hash, blk);
             //TODO: Server::Broadcast(InventoryMessage::NewInstance(blk));
         }
     }
@@ -508,13 +504,13 @@ namespace Token{
             intptr_t amt = std::min(GetBlocksMessage::kMaxNumberOfBlocks, BlockChain::GetHead()->GetHeight());
             LOG(INFO) << "sending " << (amt + 1) << " blocks...";
 
-            Block* start_block = BlockChain::GetBlock(start);
-            Block* stop_block = BlockChain::GetBlock(start_block->GetHeight() > amt ? start_block->GetHeight() + amt : amt);
+            BlockPtr start_block = BlockChain::GetBlock(start);
+            BlockPtr stop_block = BlockChain::GetBlock(start_block->GetHeight() > amt ? start_block->GetHeight() + amt : amt);
 
             for(uint32_t idx = start_block->GetHeight() + 1;
                 idx <= stop_block->GetHeight();
                 idx++){
-                Block* block = BlockChain::GetBlock(idx);
+                BlockPtr block = BlockChain::GetBlock(idx);
                 LOG(INFO) << "adding " << block;
                 items.push_back(InventoryItem(block));
             }

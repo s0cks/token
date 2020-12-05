@@ -86,11 +86,11 @@ namespace Token{
     }
 
     intptr_t BlockMessage::GetMessageSize() const{
-        return data_.GetBufferSize();
+        return data_->GetBufferSize();
     }
 
     bool BlockMessage::Write(Buffer* buff) const{
-        return data_.Encode(buff);
+        return data_->Encode(buff);
     }
 
     UnclaimedTransactionMessage* UnclaimedTransactionMessage::NewInstance(Buffer* buff){

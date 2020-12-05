@@ -150,8 +150,8 @@ namespace Token{
         }
 
         static VersionMessage* NewInstance(const UUID& node_id){
-            BlockHeader genesis = Block::Genesis().GetHeader();
-            return NewInstance(ClientType::kClient, node_id, genesis, Version(), Hash::GenerateNonce());
+            BlockPtr genesis = Block::Genesis();
+            return NewInstance(ClientType::kClient, node_id, genesis->GetHeader(), Version(), Hash::GenerateNonce());
         }
     };
 
@@ -344,23 +344,23 @@ namespace Token{
 
     class BlockMessage : public Message{
     private:
-        Block data_;
+        BlockPtr data_;
     public:
-        BlockMessage(const Block& blk):
+        BlockMessage(const BlockPtr& blk):
             Message(),
             data_(blk){}
         BlockMessage(Buffer* buff):
             Message(),
-            data_(buff){}
+            data_(std::make_shared<Block>(buff)){}
         ~BlockMessage() = default;
 
-        Block& GetBlock(){
+        BlockPtr GetBlock() const{
             return data_;
         }
 
         std::string ToString() const{
             std::stringstream ss;
-            ss << "BlockMessage(" << data_.GetHash() << ")";
+            ss << "BlockMessage(" << data_->GetHash() << ")";
             return ss.str();
         }
 
@@ -412,7 +412,7 @@ namespace Token{
             type_(type),
             hash_(hash){}
         InventoryItem(const Transaction& tx): InventoryItem(kTransaction, tx.GetHash()){}
-        InventoryItem(const Block& blk): InventoryItem(kBlock, blk.GetHash()){}
+        InventoryItem(const BlockPtr& blk): InventoryItem(kBlock, blk->GetHash()){}
         InventoryItem(UnclaimedTransaction* utxo): InventoryItem(kUnclaimedTransaction, utxo->GetHash()){}
         InventoryItem(const BlockHeader& blk): InventoryItem(kBlock, blk.GetHash()){}
         InventoryItem(const InventoryItem& item):
@@ -518,7 +518,7 @@ namespace Token{
             return NewInstance(items);
         }
 
-        static InventoryMessage* NewInstance(const Block& blk){
+        static InventoryMessage* NewInstance(const BlockPtr& blk){
             std::vector<InventoryItem> items = {
                 InventoryItem(blk)
             };
@@ -564,9 +564,9 @@ namespace Token{
             return NewInstance(items);
         }
 
-        static GetDataMessage* NewInstance(const Block& blk){
+        static GetDataMessage* NewInstance(const BlockPtr& blk){
             std::vector<InventoryItem> items = {
-                    InventoryItem(blk)
+                InventoryItem(blk)
             };
             return NewInstance(items);
         }

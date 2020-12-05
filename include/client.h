@@ -1,8 +1,14 @@
 #ifndef TOKEN_CLIENT_H
 #define TOKEN_CLIENT_H
 
+#include "uuid.h"
+#include "block.h"
 #include "session.h"
 #include "command.h"
+#include "address.h"
+#include "message.h"
+#include "transaction.h"
+#include "unclaimed_transaction.h"
 
 namespace Token{
     class ClientSession : public ThreadedSession{
@@ -43,7 +49,7 @@ namespace Token{
             return id_;
         }
 
-        Block* GetBlock(const Hash& hash);
+        BlockPtr GetBlock(const Hash& hash);
         bool GetBlockChain(std::set<Hash>& blocks);
         bool GetPeers(PeerList& peers);
         bool GetUnclaimedTransactions(const User& user, std::vector<Hash>& utxos);

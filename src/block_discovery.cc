@@ -14,7 +14,7 @@ namespace Token{
     static std::condition_variable_any cond_;
     static Thread::State state_ = Thread::State::kStopped;
 
-    static Block* block_ = nullptr;
+    static BlockPtr block_ = nullptr;
     static ProposalPtr proposal_;
 
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
@@ -49,7 +49,7 @@ namespace Token{
             transactions_(){}
         ~TransactionPoolBlockBuilder(){}
 
-        Block* GetBlock() const{
+        BlockPtr GetBlock() const{
             // Get the Parent Block
             BlockHeader parent = BlockChain::GetHead()->GetHeader();
             // Sort the Transactions by Timestamp
@@ -57,7 +57,7 @@ namespace Token{
             TransactionList transactions(transactions_);
             std::sort(transactions.begin(), transactions.end(), Transaction::TimestampComparator());
             // Return a New Block of size Block::kMaxTransactionsForBlock, using sorted Transactions
-            return new Block(parent, transactions);
+            return std::make_shared<Block>(parent, transactions);
         }
 
         int64_t GetBlockSize() const{
@@ -75,10 +75,10 @@ namespace Token{
             return true;
         }
 
-        static Block* Build(intptr_t size){
+        static BlockPtr Build(intptr_t size){
             TransactionPoolBlockBuilder builder(size);
             TransactionPool::Accept(&builder);
-            Block* block = builder.GetBlock();
+            BlockPtr block = builder.GetBlock();
             BlockPool::PutBlock(block->GetHash(), block);
             return block;
         }
@@ -91,19 +91,19 @@ namespace Token{
         TransactionPool::RemoveTransaction(hash);
     }
 
-    Block* BlockDiscoveryThread::CreateNewBlock(intptr_t size){
-        Block* blk = TransactionPoolBlockBuilder::Build(size);
+    BlockPtr BlockDiscoveryThread::CreateNewBlock(intptr_t size){
+        BlockPtr blk = TransactionPoolBlockBuilder::Build(size);
         SetBlock(blk);
         return blk;
     }
 
-    ProposalPtr BlockDiscoveryThread::CreateNewProposal(Block* blk){
+    ProposalPtr BlockDiscoveryThread::CreateNewProposal(BlockPtr blk){
         ProposalPtr proposal = std::make_shared<Proposal>(blk, Server::GetID());
         SetProposal(proposal);
         return proposal;
     }
 
-    void BlockDiscoveryThread::SetBlock(Block* blk){
+    void BlockDiscoveryThread::SetBlock(BlockPtr blk){
         LOCK_GUARD;
         block_ = blk;
     }
@@ -118,7 +118,7 @@ namespace Token{
         return proposal_ != nullptr;
     }
 
-    Block* BlockDiscoveryThread::GetBlock(){
+    BlockPtr BlockDiscoveryThread::GetBlock(){
         LOCK_GUARD;
         return block_;
     }
@@ -156,7 +156,7 @@ namespace Token{
                     return;
                 }
             } else if(GetNumberOfTransactionsInPool() >= 2){
-                Block* blk = CreateNewBlock(2);
+                BlockPtr blk = CreateNewBlock(2);
                 Hash hash = blk->GetHash();
                 if(!BlockVerifier::IsValid(blk)){
                     //TODO: orphan block properly
