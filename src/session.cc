@@ -1,3 +1,4 @@
+#include "message.h"
 #include "session.h"
 
 namespace Token{
@@ -114,7 +115,7 @@ namespace Token{
         free(req);
     }
 
-    void Session::SendInventory(std::vector<InventoryItem>& items){
+    /*void Session::SendInventory(std::vector<InventoryItem>& items){
         std::vector<Message*> data;
 
         size_t n = InventoryMessage::kMaxAmountOfItemsPerMessage;
@@ -133,7 +134,7 @@ namespace Token{
             data.push_back(InventoryMessage::NewInstance(inv));
         }
         Send(data);
-    }
+    }*/
 
     bool ThreadedSession::Disconnect(){
         if(pthread_self() == thread_){

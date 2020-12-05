@@ -4,7 +4,6 @@
 #include <set>
 #include "object.h"
 #include "uuid.h"
-#include "peer.h"
 #include "address.h"
 #include "version.h"
 #include "proposal.h"
@@ -665,6 +664,8 @@ namespace Token{
         }
     };
 
+    typedef std::set<NodeAddress> PeerList;
+
     class PeerListMessage : public Message{
     private:
         PeerList peers_;
@@ -678,7 +679,7 @@ namespace Token{
     public:
         ~PeerListMessage() = default;
 
-        int32_t GetNumberOfPeers() const{
+        int64_t GetNumberOfPeers() const{
             return peers_.size();
         }
 

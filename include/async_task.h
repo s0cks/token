@@ -3,6 +3,7 @@
 
 #include <uv.h>
 #include "task.h"
+#include "message.h"
 #include "vthread.h"
 #include "snapshot.h"
 #include "proposal.h"

@@ -1,13 +1,12 @@
 #ifndef TOKEN_SERVER_H
 #define TOKEN_SERVER_H
 
-#include <sstream>
 #include <uv.h>
-
-#include "peer_session.h"
+#include <sstream>
 #include "address.h"
 #include "message.h"
 #include "vthread.h"
+#include "session.h"
 
 namespace Token{
 #define FOR_EACH_SERVER_STATE(V) \
@@ -22,7 +21,6 @@ namespace Token{
     V(Warning)                    \
     V(Error)
 
-    class Message;
     class PeerSession;
     class HandleMessageTask;
     class Server : public Thread{

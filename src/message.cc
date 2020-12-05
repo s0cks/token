@@ -270,9 +270,9 @@ namespace Token{
     PeerListMessage* PeerListMessage::NewInstance(Buffer* buff){
         PeerList peers;
 
-        int32_t npeers = buff->GetInt();
-        for(int32_t idx = 0; idx < npeers; idx++){
-            Peer peer(buff);
+        int64_t npeers = buff->GetLong();
+        for(int64_t idx = 0; idx < npeers; idx++){
+            NodeAddress peer(buff);
             if(!peers.insert(peer).second){
                 LOG(WARNING) << "couldn't insert peer: " << peer;
                 return nullptr;
@@ -284,13 +284,13 @@ namespace Token{
 
     intptr_t PeerListMessage::GetMessageSize() const{
         intptr_t size = 0;
-        size += sizeof(int32_t);
-        size += (GetNumberOfPeers() * Peer::kSize);
+        size += sizeof(int64_t);
+        size += (GetNumberOfPeers() * NodeAddress::kSize);
         return size;
     }
 
     bool PeerListMessage::Write(Buffer* buff) const{
-        buff->PutInt(GetNumberOfPeers());
+        buff->PutLong(GetNumberOfPeers());
         for(auto it = peers_begin();
             it != peers_end();
             it++){

@@ -5,10 +5,8 @@
 #include <mutex>
 #include <uuid/uuid.h>
 #include <condition_variable>
-
 #include "buffer.h"
 #include "object.h"
-#include "message.h"
 
 namespace Token{
 #define FOR_EACH_SESSION_STATE(V) \
@@ -21,6 +19,7 @@ namespace Token{
     V(Warning)                     \
     V(Error)
 
+    class Message;
     class Session : public Object{
     public:
         static const uint32_t kHeartbeatIntervalMilliseconds = 30 * 1000; //TODO: remove Session::kHeartbeatIntervalMilliseconds
@@ -130,7 +129,6 @@ namespace Token{
         Status GetStatus();
         void Send(Message* msg);
         void Send(std::vector<Message*>& messages);
-        void SendInventory(std::vector<InventoryItem>& items);
 
 #define DEFINE_STATE_CHECK(Name) \
         bool Is##Name(){ return GetState() == State::k##Name; }

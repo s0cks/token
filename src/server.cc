@@ -7,7 +7,7 @@
 #include "message.h"
 #include "task.h"
 #include "configuration.h"
-#include "peer_session.h"
+#include "peer.h"
 #include "proposal.h"
 #include "unclaimed_transaction.h"
 
@@ -365,9 +365,9 @@ namespace Token{
         LOCK_GUARD;
         for(size_t idx = 0; idx < Server::kMaxNumberOfPeers; idx++){
             if(peers_[idx]){
-                Peer peer = peers_[idx]->GetInfo();
-                if(!peers.insert(peer).second){
-                    LOG(WARNING) << "cannot add peer: " << peer;
+                NodeAddress paddr = peers_[idx]->GetAddress();
+                if(!peers.insert(paddr).second){
+                    LOG(WARNING) << "cannot add peer: " << peers_[idx]->GetInfo();
                     return false;
                 }
             }
@@ -652,7 +652,9 @@ namespace Token{
         }
 
         LOG(INFO) << "sending inventory of " << items.size() << " items";
-        session->SendInventory(items);
+
+        InventoryMessage* response = InventoryMessage::NewInstance(items);
+        session->Send(response);
     }
 
     void ServerSession::HandleGetBlocksMessage(HandleMessageTask* task){
