@@ -5,6 +5,10 @@
 
 namespace Token{
     class PeerSessionManager{
+        //TODO: Better Peer Management
+        // - saving peers
+        // - monitoring of peers
+        // - heartbeats for the peers
         friend class PeerSessionThread;
     public:
         static const int16_t kMaxNumberOfAttempts = 3;
