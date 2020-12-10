@@ -338,8 +338,8 @@ namespace Token{
                         break;
                     }
 
-                    UnclaimedTransaction* utxo = UnclaimedTransactionPool::GetUnclaimedTransaction(hash);
-                    response.push_back(UnclaimedTransactionMessage::NewInstance(utxo));
+                    UnclaimedTransactionPtr utxo = UnclaimedTransactionPool::GetUnclaimedTransaction(hash);
+                    response.push_back(new UnclaimedTransactionMessage(utxo));
                 }
             } else{
                 session->Send(NotFoundMessage::NewInstance());
@@ -455,7 +455,7 @@ namespace Token{
             return user_;
         }
 
-        bool Visit(UnclaimedTransaction* utxo){
+        bool Visit(const UnclaimedTransactionPtr& utxo){
             if(utxo->GetUser() == GetUser())
                 items_.push_back(InventoryItem(utxo));
             return true;

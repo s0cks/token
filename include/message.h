@@ -389,25 +389,18 @@ namespace Token{
         }
     };
 
-    class UnclaimedTransactionMessage : public Message {
-    private:
-        UnclaimedTransaction* data_;
-
-        UnclaimedTransactionMessage(UnclaimedTransaction* utxo):
-            Message(),
-            data_(utxo){}
+    class UnclaimedTransactionMessage : public ObjectMessage<UnclaimedTransaction>{
     public:
+        UnclaimedTransactionMessage(const UnclaimedTransactionPtr& utxo):
+            ObjectMessage(utxo){}
+        UnclaimedTransactionMessage(Buffer* buff):
+            ObjectMessage(buff){}
         ~UnclaimedTransactionMessage() = default;
 
-        UnclaimedTransaction* GetUnclaimedTransaction() const{
-            return data_;
-        }
+        DECLARE_MESSAGE_TYPE(UnclaimedTransaction);
 
-        DECLARE_MESSAGE(UnclaimedTransaction);
-
-        static UnclaimedTransactionMessage* NewInstance(Buffer* buff);
-        static UnclaimedTransactionMessage* NewInstance(UnclaimedTransaction* utxo){
-            return new UnclaimedTransactionMessage(utxo);
+        static UnclaimedTransactionMessage* NewInstance(Buffer* buff){
+            return new UnclaimedTransactionMessage(buff);
         }
     };
 
@@ -431,10 +424,14 @@ namespace Token{
         InventoryItem(Type type, const Hash& hash):
             type_(type),
             hash_(hash){}
-        InventoryItem(const Transaction& tx): InventoryItem(kTransaction, tx.GetHash()){}
-        InventoryItem(const BlockPtr& blk): InventoryItem(kBlock, blk->GetHash()){}
-        InventoryItem(UnclaimedTransaction* utxo): InventoryItem(kUnclaimedTransaction, utxo->GetHash()){}
-        InventoryItem(const BlockHeader& blk): InventoryItem(kBlock, blk.GetHash()){}
+        InventoryItem(const Transaction& tx):
+            InventoryItem(kTransaction, tx.GetHash()){}
+        InventoryItem(const BlockPtr& blk):
+            InventoryItem(kBlock, blk->GetHash()){}
+        InventoryItem(const UnclaimedTransactionPtr& utxo):
+            InventoryItem(kUnclaimedTransaction, utxo->GetHash()){}
+        InventoryItem(const BlockHeader& blk):
+            InventoryItem(kBlock, blk.GetHash()){}
         InventoryItem(const InventoryItem& item):
             type_(item.type_),
             hash_(item.hash_){}

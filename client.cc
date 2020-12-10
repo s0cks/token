@@ -9,14 +9,16 @@ InitializeLogging(char* arg0){
 }
 
 static inline bool
-SpendToken(Token::ClientSession* client, Token::UnclaimedTransaction* utxo, const std::string& user, const std::string& product){
+SpendToken(Token::ClientSession* client, const Token::UnclaimedTransactionPtr& utxo, const std::string& user, const std::string& product){
     Token::InputList inputs = {
         Token::Input(utxo->GetTransaction(), utxo->GetIndex(), utxo->GetUser()),
     };
     Token::OutputList outputs = {
         Token::Output(user, product),
     };
-    client->SendTransaction(Token::Transaction(0, inputs, outputs));
+
+    Token::TransactionPtr tx = std::make_shared<Token::Transaction>(0, inputs, outputs);
+    client->SendTransaction(tx);
     return true;
 }
 
@@ -51,7 +53,7 @@ main(int argc, char** argv){
 
     for(int32_t idx = 0;
         idx < 2; idx++){
-        UnclaimedTransaction* utxo = client->GetUnclaimedTransaction(utxos[idx]);
+        UnclaimedTransactionPtr utxo = client->GetUnclaimedTransaction(utxos[idx]);
         SpendToken(client, utxo, "TestUser2", "TestToken");
     }
     client->Disconnect();

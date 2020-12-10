@@ -5,6 +5,7 @@
 #include "transaction.h"
 
 namespace Token{
+    //TODO: Refactor TransactionValidator
     class TransactionValidator : public TransactionVisitor{
     private:
         const Transaction& transaction_;
@@ -15,7 +16,7 @@ namespace Token{
         ~TransactionValidator(){}
 
         bool VisitInput(const Input& input) const{
-            UnclaimedTransaction* utxo;
+            UnclaimedTransactionPtr utxo;
             if(!(utxo = input.GetUnclaimedTransaction())){
                 LOG(WARNING) << "couldn't get unclaimed transaction for input: " << input.ToString();
                 return false;

@@ -173,7 +173,7 @@ namespace Token{
         } while(true);
     }
 
-    UnclaimedTransaction* ClientSession::GetUnclaimedTransaction(const Hash& hash){
+    UnclaimedTransactionPtr ClientSession::GetUnclaimedTransaction(const Hash& hash){
         LOG(INFO) << "getting unclaimed transactions " << hash;
         if(IsConnecting()){
             LOG(INFO) << "waiting for client to connect...";
@@ -189,7 +189,7 @@ namespace Token{
             Message* next = GetNextMessage();
 
             if(next->IsUnclaimedTransactionMessage()){
-                return ((UnclaimedTransactionMessage*)next)->GetUnclaimedTransaction();
+                return ((UnclaimedTransactionMessage*)next)->GetValue();
             } else if(next->IsNotFoundMessage()){
                 return nullptr;
             } else{

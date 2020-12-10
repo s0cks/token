@@ -7,6 +7,10 @@
 #include "product.h"
 
 namespace Token{
+    class UnclaimedTransaction;
+
+    typedef std::shared_ptr<UnclaimedTransaction> UnclaimedTransactionPtr;
+
     class Output;
     class Transaction;
     class UnclaimedTransaction : public BinaryObject{
@@ -17,15 +21,38 @@ namespace Token{
         User user_;
         Product product_;
 
+
+    public:
         UnclaimedTransaction(const Hash& hash, int32_t index, const User& user, const Product& product):
             BinaryObject(Type::kUnclaimedTransactionType),
             hash_(hash),
             index_(index),
             user_(user),
             product_(product){}
-    protected:
-        intptr_t GetBufferSize() const{
-            intptr_t size = 0;
+        UnclaimedTransaction(const Hash& hash, int32_t index, const std::string& user, const std::string& product):
+            UnclaimedTransaction(hash, index, User(user), Product(product)){}
+        UnclaimedTransaction(Buffer* buff):
+            UnclaimedTransaction(buff->GetHash(), buff->GetInt(), buff->GetUser(), buff->GetProduct()){}
+        ~UnclaimedTransaction(){}
+
+        Hash GetTransaction() const{
+            return hash_;
+        }
+
+        int32_t GetIndex() const{
+            return index_;
+        }
+
+        User GetUser() const{
+            return user_;
+        }
+
+        Product GetProduct() const{
+            return product_;
+        }
+
+        int64_t GetBufferSize() const{
+            int64_t size = 0;
             size += Hash::kSize;
             size += sizeof(int32_t);
             size += User::kSize;
@@ -40,38 +67,11 @@ namespace Token{
             buff->PutProduct(product_);
             return true;
         }
-    public:
-        ~UnclaimedTransaction(){}
-
-        Hash GetTransaction() const{
-            return hash_;
-        }
-
-        uint32_t GetIndex() const{
-            return index_;
-        }
-
-        User GetUser() const{
-            return user_;
-        }
-
-        Product GetProduct() const{
-            return product_;
-        }
 
         std::string ToString() const;
 
-        static UnclaimedTransaction* NewInstance(Buffer* buff);
-        static UnclaimedTransaction* NewInstance(std::fstream& fd, size_t size);
-        static UnclaimedTransaction* NewInstance(const Hash &hash, int32_t index, const std::string& user, const std::string& product){
-            return new UnclaimedTransaction(hash, index, User(user), Product(product));
-        }
-
-        static UnclaimedTransaction* NewInstance(const Hash& hash, int32_t index, const User& user, const Product& product){
-            return new UnclaimedTransaction(hash, index, user, product);
-        }
-
-        static inline UnclaimedTransaction* NewInstance(const std::string& filename){
+        static UnclaimedTransactionPtr NewInstance(std::fstream& fd, size_t size);
+        static inline UnclaimedTransactionPtr NewInstance(const std::string& filename){
             std::fstream fd(filename, std::ios::in|std::ios::binary);
             return NewInstance(fd, GetFilesize(filename));
         }
@@ -138,12 +138,12 @@ namespace Token{
         static bool Initialize();
         static bool Accept(UnclaimedTransactionPoolVisitor* vis);
         static bool RemoveUnclaimedTransaction(const Hash& hash);
-        static bool PutUnclaimedTransaction(const Hash& hash, UnclaimedTransaction* utxo);
+        static bool PutUnclaimedTransaction(const Hash& hash, const UnclaimedTransactionPtr& utxo);
         static bool HasUnclaimedTransaction(const Hash& hash);
         static bool GetUnclaimedTransactions(std::vector<Hash>& utxos);
         static bool GetUnclaimedTransactions(const std::string& user, std::vector<Hash>& utxos);
-        static UnclaimedTransaction* GetUnclaimedTransaction(const Hash& hash);
-        static UnclaimedTransaction* GetUnclaimedTransaction(const Hash& tx_hash, uint32_t tx_index);
+        static UnclaimedTransactionPtr GetUnclaimedTransaction(const Hash& hash);
+        static UnclaimedTransactionPtr GetUnclaimedTransaction(const Hash& tx_hash, int32_t tx_index);
 
 #define DEFINE_STATE_CHECK(Name) \
         static inline bool Is##Name(){ return GetState() == UnclaimedTransactionPool::k##Name; }
@@ -163,7 +163,7 @@ namespace Token{
         virtual ~UnclaimedTransactionPoolVisitor() = default;
 
         virtual bool VisitStart() { return true; }
-        virtual bool Visit(UnclaimedTransaction* utxo) = 0;
+        virtual bool Visit(const UnclaimedTransactionPtr& utxo) = 0;
         virtual bool VisitEnd() { return true; };
     };
 }

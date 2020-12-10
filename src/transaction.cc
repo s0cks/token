@@ -5,7 +5,7 @@
 #include "unclaimed_transaction.h"
 
 namespace Token{
-    UnclaimedTransaction* Input::GetUnclaimedTransaction() const{
+    UnclaimedTransactionPtr Input::GetUnclaimedTransaction() const{
         return UnclaimedTransactionPool::GetUnclaimedTransaction(GetTransactionHash(), GetOutputIndex());
     }
 //######################################################################################################################

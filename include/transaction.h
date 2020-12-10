@@ -56,7 +56,7 @@ namespace Token{
             return user_;
         }
 
-        UnclaimedTransaction* GetUnclaimedTransaction() const;
+        UnclaimedTransactionPtr GetUnclaimedTransaction() const;
 
         std::string ToString() const{
             std::stringstream stream;
@@ -205,7 +205,7 @@ namespace Token{
                 idx++)
                 outputs_.push_back(Output(buff));
         }
-        Transaction(const Transaction& tx):
+        Transaction(const Transaction& tx): //TODO: remove Transaction(const Transaction&)
             BinaryObject(Type::kTransactionType),
             timestamp_(tx.timestamp_),
             index_(tx.index_),
@@ -303,7 +303,7 @@ namespace Token{
         }
 
         int64_t GetBufferSize() const{
-            intptr_t size = 0;
+            int64_t size = 0;
             size += sizeof(Timestamp); // timestamp_
             size += sizeof(int64_t); // index_
             size += sizeof(int64_t); // num_inputs_

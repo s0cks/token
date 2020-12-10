@@ -5,18 +5,10 @@
 #include "unclaimed_transaction.h"
 
 namespace Token{
-    UnclaimedTransaction* UnclaimedTransaction::NewInstance(Buffer* buff){
-        Hash hash = buff->GetHash();
-        int32_t index = buff->GetInt();
-        User user = buff->GetUser();
-        Product product = buff->GetProduct();
-        return new UnclaimedTransaction(hash, index, user, product);
-    }
-
-    UnclaimedTransaction* UnclaimedTransaction::NewInstance(std::fstream& fd, size_t size){
+    UnclaimedTransactionPtr UnclaimedTransaction::NewInstance(std::fstream& fd, size_t size){
         Buffer buff(size);
         fd.read((char*)buff.data(), size);
-        return NewInstance(&buff);
+        return UnclaimedTransactionPtr(new UnclaimedTransaction(&buff));
     }
 
     std::string UnclaimedTransaction::ToString() const{
@@ -171,7 +163,7 @@ namespace Token{
         return true;
     }
 
-    UnclaimedTransaction* UnclaimedTransactionPool::GetUnclaimedTransaction(const Hash& hash){
+    UnclaimedTransactionPtr UnclaimedTransactionPool::GetUnclaimedTransaction(const Hash& hash){
         leveldb::ReadOptions options;
         std::string key = hash.HexString();
         std::string filename;
@@ -185,7 +177,7 @@ namespace Token{
             return nullptr;
         }
 
-        UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(filename);
+        UnclaimedTransactionPtr utxo = UnclaimedTransaction::NewInstance(filename);
         if(hash != utxo->GetHash()){
             std::stringstream ss;
             ss << "couldn't verify unclaimed transaction hash: " << hash;
@@ -196,7 +188,7 @@ namespace Token{
         return utxo;
     }
 
-    bool UnclaimedTransactionPool::PutUnclaimedTransaction(const Hash& hash, UnclaimedTransaction* utxo){
+    bool UnclaimedTransactionPool::PutUnclaimedTransaction(const Hash& hash, const UnclaimedTransactionPtr& utxo){
         leveldb::WriteOptions options;
         options.sync = true;
         std::string key = hash.HexString();
@@ -288,8 +280,9 @@ namespace Token{
                 std::string name(ent->d_name);
                 std::string filename = (GetDataDirectory() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
-                UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(filename);
-                if(!vis->Visit(utxo)) break;
+                UnclaimedTransactionPtr utxo = UnclaimedTransaction::NewInstance(filename);
+                if(!vis->Visit(utxo))
+                    break;
             }
             closedir(dir);
         }
@@ -308,7 +301,7 @@ namespace Token{
                 std::string filename = (GetDataDirectory() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
 
-                UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(filename);
+                UnclaimedTransactionPtr utxo = UnclaimedTransaction::NewInstance(filename);
                 utxos.push_back(utxo->GetHash());
             }
             closedir(dir);
@@ -328,7 +321,7 @@ namespace Token{
                 std::string name(ent->d_name);
                 std::string filename = (GetDataDirectory() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
-                UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(filename);
+                UnclaimedTransactionPtr utxo = UnclaimedTransaction::NewInstance(filename);
 
                 if(utxo->GetUser() != user) continue;
                 utxos.push_back(utxo->GetHash());
@@ -339,7 +332,7 @@ namespace Token{
         return false;
     }
 
-    UnclaimedTransaction* UnclaimedTransactionPool::GetUnclaimedTransaction(const Hash &tx_hash, uint32_t tx_index){
+    UnclaimedTransactionPtr UnclaimedTransactionPool::GetUnclaimedTransaction(const Hash &tx_hash, int32_t tx_index){
         //TODO: better error handling + validation
         LOCK_GUARD;
         DIR* dir;
@@ -350,8 +343,9 @@ namespace Token{
                 std::string filename = (GetDataDirectory() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
 
-                UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(filename);
-                if(utxo->GetTransaction() == tx_hash && utxo->GetIndex() == tx_index) return utxo;
+                UnclaimedTransactionPtr utxo = UnclaimedTransaction::NewInstance(filename);
+                if(utxo->GetTransaction() == tx_hash && utxo->GetIndex() == tx_index)
+                    return utxo;
             }
             closedir(dir);
         }
@@ -382,7 +376,7 @@ namespace Token{
         UnclaimedTransactionPoolPrinter(): UnclaimedTransactionPoolVisitor(){}
         ~UnclaimedTransactionPoolPrinter() = default;
 
-        bool Visit(UnclaimedTransaction* utxo){
+        bool Visit(const UnclaimedTransactionPtr& utxo){
             LOG(INFO) << utxo->GetTransaction() << "[" << utxo->GetIndex() << "] := " << utxo->GetHash();
             return true;
         }

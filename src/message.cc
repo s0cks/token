@@ -69,20 +69,6 @@ namespace Token{
         return size;
     }
 
-    UnclaimedTransactionMessage* UnclaimedTransactionMessage::NewInstance(Buffer* buff){
-        UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(buff);
-        return new UnclaimedTransactionMessage(utxo);
-    }
-
-    intptr_t UnclaimedTransactionMessage::GetMessageSize() const{
-        return data_->GetBufferSize();
-    }
-
-    bool UnclaimedTransactionMessage::Write(Buffer* buff) const{
-        data_->Encode(buff);
-        return true;
-    }
-
     bool InventoryItem::ItemExists() const{
         switch(type_){
             case kTransaction: return TransactionPool::HasTransaction(hash_);
