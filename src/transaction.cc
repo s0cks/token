@@ -249,7 +249,6 @@ namespace Token{
         std::string key = hash.HexString();
         std::string filename;
 
-        LOCK_GUARD;
         leveldb::Status status = GetIndex()->Get(options, key, &filename);
         if(!status.ok()){
             std::stringstream ss;
@@ -368,17 +367,9 @@ namespace Token{
         return false;
     }
 
-    class TransactionPrinter : public TransactionPoolVisitor{
-    public:
-        bool Visit(Transaction* tx){
-            LOG(INFO) << " - " << tx->GetHash();
-            return true;
-        }
-    };
-
     bool TransactionPool::Print(){
-        TransactionPrinter printer;
-        return Accept(&printer);
+        LOG(WARNING) << "TransactionPool::Print() - Not Implemented Yet."; //TODO: Implement TransactionPool::Print
+        return false;
     }
 
     size_t TransactionPool::GetSize(){

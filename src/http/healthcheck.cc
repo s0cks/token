@@ -227,16 +227,6 @@ namespace Token{
         SendOk(session);
     }
 
-    static inline bool
-    GetRuntimeStatus(Json::Value& value){
-        value["Block Chain"] = BlockChain::GetStatusMessage();
-        value["Server"] = Server::GetStatusMessage();
-        value["Unclaimed Transaction Pool"] = UnclaimedTransactionPool::GetStatusMessage();
-        value["Transaction Pool"] = TransactionPool::GetStatusMessage();
-        value["Block Pool"] = BlockPool::GetStatusMessage();
-        return true;
-    }
-
     void HealthCheckService::HandleBlockChainStatusEndpoint(HttpSession* session, HttpRequest* request){
         Json::Value response;
         response["Head"] = BlockChain::GetReference(BLOCKCHAIN_REFERENCE_HEAD).HexString();
@@ -258,5 +248,35 @@ namespace Token{
             response.append(Json::Value(it));
         SendJson(session, response);
         return;
+    }
+
+    void GetRuntimeStatus(Json::Value& value){
+        value["Block Chain"] = BlockChain::GetStatusMessage();
+        value["Server"] = Server::GetStatusMessage();
+        value["Unclaimed Transaction Pool"] = UnclaimedTransactionPool::GetStatusMessage();
+        value["Transaction Pool"] = TransactionPool::GetStatusMessage();
+        value["Block Pool"] = BlockPool::GetStatusMessage();
+
+        std::vector<std::string> status;
+        if(!PeerSessionManager::GetStatus(status))
+            return;
+
+        Json::Value peers;
+        for(auto& it : status)
+            peers.append(Json::Value(it));
+        value["Peers"] = peers;
+    }
+
+    void HealthCheckService::HandleInfoEndpoint(HttpSession* session, HttpRequest* request){
+        Json::Value doc;
+        doc["Timestamp"] = GetTimestampFormattedReadable(GetCurrentTimestamp());
+        doc["Version"] = GetVersion();
+        doc["Head"] = BlockChain::GetReference(BLOCKCHAIN_REFERENCE_HEAD).HexString();
+
+        Json::Value runtime;
+        GetRuntimeStatus(runtime);
+
+        doc["Runtime"] = runtime;
+        SendJson(session, doc);
     }
 }

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 enable_testing()
 project("token" CXX)
-
+set(TOKEN_VERSION "1.0.0")
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 set(PROTO_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protos")
@@ -81,6 +81,7 @@ message("Compiling Token w/ the following libraries: ${TOKEN_LIBRARIES}")
 
 # Token Ledger Library
 add_library("token-ledger" SHARED ${TOKEN_HEADERS} ${TOKEN_SOURCES})
+set_target_properties("token-ledger" PROPERTIES VERSION ${TOKEN_VERSION})
 set_target_properties("token-ledger" PROPERTIES PUBLIC_HEADER "${TOKEN_HEADERS}")
 target_link_libraries("${PROJECT_NAME}-ledger" ${TOKEN_LIBRARIES})
 target_compile_options(token-ledger PRIVATE -Werror -Wall -Wextra)
@@ -110,6 +111,10 @@ install(
   DESTINATION "include/token" # target directory
   FILES_MATCHING # install only matched files
   PATTERN "*.h" # select header files
+)
+install(
+  TARGETS token-ledger
+  LIBRARY DESTINATION lib
 )
 install(
   TARGETS token-node

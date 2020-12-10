@@ -66,8 +66,10 @@ namespace Token{
             return true;
         }
     public:
-        CrashReportPrinter(const google::LogSeverity& severity):
-            Printer(severity){}
+        CrashReportPrinter(Printer* printer, const google::LogSeverity& severity, const long& flags):
+            Printer(printer, severity, flags){}
+        CrashReportPrinter(const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone):
+            Printer(nullptr, severity, flags){}
         ~CrashReportPrinter() = default;
 
         bool Print(){

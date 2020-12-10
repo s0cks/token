@@ -173,6 +173,7 @@ namespace Token{
                 }
             }
         }
+        LOG(INFO) << "block discovery thread shutdown";
     }
 
     Thread::State BlockDiscoveryThread::GetState(){

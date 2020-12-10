@@ -21,6 +21,9 @@ spec:
         - name: token-ledger-node
           imagePullPolicy: IfNotPresent
           image: gcr.io/tkn-events/token-ledger:latest
+          env:
+            - name: TOKEN_CALLBACK_ADDRESS
+              value: 10.111.215.169:8080
           ports:
             - name: rpc
               containerPort: 8080

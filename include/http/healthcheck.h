@@ -26,7 +26,8 @@ namespace Token{
     V(Get, Ready, "/ready")                           \
     V(Get, Live, "/live")                             \
     V(Get, PeerStatus, "/status/peers")               \
-    V(Get, BlockChainStatus, "/status/chain")
+    V(Get, BlockChainStatus, "/status/chain")    \
+    V(Get, Info, "/info")
 
     class HealthCheckService : public Thread{
         friend class Scavenger;

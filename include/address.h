@@ -1,12 +1,68 @@
 #ifndef TOKEN_ADDRESS_H
 #define TOKEN_ADDRESS_H
 
+#include <set>
 #include "buffer.h"
 
 namespace Token{
     class NodeAddress{
     public:
         static const intptr_t kSize = sizeof(uint32_t) + sizeof(uint32_t);
+
+        template<typename Container>
+        static inline bool
+        ResolveAddresses(const std::string& hostname, Container& results){
+            void *ptr;
+
+            struct addrinfo hints;
+            memset(&hints, 0, sizeof (hints));
+            hints.ai_family = PF_UNSPEC;
+            hints.ai_socktype = SOCK_STREAM;
+            hints.ai_flags |= AI_CANONNAME;
+
+            std::string address;
+            int32_t port = FLAGS_port;
+            if(hostname.find(":") != std::string::npos){
+                std::vector<std::string> parts;
+                SplitString(hostname, parts, ':');
+                address = parts[0];
+                port = atoi(parts[1].data());
+            }
+
+            struct addrinfo* res;
+            int err;
+            if((err = getaddrinfo(address.data(), NULL, &hints, &res)) != 0){
+                LOG(WARNING) << "couldn't get " << hostname << "'s ip: " << strerror(err);
+                return false;
+            }
+
+            char addrstr[100];
+            while(res){
+                inet_ntop(res->ai_family, res->ai_addr->sa_data, addrstr, 100);
+                switch (res->ai_family){
+                    case AF_INET:
+                        ptr = &((struct sockaddr_in *)res->ai_addr)->sin_addr;
+                        break;
+                    case AF_INET6:
+                        ptr = &((struct sockaddr_in6 *)res->ai_addr)->sin6_addr;
+                        break;
+                }
+                inet_ntop(res->ai_family, ptr, addrstr, 100);
+                results.insert(NodeAddress(std::string(addrstr), port));
+                res = res->ai_next;
+            }
+            return true;
+        }
+
+        static inline NodeAddress
+        ResolveAddress(const std::string& hostname){
+            std::set<NodeAddress> addresses;
+            if(!ResolveAddresses(hostname, addresses)){
+                LOG(WARNING) << "couldn't resolve: " << hostname;
+                return NodeAddress();
+            }
+            return (*addresses.begin());
+        }
     private:
         uint32_t address_;
         uint32_t port_;

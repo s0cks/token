@@ -37,11 +37,6 @@ namespace Token{
         GetProperty(PROPERTY_SERVER, libconfig::Setting::TypeGroup);
         SetServerID(PROPERTY_SERVER_ID_DEFAULT);
         SetMaxNumberOfPeers(PROPERTY_SERVER_MAXPEERS_DEFAULT);
-        if(HasEnvironmentVariable(ENVIRONMENT_TOKEN_CALLBACK_ADDRESS)){
-            SetServerCallbackAddress(NodeAddress(GetEnvironmentVariable(ENVIRONMENT_TOKEN_CALLBACK_ADDRESS)));
-        } else{
-            SetServerCallbackAddress(NodeAddress());
-        }
         std::set<NodeAddress> peers;
         SetPeerList(peers);
         return true;
@@ -109,44 +104,6 @@ namespace Token{
         return root.add(name, type);
     }
 
-    static inline bool
-    ResolvePeers(const std::string& hostname, std::set<NodeAddress>& peers){
-        void *ptr;
-
-        struct addrinfo hints;
-        memset(&hints, 0, sizeof (hints));
-        hints.ai_family = PF_UNSPEC;
-        hints.ai_socktype = SOCK_STREAM;
-        hints.ai_flags |= AI_CANONNAME;
-
-        struct addrinfo* res;
-        int err;
-        if((err = getaddrinfo(hostname.data(), NULL, &hints, &res)) != 0){
-            LOG(WARNING) << "couldn't get " << hostname << "'s ip: " << strerror(err);
-            return -1;
-        }
-
-        char addrstr[100];
-        while(res){
-            inet_ntop(res->ai_family, res->ai_addr->sa_data, addrstr, 100);
-            switch (res->ai_family){
-                case AF_INET:
-                    ptr = &((struct sockaddr_in *)res->ai_addr)->sin_addr;
-                    break;
-                case AF_INET6:
-                    ptr = &((struct sockaddr_in6 *)res->ai_addr)->sin6_addr;
-                    break;
-            }
-            inet_ntop(res->ai_family, ptr, addrstr, 100);
-            NodeAddress paddr(std::string(addrstr), FLAGS_port); //TODO: Fixme
-            LOG(INFO) << "peer: " << paddr;
-            peers.insert(paddr);
-            res = res->ai_next;
-        }
-
-        return 0;
-    }
-
     bool BlockChainConfiguration::GetPeerList(std::set<NodeAddress>& results){
         LOCK_GUARD;
         if(!FLAGS_peer.empty())
@@ -155,10 +112,8 @@ namespace Token{
         if(HasEnvironmentVariable(ENVIRONMENT_TOKEN_LEDGER)){
             std::string phostname = GetEnvironmentVariable(ENVIRONMENT_TOKEN_LEDGER);
             if(!phostname.empty()){
-                NodeAddress paddress(phostname);
-                if(paddress != NodeAddress()){
-                    ResolvePeers(phostname, results);
-                }
+                if(!NodeAddress::ResolveAddresses(phostname, results))
+                    LOG(WARNING) << "couldn't resolve peer: " << phostname;
             }
         }
 
@@ -180,7 +135,7 @@ namespace Token{
     }
 
     NodeAddress BlockChainConfiguration::GetServerCallbackAddress(){
-        return NodeAddress(GetServerProperties().lookup(PROPERTY_SERVER_CALLBACK_ADDRESS));
+        return NodeAddress::ResolveAddress(GetEnvironmentVariable(ENVIRONMENT_TOKEN_CALLBACK_ADDRESS));
     }
 
     bool BlockChainConfiguration::SetHealthCheckPort(int32_t port){

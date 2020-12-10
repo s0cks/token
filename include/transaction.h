@@ -5,6 +5,7 @@
 #include "hash.h"
 #include "user.h"
 #include "object.h"
+#include "printer.h"
 #include "product.h"
 #include "unclaimed_transaction.h"
 
@@ -361,6 +362,29 @@ namespace Token{
         virtual bool VisitOutput(const Output& output) const = 0;
         virtual bool VisitOutputsEnd(){ return true; }
         virtual bool VisitEnd(){ return true; }
+    };
+
+    class TransactionPrinter : public Printer, public TransactionVisitor{
+    public:
+        TransactionPrinter(Printer* parent, const google::LogSeverity& severity, const long& flags):
+            Printer(parent, severity, flags){}
+        TransactionPrinter(const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone):
+            Printer(nullptr, severity, flags){}
+        ~TransactionPrinter() = default;
+
+        bool VisitInput(const Input& input) const{
+            if(!IsDetailed())
+                return true;
+            LOG_AT_LEVEL(GetSeverity()) << "Input(" << input.GetTransactionHash() << "[" << input.GetOutputIndex() << "]";
+            return true;
+        }
+
+        bool VisitOutput(const Output& output) const{
+            if(!IsDetailed())
+                return true;
+            LOG_AT_LEVEL(GetSeverity()) << "Output(" << output.GetUser() << ", " << output.GetProduct() << ")";
+            return true;
+        }
     };
 
 #define FOR_EACH_TX_POOL_STATE(V) \
