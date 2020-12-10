@@ -75,12 +75,15 @@ namespace Token{
 #undef DECLARE_TYPECHECK
     };
 
-#define DECLARE_MESSAGE(Name) \
-    public: \
-        virtual intptr_t GetMessageSize() const; \
-        virtual bool Write(Buffer* buff) const; \
+#define DECLARE_MESSAGE_TYPE(Name) \
         virtual MessageType GetMessageType() const{ return Message::k##Name##MessageType; } \
         virtual const char* GetName() const{ return #Name; }
+
+#define DECLARE_MESSAGE(Name) \
+        DECLARE_MESSAGE_TYPE(Name) \
+        virtual intptr_t GetMessageSize() const; \
+        virtual bool Write(Buffer* buff) const; \
+
 
     //TODO:
     // - refactor this
@@ -315,58 +318,75 @@ namespace Token{
         }
     };
 
-    class TransactionMessage : public Message{
-    private:
-        Transaction data_;
+    template<typename T>
+    class ObjectMessage : public Message{
+    protected:
+        typedef std::shared_ptr<T> ObjectPtr;
+
+        ObjectPtr value_;
+
+        ObjectMessage(const ObjectPtr& value):
+            Message(),
+            value_(value){}
+        ObjectMessage(Buffer* buff):
+            Message(),
+            value_(new T(buff)){}
     public:
-        TransactionMessage(const Transaction& tx):
-            Message(),
-            data_(tx){}
-        TransactionMessage(Buffer* buff):
-            Message(),
-            data_(buff){}
-        ~TransactionMessage(){}
+        virtual ~ObjectMessage() = default;
 
-        Transaction& GetTransaction(){
-            return data_;
+        ObjectPtr GetValue() const{
+            return value_;
         }
 
-        std::string ToString() const{
-            std::stringstream ss;
-            ss << "TransactionMessage(" << data_.GetHash() << ")";
-            return ss.str();
+        int64_t GetMessageSize() const{
+            return value_->GetBufferSize();
         }
 
-        DECLARE_MESSAGE(Transaction);
-
-        static TransactionMessage* NewInstance(Buffer* buff);
+        bool Write(Buffer* buff) const{
+            return value_->Encode(buff);
+        }
     };
 
-    class BlockMessage : public Message{
-    private:
-        BlockPtr data_;
+    class TransactionMessage : public ObjectMessage<Transaction>{
     public:
-        BlockMessage(const BlockPtr& blk):
-            Message(),
-            data_(blk){}
-        BlockMessage(Buffer* buff):
-            Message(),
-            data_(std::make_shared<Block>(buff)){}
-        ~BlockMessage() = default;
-
-        BlockPtr GetBlock() const{
-            return data_;
-        }
+        TransactionMessage(const TransactionPtr& value):
+            ObjectMessage(value){}
+        TransactionMessage(Buffer* buff):
+            ObjectMessage(buff){}
+        ~TransactionMessage() = default;
 
         std::string ToString() const{
             std::stringstream ss;
-            ss << "BlockMessage(" << data_->GetHash() << ")";
+            ss << "TransactionMessage(" << GetValue()->GetHash() << ")";
             return ss.str();
         }
 
-        DECLARE_MESSAGE(Block);
+        DECLARE_MESSAGE_TYPE(Transaction);
 
-        static BlockMessage* NewInstance(Buffer* buff);
+        static TransactionMessage* NewInstance(Buffer* buff){
+            return new TransactionMessage(buff);
+        }
+    };
+
+    class BlockMessage : public ObjectMessage<Block>{
+    public:
+        BlockMessage(const BlockPtr& blk):
+            ObjectMessage(blk){}
+        BlockMessage(Buffer* buff):
+            ObjectMessage(buff){}
+        ~BlockMessage() = default;
+
+        std::string ToString() const{
+            std::stringstream ss;
+            ss << "BlockMessage(" << GetValue()->GetHash() << ")";
+            return ss.str();
+        }
+
+        DECLARE_MESSAGE_TYPE(Block);
+
+        static BlockMessage* NewInstance(Buffer* buff){
+            return new BlockMessage(buff);
+        }
     };
 
     class UnclaimedTransactionMessage : public Message {

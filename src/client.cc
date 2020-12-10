@@ -137,8 +137,8 @@ namespace Token{
         rbuff->Reset();
     }
 
-    bool ClientSession::SendTransaction(const Transaction& tx){
-        LOG(INFO) << "sending transaction " << tx.GetHash();
+    bool ClientSession::SendTransaction(const TransactionPtr& tx){
+        LOG(INFO) << "sending transaction " << tx->GetHash();
         if(IsConnecting()){
             LOG(INFO) << "waiting for client to connect...";
             WaitForState(Session::kConnected);
@@ -163,7 +163,7 @@ namespace Token{
             Message* next = GetNextMessage();
 
             if(next->IsBlockMessage()){
-                return ((BlockMessage*)next)->GetBlock();
+                return ((BlockMessage*)next)->GetValue();
             } else if(next->IsNotFoundMessage()){
                 return nullptr;
             } else{

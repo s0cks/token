@@ -303,9 +303,8 @@ namespace Token{
                     break;
                 }
 
-                Transaction* tx = TransactionPool::GetTransaction(hash);
-                response.push_back(new TransactionMessage((*tx)));
-                delete tx;
+                TransactionPtr tx = TransactionPool::GetTransaction(hash);
+                response.push_back(new TransactionMessage(tx));
             }
         }
         session->Send(response);
@@ -313,7 +312,7 @@ namespace Token{
 
     void PeerSession::HandleBlockMessage(HandleMessageTask* task){
         BlockMessage* msg = (BlockMessage*)task->GetMessage();
-        BlockPtr blk = msg->GetBlock();
+        BlockPtr blk = msg->GetValue();
         Hash bhash = blk->GetHash();
         BlockPool::PutBlock(bhash, blk);
         LOG(INFO) << "received block: " << bhash;

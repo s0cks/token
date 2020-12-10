@@ -39,6 +39,7 @@ namespace Token{
     }
 
     class TransactionPoolBlockBuilder : public TransactionPoolVisitor{
+    //TODO: rebuild class
     private:
         int64_t size_;
         TransactionList transactions_;
@@ -68,10 +69,10 @@ namespace Token{
             return transactions_.size();
         }
 
-        bool Visit(Transaction* tx){
+        bool Visit(const TransactionPtr& tx){
             if((GetNumberOfTransactions() + 1) >= GetBlockSize())
                 return false;
-            transactions_.push_back(Transaction(*tx));
+            transactions_.push_back(Transaction((*tx)));
             return true;
         }
 
@@ -85,7 +86,7 @@ namespace Token{
     };
 
     static inline void
-    OrphanTransaction(Transaction* tx){
+    OrphanTransaction(const TransactionPtr& tx){
         Hash hash = tx->GetHash();
         LOG(WARNING) << "orphaning transaction: " << hash;
         TransactionPool::RemoveTransaction(hash);

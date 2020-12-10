@@ -10,6 +10,8 @@
 #include "unclaimed_transaction.h"
 
 namespace Token{
+    typedef std::shared_ptr<Transaction> TransactionPtr;
+
     class Input : public Object{
         friend class Transaction;
     public:
@@ -341,8 +343,8 @@ namespace Token{
             //TODO: compare transaction signature
         }
 
-        static Transaction* NewInstance(std::fstream& fd, size_t size);
-        static inline Transaction* NewInstance(const std::string& filename){
+        static TransactionPtr NewInstance(std::fstream& fd, size_t size);
+        static inline TransactionPtr NewInstance(const std::string& filename){
             std::fstream fd(filename, std::ios::in|std::ios::binary);
             return NewInstance(fd, GetFilesize(filename));
         }
@@ -450,10 +452,10 @@ namespace Token{
         static bool Initialize();
         static bool Accept(TransactionPoolVisitor* vis);
         static bool RemoveTransaction(const Hash& hash);
-        static bool PutTransaction(const Hash& hash, Transaction* tx);
+        static bool PutTransaction(const Hash& hash, const TransactionPtr& tx);
         static bool HasTransaction(const Hash& hash);
         static bool GetTransactions(std::vector<Hash>& txs);
-        static Transaction* GetTransaction(const Hash& hash);
+        static TransactionPtr GetTransaction(const Hash& hash);
 
 #define DEFINE_STATE_CHECK(Name) \
         static inline bool Is##Name(){ return GetState() == State::k##Name; }
@@ -472,7 +474,7 @@ namespace Token{
     public:
         virtual ~TransactionPoolVisitor() = default;
         virtual bool VisitStart() const{ return true; }
-        virtual bool Visit(Transaction* tx) = 0;
+        virtual bool Visit(const TransactionPtr& tx) = 0;
         virtual bool VisitEnd() const{ return true; }
     };
 }

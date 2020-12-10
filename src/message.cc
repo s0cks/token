@@ -69,30 +69,6 @@ namespace Token{
         return size;
     }
 
-    TransactionMessage* TransactionMessage::NewInstance(Buffer* buff){
-        return new TransactionMessage(buff);
-    }
-
-    intptr_t TransactionMessage::GetMessageSize() const{
-        return data_.GetBufferSize();
-    }
-
-    bool TransactionMessage::Write(Buffer* buff) const{
-        return data_.Encode(buff);
-    }
-
-    BlockMessage* BlockMessage::NewInstance(Buffer* buff){
-        return new BlockMessage(buff);
-    }
-
-    intptr_t BlockMessage::GetMessageSize() const{
-        return data_->GetBufferSize();
-    }
-
-    bool BlockMessage::Write(Buffer* buff) const{
-        return data_->Encode(buff);
-    }
-
     UnclaimedTransactionMessage* UnclaimedTransactionMessage::NewInstance(Buffer* buff){
         UnclaimedTransaction* utxo = UnclaimedTransaction::NewInstance(buff);
         return new UnclaimedTransactionMessage(utxo);

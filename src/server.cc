@@ -329,9 +329,8 @@ namespace Token{
                         break;
                     }
 
-                    Transaction* tx = TransactionPool::GetTransaction(hash);
-                    response.push_back(new TransactionMessage((*tx)));
-                    delete tx;
+                    TransactionPtr tx = TransactionPool::GetTransaction(hash);
+                    response.push_back(new TransactionMessage(tx));//TODO: fix
                 } else if(item.IsUnclaimedTransaction()){
                     if(!UnclaimedTransactionPool::HasUnclaimedTransaction(hash)){
                         LOG(WARNING) << "couldn't find unclaimed transaction: " << hash;
@@ -400,7 +399,7 @@ namespace Token{
 
     void ServerSession::HandleBlockMessage(HandleMessageTask* task){
         BlockMessage* msg = task->GetMessage<BlockMessage>();
-        BlockPtr blk = msg->GetBlock();
+        BlockPtr blk = msg->GetValue();
         Hash hash = blk->GetHash();
         if(!BlockPool::HasBlock(hash)){
             BlockPool::PutBlock(hash, blk);
@@ -410,14 +409,12 @@ namespace Token{
 
     void ServerSession::HandleTransactionMessage(HandleMessageTask* task){
         TransactionMessage* msg = task->GetMessage<TransactionMessage>();
-        Transaction& tx = msg->GetTransaction();
-        Hash hash = tx.GetHash();
+        TransactionPtr tx = msg->GetValue();
+        Hash hash = tx->GetHash();
 
         LOG(INFO) << "received transaction: " << hash;
-        if(!TransactionPool::HasTransaction(hash)){
-            TransactionPool::PutTransaction(hash, &tx);
-            //TODO: Server::Broadcast(InventoryMessage::NewInstance(tx));
-        }
+        if(!TransactionPool::HasTransaction(hash))
+            TransactionPool::PutTransaction(hash, tx);
     }
 
     void ServerSession::HandleUnclaimedTransactionMessage(HandleMessageTask* task){

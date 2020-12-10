@@ -11,10 +11,10 @@ namespace Token{
 //######################################################################################################################
 //                                          Transaction
 //######################################################################################################################
-    Transaction* Transaction::NewInstance(std::fstream& fd, size_t size){
+    TransactionPtr Transaction::NewInstance(std::fstream& fd, size_t size){
         Buffer buff(size);
         buff.ReadBytesFrom(fd, size);
-        return new Transaction(&buff);
+        return TransactionPtr(new Transaction(&buff));
     }
 
     bool Transaction::Accept(TransactionVisitor* vis) const{
@@ -204,7 +204,7 @@ namespace Token{
                 std::string name(ent->d_name);
                 std::string filename = (GetDataDirectory() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
-                Transaction* tx = Transaction::NewInstance(filename);
+                TransactionPtr tx = Transaction::NewInstance(filename);
                 if(!vis->Visit(tx)) break;
             }
             closedir(dir);
@@ -259,7 +259,7 @@ namespace Token{
         return true;
     }
 
-    Transaction* TransactionPool::GetTransaction(const Hash& hash){
+    TransactionPtr TransactionPool::GetTransaction(const Hash& hash){
         leveldb::ReadOptions options;
         std::string key = hash.HexString();
         std::string filename;
@@ -273,7 +273,7 @@ namespace Token{
             return nullptr;
         }
 
-        Transaction* tx = Transaction::NewInstance(filename);
+        TransactionPtr tx = Transaction::NewInstance(filename);
         if(hash != tx->GetHash()){
             std::stringstream ss;
             ss << "couldn't verify transaction hash: " << hash;
@@ -316,7 +316,7 @@ namespace Token{
         return true;
     }
 
-    bool TransactionPool::PutTransaction(const Hash& hash, Transaction* tx){
+    bool TransactionPool::PutTransaction(const Hash& hash, const TransactionPtr& tx){
         leveldb::WriteOptions options;
         options.sync = true;
         std::string key = hash.HexString();
@@ -358,7 +358,7 @@ namespace Token{
                 std::string filename = (GetDataDirectory() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
 
-                Transaction* tx = Transaction::NewInstance(filename);
+                TransactionPtr tx = Transaction::NewInstance(filename);
                 txs.push_back(tx->GetHash());
             }
             closedir(dir);

@@ -147,27 +147,6 @@ namespace Token{
         Hash previous_hash_;
         TransactionList transactions_;
         BloomFilter tx_bloom_; // transient
-    protected:
-        int64_t GetBufferSize() const{
-            int64_t size = 0;
-            size += sizeof(Timestamp); // timestamp_
-            size += sizeof(int64_t); // height_
-            size += Hash::kSize; // previous_hash_
-            size += sizeof(int64_t); // num_transactions
-            for(auto& it : transactions_)
-                size += it.GetBufferSize();
-            return size;
-        }
-
-        bool Encode(Buffer* buff) const{
-            buff->PutLong(timestamp_);
-            buff->PutLong(height_);
-            buff->PutHash(previous_hash_);
-            buff->PutLong(GetNumberOfTransactions());
-            for(auto& it : transactions_)
-                it.Encode(buff);
-            return true;
-        }
     public:
         Block():
             BinaryObject(Type::kBlockType),
@@ -276,6 +255,27 @@ namespace Token{
             return GetHeight() == 0;
         }
 
+        int64_t GetBufferSize() const{
+            int64_t size = 0;
+            size += sizeof(Timestamp); // timestamp_
+            size += sizeof(int64_t); // height_
+            size += Hash::kSize; // previous_hash_
+            size += sizeof(int64_t); // num_transactions
+            for(auto& it : transactions_)
+                size += it.GetBufferSize();
+            return size;
+        }
+
+        bool Encode(Buffer* buff) const{
+            buff->PutLong(timestamp_);
+            buff->PutLong(height_);
+            buff->PutHash(previous_hash_);
+            buff->PutLong(GetNumberOfTransactions());
+            for(auto& it : transactions_)
+                it.Encode(buff);
+            return true;
+        }
+
         Buffer* ToBuffer() const{
             Buffer buff(GetBufferSize());
             if(!Encode(&buff)){
@@ -323,6 +323,11 @@ namespace Token{
         }
 
         static BlockPtr Genesis();
+
+        static inline std::shared_ptr<Block>
+        NewInstance(const BlockPtr& parent, const TransactionList& txs, const Timestamp& timestamp=GetCurrentTimestamp()){
+            return std::shared_ptr<Block>(new Block(parent, txs, timestamp));
+        }
 
         static inline std::shared_ptr<Block>
         NewInstance(const std::string& filename){
