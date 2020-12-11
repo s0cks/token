@@ -8,6 +8,7 @@
 #include "configuration.h"
 
 #include "block_chain.h"
+#include "block_writer.h"
 #include "block_processor.h"
 #include "unclaimed_transaction.h"
 
@@ -134,12 +135,7 @@ namespace Token{
             PutBlock(hash, genesis);
             PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
             PutReference(BLOCKCHAIN_REFERENCE_GENESIS, hash);
-
-            GenesisBlockProcessor processor;
-            if(!genesis->Accept(&processor)){
-                LOG(ERROR) << "couldn't process the genesis block.";
-                return false;
-            }
+            GenesisBlockProcessor::Process(genesis);
         }
 
         LOG(INFO) << "block chain initialized!";
@@ -260,6 +256,12 @@ namespace Token{
         return Hash::FromHexString(value);
     }
 
+    static inline bool
+    WriteToFile(const BlockPtr& blk, const std::string& filename){
+        BlockFileWriter writer(filename);
+        return writer.Write(blk);
+    }
+
     bool BlockChain::PutBlock(const Hash& hash, BlockPtr blk){
         BlockHeader block = blk->GetHeader();
 
@@ -274,7 +276,7 @@ namespace Token{
             return false;
         }
 
-        if(!blk->WriteToFile(filename)){
+        if(!WriteToFile(blk, filename)){
             LOG(WARNING) << "couldn't write block " << block << " to file: " << filename;
             return false;
         }

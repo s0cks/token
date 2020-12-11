@@ -62,8 +62,7 @@ namespace Token{
         ~NewProposalHandler() = default;
 
         bool ProcessBlock(const BlockPtr& blk) const{
-            DefaultBlockProcessor processor;
-            return blk->Accept(&processor);
+            return DefaultBlockProcessor::Process(blk);
         }
 
         bool ProcessProposal() const{
@@ -97,8 +96,7 @@ namespace Token{
         ~PeerProposalHandler() = default;
 
         bool ProcessBlock(const BlockPtr& blk) const{
-            SynchronizeBlockProcessor processor;
-            return blk->Accept(&processor);
+            return SynchronizeBlockProcessor::Process(blk);
         }
 
         bool ProcessProposal() const{

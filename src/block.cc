@@ -75,9 +75,9 @@ namespace Token{
         }
 
         TransactionList transactions = {
-            std::make_shared<Transaction>(0, inputs, outputs_a, 0),
-            std::make_shared<Transaction>(1, inputs, outputs_b, 0),
-            std::make_shared<Transaction>(2, inputs, outputs_c, 0),
+            std::make_shared<Transaction>(1, inputs, outputs_a, 0),
+            std::make_shared<Transaction>(2, inputs, outputs_b, 0),
+            std::make_shared<Transaction>(3, inputs, outputs_c, 0),
         };
         return std::make_shared<Block>(0, Hash(), transactions, 0);
     }
@@ -95,6 +95,7 @@ namespace Token{
         if(!vis->VisitStart())
             return false;
 
+        LOG(INFO) << "visiting " << GetNumberOfTransactions() << " transactions";
         int64_t idx;
         for(idx = 0;
             idx < GetNumberOfTransactions();

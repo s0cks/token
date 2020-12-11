@@ -96,12 +96,11 @@ namespace Token{
         ~TransactionVerifier() = delete;
 
         static bool IsValid(const TransactionPtr& tx){
+            Hash hash = tx->GetHash();
+            bool is_valid = true;
+            LOG(INFO) << "verifying transaction: " << hash;
             Timeline timeline("VerifyTransaction");
             timeline << "Start";
-
-            bool is_valid = true;
-            Hash hash = tx->GetHash();
-            LOG(INFO) << "verifying transaction: " << hash;
 
             timeline << "VerifyInputs";
             if(!VerifyInputs(hash, tx)){
@@ -118,7 +117,8 @@ namespace Token{
         stop:
             timeline << "Stop";
 #ifdef TOKEN_DEBUG
-            LOG(INFO) << timeline;
+            TimelinePrinter printer(google::INFO, Printer::kFlagDetailed);
+            printer.Print(timeline);
 #endif//TOKEN_DEBUG
             return is_valid;
         }

@@ -207,8 +207,20 @@ namespace Token{
             return inputs_.size();
         }
 
+        InputList& inputs(){
+            return inputs_;
+        }
+
         InputList inputs() const{
             return inputs_;
+        }
+
+        OutputList& outputs(){
+            return outputs_;
+        }
+
+        OutputList outputs() const{
+            return outputs_;
         }
 
         InputList::iterator inputs_begin(){

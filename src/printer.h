@@ -18,6 +18,10 @@ namespace Token{
             parent_(parent),
             severity_(severity),
             flags_(flags){}
+        Printer(const google::LogSeverity& severity, const long& flags):
+            parent_(nullptr),
+            severity_(severity),
+            flags_(flags){}
 
         long GetFlags() const{
             return flags_;

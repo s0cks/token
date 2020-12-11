@@ -126,7 +126,7 @@ namespace Token{
         friend class BlockMessage;
     public:
         static const int64_t kMaxTransactionsForBlock = 20;
-        static const int64_t kNumberOfGenesisOutputs = 32; // TODO: changeme
+        static const int64_t kNumberOfGenesisOutputs = 1000; // TODO: changeme
 
         struct TimestampComparator{
             bool operator()(Block* a, Block* b){
@@ -344,9 +344,9 @@ namespace Token{
         BlockVisitor() = default;
     public:
         virtual ~BlockVisitor() = default;
-        virtual bool VisitStart() const{ return true; }
+        virtual bool VisitStart(){ return true; }
         virtual bool Visit(const TransactionPtr& tx) = 0;
-        virtual bool VisitEnd() const{ return true; }
+        virtual bool VisitEnd(){ return true; }
     };
 
     class BlockPrinter : public BlockVisitor{

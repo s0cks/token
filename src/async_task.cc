@@ -69,8 +69,7 @@ namespace Token{
     bool SynchronizeBlockChainTask::ProcessBlock(const BlockPtr& block){
         BlockHeader header = block->GetHeader();
         Hash hash = header.GetHash();
-        SynchronizeBlockProcessor processor;
-        if(!block->Accept(&processor)){
+        if(!SynchronizeBlockProcessor::Process(block)){
             LOG(WARNING) << "couldn't process block: " << header;
             return false;
         }

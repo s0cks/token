@@ -12,6 +12,12 @@ namespace Token{
                 return a.timestamp_ < b.timestamp_;
             }
         };
+
+        struct NameComparator{
+            bool operator()(const TimelineEvent& a, const TimelineEvent& b){
+                return a.name_ < b.name_;
+            }
+        };
     private:
         Timestamp timestamp_;
         std::string name_;
@@ -47,13 +53,14 @@ namespace Token{
         }
     };
 
-    typedef std::set<TimelineEvent, TimelineEvent::TimestampComparator> TimelineEvents;
+    typedef std::set<TimelineEvent, TimelineEvent::NameComparator> TimelineEventSet;
+    typedef std::vector<TimelineEvent> TimelineEventList;
 
     class TimelineEventVisitor;
     class Timeline{
     private:
         std::string name_;
-        TimelineEvents events_;
+        TimelineEventSet events_;
     public:
         Timeline(const std::string& name):
             name_(name),
@@ -67,11 +74,11 @@ namespace Token{
             return name_;
         }
 
-        TimelineEvents& events(){
+        TimelineEventSet& events(){
             return events_;
         }
 
-        TimelineEvents events() const{
+        TimelineEventSet events() const{
             return events_;
         }
 
@@ -89,19 +96,19 @@ namespace Token{
             return GetStopTime() - GetStartTime();
         }
 
-        TimelineEvents::iterator events_begin(){
+        TimelineEventSet::iterator begin(){
             return events_.begin();
         }
 
-        TimelineEvents::const_iterator events_begin() const{
+        TimelineEventSet::const_iterator begin() const{
             return events_.begin();
         }
 
-        TimelineEvents::iterator events_end(){
+        TimelineEventSet::iterator end(){
             return events_.end();
         }
 
-        TimelineEvents::const_iterator events_end() const{
+        TimelineEventSet::const_iterator end() const{
             return events_.end();
         }
 
@@ -114,20 +121,40 @@ namespace Token{
             timeline.events_.insert(TimelineEvent(name));
             return timeline;
         }
+    };
 
-        friend std::ostream& operator<<(std::ostream& stream, const Timeline& timeline){
-            stream << timeline.GetName() << " Timeline:" << std::endl;
-            stream << "\tStart Time: " << GetTimestampFormattedReadable(timeline.GetStartTime()) << std::endl;
-            stream << "\tStop Time: " << GetTimestampFormattedReadable(timeline.GetStopTime()) << std::endl;
-            stream << "\tTotal Time (Seconds): " << timeline.GetTotalTime() << std::endl;
-            stream << "--------------------------------------------------" << std::endl;
-            auto last = timeline.GetStartTime();
-            for(auto& event : timeline.events()){
-                auto total_seconds = (event.GetTimestamp() - last);
-                stream << "\t- " << event.GetName() << " (" << total_seconds << " seconds)" << std::endl;
+    class TimelinePrinter : public Printer{
+    public:
+        TimelinePrinter(const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone):
+            Printer(severity, flags){}
+        ~TimelinePrinter() = default;
+
+        bool Print(const Timeline& timeline) const{
+            LOG_AT_LEVEL(GetSeverity()) << timeline.GetName();
+            LOG_AT_LEVEL(GetSeverity()) << "---------------------------------------------";
+            LOG_AT_LEVEL(GetSeverity()) << "  Start: " << GetTimestampFormattedReadable(timeline.GetStartTime());
+            LOG_AT_LEVEL(GetSeverity()) << "  Stop: " << GetTimestampFormattedReadable(timeline.GetStopTime());
+            LOG_AT_LEVEL(GetSeverity()) << "  Total Time (Seconds): " << timeline.GetTotalTime();
+
+            if(IsDetailed()){
+                //TODO: TimelinePrinter::Print(const Timeline&) - ordering can be weird
+                LOG_AT_LEVEL(GetSeverity()) << "  Events:";
+
+                TimelineEventList events;
+                std::copy(timeline.begin(), timeline.end(), std::inserter(events, events.begin()));
+                std::sort(events.begin(), events.end(), TimelineEvent::TimestampComparator());
+
+                Timestamp last = timeline.GetStartTime();
+                for(auto& event : events){
+                    int64_t total_seconds = (event.GetTimestamp() - last);
+
+                    LOG_AT_LEVEL(GetSeverity()) << "    - " << event.GetName() << " (" << total_seconds << " Seconds)";
+
+                    last = event.GetTimestamp();
+                }
             }
-            stream << "--------------------------------------------------" << std::endl;
-            return stream;
+            LOG_AT_LEVEL(GetSeverity()) << "---------------------------------------------";
+            return true;
         }
     };
 }

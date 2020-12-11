@@ -134,6 +134,14 @@ namespace Token{
         return WriteBytes((uint8_t*)hash.data(), Hash::kSize);
     }
 
+    bool BinaryFileWriter::WriteUser(const User& user){
+        return WriteBytes((uint8_t*)user.data(), User::kSize);
+    }
+
+    bool BinaryFileWriter::WriteProduct(const Product& product){
+        return WriteBytes((uint8_t*)product.data(), Product::kSize);
+    }
+
     bool BinaryFileWriter::WriteString(const std::string& value){
         return WriteInt(value.length()) && WriteBytes((uint8_t*)value.data(), value.length());
     }

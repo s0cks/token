@@ -7,14 +7,19 @@
 
 namespace Token{
     class FileWriter{
-    private:
-        std::string filename_;
     protected:
+        std::string filename_;
+        FileWriter* parent_;
         FILE* file_;
 
         FileWriter(const std::string& filename):
             filename_(filename),
+            parent_(nullptr),
             file_(nullptr){}
+        FileWriter(FileWriter* parent):
+            filename_(parent->GetFilename()),
+            parent_(parent),
+            file_(parent->GetFilePointer()){}
 
         bool HasFilePointer() const{
             return file_ != nullptr;
@@ -25,7 +30,12 @@ namespace Token{
         }
     public:
         virtual ~FileWriter(){
-            if(HasFilePointer()) Close();
+            if(HasFilePointer() && !HasParent())
+                Close();
+        }
+
+        bool HasParent() const{
+            return parent_ != nullptr;
         }
 
         std::string GetFilename() const{
@@ -100,6 +110,8 @@ namespace Token{
             if((file_ = fopen(filename.c_str(), "wb")) == NULL)
                 LOG(WARNING) << "couldn't create binary file " << filename << ": " << strerror(errno);
         }
+        BinaryFileWriter(BinaryFileWriter* parent):
+            FileWriter(parent){}
     public:
         ~BinaryFileWriter() = default;
 
@@ -109,6 +121,8 @@ namespace Token{
         bool WriteLong(int64_t value);
         bool WriteUnsignedLong(uint64_t value);
         bool WriteHash(const Hash& value);
+        bool WriteUser(const User& user);
+        bool WriteProduct(const Product& product);
         bool WriteString(const std::string& value);
         bool WriteObject(Object* obj);
 
