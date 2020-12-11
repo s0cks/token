@@ -348,7 +348,7 @@ namespace Token{
     public:
         virtual ~BlockVisitor() = default;
         virtual bool VisitStart() const{ return true; }
-        virtual bool Visit(const Transaction& tx) = 0;
+        virtual bool Visit(const TransactionPtr& tx) = 0;
         virtual bool VisitEnd() const{ return true; }
     };
 
@@ -376,8 +376,8 @@ namespace Token{
             return true;
         }
 
-        bool Visit(const Transaction& tx){
-            LOG(INFO) << "  - #" << tx.GetIndex() << ": " << tx.GetHash();
+        bool Visit(const TransactionPtr& tx){
+            LOG(INFO) << "  - #" << tx->GetIndex() << ": " << tx->GetHash();
             return true;
         }
 

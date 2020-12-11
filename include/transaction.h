@@ -155,7 +155,8 @@ namespace Token{
     typedef std::vector<Input> InputList;
     typedef std::vector<Output> OutputList;
 
-    class TransactionVisitor;
+    class TransactionInputVisitor;
+    class TransactionOutputVisitor;
     class Transaction : public BinaryObject{
         friend class Block;
         friend class TransactionMessage;
@@ -279,7 +280,8 @@ namespace Token{
         }
 
         bool Sign();
-        bool Accept(TransactionVisitor* vis) const;
+        bool VisitInputs(TransactionInputVisitor* vis) const;
+        bool VisitOutputs(TransactionOutputVisitor* vis) const;
 
         bool Encode(Buffer* buff) const{
             buff->PutLong(timestamp_);
@@ -352,21 +354,23 @@ namespace Token{
 
     typedef std::vector<Transaction> TransactionList;
 
-    class TransactionVisitor{
+    class TransactionInputVisitor{
+    protected:
+        TransactionInputVisitor() = default;
     public:
-        virtual ~TransactionVisitor() = default;
-
-        virtual bool VisitStart(){ return true; }
-        virtual bool VisitInputsStart(){ return true; }
-        virtual bool VisitInput(const Input& input) const = 0;
-        virtual bool VisitInputsEnd(){ return true; }
-        virtual bool VisitOutputsStart(){ return true; }
-        virtual bool VisitOutput(const Output& output) const = 0;
-        virtual bool VisitOutputsEnd(){ return true; }
-        virtual bool VisitEnd(){ return true; }
+        virtual ~TransactionInputVisitor() = default;
+        virtual bool Visit(const Input& input) = 0;
     };
 
-    class TransactionPrinter : public Printer, public TransactionVisitor{
+    class TransactionOutputVisitor{
+    protected:
+        TransactionOutputVisitor() = default;
+    public:
+        virtual ~TransactionOutputVisitor() = default;
+        virtual bool Visit(const Output& output) = 0;
+    };
+
+    class TransactionPrinter : public Printer, public TransactionInputVisitor, public TransactionOutputVisitor{
     public:
         TransactionPrinter(Printer* parent, const google::LogSeverity& severity, const long& flags):
             Printer(parent, severity, flags){}
@@ -374,14 +378,14 @@ namespace Token{
             Printer(nullptr, severity, flags){}
         ~TransactionPrinter() = default;
 
-        bool VisitInput(const Input& input) const{
+        bool Visit(const Input& input) const{
             if(!IsDetailed())
                 return true;
             LOG_AT_LEVEL(GetSeverity()) << "Input(" << input.GetTransactionHash() << "[" << input.GetOutputIndex() << "]";
             return true;
         }
 
-        bool VisitOutput(const Output& output) const{
+        bool Visit(const Output& output) const{
             if(!IsDetailed())
                 return true;
             LOG_AT_LEVEL(GetSeverity()) << "Output(" << output.GetUser() << ", " << output.GetProduct() << ")";

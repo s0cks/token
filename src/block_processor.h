@@ -2,7 +2,7 @@
 #define TOKEN_BLOCK_PROCESSOR_H
 
 #include "block.h"
-#include "transaction_handler.h"
+#include "transaction_processor.h"
 
 namespace Token{
     class BlockProcessor : public BlockVisitor{
@@ -17,8 +17,8 @@ namespace Token{
         GenesisBlockProcessor() = default;
         ~GenesisBlockProcessor() = default;
 
-        bool Visit(const Transaction& tx){
-            Hash hash = tx.GetHash();
+        bool Visit(const TransactionPtr& tx){
+            Hash hash = tx->GetHash();
             if(!TransactionHandler::ProcessTransaction(tx)){
                 LOG(WARNING) << "couldn't process transaction: " << hash;
                 return false;
@@ -33,8 +33,8 @@ namespace Token{
         SynchronizeBlockProcessor() = default;
         ~SynchronizeBlockProcessor() = default;
 
-        bool Visit(const Transaction& tx){
-            Hash hash = tx.GetHash();
+        bool Visit(const TransactionPtr& tx){
+            Hash hash = tx->GetHash();
             if(!TransactionHandler::ProcessTransaction(tx)){
                 LOG(WARNING) << "couldn't process transaction: " << hash;
                 return false;
@@ -48,8 +48,8 @@ namespace Token{
         DefaultBlockProcessor() = default;
         ~DefaultBlockProcessor() = default;
 
-        bool Visit(const Transaction& tx){
-            Hash hash = tx.GetHash();
+        bool Visit(const TransactionPtr& tx){
+            Hash hash = tx->GetHash();
             if(!TransactionHandler::ProcessTransaction(tx)){
                 LOG(WARNING) << "couldn't process transaction: " << hash;
                 return false;

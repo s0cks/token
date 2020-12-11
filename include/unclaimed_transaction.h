@@ -140,6 +140,7 @@ namespace Token{
         static bool RemoveUnclaimedTransaction(const Hash& hash);
         static bool PutUnclaimedTransaction(const Hash& hash, const UnclaimedTransactionPtr& utxo);
         static bool HasUnclaimedTransaction(const Hash& hash);
+        static bool HasUnclaimedTransaction(const Hash& tx_hash, const int32_t tx_index);
         static bool GetUnclaimedTransactions(std::vector<Hash>& utxos);
         static bool GetUnclaimedTransactions(const std::string& user, std::vector<Hash>& utxos);
         static UnclaimedTransactionPtr GetUnclaimedTransaction(const Hash& hash);

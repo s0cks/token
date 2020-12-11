@@ -290,8 +290,8 @@ namespace Token{
             return std::unique_ptr<MerkleTree>(new MerkleTree(leaves_));
         }
 
-        bool Visit(const Transaction& tx){
-            leaves_.push_back(tx.GetHash());
+        bool Visit(const TransactionPtr& tx){
+            leaves_.push_back(tx->GetHash());
             return true;
         }
 

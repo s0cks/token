@@ -1,9 +1,9 @@
-#ifndef TOKEN_BLOCK_VALIDATOR_H
-#define TOKEN_BLOCK_VALIDATOR_H
+#ifndef TOKEN_BLOCK_VERIFIER_H
+#define TOKEN_BLOCK_VERIFIER_H
 
 #include <glog/logging.h>
 #include "object.h"
-#include "transaction_validator.h"
+#include "transaction_verifier.h"
 
 namespace Token{
     class BlockVerifier : public BlockVisitor{
@@ -23,20 +23,20 @@ namespace Token{
             return strict_;
         }
 
-        bool Visit(const Transaction& tx){
-            Hash hash = tx.GetHash();
-            if(tx.GetNumberOfInputs() <= 0){
+        bool Visit(const TransactionPtr& tx){
+            Hash hash = tx->GetHash();
+            if(tx->GetNumberOfInputs() <= 0){
                 invalid_.push_back(hash);
                 LOG(WARNING) << "transaction " << hash << " is invalid, no inputs.";
                 return false;
-            } else if(tx.GetNumberOfOutputs() <= 0){
+            } else if(tx->GetNumberOfOutputs() <= 0){
                 invalid_.push_back(hash);
                 LOG(WARNING) << "transaction " << hash << " is invalid, no outputs.";
                 return false;
             }
 
             if(IsStrict()){
-                if(!TransactionValidator::IsValid(tx)){
+                if(!TransactionVerifier::IsValid(tx)){
                     invalid_.push_back(hash);
                     LOG(WARNING) << "transaction " << hash << " is invalid, invalid data";
                     return false;
@@ -75,4 +75,4 @@ namespace Token{
     };
 }
 
-#endif //TOKEN_BLOCK_VALIDATOR_H
+#endif //TOKEN_BLOCK_VERIFIER_H

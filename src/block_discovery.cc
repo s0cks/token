@@ -3,10 +3,10 @@
 #include "async_task.h"
 #include "server.h"
 
-#include "block_validator.h"
+#include "block_verifier.h"
 #include "block_processor.h"
 #include "proposal_handler.h"
-#include "transaction_validator.h"
+#include "transaction_verifier.h"
 #include "peer/peer_session_manager.h"
 
 namespace Token{

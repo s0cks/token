@@ -17,33 +17,18 @@ namespace Token{
         return TransactionPtr(new Transaction(&buff));
     }
 
-    bool Transaction::Accept(TransactionVisitor* vis) const{
-        if(!vis->VisitStart()) return false;
+    bool Transaction::VisitInputs(TransactionInputVisitor* vis) const{
+        for(auto& it : inputs_)
+            if(!vis->Visit(it))
+                return false;
+        return true;
+    }
 
-        int64_t idx;
-        // visit the inputs
-        {
-            if(!vis->VisitInputsStart()) return false;
-            for(idx = 0;
-                idx < GetNumberOfInputs();
-                idx++){
-                if(!vis->VisitInput(inputs_[idx]))
-                    return false;
-            }
-            if(!vis->VisitInputsEnd()) return false;
-        }
-        // visit the outputs
-        {
-            if(!vis->VisitOutputsStart()) return false;
-            for(idx = 0;
-                idx < GetNumberOfOutputs();
-                idx++){
-                if(!vis->VisitOutput(outputs_[idx]))
-                    return false;
-            }
-            if(!vis->VisitOutputsEnd()) return false;
-        }
-        return vis->VisitEnd();
+    bool Transaction::VisitOutputs(TransactionOutputVisitor* vis) const{
+        for(auto& it : outputs_)
+            if(!vis->Visit(it))
+                return false;
+        return true;
     }
 
     bool Transaction::Sign(){

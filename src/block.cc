@@ -99,7 +99,9 @@ namespace Token{
         for(idx = 0;
             idx < GetNumberOfTransactions();
             idx++){
-            if(!vis->Visit(transactions_[idx]))
+
+            TransactionPtr tx = std::make_shared<Transaction>(transactions_[idx]);
+            if(!vis->Visit(tx))
                 return false;
         }
 

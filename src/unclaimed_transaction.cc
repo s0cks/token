@@ -332,6 +332,25 @@ namespace Token{
         return false;
     }
 
+    bool UnclaimedTransactionPool::HasUnclaimedTransaction(const Hash& tx_hash, int32_t tx_index){
+        LOCK_GUARD;
+        DIR* dir;
+        struct dirent* ent;
+        if((dir = opendir(GetDataDirectory().c_str())) != NULL){
+            while((ent = readdir(dir)) != NULL){
+                std::string name(ent->d_name);
+                std::string filename = (GetDataDirectory() + "/" + name);
+                if(!EndsWith(filename, ".dat")) continue;
+
+                UnclaimedTransactionPtr utxo = UnclaimedTransaction::NewInstance(filename);
+                if(utxo->GetTransaction() == tx_hash && utxo->GetIndex() == tx_index)
+                    return true;
+            }
+            closedir(dir);
+        }
+        return false;
+    }
+
     UnclaimedTransactionPtr UnclaimedTransactionPool::GetUnclaimedTransaction(const Hash &tx_hash, int32_t tx_index){
         //TODO: better error handling + validation
         LOCK_GUARD;
