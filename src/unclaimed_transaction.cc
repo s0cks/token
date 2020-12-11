@@ -391,18 +391,30 @@ namespace Token{
     }
 
     class UnclaimedTransactionPoolPrinter : public UnclaimedTransactionPoolVisitor{
+    private:
+        bool detailed_;
     public:
-        UnclaimedTransactionPoolPrinter(): UnclaimedTransactionPoolVisitor(){}
+        UnclaimedTransactionPoolPrinter(bool is_detailed):
+            UnclaimedTransactionPoolVisitor(),
+            detailed_(is_detailed){}
         ~UnclaimedTransactionPoolPrinter() = default;
 
+        bool IsDetailed() const{
+            return detailed_;
+        }
+
         bool Visit(const UnclaimedTransactionPtr& utxo){
-            LOG(INFO) << utxo->GetTransaction() << "[" << utxo->GetIndex() << "] := " << utxo->GetHash();
+            if(IsDetailed()){
+                LOG(INFO) << utxo->GetHash() << " := " << utxo->GetTransaction() << "[" << utxo->GetIndex() << "]";
+            } else{
+                LOG(INFO) << utxo->GetHash();
+            }
             return true;
         }
     };
 
-    bool UnclaimedTransactionPool::Print(){
-        UnclaimedTransactionPoolPrinter printer;
+    bool UnclaimedTransactionPool::Print(bool is_detailed){
+        UnclaimedTransactionPoolPrinter printer(is_detailed);
         return Accept(&printer);
     }
 }

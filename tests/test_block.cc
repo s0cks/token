@@ -12,4 +12,14 @@ namespace Token{
         BlockPtr b = Block::Genesis();
         ASSERT_TRUE(a->GetHash() == b->GetHash());
     }
+
+    TEST(TestBlock, test_serialization){
+        BlockPtr a = Block::Genesis();
+
+        Buffer buff(a->GetBufferSize());
+        ASSERT_TRUE(a->Encode(&buff));
+
+        BlockPtr b = std::make_shared<Block>(&buff);
+        ASSERT_EQ(a->GetHash(), b->GetHash());
+    }
 }

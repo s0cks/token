@@ -20,8 +20,6 @@ namespace Token{
         int32_t index_;
         User user_;
         Product product_;
-
-
     public:
         UnclaimedTransaction(const Hash& hash, int32_t index, const User& user, const Product& product):
             BinaryObject(Type::kUnclaimedTransactionType),
@@ -61,14 +59,30 @@ namespace Token{
         }
 
         bool Encode(Buffer* buff) const{
+            LOG(INFO) << "writing hash: " << hash_;
             buff->PutHash(hash_);
+            LOG(INFO) << "writing index: " << index_;
             buff->PutInt(index_);
+            LOG(INFO) << "writing user: " << user_;
             buff->PutUser(user_);
+            LOG(INFO) << "writing product: " << product_;
             buff->PutProduct(product_);
             return true;
         }
 
         std::string ToString() const;
+
+        static UnclaimedTransactionPtr NewInstance(Buffer* buff){
+            Hash hash = buff->GetHash();
+            LOG(INFO) << "read hash: " << hash;
+            int32_t idx = buff->GetInt();
+            LOG(INFO) << "read index: " << idx;
+            User usr = buff->GetUser();
+            LOG(INFO) << "read user: " << usr;
+            Product product = buff->GetProduct();
+            LOG(INFO) << "read product: " << product;
+            return std::make_shared<UnclaimedTransaction>(hash, idx, usr, product);
+        }
 
         static UnclaimedTransactionPtr NewInstance(std::fstream& fd, size_t size);
         static inline UnclaimedTransactionPtr NewInstance(const std::string& filename){
@@ -134,7 +148,7 @@ namespace Token{
         static Status GetStatus();
         static std::string GetStatusMessage();
         static int64_t GetNumberOfUnclaimedTransactions();
-        static bool Print();
+        static bool Print(bool is_detailed=false);
         static bool Initialize();
         static bool Accept(UnclaimedTransactionPoolVisitor* vis);
         static bool RemoveUnclaimedTransaction(const Hash& hash);

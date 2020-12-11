@@ -4,6 +4,7 @@
 #include "verifier.h"
 #include "block_chain.h"
 #include "transaction.h"
+#include "utils/timeline.h"
 
 namespace Token{
     class InputVerifier : public Verifier<Input>,
@@ -54,7 +55,7 @@ namespace Token{
 
     class TransactionVerifier{
     private:
-        TransactionVerifier() = delete;
+        TransactionVerifier() = default;
 
         static inline bool
         VerifyInputs(const Hash& hash, const TransactionPtr& tx){
@@ -95,10 +96,31 @@ namespace Token{
         ~TransactionVerifier() = delete;
 
         static bool IsValid(const TransactionPtr& tx){
+            Timeline timeline("VerifyTransaction");
+            timeline << "Start";
+
+            bool is_valid = true;
             Hash hash = tx->GetHash();
             LOG(INFO) << "verifying transaction: " << hash;
-            return VerifyInputs(hash, tx)
-                && VerifyOutputs(hash, tx);
+
+            timeline << "VerifyInputs";
+            if(!VerifyInputs(hash, tx)){
+                is_valid = false;
+                goto stop;
+            }
+
+            timeline << "VerifyOutputs";
+            if(!VerifyOutputs(hash, tx)){
+                is_valid = false;
+                goto stop;
+            }
+
+        stop:
+            timeline << "Stop";
+#ifdef TOKEN_DEBUG
+            LOG(INFO) << timeline;
+#endif//TOKEN_DEBUG
+            return is_valid;
         }
     };
 }

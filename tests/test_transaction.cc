@@ -2,9 +2,10 @@
 #include "token.h"
 
 #include "transaction.h"
+#include "transaction_verifier.h"
 
 namespace Token{
-    static inline Transaction
+    static inline TransactionPtr
     CreateTransaction(int64_t index, int64_t num_outputs, Timestamp timestamp=GetCurrentTimestamp()){
         InputList inputs;
         OutputList outputs;
@@ -13,22 +14,27 @@ namespace Token{
             ss << "TestToken" << idx;
             outputs.push_back(Output("TestUser", ss.str()));
         }
-        return Transaction(index, inputs, outputs, timestamp);
+        return std::make_shared<Transaction>(index, inputs, outputs, timestamp);
     }
 
     TEST(TestTransaction, test_hash){
-        Transaction tx = CreateTransaction(0, 1, 0);
-        ASSERT_EQ(tx.GetHash(), Hash::FromHexString("B16C82738D9EBE7BAE78828058F68AA26DF5200BFC843DE9412887E6B082746C"));
+        TransactionPtr tx = CreateTransaction(0, 1, 0);
+        ASSERT_EQ(tx->GetHash(), Hash::FromHexString("B16C82738D9EBE7BAE78828058F68AA26DF5200BFC843DE9412887E6B082746C"));
     }
 
     TEST(TestTransaction, test_eq){
-        Transaction a = CreateTransaction(0, 3);
-        Transaction b = CreateTransaction(0, 3);
-        ASSERT_TRUE(a == b);
-        Transaction c = CreateTransaction(1, 3);
-        ASSERT_FALSE(a == c);
-        Transaction d = CreateTransaction(0, 1);
-        ASSERT_FALSE(a == d);
-        ASSERT_FALSE(d == c);
+        TransactionPtr a = CreateTransaction(0, 3);
+        TransactionPtr b = CreateTransaction(0, 3);
+        ASSERT_TRUE(a->GetHash() == b->GetHash());
+        TransactionPtr c = CreateTransaction(1, 3);
+        ASSERT_FALSE(a->GetHash() == c->GetHash());
+        TransactionPtr d = CreateTransaction(0, 1);
+        ASSERT_FALSE(a->GetHash() == d->GetHash());
+        ASSERT_FALSE(d->GetHash() == c->GetHash());
     }
+/*
+    TEST(TestTransaction, test_verifier){
+        TransactionPtr tx = CreateTransaction(0, 1);
+        ASSERT_TRUE(TransactionVerifier::IsValid(tx));
+    }*/
 }
