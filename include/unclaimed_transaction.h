@@ -29,8 +29,6 @@ namespace Token{
             product_(product){}
         UnclaimedTransaction(const Hash& hash, int32_t index, const std::string& user, const std::string& product):
             UnclaimedTransaction(hash, index, User(user), Product(product)){}
-        UnclaimedTransaction(Buffer* buff):
-            UnclaimedTransaction(buff->GetHash(), buff->GetInt(), buff->GetUser(), buff->GetProduct()){}
         ~UnclaimedTransaction(){}
 
         Hash GetTransaction() const{
@@ -59,13 +57,9 @@ namespace Token{
         }
 
         bool Encode(Buffer* buff) const{
-            LOG(INFO) << "writing hash: " << hash_;
             buff->PutHash(hash_);
-            LOG(INFO) << "writing index: " << index_;
             buff->PutInt(index_);
-            LOG(INFO) << "writing user: " << user_;
             buff->PutUser(user_);
-            LOG(INFO) << "writing product: " << product_;
             buff->PutProduct(product_);
             return true;
         }
@@ -74,13 +68,9 @@ namespace Token{
 
         static UnclaimedTransactionPtr NewInstance(Buffer* buff){
             Hash hash = buff->GetHash();
-            LOG(INFO) << "read hash: " << hash;
             int32_t idx = buff->GetInt();
-            LOG(INFO) << "read index: " << idx;
             User usr = buff->GetUser();
-            LOG(INFO) << "read user: " << usr;
             Product product = buff->GetProduct();
-            LOG(INFO) << "read product: " << product;
             return std::make_shared<UnclaimedTransaction>(hash, idx, usr, product);
         }
 

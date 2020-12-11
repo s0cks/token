@@ -72,7 +72,7 @@ namespace Token{
         bool Visit(const TransactionPtr& tx){
             if((GetNumberOfTransactions() + 1) >= GetBlockSize())
                 return false;
-            transactions_.push_back(Transaction((*tx)));
+            transactions_.push_back(tx);
             return true;
         }
 
@@ -159,7 +159,7 @@ namespace Token{
             } else if(GetNumberOfTransactionsInPool() >= 2){
                 BlockPtr blk = CreateNewBlock(2);
                 Hash hash = blk->GetHash();
-                if(!BlockVerifier::IsValid(blk)){
+                if(!BlockVerifier::IsValid(blk, true)){
                     //TODO: orphan block properly
                     LOG(WARNING) << "block " << blk << " is invalid, orphaning....";
                     return;

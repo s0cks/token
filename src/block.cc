@@ -75,9 +75,9 @@ namespace Token{
         }
 
         TransactionList transactions = {
-            Transaction(0, inputs, outputs_a, 0),
-            Transaction(1, inputs, outputs_b, 0),
-            Transaction(2, inputs, outputs_c, 0),
+            std::make_shared<Transaction>(0, inputs, outputs_a, 0),
+            std::make_shared<Transaction>(1, inputs, outputs_b, 0),
+            std::make_shared<Transaction>(2, inputs, outputs_c, 0),
         };
         return std::make_shared<Block>(0, Hash(), transactions, 0);
     }
@@ -100,7 +100,7 @@ namespace Token{
             idx < GetNumberOfTransactions();
             idx++){
 
-            TransactionPtr tx = std::make_shared<Transaction>(transactions_[idx]);
+            TransactionPtr tx = transactions_[idx];
             if(!vis->Visit(tx))
                 return false;
         }

@@ -39,37 +39,42 @@ namespace Token{
     }
 
     bool ProposalHandler::WasRejected() const{
-        return proposal_->GetNumberOfRejected() >= proposal_->GetNumberOfAccepted();
+        return GetRequiredNumberOfPeers() > 0
+            && proposal_->GetNumberOfRejected() >= proposal_->GetNumberOfAccepted();
     }
 
-#define CANNOT_TRANSITION_TO(Phase) \
-    LOG(ERROR) << "cannot transition proposal #" << GetProposalID() << " to " << phase << " phase."; \
-    return false;
+#define CANNOT_TRANSITION_TO(From, To) \
+    LOG(ERROR) << "cannot transition proposal #" << GetProposalID() << " from " << (From) << " phase to " << (To) << " phase.";
 
     bool ProposalHandler::TransitionToPhase(const Proposal::Phase& phase) const{
         //TODO: better error handling
+        LOG(INFO) << "transitioning proposal #" << GetProposalID() << " to phase: " << phase;
         switch(phase){
             case Proposal::kVotingPhase:
                 if(!GetProposal()->IsProposal()){
-                    CANNOT_TRANSITION_TO(phase);
+                    CANNOT_TRANSITION_TO(GetProposal()->GetPhase(), phase);
+                    return false;
                 }
                 GetProposal()->SetPhase(phase);
                 return true;
             case Proposal::kCommitPhase:
                 if(!GetProposal()->IsVoting()){
-                    CANNOT_TRANSITION_TO(phase);
+                    CANNOT_TRANSITION_TO(GetProposal()->GetPhase(), phase);
+                    return false;
                 }
                 GetProposal()->SetPhase(phase);
                 return true;
             case Proposal::kQuorumPhase:
                 if(!(GetProposal()->IsVoting() || GetProposal()->IsCommit())){
-                    CANNOT_TRANSITION_TO(phase);
+                    CANNOT_TRANSITION_TO(GetProposal()->GetPhase(), phase);
+                    return false;
                 }
                 GetProposal()->SetPhase(phase);
                 return true;
             case Proposal::kProposalPhase:
             default:
-                CANNOT_TRANSITION_TO(phase);
+                CANNOT_TRANSITION_TO(GetProposal()->GetPhase(), phase);
+                return false;
         }
     }
 }

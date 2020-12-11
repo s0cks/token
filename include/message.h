@@ -330,7 +330,7 @@ namespace Token{
             value_(value){}
         ObjectMessage(Buffer* buff):
             Message(),
-            value_(new T(buff)){}
+            value_(T::NewInstance(buff)){}
     public:
         virtual ~ObjectMessage() = default;
 

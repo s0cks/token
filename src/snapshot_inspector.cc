@@ -15,8 +15,8 @@ namespace Token{
         for(idx = 0;
             idx < blk->GetNumberOfTransactions();
             idx++){
-            Transaction& tx = blk->transactions()[idx];
-            LOG(INFO) << "      * #" << tx.GetIndex() << ": " << tx.GetHash();
+            TransactionPtr& tx = blk->transactions()[idx];
+            LOG(INFO) << "      * #" << tx->GetIndex() << ": " << tx->GetHash();
         }
     }
 

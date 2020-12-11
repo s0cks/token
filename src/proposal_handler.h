@@ -20,6 +20,14 @@ namespace Token{
         bool CommitProposal() const;
         bool CancelProposal() const;
         bool TransitionToPhase(const Proposal::Phase& phase) const;
+
+        static inline int32_t
+        GetRequiredNumberOfPeers(){
+            int32_t peers = PeerSessionManager::GetNumberOfConnectedPeers();
+            if(peers == 0) return 0;
+            else if(peers == 1) return 1;
+            return peers / 2;
+        }
     public:
         virtual ~ProposalHandler() = default;
 

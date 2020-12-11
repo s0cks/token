@@ -8,7 +8,7 @@ namespace Token{
     UnclaimedTransactionPtr UnclaimedTransaction::NewInstance(std::fstream& fd, size_t size){
         Buffer buff(size);
         fd.read((char*)buff.data(), size);
-        return UnclaimedTransactionPtr(new UnclaimedTransaction(&buff));
+        return NewInstance(&buff);
     }
 
     std::string UnclaimedTransaction::ToString() const{

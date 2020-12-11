@@ -14,7 +14,7 @@ namespace Token{
     TransactionPtr Transaction::NewInstance(std::fstream& fd, size_t size){
         Buffer buff(size);
         buff.ReadBytesFrom(fd, size);
-        return TransactionPtr(new Transaction(&buff));
+        return NewInstance(&buff);
     }
 
     bool Transaction::VisitInputs(TransactionInputVisitor* vis) const{

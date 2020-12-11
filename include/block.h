@@ -164,7 +164,7 @@ namespace Token{
             tx_bloom_(){
             if(!transactions.empty()){
                 for(auto& it : transactions)
-                    tx_bloom_.Put(it.GetHash());
+                    tx_bloom_.Put(it->GetHash());
             }
         }
         Block(const Block& parent, const TransactionList& transactions, Timestamp timestamp=GetCurrentTimestamp()):
@@ -173,23 +173,6 @@ namespace Token{
             Block(parent->GetHeight() + 1, parent->GetHash(), transactions, timestamp){}
         Block(const BlockHeader& parent, const TransactionList& transactions, Timestamp timestamp=GetCurrentTimestamp()):
             Block(parent.GetHeight() + 1, parent.GetHash(), transactions, timestamp){}
-        Block(Buffer* buff):
-            BinaryObject(Type::kBlockType),
-            timestamp_(buff->GetLong()),
-            height_(buff->GetLong()),
-            previous_hash_(buff->GetHash()),
-            transactions_(),
-            tx_bloom_(){
-            int64_t idx;
-            int64_t num_transactions = buff->GetLong();
-            for(idx = 0;
-                idx < num_transactions;
-                idx++){
-                Transaction tx(buff);
-                transactions_.push_back(tx);
-                tx_bloom_.Put(tx.GetHash());
-            }
-        }
         Block(const Block& other):
             BinaryObject(Type::kBlockType),
             timestamp_(other.timestamp_),
@@ -243,11 +226,11 @@ namespace Token{
             return transactions_.end();
         }
 
-        Transaction& operator[](int64_t idx){
+        TransactionPtr& operator[](int64_t idx){
             return transactions_[idx];
         }
 
-        Transaction operator[](int64_t idx) const{
+        TransactionPtr operator[](int64_t idx) const{
             return transactions_[idx];
         }
 
@@ -262,7 +245,7 @@ namespace Token{
             size += Hash::kSize; // previous_hash_
             size += sizeof(int64_t); // num_transactions
             for(auto& it : transactions_)
-                size += it.GetBufferSize();
+                size += it->GetBufferSize();
             return size;
         }
 
@@ -272,7 +255,7 @@ namespace Token{
             buff->PutHash(previous_hash_);
             buff->PutLong(GetNumberOfTransactions());
             for(auto& it : transactions_)
-                it.Encode(buff);
+                it->Encode(buff);
             return true;
         }
 
@@ -324,6 +307,20 @@ namespace Token{
 
         static BlockPtr Genesis();
 
+        static BlockPtr NewInstance(Buffer* buff){
+            Timestamp timestamp = buff->GetLong();
+            int64_t height = buff->GetLong();
+            Hash previous_hash = buff->GetHash();
+
+            int64_t idx;
+            int64_t num_transactions = buff->GetLong();
+            TransactionList transactions;
+            for(idx = 0; idx < num_transactions; idx++)
+                transactions.push_back(Transaction::NewInstance(buff));
+
+            return std::make_shared<Block>(height, previous_hash, transactions, timestamp);
+        }
+
         static inline std::shared_ptr<Block>
         NewInstance(const BlockPtr& parent, const TransactionList& txs, const Timestamp& timestamp=GetCurrentTimestamp()){
             return std::shared_ptr<Block>(new Block(parent, txs, timestamp));
@@ -338,7 +335,7 @@ namespace Token{
                 LOG(WARNING) << "couldn't read block from file: " << filename;
                 return nullptr;
             }
-            return std::make_shared<Block>(&buffer);
+            return NewInstance(&buffer);
         }
     };
 

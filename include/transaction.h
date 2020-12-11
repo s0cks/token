@@ -162,14 +162,14 @@ namespace Token{
         friend class TransactionMessage;
     public:
         struct TimestampComparator{
-            bool operator()(const Transaction& a, const Transaction& b){
-                return a.timestamp_ < b.timestamp_;
+            bool operator()(const TransactionPtr& a, const TransactionPtr& b){
+                return a->timestamp_ < b->timestamp_;
             }
         };
 
         struct IndexComparator{
-            bool operator()(const Transaction& a, const Transaction& b){
-                return a.index_ < b.index_;
+            bool operator()(const TransactionPtr& a, const TransactionPtr& b){
+                return a->index_ < b->index_;
             }
         };
     private:
@@ -186,26 +186,6 @@ namespace Token{
             inputs_(inputs),
             outputs_(outputs),
             signature_(){}
-        Transaction(Buffer* buff):
-            BinaryObject(Type::kTransactionType),
-            timestamp_(buff->GetLong()),
-            index_(buff->GetLong()),
-            inputs_(),
-            outputs_(),
-            signature_(){
-            int64_t idx;
-
-            int64_t num_inputs = buff->GetLong();
-            for(idx = 0;
-                idx < num_inputs;
-                idx++)
-                inputs_.push_back(Input(buff));
-            int64_t num_outputs = buff->GetLong();
-            for(idx = 0;
-                idx < num_outputs;
-                idx++)
-                outputs_.push_back(Output(buff));
-        }
         Transaction(const Transaction& tx): //TODO: remove Transaction(const Transaction&)
             BinaryObject(Type::kTransactionType),
             timestamp_(tx.timestamp_),
@@ -345,6 +325,24 @@ namespace Token{
             //TODO: compare transaction signature
         }
 
+        static TransactionPtr NewInstance(Buffer* buff){
+            Timestamp timestamp = buff->GetLong();
+            int64_t index = buff->GetLong();
+
+            InputList inputs;
+
+            int64_t idx;
+            int64_t num_inputs = buff->GetLong();
+            for(idx = 0; idx < num_inputs; idx++)
+                inputs.push_back(Input(buff));
+
+            OutputList outputs;
+            int64_t num_outputs = buff->GetLong();
+            for(idx = 0; idx < num_outputs; idx++)
+                outputs.push_back(Output(buff));
+            return std::make_shared<Transaction>(index, inputs, outputs, timestamp);
+        }
+
         static TransactionPtr NewInstance(std::fstream& fd, size_t size);
         static inline TransactionPtr NewInstance(const std::string& filename){
             std::fstream fd(filename, std::ios::in|std::ios::binary);
@@ -352,7 +350,7 @@ namespace Token{
         }
     };
 
-    typedef std::vector<Transaction> TransactionList;
+    typedef std::vector<TransactionPtr> TransactionList;
 
     class TransactionInputVisitor{
     protected:
