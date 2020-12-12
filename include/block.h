@@ -323,7 +323,7 @@ namespace Token{
         virtual bool VisitEnd(){ return true; }
     };
 
-    class BlockFileWriter : public BinaryFileWriter{
+    class BlockFileWriter : BinaryFileWriter{
     private:
         TransactionFileWriter tx_writer_;
     public:
@@ -373,7 +373,7 @@ namespace Token{
         }
     };
 
-    class BlockPrinter : public Printer{
+    class BlockPrinter : Printer{
     public:
         BlockPrinter(const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone):
             Printer(severity, flags){}

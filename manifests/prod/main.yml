@@ -6,6 +6,7 @@ metadata:
     app: token
     tier: ledger
     component: main
+    environment: prod
 spec:
   serviceName: main
   replicas: 1
@@ -13,21 +14,23 @@ spec:
     matchLabels:
       tier: ledger
       component: main
+      environment: prod
   template:
     metadata:
       labels:
         app: token
         tier: ledger
         component: main
+        environment: prod
     spec:
       dnsPolicy: ClusterFirstWithHostNet
       containers:
         - name: main-node
           imagePullPolicy: IfNotPresent
-          image: gcr.io/tkn-events/token-ledger:latest
+          image: gcr.io/tkn-events/token-ledger:1.6.1
           env:
             - name: TOKEN_CALLBACK_ADDRESS
-              value: main.token-ledger:8080
+              value: main.ledger-prod:8080
           ports:
             - name: rpc
               containerPort: 8080
@@ -59,6 +62,11 @@ spec:
   volumeClaimTemplates:
     - metadata:
         name: ledger
+        labels:
+          app: token
+          tier: ledger
+          component: main
+          environment: prod
       spec:
         accessModes: [ "ReadWriteOnce" ]
         resources:

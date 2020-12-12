@@ -6,11 +6,13 @@ metadata:
     app: token
     tier: ledger
     component: main
+    environment: prod
 spec:
   type: ClusterIP
   selector:
     tier: ledger
     component: main
+    environment: prod
   ports:
     - name: rpc
       port: 8080

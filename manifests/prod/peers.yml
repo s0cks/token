@@ -6,7 +6,7 @@ metadata:
     app: token
     tier: ledger
     component: peers
-    environment: nonprod
+    environment: prod
 spec:
   serviceName: peers
   replicas: 1
@@ -14,14 +14,14 @@ spec:
     matchLabels:
       tier: ledger
       component: peers
-      environment: nonprod
+      environment: prod
   template:
     metadata:
       labels:
         app: token
         tier: ledger
         component: peers
-        environment: nonprod
+        environment: prod
     spec:
       dnsPolicy: ClusterFirstWithHostNet
       containers:
@@ -32,7 +32,7 @@ spec:
             - name: TOKEN_LEDGER
               value: main.ledger-prod:8080
             - name: TOKEN_CALLBACK_ADDRESS
-              value: peers.ledger-nonprod:8080
+              value: peers.ledger-prod:8080
           ports:
             - name: rpc
               containerPort: 8080
@@ -64,6 +64,11 @@ spec:
   volumeClaimTemplates:
     - metadata:
         name: ledger
+        labels:
+          app: token
+          tier: ledger
+          component: peers
+          environment: prod
       spec:
         accessModes: [ "ReadWriteOnce" ]
         resources:
