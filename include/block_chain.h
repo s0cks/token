@@ -11,6 +11,8 @@
 #include "transaction.h"
 #include "unclaimed_transaction.h"
 
+#include "utils/printer.h"
+
 namespace Token{
 #define FOR_EACH_BLOCKCHAIN_STATE(V) \
     V(Uninitialized)                 \
@@ -25,7 +27,9 @@ namespace Token{
 
 #define BLOCKCHAIN_REFERENCE_GENESIS "<GENESIS>"
 #define BLOCKCHAIN_REFERENCE_HEAD "<HEAD>"
-    class BlockChainVisitor;
+
+    class BlockChainBlockVisitor;
+    class BlockChainHeaderVisitor;
     class BlockChain{
         friend class Server;
         friend class ProposalHandler; //TODO: revoke access?
@@ -59,9 +63,9 @@ namespace Token{
         static Status GetStatus();
         static std::string GetStatusMessage();
         static bool Initialize();
+        static bool VisitHeaders(BlockChainHeaderVisitor* vis);
+        static bool VisitBlocks(BlockChainBlockVisitor* vis);
         static bool HasBlock(const Hash& hash);
-        static bool Accept(BlockChainVisitor* vis);
-        static bool Print(bool is_detailed=false);
         static bool HasReference(const std::string& name);
         static Hash GetReference(const std::string& name);
         static BlockPtr GetBlock(const Hash& hash);
@@ -95,14 +99,42 @@ namespace Token{
 #undef DEFINE_STATUS_CHECK
     };
 
-    class BlockChainVisitor{
+    class BlockChainBlockVisitor{
     protected:
-        BlockChainVisitor() = default;
+        BlockChainBlockVisitor() = default;
     public:
-        virtual ~BlockChainVisitor() = default;
-        virtual bool VisitStart() const{ return true; }
-        virtual bool Visit(const BlockHeader& blk) const = 0;
-        virtual bool VisitEnd() const{ return true; }
+        virtual ~BlockChainBlockVisitor() = default;
+        virtual bool Visit(const BlockPtr& blk) = 0;
+    };
+
+    class BlockChainHeaderVisitor{
+    protected:
+        BlockChainHeaderVisitor() = delete;
+    public:
+        virtual ~BlockChainHeaderVisitor() = default;
+        virtual bool Visit(const BlockHeader& blk) = 0;
+    };
+
+    class BlockChainPrinter : public Printer,
+                              public BlockChainBlockVisitor{
+    private:
+        BlockPrinter blk_printer_;
+    public:
+        BlockChainPrinter(const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone):
+            Printer(severity, flags),
+            blk_printer_(this){}
+        BlockChainPrinter(Printer* parent):
+            Printer(parent),
+            blk_printer_(this){}
+        ~BlockChainPrinter() = default;
+
+        bool Visit(const BlockPtr& blk){
+            return blk_printer_.Print(blk);
+        }
+
+        bool Print(){
+            return BlockChain::VisitBlocks(this);
+        }
     };
 }
 

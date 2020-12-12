@@ -1,5 +1,5 @@
 #include "bitfield.h"
-#include "file_writer.h"
+#include "utils/file_writer.h"
 
 namespace Token{
 #define CHECK_FILE_POINTER \

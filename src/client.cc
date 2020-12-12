@@ -107,10 +107,13 @@ namespace Token{
                     client->Send(&msg);
                     break;
                 }
-                case Message::MessageType::kVerackMessageType:
+                case Message::MessageType::kVerackMessageType:{
+                    VerackMessage* verack = VerackMessage::NewInstance(rbuff);
                     client->SetState(Session::kConnected);
                     LOG(INFO) << "client is connected";
+                    LOG(INFO) << "callback address: " << verack->GetCallbackAddress();
                     break;
+                }
                 case Message::MessageType::kNotFoundMessageType:
                     client->SetNextMessage(NotFoundMessage::NewInstance(rbuff));
                     break;

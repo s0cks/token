@@ -2,7 +2,7 @@
 #define TOKEN_CRASH_REPORT_PRINTER_H
 
 #include "version.h"
-#include "printer.h"
+#include "utils/printer.h"
 #include "crash_report.h"
 #include "peer/peer_session_manager.h"
 
@@ -66,10 +66,10 @@ namespace Token{
             return true;
         }
     public:
-        CrashReportPrinter(Printer* printer, const google::LogSeverity& severity, const long& flags):
-            Printer(printer, severity, flags){}
         CrashReportPrinter(const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone):
-            Printer(nullptr, severity, flags){}
+            Printer(severity, flags){}
+        CrashReportPrinter(Printer* printer):
+            Printer(printer){}
         ~CrashReportPrinter() = default;
 
         bool Print(){

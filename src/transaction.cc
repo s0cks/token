@@ -307,7 +307,6 @@ namespace Token{
         std::string key = hash.HexString();
         std::string filename = GetNewDataFilename(hash);
 
-        LOCK_GUARD;
         if(FileExists(filename)){
             std::stringstream ss;
             ss << "cannot overwrite existing transaction pool data: " << filename;
@@ -315,7 +314,8 @@ namespace Token{
             return false;
         }
 
-        if(!tx->WriteToFile(filename)){
+        TransactionFileWriter writer(filename);
+        if(!writer.Write(tx)){
             std::stringstream ss;
             ss << "cannot write transaction pool data to: " << filename;
             POOL_ERROR(ss.str());
@@ -329,7 +329,9 @@ namespace Token{
             POOL_ERROR(ss.str());
             return false;
         }
+
         LOG(INFO) << "added transaction to pool: " << hash;
+        SIGNAL_ALL;
         return true;
     }
 

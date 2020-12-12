@@ -2,7 +2,7 @@
 #define TOKEN_BLOCK_PRINTER_H
 
 #include "block.h"
-#include "printer.h"
+#include "utils/printer.h"
 
 namespace Token{
     class BlockPrinter : public Printer{

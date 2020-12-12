@@ -194,7 +194,6 @@ namespace Token{
         std::string key = hash.HexString();
         std::string filename = GetNewDataFilename(hash);
 
-        LOCK_GUARD;
         if(FileExists(filename)){
             std::stringstream ss;
             ss << "cannot overwrite existing unclaimed transaction pool data: " << filename;
@@ -202,7 +201,8 @@ namespace Token{
             return false;
         }
 
-        if(!utxo->WriteToFile(filename)){
+        UnclaimedTransactionFileWriter writer(filename);
+        if(!writer.Write(utxo)){
             std::stringstream ss;
             ss << "cannot write unclaimed transaction pool data to: " << filename;
             POOL_ERROR(ss.str());
@@ -218,6 +218,7 @@ namespace Token{
         }
 
         LOG(INFO) << "added unclaimed transaction to pool: " << hash;
+        SIGNAL_ALL;
         return true;
     }
 

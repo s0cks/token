@@ -10,14 +10,11 @@ namespace Token{
         Printer* parent_;
         google::LogSeverity severity_;
         long flags_;
-        int32_t indent_;
 
-        Printer(Printer* parent,
-                const google::LogSeverity& severity,
-                const long& flags):
+        Printer(Printer* parent):
             parent_(parent),
-            severity_(severity),
-            flags_(flags){}
+            severity_(parent->GetSeverity()),
+            flags_(parent->flags_){}
         Printer(const google::LogSeverity& severity, const long& flags):
             parent_(nullptr),
             severity_(severity),
@@ -44,12 +41,10 @@ namespace Token{
 
     class ToStringPrinter : public Printer{
     public:
-        ToStringPrinter(Printer* parent, const google::LogSeverity& severity, const long& flags):
-            Printer(parent, severity, flags){}
         ToStringPrinter(const google::LogSeverity severity=google::INFO, const long& flags=Printer::kFlagNone):
-            Printer(nullptr, severity, flags){}
-        ToStringPrinter(const ToStringPrinter& other):
-            Printer(other.GetParent(), other.GetSeverity(), other.GetFlags()){}
+            Printer(severity, flags){}
+        ToStringPrinter(Printer* parent):
+            Printer(parent){}
         ~ToStringPrinter() = default;
 
         bool Print(Object* obj) const{
@@ -60,10 +55,10 @@ namespace Token{
 
     class HashPrinter : public Printer{
     public:
-        HashPrinter(Printer* parent, const google::LogSeverity& severity, const long& flags):
-            Printer(parent, severity, flags){}
         HashPrinter(const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone):
-            Printer(nullptr, severity, flags){}
+            Printer(severity, flags){}
+        HashPrinter(Printer* parent):
+            Printer(parent){}
         ~HashPrinter() = default;
 
         bool Print(BinaryObject* obj) const{

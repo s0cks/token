@@ -1,31 +1,35 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: token-ledger-peers
+  name: peers
   labels:
     app: token
-    component: ledger-peers
+    tier: ledger
+    component: peers
 spec:
-  serviceName: token-ledger-peers-svc
-  replicas: 3
+  serviceName: peers
+  replicas: 1
   selector:
     matchLabels:
-      component: ledger-peers
+      tier: ledger
+      component: peers
   template:
     metadata:
       labels:
         app: token
-        component: ledger-peers
+        tier: ledger
+        component: peers
     spec:
+      dnsPolicy: ClusterFirstWithHostNet
       containers:
-        - name: token-ledger-node
+        - name: peers-node
           imagePullPolicy: IfNotPresent
           image: gcr.io/tkn-events/token-ledger:latest
           env:
             - name: TOKEN_LEDGER
-              value: token-ledger-master-svc.default.svc.cluster.local
+              value: main.token-ledger:8080
             - name: TOKEN_CALLBACK_ADDRESS
-              value: token-ledger-peers-svc.default.svc.cluster.local
+              value: peers.token-ledger:8080
           ports:
             - name: rpc
               containerPort: 8080

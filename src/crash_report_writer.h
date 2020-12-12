@@ -1,7 +1,7 @@
 #ifndef TOKEN_CRASH_REPORT_WRITER_H
 #define TOKEN_CRASH_REPORT_WRITER_H
 
-#include "file_writer.h"
+#include "utils/file_writer.h"
 #include "crash_report.h"
 
 namespace Token{

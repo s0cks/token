@@ -42,6 +42,7 @@ namespace Token{
         Hash nonce = buff->GetHash();
         UUID node_id(buff);
         NodeAddress callback(buff);
+        LOG(INFO) << "read callback: " << callback;
         BlockHeader head = BlockHeader(buff);
         return new VerackMessage(client_type, node_id, head, version, callback, nonce, timestamp);
     }
@@ -52,6 +53,7 @@ namespace Token{
         version_.Write(buff);
         buff->PutHash(nonce_);
         node_id_.Write(buff);
+        LOG(INFO) << "writing callback: " << callback_;
         callback_.Write(buff);
         head_.Write(buff);
         return true;

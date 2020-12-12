@@ -2,7 +2,7 @@
 #define TOKEN_SNAPSHOT_READER_H
 
 #include "snapshot.h"
-#include "file_reader.h"
+#include "utils/file_reader.h"
 #include "crash_report.h"
 
 namespace Token{

@@ -22,4 +22,17 @@ namespace Token{
         BlockPtr b = Block::NewInstance(&buff);
         ASSERT_EQ(a->GetHash(), b->GetHash());
     }
+
+#define TOKEN_TEST_DATA_FILENAME "/home/tazz/CLionProjects/libtoken-ledger/test.dat"
+
+    TEST(TestBlock, test_rw){
+        BlockPtr genesis = Block::Genesis();
+        BlockFileWriter writer(TOKEN_TEST_DATA_FILENAME);
+        ASSERT_TRUE(writer.Write(genesis));
+
+        BlockFileReader reader(TOKEN_TEST_DATA_FILENAME);
+        BlockPtr blk = reader.Read();
+
+        ASSERT_EQ(genesis->GetHash(), blk->GetHash());
+    }
 }

@@ -2,7 +2,7 @@
 #define TOKEN_SNAPSHOT_WRITER_H
 
 #include "snapshot.h"
-#include "file_writer.h"
+#include "utils/file_writer.h"
 #include "crash_report.h"
 
 namespace Token{

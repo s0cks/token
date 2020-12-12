@@ -1,4 +1,4 @@
-#include "file_reader.h"
+#include "utils/file_reader.h"
 #include "crash_report.h"
 
 #include "buffer.h"
@@ -70,16 +70,6 @@ namespace Token{
             return 0;
         }
         return (*(uint64_t*)bytes);
-    }
-
-    Hash FileReader::ReadHash(){
-        uint8_t bytes[Hash::kSize];
-        if(!ReadBytes(bytes, Hash::kSize)){
-            LOG(WARNING) << "couldn't read Hash from file: " << GetFilename();
-            return Hash();
-        }
-
-        return Hash::FromBytes(bytes);
     }
 
     std::string FileReader::ReadString(){

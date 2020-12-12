@@ -20,7 +20,6 @@ namespace Token{
     static Server::State state_ = Server::State::kStopped;
     static Server::Status status_ = Server::Status::kOk;
     static UUID node_id_;
-    static NodeAddress callback_;
 
 #define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
 #define LOCK std::unique_lock<std::mutex> lock(mutex_)

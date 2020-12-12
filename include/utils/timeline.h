@@ -2,7 +2,7 @@
 #define TOKEN_TIMELINE_H
 
 #include <set>
-#include "common.h"
+#include "printer.h"
 
 namespace Token{
     class TimelineEvent{

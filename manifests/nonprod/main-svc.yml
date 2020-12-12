@@ -1,14 +1,16 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: token-ledger-master-svc
+  name: main
   labels:
     app: token
-    component: ledger-master
+    tier: ledger
+    component: main
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
-    component: ledger-master
+    tier: ledger
+    component: main
   ports:
     - name: rpc
       port: 8080

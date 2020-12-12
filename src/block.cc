@@ -285,7 +285,6 @@ namespace Token{
         std::string key = hash.HexString();
         std::string filename;
 
-        LOCK_GUARD;
         leveldb::Status status = GetIndex()->Get(options, key, &filename);
         if(!status.ok()){
             std::stringstream ss;
@@ -294,7 +293,8 @@ namespace Token{
             return nullptr;
         }
 
-        BlockPtr blk = Block::NewInstance(filename);
+        BlockFileReader reader(filename);
+        BlockPtr blk = reader.Read();
         if(hash != blk->GetHash()){
             std::stringstream ss;
             ss << "couldn't verify block hash: " << hash;
@@ -350,7 +350,8 @@ namespace Token{
             return false;
         }
 
-        if(!blk->WriteToFile(filename)){
+        BlockFileWriter writer(filename);
+        if(!writer.Write(blk)){
             std::stringstream ss;
             ss << "cannot write block pool data to: " << filename;
             POOL_ERROR(ss.str());
@@ -365,8 +366,8 @@ namespace Token{
             return false;
         }
 
-        SIGNAL_ALL;
         LOG(INFO) << "added block to pool: " << hash;
+        SIGNAL_ALL;
         return true;
     }
 
@@ -397,7 +398,8 @@ namespace Token{
                 std::string filename = (GetDataDirectory() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
 
-                BlockPtr blk = Block::NewInstance(filename);
+                BlockFileReader reader(filename);
+                BlockPtr blk = reader.Read();
                 blocks.push_back(blk->GetHash());
             }
             closedir(dir);
@@ -418,7 +420,8 @@ namespace Token{
                 std::string filename = (GetDataDirectory() + "/" + name);
                 if(!EndsWith(filename, ".dat")) continue;
 
-                BlockPtr blk = Block::NewInstance(filename);
+                BlockFileReader reader(filename);
+                BlockPtr blk = reader.Read();
                 if(!vis->Visit(blk))
                     break;
             }

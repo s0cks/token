@@ -5,6 +5,8 @@
 #include "user.h"
 #include "object.h"
 #include "product.h"
+#include "utils/file_writer.h"
+#include "utils/file_reader.h"
 
 namespace Token{
     class UnclaimedTransaction;
@@ -78,6 +80,36 @@ namespace Token{
         static inline UnclaimedTransactionPtr NewInstance(const std::string& filename){
             std::fstream fd(filename, std::ios::in|std::ios::binary);
             return NewInstance(fd, GetFilesize(filename));
+        }
+    };
+
+    class UnclaimedTransactionFileWriter : BinaryFileWriter{
+    public:
+        UnclaimedTransactionFileWriter(const std::string& filename): BinaryFileWriter(filename){}
+        UnclaimedTransactionFileWriter(BinaryFileWriter* parent): BinaryFileWriter(parent){}
+        ~UnclaimedTransactionFileWriter() = default;
+
+        bool Write(const UnclaimedTransactionPtr& utxo){
+            WriteHash(utxo->GetTransaction());
+            WriteInt(utxo->GetIndex());
+            WriteUser(utxo->GetUser());
+            WriteProduct(utxo->GetProduct());
+            return true;
+        }
+    };
+
+    class UnclaimedTransactionFileReader : BinaryFileReader{
+    public:
+        UnclaimedTransactionFileReader(const std::string& filename): BinaryFileReader(filename){}
+        UnclaimedTransactionFileReader(BinaryFileReader* parent): BinaryFileReader(parent){}
+        ~UnclaimedTransactionFileReader() = default;
+
+        UnclaimedTransactionPtr Read(){
+            Hash tx_hash = ReadHash();
+            int32_t tx_index = ReadInt();
+            User user = ReadUser();
+            Product product = ReadProduct();
+            return std::make_shared<UnclaimedTransaction>(tx_hash, tx_index, user, product);
         }
     };
 

@@ -8,7 +8,6 @@
 #include "configuration.h"
 
 #include "block_chain.h"
-#include "block_writer.h"
 #include "block_processor.h"
 #include "unclaimed_transaction.h"
 
@@ -186,12 +185,13 @@ namespace Token{
             return nullptr;
         }
 
-        BlockPtr block = Block::NewInstance(filename);
-        if(hash != block->GetHash()){
-            LOG(WARNING) << "couldn't match block hashes: " << hash << " <=> " << block->GetHash();
+        BlockFileReader reader(filename);
+        BlockPtr blk = reader.Read();
+        if(hash != blk->GetHash()){
+            LOG(WARNING) << "couldn't match block hashes: " << hash << " <=> " << blk->GetHash();
             return nullptr;
         }
-        return block;
+        return blk;
     }
 
     BlockPtr BlockChain::GetBlock(int64_t height){
@@ -205,7 +205,9 @@ namespace Token{
             LOG(WARNING) << "couldn't find block #" << height << " in index: " << status.ToString();
             return nullptr;
         }
-        return Block::NewInstance(filename);
+
+        BlockFileReader reader(filename);
+        return reader.Read();
     }
 
     bool BlockChain::HasReference(const std::string& name){
@@ -341,30 +343,27 @@ namespace Token{
         return true;
     }
 
-    bool BlockChain::Accept(BlockChainVisitor* vis){
-        if(!vis->VisitStart()) return false;
-
-        BlockHeader genesis = GetGenesis()->GetHeader();
-        BlockHeader blk = GetHead()->GetHeader();
+    bool BlockChain::VisitBlocks(BlockChainBlockVisitor* vis){
+        Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
         do{
+            BlockPtr blk = GetBlock(current);
             if(!vis->Visit(blk))
                 return false;
-            blk = GetBlock(blk.GetPreviousHash())->GetHeader();
-        } while(blk != genesis);
-        return vis->VisitEnd();
+            current = blk->GetPreviousHash();
+        } while(!current.IsNull());
+        return true;
     }
 
-    class DefaultBlockChainPrinter : public BlockChainVisitor{
-    public:
-        bool Visit(const BlockHeader& block) const{
-            LOG(INFO) << " - " << block;
-            return true;
-        }
-    };
-
-    bool BlockChain::Print(bool is_detailed){
-        DefaultBlockChainPrinter printer;
-        return Accept(&printer);
+    bool BlockChain::VisitHeaders(BlockChainHeaderVisitor* vis){
+        //TODO: Optimize BlockChain::VisitHeaders
+        Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
+        do{
+            BlockPtr blk = GetBlock(current);
+            if(!vis->Visit(blk->GetHeader()))
+                return false;
+            current = blk->GetPreviousHash();
+        } while(!current.IsNull());
+        return true;
     }
 
     int64_t BlockChain::GetNumberOfBlocks(){

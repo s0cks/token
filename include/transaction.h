@@ -5,9 +5,12 @@
 #include "hash.h"
 #include "user.h"
 #include "object.h"
-#include "printer.h"
 #include "product.h"
 #include "unclaimed_transaction.h"
+
+#include "utils/printer.h"
+#include "utils/file_reader.h"
+#include "utils/file_writer.h"
 
 namespace Token{
     typedef std::shared_ptr<Transaction> TransactionPtr;
@@ -89,6 +92,21 @@ namespace Token{
         }
     };
 
+    class InputFileReader : BinaryFileReader{
+        friend class TransactionFileReader;
+    private:
+        InputFileReader(BinaryFileReader* parent): BinaryFileReader(parent){}
+    private:
+        ~InputFileReader() = default;
+
+        Input Read(){
+            Hash hash = ReadHash();
+            int32_t index = ReadInt();
+            User user = ReadUser();
+            return Input(hash, index, user);
+        }
+    };
+
     class Output : public Object{
         friend class Transaction;
     public:
@@ -149,6 +167,20 @@ namespace Token{
             if(a.user_ == b.user_)
                 return a.product_ < b.product_;
             return a.user_ < b.user_;
+        }
+    };
+
+    class OutputFileReader : public BinaryFileReader{
+        friend class TransactionFileReader;
+    private:
+        OutputFileReader(BinaryFileReader* parent): BinaryFileReader(parent){}
+    public:
+        ~OutputFileReader() = default;
+
+        Output Read(){
+            User user = ReadUser();
+            Product product = ReadProduct();
+            return Output(user, product);
         }
     };
 
@@ -362,6 +394,85 @@ namespace Token{
         }
     };
 
+    class TransactionFileWriter : BinaryFileWriter{
+    private:
+        inline bool
+        WriteInput(const Input& value){
+            WriteHash(value.GetTransactionHash());
+            WriteInt(value.GetOutputIndex());
+            WriteUser(value.GetUser());
+            return true;
+        }
+
+        inline bool
+        WriteOutput(const Output& value){
+            WriteUser(value.GetUser());
+            WriteProduct(value.GetProduct());
+            return true;
+        }
+    public:
+        TransactionFileWriter(const std::string& filename): BinaryFileWriter(filename){}
+        TransactionFileWriter(BinaryFileWriter* parent): BinaryFileWriter(parent){}
+        ~TransactionFileWriter() = default;
+
+        bool Write(const TransactionPtr& tx){
+            //TODO: better error handling
+            WriteLong(tx->GetTimestamp()); // timestamp_
+            WriteLong(tx->GetIndex()); // index_
+            WriteLong(tx->GetNumberOfInputs()); // num_inputs_
+            for(auto& it : tx->inputs())
+                WriteInput(it); // input_[idx]
+            WriteLong(tx->GetNumberOfOutputs()); // num_outputs_
+            for(auto& it : tx->outputs())
+                WriteOutput(it); // outputs_[idx]
+            //TODO: serialize transaction signature
+            return true;
+        }
+    };
+
+    class TransactionFileReader : BinaryFileReader{
+    private:
+        InputFileReader input_reader_;
+        OutputFileReader output_reader_;
+
+        inline Input
+        ReadNextInput(){
+            return input_reader_.Read();
+        }
+
+        inline Output
+        ReadNextOutput(){
+            return output_reader_.Read();
+        }
+    public:
+        TransactionFileReader(const std::string& filename):
+            BinaryFileReader(filename),
+            input_reader_(this),
+            output_reader_(this){}
+        TransactionFileReader(BinaryFileReader* parent):
+            BinaryFileReader(parent),
+            input_reader_(this),
+            output_reader_(this){}
+        ~TransactionFileReader() = default;
+
+        TransactionPtr Read(){
+            Timestamp timestamp = ReadLong();
+            int64_t index = ReadLong();
+
+            InputList inputs;
+            int64_t num_inputs = ReadLong();
+            for(int64_t idx = 0; idx < num_inputs; idx++)
+                inputs.push_back(ReadNextInput());
+
+            OutputList outputs;
+            int64_t num_outputs = ReadLong();
+            for(int64_t idx = 0; idx < num_outputs; idx++)
+                outputs.push_back(ReadNextOutput());
+
+            return std::make_shared<Transaction>(index, inputs, outputs, timestamp);
+        }
+    };
+
     typedef std::vector<TransactionPtr> TransactionList;
 
     class TransactionInputVisitor{
@@ -382,10 +493,10 @@ namespace Token{
 
     class TransactionPrinter : public Printer, public TransactionInputVisitor, public TransactionOutputVisitor{
     public:
-        TransactionPrinter(Printer* parent, const google::LogSeverity& severity, const long& flags):
-            Printer(parent, severity, flags){}
         TransactionPrinter(const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone):
-            Printer(nullptr, severity, flags){}
+            Printer(severity, flags){}
+        TransactionPrinter(Printer* parent):
+            Printer(parent){}
         ~TransactionPrinter() = default;
 
         bool Visit(const Input& input) const{

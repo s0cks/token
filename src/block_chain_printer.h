@@ -1,7 +1,7 @@
 #ifndef TOKEN_BLOCK_CHAIN_PRINTER_H
 #define TOKEN_BLOCK_CHAIN_PRINTER_H
 
-#include "printer.h"
+#include "utils/printer.h"
 #include "block_chain.h"
 
 namespace Token{

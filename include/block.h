@@ -259,15 +259,6 @@ namespace Token{
             return true;
         }
 
-        Buffer* ToBuffer() const{
-            Buffer buff(GetBufferSize());
-            if(!Encode(&buff)){
-                LOG(WARNING) << "couldn't encode block to buffer";
-                return nullptr;
-            }
-            return new Buffer(buff);
-        }
-
         std::string ToString() const{
             std::stringstream stream;
             stream << "Block(#" << GetHeight() << ", " << GetNumberOfTransactions() << " Transactions)";
@@ -275,6 +266,7 @@ namespace Token{
         }
 
         Hash GetMerkleRoot() const;
+        bool WriteTo(const std::string& filename) const;
         bool Accept(BlockVisitor* vis) const;
         bool Contains(const Hash& hash) const;
         bool ToJson(Json::Value& value) const;
@@ -300,13 +292,7 @@ namespace Token{
             return a.height_ < b.height_;
         }
 
-        friend std::ostream& operator<<(std::ostream& stream, const Block& blk){
-            stream << blk.ToString();
-            return stream;
-        }
-
         static BlockPtr Genesis();
-
         static BlockPtr NewInstance(Buffer* buff){
             Timestamp timestamp = buff->GetLong();
             int64_t height = buff->GetLong();
@@ -321,21 +307,9 @@ namespace Token{
             return std::make_shared<Block>(height, previous_hash, transactions, timestamp);
         }
 
-        static inline std::shared_ptr<Block>
+        static inline BlockPtr
         NewInstance(const BlockPtr& parent, const TransactionList& txs, const Timestamp& timestamp=GetCurrentTimestamp()){
-            return std::shared_ptr<Block>(new Block(parent, txs, timestamp));
-        }
-
-        static inline std::shared_ptr<Block>
-        NewInstance(const std::string& filename){
-            std::fstream fd(filename, std::ios::binary|std::ios::in);
-            int64_t total_size = GetFilesize(filename);
-            Buffer buffer(total_size);
-            if(!buffer.ReadBytesFrom(fd, total_size)){
-                LOG(WARNING) << "couldn't read block from file: " << filename;
-                return nullptr;
-            }
-            return NewInstance(&buffer);
+            return BlockPtr(new Block(parent, txs, timestamp));
         }
     };
 
@@ -349,39 +323,77 @@ namespace Token{
         virtual bool VisitEnd(){ return true; }
     };
 
-    class BlockPrinter : public BlockVisitor{
+    class BlockFileWriter : public BinaryFileWriter{
     private:
-        const Block& block_;
-
-        const Block&
-        block() const{
-            return block_;
-        }
-
-        BlockPrinter(const Block& blk):
-            block_(blk){}
+        TransactionFileWriter tx_writer_;
     public:
+        BlockFileWriter(const std::string& filename):
+            BinaryFileWriter(filename),
+            tx_writer_(this){}
+        ~BlockFileWriter() = default;
+
+        bool Write(const BlockPtr& blk){
+            WriteLong(blk->GetTimestamp()); // timestamp_
+            WriteLong(blk->GetHeight()); // height_
+            WriteHash(blk->GetPreviousHash()); // previous_hash_
+            WriteLong(blk->GetNumberOfTransactions()); // num_transactions_
+            for(auto& it : blk->transactions())
+                tx_writer_.Write(it); // transactions_[idx]
+            return true;
+        }
+    };
+
+    class BlockFileReader : BinaryFileReader{
+    private:
+        TransactionFileReader tx_reader_;
+
+        inline TransactionPtr
+        ReadNextTransaction(){
+            return tx_reader_.Read();
+        }
+    public:
+        BlockFileReader(const std::string& filename):
+            BinaryFileReader(filename),
+            tx_reader_(this){}
+        BlockFileReader(BinaryFileReader* parent):
+            BinaryFileReader(parent),
+            tx_reader_(this){}
+        ~BlockFileReader() = default;
+
+        BlockPtr Read(){
+            Timestamp timestamp = ReadLong();
+            int64_t height = ReadLong();
+            Hash phash = ReadHash();
+
+            TransactionList transactions;
+            int64_t num_transactions = ReadLong();
+            for(int64_t idx = 0; idx < num_transactions; idx++)
+                transactions.push_back(ReadNextTransaction());
+            return std::make_shared<Block>(height, phash, transactions, timestamp);
+        }
+    };
+
+    class BlockPrinter : public Printer{
+    public:
+        BlockPrinter(const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone):
+            Printer(severity, flags){}
+        BlockPrinter(Printer* parent):
+            Printer(parent){}
         ~BlockPrinter() = default;
 
-        bool VisitStart() const{
-            LOG(INFO) << "Block #" << block().GetHeight();
-            LOG(INFO) << "  - Created: " << GetTimestampFormattedReadable(block().GetTimestamp());
-            LOG(INFO) << "  - Previous Hash: " << block().GetPreviousHash();
-            LOG(INFO) << "  - Merkle Root: " << block().GetMerkleRoot();
-            LOG(INFO) << "  - Hash: " << block().GetHash();
-            LOG(INFO) << "Transactions (" << block().GetNumberOfTransactions() << "):";
-            return true;
-        }
+        bool Print(const BlockPtr& blk) const{
+            if(!IsDetailed()){
+                LOG_AT_LEVEL(GetSeverity()) << blk->GetHash();
+                return true;
+            }
 
-        bool Visit(const TransactionPtr& tx){
-            LOG(INFO) << "  - #" << tx->GetIndex() << ": " << tx->GetHash();
+            LOG_AT_LEVEL(GetSeverity()) << "Block #" << blk->GetHeight() << ":";
+            LOG_AT_LEVEL(GetSeverity()) << "  Timestamp: " << GetTimestampFormattedReadable(blk->GetTimestamp());
+            LOG_AT_LEVEL(GetSeverity()) << "  Height: " << blk->GetHeight();
+            LOG_AT_LEVEL(GetSeverity()) << "  Previous Hash: " << blk->GetPreviousHash();
+            LOG_AT_LEVEL(GetSeverity()) << "  Merkle Root: " << blk->GetMerkleRoot();
+            LOG_AT_LEVEL(GetSeverity()) << "  Hash: " << blk->GetHash();
             return true;
-        }
-
-        static inline bool
-        Print(const Block& blk){
-            BlockPrinter printer(blk);
-            return blk.Accept(&printer);
         }
     };
 

@@ -87,12 +87,6 @@ namespace Token{
         Hash GetHash() const;
         virtual int64_t GetBufferSize() const = 0;
         virtual bool Encode(Buffer* buffer) const = 0;
-        virtual bool WriteToFile(std::fstream& fd) const;
-
-        bool WriteToFile(const std::string& filename) const{
-            std::fstream fd(filename, std::ios::binary|std::ios::out);
-            return WriteToFile(fd);
-        }
     };
 
     class ObjectPointerVisitor{

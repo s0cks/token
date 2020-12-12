@@ -4,20 +4,20 @@ metadata:
   name: main
   labels:
     app: token
-    system: ledger
+    tier: ledger
     component: main
 spec:
   serviceName: main
   replicas: 1
   selector:
     matchLabels:
-      system: ledger
+      tier: ledger
       component: main
   template:
     metadata:
       labels:
         app: token
-        system: ledger
+        tier: ledger
         component: main
     spec:
       dnsPolicy: ClusterFirstWithHostNet
@@ -27,8 +27,7 @@ spec:
           image: gcr.io/tkn-events/token-ledger:latest
           env:
             - name: TOKEN_CALLBACK_ADDRESS
-              #value: token-ledger-master-svc.default.svc.cluster.local
-              value: main
+              value: main.token-ledger:8080
           ports:
             - name: rpc
               containerPort: 8080

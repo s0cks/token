@@ -21,6 +21,10 @@ namespace Token{
             parent_(parent),
             file_(parent->GetFilePointer()){}
 
+        bool HasParent() const{
+            return parent_ != nullptr;
+        }
+
         bool HasFilePointer() const{
             return file_ != nullptr;
         }
@@ -32,10 +36,6 @@ namespace Token{
         virtual ~FileWriter(){
             if(HasFilePointer() && !HasParent())
                 Close();
-        }
-
-        bool HasParent() const{
-            return parent_ != nullptr;
         }
 
         std::string GetFilename() const{
@@ -110,8 +110,7 @@ namespace Token{
             if((file_ = fopen(filename.c_str(), "wb")) == NULL)
                 LOG(WARNING) << "couldn't create binary file " << filename << ": " << strerror(errno);
         }
-        BinaryFileWriter(BinaryFileWriter* parent):
-            FileWriter(parent){}
+        BinaryFileWriter(BinaryFileWriter* parent): FileWriter(parent){}
     public:
         ~BinaryFileWriter() = default;
 

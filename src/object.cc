@@ -3,17 +3,6 @@
 #include "bitfield.h"
 
 namespace Token{
-    bool BinaryObject::WriteToFile(std::fstream& fd) const{
-        intptr_t size = GetBufferSize();
-        Buffer buff(size);
-        if(!Encode(&buff)){
-            LOG(WARNING) << "couldn't encode object to bytes";
-            return false;
-        }
-        buff.WriteBytesTo(fd, size);
-        return true;
-    }
-
     Hash BinaryObject::GetHash() const{
         intptr_t size = GetBufferSize();
 
