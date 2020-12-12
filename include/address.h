@@ -32,7 +32,7 @@ namespace Token{
             struct addrinfo* res;
             int err;
             if((err = getaddrinfo(address.data(), NULL, &hints, &res)) != 0){
-                LOG(WARNING) << "couldn't get " << hostname << "'s ip: " << strerror(err);
+                LOG(WARNING) << "couldn't get " << hostname << "'s ip: " << gai_strerror(err);
                 return false;
             }
 

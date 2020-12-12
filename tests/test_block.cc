@@ -4,7 +4,7 @@
 namespace Token{
     TEST(TestBlock, test_hash){
         BlockPtr genesis = Block::Genesis();
-        ASSERT_EQ(genesis->GetHash(), Hash::FromHexString("9B4D1255BAC069FDBCE76E9D0DF77B1AB85C6972706402944B9E9F0655DF8C5F"));
+        ASSERT_EQ(genesis->GetHash(), Hash::FromHexString("636777AFCC8DB5AC96371F24CDC0C9E5533665D3701AB199F637CBB2F12C10D3"));
     }
 
     TEST(TestBlock, test_eq){
@@ -19,7 +19,7 @@ namespace Token{
         Buffer buff(a->GetBufferSize());
         ASSERT_TRUE(a->Encode(&buff));
 
-        BlockPtr b = std::make_shared<Block>(&buff);
+        BlockPtr b = Block::NewInstance(&buff);
         ASSERT_EQ(a->GetHash(), b->GetHash());
     }
 }

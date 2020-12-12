@@ -23,9 +23,9 @@ spec:
           image: gcr.io/tkn-events/token-ledger:latest
           env:
             - name: TOKEN_LEDGER
-              value: token-ledger-master-svc
+              value: token-ledger-master-svc.default.svc.cluster.local
             - name: TOKEN_CALLBACK_ADDRESS
-              value: token-ledger-peers-svc
+              value: token-ledger-peers-svc.default.svc.cluster.local
           ports:
             - name: rpc
               containerPort: 8080

@@ -8,6 +8,8 @@ ENV GTEST_VERSION=release-1.10.0
 ENV HTTP_PARSER_VERSION=v2.9.4
 ENV JSONLIB_VERSION=1.9.4
 
+#TODO:
+# - remove dnsutils
 RUN apt-get update && apt-get install -y \
     autoconf \
     automake \
@@ -15,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     curl \
     git \
+    dnsutils \
     wget \
     unzip \
     libtool \

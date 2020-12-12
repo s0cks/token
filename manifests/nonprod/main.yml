@@ -1,29 +1,34 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: token-ledger
+  name: main
   labels:
     app: token
-    component: ledger-master
+    system: ledger
+    component: main
 spec:
-  serviceName: token-ledger-master-svc
+  serviceName: main
   replicas: 1
   selector:
     matchLabels:
-      component: ledger-master
+      system: ledger
+      component: main
   template:
     metadata:
       labels:
         app: token
-        component: ledger-master
+        system: ledger
+        component: main
     spec:
+      dnsPolicy: ClusterFirstWithHostNet
       containers:
-        - name: token-ledger-node
+        - name: main-node
           imagePullPolicy: IfNotPresent
           image: gcr.io/tkn-events/token-ledger:latest
           env:
             - name: TOKEN_CALLBACK_ADDRESS
-              value: 10.111.215.169:8080
+              #value: token-ledger-master-svc.default.svc.cluster.local
+              value: main
           ports:
             - name: rpc
               containerPort: 8080

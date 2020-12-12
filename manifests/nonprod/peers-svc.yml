@@ -1,17 +1,17 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: token-ledger-master-svc
+  name: token-ledger-peers-svc
   labels:
     app: token
-    component: ledger-master
+    component: ledger-peers
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
-    component: ledger-master
+    component: ledger-peers
   ports:
     - name: rpc
       port: 8080
       targetPort: 8080
       protocol: TCP
-  externalName: ledger-master.api.tknevents.com
+  externalName: ledger-peers.api.tknevents.com

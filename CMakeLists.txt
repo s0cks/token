@@ -98,10 +98,12 @@ target_link_libraries("token-client" "token-ledger" ${TOKEN_LIBRARIES})
 add_executable("token-inspector" inspector.cc)
 target_link_libraries("token-inspector" "token-ledger" ${TOKEN_LIBRARIES})
 
-# Token Unit Tests
-add_executable("token-tests" tests.cc ${TOKEN_TEST_SOURCES})
-target_link_libraries("token-tests" "token-ledger" ${GTEST_BOTH_LIBRARIES} ${TOKEN_LIBRARIES})
-add_test("token-tests" "token-tests")
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+  # Token Unit Tests
+  add_executable("token-tests" tests.cc ${TOKEN_TEST_SOURCES})
+  target_link_libraries("token-tests" "token-ledger" ${GTEST_BOTH_LIBRARIES} ${TOKEN_LIBRARIES})
+  add_test("token-tests" "token-tests")
+endif(CMAKE_BUILD_TYPE MATCHES Debug)
 
 # should we remove this?
 # Install Token Node
