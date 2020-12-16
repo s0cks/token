@@ -113,6 +113,7 @@ namespace Token{
     };
 
     class AsyncTask : public Task{
+        //TOOD: merge w/ Job
     private:
         void SetResult(const AsyncTaskResult& result){
             result_ = result;
