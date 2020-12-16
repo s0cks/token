@@ -2,9 +2,11 @@
 #define TOKEN_METRICS_H
 
 #include <map>
+#include <vector>
 #include <string>
 #include <memory>
 #include <iostream>
+#include <algorithm>
 
 namespace Token{
     namespace Metrics{
@@ -56,17 +58,25 @@ namespace Token{
                 return stream;
             }
         };
+
+        class Gauge : public Metric{
+        protected:
+            Gauge(const std::string& name):
+                Metric(name){}
+        public:
+            virtual ~Gauge() = default;
+            virtual int64_t Get() const = 0;
+        };
     }
 
     typedef std::shared_ptr<Metrics::Metric> Metric;
 
+
     typedef std::shared_ptr<Metrics::Counter> Counter;
     typedef std::map<std::string, Counter> CounterMap;
 
-    static inline Counter
-    NewCounter(const std::string& name, const int64_t& initial=0){
-        return std::make_shared<Metrics::Counter>(name, initial);
-    }
+    typedef std::shared_ptr<Metrics::Gauge> Gauge;
+    typedef std::map<std::string, Gauge> GaugeMap;
 
     class MetricRegistry{
     private:
@@ -74,7 +84,11 @@ namespace Token{
     public:
         ~MetricRegistry() = default;
         static bool Register(const Counter& counter);
+        static bool Register(const Gauge& gauge);
+        static bool HasCounter(const std::string& name);
+        static bool HasGauge(const std::string& name);
         static Counter GetCounter(const std::string& name);
+        static Gauge GetGauge(const std::string& name);
     };
 }
 
