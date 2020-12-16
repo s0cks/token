@@ -20,6 +20,12 @@ namespace Token{
     public:
         ~SnapshotTask() = default;
 
+        std::string ToString() const{
+            std::stringstream ss;
+            ss << "SnapshotTask()";
+            return ss.str();
+        }
+
         DEFINE_ASYNC_TASK(Snapshot);
 
         static SnapshotTask* NewInstance(uv_loop_t* loop=uv_default_loop()){

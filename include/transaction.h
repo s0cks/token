@@ -34,14 +34,14 @@ namespace Token{
         }
     public:
         Input(const Hash& tx_hash, int32_t index, const User& user):
-            Object(Type::kInputType),
+            Object(),
             hash_(tx_hash),
             index_(index),
             user_(user){}
         Input(const Hash& tx_hash, int32_t index, const std::string& user):
             Input(tx_hash, index, User(user)){}
         Input(Buffer* buff):
-            Object(Type::kInputType),
+            Object(),
             hash_(buff->GetHash()),
             index_(buff->GetInt()),
             user_(buff->GetUser()){}
@@ -123,13 +123,13 @@ namespace Token{
         }
     public:
         Output(const User& user, const Product& product):
-            Object(Type::kOutputType),
+            Object(),
             user_(user),
             product_(product){}
         Output(const std::string& user, const std::string& product):
             Output(User(user), Product(product)){}
         Output(Buffer* buff):
-            Object(Type::kOutputType),
+            Object(),
             user_(buff->GetUser()),
             product_(buff->GetProduct()){}
         ~Output(){}
@@ -212,19 +212,12 @@ namespace Token{
         std::string signature_;
     public:
         Transaction(int64_t index, const InputList& inputs, const OutputList& outputs, Timestamp timestamp=GetCurrentTimestamp()):
-            BinaryObject(Type::kTransactionType),
+            BinaryObject(),
             timestamp_(timestamp),
             index_(index),
             inputs_(inputs),
             outputs_(outputs),
             signature_(){}
-        Transaction(const Transaction& tx): //TODO: remove Transaction(const Transaction&)
-            BinaryObject(Type::kTransactionType),
-            timestamp_(tx.timestamp_),
-            index_(tx.index_),
-            inputs_(tx.inputs_),
-            outputs_(tx.outputs_),
-            signature_(tx.signature_){}
         ~Transaction() = default;
 
         Timestamp GetTimestamp() const{
@@ -499,14 +492,14 @@ namespace Token{
             Printer(parent){}
         ~TransactionPrinter() = default;
 
-        bool Visit(const Input& input) const{
+        bool Visit(const Input& input){
             if(!IsDetailed())
                 return true;
             LOG_AT_LEVEL(GetSeverity()) << "Input(" << input.GetTransactionHash() << "[" << input.GetOutputIndex() << "]";
             return true;
         }
 
-        bool Visit(const Output& output) const{
+        bool Visit(const Output& output){
             if(!IsDetailed())
                 return true;
             LOG_AT_LEVEL(GetSeverity()) << "Output(" << output.GetUser() << ", " << output.GetProduct() << ")";

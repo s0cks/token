@@ -25,7 +25,7 @@ namespace Token{
     SESSION_ERROR_STATUS(Session::kError, (Message))
 
     Session::Session(uv_loop_t* loop):
-        Object(Type::kSessionType),
+        Object(),
         mutex_(),
         cond_(),
         state_(State::kDisconnected),

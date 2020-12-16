@@ -23,6 +23,13 @@ namespace Token{
             return (T*)message_;
         }
 
+        std::string ToString() const{
+            //TODO: refactor
+            std::stringstream ss;
+            ss << "HandleMessageTask(" << GetMessage()->ToString() << ")";
+            return ss.str();
+        }
+
         static HandleMessageTask* NewInstance(Session* session, Message* msg){
             return new HandleMessageTask(session, msg);
         }

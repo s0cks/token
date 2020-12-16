@@ -114,6 +114,12 @@ namespace Token{
             return uuid_;
         }
 
+        std::string ToString() const{
+            std::stringstream ss;
+            ss << "ServerSession(" << GetID() << ")";
+            return ss.str();
+        }
+
         static ServerSession* NewInstance(uv_loop_t* loop){
             return new ServerSession(loop);
         }

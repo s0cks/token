@@ -24,7 +24,7 @@ namespace Token{
         Product product_;
     public:
         UnclaimedTransaction(const Hash& hash, int32_t index, const User& user, const Product& product):
-            BinaryObject(Type::kUnclaimedTransactionType),
+            BinaryObject(),
             hash_(hash),
             index_(index),
             user_(user),

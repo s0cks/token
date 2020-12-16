@@ -167,14 +167,14 @@ namespace Token{
         static int GetRequiredNumberOfPeers();
     public:
         Proposal(const RawProposal& proposal):
-            Object(Type::kProposalType),
+            Object(),
             phase_(Proposal::kProposalPhase),
             result_(Proposal::kNone),
             raw_(proposal),
             accepted_(),
             rejected_(){}
         Proposal(const UUID& proposer, int64_t height, const Hash& hash, int64_t timestamp=GetCurrentTimestamp()):
-            Object(Type::kProposalType),
+            Object(),
             phase_(Proposal::kProposalPhase),
             result_(Proposal::kNone),
             raw_(proposer, height, hash, timestamp),
@@ -185,7 +185,7 @@ namespace Token{
         Proposal(const BlockHeader& blk, const UUID& proposer, int64_t timestamp=GetCurrentTimestamp()):
             Proposal(proposer, blk.GetHeight(), blk.GetHash(), timestamp){}
         Proposal(Buffer* buff):
-            Object(Type::kProposalType),
+            Object(),
             phase_(Proposal::kProposalPhase),
             result_(Proposal::kNone),
             raw_(buff),
@@ -219,6 +219,12 @@ namespace Token{
 
         bool Encode(Buffer* buff) const{
             return raw_.Encode(buff);
+        }
+
+        std::string ToString() const{
+            std::stringstream ss;
+            ss << "Proposal(#" << GetHeight() << ")";
+            return ss.str();
         }
 
         std::shared_ptr<PeerSession> GetPeer() const;

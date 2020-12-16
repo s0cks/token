@@ -50,7 +50,7 @@ namespace Token{
         }
     public:
         Buffer(intptr_t size):
-            Object(Type::kBufferType),
+            Object(),
             bsize_(size),
             wpos_(0),
             rpos_(0){
@@ -58,7 +58,7 @@ namespace Token{
             memset(data(), 0, GetBufferSize());
         }
         Buffer(const Buffer& buff):
-            Object(Type::kBufferType),
+            Object(),
             bsize_(buff.bsize_),
             wpos_(buff.wpos_),
             rpos_(buff.rpos_),

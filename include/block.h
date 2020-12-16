@@ -149,14 +149,14 @@ namespace Token{
         BloomFilter tx_bloom_; // transient
     public:
         Block():
-            BinaryObject(Type::kBlockType),
+            BinaryObject(),
             timestamp_(0),
             height_(0),
             previous_hash_(),
             transactions_(),
             tx_bloom_(){}
         Block(int64_t height, const Hash& phash, const TransactionList& transactions, Timestamp timestamp=GetCurrentTimestamp()):
-            BinaryObject(Type::kBlockType),
+            BinaryObject(),
             timestamp_(timestamp),
             height_(height),
             previous_hash_(phash),
@@ -167,19 +167,10 @@ namespace Token{
                     tx_bloom_.Put(it->GetHash());
             }
         }
-        Block(const Block& parent, const TransactionList& transactions, Timestamp timestamp=GetCurrentTimestamp()):
-            Block(parent.GetHeight() + 1, parent.GetHash(), transactions, timestamp){}
         Block(const BlockPtr& parent, const TransactionList& transactions, Timestamp timestamp=GetCurrentTimestamp()):
             Block(parent->GetHeight() + 1, parent->GetHash(), transactions, timestamp){}
         Block(const BlockHeader& parent, const TransactionList& transactions, Timestamp timestamp=GetCurrentTimestamp()):
             Block(parent.GetHeight() + 1, parent.GetHash(), transactions, timestamp){}
-        Block(const Block& other):
-            BinaryObject(Type::kBlockType),
-            timestamp_(other.timestamp_),
-            height_(other.height_),
-            previous_hash_(other.previous_hash_),
-            transactions_(other.transactions_),
-            tx_bloom_(other.tx_bloom_){}
         ~Block() = default;
 
         BlockHeader GetHeader() const{

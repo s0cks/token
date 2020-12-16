@@ -47,8 +47,7 @@ namespace Token{
         static const intptr_t kHeaderSize = sizeof(int32_t)
                                           + sizeof(int64_t);
     protected:
-        Message():
-            Object(Type::kMessageType){}
+        Message() = default;
 
         virtual intptr_t GetMessageSize() const = 0;
         virtual bool Write(Buffer* buffer) const = 0;

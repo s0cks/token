@@ -177,6 +177,12 @@ namespace Token{
         void SendCommit(){
             uv_async_send(&commit_);
         }
+
+        std::string ToString() const{
+            std::stringstream ss;
+            ss << "PeerSession(" << GetID() << ")";
+            return ss.str();
+        }
     };
 }
 

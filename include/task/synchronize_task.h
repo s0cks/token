@@ -69,6 +69,13 @@ namespace Token{
             return InventoryItem(InventoryItem::kBlock, head_.GetHash());
         }
 
+        std::string ToString() const{
+            //TODO: refactor
+            std::stringstream ss;
+            ss << "SynchronizeBlockChainTask()";
+            return ss.str();
+        }
+
         static SynchronizeBlockChainTask* NewInstance(uv_loop_t* loop, Session* session, const BlockHeader& head){
             return new SynchronizeBlockChainTask(loop, session, head);
         }

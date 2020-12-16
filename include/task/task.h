@@ -7,8 +7,7 @@
 namespace Token{
     class Task : public Object{
     protected:
-        Task():
-            Object(Type::kTaskType){}
+        Task() = default;
     public:
         ~Task() = default;
     };
