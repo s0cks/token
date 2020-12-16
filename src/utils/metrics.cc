@@ -1,14 +1,19 @@
 #include "utils/metrics.h"
 
 namespace Token{
+    static MetricSet metrics_;
     static CounterMap counters_;
     static GaugeMap gauges_;
 
     bool MetricRegistry::Register(const Counter& counter){
+        if(!metrics_.insert(counter).second)
+            return false;
         return counters_.insert({ counter->GetName(), counter }).second;
     }
 
     bool MetricRegistry::Register(const Gauge& gauge){
+        if(!metrics_.insert(gauge).second)
+            return false;
         return gauges_.insert({ gauge->GetName(), gauge }).second;
     }
 
@@ -28,6 +33,7 @@ namespace Token{
             Counter counter = std::make_shared<Metrics::Counter>(name);
             if(!counters_.insert({ name, counter }).second)
                 return Counter(nullptr);
+            metrics_.insert(counter);
             return counter;
         }
         return pos->second;
@@ -38,5 +44,31 @@ namespace Token{
         if(pos == gauges_.end())
             return Gauge(nullptr);
         return pos->second;
+    }
+
+    bool MetricRegistry::VisitMetrics(MetricRegistryVisitor* vis){
+        for(auto& it : metrics_){
+            if(!vis->Visit(it))
+                return false;
+        }
+        return true;
+    }
+
+    bool MetricRegistry::VisitGauges(MetricRegistryVisitor* vis){
+        //TODO: optimize
+        for(auto& it : metrics_){
+            if(it->IsGauge() && !vis->Visit(it))
+                return false;
+        }
+        return true;
+    }
+
+    bool MetricRegistry::VisitCounters(MetricRegistryVisitor* vis){
+        //TODO: optimize
+        for(auto& it : metrics_){
+            if(it->IsCounter() && !vis->Visit(it))
+                return false;
+        }
+        return true;
     }
 }

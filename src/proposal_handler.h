@@ -3,7 +3,6 @@
 
 #include <memory>
 #include "proposal.h"
-#include "async_task.h"
 #include "block_verifier.h"
 #include "block_processor.h"
 #include "peer/peer_session_manager.h"

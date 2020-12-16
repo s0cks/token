@@ -1,8 +1,8 @@
-#include "peer/peer_session.h"
-#include "task.h"
 #include "server.h"
-#include "async_task.h"
 #include "block_discovery.h"
+#include "peer/peer_session.h"
+#include "task/synchronize_task.h"
+#include "task/handle_message_task.h"
 
 namespace Token{
     bool PeerSession::Connect(){

@@ -1,6 +1,5 @@
 #include "block_discovery.h"
 #include "block_chain.h"
-#include "async_task.h"
 #include "server.h"
 
 #include "block_verifier.h"

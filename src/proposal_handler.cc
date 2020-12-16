@@ -1,6 +1,8 @@
 #include "block_discovery.h"
 #include "proposal_handler.h"
 
+#include "task/snapshot_task.h"
+
 namespace Token{
     bool ProposalHandler::CommitProposal() const{
         Hash hash = GetProposal()->GetHash();
@@ -19,15 +21,13 @@ namespace Token{
             LOG(WARNING) << "couldn't remove block " << hash << " from pool.";
             return false;
         }
-#ifdef TOKEN_DEBUG
-        //TODO: convert to SnapshotManager class?
+
         if(FLAGS_enable_snapshots){
             LOG(INFO) << "scheduling new snapshot....";
             SnapshotTask* task = SnapshotTask::NewInstance();
             if(!task->Submit())
                 LOG(WARNING) << "couldn't schedule new snapshot!";
         }
-#endif//TOKEN_DEBUG
         return true;
     }
 
