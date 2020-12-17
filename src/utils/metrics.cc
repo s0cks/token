@@ -4,6 +4,7 @@ namespace Token{
     static MetricSet metrics_;
     static CounterMap counters_;
     static GaugeMap gauges_;
+    static HistogramMap histograms_;
 
     bool MetricRegistry::Register(const Counter& counter){
         if(!metrics_.insert(counter).second)
@@ -17,6 +18,12 @@ namespace Token{
         return gauges_.insert({ gauge->GetName(), gauge }).second;
     }
 
+    bool MetricRegistry::Register(const Histogram& histogram){
+        if(!metrics_.insert(histogram).second)
+            return false;
+        return histograms_.insert({ histogram->GetName(), histogram }).second;
+    }
+
     bool MetricRegistry::HasCounter(const std::string& name){
         auto pos = counters_.find(name);
         return pos != counters_.end();
@@ -27,15 +34,15 @@ namespace Token{
         return pos != gauges_.end();
     }
 
+    bool MetricRegistry::HasHistogram(const std::string& name){
+        auto pos = histograms_.find(name);
+        return pos != histograms_.end();
+    }
+
     Counter MetricRegistry::GetCounter(const std::string& name){
         auto pos = counters_.find(name);
-        if(pos == counters_.end()){
-            Counter counter = std::make_shared<Metrics::Counter>(name);
-            if(!counters_.insert({ name, counter }).second)
-                return Counter(nullptr);
-            metrics_.insert(counter);
-            return counter;
-        }
+        if(pos == counters_.end())
+            return Counter(nullptr);
         return pos->second;
     }
 
@@ -43,6 +50,13 @@ namespace Token{
         auto pos = gauges_.find(name);
         if(pos == gauges_.end())
             return Gauge(nullptr);
+        return pos->second;
+    }
+
+    Histogram MetricRegistry::GetHistogram(const std::string& name){
+        auto pos = histograms_.find(name);
+        if(pos == histograms_.end())
+            return Histogram(nullptr);
         return pos->second;
     }
 
@@ -67,6 +81,15 @@ namespace Token{
         //TODO: optimize
         for(auto& it : metrics_){
             if(it->IsCounter() && !vis->Visit(it))
+                return false;
+        }
+        return true;
+    }
+
+    bool MetricRegistry::VisitHistograms(MetricRegistryVisitor* vis){
+        //TODO: optimize
+        for(auto& it : metrics_){
+            if(it->IsHistogram() && !vis->Visit(it))
                 return false;
         }
         return true;
