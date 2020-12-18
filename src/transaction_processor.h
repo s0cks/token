@@ -8,20 +8,19 @@ namespace Token{
     class TransactionHandler : public TransactionInputVisitor, public TransactionOutputVisitor{
     private:
         TransactionPtr transaction_;
-        int32_t out_idx_;
+        int32_t index_;
 
         inline UnclaimedTransactionPtr
-        CreateUnclaimedTransaction(const User& user, const Product& product) const{
+        CreateUnclaimedTransaction(const User& user, const Product& product){
             Hash tx_hash = transaction_->GetHash();
-            //TODO: out_idx_++
-            return UnclaimedTransactionPtr(new UnclaimedTransaction(tx_hash, out_idx_, user, product));
+            return UnclaimedTransactionPtr(new UnclaimedTransaction(tx_hash, index_++, user, product));
         }
     public:
         TransactionHandler(const TransactionPtr& tx):
             TransactionInputVisitor(),
             TransactionOutputVisitor(),
             transaction_(tx),
-            out_idx_(0){}
+            index_(0){}
         ~TransactionHandler(){}
 
         bool Visit(const Input& input){

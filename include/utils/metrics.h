@@ -110,18 +110,6 @@ namespace Token{
 #undef DEFINE_PERCENTILE
         };
 
-        double GetQuantile(const Percentile& percentile){
-            switch(percentile){
-#define DEFINE_GETTER(Name, Quantile) \
-                case Percentile::k##Name##Percentile: \
-                    return (Quantile);
-                FOR_EACH_PERCENTILE(DEFINE_GETTER)
-#undef DEFINE_GETTER
-                default:
-                    return 0;
-            }
-        }
-
         static std::ostream& operator<<(std::ostream& stream, const Percentile& percentile){
             switch(percentile){
 #define DEFINE_TOSTRING(Name, Quantile) \
@@ -133,6 +121,19 @@ namespace Token{
                 default:
                     stream << "Unknown";
                     return stream;
+            }
+        }
+
+        static double GetQuantile(const Percentile& percentile){
+            switch(percentile){
+#define DEFINE_GETTER(Name, Quantile) \
+                case Percentile::k##Name##Percentile: \
+                    return (Quantile);
+                FOR_EACH_PERCENTILE(DEFINE_GETTER)
+#undef DEFINE_GETTER
+                default:
+                    LOG(WARNING) << "cannot get the " << percentile << " quantile.";
+                    return 0;
             }
         }
 

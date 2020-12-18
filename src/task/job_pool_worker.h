@@ -2,6 +2,7 @@
 #define TOKEN_JOB_POOL_WORKER_H
 
 #include "task/job.h"
+#include "utils/metrics.h"
 
 namespace Token{
 #define FOR_EACH_JOB_POOL_WORKER_STATE(V) \
@@ -12,6 +13,7 @@ namespace Token{
     V(Stopped)
 
     class JobPoolWorker{
+        friend class JobPool;
     public:
         enum State{
 #define DEFINE_STATE(Name) k##Name,
@@ -33,25 +35,62 @@ namespace Token{
             }
         }
     private:
-        JobQueue* queue_;
         pthread_t thread_;
         std::mutex mutex_;
         std::condition_variable cond_;
         State state_;
+        JobQueue queue_;
+        Counter num_ran_;
+        Counter num_discarded_;
 
         void SetState(const State& state){
-            std::unique_lock<std::mutex> lock(mutex_);
+            std::lock_guard<std::mutex> lock(mutex_);
             state_ = state;
             cond_.notify_all();
         }
 
+        bool Schedule(Job* job){
+            return queue_.Push(job);
+        }
+
+        void Wait(Job* job){
+            while(!job->IsFinished()){
+                Job* j = GetNextJob();
+                if(j){
+                   j->Run();
+                   num_ran_->Increment();
+                } else{
+                    //TODO off cycle counter
+                }
+            }
+        }
+
+        Job* GetNextJob(){
+            Job* job = queue_.Pop();
+            if(job){
+                return job;
+            } else{
+                JobPoolWorker* worker = JobPool::GetRandomWorker();
+                if(worker == this){ //TODO: fix logic
+                    pthread_yield();
+                    return nullptr;
+                }
+
+                if(!worker){
+                    pthread_yield();
+                    return nullptr;
+                }
+
+                return worker->queue_.Steal();
+            }
+        }
+
         static void* HandleThread(void* data){
             LOG(INFO) << "starting worker....";
-
             JobPoolWorker* worker = (JobPoolWorker*)data;
             worker->SetState(JobPoolWorker::kRunning);
             while(worker->IsRunning()){
-                Job* next = worker->queue_->Steal();
+                Job* next = worker->GetNextJob();
                 if(next){
                     if(!next->Run()){
                         LOG(WARNING) << "couldn't run the \"" << next->GetName() << "\" job.";
@@ -64,16 +103,18 @@ namespace Token{
             return nullptr;
         }
     public:
-        JobPoolWorker(JobQueue* queue):
-            queue_(queue),
+        JobPoolWorker(size_t max_queue_size):
             thread_(),
             mutex_(),
             cond_(),
-            state_(State::kStarting){}
+            state_(State::kStarting),
+            queue_(max_queue_size),
+            num_ran_(),
+            num_discarded_(){}
         ~JobPoolWorker() = default;
 
         State GetState(){
-            std::unique_lock<std::mutex> lock(mutex_);
+            std::lock_guard<std::mutex> lock(mutex_);
             return state_;
         }
 

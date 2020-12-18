@@ -10,7 +10,10 @@ namespace Token{
     private:
         uint8_t data_[kSize];
     public:
-        User() = default;
+        User():
+            data_(){
+            memset(data_, 0, kSize);
+        }
         User(const uint8_t* bytes):
             data_(){
             memcpy(data_, bytes, kSize);

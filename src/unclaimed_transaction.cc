@@ -168,7 +168,6 @@ namespace Token{
         std::string key = hash.HexString();
         std::string filename;
 
-        LOCK_GUARD;
         leveldb::Status status = GetIndex()->Get(options, key, &filename);
         if(!status.ok()){
             std::stringstream ss;
@@ -189,17 +188,25 @@ namespace Token{
     }
 
     bool UnclaimedTransactionPool::PutUnclaimedTransaction(const Hash& hash, const UnclaimedTransactionPtr& utxo){
-        leveldb::WriteOptions options;
-        options.sync = true;
+        leveldb::Status status;
         std::string key = hash.HexString();
         std::string filename = GetNewDataFilename(hash);
+        std::string tmp; //TODO: remove
 
-        if(FileExists(filename)){
+        leveldb::ReadOptions readOpts;
+        if(!(status = GetIndex()->Get(readOpts, key, &tmp)).IsNotFound()){
+            std::stringstream ss;
+            LOG(ERROR) << "cannot overwrite existing unclaimed transaction pool data for " << hash << "(" << utxo->GetTransaction() << "[" << utxo->GetIndex() << "]" << ")" << ": " << status.ToString();
+            POOL_ERROR(ss.str());
+            return false;
+        }
+
+        /*if(FileExists(filename)){
             std::stringstream ss;
             ss << "cannot overwrite existing unclaimed transaction pool data: " << filename;
             POOL_ERROR(ss.str());
             return false;
-        }
+        }*/
 
         UnclaimedTransactionFileWriter writer(filename);
         if(!writer.Write(utxo)){
@@ -209,33 +216,25 @@ namespace Token{
             return false;
         }
 
-        leveldb::Status status = GetIndex()->Put(options, key, filename);
-        if(!status.ok()){
+        leveldb::WriteOptions writeOpts;
+        writeOpts.sync = true;
+        if(!(status = GetIndex()->Put(writeOpts, key, filename)).ok()){
             std::stringstream ss;
             ss << "couldn't index unclaimed transaction " << utxo << ": " << status.ToString();
             POOL_ERROR(ss.str());
             return false;
         }
 
-        LOG(INFO) << "added unclaimed transaction to pool: " << hash;
+        //LOG(INFO) << "added unclaimed transaction to pool: " << hash;
         SIGNAL_ALL;
         return true;
     }
 
     bool UnclaimedTransactionPool::HasUnclaimedTransaction(const Hash& hash){
-        leveldb::ReadOptions options;
+        leveldb::ReadOptions readOpts;
         std::string key = hash.HexString();
         std::string filename;
-
-        LOCK_GUARD;
-        leveldb::Status status = GetIndex()->Get(options, key, &filename);
-        if(!status.ok()){
-            std::stringstream ss;
-            ss << "couldn't find unclaimed transaction " << hash << ": " << status.ToString();
-            POOL_WARNING(ss.str());
-            return false;
-        }
-        return true;
+        return GetIndex()->Get(readOpts, key, &filename).ok();
     }
 
     bool UnclaimedTransactionPool::RemoveUnclaimedTransaction(const Hash& hash){

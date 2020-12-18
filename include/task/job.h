@@ -121,12 +121,20 @@ namespace Token{
 
         virtual JobResult DoWork() = 0;
 
-        void Finish(){
-            unfinished_jobs_--;
-            if(IsFinished()){
-                if(HasParent())
-                    GetParent()->Finish();
-            }
+        bool IncrementUnfinishedJobs(){
+            return unfinished_jobs_.fetch_add(1, std::memory_order_seq_cst) == 1;
+        }
+
+        bool DecrementUnfinishedJobs(){
+            return unfinished_jobs_.fetch_sub(1, std::memory_order_seq_cst) == 1;
+        }
+
+        bool Finish(){
+            if(!DecrementUnfinishedJobs())
+                return false;
+            if(HasParent())
+                return GetParent()->Finish();
+            return true;
         }
     public:
         virtual ~Job() = default;
@@ -140,7 +148,7 @@ namespace Token{
         }
 
         bool IsFinished() const{
-            return unfinished_jobs_ == 0;
+            return unfinished_jobs_.load(std::memory_order_seq_cst) == 0;
         }
 
         std::string GetName() const{
@@ -151,6 +159,12 @@ namespace Token{
             return result_;
         }
 
+        std::string ToString() const{
+            std::stringstream ss;
+            ss << GetName() << "Job()";
+            return ss.str();
+        }
+
         bool Run(){
             LOG(INFO) << "running " << GetName() << " job....";
             result_ = DoWork();
@@ -159,12 +173,17 @@ namespace Token{
         }
     };
 
+    class JobPoolWorker;
     class JobPool{
+        friend class JobPoolWorker;
     public:
         static const int kMaxNumberOfJobs = 1024;
-        static const int kMaxNumberOfWorkers = 4;
+        static const int kMaxNumberOfWorkers = 10;
     private:
         JobPool() = delete;
+
+        static JobPoolWorker* GetWorker(pthread_t wthread);
+        static JobPoolWorker* GetRandomWorker();
     public:
         ~JobPool() = delete;
 
@@ -212,27 +231,28 @@ namespace Token{
 
         Job* Pop(){
             size_t bottom = bottom_.load(std::memory_order_acquire);
-            bottom = std::max((size_t)0, bottom - 1);
-            bottom_.store(bottom, std::memory_order_release);
-            size_t top = top_.load(std::memory_order_acquire);
-
-            if(top <= bottom){
-                Job* job = jobs_[bottom];
-                if(top != bottom){
-                    return job;
-                } else{
-                    size_t expectedTop = top;
-                    size_t desiredTop = top + 1;
-                    if(!top_.compare_exchange_weak(expectedTop, desiredTop, std::memory_order_acq_rel))
-                        job = nullptr;
-
-                    bottom_.store(top + 1, std::memory_order_release);
-                    return job;
-                }
-            } else{
-                bottom_.store(top, std::memory_order_release);
-                return nullptr;
+            if(bottom > 0){
+                bottom = bottom - 1;
+                bottom_.store(bottom, std::memory_order_release);
             }
+
+            std::atomic_thread_fence(std::memory_order_release);
+            size_t top = top_.load(std::memory_order_acquire);
+            if(top <= bottom){
+                Job* job = jobs_[bottom % jobs_.size()];
+                if(top == bottom){
+                    size_t expected = top;
+                    size_t next = top + 1;
+                    size_t desired = next;
+                    if(!top_.compare_exchange_strong(expected, desired, std::memory_order_acq_rel))
+                        job = nullptr;
+                    bottom_.store(next, std::memory_order_release);
+                }
+                return job;
+            }
+
+            bottom_.store(top, std::memory_order_release);
+            return nullptr;
         }
     };
 }

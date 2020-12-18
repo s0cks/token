@@ -45,33 +45,18 @@ namespace Token{
         InputList inputs;
 
         OutputList outputs_a;
-        for(idx = 0;
-            idx < Block::kNumberOfGenesisOutputs;
-            idx++){
-            std::string user = "VenueA";
-            std::stringstream ss;
-            ss << "TestToken" << idx;
-            outputs_a.push_back(Output(user, ss.str()));
+        for(idx = 0; idx < Block::kNumberOfGenesisOutputs; idx++){
+            outputs_a.push_back(Output("VenueA", "TestToken"));
         }
 
         OutputList outputs_b;
-        for(idx = 0;
-            idx < Block::kNumberOfGenesisOutputs;
-            idx++){
-            std::string user = "VenueB";
-            std::stringstream ss;
-            ss << "TestToken" << idx;
-            outputs_b.push_back(Output(user, ss.str()));
+        for(idx = 0; idx < Block::kNumberOfGenesisOutputs; idx++){
+            outputs_b.push_back(Output("VenueB", "TestToken"));
         }
 
         OutputList outputs_c;
-        for(idx = 0;
-            idx < Block::kNumberOfGenesisOutputs;
-            idx++){
-            std::string user = "VenueC";
-            std::stringstream ss;
-            ss << "TestToken" << idx;
-            outputs_c.push_back(Output(user, ss.str()));
+        for(idx = 0; idx < Block::kNumberOfGenesisOutputs; idx++){
+            outputs_c.push_back(Output("VenueC", "TestToken"));
         }
 
         TransactionList transactions = {

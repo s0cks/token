@@ -141,6 +141,26 @@ namespace Token{
         std::string token;
         while(std::getline(ss, token, delimiter)) cont.push_back(token);
     }
+
+    template<typename T>
+    static inline std::vector<std::vector<T>>
+    Chunk(const std::vector<T>& source, int64_t size){
+        std::vector<std::vector<T>> result;
+        result.reserve((source.size() + size - 1) / size);
+
+        auto start = source.begin();
+        auto end = source.end();
+        while (start != end) {
+            auto next = std::distance(start, end) >= size
+                        ? start + size
+                        : end;
+
+            result.emplace_back(start, next);
+            start = next;
+        }
+
+        return result;
+    }
 }
 
 // Command Line Flags

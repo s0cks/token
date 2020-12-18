@@ -11,6 +11,9 @@ namespace Token{
 //######################################################################################################################
 //                                          Transaction
 //######################################################################################################################
+    const int64_t Transaction::kMaxNumberOfInputs = 40000;
+    const int64_t Transaction::kMaxNumberOfOutputs = 40000;
+
     TransactionPtr Transaction::NewInstance(std::fstream& fd, size_t size){
         Buffer buff(size);
         buff.ReadBytesFrom(fd, size);

@@ -122,6 +122,9 @@ namespace Token{
             return true;
         }
     public:
+        explicit Output():
+            user_(),
+            product_(){}
         Output(const User& user, const Product& product):
             Object(),
             user_(user),
@@ -204,6 +207,9 @@ namespace Token{
                 return a->index_ < b->index_;
             }
         };
+
+        static const int64_t kMaxNumberOfInputs;
+        static const int64_t kMaxNumberOfOutputs;
     private:
         Timestamp timestamp_;
         int64_t index_;

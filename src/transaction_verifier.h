@@ -118,7 +118,7 @@ namespace Token{
             timeline << "Stop";
 #ifdef TOKEN_DEBUG
             TimelinePrinter printer(google::INFO, Printer::kFlagDetailed);
-            printer.Print(timeline);
+            //printer.Print(timeline);
 #endif//TOKEN_DEBUG
             return is_valid;
         }

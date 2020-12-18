@@ -125,8 +125,9 @@ namespace Token{
         friend class BlockChain;
         friend class BlockMessage;
     public:
-        static const int64_t kMaxTransactionsForBlock = 20;
-        static const int64_t kNumberOfGenesisOutputs = 32; // TODO: changeme
+        static const int64_t kMaxTransactionsForBlock = 40000;
+
+        static const int64_t kNumberOfGenesisOutputs = 10000; // TODO: changeme
 
         struct TimestampComparator{
             bool operator()(Block* a, Block* b){
