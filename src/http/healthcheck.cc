@@ -113,32 +113,8 @@ namespace Token{
 
     }
 
-    static HttpSession* sessions_[HealthCheckService::kMaxNumberOfSessions];
-
-    bool HealthCheckService::RegisterSession(HttpSession* session){
-        for(int64_t idx = 0; idx < HealthCheckService::kMaxNumberOfSessions; idx++){
-            if(!sessions_[idx]){
-                sessions_[idx] = session;
-                return true;
-            }
-        }
-        return false;
-    }
-
-    bool HealthCheckService::UnregisterSession(HttpSession* session){
-        for(int64_t idx = 0; idx < HealthCheckService::kMaxNumberOfSessions; idx++){
-            //TODO: fix HealthCheckService::UnregisterSession(const Handle<HttpSession>&);
-            if(sessions_[idx] && sessions_[idx]->GetID() == session->GetID()){
-                sessions_[idx] = nullptr;
-                return true;
-            }
-        }
-        return false;
-    }
-
     void HealthCheckService::OnNewConnection(uv_stream_t* stream, int status){
         HttpSession* session = new HttpSession(stream->loop);
-        RegisterSession(session);
 
         LOG(INFO) << "client is connecting....";
         int err;

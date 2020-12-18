@@ -24,8 +24,6 @@ namespace Token{
     class PeerSession;
     class HandleMessageTask;
     class Server : public Thread{
-        friend class PeerSession;
-        friend class Scavenger;
     public:
         enum State{
 #define DEFINE_SERVER_STATE(Name) k##Name,

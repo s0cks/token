@@ -30,7 +30,6 @@ namespace Token{
     V(Get, Info, "/info")
 
     class HealthCheckService : public Thread{
-        friend class Scavenger;
         friend class HttpSession;
     public:
         enum State{
@@ -71,8 +70,6 @@ namespace Token{
     private:
         HealthCheckService() = delete;
         static HttpRouter* GetRouter();
-        static bool RegisterSession(HttpSession* session);
-        static bool UnregisterSession(HttpSession* session);
         static void SetRouter(HttpRouter* router);
         static void SetState(State state);
         static void SetStatus(Status status);

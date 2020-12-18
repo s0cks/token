@@ -38,8 +38,6 @@ namespace Token{
     }
 
     void HttpSession::OnClose(uv_handle_t* handle){
-        HttpSession* session = (HttpSession*)handle->data;
-        if(!HealthCheckService::UnregisterSession(session))
-            LOG(WARNING) << "couldn't unregister http session from health check service";
+        //TODO: do something
     }
 }
