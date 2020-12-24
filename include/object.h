@@ -28,14 +28,6 @@ namespace Token{
         virtual int64_t GetBufferSize() const = 0;
         virtual bool Encode(Buffer* buffer) const = 0;
     };
-
-    class ObjectPointerVisitor{
-    protected:
-        ObjectPointerVisitor() = default;
-    public:
-        virtual ~ObjectPointerVisitor() = default;
-        virtual bool Visit(Object* obj) = 0;
-    };
 }
 
 #endif //TOKEN_OBJECT_H
