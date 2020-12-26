@@ -1,5 +1,5 @@
 #include "server.h"
-#include "block_discovery.h"
+#include "discovery.h"
 #include "peer/peer_session.h"
 #include "task/synchronize_task.h"
 #include "task/handle_message_task.h"

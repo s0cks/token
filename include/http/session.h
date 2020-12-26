@@ -9,7 +9,7 @@
 
 namespace Token{
     class HttpSession{
-        friend class HealthCheckService;
+        friend class HttpService;
     public:
         static const size_t kBufferSize = 4096;
     private:

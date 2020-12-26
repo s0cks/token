@@ -7,7 +7,7 @@
 #include "keychain.h"
 #include "configuration.h"
 
-#include "block_chain.h"
+#include "blockchain.h"
 #include "block_processor.h"
 #include "unclaimed_transaction.h"
 

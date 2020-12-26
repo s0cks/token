@@ -1,9 +1,8 @@
 #include <mutex>
 #include <condition_variable>
-#include "configuration.h"
-#include "http/controller.h"
-#include "http/healthcheck.h"
-#include "peer/peer_session_manager.h"
+
+#include "http/rest.h"
+#include "blockchain.h"
 
 namespace Token{
     static pthread_t thread_;
@@ -12,79 +11,91 @@ namespace Token{
 
 #define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
 #define LOCK std::unique_lock<std::mutex> lock(mutex_)
+#define UNLOCK lock.unlock()
 #define WAIT cond_.wait(lock)
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
 
-    static HealthCheckService::State state_ = HealthCheckService::kStopped;
-    static HealthCheckService::Status status_ = HealthCheckService::kOk;
+    static RestService::State state_ = RestService::kStopped;
+    static RestService::Status status_ = RestService::kOk;
     static HttpRouter router_;
     static uv_async_t shutdown_;
 
-    HealthCheckService::State HealthCheckService::GetState(){
+    RestService::State RestService::GetState(){
         LOCK_GUARD;
         return state_;
     }
 
-    void HealthCheckService::SetState(State state){
-        LOCK_GUARD;
+    void RestService::SetState(State state){
+        LOCK;
         state_ = state;
+        UNLOCK;
+        SIGNAL_ALL;
     }
 
-    HealthCheckService::Status HealthCheckService::GetStatus(){
+    void RestService::WaitForState(State state){
+        LOCK;
+        while(state_ != state) WAIT;
+        UNLOCK;
+    }
+
+    RestService::Status RestService::GetStatus(){
         LOCK_GUARD;
         return status_;
     }
 
-    void HealthCheckService::SetStatus(Status status){
-        LOCK_GUARD;
-        status_ = status;
-    }
-
-    void HealthCheckService::WaitForState(State state){
+    void RestService::SetStatus(Status status){
         LOCK;
-        while(state_ != state) WAIT;
+        status_ = status;
+        UNLOCK;
     }
 
-    bool HealthCheckService::Start(){
+    bool RestService::Start(){
         if(!IsStopped()){
-            LOG(WARNING) << "the health check service is already running.";
+            LOG(WARNING) << "the rest service is already running.";
             return false;
         }
-        LOG(INFO) << "initializing the health check service....";
-        HealthController::Initialize(&router_);
-        StatusController::Initialize(&router_);
-        return Thread::Start(&thread_, "HealthCheckService", &HandleServiceThread, 0);
+
+        LOG(INFO) << "starting the rest service....";
+        RestController::Initialize(&router_);
+        return Thread::Start(&thread_, "RestService", &HandleServiceThread, 0);
     }
 
-    bool HealthCheckService::Stop(){
+    void RestService::OnShutdown(uv_async_t* handle){
+        SetState(RestService::kStopped);
+        uv_stop(handle->loop);
+        if(!HttpService::ShutdownService(handle->loop))
+            LOG(WARNING) << "couldn't shutdown the HealthCheck service";
+    }
+
+    bool RestService::Stop(){
         if(!IsRunning())
             return true; // should we return false?
         uv_async_send(&shutdown_);
         return Thread::Stop(thread_);
     }
 
-    void HealthCheckService::HandleServiceThread(uword parameter){
-        SetState(HealthCheckService::kStarting);
+    void RestService::HandleServiceThread(uword parameter){
+        SetState(RestService::kStarting);
         uv_loop_t* loop = uv_loop_new();
         uv_async_init(loop, &shutdown_, &OnShutdown);
 
         uv_tcp_t server;
         uv_tcp_init(loop, &server);
 
-        int32_t port = BlockChainConfiguration::GetHealthCheckPort();
+        int32_t port = FLAGS_port + 2; //TODO: fixme
         if(!Bind(&server, port)){
-            LOG(WARNING) << "couldn't bind health check service on port: " << port;
+            LOG(WARNING) << "couldn't bind the rest service on port: " << port;
             goto exit;
         }
 
         int result;
         if((result = uv_listen((uv_stream_t*)&server, 100, &OnNewConnection)) != 0){
-            LOG(WARNING) << "health check service couldn't listen on port " << port << ": " << uv_strerror(result);
+            LOG(WARNING) << "the rest service couldn't listen on port " << port << ": " << uv_strerror(result);
             goto exit;
         }
 
-        LOG(INFO) << "health check service listening @" << port;
+        LOG(INFO) << "rest service listening @" << port;
         SetState(State::kRunning);
         uv_run(loop, UV_RUN_DEFAULT);
     exit:
@@ -92,14 +103,7 @@ namespace Token{
         pthread_exit(nullptr);
     }
 
-    void HealthCheckService::OnShutdown(uv_async_t* handle){
-        SetState(HealthCheckService::kStopping);
-        uv_stop(handle->loop);
-        if(!HttpService::ShutdownService(handle->loop))
-            LOG(WARNING) << "couldn't shutdown the HealthCheck service";
-    }
-
-    void HealthCheckService::OnNewConnection(uv_stream_t* stream, int status){
+    void RestService::OnNewConnection(uv_stream_t* stream, int status){
         HttpSession* session = new HttpSession(stream->loop);
         if(!Accept(stream, session)){
             LOG(WARNING) << "couldn't accept new connection.";
@@ -113,7 +117,7 @@ namespace Token{
         }
     }
 
-    void HealthCheckService::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
+    void RestService::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
         HttpSession* session = (HttpSession*)stream->data;
         if(nread == UV_EOF)
             return;
@@ -152,41 +156,15 @@ namespace Token{
         }
     }
 
-    static inline void
-    GetPeerManagerStatus(Json::Value& doc){
-        std::set<UUID> peers;
-        if(!PeerSessionManager::GetConnectedPeers(peers)){
-            LOG(WARNING) << "couldn't get list of peers from peer session manager.";
+    void RestController::HandleHead(HttpSession* session, HttpRequest* request){
+        BlockPtr blk = BlockChain::GetHead();
+
+        Json::Value doc;
+        if(!blk->ToJson(doc)){
+            SendInternalServerError(session, "Cannot convert <HEAD> to json");
             return;
         }
 
-        Json::Value list;
-        for(auto& it : peers){
-            std::shared_ptr<PeerSession> session = PeerSessionManager::GetSession(it);
-
-            Json::Value pinfo;
-            pinfo["ID"] = it.ToString();
-            pinfo["Address"] = session->GetAddress().ToString();
-
-            list.append(pinfo);
-        }
-        doc["Peers"] = list;
-    }
-
-    void StatusController::HandleOverallStatus(HttpSession* session, HttpRequest* request){
-        Json::Value doc;
-        doc["Timestamp"] = GetTimestampFormattedReadable(GetCurrentTimestamp());
-        doc["Version"] = GetVersion();
-        GetPeerManagerStatus(doc);
-
         SendJson(session, doc);
-    }
-
-    void StatusController::HandleTestStatus(HttpSession* session, HttpRequest* request){
-        std::string name = request->GetParameterValue("name");
-
-        std::stringstream ss;
-        ss << "Hello " << name << "!";
-        SendText(session, ss);
     }
 }

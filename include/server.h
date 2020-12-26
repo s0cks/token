@@ -23,7 +23,7 @@ namespace Token{
 
     class PeerSession;
     class HandleMessageTask;
-    class Server{
+    class Server : Thread{
     public:
         enum State{
 #define DEFINE_SERVER_STATE(Name) k##Name,
@@ -75,8 +75,7 @@ namespace Token{
         static void HandleTerminateCallback(uv_async_t* handle);
         static void OnNewConnection(uv_stream_t* stream, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
-
-        static void* HandleThread(void* data);
+        static void HandleServerThread(uword parameter);
     public:
         ~Server() = delete;
 

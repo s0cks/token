@@ -1,5 +1,5 @@
-#include "block_discovery.h"
-#include "block_chain.h"
+#include "discovery.h"
+#include "blockchain.h"
 #include "server.h"
 
 #include "block_verifier.h"
@@ -139,7 +139,7 @@ namespace Token{
         return proposal_;
     }
 
-    void* BlockDiscoveryThread::HandleThread(void* data){
+    void BlockDiscoveryThread::HandleThread(uword parameter){
         LOG(INFO) << "starting the block discovery thread....";
         SetState(BlockDiscoveryThread::kRunning);
         while(!IsStopped()){
@@ -173,6 +173,7 @@ namespace Token{
             }
         }
     exit:
+        SetState(BlockDiscoveryThread::kStopped);
         pthread_exit(NULL);
     }
 
@@ -181,24 +182,7 @@ namespace Token{
             LOG(WARNING) << "the block discovery thread is already running.";
             return false;
         }
-
-        int result;
-        pthread_attr_t attrs;
-        if((result = pthread_attr_init(&attrs)) != 0){
-            LOG(WARNING) << "couldn't initialize the block discovery thread attributes: " << strerror(result);
-            return false;
-        }
-
-        if((result = pthread_create(&thread_, &attrs, &HandleThread, NULL)) != 0){
-            LOG(WARNING) << "couldn't start the block discovery thread: " << strerror(result);
-            return false;
-        }
-
-        if((result = pthread_attr_destroy(&attrs)) != 0){
-            LOG(WARNING) << "couldn't destroy the block discovery thread attributes: " << strerror(result);
-            return false;
-        }
-        return true;
+        return Thread::Start(&thread_, "Discovery", &HandleThread, 0);
     }
 
     bool BlockDiscoveryThread::Stop(){
@@ -206,15 +190,7 @@ namespace Token{
             LOG(WARNING) << "the block discovery thread is not running.";
             return false;
         }
-
-        SetState(BlockDiscoveryThread::kStopped);
-
-        int result;
-        if((result = pthread_join(thread_, NULL)) != 0){
-            LOG(WARNING) << "couldn't join the server thread: " << strerror(result);
-            return false;
-        }
-        return true;
+        return Thread::Stop(thread_);
     }
 
     void BlockDiscoveryThread::SetState(const State& state){

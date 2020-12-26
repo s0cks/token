@@ -1,5 +1,5 @@
-#ifndef TOKEN_BLOCK_CHAIN_H
-#define TOKEN_BLOCK_CHAIN_H
+#ifndef TOKEN_BLOCKCHAIN_H
+#define TOKEN_BLOCKCHAIN_H
 
 #include <map>
 #include <set>
@@ -144,4 +144,4 @@ namespace Token{
     };
 }
 
-#endif //TOKEN_BLOCK_CHAIN_H
+#endif //TOKEN_BLOCKCHAIN_H

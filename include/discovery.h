@@ -1,5 +1,5 @@
-#ifndef TOKEN_BLOCK_DISCOVERY_H
-#define TOKEN_BLOCK_DISCOVERY_H
+#ifndef TOKEN_DISCOVERY_H
+#define TOKEN_DISCOVERY_H
 
 #include "vthread.h"
 #include "proposal.h"
@@ -16,7 +16,7 @@ namespace Token{
     V(Warning)                                    \
     V(Error)
 
-    class BlockDiscoveryThread{
+    class BlockDiscoveryThread : public Thread{
     public:
         enum State{
 #define DEFINE_STATE(Name) k##Name,
@@ -62,10 +62,9 @@ namespace Token{
 
         static void SetState(const State& state);
         static void SetStatus(const Status& status);
-
+        static void HandleThread(uword parameter);
         static ProposalPtr CreateNewProposal(BlockPtr blk);
         static BlockPtr CreateNewBlock(intptr_t size);
-        static void* HandleThread(void* data);
     public:
         ~BlockDiscoveryThread() = delete;
 
@@ -98,4 +97,4 @@ namespace Token{
     };
 }
 
-#endif //TOKEN_BLOCK_DISCOVERY_H
+#endif //TOKEN_DISCOVERY_H

@@ -8,7 +8,7 @@
 #include "configuration.h"
 #include "proposal.h"
 #include "unclaimed_transaction.h"
-#include "block_discovery.h"
+#include "discovery.h"
 
 #include "utils/crash_report.h"
 #include "task/handle_message_task.h"
@@ -125,42 +125,17 @@ namespace Token{
             LOG(WARNING) << "the server is already running.";
             return false;
         }
-
-        int result;
-        pthread_attr_t attrs;
-        if((result = pthread_attr_init(&attrs)) != 0){
-            LOG(WARNING) << "couldn't initialize the server thread attributes: " << strerror(result);
-            return false;
-        }
-
-        if((result = pthread_create(&thread_, &attrs, &HandleThread, NULL)) != 0){
-            LOG(WARNING) << "couldn't start the server thread: " << strerror(result);
-            return false;
-        }
-
-        if((result = pthread_attr_destroy(&attrs)) != 0){
-            LOG(WARNING) << "couldn't destroy the server thread attributes: " << strerror(result);
-            return false;
-        }
-        return true;
+        return Thread::Start(&thread_, "Server", &HandleServerThread, 0);
     }
 
     bool Server::Stop(){
         if(!IsRunning())
             return true; // should we return false?
         uv_async_send(&shutdown_);
-
-        int ret;
-        if((ret = pthread_join(thread_, NULL)) != 0){
-            std::stringstream ss;
-            ss << "Couldn't join server thread: " << strerror(ret);
-            CrashReport::PrintNewCrashReportAndExit(ss);
-        }
-
-        return true;
+        return Thread::Stop(thread_);
     }
 
-    void* Server::HandleThread(void* data){
+    void Server::HandleServerThread(uword parameter){
         LOG(INFO) << "starting server...";
         SetState(State::kStarting);
         uv_loop_t* loop = uv_loop_new();

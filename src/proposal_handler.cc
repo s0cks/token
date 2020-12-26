@@ -1,4 +1,4 @@
-#include "block_discovery.h"
+#include "discovery.h"
 #include "proposal_handler.h"
 
 #include "task/snapshot_task.h"

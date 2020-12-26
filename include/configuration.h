@@ -12,11 +12,14 @@ namespace Token{
 
 // Health Check Properties
 #define PROPERTY_HEALTHCHECK "HealthCheck"
-/*
- * HealthCheck.Port := ${port}+1
- */
+// HealthCheck.Port
 #define PROPERTY_HEALTHCHECK_PORT "Port"
 #define PROPERTY_HEALTHCHECK_PORT_DEFAULT (FLAGS_port + 1)
+
+// Rest Service Properties
+#define PROPERTY_REST "RestService"
+#define PROPERTY_REST_PORT "Port"
+#define PROPERTY_REST_PORT_DEFAULT (FLAGS_port + 2)
 
 // Server Properties
 #define PROPERTY_SERVER "Server"
@@ -39,6 +42,7 @@ namespace Token{
 #define PROPERTY_SERVER_MAXPEERS_DEFAULT 4
 
     class BlockChainConfiguration{
+        //TODO: refactor
     private:
         BlockChainConfiguration() = delete;
         static bool SaveConfiguration();

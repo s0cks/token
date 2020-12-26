@@ -7,7 +7,7 @@
 #include "address.h"
 #include "version.h"
 #include "proposal.h"
-#include "block_chain.h"
+#include "blockchain.h"
 #include "configuration.h"
 
 namespace Token{

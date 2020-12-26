@@ -1,6 +1,6 @@
 #include "block.h"
 #include "server.h"
-#include "block_chain.h"
+#include "blockchain.h"
 #include "utils/crash_report.h"
 
 namespace Token{

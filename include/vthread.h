@@ -1,30 +1,21 @@
 #ifndef TOKEN_VTHREAD_H
 #define TOKEN_VTHREAD_H
 
-//TODO os-switch
 #include "common.h"
+
+#ifdef OS_IS_LINUX
 #include "vthread_linux.h"
+#elif OS_IS_WINDOWS
+#error "Unsupported"
+#elif OS_IS_OSX
+#error "Unsupported"
+#endif
 
 namespace Token{
-    typedef void (*ThreadHandlerFunction)(uword parameter);
-
     class Thread{
-    public:
-        enum State{
-            kRunning,
-            kPaused,
-            kStopped,
-        };
     protected:
-        const ThreadId id_;
-        std::string name_;
-
-        Thread():
-            id_(0),
-            name_(){}
-
-        static size_t GetMaxStackSize();
-        static int Start(const char* name, ThreadHandlerFunction function, uword parameter);
+        static bool Start(ThreadId* thread, const char* name, ThreadHandlerFunction function, uword parameter);
+        static bool Stop(ThreadId thread);
     public:
         virtual ~Thread() = delete;
     };

@@ -1,6 +1,6 @@
 #include "transaction.h"
 #include "keychain.h"
-#include "block_chain.h"
+#include "blockchain.h"
 #include "server.h"
 #include "unclaimed_transaction.h"
 

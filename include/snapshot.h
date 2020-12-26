@@ -2,7 +2,7 @@
 #define TOKEN_SNAPSHOT_H
 
 #include "common.h"
-#include "block_chain.h"
+#include "blockchain.h"
 
 namespace Token{
     enum SnapshotSection{

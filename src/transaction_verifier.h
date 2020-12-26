@@ -2,7 +2,7 @@
 #define TOKEN_TRANSACTION_VERIFIER_H
 
 #include "verifier.h"
-#include "block_chain.h"
+#include "blockchain.h"
 #include "transaction.h"
 #include "utils/timeline.h"
 

@@ -4,13 +4,53 @@
 #include <uv.h>
 #include <libconfig.h++>
 
-#include "object.h"
 #include "vthread.h"
 #include "http/router.h"
 #include "http/session.h"
 #include "http/request.h"
+#include "http/service.h"
+#include "http/controller.h"
 
 namespace Token{
+    class StatusController : HttpController{
+    private:
+        StatusController() = delete;
+
+        static void HandleOverallStatus(HttpSession* session, HttpRequest* request);
+        static void HandleTestStatus(HttpSession* session, HttpRequest* request);
+    public:
+        ~StatusController() = delete;
+
+        static inline bool
+        Initialize(HttpRouter* router){
+            router->Get("/status", &HandleOverallStatus);
+            router->Get("/status/:name", &HandleTestStatus);
+            return true;
+        }
+    };
+
+    class HealthController : HttpController{
+    private:
+        HealthController() = delete;
+
+        static void HandleReadyEndpoint(HttpSession* session, HttpRequest* request){
+            SendOk(session);
+        }
+
+        static void HandleLiveEndpoint(HttpSession* session, HttpRequest* request){
+            SendOk(session);
+        }
+    public:
+        ~HealthController() = delete;
+
+        static inline bool
+        Initialize(HttpRouter* router){
+            router->Get("/ready", &HandleReadyEndpoint);
+            router->Get("/live", &HandleLiveEndpoint);
+            return true;
+        }
+    };
+
 #define FOR_EACH_HEALTHCHECK_SERVER_STATE(V) \
     V(Starting)                 \
     V(Running)                  \
@@ -22,14 +62,7 @@ namespace Token{
     V(Warning)                                \
     V(Error)
 
-#define FOR_EACH_HEALTHCHECK_SERVICE_ENDPOINT(V) \
-    V(Get, Ready, "/ready")                           \
-    V(Get, Live, "/live")                             \
-    V(Get, PeerStatus, "/status/peers")               \
-    V(Get, BlockChainStatus, "/status/chain")    \
-    V(Get, Info, "/info")
-
-    class HealthCheckService : public Thread{
+    class HealthCheckService : Thread, HttpService{
         friend class HttpSession;
     public:
         enum State{
@@ -65,26 +98,21 @@ namespace Token{
 #undef DECLARE_TOSTRING
             }
         }
-
-        static const int64_t kMaxNumberOfSessions = 64;
     private:
         HealthCheckService() = delete;
+
         static void SetState(State state);
         static void SetStatus(Status status);
-        static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
         static void OnNewConnection(uv_stream_t* stream, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
-        static void OnClose(uv_handle_t* handle);
-        static void OnWalk(uv_handle_t* handle, void* data);
         static void OnShutdown(uv_async_t* handle);
         static void HandleServiceThread(uword parameter);
-        static void HandleUnknownEndpoint(HttpSession* session, HttpRequest* request);
     public:
         ~HealthCheckService() = delete;
 
+        static void WaitForState(State state);
         static State GetState();
         static Status GetStatus();
-        static void WaitForState(State state);
         static bool Start();
         static bool Stop();
 
