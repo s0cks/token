@@ -3,7 +3,7 @@
 
 #include "snapshot.h"
 #include "utils/file_reader.h"
-#include "crash_report.h"
+#include "utils/crash_report.h"
 
 namespace Token{
     class Snapshot;

@@ -11,6 +11,7 @@
 #include <string>
 #include <sstream>
 #include <uv.h>
+#include <signal.h>
 #include <sys/stat.h>
 #include <uuid/uuid.h>
 
@@ -48,6 +49,10 @@ namespace Token{
 #else
 #error "Cannot determine CPU architecture"
 #endif
+
+#define TOKEN_MAJOR_VERSION 1
+#define TOKEN_MINOR_VERSION 0
+#define TOKEN_REVISION_VERSION 0
 
     static const size_t kWordSize = sizeof(uintptr_t);
     static const size_t kBitsPerByte = 8;
@@ -161,6 +166,23 @@ namespace Token{
 
         return result;
     }
+
+    std::string GetVersion();
+
+    class SignalHandlers{
+    private:
+        static void HandleInterrupt(int signum);
+        static void HandleSegfault(int signum);
+
+        SignalHandlers() = delete;
+    public:
+        ~SignalHandlers() = delete;
+
+        static void Initialize(){
+            signal(SIGINT, &HandleInterrupt);
+            signal(SIGSEGV, &HandleSegfault);
+        }
+    };
 }
 
 // Command Line Flags

@@ -78,10 +78,10 @@ namespace Token{
 
         static bool Initialize();
         static bool Shutdown();
+        static bool ConnectTo(const NodeAddress& address);
         static bool IsConnectedTo(const UUID& uuid);
         static bool IsConnectedTo(const NodeAddress& address);
-        static bool ConnectTo(const NodeAddress& address);
-        static bool GetStatus(std::vector<std::string>& statuses);
+        static bool GetConnectedPeers(std::set<UUID>& peers);
         static int32_t GetNumberOfConnectedPeers();
         static std::shared_ptr<PeerSession> GetSession(const UUID& uuid);
         static std::shared_ptr<PeerSession> GetSession(const NodeAddress& address);

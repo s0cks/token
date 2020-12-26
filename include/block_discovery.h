@@ -5,24 +5,76 @@
 #include "proposal.h"
 
 namespace Token{
-    class BlockDiscoveryThread : public Thread{
-        //TODO:
-        // - need to pause block discovery thread when proposal thread is running or merge these 2 together again
+#define FOR_EACH_BLOCK_DISCOVERY_THREAD_STATE(V) \
+    V(Starting)                                  \
+    V(Running)                                   \
+    V(Stopping)                                  \
+    V(Stopped)
+
+#define FOR_EACH_BLOCK_DISCOVERY_THREAD_STATUS(V) \
+    V(Ok)                                         \
+    V(Warning)                                    \
+    V(Error)
+
+    class BlockDiscoveryThread{
+    public:
+        enum State{
+#define DEFINE_STATE(Name) k##Name,
+            FOR_EACH_BLOCK_DISCOVERY_THREAD_STATE(DEFINE_STATE)
+#undef DEFINE_STATE
+        };
+
+        friend std::ostream& operator<<(std::ostream& stream, const State& state){
+            switch(state){
+#define DEFINE_TOSTRING(Name) \
+                case State::k##Name: \
+                    stream << #Name; \
+                    return stream;
+                FOR_EACH_BLOCK_DISCOVERY_THREAD_STATE(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
+                default:
+                    stream << "Unknown";
+                    return stream;
+            }
+        }
+
+        enum Status{
+#define DEFINE_STATUS(Name) k##Name,
+            FOR_EACH_BLOCK_DISCOVERY_THREAD_STATUS(DEFINE_STATUS)
+#undef DEFINE_STATUS
+        };
+
+        friend std::ostream& operator<<(std::ostream& stream, const Status& status){
+            switch(status){
+#define DEFINE_TOSTRING(Name) \
+                case Status::k##Name: \
+                    stream << #Name; \
+                    return stream;
+                FOR_EACH_BLOCK_DISCOVERY_THREAD_STATUS(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
+                default:
+                    stream << "Unknown";
+                    return stream;
+            }
+        }
     private:
         BlockDiscoveryThread() = delete;
 
-        static void SetState(Thread::State state);
-        static void HandleThread(uword parameter);
+        static void SetState(const State& state);
+        static void SetStatus(const Status& status);
+
         static ProposalPtr CreateNewProposal(BlockPtr blk);
         static BlockPtr CreateNewBlock(intptr_t size);
+        static void* HandleThread(void* data);
     public:
         ~BlockDiscoveryThread() = delete;
 
-        static Thread::State GetState();
-        static void WaitForState(Thread::State state);
+        static State GetState();
+        static Status GetStatus();
+        static void WaitForState(const State& state);
         static void SetBlock(BlockPtr blk);
-        static BlockPtr GetBlock();
         static void SetProposal(const ProposalPtr& proposal);
+        static BlockPtr GetBlock();
         static ProposalPtr GetProposal();
         static bool HasProposal();
 
@@ -31,37 +83,18 @@ namespace Token{
             SetProposal(nullptr);
         }
 
-        static bool
-        IsRunning(){
-            return GetState() == Thread::State::kRunning;
-        }
+        static bool Start();
+        static bool Stop();
 
-        static bool
-        IsPaused(){
-            return GetState() == Thread::State::kPaused;
-        }
+#define DEFINE_CHECK(Name) \
+        static bool Is##Name(){ return GetState() == State::k##Name; }
+        FOR_EACH_BLOCK_DISCOVERY_THREAD_STATE(DEFINE_CHECK)
+#undef DEFINE_CHECK
 
-        static bool
-        IsStopped(){
-            return GetState() == Thread::State::kStopped;
-        }
-
-        static bool Start(){
-            //TODO: fix parameter
-            return Thread::Start("BlockDiscoveryThread", &HandleThread, 0);
-        }
-
-        static bool Pause(){
-            if(!IsRunning()) return false;
-            LOG(INFO) << "pausing block discovery thread....";
-            SetState(Thread::State::kPaused);
-            return true;
-        }
-
-        static bool Stop(){
-            //TODO: implement
-            return false;
-        }
+#define DEFINE_CHECK(Name) \
+        static bool Is##Name(){ return GetStatus() == Status::k##Name; }
+        FOR_EACH_BLOCK_DISCOVERY_THREAD_STATUS(DEFINE_CHECK)
+#undef DEFINE_CHECK
     };
 }
 

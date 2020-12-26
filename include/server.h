@@ -23,7 +23,7 @@ namespace Token{
 
     class PeerSession;
     class HandleMessageTask;
-    class Server : public Thread{
+    class Server{
     public:
         enum State{
 #define DEFINE_SERVER_STATE(Name) k##Name,
@@ -39,6 +39,9 @@ namespace Token{
                     return stream;
                 FOR_EACH_SERVER_STATE(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
+                default:
+                    stream << "Unknown";
+                    return stream;
             }
         }
 
@@ -56,6 +59,9 @@ namespace Token{
                     return stream;
                 FOR_EACH_SERVER_STATUS(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
+                default:
+                    stream << "Unknown";
+                    return stream;
             }
         }
     private:
@@ -64,10 +70,13 @@ namespace Token{
         static uv_tcp_t* GetHandle();
         static void SetStatus(Status status);
         static void SetState(State state);
-        static void HandleThread(uword parameter);
+        static void OnClose(uv_handle_t* handle);
+        static void OnWalk(uv_handle_t* handle, void* data);
         static void HandleTerminateCallback(uv_async_t* handle);
         static void OnNewConnection(uv_stream_t* stream, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
+
+        static void* HandleThread(void* data);
     public:
         ~Server() = delete;
 
@@ -76,8 +85,8 @@ namespace Token{
         static std::string GetStatusMessage();
         static UUID GetID();
         static void WaitForState(State state);
-        static bool Initialize();
-        static bool Shutdown();
+        static bool Start();
+        static bool Stop();
 
 #define DEFINE_STATE_CHECK(Name) \
         static inline bool Is##Name(){ return GetState() == Server::k##Name; }

@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <glog/logging.h>
-#include "token.h"
+#include "common.h"
 
 namespace Token{
     TEST(TestTest, test_test){

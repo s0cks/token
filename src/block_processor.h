@@ -4,7 +4,8 @@
 #include "block.h"
 #include "transaction_processor.h"
 
-#include "task/job.h"
+#include "job/job.h"
+#include "job/scheduler.h"
 #include "utils/timeline.h"
 
 namespace Token{
@@ -48,75 +49,6 @@ namespace Token{
         bool VisitEnd(){
             timeline_ << "Stop";
             return true;
-        }
-    };
-
-    class ProcessBlockJob;
-    class ProcessTransactionJob : public Job{
-    protected:
-        TransactionPtr transaction_;
-
-        JobResult DoWork();
-    public:
-        ProcessTransactionJob(ProcessBlockJob* parent, const TransactionPtr& tx);
-        ~ProcessTransactionJob() = default;
-
-        TransactionPtr GetTransaction() const{
-            return transaction_;
-        }
-    };
-
-    class ProcessBlockJob : public Job, BlockVisitor{
-        friend class ProcessTransactionJob;
-    protected:
-        BlockPtr block_;
-
-        std::mutex mutex_;
-        std::set<Hash> valid_;
-        std::set<Hash> invalid_;
-
-        JobResult DoWork(){
-            if(!GetBlock()->Accept(this))
-                return Failed("Cannot visit the block transactions.");
-            return Success("Finished.");
-        }
-
-        bool AddValid(const Hash& hash){
-            std::unique_lock<std::mutex> lock(mutex_);
-            return valid_.insert(hash).second;
-        }
-
-        bool AddInvalid(const Hash& hash){
-            std::unique_lock<std::mutex> lock(mutex_);
-            return invalid_.insert(hash).second;
-        }
-    public:
-        ProcessBlockJob(Job* parent, const BlockPtr& blk):
-            Job(parent, "ProcessBlock"),
-            block_(blk){}
-        ProcessBlockJob(const BlockPtr& blk):
-            Job(nullptr, "ProcessBlock"),
-            block_(blk){}
-        ~ProcessBlockJob() = default;
-
-        BlockPtr GetBlock() const{
-            return block_;
-        }
-
-        bool Visit(const TransactionPtr& tx){
-            //TODO: fix memory leak
-            ProcessTransactionJob* job = new ProcessTransactionJob(this, tx);
-            return JobPool::Schedule(job);
-        }
-
-        std::set<Hash> GetValid(){
-            std::unique_lock<std::mutex> lock(mutex_);
-            return valid_;
-        }
-
-        std::set<Hash> GetInvalid(){
-            std::unique_lock<std::mutex> lock(mutex_);
-            return invalid_;
         }
     };
 

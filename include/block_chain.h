@@ -42,11 +42,39 @@ namespace Token{
 #undef DEFINE_STATE
         };
 
+        friend std::ostream& operator<<(std::ostream& stream, const State& state){
+            switch(state){
+#define DEFINE_TOSTRING(Name) \
+                case State::k##Name: \
+                    stream << #Name; \
+                    return stream;
+                FOR_EACH_BLOCKCHAIN_STATE(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
+                default:
+                    stream << "Unknown";
+                    return stream;
+            }
+        }
+
         enum Status{
 #define DEFINE_STATUS(Name) k##Name,
             FOR_EACH_BLOCKCHAIN_STATUS(DEFINE_STATUS)
 #undef DEFINE_STATUS
         };
+
+        friend std::ostream& operator<<(std::ostream& stream, const Status& status){
+            switch(status){
+#define DEFINE_TOSTRING(Name) \
+                case Status::k##Name: \
+                    stream << #Name; \
+                    return stream;
+                FOR_EACH_BLOCKCHAIN_STATUS(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
+                default:
+                    stream << "Unknown";
+                    return stream;
+            }
+        }
     private:
         BlockChain() = delete;
         static leveldb::DB* GetIndex();
@@ -113,28 +141,6 @@ namespace Token{
     public:
         virtual ~BlockChainHeaderVisitor() = default;
         virtual bool Visit(const BlockHeader& blk) = 0;
-    };
-
-    class BlockChainPrinter : public Printer,
-                              public BlockChainBlockVisitor{
-    private:
-        BlockPrinter blk_printer_;
-    public:
-        BlockChainPrinter(const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone):
-            Printer(severity, flags),
-            blk_printer_(this){}
-        BlockChainPrinter(Printer* parent):
-            Printer(parent),
-            blk_printer_(this){}
-        ~BlockChainPrinter() = default;
-
-        bool Visit(const BlockPtr& blk){
-            return blk_printer_.Print(blk);
-        }
-
-        bool Print(){
-            return BlockChain::VisitBlocks(this);
-        }
     };
 }
 

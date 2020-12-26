@@ -59,12 +59,18 @@ namespace Token{
     private:
         std::string filename_;
         std::string cause_;
+#ifdef OS_IS_LINUX
         StackTrace trace_;
 
         CrashReport(const std::string& filename, const std::string& cause):
             filename_(filename),
             cause_(cause),
             trace_(){}
+#else
+        CrashReport(const std::string& filename, const std::string& cause):
+            filename_(filename),
+            cause_(cause){}
+#endif//OS_IS_LINUX
 
         static inline std::string
         GetNewCrashReportFilename(){

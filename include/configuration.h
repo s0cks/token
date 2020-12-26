@@ -32,15 +32,11 @@ namespace Token{
 #define PROPERTY_SERVER_CALLBACK_ADDRESS "CallbackAddress"
 #define PROPERTY_SERVER_CALLBACK_ADDRESS_DEFAULT ()
 
-/*
- * Server.Peers := []
- */
 #define PROPERTY_SERVER_PEER_LIST "Peers"
 #define PROPERTY_SERVER_PEER_LIST_DEFAULT ({})
 
-// Server.MaxNumberOfPeers := 16
 #define PROPERTY_SERVER_MAXPEERS "MaxNumberOfPeers"
-#define PROPERTY_SERVER_MAXPEERS_DEFAULT 16
+#define PROPERTY_SERVER_MAXPEERS_DEFAULT 4
 
     class BlockChainConfiguration{
     private:

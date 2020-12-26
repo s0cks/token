@@ -127,7 +127,7 @@ namespace Token{
     public:
         static const int64_t kMaxTransactionsForBlock = 40000;
 
-        static const int64_t kNumberOfGenesisOutputs = 10000; // TODO: changeme
+        static const int64_t kNumberOfGenesisOutputs = 1000; // TODO: changeme
 
         struct TimestampComparator{
             bool operator()(Block* a, Block* b){
@@ -416,6 +416,9 @@ namespace Token{
                     return stream;
                 FOR_EACH_BLOCK_POOL_STATE(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
+                default:
+                    stream << "Unknown";
+                    return stream;
             }
         }
 
@@ -433,6 +436,9 @@ namespace Token{
                     return stream;
                 FOR_EACH_BLOCK_POOL_STATUS(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
+                default:
+                    stream << "Unknown";
+                    return stream;
             }
         }
     private:

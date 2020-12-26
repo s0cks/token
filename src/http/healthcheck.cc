@@ -1,13 +1,11 @@
 #include <mutex>
 #include <condition_variable>
-
-#include "server.h"
-#include "block_chain.h"
 #include "configuration.h"
+#include "http/controller.h"
 #include "http/healthcheck.h"
-#include "peer/peer_session_manager.h"
 
 namespace Token{
+    static pthread_t thread_;
     static std::mutex mutex_;
     static std::condition_variable cond_;
 
@@ -19,17 +17,8 @@ namespace Token{
 
     static HealthCheckService::State state_ = HealthCheckService::kStopped;
     static HealthCheckService::Status status_ = HealthCheckService::kOk;
-    static HttpRouter* router_;
-
-    HttpRouter* HealthCheckService::GetRouter(){
-        LOCK_GUARD;
-        return router_;
-    }
-
-    void HealthCheckService::SetRouter(HttpRouter* router){
-        LOCK_GUARD;
-        router_ = router;
-    }
+    static HttpRouter router_;
+    static uv_async_t shutdown_;
 
     HealthCheckService::State HealthCheckService::GetState(){
         LOCK_GUARD;
@@ -56,23 +45,28 @@ namespace Token{
         while(state_ != state) WAIT;
     }
 
-    bool HealthCheckService::Initialize(){
+    bool HealthCheckService::Start(){
         if(!IsStopped()){
             LOG(WARNING) << "the health check service is already running.";
             return false;
         }
         LOG(INFO) << "initializing the health check service....";
-        HttpRouter* router = new HttpRouter(&HandleUnknownEndpoint);
-#define DEFINE_ENDPOINT_PATH(Method, Name, Path) router->Method(Path, &Handle##Name##Endpoint);
-        FOR_EACH_HEALTHCHECK_SERVICE_ENDPOINT(DEFINE_ENDPOINT_PATH)
-#undef DEFINE_ENDPOINT_PATH
-        SetRouter(router);
+        HealthController::Initialize(&router_);
+        StatusController::Initialize(&router_);
         return Thread::Start("HealthCheckService", &HandleServiceThread, 0);
     }
 
-    bool HealthCheckService::Shutdown(){
-        //TODO: implement HealthCheckService::Shutdown()
-        return false;
+    bool HealthCheckService::Stop(){
+        if(!IsRunning())
+            return true; // should we return false?
+        uv_async_send(&shutdown_);
+
+        int ret;
+        if((ret = pthread_join(thread_, NULL)) != 0){
+            LOG(WARNING) << "couldn't join the health check service thread: " << strerror(ret);
+            return false;
+        }
+        return true;
     }
 
     void HealthCheckService::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
@@ -85,6 +79,8 @@ namespace Token{
         uv_loop_t* loop = uv_loop_new();
         uv_tcp_t server;
         uv_tcp_init(loop, &server);
+
+        uv_async_init(loop, &shutdown_, &OnShutdown);
 
         int32_t port = BlockChainConfiguration::GetHealthCheckPort();
         sockaddr_in bind_address;
@@ -109,8 +105,25 @@ namespace Token{
         pthread_exit(nullptr);
     }
 
-    void HealthCheckService::OnShutdown(uv_shutdown_t* req, int status){
+    void HealthCheckService::OnClose(uv_handle_t* handle){
 
+    }
+
+    void HealthCheckService::OnWalk(uv_handle_t* handle, void* data){
+        uv_close(handle, &OnClose);
+    }
+
+    void HealthCheckService::OnShutdown(uv_async_t* handle){
+        SetState(HealthCheckService::kStopping);
+        uv_stop(handle->loop);
+
+        int err;
+        if((err = uv_loop_close(handle->loop)) == UV_EBUSY)
+            uv_walk(handle->loop, &OnWalk, NULL);
+
+        uv_run(handle->loop, UV_RUN_DEFAULT);
+        if((err = uv_loop_close(handle->loop)))
+            LOG(ERROR) << "failed to close the server loop: " << uv_strerror(err);
     }
 
     void HealthCheckService::OnNewConnection(uv_stream_t* stream, int status){
@@ -130,56 +143,24 @@ namespace Token{
         }
     }
 
-    static inline void
-    SendOk(HttpSession* session){
-        LOG(INFO) << "sending Ok()";
-
-        HttpResponse response(session, STATUS_CODE_OK, "Ok");
-        session->Send(&response);
-    }
-
-    static inline void
-    SendInternalServerError(HttpSession* session, const std::string& msg="Internal Server Error"){
-        LOG(INFO) << "sending InternalServerError(" << msg << ")";
-
-        std::stringstream ss;
-        ss << "Internal Server Error: " << msg;
-        HttpResponse response(session, STATUS_CODE_INTERNAL_SERVER_ERROR, ss);
-        session->Send(&response);
-    }
-
-    static inline void
-    SendNotFound(HttpSession* session, const std::string& path){
-        LOG(WARNING) << "sending NotFound(" << path << ")";
-        std::stringstream ss;
-        ss << "Not Found: " << path;
-        HttpResponse response(session, STATUS_CODE_NOTFOUND, ss);
-        session->Send(&response);
-    }
-
-    static inline std::string
-    Json2String(Json::Value& value){
-        Json::StreamWriterBuilder builder;
-        builder["commentStyle"] = "None";
-        builder["indentation"] = "";
-        std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
-        std::ostringstream os;
-        writer->write(value, &os);
-        return os.str();
-    }
-
-    static inline void
-    SendJson(HttpSession* session, Json::Value& value, int status=STATUS_CODE_OK){
-        HttpResponse response(session, status, CONTENT_APPLICATION_JSON, Json2String(value));
-        session->Send(&response);
-    }
-
     void HealthCheckService::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
         HttpSession* session = (HttpSession*)stream->data;
         if(nread >= 0){
             HttpRequest request(session, buff->base, buff->len);
-            HttpRouter::HttpRoute route = GetRouter()->GetRouteOrDefault(&request);
-            route(session, &request);
+
+            HttpRouterMatch match = router_.Find(&request);
+            if(match.IsNotFound()){
+                SendNotFound(session, request.GetPath());
+            } else if(match.IsMethodNotSupported()){
+                SendNotSupported(session, request.GetPath());
+            } else{
+                assert(match.IsOk());
+
+                // weirdness :(
+                request.SetParameters(match.GetParameters());
+                HttpRouteHandler& handler = match.GetHandler();
+                handler(session, &request);
+            }
         } else{
             if(nread == UV_EOF){
                 // fallthrough
@@ -193,66 +174,5 @@ namespace Token{
 
     void HealthCheckService::HandleUnknownEndpoint(HttpSession* session, HttpRequest* request){
         SendNotFound(session, request->GetPath());
-    }
-
-    void HealthCheckService::HandleReadyEndpoint(HttpSession* session, HttpRequest* request){
-        SendOk(session);
-    }
-
-    void HealthCheckService::HandleLiveEndpoint(HttpSession* session, HttpRequest* request){
-        SendOk(session);
-    }
-
-    void HealthCheckService::HandleBlockChainStatusEndpoint(HttpSession* session, HttpRequest* request){
-        Json::Value response;
-        response["Head"] = BlockChain::GetReference(BLOCKCHAIN_REFERENCE_HEAD).HexString();
-        response["Genesis"] = BlockChain::GetReference(BLOCKCHAIN_REFERENCE_GENESIS).HexString();
-        SendJson(session, response);
-    }
-
-    void HealthCheckService::HandlePeerStatusEndpoint(HttpSession* session, HttpRequest* request){
-        Json::Value response;
-
-        std::vector<std::string> status;
-        if(!PeerSessionManager::GetStatus(status)){
-            response["message"] = "cannot get the peer statuses";
-            SendJson(session, response);
-            return;
-        }
-
-        for(auto& it : status)
-            response.append(Json::Value(it));
-        SendJson(session, response);
-        return;
-    }
-
-    void GetRuntimeStatus(Json::Value& value){
-        value["Block Chain"] = BlockChain::GetStatusMessage();
-        value["Server"] = Server::GetStatusMessage();
-        value["Unclaimed Transaction Pool"] = UnclaimedTransactionPool::GetStatusMessage();
-        value["Transaction Pool"] = TransactionPool::GetStatusMessage();
-        value["Block Pool"] = BlockPool::GetStatusMessage();
-
-        std::vector<std::string> status;
-        if(!PeerSessionManager::GetStatus(status))
-            return;
-
-        Json::Value peers;
-        for(auto& it : status)
-            peers.append(Json::Value(it));
-        value["Peers"] = peers;
-    }
-
-    void HealthCheckService::HandleInfoEndpoint(HttpSession* session, HttpRequest* request){
-        Json::Value doc;
-        doc["Timestamp"] = GetTimestampFormattedReadable(GetCurrentTimestamp());
-        doc["Version"] = GetVersion();
-        doc["Head"] = BlockChain::GetReference(BLOCKCHAIN_REFERENCE_HEAD).HexString();
-
-        Json::Value runtime;
-        GetRuntimeStatus(runtime);
-
-        doc["Runtime"] = runtime;
-        SendJson(session, doc);
     }
 }

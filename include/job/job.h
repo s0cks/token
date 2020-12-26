@@ -1,7 +1,7 @@
 #ifndef TOKEN_JOB_H
 #define TOKEN_JOB_H
 
-#include "task.h"
+#include "object.h"
 
 namespace Token{
 #define FOR_EACH_JOB_RESULT_STATUS(V) \
@@ -37,11 +37,11 @@ namespace Token{
         std::string message_;
     public:
         JobResult(const Status& status, const std::string& msg):
-            status_(status),
-            message_(msg){}
+                status_(status),
+                message_(msg){}
         JobResult(const JobResult& result):
-            status_(result.status_),
-            message_(result.message_){}
+                status_(result.status_),
+                message_(result.message_){}
         ~JobResult() = default;
 
         Status GetStatus() const{
@@ -83,7 +83,7 @@ namespace Token{
         }
     };
 
-    class Job : public Task{
+    class Job : public Object{
     public:
         static inline JobResult
         Success(const std::string& message){
@@ -170,89 +170,6 @@ namespace Token{
             result_ = DoWork();
             Finish();
             return true;
-        }
-    };
-
-    class JobPoolWorker;
-    class JobPool{
-        friend class JobPoolWorker;
-    public:
-        static const int kMaxNumberOfJobs = 1024;
-        static const int kMaxNumberOfWorkers = 10;
-    private:
-        JobPool() = delete;
-
-        static JobPoolWorker* GetWorker(pthread_t wthread);
-        static JobPoolWorker* GetRandomWorker();
-    public:
-        ~JobPool() = delete;
-
-        static bool Initialize();
-        static bool Schedule(Job* job);
-    };
-
-    class JobQueue{
-    private:
-        std::vector<Job*> jobs_;
-        std::atomic<size_t> top_;
-        std::atomic<size_t> bottom_;
-    public:
-        JobQueue(size_t max_size):
-                jobs_(max_size, nullptr),
-                top_(0),
-                bottom_(0){}
-        ~JobQueue() = default;
-
-        bool Push(Job* job){
-            size_t bottom = bottom_.load(std::memory_order_acquire);
-            if(bottom < jobs_.size()){
-                jobs_[bottom % jobs_.size()] = job;
-                std::atomic_thread_fence(std::memory_order_release);
-                bottom_.store(bottom + 1, std::memory_order_release);
-                return true;
-            }
-            return false;
-        }
-
-        Job* Steal(){
-            size_t top = top_.load(std::memory_order_acquire);
-            std::atomic_thread_fence(std::memory_order_acquire);
-            size_t bottom = bottom_.load(std::memory_order_acquire);
-            if(top < bottom){
-                Job* job = jobs_[top % jobs_.size()];
-                size_t expected_top = top + 1;
-                size_t desired_top = expected_top;
-                if(!top_.compare_exchange_weak(top, desired_top, std::memory_order_acquire))
-                    return nullptr;
-                return job;
-            }
-            return nullptr;
-        }
-
-        Job* Pop(){
-            size_t bottom = bottom_.load(std::memory_order_acquire);
-            if(bottom > 0){
-                bottom = bottom - 1;
-                bottom_.store(bottom, std::memory_order_release);
-            }
-
-            std::atomic_thread_fence(std::memory_order_release);
-            size_t top = top_.load(std::memory_order_acquire);
-            if(top <= bottom){
-                Job* job = jobs_[bottom % jobs_.size()];
-                if(top == bottom){
-                    size_t expected = top;
-                    size_t next = top + 1;
-                    size_t desired = next;
-                    if(!top_.compare_exchange_strong(expected, desired, std::memory_order_acq_rel))
-                        job = nullptr;
-                    bottom_.store(next, std::memory_order_release);
-                }
-                return job;
-            }
-
-            bottom_.store(top, std::memory_order_release);
-            return nullptr;
         }
     };
 }

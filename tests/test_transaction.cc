@@ -1,6 +1,4 @@
 #include "test_suite.h"
-#include "token.h"
-
 #include "transaction.h"
 #include "transaction_verifier.h"
 

@@ -1,7 +1,6 @@
 #ifndef TOKEN_VERSION_H
 #define TOKEN_VERSION_H
 
-#include "token.h"
 #include "buffer.h"
 
 namespace Token{

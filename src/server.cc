@@ -10,10 +10,12 @@
 #include "unclaimed_transaction.h"
 #include "block_discovery.h"
 
+#include "utils/crash_report.h"
 #include "task/handle_message_task.h"
 #include "peer/peer_session_manager.h"
 
 namespace Token{
+    static pthread_t thread_;
     static uv_tcp_t handle_;
     static uv_async_t shutdown_;
 
@@ -25,6 +27,7 @@ namespace Token{
 
 #define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
 #define LOCK std::unique_lock<std::mutex> lock(mutex_)
+#define UNLOCK lock.unlock()
 #define WAIT cond_.wait(lock)
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
@@ -38,31 +41,16 @@ namespace Token{
         return node_id_;
     }
 
-    /*
-    bool Server::Shutdown(){
-        if(!IsRunning()) return false;
-        uv_async_send(&aterm_);
-
-        int ret;
-        if((ret = pthread_join(thread_, NULL)) != 0){
-            std::stringstream ss;
-            ss << "Couldn't join server thread: " << strerror(ret);
-            CrashReport::GenerateAndExit(ss);
-        }
-
-        SetState(State::kStopped);
-        return true;
-    }
-    */
-
     void Server::WaitForState(Server::State state){
         LOCK;
         while(state_ != state) WAIT;
+        UNLOCK;
     }
 
     void Server::SetState(Server::State state){
         LOCK;
         state_ = state;
+        UNLOCK;
         SIGNAL_ALL;
     }
 
@@ -74,6 +62,7 @@ namespace Token{
     void Server::SetStatus(Server::Status status){
         LOCK;
         status_ = status;
+        UNLOCK;
         SIGNAL_ALL;
     }
 
@@ -108,41 +97,70 @@ namespace Token{
         return ss.str();
     }
 
-    void Server::HandleTerminateCallback(uv_async_t* handle){
-        uv_stop(handle->loop);
+    void Server::OnWalk(uv_handle_t* handle, void* data){
+        uv_close(handle, &OnClose);
     }
 
-    bool Server::Initialize(){
+    void Server::OnClose(uv_handle_t* handle){}
+
+    void Server::HandleTerminateCallback(uv_async_t* handle){
+        SetState(Server::kStopping);
+        uv_stop(handle->loop);
+
+        int err;
+        if((err = uv_loop_close(handle->loop)) == UV_EBUSY)
+            uv_walk(handle->loop, &OnWalk, NULL);
+
+        uv_run(handle->loop, UV_RUN_DEFAULT);
+        if((err = uv_loop_close(handle->loop))){
+            LOG(ERROR) << "failed to close server loop: " << uv_strerror(err);
+        } else{
+            LOG(INFO) << "server loop closed.";
+        }
+        SetState(Server::kStopped);
+    }
+
+    bool Server::Start(){
         if(!IsStopped()){
             LOG(WARNING) << "the server is already running.";
             return false;
         }
 
-        LOG(INFO) << "initializing the server....";
-        std::set<NodeAddress> peers;
-        if(!BlockChainConfiguration::GetPeerList(peers)){
-            LOG(WARNING) << "couldn't get the list of peers.";
+        int result;
+        pthread_attr_t attrs;
+        if((result = pthread_attr_init(&attrs)) != 0){
+            LOG(WARNING) << "couldn't initialize the server thread attributes: " << strerror(result);
             return false;
         }
 
-        LOG(INFO) << "connecting to peers....";
-        //TODO: ConnectToPeers(peers);
-        return Thread::Start("ServerThread", &HandleThread, 0) == 0;
-    }
-
-    bool Server::Shutdown(){
-        //TODO: implement Server::Shutdown()
-        LOG(WARNING) << "Server::Shutdown() not implemented yet.";
-        if(pthread_self() == uv_thread_self()){
-            // Inside OSThreadBase
-        } else{
-            // Outside OSThreadBase
-            uv_async_send(&shutdown_);
+        if((result = pthread_create(&thread_, &attrs, &HandleThread, NULL)) != 0){
+            LOG(WARNING) << "couldn't start the server thread: " << strerror(result);
+            return false;
         }
-        return false;
+
+        if((result = pthread_attr_destroy(&attrs)) != 0){
+            LOG(WARNING) << "couldn't destroy the server thread attributes: " << strerror(result);
+            return false;
+        }
+        return true;
     }
 
-    void Server::HandleThread(uword parameter){
+    bool Server::Stop(){
+        if(!IsRunning())
+            return true; // should we return false?
+        uv_async_send(&shutdown_);
+
+        int ret;
+        if((ret = pthread_join(thread_, NULL)) != 0){
+            std::stringstream ss;
+            ss << "Couldn't join server thread: " << strerror(ret);
+            CrashReport::PrintNewCrashReportAndExit(ss);
+        }
+
+        return true;
+    }
+
+    void* Server::HandleThread(void* data){
         LOG(INFO) << "starting server...";
         SetState(State::kStarting);
         uv_loop_t* loop = uv_loop_new();
@@ -165,12 +183,11 @@ namespace Token{
         }
 
 
-
         LOG(INFO) << "server " << GetID() << " listening @" << FLAGS_port;
         SetState(State::kRunning);
         uv_run(loop, UV_RUN_DEFAULT);
+        LOG(INFO) << "server is stopping...";
     exit:
-        uv_loop_close(loop);
         pthread_exit(0);
     }
 

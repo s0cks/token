@@ -4,10 +4,19 @@
 #include <uv.h>
 #include <string>
 #include <sstream>
-
+#include <unordered_map>
 #include <http_parser.h>
 
 namespace Token{
+    enum HttpMethod{
+        kGet,
+        kPut,
+        kPost,
+        kDelete,
+    };
+
+    typedef std::unordered_map<std::string, std::string> ParameterMap;
+
     class HttpSession;
     class HttpRequest{
         friend class HttpSession;
@@ -16,6 +25,7 @@ namespace Token{
         http_parser parser_;
         http_parser_settings settings_;
         std::string path_;
+        ParameterMap parameters_;
 
         static int
         OnParseURL(http_parser* parser, const char* data, size_t len){
@@ -28,7 +38,8 @@ namespace Token{
             session_(session),
             parser_(),
             settings_(),
-            path_(){
+            path_(),
+            parameters_(){
             parser_.data = this;
             settings_.on_url = &OnParseURL;
             http_parser_init(&parser_, HTTP_REQUEST);
@@ -40,8 +51,29 @@ namespace Token{
         }
         ~HttpRequest(){}
 
+        void SetParameters(const ParameterMap& parameters){
+            parameters_.clear();
+            parameters_.insert(parameters.begin(), parameters.end());
+        }
+
         std::string GetPath() const{
             return path_;
+        }
+
+        HttpMethod GetMethod() const{
+            switch(parser_.method){
+                case HTTP_GET:
+                    return HttpMethod::kGet;
+                case HTTP_PUT:
+                    return HttpMethod::kPut;
+                case HTTP_POST:
+                    return HttpMethod::kPost;
+                case HTTP_DELETE:
+                    return HttpMethod::kDelete;
+                default:
+                    // should we do this?
+                    return HttpMethod::kGet;
+            }
         }
 
         bool IsGet() const{
@@ -60,14 +92,25 @@ namespace Token{
             return parser_.method == HTTP_DELETE;
         }
 
+        bool HasParameter(const std::string& name) const{
+            auto pos = parameters_.find(name);
+            return pos != parameters_.end();
+        }
+
         HttpSession* GetSession() const{
             return session_;
+        }
+
+        std::string GetParameterValue(const std::string& name) const{
+            auto pos = parameters_.find(name);
+            return pos != parameters_.end() ? pos->second : "";
         }
     };
 
 #define STATUS_CODE_OK 200
 #define STATUS_CODE_CLIENT_ERROR 400
 #define STATUS_CODE_NOTFOUND 404
+#define STATUS_CODE_NOTSUPPORTED 405
 #define STATUS_CODE_INTERNAL_SERVER_ERROR 500
 #define CONTENT_TEXT_PLAIN "text/plain"
 #define CONTENT_APPLICATION_JSON "application/json"

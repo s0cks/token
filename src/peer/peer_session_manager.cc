@@ -24,9 +24,7 @@ namespace Token{
         for(int32_t idx = 0;
             idx < nworkers;
             idx++){
-#ifdef TOKEN_DEBUG
-            LOG(INFO) << "starting peer session thread #" << idx << "....";
-#endif//TOKEN_DEBUG
+
             threads_[idx] = std::unique_ptr<PeerSessionThread>(new PeerSessionThread(idx));
             threads_[idx]->Start();
         }
@@ -91,13 +89,12 @@ namespace Token{
         return nullptr;
     }
 
-    bool PeerSessionManager::GetStatus(std::vector<std::string>& status){
+    bool PeerSessionManager::GetConnectedPeers(std::set<UUID>& peers){
         int32_t nworkers = BlockChainConfiguration::GetMaxNumberOfPeers();
         LOCK_GUARD;
         for(int32_t idx = 0; idx < nworkers; idx++){
-            std::stringstream ss;
-            ss << "Worker #" << idx << ": " << threads_[idx]->GetStatusMessage();
-            status.push_back(ss.str());
+            if(threads_[idx] && threads_[idx]->HasSession())
+                peers.insert(threads_[idx]->GetCurrentSession()->GetID());
         }
         return true;
     }

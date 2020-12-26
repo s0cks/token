@@ -1,7 +1,9 @@
-#ifndef TOKEN_JOB_POOL_WORKER_H
-#define TOKEN_JOB_POOL_WORKER_H
+#ifndef TOKEN_WORKER_H
+#define TOKEN_WORKER_H
 
-#include "task/job.h"
+#include <condition_variable>
+#include "job/job.h"
+#include "job/queue.h"
 #include "utils/metrics.h"
 
 namespace Token{
@@ -13,7 +15,7 @@ namespace Token{
     V(Stopped)
 
     class JobPoolWorker{
-        friend class JobPool;
+        friend class JobScheduler;
     public:
         enum State{
 #define DEFINE_STATE(Name) k##Name,
@@ -53,55 +55,8 @@ namespace Token{
             return queue_.Push(job);
         }
 
-        void Wait(Job* job){
-            while(!job->IsFinished()){
-                Job* j = GetNextJob();
-                if(j){
-                   j->Run();
-                   num_ran_->Increment();
-                } else{
-                    //TODO off cycle counter
-                }
-            }
-        }
-
-        Job* GetNextJob(){
-            Job* job = queue_.Pop();
-            if(job){
-                return job;
-            } else{
-                JobPoolWorker* worker = JobPool::GetRandomWorker();
-                if(worker == this){ //TODO: fix logic
-                    pthread_yield();
-                    return nullptr;
-                }
-
-                if(!worker){
-                    pthread_yield();
-                    return nullptr;
-                }
-
-                return worker->queue_.Steal();
-            }
-        }
-
-        static void* HandleThread(void* data){
-            LOG(INFO) << "starting worker....";
-            JobPoolWorker* worker = (JobPoolWorker*)data;
-            worker->SetState(JobPoolWorker::kRunning);
-            while(worker->IsRunning()){
-                Job* next = worker->GetNextJob();
-                if(next){
-                    if(!next->Run()){
-                        LOG(WARNING) << "couldn't run the \"" << next->GetName() << "\" job.";
-                        continue;
-                    }
-                    LOG(INFO) << next->GetName() << " finished run w/ the following result: " << next->GetResult();
-                }
-            }
-
-            return nullptr;
-        }
+        Job* GetNextJob();
+        static void* HandleThread(void* data);
     public:
         JobPoolWorker(size_t max_queue_size):
             thread_(),
@@ -113,9 +68,24 @@ namespace Token{
             num_discarded_(){}
         ~JobPoolWorker() = default;
 
+        pthread_t GetThreadID() const{
+            return thread_;
+        }
+
         State GetState(){
             std::lock_guard<std::mutex> lock(mutex_);
             return state_;
+        }
+
+        bool Wait(Job* job){
+            while(!job->IsFinished()){
+                Job* j = GetNextJob();
+                if(j != nullptr){
+                    if(!j->Run())
+                        return false;
+                }
+            }
+            return true;
         }
 
         bool Start(){
@@ -150,6 +120,10 @@ namespace Token{
             return true;
         }
 
+        bool Submit(Job* job){
+            return queue_.Push(job);
+        }
+
 #define DEFINE_CHECK(Name) \
         bool Is##Name(){ return GetState() == State::k##Name; }
         FOR_EACH_JOB_POOL_WORKER_STATE(DEFINE_CHECK)
@@ -157,4 +131,4 @@ namespace Token{
     };
 }
 
-#endif //TOKEN_JOB_POOL_WORKER_H
+#endif //TOKEN_WORKER_H

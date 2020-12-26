@@ -1,5 +1,5 @@
-#include "token.h"
 #include <sstream>
+#include "common.h"
 
 namespace Token{
     std::string GetVersion(){

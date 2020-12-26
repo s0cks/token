@@ -49,6 +49,11 @@ namespace Token{
             return id_;
         }
 
+        std::string ToString() const{
+            //TODO: implement ClientSession::ToString()
+            return "ClientSession()";
+        }
+
         BlockPtr GetBlock(const Hash& hash);
         bool GetBlockChain(std::set<Hash>& blocks);
         bool GetPeers(PeerList& peers);

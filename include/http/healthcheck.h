@@ -69,29 +69,24 @@ namespace Token{
         static const int64_t kMaxNumberOfSessions = 64;
     private:
         HealthCheckService() = delete;
-        static HttpRouter* GetRouter();
-        static void SetRouter(HttpRouter* router);
         static void SetState(State state);
         static void SetStatus(Status status);
         static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
-        static void OnShutdown(uv_shutdown_t* req, int status);
         static void OnNewConnection(uv_stream_t* stream, int status);
         static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
+        static void OnClose(uv_handle_t* handle);
+        static void OnWalk(uv_handle_t* handle, void* data);
+        static void OnShutdown(uv_async_t* handle);
         static void HandleServiceThread(uword parameter);
-
         static void HandleUnknownEndpoint(HttpSession* session, HttpRequest* request);
-#define DECLARE_ENDPOINT(Method, Name, Path) \
-        static void Handle##Name##Endpoint(HttpSession* session, HttpRequest* request);
-        FOR_EACH_HEALTHCHECK_SERVICE_ENDPOINT(DECLARE_ENDPOINT)
-#undef DECLARE_ENDPOINT
     public:
         ~HealthCheckService() = delete;
 
         static State GetState();
         static Status GetStatus();
         static void WaitForState(State state);
-        static bool Initialize();
-        static bool Shutdown();
+        static bool Start();
+        static bool Stop();
 
 #define DEFINE_STATE_CHECK(Name) \
         static inline bool Is##Name(){ return GetState() == State::k##Name; }

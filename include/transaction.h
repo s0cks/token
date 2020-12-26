@@ -540,6 +540,9 @@ namespace Token{
                     return stream;
                 FOR_EACH_TX_POOL_STATE(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
+                default:
+                    stream << "Unknown";
+                    return stream;
             }
         }
 
@@ -557,7 +560,9 @@ namespace Token{
                     return stream;
                 FOR_EACH_TX_POOL_STATUS(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
-
+                default:
+                    stream << "Unknown";
+                    return stream;
             }
         }
     private:

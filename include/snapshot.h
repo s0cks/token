@@ -1,7 +1,6 @@
 #ifndef TOKEN_SNAPSHOT_H
 #define TOKEN_SNAPSHOT_H
 
-#include "token.h"
 #include "common.h"
 #include "block_chain.h"
 

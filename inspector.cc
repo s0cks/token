@@ -1,4 +1,3 @@
-#include "token.h"
 #include "common.h"
 #include "command.h"
 #include "snapshot_inspector.h"

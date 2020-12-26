@@ -9,15 +9,18 @@
 #include "peer/peer_session_manager.h"
 
 namespace Token{
-    static std::recursive_mutex mutex_;
-    static std::condition_variable_any cond_;
-    static Thread::State state_ = Thread::State::kStopped;
+    static pthread_t thread_;
+
+    static std::mutex mutex_;
+    static std::condition_variable cond_;
+    static BlockDiscoveryThread::State state_ = BlockDiscoveryThread::kStopped;
+    static BlockDiscoveryThread::Status status_ = BlockDiscoveryThread::kOk;
 
     static BlockPtr block_ = nullptr;
     static ProposalPtr proposal_;
 
-#define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
-#define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
+#define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
+#define LOCK std::unique_lock<std::mutex> lock(mutex_)
 #define UNLOCK lock.unlock()
 #define WAIT cond_.wait(lock)
 #define SIGNAL_ONE cond_.notify_one()
@@ -91,6 +94,14 @@ namespace Token{
         TransactionPool::RemoveTransaction(hash);
     }
 
+    static inline void
+    OrphanBlock(const BlockPtr& blk){
+        Hash hash = blk->GetHash();
+        LOG(WARNING) << "orphaning block: " << hash;
+        if(!BlockPool::RemoveBlock(hash))
+            LOG(WARNING) << "couldn't remove block " << hash << " from pool.";
+    }
+
     BlockPtr BlockDiscoveryThread::CreateNewBlock(intptr_t size){
         BlockPtr blk = TransactionPoolBlockBuilder::Build(size);
         SetBlock(blk);
@@ -128,40 +139,27 @@ namespace Token{
         return proposal_;
     }
 
-    void BlockDiscoveryThread::HandleThread(uword parameter){
+    void* BlockDiscoveryThread::HandleThread(void* data){
         LOG(INFO) << "starting the block discovery thread....";
-        SetState(Thread::State::kRunning);
+        SetState(BlockDiscoveryThread::kRunning);
         while(!IsStopped()){
-            if(IsPaused()){
-                LOG(INFO) << "pausing block discovery thread....";
-
-                LOCK;
-                while(GetState() != Thread::State::kRunning || GetState() != Thread::State::kStopped) WAIT;
-                UNLOCK;
-
-                if(IsStopped()){
-                    LOG(WARNING) << "block discovery thread has been halted, exiting.";
-                    return;
-                }
-
-                LOG(INFO) << "block discovery thread is resuming.";
-            }
-
             if(HasProposal()){
                 ProposalPtr proposal = GetProposal();
                 LOG(INFO) << "proposal #" << proposal->GetHeight() << " has been started by " << proposal->GetProposer();
                 PeerProposalHandler handler(proposal);
                 if(!handler.ProcessProposal()){
+                    // should we reject the proposal just in-case?
                     LOG(WARNING) << "couldn't process proposal #" << proposal->GetHeight() << ".";
-                    return;
+                    SetProposal(nullptr);
+                    goto exit;
                 }
             } else if(GetNumberOfTransactionsInPool() >= 2){
                 BlockPtr blk = CreateNewBlock(2);
                 Hash hash = blk->GetHash();
                 if(!BlockVerifier::IsValid(blk, true)){
-                    //TODO: orphan block properly
                     LOG(WARNING) << "block " << blk << " is invalid, orphaning....";
-                    return;
+                    OrphanBlock(blk);
+                    continue;
                 }
 
                 LOG(INFO) << "discovered block " << hash << ", creating proposal....";
@@ -169,26 +167,82 @@ namespace Token{
                 NewProposalHandler handler(proposal);
                 if(!handler.ProcessProposal()){
                     LOG(WARNING) << "couldn't process proposal #" << proposal->GetHeight() << ".";
-                    return;
+                    SetProposal(nullptr);
+                    goto exit;
                 }
             }
         }
-        LOG(INFO) << "block discovery thread shutdown";
+    exit:
+        pthread_exit(NULL);
     }
 
-    Thread::State BlockDiscoveryThread::GetState(){
+    bool BlockDiscoveryThread::Start(){
+        if(!IsStopped()){
+            LOG(WARNING) << "the block discovery thread is already running.";
+            return false;
+        }
+
+        int result;
+        pthread_attr_t attrs;
+        if((result = pthread_attr_init(&attrs)) != 0){
+            LOG(WARNING) << "couldn't initialize the block discovery thread attributes: " << strerror(result);
+            return false;
+        }
+
+        if((result = pthread_create(&thread_, &attrs, &HandleThread, NULL)) != 0){
+            LOG(WARNING) << "couldn't start the block discovery thread: " << strerror(result);
+            return false;
+        }
+
+        if((result = pthread_attr_destroy(&attrs)) != 0){
+            LOG(WARNING) << "couldn't destroy the block discovery thread attributes: " << strerror(result);
+            return false;
+        }
+        return true;
+    }
+
+    bool BlockDiscoveryThread::Stop(){
+        if(!IsRunning()){
+            LOG(WARNING) << "the block discovery thread is not running.";
+            return false;
+        }
+
+        SetState(BlockDiscoveryThread::kStopped);
+
+        int result;
+        if((result = pthread_join(thread_, NULL)) != 0){
+            LOG(WARNING) << "couldn't join the server thread: " << strerror(result);
+            return false;
+        }
+        return true;
+    }
+
+    void BlockDiscoveryThread::SetState(const State& state){
+        LOCK;
+        state_ = state;
+        UNLOCK;
+        SIGNAL_ALL;
+    }
+
+    void BlockDiscoveryThread::SetStatus(const Status& status){
+        LOCK;
+        status_ = status;
+        UNLOCK;
+    }
+
+    void BlockDiscoveryThread::WaitForState(const State& state){
+        LOCK;
+        while(state_ != state) WAIT;
+        UNLOCK;
+    }
+
+    BlockDiscoveryThread::State BlockDiscoveryThread::GetState(){
         LOCK_GUARD;
         return state_;
     }
 
-    void BlockDiscoveryThread::SetState(Thread::State state){
+    BlockDiscoveryThread::Status BlockDiscoveryThread::GetStatus(){
         LOCK_GUARD;
-        state_ = state;
-    }
-
-    void BlockDiscoveryThread::WaitForState(Thread::State state){
-        LOCK;
-        while(state_ != state) WAIT;
-        UNLOCK;
+        return status_;
     }
 }

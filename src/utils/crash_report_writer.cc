@@ -1,5 +1,4 @@
 #include "crash_report_writer.h"
-#include "token.h"
 #include "server.h"
 
 namespace Token{
