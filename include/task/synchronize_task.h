@@ -2,6 +2,7 @@
 #define TOKEN_SYNCHRONIZE_BLOCKCHAIN_TASK_H
 
 #include "task.h"
+#include "pool.h"
 #include "block.h"
 #include "block_processor.h"
 
@@ -26,7 +27,7 @@ namespace Token{
                 LOG(WARNING) << "couldn't process block: " << header;
                 return false;
             }
-            BlockPool::RemoveBlock(hash);
+            ObjectPool::RemoveObject(hash);
             BlockChain::Append(blk);
             return true;
         }
@@ -38,12 +39,12 @@ namespace Token{
                 Hash hash = work.front();
                 work.pop_front();
 
-                if(!BlockPool::HasBlock(hash)){
-                    LOG(INFO) << "waiting for: " << hash;
-                    BlockPool::WaitForBlock(hash);
+                if(!ObjectPool::HasObject(hash)){
+                    LOG(WARNING) << "waiting for: " << hash;
+                    ObjectPool::WaitForObject(hash);
                 }
 
-                BlockPtr blk = BlockPool::GetBlock(hash);
+                BlockPtr blk = ObjectPool::GetBlock(hash);
                 Hash phash = blk->GetPreviousHash();
                 if(!BlockChain::HasBlock(phash)){
                     LOG(WARNING) << "parent block " << phash << " not found, resolving...";

@@ -2,6 +2,7 @@
 #define TOKEN_PROPOSAL_HANDLER_H
 
 #include <memory>
+#include "pool.h"
 #include "proposal.h"
 #include "block_verifier.h"
 #include "block_processor.h"
@@ -101,7 +102,7 @@ namespace Token{
         bool ProcessProposal() const{
             std::shared_ptr<PeerSession> proposer = GetProposer();
             Hash hash = GetProposalHash();
-            if(!BlockPool::HasBlock(hash)){
+            if(!ObjectPool::HasObject(hash)){
                 //TODO: fix requesting of data
                 LOG(INFO) << hash << " cannot be found, requesting block from peer: " << proposer->GetID();
                 std::vector<InventoryItem> items = {
@@ -109,14 +110,14 @@ namespace Token{
                 };
                 GetProposer()->Send(GetDataMessage::NewInstance(items));
                 LOG(INFO) << "waiting....";
-                BlockPool::WaitForBlock(hash); //TODO: add timeout
-                if(!BlockPool::HasBlock(hash)){
+                ObjectPool::WaitForObject(hash); //TODO: add timeout
+                if(!ObjectPool::HasObject(hash)){
                     LOG(INFO) << "cannot resolve block " << hash << ", rejecting....";
                     return CancelProposal();
                 }
             }
 
-            BlockPtr blk = BlockPool::GetBlock(hash);
+            BlockPtr blk = ObjectPool::GetBlock(hash);
             LOG(INFO) << "proposal " << hash << " has entered the voting phase.";
             if(!BlockVerifier::IsValid(blk)){
                 LOG(WARNING) << "cannot validate block " << hash << ", rejecting....";

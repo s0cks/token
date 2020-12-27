@@ -1,12 +1,12 @@
+#include "pool.h"
 #include "discovery.h"
 #include "proposal_handler.h"
-
 #include "task/snapshot_task.h"
 
 namespace Token{
     bool ProposalHandler::CommitProposal() const{
         Hash hash = GetProposal()->GetHash();
-        BlockPtr blk = BlockPool::GetBlock(hash);
+        BlockPtr blk = ObjectPool::GetBlock(hash);
         if(!ProcessBlock(blk)){
             LOG(WARNING) << "couldn't process block " << hash << ".";
             return false;
@@ -17,7 +17,7 @@ namespace Token{
             return false;
         }
 
-        if(!BlockPool::RemoveBlock(hash)){
+        if(!ObjectPool::RemoveObject(hash)){
             LOG(WARNING) << "couldn't remove block " << hash << " from pool.";
             return false;
         }

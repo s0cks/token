@@ -4,10 +4,10 @@
 #include <glog/logging.h>
 #include <condition_variable>
 
+#include "pool.h"
 #include "keychain.h"
-#include "configuration.h"
-
 #include "blockchain.h"
+#include "configuration.h"
 #include "block_processor.h"
 #include "unclaimed_transaction.h"
 
@@ -125,8 +125,7 @@ namespace Token{
         SetStatus(BlockChain::kOk);
 
         Keychain::Initialize();
-        BlockPool::Initialize();
-        TransactionPool::Initialize();
+        ObjectPool::Initialize();
         UnclaimedTransactionPool::Initialize();
         if(!HasBlocks()){
             BlockPtr genesis = Block::Genesis();

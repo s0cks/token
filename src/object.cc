@@ -8,7 +8,7 @@ namespace Token{
 
         CryptoPP::SHA256 func;
         Buffer buff(size);
-        if(!Encode(&buff)){
+        if(!Write(&buff)){
             LOG(WARNING) << "couldn't encode object to bytes";
             return Hash();
         }

@@ -35,19 +35,15 @@ namespace Token{
         (ProposalInstance)->SetStatus(Proposal::Result::kRejected); \
     }
 
-    static inline size_t
-    GetNumberOfTransactionsInPool(){
-        return TransactionPool::GetSize();
-    }
-
-    class TransactionPoolBlockBuilder : public TransactionPoolVisitor{
+    /*TODO: refactor
+    class TransactionPoolBlockBuilder : public ObjectPoolTransactionVisitor{
     //TODO: rebuild class
     private:
         int64_t size_;
         TransactionList transactions_;
     public:
         TransactionPoolBlockBuilder(int64_t size=Block::kMaxTransactionsForBlock):
-            TransactionPoolVisitor(),
+            ObjectPoolTransactionVisitor(),
             size_(size),
             transactions_(){}
         ~TransactionPoolBlockBuilder(){}
@@ -71,7 +67,7 @@ namespace Token{
             return transactions_.size();
         }
 
-        bool Visit(const TransactionPtr& tx){
+        bool Visit(const TransactionPtr& tx) const{
             if((GetNumberOfTransactions() + 1) >= GetBlockSize())
                 return false;
             transactions_.push_back(tx);
@@ -82,28 +78,29 @@ namespace Token{
             TransactionPoolBlockBuilder builder(size);
             TransactionPool::Accept(&builder);
             BlockPtr block = builder.GetBlock();
-            BlockPool::PutBlock(block->GetHash(), block);
+            ObjectPool::PutObject(block->GetHash(), block);
             return block;
         }
-    };
+    };*/
 
     static inline void
     OrphanTransaction(const TransactionPtr& tx){
         Hash hash = tx->GetHash();
         LOG(WARNING) << "orphaning transaction: " << hash;
-        TransactionPool::RemoveTransaction(hash);
+        if(!ObjectPool::RemoveObject(hash))
+            LOG(WARNING) << "couldn't remove transaction " << hash << " from pool.";
     }
 
     static inline void
     OrphanBlock(const BlockPtr& blk){
         Hash hash = blk->GetHash();
         LOG(WARNING) << "orphaning block: " << hash;
-        if(!BlockPool::RemoveBlock(hash))
+        if(!ObjectPool::RemoveObject(hash))
             LOG(WARNING) << "couldn't remove block " << hash << " from pool.";
     }
 
     BlockPtr BlockDiscoveryThread::CreateNewBlock(intptr_t size){
-        BlockPtr blk = TransactionPoolBlockBuilder::Build(size);
+        BlockPtr blk = Block::Genesis(); //TODO: TransactionPoolBlockBuilder::Build(size);
         SetBlock(blk);
         return blk;
     }
@@ -153,7 +150,7 @@ namespace Token{
                     SetProposal(nullptr);
                     goto exit;
                 }
-            } else if(GetNumberOfTransactionsInPool() >= 2){
+            } else if(ObjectPool::GetNumberOfTransactions() >= 2){
                 BlockPtr blk = CreateNewBlock(2);
                 Hash hash = blk->GetHash();
                 if(!BlockVerifier::IsValid(blk, true)){

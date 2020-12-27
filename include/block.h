@@ -151,6 +151,27 @@ namespace Token{
         Hash previous_hash_;
         TransactionList transactions_;
         BloomFilter tx_bloom_; // transient
+    protected:
+        int64_t GetBufferSize() const{
+            int64_t size = 0;
+            size += sizeof(Timestamp); // timestamp_
+            size += sizeof(int64_t); // height_
+            size += Hash::GetSize(); // previous_hash_
+            size += sizeof(int64_t); // num_transactions
+            for(auto& it : transactions_)
+                size += it->GetBufferSize();
+            return size;
+        }
+
+        bool Write(Buffer* buff) const{
+            buff->PutLong(timestamp_);
+            buff->PutLong(height_);
+            buff->PutHash(previous_hash_);
+            buff->PutLong(GetNumberOfTransactions());
+            for(auto& it : transactions_)
+                it->Write(buff);
+            return true;
+        }
     public:
         Block():
             BinaryObject(),
@@ -231,27 +252,6 @@ namespace Token{
 
         bool IsGenesis(){
             return GetHeight() == 0;
-        }
-
-        int64_t GetBufferSize() const{
-            int64_t size = 0;
-            size += sizeof(Timestamp); // timestamp_
-            size += sizeof(int64_t); // height_
-            size += Hash::GetSize(); // previous_hash_
-            size += sizeof(int64_t); // num_transactions
-            for(auto& it : transactions_)
-                size += it->GetBufferSize();
-            return size;
-        }
-
-        bool Encode(Buffer* buff) const{
-            buff->PutLong(timestamp_);
-            buff->PutLong(height_);
-            buff->PutHash(previous_hash_);
-            buff->PutLong(GetNumberOfTransactions());
-            for(auto& it : transactions_)
-                it->Encode(buff);
-            return true;
         }
 
         std::string ToString() const{
@@ -390,101 +390,6 @@ namespace Token{
             LOG_AT_LEVEL(GetSeverity()) << "  Hash: " << blk->GetHash();
             return true;
         }
-    };
-
-#define FOR_EACH_BLOCK_POOL_STATE(V) \
-    V(Uninitialized)                 \
-    V(Initializing)                  \
-    V(Initialized)
-
-#define FOR_EACH_BLOCK_POOL_STATUS(V) \
-    V(Ok)                             \
-    V(Warning)                        \
-    V(Error)
-
-    class BlockPoolVisitor;
-    class BlockPool{
-    public:
-        enum State{
-#define DEFINE_STATE(Name) k##Name,
-            FOR_EACH_BLOCK_POOL_STATE(DEFINE_STATE)
-#undef DEFINE_STATE
-        };
-
-        friend std::ostream& operator<<(std::ostream& stream, const State& state){
-            switch(state){
-#define DEFINE_TOSTRING(Name) \
-                case State::k##Name: \
-                    stream << #Name; \
-                    return stream;
-                FOR_EACH_BLOCK_POOL_STATE(DEFINE_TOSTRING)
-#undef DEFINE_TOSTRING
-                default:
-                    stream << "Unknown";
-                    return stream;
-            }
-        }
-
-        enum Status{
-#define DEFINE_STATUS(Name) k##Name,
-            FOR_EACH_BLOCK_POOL_STATUS(DEFINE_STATUS)
-#undef DEFINE_STATUS
-        };
-
-        friend std::ostream& operator<<(std::ostream& stream, const Status& status){
-            switch(status){
-#define DEFINE_TOSTRING(Name) \
-                case Status::k##Name: \
-                    stream << #Name; \
-                    return stream;
-                FOR_EACH_BLOCK_POOL_STATUS(DEFINE_TOSTRING)
-#undef DEFINE_TOSTRING
-                default:
-                    stream << "Unknown";
-                    return stream;
-            }
-        }
-    private:
-        BlockPool() = delete;
-
-        static void SetState(const State& state);
-        static void SetStatus(const Status& status);
-    public:
-        ~BlockPool() = delete;
-
-        static int64_t GetNumberOfBlocksInPool();
-        static State GetState();
-        static Status GetStatus();
-        static std::string GetStatusMessage();
-        static bool Print();
-        static bool Initialize();
-        static bool Accept(BlockPoolVisitor* vis);
-        static bool RemoveBlock(const Hash& hash);
-        static bool PutBlock(const Hash& hash, const BlockPtr& blk);
-        static bool HasBlock(const Hash& hash);
-        static bool GetBlocks(HashList& hashes);
-        static BlockPtr GetBlock(const Hash& hash);
-        static void WaitForBlock(const Hash& hash);
-
-#define DEFINE_STATE_CHECK(Name) \
-        static inline bool Is##Name(){ return GetState() == State::k##Name; }
-        FOR_EACH_BLOCK_POOL_STATE(DEFINE_STATE_CHECK)
-#undef DEFINE_STATE_CHECK
-
-#define DEFINE_STATUS_CHECK(Name) \
-        static inline bool Is##Name(){ return GetStatus() == Status::k##Name; }
-        FOR_EACH_BLOCK_POOL_STATUS(DEFINE_STATUS_CHECK)
-#undef DEFINE_STATUS_CHECK
-    };
-
-    class BlockPoolVisitor{
-    protected:
-        BlockPoolVisitor() = default;
-    public:
-        virtual ~BlockPoolVisitor() = default;
-        virtual bool VisitStart(){ return true; }
-        virtual bool Visit(const BlockPtr& blk) = 0;
-        virtual bool VisitEnd(){ return true; }
     };
 }
 

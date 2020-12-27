@@ -287,9 +287,9 @@ namespace Token{
                 if(BlockChain::HasBlock(hash)){
                     LOG(INFO) << "item " << hash << " found in block chain";
                     block = BlockChain::GetBlock(hash);
-                } else if(BlockPool::HasBlock(hash)){
+                } else if(ObjectPool::HasObject(hash)){
                     LOG(INFO) << "item " << hash << " found in block pool";
-                    block = BlockPool::GetBlock(hash);
+                    block = ObjectPool::GetBlock(hash);
                 } else{
                     LOG(WARNING) << "cannot find block: " << hash;
                     response.push_back(NotFoundMessage::NewInstance());
@@ -297,13 +297,13 @@ namespace Token{
                 }
                 response.push_back(new BlockMessage(block));
             } else if(item.IsTransaction()){
-                if(!TransactionPool::HasTransaction(hash)){
+                if(!ObjectPool::HasObject(hash)){
                     LOG(WARNING) << "cannot find transaction: " << hash;
                     response.push_back(NotFoundMessage::NewInstance());
                     break;
                 }
 
-                TransactionPtr tx = TransactionPool::GetTransaction(hash);
+                TransactionPtr tx = ObjectPool::GetTransaction(hash);
                 response.push_back(new TransactionMessage(tx));
             }
         }
@@ -313,9 +313,9 @@ namespace Token{
     void PeerSession::HandleBlockMessage(HandleMessageTask* task){
         BlockMessage* msg = (BlockMessage*)task->GetMessage();
         BlockPtr blk = msg->GetValue();
-        Hash bhash = blk->GetHash();
-        BlockPool::PutBlock(bhash, blk);
-        LOG(INFO) << "received block: " << bhash;
+        Hash hash = blk->GetHash();
+        ObjectPool::PutObject(hash, blk);
+        LOG(INFO) << "received block: " << hash;
     }
 
     void PeerSession::HandleTransactionMessage(HandleMessageTask* task){

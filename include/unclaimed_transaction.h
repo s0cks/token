@@ -20,6 +20,23 @@ namespace Token{
         int32_t index_;
         User user_;
         Product product_;
+    protected:
+        int64_t GetBufferSize() const{
+            int64_t size = 0;
+            size += Hash::GetSize();
+            size += sizeof(int32_t);
+            size += User::GetSize();
+            size += Product::GetSize();
+            return size;
+        }
+
+        bool Write(Buffer* buff) const{
+            buff->PutHash(hash_);
+            buff->PutInt(index_);
+            buff->PutUser(user_);
+            buff->PutProduct(product_);
+            return true;
+        }
     public:
         UnclaimedTransaction(const Hash& hash, int32_t index, const User& user, const Product& product):
             BinaryObject(),
@@ -45,23 +62,6 @@ namespace Token{
 
         Product GetProduct() const{
             return product_;
-        }
-
-        int64_t GetBufferSize() const{
-            int64_t size = 0;
-            size += Hash::GetSize();
-            size += sizeof(int32_t);
-            size += User::GetSize();
-            size += Product::GetSize();
-            return size;
-        }
-
-        bool Encode(Buffer* buff) const{
-            buff->PutHash(hash_);
-            buff->PutInt(index_);
-            buff->PutUser(user_);
-            buff->PutProduct(product_);
-            return true;
         }
 
         std::string ToString() const;

@@ -1,3 +1,4 @@
+#include "pool.h"
 #include "message.h"
 #include "proposal.h"
 #include "discovery.h"
@@ -73,8 +74,8 @@ namespace Token{
 
     bool InventoryItem::ItemExists() const{
         switch(type_){
-            case kTransaction: return TransactionPool::HasTransaction(hash_);
-            case kBlock: return BlockChain::HasBlock(hash_) || BlockPool::HasBlock(hash_);
+            case kTransaction: return ObjectPool::HasObject(hash_);
+            case kBlock: return BlockChain::HasBlock(hash_) || ObjectPool::HasObject(hash_);
             case kUnclaimedTransaction: return UnclaimedTransactionPool::HasUnclaimedTransaction(hash_);
             default: return false;
         }

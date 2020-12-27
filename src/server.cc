@@ -2,14 +2,14 @@
 #include <algorithm>
 #include <random>
 #include <condition_variable>
+
+#include "pool.h"
 #include "server.h"
-#include "message.h"
 #include "task/task.h"
 #include "configuration.h"
 #include "proposal.h"
 #include "unclaimed_transaction.h"
 #include "discovery.h"
-
 #include "utils/crash_report.h"
 #include "task/handle_message_task.h"
 #include "peer/peer_session_manager.h"
@@ -305,10 +305,10 @@ namespace Token{
             if(item.ItemExists()){
                 if(item.IsBlock()){
                     BlockPtr block;
-                    if(BlockChain::HasBlock(hash)){
+                    if(BlockChain::HasBlock(hash)) {
                         block = BlockChain::GetBlock(hash);
-                    } else if(BlockPool::HasBlock(hash)){
-                        block = BlockPool::GetBlock(hash);
+                    } else if(ObjectPool::HasObject(hash)){
+                        block = ObjectPool::GetBlock(hash);
                     } else{
                         LOG(WARNING) << "cannot find block: " << hash;
                         response.push_back(NotFoundMessage::NewInstance());
@@ -316,13 +316,13 @@ namespace Token{
                     }
                     response.push_back(new BlockMessage(block));
                 } else if(item.IsTransaction()){
-                    if(!TransactionPool::HasTransaction(hash)){
+                    if(!ObjectPool::HasObject(hash)){
                         LOG(WARNING) << "cannot find transaction: " << hash;
                         response.push_back(NotFoundMessage::NewInstance());
                         break;
                     }
 
-                    TransactionPtr tx = TransactionPool::GetTransaction(hash);
+                    TransactionPtr tx = ObjectPool::GetTransaction(hash);
                     response.push_back(new TransactionMessage(tx));//TODO: fix
                 } else if(item.IsUnclaimedTransaction()){
                     if(!UnclaimedTransactionPool::HasUnclaimedTransaction(hash)){
@@ -394,8 +394,8 @@ namespace Token{
         BlockMessage* msg = task->GetMessage<BlockMessage>();
         BlockPtr blk = msg->GetValue();
         Hash hash = blk->GetHash();
-        if(!BlockPool::HasBlock(hash)){
-            BlockPool::PutBlock(hash, blk);
+        if(!ObjectPool::HasObject(hash)){
+            ObjectPool::PutObject(hash, blk);
             //TODO: Server::Broadcast(InventoryMessage::NewInstance(blk));
         }
     }
@@ -406,8 +406,8 @@ namespace Token{
         Hash hash = tx->GetHash();
 
         LOG(INFO) << "received transaction: " << hash;
-        if(!TransactionPool::HasTransaction(hash))
-            TransactionPool::PutTransaction(hash, tx);
+        if(!ObjectPool::HasObject(hash))
+            ObjectPool::PutObject(hash, tx);
     }
 
     void ServerSession::HandleUnclaimedTransactionMessage(HandleMessageTask* task){

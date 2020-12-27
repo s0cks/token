@@ -44,7 +44,7 @@ namespace Token{
 #undef DECLARE_MESSAGE_TYPE
         };
 
-        static const intptr_t kHeaderSize = sizeof(int32_t)
+        static const int64_t kHeaderSize = sizeof(int32_t)
                                           + sizeof(int64_t);
     protected:
         Message() = default;
@@ -336,17 +336,17 @@ namespace Token{
         ObjectPtr GetValue() const{
             return value_;
         }
-
-        int64_t GetMessageSize() const{
-            return value_->GetBufferSize();
-        }
-
-        bool Write(Buffer* buff) const{
-            return value_->Encode(buff);
-        }
     };
 
     class TransactionMessage : public ObjectMessage<Transaction>{
+    protected:
+        int64_t GetMessageSize() const{
+            return GetValue()->GetBufferSize();
+        }
+
+        bool Write(Buffer* buff) const{
+            return GetValue()->Write(buff);
+        }
     public:
         TransactionMessage(const TransactionPtr& value):
             ObjectMessage(value){}
@@ -368,6 +368,14 @@ namespace Token{
     };
 
     class BlockMessage : public ObjectMessage<Block>{
+    protected:
+        int64_t GetMessageSize() const{
+            return GetValue()->GetBufferSize();
+        }
+
+        bool Write(Buffer* buff) const{
+            return GetValue()->Write(buff);
+        }
     public:
         BlockMessage(const BlockPtr& blk):
             ObjectMessage(blk){}
@@ -389,6 +397,14 @@ namespace Token{
     };
 
     class UnclaimedTransactionMessage : public ObjectMessage<UnclaimedTransaction>{
+    protected:
+        int64_t GetMessageSize() const{
+            return GetValue()->GetBufferSize();
+        }
+
+        bool Write(Buffer* buff) const{
+            return GetValue()->Write(buff);
+        }
     public:
         UnclaimedTransactionMessage(const UnclaimedTransactionPtr& utxo):
             ObjectMessage(utxo){}

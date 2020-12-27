@@ -21,12 +21,11 @@ namespace Token{
     class BinaryObject : public Object{
     protected:
         BinaryObject() = default;
+        virtual int64_t GetBufferSize() const = 0;
+        virtual bool Write(Buffer* buffer) const = 0;
     public:
         virtual ~BinaryObject() = default;
-
         Hash GetHash() const;
-        virtual int64_t GetBufferSize() const = 0;
-        virtual bool Encode(Buffer* buffer) const = 0;
     };
 
     template<int64_t Size>

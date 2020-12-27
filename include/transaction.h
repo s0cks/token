@@ -220,6 +220,38 @@ namespace Token{
         InputList inputs_;
         OutputList outputs_;
         std::string signature_;
+    protected:
+        bool Write(Buffer* buff) const{
+            buff->PutLong(timestamp_);
+            buff->PutLong(index_);
+
+            int64_t idx;
+            buff->PutLong(GetNumberOfInputs());
+            for(idx = 0;
+                idx < GetNumberOfInputs();
+                idx++){
+                inputs_[idx].Encode(buff);
+            }
+            buff->PutLong(GetNumberOfOutputs());
+            for(idx = 0;
+                idx < GetNumberOfOutputs();
+                idx++){
+                outputs_[idx].Encode(buff);
+            }
+            //TODO: serialize transaction signature
+            return true;
+        }
+
+        int64_t GetBufferSize() const{
+            int64_t size = 0;
+            size += sizeof(Timestamp); // timestamp_
+            size += sizeof(int64_t); // index_
+            size += sizeof(int64_t); // num_inputs_
+            size += GetNumberOfInputs() * Input::GetSize(); // inputs_
+            size += sizeof(int64_t); // num_outputs
+            size += GetNumberOfOutputs() * Output::GetSize(); // outputs_
+            return size;
+        }
     public:
         Transaction(int64_t index, const InputList& inputs, const OutputList& outputs, Timestamp timestamp=GetCurrentTimestamp()):
             BinaryObject(),
@@ -309,38 +341,6 @@ namespace Token{
         bool Sign();
         bool VisitInputs(TransactionInputVisitor* vis) const;
         bool VisitOutputs(TransactionOutputVisitor* vis) const;
-
-        bool Encode(Buffer* buff) const{
-            buff->PutLong(timestamp_);
-            buff->PutLong(index_);
-
-            int64_t idx;
-            buff->PutLong(GetNumberOfInputs());
-            for(idx = 0;
-                idx < GetNumberOfInputs();
-                idx++){
-                inputs_[idx].Encode(buff);
-            }
-            buff->PutLong(GetNumberOfOutputs());
-            for(idx = 0;
-                idx < GetNumberOfOutputs();
-                idx++){
-                outputs_[idx].Encode(buff);
-            }
-            //TODO: serialize transaction signature
-            return true;
-        }
-
-        int64_t GetBufferSize() const{
-            int64_t size = 0;
-            size += sizeof(Timestamp); // timestamp_
-            size += sizeof(int64_t); // index_
-            size += sizeof(int64_t); // num_inputs_
-            size += GetNumberOfInputs() * Input::GetSize(); // inputs_
-            size += sizeof(int64_t); // num_outputs
-            size += GetNumberOfOutputs() * Output::GetSize(); // outputs_
-            return size;
-        }
 
         std::string ToString() const{
             std::stringstream stream;
@@ -515,100 +515,6 @@ namespace Token{
             LOG_AT_LEVEL(GetSeverity()) << "Output(" << output.GetUser() << ", " << output.GetProduct() << ")";
             return true;
         }
-    };
-
-#define FOR_EACH_TX_POOL_STATE(V) \
-    V(Uninitialized)              \
-    V(Initializing)               \
-    V(Initialized)
-
-#define FOR_EACH_TX_POOL_STATUS(V) \
-    V(Ok)                          \
-    V(Warning)                     \
-    V(Error)
-
-    class TransactionPoolVisitor;
-    class TransactionPool{
-    public:
-        enum State{
-#define DEFINE_STATE(Name) k##Name,
-            FOR_EACH_TX_POOL_STATE(DEFINE_STATE)
-#undef DEFINE_STATE
-        };
-
-        friend std::ostream& operator<<(std::ostream& stream, const State& state){
-            switch(state){
-#define DEFINE_TOSTRING(Name) \
-                case State::k##Name: \
-                    stream << #Name; \
-                    return stream;
-                FOR_EACH_TX_POOL_STATE(DEFINE_TOSTRING)
-#undef DEFINE_TOSTRING
-                default:
-                    stream << "Unknown";
-                    return stream;
-            }
-        }
-
-        enum Status{
-#define DEFINE_STATUS(Name) k##Name,
-            FOR_EACH_TX_POOL_STATUS(DEFINE_STATUS)
-#undef DEFINE_STATUS
-        };
-
-        friend std::ostream& operator<<(std::ostream& stream, const Status& status){
-            switch(status){
-#define DEFINE_TOSTRING(Name) \
-                case Status::k##Name: \
-                    stream << #Name; \
-                    return stream;
-                FOR_EACH_TX_POOL_STATUS(DEFINE_TOSTRING)
-#undef DEFINE_TOSTRING
-                default:
-                    stream << "Unknown";
-                    return stream;
-            }
-        }
-    private:
-        TransactionPool() = delete;
-
-        static void SetState(const State& state);
-        static void SetStatus(const Status& status);
-    public:
-        ~TransactionPool() = delete;
-
-        static size_t GetSize();
-        static State GetState();
-        static Status GetStatus();
-        static std::string GetStatusMessage();
-        static bool Print();
-        static bool Initialize();
-        static bool Accept(TransactionPoolVisitor* vis);
-        static bool RemoveTransaction(const Hash& hash);
-        static bool PutTransaction(const Hash& hash, const TransactionPtr& tx);
-        static bool HasTransaction(const Hash& hash);
-        static bool GetTransactions(std::vector<Hash>& txs);
-        static TransactionPtr GetTransaction(const Hash& hash);
-
-#define DEFINE_STATE_CHECK(Name) \
-        static inline bool Is##Name(){ return GetState() == State::k##Name; }
-        FOR_EACH_TX_POOL_STATE(DEFINE_STATE_CHECK)
-#undef DEFINE_STATE_CHECK
-
-#define DEFINE_STATUS_CHECK(Name) \
-        static inline bool Is##Name(){ return GetStatus() == Status::k##Name; }
-        FOR_EACH_TX_POOL_STATUS(DEFINE_STATUS_CHECK)
-#undef DEFINE_STATUS_CHECK
-    };
-
-    class TransactionPoolVisitor{
-    protected:
-        TransactionPoolVisitor() = default;
-    public:
-        virtual ~TransactionPoolVisitor() = default;
-        virtual bool VisitStart() const{ return true; }
-        virtual bool Visit(const TransactionPtr& tx) = 0;
-        virtual bool VisitEnd() const{ return true; }
     };
 }
 

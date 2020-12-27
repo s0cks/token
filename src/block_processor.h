@@ -1,6 +1,7 @@
 #ifndef TOKEN_BLOCK_PROCESSOR_H
 #define TOKEN_BLOCK_PROCESSOR_H
 
+#include "pool.h"
 #include "block.h"
 #include "transaction_processor.h"
 
@@ -132,11 +133,10 @@ namespace Token{
                 return false;
             }
 
-            if(!TransactionPool::RemoveTransaction(hash)){
+            if(!ObjectPool::RemoveObject(hash)){
                 LOG(WARNING) << "couldn't remove transaction " << hash << " from pool.";
                 return false;
             }
-
             return true;
         }
     public:

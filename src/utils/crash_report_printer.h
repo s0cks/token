@@ -1,6 +1,7 @@
 #ifndef TOKEN_CRASH_REPORT_PRINTER_H
 #define TOKEN_CRASH_REPORT_PRINTER_H
 
+#include "pool.h"
 #include "server.h"
 #include "version.h"
 #include "utils/printer.h"
@@ -57,18 +58,14 @@ namespace Token{
                 LOG_AT_LEVEL(GetSeverity()) << "Block Chain (" << BlockChain::GetStatus() << "): " << BlockChain::GetState();
             }
 
-            if(BlockPool::IsInitialized() && BlockPool::IsOk()){
-                LOG_AT_LEVEL(GetSeverity()) << "Block Pool (" << BlockPool::GetStatus() << "):";
-                LOG_AT_LEVEL(GetSeverity()) << "\tTotal Number of Blocks: " << BlockPool::GetNumberOfBlocksInPool();
+            if(ObjectPool::IsInitialized() && ObjectPool::IsOk()){
+                LOG_AT_LEVEL(GetSeverity()) << "Object Pool (" << ObjectPool::GetStatus() << "):";
+                LOG_AT_LEVEL(GetSeverity()) << "\tTotal Number of Objects: " << ObjectPool::GetNumberOfObjects();
+                LOG_AT_LEVEL(GetSeverity()) << "\tTotal Number of Blocks: " << ObjectPool::GetNumberOfBlocks();
+                LOG_AT_LEVEL(GetSeverity()) << "\tTotal Number of Transactions: " << ObjectPool::GetNumberOfTransactions();
+                LOG_AT_LEVEL(GetSeverity()) << "\tTotal Number of Unclaimed Transactions: " << ObjectPool::GetNumberOfUnclaimedTransactions();
             } else{
-                LOG_AT_LEVEL(GetSeverity()) << "Block Pool (" << BlockPool::GetStatus() << "): " << BlockPool::GetState();
-            }
-
-            if(TransactionPool::IsInitialized() && TransactionPool::IsOk()){
-                LOG_AT_LEVEL(GetSeverity()) << "Transaction Pool (" << TransactionPool::GetStatus() << "):";
-                LOG_AT_LEVEL(GetSeverity()) << "\tTotal Number of Transactions: " << TransactionPool::GetSize();
-            } else{
-                LOG_AT_LEVEL(GetSeverity()) << "Transaction Pool (" << TransactionPool::GetStatus() << "): " << TransactionPool::GetState();
+                LOG_AT_LEVEL(GetSeverity()) << "Block Pool (" << ObjectPool::GetStatus() << "): " << ObjectPool::GetState();
             }
 
             if(UnclaimedTransactionPool::IsInitialized() && UnclaimedTransactionPool::IsOk()){

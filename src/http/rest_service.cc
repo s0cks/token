@@ -1,5 +1,7 @@
 #include <mutex>
 #include <condition_variable>
+
+#include "pool.h"
 #include "blockchain.h"
 #include "http/rest_service.h"
 
@@ -221,7 +223,7 @@ namespace Token{
  *****************************************************************************/
     void BlockPoolController::HandleGetBlocks(HttpSession* session, HttpRequest* request){
         HashList hashes;
-        if(!BlockPool::GetBlocks(hashes))
+        if(!ObjectPool::GetBlocks(hashes))
             return SendInternalServerError(session, "Cannot get list of blocks from pool.");
 
         rapidjson::Document doc;
@@ -231,9 +233,9 @@ namespace Token{
 
     void BlockPoolController::HandleGetBlock(HttpSession* session, HttpRequest* request){
         Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
-        if(!BlockPool::HasBlock(hash))
+        if(!ObjectPool::HasObject(hash))
             return SendNotFound(session, hash);
-        BlockPtr blk = BlockPool::GetBlock(hash);
+        BlockPtr blk = ObjectPool::GetBlock(hash);
 
         rapidjson::Document doc;
         ToJson(blk, doc);
