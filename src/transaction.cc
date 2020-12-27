@@ -6,7 +6,9 @@
 
 namespace Token{
     UnclaimedTransactionPtr Input::GetUnclaimedTransaction() const{
-        return UnclaimedTransactionPool::GetUnclaimedTransaction(GetTransactionHash(), GetOutputIndex());
+        return UnclaimedTransactionPtr(nullptr);
+        //TODO: fixme
+//        return UnclaimedTransactionPool::GetUnclaimedTransaction(GetTransactionHash(), GetOutputIndex());
     }
 //######################################################################################################################
 //                                          Transaction

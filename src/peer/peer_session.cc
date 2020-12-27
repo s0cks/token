@@ -223,8 +223,7 @@ namespace Token{
     }
 
     void PeerSession::HandleGetBlocksMessage(HandleMessageTask* task){}
-    void PeerSession::HandleGetUnclaimedTransactionsMessage(HandleMessageTask* task){}
-
+    
     void PeerSession::HandleVersionMessage(HandleMessageTask* task){
         PeerSession* session = task->GetSession<PeerSession>();
         BlockPtr head = BlockChain::GetHead();

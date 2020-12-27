@@ -126,7 +126,6 @@ namespace Token{
 
         Keychain::Initialize();
         ObjectPool::Initialize();
-        UnclaimedTransactionPool::Initialize();
         if(!HasBlocks()){
             BlockPtr genesis = Block::Genesis();
             Hash hash = genesis->GetHash();

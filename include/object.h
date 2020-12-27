@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include "hash.h"
+#include "bitfield.h"
 
 namespace Token{
     class Object;

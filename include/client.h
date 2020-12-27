@@ -57,7 +57,6 @@ namespace Token{
         BlockPtr GetBlock(const Hash& hash);
         bool GetBlockChain(std::set<Hash>& blocks);
         bool GetPeers(PeerList& peers);
-        bool GetUnclaimedTransactions(const User& user, std::vector<Hash>& utxos);
         bool SendTransaction(const TransactionPtr& tx);
         UnclaimedTransactionPtr GetUnclaimedTransaction(const Hash& hash);
     };

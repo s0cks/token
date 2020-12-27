@@ -2,6 +2,7 @@
 #include <glog/logging.h>
 #include <condition_variable>
 #include "pool.h"
+#include "object_tag.h"
 
 namespace Token{
     static std::mutex mutex_;
@@ -97,6 +98,18 @@ namespace Token{
         std::string key = hash.HexString();
         std::string filename;
         return GetIndex()->Get(readOpts, key, &filename).ok();
+    }
+
+    bool ObjectPool::HasObjectByType(const Hash& hash, const ObjectTag::Type& type){
+        leveldb::ReadOptions readOpts;
+        std::string key = hash.HexString();
+        std::string filename;
+
+        leveldb::Status status;
+        if((status = GetIndex()->Get(readOpts, key, &filename)).IsNotFound())
+            return false;
+        ObjectTagVerifier verifier(filename, type);
+        return verifier.IsValid();
     }
 
     bool ObjectPool::WaitForObject(const Hash& hash){
@@ -263,18 +276,47 @@ namespace Token{
     }
 
     int64_t ObjectPool::GetNumberOfObjects(){
-        return 0;
+        int64_t count = 0;
+
+        DIR* dir;
+        struct dirent* ent;
+        if((dir = opendir(GetDataDirectory().c_str())) != NULL){
+            while((ent = readdir(dir)) != NULL){
+                std::string name(ent->d_name);
+                std::string filename = (GetDataDirectory() + "/" + name);
+                if(!EndsWith(filename, ".dat"))
+                    continue;
+
+                // matches everything
+                ObjectTagVerifier tag_verifier(filename, ObjectTag::kNone);
+                if(!tag_verifier.IsValid())
+                    continue;
+                count++;
+            }
+            closedir(dir);
+        }
+        return count;
     }
 
-    int64_t ObjectPool::GetNumberOfBlocks(){
-        return 0;
-    }
+    int64_t ObjectPool::GetNumberOfObjectsByType(const ObjectTag::Type& type){
+        int64_t count = 0;
 
-    int64_t ObjectPool::GetNumberOfTransactions(){
-        return 0;
-    }
+        DIR* dir;
+        struct dirent* ent;
+        if((dir = opendir(GetDataDirectory().c_str())) != NULL){
+            while((ent = readdir(dir)) != NULL){
+                std::string name(ent->d_name);
+                std::string filename = (GetDataDirectory() + "/" + name);
+                if(!EndsWith(filename, ".dat"))
+                    continue;
 
-    int64_t ObjectPool::GetNumberOfUnclaimedTransactions(){
-        return 0;
+                ObjectTagVerifier tag_verifier(filename, type);
+                if(!tag_verifier.IsValid())
+                    continue;
+                count++;
+            }
+            closedir(dir);
+        }
+        return count;
     }
 }

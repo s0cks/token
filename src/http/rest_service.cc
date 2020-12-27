@@ -189,18 +189,19 @@ namespace Token{
  *****************************************************************************/
     void UnclaimedTransactionPoolController::HandleGetUnclaimedTransaction(HttpSession* session, HttpRequest* request){
         Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
-        if(!UnclaimedTransactionPool::HasUnclaimedTransaction(hash))
+        if(!ObjectPool::HasUnclaimedTransaction(hash))
             return SendNotFound(session, hash);
-        UnclaimedTransactionPtr utxo = UnclaimedTransactionPool::GetUnclaimedTransaction(hash);
 
+        UnclaimedTransactionPtr val = ObjectPool::GetUnclaimedTransaction(hash);
         rapidjson::Document doc;
-        ToJson(utxo, doc);
+        ToJson(val, doc);
         SendJson(session, doc);
     }
 
     void UnclaimedTransactionPoolController::HandleGetUnclaimedTransactions(HttpSession* session, HttpRequest* request){
         HashList hashes;
-        UnclaimedTransactionPool::GetUnclaimedTransactions(hashes);
+        if(!ObjectPool::GetUnclaimedTransactions(hashes))
+            return SendInternalServerError(session, "Cannot Get Unclaimed Transactions");
 
         rapidjson::Document doc;
         ToJson(hashes, doc);
@@ -208,14 +209,15 @@ namespace Token{
     }
 
     void UnclaimedTransactionPoolController::HandleGetUserUnclaimedTransactions(HttpSession* session, HttpRequest* request){
-        std::string user = request->GetParameterValue("user_id");
-
-        HashList hashes;
-        UnclaimedTransactionPool::GetUnclaimedTransactions(user, hashes);
-
-        rapidjson::Document doc;
-        ToJson(hashes, doc);
-        SendJson(session, doc);
+//        std::string user = request->GetParameterValue("user_id");
+//
+//        HashList hashes;
+//        UnclaimedTransactionPool::GetUnclaimedTransactions(user, hashes);
+//
+//        rapidjson::Document doc;
+//        ToJson(hashes, doc);
+//        SendJson(session, doc);
+        SendInternalServerError(session, "Not Implemented");
     }
 
 /*****************************************************************************

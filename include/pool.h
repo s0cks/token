@@ -95,6 +95,8 @@ namespace Token{
         static void SetState(const State& state);
         static void SetStatus(const Status& status);
         static leveldb::Status IndexObject(const Hash& hash, const std::string& filename);
+        static int64_t GetNumberOfObjectsByType(const ObjectTag::Type& type);
+        static bool HasObjectByType(const Hash& hash, const ObjectTag::Type& type);
 
         template<class ObjectType, class ObjectWriter>
         static inline bool
@@ -108,7 +110,6 @@ namespace Token{
         static State GetState();
         static Status GetStatus();
         static bool Initialize();
-        static bool HasObject(const Hash& hash);
         static bool RemoveObject(const Hash& hash);
         static bool WaitForObject(const Hash& hash);
         static bool PutObject(const Hash& hash, const BlockPtr& val);
@@ -123,10 +124,32 @@ namespace Token{
         static BlockPtr GetBlock(const Hash& hash);
         static TransactionPtr GetTransaction(const Hash& hash);
         static UnclaimedTransactionPtr GetUnclaimedTransaction(const Hash& hash);
+
+        static bool HasObject(const Hash& hash);
+        static inline bool HasBlock(const Hash& hash){
+            return HasObjectByType(hash, ObjectTag::kBlock);
+        }
+
+        static inline bool HasTransaction(const Hash& hash){
+            return HasObjectByType(hash, ObjectTag::kTransaction);
+        }
+
+        static inline bool HasUnclaimedTransaction(const Hash& hash){
+            return HasObjectByType(hash, ObjectTag::kUnclaimedTransaction);
+        }
+
         static int64_t GetNumberOfObjects();
-        static int64_t GetNumberOfBlocks();
-        static int64_t GetNumberOfTransactions();
-        static int64_t GetNumberOfUnclaimedTransactions();
+        static inline int64_t GetNumberOfBlocks(){
+            return GetNumberOfObjectsByType(ObjectTag::kBlock);
+        }
+
+        static inline int64_t GetNumberOfTransactions(){
+            return GetNumberOfObjectsByType(ObjectTag::kTransaction);
+        }
+
+        static inline int64_t GetNumberOfUnclaimedTransactions(){
+            return GetNumberOfObjectsByType(ObjectTag::kUnclaimedTransaction);
+        }
 
 #define DEFINE_CHECK(Name) \
         static inline bool Is##Name(){ return GetState() == ObjectPool::k##Name; }

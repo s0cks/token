@@ -4,6 +4,7 @@
 #include <json/json.h>
 #include "hash.h"
 #include "bloom.h"
+#include "object_tag.h"
 #include "utils/buffer.h"
 #include "transaction.h"
 
@@ -328,6 +329,8 @@ namespace Token{
         ~BlockFileWriter() = default;
 
         bool Write(const BlockPtr& blk){
+            WriteObjectTag(ObjectTag::kBlock);
+
             WriteLong(blk->GetTimestamp()); // timestamp_
             WriteLong(blk->GetHeight()); // height_
             WriteHash(blk->GetPreviousHash()); // previous_hash_
@@ -340,22 +343,35 @@ namespace Token{
 
     class BlockFileReader : BinaryFileReader{
     private:
+        ObjectTagVerifier tag_verifier_;
         TransactionFileReader tx_reader_;
 
-        inline TransactionPtr
-        ReadNextTransaction(){
-            return tx_reader_.Read();
+        inline ObjectTagVerifier&
+        GetTagVerifier(){
+            return tag_verifier_;
+        }
+
+        inline TransactionFileReader&
+        GetTransactionReader(){
+            return tx_reader_;
         }
     public:
         BlockFileReader(const std::string& filename):
             BinaryFileReader(filename),
+            tag_verifier_(this, ObjectTag::kBlock),
             tx_reader_(this){}
         BlockFileReader(BinaryFileReader* parent):
             BinaryFileReader(parent),
+            tag_verifier_(this, ObjectTag::kBlock),
             tx_reader_(this){}
         ~BlockFileReader() = default;
 
         BlockPtr Read(){
+            if(!GetTagVerifier().IsValid()){
+                LOG(WARNING) << "cannot read block from: " << GetFilename();
+                return BlockPtr(nullptr);
+            }
+
             Timestamp timestamp = ReadLong();
             int64_t height = ReadLong();
             Hash phash = ReadHash();
@@ -363,7 +379,7 @@ namespace Token{
             TransactionList transactions;
             int64_t num_transactions = ReadLong();
             for(int64_t idx = 0; idx < num_transactions; idx++)
-                transactions.push_back(ReadNextTransaction());
+                transactions.push_back(GetTransactionReader().Read());
             return std::make_shared<Block>(height, phash, transactions, timestamp);
         }
     };

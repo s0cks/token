@@ -74,9 +74,9 @@ namespace Token{
 
     bool InventoryItem::ItemExists() const{
         switch(type_){
-            case kTransaction: return ObjectPool::HasObject(hash_);
-            case kBlock: return BlockChain::HasBlock(hash_) || ObjectPool::HasObject(hash_);
-            case kUnclaimedTransaction: return UnclaimedTransactionPool::HasUnclaimedTransaction(hash_);
+            case kTransaction: return ObjectPool::HasTransaction(hash_);
+            case kBlock: return BlockChain::HasBlock(hash_) || ObjectPool::HasBlock(hash_);
+            case kUnclaimedTransaction: return ObjectPool::HasUnclaimedTransaction(hash_);
             default: return false;
         }
     }
@@ -156,22 +156,6 @@ namespace Token{
         buff->PutShort(static_cast<uint16_t>(item_.GetType()));
         buff->PutHash(item_.GetHash());
         buff->PutString(message_);
-        return true;
-    }
-
-    GetUnclaimedTransactionsMessage* GetUnclaimedTransactionsMessage::NewInstance(Buffer* buff){
-        User user = buff->GetUser();
-        return new GetUnclaimedTransactionsMessage(user);
-    }
-
-    intptr_t GetUnclaimedTransactionsMessage::GetMessageSize() const{
-        intptr_t size = 0;
-        size += User::GetSize();
-        return size;
-    }
-
-    bool GetUnclaimedTransactionsMessage::Write(Buffer* buff) const{
-        buff->PutUser(user_);
         return true;
     }
 

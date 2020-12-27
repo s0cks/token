@@ -26,7 +26,6 @@ namespace Token{
     V(UnclaimedTransaction) \
     V(Inventory) \
     V(NotFound) \
-    V(GetUnclaimedTransactions)  \
     V(GetPeers) \
     V(PeerList)
 
@@ -660,28 +659,6 @@ namespace Token{
         static NotFoundMessage* NewInstance(Buffer* buff);
         static NotFoundMessage* NewInstance(const std::string& message="Not Found"){
             return new NotFoundMessage(message);
-        }
-    };
-
-    class GetUnclaimedTransactionsMessage : public Message{
-    private:
-        User user_;
-
-        GetUnclaimedTransactionsMessage(const User& user):
-            Message(),
-            user_(user){}
-    public:
-        ~GetUnclaimedTransactionsMessage() = default;
-
-        User GetUser() const{
-            return user_;
-        }
-
-        DECLARE_MESSAGE(GetUnclaimedTransactions);
-
-        static GetUnclaimedTransactionsMessage* NewInstance(Buffer* buff);
-        static GetUnclaimedTransactionsMessage* NewInstance(const User& user){
-            return new GetUnclaimedTransactionsMessage(user);
         }
     };
 

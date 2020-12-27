@@ -68,13 +68,6 @@ namespace Token{
                 LOG_AT_LEVEL(GetSeverity()) << "Block Pool (" << ObjectPool::GetStatus() << "): " << ObjectPool::GetState();
             }
 
-            if(UnclaimedTransactionPool::IsInitialized() && UnclaimedTransactionPool::IsOk()){
-                LOG_AT_LEVEL(GetSeverity()) << "Unclaimed Transaction Pool (" << UnclaimedTransactionPool::GetStatus() << "):";
-                LOG_AT_LEVEL(GetSeverity()) << "\tTotal Number of Unclaimed Transactions: " << UnclaimedTransactionPool::GetNumberOfUnclaimedTransactions();
-            } else{
-                LOG_AT_LEVEL(GetSeverity()) << "Unclaimed Transaction Pool (" << UnclaimedTransactionPool::GetStatus() << "): " << UnclaimedTransactionPool::GetState();
-            }
-
             if(Server::IsRunning() && Server::IsOk()){
                 LOG_AT_LEVEL(GetSeverity()) << "Server (" << Server::GetStatus() << "): ";
 

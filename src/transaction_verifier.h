@@ -11,10 +11,11 @@ namespace Token{
                           public TransactionInputVisitor{
         inline bool
         IsValidInput(const Input& input) const{
-            Hash tx = input.GetTransactionHash();
-            int64_t idx = input.GetOutputIndex();
-            if(!UnclaimedTransactionPool::HasUnclaimedTransaction(tx, idx))
-                return false;
+//            Hash tx = input.GetTransactionHash();
+//            int64_t idx = input.GetOutputIndex();
+//            if(!UnclaimedTransactionPool::HasUnclaimedTransaction(tx, idx))
+//                return false;
+            //TODO: fixme
             return true; // TODO: check user_ & product_
         }
     public:

@@ -325,13 +325,13 @@ namespace Token{
                     TransactionPtr tx = ObjectPool::GetTransaction(hash);
                     response.push_back(new TransactionMessage(tx));//TODO: fix
                 } else if(item.IsUnclaimedTransaction()){
-                    if(!UnclaimedTransactionPool::HasUnclaimedTransaction(hash)){
+                    if(!ObjectPool::HasUnclaimedTransaction(hash)){
                         LOG(WARNING) << "couldn't find unclaimed transaction: " << hash;
                         response.push_back(NotFoundMessage::NewInstance());
                         break;
                     }
 
-                    UnclaimedTransactionPtr utxo = UnclaimedTransactionPool::GetUnclaimedTransaction(hash);
+                    UnclaimedTransactionPtr utxo = ObjectPool::GetUnclaimedTransaction(hash);
                     response.push_back(new UnclaimedTransactionMessage(utxo));
                 }
             } else{
@@ -431,55 +431,6 @@ namespace Token{
 
         LOG(INFO) << "downloading " << needed.size() << "/" << items.size() << " items from inventory....";
         if(!needed.empty()) session->Send(GetDataMessage::NewInstance(needed));
-    }
-
-    class UserUnclaimedTransactionCollector : public UnclaimedTransactionPoolVisitor{
-    private:
-        std::vector<InventoryItem>& items_;
-        User user_;
-    public:
-        UserUnclaimedTransactionCollector(std::vector<InventoryItem>& items, const User& user):
-                UnclaimedTransactionPoolVisitor(),
-                items_(items),
-                user_(user){}
-        ~UserUnclaimedTransactionCollector(){}
-
-        User GetUser() const{
-            return user_;
-        }
-
-        bool Visit(const UnclaimedTransactionPtr& utxo){
-            if(utxo->GetUser() == GetUser())
-                items_.push_back(InventoryItem(utxo));
-            return true;
-        }
-    };
-
-    void ServerSession::HandleGetUnclaimedTransactionsMessage(HandleMessageTask* task){
-        ServerSession* session = task->GetSession<ServerSession>();
-        GetUnclaimedTransactionsMessage* msg = task->GetMessage<GetUnclaimedTransactionsMessage>();
-
-        User user = msg->GetUser();
-        LOG(INFO) << "getting unclaimed transactions for " << user << "....";
-
-        std::vector<InventoryItem> items;
-        UserUnclaimedTransactionCollector collector(items, user);
-        if(!UnclaimedTransactionPool::Accept(&collector)){
-            LOG(WARNING) << "couldn't visit unclaimed transaction pool";
-            //TODO: send not found?
-            return;
-        }
-
-        if(items.empty()){
-            LOG(WARNING) << "no unclaimed transactions found for user: " << user;
-            session->Send(NotFoundMessage::NewInstance());
-            return;
-        }
-
-        LOG(INFO) << "sending inventory of " << items.size() << " items";
-
-        InventoryMessage* response = InventoryMessage::NewInstance(items);
-        session->Send(response);
     }
 
     void ServerSession::HandleGetBlocksMessage(HandleMessageTask* task){

@@ -2,8 +2,9 @@
 #define TOKEN_FILE_WRITER_H
 
 #include <iostream>
-#include "object.h"
 #include "buffer.h"
+#include "object.h"
+#include "object_tag.h"
 
 namespace Token{
     class FileWriter{
@@ -125,6 +126,11 @@ namespace Token{
         bool WriteProduct(const Product& product);
         bool WriteString(const std::string& value);
         bool WriteObject(Object* obj);
+
+        bool WriteObjectTag(const ObjectTag::Type& tag){
+            ObjectTag val(tag);
+            return WriteUnsignedLong(val.data());
+        }
 
         inline bool
         WriteBytes(Buffer* buff){

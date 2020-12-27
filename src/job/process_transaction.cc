@@ -1,3 +1,4 @@
+#include "pool.h"
 #include "job/scheduler.h"
 #include "job/process_transaction.h"
 
@@ -12,7 +13,7 @@ namespace Token{
             for(auto& it : inputs_){
                 UnclaimedTransactionPtr utxo = it.GetUnclaimedTransaction();
                 Hash hash = utxo->GetHash();
-                if(!UnclaimedTransactionPool::RemoveUnclaimedTransaction(hash)){
+                if(!ObjectPool::RemoveObject(hash)){
                     std::stringstream ss;
                     ss << "Couldn't remove unclaimed transaction: " << hash;
                     return Failed(ss.str());
@@ -66,7 +67,7 @@ namespace Token{
 
         bool Process(const Output& output){
             UnclaimedTransactionPtr utxo = CreateUnclaimedTransaction(output);
-            return UnclaimedTransactionPool::PutUnclaimedTransaction(utxo->GetHash(), utxo);
+            return ObjectPool::PutObject(utxo->GetHash(), utxo);
         }
 
         int64_t GetNextOutputIndex(){
@@ -77,7 +78,7 @@ namespace Token{
             for(auto& it : outputs_){
                 UnclaimedTransactionPtr utxo = CreateUnclaimedTransaction(it);
                 Hash hash = utxo->GetHash();
-                if(!UnclaimedTransactionPool::PutUnclaimedTransaction(hash, utxo)){
+                if(!ObjectPool::PutObject(hash, utxo)){
                     std::stringstream ss;
                     ss << "Couldn't create unclaimed transaction: " << hash;
                     return Failed(ss.str());

@@ -229,41 +229,4 @@ namespace Token{
         LOG(INFO) << "ClientSession::GetBlockChain(std::set<Hash>&) not implemented";
         return false;
     }
-
-    bool ClientSession::GetUnclaimedTransactions(const User& user, std::vector<Hash>& utxos){
-        LOG(INFO) << "getting unclaimed transactions for " << user;
-        if(!IsConnected()){
-            LOG(INFO) << "waiting for client to connect...";
-            WaitForState(Session::kConnected);
-        }
-
-        Send(GetUnclaimedTransactionsMessage::NewInstance(user));
-        do{
-            WaitForNextMessage();
-            Message* next = GetNextMessage();
-            LOG(INFO) << "next: " << next->GetName();
-            if(next->IsInventoryMessage()){
-                InventoryMessage* inv = (InventoryMessage*)next;
-
-                std::vector<InventoryItem> items;
-                if(!inv->GetItems(items)){
-                    LOG(ERROR) << "cannot get items from inventory";
-                    return false;
-                }
-
-                LOG(INFO) << "received inventory of " << items.size() << " items";
-                for(auto& item : items){
-                    LOG(INFO) << "- " << item;
-                    utxos.push_back(item.GetHash());
-                }
-
-                return utxos.size() == items.size();
-            } else if(next->IsNotFoundMessage()){
-                return false;
-            } else{
-                LOG(WARNING) << "cannot handle " << next;
-                continue;
-            }
-        } while(true);
-    }
 }

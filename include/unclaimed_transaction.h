@@ -88,6 +88,8 @@ namespace Token{
         ~UnclaimedTransactionFileWriter() = default;
 
         bool Write(const UnclaimedTransactionPtr& utxo){
+            WriteObjectTag(ObjectTag::kUnclaimedTransaction);
+
             WriteHash(utxo->GetTransaction());
             WriteInt(utxo->GetIndex());
             WriteUser(utxo->GetUser());
@@ -97,115 +99,34 @@ namespace Token{
     };
 
     class UnclaimedTransactionFileReader : BinaryFileReader{
+    private:
+        ObjectTagVerifier tag_verifier_;
+
+        inline ObjectTagVerifier&
+        GetTagVerifier(){
+            return tag_verifier_;
+        }
     public:
-        UnclaimedTransactionFileReader(const std::string& filename): BinaryFileReader(filename){}
-        UnclaimedTransactionFileReader(BinaryFileReader* parent): BinaryFileReader(parent){}
+        UnclaimedTransactionFileReader(const std::string& filename):
+            BinaryFileReader(filename),
+            tag_verifier_(this, ObjectTag::kUnclaimedTransaction){}
+        UnclaimedTransactionFileReader(BinaryFileReader* parent):
+            BinaryFileReader(parent),
+            tag_verifier_(this, ObjectTag::kUnclaimedTransaction){}
         ~UnclaimedTransactionFileReader() = default;
 
         UnclaimedTransactionPtr Read(){
+            if(!GetTagVerifier().IsValid()){
+                LOG(WARNING) << "couldn't read unclaimed transaction from: " << GetFilename();
+                return UnclaimedTransactionPtr(nullptr);
+            }
+
             Hash tx_hash = ReadHash();
             int32_t tx_index = ReadInt();
             User user = ReadUser();
             Product product = ReadProduct();
             return std::make_shared<UnclaimedTransaction>(tx_hash, tx_index, user, product);
         }
-    };
-
-#define FOR_EACH_UTXOPOOL_STATE(V) \
-    V(Uninitialized)               \
-    V(Initializing)                 \
-    V(Initialized)
-
-#define FOR_EACH_UTXOPOOL_STATUS(V) \
-    V(Ok)                           \
-    V(Warning)                      \
-    V(Error)
-
-    class UnclaimedTransactionPoolVisitor;
-    class UnclaimedTransactionPool{
-    public:
-        enum State{
-#define DEFINE_STATE(Name) k##Name,
-            FOR_EACH_UTXOPOOL_STATE(DEFINE_STATE)
-#undef DEFINE_STATE
-        };
-
-        friend std::ostream& operator<<(std::ostream& stream, const State& state){
-            switch(state){
-#define DEFINE_TOSTRING(Name) \
-                case State::k##Name: \
-                    stream << #Name; \
-                    return stream;
-                FOR_EACH_UTXOPOOL_STATE(DEFINE_TOSTRING)
-#undef DEFINE_TOSTRING
-                default:
-                    stream << "Unknown";
-                    return stream;
-            }
-        }
-
-        enum Status{
-#define DEFINE_STATUS(Name) k##Name,
-            FOR_EACH_UTXOPOOL_STATUS(DEFINE_STATUS)
-#undef DEFINE_STATUS
-        };
-
-        friend std::ostream& operator<<(std::ostream& stream, const Status& status){
-            switch(status){
-#define DEFINE_TOSTRING(Name) \
-                case Status::k##Name: \
-                    stream << #Name; \
-                    return stream;
-                FOR_EACH_UTXOPOOL_STATUS(DEFINE_TOSTRING)
-#undef DEFINE_TOSTRING
-                default:
-                    stream << "Unknown";
-                    return stream;
-            }
-        }
-    private:
-        UnclaimedTransactionPool() = delete;
-        static void SetState(State state);
-        static void SetStatus(Status status);
-    public:
-        ~UnclaimedTransactionPool() = delete;
-
-        static State GetState();
-        static Status GetStatus();
-        static std::string GetStatusMessage();
-        static int64_t GetNumberOfUnclaimedTransactions();
-        static bool Print(bool is_detailed=false);
-        static bool Initialize();
-        static bool Accept(UnclaimedTransactionPoolVisitor* vis);
-        static bool RemoveUnclaimedTransaction(const Hash& hash);
-        static bool PutUnclaimedTransaction(const Hash& hash, const UnclaimedTransactionPtr& utxo);
-        static bool HasUnclaimedTransaction(const Hash& hash);
-        static bool HasUnclaimedTransaction(const Hash& tx_hash, const int32_t tx_index);
-        static bool GetUnclaimedTransactions(HashList& hashes);
-        static bool GetUnclaimedTransactions(const std::string& user, HashList& hashes);
-        static UnclaimedTransactionPtr GetUnclaimedTransaction(const Hash& hash);
-        static UnclaimedTransactionPtr GetUnclaimedTransaction(const Hash& tx_hash, int32_t tx_index);
-
-#define DEFINE_STATE_CHECK(Name) \
-        static inline bool Is##Name(){ return GetState() == UnclaimedTransactionPool::k##Name; }
-        FOR_EACH_UTXOPOOL_STATE(DEFINE_STATE_CHECK)
-#undef DEFINE_STATE_CHECK
-
-#define DEFINE_STATUS_CHECK(Name) \
-        static inline bool Is##Name(){ return GetStatus() == UnclaimedTransactionPool::k##Name; }
-        FOR_EACH_UTXOPOOL_STATUS(DEFINE_STATUS_CHECK)
-#undef DEFINE_STATUS_CHECK
-    };
-
-    class UnclaimedTransactionPoolVisitor{
-    protected:
-        UnclaimedTransactionPoolVisitor() = default;
-    public:
-        virtual ~UnclaimedTransactionPoolVisitor() = default;
-
-        virtual bool VisitStart() { return true; }
-        virtual bool Visit(const UnclaimedTransactionPtr& utxo) = 0;
-        virtual bool VisitEnd() { return true; };
     };
 }
 

@@ -25,14 +25,12 @@ namespace Token{
 
         bool Visit(const Input& input){
             UnclaimedTransactionPtr utxo = input.GetUnclaimedTransaction();
-            UnclaimedTransactionPool::RemoveUnclaimedTransaction(utxo->GetHash());
-            return true;
+            return ObjectPool::RemoveObject(utxo->GetHash());
         }
 
         bool Visit(const Output& output){
             UnclaimedTransactionPtr utxo = CreateUnclaimedTransaction(output.GetUser(), output.GetProduct());
-            UnclaimedTransactionPool::PutUnclaimedTransaction(utxo->GetHash(), utxo);
-            return true;
+            return ObjectPool::PutObject(utxo->GetHash(), utxo);
         }
 
         static bool ProcessTransaction(const TransactionPtr& tx){
