@@ -1,9 +1,7 @@
-#include "discovery.h"
-#include "blockchain.h"
 #include "server.h"
+#include "discovery.h"
 
 #include "block_verifier.h"
-#include "block_processor.h"
 #include "proposal_handler.h"
 #include "transaction_verifier.h"
 #include "peer/peer_session_manager.h"

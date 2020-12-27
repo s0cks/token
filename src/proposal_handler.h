@@ -4,8 +4,9 @@
 #include <memory>
 #include "pool.h"
 #include "proposal.h"
+#include "job/scheduler.h"
 #include "block_verifier.h"
-#include "block_processor.h"
+#include "job/process_block.h"
 #include "peer/peer_session_manager.h"
 
 namespace Token{
@@ -62,7 +63,11 @@ namespace Token{
         ~NewProposalHandler() = default;
 
         bool ProcessBlock(const BlockPtr& blk) const{
-            return DefaultBlockProcessor::Process(blk);
+            JobPoolWorker* worker = JobScheduler::GetRandomWorker();
+            ProcessBlockJob* job = new ProcessBlockJob(blk, true);
+            worker->Submit(job);
+            worker->Wait(job);
+            return true;
         }
 
         bool ProcessProposal() const{
@@ -96,7 +101,11 @@ namespace Token{
         ~PeerProposalHandler() = default;
 
         bool ProcessBlock(const BlockPtr& blk) const{
-            return SynchronizeBlockProcessor::Process(blk);
+            JobPoolWorker* worker = JobScheduler::GetRandomWorker();
+            ProcessBlockJob* job = new ProcessBlockJob(blk);
+            worker->Submit(job);
+            worker->Wait(job);
+            return true;
         }
 
         bool ProcessProposal() const{

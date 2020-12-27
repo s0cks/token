@@ -3,12 +3,11 @@
 #include <leveldb/db.h>
 #include <glog/logging.h>
 #include <condition_variable>
-
 #include "pool.h"
 #include "keychain.h"
 #include "blockchain.h"
-#include "configuration.h"
-#include "block_processor.h"
+#include "job/scheduler.h"
+#include "job/process_block.h"
 #include "unclaimed_transaction.h"
 
 namespace Token{
@@ -43,10 +42,9 @@ namespace Token{
 
     static std::recursive_mutex mutex_;
     static std::condition_variable cond_;
-    static BlockChain::State state_;
-    static BlockChain::Status status_;
+    static BlockChain::State state_ = BlockChain::kUninitialized;
+    static BlockChain::Status status_ = BlockChain::kOk;
     static leveldb::DB* index_ = nullptr;
-    static std::string error_;
 
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
 #define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
@@ -120,9 +118,8 @@ namespace Token{
             return true;
         }*/
 
-        LOG(INFO) << "initializing block chain in directory: " << TOKEN_BLOCKCHAIN_HOME;
+        LOG(INFO) << "initializing the block chain....";
         SetState(BlockChain::kInitializing);
-        SetStatus(BlockChain::kOk);
 
         Keychain::Initialize();
         ObjectPool::Initialize();
@@ -132,7 +129,14 @@ namespace Token{
             PutBlock(hash, genesis);
             PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
             PutReference(BLOCKCHAIN_REFERENCE_GENESIS, hash);
-            GenesisBlockProcessor::Process(genesis);
+
+            //Previous:
+            // - ProcessGenesisBlock Timeline (4s) - Async
+            // - ProcessGenesisBlock Timeline (19s) - Sync
+            JobPoolWorker* worker = JobScheduler::GetRandomWorker();
+            ProcessBlockJob* job = new ProcessBlockJob(genesis);
+            worker->Submit(job);
+            worker->Wait(job);
         }
 
         LOG(INFO) << "block chain initialized!";

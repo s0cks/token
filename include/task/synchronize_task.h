@@ -4,7 +4,9 @@
 #include "task.h"
 #include "pool.h"
 #include "block.h"
-#include "block_processor.h"
+
+#include "job/scheduler.h"
+#include "job/process_block.h"
 
 namespace Token{
     class SynchronizeBlockChainTask : public AsyncSessionTask{
@@ -23,10 +25,12 @@ namespace Token{
         bool ProcessBlock(const BlockPtr& blk){
             BlockHeader header = blk->GetHeader();
             Hash hash = header.GetHash();
-            if(!SynchronizeBlockProcessor::Process(blk)){
-                LOG(WARNING) << "couldn't process block: " << header;
-                return false;
-            }
+
+            JobPoolWorker* worker = JobScheduler::GetRandomWorker();
+            ProcessBlockJob* job = new ProcessBlockJob(blk);
+            worker->Submit(job);
+            worker->Wait(job);
+
             ObjectPool::RemoveObject(hash);
             BlockChain::Append(blk);
             return true;

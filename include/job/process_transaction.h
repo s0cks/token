@@ -16,6 +16,14 @@ namespace Token{
             transaction_(tx){}
         ~ProcessTransactionJob() = default;
 
+        BlockPtr GetBlock() const{
+            return ((ProcessBlockJob*)GetParent())->GetBlock();
+        }
+
+        bool ShouldClean() const{
+            return ((ProcessBlockJob*)GetParent())->ShouldClean();
+        }
+
         TransactionPtr GetTransaction() const{
             return transaction_;
         }

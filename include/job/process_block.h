@@ -9,7 +9,7 @@ namespace Token{
         friend class ProcessTransactionJob;
     protected:
         BlockPtr block_;
-        std::mutex mutex_;
+        bool clean_;
 
         JobResult DoWork(){
             if(!GetBlock()->Accept(this))
@@ -17,13 +17,18 @@ namespace Token{
             return Success("Finished.");
         }
     public:
-        ProcessBlockJob(const BlockPtr& blk):
+        ProcessBlockJob(const BlockPtr& blk, bool clean=false):
             Job(nullptr, "ProcessBlock"),
-            block_(blk){}
+            block_(blk),
+            clean_(clean){}
         ~ProcessBlockJob() = default;
 
         BlockPtr GetBlock() const{
             return block_;
+        }
+
+        bool ShouldClean() const{
+            return clean_;
         }
 
         bool Visit(const TransactionPtr& tx);
