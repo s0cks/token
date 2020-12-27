@@ -137,4 +137,12 @@ namespace Token{
             handler(session, &request);
         }
     }
+
+    void HealthController::HandleGetReadyStatus(HttpSession* session, HttpRequest* request){
+        SendOk(session); //TODO: implement
+    }
+
+    void HealthController::HandleGetLiveStatus(HttpSession* session, HttpRequest* request){
+        SendOk(session); //TODO: implement
+    }
 }

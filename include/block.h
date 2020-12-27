@@ -462,7 +462,7 @@ namespace Token{
         static bool RemoveBlock(const Hash& hash);
         static bool PutBlock(const Hash& hash, const BlockPtr& blk);
         static bool HasBlock(const Hash& hash);
-        static bool GetBlocks(std::vector<Hash>& blocks);
+        static bool GetBlocks(HashList& hashes);
         static BlockPtr GetBlock(const Hash& hash);
         static void WaitForBlock(const Hash& hash);
 

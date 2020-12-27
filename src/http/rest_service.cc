@@ -56,7 +56,8 @@ namespace Token{
         }
 
         LOG(INFO) << "starting the rest service....";
-        LedgerController::Initialize(&router_);
+        BlockChainController::Initialize(&router_);
+        BlockPoolController::Initialize(&router_);
         UnclaimedTransactionPoolController::Initialize(&router_);
         return Thread::Start(&thread_, "RestService", &HandleServiceThread, 0);
     }
@@ -144,8 +145,10 @@ namespace Token{
         }
     }
 
-    // BlockChain
-    void LedgerController::HandleGetBlockChain(HttpSession* session, HttpRequest* request){
+/*****************************************************************************
+ *                      BlockChainController
+ *****************************************************************************/
+    void BlockChainController::HandleGetBlockChain(HttpSession* session, HttpRequest* request){
         HashList blocks;
         BlockChain::GetBlocks(blocks);
 
@@ -155,7 +158,7 @@ namespace Token{
         SendJson(session, doc);
     }
 
-    void LedgerController::HandleGetBlockChainHead(HttpSession* session, HttpRequest* request){
+    void BlockChainController::HandleGetBlockChainHead(HttpSession* session, HttpRequest* request){
         BlockPtr head = BlockChain::GetHead();
 
         rapidjson::Document doc;
@@ -164,7 +167,7 @@ namespace Token{
         SendJson(session, doc);
     }
 
-    void LedgerController::HandleGetBlockChainBlock(HttpSession* session, HttpRequest* request){
+    void BlockChainController::HandleGetBlockChainBlock(HttpSession* session, HttpRequest* request){
         Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
         if(!BlockChain::HasBlock(hash)){
             LOG(WARNING) << "couldn't find block: " << hash;
@@ -178,15 +181,16 @@ namespace Token{
         SendJson(session, doc);
     }
 
-    // Unclaimed Transactions
+
+/*****************************************************************************
+ *                      UnclaimedTransactionPoolController
+ *****************************************************************************/
     void UnclaimedTransactionPoolController::HandleGetUnclaimedTransaction(HttpSession* session, HttpRequest* request){
         Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
-        if(!UnclaimedTransactionPool::HasUnclaimedTransaction(hash)){
-            LOG(WARNING) << "couldn't find unclaimed transaction: " << hash;
+        if(!UnclaimedTransactionPool::HasUnclaimedTransaction(hash))
             return SendNotFound(session, hash);
-        }
-
         UnclaimedTransactionPtr utxo = UnclaimedTransactionPool::GetUnclaimedTransaction(hash);
+
         rapidjson::Document doc;
         ToJson(utxo, doc);
         SendJson(session, doc);
@@ -201,7 +205,7 @@ namespace Token{
         SendJson(session, doc);
     }
 
-    void UnclaimedTransactionPoolController::HandleGetUnclaimedTransactionsFor(HttpSession* session, HttpRequest* request){
+    void UnclaimedTransactionPoolController::HandleGetUserUnclaimedTransactions(HttpSession* session, HttpRequest* request){
         std::string user = request->GetParameterValue("user_id");
 
         HashList hashes;
@@ -209,6 +213,30 @@ namespace Token{
 
         rapidjson::Document doc;
         ToJson(hashes, doc);
+        SendJson(session, doc);
+    }
+
+/*****************************************************************************
+ *                      BlockPoolController
+ *****************************************************************************/
+    void BlockPoolController::HandleGetBlocks(HttpSession* session, HttpRequest* request){
+        HashList hashes;
+        if(!BlockPool::GetBlocks(hashes))
+            return SendInternalServerError(session, "Cannot get list of blocks from pool.");
+
+        rapidjson::Document doc;
+        ToJson(hashes, doc);
+        SendJson(session, doc);
+    }
+
+    void BlockPoolController::HandleGetBlock(HttpSession* session, HttpRequest* request){
+        Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
+        if(!BlockPool::HasBlock(hash))
+            return SendNotFound(session, hash);
+        BlockPtr blk = BlockPool::GetBlock(hash);
+
+        rapidjson::Document doc;
+        ToJson(blk, doc);
         SendJson(session, doc);
     }
 }

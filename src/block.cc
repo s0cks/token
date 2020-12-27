@@ -371,7 +371,7 @@ namespace Token{
         return count;
     }
 
-    bool BlockPool::GetBlocks(std::vector<Hash>& blocks){
+    bool BlockPool::GetBlocks(HashList& hashes){
         LOCK_GUARD;
         DIR* dir;
         struct dirent* ent;
@@ -379,11 +379,12 @@ namespace Token{
             while((ent = readdir(dir)) != NULL){
                 std::string name(ent->d_name);
                 std::string filename = (GetDataDirectory() + "/" + name);
-                if(!EndsWith(filename, ".dat")) continue;
+                if(!EndsWith(filename, ".dat"))
+                    continue;
 
                 BlockFileReader reader(filename);
                 BlockPtr blk = reader.Read();
-                blocks.push_back(blk->GetHash());
+                hashes.insert(blk->GetHash());
             }
             closedir(dir);
             return true;

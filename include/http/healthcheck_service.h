@@ -16,21 +16,14 @@ namespace Token{
     private:
         HealthController() = delete;
 
-        static void HandleReadyEndpoint(HttpSession* session, HttpRequest* request){
-            SendOk(session);
-        }
-
-        static void HandleLiveEndpoint(HttpSession* session, HttpRequest* request){
-            SendOk(session);
-        }
+        HTTP_CONTROLLER_ENDPOINT(GetReadyStatus);
+        HTTP_CONTROLLER_ENDPOINT(GetLiveStatus);
     public:
         ~HealthController() = delete;
 
-        static inline bool
-        Initialize(HttpRouter* router){
-            router->Get("/ready", &HandleReadyEndpoint);
-            router->Get("/live", &HandleLiveEndpoint);
-            return true;
+        HTTP_CONTROLLER_INIT(){
+            HTTP_CONTROLLER_GET("/ready", GetReadyStatus);
+            HTTP_CONTROLLER_GET("/live", GetLiveStatus);
         }
     };
 

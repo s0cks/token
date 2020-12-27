@@ -11,23 +11,36 @@
 #include "http/service.h"
 #include "http/controller.h"
 
-namespace Token{
-    class LedgerController : HttpController {
+namespace Token {
+    class BlockChainController : HttpController {
     private:
-        LedgerController() = delete;
+        BlockChainController() = delete;
 
-        HTTP_ENDPOINT_HANDLER(GetBlockChain);
-        HTTP_ENDPOINT_HANDLER(GetBlockChainHead);
-        HTTP_ENDPOINT_HANDLER(GetBlockChainBlock);
+        HTTP_CONTROLLER_ENDPOINT(GetBlockChain);
+        HTTP_CONTROLLER_ENDPOINT(GetBlockChainHead);
+        HTTP_CONTROLLER_ENDPOINT(GetBlockChainBlock);
     public:
-        ~LedgerController() = delete;
+        ~BlockChainController() = delete;
 
-        static inline bool
-        Initialize(HttpRouter* router){
-            router->Get("/chain", &HandleGetBlockChain);
-            router->Get("/chain/head", &HandleGetBlockChainHead);
-            router->Get("/chain/data/:hash", &HandleGetBlockChainBlock);
-            return true;
+        HTTP_CONTROLLER_INIT(){
+            HTTP_CONTROLLER_GET("/chain", GetBlockChain);
+            HTTP_CONTROLLER_GET("/chain/head", GetBlockChainHead);
+            HTTP_CONTROLLER_GET("/chain/data/:hash", GetBlockChainBlock);
+        }
+    };
+
+    class BlockPoolController : HttpController{
+    private:
+        BlockPoolController() = delete;
+
+        HTTP_CONTROLLER_ENDPOINT(GetBlock);
+        HTTP_CONTROLLER_ENDPOINT(GetBlocks);
+    public:
+        ~BlockPoolController() = delete;
+
+        HTTP_CONTROLLER_INIT(){
+            HTTP_CONTROLLER_GET("/blocks", GetBlocks);
+            HTTP_CONTROLLER_GET("/blocks/data/:hash", GetBlock);
         }
     };
 
@@ -35,25 +48,16 @@ namespace Token{
     private:
         UnclaimedTransactionPoolController() = delete;
 
-        HTTP_ENDPOINT_HANDLER(GetUnclaimedTransaction);
-        HTTP_ENDPOINT_HANDLER(GetUnclaimedTransactions);
-        HTTP_ENDPOINT_HANDLER(GetUnclaimedTransactionsFor);
+        HTTP_CONTROLLER_ENDPOINT(GetUnclaimedTransaction);
+        HTTP_CONTROLLER_ENDPOINT(GetUnclaimedTransactions);
+        HTTP_CONTROLLER_ENDPOINT(GetUserUnclaimedTransactions);
     public:
         ~UnclaimedTransactionPoolController() = delete;
 
-        static inline bool
-        Initialize(HttpRouter* router){
-            // Transactions
-            //TODO implement
-
-            // Blocks
-            //TODO implement
-
-            // Unclaimed Transactions
-            router->Get("/utxos", &HandleGetUnclaimedTransactions);
-            router->Get("/utxos/:user_id", &HandleGetUnclaimedTransactionsFor);
-            router->Get("/utxos/data/:hash", &HandleGetUnclaimedTransaction);
-            return true;
+        HTTP_CONTROLLER_INIT(){
+            HTTP_CONTROLLER_GET("/utxos", GetUnclaimedTransactions);
+            HTTP_CONTROLLER_GET("/utxos/:user_id", GetUserUnclaimedTransactions);
+            HTTP_CONTROLLER_GET("/utxos/data/:hash", GetUnclaimedTransaction);
         }
     };
 
