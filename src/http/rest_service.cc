@@ -1,8 +1,7 @@
 #include <mutex>
 #include <condition_variable>
-
-#include "http/rest.h"
 #include "blockchain.h"
+#include "http/rest_service.h"
 
 namespace Token{
     static pthread_t thread_;
@@ -57,7 +56,8 @@ namespace Token{
         }
 
         LOG(INFO) << "starting the rest service....";
-        RestController::Initialize(&router_);
+        LedgerController::Initialize(&router_);
+        UnclaimedTransactionPoolController::Initialize(&router_);
         return Thread::Start(&thread_, "RestService", &HandleServiceThread, 0);
     }
 
@@ -131,21 +131,9 @@ namespace Token{
         HttpRequest request(session, buff->base, buff->len);
         HttpRouterMatch match = router_.Find(&request);
         if(match.IsNotFound()){
-            std::stringstream ss;
-            ss << "Not Found: " << request.GetPath();
-            std::string body = ss.str();
-            HttpResponse response(session, STATUS_CODE_NOTFOUND, body);
-            response.SetHeader("Content-Type", CONTENT_TYPE_TEXT_PLAIN);
-            response.SetHeader("Content-Length", body.size());
-            session->Send(&response);
+            SendNotFound(session, &request);
         } else if(match.IsMethodNotSupported()){
-            std::stringstream ss;
-            ss << "Not Supported.";
-            std::string body = ss.str();
-            HttpResponse response(session, STATUS_CODE_NOTSUPPORTED, body);
-            response.SetHeader("Content-Type", CONTENT_TYPE_TEXT_PLAIN);
-            response.SetHeader("Content-Length", body.size());
-            session->Send(&response);
+            SendNotSupported(session, &request);
         } else{
             assert(match.IsOk());
 
@@ -156,15 +144,71 @@ namespace Token{
         }
     }
 
-    void RestController::HandleHead(HttpSession* session, HttpRequest* request){
-        BlockPtr blk = BlockChain::GetHead();
+    // BlockChain
+    void LedgerController::HandleGetBlockChain(HttpSession* session, HttpRequest* request){
+        HashList blocks;
+        BlockChain::GetBlocks(blocks);
 
-        Json::Value doc;
-        if(!blk->ToJson(doc)){
-            SendInternalServerError(session, "Cannot convert <HEAD> to json");
-            return;
+        rapidjson::Document doc;
+        ToJson(blocks, doc);
+
+        SendJson(session, doc);
+    }
+
+    void LedgerController::HandleGetBlockChainHead(HttpSession* session, HttpRequest* request){
+        BlockPtr head = BlockChain::GetHead();
+
+        rapidjson::Document doc;
+        ToJson(head, doc);
+
+        SendJson(session, doc);
+    }
+
+    void LedgerController::HandleGetBlockChainBlock(HttpSession* session, HttpRequest* request){
+        Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
+        if(!BlockChain::HasBlock(hash)){
+            LOG(WARNING) << "couldn't find block: " << hash;
+            return SendNotFound(session, hash);
         }
 
+        BlockPtr blk = BlockChain::GetBlock(hash);
+
+        rapidjson::Document doc;
+        ToJson(blk, doc);
+        SendJson(session, doc);
+    }
+
+    // Unclaimed Transactions
+    void UnclaimedTransactionPoolController::HandleGetUnclaimedTransaction(HttpSession* session, HttpRequest* request){
+        Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
+        if(!UnclaimedTransactionPool::HasUnclaimedTransaction(hash)){
+            LOG(WARNING) << "couldn't find unclaimed transaction: " << hash;
+            return SendNotFound(session, hash);
+        }
+
+        UnclaimedTransactionPtr utxo = UnclaimedTransactionPool::GetUnclaimedTransaction(hash);
+        rapidjson::Document doc;
+        ToJson(utxo, doc);
+        SendJson(session, doc);
+    }
+
+    void UnclaimedTransactionPoolController::HandleGetUnclaimedTransactions(HttpSession* session, HttpRequest* request){
+        HashList hashes;
+        UnclaimedTransactionPool::GetUnclaimedTransactions(hashes);
+
+        rapidjson::Document doc;
+        ToJson(hashes, doc);
+        SendJson(session, doc);
+    }
+
+    void UnclaimedTransactionPoolController::HandleGetUnclaimedTransactionsFor(HttpSession* session, HttpRequest* request){
+        std::string user = request->GetParameterValue("user_id");
+
+        HashList hashes;
+        UnclaimedTransactionPool::GetUnclaimedTransactions(user, hashes);
+
+        rapidjson::Document doc;
+        ToJson(hashes, doc);
         SendJson(session, doc);
     }
 }

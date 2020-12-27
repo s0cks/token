@@ -4,12 +4,38 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <unordered_set>
+#include <rapidjson/document.h>
 #include "common.h"
 
 namespace Token{
     class Hash{
+    private:
+        static const int64_t kSize = 256 / 8;
     public:
-        static const intptr_t kSize = 256 / 8;
+        struct Hasher{
+        public:
+            size_t operator()(const Hash& hash) const{
+                uint64_t a = ((uint64_t*)hash.data())[0];
+                uint64_t b = ((uint64_t*)hash.data())[1];
+                uint64_t c = ((uint64_t*)hash.data())[2];
+                uint64_t d = ((uint64_t*)hash.data())[3];
+
+                size_t res = 17;
+                res = res * 31 + std::hash<uint64_t>()(a);
+                res = res * 31 + std::hash<uint64_t>()(b);
+                res = res * 31 + std::hash<uint64_t>()(c);
+                res = res * 31 + std::hash<uint64_t>()(d);
+                return res;
+            }
+        };
+
+        struct Equal{
+        public:
+            bool operator()(const Hash& a, const Hash& b) const{
+                return a.Compare(b) == 0;
+            }
+        };
     private:
         uint8_t data_[kSize];
 
@@ -20,7 +46,7 @@ namespace Token{
 
         Hash(const std::string& hex):
             data_(){
-            CryptoPP::StringSource source(hex, true, new CryptoPP::HexDecoder(new CryptoPP::ArraySink(data_, kSize)));
+            CryptoPP::StringSource source(hex, true, new CryptoPP::HexDecoder(new CryptoPP::ArraySink(data_, GetSize())));
         }
 
         Hash(const Hash& first, const Hash& second):
@@ -30,20 +56,20 @@ namespace Token{
             memcpy(&bytes[0], first.data(), first.size());
             memcpy(&bytes[first.size()], second.data(), second.size());
             CryptoPP::SHA256 func;
-            CryptoPP::ArraySource source(bytes, size, true, new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(data_, kSize)));
+            CryptoPP::ArraySource source(bytes, size, true, new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(data_, GetSize())));
         }
     public:
         Hash():
             data_(){
             SetNull();
         }
-        Hash(uint8_t* data):
+        Hash(uint8_t* data, int64_t size):
             data_(){
-            memcpy(data_, data, kSize);
+            memcpy(data_, data, std::min(size, Hash::GetSize()));
         }
         Hash(const Hash& hash):
             data_(){
-            memcpy(data_, hash.data_, kSize);
+            memcpy(data_, hash.data_, GetSize());
         }
         ~Hash() = default;
 
@@ -52,30 +78,18 @@ namespace Token{
         }
 
         bool IsNull() const{
-            for(size_t idx = 0; idx < kSize; idx++){
-                if(data_[idx] != 0) return false;
+            for(int64_t idx = 0; idx < GetSize(); idx++){
+                if(data_[idx] != 0)
+                    return false;
             }
             return true;
-        }
-
-        unsigned long GetHashCode() const{
-            uint64_t a = ((uint64_t*)data_)[0];
-            uint64_t b = ((uint64_t*)data_)[1];
-            uint64_t c = ((uint64_t*)data_)[2];
-            uint64_t d = ((uint64_t*)data_)[3];
-            unsigned long h = 0;
-            h = 31 * h + a;
-            h = 31 * h + b;
-            h = 31 * h + c;
-            h = 31 * h + d;
-            return h;
         }
 
         unsigned char* data() const{
             return (unsigned char*)data_;
         }
 
-        size_t size() const{
+        int64_t size() const{
             return kSize;
         }
 
@@ -105,36 +119,38 @@ namespace Token{
             memcpy(data_, other.data_, sizeof(data_));
         }
 
-        static Hash
-        GenerateNonce(){
-            CryptoPP::SecByteBlock nonce(kSize);
-            CryptoPP::AutoSeededRandomPool prng;
-            prng.GenerateBlock(nonce, nonce.size());
-            uint8_t data[kSize];
-            CryptoPP::ArraySource source(nonce, nonce.size(), true, new CryptoPP::HexEncoder(new CryptoPP::ArraySink(data, kSize)));
-            return Hash(data);
-        }
-
-        static Hash
-        FromBytes(uint8_t* bytes){
-            return Hash(bytes);
-        }
-
-        static Hash
-        FromHexString(const std::string& hex){
-            return Hash(hex);
-        }
-
-        static Hash
-        Concat(const Hash& first, const Hash& second){
-            return Hash(first, second);
-        }
-
         friend std::ostream& operator<<(std::ostream& stream, const Hash& hash){
             stream << hash.HexString();
             return stream;
         }
+
+        static inline int64_t
+        GetSize(){
+            return kSize;
+        }
+
+        static inline Hash
+        FromHexString(const std::string& hex){
+            return Hash(hex);
+        }
+
+        static inline Hash
+        Concat(const Hash& first, const Hash& second){
+            return Hash(first, second);
+        }
+
+        static inline Hash
+        GenerateNonce(){
+            CryptoPP::SecByteBlock nonce(GetSize());
+            CryptoPP::AutoSeededRandomPool prng;
+            prng.GenerateBlock(nonce, nonce.size());
+            uint8_t data[GetSize()];
+            CryptoPP::ArraySource source(nonce, nonce.size(), true, new CryptoPP::HexEncoder(new CryptoPP::ArraySink(data, GetSize())));
+            return Hash(data);
+        }
     };
+
+    typedef std::unordered_set<Hash, Hash::Hasher, Hash::Equal> HashList;
 }
 
 #endif //TOKEN_HASH_H

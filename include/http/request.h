@@ -4,8 +4,11 @@
 #include <uv.h>
 #include <string>
 #include <sstream>
+#include <json/value.h>
+#include <json/writer.h>
 #include <unordered_map>
 #include <http_parser.h>
+#include "utils/json.h"
 
 namespace Token{
     enum HttpMethod{
@@ -125,13 +128,39 @@ namespace Token{
         HttpSession* session_;
         HttpStatusCode status_code_;
         HttpHeadersMap headers_;
-        std::string body_;
+
+        inline std::string
+        GetHttpMessageHeader() const{
+            std::stringstream ss;
+            ss << "HTTP/1.1 " << GetStatusCode() << " OK\r\n";
+            return ss.str();
+        }
+
+        inline std::string
+        GetHttpHeader(const std::string& name, const std::string& value) const{
+            std::stringstream ss;
+            ss << name << ": " << value << "\r\n";
+            return ss.str();
+        }
+    protected:
+        bool WriteHttp(const BufferPtr& buff) const{
+            buff->PutString(GetHttpMessageHeader());
+            return true;
+        }
+
+        bool WriteHeaders(const BufferPtr& buff) const{
+            for(auto& it : headers_)
+                buff->PutString(GetHttpHeader(it.first, it.second));
+            buff->PutString("\r\n");
+            return true;
+        }
+
+        virtual bool Write(const BufferPtr& buff) const = 0;
     public:
-        HttpResponse(HttpSession* session, const HttpStatusCode& code, const std::string& body):
+        HttpResponse(HttpSession* session, const HttpStatusCode& code):
             session_(session),
-            status_code_(code),
-            body_(body){}
-        ~HttpResponse() = default;
+            status_code_(code){}
+        virtual ~HttpResponse() = default;
 
         HttpSession* GetSession() const{
             return session_;
@@ -139,14 +168,6 @@ namespace Token{
 
         int GetStatusCode() const{
             return status_code_;
-        }
-
-        int GetContentLength() const{
-            return body_.size();
-        }
-
-        std::string GetBody() const{
-            return body_;
         }
 
         void SetHeader(const std::string& key, const std::string& value){
@@ -171,6 +192,67 @@ namespace Token{
         std::string GetHeaderValue(const std::string& key){
             auto pos = headers_.find(key);
             return pos->second;
+        }
+
+        virtual int64_t GetContentLength() const = 0;
+
+        int64_t GetBufferSize() const{
+            int64_t size = 0;
+            size += GetHttpMessageHeader().size();
+            for(auto& it : headers_)
+                size += GetHttpHeader(it.first, it.second).size();
+            size += GetContentLength();
+            return size;
+        }
+    };
+
+    class HttpTextResponse : public HttpResponse{
+    private:
+        std::string body_;
+    protected:
+        bool Write(const BufferPtr& buff) const{
+            WriteHttp(buff);
+            WriteHeaders(buff);
+            buff->PutString(body_);
+            return true;
+        }
+    public:
+        HttpTextResponse(HttpSession* session, const HttpStatusCode& status_code, const std::string& body):
+            HttpResponse(session, status_code),
+            body_(body){}
+        ~HttpTextResponse() = default;
+
+        int64_t GetContentLength() const{
+            return body_.size();
+        }
+    };
+
+    class HttpJsonResponse : public HttpResponse{
+    private:
+        const rapidjson::Document& body_;
+    protected:
+        bool Write(const BufferPtr& buff) const{
+            WriteHttp(buff);
+            WriteHeaders(buff);
+
+            rapidjson::StringBuffer sb;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
+            body_.Accept(writer);
+
+            buff->PutBytes((uint8_t*)sb.GetString(), sb.GetLength());
+            return true;
+        }
+    public:
+        HttpJsonResponse(HttpSession* session, const HttpStatusCode& status_code, const rapidjson::Document& doc):
+            HttpResponse(session, status_code),
+            body_(doc){}
+        ~HttpJsonResponse() = default;
+
+        int64_t GetContentLength() const{
+            rapidjson::StringBuffer sb;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
+            body_.Accept(writer);
+            return sb.GetLength();
         }
     };
 }

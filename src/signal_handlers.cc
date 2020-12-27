@@ -1,6 +1,6 @@
 #include "server.h"
 #include "discovery.h"
-#include "http/healthcheck.h"
+#include "http/healthcheck_service.h"
 #include "utils/crash_report.h"
 #include "peer/peer_session_manager.h"
 

@@ -3,31 +3,30 @@
 
 #include <uv.h>
 #include <glog/logging.h>
-#include "buffer.h"
-#include "http/request.h"
 #include "uuid.h"
+#include "utils/buffer.h"
+#include "http/request.h"
+
 
 namespace Token{
     class HttpSession{
         friend class HttpService;
-    public:
-        static const size_t kBufferSize = 4096;
     private:
         UUID session_id_;
         uv_tcp_t handle_;
-        Buffer wbuff_;
-        Buffer rbuff_;
+        BufferPtr rbuff_;
+        BufferPtr wbuff_;
 
-        void InitReadBuffer(uv_buf_t* buff){
-            Buffer* rbuff = GetReadBuffer();
-            buff->len = rbuff->GetBufferSize();
-            buff->base = rbuff->data();
+        void InitReadBuffer(uv_buf_t* buff, int64_t suggested_size){
+            rbuff_ = BufferPtr(new Buffer(suggested_size));
+            buff->len = rbuff_->GetBufferSize();
+            buff->base = rbuff_->data();
         }
 
-        void InitWriteBuffer(uv_buf_t* buff){
-            Buffer* wbuff = GetWriteBuffer();
-            buff->len = wbuff->GetBufferSize();
-            buff->base = wbuff->data();
+        void InitWriteBuffer(uv_buf_t* buff, int64_t size){
+            wbuff_ = BufferPtr(new Buffer(size));
+            buff->base = wbuff_->data();
+            buff->len = wbuff_->GetBufferSize();
         }
 
         static void OnResponseSent(uv_write_t* req, int status);
@@ -36,8 +35,8 @@ namespace Token{
         HttpSession(uv_loop_t* loop):
             session_id_(),
             handle_(),
-            wbuff_(kBufferSize),
-            rbuff_(kBufferSize){
+            rbuff_(BufferPtr(nullptr)),
+            wbuff_(BufferPtr(nullptr)){
             handle_.data = this;
             int err;
             if((err = uv_tcp_init(loop, &handle_)) != 0){
@@ -56,14 +55,6 @@ namespace Token{
 
         uv_stream_t* GetStream() const{
             return (uv_stream_t*)&handle_;
-        }
-
-        Buffer* GetReadBuffer(){
-            return &rbuff_;
-        }
-
-        Buffer* GetWriteBuffer(){
-            return &wbuff_;
         }
 
         std::string ToString() const{

@@ -52,12 +52,7 @@ namespace Token{
     protected:
         size_t indent_;
 
-        TextFileWriter(const std::string& filename):
-            FileWriter(filename),
-            indent_(0){
-            if((file_ = fopen(filename.c_str(), "w")) == NULL)
-                LOG(WARNING) << "couldn't create text file " << filename << ": " << strerror(errno);
-        }
+
 
         inline void Indent(){
             indent_++;
@@ -71,6 +66,12 @@ namespace Token{
             return indent_;
         }
     public:
+        TextFileWriter(const std::string& filename):
+            FileWriter(filename),
+            indent_(0){
+            if((file_ = fopen(filename.c_str(), "w")) == NULL)
+                LOG(WARNING) << "couldn't create text file " << filename << ": " << strerror(errno);
+        }
         ~TextFileWriter() = default;
 
         bool Write(const std::string& value);

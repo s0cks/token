@@ -1,34 +1,35 @@
 #include "http/session.h"
-#include "http/healthcheck.h"
+#include "http/healthcheck_service.h"
 
 namespace Token{
+    struct HttpSessionWriteRequestData{
+        HttpSession* session;
+        BufferPtr buffer;
+
+        HttpSessionWriteRequestData(HttpSession* s, int64_t size):
+            session(s),
+            buffer(new Buffer(size)){}
+    };
+
     void HttpSession::Send(HttpResponse* response){
-        std::stringstream ss;
-        ss << "HTTP/1.1 200 OK\r\n";
-        ss << "Content-Type: text/plain\r\n";
-        ss << "Content-Length: " << response->GetContentLength() << "\r\n";
-        ss << "\r\n";
-        ss << response->GetBody();
-        std::string resp = ss.str();
-
-        Buffer* wbuff = GetWriteBuffer();
-        wbuff->PutString(ss.str());
-
-        uv_buf_t buff;
-        buff.len = wbuff->GetBufferSize();
-        buff.base = wbuff->data();
+        int64_t content_length = response->GetBufferSize();
 
         uv_write_t* req = (uv_write_t*)malloc(sizeof(uv_write_t));
-        req->data = this;
+        req->data  = new HttpSessionWriteRequestData(this, content_length);
+        BufferPtr& buffer = ((HttpSessionWriteRequestData*)req->data)->buffer;
+        response->Write(buffer);
+
+        uv_buf_t buff;
+        buff.base = buffer->data();
+        buff.len = buffer->GetWrittenBytes();
         uv_write(req, (uv_stream_t*)&handle_, &buff, 1, &OnResponseSent);
     }
 
     void HttpSession::OnResponseSent(uv_write_t* req, int status){
-        HttpSession* session = (HttpSession*)req->data;
         if(status != 0)
             LOG(WARNING) << "failed to send the response: " << uv_strerror(status);
+        free(req->data);
         free(req);
-        session->Close();
     }
 
     void HttpSession::Close(){

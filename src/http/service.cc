@@ -4,7 +4,7 @@
 namespace Token{
     void HttpService::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
         HttpSession* session = (HttpSession*)handle->data;
-        session->InitReadBuffer(buff);
+        session->InitReadBuffer(buff, 65536);
     }
 
     void HttpService::OnClose(uv_handle_t* handle){}
@@ -42,5 +42,25 @@ namespace Token{
             return false;
         }
         return true;
+    }
+
+    void HttpService::SendNotSupported(HttpSession* session, HttpRequest* request){
+        std::stringstream ss;
+        ss << "Not Supported.";
+        std::string body = ss.str();
+        HttpTextResponse response(session, STATUS_CODE_NOTSUPPORTED, body);
+        response.SetHeader("Content-Type", CONTENT_TYPE_TEXT_PLAIN);
+        response.SetHeader("Content-Length", body.size());
+        session->Send(&response);
+    }
+
+    void HttpService::SendNotFound(HttpSession* session, HttpRequest* request){
+        std::stringstream ss;
+        ss << "Not Found: " << request->GetPath();
+        std::string body = ss.str();
+        HttpTextResponse response(session, STATUS_CODE_NOTFOUND, body);
+        response.SetHeader("Content-Type", CONTENT_TYPE_TEXT_PLAIN);
+        response.SetHeader("Content-Length", body.size());
+        session->Send(&response);
     }
 }

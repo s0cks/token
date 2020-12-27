@@ -2,7 +2,7 @@
 #define TOKEN_UUID_H
 
 #include <uuid/uuid.h>
-#include "buffer.h"
+#include "utils/buffer.h"
 
 namespace Token{
     class UUID{

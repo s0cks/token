@@ -79,8 +79,6 @@ namespace Token{
     bool Block::Accept(BlockVisitor* vis) const{
         if(!vis->VisitStart())
             return false;
-
-        LOG(INFO) << "visiting " << GetNumberOfTransactions() << " transactions";
         int64_t idx;
         for(idx = 0;
             idx < GetNumberOfTransactions();

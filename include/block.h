@@ -4,7 +4,7 @@
 #include <json/json.h>
 #include "hash.h"
 #include "bloom.h"
-#include "buffer.h"
+#include "utils/buffer.h"
 #include "transaction.h"
 
 namespace Token{
@@ -13,12 +13,6 @@ namespace Token{
 
     class BlockHeader{
     public:
-        static const size_t kSize = sizeof(Timestamp) +
-                                    sizeof(intptr_t) +
-                                    Hash::kSize +
-                                    Hash::kSize +
-                                    Hash::kSize;
-
         struct TimestampComparator{
             bool operator()(const BlockHeader& a, const BlockHeader& b){
                 return a.timestamp_ < b.timestamp_;
@@ -32,7 +26,7 @@ namespace Token{
         };
     private:
         Timestamp timestamp_;
-        intptr_t height_;
+        int64_t height_;
         Hash previous_hash_;
         Hash merkle_root_;
         Hash hash_;
@@ -52,7 +46,7 @@ namespace Token{
             merkle_root_(blk.merkle_root_),
             hash_(blk.hash_),
             bloom_(blk.bloom_){}
-        BlockHeader(Timestamp timestamp, intptr_t height, const Hash& phash, const Hash& merkle_root, const Hash& hash, const BloomFilter& tx_bloom):
+        BlockHeader(Timestamp timestamp, int64_t height, const Hash& phash, const Hash& merkle_root, const Hash& hash, const BloomFilter& tx_bloom):
             timestamp_(timestamp),
             height_(height),
             previous_hash_(phash),
@@ -67,7 +61,7 @@ namespace Token{
             return timestamp_;
         }
 
-        intptr_t GetHeight() const{
+        int64_t GetHeight() const{
             return height_;
         }
 
@@ -114,6 +108,15 @@ namespace Token{
         friend std::ostream& operator<<(std::ostream& stream, const BlockHeader& header){
             stream << "#" << header.GetHeight() << "(" << header.GetHash() << ")";
             return stream;
+        }
+
+        static inline int64_t
+        GetSize(){
+            return sizeof(Timestamp)
+                 + sizeof(int64_t)
+                 + Hash::GetSize()
+                 + Hash::GetSize()
+                 + Hash::GetSize();
         }
     };
 
@@ -234,7 +237,7 @@ namespace Token{
             int64_t size = 0;
             size += sizeof(Timestamp); // timestamp_
             size += sizeof(int64_t); // height_
-            size += Hash::kSize; // previous_hash_
+            size += Hash::GetSize(); // previous_hash_
             size += sizeof(int64_t); // num_transactions
             for(auto& it : transactions_)
                 size += it->GetBufferSize();

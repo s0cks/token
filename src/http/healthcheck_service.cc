@@ -2,8 +2,7 @@
 #include <condition_variable>
 #include "configuration.h"
 #include "http/controller.h"
-#include "http/healthcheck.h"
-#include "peer/peer_session_manager.h"
+#include "http/healthcheck_service.h"
 
 namespace Token{
     static pthread_t thread_;
@@ -53,7 +52,6 @@ namespace Token{
         }
         LOG(INFO) << "initializing the health check service....";
         HealthController::Initialize(&router_);
-        StatusController::Initialize(&router_);
         return Thread::Start(&thread_, "HealthCheckService", &HandleServiceThread, 0);
     }
 
@@ -127,21 +125,9 @@ namespace Token{
         HttpRequest request(session, buff->base, buff->len);
         HttpRouterMatch match = router_.Find(&request);
         if(match.IsNotFound()){
-            std::stringstream ss;
-            ss << "Not Found: " << request.GetPath();
-            std::string body = ss.str();
-            HttpResponse response(session, STATUS_CODE_NOTFOUND, body);
-            response.SetHeader("Content-Type", CONTENT_TYPE_TEXT_PLAIN);
-            response.SetHeader("Content-Length", body.size());
-            session->Send(&response);
+            SendNotFound(session, &request);
         } else if(match.IsMethodNotSupported()){
-            std::stringstream ss;
-            ss << "Not Supported.";
-            std::string body = ss.str();
-            HttpResponse response(session, STATUS_CODE_NOTSUPPORTED, body);
-            response.SetHeader("Content-Type", CONTENT_TYPE_TEXT_PLAIN);
-            response.SetHeader("Content-Length", body.size());
-            session->Send(&response);
+            SendNotSupported(session, &request);
         } else{
             assert(match.IsOk());
 
@@ -150,43 +136,5 @@ namespace Token{
             HttpRouteHandler& handler = match.GetHandler();
             handler(session, &request);
         }
-    }
-
-    static inline void
-    GetPeerManagerStatus(Json::Value& doc){
-        std::set<UUID> peers;
-        if(!PeerSessionManager::GetConnectedPeers(peers)){
-            LOG(WARNING) << "couldn't get list of peers from peer session manager.";
-            return;
-        }
-
-        Json::Value list;
-        for(auto& it : peers){
-            std::shared_ptr<PeerSession> session = PeerSessionManager::GetSession(it);
-
-            Json::Value pinfo;
-            pinfo["ID"] = it.ToString();
-            pinfo["Address"] = session->GetAddress().ToString();
-
-            list.append(pinfo);
-        }
-        doc["Peers"] = list;
-    }
-
-    void StatusController::HandleOverallStatus(HttpSession* session, HttpRequest* request){
-        Json::Value doc;
-        doc["Timestamp"] = GetTimestampFormattedReadable(GetCurrentTimestamp());
-        doc["Version"] = GetVersion();
-        GetPeerManagerStatus(doc);
-
-        SendJson(session, doc);
-    }
-
-    void StatusController::HandleTestStatus(HttpSession* session, HttpRequest* request){
-        std::string name = request->GetParameterValue("name");
-
-        std::stringstream ss;
-        ss << "Hello " << name << "!";
-        SendText(session, ss);
     }
 }

@@ -1,8 +1,7 @@
 #ifndef TOKEN_CONTROLLER_H
 #define TOKEN_CONTROLLER_H
 
-#include <json/value.h>
-#include <json/writer.h>
+#include <rapidjson/document.h>
 #include "http/router.h"
 #include "http/request.h"
 
@@ -13,7 +12,7 @@ namespace Token{
 
         static inline void
         SendText(HttpSession* session, const std::string& body, const HttpStatusCode& status_code=STATUS_CODE_OK){
-            HttpResponse response(session, status_code, body);
+            HttpTextResponse response(session, status_code, body);
             response.SetHeader("Content-Type", CONTENT_TYPE_TEXT_PLAIN);
             response.SetHeader("Content-Length", body.size());
             session->Send(&response);
@@ -49,23 +48,25 @@ namespace Token{
         }
 
         static inline void
-        SendJson(HttpSession* session, Json::Value& value, const HttpStatusCode& status_code=STATUS_CODE_OK){
-            Json::StreamWriterBuilder builder;
-            builder["commentStyle"] = "None";
-            builder["indentation"] = "";
-            std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
-            std::ostringstream os;
-            writer->write(value, &os);
+        SendNotFound(HttpSession* session, const Hash& hash){
+            std::stringstream ss;
+            ss << "Not Found: " << hash;
+            return SendText(session, ss, STATUS_CODE_NOTFOUND);
+        }
 
-            std::string body = os.str();
-            HttpResponse response(session, status_code, body);
+        static inline void
+        SendJson(HttpSession* session, const rapidjson::Document& doc, const HttpStatusCode& status_code=STATUS_CODE_OK){
+            HttpJsonResponse response(session, status_code, doc);
             response.SetHeader("Content-Type", CONTENT_TYPE_APPLICATION_JSON);
-            response.SetHeader("Content-Length", body.size());
+            response.SetHeader("Content-Length", response.GetContentLength());
             session->Send(&response);
         }
     public:
         virtual ~HttpController() = delete;
     };
+
+#define HTTP_ENDPOINT_HANDLER(Name) \
+    static void Handle##Name(HttpSession* session, HttpRequest* request);
 }
 
 #endif //TOKEN_CONTROLLER_H

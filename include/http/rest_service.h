@@ -1,5 +1,5 @@
-#ifndef TOKEN_REST_H
-#define TOKEN_REST_H
+#ifndef TOKEN_REST_SERVICE_H
+#define TOKEN_REST_SERVICE_H
 
 #include <uv.h>
 #include <libconfig.h++>
@@ -12,17 +12,47 @@
 #include "http/controller.h"
 
 namespace Token{
-    class RestController : HttpController {
+    class LedgerController : HttpController {
     private:
-        RestController() = delete;
+        LedgerController() = delete;
 
-        static void HandleHead(HttpSession* session, HttpRequest* request);
+        HTTP_ENDPOINT_HANDLER(GetBlockChain);
+        HTTP_ENDPOINT_HANDLER(GetBlockChainHead);
+        HTTP_ENDPOINT_HANDLER(GetBlockChainBlock);
     public:
-        ~RestController() = delete;
+        ~LedgerController() = delete;
 
         static inline bool
         Initialize(HttpRouter* router){
-            router->Get("/head", &HandleHead);
+            router->Get("/chain", &HandleGetBlockChain);
+            router->Get("/chain/head", &HandleGetBlockChainHead);
+            router->Get("/chain/data/:hash", &HandleGetBlockChainBlock);
+            return true;
+        }
+    };
+
+    class UnclaimedTransactionPoolController : HttpController{
+    private:
+        UnclaimedTransactionPoolController() = delete;
+
+        HTTP_ENDPOINT_HANDLER(GetUnclaimedTransaction);
+        HTTP_ENDPOINT_HANDLER(GetUnclaimedTransactions);
+        HTTP_ENDPOINT_HANDLER(GetUnclaimedTransactionsFor);
+    public:
+        ~UnclaimedTransactionPoolController() = delete;
+
+        static inline bool
+        Initialize(HttpRouter* router){
+            // Transactions
+            //TODO implement
+
+            // Blocks
+            //TODO implement
+
+            // Unclaimed Transactions
+            router->Get("/utxos", &HandleGetUnclaimedTransactions);
+            router->Get("/utxos/:user_id", &HandleGetUnclaimedTransactionsFor);
+            router->Get("/utxos/data/:hash", &HandleGetUnclaimedTransaction);
             return true;
         }
     };
@@ -109,4 +139,4 @@ namespace Token{
     };
 }
 
-#endif //TOKEN_REST_H
+#endif //TOKEN_REST_SERVICE_H

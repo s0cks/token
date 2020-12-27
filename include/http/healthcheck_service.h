@@ -1,5 +1,5 @@
-#ifndef TOKEN_HEALTHCHECK_H
-#define TOKEN_HEALTHCHECK_H
+#ifndef TOKEN_HEALTHCHECK_SERVICE_H
+#define TOKEN_HEALTHCHECK_SERVICE_H
 
 #include <uv.h>
 #include <libconfig.h++>
@@ -12,23 +12,6 @@
 #include "http/controller.h"
 
 namespace Token{
-    class StatusController : HttpController{
-    private:
-        StatusController() = delete;
-
-        static void HandleOverallStatus(HttpSession* session, HttpRequest* request);
-        static void HandleTestStatus(HttpSession* session, HttpRequest* request);
-    public:
-        ~StatusController() = delete;
-
-        static inline bool
-        Initialize(HttpRouter* router){
-            router->Get("/status", &HandleOverallStatus);
-            router->Get("/status/:name", &HandleTestStatus);
-            return true;
-        }
-    };
-
     class HealthController : HttpController{
     private:
         HealthController() = delete;
@@ -128,4 +111,4 @@ namespace Token{
     };
 }
 
-#endif //TOKEN_HEALTHCHECK_H
+#endif //TOKEN_HEALTHCHECK_SERVICE_H

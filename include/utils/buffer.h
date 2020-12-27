@@ -2,8 +2,6 @@
 #define TOKEN_BUFFER_H
 
 #include "object.h"
-#include "user.h"
-#include "product.h"
 
 namespace Token{
     class Buffer : public Object{
@@ -77,6 +75,14 @@ namespace Token{
 
         char* data() const{
             return (char*)raw();
+        }
+
+        uint8_t* begin() const{
+            return (uint8_t*)raw();
+        }
+
+        uint8_t* end() const{
+            return (uint8_t*)raw() + GetBufferSize();
         }
 
         intptr_t GetBufferSize() const{
@@ -170,36 +176,36 @@ namespace Token{
         }
 
         void PutUser(const User& user) {
-            memcpy(&raw()[wpos_], user.data(), User::kSize);
-            wpos_ += User::kSize;
+            memcpy(&raw()[wpos_], user.data(), User::GetSize());
+            wpos_ += User::GetSize();
         }
 
         User GetUser(){
-            User user(&raw()[rpos_]);
-            rpos_ += User::kSize;
+            User user(&raw()[rpos_], User::GetSize());
+            rpos_ += User::GetSize();
             return user;
         }
 
         void PutProduct(const Product& product){
-            memcpy(&raw()[wpos_], product.data(), Product::kSize);
-            wpos_ += Product::kSize;
+            memcpy(&raw()[wpos_], product.data(), Product::GetSize());
+            wpos_ += Product::GetSize();
         }
 
         Product GetProduct(){
-            Product product(&raw()[rpos_]);
-            rpos_ += Product::kSize;
+            Product product(&raw()[rpos_], Product::GetSize());
+            rpos_ += Product::GetSize();
             return product;
         }
 
         void PutHash(const Hash& value){
-            memcpy(&raw()[wpos_], value.data(), Hash::kSize);
-            wpos_ += Hash::kSize;
+            memcpy(&raw()[wpos_], value.data(), Hash::GetSize());
+            wpos_ += Hash::GetSize();
         }
 
         Hash
         GetHash(){
-            Hash hash(&raw()[rpos_]);
-            rpos_ += Hash::kSize;
+            Hash hash(&raw()[rpos_], Hash::GetSize());
+            rpos_ += Hash::GetSize();
             return hash;
         }
 
@@ -220,6 +226,10 @@ namespace Token{
             return ss.str();
         }
     };
+
+    typedef std::shared_ptr<Buffer> BufferPtr;
+
+
 }
 
 #endif //TOKEN_BUFFER_H

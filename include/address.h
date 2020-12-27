@@ -2,7 +2,7 @@
 #define TOKEN_ADDRESS_H
 
 #include <set>
-#include "buffer.h"
+#include "utils/buffer.h"
 
 namespace Token{
     class NodeAddress{

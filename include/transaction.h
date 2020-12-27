@@ -3,9 +3,7 @@
 
 #include <set>
 #include "hash.h"
-#include "user.h"
 #include "object.h"
-#include "product.h"
 #include "unclaimed_transaction.h"
 
 #include "utils/printer.h"
@@ -17,10 +15,6 @@ namespace Token{
 
     class Input : public Object{
         friend class Transaction;
-    public:
-        static const intptr_t kSize = Hash::kSize
-                                    + sizeof(int32_t)
-                                    + User::kSize;
     private:
         Hash hash_;
         int32_t index_;
@@ -90,6 +84,13 @@ namespace Token{
                 return a.index_ < b.index_;
             return a.hash_ < b.hash_;
         }
+
+        static inline int64_t
+        GetSize(){
+            return Hash::GetSize()
+                 + sizeof(int32_t)
+                 + User::GetSize();
+        }
     };
 
     class InputFileReader : BinaryFileReader{
@@ -109,9 +110,6 @@ namespace Token{
 
     class Output : public Object{
         friend class Transaction;
-    public:
-        static const intptr_t kSize = User::kSize
-                                    + Product::kSize;
     private:
         User user_;
         Product product_;
@@ -170,6 +168,12 @@ namespace Token{
             if(a.user_ == b.user_)
                 return a.product_ < b.product_;
             return a.user_ < b.user_;
+        }
+
+        static inline int64_t
+        GetSize(){
+            return User::GetSize()
+                 + Product::GetSize();
         }
     };
 
@@ -332,9 +336,9 @@ namespace Token{
             size += sizeof(Timestamp); // timestamp_
             size += sizeof(int64_t); // index_
             size += sizeof(int64_t); // num_inputs_
-            size += GetNumberOfInputs() * Input::kSize; // inputs_
+            size += GetNumberOfInputs() * Input::GetSize(); // inputs_
             size += sizeof(int64_t); // num_outputs
-            size += GetNumberOfOutputs() * Output::kSize; // outputs_
+            size += GetNumberOfOutputs() * Output::GetSize(); // outputs_
             return size;
         }
 

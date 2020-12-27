@@ -11,11 +11,6 @@ namespace Token{
         //TODO:
         // - Merge RawProposal w/ BlockHeader?
     public:
-        static const int64_t kSize = sizeof(int64_t)
-                                   + sizeof(int64_t)
-                                   + Hash::kSize
-                                   + UUID::kSize;
-
         struct TimestampComparator{
             bool operator()(const RawProposal& a, const RawProposal& b){
                 return a.GetTimestamp() < b.GetTimestamp();
@@ -92,6 +87,16 @@ namespace Token{
 
         friend bool operator!=(const RawProposal& a, const RawProposal& b){
             return !operator==(a, b);
+        }
+
+        static inline int64_t
+        GetSize(){
+            int64_t size = 0;
+            size += sizeof(int64_t);
+            size += sizeof(int64_t);
+            size += Hash::GetSize();
+            size += UUID::kSize;
+            return size;
         }
     };
 
@@ -214,7 +219,7 @@ namespace Token{
         }
 
         int64_t GetBufferSize() const{
-            return RawProposal::kSize;
+            return RawProposal::GetSize();
         }
 
         bool Encode(Buffer* buff) const{

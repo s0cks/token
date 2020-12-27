@@ -1,10 +1,8 @@
 #ifndef TOKEN_UNCLAIMED_TRANSACTION_H
 #define TOKEN_UNCLAIMED_TRANSACTION_H
 
-#include "buffer.h"
-#include "user.h"
+#include "utils/buffer.h"
 #include "object.h"
-#include "product.h"
 #include "utils/file_writer.h"
 #include "utils/file_reader.h"
 
@@ -51,10 +49,10 @@ namespace Token{
 
         int64_t GetBufferSize() const{
             int64_t size = 0;
-            size += Hash::kSize;
+            size += Hash::GetSize();
             size += sizeof(int32_t);
-            size += User::kSize;
-            size += Product::kSize;
+            size += User::GetSize();
+            size += Product::GetSize();
             return size;
         }
 
@@ -183,8 +181,8 @@ namespace Token{
         static bool PutUnclaimedTransaction(const Hash& hash, const UnclaimedTransactionPtr& utxo);
         static bool HasUnclaimedTransaction(const Hash& hash);
         static bool HasUnclaimedTransaction(const Hash& tx_hash, const int32_t tx_index);
-        static bool GetUnclaimedTransactions(std::vector<Hash>& utxos);
-        static bool GetUnclaimedTransactions(const std::string& user, std::vector<Hash>& utxos);
+        static bool GetUnclaimedTransactions(HashList& hashes);
+        static bool GetUnclaimedTransactions(const std::string& user, HashList& hashes);
         static UnclaimedTransactionPtr GetUnclaimedTransaction(const Hash& hash);
         static UnclaimedTransactionPtr GetUnclaimedTransaction(const Hash& tx_hash, int32_t tx_index);
 

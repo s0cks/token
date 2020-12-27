@@ -10,12 +10,12 @@ namespace Token{
     private:
         template<typename T>
         T ReadRaw(){
-            uint8_t bytes[T::kSize];
-            if(!ReadBytes(bytes, T::kSize)){
-                LOG(WARNING) << "couldn't read " << T::kSize << " bytes from file: " << GetFilename();
+            uint8_t bytes[T::GetSize()];
+            if(!ReadBytes(bytes, T::GetSize())){
+                LOG(WARNING) << "couldn't read " << T::GetSize() << " bytes from file: " << GetFilename();
                 return T();
             }
-            return T(bytes);
+            return T(bytes, T::GetSize());
         }
     protected:
         FileReader* parent_;

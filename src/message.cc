@@ -19,9 +19,9 @@ namespace Token{
         size += sizeof(Timestamp); // timestamp_
         size += sizeof(int32_t); // client_type_
         size += Version::kSize; // version_
-        size += Hash::kSize; // nonce_
+        size += Hash::GetSize(); // nonce_
         size += UUID::kSize; // node_id_
-        size += BlockHeader::kSize; // head_
+        size += BlockHeader::GetSize(); // head_
         return size;
     }
 
@@ -64,10 +64,10 @@ namespace Token{
         size += sizeof(Timestamp); // timestamp_
         size += sizeof(int32_t); // client_type_
         size += Version::kSize; // version_
-        size += Hash::kSize; // nonce_
+        size += Hash::GetSize(); // nonce_
         size += UUID::kSize; // node_id_
         size += NodeAddress::kSize; // callback_
-        size += BlockHeader::kSize; // head_
+        size += BlockHeader::GetSize(); // head_
         return size;
     }
 
@@ -91,7 +91,7 @@ namespace Token{
     intptr_t InventoryMessage::GetMessageSize() const{
         intptr_t size = 0;
         size += sizeof(int64_t); // length(items_)
-        size += (items_.size() * InventoryItem::kSize);
+        size += (items_.size() * InventoryItem::GetSize());
         return size;
     }
 
@@ -120,7 +120,7 @@ namespace Token{
     intptr_t GetDataMessage::GetMessageSize() const{
         intptr_t size = 0;
         size += sizeof(int64_t); // sizeof(items_);
-        size += items_.size() * InventoryItem::kSize; // items;
+        size += items_.size() * InventoryItem::GetSize(); // items;
         return size;
     }
 
@@ -145,7 +145,7 @@ namespace Token{
 
     intptr_t NotFoundMessage::GetMessageSize() const{
         intptr_t size = 0;
-        size += InventoryItem::kSize; // item_
+        size += InventoryItem::GetSize(); // item_
         size += sizeof(uint32_t); // length(message_)
         size += message_.length(); // message_
         return size;
@@ -165,7 +165,7 @@ namespace Token{
 
     intptr_t GetUnclaimedTransactionsMessage::GetMessageSize() const{
         intptr_t size = 0;
-        size += User::kSize;
+        size += User::GetSize();
         return size;
     }
 
@@ -228,7 +228,7 @@ namespace Token{
     }
 
     intptr_t GetBlocksMessage::GetMessageSize() const{
-        return Hash::kSize * 2;
+        return Hash::GetSize() * 2;
     }
 
     PeerListMessage* PeerListMessage::NewInstance(Buffer* buff){

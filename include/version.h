@@ -1,7 +1,7 @@
 #ifndef TOKEN_VERSION_H
 #define TOKEN_VERSION_H
 
-#include "buffer.h"
+#include "utils/buffer.h"
 
 namespace Token{
     class Version{

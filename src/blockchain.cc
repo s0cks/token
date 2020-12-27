@@ -354,6 +354,16 @@ namespace Token{
         return true;
     }
 
+    bool BlockChain::GetBlocks(HashList& hashes){
+        Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
+        do{
+            BlockPtr blk = GetBlock(current);
+            hashes.insert(blk->GetHash());
+            current = blk->GetPreviousHash();
+        } while(!current.IsNull());
+        return true;
+    }
+
     bool BlockChain::VisitHeaders(BlockChainHeaderVisitor* vis){
         //TODO: Optimize BlockChain::VisitHeaders
         Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);

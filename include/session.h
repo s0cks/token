@@ -5,7 +5,7 @@
 #include <mutex>
 #include <uuid/uuid.h>
 #include <condition_variable>
-#include "buffer.h"
+#include "utils/buffer.h"
 #include "object.h"
 
 namespace Token{

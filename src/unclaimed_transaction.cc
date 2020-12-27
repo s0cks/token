@@ -1,7 +1,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <leveldb/db.h>
-#include "buffer.h"
+#include "utils/buffer.h"
 #include "unclaimed_transaction.h"
 
 namespace Token{
@@ -290,7 +290,7 @@ namespace Token{
         return vis->VisitEnd();
     }
 
-    bool UnclaimedTransactionPool::GetUnclaimedTransactions(std::vector<Hash>& utxos){
+    bool UnclaimedTransactionPool::GetUnclaimedTransactions(HashList& hashes){
         //TODO: better error handling and validation
         LOCK_GUARD;
         DIR* dir;
@@ -299,10 +299,11 @@ namespace Token{
             while((ent = readdir(dir)) != NULL){
                 std::string name(ent->d_name);
                 std::string filename = (GetDataDirectory() + "/" + name);
-                if(!EndsWith(filename, ".dat")) continue;
+                if(!EndsWith(filename, ".dat"))
+                    continue;
 
                 UnclaimedTransactionPtr utxo = UnclaimedTransaction::NewInstance(filename);
-                utxos.push_back(utxo->GetHash());
+                hashes.insert(utxo->GetHash());
             }
             closedir(dir);
             return true;
@@ -311,7 +312,7 @@ namespace Token{
         return false;
     }
 
-    bool UnclaimedTransactionPool::GetUnclaimedTransactions(const std::string& user, std::vector<Hash>& utxos){
+    bool UnclaimedTransactionPool::GetUnclaimedTransactions(const std::string& user, HashList& utxos){
         //TODO: better error handling + validation
         LOCK_GUARD;
         DIR* dir;
@@ -320,11 +321,13 @@ namespace Token{
             while((ent = readdir(dir)) != NULL){
                 std::string name(ent->d_name);
                 std::string filename = (GetDataDirectory() + "/" + name);
-                if(!EndsWith(filename, ".dat")) continue;
-                UnclaimedTransactionPtr utxo = UnclaimedTransaction::NewInstance(filename);
+                if(!EndsWith(filename, ".dat"))
+                    continue;
 
-                if(utxo->GetUser() != user) continue;
-                utxos.push_back(utxo->GetHash());
+                UnclaimedTransactionPtr utxo = UnclaimedTransaction::NewInstance(filename);
+                if(utxo->GetUser() != user)
+                    continue;
+                utxos.insert(utxo->GetHash());
             }
             closedir(dir);
             return true;

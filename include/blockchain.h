@@ -93,6 +93,7 @@ namespace Token{
         static bool Initialize();
         static bool VisitHeaders(BlockChainHeaderVisitor* vis);
         static bool VisitBlocks(BlockChainBlockVisitor* vis);
+        static bool GetBlocks(HashList& hashes);
         static bool HasBlock(const Hash& hash);
         static bool HasReference(const std::string& name);
         static Hash GetReference(const std::string& name);

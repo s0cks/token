@@ -232,7 +232,7 @@ namespace Token{
             raw_(buff){}
 
         int64_t GetMessageSize() const{
-            return RawProposal::kSize;
+            return RawProposal::GetSize();
         }
 
         bool Write(Buffer* buff) const{
@@ -411,8 +411,6 @@ namespace Token{
             kBlock,
             kUnclaimedTransaction
         };
-
-        static const size_t kSize = sizeof(int32_t) + Hash::kSize;
     private:
         Type type_;
         Hash hash_;
@@ -492,6 +490,14 @@ namespace Token{
                 stream << "Unknown(" << item.GetHash() << ")";
             }
             return stream;
+        }
+
+        static inline int64_t
+        GetSize(){
+            int64_t size = 0;
+            size += sizeof(int16_t);
+            size += Hash::GetSize();
+            return size;
         }
     };
 
