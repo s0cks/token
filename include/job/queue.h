@@ -14,6 +14,14 @@ namespace Token{
             bottom_(0){}
         ~JobQueue() = default;
 
+        size_t GetSize() const{
+            return bottom_.load(std::memory_order_seq_cst) - top_.load(std::memory_order_seq_cst);
+        }
+
+        bool IsEmpty() const{
+            return GetSize() == 0;
+        }
+
         bool Push(Job* job){
             size_t bottom = bottom_.load(std::memory_order_acquire);
             if(bottom < jobs_.size()){
@@ -33,7 +41,7 @@ namespace Token{
                 Job* job = jobs_[top % jobs_.size()];
                 size_t expected_top = top + 1;
                 size_t desired_top = expected_top;
-                if(!top_.compare_exchange_weak(top, desired_top, std::memory_order_acquire))
+                if(!top_.compare_exchange_weak(top, desired_top, std::memory_order_acq_rel))
                     return nullptr;
                 return job;
             }

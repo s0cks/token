@@ -29,7 +29,7 @@ namespace Token{
     };
 
     JobResult ProcessTransactionInputsJob::DoWork(){
-        JobPoolWorker* worker = JobScheduler::GetThreadWorker();
+        JobWorker* worker = JobScheduler::GetThreadWorker();
 
         TransactionPtr tx = GetTransaction();
         InputList& inputs = tx->inputs();
@@ -56,7 +56,9 @@ namespace Token{
     private:
         int64_t worker_;
         int64_t offset_;
+        leveldb::WriteBatch* batch_;
         OutputList outputs_;
+        UserHashLists hashes_;
 
         inline UnclaimedTransactionPtr
         CreateUnclaimedTransaction(const Output& output){
@@ -65,25 +67,43 @@ namespace Token{
             return UnclaimedTransactionPtr(new UnclaimedTransaction(tx->GetHash(), index, output.GetUser(), output.GetProduct()));
         }
 
-        bool Process(const Output& output){
-            UnclaimedTransactionPtr utxo = CreateUnclaimedTransaction(output);
-            return ObjectPool::PutObject(utxo->GetHash(), utxo);
-        }
-
         int64_t GetNextOutputIndex(){
             return offset_++;
+        }
+
+        void Track(const User& user, const Hash& hash){
+            auto pos = hashes_.find(user);
+            if(pos == hashes_.end()){
+                hashes_.insert({ user, HashList{ hash } });
+                return;
+            }
+
+            HashList& list = pos->second;
+            list.insert(hash);
         }
     protected:
         JobResult DoWork(){
             for(auto& it : outputs_){
                 UnclaimedTransactionPtr utxo = CreateUnclaimedTransaction(it);
                 Hash hash = utxo->GetHash();
-                if(!ObjectPool::PutObject(hash, utxo)){
-                    std::stringstream ss;
-                    ss << "Couldn't create unclaimed transaction: " << hash;
-                    return Failed(ss.str());
-                }
+
+                ObjectPoolKey pkey = ObjectPoolKey(ObjectTag::kUnclaimedTransaction, hash);
+                uint8_t pkey_data[ObjectPoolKey::kTotalSize];
+                pkey.Encode(pkey_data, ObjectPoolKey::kTotalSize);
+                leveldb::Slice key((char*)pkey_data, ObjectPoolKey::kTotalSize);
+
+                uint8_t pobj_data[UnclaimedTransaction::kTotalSize];
+                utxo->Encode(pobj_data, UnclaimedTransaction::kTotalSize);
+                leveldb::Slice value((char*)pobj_data, UnclaimedTransaction::kTotalSize);
+
+                batch_->Put(key, value);
+
+                User user = utxo->GetUser();
+                Track(user, hash);
             }
+
+            ((ProcessTransactionOutputsJob*)GetParent())->Track(hashes_);
+            ((ProcessTransactionOutputsJob*)GetParent())->Append(batch_);
             return Success("done.");
         }
     public:
@@ -91,8 +111,12 @@ namespace Token{
             Job(parent, "ProcessOutputListJob"),
             worker_(wid),
             offset_(wid * ProcessOutputListJob::kMaxNumberOfOutputs),
+            batch_(new leveldb::WriteBatch()),
             outputs_(outputs){}
-        ~ProcessOutputListJob() = default;
+        ~ProcessOutputListJob(){
+            if(batch_)
+                delete batch_;
+        }
 
         TransactionPtr GetTransaction() const{
             return ((ProcessTransactionOutputsJob*)GetParent())->GetTransaction();
@@ -100,7 +124,7 @@ namespace Token{
     };
 
     JobResult ProcessTransactionOutputsJob::DoWork(){
-        JobPoolWorker* worker = JobScheduler::GetThreadWorker();
+        JobWorker* worker = JobScheduler::GetThreadWorker();
         TransactionPtr tx = GetTransaction();
 
         int64_t nworker = 0;
@@ -124,7 +148,7 @@ namespace Token{
     }
 
     JobResult ProcessTransactionJob::DoWork(){
-        JobPoolWorker* worker = JobScheduler::GetThreadWorker();
+        JobWorker* worker = JobScheduler::GetThreadWorker();
         ProcessTransactionInputsJob* process_inputs = new ProcessTransactionInputsJob(this);
         worker->Submit(process_inputs);
         worker->Wait(process_inputs);
@@ -132,6 +156,7 @@ namespace Token{
         ProcessTransactionOutputsJob* process_outputs = new ProcessTransactionOutputsJob(this);
         worker->Submit(process_outputs);
         worker->Wait(process_outputs);
+
         return Success("Finished.");
     }
 }

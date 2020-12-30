@@ -1,12 +1,15 @@
 #ifndef TOKEN_WORKER_H
 #define TOKEN_WORKER_H
 
-#include <condition_variable>
+#include <thread>
+#include <atomic>
 #include "job/job.h"
 #include "job/queue.h"
 #include "utils/metrics.h"
 
 namespace Token{
+    typedef int16_t JobWorkerId;
+
 #define FOR_EACH_JOB_POOL_WORKER_STATE(V) \
     V(Starting)                           \
     V(Idle)                               \
@@ -14,7 +17,7 @@ namespace Token{
     V(Stopping)                           \
     V(Stopped)
 
-    class JobPoolWorker{
+    class JobWorker{
         friend class JobScheduler;
     public:
         enum State{
@@ -37,86 +40,68 @@ namespace Token{
             }
         }
     private:
-        pthread_t thread_;
-        std::mutex mutex_;
-        std::condition_variable cond_;
-        State state_;
+        std::thread thread_;
+        std::thread::id thread_id_;
+        JobWorkerId id_;
+        std::atomic<State> state_;
         JobQueue queue_;
+        Histogram histogram_;
         Counter num_ran_;
         Counter num_discarded_;
 
         void SetState(const State& state){
-            std::lock_guard<std::mutex> lock(mutex_);
             state_ = state;
-            cond_.notify_all();
         }
 
         bool Schedule(Job* job){
             return queue_.Push(job);
         }
 
-        Job* GetNextJob();
-        static void* HandleThread(void* data);
-    public:
-        JobPoolWorker(size_t max_queue_size):
-            thread_(),
-            mutex_(),
-            cond_(),
-            state_(State::kStarting),
-            queue_(max_queue_size),
-            num_ran_(),
-            num_discarded_(){}
-        ~JobPoolWorker() = default;
-
-        pthread_t GetThreadID() const{
-            return thread_;
+        Histogram& GetHistogram(){
+            return histogram_;
         }
 
-        State GetState(){
-            std::lock_guard<std::mutex> lock(mutex_);
+        Job* GetNextJob();
+        static void HandleThread(JobWorker* worker);
+    public:
+        JobWorker(const JobWorkerId& id, size_t max_queue_size):
+            thread_(),
+            thread_id_(),
+            id_(id),
+            state_(State::kStarting),
+            queue_(max_queue_size),
+            histogram_(new Metrics::Histogram("TaskHistogram")),
+            num_ran_(new Metrics::Counter("NumRan")),
+            num_discarded_(new Metrics::Counter("NumDiscarded")){}
+        ~JobWorker() = default;
+
+        JobWorkerId GetWorkerID() const{
+            return id_;
+        }
+
+        std::thread::id GetThreadID() const{
+            return thread_.get_id();
+        }
+
+        const std::atomic<State>& GetState(){
             return state_;
         }
 
         bool Wait(Job* job){
-            while(!job->IsFinished()){
-                Job* j = GetNextJob();
-                if(j != nullptr){
-                    if(!j->Run())
-                        return false;
-                }
-            }
+            while(!job->IsFinished());
             return true;
         }
 
         bool Start(){
-            int result;
-            pthread_attr_t thread_attr;
-            if((result = pthread_attr_init(&thread_attr)) != 0){
-                LOG(WARNING) << "couldn't initialize the thread attributes: " << strerror(result);
-                return false;
-            }
-
-            if((result = pthread_create(&thread_, &thread_attr, &HandleThread, this)) != 0){
-                LOG(WARNING) << "couldn't start the session thread: " << strerror(result);
-                return false;
-            }
-
-            if((result = pthread_attr_destroy(&thread_attr)) != 0){
-                LOG(WARNING) << "couldn't destroy the thread attributes: " << strerror(result);
-                return false;
-            }
+            thread_ = std::thread(&HandleThread, this);
+            thread_id_ = thread_.get_id();
+            LOG(INFO) << "started worker: " << thread_id_;
             return true;
         }
 
         bool Stop(){
-            SetState(JobPoolWorker::kStopping);
-
-            void** result = NULL;
-            int err;
-            if((err = pthread_join(thread_, result)) != 0){
-                LOG(WARNING) << "couldn't join thread: " << strerror(err);
-                return false;
-            }
+            SetState(JobWorker::kStopping);
+            thread_.join();
             return true;
         }
 
@@ -125,7 +110,7 @@ namespace Token{
         }
 
 #define DEFINE_CHECK(Name) \
-        bool Is##Name(){ return GetState() == State::k##Name; }
+        bool Is##Name(){ return state_ == State::k##Name; }
         FOR_EACH_JOB_POOL_WORKER_STATE(DEFINE_CHECK)
 #undef DEFINE_CHECK
     };

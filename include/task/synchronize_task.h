@@ -26,7 +26,7 @@ namespace Token{
             BlockHeader header = blk->GetHeader();
             Hash hash = header.GetHash();
 
-            JobPoolWorker* worker = JobScheduler::GetRandomWorker();
+            JobWorker* worker = JobScheduler::GetRandomWorker();
             ProcessBlockJob* job = new ProcessBlockJob(blk);
             worker->Submit(job);
             worker->Wait(job);

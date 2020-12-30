@@ -209,14 +209,13 @@ namespace Token{
     }
 
     void UnclaimedTransactionPoolController::HandleGetUserUnclaimedTransactions(HttpSession* session, HttpRequest* request){
-//        std::string user = request->GetParameterValue("user_id");
-//
-//        HashList hashes;
-//        UnclaimedTransactionPool::GetUnclaimedTransactions(user, hashes);
-//
-//        rapidjson::Document doc;
-//        ToJson(hashes, doc);
-//        SendJson(session, doc);
+        std::string user = request->GetParameterValue("user_id");
+
+        HashList hashes;
+        if(!ObjectPool::GetHashList(user, hashes))
+            return SendInternalServerError(session, "Cannot get unclaimed transactions from pool.");
+
+        SendJson(session, hashes, STATUS_CODE_OK);
         SendInternalServerError(session, "Not Implemented");
     }
 

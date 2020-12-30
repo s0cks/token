@@ -1,6 +1,7 @@
 #ifndef TOKEN_JOB_H
 #define TOKEN_JOB_H
 
+#include <leveldb/write_batch.h>
 #include "object.h"
 
 namespace Token{
@@ -91,8 +92,18 @@ namespace Token{
         }
 
         static inline JobResult
+        Success(const std::stringstream& ss){
+            return Success(ss.str());
+        }
+
+        static inline JobResult
         Failed(const std::string& message){
             return JobResult(JobResult::kFailed, message);
+        }
+
+        static inline JobResult
+        Failed(const std::stringstream& ss){
+            return Failed(ss.str());
         }
 
         static inline JobResult
@@ -108,25 +119,30 @@ namespace Token{
         Job* parent_;
         std::string name_;
         JobResult result_;
-        std::atomic_size_t unfinished_jobs_;
+        std::atomic<int32_t> unfinished_;
 
         Job(Job* parent, const std::string& name):
             parent_(parent),
             name_(name),
             result_(JobResult::kUnscheduled, "Unscheduled"),
-            unfinished_jobs_(1){
+            unfinished_(){
+            unfinished_.store(1, std::memory_order_seq_cst);
             if(parent != nullptr)
-                parent->unfinished_jobs_++;
+                parent->IncrementUnfinishedJobs();
         }
 
         virtual JobResult DoWork() = 0;
 
+        int32_t GetUnfinishedJobs() const{
+            return unfinished_.load(std::memory_order_seq_cst);
+        }
+
         bool IncrementUnfinishedJobs(){
-            return unfinished_jobs_.fetch_add(1, std::memory_order_seq_cst) == 1;
+            return unfinished_.fetch_add(1, std::memory_order_seq_cst) == 1;
         }
 
         bool DecrementUnfinishedJobs(){
-            return unfinished_jobs_.fetch_sub(1, std::memory_order_seq_cst) == 1;
+            return unfinished_.fetch_sub(1, std::memory_order_seq_cst) == 1;
         }
 
         bool Finish(){
@@ -148,7 +164,7 @@ namespace Token{
         }
 
         bool IsFinished() const{
-            return unfinished_jobs_.load(std::memory_order_seq_cst) == 0;
+            return unfinished_.load(std::memory_order_seq_cst) == 0;
         }
 
         std::string GetName() const{
@@ -166,11 +182,22 @@ namespace Token{
         }
 
         bool Run(){
+            if(IsFinished())
+                return false;
             LOG(INFO) << "running " << GetName() << " job....";
             result_ = DoWork();
             Finish();
             return true;
         }
+    };
+
+    class WriteBatchJob : public Job{
+    protected:
+        WriteBatchJob(Job* parent, const std::string& name):
+            Job(parent, name){}
+    public:
+        virtual ~WriteBatchJob() = default;
+        virtual void Append(leveldb::WriteBatch* batch) = 0;
     };
 }
 

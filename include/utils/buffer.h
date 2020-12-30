@@ -2,6 +2,7 @@
 #define TOKEN_BUFFER_H
 
 #include "object.h"
+#include "object_tag.h"
 
 namespace Token{
     class Buffer : public Object{
@@ -54,6 +55,14 @@ namespace Token{
             rpos_(0){
             data_ = (uint8_t*)malloc(sizeof(uint8_t)*size);
             memset(data(), 0, GetBufferSize());
+        }
+        Buffer(const char* data, size_t size):
+            Object(),
+            bsize_(size),
+            wpos_(size),
+            rpos_(0),
+            data_(nullptr) {
+            data_ = (uint8_t*) data;
         }
         Buffer(const Buffer& buff):
             Object(),
@@ -212,6 +221,14 @@ namespace Token{
         void PutString(const std::string& value){
             memcpy(&raw()[wpos_], value.data(), value.length());
             wpos_ += value.length();
+        }
+
+        ObjectTag GetObjectTag(){
+            return ObjectTag(GetUnsignedLong());
+        }
+
+        void PutObjectTag(const ObjectTag& tag){
+            PutUnsignedLong(tag.data());
         }
 
         void Reset(){

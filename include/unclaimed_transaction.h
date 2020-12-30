@@ -8,13 +8,31 @@
 
 namespace Token{
     class UnclaimedTransaction;
-
     typedef std::shared_ptr<UnclaimedTransaction> UnclaimedTransactionPtr;
 
     class Output;
     class Transaction;
     class UnclaimedTransaction : public BinaryObject{
         friend class UnclaimedTransactionMessage;
+    public:
+        enum UnclaimedTransactionLayout{
+            // TransactionHash
+            kTxHashOffset = 0,
+            kTxHashSize = 256/8,
+
+            // OutputIndex
+            kIndexOffset = kTxHashOffset+kTxHashSize,
+            kIndexSize = sizeof(int64_t),
+
+            // User
+            kUserOffset = kIndexOffset+kIndexSize,
+            kUserSize = User::kSize,
+
+            // Product
+            kProductOffset = kUserOffset+kUserSize,
+            kProductSize = Product::kSize,
+            kTotalSize = kProductOffset+kProductSize,
+        };
     private:
         Hash hash_;
         int32_t index_;
@@ -38,6 +56,14 @@ namespace Token{
             return true;
         }
     public:
+        UnclaimedTransaction(uint8_t* bytes, const int64_t& size):
+            BinaryObject(),
+            hash_(&bytes[kTxHashOffset], kTxHashSize),
+            index_(),
+            user_(&bytes[kUserOffset], kUserSize),
+            product_(&bytes[kProductOffset], kProductSize){
+            memcpy(&index_, &bytes[kIndexOffset], kIndexSize);
+        }
         UnclaimedTransaction(const Hash& hash, int32_t index, const User& user, const Product& product):
             BinaryObject(),
             hash_(hash),
@@ -66,6 +92,25 @@ namespace Token{
 
         std::string ToString() const;
 
+        bool Encode(uint8_t* bytes, const int64_t& size) const{
+            if(size < kTotalSize)
+                return false;
+            memcpy(&bytes[kTxHashOffset], hash_.data(), kTxHashSize);
+            memcpy(&bytes[kIndexOffset], &index_, kIndexSize);
+            memcpy(&bytes[kUserOffset], user_.data(), kUserSize);
+            memcpy(&bytes[kProductOffset], product_.data(), kProductSize);
+            return true;
+        }
+
+        bool Encode(leveldb::Slice* slice) const{
+            if(!slice)
+                return false;
+            uint8_t bytes[kTotalSize];
+            Encode(bytes, kTotalSize);
+            (*slice) = leveldb::Slice((char*)bytes, kTotalSize);
+            return true;
+        }
+
         static UnclaimedTransactionPtr NewInstance(Buffer* buff){
             Hash hash = buff->GetHash();
             int32_t idx = buff->GetInt();
@@ -79,53 +124,15 @@ namespace Token{
             std::fstream fd(filename, std::ios::in|std::ios::binary);
             return NewInstance(fd, GetFilesize(filename));
         }
-    };
 
-    class UnclaimedTransactionFileWriter : BinaryFileWriter{
-    public:
-        UnclaimedTransactionFileWriter(const std::string& filename): BinaryFileWriter(filename){}
-        UnclaimedTransactionFileWriter(BinaryFileWriter* parent): BinaryFileWriter(parent){}
-        ~UnclaimedTransactionFileWriter() = default;
-
-        bool Write(const UnclaimedTransactionPtr& utxo){
-            WriteObjectTag(ObjectTag::kUnclaimedTransaction);
-
-            WriteHash(utxo->GetTransaction());
-            WriteInt(utxo->GetIndex());
-            WriteUser(utxo->GetUser());
-            WriteProduct(utxo->GetProduct());
-            return true;
-        }
-    };
-
-    class UnclaimedTransactionFileReader : BinaryFileReader{
-    private:
-        ObjectTagVerifier tag_verifier_;
-
-        inline ObjectTagVerifier&
-        GetTagVerifier(){
-            return tag_verifier_;
-        }
-    public:
-        UnclaimedTransactionFileReader(const std::string& filename):
-            BinaryFileReader(filename),
-            tag_verifier_(this, ObjectTag::kUnclaimedTransaction){}
-        UnclaimedTransactionFileReader(BinaryFileReader* parent):
-            BinaryFileReader(parent),
-            tag_verifier_(this, ObjectTag::kUnclaimedTransaction){}
-        ~UnclaimedTransactionFileReader() = default;
-
-        UnclaimedTransactionPtr Read(){
-            if(!GetTagVerifier().IsValid()){
-                LOG(WARNING) << "couldn't read unclaimed transaction from: " << GetFilename();
-                return UnclaimedTransactionPtr(nullptr);
-            }
-
-            Hash tx_hash = ReadHash();
-            int32_t tx_index = ReadInt();
-            User user = ReadUser();
-            Product product = ReadProduct();
-            return std::make_shared<UnclaimedTransaction>(tx_hash, tx_index, user, product);
+        static inline int64_t
+        GetSize(){
+            int64_t size = 0;
+            size += Hash::GetSize();
+            size += sizeof(int64_t);
+            size += User::GetSize();
+            size += Product::GetSize();
+            return size;
         }
     };
 }

@@ -61,6 +61,23 @@ namespace Token{
             response.SetHeader("Content-Length", response.GetContentLength());
             session->Send(&response);
         }
+
+        static inline void
+        SendJson(HttpSession* session, const HashList& hashes, const HttpStatusCode& status_code=STATUS_CODE_OK){
+            rapidjson::StringBuffer sb;
+            rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
+            writer.StartArray();
+            for(auto& it : hashes){
+                std::string hash = it.HexString();
+                writer.String(hash.data(), 64);
+            }
+            writer.EndArray();
+
+            HttpRawJsonResponse response(session, status_code, sb);
+            response.SetHeader("Content-Type", CONTENT_TYPE_APPLICATION_JSON);
+            response.SetHeader("Content-Length", response.GetContentLength());
+            session->Send(&response);
+        }
     public:
         virtual ~HttpController() = delete;
     };

@@ -7,17 +7,20 @@
 #include "job/worker.h"
 
 namespace Token{
+    const int32_t JobScheduler::kMaxNumberOfJobs = 1024;
+    const int16_t JobScheduler::kMaxNumberOfWorkers = 10;
+
     static std::default_random_engine engine;
-    static std::vector<JobPoolWorker*> workers_;
+    static JobWorker* workers_ = nullptr;
 
     bool JobScheduler::Initialize(){
+        workers_ = (JobWorker*)malloc(sizeof(JobWorker)*kMaxNumberOfWorkers);
         for(int idx = 0; idx < JobScheduler::kMaxNumberOfWorkers; idx++){
-            JobPoolWorker* worker = new JobPoolWorker(JobScheduler::kMaxNumberOfJobs);
+            JobWorker* worker = new(&workers_[idx]) JobWorker(idx, JobScheduler::kMaxNumberOfJobs);
             if(!worker->Start()){
                 LOG(WARNING) << "couldn't start job pool worker #" << idx;
                 return false;
             }
-            workers_.push_back(worker);
         }
         return true;
     }
@@ -26,23 +29,35 @@ namespace Token{
         return GetRandomWorker()->Schedule(job);
     }
 
-    JobPoolWorker* JobScheduler::GetWorker(pthread_t wthread){
-        for(auto& worker : workers_){
-            if(worker->GetThreadID() == wthread)
-                return worker;
+    JobWorker* JobScheduler::GetWorker(const std::thread::id& thread){
+        for(int idx = 0; idx < JobScheduler::kMaxNumberOfWorkers; idx++){
+            if(workers_[idx].GetThreadID() == thread)
+                return &workers_[idx];
         }
+        LOG(INFO) << "cannot find worker: " << thread;
         return nullptr;
     }
 
-    JobPoolWorker* JobScheduler::GetThreadWorker(){
-        return GetWorker(pthread_self());
+    JobWorker* JobScheduler::GetThreadWorker(){
+        return GetWorker(std::this_thread::get_id());
     }
 
-    JobPoolWorker* JobScheduler::GetRandomWorker(){
-        std::uniform_int_distribution<int> distribution(0, workers_.size() - 1);
-        JobPoolWorker* worker = workers_[distribution(engine)];
-        return worker->IsRunning()
-               ? worker
-               : nullptr;
+    JobWorker* JobScheduler::GetRandomWorker(){
+        std::uniform_int_distribution<int> distribution(0, JobScheduler::kMaxNumberOfWorkers);
+
+        int idx = distribution(engine);
+        JobWorker* worker = &workers_[idx];
+        return (worker && worker->IsRunning()) ? worker : nullptr;
+    }
+
+    void JobScheduler::PrintWorkerStatistics(){
+        for(int idx = 0; idx < JobScheduler::kMaxNumberOfWorkers; idx++){
+            JobWorker* worker = &workers_[idx];
+            std::shared_ptr<Metrics::Snapshot> snapshot = worker->GetHistogram()->GetSnapshot();
+            LOG(INFO) << "worker #" << worker->GetWorkerID() << " statistics:";
+            LOG(INFO) << " - min time: " << snapshot->GetMin();
+            LOG(INFO) << " - max time: " << snapshot->GetMax();
+            LOG(INFO) << " - mean time: " << snapshot->GetMean();
+        }
     }
 }

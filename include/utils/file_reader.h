@@ -3,7 +3,6 @@
 
 #include "hash.h"
 #include "object.h"
-#include "buffer.h"
 
 namespace Token{
     class FileReader{

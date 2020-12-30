@@ -9,6 +9,7 @@
 #include "job/scheduler.h"
 #include "job/process_block.h"
 #include "unclaimed_transaction.h"
+#include "utils/timeline.h"
 
 namespace Token{
     static inline bool
@@ -126,17 +127,34 @@ namespace Token{
         if(!HasBlocks()){
             BlockPtr genesis = Block::Genesis();
             Hash hash = genesis->GetHash();
-            PutBlock(hash, genesis);
-            PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
-            PutReference(BLOCKCHAIN_REFERENCE_GENESIS, hash);
 
-            //Previous:
-            // - ProcessGenesisBlock Timeline (4s) - Async
-            // - ProcessGenesisBlock Timeline (19s) - Sync
-            JobPoolWorker* worker = JobScheduler::GetRandomWorker();
+#ifdef TOKEN_DEBUG
+            Timeline tl("ProcessGenesisBlock");
+            tl << "Start";
+            auto start = std::chrono::steady_clock::now();
+#endif//TOKEN_DEBUG
+
+
+            // [Before - Work Stealing]
+            //  - ProcessGenesisBlock Timeline (19s)
+            // [After - Work Stealing]
+            //  - ProcessGenesisBlock Timeline (4s)
+            JobWorker* worker = JobScheduler::GetRandomWorker();
             ProcessBlockJob* job = new ProcessBlockJob(genesis);
             worker->Submit(job);
             worker->Wait(job);
+#ifdef TOKEN_DEBUG
+            auto stop = std::chrono::steady_clock::now();
+            tl << "Stop";
+            TimelinePrinter::PrintTimeline(tl);
+            //JobScheduler::PrintWorkerStatistics();
+
+            LOG(INFO) << "total time: " << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() << "ms";
+#endif//TOKEN_DEBUG
+
+            PutBlock(hash, genesis);
+            PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
+            PutReference(BLOCKCHAIN_REFERENCE_GENESIS, hash);
         }
 
         LOG(INFO) << "block chain initialized!";

@@ -7,10 +7,10 @@
 namespace Token{
     class Job;
     class JobScheduler{
-        friend class JobPoolWorker;
+        friend class JobWorker;
     public:
-        static const int kMaxNumberOfJobs = 1024;
-        static const int kMaxNumberOfWorkers = 10;
+        static const int32_t kMaxNumberOfJobs;
+        static const int16_t kMaxNumberOfWorkers;
     private:
         JobScheduler() = delete;
     public:
@@ -18,9 +18,10 @@ namespace Token{
 
         static bool Initialize();
         static bool Schedule(Job* job);
-        static JobPoolWorker* GetWorker(pthread_t wthread);
-        static JobPoolWorker* GetThreadWorker();
-        static JobPoolWorker* GetRandomWorker();
+        static JobWorker* GetWorker(const std::thread::id& thread);
+        static JobWorker* GetThreadWorker();
+        static JobWorker* GetRandomWorker();
+        static void PrintWorkerStatistics();
     };
 }
 

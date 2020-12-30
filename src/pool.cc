@@ -40,6 +40,27 @@ namespace Token{
         return filename.str();
     }
 
+    static inline std::string
+    GetBlockFilename(const Hash& hash){
+        std::stringstream filename;
+        filename << GetDataDirectory() << "/b" << hash << ".dat";
+        return filename.str();
+    }
+
+    static inline std::string
+    GetTransactionFilename(const Hash& hash){
+        std::stringstream filename;
+        filename << GetDataDirectory() << "/t" << hash << ".dat";
+        return filename.str();
+    }
+
+    static inline std::string
+    GetUnclaimedTransactionFilename(const Hash& hash){
+        std::stringstream filename;
+        filename << GetDataDirectory() << "/u" << hash << ".dat";
+        return filename.str();
+    }
+
     ObjectPool::State ObjectPool::GetState(){
         LOCK_GUARD;
         return state_;
@@ -64,6 +85,26 @@ namespace Token{
         SIGNAL_ALL;
     }
 
+    class ObjectPoolComparator : public leveldb::Comparator{
+    public:
+        int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const{
+            Hash h1((uint8_t*)a.data());
+            Hash h2((uint8_t*)b.data());
+            if(h1 < h2)
+                return -1;
+            else if(h1 > h2)
+                return +1;
+            return 0;
+        }
+
+        const char* Name() const{
+            return "ObjectPoolComparator";
+        }
+
+        void FindShortestSeparator(std::string* str, const leveldb::Slice& slice) const{}
+        void FindShortSuccessor(std::string* str) const{}
+    };
+
     bool ObjectPool::Initialize(){
         if(IsInitialized()){
             LOG(WARNING) << "cannot re-initialize the object pool.";
@@ -80,6 +121,7 @@ namespace Token{
         }
 
         leveldb::Options options;
+        options.comparator = new ObjectPoolComparator();
         options.create_if_missing = true;
 
         leveldb::Status status;
@@ -155,7 +197,7 @@ namespace Token{
     }
 
     bool ObjectPool::PutObject(const Hash& hash, const BlockPtr& val){
-        std::string filename = GetDataFilename(hash);
+        std::string filename = GetBlockFilename(hash);
         if(HasObject(hash) || FileExists(filename)){
             LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash << "(" << filename << ")";
             SetStatus(ObjectPool::kWarning);
@@ -181,7 +223,7 @@ namespace Token{
     }
 
     bool ObjectPool::PutObject(const Hash& hash, const TransactionPtr& val){
-        std::string filename = GetDataFilename(hash);
+        std::string filename = GetTransactionFilename(hash);
         if(HasObject(hash) || FileExists(filename)){
             LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash << "(" << filename << ")";
             SetStatus(ObjectPool::kWarning);
@@ -206,24 +248,70 @@ namespace Token{
         return true;
     }
 
-    bool ObjectPool::PutObject(const Hash& hash, const UnclaimedTransactionPtr& val){
-        std::string filename = GetDataFilename(hash);
+    bool ObjectPool::HasHashList(const User& user){
+        std::string key = user.Get();
+        std::string value;
+        leveldb::Status status;
+        return GetIndex()->Get(leveldb::ReadOptions(), key, &value).ok();
+    }
+
+    bool ObjectPool::PutHashList(const User& user, const HashList& hashes){
+        std::string key = user.Get();
+
+        int64_t val_size = GetBufferSize(hashes);
+        uint8_t val_data[val_size];
+        Encode(hashes, val_data, val_size);
+        leveldb::Slice value((char*)val_data, val_size);
+
+        leveldb::WriteOptions opts;
+        opts.sync = true;
+        leveldb::Status status;
+        if(!(status = GetIndex()->Put(opts, key, value)).ok()){
+            LOG(WARNING) << "cannot index hash list for user " << user << ": " << status.ToString();
+            return false;
+        }
+
+        LOG(INFO) << "indexed hash list for user: " << user;
+        return true;
+    }
+
+    bool ObjectPool::GetHashList(const User& user, HashList& hashes){
+        std::string key = user.str();
+        std::string value;
+
+        leveldb::ReadOptions opts;
+        leveldb::Status status;
+        if(!(status = GetIndex()->Get(opts, key, &value)).ok()){
+            LOG(WARNING) << "cannot get hash list for " << user << ": " << status.ToString();
+            return false;
+        }
+
+        return Decode((uint8_t*)value.data(), value.size(), hashes);
+    }
+
+    bool ObjectPool::PutObject(const Hash& hash, const UnclaimedTransactionPtr& obj){
+        std::string filename = GetUnclaimedTransactionFilename(hash);
         if(HasObject(hash) || FileExists(filename)){
             LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash << "(" << filename << ")";
             SetStatus(ObjectPool::kWarning);
             return false;
         }
 
-        leveldb::Status status;
-        if(!(status = IndexObject(hash, filename)).ok()){
-            LOG(WARNING) << "cannot index object pool data for " << hash << ": " << status.ToString();
-            SetStatus(ObjectPool::kWarning);
-            return false;
-        }
+        ObjectPoolKey pkey = ObjectPoolKey(ObjectTag::kUnclaimedTransaction, hash);
+        uint8_t pkey_data[ObjectPoolKey::kTotalSize];
+        pkey.Encode(pkey_data, ObjectPoolKey::kTotalSize);
 
-        if(!WriteObject<UnclaimedTransaction, UnclaimedTransactionFileWriter>(val, filename)){
-            LOG(WARNING) << "couldn't write object data to: " << filename;
-            SetStatus(ObjectPool::kWarning);
+        leveldb::Slice key((char*)pkey_data, ObjectPoolKey::kTotalSize);
+
+        uint8_t pobj_data[UnclaimedTransaction::kTotalSize];
+        obj->Encode(pobj_data, UnclaimedTransaction::kTotalSize);
+        leveldb::Slice value((char*)pobj_data, UnclaimedTransaction::kTotalSize);
+
+        leveldb::WriteOptions opts;
+        opts.sync = true;
+        leveldb::Status status;
+        if(!(status = GetIndex()->Put(opts, key, value)).ok()){
+            LOG(WARNING) << "cannot index object " << hash << ": " << status.ToString();
             return false;
         }
 
@@ -241,7 +329,26 @@ namespace Token{
     }
 
     bool ObjectPool::GetUnclaimedTransactions(HashList& hashes){
-        return false;
+        leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
+        for(it->SeekToFirst(); it->Valid(); it->Next()){
+            ObjectPoolKey key(it->key());
+            LOG(INFO) << "Key: " << key;
+            if(key.IsUnclaimedTransaction())
+                hashes.insert(key.GetHash());
+        }
+        return true;
+    }
+
+    bool ObjectPool::GetUnclaimedTransactionsFor(HashList& hashes, const User& user){
+        leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
+        for(it->SeekToFirst(); it->Valid(); it->Next()){
+            ObjectPoolKey key(it->key());
+            UnclaimedTransaction value((uint8_t*)it->value().data(), UnclaimedTransaction::kTotalSize);
+            LOG(INFO) << value.GetUser() << ": " <<  value.GetHash();
+            if(key.IsUnclaimedTransaction() && value.GetUser() == user)
+                hashes.insert(key.GetHash());
+        }
+        return true;
     }
 
     bool ObjectPool::VisitBlocks(ObjectPoolBlockVisitor* vis){
@@ -272,7 +379,24 @@ namespace Token{
     }
 
     UnclaimedTransactionPtr ObjectPool::GetUnclaimedTransaction(const Hash& hash){
-        return nullptr;
+        leveldb::Slice key((char*)hash.data(), Hash::GetSize());
+        std::string value;
+
+        leveldb::ReadOptions opts;
+        leveldb::Status status;
+        if(!(status = GetIndex()->Get(opts, key, &value)).ok()){
+            LOG(WARNING) << "cannot get " << hash << ": " << status.ToString();
+            return UnclaimedTransactionPtr(nullptr);
+        }
+
+        Buffer buff(value.data(), value.size());
+        return UnclaimedTransaction::NewInstance(&buff);
+    }
+
+    leveldb::Status ObjectPool::Write(leveldb::WriteBatch* update){
+        leveldb::WriteOptions opts;
+        opts.sync = true;
+        return GetIndex()->Write(opts, update);
     }
 
     int64_t ObjectPool::GetNumberOfObjects(){
@@ -300,23 +424,14 @@ namespace Token{
 
     int64_t ObjectPool::GetNumberOfObjectsByType(const ObjectTag::Type& type){
         int64_t count = 0;
-
-        DIR* dir;
-        struct dirent* ent;
-        if((dir = opendir(GetDataDirectory().c_str())) != NULL){
-            while((ent = readdir(dir)) != NULL){
-                std::string name(ent->d_name);
-                std::string filename = (GetDataDirectory() + "/" + name);
-                if(!EndsWith(filename, ".dat"))
-                    continue;
-
-                ObjectTagVerifier tag_verifier(filename, type);
-                if(!tag_verifier.IsValid())
-                    continue;
+        ObjectTag tag(type);
+        leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
+        for(it->SeekToFirst(); it->Valid(); it->Next()){
+            ObjectPoolKey key(it->key());
+            if(key.GetTag() == tag)
                 count++;
-            }
-            closedir(dir);
         }
+        delete it;
         return count;
     }
 }

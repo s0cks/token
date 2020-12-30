@@ -7,8 +7,11 @@
 #include "block.h"
 
 namespace Token{
+    class MerkleNode;
+    typedef std::shared_ptr<MerkleNode> MerkleNodePtr;
+
     class BlockVisitor;
-    class MerkleNode{
+    class MerkleNode : std::enable_shared_from_this<MerkleNode>{
     protected:
         MerkleNode* parent_;
         MerkleNode* lchild_;
@@ -17,6 +20,18 @@ namespace Token{
 
         void SetParent(MerkleNode* node){
             parent_ = node;
+        }
+
+        void SetLeft(MerkleNode* node){
+            lchild_ = node;
+            if(node)
+                node->SetParent(this);
+        }
+
+        void SetRight(MerkleNode* node){
+            rchild_ = node;
+            if(node)
+                node->SetParent(this);
         }
 
         Hash ComputeHash() const;
@@ -40,24 +55,12 @@ namespace Token{
             return parent_;
         }
 
-        void SetLeft(MerkleNode* node){
-            lchild_ = node;
-            if(node)
-                node->SetParent(this);
-        }
-
         MerkleNode* GetLeft() const{
             return lchild_;
         }
 
         bool HasLeft() const{
             return lchild_ != nullptr;
-        }
-
-        void SetRight(MerkleNode* node){
-            rchild_ = node;
-            if(node)
-                node->SetParent(this);
         }
 
         MerkleNode* GetRight() const{
@@ -94,8 +97,6 @@ namespace Token{
 
         std::string ToString() const;
     };
-
-    typedef MerkleNode* MerkleNodePtr;
 
     //TODO: refactor MerkleProofHash?
     class MerkleProofHash{
@@ -170,7 +171,7 @@ namespace Token{
     class MerkleTree{
         friend class MerkleTreeBuilder;
     private:
-        MerkleNodePtr root_;
+        MerkleNode* root_;
         std::vector<Hash> leaves_;
         std::map<Hash, MerkleNode*> nodes_;
 
@@ -178,22 +179,22 @@ namespace Token{
             root_ = node;
         }
 
-        inline MerkleNodePtr
+        inline MerkleNode*
         CreateNode(const Hash& hash){
-            MerkleNodePtr node = new MerkleNode(hash);
+            MerkleNode* node = new MerkleNode(hash);
             nodes_.insert({ hash, node });
             return node;
         }
 
-        inline MerkleNodePtr
-        CreateNode(MerkleNodePtr lchild, MerkleNodePtr rchild){
-            MerkleNodePtr node = new MerkleNode(lchild, rchild);
+        inline MerkleNode*
+        CreateNode(MerkleNode* lchild, MerkleNode* rchild){
+            MerkleNode* node = new MerkleNode(lchild, rchild);
             nodes_.insert({ node->GetHash(), node });
             return node;
         }
 
-        MerkleNodePtr BuildTree(std::vector<MerkleNodePtr>& nodes);
-        MerkleNodePtr BuildTree(std::vector<Hash>& nodes);
+        MerkleNode* BuildTree(std::vector<MerkleNode*>& nodes);
+        MerkleNode* BuildTree(std::vector<Hash>& nodes);
     public:
         MerkleTree(const std::vector<Hash>& leaves):
             root_(nullptr),
@@ -203,7 +204,7 @@ namespace Token{
         }
         ~MerkleTree() = default;
 
-        MerkleNodePtr GetRoot() const{
+        MerkleNode* GetRoot() const{
             return root_;
         }
 
@@ -232,7 +233,7 @@ namespace Token{
             leaves_.clear();
         }
 
-        MerkleNodePtr GetNode(const Hash& hash) const;
+        MerkleNode* GetNode(const Hash& hash) const;
         bool VisitLeaves(MerkleTreeVisitor* vis) const;
         bool VisitNodes(MerkleTreeVisitor* vis) const;
         bool Append(const std::unique_ptr<MerkleTree>& tree);
@@ -263,7 +264,7 @@ namespace Token{
     public:
         virtual ~MerkleTreeVisitor() = default;
         virtual bool VisitStart() const{ return true; }
-        virtual bool Visit(const MerkleNodePtr& node) const = 0;
+        virtual bool Visit(MerkleNode* node) const = 0;
         virtual bool VisitEnd() const{ return true; }
     };
 
@@ -276,7 +277,7 @@ namespace Token{
             severity_(severity){}
         ~MerkleTreeLogger() = default;
 
-        bool Visit(const MerkleNodePtr& node) const{
+        bool Visit(MerkleNode* node) const{
             LOG_AT_LEVEL(severity_) << node->GetHash();
             return true;
         }

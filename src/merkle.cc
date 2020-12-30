@@ -21,26 +21,26 @@ namespace Token{
         return Hash::Concat(left, right);
     }
 
-    MerkleNodePtr MerkleTree::BuildTree(std::vector<MerkleNodePtr>& nodes){
+    MerkleNode* MerkleTree::BuildTree(std::vector<MerkleNode*>& nodes){
         if(nodes.size() == 1){
             return nodes.front();
         }
 
-        std::vector<MerkleNodePtr> parents;
+        std::vector<MerkleNode*> parents;
         for(size_t idx = 0; idx < nodes.size(); idx += 2){
-            MerkleNodePtr lchild = nodes[idx];
-            MerkleNodePtr rchild = nodes[idx + 1];
+            MerkleNode* lchild = nodes[idx];
+            MerkleNode* rchild = nodes[idx + 1];
             parents.push_back(CreateNode(lchild, rchild));
         }
         return BuildTree(parents);
     }
 
-    MerkleNodePtr MerkleTree::BuildTree(std::vector<Hash>& leaves){
-        std::vector<MerkleNodePtr> nodes;
+    MerkleNode* MerkleTree::BuildTree(std::vector<Hash>& leaves){
+        std::vector<MerkleNode*> nodes;
         for(auto& it : leaves)
             nodes.push_back(CreateNode(it));
         if((nodes.size() % 2) == 1){
-            MerkleNodePtr node = nodes.back();
+            MerkleNode* node = nodes.back();
             nodes.push_back(node);
         }
         return BuildTree(nodes);
@@ -91,7 +91,7 @@ namespace Token{
         }
     }
 
-    MerkleNodePtr MerkleTree::GetNode(const Hash& hash) const{
+    MerkleNode* MerkleTree::GetNode(const Hash& hash) const{
         auto pos = nodes_.find(hash);
         if(pos == nodes_.end())
             return nullptr;
@@ -102,8 +102,7 @@ namespace Token{
         MerkleNode* node;
         if(!(node = GetNode(hash)))
             return false;
-        MerkleNodePtr parent = node->GetParent();
-        BuildAuditTrail(trail, parent, node);
+        BuildAuditTrail(trail, node->GetParent(), node);
         return true;
     }
 
@@ -134,7 +133,7 @@ namespace Token{
         trail.push_back(MerkleProofHash(MerkleProofHash::kRoot, node->GetHash()));
 
         if(m != k){
-            MerkleNodePtr sn = node->GetParent()->GetRight();
+            MerkleNode* sn = node->GetParent()->GetRight();
             while(true){
                 int sncount = sn->GetLeaves();
                 if(m - k == sncount){
@@ -155,8 +154,8 @@ namespace Token{
     }
 
     bool MerkleTree::BuildConsistencyAuditProof(const Hash& hash, MerkleProof& trail){
-        MerkleNodePtr node = GetNode(hash);
-        MerkleNodePtr parent = node->GetParent();
+        MerkleNode* node = GetNode(hash);
+        MerkleNode* parent = node->GetParent();
         BuildAuditTrail(trail, parent, node);
         return true;
     }

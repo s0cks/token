@@ -227,6 +227,27 @@ namespace Token{
         }
     };
 
+    class HttpRawJsonResponse : public HttpResponse{
+    private:
+        const rapidjson::StringBuffer& body_;
+    protected:
+        bool Write(const BufferPtr& buffer) const{
+            WriteHttp(buffer);
+            WriteHeaders(buffer);
+            buffer->PutBytes((uint8_t*)body_.GetString(), body_.GetSize());
+            return true;
+        }
+    public:
+        HttpRawJsonResponse(HttpSession* session, const HttpStatusCode& status_code, const rapidjson::StringBuffer& body):
+            HttpResponse(session, status_code),
+            body_(body){}
+        ~HttpRawJsonResponse() = default;
+
+        int64_t GetContentLength() const{
+            return body_.GetSize();
+        }
+    };
+
     class HttpJsonResponse : public HttpResponse{
     private:
         const rapidjson::Document& body_;

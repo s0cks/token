@@ -14,6 +14,20 @@ namespace Token{
             kUnclaimedTransaction,
         };
 
+        friend std::ostream& operator<<(std::ostream& stream, const Type& type){
+            switch(type){
+                case Type::kBlock:
+                    return stream << "Block";
+                case Type::kTransaction:
+                    return stream << "Transaction";
+                case Type::kUnclaimedTransaction:
+                    return stream << "UnclaimedTransaction";
+                case Type::kNone:
+                default:
+                    return stream << "None";
+            }
+        }
+
         static const int32_t kMagic;
     private:
         enum ObjectTagLayout{
@@ -47,6 +61,8 @@ namespace Token{
             value_ = TypeField::Update(type, value_);
         }
     public:
+        ObjectTag(uint8_t* data):
+            value_(*(uint64_t*)data){}
         ObjectTag():
             value_(MagicField::Encode(kMagic)|TypeField::Encode(Type::kNone)){}
         ObjectTag(const uint64_t& tag):
@@ -95,6 +111,15 @@ namespace Token{
 
         friend bool operator!=(const ObjectTag& a, const ObjectTag& b){
             return a.value_ != b.value_;
+        }
+
+        friend std::ostream& operator<<(std::ostream& stream, const ObjectTag& tag){
+            return stream << tag.GetTypeField();
+        }
+
+        static inline int64_t
+        GetSize(){
+            return sizeof(uint64_t);
         }
     };
 

@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <leveldb/slice.h>
 #include "hash.h"
 #include "bitfield.h"
 
@@ -24,9 +25,14 @@ namespace Token{
         BinaryObject() = default;
         virtual int64_t GetBufferSize() const = 0;
         virtual bool Write(Buffer* buffer) const = 0;
+
+        virtual bool Encode(uint8_t* bytes, const int64_t& size) const{
+            return false;
+        }
     public:
         virtual ~BinaryObject() = default;
         Hash GetHash() const;
+        bool ToSlice(leveldb::Slice* slice) const;
     };
 
     template<int64_t Size>
@@ -73,6 +79,8 @@ namespace Token{
     class Product : public RawType<64>{
         using Base = RawType<64>;
     public:
+        static const int64_t kSize = 64;
+
         Product(): Base(){}
         Product(const uint8_t* bytes, int64_t size): Base(bytes, size){}
         Product(const Product& product):
@@ -118,6 +126,8 @@ namespace Token{
     class User : public RawType<64>{
         using Base = RawType<64>;
     public:
+        static const int64_t kSize = 64;
+
         User(): Base(){}
         User(const uint8_t* bytes, int64_t size): Base(bytes, size){}
         User(const User& user):

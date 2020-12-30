@@ -4,7 +4,7 @@
 namespace Token{
     TEST(TestMerkle, test_tree){
         BlockPtr genesis = Block::Genesis();
-        ASSERT_EQ(genesis->GetMerkleRoot(), Hash::FromHexString("2EC98E3D40CB94A7CC6B49A207D628DE47463BA67CF76EAC6AE1ECAF0FC12B77"));
+        ASSERT_EQ(genesis->GetMerkleRoot(), Hash::FromHexString("B3863C87CD23972C5B322B5E88145E671B9C42E7C8DDE5AC7065EFB1E0E2B4FB"));
     }
 
     static inline TransactionPtr
@@ -46,7 +46,7 @@ namespace Token{
     TEST(TestMerkle, test_append){
         BlockPtr genesis = Block::Genesis();
         MerkleTreePtr tree1 = MerkleTreeBuilder::Build(genesis);
-        ASSERT_EQ(tree1->GetRootHash(), Hash::FromHexString("2EC98E3D40CB94A7CC6B49A207D628DE47463BA67CF76EAC6AE1ECAF0FC12B77"));
+        ASSERT_EQ(tree1->GetRootHash(), Hash::FromHexString("B3863C87CD23972C5B322B5E88145E671B9C42E7C8DDE5AC7065EFB1E0E2B4FB"));
 
         TransactionPtr tx = CreateTransaction(0, 1);
         BlockPtr blk1 = BlockPtr(new Block(genesis, { tx }));

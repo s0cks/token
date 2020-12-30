@@ -156,6 +156,16 @@ namespace Token{
             LOG_AT_LEVEL(GetSeverity()) << "---------------------------------------------";
             return true;
         }
+
+        bool operator()(const Timeline& timeline) const{
+            return Print(timeline);
+        }
+
+        static inline bool
+        PrintTimeline(const Timeline& timeline, const google::LogSeverity& severity=google::INFO){
+            TimelinePrinter printer(severity);
+            return printer(timeline);
+        }
     };
 }
 

@@ -2,6 +2,9 @@
 #define TOKEN_POOL_H
 
 #include <leveldb/db.h>
+#include <leveldb/slice.h>
+#include <leveldb/comparator.h>
+#include <leveldb/write_batch.h>
 #include "hash.h"
 #include "block.h"
 #include "transaction.h"
@@ -48,6 +51,100 @@ namespace Token{
     V(Ok)                       \
     V(Warning)                  \
     V(Error)
+
+    class ObjectPoolKey{
+    public:
+        enum ObjectPoolKeyLayout{
+            // tag_
+            kTagOffset = 0,
+            kTagSize = sizeof(uint64_t),
+
+            // hash_
+            kHashOffset = kTagOffset+kTagSize,
+            kHashSize = 256 / 8,
+
+            kTotalSize = kHashOffset+kHashSize,
+        };
+    private:
+        ObjectTag tag_;
+        Hash hash_;
+    public:
+        ObjectPoolKey():
+            tag_(),
+            hash_(){}
+        ObjectPoolKey(const ObjectTag& tag, const Hash& hash):
+            tag_(tag),
+            hash_(hash){}
+        ObjectPoolKey(const ObjectTag::Type& tag, const Hash& hash):
+            tag_(tag),
+            hash_(hash){}
+        ObjectPoolKey(uint8_t* bytes, const int64_t& size=kTotalSize):
+            tag_(&bytes[kTagOffset]),
+            hash_(&bytes[kHashOffset], kHashSize){}
+        ObjectPoolKey(const leveldb::Slice& slice):
+            ObjectPoolKey((uint8_t*)slice.data(), slice.size()){}
+        ~ObjectPoolKey() = default;
+
+        ObjectTag& GetTag(){
+            return tag_;
+        }
+
+        ObjectTag GetTag() const{
+            return tag_;
+        }
+
+        Hash& GetHash(){
+            return hash_;
+        }
+
+        Hash GetHash() const{
+            return hash_;
+        }
+
+        bool IsUnclaimedTransaction() const{
+            return tag_.IsUnclaimedTransaction();
+        }
+
+        bool IsTransaction() const{
+            return tag_.IsTransaction();
+        }
+
+        bool IsBlock() const{
+            return tag_.IsBlock();
+        }
+
+        bool Encode(uint8_t* bytes, const int64_t& size) const{
+            uint64_t tag = tag_.data();
+            memcpy(&bytes[kTagOffset], &tag, kTagSize);
+            memcpy(&bytes[kHashOffset], hash_.data(), Hash::GetSize());
+            return true;
+        }
+
+        void operator=(const ObjectPoolKey& key){
+            tag_ = key.tag_;
+            hash_ = key.hash_;
+        }
+
+        friend bool operator==(const ObjectPoolKey& a, const ObjectPoolKey& b){
+            return a.tag_ == b.tag_
+                && a.hash_ == b.hash_;
+        }
+
+        friend bool operator!=(const ObjectPoolKey& a, const ObjectPoolKey& b){
+            return !operator==(a, b);
+        }
+
+        friend std::ostream& operator<<(std::ostream& stream, const ObjectPoolKey& key){
+            stream << "ObjectPoolKey(" << key.GetTag() << ", " << key.GetHash() << ")";
+            return stream;
+        }
+
+        static inline int64_t
+        GetSize(){
+            return ObjectTag::GetSize()
+                 + Hash::GetSize();
+        }
+    };
 
     class ObjectPool{
     public:
@@ -115,15 +212,20 @@ namespace Token{
         static bool PutObject(const Hash& hash, const BlockPtr& val);
         static bool PutObject(const Hash& hash, const TransactionPtr& val);
         static bool PutObject(const Hash& hash, const UnclaimedTransactionPtr& val);
+        static bool PutHashList(const User& user, const HashList& hashes);
         static bool GetBlocks(HashList& hashes);
         static bool GetTransactions(HashList& hashes);
         static bool GetUnclaimedTransactions(HashList& hashes);
+        static bool GetUnclaimedTransactionsFor(HashList& hashes, const User& user);
+        static bool HasHashList(const User& user);
         static bool VisitBlocks(ObjectPoolBlockVisitor* vis);
         static bool VisitTransactions(ObjectPoolTransactionVisitor* vis);
         static bool VisitUnclaimedTransactions(ObjectPoolUnclaimedTransactionVisitor* vis);
+        static bool GetHashList(const User& user, HashList& hashes);
         static BlockPtr GetBlock(const Hash& hash);
         static TransactionPtr GetTransaction(const Hash& hash);
         static UnclaimedTransactionPtr GetUnclaimedTransaction(const Hash& hash);
+        static leveldb::Status Write(leveldb::WriteBatch* update);
 
         static bool HasObject(const Hash& hash);
         static inline bool HasBlock(const Hash& hash){
@@ -149,6 +251,18 @@ namespace Token{
 
         static inline int64_t GetNumberOfUnclaimedTransactions(){
             return GetNumberOfObjectsByType(ObjectTag::kUnclaimedTransaction);
+        }
+
+        static inline bool GetUnclaimedTransactionsFor(HashList& hashes, const std::string& user){
+            return GetUnclaimedTransactionsFor(hashes, User(user));
+        }
+
+        static inline bool GetHashListFor(const std::string& user, HashList& hashes){
+            return GetHashList(User(user), hashes);
+        }
+
+        static inline bool PutHashList(const std::string& user, const HashList& hashes){
+            return PutHashList(User(user), hashes);
         }
 
 #define DEFINE_CHECK(Name) \

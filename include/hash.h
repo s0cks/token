@@ -5,13 +5,14 @@
 #include <cstdlib>
 #include <cstring>
 #include <unordered_set>
+#include <leveldb/slice.h>
 #include <rapidjson/document.h>
 #include "common.h"
 
 namespace Token{
     class Hash{
-    private:
-        static const int64_t kSize = 256 / 8;
+    public:
+        static const size_t kSize = 256 / 8;
     public:
         struct Hasher{
         public:
@@ -63,9 +64,13 @@ namespace Token{
             data_(){
             SetNull();
         }
-        Hash(uint8_t* data, int64_t size):
+        Hash(uint8_t* data, int64_t size=Hash::GetSize()):
             data_(){
-            memcpy(data_, data, std::min(size, Hash::GetSize()));
+            memcpy(data_, data, size);
+        }
+        Hash(const leveldb::Slice& slice, int64_t size=Hash::GetSize()):
+            data_(){
+            memcpy(data_, slice.data(), std::min((int64_t)slice.size(), size));
         }
         Hash(const Hash& hash):
             data_(){
@@ -93,6 +98,22 @@ namespace Token{
             return kSize;
         }
 
+        bool Encode(uint8_t* bytes, const int64_t& size) const{
+            if(size < (int64_t)kSize)
+                return false;
+            memcpy(bytes, data_, kSize);
+            return true;
+        }
+
+        bool Encode(leveldb::Slice* slice) const{
+            if(!slice)
+                return false;
+            uint8_t bytes[kSize];
+            Encode(bytes, kSize);
+            (*slice) = leveldb::Slice((char*)bytes, kSize);
+            return true;
+        }
+
         std::string HexString() const{
             std::string hash;
             CryptoPP::ArraySource source(data(), size(), true, new CryptoPP::HexEncoder(new CryptoPP::StringSink(hash)));
@@ -113,6 +134,10 @@ namespace Token{
 
         friend inline bool operator<(const Hash& a, const Hash& b){
             return a.Compare(b) < 0;
+        }
+
+        friend inline bool operator>(const Hash& a, const Hash& b){
+            return a.Compare(b) > 0;
         }
 
         void operator=(const Hash& other){
@@ -151,6 +176,42 @@ namespace Token{
     };
 
     typedef std::unordered_set<Hash, Hash::Hasher, Hash::Equal> HashList;
+
+    static inline int64_t
+    GetBufferSize(const HashList& hashes){
+        return hashes.size() * Hash::kSize;
+    }
+
+    static inline bool
+    Encode(const HashList& hashes, uint8_t* bytes, const int64_t& size){
+        int64_t bsize = GetBufferSize(hashes);
+        if(size < bsize)
+            return false;
+        int64_t offset = 0;
+        for(auto& it : hashes){
+            it.Encode(&bytes[offset], it.size());
+            offset += it.size();
+        }
+        return true;
+    }
+
+    static inline bool
+    Decode(uint8_t* bytes, const int64_t& size, HashList& hashes){
+        int64_t offset = 0;
+        while(offset < size){
+            hashes.insert(Hash(&bytes[offset], Hash::GetSize()));
+            offset += Hash::GetSize();
+        }
+        return true;
+    }
+
+    static inline void
+    Print(const HashList& hashes, const google::LogSeverity& severity=google::INFO){
+        LOG_AT_LEVEL(severity) << "Hash List:";
+        for(auto& it : hashes){
+            LOG_AT_LEVEL(severity) << " - " << it;
+        }
+    }
 }
 
 #endif //TOKEN_HASH_H

@@ -63,7 +63,7 @@ namespace Token{
         ~NewProposalHandler() = default;
 
         bool ProcessBlock(const BlockPtr& blk) const{
-            JobPoolWorker* worker = JobScheduler::GetRandomWorker();
+            JobWorker* worker = JobScheduler::GetRandomWorker();
             ProcessBlockJob* job = new ProcessBlockJob(blk, true);
             worker->Submit(job);
             worker->Wait(job);
@@ -101,7 +101,7 @@ namespace Token{
         ~PeerProposalHandler() = default;
 
         bool ProcessBlock(const BlockPtr& blk) const{
-            JobPoolWorker* worker = JobScheduler::GetRandomWorker();
+            JobWorker* worker = JobScheduler::GetRandomWorker();
             ProcessBlockJob* job = new ProcessBlockJob(blk);
             worker->Submit(job);
             worker->Wait(job);

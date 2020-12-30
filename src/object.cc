@@ -3,6 +3,18 @@
 #include "bitfield.h"
 
 namespace Token{
+    bool BinaryObject::ToSlice(leveldb::Slice* slice) const{
+        if(!slice)
+            return false;
+        Hash hash = GetHash();
+        Buffer buffer(GetBufferSize() + Hash::GetSize());
+        buffer.PutHash(hash);
+        if(!Write(&buffer))
+            return false;
+        (*slice) = leveldb::Slice(buffer.data(), buffer.GetWrittenBytes());
+        return true;
+    }
+
     Hash BinaryObject::GetHash() const{
         intptr_t size = GetBufferSize();
 

@@ -144,7 +144,8 @@ namespace Token{
             SnapshotData data_;
         public:
             Snapshot(const SnapshotData& data):
-                data_(data){
+                data_(){
+                std::copy(data.begin(), data.end(), std::back_inserter(data_));
                 std::sort(data_.begin(), data_.end());
             }
             ~Snapshot() = default;
@@ -282,7 +283,9 @@ namespace Token{
         public:
             Histogram(const std::string& name, const Sampling::SampleType& sample_type=Sampling::kUniform):
                 Metric(name),
-                Sampling(){
+                Sampling(),
+                count_(0),
+                sample_(){
                 switch(sample_type){
                     case Sampling::kUniform:
                         sample_.reset(new UniformSample());
