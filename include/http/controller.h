@@ -11,7 +11,7 @@ namespace Token{
         HttpController() = delete;
 
         static inline void
-        SendText(HttpSession* session, const std::string& body, const HttpStatusCode& status_code=STATUS_CODE_OK){
+        SendText(HttpSession* session, const std::string& body, const HttpStatusCode& status_code){
             HttpTextResponse response(session, status_code, body);
             response.SetHeader("Content-Type", CONTENT_TYPE_TEXT_PLAIN);
             response.SetHeader("Content-Length", body.size());
@@ -19,13 +19,13 @@ namespace Token{
         }
 
         static inline void
-        SendText(HttpSession* session, const std::stringstream& ss, const HttpStatusCode& status_code=STATUS_CODE_OK){
+        SendText(HttpSession* session, const std::stringstream& ss, const HttpStatusCode& status_code){
             return SendText(session, ss.str(), status_code);
         }
 
         static inline void
         SendOk(HttpSession* session){
-            return SendText(session, "Ok");
+            return SendText(session, "Ok", STATUS_CODE_OK);
         }
 
         static inline void
@@ -55,27 +55,34 @@ namespace Token{
         }
 
         static inline void
-        SendJson(HttpSession* session, const rapidjson::Document& doc, const HttpStatusCode& status_code=STATUS_CODE_OK){
-            HttpJsonResponse response(session, status_code, doc);
-            response.SetHeader("Content-Type", CONTENT_TYPE_APPLICATION_JSON);
-            response.SetHeader("Content-Length", response.GetContentLength());
+        SendJson(HttpSession* session, const BlockPtr& blk){
+            JsonString json;
+            ToJson(blk, json);
+            HttpJsonResponse response(session, STATUS_CODE_OK, json);
             session->Send(&response);
         }
 
         static inline void
-        SendJson(HttpSession* session, const HashList& hashes, const HttpStatusCode& status_code=STATUS_CODE_OK){
-            rapidjson::StringBuffer sb;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
-            writer.StartArray();
-            for(auto& it : hashes){
-                std::string hash = it.HexString();
-                writer.String(hash.data(), 64);
-            }
-            writer.EndArray();
+        SendJson(HttpSession* session, const TransactionPtr& tx){
+            JsonString json;
+            ToJson(tx, json);
+            HttpJsonResponse response(session, STATUS_CODE_OK, json);
+            session->Send(&response);
+        }
 
-            HttpRawJsonResponse response(session, status_code, sb);
-            response.SetHeader("Content-Type", CONTENT_TYPE_APPLICATION_JSON);
-            response.SetHeader("Content-Length", response.GetContentLength());
+        static inline void
+        SendJson(HttpSession* session, const UnclaimedTransactionPtr& utxo){
+            JsonString json;
+            ToJson(utxo, json);
+            HttpJsonResponse response(session, STATUS_CODE_OK, json);
+            session->Send(&response);
+        }
+
+        static inline void
+        SendJson(HttpSession* session, const HashList& hashes){
+            JsonString json;
+            ToJson(hashes, json);
+            HttpJsonResponse response(session, STATUS_CODE_OK, json);
             session->Send(&response);
         }
     public:

@@ -6,7 +6,8 @@
 #include <cstring>
 #include <unordered_set>
 #include <leveldb/slice.h>
-#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
 #include "common.h"
 
 namespace Token{

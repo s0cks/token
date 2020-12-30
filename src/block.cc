@@ -67,15 +67,6 @@ namespace Token{
         return std::make_shared<Block>(0, Hash(), transactions, 0);
     }
 
-    bool Block::ToJson(Json::Value& value) const{
-        value["timestamp"] = GetTimestamp();
-        value["height"] = GetHeight();
-        value["previous_hash"] = GetPreviousHash().HexString();
-        value["merkle_root"] = GetMerkleRoot().HexString();
-        value["hash"] = GetHash().HexString();
-        return true;
-    }
-
     bool Block::Accept(BlockVisitor* vis) const{
         if(!vis->VisitStart())
             return false;

@@ -153,20 +153,12 @@ namespace Token{
     void BlockChainController::HandleGetBlockChain(HttpSession* session, HttpRequest* request){
         HashList blocks;
         BlockChain::GetBlocks(blocks);
-
-        rapidjson::Document doc;
-        ToJson(blocks, doc);
-
-        SendJson(session, doc);
+        SendJson(session, blocks);
     }
 
     void BlockChainController::HandleGetBlockChainHead(HttpSession* session, HttpRequest* request){
         BlockPtr head = BlockChain::GetHead();
-
-        rapidjson::Document doc;
-        ToJson(head, doc);
-
-        SendJson(session, doc);
+        SendJson(session, head);
     }
 
     void BlockChainController::HandleGetBlockChainBlock(HttpSession* session, HttpRequest* request){
@@ -177,10 +169,7 @@ namespace Token{
         }
 
         BlockPtr blk = BlockChain::GetBlock(hash);
-
-        rapidjson::Document doc;
-        ToJson(blk, doc);
-        SendJson(session, doc);
+        SendJson(session, blk);
     }
 
 
@@ -193,30 +182,22 @@ namespace Token{
             return SendNotFound(session, hash);
 
         UnclaimedTransactionPtr val = ObjectPool::GetUnclaimedTransaction(hash);
-        rapidjson::Document doc;
-        ToJson(val, doc);
-        SendJson(session, doc);
+        SendJson(session, val);
     }
 
     void UnclaimedTransactionPoolController::HandleGetUnclaimedTransactions(HttpSession* session, HttpRequest* request){
         HashList hashes;
         if(!ObjectPool::GetUnclaimedTransactions(hashes))
             return SendInternalServerError(session, "Cannot Get Unclaimed Transactions");
-
-        rapidjson::Document doc;
-        ToJson(hashes, doc);
-        SendJson(session, doc);
+        SendJson(session, hashes);
     }
 
     void UnclaimedTransactionPoolController::HandleGetUserUnclaimedTransactions(HttpSession* session, HttpRequest* request){
         std::string user = request->GetParameterValue("user_id");
-
         HashList hashes;
         if(!ObjectPool::GetHashList(user, hashes))
             return SendInternalServerError(session, "Cannot get unclaimed transactions from pool.");
-
-        SendJson(session, hashes, STATUS_CODE_OK);
-        SendInternalServerError(session, "Not Implemented");
+        SendJson(session, hashes);
     }
 
 /*****************************************************************************
@@ -226,10 +207,7 @@ namespace Token{
         HashList hashes;
         if(!ObjectPool::GetBlocks(hashes))
             return SendInternalServerError(session, "Cannot get list of blocks from pool.");
-
-        rapidjson::Document doc;
-        ToJson(hashes, doc);
-        SendJson(session, doc);
+        SendJson(session, hashes);
     }
 
     void BlockPoolController::HandleGetBlock(HttpSession* session, HttpRequest* request){
@@ -237,9 +215,6 @@ namespace Token{
         if(!ObjectPool::HasObject(hash))
             return SendNotFound(session, hash);
         BlockPtr blk = ObjectPool::GetBlock(hash);
-
-        rapidjson::Document doc;
-        ToJson(blk, doc);
-        SendJson(session, doc);
+        SendJson(session, blk);
     }
 }

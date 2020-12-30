@@ -261,10 +261,8 @@ namespace Token{
         }
 
         Hash GetMerkleRoot() const;
-        bool WriteTo(const std::string& filename) const;
         bool Accept(BlockVisitor* vis) const;
         bool Contains(const Hash& hash) const;
-        bool ToJson(Json::Value& value) const;
 
         void operator=(const Block& other){
             timestamp_ = other.timestamp_;

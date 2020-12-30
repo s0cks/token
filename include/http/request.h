@@ -8,7 +8,7 @@
 #include <json/writer.h>
 #include <unordered_map>
 #include <http_parser.h>
-#include "utils/json.h"
+#include "utils/json_conversion.h"
 
 namespace Token{
     enum HttpMethod{
@@ -227,9 +227,9 @@ namespace Token{
         }
     };
 
-    class HttpRawJsonResponse : public HttpResponse{
+    class HttpJsonResponse : public HttpResponse{
     private:
-        const rapidjson::StringBuffer& body_;
+        const JsonString& body_;
     protected:
         bool Write(const BufferPtr& buffer) const{
             WriteHttp(buffer);
@@ -238,42 +238,16 @@ namespace Token{
             return true;
         }
     public:
-        HttpRawJsonResponse(HttpSession* session, const HttpStatusCode& status_code, const rapidjson::StringBuffer& body):
+        HttpJsonResponse(HttpSession* session, const HttpStatusCode& status_code, const JsonString& body):
             HttpResponse(session, status_code),
-            body_(body){}
-        ~HttpRawJsonResponse() = default;
-
-        int64_t GetContentLength() const{
-            return body_.GetSize();
+            body_(body){
+            SetHeader("Content-Type", CONTENT_TYPE_APPLICATION_JSON);
+            SetHeader("Content-Length", body.GetSize());
         }
-    };
-
-    class HttpJsonResponse : public HttpResponse{
-    private:
-        const rapidjson::Document& body_;
-    protected:
-        bool Write(const BufferPtr& buff) const{
-            WriteHttp(buff);
-            WriteHeaders(buff);
-
-            rapidjson::StringBuffer sb;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
-            body_.Accept(writer);
-
-            buff->PutBytes((uint8_t*)sb.GetString(), sb.GetLength());
-            return true;
-        }
-    public:
-        HttpJsonResponse(HttpSession* session, const HttpStatusCode& status_code, const rapidjson::Document& doc):
-            HttpResponse(session, status_code),
-            body_(doc){}
         ~HttpJsonResponse() = default;
 
         int64_t GetContentLength() const{
-            rapidjson::StringBuffer sb;
-            rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
-            body_.Accept(writer);
-            return sb.GetLength();
+            return body_.GetSize();
         }
     };
 }
