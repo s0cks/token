@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <fstream>
 #include "common.h"
+#include "printer.h"
 
 #ifdef OS_IS_LINUX
 #include <execinfo.h>
@@ -97,6 +98,25 @@ namespace Token{
                                const google::LogSeverity &severity = google::INFO,
                                int code = EXIT_FAILURE){
       return PrintNewCrashReportAndExit(ss.str(), severity, code);
+    }
+  };
+
+  class CrashReportPrinter : public Printer{
+   private:
+    bool PrintBanner();
+    bool PrintStackTrace();
+    bool PrintSystemInformation();
+   public:
+    CrashReportPrinter(const google::LogSeverity &severity = google::INFO, const long &flags = Printer::kFlagNone):
+        Printer(severity, flags){}
+    CrashReportPrinter(Printer *printer):
+        Printer(printer){}
+    ~CrashReportPrinter() = default;
+
+    bool Print(){
+      return PrintBanner()
+          && PrintSystemInformation()
+          && PrintStackTrace();
     }
   };
 }
