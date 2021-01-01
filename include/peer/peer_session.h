@@ -116,7 +116,7 @@ namespace Token{
     static void OnRejected(uv_async_t* handle);
 
 #define DECLARE_MESSAGE_HANDLER(Name) \
-        static void Handle##Name##Message(HandleMessageTask* task);
+        static void Handle##Name##Message(PeerSession* session, const Name##MessagePtr& msg);
     FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
    public:

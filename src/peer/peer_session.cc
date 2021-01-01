@@ -2,7 +2,6 @@
 #include "discovery.h"
 #include "peer/peer_session.h"
 #include "task/synchronize_task.h"
-#include "task/handle_message_task.h"
 
 namespace Token{
   bool PeerSession::Connect(){
@@ -197,11 +196,10 @@ namespace Token{
 
     for(size_t idx = 0; idx < messages.size(); idx++){
       MessagePtr msg = messages[idx];
-      HandleMessageTask* task = HandleMessageTask::NewInstance(session, msg);
       switch(msg->GetMessageType()){
 #define DEFINE_HANDLER_CASE(Name) \
             case Message::k##Name##MessageType: \
-                session->Handle##Name##Message(task); \
+                session->Handle##Name##Message(session, std::static_pointer_cast<Name##Message>(msg)); \
                 break;
         FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLER_CASE);
 #undef DEFINE_HANDLER_CASE
@@ -213,18 +211,14 @@ namespace Token{
     rbuff->Reset();
   }
 
-  void PeerSession::HandleGetBlocksMessage(HandleMessageTask* task){}
+  void PeerSession::HandleGetBlocksMessage(PeerSession* session, const GetBlocksMessagePtr& msg){}
 
-  void PeerSession::HandleVersionMessage(HandleMessageTask* task){
-    PeerSession* session = task->GetSession<PeerSession>();
+  void PeerSession::HandleVersionMessage(PeerSession* session, const VersionMessagePtr& msg){
     BlockPtr head = BlockChain::GetHead();
     session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), head->GetHeader()));
   }
 
-  void PeerSession::HandleVerackMessage(HandleMessageTask* task){
-    PeerSession* session = task->GetSession<PeerSession>();
-    VerackMessagePtr msg = task->GetMessage<VerackMessage>();
-
+  void PeerSession::HandleVerackMessage(PeerSession* session, const VerackMessagePtr& msg){
     LOG(INFO) << "remote timestamp: " << GetTimestampFormattedReadable(msg->GetTimestamp());
     LOG(INFO) << "remote <HEAD>: " << msg->GetHead();
 
@@ -251,16 +245,13 @@ namespace Token{
     // - state transition
   }
 
-  void PeerSession::HandlePrepareMessage(HandleMessageTask* task){}
-  void PeerSession::HandlePromiseMessage(HandleMessageTask* task){}
-  void PeerSession::HandleCommitMessage(HandleMessageTask* task){}
-  void PeerSession::HandleAcceptedMessage(HandleMessageTask* task){}
-  void PeerSession::HandleRejectedMessage(HandleMessageTask* task){}
+  void PeerSession::HandlePrepareMessage(PeerSession* session, const PrepareMessagePtr& msg){}
+  void PeerSession::HandlePromiseMessage(PeerSession* session, const PromiseMessagePtr& msg){}
+  void PeerSession::HandleCommitMessage(PeerSession* session, const CommitMessagePtr& msg){}
+  void PeerSession::HandleAcceptedMessage(PeerSession* session, const AcceptedMessagePtr& msg){}
+  void PeerSession::HandleRejectedMessage(PeerSession* session, const RejectedMessagePtr& msg){}
 
-  void PeerSession::HandleGetDataMessage(HandleMessageTask* task){
-    PeerSession* session = (PeerSession*) task->GetSession();
-    GetDataMessagePtr msg = task->GetMessage<GetDataMessage>();
-
+  void PeerSession::HandleGetDataMessage(PeerSession* session, const GetDataMessagePtr& msg){
     std::vector<InventoryItem> items;
     if(!msg->GetItems(items)){
       LOG(WARNING) << "cannot get items from message";
@@ -300,32 +291,26 @@ namespace Token{
     session->Send(response);
   }
 
-  void PeerSession::HandleBlockMessage(HandleMessageTask* task){
-    BlockMessagePtr msg = task->GetMessage<BlockMessage>();
+  void PeerSession::HandleBlockMessage(PeerSession* session, const BlockMessagePtr& msg){
     BlockPtr blk = msg->GetValue();
     Hash hash = blk->GetHash();
     ObjectPool::PutObject(hash, blk);
     LOG(INFO) << "received block: " << hash;
   }
 
-  void PeerSession::HandleTransactionMessage(HandleMessageTask* task){
+  void PeerSession::HandleTransactionMessage(PeerSession* session, const TransactionMessagePtr& msg){
 
   }
 
-  void PeerSession::HandleUnclaimedTransactionMessage(HandleMessageTask* task){
+  void PeerSession::HandleUnclaimedTransactionMessage(PeerSession* session, const UnclaimedTransactionMessagePtr& msg){
 
   }
 
-  void PeerSession::HandleNotFoundMessage(HandleMessageTask* task){
-    PeerSession* session = (PeerSession*) task->GetSession();
-    NotFoundMessagePtr msg = task->GetMessage<NotFoundMessage>();
+  void PeerSession::HandleNotFoundMessage(PeerSession* session, const NotFoundMessagePtr& msg){
     LOG(WARNING) << "(" << session->GetInfo() << "): " << msg->GetMessage();
   }
 
-  void PeerSession::HandleInventoryMessage(HandleMessageTask* task){
-    PeerSession* session = (PeerSession*) task->GetSession();
-    InventoryMessagePtr msg = task->GetMessage<InventoryMessage>();
-
+  void PeerSession::HandleInventoryMessage(PeerSession* session, const InventoryMessagePtr& msg){
     std::vector<InventoryItem> items;
     if(!msg->GetItems(items)){
       LOG(WARNING) << "couldn't get items from inventory message";
@@ -342,11 +327,11 @@ namespace Token{
     session->Send(GetDataMessage::NewInstance(items));
   }
 
-  void PeerSession::HandleGetPeersMessage(HandleMessageTask* task){
+  void PeerSession::HandleGetPeersMessage(PeerSession* session, const GetPeersMessagePtr& msg){
     //TODO: implement PeerSession::HandleGetPeersMessage(HandleMessageTask*);
   }
 
-  void PeerSession::HandlePeerListMessage(HandleMessageTask* task){
+  void PeerSession::HandlePeerListMessage(PeerSession* session, const PeerListMessagePtr& msg){
     //TODO: implement PeerSession::HandlePeerListMessage(HandleMessageTask*);
   }
 }

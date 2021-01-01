@@ -13,12 +13,17 @@ namespace Token{
     return true;
   }
 
+  SnapshotBlockChainSection::SnapshotBlockChainSection():
+    SnapshotSection(SnapshotSection::kBlockChain),
+    references_(){}
+
   SnapshotBlockChainSection::SnapshotBlockChainSection(SnapshotReader* reader):
     SnapshotSection(SnapshotSection::kBlockChain),
-    head_(reader->ReadHash()){}
+    references_(){
+  }
 
   bool SnapshotBlockChainSection::Write(SnapshotWriter* writer) const{
-    writer->WriteHash(head_);
+    //TODO: write block chain section
     return true;
   }
 }

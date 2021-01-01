@@ -30,7 +30,7 @@ main(int argc, char **argv){
   using namespace Token;
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   if(!InitializeLogging(argv[0])){
-    fprintf(stderr, "Couldn't initialize logging!"); //TODO: Refactor
+    fprintf(stderr, "Couldn't initialize logging!");
     return EXIT_FAILURE;
   }
 
@@ -48,17 +48,6 @@ main(int argc, char **argv){
     return EXIT_FAILURE;
   }
 
-  std::vector<Hash> utxos;
-  if(!client->GetUnclaimedTransactions(User("VenueA"), utxos)){
-    LOG(ERROR) << "couldn't get the list of unclaimed transactions from the peer: " << address;
-    return EXIT_FAILURE;
-  }
-
-  for(int32_t idx = 0;
-      idx < 2; idx++){
-    UnclaimedTransactionPtr utxo = client->GetUnclaimedTransaction(utxos[idx]);
-    SpendToken(client, utxo, "TestUser2", "TestToken");
-  }
   client->Disconnect();
   return EXIT_SUCCESS;
 }

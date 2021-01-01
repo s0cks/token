@@ -5,7 +5,6 @@
 
 namespace Token{
   class PeerSessionManager{
-    //TODO: Better Peer Management
     // - saving peers
     // - monitoring of peers
     // - heartbeats for the peers

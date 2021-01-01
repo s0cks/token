@@ -110,7 +110,7 @@ namespace Token{
     }
 
 #define DECLARE_MESSAGE_HANDLER(Name) \
-        static void Handle##Name##Message(HandleMessageTask* task);
+        static void Handle##Name##Message(ServerSession*, const Name##MessagePtr& msg);
     FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
    public:

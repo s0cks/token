@@ -114,26 +114,73 @@ namespace Token{
   };
 
   class SnapshotBlockChainSection : public SnapshotSection{
-   private:
-    Hash head_;
    public:
-    SnapshotBlockChainSection(const Hash& head):
-      SnapshotSection(SnapshotSection::kBlockChain),
-      head_(head){}
-    SnapshotBlockChainSection():
-      SnapshotSection(SnapshotSection::kBlockChain),
-      head_(Hash::GenerateNonce()){}
+    class Reference{
+     public:
+      struct PositionComparator{
+        bool operator()(const Reference& a, const Reference& b){
+          return a.GetPosition() < b.GetPosition();
+        }
+      };
+     private:
+      Hash hash_;
+      int64_t pos_;
+      int64_t size_;
+     public:
+      Reference(const Hash& hash, int64_t pos, int64_t size):
+        hash_(hash),
+        pos_(pos),
+        size_(size){}
+      Reference(const Reference& ref):
+        hash_(ref.hash_),
+        pos_(ref.pos_),
+        size_(ref.size_){}
+      ~Reference() = default;
+
+      Hash GetHash() const{
+        return hash_;
+      }
+
+      int64_t GetPosition() const{
+        return pos_;
+      }
+
+      int64_t GetSize() const{
+        return size_;
+      }
+
+      void operator=(const Reference& ref){
+        hash_ = ref.hash_;
+        pos_ = ref.pos_;
+        size_ = ref.size_;
+      }
+
+      friend bool operator==(const Reference& a, const Reference& b){
+        return a.hash_ == b.hash_ && a.pos_ == b.pos_ && a.size_ == b.size_;
+      }
+
+      friend bool operator!=(const Reference& a, const Reference& b){
+        return !operator==(a, b);
+      }
+    };
+
+    typedef std::set<Reference, Reference::PositionComparator> ReferenceSet;
+   private:
+    ReferenceSet references_;
+   public:
+    SnapshotBlockChainSection();
     SnapshotBlockChainSection(SnapshotReader* reader);
     SnapshotBlockChainSection(const SnapshotBlockChainSection& section):
       SnapshotSection(SnapshotSection::kBlockChain),
-      head_(section.head_){}
+      references_(section.references_){}
     ~SnapshotBlockChainSection() = default;
 
     Hash GetHead() const{
-      return head_;
+      return (*references_.end()).GetHash();
     }
 
     int32_t GetSize() const{
+      //TODO: fixme
       int32_t size = 0;
       size += Hash::kSize;
       return size;
@@ -142,7 +189,7 @@ namespace Token{
     bool Write(SnapshotWriter* writer) const;
 
     void operator=(const SnapshotBlockChainSection& section){
-      head_ = section.head_;
+      references_ = section.references_;
     }
   };
 }
