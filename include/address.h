@@ -70,11 +70,11 @@ namespace Token{
     NodeAddress(const uv_tcp_t *stream);
     NodeAddress(const NodeAddress &other);
     NodeAddress(const BufferPtr &buff):
-        address_(buff->GetUnsignedInt()),
-        port_(buff->GetUnsignedInt()){}
+      address_(buff->GetUnsignedInt()),
+      port_(buff->GetUnsignedInt()){}
     NodeAddress():
-        address_(0),
-        port_(0){}
+      address_(0),
+      port_(0){}
     ~NodeAddress() = default;
 
     uint32_t GetPort() const{
@@ -99,7 +99,7 @@ namespace Token{
 
     friend bool operator==(const NodeAddress &a, const NodeAddress &b){
       return a.address_ == b.address_
-          && a.port_ == b.port_;
+        && a.port_ == b.port_;
     }
 
     friend bool operator!=(const NodeAddress &a, const NodeAddress &b){

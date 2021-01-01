@@ -12,19 +12,19 @@ namespace Token{
     uuid_t uuid_;
    public:
     UUID():
-        uuid_(){
+      uuid_(){
       uuid_generate_time_safe(uuid_);
     }
     UUID(const std::string &uuid):
-        uuid_(){
+      uuid_(){
       uuid_parse(uuid.data(), uuid_);
     }
     UUID(const UUID &other):
-        uuid_(){
+      uuid_(){
       uuid_copy(uuid_, other.uuid_);
     }
     UUID(const BufferPtr &buff):
-        uuid_(){
+      uuid_(){
       if(!buff->GetBytes((uint8_t *) uuid_, kSize))
         LOG(WARNING) << "cannot read uuid from bytes";
     }

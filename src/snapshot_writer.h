@@ -24,7 +24,7 @@ namespace Token{
     bool WriteHeaderAt(int64_t pos, SnapshotSectionHeader header);
    public:
     SnapshotWriter(const std::string &filename = GetNewSnapshotFilename()):
-        BinaryFileWriter(filename){}
+      BinaryFileWriter(filename){}
     ~SnapshotWriter() = default;
 
     bool WriteSnapshot();

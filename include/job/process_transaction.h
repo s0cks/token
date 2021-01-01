@@ -14,8 +14,8 @@ namespace Token{
     JobResult DoWork();
    public:
     ProcessTransactionJob(ProcessBlockJob *parent, const TransactionPtr &tx):
-        WriteBatchJob(parent, "ProcessTransaction"),
-        transaction_(tx){}
+      WriteBatchJob(parent, "ProcessTransaction"),
+      transaction_(tx){}
     ~ProcessTransactionJob() = default;
 
     BlockPtr GetBlock() const{
@@ -44,7 +44,7 @@ namespace Token{
     JobResult DoWork();
    public:
     ProcessTransactionInputsJob(ProcessTransactionJob *parent):
-        WriteBatchJob(parent, "ProcessTransactionInputsJob"){}
+      WriteBatchJob(parent, "ProcessTransactionInputsJob"){}
     ~ProcessTransactionInputsJob() = default;
 
     TransactionPtr GetTransaction() const{
@@ -61,7 +61,7 @@ namespace Token{
     JobResult DoWork();
    public:
     ProcessTransactionOutputsJob(ProcessTransactionJob *parent):
-        WriteBatchJob(parent, "ProcessTransactionOutputsJob"){}
+      WriteBatchJob(parent, "ProcessTransactionOutputsJob"){}
     ~ProcessTransactionOutputsJob(){}
 
     TransactionPtr GetTransaction() const{

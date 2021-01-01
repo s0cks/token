@@ -14,7 +14,7 @@ namespace Token{
     ProposalPtr proposal_;
 
     ProposalHandler(const ProposalPtr &proposal):
-        proposal_(proposal){}
+      proposal_(proposal){}
 
     bool WasRejected() const;
     bool CommitProposal() const;
@@ -58,7 +58,7 @@ namespace Token{
   class NewProposalHandler : public ProposalHandler{
    public:
     NewProposalHandler(const ProposalPtr &proposal):
-        ProposalHandler(proposal){}
+      ProposalHandler(proposal){}
     ~NewProposalHandler() = default;
 
     bool ProcessBlock(const BlockPtr &blk) const{
@@ -96,7 +96,7 @@ namespace Token{
   class PeerProposalHandler : public ProposalHandler{
    public:
     PeerProposalHandler(const ProposalPtr &proposal):
-        ProposalHandler(proposal){}
+      ProposalHandler(proposal){}
     ~PeerProposalHandler() = default;
 
     bool ProcessBlock(const BlockPtr &blk) const{
@@ -114,7 +114,7 @@ namespace Token{
         //TODO: fix requesting of data
         LOG(INFO) << hash << " cannot be found, requesting block from peer: " << proposer->GetID();
         std::vector<InventoryItem> items = {
-            InventoryItem(InventoryItem::kBlock, hash)
+          InventoryItem(InventoryItem::kBlock, hash)
         };
         GetProposer()->Send(GetDataMessage::NewInstance(items));
         LOG(INFO) << "waiting....";

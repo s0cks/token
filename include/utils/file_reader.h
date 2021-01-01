@@ -22,13 +22,13 @@ namespace Token{
     FILE *file_;
 
     FileReader(const std::string &filename):
-        parent_(nullptr),
-        filename_(filename),
-        file_(nullptr){}
+      parent_(nullptr),
+      filename_(filename),
+      file_(nullptr){}
     FileReader(FileReader *parent):
-        parent_(parent),
-        filename_(parent->filename_),
-        file_(parent->file_){}
+      parent_(parent),
+      filename_(parent->filename_),
+      file_(parent->file_){}
 
     bool HasParent() const{
       return parent_ != nullptr;
@@ -78,11 +78,12 @@ namespace Token{
   class BinaryFileReader : public FileReader{
    protected:
     BinaryFileReader(const std::string &filename):
-        FileReader(filename){
+      FileReader(filename){
       if((file_ = fopen(filename.c_str(), "rb")) == NULL)
         LOG(WARNING) << "couldn't open binary file " << filename << ": " << strerror(errno);
     }
-    BinaryFileReader(BinaryFileReader *parent): FileReader(parent){}
+    BinaryFileReader(BinaryFileReader *parent):
+      FileReader(parent){}
    public:
     virtual ~BinaryFileReader() = default;
   };

@@ -9,8 +9,8 @@ namespace Token{
     MessagePtr message_;
 
     HandleMessageTask(Session *session, const MessagePtr &msg):
-        SessionTask(session),
-        message_(msg){}
+      SessionTask(session),
+      message_(msg){}
    public:
     ~HandleMessageTask() = default;
 

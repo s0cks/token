@@ -29,14 +29,14 @@ namespace Token{
     NodeAddress address_;
    public:
     Peer(const UUID &uuid, const NodeAddress &address):
-        uuid_(uuid),
-        address_(address){}
+      uuid_(uuid),
+      address_(address){}
     Peer(const BufferPtr &buff):
-        uuid_(buff),
-        address_(buff){}
+      uuid_(buff),
+      address_(buff){}
     Peer(const Peer &other):
-        uuid_(other.uuid_),
-        address_(other.address_){}
+      uuid_(other.uuid_),
+      address_(other.address_){}
     ~Peer() = default;
 
     UUID GetID() const{
@@ -60,7 +60,7 @@ namespace Token{
 
     friend bool operator==(const Peer &a, const Peer &b){
       return a.uuid_ == b.uuid_
-          && a.address_ == b.address_;
+        && a.address_ == b.address_;
     }
 
     friend bool operator!=(const Peer &a, const Peer &b){
@@ -121,16 +121,16 @@ namespace Token{
 #undef DECLARE_MESSAGE_HANDLER
    public:
     PeerSession(uv_loop_t *loop, const NodeAddress &address):
-        Session(loop),
-        thread_(pthread_self()),
-        info_(UUID(), address),
-        head_(),
-        disconnect_(),
-        prepare_(),
-        promise_(),
-        commit_(),
-        accepted_(),
-        rejected_(){
+      Session(loop),
+      thread_(pthread_self()),
+      info_(UUID(), address),
+      head_(),
+      disconnect_(),
+      prepare_(),
+      promise_(),
+      commit_(),
+      accepted_(),
+      rejected_(){
       disconnect_.data = this;
       prepare_.data = this;
       promise_.data = this;

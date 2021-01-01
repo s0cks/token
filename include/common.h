@@ -103,13 +103,13 @@ namespace Token{
   static bool
   EndsWith(const std::string &str, const std::string &suffix){
     return str.size() >= suffix.size() &&
-        str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
+      str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
   }
 
   static bool
   BeginsWith(const std::string &str, const std::string prefix){
     return str.size() >= prefix.size() &&
-        str.compare(0, prefix.size(), prefix) == 0;
+      str.compare(0, prefix.size(), prefix) == 0;
   }
 
   static inline size_t

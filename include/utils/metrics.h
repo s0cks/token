@@ -30,7 +30,7 @@ namespace Token{
       std::string name_;
 
       Metric(const std::string &name):
-          name_(name){}
+        name_(name){}
      public:
       virtual ~Metric() = default;
 
@@ -53,8 +53,8 @@ namespace Token{
       int64_t value_;
      public:
       Counter(const std::string &name, const int64_t &initial = 0):
-          Metric(name),
-          value_(initial){}
+        Metric(name),
+        value_(initial){}
       ~Counter() = default;
 
       int64_t &Get(){
@@ -88,7 +88,7 @@ namespace Token{
     class Gauge : public Metric{
      protected:
       Gauge(const std::string &name):
-          Metric(name){}
+        Metric(name){}
      public:
       virtual ~Gauge() = default;
       virtual int64_t Get() const = 0;
@@ -142,7 +142,7 @@ namespace Token{
       SnapshotData data_;
      public:
       Snapshot(const SnapshotData &data):
-          data_(){
+        data_(){
         std::copy(data.begin(), data.end(), std::back_inserter(data_));
         std::sort(data_.begin(), data_.end());
       }
@@ -227,9 +227,9 @@ namespace Token{
       }
      public:
       UniformSample(int64_t size = Sample::kDefaultSampleSize):
-          size_(size),
-          count_(0),
-          data_(size, 0){}
+        size_(size),
+        count_(0),
+        data_(size, 0){}
       ~UniformSample() = default;
 
       void Clear(){
@@ -280,10 +280,10 @@ namespace Token{
       std::unique_ptr<Sample> sample_;
      public:
       Histogram(const std::string &name, const Sampling::SampleType &sample_type = Sampling::kUniform):
-          Metric(name),
-          Sampling(),
-          count_(0),
-          sample_(){
+        Metric(name),
+        Sampling(),
+        count_(0),
+        sample_(){
         switch(sample_type){
           case Sampling::kUniform:sample_.reset(new UniformSample());
             break;

@@ -24,9 +24,9 @@ namespace Token{
   class Session : public Object{
    public:
     static const uint32_t
-        kHeartbeatIntervalMilliseconds = 30 * 1000; //TODO: remove Session::kHeartbeatIntervalMilliseconds
+      kHeartbeatIntervalMilliseconds = 30 * 1000; //TODO: remove Session::kHeartbeatIntervalMilliseconds
     static const uint32_t
-        kHeartbeatTimeoutMilliseconds = 1 * 60 * 1000; //TODO: remove Session::kHeartbeatTimeoutMilliseconds
+      kHeartbeatTimeoutMilliseconds = 1 * 60 * 1000; //TODO: remove Session::kHeartbeatTimeoutMilliseconds
     static const intptr_t kBufferSize = 65536;
 
     enum State{
@@ -140,8 +140,8 @@ namespace Token{
     uv_async_t shutdown_;
 
     ThreadedSession(uv_loop_t *loop):
-        Session(loop),
-        thread_(){}
+      Session(loop),
+      thread_(){}
    public:
     virtual ~ThreadedSession() = default;
     virtual bool Connect() = 0;

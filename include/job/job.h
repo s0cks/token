@@ -37,11 +37,11 @@ namespace Token{
     std::string message_;
    public:
     JobResult(const Status &status, const std::string &msg):
-        status_(status),
-        message_(msg){}
+      status_(status),
+      message_(msg){}
     JobResult(const JobResult &result):
-        status_(result.status_),
-        message_(result.message_){}
+      status_(result.status_),
+      message_(result.message_){}
     ~JobResult() = default;
 
     Status GetStatus() const{
@@ -121,10 +121,10 @@ namespace Token{
     std::atomic<int32_t> unfinished_;
 
     Job(Job *parent, const std::string &name):
-        parent_(parent),
-        name_(name),
-        result_(JobResult::kUnscheduled, "Unscheduled"),
-        unfinished_(){
+      parent_(parent),
+      name_(name),
+      result_(JobResult::kUnscheduled, "Unscheduled"),
+      unfinished_(){
       unfinished_.store(1, std::memory_order_seq_cst);
       if(parent != nullptr)
         parent->IncrementUnfinishedJobs();
@@ -193,7 +193,7 @@ namespace Token{
   class WriteBatchJob : public Job{
    protected:
     WriteBatchJob(Job *parent, const std::string &name):
-        Job(parent, name){}
+      Job(parent, name){}
    public:
     virtual ~WriteBatchJob() = default;
     virtual void Append(leveldb::WriteBatch *batch) = 0;

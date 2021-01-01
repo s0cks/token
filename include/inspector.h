@@ -16,9 +16,9 @@ namespace Token{
     DataType *data_;
 
     Inspector():
-        stdin_(),
-        stdout_(),
-        data_(nullptr){
+      stdin_(),
+      stdout_(),
+      data_(nullptr){
       stdin_.data = this;
       stdout_.data = this;
     }

@@ -20,14 +20,14 @@ namespace Token{
     User user_;//TODO: remove field
    public:
     Input(const Hash &tx_hash, int64_t index, const User &user):
-        BinaryObject(),
-        hash_(tx_hash),
-        index_(index),
-        user_(user){}
+      BinaryObject(),
+      hash_(tx_hash),
+      index_(index),
+      user_(user){}
     Input(const Hash &tx_hash, int64_t index, const std::string &user):
-        Input(tx_hash, index, User(user)){}
+      Input(tx_hash, index, User(user)){}
     Input(const BufferPtr &buff):
-        Input(buff->GetHash(), buff->GetInt(), buff->GetUser()){}
+      Input(buff->GetHash(), buff->GetInt(), buff->GetUser()){}
     ~Input(){}
 
     int64_t GetOutputIndex() const{
@@ -69,14 +69,14 @@ namespace Token{
 
     friend bool operator==(const Input &a, const Input &b){
       return a.hash_ == b.hash_
-          && a.index_ == b.index_
-          && a.user_ == b.user_;
+        && a.index_ == b.index_
+        && a.user_ == b.user_;
     }
 
     friend bool operator!=(const Input &a, const Input &b){
       return a.hash_ != b.hash_
-          && a.index_ != b.index_
-          && a.user_ != b.user_;
+        && a.index_ != b.index_
+        && a.user_ != b.user_;
     }
 
     friend bool operator<(const Input &a, const Input &b){
@@ -95,13 +95,13 @@ namespace Token{
     Product product_;
    public:
     Output(const User &user, const Product &product):
-        BinaryObject(),
-        user_(user),
-        product_(product){}
+      BinaryObject(),
+      user_(user),
+      product_(product){}
     Output(const std::string &user, const std::string &product):
-        Output(User(user), Product(product)){}
+      Output(User(user), Product(product)){}
     Output(const BufferPtr &buff):
-        Output(buff->GetUser(), buff->GetProduct()){}
+      Output(buff->GetUser(), buff->GetProduct()){}
     ~Output(){}
 
     User GetUser() const{
@@ -135,12 +135,12 @@ namespace Token{
 
     friend bool operator==(const Output &a, const Output &b){
       return a.user_ == b.user_
-          && a.product_ == b.product_;
+        && a.product_ == b.product_;
     }
 
     friend bool operator!=(const Output &a, const Output &b){
       return a.user_ != b.user_
-          && a.product_ != b.product_;
+        && a.product_ != b.product_;
     }
 
     friend bool operator<(const Output &a, const Output &b){
@@ -184,12 +184,12 @@ namespace Token{
                 const InputList &inputs,
                 const OutputList &outputs,
                 Timestamp timestamp = GetCurrentTimestamp()):
-        BinaryObject(),
-        timestamp_(timestamp),
-        index_(index),
-        inputs_(inputs),
-        outputs_(outputs),
-        signature_(){}
+      BinaryObject(),
+      timestamp_(timestamp),
+      index_(index),
+      inputs_(inputs),
+      outputs_(outputs),
+      signature_(){}
     ~Transaction() = default;
 
     Timestamp GetTimestamp() const{
@@ -308,17 +308,17 @@ namespace Token{
 
     bool operator==(const Transaction &other){
       return timestamp_ == other.timestamp_
-          && index_ == other.index_
-          && inputs_ == other.inputs_
-          && outputs_ == other.outputs_;
+        && index_ == other.index_
+        && inputs_ == other.inputs_
+        && outputs_ == other.outputs_;
       //TODO: compare transaction signature
     }
 
     bool operator!=(const Transaction &other){
       return timestamp_ != other.timestamp_
-          && index_ != other.index_
-          && inputs_ != other.inputs_
-          && outputs_ != other.outputs_;
+        && index_ != other.index_
+        && inputs_ != other.inputs_
+        && outputs_ != other.outputs_;
       //TODO: compare transaction signature
     }
 

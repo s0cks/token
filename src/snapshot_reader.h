@@ -16,7 +16,7 @@ namespace Token{
     }
    public:
     SnapshotReader(const std::string &filename):
-        BinaryFileReader(filename){}
+      BinaryFileReader(filename){}
     ~SnapshotReader() = default;
 
     Snapshot *ReadSnapshot();

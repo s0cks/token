@@ -11,8 +11,8 @@ namespace Token{
     ObjectList invalid_;
 
     Verifier():
-        valid_(),
-        invalid_(){}
+      valid_(),
+      invalid_(){}
    public:
     virtual ~Verifier() = default;
 
@@ -26,7 +26,7 @@ namespace Token{
 
     bool IsValid() const{
       return invalid_.empty()
-          && !valid_.empty();
+        && !valid_.empty();
     }
   };
 }

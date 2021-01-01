@@ -10,7 +10,7 @@ namespace Token{
   class VerifierJob : public Job{
    protected:
     VerifierJob(Job *parent, const std::string &name):
-        Job(parent, name){}
+      Job(parent, name){}
    public:
     virtual ~VerifierJob() = default;
   };
@@ -36,8 +36,8 @@ namespace Token{
     JobResult DoWork();
    public:
     VerifyBlockJob(const BlockPtr &blk):
-        VerifierJob(nullptr, "VerifyBlock"),
-        block_(blk){}
+      VerifierJob(nullptr, "VerifyBlock"),
+      block_(blk){}
     ~VerifyBlockJob() = default;
 
     BlockPtr &GetBlock(){

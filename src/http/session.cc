@@ -7,8 +7,8 @@ namespace Token{
     BufferPtr buffer;
 
     HttpSessionWriteRequestData(HttpSession *s, int64_t size):
-        session(s),
-        buffer(Buffer::NewInstance(size)){}
+      session(s),
+      buffer(Buffer::NewInstance(size)){}
   };
 
   void HttpSession::Send(HttpResponse *response){

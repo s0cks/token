@@ -240,7 +240,7 @@ namespace Token{
         LOG(INFO) << "skipping remote <HEAD> := " << remote_head;
       } else if(local_head < remote_head){
         SynchronizeBlockChainTask
-            *sync_task = SynchronizeBlockChainTask::NewInstance(session->GetLoop(), session, remote_head);
+          *sync_task = SynchronizeBlockChainTask::NewInstance(session->GetLoop(), session, remote_head);
         sync_task->Submit();
         session->Send(GetBlocksMessage::NewInstance());
       }

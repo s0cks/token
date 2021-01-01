@@ -87,13 +87,13 @@ namespace Token{
     static void *HandleThread(void *data);
    public:
     PeerSessionThread(int32_t worker, uv_loop_t *loop = uv_loop_new()):
-        worker_(worker),
-        thread_(),
-        mutex_(),
-        cond_(),
-        state_(),
-        status_(),
-        loop_(loop){}
+      worker_(worker),
+      thread_(),
+      mutex_(),
+      cond_(),
+      state_(),
+      status_(),
+      loop_(loop){}
     ~PeerSessionThread(){
       if(loop_)
         uv_loop_delete(loop_);

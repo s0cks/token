@@ -9,9 +9,9 @@ namespace Token{
     std::atomic<size_t> bottom_;
    public:
     JobQueue(size_t max_size):
-        jobs_(max_size, nullptr),
-        top_(0),
-        bottom_(0){}
+      jobs_(max_size, nullptr),
+      top_(0),
+      bottom_(0){}
     ~JobQueue() = default;
 
     size_t GetSize() const{

@@ -16,13 +16,13 @@ namespace Token{
     HttpRouteHandler handler_;
 
     HttpRoute():
-        path_(),
-        method_(),
-        handler_(){}
+      path_(),
+      method_(),
+      handler_(){}
     HttpRoute(const HttpMethod &method, const HttpRouteHandler &handler):
-        path_(),
-        method_(method),
-        handler_(handler){}
+      path_(),
+      method_(method),
+      handler_(handler){}
    public:
     ~HttpRoute() = default;
 
@@ -71,17 +71,17 @@ namespace Token{
     HttpRouteHandler handler_;
 
     HttpRouterMatch(const Status &status, const ParameterMap &params, const HttpRouteHandler &handler):
-        status_(status),
-        parameters_(params),
-        handler_(handler){}
+      status_(status),
+      parameters_(params),
+      handler_(handler){}
     HttpRouterMatch(const Status &status):
-        status_(status),
-        parameters_(),
-        handler_(nullptr){}
+      status_(status),
+      parameters_(),
+      handler_(nullptr){}
    public:
     HttpRouterMatch(const HttpRouterMatch &match):
-        status_(match.status_),
-        parameters_(match.parameters_){}
+      status_(match.status_),
+      parameters_(match.parameters_){}
     ~HttpRouterMatch() = default;
 
     Status GetStatus() const{
@@ -133,26 +133,26 @@ namespace Token{
       HttpRoute route_;
 
       Node():
-          parent_(nullptr),
-          children_(),
-          key_(),
-          route_(){
+        parent_(nullptr),
+        children_(),
+        key_(),
+        route_(){
         for(int idx = 0; idx < kAlphabetSize; idx++)
           children_[idx] = nullptr;
       }
       Node(const HttpMethod &method, const HttpRouteHandler &handler, const std::string &part):
-          parent_(nullptr),
-          children_(),
-          key_(part),
-          route_(method, handler){
+        parent_(nullptr),
+        children_(),
+        key_(part),
+        route_(method, handler){
         for(int idx = 0; idx < kAlphabetSize; idx++)
           children_[idx] = nullptr;
       }
       Node(const HttpMethod &method, const HttpRouteHandler &handler, const char &c):
-          parent_(nullptr),
-          children_(),
-          key_(1, c),
-          route_(method, handler){
+        parent_(nullptr),
+        children_(),
+        key_(1, c),
+        route_(method, handler){
         for(int idx = 0; idx < kAlphabetSize; idx++)
           children_[idx] = nullptr;
       }
@@ -234,9 +234,9 @@ namespace Token{
     }
    public:
     HttpRouter():
-        root_(new Node()){}
+      root_(new Node()){}
     HttpRouter(const HttpRouteHandler &default_handler):
-        root_(new Node()){}
+      root_(new Node()){}
     ~HttpRouter() = default;
 
     void Get(const std::string &path, const HttpRouteHandler &handler){

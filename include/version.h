@@ -7,29 +7,29 @@ namespace Token{
   class Version{
    public:
     static const int64_t kSize = sizeof(int16_t) // Major
-        + sizeof(int16_t) // Minor
-        + sizeof(int16_t); // Revision
+      + sizeof(int16_t) // Minor
+      + sizeof(int16_t); // Revision
    private:
     int16_t major_;
     int16_t minor_;
     int16_t revision_;
    public:
     Version():
-        major_(TOKEN_MAJOR_VERSION),
-        minor_(TOKEN_MINOR_VERSION),
-        revision_(TOKEN_REVISION_VERSION){}
+      major_(TOKEN_MAJOR_VERSION),
+      minor_(TOKEN_MINOR_VERSION),
+      revision_(TOKEN_REVISION_VERSION){}
     Version(int16_t major, int16_t minor, int16_t revision):
-        major_(major),
-        minor_(minor),
-        revision_(revision){}
+      major_(major),
+      minor_(minor),
+      revision_(revision){}
     Version(const Version &other):
-        major_(other.major_),
-        minor_(other.minor_),
-        revision_(other.revision_){}
+      major_(other.major_),
+      minor_(other.minor_),
+      revision_(other.revision_){}
     Version(const BufferPtr &buff):
-        major_(buff->GetShort()),
-        minor_(buff->GetShort()),
-        revision_(buff->GetShort()){}
+      major_(buff->GetShort()),
+      minor_(buff->GetShort()),
+      revision_(buff->GetShort()){}
     ~Version() = default;
 
     int16_t GetMajor() const{
@@ -65,8 +65,8 @@ namespace Token{
 
     bool operator==(const Version &other){
       return major_ == other.major_
-          && minor_ == other.minor_
-          && revision_ == other.revision_;
+        && minor_ == other.minor_
+        && revision_ == other.revision_;
     }
 
     bool operator!=(const Version &other){

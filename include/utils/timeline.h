@@ -23,11 +23,11 @@ namespace Token{
     std::string name_;
    public:
     TimelineEvent(const std::string &name, const Timestamp timestamp = GetCurrentTimestamp()):
-        timestamp_(timestamp),
-        name_(name){}
+      timestamp_(timestamp),
+      name_(name){}
     TimelineEvent(const TimelineEvent &event):
-        timestamp_(event.timestamp_),
-        name_(event.name_){}
+      timestamp_(event.timestamp_),
+      name_(event.name_){}
     ~TimelineEvent() = default;
 
     Timestamp GetTimestamp() const{
@@ -45,7 +45,7 @@ namespace Token{
 
     friend bool operator==(const TimelineEvent &a, const TimelineEvent &b){
       return a.GetTimestamp() == b.GetTimestamp()
-          && a.GetName() == b.GetName();
+        && a.GetName() == b.GetName();
     }
 
     friend bool operator!=(const TimelineEvent &a, const TimelineEvent &b){
@@ -63,11 +63,11 @@ namespace Token{
     TimelineEventSet events_;
    public:
     Timeline(const std::string &name):
-        name_(name),
-        events_(){}
+      name_(name),
+      events_(){}
     Timeline(const Timeline &timeline):
-        name_(timeline.name_),
-        events_(timeline.events_){}
+      name_(timeline.name_),
+      events_(timeline.events_){}
     ~Timeline() = default;
 
     std::string GetName() const{
@@ -126,7 +126,7 @@ namespace Token{
   class TimelinePrinter : public Printer{
    public:
     TimelinePrinter(const google::LogSeverity &severity = google::INFO, const long &flags = Printer::kFlagNone):
-        Printer(severity, flags){}
+      Printer(severity, flags){}
     ~TimelinePrinter() = default;
 
     bool Print(const Timeline &timeline) const{

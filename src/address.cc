@@ -53,8 +53,8 @@ namespace Token{
   }
 
   NodeAddress::NodeAddress(const std::string &address):
-      address_(0),
-      port_(0){
+    address_(0),
+    port_(0){
     if(address.find(':') != std::string::npos){
       // has port
       std::vector<std::string> parts;
@@ -68,16 +68,16 @@ namespace Token{
   }
 
   NodeAddress::NodeAddress(const std::string &address, uint32_t port):
-      address_(GetAddressFrom(address)),
-      port_(port){}
+    address_(GetAddressFrom(address)),
+    port_(port){}
 
   NodeAddress::NodeAddress(const uv_tcp_t *handle):
-      address_(GetAddressFromHandle(handle)),
-      port_(GetPortFromHandle(handle)){}
+    address_(GetAddressFromHandle(handle)),
+    port_(GetPortFromHandle(handle)){}
 
   NodeAddress::NodeAddress(const NodeAddress &other):
-      address_(other.address_),
-      port_(other.port_){}
+    address_(other.address_),
+    port_(other.port_){}
 
   std::string NodeAddress::GetAddress() const{
     return GetAddressAsString(address_);

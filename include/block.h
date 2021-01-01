@@ -33,31 +33,31 @@ namespace Token{
     BloomFilter bloom_;
    public:
     BlockHeader():
-        timestamp_(0),
-        height_(0),
-        previous_hash_(),
-        merkle_root_(), // fill w/ genesis's merkle root
-        hash_(), //TODO: fill w/ genesis's Hash
-        bloom_(){}
+      timestamp_(0),
+      height_(0),
+      previous_hash_(),
+      merkle_root_(), // fill w/ genesis's merkle root
+      hash_(), //TODO: fill w/ genesis's Hash
+      bloom_(){}
     BlockHeader(const BlockHeader &blk):
-        timestamp_(blk.timestamp_),
-        height_(blk.height_),
-        previous_hash_(blk.previous_hash_),
-        merkle_root_(blk.merkle_root_),
-        hash_(blk.hash_),
-        bloom_(blk.bloom_){}
+      timestamp_(blk.timestamp_),
+      height_(blk.height_),
+      previous_hash_(blk.previous_hash_),
+      merkle_root_(blk.merkle_root_),
+      hash_(blk.hash_),
+      bloom_(blk.bloom_){}
     BlockHeader(Timestamp timestamp,
                 int64_t height,
                 const Hash &phash,
                 const Hash &merkle_root,
                 const Hash &hash,
                 const BloomFilter &tx_bloom):
-        timestamp_(timestamp),
-        height_(height),
-        previous_hash_(phash),
-        merkle_root_(merkle_root),
-        hash_(hash),
-        bloom_(tx_bloom){}
+      timestamp_(timestamp),
+      height_(height),
+      previous_hash_(phash),
+      merkle_root_(merkle_root),
+      hash_(hash),
+      bloom_(tx_bloom){}
     BlockHeader(const BufferPtr &buff);
     ~BlockHeader(){}
 
@@ -117,10 +117,10 @@ namespace Token{
     static inline int64_t
     GetSize(){
       return sizeof(Timestamp)
-          + sizeof(int64_t)
-          + Hash::GetSize()
-          + Hash::GetSize()
-          + Hash::GetSize();
+        + sizeof(int64_t)
+        + Hash::GetSize()
+        + Hash::GetSize()
+        + Hash::GetSize();
     }
   };
 
@@ -169,31 +169,31 @@ namespace Token{
     BloomFilter tx_bloom_; // transient
    public:
     Block():
-        BinaryObject(),
-        timestamp_(0),
-        height_(0),
-        previous_hash_(),
-        transactions_(),
-        tx_bloom_(){}
+      BinaryObject(),
+      timestamp_(0),
+      height_(0),
+      previous_hash_(),
+      transactions_(),
+      tx_bloom_(){}
     Block(int64_t height,
           const Hash &phash,
           const TransactionList &transactions,
           Timestamp timestamp = GetCurrentTimestamp()):
-        BinaryObject(),
-        timestamp_(timestamp),
-        height_(height),
-        previous_hash_(phash),
-        transactions_(transactions),
-        tx_bloom_(){
+      BinaryObject(),
+      timestamp_(timestamp),
+      height_(height),
+      previous_hash_(phash),
+      transactions_(transactions),
+      tx_bloom_(){
       if(!transactions.empty()){
         for(auto &it : transactions)
           tx_bloom_.Put(it->GetHash());
       }
     }
     Block(const BlockPtr &parent, const TransactionList &transactions, Timestamp timestamp = GetCurrentTimestamp()):
-        Block(parent->GetHeight() + 1, parent->GetHash(), transactions, timestamp){}
+      Block(parent->GetHeight() + 1, parent->GetHash(), transactions, timestamp){}
     Block(const BlockHeader &parent, const TransactionList &transactions, Timestamp timestamp = GetCurrentTimestamp()):
-        Block(parent.GetHeight() + 1, parent.GetHash(), transactions, timestamp){}
+      Block(parent.GetHeight() + 1, parent.GetHash(), transactions, timestamp){}
     ~Block() = default;
 
     BlockHeader GetHeader() const{
@@ -282,8 +282,8 @@ namespace Token{
 
     friend bool operator==(const Block &a, const Block &b){
       return a.timestamp_ == b.timestamp_
-          && a.height_ == b.height_
-          && a.GetHash() == b.GetHash();
+        && a.height_ == b.height_
+        && a.GetHash() == b.GetHash();
     }
 
     friend bool operator!=(const Block &a, const Block &b){

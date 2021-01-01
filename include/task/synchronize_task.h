@@ -14,8 +14,8 @@ namespace Token{
     BlockHeader head_;
 
     SynchronizeBlockChainTask(uv_loop_t *loop, Session *session, const BlockHeader &head):
-        AsyncSessionTask(loop, session),
-        head_(head){}
+      AsyncSessionTask(loop, session),
+      head_(head){}
 
     static inline InventoryItem
     GetItem(const Hash hash){

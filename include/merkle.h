@@ -37,15 +37,15 @@ namespace Token{
     Hash ComputeHash() const;
    public:
     MerkleNode(const Hash &hash):
-        parent_(),
-        lchild_(),
-        rchild_(),
-        hash_(hash){}
+      parent_(),
+      lchild_(),
+      rchild_(),
+      hash_(hash){}
     MerkleNode(MerkleNode *lchild, MerkleNode *rchild):
-        parent_(nullptr),
-        lchild_(nullptr),
-        rchild_(nullptr),
-        hash_(Hash::Concat(lchild->GetHash(), rchild->GetHash())){
+      parent_(nullptr),
+      lchild_(nullptr),
+      rchild_(nullptr),
+      hash_(Hash::Concat(lchild->GetHash(), rchild->GetHash())){
       SetLeft(lchild);
       SetRight(rchild);
     }
@@ -73,7 +73,7 @@ namespace Token{
 
     bool IsLeaf() const{
       return lchild_ == nullptr
-          && rchild_ == nullptr;
+        && rchild_ == nullptr;
     }
 
     Hash GetHash() const{
@@ -111,14 +111,14 @@ namespace Token{
     Hash hash_;
    public:
     MerkleProofHash(Direction direction, const Hash &hash):
-        direction_(direction),
-        hash_(hash){}
+      direction_(direction),
+      hash_(hash){}
     MerkleProofHash(Direction direction, const MerkleNode &node):
-        direction_(direction),
-        hash_(node.GetHash()){}
+      direction_(direction),
+      hash_(node.GetHash()){}
     MerkleProofHash(const MerkleProofHash &other):
-        direction_(other.direction_),
-        hash_(other.hash_){}
+      direction_(other.direction_),
+      hash_(other.hash_){}
     ~MerkleProofHash(){}
 
     Direction GetDirection() const{
@@ -148,12 +148,12 @@ namespace Token{
 
     friend bool operator==(const MerkleProofHash &a, const MerkleProofHash &b){
       return a.hash_ == b.hash_
-          && a.direction_ == b.direction_;
+        && a.direction_ == b.direction_;
     }
 
     friend bool operator!=(const MerkleProofHash &a, const MerkleProofHash &b){
       return a.hash_ != b.hash_
-          && a.direction_ != b.direction_;
+        && a.direction_ != b.direction_;
     }
   };
 
@@ -197,9 +197,9 @@ namespace Token{
     MerkleNode *BuildTree(std::vector<Hash> &nodes);
    public:
     MerkleTree(const std::vector<Hash> &leaves):
-        root_(nullptr),
-        leaves_(leaves),
-        nodes_(){
+      root_(nullptr),
+      leaves_(leaves),
+      nodes_(){
       SetRoot(BuildTree(leaves_));
     }
     ~MerkleTree() = default;
@@ -273,8 +273,8 @@ namespace Token{
     google::LogSeverity severity_;
    public:
     MerkleTreeLogger(const google::LogSeverity &severity = google::INFO):
-        MerkleTreeVisitor(),
-        severity_(severity){}
+      MerkleTreeVisitor(),
+      severity_(severity){}
     ~MerkleTreeLogger() = default;
 
     bool Visit(MerkleNode *node) const{

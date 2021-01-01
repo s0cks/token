@@ -7,7 +7,8 @@
 namespace Token{
   class SnapshotTask : public AsyncTask{
    protected:
-    SnapshotTask(uv_loop_t *loop): AsyncTask(loop){}
+    SnapshotTask(uv_loop_t *loop):
+      AsyncTask(loop){}
 
     AsyncTaskResult DoWork(){
       LOG(INFO) << "generating new snapshot....";

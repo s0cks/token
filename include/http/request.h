@@ -39,11 +39,11 @@ namespace Token{
     }
    public:
     HttpRequest(HttpSession *session, const char *data, size_t len):
-        session_(session),
-        parser_(),
-        settings_(),
-        path_(),
-        parameters_(){
+      session_(session),
+      parser_(),
+      settings_(),
+      path_(),
+      parameters_(){
       parser_.data = this;
       settings_.on_url = &OnParseURL;
       http_parser_init(&parser_, HTTP_REQUEST);
@@ -154,8 +154,8 @@ namespace Token{
     virtual bool Write(const BufferPtr &buff) const = 0;
    public:
     HttpResponse(HttpSession *session, const HttpStatusCode &code):
-        session_(session),
-        status_code_(code){}
+      session_(session),
+      status_code_(code){}
     virtual ~HttpResponse() = default;
 
     HttpSession *GetSession() const{
@@ -214,8 +214,8 @@ namespace Token{
     }
    public:
     HttpTextResponse(HttpSession *session, const HttpStatusCode &status_code, const std::string &body):
-        HttpResponse(session, status_code),
-        body_(body){}
+      HttpResponse(session, status_code),
+      body_(body){}
     ~HttpTextResponse() = default;
 
     int64_t GetContentLength() const{
@@ -235,8 +235,8 @@ namespace Token{
     }
    public:
     HttpJsonResponse(HttpSession *session, const HttpStatusCode &status_code, const JsonString &body):
-        HttpResponse(session, status_code),
-        body_(body){
+      HttpResponse(session, status_code),
+      body_(body){
       SetHeader("Content-Type", CONTENT_TYPE_APPLICATION_JSON);
       SetHeader("Content-Length", body.GetSize());
     }

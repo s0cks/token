@@ -32,10 +32,10 @@ namespace Token{
     static void OnClose(uv_handle_t *handle);
    public:
     HttpSession(uv_loop_t *loop):
-        session_id_(),
-        handle_(),
-        rbuff_(BufferPtr(nullptr)),
-        wbuff_(BufferPtr(nullptr)){
+      session_id_(),
+      handle_(),
+      rbuff_(BufferPtr(nullptr)),
+      wbuff_(BufferPtr(nullptr)){
       handle_.data = this;
       int err;
       if((err = uv_tcp_init(loop, &handle_)) != 0){

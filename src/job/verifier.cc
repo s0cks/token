@@ -13,8 +13,8 @@ namespace Token{
     }
    public:
     VerifyInputListJob(VerifyTransactionJob *parent, const InputList &inputs):
-        VerifierJob(parent, "VerifyInputList"),
-        inputs_(inputs){}
+      VerifierJob(parent, "VerifyInputList"),
+      inputs_(inputs){}
     ~VerifyInputListJob() = default;
   };
 
@@ -29,14 +29,14 @@ namespace Token{
     }
    public:
     VerifyOutputListJob(VerifyTransactionJob *parent, const OutputList &outputs):
-        VerifierJob(parent, "VerifyOutputList"),
-        outputs_(outputs){}
+      VerifierJob(parent, "VerifyOutputList"),
+      outputs_(outputs){}
     ~VerifyOutputListJob() = default;
   };
 
   VerifyTransactionJob::VerifyTransactionJob(VerifyBlockJob *parent, const TransactionPtr &tx):
-      VerifierJob(parent, "VerifyTransaction"),
-      transaction_(tx){}
+    VerifierJob(parent, "VerifyTransaction"),
+    transaction_(tx){}
 
   JobResult VerifyTransactionJob::DoWork(){
     JobWorker *worker = JobScheduler::GetThreadWorker();

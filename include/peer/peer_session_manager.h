@@ -21,18 +21,18 @@ namespace Token{
       int16_t attempts_;
 
       ConnectRequest(const NodeAddress &addr, int16_t attempts):
-          address_(addr),
-          attempts_(attempts){}
+        address_(addr),
+        attempts_(attempts){}
       ConnectRequest(const ConnectRequest &request, bool is_retry):
-          address_(request.address_),
-          attempts_(is_retry ? request.GetNumberOfAttempts() + 1 : 0){}
+        address_(request.address_),
+        attempts_(is_retry ? request.GetNumberOfAttempts() + 1 : 0){}
      public:
       ConnectRequest():
-          address_(),
-          attempts_(0){}
+        address_(),
+        attempts_(0){}
       ConnectRequest(const ConnectRequest &other):
-          address_(other.address_),
-          attempts_(other.attempts_){}
+        address_(other.address_),
+        attempts_(other.attempts_){}
       ~ConnectRequest() = default;
 
       NodeAddress GetAddress() const{
@@ -54,7 +54,7 @@ namespace Token{
 
       friend bool operator==(const ConnectRequest &a, const ConnectRequest &b){
         return a.address_ == b.address_
-            && a.attempts_ == b.attempts_;
+          && a.attempts_ == b.attempts_;
       }
 
       friend bool operator!=(const ConnectRequest &a, const ConnectRequest &b){

@@ -29,22 +29,22 @@ namespace Token{
     UUID proposer_;
    public:
     RawProposal(const UUID &proposer, int64_t height, const Hash &hash, int64_t timestamp = GetCurrentTimestamp()):
-        timestamp_(timestamp),
-        height_(height),
-        hash_(hash),
-        proposer_(proposer){}
+      timestamp_(timestamp),
+      height_(height),
+      hash_(hash),
+      proposer_(proposer){}
     RawProposal(const UUID &proposer, const BlockHeader &blk, int64_t timestamp = GetCurrentTimestamp()):
-        RawProposal(proposer, blk.GetHeight(), blk.GetHash(), timestamp){}
+      RawProposal(proposer, blk.GetHeight(), blk.GetHash(), timestamp){}
     RawProposal(const BufferPtr &buff):
-        timestamp_(buff->GetLong()),
-        height_(buff->GetLong()),
-        hash_(buff->GetHash()),
-        proposer_(buff){}
+      timestamp_(buff->GetLong()),
+      height_(buff->GetLong()),
+      hash_(buff->GetHash()),
+      proposer_(buff){}
     RawProposal(const RawProposal &proposal):
-        timestamp_(proposal.GetTimestamp()),
-        height_(proposal.GetHeight()),
-        hash_(proposal.GetHash()),
-        proposer_(proposal.GetProposer()){}
+      timestamp_(proposal.GetTimestamp()),
+      height_(proposal.GetHeight()),
+      hash_(proposal.GetHash()),
+      proposer_(proposal.GetProposer()){}
     ~RawProposal() = default;
 
     int64_t GetTimestamp() const{
@@ -80,9 +80,9 @@ namespace Token{
 
     friend bool operator==(const RawProposal &a, const RawProposal &b){
       return a.timestamp_ == b.timestamp_
-          && a.height_ == b.height_
-          && a.hash_ == b.hash_
-          && a.proposer_ == b.proposer_;
+        && a.height_ == b.height_
+        && a.hash_ == b.hash_
+        && a.proposer_ == b.proposer_;
     }
 
     friend bool operator!=(const RawProposal &a, const RawProposal &b){
@@ -170,30 +170,30 @@ namespace Token{
     static int GetRequiredNumberOfPeers();
    public:
     Proposal(const RawProposal &proposal):
-        Object(),
-        phase_(Proposal::kProposalPhase),
-        result_(Proposal::kNone),
-        raw_(proposal),
-        accepted_(),
-        rejected_(){}
+      Object(),
+      phase_(Proposal::kProposalPhase),
+      result_(Proposal::kNone),
+      raw_(proposal),
+      accepted_(),
+      rejected_(){}
     Proposal(const UUID &proposer, int64_t height, const Hash &hash, int64_t timestamp = GetCurrentTimestamp()):
-        Object(),
-        phase_(Proposal::kProposalPhase),
-        result_(Proposal::kNone),
-        raw_(proposer, height, hash, timestamp),
-        accepted_(),
-        rejected_(){}
+      Object(),
+      phase_(Proposal::kProposalPhase),
+      result_(Proposal::kNone),
+      raw_(proposer, height, hash, timestamp),
+      accepted_(),
+      rejected_(){}
     Proposal(BlockPtr blk, const UUID &proposer, int64_t timestamp = GetCurrentTimestamp()):
-        Proposal(proposer, blk->GetHeight(), blk->GetHash(), timestamp){}
+      Proposal(proposer, blk->GetHeight(), blk->GetHash(), timestamp){}
     Proposal(const BlockHeader &blk, const UUID &proposer, int64_t timestamp = GetCurrentTimestamp()):
-        Proposal(proposer, blk.GetHeight(), blk.GetHash(), timestamp){}
+      Proposal(proposer, blk.GetHeight(), blk.GetHash(), timestamp){}
     Proposal(const BufferPtr &buff):
-        Object(),
-        phase_(Proposal::kProposalPhase),
-        result_(Proposal::kNone),
-        raw_(buff),
-        accepted_(),
-        rejected_(){}
+      Object(),
+      phase_(Proposal::kProposalPhase),
+      result_(Proposal::kNone),
+      raw_(buff),
+      accepted_(),
+      rejected_(){}
     ~Proposal() = default;
 
     RawProposal &GetRaw(){

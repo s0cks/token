@@ -100,7 +100,7 @@ namespace Token{
   bool Proposal::HasResponseFrom(const std::string &node){
     LOCK_GUARD;
     return accepted_.find(node) != accepted_.end() ||
-        rejected_.find(node) != rejected_.end();
+      rejected_.find(node) != rejected_.end();
   }
 
   int Proposal::GetRequiredNumberOfPeers(){

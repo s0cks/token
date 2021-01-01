@@ -20,12 +20,12 @@ namespace Token{
     JobResult DoWork();
    public:
     ProcessBlockJob(const BlockPtr &blk, bool clean = false):
-        WriteBatchJob(nullptr, "ProcessBlock"),
-        block_(blk),
-        mutex_(),
-        batch_(new leveldb::WriteBatch()),
-        hash_lists_(),
-        clean_(clean){}
+      WriteBatchJob(nullptr, "ProcessBlock"),
+      block_(blk),
+      mutex_(),
+      batch_(new leveldb::WriteBatch()),
+      hash_lists_(),
+      clean_(clean){}
     ~ProcessBlockJob(){
       if(batch_)
         delete batch_;

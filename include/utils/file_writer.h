@@ -14,13 +14,13 @@ namespace Token{
     FILE *file_;
 
     FileWriter(const std::string &filename):
-        filename_(filename),
-        parent_(nullptr),
-        file_(nullptr){}
+      filename_(filename),
+      parent_(nullptr),
+      file_(nullptr){}
     FileWriter(FileWriter *parent):
-        filename_(parent->GetFilename()),
-        parent_(parent),
-        file_(parent->GetFilePointer()){}
+      filename_(parent->GetFilename()),
+      parent_(parent),
+      file_(parent->GetFilePointer()){}
 
     bool HasParent() const{
       return parent_ != nullptr;
@@ -66,8 +66,8 @@ namespace Token{
     }
    public:
     TextFileWriter(const std::string &filename):
-        FileWriter(filename),
-        indent_(0){
+      FileWriter(filename),
+      indent_(0){
       if((file_ = fopen(filename.c_str(), "w")) == NULL)
         LOG(WARNING) << "couldn't create text file " << filename << ": " << strerror(errno);
     }
@@ -106,11 +106,12 @@ namespace Token{
   class BinaryFileWriter : public FileWriter{
    protected:
     BinaryFileWriter(const std::string &filename):
-        FileWriter(filename){
+      FileWriter(filename){
       if((file_ = fopen(filename.c_str(), "wb")) == NULL)
         LOG(WARNING) << "couldn't create binary file " << filename << ": " << strerror(errno);
     }
-    BinaryFileWriter(BinaryFileWriter *parent): FileWriter(parent){}
+    BinaryFileWriter(BinaryFileWriter *parent):
+      FileWriter(parent){}
    public:
     ~BinaryFileWriter() = default;
 

@@ -155,7 +155,7 @@ namespace Token{
     }
 
     std::vector<InventoryItem> items = {
-        InventoryItem(InventoryItem::kBlock, hash),
+      InventoryItem(InventoryItem::kBlock, hash),
     };
     Send(GetDataMessage::NewInstance(items));
     do{
@@ -181,7 +181,7 @@ namespace Token{
     }
 
     std::vector<InventoryItem> items = {
-        InventoryItem(InventoryItem::kUnclaimedTransaction, hash),
+      InventoryItem(InventoryItem::kUnclaimedTransaction, hash),
     };
     Send(GetDataMessage::NewInstance(items));
     do{

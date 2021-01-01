@@ -19,9 +19,9 @@ namespace Token{
     T value_;
    public:
     TrieKey():
-        value_(){}
+      value_(){}
     TrieKey(const T &value):
-        value_(value){}
+      value_(value){}
     ~TrieKey() = default;
 
     friend bool operator==(const TrieKey<T> &a, const TrieKey<T> &b){
@@ -60,20 +60,20 @@ namespace Token{
     }
    public:
     TrieNode():
-        parent_(nullptr),
-        children_(),
-        key_(),
-        value_(),
-        is_epsilon_(false){
+      parent_(nullptr),
+      children_(),
+      key_(),
+      value_(),
+      is_epsilon_(false){
       for(size_t idx = 0; idx < kAlphabetSize; idx++)
         children_[idx] = std::shared_ptr<TrieNode<K, V, kAlphabetSize>>(nullptr);
     }
     TrieNode(const K &key, V value):
-        parent_(nullptr),
-        children_(),
-        key_(key),
-        value_(value),
-        is_epsilon_(false){
+      parent_(nullptr),
+      children_(),
+      key_(key),
+      value_(value),
+      is_epsilon_(false){
       for(size_t idx = 0; idx < kAlphabetSize; idx++)
         children_[idx] = std::shared_ptr<TrieNode<K, V, kAlphabetSize>>(nullptr);
     }
@@ -145,7 +145,7 @@ namespace Token{
     }
    public:
     Trie():
-        root_(std::unique_ptr<TrieNode<K, V, kAlphabetSize>>()){}
+      root_(std::unique_ptr<TrieNode<K, V, kAlphabetSize>>()){}
     ~Trie() = default;
 
     std::shared_ptr<TrieNode<K, V, kAlphabetSize>> GetRoot() const{

@@ -54,7 +54,7 @@ namespace Token{
           LOG(WARNING) << "  - Public Key: " << PUBLIC_KEYFILE << " - Missing" << std::endl;
           LOG(WARNING) << "Please recover the keys before running this node" << std::endl;
           LOG(WARNING)
-              << "The node will require it's original keys, or it will need to be reinitialized before running";
+            << "The node will require it's original keys, or it will need to be reinitialized before running";
           return;
         }
 
@@ -126,7 +126,7 @@ namespace Token{
 
       // 3. Consistency Check
       if((privKey->GetModulus() != pubKey->GetModulus())
-          || (privKey->GetPublicExponent() != pubKey->GetPublicExponent())){
+        || (privKey->GetPublicExponent() != pubKey->GetPublicExponent())){
         LOG(WARNING) << "Keys didn't pass round-trip consistency check";
         return;
       }

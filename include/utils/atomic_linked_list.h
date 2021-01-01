@@ -15,7 +15,7 @@ namespace Token{
     T value_;
    public:
     LinkedListNode(const T &value):
-        value_(value){}
+      value_(value){}
     ~LinkedListNode() = default;
   };
 
@@ -39,8 +39,8 @@ namespace Token{
     AtomicLinkedListNode<T> *tail_;
    public:
     AtomicLinkedList():
-        head_(new AtomicLinkedListNode<T>()),
-        tail_(new AtomicLinkedListNode<T>()){
+      head_(new AtomicLinkedListNode<T>()),
+      tail_(new AtomicLinkedListNode<T>()){
       head_->next_.store(tail_->next_);
       head_->prev_.store(nullptr);
       tail_->prev_.store(head_->next_);

@@ -15,7 +15,7 @@ namespace Token{
   class SnapshotInspectorCommand : public Command{
    public:
     SnapshotInspectorCommand(std::deque<std::string> &args):
-        Command(args){}
+      Command(args){}
     ~SnapshotInspectorCommand() = default;
 
 #define DEFINE_TYPE_CHECK(Name, Text, ArgumentCount) \
@@ -54,7 +54,7 @@ namespace Token{
     }
    public:
     SnapshotInspector():
-        Inspector(){}
+      Inspector(){}
     ~SnapshotInspector() = default;
   };
 }

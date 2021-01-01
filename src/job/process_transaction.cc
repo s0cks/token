@@ -23,8 +23,8 @@ namespace Token{
     }
    public:
     ProcessInputListJob(ProcessTransactionInputsJob *parent, const InputList &inputs):
-        Job(parent, "ProcessInputListJob"),
-        inputs_(inputs){}
+      Job(parent, "ProcessInputListJob"),
+      inputs_(inputs){}
     ~ProcessInputListJob() = default;
   };
 
@@ -112,11 +112,11 @@ namespace Token{
     }
    public:
     ProcessOutputListJob(ProcessTransactionOutputsJob *parent, int64_t wid, const OutputList &outputs):
-        Job(parent, "ProcessOutputListJob"),
-        worker_(wid),
-        offset_(wid * ProcessOutputListJob::kMaxNumberOfOutputs),
-        batch_(new leveldb::WriteBatch()),
-        outputs_(outputs){}
+      Job(parent, "ProcessOutputListJob"),
+      worker_(wid),
+      offset_(wid * ProcessOutputListJob::kMaxNumberOfOutputs),
+      batch_(new leveldb::WriteBatch()),
+      outputs_(outputs){}
     ~ProcessOutputListJob(){
       if(batch_)
         delete batch_;

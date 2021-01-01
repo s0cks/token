@@ -39,16 +39,16 @@ namespace Token{
     uint8_t data_[Size];
 
     RawType():
-        data_(){
+      data_(){
       memset(data_, 0, GetSize());
     }
     RawType(const uint8_t *bytes, int64_t size):
-        data_(){
+      data_(){
       memset(data_, 0, GetSize());
       memcpy(data_, bytes, std::min(size, GetSize()));
     }
     RawType(const RawType &raw):
-        data_(){
+      data_(){
       memset(data_, 0, GetSize());
       memcpy(data_, raw.data_, GetSize());
     }
@@ -79,14 +79,16 @@ namespace Token{
    public:
     static const int64_t kSize = 64;
 
-    Product(): Base(){}
-    Product(const uint8_t *bytes, int64_t size): Base(bytes, size){}
+    Product():
+      Base(){}
+    Product(const uint8_t *bytes, int64_t size):
+      Base(bytes, size){}
     Product(const Product &product):
-        Base(){
+      Base(){
       memcpy(data(), product.data(), Base::GetSize());
     }
     Product(const std::string &value):
-        Base(){
+      Base(){
       memcpy(data(), value.data(), std::min((int64_t) value.length(), Base::GetSize()));
     }
     ~Product() = default;
@@ -126,14 +128,16 @@ namespace Token{
    public:
     static const int64_t kSize = 64;
 
-    User(): Base(){}
-    User(const uint8_t *bytes, int64_t size): Base(bytes, size){}
+    User():
+      Base(){}
+    User(const uint8_t *bytes, int64_t size):
+      Base(bytes, size){}
     User(const User &user):
-        Base(){
+      Base(){
       memcpy(data(), user.data(), Base::GetSize());
     }
     User(const std::string &value):
-        Base(){
+      Base(){
       memcpy(data(), value.data(), std::min((int64_t) value.length(), Base::GetSize()));
     }
     ~User() = default;

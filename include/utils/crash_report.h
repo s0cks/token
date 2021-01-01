@@ -22,8 +22,8 @@ namespace Token{
     char **symbols_;
    public:
     StackTrace(int32_t offset = 0, int32_t depth = StackTrace::kDefaultStackTraceDepth):
-        frames_(nullptr),
-        frames_len_(0){
+      frames_(nullptr),
+      frames_len_(0){
       int32_t total_size = offset + depth;
       if(!(frames_ = (void **) malloc(sizeof(void *) * total_size))){
         fprintf(stderr, "couldn't allocate stack trace of size: %" PRId32 "\n", total_size);
@@ -64,9 +64,9 @@ namespace Token{
     StackTrace trace_;
 
     CrashReport(const std::string &filename, const std::string &cause):
-        filename_(filename),
-        cause_(cause),
-        trace_(){}
+      filename_(filename),
+      cause_(cause),
+      trace_(){}
 #else
     CrashReport(const std::string& filename, const std::string& cause):
         filename_(filename),
@@ -108,15 +108,15 @@ namespace Token{
     bool PrintSystemInformation();
    public:
     CrashReportPrinter(const google::LogSeverity &severity = google::INFO, const long &flags = Printer::kFlagNone):
-        Printer(severity, flags){}
+      Printer(severity, flags){}
     CrashReportPrinter(Printer *printer):
-        Printer(printer){}
+      Printer(printer){}
     ~CrashReportPrinter() = default;
 
     bool Print(){
       return PrintBanner()
-          && PrintSystemInformation()
-          && PrintStackTrace();
+        && PrintSystemInformation()
+        && PrintStackTrace();
     }
   };
 }

@@ -52,7 +52,7 @@ namespace Token{
     };
 
     static const int64_t kHeaderSize = sizeof(int32_t)
-        + sizeof(int64_t);
+      + sizeof(int64_t);
    protected:
     Message() = default;
 
@@ -126,21 +126,21 @@ namespace Token{
                    Timestamp timestamp,
                    const Hash &nonce,
                    const BlockHeader &head):
-        Message(),
-        timestamp_(timestamp),
-        client_type_(type),
-        version_(version),
-        nonce_(nonce),
-        node_id_(node_id),
-        head_(head){}
+      Message(),
+      timestamp_(timestamp),
+      client_type_(type),
+      version_(version),
+      nonce_(nonce),
+      node_id_(node_id),
+      head_(head){}
     VersionMessage(const BufferPtr &buff):
-        Message(),
-        timestamp_(buff->GetLong()),
-        client_type_(static_cast<ClientType>(buff->GetInt())),
-        version_(buff),
-        nonce_(buff->GetHash()),
-        node_id_(buff),
-        head_(buff){}
+      Message(),
+      timestamp_(buff->GetLong()),
+      client_type_(static_cast<ClientType>(buff->GetInt())),
+      version_(buff),
+      nonce_(buff->GetHash()),
+      node_id_(buff),
+      head_(buff){}
     ~VersionMessage() = default;
 
     Timestamp GetTimestamp() const{
@@ -213,23 +213,23 @@ namespace Token{
                   const NodeAddress &callback = BlockChainConfiguration::GetServerCallbackAddress(),
                   const Hash &nonce = Hash::GenerateNonce(),
                   Timestamp timestamp = GetCurrentTimestamp()):
-        Message(),
-        timestamp_(timestamp),
-        client_type_(type),
-        version_(version),
-        nonce_(nonce),
-        node_id_(node_id),
-        callback_(callback),
-        head_(head){}
+      Message(),
+      timestamp_(timestamp),
+      client_type_(type),
+      version_(version),
+      nonce_(nonce),
+      node_id_(node_id),
+      callback_(callback),
+      head_(head){}
     VerackMessage(const BufferPtr &buff):
-        Message(),
-        timestamp_(buff->GetLong()),
-        client_type_(static_cast<ClientType>(buff->GetInt())),
-        version_(buff),
-        nonce_(buff->GetHash()),
-        node_id_(buff),
-        callback_(buff),
-        head_(buff){}
+      Message(),
+      timestamp_(buff->GetLong()),
+      client_type_(static_cast<ClientType>(buff->GetInt())),
+      version_(buff),
+      nonce_(buff->GetHash()),
+      node_id_(buff),
+      callback_(buff),
+      head_(buff){}
     ~VerackMessage() = default;
 
     Timestamp GetTimestamp() const{
@@ -284,13 +284,13 @@ namespace Token{
     RawProposal raw_;
 
     PaxosMessage(MessageType type, ProposalPtr proposal):
-        Message(),
-        type_(type),
-        raw_(proposal->GetRaw()){}
+      Message(),
+      type_(type),
+      raw_(proposal->GetRaw()){}
     PaxosMessage(MessageType type, const BufferPtr &buff):
-        Message(),
-        type_(type),
-        raw_(buff){}
+      Message(),
+      type_(type),
+      raw_(buff){}
 
     int64_t GetMessageSize() const{
       return RawProposal::GetSize();
@@ -315,8 +315,10 @@ namespace Token{
 
   class PrepareMessage : public PaxosMessage{
    public:
-    PrepareMessage(ProposalPtr proposal): PaxosMessage(Message::kPrepareMessageType, proposal){}
-    PrepareMessage(const BufferPtr &buff): PaxosMessage(Message::kPrepareMessageType, buff){}
+    PrepareMessage(ProposalPtr proposal):
+      PaxosMessage(Message::kPrepareMessageType, proposal){}
+    PrepareMessage(const BufferPtr &buff):
+      PaxosMessage(Message::kPrepareMessageType, buff){}
     ~PrepareMessage(){}
 
     DECLARE_MESSAGE(Prepare);
@@ -332,8 +334,10 @@ namespace Token{
 
   class PromiseMessage : public PaxosMessage{
    public:
-    PromiseMessage(ProposalPtr proposal): PaxosMessage(Message::kPromiseMessageType, proposal){}
-    PromiseMessage(const BufferPtr &buff): PaxosMessage(Message::kPromiseMessageType, buff){}
+    PromiseMessage(ProposalPtr proposal):
+      PaxosMessage(Message::kPromiseMessageType, proposal){}
+    PromiseMessage(const BufferPtr &buff):
+      PaxosMessage(Message::kPromiseMessageType, buff){}
     ~PromiseMessage(){}
 
     DECLARE_MESSAGE(Promise);
@@ -349,8 +353,10 @@ namespace Token{
 
   class CommitMessage : public PaxosMessage{
    public:
-    CommitMessage(ProposalPtr proposal): PaxosMessage(Message::kCommitMessageType, proposal){}
-    CommitMessage(const BufferPtr &buff): PaxosMessage(Message::kCommitMessageType, buff){}
+    CommitMessage(ProposalPtr proposal):
+      PaxosMessage(Message::kCommitMessageType, proposal){}
+    CommitMessage(const BufferPtr &buff):
+      PaxosMessage(Message::kCommitMessageType, buff){}
     ~CommitMessage(){}
 
     DECLARE_MESSAGE(Commit);
@@ -366,8 +372,10 @@ namespace Token{
 
   class AcceptedMessage : public PaxosMessage{
    public:
-    AcceptedMessage(ProposalPtr proposal): PaxosMessage(Message::kAcceptedMessageType, proposal){}
-    AcceptedMessage(const BufferPtr &buff): PaxosMessage(Message::kAcceptedMessageType, buff){}
+    AcceptedMessage(ProposalPtr proposal):
+      PaxosMessage(Message::kAcceptedMessageType, proposal){}
+    AcceptedMessage(const BufferPtr &buff):
+      PaxosMessage(Message::kAcceptedMessageType, buff){}
     ~AcceptedMessage(){}
 
     DECLARE_MESSAGE(Accepted);
@@ -383,8 +391,10 @@ namespace Token{
 
   class RejectedMessage : public PaxosMessage{
    public:
-    RejectedMessage(ProposalPtr proposal): PaxosMessage(Message::kRejectedMessageType, proposal){}
-    RejectedMessage(const BufferPtr &buff): PaxosMessage(Message::kRejectedMessageType, buff){}
+    RejectedMessage(ProposalPtr proposal):
+      PaxosMessage(Message::kRejectedMessageType, proposal){}
+    RejectedMessage(const BufferPtr &buff):
+      PaxosMessage(Message::kRejectedMessageType, buff){}
     ~RejectedMessage(){}
 
     DECLARE_MESSAGE(Rejected);
@@ -406,11 +416,11 @@ namespace Token{
     ObjectPtr value_;
 
     ObjectMessage(const ObjectPtr &value):
-        Message(),
-        value_(value){}
+      Message(),
+      value_(value){}
     ObjectMessage(const BufferPtr &buff):
-        Message(),
-        value_(T::NewInstance(buff)){}
+      Message(),
+      value_(T::NewInstance(buff)){}
    public:
     virtual ~ObjectMessage() = default;
 
@@ -430,9 +440,9 @@ namespace Token{
     }
    public:
     TransactionMessage(const TransactionPtr &value):
-        ObjectMessage(value){}
+      ObjectMessage(value){}
     TransactionMessage(const BufferPtr &buff):
-        ObjectMessage(buff){}
+      ObjectMessage(buff){}
     ~TransactionMessage() = default;
 
     std::string ToString() const{
@@ -463,9 +473,9 @@ namespace Token{
     }
    public:
     BlockMessage(const BlockPtr &blk):
-        ObjectMessage(blk){}
+      ObjectMessage(blk){}
     BlockMessage(const BufferPtr &buff):
-        ObjectMessage(buff){}
+      ObjectMessage(buff){}
     ~BlockMessage() = default;
 
     std::string ToString() const{
@@ -496,9 +506,9 @@ namespace Token{
     }
    public:
     UnclaimedTransactionMessage(const UnclaimedTransactionPtr &utxo):
-        ObjectMessage(utxo){}
+      ObjectMessage(utxo){}
     UnclaimedTransactionMessage(const BufferPtr &buff):
-        ObjectMessage(buff){}
+      ObjectMessage(buff){}
     ~UnclaimedTransactionMessage() = default;
 
     DECLARE_MESSAGE_TYPE(UnclaimedTransaction);
@@ -525,25 +535,25 @@ namespace Token{
     Hash hash_;
    public:
     InventoryItem():
-        type_(kUnknown),
-        hash_(){}
+      type_(kUnknown),
+      hash_(){}
     InventoryItem(Type type, const Hash &hash):
-        type_(type),
-        hash_(hash){}
+      type_(type),
+      hash_(hash){}
     InventoryItem(const Transaction &tx):
-        InventoryItem(kTransaction, tx.GetHash()){}
+      InventoryItem(kTransaction, tx.GetHash()){}
     InventoryItem(const BlockPtr &blk):
-        InventoryItem(kBlock, blk->GetHash()){}
+      InventoryItem(kBlock, blk->GetHash()){}
     InventoryItem(const UnclaimedTransactionPtr &utxo):
-        InventoryItem(kUnclaimedTransaction, utxo->GetHash()){}
+      InventoryItem(kUnclaimedTransaction, utxo->GetHash()){}
     InventoryItem(const BlockHeader &blk):
-        InventoryItem(kBlock, blk.GetHash()){}
+      InventoryItem(kBlock, blk.GetHash()){}
     InventoryItem(const InventoryItem &item):
-        type_(item.type_),
-        hash_(item.hash_){}
+      type_(item.type_),
+      hash_(item.hash_){}
     InventoryItem(const BufferPtr &buff):
-        type_(static_cast<Type>(buff->GetShort())),
-        hash_(buff->GetHash()){}
+      type_(static_cast<Type>(buff->GetShort())),
+      hash_(buff->GetHash()){}
     ~InventoryItem(){}
 
     Type GetType() const{
@@ -581,7 +591,7 @@ namespace Token{
 
     friend bool operator==(const InventoryItem &a, const InventoryItem &b){
       return a.type_ == b.type_ &&
-          a.hash_ == b.hash_;
+        a.hash_ == b.hash_;
     }
 
     friend bool operator!=(const InventoryItem &a, const InventoryItem &b){
@@ -617,14 +627,14 @@ namespace Token{
     std::vector<InventoryItem> items_;
    public:
     InventoryMessage(const std::vector<InventoryItem> &items):
-        Message(),
-        items_(items){
+      Message(),
+      items_(items){
       if(items_.empty())
         LOG(WARNING) << "inventory created w/ zero size";
     }
     InventoryMessage(const BufferPtr &buff):
-        Message(),
-        items_(){
+      Message(),
+      items_(){
       int64_t num_items = buff->GetLong();
       for(int64_t idx = 0; idx < num_items; idx++)
         items_.push_back(InventoryItem(buff));
@@ -649,14 +659,14 @@ namespace Token{
 
     static MessagePtr NewInstance(const Transaction &tx){
       std::vector<InventoryItem> items = {
-          InventoryItem(tx)
+        InventoryItem(tx)
       };
       return NewInstance(items);
     }
 
     static MessagePtr NewInstance(const BlockPtr &blk){
       std::vector<InventoryItem> items = {
-          InventoryItem(blk)
+        InventoryItem(blk)
       };
       return NewInstance(items);
     }
@@ -669,8 +679,8 @@ namespace Token{
     std::vector<InventoryItem> items_;
    public:
     GetDataMessage(const std::vector<InventoryItem> &items):
-        Message(),
-        items_(items){
+      Message(),
+      items_(items){
       if(items_.empty())
         LOG(WARNING) << "inventory created w/ zero size";
     }
@@ -694,14 +704,14 @@ namespace Token{
 
     static MessagePtr NewInstance(const Transaction &tx){
       std::vector<InventoryItem> items = {
-          InventoryItem(tx)
+        InventoryItem(tx)
       };
       return NewInstance(items);
     }
 
     static MessagePtr NewInstance(const BlockPtr &blk){
       std::vector<InventoryItem> items = {
-          InventoryItem(blk)
+        InventoryItem(blk)
       };
       return NewInstance(items);
     }
@@ -715,9 +725,9 @@ namespace Token{
     Hash stop_;
    public:
     GetBlocksMessage(const Hash &start_hash, const Hash &stop_hash):
-        Message(),
-        start_(start_hash),
-        stop_(stop_hash){}
+      Message(),
+      start_(start_hash),
+      stop_(stop_hash){}
     ~GetBlocksMessage(){}
 
     Hash GetHeadHash() const{
@@ -743,8 +753,8 @@ namespace Token{
     std::string message_;
    public:
     NotFoundMessage(const std::string &message):
-        Message(),
-        message_(message){}
+      Message(),
+      message_(message){}
     ~NotFoundMessage() = default;
 
     std::string GetMessage() const{
@@ -763,7 +773,7 @@ namespace Token{
    public:
     GetPeersMessage() = default;
     GetPeersMessage(const BufferPtr &buff):
-        Message(){}
+      Message(){}
     ~GetPeersMessage() = default;
 
     DECLARE_MESSAGE(GetPeers);
@@ -784,8 +794,8 @@ namespace Token{
     PeerList peers_;
    public:
     PeerListMessage(const PeerList &peers):
-        Message(),
-        peers_(peers){
+      Message(),
+      peers_(peers){
       if(peers_.empty())
         LOG(WARNING) << "sending empty peer list";
     }

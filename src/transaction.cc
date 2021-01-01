@@ -55,7 +55,7 @@ namespace Token{
 
       std::string signature;
       CryptoPP::ArraySource
-          source(sigData.data(), sigData.size(), true, new CryptoPP::HexEncoder(new CryptoPP::StringSink(signature)));
+        source(sigData.data(), sigData.size(), true, new CryptoPP::HexEncoder(new CryptoPP::StringSink(signature)));
 
       LOG(INFO) << "signature: " << signature;
       signature_ = signature;

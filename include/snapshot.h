@@ -33,12 +33,12 @@ namespace Token{
     Block **blocks_;
 
     Snapshot(const std::string &filename):
-        filename_(filename),
-        timestamp_(),
-        version_(),
-        head_(),
-        blocks_len_(0),
-        blocks_(nullptr){}
+      filename_(filename),
+      timestamp_(),
+      version_(),
+      head_(),
+      blocks_len_(0),
+      blocks_(nullptr){}
 
     void SetTimestamp(uint64_t timestamp){
       timestamp_ = timestamp;
@@ -126,7 +126,7 @@ namespace Token{
   class SnapshotPrinter : public SnapshotVisitor{
    private:
     SnapshotPrinter():
-        SnapshotVisitor(){}
+      SnapshotVisitor(){}
    public:
     ~SnapshotPrinter() = default;
 

@@ -9,9 +9,9 @@ namespace Token{
     uword parameter_;
    public:
     ThreadStartData(const char *name, ThreadHandlerFunction function, uword parameter):
-        name_(strdup(name)),
-        function_(function),
-        parameter_(parameter){}
+      name_(strdup(name)),
+      function_(function),
+      parameter_(parameter){}
     ~ThreadStartData(){
       if(name_)
         free((void *) name_);

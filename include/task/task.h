@@ -17,8 +17,8 @@ namespace Token{
     Session *session_;
 
     SessionTask(Session *session):
-        Task(),
-        session_(session){}
+      Task(),
+      session_(session){}
    public:
     ~SessionTask() = default;
 
@@ -64,13 +64,13 @@ namespace Token{
     std::string message_;
    public:
     AsyncTaskResult(Status status, const std::string &msg):
-        status_(status),
-        message_(msg){}
+      status_(status),
+      message_(msg){}
     AsyncTaskResult(Status status, const std::stringstream &ss):
-        AsyncTaskResult(status, ss.str()){}
+      AsyncTaskResult(status, ss.str()){}
     AsyncTaskResult(const AsyncTaskResult &other):
-        status_(other.status_),
-        message_(other.message_){}
+      status_(other.status_),
+      message_(other.message_){}
     ~AsyncTaskResult() = default;
 
     Status GetStatus() const{
@@ -119,9 +119,9 @@ namespace Token{
     AsyncTaskResult result_;
 
     AsyncTask(uv_loop_t *loop):
-        loop_(loop),
-        handle_(),
-        result_(AsyncTaskResult::kTimedOut, "no execution?"){
+      loop_(loop),
+      handle_(),
+      result_(AsyncTaskResult::kTimedOut, "no execution?"){
       handle_.data = this;
     }
 
@@ -169,8 +169,8 @@ namespace Token{
     Session *session_;
 
     AsyncSessionTask(uv_loop_t *loop, Session *session):
-        AsyncTask(loop),
-        session_(session){}
+      AsyncTask(loop),
+      session_(session){}
    public:
     virtual ~AsyncSessionTask() = default;
 

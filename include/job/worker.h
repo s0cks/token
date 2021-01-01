@@ -64,14 +64,14 @@ namespace Token{
     static void HandleThread(JobWorker *worker);
    public:
     JobWorker(const JobWorkerId &id, size_t max_queue_size):
-        thread_(),
-        thread_id_(),
-        id_(id),
-        state_(State::kStarting),
-        queue_(max_queue_size),
-        histogram_(new Metrics::Histogram("TaskHistogram")),
-        num_ran_(new Metrics::Counter("NumRan")),
-        num_discarded_(new Metrics::Counter("NumDiscarded")){}
+      thread_(),
+      thread_id_(),
+      id_(id),
+      state_(State::kStarting),
+      queue_(max_queue_size),
+      histogram_(new Metrics::Histogram("TaskHistogram")),
+      num_ran_(new Metrics::Counter("NumRan")),
+      num_discarded_(new Metrics::Counter("NumDiscarded")){}
     ~JobWorker() = default;
 
     JobWorkerId GetWorkerID() const{

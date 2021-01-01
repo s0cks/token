@@ -12,11 +12,11 @@ namespace Token{
     std::deque<std::string> args_;
 
     Command(const std::string &name, std::deque<std::string> &args):
-        name_(name),
-        args_(args){}
+      name_(name),
+      args_(args){}
     Command(std::deque<std::string> &args):
-        name_(GetCommand(args)),
-        args_(args){}
+      name_(GetCommand(args)),
+      args_(args){}
 
     static inline std::string
     GetCommand(std::deque<std::string> &args){

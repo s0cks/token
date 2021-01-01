@@ -39,7 +39,7 @@ namespace Token{
     uint64_t value_;
 
     ObjectTag(const int32_t &magic, const Type &type):
-        value_(MagicField::Encode(magic) | MagicField::Encode(type)){}
+      value_(MagicField::Encode(magic) | MagicField::Encode(type)){}
 
     int32_t GetMagicField() const{
       return MagicField::Decode(value_);
@@ -58,15 +58,15 @@ namespace Token{
     }
    public:
     ObjectTag(uint8_t *data):
-        value_(*(uint64_t *) data){}
+      value_(*(uint64_t *) data){}
     ObjectTag():
-        value_(MagicField::Encode(kMagic) | TypeField::Encode(Type::kNone)){}
+      value_(MagicField::Encode(kMagic) | TypeField::Encode(Type::kNone)){}
     ObjectTag(const uint64_t &tag):
-        value_(tag){}
+      value_(tag){}
     ObjectTag(const Type &type):
-        value_(MagicField::Encode(kMagic) | TypeField::Encode(type)){}
+      value_(MagicField::Encode(kMagic) | TypeField::Encode(type)){}
     ObjectTag(const ObjectTag &tag):
-        value_(tag.value_){}
+      value_(tag.value_){}
     ~ObjectTag() = default;
 
     uint64_t &data(){
@@ -122,9 +122,9 @@ namespace Token{
   class ObjectTagReader : protected BinaryFileReader{
    public:
     ObjectTagReader(const std::string &filename):
-        BinaryFileReader(filename){}
+      BinaryFileReader(filename){}
     ObjectTagReader(BinaryFileReader *parent):
-        BinaryFileReader(parent){}
+      BinaryFileReader(parent){}
     ~ObjectTagReader() = default;
 
     ObjectTag ReadObjectTag(){
@@ -137,11 +137,11 @@ namespace Token{
     ObjectTag expected_;
    public:
     ObjectTagVerifier(const std::string &filename, const ObjectTag::Type &expected_type):
-        ObjectTagReader(filename),
-        expected_(expected_type){}
+      ObjectTagReader(filename),
+      expected_(expected_type){}
     ObjectTagVerifier(BinaryFileReader *parent, const ObjectTag::Type &expected_type):
-        ObjectTagReader(parent),
-        expected_(expected_type){}
+      ObjectTagReader(parent),
+      expected_(expected_type){}
     ~ObjectTagVerifier() = default;
 
     ObjectTag &GetExpectedTag(){

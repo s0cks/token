@@ -26,10 +26,10 @@ namespace Token{
     static void *SessionThread(void *data);
    public:
     ClientSession(const NodeAddress &address, uv_loop_t *loop = uv_loop_new()):
-        ThreadedSession(loop),
-        address_(address),
-        id_(),
-        next_(nullptr){}
+      ThreadedSession(loop),
+      address_(address),
+      id_(),
+      next_(nullptr){}
     ~ClientSession() = default;
 
     bool Connect(){

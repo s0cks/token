@@ -21,15 +21,15 @@ namespace Token{
     Product product_;
    public:
     UnclaimedTransaction(const Hash &hash, int64_t index, const User &user, const Product &product):
-        BinaryObject(),
-        hash_(hash),
-        index_(index),
-        user_(user),
-        product_(product){}
+      BinaryObject(),
+      hash_(hash),
+      index_(index),
+      user_(user),
+      product_(product){}
     UnclaimedTransaction(const Hash &hash, int32_t index, const std::string &user, const std::string &product):
-        UnclaimedTransaction(hash, index, User(user), Product(product)){}
+      UnclaimedTransaction(hash, index, User(user), Product(product)){}
     UnclaimedTransaction(const BufferPtr &buffer):
-        UnclaimedTransaction(buffer->GetHash(), buffer->GetLong(), buffer->GetUser(), buffer->GetProduct()){}
+      UnclaimedTransaction(buffer->GetHash(), buffer->GetLong(), buffer->GetUser(), buffer->GetProduct()){}
     ~UnclaimedTransaction(){}
 
     Hash GetTransaction() const{

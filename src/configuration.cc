@@ -201,9 +201,9 @@ namespace Token{
     LOCK_GUARD;
     libconfig::Setting &server = GetServerProperties();
     libconfig::Setting &property =
-        server.exists(PROPERTY_SERVER_MAXPEERS)
-        ? server.lookup(PROPERTY_SERVER_MAXPEERS)
-        : server.add(PROPERTY_SERVER_MAXPEERS, libconfig::Setting::TypeInt);
+      server.exists(PROPERTY_SERVER_MAXPEERS)
+      ? server.lookup(PROPERTY_SERVER_MAXPEERS)
+      : server.add(PROPERTY_SERVER_MAXPEERS, libconfig::Setting::TypeInt);
     property = value;
     return SaveConfiguration();
   }

@@ -102,8 +102,8 @@ namespace Token{
     UUID uuid_;
 
     ServerSession(uv_loop_t *loop):
-        Session(loop),
-        uuid_(){}
+      Session(loop),
+      uuid_(){}
 
     void SetID(const UUID &uuid){
       uuid_ = uuid;
