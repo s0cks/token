@@ -4,9 +4,16 @@
 #include <iostream>
 #include "buffer.h"
 #include "object.h"
+#include "version.h"
 #include "object_tag.h"
 
 namespace Token{
+  #define FOR_EACH_RAW_TYPE(V) \
+    V(Byte, int8_t)            \
+    V(Short, int16_t)          \
+    V(Int, int32_t)            \
+    V(Long, int64_t)
+
   class FileWriter{
    protected:
     std::string filename_;
@@ -43,6 +50,12 @@ namespace Token{
       return filename_;
     }
 
+    #define DECLARE_WRITE(Name, Type) \
+      bool Write##Name(const Type& val); \
+      bool WriteUnsigned##Name(const u##Type& val);
+      FOR_EACH_RAW_TYPE(DECLARE_WRITE)
+    #undef DECLARE_WRITE
+
     int64_t GetCurrentPosition();
     bool SetCurrentPosition(int64_t pos);
     bool Flush();
@@ -74,10 +87,6 @@ namespace Token{
     ~TextFileWriter() = default;
 
     bool Write(const std::string& value);
-    bool Write(uint32_t value);
-    bool Write(int32_t value);
-    bool Write(uint64_t value);
-    bool Write(int64_t value);
     bool Write(const Hash& hash);
     bool Write(Object* obj);
     bool NewLine();
@@ -112,19 +121,27 @@ namespace Token{
     }
     BinaryFileWriter(BinaryFileWriter* parent):
       FileWriter(parent){}
+
+    template<typename T>
+    void Write(const T& value){
+
+    }
    public:
     ~BinaryFileWriter() = default;
 
     bool WriteBytes(uint8_t* bytes, intptr_t size);
-    bool WriteInt(int32_t value);
-    bool WriteUnsignedInt(uint32_t value);
-    bool WriteLong(int64_t value);
-    bool WriteUnsignedLong(uint64_t value);
     bool WriteHash(const Hash& value);
     bool WriteUser(const User& user);
     bool WriteProduct(const Product& product);
     bool WriteString(const std::string& value);
     bool WriteObject(Object* obj);
+
+    bool WriteVersion(const Version& version){
+      WriteShort(version.GetMajor());
+      WriteShort(version.GetMinor());
+      WriteShort(version.GetRevision());
+      return true;
+    }
 
     bool WriteObjectTag(const ObjectTag::Type& tag){
       ObjectTag val(tag);
@@ -141,6 +158,8 @@ namespace Token{
       return WriteObject((Object*) value);
     }
   };
+
+  #undef FOR_EACH_RAW_TYPE
 }
 
 #endif //TOKEN_FILE_WRITER_H

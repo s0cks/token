@@ -1,6 +1,6 @@
 #include "common.h"
 #include "command.h"
-#include "snapshot_inspector.h"
+#include "snapshot/snapshot_inspector.h"
 
 static inline void
 InitializeLogging(char *arg0){

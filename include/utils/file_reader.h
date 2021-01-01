@@ -3,19 +3,16 @@
 
 #include "hash.h"
 #include "object.h"
+#include "version.h"
 
 namespace Token{
+  #define FOR_EACH_RAW_TYPE(V) \
+    V(Byte, int8_t)   \
+    V(Short, int16_t) \
+    V(Int, int32_t)   \
+    V(Long, int64_t)
+
   class FileReader{
-   private:
-    template<typename T>
-    T ReadRaw(){
-      uint8_t bytes[T::GetSize()];
-      if(!ReadBytes(bytes, T::GetSize())){
-        LOG(WARNING) << "couldn't read " << T::GetSize() << " bytes from file: " << GetFilename();
-        return T();
-      }
-      return T(bytes, T::GetSize());
-    }
    protected:
     FileReader* parent_;
     std::string filename_;
@@ -44,6 +41,26 @@ namespace Token{
 
     int64_t GetCurrentPosition();
     void SetCurrentPosition(int64_t pos);
+
+    template<typename T>
+    T Read(){
+      uint8_t bytes[sizeof(T)];
+      if(!ReadBytes(bytes, sizeof(T))){
+        LOG(WARNING) << "couldn't read " << sizeof(T) << " bytes from file: " << GetFilename();
+        return (T)0;
+      }
+      return (*(T*)bytes);
+    }
+
+    template<typename T>
+    T ReadRaw(){
+      uint8_t bytes[T::GetSize()];
+      if(!ReadBytes(bytes, T::GetSize())){
+        LOG(WARNING) << "couldn't read " << T::GetSize() << " bytes from file: " << GetFilename();
+        return T();
+      }
+      return T(bytes, T::GetSize());
+    }
    public:
     virtual ~FileReader(){
       if(HasFilePointer() && !HasParent())
@@ -54,24 +71,31 @@ namespace Token{
       return filename_;
     }
 
-    inline Hash ReadHash(){
+    Hash ReadHash(){
       return ReadRaw<Hash>();
     }
 
-    inline User ReadUser(){
+    User ReadUser(){
       return ReadRaw<User>();
     }
 
-    inline Product ReadProduct(){
+    Product ReadProduct(){
       return ReadRaw<Product>();
     }
 
-    bool ReadBytes(uint8_t* bytes, size_t size);
+    Version ReadVersion(){
+      return Version(ReadShort(), ReadShort(), ReadShort());
+    }
+
     std::string ReadString();
-    int32_t ReadInt();
-    uint32_t ReadUnsignedInt();
-    int64_t ReadLong();
-    uint64_t ReadUnsignedLong();
+    bool ReadBytes(uint8_t* bytes, size_t size);
+
+    #define DEFINE_READ(Name, Type) \
+      Type Read##Name(){ return Read<Type>(); } \
+      u##Type Read##Unsigned##Name(){ return Read<u##Type>(); }
+      FOR_EACH_RAW_TYPE(DEFINE_READ)
+    #undef DEFINE_READ
+
     void Close();
   };
 
@@ -87,6 +111,8 @@ namespace Token{
    public:
     virtual ~BinaryFileReader() = default;
   };
+
+  #undef FOR_EACH_RAW_TYPE
 }
 
 #endif //TOKEN_FILE_READER_H

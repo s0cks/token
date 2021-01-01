@@ -2,6 +2,12 @@
 #include "utils/file_writer.h"
 
 namespace Token{
+  #define FOR_EACH_RAW_TYPE(V) \
+    V(Byte, int8_t)            \
+    V(Short, int16_t)          \
+    V(Int, int32_t)            \
+    V(Long, int64_t)
+
 #define CHECK_FILE_POINTER \
     if(GetFilePointer() == NULL){ \
         LOG(WARNING) << "file " << GetFilename() << " is not opened"; \
@@ -12,6 +18,20 @@ namespace Token{
         LOG(WARNING) << "could only write " << ((Written)*(Size)) << "/" << ((Expected)*(Size)) << " bytes to file: " << GetFilename(); \
         return false; \
     }
+
+#define DEFINE_WRITE(Name, Type) \
+  bool FileWriter::Write##Name(const Type& val){ \
+    CHECK_FILE_POINTER; \
+    CHECK_WRITTEN(fwrite(&val, sizeof(Type), 1, GetFilePointer()), 1, sizeof(Type)); \
+    return Flush(); \
+  } \
+  bool FileWriter::WriteUnsigned##Name(const u##Type& val){ \
+    CHECK_FILE_POINTER; \
+    CHECK_WRITTEN(fwrite(&val, sizeof(u##Type), 1, GetFilePointer()), 1, sizeof(u##Type)); \
+    return Flush(); \
+  }
+  FOR_EACH_RAW_TYPE(DEFINE_WRITE)
+#undef DEFINE_WRITE
 
   bool FileWriter::Close(){
     CHECK_FILE_POINTER;
@@ -64,30 +84,6 @@ namespace Token{
     return Flush();
   }
 
-  bool TextFileWriter::Write(uint32_t value){
-    std::stringstream ss;
-    ss << value;
-    return Write(ss);
-  }
-
-  bool TextFileWriter::Write(int32_t value){
-    std::stringstream ss;
-    ss << value;
-    return Write(ss);
-  }
-
-  bool TextFileWriter::Write(uint64_t value){
-    std::stringstream ss;
-    ss << value;
-    return Write(ss);
-  }
-
-  bool TextFileWriter::Write(int64_t value){
-    std::stringstream ss;
-    ss << value;
-    return Write(ss);
-  }
-
   bool TextFileWriter::Write(const Hash& hash){
     return Write(hash.HexString());
   }
@@ -103,30 +99,6 @@ namespace Token{
   bool BinaryFileWriter::WriteBytes(uint8_t* bytes, intptr_t size){
     CHECK_FILE_POINTER;
     CHECK_WRITTEN(fwrite(bytes, sizeof(uint8_t), (size_t) size, GetFilePointer()), (size_t) size, sizeof(uint8_t));
-    return Flush();
-  }
-
-  bool BinaryFileWriter::WriteInt(int32_t value){
-    CHECK_FILE_POINTER;
-    CHECK_WRITTEN(fwrite(&value, sizeof(int32_t), 1, GetFilePointer()), 1, sizeof(int32_t));
-    return Flush();
-  }
-
-  bool BinaryFileWriter::WriteUnsignedInt(uint32_t value){
-    CHECK_FILE_POINTER;
-    CHECK_WRITTEN(fwrite(&value, sizeof(uint32_t), 1, GetFilePointer()), 1, sizeof(uint32_t));
-    return Flush();
-  }
-
-  bool BinaryFileWriter::WriteLong(int64_t value){
-    CHECK_FILE_POINTER;
-    CHECK_WRITTEN(fwrite(&value, sizeof(int64_t), 1, GetFilePointer()), 1, sizeof(int64_t));
-    return Flush();
-  }
-
-  bool BinaryFileWriter::WriteUnsignedLong(uint64_t value){
-    CHECK_FILE_POINTER;
-    CHECK_WRITTEN(fwrite(&value, sizeof(uint64_t), 1, GetFilePointer()), 1, sizeof(uint64_t));
     return Flush();
   }
 

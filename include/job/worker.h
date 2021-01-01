@@ -94,7 +94,6 @@ namespace Token{
     bool Start(){
       thread_ = std::thread(&HandleThread, this);
       thread_id_ = thread_.get_id();
-      LOG(INFO) << "started worker: " << thread_id_;
       return true;
     }
 

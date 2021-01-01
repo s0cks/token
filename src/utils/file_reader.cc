@@ -36,42 +36,6 @@ namespace Token{
     return nread == size;
   }
 
-  int32_t FileReader::ReadInt(){
-    uint8_t bytes[4];
-    if(!ReadBytes(bytes, 4)){
-      LOG(WARNING) << "couldn't read int from file: " << GetFilename();
-      return 0;
-    }
-    return (*(int32_t*) bytes);
-  }
-
-  uint32_t FileReader::ReadUnsignedInt(){
-    uint8_t bytes[4];
-    if(!ReadBytes(bytes, 4)){
-      LOG(WARNING) << "couldn't read unsigned int from file: " << GetFilename();
-      return 0;
-    }
-    return (*(uint32_t*) bytes);
-  }
-
-  int64_t FileReader::ReadLong(){
-    uint8_t bytes[8];
-    if(!ReadBytes(bytes, 8)){
-      LOG(WARNING) << "couldn't read long from file: " << GetFilename();
-      return 0;
-    }
-    return (*(int64_t*) bytes);
-  }
-
-  uint64_t FileReader::ReadUnsignedLong(){
-    uint8_t bytes[8];
-    if(!ReadBytes(bytes, 8)){
-      LOG(WARNING) << "couldn't read unsigned long from file: " << GetFilename();
-      return 0;
-    }
-    return (*(uint64_t*) bytes);
-  }
-
   std::string FileReader::ReadString(){
     int32_t size = ReadInt();
     uint8_t bytes[size];

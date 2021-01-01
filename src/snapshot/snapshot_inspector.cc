@@ -1,4 +1,4 @@
-#include "snapshot_inspector.h"
+#include "snapshot/snapshot_inspector.h"
 
 namespace Token{
   static inline void
@@ -50,6 +50,6 @@ namespace Token{
   void SnapshotInspector::HandleGetBlocksCommand(Token::SnapshotInspectorCommand* cmd){
     LOG(INFO) << "Blocks:";
     SnapshotBlockPrinter printer;
-    GetSnapshot()->Accept(&printer);
+    return; //TODO: fixme
   }
 }

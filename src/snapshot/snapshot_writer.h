@@ -1,7 +1,8 @@
 #ifndef TOKEN_SNAPSHOT_WRITER_H
 #define TOKEN_SNAPSHOT_WRITER_H
 
-#include "snapshot.h"
+#include "snapshot/section.h"
+#include "snapshot/snapshot.h"
 #include "utils/file_writer.h"
 #include "utils/crash_report.h"
 
@@ -16,12 +17,19 @@ namespace Token{
       return filename.str();
     }
 
+    void WriteHeader(const SnapshotSectionHeader& header, int64_t pos);
+
     inline void
-    WriteHeader(SnapshotSectionHeader header){
+    WriteHeader(const SnapshotSectionHeader& header){
       WriteUnsignedLong(header);
     }
 
-    bool WriteHeaderAt(int64_t pos, SnapshotSectionHeader header);
+    template<class T>
+    bool WriteSection(const T& section){
+      WriteHeader(section.GetSectionHeader());
+      section.Write(this);
+      return true;
+    }
    public:
     SnapshotWriter(const std::string& filename = GetNewSnapshotFilename()):
       BinaryFileWriter(filename){}

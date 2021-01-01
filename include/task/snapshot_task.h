@@ -2,7 +2,7 @@
 #define TOKEN_SNAPSHOT_TASK_H
 
 #include "task.h"
-#include "snapshot.h"
+#include "snapshot/snapshot.h"
 
 namespace Token{
   class SnapshotTask : public AsyncTask{

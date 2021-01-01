@@ -2,7 +2,6 @@
 #define TOKEN_OBJECT_TAG_H
 
 #include "utils/bitfield.h"
-#include "utils/file_reader.h"
 
 namespace Token{
   class ObjectTag{
@@ -116,46 +115,6 @@ namespace Token{
     static inline int64_t
     GetSize(){
       return sizeof(uint64_t);
-    }
-  };
-
-  class ObjectTagReader : protected BinaryFileReader{
-   public:
-    ObjectTagReader(const std::string& filename):
-      BinaryFileReader(filename){}
-    ObjectTagReader(BinaryFileReader* parent):
-      BinaryFileReader(parent){}
-    ~ObjectTagReader() = default;
-
-    ObjectTag ReadObjectTag(){
-      return ObjectTag(ReadUnsignedLong());
-    }
-  };
-
-  class ObjectTagVerifier : ObjectTagReader{
-   private:
-    ObjectTag expected_;
-   public:
-    ObjectTagVerifier(const std::string& filename, const ObjectTag::Type& expected_type):
-      ObjectTagReader(filename),
-      expected_(expected_type){}
-    ObjectTagVerifier(BinaryFileReader* parent, const ObjectTag::Type& expected_type):
-      ObjectTagReader(parent),
-      expected_(expected_type){}
-    ~ObjectTagVerifier() = default;
-
-    ObjectTag& GetExpectedTag(){
-      return expected_;
-    }
-
-    ObjectTag GetExpectedTag() const{
-      return expected_;
-    }
-
-    bool IsValid(){
-      if(expected_.IsMagic() && expected_.IsNone())
-        return ReadObjectTag().IsMagic();
-      return ReadObjectTag() == GetExpectedTag();
     }
   };
 }

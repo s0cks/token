@@ -149,8 +149,7 @@ namespace Token{
     leveldb::Status status;
     if((status = GetIndex()->Get(readOpts, key, &filename)).IsNotFound())
       return false;
-    ObjectTagVerifier verifier(filename, type);
-    return verifier.IsValid();
+    return false; //TODO: fixme
   }
 
   bool ObjectPool::WaitForObject(const Hash& hash){
@@ -487,11 +486,7 @@ namespace Token{
         if(!EndsWith(filename, ".dat"))
           continue;
 
-        // matches everything
-        ObjectTagVerifier tag_verifier(filename, ObjectTag::kNone);
-        if(!tag_verifier.IsValid())
-          continue;
-        count++;
+        //TODO: fixme
       }
       closedir(dir);
     }
