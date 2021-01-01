@@ -58,7 +58,6 @@ namespace Token{
     }
 
     LOG(INFO) << "starting the rest service....";
-    DebugController::Initialize(&router_);
     ObjectPoolController::Initialize(&router_);
     BlockChainController::Initialize(&router_);
     return Thread::Start(&thread_, "RestService", &HandleServiceThread, 0);

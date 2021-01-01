@@ -210,20 +210,62 @@ namespace Token{
    public:
     ~ObjectPool() = delete;
 
+    /**
+     * Returns the State of the ObjectPool.
+     * @see State
+     * @return The State of the ObjectPool
+     */
     static State GetState();
 
+    /**
+     * Returns the Status of the ObjectPool.
+     * @see Status
+     * @return The Status of the ObjectPool
+     */
     static Status GetStatus();
 
+    /**
+     * Initializes the ObjectPool.
+     * @return true if successful, false otherwise
+     */
     static bool Initialize();
 
+    /**
+     * Removes an object by hash from the ObjectPool.
+     * @param hash - The hash of the object
+     * @return true if successful, false otherwise
+     */
     static bool RemoveObject(const Hash& hash);
 
+    /**
+     * Waits for the object to be put into the ObjectPool by sleeping.
+     * @param hash - The hash of the object to wait for
+     * @return true if successful, false otherwise
+     */
     static bool WaitForObject(const Hash& hash);
 
+    /**
+     * Puts a block into the ObjectPool based on it's hash.
+     * @param hash - The hash of the block
+     * @param val - The block to put into the pool
+     * @return true if successful, false otherwise
+     */
     static bool PutObject(const Hash& hash, const BlockPtr& val);
 
+    /**
+     * Puts a transaction into the ObjectPool based on it's hash.
+     * @param hash - The hash of the transaction
+     * @param val - The transaction to put into the pool
+     * @return true if successful, false otherwise
+     */
     static bool PutObject(const Hash& hash, const TransactionPtr& val);
 
+    /**
+     * Puts an unclaimed transaction into the ObjectPool based on it's hash.
+     * @param hash - The hash of the unclaimed transaction
+     * @param val - The unclaimed transaction to put into the pool
+     * @return true if successful, false otherwise
+     */
     static bool PutObject(const Hash& hash, const UnclaimedTransactionPtr& val);
 
     static bool PutHashList(const User& user, const HashList& hashes);

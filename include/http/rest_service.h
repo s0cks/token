@@ -12,19 +12,6 @@
 #include "http/controller.h"
 
 namespace Token{
-  class DebugController : HttpController{
-   private:
-    DebugController() = delete;
-
-    HTTP_CONTROLLER_ENDPOINT(GetSwagger);
-   public:
-    ~DebugController() = delete;
-
-    HTTP_CONTROLLER_INIT(){
-      HTTP_CONTROLLER_GET("/swagger.json", GetSwagger);
-    }
-  };
-
   class BlockChainController : HttpController{
    private:
     BlockChainController() = delete;
