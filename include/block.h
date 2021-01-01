@@ -4,9 +4,8 @@
 #include <json/json.h>
 #include "hash.h"
 #include "bloom.h"
-#include "object_tag.h"
-#include "utils/buffer.h"
 #include "transaction.h"
+#include "utils/buffer.h"
 
 namespace Token{
     class Block;
@@ -54,8 +53,7 @@ namespace Token{
             merkle_root_(merkle_root),
             hash_(hash),
             bloom_(tx_bloom){}
-        BlockHeader(Block* blk);
-        BlockHeader(Buffer* buff);
+        BlockHeader(const BufferPtr& buff);
         ~BlockHeader(){}
 
         Timestamp GetTimestamp() const{
@@ -83,7 +81,7 @@ namespace Token{
         }
 
         BlockPtr GetData() const;
-        bool Write(Buffer* buff) const;
+        bool Write(const BufferPtr& buff) const;
 
         BlockHeader& operator=(const BlockHeader& other){
             timestamp_ = other.timestamp_;
@@ -145,33 +143,25 @@ namespace Token{
                 return a->GetHeight() < b->GetHeight();
             }
         };
+
+        enum RawBlockLayout{
+            kTimestampOffset= 0,
+            kTimestampSize = 64,
+
+            kHeightOffset = kTimestampSize+kTimestampOffset,
+            kHeightSize = 64,
+
+            kPreviousHashOffset = kHeightOffset+kHeightSize,
+            kPreviousHashSize = Hash::kSize,
+
+            kTransactionListOffset = kPreviousHashOffset+kPreviousHashSize,
+        };
     private:
         Timestamp timestamp_;
         int64_t height_;
         Hash previous_hash_;
         TransactionList transactions_;
         BloomFilter tx_bloom_; // transient
-    protected:
-        int64_t GetBufferSize() const{
-            int64_t size = 0;
-            size += sizeof(Timestamp); // timestamp_
-            size += sizeof(int64_t); // height_
-            size += Hash::GetSize(); // previous_hash_
-            size += sizeof(int64_t); // num_transactions
-            for(auto& it : transactions_)
-                size += it->GetBufferSize();
-            return size;
-        }
-
-        bool Write(Buffer* buff) const{
-            buff->PutLong(timestamp_);
-            buff->PutLong(height_);
-            buff->PutHash(previous_hash_);
-            buff->PutLong(GetNumberOfTransactions());
-            for(auto& it : transactions_)
-                it->Write(buff);
-            return true;
-        }
     public:
         Block():
             BinaryObject(),
@@ -242,14 +232,6 @@ namespace Token{
             return transactions_.end();
         }
 
-        TransactionPtr& operator[](int64_t idx){
-            return transactions_[idx];
-        }
-
-        TransactionPtr operator[](int64_t idx) const{
-            return transactions_[idx];
-        }
-
         bool IsGenesis(){
             return GetHeight() == 0;
         }
@@ -258,6 +240,25 @@ namespace Token{
             std::stringstream stream;
             stream << "Block(#" << GetHeight() << ", " << GetNumberOfTransactions() << " Transactions)";
             return stream.str();
+        }
+
+        int64_t GetBufferSize() const{
+            int64_t size = 0;
+            size += sizeof(Timestamp); // timestamp_
+            size += sizeof(int64_t); // height_
+            size += Hash::GetSize(); // previous_hash_
+            size += sizeof(int64_t); // num_transactions
+            for(auto& it : transactions_)
+                size += it->GetBufferSize();
+            return size;
+        }
+
+        bool Write(const BufferPtr& buff) const{
+            buff->PutLong(timestamp_);
+            buff->PutLong(height_);
+            buff->PutHash(previous_hash_);
+            buff->PutSet(transactions_);
+            return true;
         }
 
         Hash GetMerkleRoot() const;
@@ -286,7 +287,8 @@ namespace Token{
         }
 
         static BlockPtr Genesis();
-        static BlockPtr NewInstance(Buffer* buff){
+
+        static BlockPtr NewInstance(const BufferPtr& buff){
             Timestamp timestamp = buff->GetLong();
             int64_t height = buff->GetLong();
             Hash previous_hash = buff->GetHash();
@@ -295,7 +297,7 @@ namespace Token{
             int64_t num_transactions = buff->GetLong();
             TransactionList transactions;
             for(idx = 0; idx < num_transactions; idx++)
-                transactions.push_back(Transaction::NewInstance(buff));
+                transactions.insert(Transaction::NewInstance(buff));
 
             return std::make_shared<Block>(height, previous_hash, transactions, timestamp);
         }
@@ -314,95 +316,6 @@ namespace Token{
         virtual bool VisitStart(){ return true; }
         virtual bool Visit(const TransactionPtr& tx) = 0;
         virtual bool VisitEnd(){ return true; }
-    };
-
-    class BlockFileWriter : BinaryFileWriter{
-    private:
-        TransactionFileWriter tx_writer_;
-    public:
-        BlockFileWriter(const std::string& filename):
-            BinaryFileWriter(filename),
-            tx_writer_(this){}
-        ~BlockFileWriter() = default;
-
-        bool Write(const BlockPtr& blk){
-            WriteObjectTag(ObjectTag::kBlock);
-
-            WriteLong(blk->GetTimestamp()); // timestamp_
-            WriteLong(blk->GetHeight()); // height_
-            WriteHash(blk->GetPreviousHash()); // previous_hash_
-            WriteLong(blk->GetNumberOfTransactions()); // num_transactions_
-            for(auto& it : blk->transactions())
-                tx_writer_.Write(it); // transactions_[idx]
-            return true;
-        }
-    };
-
-    class BlockFileReader : BinaryFileReader{
-    private:
-        ObjectTagVerifier tag_verifier_;
-        TransactionFileReader tx_reader_;
-
-        inline ObjectTagVerifier&
-        GetTagVerifier(){
-            return tag_verifier_;
-        }
-
-        inline TransactionFileReader&
-        GetTransactionReader(){
-            return tx_reader_;
-        }
-    public:
-        BlockFileReader(const std::string& filename):
-            BinaryFileReader(filename),
-            tag_verifier_(this, ObjectTag::kBlock),
-            tx_reader_(this){}
-        BlockFileReader(BinaryFileReader* parent):
-            BinaryFileReader(parent),
-            tag_verifier_(this, ObjectTag::kBlock),
-            tx_reader_(this){}
-        ~BlockFileReader() = default;
-
-        BlockPtr Read(){
-            if(!GetTagVerifier().IsValid()){
-                LOG(WARNING) << "cannot read block from: " << GetFilename();
-                return BlockPtr(nullptr);
-            }
-
-            Timestamp timestamp = ReadLong();
-            int64_t height = ReadLong();
-            Hash phash = ReadHash();
-
-            TransactionList transactions;
-            int64_t num_transactions = ReadLong();
-            for(int64_t idx = 0; idx < num_transactions; idx++)
-                transactions.push_back(GetTransactionReader().Read());
-            return std::make_shared<Block>(height, phash, transactions, timestamp);
-        }
-    };
-
-    class BlockPrinter : Printer{
-    public:
-        BlockPrinter(const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone):
-            Printer(severity, flags){}
-        BlockPrinter(Printer* parent):
-            Printer(parent){}
-        ~BlockPrinter() = default;
-
-        bool Print(const BlockPtr& blk) const{
-            if(!IsDetailed()){
-                LOG_AT_LEVEL(GetSeverity()) << blk->GetHash();
-                return true;
-            }
-
-            LOG_AT_LEVEL(GetSeverity()) << "Block #" << blk->GetHeight() << ":";
-            LOG_AT_LEVEL(GetSeverity()) << "  Timestamp: " << GetTimestampFormattedReadable(blk->GetTimestamp());
-            LOG_AT_LEVEL(GetSeverity()) << "  Height: " << blk->GetHeight();
-            LOG_AT_LEVEL(GetSeverity()) << "  Previous Hash: " << blk->GetPreviousHash();
-            LOG_AT_LEVEL(GetSeverity()) << "  Merkle Root: " << blk->GetMerkleRoot();
-            LOG_AT_LEVEL(GetSeverity()) << "  Hash: " << blk->GetHash();
-            return true;
-        }
     };
 }
 

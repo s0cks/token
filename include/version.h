@@ -26,7 +26,7 @@ namespace Token{
             major_(other.major_),
             minor_(other.minor_),
             revision_(other.revision_){}
-        Version(Buffer* buff):
+        Version(const BufferPtr& buff):
             major_(buff->GetShort()),
             minor_(buff->GetShort()),
             revision_(buff->GetShort()){}
@@ -44,10 +44,11 @@ namespace Token{
             return revision_;
         }
 
-        void Write(Buffer* buff) const{
+        bool Write(const BufferPtr& buff) const{
             buff->PutShort(major_);
             buff->PutShort(minor_);
             buff->PutShort(revision_);
+            return true;
         }
 
         std::string ToString() const{

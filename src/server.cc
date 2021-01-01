@@ -205,7 +205,7 @@ namespace Token{
             return;
         }
 
-        Buffer* rbuff = session->GetReadBuffer();
+        BufferPtr& rbuff = session->GetReadBuffer();
 
         intptr_t offset = 0;
         std::vector<Message*> messages;

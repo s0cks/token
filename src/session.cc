@@ -32,8 +32,8 @@ namespace Token{
         status_(Status::kOk),
         loop_(loop),
         handle_(),
-        rbuffer_(nullptr),
-        wbuffer_(nullptr){
+        rbuff_(Buffer::NewInstance(kBufferSize)),
+        wbuff_(Buffer::NewInstance(kBufferSize)){
         handle_.data = this;
 
         uv_tcp_keepalive(GetHandle(), 1, 60);
@@ -44,14 +44,11 @@ namespace Token{
             SESSION_ERROR(ss.str());
             return;
         }
-
-        rbuffer_ = new Buffer(kBufferSize);
-        wbuffer_ = new Buffer(kBufferSize);
     }
 
     void Session::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
         Session* session = (Session*)handle->data;
-        Buffer* rbuff = session->GetReadBuffer();
+        BufferPtr& rbuff = session->GetReadBuffer();
         buff->len = suggested_size;
         buff->base = rbuff->data();
     }
@@ -97,7 +94,7 @@ namespace Token{
         LOG(INFO) << "sending " << msg->ToString() << " (" << total_size << " bytes)";
 #endif//TOKEN_DEBUG
 
-        Buffer* wbuff = GetWriteBuffer();
+        BufferPtr& wbuff = GetWriteBuffer();
         wbuff->PutInt(type);
         wbuff->PutLong(size);
         if(!msg->Write(wbuff)){
@@ -123,7 +120,7 @@ namespace Token{
             return;
         }
 
-        Buffer* wbuff = GetWriteBuffer();
+        BufferPtr& wbuff = GetWriteBuffer();
         int64_t offset = 0;
         uv_buf_t buffers[total_messages];
         for(size_t idx = 0; idx < total_messages; idx++){

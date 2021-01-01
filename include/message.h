@@ -49,7 +49,7 @@ namespace Token{
         Message() = default;
 
         virtual intptr_t GetMessageSize() const = 0;
-        virtual bool Write(Buffer* buffer) const = 0;
+        virtual bool Write(const BufferPtr& buff) const = 0;
     public:
         virtual ~Message() = default;
 
@@ -80,7 +80,7 @@ namespace Token{
 #define DECLARE_MESSAGE(Name) \
         DECLARE_MESSAGE_TYPE(Name) \
         virtual intptr_t GetMessageSize() const; \
-        virtual bool Write(Buffer* buff) const; \
+        virtual bool Write(const BufferPtr& buff) const; \
 
 
     //TODO:
@@ -145,7 +145,7 @@ namespace Token{
 
         DECLARE_MESSAGE(Version);
 
-        static VersionMessage* NewInstance(Buffer* buff);
+        static VersionMessage* NewInstance(const BufferPtr& buff);
         static VersionMessage* NewInstance(ClientType type, const UUID& node_id, const BlockHeader& head, const Version& version=Version(), const Hash& nonce=Hash::GenerateNonce(), Timestamp timestamp=GetCurrentTimestamp()){
             return new VersionMessage(type, version, node_id, timestamp, nonce, head);
         }
@@ -212,7 +212,7 @@ namespace Token{
 
         DECLARE_MESSAGE(Verack);
 
-        static VerackMessage* NewInstance(Buffer* buff);
+        static VerackMessage* NewInstance(const BufferPtr& buff);
     };
 
     class Proposal;
@@ -225,7 +225,7 @@ namespace Token{
             Message(),
             type_(type),
             raw_(proposal->GetRaw()){}
-        PaxosMessage(MessageType type, Buffer* buff):
+        PaxosMessage(MessageType type, const BufferPtr& buff):
             Message(),
             type_(type),
             raw_(buff){}
@@ -234,7 +234,7 @@ namespace Token{
             return RawProposal::GetSize();
         }
 
-        bool Write(Buffer* buff) const{
+        bool Write(const BufferPtr& buff) const{
             return raw_.Encode(buff);
         }
     public:
@@ -254,12 +254,12 @@ namespace Token{
     class PrepareMessage : public PaxosMessage{
     public:
         PrepareMessage(ProposalPtr proposal): PaxosMessage(Message::kPrepareMessageType, proposal){}
-        PrepareMessage(Buffer* buff): PaxosMessage(Message::kPrepareMessageType, buff){}
+        PrepareMessage(const BufferPtr& buff): PaxosMessage(Message::kPrepareMessageType, buff){}
         ~PrepareMessage(){}
 
         DECLARE_MESSAGE(Prepare);
 
-        static PrepareMessage* NewInstance(Buffer* buff){
+        static PrepareMessage* NewInstance(const BufferPtr& buff){
             return new PrepareMessage(buff);
         }
     };
@@ -267,12 +267,12 @@ namespace Token{
     class PromiseMessage : public PaxosMessage{
     public:
         PromiseMessage(ProposalPtr proposal): PaxosMessage(Message::kPromiseMessageType, proposal){}
-        PromiseMessage(Buffer* buff): PaxosMessage(Message::kPromiseMessageType, buff){}
+        PromiseMessage(const BufferPtr& buff): PaxosMessage(Message::kPromiseMessageType, buff){}
         ~PromiseMessage(){}
 
         DECLARE_MESSAGE(Promise);
 
-        static PromiseMessage* NewInstance(Buffer* buff){
+        static PromiseMessage* NewInstance(const BufferPtr& buff){
             return new PromiseMessage(buff);
         }
     };
@@ -280,12 +280,12 @@ namespace Token{
     class CommitMessage : public PaxosMessage{
     public:
         CommitMessage(ProposalPtr proposal): PaxosMessage(Message::kCommitMessageType, proposal){}
-        CommitMessage(Buffer* buff): PaxosMessage(Message::kCommitMessageType, buff){}
+        CommitMessage(const BufferPtr& buff): PaxosMessage(Message::kCommitMessageType, buff){}
         ~CommitMessage(){}
 
         DECLARE_MESSAGE(Commit);
 
-        static CommitMessage* NewInstance(Buffer* buff){
+        static CommitMessage* NewInstance(const BufferPtr& buff){
             return new CommitMessage(buff);
         }
     };
@@ -293,12 +293,12 @@ namespace Token{
     class AcceptedMessage : public PaxosMessage{
     public:
         AcceptedMessage(ProposalPtr proposal): PaxosMessage(Message::kAcceptedMessageType, proposal){}
-        AcceptedMessage(Buffer* buff): PaxosMessage(Message::kAcceptedMessageType, buff){}
+        AcceptedMessage(const BufferPtr& buff): PaxosMessage(Message::kAcceptedMessageType, buff){}
         ~AcceptedMessage(){}
 
         DECLARE_MESSAGE(Accepted);
 
-        static AcceptedMessage* NewInstance(Buffer* buff){
+        static AcceptedMessage* NewInstance(const BufferPtr& buff){
             return new AcceptedMessage(buff);
         }
     };
@@ -306,17 +306,17 @@ namespace Token{
     class RejectedMessage : public PaxosMessage{
     public:
         RejectedMessage(ProposalPtr proposal): PaxosMessage(Message::kRejectedMessageType, proposal){}
-        RejectedMessage(Buffer* buff): PaxosMessage(Message::kRejectedMessageType, buff){}
+        RejectedMessage(const BufferPtr& buff): PaxosMessage(Message::kRejectedMessageType, buff){}
         ~RejectedMessage(){}
 
         DECLARE_MESSAGE(Rejected);
 
-        static RejectedMessage* NewInstance(Buffer* buff){
+        static RejectedMessage* NewInstance(const BufferPtr& buff){
             return new RejectedMessage(buff);
         }
     };
 
-    template<typename T>
+    template<class T>
     class ObjectMessage : public Message{
     protected:
         typedef std::shared_ptr<T> ObjectPtr;
@@ -326,7 +326,7 @@ namespace Token{
         ObjectMessage(const ObjectPtr& value):
             Message(),
             value_(value){}
-        ObjectMessage(Buffer* buff):
+        ObjectMessage(const BufferPtr& buff):
             Message(),
             value_(T::NewInstance(buff)){}
     public:
@@ -343,13 +343,13 @@ namespace Token{
             return GetValue()->GetBufferSize();
         }
 
-        bool Write(Buffer* buff) const{
+        bool Write(const BufferPtr& buff) const{
             return GetValue()->Write(buff);
         }
     public:
         TransactionMessage(const TransactionPtr& value):
             ObjectMessage(value){}
-        TransactionMessage(Buffer* buff):
+        TransactionMessage(const BufferPtr& buff):
             ObjectMessage(buff){}
         ~TransactionMessage() = default;
 
@@ -361,7 +361,7 @@ namespace Token{
 
         DECLARE_MESSAGE_TYPE(Transaction);
 
-        static TransactionMessage* NewInstance(Buffer* buff){
+        static TransactionMessage* NewInstance(const BufferPtr& buff){
             return new TransactionMessage(buff);
         }
     };
@@ -372,13 +372,13 @@ namespace Token{
             return GetValue()->GetBufferSize();
         }
 
-        bool Write(Buffer* buff) const{
+        bool Write(const BufferPtr& buff) const{
             return GetValue()->Write(buff);
         }
     public:
         BlockMessage(const BlockPtr& blk):
             ObjectMessage(blk){}
-        BlockMessage(Buffer* buff):
+        BlockMessage(const BufferPtr& buff):
             ObjectMessage(buff){}
         ~BlockMessage() = default;
 
@@ -390,7 +390,7 @@ namespace Token{
 
         DECLARE_MESSAGE_TYPE(Block);
 
-        static BlockMessage* NewInstance(Buffer* buff){
+        static BlockMessage* NewInstance(const BufferPtr& buff){
             return new BlockMessage(buff);
         }
     };
@@ -401,19 +401,19 @@ namespace Token{
             return GetValue()->GetBufferSize();
         }
 
-        bool Write(Buffer* buff) const{
+        bool Write(const BufferPtr& buff) const{
             return GetValue()->Write(buff);
         }
     public:
         UnclaimedTransactionMessage(const UnclaimedTransactionPtr& utxo):
             ObjectMessage(utxo){}
-        UnclaimedTransactionMessage(Buffer* buff):
+        UnclaimedTransactionMessage(const BufferPtr& buff):
             ObjectMessage(buff){}
         ~UnclaimedTransactionMessage() = default;
 
         DECLARE_MESSAGE_TYPE(UnclaimedTransaction);
 
-        static UnclaimedTransactionMessage* NewInstance(Buffer* buff){
+        static UnclaimedTransactionMessage* NewInstance(const BufferPtr& buff){
             return new UnclaimedTransactionMessage(buff);
         }
     };
@@ -447,7 +447,7 @@ namespace Token{
         InventoryItem(const InventoryItem& item):
             type_(item.type_),
             hash_(item.hash_){}
-        InventoryItem(Buffer* buff):
+        InventoryItem(const BufferPtr& buff):
             type_(static_cast<Type>(buff->GetShort())),
             hash_(buff->GetHash()){}
         ~InventoryItem(){}
@@ -474,7 +474,7 @@ namespace Token{
             return type_ == kTransaction;
         }
 
-        bool Encode(Buffer* buff) const{
+        bool Encode(const BufferPtr& buff) const{
             buff->PutShort(static_cast<int16_t>(GetType()));
             buff->PutHash(GetHash());
             return true;
@@ -543,7 +543,7 @@ namespace Token{
 
         DECLARE_MESSAGE(Inventory);
 
-        static InventoryMessage* NewInstance(Buffer* buff);
+        static InventoryMessage* NewInstance(const BufferPtr& buff);
         static InventoryMessage* NewInstance(std::vector<InventoryItem>& items){
             return new InventoryMessage(items);
         }
@@ -589,7 +589,7 @@ namespace Token{
 
         DECLARE_MESSAGE(GetData);
 
-        static GetDataMessage* NewInstance(Buffer* buff);
+        static GetDataMessage* NewInstance(const BufferPtr& buff);
         static GetDataMessage* NewInstance(std::vector<InventoryItem>& items){
             return new GetDataMessage(items);
         }
@@ -633,7 +633,7 @@ namespace Token{
 
         DECLARE_MESSAGE(GetBlocks);
 
-        static GetBlocksMessage* NewInstance(Buffer* buff);
+        static GetBlocksMessage* NewInstance(const BufferPtr& buff);
         static GetBlocksMessage* NewInstance(const Hash& start_hash=BlockChain::GetHead()->GetHash(), const Hash& stop_hash=Hash()){
             return new GetBlocksMessage(start_hash, stop_hash);
         }
@@ -656,7 +656,7 @@ namespace Token{
 
         DECLARE_MESSAGE(NotFound);
 
-        static NotFoundMessage* NewInstance(Buffer* buff);
+        static NotFoundMessage* NewInstance(const BufferPtr& buff);
         static NotFoundMessage* NewInstance(const std::string& message="Not Found"){
             return new NotFoundMessage(message);
         }
@@ -670,7 +670,7 @@ namespace Token{
 
         DECLARE_MESSAGE(GetPeers);
 
-        static GetPeersMessage* NewInstance(Buffer* buff){
+        static GetPeersMessage* NewInstance(const BufferPtr& buff){
             return new GetPeersMessage();
         }
 
@@ -716,7 +716,7 @@ namespace Token{
 
         DECLARE_MESSAGE(PeerList);
 
-        static PeerListMessage* NewInstance(Buffer* buff);
+        static PeerListMessage* NewInstance(const BufferPtr& buff);
         static PeerListMessage* NewInstance(const PeerList& peers){
             return new PeerListMessage(peers);
         }

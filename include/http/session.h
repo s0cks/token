@@ -18,13 +18,13 @@ namespace Token{
         BufferPtr wbuff_;
 
         void InitReadBuffer(uv_buf_t* buff, int64_t suggested_size){
-            rbuff_ = BufferPtr(new Buffer(suggested_size));
+            rbuff_ = Buffer::NewInstance(suggested_size);
             buff->len = rbuff_->GetBufferSize();
             buff->base = rbuff_->data();
         }
 
         void InitWriteBuffer(uv_buf_t* buff, int64_t size){
-            wbuff_ = BufferPtr(new Buffer(size));
+            wbuff_ = Buffer::NewInstance(size);
             buff->base = wbuff_->data();
             buff->len = wbuff_->GetBufferSize();
         }

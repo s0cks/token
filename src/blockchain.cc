@@ -104,21 +104,6 @@ namespace Token{
             return false;
         }
 
-        /*if(ShouldLoadSnapshot()){
-            Snapshot* snapshot = nullptr;
-            if(!(snapshot = Snapshot::ReadSnapshot(FLAGS_snapshot))){
-                LOG(WARNING) << "couldn't load snapshot: " << FLAGS_snapshot;
-                return false;
-            }
-
-            SnapshotBlockChainInitializer initializer(snapshot);
-            if(!initializer.Initialize()){
-                LOG(WARNING) << "couldn't initialize block chain from snapshot: " << FLAGS_snapshot;
-                return false;
-            }
-            return true;
-        }*/
-
         LOG(INFO) << "initializing the block chain....";
         SetState(BlockChain::kInitializing);
 
@@ -193,54 +178,61 @@ namespace Token{
         return GetBlock(GetReference(BLOCKCHAIN_REFERENCE_HEAD));
     }
 
+    bool BlockChain::PutBlock(const Hash& hash, BlockPtr blk){
+        if(HasBlock(hash)){
+            LOG(WARNING) << "cannot overwrite existing block data for: " << hash;
+            return false;
+        }
+
+        int64_t size = blk->GetBufferSize();
+        BufferPtr buff = Buffer::NewInstance(size);
+        blk->Write(buff);
+
+        leveldb::Slice key((char*)hash.data(), Hash::GetSize());
+        leveldb::Slice value(buff->data(), size);
+
+        leveldb::WriteOptions opts;
+        opts.sync = true;
+        leveldb::Status status;
+        if(!(status = GetIndex()->Put(opts, key, value)).ok()){
+            LOG(WARNING) << "cannot index object " << hash << ": " << status.ToString();
+            return false;
+        }
+
+        LOG(INFO) << "indexed block: " << hash;
+        return true;
+    }
+
     BlockPtr BlockChain::GetBlock(const Hash& hash){
-        leveldb::ReadOptions options;
-        std::string key = hash.HexString();
-        std::string filename;
+        leveldb::Slice key((char*)hash.data(), Hash::GetSize());
+        std::string value;
 
-        LOCK_GUARD;
-        leveldb::Status status = GetIndex()->Get(options, key, &filename);
-        if(!status.ok()){
-            LOG(WARNING) << "couldn't find block " << hash << " in index: " << status.ToString();
-            return nullptr;
+        leveldb::ReadOptions opts;
+        leveldb::Status status;
+        if(!(status = GetIndex()->Get(opts, key, &value)).ok()){
+            LOG(WARNING) << "cannot get " << hash << ": " << status.ToString();
+            return BlockPtr(nullptr);
         }
 
-        BlockFileReader reader(filename);
-        BlockPtr blk = reader.Read();
-        if(hash != blk->GetHash()){
-            LOG(WARNING) << "couldn't match block hashes: " << hash << " <=> " << blk->GetHash();
-            return nullptr;
-        }
-        return blk;
+        BufferPtr buff = Buffer::From(value);
+        return Block::NewInstance(buff);
     }
 
     BlockPtr BlockChain::GetBlock(int64_t height){
-        leveldb::ReadOptions options;
-        std::string key = GetBlockHeightKey(height);
-        std::string filename;
-
-        LOCK_GUARD;
-        leveldb::Status status = GetIndex()->Get(options, key, &filename);
-        if(!status.ok()){
-            LOG(WARNING) << "couldn't find block #" << height << " in index: " << status.ToString();
-            return nullptr;
-        }
-
-        BlockFileReader reader(filename);
-        return reader.Read();
+        //TODO: implement
+        return BlockPtr(nullptr);
     }
 
     bool BlockChain::HasReference(const std::string& name){
         leveldb::ReadOptions options;
         std::string value;
-        LOCK_GUARD;
         return GetIndex()->Get(options, name, &value).ok();
     }
 
     bool BlockChain::RemoveReference(const std::string& name){
         leveldb::WriteOptions options;
         std::string value;
-        LOCK_GUARD;
+
         leveldb::Status status = GetIndex()->Delete(options, name);
         if(!status.ok()){
             LOG(WARNING) << "couldn't remove reference " << name << ": " << status.ToString();
@@ -255,7 +247,6 @@ namespace Token{
         leveldb::WriteOptions options;
         options.sync = true;
 
-        LOCK_GUARD;
         leveldb::Status status = GetIndex()->Put(options, name, hash.HexString());
         if(!status.ok()){
             LOG(WARNING) << "couldn't set reference " << name << " to " << hash << ": " << status.ToString();
@@ -267,61 +258,22 @@ namespace Token{
     }
 
     Hash BlockChain::GetReference(const std::string& name){
-        leveldb::ReadOptions options;
         std::string value;
-        LOCK_GUARD;
-        leveldb::Status status = GetIndex()->Get(options, name, &value);
-        if(!status.ok()){
+
+        leveldb::Status status;
+        leveldb::ReadOptions options;
+        if(!(status = GetIndex()->Get(options, name, &value)).ok()){
             LOG(WARNING) << "couldn't find reference " << name << ": " << status.ToString();
             return Hash();
         }
+
         return Hash::FromHexString(value);
     }
 
-    static inline bool
-    WriteToFile(const BlockPtr& blk, const std::string& filename){
-        BlockFileWriter writer(filename);
-        return writer.Write(blk);
-    }
-
-    bool BlockChain::PutBlock(const Hash& hash, BlockPtr blk){
-        BlockHeader block = blk->GetHeader();
-
-        leveldb::WriteOptions options;
-        options.sync = true;
-        std::string key = block.GetHash().HexString();
-        std::string filename = GetNewBlockFilename(blk);
-
-        LOCK_GUARD;
-        if(FileExists(filename)){
-            LOG(WARNING) << "couldn't overwrite existing block data: " << filename;
-            return false;
-        }
-
-        if(!WriteToFile(blk, filename)){
-            LOG(WARNING) << "couldn't write block " << block << " to file: " << filename;
-            return false;
-        }
-
-        leveldb::Status status = GetIndex()->Put(options, key, filename);
-        if(!status.ok()){
-            LOG(WARNING) << "couldn't index block " << block << " by hash: " << status.ToString();
-            return false;
-        }
-
-        status = GetIndex()->Put(options, GetBlockHeightKey(blk->GetHeight()), filename);
-        if(!status.ok()){
-            LOG(WARNING) << "couldn't index block " << block << " by height: " << status.ToString();
-            return false;
-        }
-
-        LOG(INFO) << "indexed block " << block << " to file: " << filename;
-        return true;
-    }
-
     bool BlockChain::HasBlock(const Hash& hash){
+        leveldb::Slice key((char*)hash.data(), Hash::GetSize());
+
         leveldb::ReadOptions options;
-        std::string key = hash.HexString();
         std::string filename;
 
         LOCK_GUARD;

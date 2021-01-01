@@ -20,6 +20,7 @@ namespace Token{
 
     template<typename T>
     class AtomicLinkedListNode{
+        //TODO: fixme
         template<typename U>
         friend class AtomicLinkedList;
     private:
@@ -38,9 +39,9 @@ namespace Token{
         AtomicLinkedList():
             head_(new AtomicLinkedListNode<T>()),
             tail_(new AtomicLinkedListNode<T>()) {
-            head_->next_.store(tail_);
+            head_->next_.store(tail_->next_);
             head_->prev_.store(nullptr);
-            tail_->prev_.store(head_);
+            tail_->prev_.store(head_->next_);
             tail_->next_.store(nullptr);
         }
         ~AtomicLinkedList(){
@@ -61,7 +62,7 @@ namespace Token{
 
         void PushBack(const T& val){
             LinkedListNode<T>* node = new LinkedListNode<T>(val);
-            node->next_ = tail_;
+            node->next_ = tail_->next_;
 
             LinkedListNode<T>* prev;
             do{

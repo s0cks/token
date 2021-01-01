@@ -9,6 +9,7 @@
 #include "block.h"
 #include "transaction.h"
 #include "unclaimed_transaction.h"
+#include "utils/json_conversion.h"
 
 namespace Token{
     class ObjectPoolVisitor{
@@ -54,17 +55,8 @@ namespace Token{
 
     class ObjectPoolKey{
     public:
-        enum ObjectPoolKeyLayout{
-            // tag_
-            kTagOffset = 0,
-            kTagSize = sizeof(uint64_t),
-
-            // hash_
-            kHashOffset = kTagOffset+kTagSize,
-            kHashSize = 256 / 8,
-
-            kTotalSize = kHashOffset+kHashSize,
-        };
+        static const int64_t kSize = sizeof(int32_t)
+                                   + Hash::kSize;
     private:
         ObjectTag tag_;
         Hash hash_;
@@ -78,11 +70,16 @@ namespace Token{
         ObjectPoolKey(const ObjectTag::Type& tag, const Hash& hash):
             tag_(tag),
             hash_(hash){}
-        ObjectPoolKey(uint8_t* bytes, const int64_t& size=kTotalSize):
-            tag_(&bytes[kTagOffset]),
-            hash_(&bytes[kHashOffset], kHashSize){}
+        ObjectPoolKey(const BufferPtr& buff):
+            tag_(static_cast<ObjectTag>(buff->GetInt())),
+            hash_(buff->GetHash()){}
         ObjectPoolKey(const leveldb::Slice& slice):
-            ObjectPoolKey((uint8_t*)slice.data(), slice.size()){}
+            tag_(),
+            hash_(){
+            BufferPtr buff = Buffer::From(slice.data(), slice.size());
+            tag_ = buff->GetObjectTag();
+            hash_ = buff->GetHash();
+        }
         ~ObjectPoolKey() = default;
 
         ObjectTag& GetTag(){
@@ -113,10 +110,9 @@ namespace Token{
             return tag_.IsBlock();
         }
 
-        bool Encode(uint8_t* bytes, const int64_t& size) const{
-            uint64_t tag = tag_.data();
-            memcpy(&bytes[kTagOffset], &tag, kTagSize);
-            memcpy(&bytes[kHashOffset], hash_.data(), Hash::GetSize());
+        bool Write(const BufferPtr& buff) const{
+            buff->PutObjectTag(tag_);
+            buff->PutHash(hash_);
             return true;
         }
 
@@ -194,13 +190,6 @@ namespace Token{
         static leveldb::Status IndexObject(const Hash& hash, const std::string& filename);
         static int64_t GetNumberOfObjectsByType(const ObjectTag::Type& type);
         static bool HasObjectByType(const Hash& hash, const ObjectTag::Type& type);
-
-        template<class ObjectType, class ObjectWriter>
-        static inline bool
-        WriteObject(const std::shared_ptr<ObjectType>& obj, const std::string& filename){
-            ObjectWriter writer(filename);
-            return writer.Write(obj);
-        }
     public:
         ~ObjectPool() = delete;
 
@@ -222,6 +211,7 @@ namespace Token{
         static bool VisitTransactions(ObjectPoolTransactionVisitor* vis);
         static bool VisitUnclaimedTransactions(ObjectPoolUnclaimedTransactionVisitor* vis);
         static bool GetHashList(const User& user, HashList& hashes);
+        static bool GetHashListAsJson(const User& user, JsonString& json);
         static BlockPtr GetBlock(const Hash& hash);
         static TransactionPtr GetTransaction(const Hash& hash);
         static UnclaimedTransactionPtr GetUnclaimedTransaction(const Hash& hash);

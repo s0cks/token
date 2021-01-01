@@ -5,7 +5,6 @@
 #include "pool.h"
 #include "proposal.h"
 #include "job/scheduler.h"
-#include "block_verifier.h"
 #include "job/process_block.h"
 #include "peer/peer_session_manager.h"
 
@@ -128,10 +127,11 @@ namespace Token{
 
             BlockPtr blk = ObjectPool::GetBlock(hash);
             LOG(INFO) << "proposal " << hash << " has entered the voting phase.";
-            if(!BlockVerifier::IsValid(blk)){
-                LOG(WARNING) << "cannot validate block " << hash << ", rejecting....";
-                return CancelProposal();
-            }
+//TODO:
+//            if(!BlockVerifier::IsValid(blk)){
+//                LOG(WARNING) << "cannot validate block " << hash << ", rejecting....";
+//                return CancelProposal();
+//            }
             proposer->SendAccepted();
 
             GetProposal()->WaitForPhase(Proposal::kCommitPhase);

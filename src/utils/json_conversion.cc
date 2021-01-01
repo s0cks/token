@@ -1,8 +1,6 @@
 #include "utils/json_conversion.h"
 
 namespace Token{
-    typedef rapidjson::Writer<JsonString> JsonWriter;
-
     static inline void
     SetField(JsonWriter& writer, const std::string& name, const int64_t& value){
         writer.Key(name.data(), name.length());

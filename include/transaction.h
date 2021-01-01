@@ -4,44 +4,33 @@
 #include <set>
 #include "hash.h"
 #include "object.h"
+#include "utils/buffer.h"
 #include "unclaimed_transaction.h"
-
-#include "utils/printer.h"
-#include "utils/file_reader.h"
-#include "utils/file_writer.h"
 
 namespace Token{
     typedef std::shared_ptr<Transaction> TransactionPtr;
 
-    class Input : public Object{
+    class Input : public BinaryObject{
         friend class Transaction;
+    public:
+        static const int64_t kSize = Hash::kSize + sizeof(int64_t) + User::kSize;
     private:
         Hash hash_;
-        int32_t index_;
-        User user_;
-    protected:
-        bool Encode(Buffer* buff) const{
-            buff->PutHash(hash_);
-            buff->PutInt(index_);
-            buff->PutUser(user_);
-            return true;
-        }
+        int64_t index_;
+        User user_;//TODO: remove field
     public:
-        Input(const Hash& tx_hash, int32_t index, const User& user):
-            Object(),
+        Input(const Hash& tx_hash, int64_t index, const User& user):
+            BinaryObject(),
             hash_(tx_hash),
             index_(index),
             user_(user){}
-        Input(const Hash& tx_hash, int32_t index, const std::string& user):
+        Input(const Hash& tx_hash, int64_t index, const std::string& user):
             Input(tx_hash, index, User(user)){}
-        Input(Buffer* buff):
-            Object(),
-            hash_(buff->GetHash()),
-            index_(buff->GetInt()),
-            user_(buff->GetUser()){}
+        Input(const BufferPtr& buff):
+            Input(buff->GetHash(), buff->GetInt(), buff->GetUser()){}
         ~Input(){}
 
-        int32_t GetOutputIndex() const{
+        int64_t GetOutputIndex() const{
             return index_;
         }
 
@@ -53,7 +42,18 @@ namespace Token{
             return user_;
         }
 
-        UnclaimedTransactionPtr GetUnclaimedTransaction() const;
+        UnclaimedTransactionPtr GetUnclaimedTransaction() const; //TODO: remove
+
+        int64_t GetBufferSize() const{
+            return Input::kSize;
+        }
+
+        bool Write(const BufferPtr& buffer) const{
+            buffer->PutHash(hash_);
+            buffer->PutLong(index_);
+            buffer->PutUser(user_);
+            return true;
+        }
 
         std::string ToString() const{
             std::stringstream stream;
@@ -84,55 +84,24 @@ namespace Token{
                 return a.index_ < b.index_;
             return a.hash_ < b.hash_;
         }
-
-        static inline int64_t
-        GetSize(){
-            return Hash::GetSize()
-                 + sizeof(int32_t)
-                 + User::GetSize();
-        }
     };
 
-    class InputFileReader : BinaryFileReader{
-        friend class TransactionFileReader;
-    private:
-        InputFileReader(BinaryFileReader* parent): BinaryFileReader(parent){}
-    private:
-        ~InputFileReader() = default;
-
-        Input Read(){
-            Hash hash = ReadHash();
-            int32_t index = ReadInt();
-            User user = ReadUser();
-            return Input(hash, index, user);
-        }
-    };
-
-    class Output : public Object{
+    class Output : public BinaryObject{
         friend class Transaction;
+    public:
+        static const int64_t kSize = User::kSize + Product::kSize;
     private:
         User user_;
         Product product_;
-    protected:
-        bool Encode(Buffer* buff) const{
-            buff->PutUser(user_);
-            buff->PutProduct(product_);
-            return true;
-        }
     public:
-        explicit Output():
-            user_(),
-            product_(){}
         Output(const User& user, const Product& product):
-            Object(),
+            BinaryObject(),
             user_(user),
             product_(product){}
         Output(const std::string& user, const std::string& product):
             Output(User(user), Product(product)){}
-        Output(Buffer* buff):
-            Object(),
-            user_(buff->GetUser()),
-            product_(buff->GetProduct()){}
+        Output(const BufferPtr& buff):
+            Output(buff->GetUser(), buff->GetProduct()){}
         ~Output(){}
 
         User GetUser() const{
@@ -141,6 +110,16 @@ namespace Token{
 
         Product GetProduct() const{
             return product_;
+        }
+
+        int64_t GetBufferSize() const{
+            return Output::kSize;
+        }
+
+        bool Write(const BufferPtr& buff) const{
+            buff->PutUser(user_);
+            buff->PutProduct(product_);
+            return true;
         }
 
         std::string ToString() const{
@@ -168,26 +147,6 @@ namespace Token{
             if(a.user_ == b.user_)
                 return a.product_ < b.product_;
             return a.user_ < b.user_;
-        }
-
-        static inline int64_t
-        GetSize(){
-            return User::GetSize()
-                 + Product::GetSize();
-        }
-    };
-
-    class OutputFileReader : public BinaryFileReader{
-        friend class TransactionFileReader;
-    private:
-        OutputFileReader(BinaryFileReader* parent): BinaryFileReader(parent){}
-    public:
-        ~OutputFileReader() = default;
-
-        Output Read(){
-            User user = ReadUser();
-            Product product = ReadProduct();
-            return Output(user, product);
         }
     };
 
@@ -220,38 +179,6 @@ namespace Token{
         InputList inputs_;
         OutputList outputs_;
         std::string signature_;
-    protected:
-        bool Write(Buffer* buff) const{
-            buff->PutLong(timestamp_);
-            buff->PutLong(index_);
-
-            int64_t idx;
-            buff->PutLong(GetNumberOfInputs());
-            for(idx = 0;
-                idx < GetNumberOfInputs();
-                idx++){
-                inputs_[idx].Encode(buff);
-            }
-            buff->PutLong(GetNumberOfOutputs());
-            for(idx = 0;
-                idx < GetNumberOfOutputs();
-                idx++){
-                outputs_[idx].Encode(buff);
-            }
-            //TODO: serialize transaction signature
-            return true;
-        }
-
-        int64_t GetBufferSize() const{
-            int64_t size = 0;
-            size += sizeof(Timestamp); // timestamp_
-            size += sizeof(int64_t); // index_
-            size += sizeof(int64_t); // num_inputs_
-            size += GetNumberOfInputs() * Input::GetSize(); // inputs_
-            size += sizeof(int64_t); // num_outputs
-            size += GetNumberOfOutputs() * Output::GetSize(); // outputs_
-            return size;
-        }
     public:
         Transaction(int64_t index, const InputList& inputs, const OutputList& outputs, Timestamp timestamp=GetCurrentTimestamp()):
             BinaryObject(),
@@ -338,6 +265,25 @@ namespace Token{
             return GetIndex() == 0;
         }
 
+        int64_t GetBufferSize() const{
+            int64_t size = 0;
+            size += sizeof(Timestamp); // timestamp_
+            size += sizeof(int64_t); // index_
+            size += sizeof(int64_t); // num_inputs_
+            size += GetNumberOfInputs() * Input::kSize; // inputs_
+            size += sizeof(int64_t); // num_outputs
+            size += GetNumberOfOutputs() * Output::kSize; // outputs_
+            return size;
+        }
+
+        bool Write(const BufferPtr& buff) const{
+            buff->PutLong(timestamp_);
+            buff->PutLong(index_);
+            buff->PutList(inputs_);
+            buff->PutList(outputs_);
+            return true;
+        }
+
         bool Sign();
         bool VisitInputs(TransactionInputVisitor* vis) const;
         bool VisitOutputs(TransactionOutputVisitor* vis) const;
@@ -372,7 +318,7 @@ namespace Token{
             //TODO: compare transaction signature
         }
 
-        static TransactionPtr NewInstance(Buffer* buff){
+        static TransactionPtr NewInstance(const BufferPtr& buff){
             Timestamp timestamp = buff->GetLong();
             int64_t index = buff->GetLong();
 
@@ -389,94 +335,9 @@ namespace Token{
                 outputs.push_back(Output(buff));
             return std::make_shared<Transaction>(index, inputs, outputs, timestamp);
         }
-
-        static TransactionPtr NewInstance(std::fstream& fd, size_t size);
-        static inline TransactionPtr NewInstance(const std::string& filename){
-            std::fstream fd(filename, std::ios::in|std::ios::binary);
-            return NewInstance(fd, GetFilesize(filename));
-        }
     };
 
-    class TransactionFileWriter : BinaryFileWriter{
-    private:
-        inline bool
-        WriteInput(const Input& value){
-            WriteHash(value.GetTransactionHash());
-            WriteInt(value.GetOutputIndex());
-            WriteUser(value.GetUser());
-            return true;
-        }
-
-        inline bool
-        WriteOutput(const Output& value){
-            WriteUser(value.GetUser());
-            WriteProduct(value.GetProduct());
-            return true;
-        }
-    public:
-        TransactionFileWriter(const std::string& filename): BinaryFileWriter(filename){}
-        TransactionFileWriter(BinaryFileWriter* parent): BinaryFileWriter(parent){}
-        ~TransactionFileWriter() = default;
-
-        bool Write(const TransactionPtr& tx){
-            //TODO: better error handling
-            WriteLong(tx->GetTimestamp()); // timestamp_
-            WriteLong(tx->GetIndex()); // index_
-            WriteLong(tx->GetNumberOfInputs()); // num_inputs_
-            for(auto& it : tx->inputs())
-                WriteInput(it); // input_[idx]
-            WriteLong(tx->GetNumberOfOutputs()); // num_outputs_
-            for(auto& it : tx->outputs())
-                WriteOutput(it); // outputs_[idx]
-            //TODO: serialize transaction signature
-            return true;
-        }
-    };
-
-    class TransactionFileReader : BinaryFileReader{
-    private:
-        InputFileReader input_reader_;
-        OutputFileReader output_reader_;
-
-        inline Input
-        ReadNextInput(){
-            return input_reader_.Read();
-        }
-
-        inline Output
-        ReadNextOutput(){
-            return output_reader_.Read();
-        }
-    public:
-        TransactionFileReader(const std::string& filename):
-            BinaryFileReader(filename),
-            input_reader_(this),
-            output_reader_(this){}
-        TransactionFileReader(BinaryFileReader* parent):
-            BinaryFileReader(parent),
-            input_reader_(this),
-            output_reader_(this){}
-        ~TransactionFileReader() = default;
-
-        TransactionPtr Read(){
-            Timestamp timestamp = ReadLong();
-            int64_t index = ReadLong();
-
-            InputList inputs;
-            int64_t num_inputs = ReadLong();
-            for(int64_t idx = 0; idx < num_inputs; idx++)
-                inputs.push_back(ReadNextInput());
-
-            OutputList outputs;
-            int64_t num_outputs = ReadLong();
-            for(int64_t idx = 0; idx < num_outputs; idx++)
-                outputs.push_back(ReadNextOutput());
-
-            return std::make_shared<Transaction>(index, inputs, outputs, timestamp);
-        }
-    };
-
-    typedef std::vector<TransactionPtr> TransactionList;
+    typedef std::set<TransactionPtr, Transaction::TimestampComparator> TransactionList;
 
     class TransactionInputVisitor{
     protected:
@@ -492,29 +353,6 @@ namespace Token{
     public:
         virtual ~TransactionOutputVisitor() = default;
         virtual bool Visit(const Output& output) = 0;
-    };
-
-    class TransactionPrinter : public Printer, public TransactionInputVisitor, public TransactionOutputVisitor{
-    public:
-        TransactionPrinter(const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone):
-            Printer(severity, flags){}
-        TransactionPrinter(Printer* parent):
-            Printer(parent){}
-        ~TransactionPrinter() = default;
-
-        bool Visit(const Input& input){
-            if(!IsDetailed())
-                return true;
-            LOG_AT_LEVEL(GetSeverity()) << "Input(" << input.GetTransactionHash() << "[" << input.GetOutputIndex() << "]";
-            return true;
-        }
-
-        bool Visit(const Output& output){
-            if(!IsDetailed())
-                return true;
-            LOG_AT_LEVEL(GetSeverity()) << "Output(" << output.GetUser() << ", " << output.GetProduct() << ")";
-            return true;
-        }
     };
 }
 

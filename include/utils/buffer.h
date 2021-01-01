@@ -1,16 +1,22 @@
 #ifndef TOKEN_BUFFER_H
 #define TOKEN_BUFFER_H
 
+#include <set>
+#include <vector>
 #include "object.h"
 #include "object_tag.h"
 
 namespace Token{
-    class Buffer : public Object{
+    class Buffer;
+    typedef std::shared_ptr<Buffer> BufferPtr;
+
+    class Buffer : public std::enable_shared_from_this<Buffer>{
     private:
         intptr_t bsize_;
         intptr_t wpos_;
         intptr_t rpos_;
         uint8_t* data_;
+        bool owned_; //TODO: fixme
 
         uint8_t* raw(){
             return data_;
@@ -48,33 +54,26 @@ namespace Token{
             return data;
         }
     public:
-        Buffer(intptr_t size):
-            Object(),
+        Buffer(int64_t size):
             bsize_(size),
             wpos_(0),
-            rpos_(0){
+            rpos_(0),
+            data_(nullptr),
+            owned_(true){
             data_ = (uint8_t*)malloc(sizeof(uint8_t)*size);
             memset(data(), 0, GetBufferSize());
         }
         Buffer(const char* data, size_t size):
-            Object(),
             bsize_(size),
             wpos_(size),
             rpos_(0),
-            data_(nullptr) {
+            data_(nullptr),
+            owned_(false){
             data_ = (uint8_t*) data;
         }
-        Buffer(const Buffer& buff):
-            Object(),
-            bsize_(buff.bsize_),
-            wpos_(buff.wpos_),
-            rpos_(buff.rpos_),
-            data_(nullptr) {
-            data_ = (uint8_t*) malloc(sizeof(uint8_t)*buff.GetBufferSize());
-            memcpy(data(), buff.data(), buff.GetBufferSize());
-        }
+
         ~Buffer(){
-            if(data_)
+            if(data_ && owned_)
                 free(data_);
         }
 
@@ -231,6 +230,22 @@ namespace Token{
             PutUnsignedLong(tag.data());
         }
 
+        template<class T>
+        void PutList(const std::vector<T>& items){
+            PutLong(items.size());
+            for(auto& item : items){
+                item.Write(shared_from_this());
+            }
+        }
+
+        template<class T, class C>
+        void PutSet(const std::set<T, C>& items){
+            PutLong(items.size());
+            for(auto& item : items){
+                item->Write(shared_from_this());
+            }
+        }
+
         void Reset(){
             memset(data(), 0, GetBufferSize());
             rpos_ = 0;
@@ -242,11 +257,23 @@ namespace Token{
             ss << "Buffer(" << GetBufferSize() << ")";
             return ss.str();
         }
+
+        static inline BufferPtr NewInstance(int64_t size){
+            return std::make_shared<Buffer>(size);
+        }
+
+        static inline BufferPtr From(const char* data, size_t size){
+            return std::make_shared<Buffer>(data, size);
+        }
+
+        static inline BufferPtr From(const std::string& slice){
+            return From(slice.data(), slice.size());
+        }
+
+        static inline BufferPtr From(const leveldb::Slice& slice){
+            return From(slice.data(), slice.size());
+        }
     };
-
-    typedef std::shared_ptr<Buffer> BufferPtr;
-
-
 }
 
 #endif //TOKEN_BUFFER_H

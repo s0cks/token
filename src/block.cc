@@ -4,18 +4,7 @@
 #include "utils/crash_report.h"
 
 namespace Token{
-//######################################################################################################################
-//                                          Block Header
-//######################################################################################################################
-    BlockHeader::BlockHeader(Block* blk):
-        timestamp_(blk->timestamp_),
-        height_(blk->height_),
-        previous_hash_(blk->previous_hash_),
-        merkle_root_(blk->GetMerkleRoot()),
-        hash_(blk->GetHash()),
-        bloom_(blk->tx_bloom_){}
-
-    BlockHeader::BlockHeader(Buffer* buff):
+    BlockHeader::BlockHeader(const BufferPtr& buff):
         timestamp_(buff->GetLong()),
         height_(buff->GetLong()),
         previous_hash_(buff->GetHash()),
@@ -28,7 +17,7 @@ namespace Token{
         return BlockChain::GetBlock(GetHash());
     }
 
-    bool BlockHeader::Write(Buffer* buff) const{
+    bool BlockHeader::Write(const BufferPtr& buff) const{
         buff->PutLong(timestamp_);
         buff->PutLong(height_);
         buff->PutHash(previous_hash_);
@@ -70,16 +59,10 @@ namespace Token{
     bool Block::Accept(BlockVisitor* vis) const{
         if(!vis->VisitStart())
             return false;
-        int64_t idx;
-        for(idx = 0;
-            idx < GetNumberOfTransactions();
-            idx++){
-
-            TransactionPtr tx = transactions_[idx];
+        for(auto& tx : transactions_){
             if(!vis->Visit(tx))
                 return false;
         }
-
         return vis->VisitEnd();
     }
 

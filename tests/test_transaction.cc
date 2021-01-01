@@ -1,6 +1,5 @@
 #include "test_suite.h"
 #include "transaction.h"
-#include "transaction_verifier.h"
 
 namespace Token{
     static inline TransactionPtr
@@ -30,9 +29,4 @@ namespace Token{
         ASSERT_FALSE(a->GetHash() == d->GetHash());
         ASSERT_FALSE(d->GetHash() == c->GetHash());
     }
-/*
-    TEST(TestTransaction, test_verifier){
-        TransactionPtr tx = CreateTransaction(0, 1);
-        ASSERT_TRUE(TransactionVerifier::IsValid(tx));
-    }*/
 }

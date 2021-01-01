@@ -71,14 +71,6 @@ namespace Token{
             filename_(filename),
             cause_(cause){}
 #endif//OS_IS_LINUX
-
-        static inline std::string
-        GetNewCrashReportFilename(){
-            std::stringstream filename;
-            filename << CrashReport::GetCrashReportDirectory();
-            filename << "/crash-report-" << GetTimestampFormattedFileSafe(GetCurrentTimestamp()) << ".log";
-            return filename.str();
-        }
     public:
         ~CrashReport() = default;
 
@@ -101,24 +93,6 @@ namespace Token{
         static inline bool
         PrintNewCrashReportAndExit(const std::stringstream& ss, const google::LogSeverity& severity=google::INFO, int code=EXIT_FAILURE){
             return PrintNewCrashReportAndExit(ss.str(), severity, code);
-        }
-
-        static bool WriteNewCrashReport(const std::string& cause);
-        static void WriteNewCrashReportAndExit(const std::string& cause);
-
-        static inline bool
-        WriteNewCrashReport(const std::stringstream& ss){
-            return WriteNewCrashReport(ss.str());
-        }
-
-        static inline void
-        WriteNewCrashReportAndExit(const std::stringstream& ss){
-            return WriteNewCrashReportAndExit(ss.str());
-        }
-
-        static inline std::string
-        GetCrashReportDirectory(){
-            return TOKEN_BLOCKCHAIN_HOME;
         }
     };
 }

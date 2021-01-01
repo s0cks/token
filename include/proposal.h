@@ -35,7 +35,7 @@ namespace Token{
             proposer_(proposer){}
         RawProposal(const UUID& proposer, const BlockHeader& blk, int64_t timestamp=GetCurrentTimestamp()):
             RawProposal(proposer, blk.GetHeight(), blk.GetHash(), timestamp){}
-        RawProposal(Buffer* buff):
+        RawProposal(const BufferPtr& buff):
             timestamp_(buff->GetLong()),
             height_(buff->GetLong()),
             hash_(buff->GetHash()),
@@ -63,7 +63,7 @@ namespace Token{
             return proposer_;
         }
 
-        bool Encode(Buffer* buff) const{
+        bool Encode(const BufferPtr& buff) const{
             buff->PutLong(GetTimestamp());
             buff->PutLong(GetHeight());
             buff->PutHash(GetHash());
@@ -189,7 +189,7 @@ namespace Token{
             Proposal(proposer, blk->GetHeight(), blk->GetHash(), timestamp){}
         Proposal(const BlockHeader& blk, const UUID& proposer, int64_t timestamp=GetCurrentTimestamp()):
             Proposal(proposer, blk.GetHeight(), blk.GetHash(), timestamp){}
-        Proposal(Buffer* buff):
+        Proposal(const BufferPtr& buff):
             Object(),
             phase_(Proposal::kProposalPhase),
             result_(Proposal::kNone),
@@ -222,7 +222,7 @@ namespace Token{
             return RawProposal::GetSize();
         }
 
-        bool Encode(Buffer* buff) const{
+        bool Encode(const BufferPtr& buff) const{
             return raw_.Encode(buff);
         }
 

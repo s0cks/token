@@ -181,7 +181,7 @@ namespace Token{
         uint32_t offset = 0;
         std::vector<Message*> messages;
 
-        Buffer* rbuff = session->GetReadBuffer();
+        BufferPtr& rbuff = session->GetReadBuffer();
         do{
             uint32_t mtype = rbuff->GetInt();
             intptr_t msize = rbuff->GetLong();

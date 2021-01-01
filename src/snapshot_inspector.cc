@@ -2,7 +2,7 @@
 
 namespace Token{
     static inline void
-    PrintBlock(Block* blk){
+    PrintBlock(const BlockPtr& blk){
         LOG(INFO) << "Block #" << blk->GetHeight();
         LOG(INFO) << "  - Timestamp: " << blk->GetTimestamp();
         LOG(INFO) << "  - Height: " << blk->GetHeight();
@@ -11,11 +11,7 @@ namespace Token{
         LOG(INFO) << "  - Merkle Root: " << blk->GetMerkleRoot();
         LOG(INFO) << "  - Transactions: ";
 
-        int64_t idx;
-        for(idx = 0;
-            idx < blk->GetNumberOfTransactions();
-            idx++){
-            TransactionPtr& tx = blk->transactions()[idx];
+        for(auto& tx : blk->transactions()){
             LOG(INFO) << "      * #" << tx->GetIndex() << ": " << tx->GetHash();
         }
     }
@@ -46,7 +42,7 @@ namespace Token{
         ~SnapshotBlockPrinter() = default;
 
         bool Visit(Block* blk){
-            PrintBlock(blk);
+            PrintBlock(BlockPtr(blk));
             return true;
         }
     };

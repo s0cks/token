@@ -1,10 +1,6 @@
 #include "server.h"
 #include "discovery.h"
-
-#include "block_verifier.h"
 #include "proposal_handler.h"
-#include "transaction_verifier.h"
-#include "peer/peer_session_manager.h"
 
 namespace Token{
     static pthread_t thread_;
@@ -151,11 +147,12 @@ namespace Token{
             } else if(ObjectPool::GetNumberOfTransactions() >= 2){
                 BlockPtr blk = CreateNewBlock(2);
                 Hash hash = blk->GetHash();
-                if(!BlockVerifier::IsValid(blk, true)){
-                    LOG(WARNING) << "block " << blk << " is invalid, orphaning....";
-                    OrphanBlock(blk);
-                    continue;
-                }
+//TODO:
+//                if(!BlockVerifier::IsValid(blk, true)){
+//                    LOG(WARNING) << "block " << blk << " is invalid, orphaning....";
+//                    OrphanBlock(blk);
+//                    continue;
+//                }
 
                 LOG(INFO) << "discovered block " << hash << ", creating proposal....";
                 ProposalPtr proposal = CreateNewProposal(blk);

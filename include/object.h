@@ -20,19 +20,17 @@ namespace Token{
     };
 
     class Buffer;
+    typedef std::shared_ptr<Buffer> BufferPtr;
+
     class BinaryObject : public Object{
     protected:
         BinaryObject() = default;
-        virtual int64_t GetBufferSize() const = 0;
-        virtual bool Write(Buffer* buffer) const = 0;
-
-        virtual bool Encode(uint8_t* bytes, const int64_t& size) const{
-            return false;
-        }
     public:
         virtual ~BinaryObject() = default;
+
+        virtual int64_t GetBufferSize() const = 0;
+        virtual bool Write(const BufferPtr& buff) const = 0;
         Hash GetHash() const;
-        bool ToSlice(leveldb::Slice* slice) const;
     };
 
     template<int64_t Size>

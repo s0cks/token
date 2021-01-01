@@ -2,7 +2,6 @@
 #include <glog/logging.h>
 #include <condition_variable>
 #include "pool.h"
-#include "object_tag.h"
 
 namespace Token{
     static std::mutex mutex_;
@@ -85,7 +84,7 @@ namespace Token{
         SIGNAL_ALL;
     }
 
-    class ObjectPoolComparator : public leveldb::Comparator{
+    class BlockChainComparator : public leveldb::Comparator{
     public:
         int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const{
             Hash h1((uint8_t*)a.data());
@@ -121,7 +120,7 @@ namespace Token{
         }
 
         leveldb::Options options;
-        options.comparator = new ObjectPoolComparator();
+        options.comparator = new BlockChainComparator();
         options.create_if_missing = true;
 
         leveldb::Status status;
@@ -197,54 +196,66 @@ namespace Token{
     }
 
     bool ObjectPool::PutObject(const Hash& hash, const BlockPtr& val){
-        std::string filename = GetBlockFilename(hash);
-        if(HasObject(hash) || FileExists(filename)){
-            LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash << "(" << filename << ")";
+        if(HasObject(hash)){
+            LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash;
             SetStatus(ObjectPool::kWarning);
             return false;
         }
 
+        ObjectPoolKey pkey(ObjectTag::kBlock, hash);
+        BufferPtr kdata = Buffer::NewInstance(ObjectPoolKey::kSize);
+        pkey.Write(kdata);
+
+        int64_t vsize = val->GetBufferSize();
+        BufferPtr vdata = Buffer::NewInstance(vsize);
+        val->Write(vdata);
+
+        leveldb::Slice key(kdata->data(), ObjectPoolKey::kSize);
+        leveldb::Slice value(vdata->data(), vsize);
+
+        leveldb::WriteOptions opts;
+        opts.sync = true;
         leveldb::Status status;
-        if(!(status = IndexObject(hash, filename)).ok()){
-            LOG(WARNING) << "cannot index object pool data for " << hash << ": " << status.ToString();
-            SetStatus(ObjectPool::kWarning);
-            return false;
-        }
-
-        if(!WriteObject<Block, BlockFileWriter>(val, filename)){
-            LOG(WARNING) << "couldn't write object data to: " << filename;
+        if(!(status = GetIndex()->Put(opts, key, value)).ok()){
+            LOG(WARNING) << "cannot index object " << hash << ": " << status.ToString();
             SetStatus(ObjectPool::kWarning);
             return false;
         }
 
         //TODO: should we signal
-        LOG(INFO) << "indexed object: " << hash << "(" << filename << ")";
+        LOG(INFO) << "indexed object: " << hash;
         return true;
     }
 
     bool ObjectPool::PutObject(const Hash& hash, const TransactionPtr& val){
-        std::string filename = GetTransactionFilename(hash);
-        if(HasObject(hash) || FileExists(filename)){
-            LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash << "(" << filename << ")";
+        if(HasObject(hash)){
+            LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash;
             SetStatus(ObjectPool::kWarning);
             return false;
         }
 
+        ObjectPoolKey pkey(ObjectTag::kBlock, hash);
+        BufferPtr kdata = Buffer::NewInstance(ObjectPoolKey::kSize);
+        pkey.Write(kdata);
+
+        int64_t vsize = val->GetBufferSize();
+        BufferPtr vdata = Buffer::NewInstance(vsize);
+        val->Write(vdata);
+
+        leveldb::Slice key(kdata->data(), ObjectPoolKey::kSize);
+        leveldb::Slice value(vdata->data(), vsize);
+
+        leveldb::WriteOptions opts;
+        opts.sync = true;
         leveldb::Status status;
-        if(!(status = IndexObject(hash, filename)).ok()){
-            LOG(WARNING) << "cannot index object pool data for " << hash << ": " << status.ToString();
-            SetStatus(ObjectPool::kWarning);
-            return false;
-        }
-
-        if(!WriteObject<Transaction, TransactionFileWriter>(val, filename)){
-            LOG(WARNING) << "couldn't write object data to: " << filename;
+        if(!(status = GetIndex()->Put(opts, key, value)).ok()){
+            LOG(WARNING) << "cannot index object " << hash << ": " << status.ToString();
             SetStatus(ObjectPool::kWarning);
             return false;
         }
 
         //TODO: should we signal
-        LOG(INFO) << "indexed object: " << hash << "(" << filename << ")";
+        LOG(INFO) << "indexed object: " << hash;
         return true;
     }
 
@@ -275,6 +286,33 @@ namespace Token{
         return true;
     }
 
+    bool ObjectPool::GetHashListAsJson(const User& user, JsonString& json){
+        std::string key = user.str();
+        std::string value;
+
+        leveldb::ReadOptions opts;
+        leveldb::Status status;
+        if(!(status = GetIndex()->Get(opts, key, &value)).ok()){
+            LOG(WARNING) << "cannot get hash list for " << user << ": " << status.ToString();
+            return false;
+        }
+
+        int64_t size = (int64_t)value.size();
+        uint8_t* bytes = (uint8_t*)value.data();
+
+        JsonWriter writer(json);
+        writer.StartArray();
+            int64_t offset = 0;
+            while(offset < size){
+                Hash hash(&bytes[offset], Hash::kSize);
+                std::string hex = hash.HexString();
+                writer.String(hex.data(), 64);
+                offset += Hash::kSize;
+            }
+        writer.EndArray();
+        return true;
+    }
+
     bool ObjectPool::GetHashList(const User& user, HashList& hashes){
         std::string key = user.str();
         std::string value;
@@ -289,23 +327,23 @@ namespace Token{
         return Decode((uint8_t*)value.data(), value.size(), hashes);
     }
 
-    bool ObjectPool::PutObject(const Hash& hash, const UnclaimedTransactionPtr& obj){
-        std::string filename = GetUnclaimedTransactionFilename(hash);
-        if(HasObject(hash) || FileExists(filename)){
-            LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash << "(" << filename << ")";
+    bool ObjectPool::PutObject(const Hash& hash, const UnclaimedTransactionPtr& val){
+        if(HasObject(hash)){
+            LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash;
             SetStatus(ObjectPool::kWarning);
             return false;
         }
 
-        ObjectPoolKey pkey = ObjectPoolKey(ObjectTag::kUnclaimedTransaction, hash);
-        uint8_t pkey_data[ObjectPoolKey::kTotalSize];
-        pkey.Encode(pkey_data, ObjectPoolKey::kTotalSize);
+        ObjectPoolKey pkey(ObjectTag::kBlock, hash);
+        BufferPtr kdata = Buffer::NewInstance(ObjectPoolKey::kSize);
+        pkey.Write(kdata);
 
-        leveldb::Slice key((char*)pkey_data, ObjectPoolKey::kTotalSize);
+        int64_t vsize = val->GetBufferSize();
+        BufferPtr vdata = Buffer::NewInstance(vsize);
+        val->Write(vdata);
 
-        uint8_t pobj_data[UnclaimedTransaction::kTotalSize];
-        obj->Encode(pobj_data, UnclaimedTransaction::kTotalSize);
-        leveldb::Slice value((char*)pobj_data, UnclaimedTransaction::kTotalSize);
+        leveldb::Slice key(kdata->data(), ObjectPoolKey::kSize);
+        leveldb::Slice value(vdata->data(), vsize);
 
         leveldb::WriteOptions opts;
         opts.sync = true;
@@ -316,7 +354,7 @@ namespace Token{
         }
 
         //TODO: should we signal
-        LOG(INFO) << "indexed object: " << hash << "(" << filename << ")";
+        LOG(INFO) << "indexed object: " << hash;
         return true;
     }
 
@@ -343,9 +381,13 @@ namespace Token{
         leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
         for(it->SeekToFirst(); it->Valid(); it->Next()){
             ObjectPoolKey key(it->key());
-            UnclaimedTransaction value((uint8_t*)it->value().data(), UnclaimedTransaction::kTotalSize);
-            LOG(INFO) << value.GetUser() << ": " <<  value.GetHash();
-            if(key.IsUnclaimedTransaction() && value.GetUser() == user)
+            if(!key.IsUnclaimedTransaction())
+                continue;
+
+            BufferPtr val = Buffer::From(it->value());
+            UnclaimedTransactionPtr value = UnclaimedTransaction::NewInstance(val);
+            LOG(INFO) << value->GetUser() << ": " <<  value->GetHash();
+            if(value->GetUser() == user)
                 hashes.insert(key.GetHash());
         }
         return true;
@@ -371,15 +413,49 @@ namespace Token{
     }
 
     BlockPtr ObjectPool::GetBlock(const Hash& hash){
-        return nullptr;
+        ObjectPoolKey pkey(ObjectTag::kBlock, hash);
+        BufferPtr kdata = Buffer::NewInstance(ObjectPoolKey::kSize);
+        pkey.Write(kdata);
+
+        leveldb::Slice key(kdata->data(), ObjectPoolKey::kSize);
+        std::string value;
+
+        leveldb::ReadOptions opts;
+        leveldb::Status status;
+        if(!(status = GetIndex()->Get(opts, key, &value)).ok()){
+            LOG(WARNING) << "cannot get " << hash << ": " << status.ToString();
+            return BlockPtr(nullptr);
+        }
+
+        BufferPtr buff = Buffer::From(value);
+        return Block::NewInstance(buff);
     }
 
     TransactionPtr ObjectPool::GetTransaction(const Hash& hash){
-        return nullptr;
+        ObjectPoolKey pkey(ObjectTag::kTransaction, hash);
+        BufferPtr kdata = Buffer::NewInstance(ObjectPoolKey::kSize);
+        pkey.Write(kdata);
+
+        leveldb::Slice key(kdata->data(), ObjectPoolKey::kSize);
+        std::string value;
+
+        leveldb::ReadOptions opts;
+        leveldb::Status status;
+        if(!(status = GetIndex()->Get(opts, key, &value)).ok()){
+            LOG(WARNING) << "cannot get " << hash << ": " << status.ToString();
+            return TransactionPtr(nullptr);
+        }
+
+        BufferPtr buff = Buffer::From(value);
+        return Transaction::NewInstance(buff);
     }
 
     UnclaimedTransactionPtr ObjectPool::GetUnclaimedTransaction(const Hash& hash){
-        leveldb::Slice key((char*)hash.data(), Hash::GetSize());
+        ObjectPoolKey pkey(ObjectTag::kUnclaimedTransaction, hash);
+        BufferPtr kdata = Buffer::NewInstance(ObjectPoolKey::kSize);
+        pkey.Write(kdata);
+
+        leveldb::Slice key(kdata->data(), ObjectTag::kUnclaimedTransaction);
         std::string value;
 
         leveldb::ReadOptions opts;
@@ -389,8 +465,8 @@ namespace Token{
             return UnclaimedTransactionPtr(nullptr);
         }
 
-        Buffer buff(value.data(), value.size());
-        return UnclaimedTransaction::NewInstance(&buff);
+        BufferPtr buff = Buffer::From(value);
+        return UnclaimedTransaction::NewInstance(buff);
     }
 
     leveldb::Status ObjectPool::Write(leveldb::WriteBatch* update){

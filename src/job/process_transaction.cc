@@ -84,21 +84,22 @@ namespace Token{
     protected:
         JobResult DoWork(){
             for(auto& it : outputs_){
-                UnclaimedTransactionPtr utxo = CreateUnclaimedTransaction(it);
-                Hash hash = utxo->GetHash();
+                UnclaimedTransactionPtr val = CreateUnclaimedTransaction(it);
+                Hash hash = val->GetHash();
 
                 ObjectPoolKey pkey = ObjectPoolKey(ObjectTag::kUnclaimedTransaction, hash);
-                uint8_t pkey_data[ObjectPoolKey::kTotalSize];
-                pkey.Encode(pkey_data, ObjectPoolKey::kTotalSize);
-                leveldb::Slice key((char*)pkey_data, ObjectPoolKey::kTotalSize);
+                BufferPtr kdata = Buffer::NewInstance(ObjectPoolKey::kSize);
+                pkey.Write(kdata);
 
-                uint8_t pobj_data[UnclaimedTransaction::kTotalSize];
-                utxo->Encode(pobj_data, UnclaimedTransaction::kTotalSize);
-                leveldb::Slice value((char*)pobj_data, UnclaimedTransaction::kTotalSize);
+                BufferPtr vdata = Buffer::NewInstance(UnclaimedTransaction::kSize);
+                val->Write(vdata);
+
+                leveldb::Slice key(kdata->data(), ObjectPoolKey::kSize);
+                leveldb::Slice value(vdata->data(), UnclaimedTransaction::kSize);
 
                 batch_->Put(key, value);
 
-                User user = utxo->GetUser();
+                User user = val->GetUser();
                 Track(user, hash);
             }
 

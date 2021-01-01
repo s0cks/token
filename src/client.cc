@@ -93,7 +93,7 @@ namespace Token{
         }
 
         intptr_t offset = 0;
-        Buffer* rbuff = client->GetReadBuffer();
+        BufferPtr& rbuff = client->GetReadBuffer();
         do{
             int32_t mtype = rbuff->GetInt();
             int64_t msize = rbuff->GetLong();

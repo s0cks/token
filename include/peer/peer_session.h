@@ -31,7 +31,7 @@ namespace Token{
         Peer(const UUID& uuid, const NodeAddress& address):
                 uuid_(uuid),
                 address_(address){}
-        Peer(Buffer* buff):
+        Peer(const BufferPtr& buff):
                 uuid_(buff),
                 address_(buff){}
         Peer(const Peer& other):
@@ -47,7 +47,7 @@ namespace Token{
             return address_;
         }
 
-        bool Write(Buffer* buff) const{
+        bool Write(const BufferPtr& buff) const{
             uuid_.Write(buff);
             address_.Write(buff);
             return true;
