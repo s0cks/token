@@ -1,7 +1,7 @@
 #ifndef TOKEN_OBJECT_TAG_H
 #define TOKEN_OBJECT_TAG_H
 
-#include "bitfield.h"
+#include "utils/bitfield.h"
 #include "utils/file_reader.h"
 
 namespace Token{

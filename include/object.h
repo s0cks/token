@@ -6,7 +6,7 @@
 #include <string>
 #include <leveldb/slice.h>
 #include "hash.h"
-#include "bitfield.h"
+#include "utils/bitfield.h"
 
 namespace Token{
   class Object;

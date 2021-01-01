@@ -1,4 +1,4 @@
-#include "bitfield.h"
+#include "utils/bitfield.h"
 #include "utils/file_writer.h"
 
 namespace Token{

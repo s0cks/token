@@ -4,7 +4,7 @@
 namespace Token{
     TEST(TestBlock, test_hash){
         BlockPtr genesis = Block::Genesis();
-        ASSERT_EQ(genesis->GetHash(), Hash::FromHexString("636777AFCC8DB5AC96371F24CDC0C9E5533665D3701AB199F637CBB2F12C10D3"));
+        ASSERT_EQ(genesis->GetHash(), Hash::FromHexString("28C4AD5C28971E661C770253EF4F3FE9F3881394168140CF26F86C3B0C5B8C8A"));
     }
 
     TEST(TestBlock, test_eq){

@@ -1,4 +1,4 @@
-#include "bitfield.h"
+#include "utils/bitfield.h"
 #include "snapshot.h"
 #include "snapshot_writer.h"
 #include "snapshot_reader.h"

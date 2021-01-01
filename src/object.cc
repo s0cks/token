@@ -1,6 +1,6 @@
 #include "object.h"
 #include "utils/buffer.h"
-#include "bitfield.h"
+#include "utils/bitfield.h"
 
 namespace Token{
   Hash BinaryObject::GetHash() const{

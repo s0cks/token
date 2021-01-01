@@ -1,10 +1,10 @@
 #include "test_suite.h"
-#include "merkle.h"
+#include "merkle/tree.h"
 
 namespace Token{
     TEST(TestMerkle, test_tree){
         BlockPtr genesis = Block::Genesis();
-        ASSERT_EQ(genesis->GetMerkleRoot(), Hash::FromHexString("B3863C87CD23972C5B322B5E88145E671B9C42E7C8DDE5AC7065EFB1E0E2B4FB"));
+        ASSERT_EQ(genesis->GetMerkleRoot(), Hash::FromHexString("CC564DCFA3662175D10865FF6D639A651E0FF6769F93F0D33143D0E202011C9D"));
     }
 
     static inline TransactionPtr
@@ -23,7 +23,7 @@ namespace Token{
         BlockPtr blk1 = Block::Genesis();
         MerkleTreePtr tree1 = MerkleTreeBuilder::Build(blk1);
 
-        Hash h1 = blk1->transactions()[0]->GetHash();
+        Hash h1 = (*blk1->transactions_begin())->GetHash();
         MerkleProof p1;
         ASSERT_TRUE(tree1->BuildAuditProof(h1, p1));
         ASSERT_TRUE(tree1->VerifyAuditProof(h1, p1));
@@ -46,7 +46,7 @@ namespace Token{
     TEST(TestMerkle, test_append){
         BlockPtr genesis = Block::Genesis();
         MerkleTreePtr tree1 = MerkleTreeBuilder::Build(genesis);
-        ASSERT_EQ(tree1->GetRootHash(), Hash::FromHexString("B3863C87CD23972C5B322B5E88145E671B9C42E7C8DDE5AC7065EFB1E0E2B4FB"));
+        ASSERT_EQ(tree1->GetRootHash(), Hash::FromHexString("CC564DCFA3662175D10865FF6D639A651E0FF6769F93F0D33143D0E202011C9D"));
 
         TransactionPtr tx = CreateTransaction(0, 1);
         BlockPtr blk1 = BlockPtr(new Block(genesis, { tx }));
@@ -54,7 +54,7 @@ namespace Token{
         tree1->Append(tree2);
 
         LOG(INFO) << "Merkle Tree #3 (Leaves) " << tree1->GetRootHash() << ":";
-        MerkleTreeLogger logger;
+        MerkleTreePrinter logger;
         ASSERT_TRUE(tree1->VisitLeaves(&logger));
 
         Hash h1 = tx->GetHash();
@@ -65,7 +65,7 @@ namespace Token{
     }
 
     TEST(TestMerkle, test_consistency_proof){
-        MerkleTreeLogger logger;
+        MerkleTreePrinter logger;
 
         TransactionPtr tx1 = CreateTransaction(0, 1);
         TransactionPtr tx2 = CreateTransaction(1, 1);
@@ -99,7 +99,7 @@ namespace Token{
     }
 
     TEST(TestMerkle, test_consistency_proof_2){
-        MerkleTreeLogger logger;
+        MerkleTreePrinter logger;
 
         TransactionPtr tx1 = CreateTransaction(0, 1);
         TransactionPtr tx2 = CreateTransaction(1, 1);

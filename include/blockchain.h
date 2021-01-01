@@ -5,13 +5,11 @@
 #include <set>
 #include <leveldb/db.h>
 
-#include "common.h"
-#include "merkle.h"
 #include "block.h"
 #include "transaction.h"
-#include "unclaimed_transaction.h"
-
+#include "merkle/tree.h"
 #include "utils/printer.h"
+#include "unclaimed_transaction.h"
 
 namespace Token{
 #define FOR_EACH_BLOCKCHAIN_STATE(V) \
