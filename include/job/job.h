@@ -189,15 +189,6 @@ namespace Token{
       return true;
     }
   };
-
-  class WriteBatchJob : public Job{
-   protected:
-    WriteBatchJob(Job* parent, const std::string& name):
-      Job(parent, name){}
-   public:
-    virtual ~WriteBatchJob() = default;
-    virtual void Append(leveldb::WriteBatch* batch) = 0;
-  };
 }
 
 #endif //TOKEN_JOB_H

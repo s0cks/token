@@ -1,6 +1,7 @@
+#ifdef TOKEN_ENABLE_REST
+
 #include <mutex>
 #include <condition_variable>
-
 #include "pool.h"
 #include "blockchain.h"
 #include "http/rest_service.h"
@@ -217,17 +218,23 @@ namespace Token{
   }
 
   void ObjectPoolController::HandleGetUnclaimedTransactions(HttpSession* session, const HttpRequestPtr& request){
-    HashList hashes;
-    if(!ObjectPool::GetUnclaimedTransactions(hashes))
+    JsonString json;
+    if(!ObjectPool::GetUnclaimedTransactions(json))
       return SendInternalServerError(session, "Cannot Get Unclaimed Transactions");
-    SendJson(session, hashes);
+    SendJson(session, json);
   }
 
-/*****************************************************************************
- *                      DebugController
- *****************************************************************************/
-  void DebugController::HandleGetSwagger(HttpSession* session, const HttpRequestPtr& request){
-    std::string filename = "/home/tazz/CLionProjects/libtoken-ledger/swagger.json";
-    SendFile(session, filename);
+  void ObjectPoolController::HandleGetUserUnclaimedTransactions(HttpSession* session, const HttpRequestPtr& request){
+    std::string user = request->GetParameterValue("user");
+
+    JsonString json;
+    if(!ObjectPool::GetUnclaimedTransactionsFor(user, json)){
+      std::stringstream ss;
+      ss << "Cannot get unclaimed transactions for: " << user;
+      return SendNotFound(session, ss);
+    }
+    SendJson(session, json);
   }
 }
+
+#endif//TOKEN_ENABLE_REST

@@ -1,9 +1,10 @@
 #ifndef TOKEN_HEALTHCHECK_SERVICE_H
 #define TOKEN_HEALTHCHECK_SERVICE_H
 
+#ifdef TOKEN_ENABLE_HEALTHCHECK
+
 #include <uv.h>
 #include <libconfig.h++>
-
 #include "vthread.h"
 #include "http/router.h"
 #include "http/session.h"
@@ -103,5 +104,7 @@ namespace Token{
 #undef DEFINE_STATUS_CHECK
   };
 }
+
+#endif//TOKEN_ENABLE_HEALTHCHECK
 
 #endif //TOKEN_HEALTHCHECK_SERVICE_H

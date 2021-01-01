@@ -1,3 +1,5 @@
+#ifdef TOKEN_ENABLE_HEALTHCHECK
+
 #include <mutex>
 #include <condition_variable>
 #include "configuration.h"
@@ -146,3 +148,5 @@ namespace Token{
     SendOk(session); //TODO: implement
   }
 }
+
+#endif//TOKEN_ENABLE_HEALTHCHECK

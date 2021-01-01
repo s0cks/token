@@ -7,14 +7,14 @@
 #include "utils/atomic_linked_list.h"
 
 namespace Token{
-  class ProcessTransactionJob : public WriteBatchJob{
+  class ProcessTransactionJob : public Job{
    protected:
     TransactionPtr transaction_;
 
     JobResult DoWork();
    public:
     ProcessTransactionJob(ProcessBlockJob* parent, const TransactionPtr& tx):
-      WriteBatchJob(parent, "ProcessTransaction"),
+      Job(parent, "ProcessTransaction"),
       transaction_(tx){}
     ~ProcessTransactionJob() = default;
 
@@ -30,21 +30,17 @@ namespace Token{
       return transaction_;
     }
 
-    void Track(const UserHashLists& hashes){
-      return ((ProcessBlockJob*) GetParent())->Track(hashes);
-    }
-
-    void Append(leveldb::WriteBatch* batch){
-      return ((ProcessBlockJob*) GetParent())->Append(batch);
+    void Append(leveldb::WriteBatch* batch, const UserHashLists& hashes){
+      return ((ProcessBlockJob*) GetParent())->Append(batch, hashes);
     }
   };
 
-  class ProcessTransactionInputsJob : public WriteBatchJob{
+  class ProcessTransactionInputsJob : public Job{
    protected:
     JobResult DoWork();
    public:
     ProcessTransactionInputsJob(ProcessTransactionJob* parent):
-      WriteBatchJob(parent, "ProcessTransactionInputsJob"){}
+      Job(parent, "ProcessTransactionInputsJob"){}
     ~ProcessTransactionInputsJob() = default;
 
     TransactionPtr GetTransaction() const{
@@ -52,28 +48,24 @@ namespace Token{
     }
 
     void Append(leveldb::WriteBatch* batch){
-      return ((ProcessTransactionJob*) GetParent())->Append(batch);
+      return ((ProcessTransactionJob*) GetParent())->Append(batch, UserHashLists());
     }
   };
 
-  class ProcessTransactionOutputsJob : public WriteBatchJob{
+  class ProcessTransactionOutputsJob : public Job{
    protected:
     JobResult DoWork();
    public:
     ProcessTransactionOutputsJob(ProcessTransactionJob* parent):
-      WriteBatchJob(parent, "ProcessTransactionOutputsJob"){}
+      Job(parent, "ProcessTransactionOutputsJob"){}
     ~ProcessTransactionOutputsJob(){}
 
     TransactionPtr GetTransaction() const{
       return ((ProcessTransactionJob*) GetParent())->GetTransaction();
     }
 
-    void Track(const UserHashLists& hashes){
-      return ((ProcessTransactionJob*) GetParent())->Track(hashes);
-    }
-
-    void Append(leveldb::WriteBatch* batch){
-      return ((ProcessTransactionJob*) GetParent())->Append(batch);
+    void Append(leveldb::WriteBatch* batch, const UserHashLists& user_hashes){
+      return ((ProcessTransactionJob*) GetParent())->Append(batch, user_hashes);
     }
   };
 }

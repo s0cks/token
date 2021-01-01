@@ -48,6 +48,11 @@ namespace Token{
     }
 
     static inline void
+    SendNotFound(HttpSession* session, const std::stringstream& ss){
+      return SendText(session, ss, STATUS_CODE_NOTFOUND);
+    }
+
+    static inline void
     SendNotFound(HttpSession* session, const Hash& hash){
       std::stringstream ss;
       ss << "Not Found: " << hash;

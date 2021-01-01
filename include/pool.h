@@ -271,24 +271,20 @@ namespace Token{
     static bool PutHashList(const User& user, const HashList& hashes);
 
     static bool GetBlocks(HashList& hashes);
+    static bool GetBlocks(JsonString& json);
 
     static bool GetTransactions(HashList& hashes);
+    static bool GetTransactions(JsonString& json);
 
     static bool GetUnclaimedTransactions(HashList& hashes);
-
-    static bool GetUnclaimedTransactionsFor(HashList& hashes, const User& user);
-
-    static bool HasHashList(const User& user);
+    static bool GetUnclaimedTransactions(JsonString& json);
+    static bool GetUnclaimedTransactionsFor(const User& user, HashList& hashes);
+    static bool GetUnclaimedTransactionsFor(const User& user, JsonString& json);
+    static bool HasUnclaimedTransactions(const User& user);
 
     static bool VisitBlocks(ObjectPoolBlockVisitor* vis);
-
     static bool VisitTransactions(ObjectPoolTransactionVisitor* vis);
-
     static bool VisitUnclaimedTransactions(ObjectPoolUnclaimedTransactionVisitor* vis);
-
-    static bool GetHashList(const User& user, HashList& hashes);
-
-    static bool GetHashListAsJson(const User& user, JsonString& json);
 
     static BlockPtr GetBlock(const Hash& hash);
 
@@ -326,12 +322,8 @@ namespace Token{
       return GetNumberOfObjectsByType(ObjectTag::kUnclaimedTransaction);
     }
 
-    static inline bool GetUnclaimedTransactionsFor(HashList& hashes, const std::string& user){
-      return GetUnclaimedTransactionsFor(hashes, User(user));
-    }
-
-    static inline bool GetHashListFor(const std::string& user, HashList& hashes){
-      return GetHashList(User(user), hashes);
+    static inline bool GetUnclaimedTransactionsFor(const std::string& user, JsonString& json){
+      return GetUnclaimedTransactionsFor(User(user), json);
     }
 
     static inline bool PutHashList(const std::string& user, const HashList& hashes){

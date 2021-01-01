@@ -75,9 +75,9 @@ namespace Token{
     }
 
     void Track(const User& user, const Hash& hash){
-      auto pos = hashes_.find(user);
+      auto pos = hashes_.find(user.str());
       if(pos == hashes_.end()){
-        hashes_.insert({user, HashList{hash}});
+        hashes_.insert({user.str(), HashList{hash}});
         return;
       }
 
@@ -106,8 +106,7 @@ namespace Token{
         Track(user, hash);
       }
 
-      ((ProcessTransactionOutputsJob*) GetParent())->Track(hashes_);
-      ((ProcessTransactionOutputsJob*) GetParent())->Append(batch_);
+      ((ProcessTransactionOutputsJob*) GetParent())->Append(batch_, hashes_);
       return Success("done.");
     }
    public:

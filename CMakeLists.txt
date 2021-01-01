@@ -7,15 +7,32 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 set(PROTO_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protos")
 
 file(GLOB_RECURSE TOKEN_CMAKE_MODULES ${CMAKE_MODULE_PATH}/*.cmake)
-message("Using Modules: ${TOKEN_CMAKE_MODULES}")
+
+set(ENABLE_HEALTHCHECK ON)
+set(ENABLE_REST ON)
+
+option(ENABLE_HEALTHCHECK "Enable the HealthCheck Service")
+option(ENABLE_REST "Enable the REST Service")
 
 # Monkey Patching for Debug Mode
 if(CMAKE_BUILD_TYPE MATCHES Debug)
-  message("Compiling Token w/ Debug")
+  message(STATUS "Compiling w/ debug mode")
   add_compile_definitions(TOKEN_DEBUG)
 else()
-  message("Compiling Token w/o Debug")
+  message(STATUS "Compiling w/o debug mode")
 endif (CMAKE_BUILD_TYPE MATCHES Debug)
+
+# Compile w/ the rest service if enabled
+if(ENABLE_REST)
+  message(STATUS "Compiling w/ the rest service enabled")
+  add_compile_definitions(TOKEN_ENABLE_REST)
+endif(ENABLE_REST)
+
+# Compile w/ the health check service if enabled
+if(ENABLE_HEALTHCHECK)
+  message(STATUS "Compiling w/ the health-check service enabled")
+  add_compile_definitions(TOKEN_ENABLE_HEALTHCHECK)
+endif(ENABLE_HEALTHCHECK)
 
 # Packages
 find_package(Threads)
@@ -53,10 +70,8 @@ set(TOKEN_LIBRARIES
   ${UUID_LIBRARIES} # uuid
   ${CMAKE_THREAD_LIBS_INIT} # pthread
   ${HTTPPARSER_LIBRARIES} # http-parser
-  ${JsonCpp_LIBRARY} # jsoncpp
   ${ZLIB_LIBRARIES} # zlib
 )
-message("Compiling Token w/ the following libraries: ${TOKEN_LIBRARIES}")
 
 # Token Ledger Library
 add_library("token-ledger" SHARED ${TOKEN_HEADERS} ${TOKEN_SOURCES})

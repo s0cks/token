@@ -1,6 +1,8 @@
 #ifndef TOKEN_REST_SERVICE_H
 #define TOKEN_REST_SERVICE_H
 
+#ifdef TOKEN_ENABLE_REST
+
 #include <uv.h>
 #include <libconfig.h++>
 
@@ -47,6 +49,7 @@ namespace Token{
     // Unclaimed Transactions
     HTTP_CONTROLLER_ENDPOINT(GetUnclaimedTransaction);
     HTTP_CONTROLLER_ENDPOINT(GetUnclaimedTransactions);
+    HTTP_CONTROLLER_ENDPOINT(GetUserUnclaimedTransactions);
    public:
     ~ObjectPoolController() = delete;
 
@@ -63,8 +66,9 @@ namespace Token{
       HTTP_CONTROLLER_GET("/pool/transactions/data/:hash", GetTransaction);
 
       // Unclaimed Transactions
-      HTTP_CONTROLLER_GET("/pool/unclaimed_transactions", GetUnclaimedTransactions);
-      HTTP_CONTROLLER_GET("/pool/unclaimed_transactions/data/:hash", GetUnclaimedTransaction);
+      HTTP_CONTROLLER_GET("/pool/utxos", GetUnclaimedTransactions);
+      HTTP_CONTROLLER_GET("/pool/utxos/:user", GetUserUnclaimedTransactions);
+      HTTP_CONTROLLER_GET("/pool/utxos/data/:hash", GetUnclaimedTransaction);
     }
   };
 
@@ -147,5 +151,7 @@ namespace Token{
 #undef DEFINE_CHECK
   };
 }
+
+  #endif//TOKEN_ENABLE_REST
 
 #endif //TOKEN_REST_SERVICE_H

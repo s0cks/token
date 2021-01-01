@@ -258,7 +258,7 @@ namespace Token{
     return true;
   }
 
-  bool ObjectPool::HasHashList(const User& user){
+  bool ObjectPool::HasUnclaimedTransactions(const User& user){
     std::string key = user.Get();
     std::string value;
     leveldb::Status status;
@@ -283,47 +283,6 @@ namespace Token{
 
     LOG(INFO) << "indexed hash list for user: " << user;
     return true;
-  }
-
-  bool ObjectPool::GetHashListAsJson(const User& user, JsonString& json){
-    std::string key = user.str();
-    std::string value;
-
-    leveldb::ReadOptions opts;
-    leveldb::Status status;
-    if(!(status = GetIndex()->Get(opts, key, &value)).ok()){
-      LOG(WARNING) << "cannot get hash list for " << user << ": " << status.ToString();
-      return false;
-    }
-
-    int64_t size = (int64_t) value.size();
-    uint8_t* bytes = (uint8_t*) value.data();
-
-    JsonWriter writer(json);
-    writer.StartArray();
-    int64_t offset = 0;
-    while(offset < size){
-      Hash hash(&bytes[offset], Hash::kSize);
-      std::string hex = hash.HexString();
-      writer.String(hex.data(), 64);
-      offset += Hash::kSize;
-    }
-    writer.EndArray();
-    return true;
-  }
-
-  bool ObjectPool::GetHashList(const User& user, HashList& hashes){
-    std::string key = user.str();
-    std::string value;
-
-    leveldb::ReadOptions opts;
-    leveldb::Status status;
-    if(!(status = GetIndex()->Get(opts, key, &value)).ok()){
-      LOG(WARNING) << "cannot get hash list for " << user << ": " << status.ToString();
-      return false;
-    }
-
-    return Decode((uint8_t*) value.data(), value.size(), hashes);
   }
 
   bool ObjectPool::PutObject(const Hash& hash, const UnclaimedTransactionPtr& val){
@@ -367,6 +326,23 @@ namespace Token{
     return true;
   }
 
+  bool ObjectPool::GetBlocks(JsonString& json){
+    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
+
+    JsonWriter writer(json);
+    writer.StartArray();
+    for(it->SeekToFirst(); it->Valid(); it->Next()){
+      ObjectPoolKey key(it->key());
+      if(key.IsBlock()){
+        Hash& hash = key.GetHash();
+        std::string hex = hash.HexString();
+        writer.String(hex.data(), 64);
+      }
+    }
+    writer.EndArray();
+    return true;
+  }
+
   bool ObjectPool::GetTransactions(HashList& hashes){
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
@@ -374,6 +350,23 @@ namespace Token{
       if(key.IsTransaction())
         hashes.insert(key.GetHash());
     }
+    return true;
+  }
+
+  bool ObjectPool::GetTransactions(JsonString& json){
+    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
+
+    JsonWriter writer(json);
+    writer.StartArray();
+    for(it->SeekToFirst(); it->Valid(); it->Next()){
+      ObjectPoolKey key(it->key());
+      if(key.IsTransaction()){
+        Hash& hash = key.GetHash();
+        std::string hex = hash.HexString();
+        writer.String(hex.data(), 64);
+      }
+    }
+    writer.EndArray();
     return true;
   }
 
@@ -387,7 +380,24 @@ namespace Token{
     return true;
   }
 
-  bool ObjectPool::GetUnclaimedTransactionsFor(HashList& hashes, const User& user){
+  bool ObjectPool::GetUnclaimedTransactions(JsonString& json){
+    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
+
+    JsonWriter writer(json);
+    writer.StartArray();
+    for(it->SeekToFirst(); it->Valid(); it->Next()){
+      ObjectPoolKey key(it->key());
+      if(key.IsUnclaimedTransaction()){
+        Hash& hash = key.GetHash();
+        std::string hex = hash.HexString();
+        writer.String(hex.data(), 64);
+      }
+    }
+    writer.EndArray();
+    return true;
+  }
+
+  bool ObjectPool::GetUnclaimedTransactionsFor(const User& user, HashList& hashes){
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
       ObjectPoolKey key(it->key());
@@ -396,10 +406,36 @@ namespace Token{
 
       BufferPtr val = Buffer::From(it->value());
       UnclaimedTransactionPtr value = UnclaimedTransaction::NewInstance(val);
-      LOG(INFO) << value->GetUser() << ": " << value->GetHash();
       if(value->GetUser() == user)
         hashes.insert(key.GetHash());
     }
+    return true;
+  }
+
+  bool ObjectPool::GetUnclaimedTransactionsFor(const User& user, JsonString& json){
+    std::string key = user.str();
+    std::string value;
+
+    leveldb::ReadOptions opts;
+    leveldb::Status status;
+    if(!(status = GetIndex()->Get(opts, key, &value)).ok()){
+      LOG(WARNING) << "cannot get hash list for " << user << ": " << status.ToString();
+      return false;
+    }
+
+    int64_t size = (int64_t) value.size();
+    uint8_t* bytes = (uint8_t*)value.data();
+
+    JsonWriter writer(json);
+    writer.StartArray();
+    int64_t offset = 0;
+    while(offset < size){
+      Hash hash(&bytes[offset], Hash::kSize);
+      std::string hex = hash.HexString();
+      writer.String(hex.data(), 64);
+      offset += Hash::kSize;
+    }
+    writer.EndArray();
     return true;
   }
 

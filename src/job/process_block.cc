@@ -7,10 +7,14 @@ namespace Token{
     if(!GetBlock()->Accept(this))
       return Failed("Cannot visit the block transactions.");
 
-    for(auto& it : hash_lists_){
-      const User& user = it.first;
-      HashList& hashes = it.second;
-      ObjectPool::GetHashList(user, hashes);
+    for(auto it = hash_lists_->begin();
+          it != hash_lists_->end();
+          it++){
+      const User& user = (*it).first;
+      HashList& hashes = (*it).second;
+      ObjectPool::GetUnclaimedTransactionsFor(user, hashes);
+
+      LOG(INFO) << user << " now has " << hashes.size() << " unclaimed transactions.";
 
       std::string key = user.Get();
 
