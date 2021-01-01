@@ -1,0 +1,261 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "Token REST Api",
+    "description": "~ TBD ~"
+  },
+  "host": "localhost:8082",
+  "basePath": "/v1",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/chain": {
+      "get": {
+        "summary": "Get the list of blocks in the ledger",
+        "responses": {
+          "200": {
+            "description": "The request was successful.",
+            "schema": {
+              "$ref": "#/definitions/HashList"
+            }
+          }
+        }
+      }
+    },
+    "/chain/head": {
+      "get": {
+        "summary": "Get the HEAD for the ledger",
+        "responses": {
+          "200": {
+            "description": "The request was successful.",
+            "schema": {
+              "$ref": "#/definitions/Block"
+            }
+          }
+        }
+      }
+    },
+    "/chain/data/:hash": {
+      "get": {
+        "summary": "Get the block data from the ledger",
+        "parameters": [
+          { "$ref": "#/parameters/Hash" }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request was successful.",
+            "schema": {
+              "$ref": "#/definitions/Block"
+            }
+          }
+        }
+      }
+    }
+  },
+  "parameters": {
+    "Hash": {
+      "name": "Hash",
+      "type": "string",
+      "in": "path",
+      "required": true,
+      "description": "The SHA256 hash of an object"
+    }
+  },
+  "responses": {
+    "NotFound": {
+      "description": "The requested hash cannot be found in the ledger.",
+      "schema": {
+        "$ref": "#/definitions/DataNotFound"
+      }
+    }
+  },
+  "definitions": {
+    "DataNotFound": {
+      "type": "object",
+      "description": "The specified data wasn't found in the ledger",
+      "required": [
+        "Hash",
+        "Type",
+        "Message"
+      ],
+      "properties": {
+        "Hash": {
+          "description": "The hash of the object",
+          "$ref": "#/definitions/Hash"
+        },
+        "Type": {
+          "description": "The type of object requested",
+          "$ref": "#/definitions/Type"
+        },
+        "Message": {
+          "description": "The description of the error",
+          "type": "string"
+        }
+      }
+    },
+    "Type": {
+      "type": "string",
+      "enum": [ "Transaction", "Block", "UnclaimedTransaction" ],
+      "description": "The type of object, usually associated w/ a Hash object"
+    },
+    "Hash": {
+      "type": "string"
+    },
+    "HashList": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Hash"
+      }
+    },
+    "User": {
+      "type": "object",
+      "description": "Represents a user of the token ledger",
+      "required": [
+        "name", "email", "tokens"
+      ],
+      "properties": {
+        "name": {
+          "description": "The human readable name of the User",
+          "type": "string"
+        },
+        "email": {
+          "description": "The email for the User",
+          "type": "string"
+        },
+        "tokens": {
+          "description": "The list of tokens that the User owns in the ledger",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Hash"
+          }
+        }
+      }
+    },
+    "Block": {
+      "type": "object",
+      "description": "An object representing a summary of a block in the ledger",
+      "required": [
+        "Height",
+        "Hash",
+        "PreviousHash",
+        "MerkleRoot"
+      ],
+      "properties": {
+        "Height": {
+          "type": "number",
+          "description": "The index of (or height of) the Block in the BlockChain"
+        },
+        "Hash": {
+          "$ref": "#/definitions/Hash",
+          "description": "The hash of the block"
+        },
+        "PreviousHash": {
+          "description": "The hash of the previous block in the block chain",
+          "$ref": "#/definitions/Hash"
+        },
+        "MerkleRoot": {
+          "$ref": "#/definitions/Hash",
+          "description": "The merkle root hash of the block"
+        }
+      }
+    },
+    "Input": {
+      "type": "object",
+      "description": "An input to a transaction, represents an old UnclaimedTransaction in the unclaimed transaction pool",
+      "required": [
+        "Transaction",
+        "Index",
+        "User"
+      ],
+      "properties": {
+        "Transaction": {
+          "$ref": "#/definitions/Hash",
+          "description": "The hash of the transaction that this input is referring to"
+        },
+        "Index": {
+          "type": "number",
+          "description": "The output index in the transaction"
+        },
+        "User": {
+          "type": "string",
+          "description": "The id of the user that owns this Input"
+        }
+      }
+    },
+    "Output": {
+      "type": "object",
+      "description": "An output to a transaction, used to create a new UnclaimedTransaction in the unclaimed transaction pool",
+      "required": [
+        "User",
+        "Product"
+      ],
+      "properties": {
+        "User": {
+          "type": "string",
+          "description": "The user id that this output belongs to"
+        },
+        "Token": {
+          "type": "string",
+          "description": "The id of the token that this Output is referring to"
+        }
+      }
+    },
+    "Transaction": {
+      "type": "object",
+      "description": "A transaction, used to record the transfer of tokens from one user to another at a point in time",
+      "required": [
+        "Timestamp",
+        "Index",
+        "Inputs",
+        "Outputs",
+        "Signature"
+      ],
+      "properties": {
+        "Timestamp": {
+          "type": "number",
+          "description": "The timestamp that this transaction was generated at"
+        },
+        "Index": {
+          "type": "number",
+          "description": "The the index in the block that this transaction lives"
+        },
+        "Inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Input"
+          },
+          "description": "The list of inputs for the transaction"
+        },
+        "Outputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Output"
+          },
+          "description": "The list of outputs for the transaction"
+        },
+        "Signature": {
+          "type": "string",
+          "description": "The signature of the transaction generated by the transaction creator"
+        }
+      }
+    },
+    "UnclaimedTransaction": {
+      "type": "object",
+      "description": "An unclaimed transaction, represents an unspent transaction that can be spent",
+      "required": [
+        ""
+      ],
+      "properties": {
+
+      }
+    }
+  }
+}
