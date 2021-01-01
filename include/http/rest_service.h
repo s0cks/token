@@ -5,7 +5,6 @@
 
 #include <uv.h>
 #include <libconfig.h++>
-
 #include "vthread.h"
 #include "http/router.h"
 #include "http/session.h"
@@ -152,6 +151,6 @@ namespace Token{
   };
 }
 
-  #endif//TOKEN_ENABLE_REST
+#endif//TOKEN_ENABLE_REST
 
 #endif //TOKEN_REST_SERVICE_H

@@ -47,9 +47,9 @@ namespace Token{
       uint8_t bytes[sizeof(T)];
       if(!ReadBytes(bytes, sizeof(T))){
         LOG(WARNING) << "couldn't read " << sizeof(T) << " bytes from file: " << GetFilename();
-        return (T)0;
+        return (T) 0;
       }
-      return (*(T*)bytes);
+      return (*(T*) bytes);
     }
 
     template<typename T>
@@ -93,7 +93,7 @@ namespace Token{
     #define DEFINE_READ(Name, Type) \
       Type Read##Name(){ return Read<Type>(); } \
       u##Type Read##Unsigned##Name(){ return Read<u##Type>(); }
-      FOR_EACH_RAW_TYPE(DEFINE_READ)
+    FOR_EACH_RAW_TYPE(DEFINE_READ)
     #undef DEFINE_READ
 
     void Close();

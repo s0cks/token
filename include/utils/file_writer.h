@@ -53,7 +53,7 @@ namespace Token{
     #define DECLARE_WRITE(Name, Type) \
       bool Write##Name(const Type& val); \
       bool WriteUnsigned##Name(const u##Type& val);
-      FOR_EACH_RAW_TYPE(DECLARE_WRITE)
+    FOR_EACH_RAW_TYPE(DECLARE_WRITE)
     #undef DECLARE_WRITE
 
     int64_t GetCurrentPosition();

@@ -164,7 +164,7 @@ namespace Token{
         return false;
       }
 
-      if(!stream.read((char*)&data_[wpos_], size)){
+      if(!stream.read((char*) &data_[wpos_], size)){
         LOG(WARNING) << "cannot read " << size << " bytes from file";
         return false;
       }
@@ -304,7 +304,7 @@ namespace Token{
     }
 
     static inline BufferPtr FromFile(const std::string& filename){
-      std::fstream fd(filename, std::ios::in|std::ios::binary);
+      std::fstream fd(filename, std::ios::in | std::ios::binary);
       size_t size = GetFilesize(fd);
       BufferPtr buff = NewInstance(size);
       if(!buff->ReadBytesFrom(fd, static_cast<int64_t>(size))){

@@ -35,7 +35,9 @@ namespace Token{
       filename_(filename),
       prologue_(),
       blocks_(){}
-    Snapshot(const std::string& filename, const SnapshotPrologueSection& prologue, const SnapshotBlockChainSection& blocks):
+    Snapshot(const std::string& filename,
+             const SnapshotPrologueSection& prologue,
+             const SnapshotBlockChainSection& blocks):
       filename_(filename),
       prologue_(prologue),
       blocks_(blocks){}
@@ -92,7 +94,7 @@ namespace Token{
    public:
     SnapshotPrinter(Printer* parent):
       Printer(parent){}
-    SnapshotPrinter(const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone):
+    SnapshotPrinter(const google::LogSeverity& severity = google::INFO, const long& flags = Printer::kFlagNone):
       Printer(severity, flags){}
     ~SnapshotPrinter() = default;
 
@@ -182,8 +184,10 @@ namespace Token{
       return Success("done.");
     }
    public:
-    SnapshotJob(Job* parent): Job(parent, "CreateSnapshot"){}
-    SnapshotJob(): SnapshotJob(nullptr){}
+    SnapshotJob(Job* parent):
+      Job(parent, "CreateSnapshot"){}
+    SnapshotJob():
+      SnapshotJob(nullptr){}
     ~SnapshotJob() = default;
   };
 }

@@ -228,10 +228,10 @@ namespace Token{
     HttpBinaryResponse(HttpSession* session,
                        const HttpStatusCode& status_code,
                        const std::string& filename,
-                       const std::string& content_type=CONTENT_TYPE_TEXT_PLAIN):
+                       const std::string& content_type = CONTENT_TYPE_TEXT_PLAIN):
       HttpResponse(session, status_code),
       body_(){
-      std::fstream fd(filename, std::ios::in|std::ios::binary);
+      std::fstream fd(filename, std::ios::in | std::ios::binary);
       int64_t fsize = GetFilesize(fd);
       body_ = Buffer::NewInstance(fsize);
       if(!body_->ReadBytesFrom(fd, fsize)){
@@ -252,7 +252,7 @@ namespace Token{
     NewInstance(HttpSession* session,
                 const HttpStatusCode& status_code,
                 const std::string& filename,
-                const std::string& content_type=CONTENT_TYPE_TEXT_PLAIN){
+                const std::string& content_type = CONTENT_TYPE_TEXT_PLAIN){
       return std::make_shared<HttpBinaryResponse>(session, status_code, filename, content_type);
     }
   };

@@ -12,10 +12,10 @@ namespace Token{
     defstream.zfree = Z_NULL;
     defstream.opaque = Z_NULL;
     // setup "a" as the input and "b" as the compressed output
-    defstream.avail_in = (uInt)in->GetBufferSize();
-    defstream.next_in = (Bytef*)in->data();
-    defstream.avail_out = (uInt)out->GetBufferSize(); // size of output
-    defstream.next_out = (Bytef*)out->data(); // output char array
+    defstream.avail_in = (uInt) in->GetBufferSize();
+    defstream.next_in = (Bytef*) in->data();
+    defstream.avail_out = (uInt) out->GetBufferSize(); // size of output
+    defstream.next_out = (Bytef*) out->data(); // output char array
 
     // the actual compression work.
     deflateInit(&defstream, Z_BEST_COMPRESSION);
@@ -30,10 +30,10 @@ namespace Token{
     infstream.zalloc = Z_NULL;
     infstream.zfree = Z_NULL;
     infstream.opaque = Z_NULL;
-    infstream.avail_in = (uInt)in->GetBufferSize(); // size of input
-    infstream.next_in = (Bytef*)in->data(); // input char array
-    infstream.avail_out = (uInt)out->GetBufferSize(); // size of output
-    infstream.next_out = (Bytef*)out->data(); // output char array
+    infstream.avail_in = (uInt) in->GetBufferSize(); // size of input
+    infstream.next_in = (Bytef*) in->data(); // input char array
+    infstream.avail_out = (uInt) out->GetBufferSize(); // size of output
+    infstream.next_out = (Bytef*) out->data(); // output char array
 
     inflateInit(&infstream);
     inflate(&infstream, Z_NO_FLUSH);

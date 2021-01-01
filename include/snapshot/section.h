@@ -18,12 +18,9 @@ namespace Token{
 
     friend std::ostream& operator<<(std::ostream& stream, const Type& type){
       switch(type){
-        case Type::kPrologue:
-          return stream << "Prologue";
-        case Type::kBlockChain:
-          return stream << "BlockChain";
-        default:
-          return stream << "Unknown";
+        case Type::kPrologue:return stream << "Prologue";
+        case Type::kBlockChain:return stream << "BlockChain";
+        default:return stream << "Unknown";
       }
     }
    private:
@@ -31,7 +28,7 @@ namespace Token{
       kTypePos = 0,
       kBitsForType = 32,
 
-      kSizePos = kTypePos+kBitsForType,
+      kSizePos = kTypePos + kBitsForType,
       kBitsForSize = 32,
     };
 
@@ -50,7 +47,7 @@ namespace Token{
     }
 
     SnapshotSectionHeader GetSectionHeader() const{
-      return TypeField::Encode(type_)|SizeField::Encode(GetSize());
+      return TypeField::Encode(type_) | SizeField::Encode(GetSize());
     }
 
     virtual int32_t GetSize() const = 0;

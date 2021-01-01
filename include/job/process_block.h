@@ -62,7 +62,7 @@ namespace Token{
         const HashList& src = it.second;
         HashList& dst = pos->second;
         dst.insert(src.begin(), src.end());
-        hash_lists_->insert({ it.first, dst });
+        hash_lists_->insert({it.first, dst});
       }
     }
 
