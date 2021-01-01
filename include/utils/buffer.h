@@ -222,6 +222,13 @@ namespace Token{
       wpos_ += value.length();
     }
 
+    std::string GetString(int64_t size){
+      char data[size];
+      memcpy(&raw()[rpos_], data, size);
+      rpos_ += size;
+      return std::string(data, size);
+    }
+
     ObjectTag GetObjectTag(){
       return ObjectTag(GetUnsignedLong());
     }
@@ -250,6 +257,18 @@ namespace Token{
       memset(data(), 0, GetBufferSize());
       rpos_ = 0;
       wpos_ = 0;
+    }
+
+    void SetWritePosition(int64_t pos){
+      if(pos > GetBufferSize())
+        return;
+      wpos_ = pos;
+    }
+
+    void SetReadPosition(int64_t pos){
+      if(pos > GetBufferSize())
+        return;
+      rpos_ = pos;
     }
 
     std::string ToString() const{

@@ -28,6 +28,7 @@ find_package(Libuv REQUIRED)
 find_package(GTest REQUIRED)
 find_package(HttpParser REQUIRED)
 find_package(JsonCpp REQUIRED)
+find_package(ZLIB REQUIRED)
 
 # Include Directories
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -53,6 +54,7 @@ set(TOKEN_LIBRARIES
   ${CMAKE_THREAD_LIBS_INIT} # pthread
   ${HTTPPARSER_LIBRARIES} # http-parser
   ${JsonCpp_LIBRARY} # jsoncpp
+  ${ZLIB_LIBRARIES} # zlib
 )
 message("Compiling Token w/ the following libraries: ${TOKEN_LIBRARIES}")
 
