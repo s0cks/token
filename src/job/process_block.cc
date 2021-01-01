@@ -34,6 +34,7 @@ namespace Token{
 
   bool ProcessBlockJob::Visit(const TransactionPtr& tx){
     JobWorker* worker = JobScheduler::GetThreadWorker();
+    LOG(INFO) << "submitting worker for: " << tx->GetHash();
     ProcessTransactionJob* job = new ProcessTransactionJob(this, tx);
     worker->Submit(job);
     worker->Wait(job);

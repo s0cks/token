@@ -159,6 +159,23 @@ namespace Token{
     friend class Block;
     friend class TransactionMessage;
    public:
+    struct DefaultComparator{
+      bool operator()(const TransactionPtr& a, const TransactionPtr& b){
+        if(a->timestamp_ < b->timestamp_){
+          return -1;
+        } else if(a->timestamp_ > b->timestamp_){
+          return +1;
+        }
+
+        if(a->index_ < b->index_){
+          return -1;
+        } else if(a->index_ > b->index_){
+          return +1;
+        }
+        return 0;
+      }
+    };
+
     struct TimestampComparator{
       bool operator()(const TransactionPtr& a, const TransactionPtr& b){
         return a->timestamp_ < b->timestamp_;
@@ -322,6 +339,10 @@ namespace Token{
       //TODO: compare transaction signature
     }
 
+    static TransactionPtr NewInstance(int64_t index, const InputList& inputs, const OutputList& outputs, const Timestamp& timestamp=GetCurrentTimestamp()){
+      return std::make_shared<Transaction>(index, inputs, outputs, timestamp);
+    }
+
     static TransactionPtr NewInstance(const BufferPtr& buff){
       Timestamp timestamp = buff->GetLong();
       int64_t index = buff->GetLong();
@@ -341,7 +362,7 @@ namespace Token{
     }
   };
 
-  typedef std::set<TransactionPtr, Transaction::TimestampComparator> TransactionList;
+  typedef std::set<TransactionPtr, Transaction::DefaultComparator> TransactionList;
 
   class TransactionInputVisitor{
    protected:

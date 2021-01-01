@@ -48,11 +48,10 @@ namespace Token{
       outputs_c.push_back(Output("VenueC", "TestToken"));
     }
 
-    TransactionList transactions = {
-      std::make_shared<Transaction>(1, inputs, outputs_a, 0),
-      std::make_shared<Transaction>(2, inputs, outputs_b, 0),
-      std::make_shared<Transaction>(3, inputs, outputs_c, 0),
-    };
+    TransactionList transactions;
+    transactions.insert(Transaction::NewInstance(1, inputs, outputs_a, 0));
+    transactions.insert(Transaction::NewInstance(2, inputs, outputs_b, 0));
+    transactions.insert(Transaction::NewInstance(3, inputs, outputs_c, 0));
     return std::make_shared<Block>(0, Hash(), transactions, 0);
   }
 

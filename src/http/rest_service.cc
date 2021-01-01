@@ -59,9 +59,8 @@ namespace Token{
 
     LOG(INFO) << "starting the rest service....";
     DebugController::Initialize(&router_);
+    ObjectPoolController::Initialize(&router_);
     BlockChainController::Initialize(&router_);
-    BlockPoolController::Initialize(&router_);
-    UnclaimedTransactionPoolController::Initialize(&router_);
     return Thread::Start(&thread_, "RestService", &HandleServiceThread, 0);
   }
 
@@ -174,44 +173,13 @@ namespace Token{
   }
 
 /*****************************************************************************
- *                      UnclaimedTransactionPoolController
+ *                      ObjectPoolController
  *****************************************************************************/
-  void UnclaimedTransactionPoolController::HandleGetUnclaimedTransaction(HttpSession* session, const HttpRequestPtr& request){
-    Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
-    if(!ObjectPool::HasUnclaimedTransaction(hash))
-      return SendNotFound(session, hash);
-
-    UnclaimedTransactionPtr val = ObjectPool::GetUnclaimedTransaction(hash);
-    SendJson(session, val);
+  void ObjectPoolController::HandleGetStats(HttpSession* session, const HttpRequestPtr& request){
+    SendNotSupported(session, request->GetPath()); //TODO: implement HandleGetStats()
   }
 
-  void UnclaimedTransactionPoolController::HandleGetUnclaimedTransactions(HttpSession* session, const HttpRequestPtr& request){
-    HashList hashes;
-    if(!ObjectPool::GetUnclaimedTransactions(hashes))
-      return SendInternalServerError(session, "Cannot Get Unclaimed Transactions");
-    SendJson(session, hashes);
-  }
-
-  void UnclaimedTransactionPoolController::HandleGetUserUnclaimedTransactions(HttpSession* session,
-                                                                              const HttpRequestPtr& request){
-    std::string user = request->GetParameterValue("user_id");
-    HashList hashes;
-    if(!ObjectPool::GetHashList(user, hashes))
-      return SendInternalServerError(session, "Cannot get unclaimed transactions from pool.");
-    SendJson(session, hashes);
-  }
-
-/*****************************************************************************
- *                      BlockPoolController
- *****************************************************************************/
-  void BlockPoolController::HandleGetBlocks(HttpSession* session, const HttpRequestPtr& request){
-    HashList hashes;
-    if(!ObjectPool::GetBlocks(hashes))
-      return SendInternalServerError(session, "Cannot get list of blocks from pool.");
-    SendJson(session, hashes);
-  }
-
-  void BlockPoolController::HandleGetBlock(HttpSession* session, const HttpRequestPtr& request){
+  void ObjectPoolController::HandleGetBlock(HttpSession* session, const HttpRequestPtr& request){
     Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
     if(!ObjectPool::HasObject(hash))
       return SendNotFound(session, hash);
@@ -219,11 +187,48 @@ namespace Token{
     SendJson(session, blk);
   }
 
+  void ObjectPoolController::HandleGetBlocks(HttpSession* session, const HttpRequestPtr& request){
+    HashList hashes;
+    if(!ObjectPool::GetBlocks(hashes))
+      return SendInternalServerError(session, "Cannot get list of blocks from pool.");
+    SendJson(session, hashes);
+  }
+
+  void ObjectPoolController::HandleGetTransaction(HttpSession* session, const HttpRequestPtr& request){
+    Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
+    if(!ObjectPool::HasObject(hash))
+      return SendNotFound(session, hash);
+    TransactionPtr tx = ObjectPool::GetTransaction(hash);
+    SendJson(session, tx);
+  }
+
+  void ObjectPoolController::HandleGetTransactions(HttpSession* session, const HttpRequestPtr& request){
+    HashList hashes;
+    if(!ObjectPool::GetTransactions(hashes))
+      return SendInternalServerError(session, "Cannot get list of blocks from pool.");
+    SendJson(session, hashes);
+  }
+
+  void ObjectPoolController::HandleGetUnclaimedTransaction(HttpSession* session, const HttpRequestPtr& request){
+    Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
+    if(!ObjectPool::HasUnclaimedTransaction(hash))
+      return SendNotFound(session, hash);
+    UnclaimedTransactionPtr val = ObjectPool::GetUnclaimedTransaction(hash);
+    SendJson(session, val);
+  }
+
+  void ObjectPoolController::HandleGetUnclaimedTransactions(HttpSession* session, const HttpRequestPtr& request){
+    HashList hashes;
+    if(!ObjectPool::GetUnclaimedTransactions(hashes))
+      return SendInternalServerError(session, "Cannot Get Unclaimed Transactions");
+    SendJson(session, hashes);
+  }
+
 /*****************************************************************************
  *                      DebugController
  *****************************************************************************/
- void DebugController::HandleGetSwagger(HttpSession* session, const HttpRequestPtr& request){
-   std::string filename = "/home/tazz/CLionProjects/libtoken-ledger/swagger.json";
-   SendFile(session, filename);
- }
+  void DebugController::HandleGetSwagger(HttpSession* session, const HttpRequestPtr& request){
+    std::string filename = "/home/tazz/CLionProjects/libtoken-ledger/swagger.json";
+    SendFile(session, filename);
+  }
 }

@@ -358,18 +358,29 @@ namespace Token{
   }
 
   bool ObjectPool::GetBlocks(HashList& hashes){
-    return false;
+    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
+    for(it->SeekToFirst(); it->Valid(); it->Next()){
+      ObjectPoolKey key(it->key());
+      if(key.IsBlock())
+        hashes.insert(key.GetHash());
+    }
+    return true;
   }
 
   bool ObjectPool::GetTransactions(HashList& hashes){
-    return false;
+    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
+    for(it->SeekToFirst(); it->Valid(); it->Next()){
+      ObjectPoolKey key(it->key());
+      if(key.IsTransaction())
+        hashes.insert(key.GetHash());
+    }
+    return true;
   }
 
   bool ObjectPool::GetUnclaimedTransactions(HashList& hashes){
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
       ObjectPoolKey key(it->key());
-      LOG(INFO) << "Key: " << key;
       if(key.IsUnclaimedTransaction())
         hashes.insert(key.GetHash());
     }

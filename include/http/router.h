@@ -122,7 +122,7 @@ namespace Token{
 
   class HttpRouter{
    public:
-    static const int64_t kAlphabetSize = 29;
+    static const int64_t kAlphabetSize = 32;
 
     class Node{
       friend class HttpRouter;
@@ -183,6 +183,11 @@ namespace Token{
           if(!curr->children_[pos])
             curr->children_[pos] = new Node(method, handler, "/");
           curr = curr->children_[pos];
+        } else if(c == '_'){
+          int pos = 29;
+          if(!curr->children_[pos])
+            curr->children_[pos] = new Node(method, handler, "_");
+          curr = curr->children_[pos];
         } else{
           int pos = (int) tolower(c) - 'a';
           if(!curr->children_[pos])
@@ -212,6 +217,11 @@ namespace Token{
           params.insert({curr->key_, value});
         } else if(curr->children_[28]){
           int pos = 28;
+          if(!curr->children_[pos])
+            return HttpRouterMatch(HttpRouterMatch::kNotFound);
+          curr = curr->children_[pos];
+        } else if(curr->children_[29]){
+          int pos = 29;
           if(!curr->children_[pos])
             return HttpRouterMatch(HttpRouterMatch::kNotFound);
           curr = curr->children_[pos];

@@ -152,6 +152,8 @@ namespace Token{
   }
 
   JobResult ProcessTransactionJob::DoWork(){
+    LOG(INFO) << "processing transaction " << GetTransaction()->GetHash() << "....";
+
     JobWorker* worker = JobScheduler::GetThreadWorker();
     ProcessTransactionInputsJob* process_inputs = new ProcessTransactionInputsJob(this);
     worker->Submit(process_inputs);
@@ -161,6 +163,7 @@ namespace Token{
     worker->Submit(process_outputs);
     worker->Wait(process_outputs);
 
-    return Success("Finished.");
+    LOG(INFO) << "done.";
+    return Success("done.");
   }
 }

@@ -42,35 +42,42 @@ namespace Token{
     }
   };
 
-  class BlockPoolController : HttpController{
+  class ObjectPoolController : HttpController{
    private:
-    BlockPoolController() = delete;
+    ObjectPoolController() = delete;
 
+    // Core
+    HTTP_CONTROLLER_ENDPOINT(GetStats);
+
+    // Blocks
     HTTP_CONTROLLER_ENDPOINT(GetBlock);
     HTTP_CONTROLLER_ENDPOINT(GetBlocks);
-   public:
-    ~BlockPoolController() = delete;
 
-    HTTP_CONTROLLER_INIT(){
-      HTTP_CONTROLLER_GET("/blocks", GetBlocks);
-      HTTP_CONTROLLER_GET("/blocks/data/:hash", GetBlock);
-    }
-  };
+    // Transactions
+    HTTP_CONTROLLER_ENDPOINT(GetTransaction);
+    HTTP_CONTROLLER_ENDPOINT(GetTransactions);
 
-  class UnclaimedTransactionPoolController : HttpController{
-   private:
-    UnclaimedTransactionPoolController() = delete;
-
+    // Unclaimed Transactions
     HTTP_CONTROLLER_ENDPOINT(GetUnclaimedTransaction);
     HTTP_CONTROLLER_ENDPOINT(GetUnclaimedTransactions);
-    HTTP_CONTROLLER_ENDPOINT(GetUserUnclaimedTransactions);
    public:
-    ~UnclaimedTransactionPoolController() = delete;
+    ~ObjectPoolController() = delete;
 
     HTTP_CONTROLLER_INIT(){
-      HTTP_CONTROLLER_GET("/utxos", GetUnclaimedTransactions);
-      HTTP_CONTROLLER_GET("/utxos/:user_id", GetUserUnclaimedTransactions);
-      HTTP_CONTROLLER_GET("/utxos/data/:hash", GetUnclaimedTransaction);
+      // Core
+      HTTP_CONTROLLER_GET("/pool/stats", GetStats);
+
+      // Blocks
+      HTTP_CONTROLLER_GET("/pool/blocks", GetBlocks);
+      HTTP_CONTROLLER_GET("/pool/blocks/data/:hash", GetBlock);
+
+      // Transactions
+      HTTP_CONTROLLER_GET("/pool/transactions", GetTransactions);
+      HTTP_CONTROLLER_GET("/pool/transactions/data/:hash", GetTransaction);
+
+      // Unclaimed Transactions
+      HTTP_CONTROLLER_GET("/pool/unclaimed_transactions", GetUnclaimedTransactions);
+      HTTP_CONTROLLER_GET("/pool/unclaimed_transactions/data/:hash", GetUnclaimedTransaction);
     }
   };
 
