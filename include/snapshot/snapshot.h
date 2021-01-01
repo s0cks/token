@@ -4,6 +4,8 @@
 #include <memory>
 #include "block.h"
 #include "section.h"
+#include "utils/file_reader.h"
+#include "utils/file_writer.h"
 
 namespace Token{
   class Snapshot;
@@ -103,6 +105,67 @@ namespace Token{
 
     bool operator()(const SnapshotPtr& snapshot){
       return Print(snapshot);
+    }
+  };
+
+  class SnapshotWriter : public BinaryFileWriter{
+   private:
+    static inline std::string
+    GetNewSnapshotFilename(){
+      std::stringstream filename;
+      filename << Snapshot::GetSnapshotDirectory();
+      filename << "/snapshot-" << GetTimestampFormattedFileSafe(GetCurrentTimestamp()) << ".dat";
+      return filename.str();
+    }
+
+    inline void
+    WriteHeader(const SnapshotSectionHeader& header){
+      WriteUnsignedLong(header);
+    }
+
+    template<class T>
+    bool WriteSection(const T& section){
+      WriteHeader(section.GetSectionHeader());
+      section.Write(this);
+      return true;
+    }
+   public:
+    SnapshotWriter(const std::string& filename = GetNewSnapshotFilename()):
+      BinaryFileWriter(filename){}
+    ~SnapshotWriter() = default;
+
+    bool WriteSnapshot(){
+      SnapshotPtr snapshot = Snapshot::NewInstance(GetFilename());
+      LOG(INFO) << "writing new snapshot...";
+      WriteSection(snapshot->GetPrologue());
+      WriteSection(snapshot->GetBlockChain());
+      LOG(INFO) << "snapshot written to: " << GetFilename();
+      return true;
+    }
+  };
+
+  class SnapshotReader : public BinaryFileReader{
+    friend class Snapshot;
+   public:
+    SnapshotReader(const std::string& filename):
+      BinaryFileReader(filename){}
+    ~SnapshotReader() = default;
+
+    SnapshotPtr ReadSnapshot(){
+      int64_t start = GetCurrentPosition();
+      if(!SnapshotSection::IsPrologueSection(ReadUnsignedLong())){
+        LOG(WARNING) << "cannot read snapshot prologue section @" << start << " in: " << GetFilename();
+        return SnapshotPtr(nullptr);
+      }
+      SnapshotPrologueSection prologue(this);
+
+      start = GetCurrentPosition();
+      if(!SnapshotSection::IsBlockChainSection(ReadUnsignedLong())){
+        LOG(WARNING) << "cannot read snapshot block chain section @" << start << " in: " << GetFilename();
+        return SnapshotPtr(nullptr);
+      }
+      SnapshotBlockChainSection blocks(this);
+      return std::make_shared<Snapshot>(GetFilename(), prologue, blocks);
     }
   };
 }

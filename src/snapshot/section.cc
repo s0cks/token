@@ -1,6 +1,5 @@
 #include "snapshot/section.h"
-#include "snapshot/snapshot_writer.h"
-#include "snapshot/snapshot_reader.h"
+#include "snapshot/snapshot.h"
 
 namespace Token{
   SnapshotPrologueSection::SnapshotPrologueSection(SnapshotReader* reader):
