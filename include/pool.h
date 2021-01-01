@@ -281,7 +281,7 @@ namespace Token{
     static bool GetUnclaimedTransactionsFor(const User& user, HashList& hashes);
     static bool GetUnclaimedTransactionsFor(const User& user, JsonString& json);
     static bool HasUnclaimedTransactions(const User& user);
-
+    static bool GetStats(JsonString& json);
     static bool VisitBlocks(ObjectPoolBlockVisitor* vis);
     static bool VisitTransactions(ObjectPoolTransactionVisitor* vis);
     static bool VisitUnclaimedTransactions(ObjectPoolUnclaimedTransactionVisitor* vis);

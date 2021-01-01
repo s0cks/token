@@ -552,4 +552,33 @@ namespace Token{
     delete it;
     return count;
   }
+
+  bool ObjectPool::GetStats(JsonString& json){
+    int64_t num_blocks = 0;
+    int64_t num_transactions = 0;
+    int64_t num_unclaimed_transactions = 0;
+
+    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
+    for(it->SeekToFirst(); it->Valid(); it->Next()){
+      ObjectPoolKey key(it->key());
+      if(key.IsBlock()){
+        num_blocks++;
+      } else if(key.IsTransaction()){
+        num_transactions++;
+      } else if(key.IsUnclaimedTransaction()){
+        num_unclaimed_transactions++;
+      }
+    }
+    delete it;
+
+    JsonWriter writer(json);
+    writer.StartObject();
+    {
+      SetField(writer, "NumberOfBlocks", num_blocks);
+      SetField(writer, "NumberOfTransactions", num_transactions);
+      SetField(writer, "NumberOfUnclaimedTransactions", num_unclaimed_transactions);
+    }
+    writer.EndObject();
+    return true;
+  }
 }

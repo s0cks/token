@@ -176,7 +176,10 @@ namespace Token{
  *                      ObjectPoolController
  *****************************************************************************/
   void ObjectPoolController::HandleGetStats(HttpSession* session, const HttpRequestPtr& request){
-    SendNotSupported(session, request->GetPath()); //TODO: implement HandleGetStats()
+    JsonString json;
+    if(!ObjectPool::GetStats(json))
+      return SendInternalServerError(session, "Cannot get ObjectPool stats.");
+    SendJson(session, json);
   }
 
   void ObjectPoolController::HandleGetBlock(HttpSession* session, const HttpRequestPtr& request){
