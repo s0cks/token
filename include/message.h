@@ -52,16 +52,16 @@ namespace Token{
     };
 
     static const int64_t kHeaderSize = sizeof(int32_t)
-      + sizeof(int64_t);
+                                       + sizeof(int64_t);
    protected:
     Message() = default;
 
     virtual int64_t GetMessageSize() const = 0;
-    virtual bool Encode(const BufferPtr &buff) const = 0;
+    virtual bool Encode(const BufferPtr& buff) const = 0;
    public:
     virtual ~Message() = default;
 
-    virtual const char *GetName() const{
+    virtual const char* GetName() const{
       return "Unknown";
     }
 
@@ -82,7 +82,7 @@ namespace Token{
       return size;
     }
 
-    bool Write(const BufferPtr &buff) const{
+    bool Write(const BufferPtr& buff) const{
       buff->PutInt(static_cast<int32_t>(GetMessageType()));
       buff->PutLong(GetBufferSize());
       return true;
@@ -121,11 +121,11 @@ namespace Token{
     BlockHeader head_;
    public:
     VersionMessage(ClientType type,
-                   const Version &version,
-                   const UUID &node_id,
+                   const Version& version,
+                   const UUID& node_id,
                    Timestamp timestamp,
-                   const Hash &nonce,
-                   const BlockHeader &head):
+                   const Hash& nonce,
+                   const BlockHeader& head):
       Message(),
       timestamp_(timestamp),
       client_type_(type),
@@ -133,7 +133,7 @@ namespace Token{
       nonce_(nonce),
       node_id_(node_id),
       head_(head){}
-    VersionMessage(const BufferPtr &buff):
+    VersionMessage(const BufferPtr& buff):
       Message(),
       timestamp_(buff->GetLong()),
       client_type_(static_cast<ClientType>(buff->GetInt())),
@@ -177,20 +177,20 @@ namespace Token{
 
     DECLARE_MESSAGE(Version);
 
-    static MessagePtr NewInstance(const BufferPtr &buff){
+    static MessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<VersionMessage>(buff);
     }
 
     static MessagePtr NewInstance(ClientType type,
-                                  const UUID &node_id,
-                                  const BlockHeader &head,
-                                  const Version &version = Version(),
-                                  const Hash &nonce = Hash::GenerateNonce(),
+                                  const UUID& node_id,
+                                  const BlockHeader& head,
+                                  const Version& version = Version(),
+                                  const Hash& nonce = Hash::GenerateNonce(),
                                   Timestamp timestamp = GetCurrentTimestamp()){
       return std::make_shared<VersionMessage>(type, version, node_id, timestamp, nonce, head);
     }
 
-    static MessagePtr NewInstance(const UUID &node_id){
+    static MessagePtr NewInstance(const UUID& node_id){
       BlockPtr genesis = Block::Genesis();
       return NewInstance(ClientType::kClient, node_id, genesis->GetHeader(), Version(), Hash::GenerateNonce());
     }
@@ -207,11 +207,11 @@ namespace Token{
     BlockHeader head_;
    public:
     VerackMessage(ClientType type,
-                  const UUID &node_id,
-                  const BlockHeader &head = BlockHeader(),
-                  const Version &version = Version(),
-                  const NodeAddress &callback = BlockChainConfiguration::GetServerCallbackAddress(),
-                  const Hash &nonce = Hash::GenerateNonce(),
+                  const UUID& node_id,
+                  const BlockHeader& head = BlockHeader(),
+                  const Version& version = Version(),
+                  const NodeAddress& callback = BlockChainConfiguration::GetServerCallbackAddress(),
+                  const Hash& nonce = Hash::GenerateNonce(),
                   Timestamp timestamp = GetCurrentTimestamp()):
       Message(),
       timestamp_(timestamp),
@@ -221,7 +221,7 @@ namespace Token{
       node_id_(node_id),
       callback_(callback),
       head_(head){}
-    VerackMessage(const BufferPtr &buff):
+    VerackMessage(const BufferPtr& buff):
       Message(),
       timestamp_(buff->GetLong()),
       client_type_(static_cast<ClientType>(buff->GetInt())),
@@ -263,16 +263,16 @@ namespace Token{
     DECLARE_MESSAGE(Verack);
 
     static MessagePtr NewInstance(ClientType type,
-                                  const UUID &node_id,
-                                  const BlockHeader &head = BlockHeader(),
-                                  const Version &version = Version(),
-                                  const NodeAddress &callback = BlockChainConfiguration::GetServerCallbackAddress(),
-                                  const Hash &nonce = Hash::GenerateNonce(),
+                                  const UUID& node_id,
+                                  const BlockHeader& head = BlockHeader(),
+                                  const Version& version = Version(),
+                                  const NodeAddress& callback = BlockChainConfiguration::GetServerCallbackAddress(),
+                                  const Hash& nonce = Hash::GenerateNonce(),
                                   Timestamp timestamp = GetCurrentTimestamp()){
       return std::make_shared<VerackMessage>(type, node_id, head, version, callback, nonce, timestamp);
     }
 
-    static MessagePtr NewInstance(const BufferPtr &buff){
+    static MessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<VerackMessage>(buff);
     }
   };
@@ -287,7 +287,7 @@ namespace Token{
       Message(),
       type_(type),
       raw_(proposal->GetRaw()){}
-    PaxosMessage(MessageType type, const BufferPtr &buff):
+    PaxosMessage(MessageType type, const BufferPtr& buff):
       Message(),
       type_(type),
       raw_(buff){}
@@ -296,7 +296,7 @@ namespace Token{
       return RawProposal::GetSize();
     }
 
-    bool Encode(const BufferPtr &buff) const{
+    bool Encode(const BufferPtr& buff) const{
       return raw_.Encode(buff);
     }
    public:
@@ -317,17 +317,17 @@ namespace Token{
    public:
     PrepareMessage(ProposalPtr proposal):
       PaxosMessage(Message::kPrepareMessageType, proposal){}
-    PrepareMessage(const BufferPtr &buff):
+    PrepareMessage(const BufferPtr& buff):
       PaxosMessage(Message::kPrepareMessageType, buff){}
     ~PrepareMessage(){}
 
     DECLARE_MESSAGE(Prepare);
 
-    static MessagePtr NewInstance(const ProposalPtr &proposal){
+    static MessagePtr NewInstance(const ProposalPtr& proposal){
       return std::make_shared<PrepareMessage>(proposal);
     }
 
-    static MessagePtr NewInstance(const BufferPtr &buff){
+    static MessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<PrepareMessage>(buff);
     }
   };
@@ -336,17 +336,17 @@ namespace Token{
    public:
     PromiseMessage(ProposalPtr proposal):
       PaxosMessage(Message::kPromiseMessageType, proposal){}
-    PromiseMessage(const BufferPtr &buff):
+    PromiseMessage(const BufferPtr& buff):
       PaxosMessage(Message::kPromiseMessageType, buff){}
     ~PromiseMessage(){}
 
     DECLARE_MESSAGE(Promise);
 
-    static MessagePtr NewInstance(const ProposalPtr &proposal){
+    static MessagePtr NewInstance(const ProposalPtr& proposal){
       return std::make_shared<PromiseMessage>(proposal);
     }
 
-    static MessagePtr NewInstance(const BufferPtr &buff){
+    static MessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<PromiseMessage>(buff);
     }
   };
@@ -355,17 +355,17 @@ namespace Token{
    public:
     CommitMessage(ProposalPtr proposal):
       PaxosMessage(Message::kCommitMessageType, proposal){}
-    CommitMessage(const BufferPtr &buff):
+    CommitMessage(const BufferPtr& buff):
       PaxosMessage(Message::kCommitMessageType, buff){}
     ~CommitMessage(){}
 
     DECLARE_MESSAGE(Commit);
 
-    static MessagePtr NewInstance(const ProposalPtr &proposal){
+    static MessagePtr NewInstance(const ProposalPtr& proposal){
       return std::make_shared<CommitMessage>(proposal);
     }
 
-    static MessagePtr NewInstance(const BufferPtr &buff){
+    static MessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<CommitMessage>(buff);
     }
   };
@@ -374,17 +374,17 @@ namespace Token{
    public:
     AcceptedMessage(ProposalPtr proposal):
       PaxosMessage(Message::kAcceptedMessageType, proposal){}
-    AcceptedMessage(const BufferPtr &buff):
+    AcceptedMessage(const BufferPtr& buff):
       PaxosMessage(Message::kAcceptedMessageType, buff){}
     ~AcceptedMessage(){}
 
     DECLARE_MESSAGE(Accepted);
 
-    static MessagePtr NewInstance(const ProposalPtr &proposal){
+    static MessagePtr NewInstance(const ProposalPtr& proposal){
       return std::make_shared<AcceptedMessage>(proposal);
     }
 
-    static MessagePtr NewInstance(const BufferPtr &buff){
+    static MessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<AcceptedMessage>(buff);
     }
   };
@@ -393,17 +393,17 @@ namespace Token{
    public:
     RejectedMessage(ProposalPtr proposal):
       PaxosMessage(Message::kRejectedMessageType, proposal){}
-    RejectedMessage(const BufferPtr &buff):
+    RejectedMessage(const BufferPtr& buff):
       PaxosMessage(Message::kRejectedMessageType, buff){}
     ~RejectedMessage(){}
 
     DECLARE_MESSAGE(Rejected);
 
-    static MessagePtr NewInstance(const ProposalPtr &proposal){
+    static MessagePtr NewInstance(const ProposalPtr& proposal){
       return std::make_shared<RejectedMessage>(proposal);
     }
 
-    static MessagePtr NewInstance(const BufferPtr &buff){
+    static MessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<RejectedMessage>(buff);
     }
   };
@@ -415,10 +415,10 @@ namespace Token{
 
     ObjectPtr value_;
 
-    ObjectMessage(const ObjectPtr &value):
+    ObjectMessage(const ObjectPtr& value):
       Message(),
       value_(value){}
-    ObjectMessage(const BufferPtr &buff):
+    ObjectMessage(const BufferPtr& buff):
       Message(),
       value_(T::NewInstance(buff)){}
    public:
@@ -435,13 +435,13 @@ namespace Token{
       return GetValue()->GetBufferSize();
     }
 
-    bool Encode(const BufferPtr &buff) const{
+    bool Encode(const BufferPtr& buff) const{
       return GetValue()->Write(buff);
     }
    public:
-    TransactionMessage(const TransactionPtr &value):
+    TransactionMessage(const TransactionPtr& value):
       ObjectMessage(value){}
-    TransactionMessage(const BufferPtr &buff):
+    TransactionMessage(const BufferPtr& buff):
       ObjectMessage(buff){}
     ~TransactionMessage() = default;
 
@@ -453,11 +453,11 @@ namespace Token{
 
     DECLARE_MESSAGE_TYPE(Transaction);
 
-    static MessagePtr NewInstance(const TransactionPtr &tx){
+    static MessagePtr NewInstance(const TransactionPtr& tx){
       return std::make_shared<TransactionMessage>(tx);
     }
 
-    static MessagePtr NewInstance(const BufferPtr &buff){
+    static MessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<TransactionMessage>(buff);
     }
   };
@@ -468,13 +468,13 @@ namespace Token{
       return GetValue()->GetBufferSize();
     }
 
-    bool Encode(const BufferPtr &buff) const{
+    bool Encode(const BufferPtr& buff) const{
       return GetValue()->Write(buff);
     }
    public:
-    BlockMessage(const BlockPtr &blk):
+    BlockMessage(const BlockPtr& blk):
       ObjectMessage(blk){}
-    BlockMessage(const BufferPtr &buff):
+    BlockMessage(const BufferPtr& buff):
       ObjectMessage(buff){}
     ~BlockMessage() = default;
 
@@ -486,11 +486,11 @@ namespace Token{
 
     DECLARE_MESSAGE_TYPE(Block);
 
-    static MessagePtr NewInstance(const BlockPtr &blk){
+    static MessagePtr NewInstance(const BlockPtr& blk){
       return std::make_shared<BlockMessage>(blk);
     }
 
-    static MessagePtr NewInstance(const BufferPtr &buff){
+    static MessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<BlockMessage>(buff);
     }
   };
@@ -501,23 +501,23 @@ namespace Token{
       return GetValue()->GetBufferSize();
     }
 
-    bool Encode(const BufferPtr &buff) const{
+    bool Encode(const BufferPtr& buff) const{
       return GetValue()->Write(buff);
     }
    public:
-    UnclaimedTransactionMessage(const UnclaimedTransactionPtr &utxo):
+    UnclaimedTransactionMessage(const UnclaimedTransactionPtr& utxo):
       ObjectMessage(utxo){}
-    UnclaimedTransactionMessage(const BufferPtr &buff):
+    UnclaimedTransactionMessage(const BufferPtr& buff):
       ObjectMessage(buff){}
     ~UnclaimedTransactionMessage() = default;
 
     DECLARE_MESSAGE_TYPE(UnclaimedTransaction);
 
-    static MessagePtr NewInstance(const UnclaimedTransactionPtr &utxo){
+    static MessagePtr NewInstance(const UnclaimedTransactionPtr& utxo){
       return std::make_shared<UnclaimedTransactionMessage>(utxo);
     }
 
-    static MessagePtr NewInstance(const BufferPtr &buff){
+    static MessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<UnclaimedTransactionMessage>(buff);
     }
   };
@@ -537,21 +537,21 @@ namespace Token{
     InventoryItem():
       type_(kUnknown),
       hash_(){}
-    InventoryItem(Type type, const Hash &hash):
+    InventoryItem(Type type, const Hash& hash):
       type_(type),
       hash_(hash){}
-    InventoryItem(const Transaction &tx):
+    InventoryItem(const Transaction& tx):
       InventoryItem(kTransaction, tx.GetHash()){}
-    InventoryItem(const BlockPtr &blk):
+    InventoryItem(const BlockPtr& blk):
       InventoryItem(kBlock, blk->GetHash()){}
-    InventoryItem(const UnclaimedTransactionPtr &utxo):
+    InventoryItem(const UnclaimedTransactionPtr& utxo):
       InventoryItem(kUnclaimedTransaction, utxo->GetHash()){}
-    InventoryItem(const BlockHeader &blk):
+    InventoryItem(const BlockHeader& blk):
       InventoryItem(kBlock, blk.GetHash()){}
-    InventoryItem(const InventoryItem &item):
+    InventoryItem(const InventoryItem& item):
       type_(item.type_),
       hash_(item.hash_){}
-    InventoryItem(const BufferPtr &buff):
+    InventoryItem(const BufferPtr& buff):
       type_(static_cast<Type>(buff->GetShort())),
       hash_(buff->GetHash()){}
     ~InventoryItem(){}
@@ -578,27 +578,27 @@ namespace Token{
       return type_ == kTransaction;
     }
 
-    bool Encode(const BufferPtr &buff) const{
+    bool Encode(const BufferPtr& buff) const{
       buff->PutShort(static_cast<int16_t>(GetType()));
       buff->PutHash(GetHash());
       return true;
     }
 
-    void operator=(const InventoryItem &other){
+    void operator=(const InventoryItem& other){
       type_ = other.type_;
       hash_ = other.hash_;
     }
 
-    friend bool operator==(const InventoryItem &a, const InventoryItem &b){
+    friend bool operator==(const InventoryItem& a, const InventoryItem& b){
       return a.type_ == b.type_ &&
-        a.hash_ == b.hash_;
+             a.hash_ == b.hash_;
     }
 
-    friend bool operator!=(const InventoryItem &a, const InventoryItem &b){
+    friend bool operator!=(const InventoryItem& a, const InventoryItem& b){
       return !operator==(a, b);
     }
 
-    friend std::ostream &operator<<(std::ostream &stream, const InventoryItem &item){
+    friend std::ostream& operator<<(std::ostream& stream, const InventoryItem& item){
       if(item.IsBlock()){
         stream << "Block(" << item.GetHash() << ")";
       } else if(item.IsTransaction()){
@@ -626,13 +626,13 @@ namespace Token{
    protected:
     std::vector<InventoryItem> items_;
    public:
-    InventoryMessage(const std::vector<InventoryItem> &items):
+    InventoryMessage(const std::vector<InventoryItem>& items):
       Message(),
       items_(items){
       if(items_.empty())
         LOG(WARNING) << "inventory created w/ zero size";
     }
-    InventoryMessage(const BufferPtr &buff):
+    InventoryMessage(const BufferPtr& buff):
       Message(),
       items_(){
       int64_t num_items = buff->GetLong();
@@ -645,26 +645,26 @@ namespace Token{
       return items_.size();
     }
 
-    bool GetItems(std::vector<InventoryItem> &items){
+    bool GetItems(std::vector<InventoryItem>& items){
       std::copy(items_.begin(), items_.end(), std::back_inserter(items));
       return items.size() == items_.size();
     }
 
     DECLARE_MESSAGE(Inventory);
 
-    static MessagePtr NewInstance(const BufferPtr &buff);
-    static MessagePtr NewInstance(std::vector<InventoryItem> &items){
+    static MessagePtr NewInstance(const BufferPtr& buff);
+    static MessagePtr NewInstance(std::vector<InventoryItem>& items){
       return std::make_shared<InventoryMessage>(items);
     }
 
-    static MessagePtr NewInstance(const Transaction &tx){
+    static MessagePtr NewInstance(const Transaction& tx){
       std::vector<InventoryItem> items = {
         InventoryItem(tx)
       };
       return NewInstance(items);
     }
 
-    static MessagePtr NewInstance(const BlockPtr &blk){
+    static MessagePtr NewInstance(const BlockPtr& blk){
       std::vector<InventoryItem> items = {
         InventoryItem(blk)
       };
@@ -678,7 +678,7 @@ namespace Token{
    protected:
     std::vector<InventoryItem> items_;
    public:
-    GetDataMessage(const std::vector<InventoryItem> &items):
+    GetDataMessage(const std::vector<InventoryItem>& items):
       Message(),
       items_(items){
       if(items_.empty())
@@ -690,26 +690,26 @@ namespace Token{
       return items_.size();
     }
 
-    bool GetItems(std::vector<InventoryItem> &items){
+    bool GetItems(std::vector<InventoryItem>& items){
       std::copy(items_.begin(), items_.end(), std::back_inserter(items));
       return items.size() == items_.size();
     }
 
     DECLARE_MESSAGE(GetData);
 
-    static MessagePtr NewInstance(const BufferPtr &buff);
-    static MessagePtr NewInstance(std::vector<InventoryItem> &items){
+    static MessagePtr NewInstance(const BufferPtr& buff);
+    static MessagePtr NewInstance(std::vector<InventoryItem>& items){
       return std::make_shared<GetDataMessage>(items);
     }
 
-    static MessagePtr NewInstance(const Transaction &tx){
+    static MessagePtr NewInstance(const Transaction& tx){
       std::vector<InventoryItem> items = {
         InventoryItem(tx)
       };
       return NewInstance(items);
     }
 
-    static MessagePtr NewInstance(const BlockPtr &blk){
+    static MessagePtr NewInstance(const BlockPtr& blk){
       std::vector<InventoryItem> items = {
         InventoryItem(blk)
       };
@@ -724,7 +724,7 @@ namespace Token{
     Hash start_;
     Hash stop_;
    public:
-    GetBlocksMessage(const Hash &start_hash, const Hash &stop_hash):
+    GetBlocksMessage(const Hash& start_hash, const Hash& stop_hash):
       Message(),
       start_(start_hash),
       stop_(stop_hash){}
@@ -740,9 +740,9 @@ namespace Token{
 
     DECLARE_MESSAGE(GetBlocks);
 
-    static MessagePtr NewInstance(const BufferPtr &buff);
-    static MessagePtr NewInstance(const Hash &start_hash = BlockChain::GetHead()->GetHash(),
-                                  const Hash &stop_hash = Hash()){
+    static MessagePtr NewInstance(const BufferPtr& buff);
+    static MessagePtr NewInstance(const Hash& start_hash = BlockChain::GetHead()->GetHash(),
+                                  const Hash& stop_hash = Hash()){
       return std::make_shared<GetBlocksMessage>(start_hash, stop_hash);
     }
   };
@@ -752,7 +752,7 @@ namespace Token{
     InventoryItem item_;
     std::string message_;
    public:
-    NotFoundMessage(const std::string &message):
+    NotFoundMessage(const std::string& message):
       Message(),
       message_(message){}
     ~NotFoundMessage() = default;
@@ -763,8 +763,8 @@ namespace Token{
 
     DECLARE_MESSAGE(NotFound);
 
-    static MessagePtr NewInstance(const BufferPtr &buff);
-    static MessagePtr NewInstance(const std::string &message = "Not Found"){
+    static MessagePtr NewInstance(const BufferPtr& buff);
+    static MessagePtr NewInstance(const std::string& message = "Not Found"){
       return std::make_shared<NotFoundMessage>(message);
     }
   };
@@ -772,13 +772,13 @@ namespace Token{
   class GetPeersMessage : public Message{
    public:
     GetPeersMessage() = default;
-    GetPeersMessage(const BufferPtr &buff):
+    GetPeersMessage(const BufferPtr& buff):
       Message(){}
     ~GetPeersMessage() = default;
 
     DECLARE_MESSAGE(GetPeers);
 
-    static MessagePtr NewInstance(const BufferPtr &buff){
+    static MessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<GetPeersMessage>(buff);
     }
 
@@ -793,7 +793,7 @@ namespace Token{
    private:
     PeerList peers_;
    public:
-    PeerListMessage(const PeerList &peers):
+    PeerListMessage(const PeerList& peers):
       Message(),
       peers_(peers){
       if(peers_.empty())
@@ -823,8 +823,8 @@ namespace Token{
 
     DECLARE_MESSAGE(PeerList);
 
-    static MessagePtr NewInstance(const BufferPtr &buff);
-    static MessagePtr NewInstance(const PeerList &peers){
+    static MessagePtr NewInstance(const BufferPtr& buff);
+    static MessagePtr NewInstance(const PeerList& peers){
       return std::make_shared<PeerListMessage>(peers);
     }
   };

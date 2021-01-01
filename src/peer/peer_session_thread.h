@@ -30,7 +30,7 @@ namespace Token{
 #undef DEFINE_STATE
     };
 
-    friend std::ostream &operator<<(std::ostream &stream, const State &state){
+    friend std::ostream& operator<<(std::ostream& stream, const State& state){
       switch(state){
 #define DEFINE_TOSTRING(Name) \
                 case State::k##Name: \
@@ -49,7 +49,7 @@ namespace Token{
 #undef DEFINE_STATUS
     };
 
-    friend std::ostream &operator<<(std::ostream &stream, const Status &status){
+    friend std::ostream& operator<<(std::ostream& stream, const Status& status){
       switch(status){
 #define DEFINE_TOSTRING(Name) \
                 case Status::k##Name: \
@@ -70,23 +70,23 @@ namespace Token{
     std::condition_variable cond_;
     State state_;
     Status status_;
-    uv_loop_t *loop_;
+    uv_loop_t* loop_;
     std::shared_ptr<PeerSession> session_;
 
-    std::shared_ptr<PeerSession> CreateNewSession(const NodeAddress &address){
+    std::shared_ptr<PeerSession> CreateNewSession(const NodeAddress& address){
       std::unique_lock<std::mutex> guard(mutex_);
       session_ = std::make_shared<PeerSession>(GetLoop(), address);
       return session_;
     }
 
-    static void HandleDisconnect(uv_async_t *handle){
-      PeerSessionThread *thread = (PeerSessionThread *) handle->data;
+    static void HandleDisconnect(uv_async_t* handle){
+      PeerSessionThread* thread = (PeerSessionThread*) handle->data;
       thread->GetCurrentSession()->Disconnect();
     }
 
-    static void *HandleThread(void *data);
+    static void* HandleThread(void* data);
    public:
-    PeerSessionThread(int32_t worker, uv_loop_t *loop = uv_loop_new()):
+    PeerSessionThread(int32_t worker, uv_loop_t* loop = uv_loop_new()):
       worker_(worker),
       thread_(),
       mutex_(),
@@ -103,7 +103,7 @@ namespace Token{
       return worker_;
     }
 
-    uv_loop_t *GetLoop() const{
+    uv_loop_t* GetLoop() const{
       return loop_;
     }
 
@@ -112,7 +112,7 @@ namespace Token{
       return state_;
     }
 
-    void SetState(const State &state){
+    void SetState(const State& state){
       std::lock_guard<std::mutex> guard(mutex_);
       state_ = state;
     }
@@ -122,7 +122,7 @@ namespace Token{
       return status_;
     }
 
-    void SetStatus(const Status &status){
+    void SetStatus(const Status& status){
       std::lock_guard<std::mutex> guard(mutex_);
       status_ = status;
     }

@@ -1,8 +1,8 @@
 #include "snapshot_reader.h"
 
 namespace Token{
-  Snapshot *SnapshotReader::ReadSnapshot(){
-    Snapshot *snapshot = new Snapshot(GetFilename());
+  Snapshot* SnapshotReader::ReadSnapshot(){
+    Snapshot* snapshot = new Snapshot(GetFilename());
     do{
       SnapshotSectionHeader header = ReadSectionHeader();
       switch(GetSnapshotSection(header)){

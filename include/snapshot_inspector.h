@@ -14,7 +14,7 @@ namespace Token{
 
   class SnapshotInspectorCommand : public Command{
    public:
-    SnapshotInspectorCommand(std::deque<std::string> &args):
+    SnapshotInspectorCommand(std::deque<std::string>& args):
       Command(args){}
     ~SnapshotInspectorCommand() = default;
 
@@ -26,11 +26,11 @@ namespace Token{
 
   class SnapshotInspector : public Inspector<Snapshot, SnapshotInspectorCommand>{
    private:
-    void PrintSnapshot(Snapshot *snapshot);
+    void PrintSnapshot(Snapshot* snapshot);
 
-    inline Snapshot *
+    inline Snapshot*
     GetSnapshot() const{
-      return (Snapshot *) data_;
+      return (Snapshot*) data_;
     }
 
     inline bool
@@ -43,7 +43,7 @@ namespace Token{
     FOR_EACH_INSPECTOR_COMMAND(DECLARE_HANDLER);
 #undef DECLARE_HANDLER
 
-    void OnCommand(SnapshotInspectorCommand *cmd){
+    void OnCommand(SnapshotInspectorCommand* cmd){
 #define DECLARE_CHECK(Name, Text, ArgumentCount) \
             if(cmd->Is##Name##Command()){ \
                 Handle##Name##Command(cmd); \

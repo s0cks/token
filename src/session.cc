@@ -24,7 +24,7 @@ namespace Token{
 #define SESSION_ERROR(Message) \
     SESSION_ERROR_STATUS(Session::kError, (Message))
 
-  Session::Session(uv_loop_t *loop):
+  Session::Session(uv_loop_t* loop):
     Object(),
     mutex_(),
     cond_(),
@@ -46,9 +46,9 @@ namespace Token{
     }
   }
 
-  void Session::AllocBuffer(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buff){
-    Session *session = (Session *) handle->data;
-    BufferPtr &rbuff = session->GetReadBuffer();
+  void Session::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
+    Session* session = (Session*) handle->data;
+    BufferPtr& rbuff = session->GetReadBuffer();
     buff->len = suggested_size;
     buff->base = rbuff->data();
   }
@@ -85,7 +85,7 @@ namespace Token{
     return status_;
   }
 
-  void Session::Send(const MessagePtr &msg){
+  void Session::Send(const MessagePtr& msg){
     // TODO: convert to message header struct
     int32_t type = msg->GetMessageType();
     int64_t size = msg->GetMessageSize();
@@ -94,7 +94,7 @@ namespace Token{
     LOG(INFO) << "sending " << msg->ToString() << " (" << total_size << " bytes)";
 #endif//TOKEN_DEBUG
 
-    BufferPtr &wbuff = GetWriteBuffer();
+    BufferPtr& wbuff = GetWriteBuffer();
     wbuff->PutInt(type);
     wbuff->PutLong(size);
     if(!msg->Write(wbuff)){
@@ -108,19 +108,19 @@ namespace Token{
     buff.len = total_size;
     buff.base = wbuff->data();
 
-    uv_write_t *req = (uv_write_t *) malloc(sizeof(uv_write_t));
+    uv_write_t* req = (uv_write_t*) malloc(sizeof(uv_write_t));
     req->data = this;
     uv_write(req, GetStream(), &buff, 1, &OnMessageSent);
   }
 
-  void Session::Send(std::vector<MessagePtr> &messages){
+  void Session::Send(std::vector<MessagePtr>& messages){
     size_t total_messages = messages.size();
     if(total_messages <= 0){
       LOG(WARNING) << "not sending any messages!";
       return;
     }
 
-    BufferPtr &wbuff = GetWriteBuffer();
+    BufferPtr& wbuff = GetWriteBuffer();
     int64_t offset = 0;
     uv_buf_t buffers[total_messages];
     for(size_t idx = 0; idx < total_messages; idx++){
@@ -140,13 +140,13 @@ namespace Token{
     }
     messages.clear();
 
-    uv_write_t *req = (uv_write_t *) malloc(sizeof(uv_write_t));
+    uv_write_t* req = (uv_write_t*) malloc(sizeof(uv_write_t));
     req->data = this;
     uv_write(req, GetStream(), buffers, total_messages, &OnMessageSent);
   }
 
-  void Session::OnMessageSent(uv_write_t *req, int status){
-    Session *session = (Session *) req->data;
+  void Session::OnMessageSent(uv_write_t* req, int status){
+    Session* session = (Session*) req->data;
     session->GetWriteBuffer()->Reset();
     if(status != 0)
       LOG(ERROR) << "failed to send message: " << uv_strerror(status);

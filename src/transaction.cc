@@ -16,15 +16,15 @@ namespace Token{
   const int64_t Transaction::kMaxNumberOfInputs = 40000;
   const int64_t Transaction::kMaxNumberOfOutputs = 40000;
 
-  bool Transaction::VisitInputs(TransactionInputVisitor *vis) const{
-    for(auto &it : inputs_)
+  bool Transaction::VisitInputs(TransactionInputVisitor* vis) const{
+    for(auto& it : inputs_)
       if(!vis->Visit(it))
         return false;
     return true;
   }
 
-  bool Transaction::VisitOutputs(TransactionOutputVisitor *vis) const{
-    for(auto &it : outputs_)
+  bool Transaction::VisitOutputs(TransactionOutputVisitor* vis) const{
+    for(auto& it : outputs_)
       if(!vis->Visit(it))
         return false;
     return true;
@@ -60,7 +60,7 @@ namespace Token{
       LOG(INFO) << "signature: " << signature;
       signature_ = signature;
       return true;
-    } catch(CryptoPP::Exception &ex){
+    } catch(CryptoPP::Exception& ex){
       LOG(ERROR) << "error occurred signing transaction: " << ex.GetWhat();
       return false;
     }

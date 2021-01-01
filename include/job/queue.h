@@ -4,7 +4,7 @@
 namespace Token{
   class JobQueue{
    private:
-    std::vector<Job *> jobs_;
+    std::vector<Job*> jobs_;
     std::atomic<size_t> top_;
     std::atomic<size_t> bottom_;
    public:
@@ -22,7 +22,7 @@ namespace Token{
       return GetSize() == 0;
     }
 
-    bool Push(Job *job){
+    bool Push(Job* job){
       size_t bottom = bottom_.load(std::memory_order_acquire);
       if(bottom < jobs_.size()){
         jobs_[bottom % jobs_.size()] = job;
@@ -33,12 +33,12 @@ namespace Token{
       return false;
     }
 
-    Job *Steal(){
+    Job* Steal(){
       size_t top = top_.load(std::memory_order_acquire);
       std::atomic_thread_fence(std::memory_order_acquire);
       size_t bottom = bottom_.load(std::memory_order_acquire);
       if(top < bottom){
-        Job *job = jobs_[top % jobs_.size()];
+        Job* job = jobs_[top % jobs_.size()];
         size_t expected_top = top + 1;
         size_t desired_top = expected_top;
         if(!top_.compare_exchange_weak(top, desired_top, std::memory_order_acq_rel))
@@ -48,7 +48,7 @@ namespace Token{
       return nullptr;
     }
 
-    Job *Pop(){
+    Job* Pop(){
       size_t bottom = bottom_.load(std::memory_order_acquire);
       if(bottom > 0){
         bottom = bottom - 1;
@@ -58,7 +58,7 @@ namespace Token{
       std::atomic_thread_fence(std::memory_order_release);
       size_t top = top_.load(std::memory_order_acquire);
       if(top <= bottom){
-        Job *job = jobs_[bottom % jobs_.size()];
+        Job* job = jobs_[bottom % jobs_.size()];
         if(top == bottom){
           size_t expected = top;
           size_t next = top + 1;

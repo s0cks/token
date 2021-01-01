@@ -27,7 +27,7 @@ namespace Token{
    public:
     virtual ~ObjectPoolBlockVisitor() = default;
 
-    virtual bool Visit(const BlockPtr &blk) const = 0;
+    virtual bool Visit(const BlockPtr& blk) const = 0;
   };
 
   class ObjectPoolTransactionVisitor : ObjectPoolVisitor{
@@ -37,7 +37,7 @@ namespace Token{
    public:
     virtual ~ObjectPoolTransactionVisitor() = default;
 
-    virtual bool Visit(const TransactionPtr &tx) const = 0;
+    virtual bool Visit(const TransactionPtr& tx) const = 0;
   };
 
   class ObjectPoolUnclaimedTransactionVisitor : ObjectPoolVisitor{
@@ -47,7 +47,7 @@ namespace Token{
    public:
     virtual ~ObjectPoolUnclaimedTransactionVisitor() = default;
 
-    virtual bool Visit(const UnclaimedTransactionPtr &utxo) const = 0;
+    virtual bool Visit(const UnclaimedTransactionPtr& utxo) const = 0;
   };
 
 #define FOR_EACH_POOL_STATE(V) \
@@ -63,7 +63,7 @@ namespace Token{
   class ObjectPoolKey{
    public:
     static const int64_t kSize = sizeof(int32_t)
-      + Hash::kSize;
+                                 + Hash::kSize;
    private:
     ObjectTag tag_;
     Hash hash_;
@@ -72,19 +72,19 @@ namespace Token{
       tag_(),
       hash_(){}
 
-    ObjectPoolKey(const ObjectTag &tag, const Hash &hash):
+    ObjectPoolKey(const ObjectTag& tag, const Hash& hash):
       tag_(tag),
       hash_(hash){}
 
-    ObjectPoolKey(const ObjectTag::Type &tag, const Hash &hash):
+    ObjectPoolKey(const ObjectTag::Type& tag, const Hash& hash):
       tag_(tag),
       hash_(hash){}
 
-    ObjectPoolKey(const BufferPtr &buff):
+    ObjectPoolKey(const BufferPtr& buff):
       tag_(static_cast<ObjectTag>(buff->GetInt())),
       hash_(buff->GetHash()){}
 
-    ObjectPoolKey(const leveldb::Slice &slice):
+    ObjectPoolKey(const leveldb::Slice& slice):
       tag_(),
       hash_(){
       BufferPtr buff = Buffer::From(slice.data(), slice.size());
@@ -94,7 +94,7 @@ namespace Token{
 
     ~ObjectPoolKey() = default;
 
-    ObjectTag &GetTag(){
+    ObjectTag& GetTag(){
       return tag_;
     }
 
@@ -102,7 +102,7 @@ namespace Token{
       return tag_;
     }
 
-    Hash &GetHash(){
+    Hash& GetHash(){
       return hash_;
     }
 
@@ -122,27 +122,27 @@ namespace Token{
       return tag_.IsBlock();
     }
 
-    bool Write(const BufferPtr &buff) const{
+    bool Write(const BufferPtr& buff) const{
       buff->PutObjectTag(tag_);
       buff->PutHash(hash_);
       return true;
     }
 
-    void operator=(const ObjectPoolKey &key){
+    void operator=(const ObjectPoolKey& key){
       tag_ = key.tag_;
       hash_ = key.hash_;
     }
 
-    friend bool operator==(const ObjectPoolKey &a, const ObjectPoolKey &b){
+    friend bool operator==(const ObjectPoolKey& a, const ObjectPoolKey& b){
       return a.tag_ == b.tag_
-        && a.hash_ == b.hash_;
+             && a.hash_ == b.hash_;
     }
 
-    friend bool operator!=(const ObjectPoolKey &a, const ObjectPoolKey &b){
+    friend bool operator!=(const ObjectPoolKey& a, const ObjectPoolKey& b){
       return !operator==(a, b);
     }
 
-    friend std::ostream &operator<<(std::ostream &stream, const ObjectPoolKey &key){
+    friend std::ostream& operator<<(std::ostream& stream, const ObjectPoolKey& key){
       stream << "ObjectPoolKey(" << key.GetTag() << ", " << key.GetHash() << ")";
       return stream;
     }
@@ -150,7 +150,7 @@ namespace Token{
     static inline int64_t
     GetSize(){
       return ObjectTag::GetSize()
-        + Hash::GetSize();
+             + Hash::GetSize();
     }
   };
 
@@ -162,7 +162,7 @@ namespace Token{
 #undef DEFINE_STATE
     };
 
-    friend std::ostream &operator<<(std::ostream &stream, const State &state){
+    friend std::ostream& operator<<(std::ostream& stream, const State& state){
       switch(state){
 #define DEFINE_TOSTRING(Name) \
                 case State::k##Name: \
@@ -181,7 +181,7 @@ namespace Token{
 #undef DEFINE_STATUS
     };
 
-    friend std::ostream &operator<<(std::ostream &stream, const Status &status){
+    friend std::ostream& operator<<(std::ostream& stream, const Status& status){
       switch(status){
 #define DEFINE_TOSTRING(Name) \
                 case Status::k##Name: \
@@ -197,15 +197,15 @@ namespace Token{
    private:
     ObjectPool() = delete;
 
-    static void SetState(const State &state);
+    static void SetState(const State& state);
 
-    static void SetStatus(const Status &status);
+    static void SetStatus(const Status& status);
 
-    static leveldb::Status IndexObject(const Hash &hash, const std::string &filename);
+    static leveldb::Status IndexObject(const Hash& hash, const std::string& filename);
 
-    static int64_t GetNumberOfObjectsByType(const ObjectTag::Type &type);
+    static int64_t GetNumberOfObjectsByType(const ObjectTag::Type& type);
 
-    static bool HasObjectByType(const Hash &hash, const ObjectTag::Type &type);
+    static bool HasObjectByType(const Hash& hash, const ObjectTag::Type& type);
 
    public:
     ~ObjectPool() = delete;
@@ -216,57 +216,57 @@ namespace Token{
 
     static bool Initialize();
 
-    static bool RemoveObject(const Hash &hash);
+    static bool RemoveObject(const Hash& hash);
 
-    static bool WaitForObject(const Hash &hash);
+    static bool WaitForObject(const Hash& hash);
 
-    static bool PutObject(const Hash &hash, const BlockPtr &val);
+    static bool PutObject(const Hash& hash, const BlockPtr& val);
 
-    static bool PutObject(const Hash &hash, const TransactionPtr &val);
+    static bool PutObject(const Hash& hash, const TransactionPtr& val);
 
-    static bool PutObject(const Hash &hash, const UnclaimedTransactionPtr &val);
+    static bool PutObject(const Hash& hash, const UnclaimedTransactionPtr& val);
 
-    static bool PutHashList(const User &user, const HashList &hashes);
+    static bool PutHashList(const User& user, const HashList& hashes);
 
-    static bool GetBlocks(HashList &hashes);
+    static bool GetBlocks(HashList& hashes);
 
-    static bool GetTransactions(HashList &hashes);
+    static bool GetTransactions(HashList& hashes);
 
-    static bool GetUnclaimedTransactions(HashList &hashes);
+    static bool GetUnclaimedTransactions(HashList& hashes);
 
-    static bool GetUnclaimedTransactionsFor(HashList &hashes, const User &user);
+    static bool GetUnclaimedTransactionsFor(HashList& hashes, const User& user);
 
-    static bool HasHashList(const User &user);
+    static bool HasHashList(const User& user);
 
-    static bool VisitBlocks(ObjectPoolBlockVisitor *vis);
+    static bool VisitBlocks(ObjectPoolBlockVisitor* vis);
 
-    static bool VisitTransactions(ObjectPoolTransactionVisitor *vis);
+    static bool VisitTransactions(ObjectPoolTransactionVisitor* vis);
 
-    static bool VisitUnclaimedTransactions(ObjectPoolUnclaimedTransactionVisitor *vis);
+    static bool VisitUnclaimedTransactions(ObjectPoolUnclaimedTransactionVisitor* vis);
 
-    static bool GetHashList(const User &user, HashList &hashes);
+    static bool GetHashList(const User& user, HashList& hashes);
 
-    static bool GetHashListAsJson(const User &user, JsonString &json);
+    static bool GetHashListAsJson(const User& user, JsonString& json);
 
-    static BlockPtr GetBlock(const Hash &hash);
+    static BlockPtr GetBlock(const Hash& hash);
 
-    static TransactionPtr GetTransaction(const Hash &hash);
+    static TransactionPtr GetTransaction(const Hash& hash);
 
-    static UnclaimedTransactionPtr GetUnclaimedTransaction(const Hash &hash);
+    static UnclaimedTransactionPtr GetUnclaimedTransaction(const Hash& hash);
 
-    static leveldb::Status Write(leveldb::WriteBatch *update);
+    static leveldb::Status Write(leveldb::WriteBatch* update);
 
-    static bool HasObject(const Hash &hash);
+    static bool HasObject(const Hash& hash);
 
-    static inline bool HasBlock(const Hash &hash){
+    static inline bool HasBlock(const Hash& hash){
       return HasObjectByType(hash, ObjectTag::kBlock);
     }
 
-    static inline bool HasTransaction(const Hash &hash){
+    static inline bool HasTransaction(const Hash& hash){
       return HasObjectByType(hash, ObjectTag::kTransaction);
     }
 
-    static inline bool HasUnclaimedTransaction(const Hash &hash){
+    static inline bool HasUnclaimedTransaction(const Hash& hash){
       return HasObjectByType(hash, ObjectTag::kUnclaimedTransaction);
     }
 
@@ -284,15 +284,15 @@ namespace Token{
       return GetNumberOfObjectsByType(ObjectTag::kUnclaimedTransaction);
     }
 
-    static inline bool GetUnclaimedTransactionsFor(HashList &hashes, const std::string &user){
+    static inline bool GetUnclaimedTransactionsFor(HashList& hashes, const std::string& user){
       return GetUnclaimedTransactionsFor(hashes, User(user));
     }
 
-    static inline bool GetHashListFor(const std::string &user, HashList &hashes){
+    static inline bool GetHashListFor(const std::string& user, HashList& hashes){
       return GetHashList(User(user), hashes);
     }
 
-    static inline bool PutHashList(const std::string &user, const HashList &hashes){
+    static inline bool PutHashList(const std::string& user, const HashList& hashes){
       return PutHashList(User(user), hashes);
     }
 

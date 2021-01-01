@@ -25,8 +25,8 @@ namespace Token{
     return ss.str();
   }
 
-  void *PeerSessionThread::HandleThread(void *data){
-    PeerSessionThread *thread = (PeerSessionThread *) data;
+  void* PeerSessionThread::HandleThread(void* data){
+    PeerSessionThread* thread = (PeerSessionThread*) data;
     thread->SetState(State::kStarting);
 
     char truncated_name[16];
@@ -95,7 +95,7 @@ namespace Token{
   bool PeerSessionThread::Stop(){
     SetState(PeerSessionThread::kStopping);
 
-    void **result = NULL;
+    void** result = NULL;
     int err;
     if((err = pthread_join(thread_, result)) != 0){
       LOG(WARNING) << "couldn't join thread: " << strerror(err);

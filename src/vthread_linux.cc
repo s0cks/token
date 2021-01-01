@@ -4,20 +4,20 @@
 namespace Token{
   class ThreadStartData{
    private:
-    const char *name_;
+    const char* name_;
     ThreadHandlerFunction function_;
     uword parameter_;
    public:
-    ThreadStartData(const char *name, ThreadHandlerFunction function, uword parameter):
+    ThreadStartData(const char* name, ThreadHandlerFunction function, uword parameter):
       name_(strdup(name)),
       function_(function),
       parameter_(parameter){}
     ~ThreadStartData(){
       if(name_)
-        free((void *) name_);
+        free((void*) name_);
     }
 
-    const char *GetName() const{
+    const char* GetName() const{
       return name_;
     }
 
@@ -30,9 +30,9 @@ namespace Token{
     }
   };
 
-  static void *
-  HandleThread(void *pdata){
-    ThreadStartData *data = (ThreadStartData *) pdata;
+  static void*
+  HandleThread(void* pdata){
+    ThreadStartData* data = (ThreadStartData*) pdata;
     ThreadHandlerFunction func = data->GetFunction();
     uword parameter = data->GetParameter();
 
@@ -51,7 +51,7 @@ namespace Token{
     pthread_exit(NULL);
   }
 
-  bool Thread::Start(ThreadId *thread, const char *name, ThreadHandlerFunction function, uword parameter){
+  bool Thread::Start(ThreadId* thread, const char* name, ThreadHandlerFunction function, uword parameter){
     int result;
     pthread_attr_t attrs;
     if((result = pthread_attr_init(&attrs)) != 0){
@@ -59,7 +59,7 @@ namespace Token{
       return false;
     }
 
-    ThreadStartData *data = new ThreadStartData(name, function, parameter);
+    ThreadStartData* data = new ThreadStartData(name, function, parameter);
     if((result = pthread_create(thread, &attrs, &HandleThread, data)) != 0){
       LOG(WARNING) << "couldn't start the thread: " << strerror(result);
       return false;

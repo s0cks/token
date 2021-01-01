@@ -2,18 +2,18 @@
 #include "http/session.h"
 
 namespace Token{
-  void HttpService::AllocBuffer(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buff){
-    HttpSession *session = (HttpSession *) handle->data;
+  void HttpService::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
+    HttpSession* session = (HttpSession*) handle->data;
     session->InitReadBuffer(buff, 65536);
   }
 
-  void HttpService::OnClose(uv_handle_t *handle){}
+  void HttpService::OnClose(uv_handle_t* handle){}
 
-  void HttpService::OnWalk(uv_handle_t *handle, void *data){
+  void HttpService::OnWalk(uv_handle_t* handle, void* data){
     uv_close(handle, &OnClose);
   }
 
-  bool HttpService::ShutdownService(uv_loop_t *loop){
+  bool HttpService::ShutdownService(uv_loop_t* loop){
     uv_stop(loop);
 
     int result;
@@ -24,18 +24,18 @@ namespace Token{
     return (result = uv_loop_close(loop)) == 0;
   }
 
-  bool HttpService::Bind(uv_tcp_t *server, const int32_t &port){
+  bool HttpService::Bind(uv_tcp_t* server, const int32_t& port){
     sockaddr_in bind_address;
     uv_ip4_addr("0.0.0.0", port, &bind_address);
     int err;
-    if((err = uv_tcp_bind(server, (struct sockaddr *) &bind_address, 0)) != 0){
+    if((err = uv_tcp_bind(server, (struct sockaddr*) &bind_address, 0)) != 0){
       LOG(WARNING) << "couldn't bind the health check service on port " << port << ": " << uv_strerror(err);
       return false;
     }
     return true;
   }
 
-  bool HttpService::Accept(uv_stream_t *stream, HttpSession *session){
+  bool HttpService::Accept(uv_stream_t* stream, HttpSession* session){
     int result;
     if((result = uv_accept(stream, session->GetStream())) != 0){
       LOG(WARNING) << "server accept failure: " << uv_strerror(result);
@@ -44,7 +44,7 @@ namespace Token{
     return true;
   }
 
-  void HttpService::SendNotSupported(HttpSession *session, HttpRequest *request){
+  void HttpService::SendNotSupported(HttpSession* session, HttpRequest* request){
     std::stringstream ss;
     ss << "Not Supported.";
     std::string body = ss.str();
@@ -54,7 +54,7 @@ namespace Token{
     session->Send(&response);
   }
 
-  void HttpService::SendNotFound(HttpSession *session, HttpRequest *request){
+  void HttpService::SendNotFound(HttpSession* session, HttpRequest* request){
     std::stringstream ss;
     ss << "Not Found: " << request->GetPath();
     std::string body = ss.str();

@@ -8,7 +8,7 @@ namespace Token{
    private:
     MessagePtr message_;
 
-    HandleMessageTask(Session *session, const MessagePtr &msg):
+    HandleMessageTask(Session* session, const MessagePtr& msg):
       SessionTask(session),
       message_(msg){}
    public:
@@ -30,7 +30,7 @@ namespace Token{
       return ss.str();
     }
 
-    static HandleMessageTask *NewInstance(Session *session, const MessagePtr &msg){
+    static HandleMessageTask* NewInstance(Session* session, const MessagePtr& msg){
       return new HandleMessageTask(session, msg);
     }
   };

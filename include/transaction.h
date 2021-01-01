@@ -19,14 +19,14 @@ namespace Token{
     int64_t index_;
     User user_;//TODO: remove field
    public:
-    Input(const Hash &tx_hash, int64_t index, const User &user):
+    Input(const Hash& tx_hash, int64_t index, const User& user):
       BinaryObject(),
       hash_(tx_hash),
       index_(index),
       user_(user){}
-    Input(const Hash &tx_hash, int64_t index, const std::string &user):
+    Input(const Hash& tx_hash, int64_t index, const std::string& user):
       Input(tx_hash, index, User(user)){}
-    Input(const BufferPtr &buff):
+    Input(const BufferPtr& buff):
       Input(buff->GetHash(), buff->GetInt(), buff->GetUser()){}
     ~Input(){}
 
@@ -48,7 +48,7 @@ namespace Token{
       return Input::kSize;
     }
 
-    bool Write(const BufferPtr &buffer) const{
+    bool Write(const BufferPtr& buffer) const{
       buffer->PutHash(hash_);
       buffer->PutLong(index_);
       buffer->PutUser(user_);
@@ -61,25 +61,25 @@ namespace Token{
       return stream.str();
     }
 
-    void operator=(const Input &other){
+    void operator=(const Input& other){
       hash_ = other.hash_;
       user_ = other.user_;
       index_ = other.index_;
     }
 
-    friend bool operator==(const Input &a, const Input &b){
+    friend bool operator==(const Input& a, const Input& b){
       return a.hash_ == b.hash_
-        && a.index_ == b.index_
-        && a.user_ == b.user_;
+             && a.index_ == b.index_
+             && a.user_ == b.user_;
     }
 
-    friend bool operator!=(const Input &a, const Input &b){
+    friend bool operator!=(const Input& a, const Input& b){
       return a.hash_ != b.hash_
-        && a.index_ != b.index_
-        && a.user_ != b.user_;
+             && a.index_ != b.index_
+             && a.user_ != b.user_;
     }
 
-    friend bool operator<(const Input &a, const Input &b){
+    friend bool operator<(const Input& a, const Input& b){
       if(a.hash_ == b.hash_)
         return a.index_ < b.index_;
       return a.hash_ < b.hash_;
@@ -94,13 +94,13 @@ namespace Token{
     User user_;
     Product product_;
    public:
-    Output(const User &user, const Product &product):
+    Output(const User& user, const Product& product):
       BinaryObject(),
       user_(user),
       product_(product){}
-    Output(const std::string &user, const std::string &product):
+    Output(const std::string& user, const std::string& product):
       Output(User(user), Product(product)){}
-    Output(const BufferPtr &buff):
+    Output(const BufferPtr& buff):
       Output(buff->GetUser(), buff->GetProduct()){}
     ~Output(){}
 
@@ -116,7 +116,7 @@ namespace Token{
       return Output::kSize;
     }
 
-    bool Write(const BufferPtr &buff) const{
+    bool Write(const BufferPtr& buff) const{
       buff->PutUser(user_);
       buff->PutProduct(product_);
       return true;
@@ -128,22 +128,22 @@ namespace Token{
       return stream.str();
     }
 
-    void operator=(const Output &other){
+    void operator=(const Output& other){
       user_ = other.user_;
       product_ = other.product_;
     }
 
-    friend bool operator==(const Output &a, const Output &b){
+    friend bool operator==(const Output& a, const Output& b){
       return a.user_ == b.user_
-        && a.product_ == b.product_;
+             && a.product_ == b.product_;
     }
 
-    friend bool operator!=(const Output &a, const Output &b){
+    friend bool operator!=(const Output& a, const Output& b){
       return a.user_ != b.user_
-        && a.product_ != b.product_;
+             && a.product_ != b.product_;
     }
 
-    friend bool operator<(const Output &a, const Output &b){
+    friend bool operator<(const Output& a, const Output& b){
       if(a.user_ == b.user_)
         return a.product_ < b.product_;
       return a.user_ < b.user_;
@@ -160,13 +160,13 @@ namespace Token{
     friend class TransactionMessage;
    public:
     struct TimestampComparator{
-      bool operator()(const TransactionPtr &a, const TransactionPtr &b){
+      bool operator()(const TransactionPtr& a, const TransactionPtr& b){
         return a->timestamp_ < b->timestamp_;
       }
     };
 
     struct IndexComparator{
-      bool operator()(const TransactionPtr &a, const TransactionPtr &b){
+      bool operator()(const TransactionPtr& a, const TransactionPtr& b){
         return a->index_ < b->index_;
       }
     };
@@ -181,8 +181,8 @@ namespace Token{
     std::string signature_;
    public:
     Transaction(int64_t index,
-                const InputList &inputs,
-                const OutputList &outputs,
+                const InputList& inputs,
+                const OutputList& outputs,
                 Timestamp timestamp = GetCurrentTimestamp()):
       BinaryObject(),
       timestamp_(timestamp),
@@ -204,7 +204,7 @@ namespace Token{
       return inputs_.size();
     }
 
-    InputList &inputs(){
+    InputList& inputs(){
       return inputs_;
     }
 
@@ -212,7 +212,7 @@ namespace Token{
       return inputs_;
     }
 
-    OutputList &outputs(){
+    OutputList& outputs(){
       return outputs_;
     }
 
@@ -279,7 +279,7 @@ namespace Token{
       return size;
     }
 
-    bool Write(const BufferPtr &buff) const{
+    bool Write(const BufferPtr& buff) const{
       buff->PutLong(timestamp_);
       buff->PutLong(index_);
       buff->PutList(inputs_);
@@ -288,8 +288,8 @@ namespace Token{
     }
 
     bool Sign();
-    bool VisitInputs(TransactionInputVisitor *vis) const;
-    bool VisitOutputs(TransactionOutputVisitor *vis) const;
+    bool VisitInputs(TransactionInputVisitor* vis) const;
+    bool VisitOutputs(TransactionOutputVisitor* vis) const;
 
     std::string ToString() const{
       std::stringstream stream;
@@ -298,7 +298,7 @@ namespace Token{
       return stream.str();
     }
 
-    void operator=(const Transaction &other){
+    void operator=(const Transaction& other){
       timestamp_ = other.timestamp_;
       index_ = other.index_;
       inputs_ = other.inputs_;
@@ -306,23 +306,23 @@ namespace Token{
       //TODO: copy transaction signature
     }
 
-    bool operator==(const Transaction &other){
+    bool operator==(const Transaction& other){
       return timestamp_ == other.timestamp_
-        && index_ == other.index_
-        && inputs_ == other.inputs_
-        && outputs_ == other.outputs_;
+             && index_ == other.index_
+             && inputs_ == other.inputs_
+             && outputs_ == other.outputs_;
       //TODO: compare transaction signature
     }
 
-    bool operator!=(const Transaction &other){
+    bool operator!=(const Transaction& other){
       return timestamp_ != other.timestamp_
-        && index_ != other.index_
-        && inputs_ != other.inputs_
-        && outputs_ != other.outputs_;
+             && index_ != other.index_
+             && inputs_ != other.inputs_
+             && outputs_ != other.outputs_;
       //TODO: compare transaction signature
     }
 
-    static TransactionPtr NewInstance(const BufferPtr &buff){
+    static TransactionPtr NewInstance(const BufferPtr& buff){
       Timestamp timestamp = buff->GetLong();
       int64_t index = buff->GetLong();
 
@@ -348,7 +348,7 @@ namespace Token{
     TransactionInputVisitor() = default;
    public:
     virtual ~TransactionInputVisitor() = default;
-    virtual bool Visit(const Input &input) = 0;
+    virtual bool Visit(const Input& input) = 0;
   };
 
   class TransactionOutputVisitor{
@@ -356,7 +356,7 @@ namespace Token{
     TransactionOutputVisitor() = default;
    public:
     virtual ~TransactionOutputVisitor() = default;
-    virtual bool Visit(const Output &output) = 0;
+    virtual bool Visit(const Output& output) = 0;
   };
 }
 

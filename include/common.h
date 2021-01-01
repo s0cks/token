@@ -85,7 +85,7 @@ namespace Token{
   static inline std::string
   GetTimestampFormattedReadable(Timestamp timestamp = GetCurrentTimestamp()){
     //TODO: fix usage of gmtime
-    struct tm *timeinfo = gmtime((time_t *) &timestamp);
+    struct tm* timeinfo = gmtime((time_t*) &timestamp);
     char buff[256];
     strftime(buff, sizeof(buff), "%m/%d/%Y %H:%M:%S", timeinfo);
     return std::string(buff);
@@ -94,50 +94,50 @@ namespace Token{
   static inline std::string
   GetTimestampFormattedFileSafe(Timestamp timestamp = GetCurrentTimestamp()){
     //TODO: fix usage of gmtime
-    struct tm *timeinfo = gmtime((time_t *) &timestamp);
+    struct tm* timeinfo = gmtime((time_t*) &timestamp);
     char buff[256];
     strftime(buff, sizeof(buff), "%Y%m%d-%H%M%S", timeinfo);
     return std::string(buff);
   }
 
   static bool
-  EndsWith(const std::string &str, const std::string &suffix){
+  EndsWith(const std::string& str, const std::string& suffix){
     return str.size() >= suffix.size() &&
-      str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
+           str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
   }
 
   static bool
-  BeginsWith(const std::string &str, const std::string prefix){
+  BeginsWith(const std::string& str, const std::string prefix){
     return str.size() >= prefix.size() &&
-      str.compare(0, prefix.size(), prefix) == 0;
+           str.compare(0, prefix.size(), prefix) == 0;
   }
 
   static inline size_t
-  GetFilesize(const std::string &filename){
+  GetFilesize(const std::string& filename){
     //TODO: optimize function for std::fstream
     std::ifstream fd(filename, std::ios::binary | std::ios::ate);
     return fd.tellg();
   }
 
   static inline bool
-  FileExists(const std::string &name){
+  FileExists(const std::string& name){
     std::ifstream f(name.c_str());
     return f.good();
   }
 
   static inline bool
-  DeleteFile(const std::string &name){
+  DeleteFile(const std::string& name){
     return remove(name.c_str()) == 0;
   }
 
   static inline bool
-  CreateDirectory(const std::string &path){
+  CreateDirectory(const std::string& path){
     return (mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) != -1;
   }
 
   template<class container>
   static inline void
-  SplitString(const std::string &str, container &cont, char delimiter = ' '){
+  SplitString(const std::string& str, container& cont, char delimiter = ' '){
     if(str.find(delimiter) == std::string::npos){ // delimiter not found, return whole
       cont.push_back(str);
       return;
@@ -149,7 +149,7 @@ namespace Token{
 
   template<typename T>
   static inline std::vector<std::vector<T>>
-  Chunk(const std::vector<T> &source, int64_t size){
+  Chunk(const std::vector<T>& source, int64_t size){
     std::vector<std::vector<T>> result;
     result.reserve((source.size() + size - 1) / size);
 

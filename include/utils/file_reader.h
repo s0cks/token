@@ -17,15 +17,15 @@ namespace Token{
       return T(bytes, T::GetSize());
     }
    protected:
-    FileReader *parent_;
+    FileReader* parent_;
     std::string filename_;
-    FILE *file_;
+    FILE* file_;
 
-    FileReader(const std::string &filename):
+    FileReader(const std::string& filename):
       parent_(nullptr),
       filename_(filename),
       file_(nullptr){}
-    FileReader(FileReader *parent):
+    FileReader(FileReader* parent):
       parent_(parent),
       filename_(parent->filename_),
       file_(parent->file_){}
@@ -38,7 +38,7 @@ namespace Token{
       return file_ != nullptr;
     }
 
-    FILE *GetFilePointer() const{
+    FILE* GetFilePointer() const{
       return file_;
     }
 
@@ -66,7 +66,7 @@ namespace Token{
       return ReadRaw<Product>();
     }
 
-    bool ReadBytes(uint8_t *bytes, size_t size);
+    bool ReadBytes(uint8_t* bytes, size_t size);
     std::string ReadString();
     int32_t ReadInt();
     uint32_t ReadUnsignedInt();
@@ -77,12 +77,12 @@ namespace Token{
 
   class BinaryFileReader : public FileReader{
    protected:
-    BinaryFileReader(const std::string &filename):
+    BinaryFileReader(const std::string& filename):
       FileReader(filename){
       if((file_ = fopen(filename.c_str(), "rb")) == NULL)
         LOG(WARNING) << "couldn't open binary file " << filename << ": " << strerror(errno);
     }
-    BinaryFileReader(BinaryFileReader *parent):
+    BinaryFileReader(BinaryFileReader* parent):
       FileReader(parent){}
    public:
     virtual ~BinaryFileReader() = default;

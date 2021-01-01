@@ -72,7 +72,7 @@ namespace Token{
 
     bool IsLeaf() const{
       return lchild_ == nullptr
-        && rchild_ == nullptr;
+             && rchild_ == nullptr;
     }
 
     Hash GetHash() const{

@@ -13,13 +13,13 @@ namespace Token{
    protected:
     ProposalPtr proposal_;
 
-    ProposalHandler(const ProposalPtr &proposal):
+    ProposalHandler(const ProposalPtr& proposal):
       proposal_(proposal){}
 
     bool WasRejected() const;
     bool CommitProposal() const;
     bool CancelProposal() const;
-    bool TransitionToPhase(const Proposal::Phase &phase) const;
+    bool TransitionToPhase(const Proposal::Phase& phase) const;
 
     static inline int32_t
     GetRequiredNumberOfPeers(){
@@ -51,19 +51,19 @@ namespace Token{
       return proposal_->GetResult();
     }
 
-    virtual bool ProcessBlock(const BlockPtr &blk) const = 0;
+    virtual bool ProcessBlock(const BlockPtr& blk) const = 0;
     virtual bool ProcessProposal() const = 0;
   };
 
   class NewProposalHandler : public ProposalHandler{
    public:
-    NewProposalHandler(const ProposalPtr &proposal):
+    NewProposalHandler(const ProposalPtr& proposal):
       ProposalHandler(proposal){}
     ~NewProposalHandler() = default;
 
-    bool ProcessBlock(const BlockPtr &blk) const{
-      JobWorker *worker = JobScheduler::GetRandomWorker();
-      ProcessBlockJob *job = new ProcessBlockJob(blk, true);
+    bool ProcessBlock(const BlockPtr& blk) const{
+      JobWorker* worker = JobScheduler::GetRandomWorker();
+      ProcessBlockJob* job = new ProcessBlockJob(blk, true);
       worker->Submit(job);
       worker->Wait(job);
       return true;
@@ -95,13 +95,13 @@ namespace Token{
 
   class PeerProposalHandler : public ProposalHandler{
    public:
-    PeerProposalHandler(const ProposalPtr &proposal):
+    PeerProposalHandler(const ProposalPtr& proposal):
       ProposalHandler(proposal){}
     ~PeerProposalHandler() = default;
 
-    bool ProcessBlock(const BlockPtr &blk) const{
-      JobWorker *worker = JobScheduler::GetRandomWorker();
-      ProcessBlockJob *job = new ProcessBlockJob(blk);
+    bool ProcessBlock(const BlockPtr& blk) const{
+      JobWorker* worker = JobScheduler::GetRandomWorker();
+      ProcessBlockJob* job = new ProcessBlockJob(blk);
       worker->Submit(job);
       worker->Wait(job);
       return true;

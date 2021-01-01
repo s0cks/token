@@ -14,7 +14,7 @@ namespace Token{
       kUnclaimedTransaction,
     };
 
-    friend std::ostream &operator<<(std::ostream &stream, const Type &type){
+    friend std::ostream& operator<<(std::ostream& stream, const Type& type){
       switch(type){
         case Type::kBlock:return stream << "Block";
         case Type::kTransaction:return stream << "Transaction";
@@ -38,14 +38,14 @@ namespace Token{
 
     uint64_t value_;
 
-    ObjectTag(const int32_t &magic, const Type &type):
+    ObjectTag(const int32_t& magic, const Type& type):
       value_(MagicField::Encode(magic) | MagicField::Encode(type)){}
 
     int32_t GetMagicField() const{
       return MagicField::Decode(value_);
     }
 
-    void SetMagicField(const int32_t &magic){
+    void SetMagicField(const int32_t& magic){
       value_ = MagicField::Update(magic, value_);
     }
 
@@ -53,23 +53,23 @@ namespace Token{
       return TypeField::Decode(value_);
     }
 
-    void SetTypeField(const Type &type){
+    void SetTypeField(const Type& type){
       value_ = TypeField::Update(type, value_);
     }
    public:
-    ObjectTag(uint8_t *data):
-      value_(*(uint64_t *) data){}
+    ObjectTag(uint8_t* data):
+      value_(*(uint64_t*) data){}
     ObjectTag():
       value_(MagicField::Encode(kMagic) | TypeField::Encode(Type::kNone)){}
-    ObjectTag(const uint64_t &tag):
+    ObjectTag(const uint64_t& tag):
       value_(tag){}
-    ObjectTag(const Type &type):
+    ObjectTag(const Type& type):
       value_(MagicField::Encode(kMagic) | TypeField::Encode(type)){}
-    ObjectTag(const ObjectTag &tag):
+    ObjectTag(const ObjectTag& tag):
       value_(tag.value_){}
     ~ObjectTag() = default;
 
-    uint64_t &data(){
+    uint64_t& data(){
       return value_;
     }
 
@@ -97,19 +97,19 @@ namespace Token{
       return GetTypeField() == Type::kUnclaimedTransaction;
     }
 
-    void operator=(const ObjectTag &tag){
+    void operator=(const ObjectTag& tag){
       value_ = tag.value_;
     }
 
-    friend bool operator==(const ObjectTag &a, const ObjectTag &b){
+    friend bool operator==(const ObjectTag& a, const ObjectTag& b){
       return a.value_ == b.value_;
     }
 
-    friend bool operator!=(const ObjectTag &a, const ObjectTag &b){
+    friend bool operator!=(const ObjectTag& a, const ObjectTag& b){
       return a.value_ != b.value_;
     }
 
-    friend std::ostream &operator<<(std::ostream &stream, const ObjectTag &tag){
+    friend std::ostream& operator<<(std::ostream& stream, const ObjectTag& tag){
       return stream << tag.GetTypeField();
     }
 
@@ -121,9 +121,9 @@ namespace Token{
 
   class ObjectTagReader : protected BinaryFileReader{
    public:
-    ObjectTagReader(const std::string &filename):
+    ObjectTagReader(const std::string& filename):
       BinaryFileReader(filename){}
-    ObjectTagReader(BinaryFileReader *parent):
+    ObjectTagReader(BinaryFileReader* parent):
       BinaryFileReader(parent){}
     ~ObjectTagReader() = default;
 
@@ -136,15 +136,15 @@ namespace Token{
    private:
     ObjectTag expected_;
    public:
-    ObjectTagVerifier(const std::string &filename, const ObjectTag::Type &expected_type):
+    ObjectTagVerifier(const std::string& filename, const ObjectTag::Type& expected_type):
       ObjectTagReader(filename),
       expected_(expected_type){}
-    ObjectTagVerifier(BinaryFileReader *parent, const ObjectTag::Type &expected_type):
+    ObjectTagVerifier(BinaryFileReader* parent, const ObjectTag::Type& expected_type):
       ObjectTagReader(parent),
       expected_(expected_type){}
     ~ObjectTagVerifier() = default;
 
-    ObjectTag &GetExpectedTag(){
+    ObjectTag& GetExpectedTag(){
       return expected_;
     }
 

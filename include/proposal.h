@@ -12,13 +12,13 @@ namespace Token{
     // - Merge RawProposal w/ BlockHeader?
    public:
     struct TimestampComparator{
-      bool operator()(const RawProposal &a, const RawProposal &b){
+      bool operator()(const RawProposal& a, const RawProposal& b){
         return a.GetTimestamp() < b.GetTimestamp();
       }
     };
 
     struct HeightComparator{
-      bool operator()(const RawProposal &a, const RawProposal &b){
+      bool operator()(const RawProposal& a, const RawProposal& b){
         return a.GetHeight() < b.GetHeight();
       }
     };
@@ -28,19 +28,19 @@ namespace Token{
     Hash hash_;
     UUID proposer_;
    public:
-    RawProposal(const UUID &proposer, int64_t height, const Hash &hash, int64_t timestamp = GetCurrentTimestamp()):
+    RawProposal(const UUID& proposer, int64_t height, const Hash& hash, int64_t timestamp = GetCurrentTimestamp()):
       timestamp_(timestamp),
       height_(height),
       hash_(hash),
       proposer_(proposer){}
-    RawProposal(const UUID &proposer, const BlockHeader &blk, int64_t timestamp = GetCurrentTimestamp()):
+    RawProposal(const UUID& proposer, const BlockHeader& blk, int64_t timestamp = GetCurrentTimestamp()):
       RawProposal(proposer, blk.GetHeight(), blk.GetHash(), timestamp){}
-    RawProposal(const BufferPtr &buff):
+    RawProposal(const BufferPtr& buff):
       timestamp_(buff->GetLong()),
       height_(buff->GetLong()),
       hash_(buff->GetHash()),
       proposer_(buff){}
-    RawProposal(const RawProposal &proposal):
+    RawProposal(const RawProposal& proposal):
       timestamp_(proposal.GetTimestamp()),
       height_(proposal.GetHeight()),
       hash_(proposal.GetHash()),
@@ -63,7 +63,7 @@ namespace Token{
       return proposer_;
     }
 
-    bool Encode(const BufferPtr &buff) const{
+    bool Encode(const BufferPtr& buff) const{
       buff->PutLong(GetTimestamp());
       buff->PutLong(GetHeight());
       buff->PutHash(GetHash());
@@ -71,21 +71,21 @@ namespace Token{
       return true;
     }
 
-    void operator=(const RawProposal &proposal){
+    void operator=(const RawProposal& proposal){
       timestamp_ = proposal.GetTimestamp();
       height_ = proposal.GetHeight();
       hash_ = proposal.GetHash();
       proposer_ = proposal.GetProposer();
     }
 
-    friend bool operator==(const RawProposal &a, const RawProposal &b){
+    friend bool operator==(const RawProposal& a, const RawProposal& b){
       return a.timestamp_ == b.timestamp_
-        && a.height_ == b.height_
-        && a.hash_ == b.hash_
-        && a.proposer_ == b.proposer_;
+             && a.height_ == b.height_
+             && a.hash_ == b.hash_
+             && a.proposer_ == b.proposer_;
     }
 
-    friend bool operator!=(const RawProposal &a, const RawProposal &b){
+    friend bool operator!=(const RawProposal& a, const RawProposal& b){
       return !operator==(a, b);
     }
 
@@ -124,7 +124,7 @@ namespace Token{
 #undef DEFINE_PHASE
     };
 
-    friend std::ostream &operator<<(std::ostream &stream, const Phase &phase){
+    friend std::ostream& operator<<(std::ostream& stream, const Phase& phase){
       switch(phase){
 #define DEFINE_TOSTRING(Name) \
                 case Phase::k##Name##Phase: \
@@ -143,7 +143,7 @@ namespace Token{
 #undef DEFINE_RESULT
     };
 
-    friend std::ostream &operator<<(std::ostream &stream, const Result &result){
+    friend std::ostream& operator<<(std::ostream& stream, const Result& result){
       switch(result){
 #define DEFINE_TOSTRING(Name) \
                 case Result::k##Name: \
@@ -164,30 +164,30 @@ namespace Token{
     std::set<std::string> accepted_;
     std::set<std::string> rejected_;
 
-    void SetPhase(const Phase &phase);
-    void SetResult(const Result &result);
+    void SetPhase(const Phase& phase);
+    void SetResult(const Result& result);
 
     static int GetRequiredNumberOfPeers();
    public:
-    Proposal(const RawProposal &proposal):
+    Proposal(const RawProposal& proposal):
       Object(),
       phase_(Proposal::kProposalPhase),
       result_(Proposal::kNone),
       raw_(proposal),
       accepted_(),
       rejected_(){}
-    Proposal(const UUID &proposer, int64_t height, const Hash &hash, int64_t timestamp = GetCurrentTimestamp()):
+    Proposal(const UUID& proposer, int64_t height, const Hash& hash, int64_t timestamp = GetCurrentTimestamp()):
       Object(),
       phase_(Proposal::kProposalPhase),
       result_(Proposal::kNone),
       raw_(proposer, height, hash, timestamp),
       accepted_(),
       rejected_(){}
-    Proposal(BlockPtr blk, const UUID &proposer, int64_t timestamp = GetCurrentTimestamp()):
+    Proposal(BlockPtr blk, const UUID& proposer, int64_t timestamp = GetCurrentTimestamp()):
       Proposal(proposer, blk->GetHeight(), blk->GetHash(), timestamp){}
-    Proposal(const BlockHeader &blk, const UUID &proposer, int64_t timestamp = GetCurrentTimestamp()):
+    Proposal(const BlockHeader& blk, const UUID& proposer, int64_t timestamp = GetCurrentTimestamp()):
       Proposal(proposer, blk.GetHeight(), blk.GetHash(), timestamp){}
-    Proposal(const BufferPtr &buff):
+    Proposal(const BufferPtr& buff):
       Object(),
       phase_(Proposal::kProposalPhase),
       result_(Proposal::kNone),
@@ -196,7 +196,7 @@ namespace Token{
       rejected_(){}
     ~Proposal() = default;
 
-    RawProposal &GetRaw(){
+    RawProposal& GetRaw(){
       return raw_;
     }
 
@@ -220,7 +220,7 @@ namespace Token{
       return RawProposal::GetSize();
     }
 
-    bool Encode(const BufferPtr &buff) const{
+    bool Encode(const BufferPtr& buff) const{
       return raw_.Encode(buff);
     }
 
@@ -236,11 +236,11 @@ namespace Token{
     int64_t GetNumberOfAccepted();
     int64_t GetNumberOfRejected();
     int64_t GetNumberOfResponses();
-    bool HasResponseFrom(const std::string &node_id);
-    void AcceptProposal(const std::string &node);
-    void RejectProposal(const std::string &node);
-    void WaitForPhase(const Phase &phase);
-    void WaitForResult(const Result &result);
+    bool HasResponseFrom(const std::string& node_id);
+    void AcceptProposal(const std::string& node);
+    void RejectProposal(const std::string& node);
+    void WaitForPhase(const Phase& phase);
+    void WaitForResult(const Result& result);
     void WaitForRequiredResponses(int required = GetRequiredNumberOfPeers());
 
 #define DEFINE_PHASE_CHECK(Name) \

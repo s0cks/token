@@ -51,7 +51,7 @@ namespace Token{
     return ftell(GetFilePointer());
   }
 
-  bool TextFileWriter::Write(const std::string &value){
+  bool TextFileWriter::Write(const std::string& value){
     CHECK_FILE_POINTER;
 
     std::stringstream ss;
@@ -88,19 +88,19 @@ namespace Token{
     return Write(ss);
   }
 
-  bool TextFileWriter::Write(const Hash &hash){
+  bool TextFileWriter::Write(const Hash& hash){
     return Write(hash.HexString());
   }
 
-  bool TextFileWriter::Write(Object *obj){
+  bool TextFileWriter::Write(Object* obj){
     return Write(obj->ToString());
   }
 
   bool TextFileWriter::NewLine(){
-    return Write((const std::string &) "\n");
+    return Write((const std::string&) "\n");
   }
 
-  bool BinaryFileWriter::WriteBytes(uint8_t *bytes, intptr_t size){
+  bool BinaryFileWriter::WriteBytes(uint8_t* bytes, intptr_t size){
     CHECK_FILE_POINTER;
     CHECK_WRITTEN(fwrite(bytes, sizeof(uint8_t), (size_t) size, GetFilePointer()), (size_t) size, sizeof(uint8_t));
     return Flush();
@@ -130,23 +130,23 @@ namespace Token{
     return Flush();
   }
 
-  bool BinaryFileWriter::WriteHash(const Hash &hash){
-    return WriteBytes((uint8_t *) hash.data(), Hash::GetSize());
+  bool BinaryFileWriter::WriteHash(const Hash& hash){
+    return WriteBytes((uint8_t*) hash.data(), Hash::GetSize());
   }
 
-  bool BinaryFileWriter::WriteUser(const User &user){
-    return WriteBytes((uint8_t *) user.data(), User::GetSize());
+  bool BinaryFileWriter::WriteUser(const User& user){
+    return WriteBytes((uint8_t*) user.data(), User::GetSize());
   }
 
-  bool BinaryFileWriter::WriteProduct(const Product &product){
-    return WriteBytes((uint8_t *) product.data(), Product::GetSize());
+  bool BinaryFileWriter::WriteProduct(const Product& product){
+    return WriteBytes((uint8_t*) product.data(), Product::GetSize());
   }
 
-  bool BinaryFileWriter::WriteString(const std::string &value){
-    return WriteInt(value.length()) && WriteBytes((uint8_t *) value.data(), value.length());
+  bool BinaryFileWriter::WriteString(const std::string& value){
+    return WriteInt(value.length()) && WriteBytes((uint8_t*) value.data(), value.length());
   }
 
-  bool BinaryFileWriter::WriteObject(Object *value){
+  bool BinaryFileWriter::WriteObject(Object* value){
     LOG(WARNING) << "BinaryFileWriter::WriteObject(Object*) - not implemented yet!";
     return false; //TODO: implement BinaryFileWriter::WriteObject(Object*)
   }

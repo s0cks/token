@@ -20,15 +20,15 @@ namespace Token{
     User user_;
     Product product_;
    public:
-    UnclaimedTransaction(const Hash &hash, int64_t index, const User &user, const Product &product):
+    UnclaimedTransaction(const Hash& hash, int64_t index, const User& user, const Product& product):
       BinaryObject(),
       hash_(hash),
       index_(index),
       user_(user),
       product_(product){}
-    UnclaimedTransaction(const Hash &hash, int32_t index, const std::string &user, const std::string &product):
+    UnclaimedTransaction(const Hash& hash, int32_t index, const std::string& user, const std::string& product):
       UnclaimedTransaction(hash, index, User(user), Product(product)){}
-    UnclaimedTransaction(const BufferPtr &buffer):
+    UnclaimedTransaction(const BufferPtr& buffer):
       UnclaimedTransaction(buffer->GetHash(), buffer->GetLong(), buffer->GetUser(), buffer->GetProduct()){}
     ~UnclaimedTransaction(){}
 
@@ -52,7 +52,7 @@ namespace Token{
       return UnclaimedTransaction::kSize;
     }
 
-    bool Write(const BufferPtr &buff) const{
+    bool Write(const BufferPtr& buff) const{
       buff->PutHash(hash_);
       buff->PutLong(index_);
       buff->PutUser(user_);
@@ -66,7 +66,7 @@ namespace Token{
       return stream.str();
     }
 
-    static UnclaimedTransactionPtr NewInstance(const BufferPtr &buff){
+    static UnclaimedTransactionPtr NewInstance(const BufferPtr& buff){
       return std::make_shared<UnclaimedTransaction>(buff);
     }
   };

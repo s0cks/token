@@ -43,12 +43,12 @@ namespace Token{
     return writer.WriteSnapshot();
   }
 
-  Snapshot *Snapshot::ReadSnapshot(const std::string &filename){
+  Snapshot* Snapshot::ReadSnapshot(const std::string& filename){
     SnapshotReader reader(filename);
     return reader.ReadSnapshot();
   }
 
-  bool Snapshot::Accept(SnapshotVisitor *vis){
+  bool Snapshot::Accept(SnapshotVisitor* vis){
     if(!vis->VisitStart(this)) return false;
     for(uint64_t idx = 0; idx < GetNumberOfBlocks(); idx++){
       if(!vis->Visit(GetBlock(idx)))

@@ -28,7 +28,7 @@ namespace Token{
   }
 
   static inline std::string
-  GetNewBlockFilename(const BlockPtr &blk){
+  GetNewBlockFilename(const BlockPtr& blk){
     std::stringstream ss;
     ss << GetDataDirectory() + "/blk" << blk->GetHeight() << ".dat";
     return ss.str();
@@ -45,7 +45,7 @@ namespace Token{
   static std::condition_variable cond_;
   static BlockChain::State state_ = BlockChain::kUninitialized;
   static BlockChain::Status status_ = BlockChain::kOk;
-  static leveldb::DB *index_ = nullptr;
+  static leveldb::DB* index_ = nullptr;
 
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
 #define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
@@ -80,7 +80,7 @@ namespace Token{
     return ss.str();
   }
 
-  leveldb::DB *BlockChain::GetIndex(){
+  leveldb::DB* BlockChain::GetIndex(){
     return index_;
   }
 
@@ -124,8 +124,8 @@ namespace Token{
       //  - ProcessGenesisBlock Timeline (19s)
       // [After - Work Stealing]
       //  - ProcessGenesisBlock Timeline (4s)
-      JobWorker *worker = JobScheduler::GetRandomWorker();
-      ProcessBlockJob *job = new ProcessBlockJob(genesis);
+      JobWorker* worker = JobScheduler::GetRandomWorker();
+      ProcessBlockJob* job = new ProcessBlockJob(genesis);
       worker->Submit(job);
       worker->Wait(job);
 #ifdef TOKEN_DEBUG
@@ -179,7 +179,7 @@ namespace Token{
     return GetBlock(GetReference(BLOCKCHAIN_REFERENCE_HEAD));
   }
 
-  bool BlockChain::PutBlock(const Hash &hash, BlockPtr blk){
+  bool BlockChain::PutBlock(const Hash& hash, BlockPtr blk){
     if(HasBlock(hash)){
       LOG(WARNING) << "cannot overwrite existing block data for: " << hash;
       return false;
@@ -189,7 +189,7 @@ namespace Token{
     BufferPtr buff = Buffer::NewInstance(size);
     blk->Write(buff);
 
-    leveldb::Slice key((char *) hash.data(), Hash::GetSize());
+    leveldb::Slice key((char*) hash.data(), Hash::GetSize());
     leveldb::Slice value(buff->data(), size);
 
     leveldb::WriteOptions opts;
@@ -204,8 +204,8 @@ namespace Token{
     return true;
   }
 
-  BlockPtr BlockChain::GetBlock(const Hash &hash){
-    leveldb::Slice key((char *) hash.data(), Hash::GetSize());
+  BlockPtr BlockChain::GetBlock(const Hash& hash){
+    leveldb::Slice key((char*) hash.data(), Hash::GetSize());
     std::string value;
 
     leveldb::ReadOptions opts;
@@ -224,13 +224,13 @@ namespace Token{
     return BlockPtr(nullptr);
   }
 
-  bool BlockChain::HasReference(const std::string &name){
+  bool BlockChain::HasReference(const std::string& name){
     leveldb::ReadOptions options;
     std::string value;
     return GetIndex()->Get(options, name, &value).ok();
   }
 
-  bool BlockChain::RemoveReference(const std::string &name){
+  bool BlockChain::RemoveReference(const std::string& name){
     leveldb::WriteOptions options;
     std::string value;
 
@@ -244,7 +244,7 @@ namespace Token{
     return true;
   }
 
-  bool BlockChain::PutReference(const std::string &name, const Hash &hash){
+  bool BlockChain::PutReference(const std::string& name, const Hash& hash){
     leveldb::WriteOptions options;
     options.sync = true;
 
@@ -258,7 +258,7 @@ namespace Token{
     return true;
   }
 
-  Hash BlockChain::GetReference(const std::string &name){
+  Hash BlockChain::GetReference(const std::string& name){
     std::string value;
 
     leveldb::Status status;
@@ -271,8 +271,8 @@ namespace Token{
     return Hash::FromHexString(value);
   }
 
-  bool BlockChain::HasBlock(const Hash &hash){
-    leveldb::Slice key((char *) hash.data(), Hash::GetSize());
+  bool BlockChain::HasBlock(const Hash& hash){
+    leveldb::Slice key((char*) hash.data(), Hash::GetSize());
 
     leveldb::ReadOptions options;
     std::string filename;
@@ -286,7 +286,7 @@ namespace Token{
     return true;
   }
 
-  bool BlockChain::Append(const BlockPtr &block){
+  bool BlockChain::Append(const BlockPtr& block){
     LOCK_GUARD;
     BlockPtr head = GetHead();
     Hash hash = block->GetHash();
@@ -316,7 +316,7 @@ namespace Token{
     return true;
   }
 
-  bool BlockChain::VisitBlocks(BlockChainBlockVisitor *vis){
+  bool BlockChain::VisitBlocks(BlockChainBlockVisitor* vis){
     Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
     do{
       BlockPtr blk = GetBlock(current);
@@ -327,7 +327,7 @@ namespace Token{
     return true;
   }
 
-  bool BlockChain::GetBlocks(HashList &hashes){
+  bool BlockChain::GetBlocks(HashList& hashes){
     Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
     do{
       BlockPtr blk = GetBlock(current);
@@ -337,7 +337,7 @@ namespace Token{
     return true;
   }
 
-  bool BlockChain::VisitHeaders(BlockChainHeaderVisitor *vis){
+  bool BlockChain::VisitHeaders(BlockChainHeaderVisitor* vis){
     //TODO: Optimize BlockChain::VisitHeaders
     Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
     do{
@@ -352,8 +352,8 @@ namespace Token{
   int64_t BlockChain::GetNumberOfBlocks(){
     int64_t count = 0;
 
-    DIR *dir;
-    struct dirent *ent;
+    DIR* dir;
+    struct dirent* ent;
     if((dir = opendir(GetDataDirectory().c_str())) != NULL){
       while((ent = readdir(dir)) != NULL){
         std::string filename(ent->d_name);

@@ -14,7 +14,7 @@ namespace Token{
     }
 
     CryptoPP::SecByteBlock hash(CryptoPP::SHA256::DIGESTSIZE);
-    CryptoPP::ArraySource source((uint8_t *) buff->data(),
+    CryptoPP::ArraySource source((uint8_t*) buff->data(),
                                  size,
                                  true,
                                  new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(hash.data(), hash.size())));

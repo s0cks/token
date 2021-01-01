@@ -19,7 +19,7 @@ namespace Token{
     return phase_;
   }
 
-  void Proposal::SetPhase(const Proposal::Phase &phase){
+  void Proposal::SetPhase(const Proposal::Phase& phase){
     LOCK;
     phase_ = phase;
     accepted_.clear();
@@ -28,7 +28,7 @@ namespace Token{
     SIGNAL_ALL;
   }
 
-  void Proposal::WaitForPhase(const Phase &phase){
+  void Proposal::WaitForPhase(const Phase& phase){
     LOCK;
     while(phase_ != phase) WAIT;
     UNLOCK;
@@ -39,14 +39,14 @@ namespace Token{
     return result_;
   }
 
-  void Proposal::SetResult(const Proposal::Result &result){
+  void Proposal::SetResult(const Proposal::Result& result){
     LOCK;
     result_ = result;
     UNLOCK;
     SIGNAL_ALL;
   }
 
-  void Proposal::WaitForResult(const Result &result){
+  void Proposal::WaitForResult(const Result& result){
     LOCK;
     while(result_ != result) WAIT;
     UNLOCK;
@@ -75,7 +75,7 @@ namespace Token{
     return accepted_.size() + rejected_.size();
   }
 
-  void Proposal::AcceptProposal(const std::string &node){
+  void Proposal::AcceptProposal(const std::string& node){
     if(HasResponseFrom(node)){
       LOG(WARNING) << "node " << node << "has voted already! skipping second vote.";
       return;
@@ -86,7 +86,7 @@ namespace Token{
     SIGNAL_ALL;
   }
 
-  void Proposal::RejectProposal(const std::string &node){
+  void Proposal::RejectProposal(const std::string& node){
     if(HasResponseFrom(node)){
       LOG(WARNING) << "node " << node << " has voted already! skipping second vote.";
       return;
@@ -97,10 +97,10 @@ namespace Token{
     SIGNAL_ALL;
   }
 
-  bool Proposal::HasResponseFrom(const std::string &node){
+  bool Proposal::HasResponseFrom(const std::string& node){
     LOCK_GUARD;
     return accepted_.find(node) != accepted_.end() ||
-      rejected_.find(node) != rejected_.end();
+           rejected_.find(node) != rejected_.end();
   }
 
   int Proposal::GetRequiredNumberOfPeers(){

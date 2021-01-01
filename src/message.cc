@@ -16,7 +16,7 @@ namespace Token{
     return size;
   }
 
-  bool VersionMessage::Encode(const BufferPtr &buff) const{
+  bool VersionMessage::Encode(const BufferPtr& buff) const{
     buff->PutLong(timestamp_);
     buff->PutInt(static_cast<int32_t>(client_type_));
     version_.Write(buff);
@@ -38,7 +38,7 @@ namespace Token{
     return size;
   }
 
-  bool VerackMessage::Encode(const BufferPtr &buff) const{
+  bool VerackMessage::Encode(const BufferPtr& buff) const{
     buff->PutLong(timestamp_);
     buff->PutInt(static_cast<int32_t>(GetClientType()));
     version_.Write(buff);
@@ -59,7 +59,7 @@ namespace Token{
     }
   }
 
-  MessagePtr InventoryMessage::NewInstance(const BufferPtr &buff){
+  MessagePtr InventoryMessage::NewInstance(const BufferPtr& buff){
     int64_t num_items = buff->GetLong();
     std::vector<InventoryItem> items;
     for(int64_t idx = 0; idx < num_items; idx++)
@@ -74,21 +74,21 @@ namespace Token{
     return size;
   }
 
-  bool InventoryMessage::Encode(const BufferPtr &buff) const{
+  bool InventoryMessage::Encode(const BufferPtr& buff) const{
     buff->PutLong(GetNumberOfItems());
-    for(auto &it : items_)
+    for(auto& it : items_)
       it.Encode(buff);
     return true;
   }
 
-  bool GetDataMessage::Encode(const BufferPtr &buff) const{
+  bool GetDataMessage::Encode(const BufferPtr& buff) const{
     buff->PutLong(GetNumberOfItems());
-    for(auto &it : items_)
+    for(auto& it : items_)
       it.Encode(buff);
     return true;
   }
 
-  MessagePtr GetDataMessage::NewInstance(const BufferPtr &buff){
+  MessagePtr GetDataMessage::NewInstance(const BufferPtr& buff){
     int64_t num_items = buff->GetLong();
     std::vector<InventoryItem> items;
     for(int64_t idx = 0; idx < num_items; idx++)
@@ -105,19 +105,19 @@ namespace Token{
 
   const int64_t GetBlocksMessage::kMaxNumberOfBlocks = 32;
 
-  MessagePtr GetBlocksMessage::NewInstance(const BufferPtr &buff){
+  MessagePtr GetBlocksMessage::NewInstance(const BufferPtr& buff){
     Hash start = buff->GetHash();
     Hash stop = buff->GetHash();
     return std::make_shared<GetBlocksMessage>(start, stop);
   }
 
-  bool GetBlocksMessage::Encode(const BufferPtr &buff) const{
+  bool GetBlocksMessage::Encode(const BufferPtr& buff) const{
     buff->PutHash(start_);
     buff->PutHash(stop_);
     return true;
   }
 
-  MessagePtr NotFoundMessage::NewInstance(const BufferPtr &buff){
+  MessagePtr NotFoundMessage::NewInstance(const BufferPtr& buff){
     std::string message = ""; //TODO: buff->GetString();
     return std::make_shared<NotFoundMessage>(message);
   }
@@ -130,7 +130,7 @@ namespace Token{
     return size;
   }
 
-  bool NotFoundMessage::Encode(const BufferPtr &buff) const{
+  bool NotFoundMessage::Encode(const BufferPtr& buff) const{
     buff->PutShort(static_cast<uint16_t>(item_.GetType()));
     buff->PutHash(item_.GetHash());
     buff->PutString(message_);
@@ -154,7 +154,7 @@ namespace Token{
     return PaxosMessage::GetMessageSize();
   }
 
-  bool PrepareMessage::Encode(const BufferPtr &buff) const{
+  bool PrepareMessage::Encode(const BufferPtr& buff) const{
     return PaxosMessage::Encode(buff);
   }
 
@@ -162,7 +162,7 @@ namespace Token{
     return PaxosMessage::GetMessageSize();
   }
 
-  bool PromiseMessage::Encode(const BufferPtr &buff) const{
+  bool PromiseMessage::Encode(const BufferPtr& buff) const{
     return PaxosMessage::Encode(buff);
   }
 
@@ -170,7 +170,7 @@ namespace Token{
     return PaxosMessage::GetMessageSize();
   }
 
-  bool CommitMessage::Encode(const BufferPtr &buff) const{
+  bool CommitMessage::Encode(const BufferPtr& buff) const{
     return PaxosMessage::Encode(buff);
   }
 
@@ -178,7 +178,7 @@ namespace Token{
     return PaxosMessage::GetMessageSize();
   }
 
-  bool AcceptedMessage::Encode(const BufferPtr &buff) const{
+  bool AcceptedMessage::Encode(const BufferPtr& buff) const{
     return PaxosMessage::Encode(buff);
   }
 
@@ -186,7 +186,7 @@ namespace Token{
     return PaxosMessage::GetMessageSize();
   }
 
-  bool RejectedMessage::Encode(const BufferPtr &buff) const{
+  bool RejectedMessage::Encode(const BufferPtr& buff) const{
     return PaxosMessage::Encode(buff);
   }
 
@@ -194,7 +194,7 @@ namespace Token{
     return Hash::GetSize() * 2;
   }
 
-  MessagePtr PeerListMessage::NewInstance(const BufferPtr &buff){
+  MessagePtr PeerListMessage::NewInstance(const BufferPtr& buff){
     PeerList peers;
 
     int64_t npeers = buff->GetLong();
@@ -216,7 +216,7 @@ namespace Token{
     return size;
   }
 
-  bool PeerListMessage::Encode(const BufferPtr &buff) const{
+  bool PeerListMessage::Encode(const BufferPtr& buff) const{
     buff->PutLong(GetNumberOfPeers());
     for(auto it = peers_begin();
         it != peers_end();
@@ -231,7 +231,7 @@ namespace Token{
     return 0;
   }
 
-  bool GetPeersMessage::Encode(const BufferPtr &buff) const{
+  bool GetPeersMessage::Encode(const BufferPtr& buff) const{
     //TODO: implement GetPeersMessage::Encode(ByteBuffer*)
     return true;
   }

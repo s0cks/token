@@ -4,7 +4,7 @@
 #include "utils/crash_report.h"
 
 namespace Token{
-  BlockHeader::BlockHeader(const BufferPtr &buff):
+  BlockHeader::BlockHeader(const BufferPtr& buff):
     timestamp_(buff->GetLong()),
     height_(buff->GetLong()),
     previous_hash_(buff->GetHash()),
@@ -17,7 +17,7 @@ namespace Token{
     return BlockChain::GetBlock(GetHash());
   }
 
-  bool BlockHeader::Write(const BufferPtr &buff) const{
+  bool BlockHeader::Write(const BufferPtr& buff) const{
     buff->PutLong(timestamp_);
     buff->PutLong(height_);
     buff->PutHash(previous_hash_);
@@ -56,17 +56,17 @@ namespace Token{
     return std::make_shared<Block>(0, Hash(), transactions, 0);
   }
 
-  bool Block::Accept(BlockVisitor *vis) const{
+  bool Block::Accept(BlockVisitor* vis) const{
     if(!vis->VisitStart())
       return false;
-    for(auto &tx : transactions_){
+    for(auto& tx : transactions_){
       if(!vis->Visit(tx))
         return false;
     }
     return vis->VisitEnd();
   }
 
-  bool Block::Contains(const Hash &hash) const{
+  bool Block::Contains(const Hash& hash) const{
     return tx_bloom_.Contains(hash);
   }
 

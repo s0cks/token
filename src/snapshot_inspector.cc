@@ -2,7 +2,7 @@
 
 namespace Token{
   static inline void
-  PrintBlock(const BlockPtr &blk){
+  PrintBlock(const BlockPtr& blk){
     LOG(INFO) << "Block #" << blk->GetHeight();
     LOG(INFO) << "  - Timestamp: " << blk->GetTimestamp();
     LOG(INFO) << "  - Height: " << blk->GetHeight();
@@ -11,28 +11,28 @@ namespace Token{
     LOG(INFO) << "  - Merkle Root: " << blk->GetMerkleRoot();
     LOG(INFO) << "  - Transactions: ";
 
-    for(auto &tx : blk->transactions()){
+    for(auto& tx : blk->transactions()){
       LOG(INFO) << "      * #" << tx->GetIndex() << ": " << tx->GetHash();
     }
   }
 
   static inline void
-  PrintUnclaimedTransaction(UnclaimedTransaction *utxo){
+  PrintUnclaimedTransaction(UnclaimedTransaction* utxo){
     LOG(INFO) << "  - " << utxo << " => " << utxo->GetUser();
   }
 
-  void SnapshotInspector::PrintSnapshot(Snapshot *snapshot){
+  void SnapshotInspector::PrintSnapshot(Snapshot* snapshot){
     LOG(INFO) << "Snapshot: " << snapshot->GetFilename();
     LOG(INFO) << "Created: " << GetTimestampFormattedReadable(snapshot->GetTimestamp());
     LOG(INFO) << "Version: " << snapshot->GetVersion();
     LOG(INFO) << "Size: " << GetFilesize(snapshot->GetFilename()) << " Bytes";
   }
 
-  void SnapshotInspector::HandleStatusCommand(Token::SnapshotInspectorCommand *cmd){
+  void SnapshotInspector::HandleStatusCommand(Token::SnapshotInspectorCommand* cmd){
     PrintSnapshot(GetSnapshot());
   }
 
-  void SnapshotInspector::HandleGetDataCommand(Token::SnapshotInspectorCommand *cmd){
+  void SnapshotInspector::HandleGetDataCommand(Token::SnapshotInspectorCommand* cmd){
     //TODO: PrintBlock(GetBlock(Hash));
   }
 
@@ -41,13 +41,13 @@ namespace Token{
     SnapshotBlockPrinter() = default;
     ~SnapshotBlockPrinter() = default;
 
-    bool Visit(Block *blk){
+    bool Visit(Block* blk){
       PrintBlock(BlockPtr(blk));
       return true;
     }
   };
 
-  void SnapshotInspector::HandleGetBlocksCommand(Token::SnapshotInspectorCommand *cmd){
+  void SnapshotInspector::HandleGetBlocksCommand(Token::SnapshotInspectorCommand* cmd){
     LOG(INFO) << "Blocks:";
     SnapshotBlockPrinter printer;
     GetSnapshot()->Accept(&printer);

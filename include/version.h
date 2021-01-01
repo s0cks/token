@@ -7,8 +7,8 @@ namespace Token{
   class Version{
    public:
     static const int64_t kSize = sizeof(int16_t) // Major
-      + sizeof(int16_t) // Minor
-      + sizeof(int16_t); // Revision
+                                 + sizeof(int16_t) // Minor
+                                 + sizeof(int16_t); // Revision
    private:
     int16_t major_;
     int16_t minor_;
@@ -22,11 +22,11 @@ namespace Token{
       major_(major),
       minor_(minor),
       revision_(revision){}
-    Version(const Version &other):
+    Version(const Version& other):
       major_(other.major_),
       minor_(other.minor_),
       revision_(other.revision_){}
-    Version(const BufferPtr &buff):
+    Version(const BufferPtr& buff):
       major_(buff->GetShort()),
       minor_(buff->GetShort()),
       revision_(buff->GetShort()){}
@@ -44,7 +44,7 @@ namespace Token{
       return revision_;
     }
 
-    bool Write(const BufferPtr &buff) const{
+    bool Write(const BufferPtr& buff) const{
       buff->PutShort(major_);
       buff->PutShort(minor_);
       buff->PutShort(revision_);
@@ -57,37 +57,37 @@ namespace Token{
       return ss.str();
     }
 
-    void operator=(const Version &other){
+    void operator=(const Version& other){
       major_ = other.major_;
       minor_ = other.minor_;
       revision_ = other.revision_;
     }
 
-    bool operator==(const Version &other){
+    bool operator==(const Version& other){
       return major_ == other.major_
-        && minor_ == other.minor_
-        && revision_ == other.revision_;
+             && minor_ == other.minor_
+             && revision_ == other.revision_;
     }
 
-    bool operator!=(const Version &other){
+    bool operator!=(const Version& other){
       return !operator==(other);
     }
 
-    bool operator<(const Version &other){
+    bool operator<(const Version& other){
       if(major_ < other.major_) return true;
       if(minor_ < other.minor_) return true;
       if(revision_ < other.minor_) return true;
       return false;
     }
 
-    bool operator>(const Version &other){
+    bool operator>(const Version& other){
       if(major_ > other.major_) return true;
       if(minor_ > other.minor_) return true;
       if(revision_ > other.revision_) return true;
       return false;
     }
 
-    friend std::ostream &operator<<(std::ostream &stream, const Version &version){
+    friend std::ostream& operator<<(std::ostream& stream, const Version& version){
       stream << version.ToString();
       return stream;
     }

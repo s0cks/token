@@ -12,10 +12,10 @@ namespace Token{
   typedef rapidjson::StringBuffer JsonString;
   typedef rapidjson::Writer<JsonString> JsonWriter;
 
-  void ToJson(const HashList &hashes, JsonString &json);
-  void ToJson(const BlockPtr &blk, JsonString &json);
-  void ToJson(const TransactionPtr &tx, JsonString &json);
-  void ToJson(const UnclaimedTransactionPtr &utxo, JsonString &json);
+  void ToJson(const HashList& hashes, JsonString& json);
+  void ToJson(const BlockPtr& blk, JsonString& json);
+  void ToJson(const TransactionPtr& tx, JsonString& json);
+  void ToJson(const UnclaimedTransactionPtr& utxo, JsonString& json);
 }
 
 #endif //TOKEN_JSON_CONVERSION_H

@@ -20,7 +20,7 @@ namespace Token{
 #undef DEFINE_STATE
     };
 
-    friend std::ostream &operator<<(std::ostream &stream, const Status &status){
+    friend std::ostream& operator<<(std::ostream& stream, const Status& status){
       switch(status){
 #define DEFINE_TOSTRING(Name) \
                 case Status::k##Name: \
@@ -36,10 +36,10 @@ namespace Token{
     Status status_;
     std::string message_;
    public:
-    JobResult(const Status &status, const std::string &msg):
+    JobResult(const Status& status, const std::string& msg):
       status_(status),
       message_(msg){}
-    JobResult(const JobResult &result):
+    JobResult(const JobResult& result):
       status_(result.status_),
       message_(result.message_){}
     ~JobResult() = default;
@@ -72,12 +72,12 @@ namespace Token{
       return GetStatus() == JobResult::kCancelled;
     }
 
-    void operator=(const JobResult &result){
+    void operator=(const JobResult& result){
       status_ = result.status_;
       message_ = result.message_;
     }
 
-    friend std::ostream &operator<<(std::ostream &stream, const JobResult &result){
+    friend std::ostream& operator<<(std::ostream& stream, const JobResult& result){
       stream << result.GetMessage() << " [" << result.GetStatus() << "]";
       return stream;
     }
@@ -86,41 +86,41 @@ namespace Token{
   class Job : public Object{
    public:
     static inline JobResult
-    Success(const std::string &message){
+    Success(const std::string& message){
       return JobResult(JobResult::kSuccessful, message);
     }
 
     static inline JobResult
-    Success(const std::stringstream &ss){
+    Success(const std::stringstream& ss){
       return Success(ss.str());
     }
 
     static inline JobResult
-    Failed(const std::string &message){
+    Failed(const std::string& message){
       return JobResult(JobResult::kFailed, message);
     }
 
     static inline JobResult
-    Failed(const std::stringstream &ss){
+    Failed(const std::stringstream& ss){
       return Failed(ss.str());
     }
 
     static inline JobResult
-    TimedOut(const std::string &message){
+    TimedOut(const std::string& message){
       return JobResult(JobResult::kTimedOut, message);
     }
 
     static inline JobResult
-    Cancelled(const std::string &message){
+    Cancelled(const std::string& message){
       return JobResult(JobResult::kCancelled, message);
     }
    protected:
-    Job *parent_;
+    Job* parent_;
     std::string name_;
     JobResult result_;
     std::atomic<int32_t> unfinished_;
 
-    Job(Job *parent, const std::string &name):
+    Job(Job* parent, const std::string& name):
       parent_(parent),
       name_(name),
       result_(JobResult::kUnscheduled, "Unscheduled"),
@@ -154,7 +154,7 @@ namespace Token{
    public:
     virtual ~Job() = default;
 
-    Job *GetParent() const{
+    Job* GetParent() const{
       return parent_;
     }
 
@@ -192,11 +192,11 @@ namespace Token{
 
   class WriteBatchJob : public Job{
    protected:
-    WriteBatchJob(Job *parent, const std::string &name):
+    WriteBatchJob(Job* parent, const std::string& name):
       Job(parent, name){}
    public:
     virtual ~WriteBatchJob() = default;
-    virtual void Append(leveldb::WriteBatch *batch) = 0;
+    virtual void Append(leveldb::WriteBatch* batch) = 0;
   };
 }
 

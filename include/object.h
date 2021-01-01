@@ -29,7 +29,7 @@ namespace Token{
     virtual ~BinaryObject() = default;
 
     virtual int64_t GetBufferSize() const = 0;
-    virtual bool Write(const BufferPtr &buff) const = 0;
+    virtual bool Write(const BufferPtr& buff) const = 0;
     Hash GetHash() const;
   };
 
@@ -42,26 +42,26 @@ namespace Token{
       data_(){
       memset(data_, 0, GetSize());
     }
-    RawType(const uint8_t *bytes, int64_t size):
+    RawType(const uint8_t* bytes, int64_t size):
       data_(){
       memset(data_, 0, GetSize());
       memcpy(data_, bytes, std::min(size, GetSize()));
     }
-    RawType(const RawType &raw):
+    RawType(const RawType& raw):
       data_(){
       memset(data_, 0, GetSize());
       memcpy(data_, raw.data_, GetSize());
     }
 
     static inline int
-    Compare(const RawType<Size> &a, const RawType<Size> &b){
+    Compare(const RawType<Size>& a, const RawType<Size>& b){
       return memcmp(a.data(), b.data(), Size);
     }
    public:
     virtual ~RawType() = default;
 
-    char *data() const{
-      return (char *) data_;
+    char* data() const{
+      return (char*) data_;
     }
 
     std::string str() const{
@@ -81,43 +81,43 @@ namespace Token{
 
     Product():
       Base(){}
-    Product(const uint8_t *bytes, int64_t size):
+    Product(const uint8_t* bytes, int64_t size):
       Base(bytes, size){}
-    Product(const Product &product):
+    Product(const Product& product):
       Base(){
       memcpy(data(), product.data(), Base::GetSize());
     }
-    Product(const std::string &value):
+    Product(const std::string& value):
       Base(){
       memcpy(data(), value.data(), std::min((int64_t) value.length(), Base::GetSize()));
     }
     ~Product() = default;
 
     int64_t size() const{
-      return std::min((int64_t) strlen((char *) data_), Base::GetSize());
+      return std::min((int64_t) strlen((char*) data_), Base::GetSize());
     }
 
     std::string Get() const{
-      return std::string((char *) data_, Base::GetSize());
+      return std::string((char*) data_, Base::GetSize());
     }
 
-    void operator=(const Product &product){
+    void operator=(const Product& product){
       memcpy(data(), product.data(), Base::GetSize());
     }
 
-    friend bool operator==(const Product &a, const Product &b){
+    friend bool operator==(const Product& a, const Product& b){
       return Base::Compare(a, b) == 0;
     }
 
-    friend bool operator!=(const Product &a, const Product &b){
+    friend bool operator!=(const Product& a, const Product& b){
       return Base::Compare(a, b) != 0;
     }
 
-    friend int operator<(const Product &a, const Product &b){
+    friend int operator<(const Product& a, const Product& b){
       return Base::Compare(a, b);
     }
 
-    friend std::ostream &operator<<(std::ostream &stream, const Product &product){
+    friend std::ostream& operator<<(std::ostream& stream, const Product& product){
       stream << product.str();
       return stream;
     }
@@ -130,43 +130,43 @@ namespace Token{
 
     User():
       Base(){}
-    User(const uint8_t *bytes, int64_t size):
+    User(const uint8_t* bytes, int64_t size):
       Base(bytes, size){}
-    User(const User &user):
+    User(const User& user):
       Base(){
       memcpy(data(), user.data(), Base::GetSize());
     }
-    User(const std::string &value):
+    User(const std::string& value):
       Base(){
       memcpy(data(), value.data(), std::min((int64_t) value.length(), Base::GetSize()));
     }
     ~User() = default;
 
     int64_t size() const{
-      return std::min((int64_t) strlen((char *) data_), Base::GetSize());
+      return std::min((int64_t) strlen((char*) data_), Base::GetSize());
     }
 
     std::string Get() const{
-      return std::string((char *) data_, Base::GetSize());
+      return std::string((char*) data_, Base::GetSize());
     }
 
-    void operator=(const User &user){
+    void operator=(const User& user){
       memcpy(data(), user.data(), Base::GetSize());
     }
 
-    friend bool operator==(const User &a, const User &b){
+    friend bool operator==(const User& a, const User& b){
       return Base::Compare(a, b) == 0;
     }
 
-    friend bool operator!=(const User &a, const User &b){
+    friend bool operator!=(const User& a, const User& b){
       return Base::Compare(a, b) != 0;
     }
 
-    friend int operator<(const User &a, const User &b){
+    friend int operator<(const User& a, const User& b){
       return Base::Compare(a, b);
     }
 
-    friend std::ostream &operator<<(std::ostream &stream, const User &user){
+    friend std::ostream& operator<<(std::ostream& stream, const User& user){
       stream << user.str();
       return stream;
     }

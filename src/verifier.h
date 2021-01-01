@@ -16,17 +16,17 @@ namespace Token{
    public:
     virtual ~Verifier() = default;
 
-    ObjectList &valid(){
+    ObjectList& valid(){
       return valid_;
     }
 
-    ObjectList &invalid(){
+    ObjectList& invalid(){
       return invalid_;
     }
 
     bool IsValid() const{
       return invalid_.empty()
-        && !valid_.empty();
+             && !valid_.empty();
     }
   };
 }

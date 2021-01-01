@@ -14,21 +14,21 @@ namespace Token{
 
   class SessionTask : public Task{
    protected:
-    Session *session_;
+    Session* session_;
 
-    SessionTask(Session *session):
+    SessionTask(Session* session):
       Task(),
       session_(session){}
    public:
     ~SessionTask() = default;
 
-    Session *GetSession() const{
+    Session* GetSession() const{
       return session_;
     }
 
     template<typename T>
-    T *GetSession() const{
-      return (T *) session_;
+    T* GetSession() const{
+      return (T*) session_;
     }
   };
 
@@ -45,7 +45,7 @@ namespace Token{
       kTimedOut
     };
 
-    friend std::ostream &operator<<(std::ostream &stream, const Status &status){
+    friend std::ostream& operator<<(std::ostream& stream, const Status& status){
       switch(status){
         case kFailed:stream << "Failed";
           return stream;
@@ -63,12 +63,12 @@ namespace Token{
     Status status_;
     std::string message_;
    public:
-    AsyncTaskResult(Status status, const std::string &msg):
+    AsyncTaskResult(Status status, const std::string& msg):
       status_(status),
       message_(msg){}
-    AsyncTaskResult(Status status, const std::stringstream &ss):
+    AsyncTaskResult(Status status, const std::stringstream& ss):
       AsyncTaskResult(status, ss.str()){}
-    AsyncTaskResult(const AsyncTaskResult &other):
+    AsyncTaskResult(const AsyncTaskResult& other):
       status_(other.status_),
       message_(other.message_){}
     ~AsyncTaskResult() = default;
@@ -81,28 +81,28 @@ namespace Token{
       return message_;
     }
 
-    void operator=(const AsyncTaskResult &other){
+    void operator=(const AsyncTaskResult& other){
       status_ = other.status_;
       message_ = other.message_;
     }
 
-    friend std::ostream &operator<<(std::ostream &stream, const AsyncTaskResult &result){
+    friend std::ostream& operator<<(std::ostream& stream, const AsyncTaskResult& result){
       stream << "[" << result.status_ << "] " << result.message_;
       return stream;
     }
 
     static inline AsyncTaskResult
-    Success(const std::string &msg){
+    Success(const std::string& msg){
       return AsyncTaskResult(AsyncTaskResult::kSuccessful, msg);
     }
 
     static inline AsyncTaskResult
-    Failed(const std::string &msg){
+    Failed(const std::string& msg){
       return AsyncTaskResult(AsyncTaskResult::kFailed, msg);
     }
 
     static inline AsyncTaskResult
-    Cancelled(const std::string &msg){
+    Cancelled(const std::string& msg){
       return AsyncTaskResult(AsyncTaskResult::kCancelled, msg);
     }
   };
@@ -110,15 +110,15 @@ namespace Token{
   class AsyncTask : public Task{
     //TOOD: merge w/ Job
    private:
-    void SetResult(const AsyncTaskResult &result){
+    void SetResult(const AsyncTaskResult& result){
       result_ = result;
     }
    protected:
-    uv_loop_t *loop_;
+    uv_loop_t* loop_;
     uv_work_t handle_;
     AsyncTaskResult result_;
 
-    AsyncTask(uv_loop_t *loop):
+    AsyncTask(uv_loop_t* loop):
       loop_(loop),
       handle_(),
       result_(AsyncTaskResult::kTimedOut, "no execution?"){
@@ -127,13 +127,13 @@ namespace Token{
 
     virtual AsyncTaskResult DoWork() = 0;
 
-    static void OnTask(uv_work_t *handle){
-      AsyncTask *task = (AsyncTask *) handle->data;
+    static void OnTask(uv_work_t* handle){
+      AsyncTask* task = (AsyncTask*) handle->data;
       task->SetResult(task->DoWork());
     }
 
-    static void OnTaskFinished(uv_work_t *handle, int status){
-      AsyncTask *task = (AsyncTask *) handle->data;
+    static void OnTaskFinished(uv_work_t* handle, int status){
+      AsyncTask* task = (AsyncTask*) handle->data;
       AsyncTaskResult result = task->GetResult();
       switch(result.GetStatus()){
         case AsyncTaskResult::kSuccessful:LOG(INFO) << task->GetName() << " finished: " << task->GetResult();
@@ -148,7 +148,7 @@ namespace Token{
     }
    public:
     virtual ~AsyncTask() = default;
-    virtual const char *GetName() const = 0;
+    virtual const char* GetName() const = 0;
 
     AsyncTaskResult GetResult() const{
       return result_;
@@ -160,21 +160,21 @@ namespace Token{
 
     bool Cancel(){
       SetResult(AsyncTaskResult::Cancelled("Task was cancelled"));
-      return uv_cancel((uv_req_t *) &handle_) == 0;
+      return uv_cancel((uv_req_t*) &handle_) == 0;
     }
   };
 
   class AsyncSessionTask : public AsyncTask{
    protected:
-    Session *session_;
+    Session* session_;
 
-    AsyncSessionTask(uv_loop_t *loop, Session *session):
+    AsyncSessionTask(uv_loop_t* loop, Session* session):
       AsyncTask(loop),
       session_(session){}
    public:
     virtual ~AsyncSessionTask() = default;
 
-    Session *GetSession() const{
+    Session* GetSession() const{
       return session_;
     }
   };

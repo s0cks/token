@@ -22,14 +22,14 @@ namespace Token{
     class Metric{
      public:
       struct NameComparator{
-        bool operator()(const std::shared_ptr<Metric> &a, const std::shared_ptr<Metric> &b){
+        bool operator()(const std::shared_ptr<Metric>& a, const std::shared_ptr<Metric>& b){
           return a->name_ < b->name_;
         }
       };
      protected:
       std::string name_;
 
-      Metric(const std::string &name):
+      Metric(const std::string& name):
         name_(name){}
      public:
       virtual ~Metric() = default;
@@ -52,12 +52,12 @@ namespace Token{
      private:
       int64_t value_;
      public:
-      Counter(const std::string &name, const int64_t &initial = 0):
+      Counter(const std::string& name, const int64_t& initial = 0):
         Metric(name),
         value_(initial){}
       ~Counter() = default;
 
-      int64_t &Get(){
+      int64_t& Get(){
         return value_;
       }
 
@@ -77,7 +77,7 @@ namespace Token{
         value_ -= scale;
       }
 
-      friend std::ostream &operator<<(std::ostream &stream, const Counter &counter){
+      friend std::ostream& operator<<(std::ostream& stream, const Counter& counter){
         stream << "Counter(" << counter.Get() << ")";
         return stream;
       }
@@ -87,7 +87,7 @@ namespace Token{
 
     class Gauge : public Metric{
      protected:
-      Gauge(const std::string &name):
+      Gauge(const std::string& name):
         Metric(name){}
      public:
       virtual ~Gauge() = default;
@@ -110,7 +110,7 @@ namespace Token{
 #undef DEFINE_PERCENTILE
     };
 
-    static std::ostream &operator<<(std::ostream &stream, const Percentile &percentile){
+    static std::ostream& operator<<(std::ostream& stream, const Percentile& percentile){
       switch(percentile){
 #define DEFINE_TOSTRING(Name, Quantile) \
                 case Percentile::k##Name##Percentile: \
@@ -123,7 +123,7 @@ namespace Token{
       }
     }
 
-    static double GetQuantile(const Percentile &percentile){
+    static double GetQuantile(const Percentile& percentile){
       switch(percentile){
 #define DEFINE_GETTER(Name, Quantile) \
                 case Percentile::k##Name##Percentile: \
@@ -141,7 +141,7 @@ namespace Token{
      private:
       SnapshotData data_;
      public:
-      Snapshot(const SnapshotData &data):
+      Snapshot(const SnapshotData& data):
         data_(){
         std::copy(data.begin(), data.end(), std::back_inserter(data_));
         std::sort(data_.begin(), data_.end());
@@ -172,12 +172,12 @@ namespace Token{
         if(IsEmpty())
           return 0;
         int64_t mean = 0;
-        for(auto &it : data_)
+        for(auto& it : data_)
           mean += it;
         return mean / data_.size();
       }
 
-      double GetPercentile(const Percentile &percentile) const{
+      double GetPercentile(const Percentile& percentile) const{
         if(IsEmpty())
           return 0;
 
@@ -279,7 +279,7 @@ namespace Token{
       int64_t count_;
       std::unique_ptr<Sample> sample_;
      public:
-      Histogram(const std::string &name, const Sampling::SampleType &sample_type = Sampling::kUniform):
+      Histogram(const std::string& name, const Sampling::SampleType& sample_type = Sampling::kUniform):
         Metric(name),
         Sampling(),
         count_(0),
@@ -335,22 +335,22 @@ namespace Token{
     MetricRegistry() = default;
    public:
     ~MetricRegistry() = default;
-    static bool Register(const Counter &counter);
-    static bool Register(const Gauge &gauge);
-    static bool Register(const Histogram &histogram);
+    static bool Register(const Counter& counter);
+    static bool Register(const Gauge& gauge);
+    static bool Register(const Histogram& histogram);
 
-    static bool HasCounter(const std::string &name);
-    static bool HasGauge(const std::string &name);
-    static bool HasHistogram(const std::string &name);
+    static bool HasCounter(const std::string& name);
+    static bool HasGauge(const std::string& name);
+    static bool HasHistogram(const std::string& name);
 
-    static bool VisitMetrics(MetricRegistryVisitor *vis);
-    static bool VisitCounters(MetricRegistryVisitor *vis);
-    static bool VisitGauges(MetricRegistryVisitor *vis);
-    static bool VisitHistograms(MetricRegistryVisitor *vis);
+    static bool VisitMetrics(MetricRegistryVisitor* vis);
+    static bool VisitCounters(MetricRegistryVisitor* vis);
+    static bool VisitGauges(MetricRegistryVisitor* vis);
+    static bool VisitHistograms(MetricRegistryVisitor* vis);
 
-    static Counter GetCounter(const std::string &name);
-    static Gauge GetGauge(const std::string &name);
-    static Histogram GetHistogram(const std::string &name);
+    static Counter GetCounter(const std::string& name);
+    static Gauge GetGauge(const std::string& name);
+    static Histogram GetHistogram(const std::string& name);
   };
 
   class MetricRegistryVisitor{
@@ -358,7 +358,7 @@ namespace Token{
     MetricRegistryVisitor() = default;
    public:
     virtual ~MetricRegistryVisitor() = default;
-    virtual bool Visit(const Metric &metric) const = 0;
+    virtual bool Visit(const Metric& metric) const = 0;
   };
 }
 

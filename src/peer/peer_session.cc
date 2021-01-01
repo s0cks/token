@@ -16,7 +16,7 @@ namespace Token{
     conn.data = this;
 
     int err;
-    if((err = uv_tcp_connect(&conn, GetHandle(), (const struct sockaddr *) &addr, &PeerSession::OnConnect)) != 0){
+    if((err = uv_tcp_connect(&conn, GetHandle(), (const struct sockaddr*) &addr, &PeerSession::OnConnect)) != 0){
       LOG(ERROR) << "couldn't connect to peer " << paddr << ": " << uv_strerror(err);
       return false;
     }
@@ -53,8 +53,8 @@ namespace Token{
 #define SESSION_ERROR(Message) \
     SESSION_ERROR_STATUS(Session::kError, (Message))
 
-  void PeerSession::OnConnect(uv_connect_t *conn, int status){
-    PeerSession *session = (PeerSession *) conn->data;
+  void PeerSession::OnConnect(uv_connect_t* conn, int status){
+    PeerSession* session = (PeerSession*) conn->data;
     if(status != 0){
       std::stringstream ss;
       ss << "client accept error: " << uv_strerror(status);
@@ -76,13 +76,13 @@ namespace Token{
     }
   }
 
-  void PeerSession::OnDisconnect(uv_async_t *handle){
-    PeerSession *session = (PeerSession *) handle->data;
+  void PeerSession::OnDisconnect(uv_async_t* handle){
+    PeerSession* session = (PeerSession*) handle->data;
     session->Disconnect();
   }
 
-  void PeerSession::OnPrepare(uv_async_t *handle){
-    PeerSession *session = (PeerSession *) handle->data;
+  void PeerSession::OnPrepare(uv_async_t* handle){
+    PeerSession* session = (PeerSession*) handle->data;
     if(!BlockDiscoveryThread::HasProposal()){
       LOG(WARNING) << "there is no active proposal.";
       return;
@@ -92,8 +92,8 @@ namespace Token{
     session->Send(PrepareMessage::NewInstance(proposal));
   }
 
-  void PeerSession::OnPromise(uv_async_t *handle){
-    PeerSession *session = (PeerSession *) handle->data;
+  void PeerSession::OnPromise(uv_async_t* handle){
+    PeerSession* session = (PeerSession*) handle->data;
     if(!BlockDiscoveryThread::HasProposal()){
       LOG(WARNING) << "there is no active proposal.";
       return;
@@ -107,8 +107,8 @@ namespace Token{
     session->Send(PromiseMessage::NewInstance(proposal));
   }
 
-  void PeerSession::OnCommit(uv_async_t *handle){
-    PeerSession *session = (PeerSession *) handle->data;
+  void PeerSession::OnCommit(uv_async_t* handle){
+    PeerSession* session = (PeerSession*) handle->data;
     if(!BlockDiscoveryThread::HasProposal()){
       LOG(WARNING) << "there is no active proposal.";
       return;
@@ -122,8 +122,8 @@ namespace Token{
     session->Send(CommitMessage::NewInstance(proposal));
   }
 
-  void PeerSession::OnAccepted(uv_async_t *handle){
-    PeerSession *session = (PeerSession *) handle->data;
+  void PeerSession::OnAccepted(uv_async_t* handle){
+    PeerSession* session = (PeerSession*) handle->data;
     if(!BlockDiscoveryThread::HasProposal()){
       LOG(WARNING) << "there is no active proposal.";
       return;
@@ -138,8 +138,8 @@ namespace Token{
     session->Send(AcceptedMessage::NewInstance(proposal));
   }
 
-  void PeerSession::OnRejected(uv_async_t *handle){
-    PeerSession *session = (PeerSession *) handle->data;
+  void PeerSession::OnRejected(uv_async_t* handle){
+    PeerSession* session = (PeerSession*) handle->data;
     if(!BlockDiscoveryThread::HasProposal()){
       LOG(WARNING) << "there is no active proposal.";
       return;
@@ -154,8 +154,8 @@ namespace Token{
     session->Send(RejectedMessage::NewInstance(proposal));
   }
 
-  void PeerSession::OnMessageReceived(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buff){
-    PeerSession *session = (PeerSession *) stream->data;
+  void PeerSession::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
+    PeerSession* session = (PeerSession*) stream->data;
     if(nread == UV_EOF){
       LOG(ERROR) << "client disconnected!";
       return;
@@ -173,7 +173,7 @@ namespace Token{
     uint32_t offset = 0;
     std::vector<MessagePtr> messages;
 
-    BufferPtr &rbuff = session->GetReadBuffer();
+    BufferPtr& rbuff = session->GetReadBuffer();
     do{
       uint32_t mtype = rbuff->GetInt();
       intptr_t msize = rbuff->GetLong();
@@ -197,7 +197,7 @@ namespace Token{
 
     for(size_t idx = 0; idx < messages.size(); idx++){
       MessagePtr msg = messages[idx];
-      HandleMessageTask *task = HandleMessageTask::NewInstance(session, msg);
+      HandleMessageTask* task = HandleMessageTask::NewInstance(session, msg);
       switch(msg->GetMessageType()){
 #define DEFINE_HANDLER_CASE(Name) \
             case Message::k##Name##MessageType: \
@@ -213,16 +213,16 @@ namespace Token{
     rbuff->Reset();
   }
 
-  void PeerSession::HandleGetBlocksMessage(HandleMessageTask *task){}
+  void PeerSession::HandleGetBlocksMessage(HandleMessageTask* task){}
 
-  void PeerSession::HandleVersionMessage(HandleMessageTask *task){
-    PeerSession *session = task->GetSession<PeerSession>();
+  void PeerSession::HandleVersionMessage(HandleMessageTask* task){
+    PeerSession* session = task->GetSession<PeerSession>();
     BlockPtr head = BlockChain::GetHead();
     session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), head->GetHeader()));
   }
 
-  void PeerSession::HandleVerackMessage(HandleMessageTask *task){
-    PeerSession *session = task->GetSession<PeerSession>();
+  void PeerSession::HandleVerackMessage(HandleMessageTask* task){
+    PeerSession* session = task->GetSession<PeerSession>();
     VerackMessagePtr msg = task->GetMessage<VerackMessage>();
 
     LOG(INFO) << "remote timestamp: " << GetTimestampFormattedReadable(msg->GetTimestamp());
@@ -240,7 +240,7 @@ namespace Token{
         LOG(INFO) << "skipping remote <HEAD> := " << remote_head;
       } else if(local_head < remote_head){
         SynchronizeBlockChainTask
-          *sync_task = SynchronizeBlockChainTask::NewInstance(session->GetLoop(), session, remote_head);
+          * sync_task = SynchronizeBlockChainTask::NewInstance(session->GetLoop(), session, remote_head);
         sync_task->Submit();
         session->Send(GetBlocksMessage::NewInstance());
       }
@@ -251,14 +251,14 @@ namespace Token{
     // - state transition
   }
 
-  void PeerSession::HandlePrepareMessage(HandleMessageTask *task){}
-  void PeerSession::HandlePromiseMessage(HandleMessageTask *task){}
-  void PeerSession::HandleCommitMessage(HandleMessageTask *task){}
-  void PeerSession::HandleAcceptedMessage(HandleMessageTask *task){}
-  void PeerSession::HandleRejectedMessage(HandleMessageTask *task){}
+  void PeerSession::HandlePrepareMessage(HandleMessageTask* task){}
+  void PeerSession::HandlePromiseMessage(HandleMessageTask* task){}
+  void PeerSession::HandleCommitMessage(HandleMessageTask* task){}
+  void PeerSession::HandleAcceptedMessage(HandleMessageTask* task){}
+  void PeerSession::HandleRejectedMessage(HandleMessageTask* task){}
 
-  void PeerSession::HandleGetDataMessage(HandleMessageTask *task){
-    PeerSession *session = (PeerSession *) task->GetSession();
+  void PeerSession::HandleGetDataMessage(HandleMessageTask* task){
+    PeerSession* session = (PeerSession*) task->GetSession();
     GetDataMessagePtr msg = task->GetMessage<GetDataMessage>();
 
     std::vector<InventoryItem> items;
@@ -269,7 +269,7 @@ namespace Token{
 
     LOG(INFO) << "getting " << items.size() << " items....";
     std::vector<MessagePtr> response;
-    for(auto &item : items){
+    for(auto& item : items){
       Hash hash = item.GetHash();
       LOG(INFO) << "resolving item : " << hash;
       if(item.IsBlock()){
@@ -300,7 +300,7 @@ namespace Token{
     session->Send(response);
   }
 
-  void PeerSession::HandleBlockMessage(HandleMessageTask *task){
+  void PeerSession::HandleBlockMessage(HandleMessageTask* task){
     BlockMessagePtr msg = task->GetMessage<BlockMessage>();
     BlockPtr blk = msg->GetValue();
     Hash hash = blk->GetHash();
@@ -308,22 +308,22 @@ namespace Token{
     LOG(INFO) << "received block: " << hash;
   }
 
-  void PeerSession::HandleTransactionMessage(HandleMessageTask *task){
+  void PeerSession::HandleTransactionMessage(HandleMessageTask* task){
 
   }
 
-  void PeerSession::HandleUnclaimedTransactionMessage(HandleMessageTask *task){
+  void PeerSession::HandleUnclaimedTransactionMessage(HandleMessageTask* task){
 
   }
 
-  void PeerSession::HandleNotFoundMessage(HandleMessageTask *task){
-    PeerSession *session = (PeerSession *) task->GetSession();
+  void PeerSession::HandleNotFoundMessage(HandleMessageTask* task){
+    PeerSession* session = (PeerSession*) task->GetSession();
     NotFoundMessagePtr msg = task->GetMessage<NotFoundMessage>();
     LOG(WARNING) << "(" << session->GetInfo() << "): " << msg->GetMessage();
   }
 
-  void PeerSession::HandleInventoryMessage(HandleMessageTask *task){
-    PeerSession *session = (PeerSession *) task->GetSession();
+  void PeerSession::HandleInventoryMessage(HandleMessageTask* task){
+    PeerSession* session = (PeerSession*) task->GetSession();
     InventoryMessagePtr msg = task->GetMessage<InventoryMessage>();
 
     std::vector<InventoryItem> items;
@@ -333,7 +333,7 @@ namespace Token{
     }
 
     std::vector<InventoryItem> needed;
-    for(auto &item : items){
+    for(auto& item : items){
       if(!item.ItemExists())
         needed.push_back(item);
     }
@@ -342,11 +342,11 @@ namespace Token{
     session->Send(GetDataMessage::NewInstance(items));
   }
 
-  void PeerSession::HandleGetPeersMessage(HandleMessageTask *task){
+  void PeerSession::HandleGetPeersMessage(HandleMessageTask* task){
     //TODO: implement PeerSession::HandleGetPeersMessage(HandleMessageTask*);
   }
 
-  void PeerSession::HandlePeerListMessage(HandleMessageTask *task){
+  void PeerSession::HandlePeerListMessage(HandleMessageTask* task){
     //TODO: implement PeerSession::HandlePeerListMessage(HandleMessageTask*);
   }
 }

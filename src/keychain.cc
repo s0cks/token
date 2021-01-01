@@ -4,38 +4,38 @@
 #include "utils/crash_report.h"
 
 namespace Token{
-  void Decode(CryptoPP::BufferedTransformation &bt, const std::string &filename){
+  void Decode(CryptoPP::BufferedTransformation& bt, const std::string& filename){
     CryptoPP::FileSource source(filename.c_str(), true);
     source.TransferTo(bt);
     bt.MessageEnd();
   }
 
-  void DecodePrivateKey(CryptoPP::RSA::PrivateKey *privKey, const std::string &filename){
+  void DecodePrivateKey(CryptoPP::RSA::PrivateKey* privKey, const std::string& filename){
     CryptoPP::ByteQueue bytes;
     Decode(bytes, filename);
     privKey->BERDecodePrivateKey(bytes, false, bytes.MaxRetrievable());
   }
 
-  void DecodePublicKey(CryptoPP::RSA::PublicKey *key, const std::string &filename){
+  void DecodePublicKey(CryptoPP::RSA::PublicKey* key, const std::string& filename){
     CryptoPP::ByteQueue bytes;
     Decode(bytes, filename);
     key->BERDecodePublicKey(bytes, false, bytes.MaxRetrievable());
   }
 
-  void Encode(CryptoPP::BufferedTransformation &bt, const std::string &filename){
+  void Encode(CryptoPP::BufferedTransformation& bt, const std::string& filename){
     CryptoPP::FileSink sink(filename.c_str());
     bt.CopyTo(sink);
     sink.MessageEnd();
   }
 
-  void EncodePrivateKey(CryptoPP::RSA::PrivateKey *key, const std::string &filename){
+  void EncodePrivateKey(CryptoPP::RSA::PrivateKey* key, const std::string& filename){
     CryptoPP::ByteQueue bytes;
     key->DEREncodePrivateKey(bytes);
     Encode(bytes, filename);
     LOG(INFO) << "generated private key: " << filename;
   }
 
-  void EncodePublicKey(CryptoPP::RSA::PublicKey *key, const std::string &filename){
+  void EncodePublicKey(CryptoPP::RSA::PublicKey* key, const std::string& filename){
     CryptoPP::ByteQueue bytes;
     key->DEREncodePublicKey(bytes);
     Encode(bytes, filename);
@@ -71,7 +71,7 @@ namespace Token{
           // 3. Write Keys to File
           EncodePrivateKey(&privKey, PRIVATE_KEYFILE);
           EncodePublicKey(&pubKey, PUBLIC_KEYFILE);
-        } catch(CryptoPP::Exception &ex){
+        } catch(CryptoPP::Exception& ex){
           LOG(WARNING) << "An exception occurred when generating the block chain keys: " << std::endl;
           LOG(WARNING) << "\t" << ex.what();
         }
@@ -88,7 +88,7 @@ namespace Token{
     LoadKeys(&privateKey, &publicKey);
   }
 
-  void Keychain::LoadKeys(CryptoPP::RSA::PrivateKey *privKey, CryptoPP::RSA::PublicKey *pubKey){
+  void Keychain::LoadKeys(CryptoPP::RSA::PrivateKey* privKey, CryptoPP::RSA::PublicKey* pubKey){
     try{
       CryptoPP::AutoSeededRandomPool rng;
 
@@ -126,13 +126,13 @@ namespace Token{
 
       // 3. Consistency Check
       if((privKey->GetModulus() != pubKey->GetModulus())
-        || (privKey->GetPublicExponent() != pubKey->GetPublicExponent())){
+         || (privKey->GetPublicExponent() != pubKey->GetPublicExponent())){
         LOG(WARNING) << "Keys didn't pass round-trip consistency check";
         return;
       }
 
       LOG(INFO) << "initialized block chain keychain";
-    } catch(CryptoPP::Exception &ex){
+    } catch(CryptoPP::Exception& ex){
       LOG(WARNING) << "Failed to load block chain keys: " << ex.what();
       return;
     }

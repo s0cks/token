@@ -64,7 +64,7 @@ namespace Token{
 
   void HealthCheckService::HandleServiceThread(uword parameter){
     SetState(HealthCheckService::kStarting);
-    uv_loop_t *loop = uv_loop_new();
+    uv_loop_t* loop = uv_loop_new();
     uv_async_init(loop, &shutdown_, &OnShutdown);
 
     uv_tcp_t server;
@@ -77,7 +77,7 @@ namespace Token{
     }
 
     int result;
-    if((result = uv_listen((uv_stream_t *) &server, 100, &OnNewConnection)) != 0){
+    if((result = uv_listen((uv_stream_t*) &server, 100, &OnNewConnection)) != 0){
       LOG(WARNING) << "health check service couldn't listen on port " << port << ": " << uv_strerror(result);
       goto exit;
     }
@@ -90,15 +90,15 @@ namespace Token{
     pthread_exit(nullptr);
   }
 
-  void HealthCheckService::OnShutdown(uv_async_t *handle){
+  void HealthCheckService::OnShutdown(uv_async_t* handle){
     SetState(HealthCheckService::kStopping);
     uv_stop(handle->loop);
     if(!HttpService::ShutdownService(handle->loop))
       LOG(WARNING) << "couldn't shutdown the HealthCheck service";
   }
 
-  void HealthCheckService::OnNewConnection(uv_stream_t *stream, int status){
-    HttpSession *session = new HttpSession(stream->loop);
+  void HealthCheckService::OnNewConnection(uv_stream_t* stream, int status){
+    HttpSession* session = new HttpSession(stream->loop);
     if(!Accept(stream, session)){
       LOG(WARNING) << "couldn't accept new connection.";
       return;
@@ -111,8 +111,8 @@ namespace Token{
     }
   }
 
-  void HealthCheckService::OnMessageReceived(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buff){
-    HttpSession *session = (HttpSession *) stream->data;
+  void HealthCheckService::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
+    HttpSession* session = (HttpSession*) stream->data;
     if(nread == UV_EOF)
       return;
 
@@ -133,16 +133,16 @@ namespace Token{
 
       // weirdness :(
       request.SetParameters(match.GetParameters());
-      HttpRouteHandler &handler = match.GetHandler();
+      HttpRouteHandler& handler = match.GetHandler();
       handler(session, &request);
     }
   }
 
-  void HealthController::HandleGetReadyStatus(HttpSession *session, HttpRequest *request){
+  void HealthController::HandleGetReadyStatus(HttpSession* session, HttpRequest* request){
     SendOk(session); //TODO: implement
   }
 
-  void HealthController::HandleGetLiveStatus(HttpSession *session, HttpRequest *request){
+  void HealthController::HandleGetLiveStatus(HttpSession* session, HttpRequest* request){
     SendOk(session); //TODO: implement
   }
 }

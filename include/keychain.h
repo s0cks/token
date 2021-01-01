@@ -13,7 +13,7 @@ namespace Token{
     ~Keychain() = delete;
 
     static void Initialize();
-    static void LoadKeys(CryptoPP::RSA::PrivateKey *privKey, CryptoPP::RSA::PublicKey *pubKey);
+    static void LoadKeys(CryptoPP::RSA::PrivateKey* privKey, CryptoPP::RSA::PublicKey* pubKey);
   };
 }
 

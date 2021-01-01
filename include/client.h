@@ -17,15 +17,15 @@ namespace Token{
     UUID id_;
     MessagePtr next_;
 
-    void SetNextMessage(const MessagePtr &msg);
+    void SetNextMessage(const MessagePtr& msg);
     void WaitForNextMessage();
     MessagePtr GetNextMessage();
-    static void OnConnect(uv_connect_t *conn, int status);
-    static void OnShutdown(uv_async_t *handle);
-    static void OnMessageReceived(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buff);
-    static void *SessionThread(void *data);
+    static void OnConnect(uv_connect_t* conn, int status);
+    static void OnShutdown(uv_async_t* handle);
+    static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
+    static void* SessionThread(void* data);
    public:
-    ClientSession(const NodeAddress &address, uv_loop_t *loop = uv_loop_new()):
+    ClientSession(const NodeAddress& address, uv_loop_t* loop = uv_loop_new()):
       ThreadedSession(loop),
       address_(address),
       id_(),
@@ -54,11 +54,11 @@ namespace Token{
       return "ClientSession()";
     }
 
-    BlockPtr GetBlock(const Hash &hash);
-    bool GetBlockChain(std::set<Hash> &blocks);
-    bool GetPeers(PeerList &peers);
-    bool SendTransaction(const TransactionPtr &tx);
-    UnclaimedTransactionPtr GetUnclaimedTransaction(const Hash &hash);
+    BlockPtr GetBlock(const Hash& hash);
+    bool GetBlockChain(std::set<Hash>& blocks);
+    bool GetPeers(PeerList& peers);
+    bool SendTransaction(const TransactionPtr& tx);
+    UnclaimedTransactionPtr GetUnclaimedTransaction(const Hash& hash);
   };
 }
 

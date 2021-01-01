@@ -30,9 +30,9 @@ namespace Token{
     Hash head_;
 
     uint64_t blocks_len_;
-    Block **blocks_;
+    Block** blocks_;
 
-    Snapshot(const std::string &filename):
+    Snapshot(const std::string& filename):
       filename_(filename),
       timestamp_(),
       version_(),
@@ -44,18 +44,18 @@ namespace Token{
       timestamp_ = timestamp;
     }
 
-    void SetVersion(const std::string &version){
+    void SetVersion(const std::string& version){
       version_ = version;
     }
 
-    void SetHead(const Hash &hash){
+    void SetHead(const Hash& hash){
       head_ = hash;
     }
 
     void SetNumberOfBlocks(uint64_t num_blocks){
       if(blocks_) free(blocks_);
-      blocks_ = (Block **) malloc(sizeof(Block *) * num_blocks);
-      memset(blocks_, 0, sizeof(Block *) * num_blocks);
+      blocks_ = (Block**) malloc(sizeof(Block*) * num_blocks);
+      memset(blocks_, 0, sizeof(Block*) * num_blocks);
       blocks_len_ = num_blocks;
     }
 
@@ -90,11 +90,11 @@ namespace Token{
       return blocks_len_;
     }
 
-    Block *GetBlock(uint64_t height) const{
+    Block* GetBlock(uint64_t height) const{
       return blocks_[height];
     }
 
-    Block *GetBlock(const Hash &hash) const{
+    Block* GetBlock(const Hash& hash) const{
       for(uint64_t idx = 0; idx < blocks_len_; idx++){
         if(blocks_[idx]->GetHash() == hash)
           return blocks_[idx];
@@ -102,10 +102,10 @@ namespace Token{
       return nullptr;
     }
 
-    bool Accept(SnapshotVisitor *vis);
+    bool Accept(SnapshotVisitor* vis);
 
     static bool WriteNewSnapshot();
-    static Snapshot *ReadSnapshot(const std::string &filename);
+    static Snapshot* ReadSnapshot(const std::string& filename);
 
     static inline std::string
     GetSnapshotDirectory(){
@@ -118,9 +118,9 @@ namespace Token{
     SnapshotVisitor() = default;
    public:
     virtual ~SnapshotVisitor() = default;
-    virtual bool VisitStart(Snapshot *snapshot){ return true; }
-    virtual bool Visit(Block *blk) = 0;
-    virtual bool VisitEnd(Snapshot *snapshot){ return true; }
+    virtual bool VisitStart(Snapshot* snapshot){ return true; }
+    virtual bool Visit(Block* blk) = 0;
+    virtual bool VisitEnd(Snapshot* snapshot){ return true; }
   };
 
   class SnapshotPrinter : public SnapshotVisitor{
@@ -130,19 +130,19 @@ namespace Token{
    public:
     ~SnapshotPrinter() = default;
 
-    bool VisitStart(Snapshot *snapshot){
+    bool VisitStart(Snapshot* snapshot){
       LOG(INFO) << "Snapshot: " << snapshot->GetFilename();
       LOG(INFO) << "Generated: " << GetTimestampFormattedReadable(snapshot->GetTimestamp());
       LOG(INFO) << "Blocks:";
       return true;
     }
 
-    bool Visit(Block *blk){
+    bool Visit(Block* blk){
       LOG(INFO) << " - " << blk->GetHash();
       return true;
     }
 
-    static bool Print(Snapshot *snapshot){
+    static bool Print(Snapshot* snapshot){
       SnapshotPrinter printer;
       return snapshot->Accept(&printer);
     }

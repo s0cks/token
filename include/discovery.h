@@ -24,7 +24,7 @@ namespace Token{
 #undef DEFINE_STATE
     };
 
-    friend std::ostream &operator<<(std::ostream &stream, const State &state){
+    friend std::ostream& operator<<(std::ostream& stream, const State& state){
       switch(state){
 #define DEFINE_TOSTRING(Name) \
                 case State::k##Name: \
@@ -43,7 +43,7 @@ namespace Token{
 #undef DEFINE_STATUS
     };
 
-    friend std::ostream &operator<<(std::ostream &stream, const Status &status){
+    friend std::ostream& operator<<(std::ostream& stream, const Status& status){
       switch(status){
 #define DEFINE_TOSTRING(Name) \
                 case Status::k##Name: \
@@ -58,8 +58,8 @@ namespace Token{
    private:
     BlockDiscoveryThread() = delete;
 
-    static void SetState(const State &state);
-    static void SetStatus(const Status &status);
+    static void SetState(const State& state);
+    static void SetStatus(const Status& status);
     static void HandleThread(uword parameter);
     static ProposalPtr CreateNewProposal(BlockPtr blk);
     static BlockPtr CreateNewBlock(intptr_t size);
@@ -68,9 +68,9 @@ namespace Token{
 
     static State GetState();
     static Status GetStatus();
-    static void WaitForState(const State &state);
+    static void WaitForState(const State& state);
     static void SetBlock(BlockPtr blk);
-    static void SetProposal(const ProposalPtr &proposal);
+    static void SetProposal(const ProposalPtr& proposal);
     static BlockPtr GetBlock();
     static ProposalPtr GetProposal();
     static bool HasProposal();

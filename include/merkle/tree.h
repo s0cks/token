@@ -116,7 +116,7 @@ namespace Token{
     MerkleTreePrinter(Printer* parent):
       MerkleTreeVisitor(),
       Printer(parent){}
-    MerkleTreePrinter(const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone):
+    MerkleTreePrinter(const google::LogSeverity& severity = google::INFO, const long& flags = Printer::kFlagNone):
       MerkleTreeVisitor(),
       Printer(severity, flags){}
     ~MerkleTreePrinter() = default;

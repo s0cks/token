@@ -49,15 +49,15 @@ namespace Token{
     static bool LoadConfiguration();
     static bool GenerateConfiguration();
 
-    static libconfig::Setting &GetRootProperty();
-    static libconfig::Setting &GetProperty(const std::string &name, libconfig::Setting::Type type);
+    static libconfig::Setting& GetRootProperty();
+    static libconfig::Setting& GetProperty(const std::string& name, libconfig::Setting::Type type);
 
-    static inline libconfig::Setting &
+    static inline libconfig::Setting&
     GetServerProperties(){
       return GetProperty(PROPERTY_SERVER, libconfig::Setting::TypeGroup);
     }
 
-    static inline libconfig::Setting &
+    static inline libconfig::Setting&
     GetHealthCheckProperties(){
       return GetProperty(PROPERTY_HEALTHCHECK, libconfig::Setting::TypeGroup);
     }
@@ -73,16 +73,16 @@ namespace Token{
     // Server
     // Server.Id
     static UUID GetSererID();
-    static bool SetServerID(const UUID &uuid);
+    static bool SetServerID(const UUID& uuid);
     // Server.CallbackAddress
     static NodeAddress GetServerCallbackAddress();
-    static bool SetServerCallbackAddress(const NodeAddress &address);
+    static bool SetServerCallbackAddress(const NodeAddress& address);
     // Server.MaxNumberOfPeers
     static int32_t GetMaxNumberOfPeers();
     static bool SetMaxNumberOfPeers(int32_t value);
     // Server.Peers
-    static bool GetPeerList(std::set<NodeAddress> &peers);
-    static bool SetPeerList(const std::set<NodeAddress> &peers);
+    static bool GetPeerList(std::set<NodeAddress>& peers);
+    static bool SetPeerList(const std::set<NodeAddress>& peers);
 
     static inline std::string
     GetConfigurationFilename(){

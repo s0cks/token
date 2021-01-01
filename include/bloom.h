@@ -18,27 +18,27 @@ namespace Token{
     BloomFilter(size_t num_hashes = 4):
       num_hashes_(num_hashes),
       bits_(){}
-    BloomFilter(const BloomFilter &filter):
+    BloomFilter(const BloomFilter& filter):
       num_hashes_(filter.num_hashes_),
       bits_(filter.bits_){}
     ~BloomFilter(){}
 
-    void Put(const Hash &hash){
-      uint16_t *hashes = (uint16_t *) hash.data();
+    void Put(const Hash& hash){
+      uint16_t* hashes = (uint16_t*) hash.data();
       for(size_t idx = 0; idx < num_hashes_; idx++){
         bits_[hashes[idx]] = true;
       }
     }
 
-    bool Contains(const Hash &hash) const{
-      uint16_t *hashes = (uint16_t *) hash.data();
+    bool Contains(const Hash& hash) const{
+      uint16_t* hashes = (uint16_t*) hash.data();
       for(size_t idx = 0; idx < num_hashes_; idx++){
         if(!bits_[hashes[idx]]) return false;
       }
       return true;
     }
 
-    void operator=(const BloomFilter &filter){
+    void operator=(const BloomFilter& filter){
       num_hashes_ = filter.num_hashes_;
       bits_ = filter.bits_;
     }

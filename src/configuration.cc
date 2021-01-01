@@ -5,14 +5,14 @@
 
 namespace Token{
   static inline bool
-  HasEnvironmentVariable(const std::string &name){ //TODO: move HasEnvironmentVariable to common
-    char *val = getenv(name.data());
+  HasEnvironmentVariable(const std::string& name){ //TODO: move HasEnvironmentVariable to common
+    char* val = getenv(name.data());
     return val != NULL;
   }
 
   static inline std::string
-  GetEnvironmentVariable(const std::string &name){ //TODO: move GetEnvironmentVariable to common
-    char *val = getenv(name.data());
+  GetEnvironmentVariable(const std::string& name){ //TODO: move GetEnvironmentVariable to common
+    char* val = getenv(name.data());
     if(val == NULL) return "";
     return std::string(val);
   }
@@ -47,19 +47,19 @@ namespace Token{
     try{
       config_.writeFile(filename.data());
       return true;
-    } catch(const libconfig::FileIOException &exc){
+    } catch(const libconfig::FileIOException& exc){
       LOG(WARNING) << "failed to save configuration to file " << filename << ": " << exc.what();
       return false;
     }
   }
 
   static inline bool
-  ParseConfiguration(libconfig::Config &config, const std::string &filename){
+  ParseConfiguration(libconfig::Config& config, const std::string& filename){
     try{
       LOG(INFO) << "loading block chain configuration file from " << filename << "....";
       config.readFile(filename.c_str());
       return true;
-    } catch(const libconfig::ParseException &exc){
+    } catch(const libconfig::ParseException& exc){
       LOG(WARNING) << "failed to parse configuration from file " << filename << ": " << exc.what();
       return false;
     }
@@ -94,17 +94,17 @@ namespace Token{
     return LoadConfiguration();
   }
 
-  libconfig::Setting &BlockChainConfiguration::GetRootProperty(){
+  libconfig::Setting& BlockChainConfiguration::GetRootProperty(){
     return config_.getRoot();
   }
 
-  libconfig::Setting &BlockChainConfiguration::GetProperty(const std::string &name, libconfig::Setting::Type type){
-    libconfig::Setting &root = GetRootProperty();
+  libconfig::Setting& BlockChainConfiguration::GetProperty(const std::string& name, libconfig::Setting::Type type){
+    libconfig::Setting& root = GetRootProperty();
     if(root.exists(name)) return root.lookup(name);
     return root.add(name, type);
   }
 
-  bool BlockChainConfiguration::GetPeerList(std::set<NodeAddress> &results){
+  bool BlockChainConfiguration::GetPeerList(std::set<NodeAddress>& results){
     LOCK_GUARD;
     if(!FLAGS_peer.empty())
       results.insert(NodeAddress(FLAGS_peer));
@@ -117,7 +117,7 @@ namespace Token{
       }
     }
 
-    libconfig::Setting &peers = GetServerProperties().lookup(PROPERTY_SERVER_PEER_LIST);
+    libconfig::Setting& peers = GetServerProperties().lookup(PROPERTY_SERVER_PEER_LIST);
     auto iter = peers.begin();
     while(iter != peers.end()){
       results.insert(NodeAddress(std::string(iter->c_str())));
@@ -140,7 +140,7 @@ namespace Token{
 
   bool BlockChainConfiguration::SetHealthCheckPort(int32_t port){
     LOCK_GUARD;
-    libconfig::Setting &health_check = GetHealthCheckProperties();
+    libconfig::Setting& health_check = GetHealthCheckProperties();
     health_check.add(PROPERTY_HEALTHCHECK_PORT, libconfig::Setting::TypeInt) = port;
     if(!SaveConfiguration()){
       LOG(WARNING) << "couldn't save the configuration";
@@ -149,13 +149,13 @@ namespace Token{
     return true;
   }
 
-  bool BlockChainConfiguration::SetPeerList(const std::set<NodeAddress> &peers){
+  bool BlockChainConfiguration::SetPeerList(const std::set<NodeAddress>& peers){
     LOCK_GUARD;
-    libconfig::Setting &server = GetServerProperties();
+    libconfig::Setting& server = GetServerProperties();
     if(server.exists(PROPERTY_SERVER_PEER_LIST))
       server.remove(PROPERTY_SERVER_PEER_LIST);
-    libconfig::Setting &property = server.add(PROPERTY_SERVER_PEER_LIST, libconfig::Setting::TypeList);
-    for(auto &it : peers){
+    libconfig::Setting& property = server.add(PROPERTY_SERVER_PEER_LIST, libconfig::Setting::TypeList);
+    for(auto& it : peers){
       property.add(libconfig::Setting::TypeString) = it.ToString();
     }
 
@@ -166,9 +166,9 @@ namespace Token{
     return true;
   }
 
-  bool BlockChainConfiguration::SetServerID(const UUID &uuid){
+  bool BlockChainConfiguration::SetServerID(const UUID& uuid){
     LOCK_GUARD;
-    libconfig::Setting &server = GetServerProperties();
+    libconfig::Setting& server = GetServerProperties();
     if(server.exists(PROPERTY_SERVER_ID))
       server.remove(PROPERTY_SERVER_ID);
     server.add(PROPERTY_SERVER_ID, libconfig::Setting::Type::TypeString);
@@ -180,9 +180,9 @@ namespace Token{
     return true;
   }
 
-  bool BlockChainConfiguration::SetServerCallbackAddress(const NodeAddress &address){
+  bool BlockChainConfiguration::SetServerCallbackAddress(const NodeAddress& address){
     LOCK_GUARD;
-    libconfig::Setting &server = GetServerProperties();
+    libconfig::Setting& server = GetServerProperties();
     if(server.exists(PROPERTY_SERVER_CALLBACK_ADDRESS))
       server.remove(PROPERTY_SERVER_CALLBACK_ADDRESS);
     server.add(PROPERTY_SERVER_CALLBACK_ADDRESS, libconfig::Setting::TypeString) = address.ToString();
@@ -199,8 +199,8 @@ namespace Token{
 
   bool BlockChainConfiguration::SetMaxNumberOfPeers(int32_t value){
     LOCK_GUARD;
-    libconfig::Setting &server = GetServerProperties();
-    libconfig::Setting &property =
+    libconfig::Setting& server = GetServerProperties();
+    libconfig::Setting& property =
       server.exists(PROPERTY_SERVER_MAXPEERS)
       ? server.lookup(PROPERTY_SERVER_MAXPEERS)
       : server.add(PROPERTY_SERVER_MAXPEERS, libconfig::Setting::TypeInt);

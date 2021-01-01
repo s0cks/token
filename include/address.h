@@ -11,8 +11,8 @@ namespace Token{
 
     template<typename Container>
     static inline bool
-    ResolveAddresses(const std::string &hostname, Container &results){
-      void *ptr;
+    ResolveAddresses(const std::string& hostname, Container& results){
+      void* ptr;
 
       struct addrinfo hints;
       memset(&hints, 0, sizeof(hints));
@@ -29,7 +29,7 @@ namespace Token{
         port = atoi(parts[1].data());
       }
 
-      struct addrinfo *res;
+      struct addrinfo* res;
       int err;
       if((err = getaddrinfo(address.data(), NULL, &hints, &res)) != 0){
         LOG(WARNING) << "couldn't get " << hostname << "'s ip: " << gai_strerror(err);
@@ -40,9 +40,9 @@ namespace Token{
       while(res){
         inet_ntop(res->ai_family, res->ai_addr->sa_data, addrstr, 100);
         switch(res->ai_family){
-          case AF_INET:ptr = &((struct sockaddr_in *) res->ai_addr)->sin_addr;
+          case AF_INET:ptr = &((struct sockaddr_in*) res->ai_addr)->sin_addr;
             break;
-          case AF_INET6:ptr = &((struct sockaddr_in6 *) res->ai_addr)->sin6_addr;
+          case AF_INET6:ptr = &((struct sockaddr_in6*) res->ai_addr)->sin6_addr;
             break;
         }
         inet_ntop(res->ai_family, ptr, addrstr, 100);
@@ -53,7 +53,7 @@ namespace Token{
     }
 
     static inline NodeAddress
-    ResolveAddress(const std::string &hostname){
+    ResolveAddress(const std::string& hostname){
       std::set<NodeAddress> addresses;
       if(!ResolveAddresses(hostname, addresses)){
         LOG(WARNING) << "couldn't resolve: " << hostname;
@@ -65,11 +65,11 @@ namespace Token{
     uint32_t address_;
     uint32_t port_;
    public:
-    NodeAddress(const std::string &address);
-    NodeAddress(const std::string &address, uint32_t port);
-    NodeAddress(const uv_tcp_t *stream);
-    NodeAddress(const NodeAddress &other);
-    NodeAddress(const BufferPtr &buff):
+    NodeAddress(const std::string& address);
+    NodeAddress(const std::string& address, uint32_t port);
+    NodeAddress(const uv_tcp_t* stream);
+    NodeAddress(const NodeAddress& other);
+    NodeAddress(const BufferPtr& buff):
       address_(buff->GetUnsignedInt()),
       port_(buff->GetUnsignedInt()){}
     NodeAddress():
@@ -83,34 +83,34 @@ namespace Token{
 
     std::string GetAddress() const;
     std::string ToString() const;
-    bool Get(struct sockaddr_in *addr) const;
+    bool Get(struct sockaddr_in* addr) const;
 
-    bool Write(const BufferPtr &buff) const{
+    bool Write(const BufferPtr& buff) const{
       buff->PutUnsignedInt(address_);
       buff->PutUnsignedInt(port_);
       return true;
     }
 
-    NodeAddress &operator=(const NodeAddress &other){
+    NodeAddress& operator=(const NodeAddress& other){
       address_ = other.address_;
       port_ = other.port_;
       return (*this);
     }
 
-    friend bool operator==(const NodeAddress &a, const NodeAddress &b){
+    friend bool operator==(const NodeAddress& a, const NodeAddress& b){
       return a.address_ == b.address_
-        && a.port_ == b.port_;
+             && a.port_ == b.port_;
     }
 
-    friend bool operator!=(const NodeAddress &a, const NodeAddress &b){
+    friend bool operator!=(const NodeAddress& a, const NodeAddress& b){
       return !operator==(a, b);
     }
 
-    friend bool operator<(const NodeAddress &a, const NodeAddress &b){
+    friend bool operator<(const NodeAddress& a, const NodeAddress& b){
       return a.address_ < b.address_;
     }
 
-    friend std::ostream &operator<<(std::ostream &stream, const NodeAddress &address){
+    friend std::ostream& operator<<(std::ostream& stream, const NodeAddress& address){
       stream << address.ToString();
       return stream;
     }

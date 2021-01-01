@@ -2,7 +2,7 @@
 
 namespace Token{
   static inline uint32_t
-  GetAddressFrom(const std::string &address){
+  GetAddressFrom(const std::string& address){
     int a, b, c, d;
     uint32_t addr = 0;
 
@@ -30,29 +30,29 @@ namespace Token{
   }
 
   static uint32_t
-  GetAddressFromHandle(const uv_tcp_t *handle){
+  GetAddressFromHandle(const uv_tcp_t* handle){
     struct sockaddr_in name;
     int nlen = sizeof(name);
-    if(uv_tcp_getpeername(handle, (struct sockaddr *) &name, &nlen)) return 0;
+    if(uv_tcp_getpeername(handle, (struct sockaddr*) &name, &nlen)) return 0;
     char addr[16];
     uv_inet_ntop(AF_INET, &name.sin_addr, addr, sizeof(addr));
     return GetAddressFrom(std::string(addr));
   }
 
   static inline uint32_t
-  GetPortFromHandle(const uv_tcp_t *handle){
+  GetPortFromHandle(const uv_tcp_t* handle){
     struct sockaddr_in name;
     int nlen = sizeof(name);
-    if(uv_tcp_getpeername(handle, (struct sockaddr *) &name, &nlen)) return 0;
+    if(uv_tcp_getpeername(handle, (struct sockaddr*) &name, &nlen)) return 0;
     return ntohs(name.sin_port);
   }
 
   static inline uint32_t
-  GetPortFrom(const std::string &port){
+  GetPortFrom(const std::string& port){
     return atoi(port.c_str());
   }
 
-  NodeAddress::NodeAddress(const std::string &address):
+  NodeAddress::NodeAddress(const std::string& address):
     address_(0),
     port_(0){
     if(address.find(':') != std::string::npos){
@@ -67,15 +67,15 @@ namespace Token{
     }
   }
 
-  NodeAddress::NodeAddress(const std::string &address, uint32_t port):
+  NodeAddress::NodeAddress(const std::string& address, uint32_t port):
     address_(GetAddressFrom(address)),
     port_(port){}
 
-  NodeAddress::NodeAddress(const uv_tcp_t *handle):
+  NodeAddress::NodeAddress(const uv_tcp_t* handle):
     address_(GetAddressFromHandle(handle)),
     port_(GetPortFromHandle(handle)){}
 
-  NodeAddress::NodeAddress(const NodeAddress &other):
+  NodeAddress::NodeAddress(const NodeAddress& other):
     address_(other.address_),
     port_(other.port_){}
 
@@ -89,7 +89,7 @@ namespace Token{
     return ss.str();
   }
 
-  bool NodeAddress::Get(struct sockaddr_in *addr) const{
+  bool NodeAddress::Get(struct sockaddr_in* addr) const{
     std::string address = GetAddress();
     return uv_ip4_addr(address.c_str(), port_, addr) == 0;
   }

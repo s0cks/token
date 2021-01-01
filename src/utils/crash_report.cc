@@ -7,12 +7,12 @@
 #include "peer/peer_session_manager.h"
 
 namespace Token{
-  bool CrashReport::PrintNewCrashReport(const std::string &cause, const google::LogSeverity &severity){
+  bool CrashReport::PrintNewCrashReport(const std::string& cause, const google::LogSeverity& severity){
     CrashReportPrinter printer(severity);
     return printer.Print();
   }
 
-  bool CrashReport::PrintNewCrashReportAndExit(const std::string &cause, const google::LogSeverity &severity, int code){
+  bool CrashReport::PrintNewCrashReportAndExit(const std::string& cause, const google::LogSeverity& severity, int code){
     CrashReportPrinter printer(severity);
     return printer.Print();
   }
@@ -91,7 +91,7 @@ namespace Token{
       std::set<UUID> peers;
       if(PeerSessionManager::GetConnectedPeers(peers)){
         LOG_AT_LEVEL(GetSeverity()) << "\tPeers:";
-        for(auto &it : peers){
+        for(auto& it : peers){
           std::shared_ptr<PeerSession> session = PeerSessionManager::GetSession(it);
           UUID id = session->GetID();
           NodeAddress addr = session->GetAddress();

@@ -15,7 +15,7 @@ namespace Token{
     while(next_ == nullptr) WAIT;
   }
 
-  void ClientSession::SetNextMessage(const MessagePtr &msg){
+  void ClientSession::SetNextMessage(const MessagePtr& msg){
     LOCK;
     next_ = msg;
     SIGNAL_ALL;
@@ -28,9 +28,9 @@ namespace Token{
     return next;
   }
 
-  void *ClientSession::SessionThread(void *data){
-    ClientSession *session = (ClientSession *) data;
-    uv_loop_t *loop = session->GetLoop();
+  void* ClientSession::SessionThread(void* data){
+    ClientSession* session = (ClientSession*) data;
+    uv_loop_t* loop = session->GetLoop();
     NodeAddress address = session->GetAddress();
     LOG(INFO) << "connecting to peer " << address << "....";
 
@@ -42,7 +42,7 @@ namespace Token{
     conn.data = session;
 
     int err;
-    if((err = uv_tcp_connect(&conn, session->GetHandle(), (const struct sockaddr *) &addr, &OnConnect)) != 0){
+    if((err = uv_tcp_connect(&conn, session->GetHandle(), (const struct sockaddr*) &addr, &OnConnect)) != 0){
       LOG(WARNING) << "couldn't connect to peer " << address << ": " << uv_strerror(err);
       session->Disconnect();
       goto cleanup;
@@ -54,8 +54,8 @@ namespace Token{
     pthread_exit(0);
   }
 
-  void ClientSession::OnConnect(uv_connect_t *conn, int status){
-    ClientSession *session = (ClientSession *) conn->data;
+  void ClientSession::OnConnect(uv_connect_t* conn, int status){
+    ClientSession* session = (ClientSession*) conn->data;
     if(status != 0){
       LOG(WARNING) << "client accept error: " << uv_strerror(status);
       session->Disconnect();
@@ -71,13 +71,13 @@ namespace Token{
     }
   }
 
-  void ClientSession::OnShutdown(uv_async_t *handle){
-    ClientSession *client = (ClientSession *) handle->data;
+  void ClientSession::OnShutdown(uv_async_t* handle){
+    ClientSession* client = (ClientSession*) handle->data;
     client->Disconnect();
   }
 
-  void ClientSession::OnMessageReceived(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buff){
-    ClientSession *client = (ClientSession *) stream->data;
+  void ClientSession::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
+    ClientSession* client = (ClientSession*) stream->data;
     if(nread == UV_EOF){
       LOG(ERROR) << "client disconnected!";
       return;
@@ -93,7 +93,7 @@ namespace Token{
     }
 
     intptr_t offset = 0;
-    BufferPtr &rbuff = client->GetReadBuffer();
+    BufferPtr& rbuff = client->GetReadBuffer();
     do{
       int32_t mtype = rbuff->GetInt();
       int64_t msize = rbuff->GetLong();
@@ -137,7 +137,7 @@ namespace Token{
     rbuff->Reset();
   }
 
-  bool ClientSession::SendTransaction(const TransactionPtr &tx){
+  bool ClientSession::SendTransaction(const TransactionPtr& tx){
     LOG(INFO) << "sending transaction " << tx->GetHash();
     if(IsConnecting()){
       LOG(INFO) << "waiting for client to connect...";
@@ -147,7 +147,7 @@ namespace Token{
     return true; // no acknowledgement from server
   }
 
-  BlockPtr ClientSession::GetBlock(const Hash &hash){
+  BlockPtr ClientSession::GetBlock(const Hash& hash){
     LOG(INFO) << "getting block: " << hash;
     if(IsConnecting()){
       LOG(INFO) << "waiting for the client to connect....";
@@ -173,7 +173,7 @@ namespace Token{
     } while(true);
   }
 
-  UnclaimedTransactionPtr ClientSession::GetUnclaimedTransaction(const Hash &hash){
+  UnclaimedTransactionPtr ClientSession::GetUnclaimedTransaction(const Hash& hash){
     LOG(INFO) << "getting unclaimed transactions " << hash;
     if(IsConnecting()){
       LOG(INFO) << "waiting for client to connect...";
@@ -199,7 +199,7 @@ namespace Token{
     } while(true);
   }
 
-  bool ClientSession::GetPeers(PeerList &peers){
+  bool ClientSession::GetPeers(PeerList& peers){
     LOG(INFO) << "getting peers....";
     if(IsConnecting()){
       LOG(INFO) << "waiting for client to connect....";
@@ -222,7 +222,7 @@ namespace Token{
     } while(true);
   }
 
-  bool ClientSession::GetBlockChain(std::set<Hash> &blocks){
+  bool ClientSession::GetBlockChain(std::set<Hash>& blocks){
     LOG(INFO) << "ClientSession::GetBlockChain(std::set<Hash>&) not implemented";
     return false;
   }

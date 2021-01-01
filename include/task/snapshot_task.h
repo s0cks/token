@@ -7,7 +7,7 @@
 namespace Token{
   class SnapshotTask : public AsyncTask{
    protected:
-    SnapshotTask(uv_loop_t *loop):
+    SnapshotTask(uv_loop_t* loop):
       AsyncTask(loop){}
 
     AsyncTaskResult DoWork(){
@@ -29,11 +29,11 @@ namespace Token{
 
    DEFINE_ASYNC_TASK(Snapshot);
 
-    static SnapshotTask *NewInstance(uv_loop_t *loop = uv_default_loop()){
+    static SnapshotTask* NewInstance(uv_loop_t* loop = uv_default_loop()){
       return new SnapshotTask(loop);
     }
 
-    static bool ScheduleNewTask(uv_loop_t *loop = uv_default_loop()){
+    static bool ScheduleNewTask(uv_loop_t* loop = uv_default_loop()){
       return NewInstance(loop)->Submit();
     }
   };

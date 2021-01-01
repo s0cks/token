@@ -11,15 +11,15 @@ namespace Token{
     std::string name_;
     std::deque<std::string> args_;
 
-    Command(const std::string &name, std::deque<std::string> &args):
+    Command(const std::string& name, std::deque<std::string>& args):
       name_(name),
       args_(args){}
-    Command(std::deque<std::string> &args):
+    Command(std::deque<std::string>& args):
       name_(GetCommand(args)),
       args_(args){}
 
     static inline std::string
-    GetCommand(std::deque<std::string> &args){
+    GetCommand(std::deque<std::string>& args){
       std::string cmd = args.front();
       args.pop_front();
       return cmd;
@@ -53,7 +53,7 @@ namespace Token{
       return (uint32_t) atol(GetNextArgument().c_str());
     }
 
-    friend std::ostream &operator<<(std::ostream &stream, const Command &cmd){
+    friend std::ostream& operator<<(std::ostream& stream, const Command& cmd){
       std::vector<std::string> args(cmd.args_.begin(), cmd.args_.end());
       stream << cmd.GetName();
       stream << "(";

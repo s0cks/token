@@ -35,7 +35,7 @@ namespace Token{
 #undef DEFINE_STATE
     };
 
-    friend std::ostream &operator<<(std::ostream &stream, const State &state){
+    friend std::ostream& operator<<(std::ostream& stream, const State& state){
       switch(state){
 #define DEFINE_STATE_CHECK(Name) \
                 case State::k##Name: \
@@ -54,7 +54,7 @@ namespace Token{
 #undef DEFINE_STATUS
     };
 
-    friend std::ostream &operator<<(std::ostream &stream, const Status &status){
+    friend std::ostream& operator<<(std::ostream& stream, const Status& status){
       switch(status){
 #define DEFINE_STATUS_CHECK(Name) \
                 case Status::k##Name: \
@@ -71,22 +71,22 @@ namespace Token{
     std::condition_variable cond_;
     State state_;
     Status status_;
-    uv_loop_t *loop_;
+    uv_loop_t* loop_;
     uv_tcp_t handle_;
     BufferPtr rbuff_;
     BufferPtr wbuff_;
 
-    Session(uv_loop_t *loop);
+    Session(uv_loop_t* loop);
 
-    uv_tcp_t *GetHandle() const{
-      return (uv_tcp_t *) &handle_;
+    uv_tcp_t* GetHandle() const{
+      return (uv_tcp_t*) &handle_;
     }
 
-    uv_stream_t *GetStream() const{
-      return (uv_stream_t *) &handle_;
+    uv_stream_t* GetStream() const{
+      return (uv_stream_t*) &handle_;
     }
 
-    uv_loop_t *GetLoop() const{
+    uv_loop_t* GetLoop() const{
       return loop_;
     }
 
@@ -94,10 +94,10 @@ namespace Token{
     void SetStatus(Status status);
     bool WaitForState(State state, intptr_t timeout = 0);
     bool WaitForStatus(Status status, intptr_t timeout = 0);
-    static void AllocBuffer(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buff);
-    static void OnMessageSent(uv_write_t *req, int status);
+    static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
+    static void OnMessageSent(uv_write_t* req, int status);
    public:
-    BufferPtr &GetReadBuffer(){
+    BufferPtr& GetReadBuffer(){
       return rbuff_;
     }
 
@@ -105,7 +105,7 @@ namespace Token{
       return rbuff_;
     }
 
-    BufferPtr &GetWriteBuffer(){
+    BufferPtr& GetWriteBuffer(){
       return wbuff_;
     }
 
@@ -115,8 +115,8 @@ namespace Token{
 
     State GetState();
     Status GetStatus();
-    void Send(const MessagePtr &msg);
-    void Send(std::vector<MessagePtr> &messages);
+    void Send(const MessagePtr& msg);
+    void Send(std::vector<MessagePtr>& messages);
 
 #define DEFINE_STATE_CHECK(Name) \
         bool Is##Name(){ return GetState() == State::k##Name; }
@@ -139,7 +139,7 @@ namespace Token{
     pthread_t thread_;
     uv_async_t shutdown_;
 
-    ThreadedSession(uv_loop_t *loop):
+    ThreadedSession(uv_loop_t* loop):
       Session(loop),
       thread_(){}
    public:

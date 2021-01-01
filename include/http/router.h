@@ -6,7 +6,7 @@
 #include "http/request.h"
 
 namespace Token{
-  typedef void (*HttpRouteHandler)(HttpSession *, HttpRequest *);
+  typedef void (* HttpRouteHandler)(HttpSession*, HttpRequest*);
 
   class HttpRoute{
     friend class HttpRouter;
@@ -19,7 +19,7 @@ namespace Token{
       path_(),
       method_(),
       handler_(){}
-    HttpRoute(const HttpMethod &method, const HttpRouteHandler &handler):
+    HttpRoute(const HttpMethod& method, const HttpRouteHandler& handler):
       path_(),
       method_(method),
       handler_(handler){}
@@ -53,7 +53,7 @@ namespace Token{
 #undef DEFINE_STATUS
     };
 
-    friend std::ostream &operator<<(std::ostream &stream, const Status &status){
+    friend std::ostream& operator<<(std::ostream& stream, const Status& status){
       switch(status){
 #define DEFINE_TOSTRING(Name) \
                 case Status::k##Name: \
@@ -70,16 +70,16 @@ namespace Token{
     ParameterMap parameters_;
     HttpRouteHandler handler_;
 
-    HttpRouterMatch(const Status &status, const ParameterMap &params, const HttpRouteHandler &handler):
+    HttpRouterMatch(const Status& status, const ParameterMap& params, const HttpRouteHandler& handler):
       status_(status),
       parameters_(params),
       handler_(handler){}
-    HttpRouterMatch(const Status &status):
+    HttpRouterMatch(const Status& status):
       status_(status),
       parameters_(),
       handler_(nullptr){}
    public:
-    HttpRouterMatch(const HttpRouterMatch &match):
+    HttpRouterMatch(const HttpRouterMatch& match):
       status_(match.status_),
       parameters_(match.parameters_){}
     ~HttpRouterMatch() = default;
@@ -88,7 +88,7 @@ namespace Token{
       return status_;
     }
 
-    HttpRouteHandler &GetHandler(){
+    HttpRouteHandler& GetHandler(){
       return handler_;
     }
 
@@ -96,7 +96,7 @@ namespace Token{
       return handler_;
     }
 
-    ParameterMap &GetParameters(){
+    ParameterMap& GetParameters(){
       return parameters_;
     }
 
@@ -104,7 +104,7 @@ namespace Token{
       return parameters_;
     }
 
-    std::string GetParameterValue(const std::string &name){
+    std::string GetParameterValue(const std::string& name){
       return parameters_[name];
     }
 
@@ -113,7 +113,7 @@ namespace Token{
     FOR_EACH_HTTP_ROUTER_MATCH_STATUS(DEFINE_CHECK)
 #undef DEFINE_CHECK
 
-    void operator=(const HttpRouterMatch &match){
+    void operator=(const HttpRouterMatch& match){
       status_ = match.status_;
       parameters_ = match.parameters_;
       handler_ = match.handler_;
@@ -127,8 +127,8 @@ namespace Token{
     class Node{
       friend class HttpRouter;
      private:
-      Node *parent_;
-      Node *children_[kAlphabetSize];
+      Node* parent_;
+      Node* children_[kAlphabetSize];
       std::string key_;
       HttpRoute route_;
 
@@ -140,7 +140,7 @@ namespace Token{
         for(int idx = 0; idx < kAlphabetSize; idx++)
           children_[idx] = nullptr;
       }
-      Node(const HttpMethod &method, const HttpRouteHandler &handler, const std::string &part):
+      Node(const HttpMethod& method, const HttpRouteHandler& handler, const std::string& part):
         parent_(nullptr),
         children_(),
         key_(part),
@@ -148,7 +148,7 @@ namespace Token{
         for(int idx = 0; idx < kAlphabetSize; idx++)
           children_[idx] = nullptr;
       }
-      Node(const HttpMethod &method, const HttpRouteHandler &handler, const char &c):
+      Node(const HttpMethod& method, const HttpRouteHandler& handler, const char& c):
         parent_(nullptr),
         children_(),
         key_(1, c),
@@ -158,10 +158,10 @@ namespace Token{
       }
     };
    private:
-    Node *root_;
+    Node* root_;
 
-    void Insert(Node *node, const HttpMethod &method, const std::string &path, const HttpRouteHandler &handler){
-      Node *curr = node;
+    void Insert(Node* node, const HttpMethod& method, const std::string& path, const HttpRouteHandler& handler){
+      Node* curr = node;
       for(auto i = path.begin(); i < path.end(); i++){
         char c = (*i);
 
@@ -192,10 +192,10 @@ namespace Token{
       }
     }
 
-    HttpRouterMatch Search(Node *node, const HttpMethod &method, const std::string &path){
+    HttpRouterMatch Search(Node* node, const HttpMethod& method, const std::string& path){
       ParameterMap params;
 
-      Node *curr = node;
+      Node* curr = node;
       for(auto i = path.begin(); i < path.end(); i++){
         char c = (*i);
         if(curr->children_[27]){
@@ -223,39 +223,39 @@ namespace Token{
         }
       }
 
-      HttpRoute &route = curr->route_;
+      HttpRoute& route = curr->route_;
       if(route.GetMethod() != method)
         return HttpRouterMatch(HttpRouterMatch::kMethodNotSupported);
       return HttpRouterMatch(HttpRouterMatch::kOk, params, route.handler_);
     }
 
-    Node *GetRoot() const{
+    Node* GetRoot() const{
       return root_;
     }
    public:
     HttpRouter():
       root_(new Node()){}
-    HttpRouter(const HttpRouteHandler &default_handler):
+    HttpRouter(const HttpRouteHandler& default_handler):
       root_(new Node()){}
     ~HttpRouter() = default;
 
-    void Get(const std::string &path, const HttpRouteHandler &handler){
+    void Get(const std::string& path, const HttpRouteHandler& handler){
       Insert(GetRoot(), HttpMethod::kGet, path, handler);
     }
 
-    void Put(const std::string &path, const HttpRouteHandler &handler){
+    void Put(const std::string& path, const HttpRouteHandler& handler){
       Insert(GetRoot(), HttpMethod::kPut, path, handler);
     }
 
-    void Post(const std::string &path, const HttpRouteHandler &handler){
+    void Post(const std::string& path, const HttpRouteHandler& handler){
       Insert(GetRoot(), HttpMethod::kPost, path, handler);
     }
 
-    void Delete(const std::string &path, const HttpRouteHandler &handler){
+    void Delete(const std::string& path, const HttpRouteHandler& handler){
       Insert(GetRoot(), HttpMethod::kDelete, path, handler);
     }
 
-    HttpRouterMatch Find(HttpRequest *request){
+    HttpRouterMatch Find(HttpRequest* request){
       return Search(GetRoot(), request->GetMethod(), request->GetPath());
     }
   };

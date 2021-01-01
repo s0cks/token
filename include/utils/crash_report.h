@@ -17,15 +17,15 @@ namespace Token{
    public:
     static const int32_t kDefaultStackTraceDepth = 20;
    private:
-    void **frames_;
+    void** frames_;
     int32_t frames_len_;
-    char **symbols_;
+    char** symbols_;
    public:
     StackTrace(int32_t offset = 0, int32_t depth = StackTrace::kDefaultStackTraceDepth):
       frames_(nullptr),
       frames_len_(0){
       int32_t total_size = offset + depth;
-      if(!(frames_ = (void **) malloc(sizeof(void *) * total_size))){
+      if(!(frames_ = (void**) malloc(sizeof(void*) * total_size))){
         fprintf(stderr, "couldn't allocate stack trace of size: %" PRId32 "\n", total_size);
         return;
       }
@@ -46,11 +46,11 @@ namespace Token{
       return frames_len_;
     }
 
-    char *operator[](int32_t idx){
+    char* operator[](int32_t idx){
       return symbols_[idx];
     }
 
-    char *operator[](int32_t idx) const{
+    char* operator[](int32_t idx) const{
       return symbols_[idx];
     }
   };
@@ -63,7 +63,7 @@ namespace Token{
 #ifdef OS_IS_LINUX
     StackTrace trace_;
 
-    CrashReport(const std::string &filename, const std::string &cause):
+    CrashReport(const std::string& filename, const std::string& cause):
       filename_(filename),
       cause_(cause),
       trace_(){}
@@ -83,19 +83,19 @@ namespace Token{
       return cause_;
     }
 
-    static bool PrintNewCrashReport(const std::string &cause, const google::LogSeverity &severity = google::INFO);
-    static bool PrintNewCrashReportAndExit(const std::string &cause,
-                                           const google::LogSeverity &severity = google::INFO,
+    static bool PrintNewCrashReport(const std::string& cause, const google::LogSeverity& severity = google::INFO);
+    static bool PrintNewCrashReportAndExit(const std::string& cause,
+                                           const google::LogSeverity& severity = google::INFO,
                                            int code = EXIT_FAILURE);
 
     static inline bool
-    PrintNewCrashReport(const std::stringstream &ss, const google::LogSeverity &severity = google::INFO){
+    PrintNewCrashReport(const std::stringstream& ss, const google::LogSeverity& severity = google::INFO){
       return PrintNewCrashReport(ss.str(), severity);
     }
 
     static inline bool
-    PrintNewCrashReportAndExit(const std::stringstream &ss,
-                               const google::LogSeverity &severity = google::INFO,
+    PrintNewCrashReportAndExit(const std::stringstream& ss,
+                               const google::LogSeverity& severity = google::INFO,
                                int code = EXIT_FAILURE){
       return PrintNewCrashReportAndExit(ss.str(), severity, code);
     }
@@ -107,16 +107,16 @@ namespace Token{
     bool PrintStackTrace();
     bool PrintSystemInformation();
    public:
-    CrashReportPrinter(const google::LogSeverity &severity = google::INFO, const long &flags = Printer::kFlagNone):
+    CrashReportPrinter(const google::LogSeverity& severity = google::INFO, const long& flags = Printer::kFlagNone):
       Printer(severity, flags){}
-    CrashReportPrinter(Printer *printer):
+    CrashReportPrinter(Printer* printer):
       Printer(printer){}
     ~CrashReportPrinter() = default;
 
     bool Print(){
       return PrintBanner()
-        && PrintSystemInformation()
-        && PrintStackTrace();
+             && PrintSystemInformation()
+             && PrintStackTrace();
     }
   };
 }

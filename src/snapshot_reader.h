@@ -15,11 +15,11 @@ namespace Token{
       return ReadUnsignedLong();
     }
    public:
-    SnapshotReader(const std::string &filename):
+    SnapshotReader(const std::string& filename):
       BinaryFileReader(filename){}
     ~SnapshotReader() = default;
 
-    Snapshot *ReadSnapshot();
+    Snapshot* ReadSnapshot();
   };
 }
 

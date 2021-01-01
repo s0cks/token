@@ -80,7 +80,7 @@ namespace Token{
 #undef DEFINE_STATE
     };
 
-    friend std::ostream &operator<<(std::ostream &stream, const State &state){
+    friend std::ostream& operator<<(std::ostream& stream, const State& state){
       switch(state){
 #define DEFINE_TOSTRING(Name) \
                 case State::k##Name: \
@@ -99,7 +99,7 @@ namespace Token{
 #undef DEFINE_STATUS
     };
 
-    friend std::ostream &operator<<(std::ostream &stream, const Status &status){
+    friend std::ostream& operator<<(std::ostream& stream, const Status& status){
       switch(status){
 #define DEFINE_TOSTRING(Name) \
                 case Status::k##Name: \
@@ -116,9 +116,9 @@ namespace Token{
 
     static void SetState(State state);
     static void SetStatus(Status status);
-    static void OnNewConnection(uv_stream_t *stream, int status);
-    static void OnMessageReceived(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buff);
-    static void OnShutdown(uv_async_t *handle);
+    static void OnNewConnection(uv_stream_t* stream, int status);
+    static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
+    static void OnShutdown(uv_async_t* handle);
     static void HandleServiceThread(uword parameter);
    public:
     ~RestService() = delete;

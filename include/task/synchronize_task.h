@@ -13,7 +13,7 @@ namespace Token{
    private:
     BlockHeader head_;
 
-    SynchronizeBlockChainTask(uv_loop_t *loop, Session *session, const BlockHeader &head):
+    SynchronizeBlockChainTask(uv_loop_t* loop, Session* session, const BlockHeader& head):
       AsyncSessionTask(loop, session),
       head_(head){}
 
@@ -22,12 +22,12 @@ namespace Token{
       return InventoryItem(InventoryItem::kBlock, hash);
     }
 
-    bool ProcessBlock(const BlockPtr &blk){
+    bool ProcessBlock(const BlockPtr& blk){
       BlockHeader header = blk->GetHeader();
       Hash hash = header.GetHash();
 
-      JobWorker *worker = JobScheduler::GetRandomWorker();
-      ProcessBlockJob *job = new ProcessBlockJob(blk);
+      JobWorker* worker = JobScheduler::GetRandomWorker();
+      ProcessBlockJob* job = new ProcessBlockJob(blk);
       worker->Submit(job);
       worker->Wait(job);
 
@@ -81,7 +81,7 @@ namespace Token{
       return ss.str();
     }
 
-    static SynchronizeBlockChainTask *NewInstance(uv_loop_t *loop, Session *session, const BlockHeader &head){
+    static SynchronizeBlockChainTask* NewInstance(uv_loop_t* loop, Session* session, const BlockHeader& head){
       return new SynchronizeBlockChainTask(loop, session, head);
     }
   };

@@ -9,7 +9,7 @@
 namespace Token{
   class VerifierJob : public Job{
    protected:
-    VerifierJob(Job *parent, const std::string &name):
+    VerifierJob(Job* parent, const std::string& name):
       Job(parent, name){}
    public:
     virtual ~VerifierJob() = default;
@@ -23,7 +23,7 @@ namespace Token{
    protected:
     JobResult DoWork();
    public:
-    VerifyTransactionJob(VerifyBlockJob *parent, const TransactionPtr &tx);
+    VerifyTransactionJob(VerifyBlockJob* parent, const TransactionPtr& tx);
     ~VerifyTransactionJob() = default;
   };
 
@@ -35,12 +35,12 @@ namespace Token{
    protected:
     JobResult DoWork();
    public:
-    VerifyBlockJob(const BlockPtr &blk):
+    VerifyBlockJob(const BlockPtr& blk):
       VerifierJob(nullptr, "VerifyBlock"),
       block_(blk){}
     ~VerifyBlockJob() = default;
 
-    BlockPtr &GetBlock(){
+    BlockPtr& GetBlock(){
       return block_;
     }
 
@@ -48,11 +48,11 @@ namespace Token{
       return block_;
     }
 
-    void AddValidTransaction(const Hash &hash){
+    void AddValidTransaction(const Hash& hash){
       valid_.PushBack(hash);
     }
 
-    void AddInvalidTransaction(const Hash &hash){
+    void AddInvalidTransaction(const Hash& hash){
       invalid_.PushBack(hash);
     }
   };

@@ -26,7 +26,7 @@ namespace Token{
 #undef DEFINE_STATE
     };
 
-    friend std::ostream &operator<<(std::ostream &stream, const State &state){
+    friend std::ostream& operator<<(std::ostream& stream, const State& state){
       switch(state){
 #define DEFINE_TOSTRING(Name) \
                 case State::k##Name: \
@@ -48,22 +48,22 @@ namespace Token{
     Counter num_ran_;
     Counter num_discarded_;
 
-    void SetState(const State &state){
+    void SetState(const State& state){
       state_ = state;
     }
 
-    bool Schedule(Job *job){
+    bool Schedule(Job* job){
       return queue_.Push(job);
     }
 
-    Histogram &GetHistogram(){
+    Histogram& GetHistogram(){
       return histogram_;
     }
 
-    Job *GetNextJob();
-    static void HandleThread(JobWorker *worker);
+    Job* GetNextJob();
+    static void HandleThread(JobWorker* worker);
    public:
-    JobWorker(const JobWorkerId &id, size_t max_queue_size):
+    JobWorker(const JobWorkerId& id, size_t max_queue_size):
       thread_(),
       thread_id_(),
       id_(id),
@@ -82,11 +82,11 @@ namespace Token{
       return thread_.get_id();
     }
 
-    const std::atomic<State> &GetState(){
+    const std::atomic<State>& GetState(){
       return state_;
     }
 
-    bool Wait(Job *job){
+    bool Wait(Job* job){
       while(!job->IsFinished());
       return true;
     }
@@ -104,7 +104,7 @@ namespace Token{
       return true;
     }
 
-    bool Submit(Job *job){
+    bool Submit(Job* job){
       return queue_.Push(job);
     }
 

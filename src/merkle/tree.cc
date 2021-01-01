@@ -6,7 +6,7 @@ namespace Token{
       return nodes.front();
     }
 
-    std::vector < MerkleNode * > parents;
+    std::vector<MerkleNode*> parents;
     for(size_t idx = 0; idx < nodes.size(); idx += 2){
       MerkleNode* lchild = nodes[idx];
       MerkleNode* rchild = nodes[idx + 1];
@@ -16,7 +16,7 @@ namespace Token{
   }
 
   MerkleNode* MerkleTree::BuildTree(std::vector<Hash>& leaves){
-    std::vector < MerkleNode * > nodes;
+    std::vector<MerkleNode*> nodes;
     for(auto& it : leaves)
       nodes.push_back(CreateNode(it));
     if((nodes.size() % 2) == 1){

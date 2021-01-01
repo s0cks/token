@@ -51,12 +51,12 @@ namespace Token{
 
     friend bool operator==(const MerkleProofHash& a, const MerkleProofHash& b){
       return a.hash_ == b.hash_
-        && a.direction_ == b.direction_;
+             && a.direction_ == b.direction_;
     }
 
     friend bool operator!=(const MerkleProofHash& a, const MerkleProofHash& b){
       return a.hash_ != b.hash_
-        && a.direction_ != b.direction_;
+             && a.direction_ != b.direction_;
     }
   };
 

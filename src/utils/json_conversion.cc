@@ -2,43 +2,43 @@
 
 namespace Token{
   static inline void
-  SetField(JsonWriter &writer, const std::string &name, const int64_t &value){
+  SetField(JsonWriter& writer, const std::string& name, const int64_t& value){
     writer.Key(name.data(), name.length());
     writer.Int64(value);
   }
 
   static inline void
-  SetField(JsonWriter &writer, const std::string &name, const std::string &value){
+  SetField(JsonWriter& writer, const std::string& name, const std::string& value){
     writer.Key(name.data(), name.length());
     writer.String(value.data(), value.length());
   }
 
   static inline void
-  SetField(JsonWriter &writer, const std::string &name, const Hash &hash){
+  SetField(JsonWriter& writer, const std::string& name, const Hash& hash){
     SetField(writer, name, hash.HexString());
   }
 
   static inline void
-  SetField(JsonWriter &writer, const std::string &name, const User &user){
+  SetField(JsonWriter& writer, const std::string& name, const User& user){
     SetField(writer, name, user.str());
   }
 
   static inline void
-  SetField(JsonWriter &writer, const std::string &name, const Product &product){
+  SetField(JsonWriter& writer, const std::string& name, const Product& product){
     SetField(writer, name, product.str());
   }
 
-  void ToJson(const HashList &hashes, JsonString &sb){
+  void ToJson(const HashList& hashes, JsonString& sb){
     JsonWriter writer(sb);
     writer.StartArray();
-    for(auto &it : hashes){
+    for(auto& it : hashes){
       std::string hash = it.HexString();
       writer.String(hash.data(), Hash::GetSize());
     }
     writer.EndArray();
   }
 
-  void ToJson(const BlockPtr &blk, JsonString &json){
+  void ToJson(const BlockPtr& blk, JsonString& json){
     JsonWriter writer(json);
     writer.StartObject();
     SetField(writer, "Hash", blk->GetHash());
@@ -49,7 +49,7 @@ namespace Token{
     writer.EndObject();
   }
 
-  void ToJson(const TransactionPtr &tx, JsonString &json){
+  void ToJson(const TransactionPtr& tx, JsonString& json){
     JsonWriter writer(json);
     writer.StartObject();
     SetField(writer, "Hash", tx->GetHash());
@@ -60,7 +60,7 @@ namespace Token{
     writer.EndObject();
   }
 
-  void ToJson(const UnclaimedTransactionPtr &utxo, JsonString &json){
+  void ToJson(const UnclaimedTransactionPtr& utxo, JsonString& json){
     JsonWriter writer(json);
     writer.StartObject();
     SetField(writer, "Hash", utxo->GetHash());

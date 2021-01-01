@@ -20,19 +20,19 @@ namespace Token{
    public:
     TrieKey():
       value_(){}
-    TrieKey(const T &value):
+    TrieKey(const T& value):
       value_(value){}
     ~TrieKey() = default;
 
-    friend bool operator==(const TrieKey<T> &a, const TrieKey<T> &b){
+    friend bool operator==(const TrieKey<T>& a, const TrieKey<T>& b){
       return a.value_ == b.value_;
     }
 
-    friend bool operator!=(const TrieKey<T> &a, const TrieKey<T> &b){
+    friend bool operator!=(const TrieKey<T>& a, const TrieKey<T>& b){
       return a.value_ != b.value_;
     }
 
-    friend bool operator<(const TrieKey<T> &a, const TrieKey<T> &b){
+    friend bool operator<(const TrieKey<T>& a, const TrieKey<T>& b){
       return a.value_ < b.value_;
     }
   };
@@ -55,7 +55,7 @@ namespace Token{
       is_epsilon_ = false;
     }
 
-    void SetValue(const V &value){
+    void SetValue(const V& value){
       value_ = value;
     }
    public:
@@ -68,7 +68,7 @@ namespace Token{
       for(size_t idx = 0; idx < kAlphabetSize; idx++)
         children_[idx] = std::shared_ptr<TrieNode<K, V, kAlphabetSize>>(nullptr);
     }
-    TrieNode(const K &key, V value):
+    TrieNode(const K& key, V value):
       parent_(nullptr),
       children_(),
       key_(key),
@@ -109,12 +109,12 @@ namespace Token{
    private:
     std::unique_ptr<TrieNode<K, V, kAlphabetSize>> root_;
 
-    void Insert(const std::shared_ptr<TrieNode<K, V, kAlphabetSize>> &node, const K &key, const V &value){
+    void Insert(const std::shared_ptr<TrieNode<K, V, kAlphabetSize>>& node, const K& key, const V& value){
       std::shared_ptr<TrieNode<K, V, kAlphabetSize>> curr = node;
       for(size_t idx = 0; idx < key.size(); idx++){
         char next = tolower(key[idx]);
 
-        std::shared_ptr<TrieNode<K, V, kAlphabetSize>> &n = curr->children_[(int) next];
+        std::shared_ptr<TrieNode<K, V, kAlphabetSize>>& n = curr->children_[(int) next];
         if(!n){
           curr->children_[(int) next] = n = std::make_shared<TrieNode<K, V, kAlphabetSize>>(key, value);
         }
@@ -125,11 +125,11 @@ namespace Token{
       curr->SetEpsilon();
     }
 
-    std::shared_ptr<TrieNode<K, V, kAlphabetSize>> Search(const std::shared_ptr<TrieNode<K, V, kAlphabetSize>> &node,
-                                                          const K &key){
+    std::shared_ptr<TrieNode<K, V, kAlphabetSize>> Search(const std::shared_ptr<TrieNode<K, V, kAlphabetSize>>& node,
+                                                          const K& key){
       std::shared_ptr<TrieNode<K, V, kAlphabetSize>> n = node;
 
-      const char *word = key.data();
+      const char* word = key.data();
       while((*word) != '\0'){
         if(n->children_[tolower((*word))].get()){
           n = n->children_[tolower((*word))];
@@ -152,16 +152,16 @@ namespace Token{
       return std::shared_ptr<TrieNode<K, V, kAlphabetSize>>(root_.get());
     }
 
-    void Insert(const K &key, const V &value){
+    void Insert(const K& key, const V& value){
       Insert(GetRoot(), key, value);
     }
 
-    bool Contains(const K &key){
+    bool Contains(const K& key){
       std::shared_ptr<TrieNode<K, V, kAlphabetSize>> node = Search(GetRoot(), key);
       return !node;
     }
 
-    V Search(const K &key){
+    V Search(const K& key){
       std::shared_ptr<TrieNode<K, V, kAlphabetSize>> node = Search(GetRoot(), key);
       return node != nullptr
              ? node->GetValue()

@@ -14,7 +14,7 @@
 namespace Token{
   class Thread{
    protected:
-    static bool Start(ThreadId *thread, const char *name, ThreadHandlerFunction function, uword parameter);
+    static bool Start(ThreadId* thread, const char* name, ThreadHandlerFunction function, uword parameter);
     static bool Stop(ThreadId thread);
    public:
     virtual ~Thread() = delete;

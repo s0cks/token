@@ -10,7 +10,7 @@
 namespace Token{
   typedef pthread_key_t ThreadLocalKey;
   typedef pthread_t ThreadId;
-  typedef void (*ThreadHandlerFunction)(uword parameter);
+  typedef void (* ThreadHandlerFunction)(uword parameter);
 }
 
 #endif //TOKEN_VTHREAD_LINUX_H

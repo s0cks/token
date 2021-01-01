@@ -24,7 +24,7 @@ namespace Token{
 
     if(FLAGS_enable_snapshots){
       LOG(INFO) << "scheduling new snapshot....";
-      SnapshotTask *task = SnapshotTask::NewInstance();
+      SnapshotTask* task = SnapshotTask::NewInstance();
       if(!task->Submit())
         LOG(WARNING) << "couldn't schedule new snapshot!";
     }
@@ -40,13 +40,13 @@ namespace Token{
 
   bool ProposalHandler::WasRejected() const{
     return GetRequiredNumberOfPeers() > 0
-      && proposal_->GetNumberOfRejected() >= proposal_->GetNumberOfAccepted();
+           && proposal_->GetNumberOfRejected() >= proposal_->GetNumberOfAccepted();
   }
 
 #define CANNOT_TRANSITION_TO(From, To) \
     LOG(ERROR) << "cannot transition proposal #" << GetProposalID() << " from " << (From) << " phase to " << (To) << " phase.";
 
-  bool ProposalHandler::TransitionToPhase(const Proposal::Phase &phase) const{
+  bool ProposalHandler::TransitionToPhase(const Proposal::Phase& phase) const{
     //TODO: better error handling
     LOG(INFO) << "transitioning proposal #" << GetProposalID() << " to phase: " << phase;
     switch(phase){

@@ -29,7 +29,7 @@ namespace Token{
     return ftell(GetFilePointer());
   }
 
-  bool FileReader::ReadBytes(uint8_t *bytes, size_t size){
+  bool FileReader::ReadBytes(uint8_t* bytes, size_t size){
     //TODO: validate amount read
     size_t nread = fread(bytes, sizeof(uint8_t), size, GetFilePointer());
     if(nread != size) LOG(WARNING) << "read " << nread << "/" << size << " bytes";
@@ -42,7 +42,7 @@ namespace Token{
       LOG(WARNING) << "couldn't read int from file: " << GetFilename();
       return 0;
     }
-    return (*(int32_t *) bytes);
+    return (*(int32_t*) bytes);
   }
 
   uint32_t FileReader::ReadUnsignedInt(){
@@ -51,7 +51,7 @@ namespace Token{
       LOG(WARNING) << "couldn't read unsigned int from file: " << GetFilename();
       return 0;
     }
-    return (*(uint32_t *) bytes);
+    return (*(uint32_t*) bytes);
   }
 
   int64_t FileReader::ReadLong(){
@@ -60,7 +60,7 @@ namespace Token{
       LOG(WARNING) << "couldn't read long from file: " << GetFilename();
       return 0;
     }
-    return (*(int64_t *) bytes);
+    return (*(int64_t*) bytes);
   }
 
   uint64_t FileReader::ReadUnsignedLong(){
@@ -69,7 +69,7 @@ namespace Token{
       LOG(WARNING) << "couldn't read unsigned long from file: " << GetFilename();
       return 0;
     }
-    return (*(uint64_t *) bytes);
+    return (*(uint64_t*) bytes);
   }
 
   std::string FileReader::ReadString(){
@@ -79,7 +79,7 @@ namespace Token{
       LOG(WARNING) << "couldn't read string of size " << size << " from file: " << GetFilename();
       return "";
     }
-    return std::string((char *) bytes, size);
+    return std::string((char*) bytes, size);
   }
 
   void FileReader::SetCurrentPosition(int64_t pos){

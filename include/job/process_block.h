@@ -13,13 +13,13 @@ namespace Token{
    protected:
     BlockPtr block_;
     std::mutex mutex_; //TODO: remove mutex
-    leveldb::WriteBatch *batch_;
+    leveldb::WriteBatch* batch_;
     UserHashLists hash_lists_;
     bool clean_; //TODO: remove clean flag?
 
     JobResult DoWork();
    public:
-    ProcessBlockJob(const BlockPtr &blk, bool clean = false):
+    ProcessBlockJob(const BlockPtr& blk, bool clean = false):
       WriteBatchJob(nullptr, "ProcessBlock"),
       block_(blk),
       mutex_(),
@@ -31,7 +31,7 @@ namespace Token{
         delete batch_;
     }
 
-    leveldb::WriteBatch *GetBatch() const{
+    leveldb::WriteBatch* GetBatch() const{
       return batch_;
     }
 
@@ -43,17 +43,17 @@ namespace Token{
       return clean_;
     }
 
-    bool Visit(const TransactionPtr &tx);
+    bool Visit(const TransactionPtr& tx);
 
-    void Append(leveldb::WriteBatch *batch){
+    void Append(leveldb::WriteBatch* batch){
       std::lock_guard<std::mutex> guard(mutex_);
       batch_->Append((*batch));
     }
 
-    void Track(const UserHashLists &hashes){
+    void Track(const UserHashLists& hashes){
       //TODO: optimize
       std::lock_guard<std::mutex> guard(mutex_);
-      for(auto &it : hashes){
+      for(auto& it : hashes){
         auto pos = hash_lists_.find(it.first);
         if(pos == hash_lists_.end()){
           hash_lists_.insert({it.first, it.second});
@@ -61,7 +61,7 @@ namespace Token{
         }
 
         HashList src = it.second;
-        HashList &dst = pos->second;
+        HashList& dst = pos->second;
         dst.insert(src.begin(), src.end());
       }
     }

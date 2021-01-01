@@ -9,15 +9,15 @@ namespace Token{
     static const int kFlagNone = 0;
     static const int kFlagDetailed = 1 << 1;
    protected:
-    Printer *parent_;
+    Printer* parent_;
     google::LogSeverity severity_;
     long flags_;
 
-    Printer(Printer *parent):
+    Printer(Printer* parent):
       parent_(parent),
       severity_(parent->GetSeverity()),
       flags_(parent->flags_){}
-    Printer(const google::LogSeverity &severity, const long &flags):
+    Printer(const google::LogSeverity& severity, const long& flags):
       parent_(nullptr),
       severity_(severity),
       flags_(flags){}
@@ -28,7 +28,7 @@ namespace Token{
    public:
     virtual ~Printer() = default;
 
-    Printer *GetParent() const{
+    Printer* GetParent() const{
       return parent_;
     }
 
@@ -43,13 +43,13 @@ namespace Token{
 
   class ToStringPrinter : public Printer{
    public:
-    ToStringPrinter(const google::LogSeverity severity = google::INFO, const long &flags = Printer::kFlagNone):
+    ToStringPrinter(const google::LogSeverity severity = google::INFO, const long& flags = Printer::kFlagNone):
       Printer(severity, flags){}
-    ToStringPrinter(Printer *parent):
+    ToStringPrinter(Printer* parent):
       Printer(parent){}
     ~ToStringPrinter() = default;
 
-    bool Print(Object *obj) const{
+    bool Print(Object* obj) const{
       LOG_AT_LEVEL(GetSeverity()) << obj->ToString();
       return true;
     }
@@ -57,13 +57,13 @@ namespace Token{
 
   class HashPrinter : public Printer{
    public:
-    HashPrinter(const google::LogSeverity &severity = google::INFO, const long &flags = Printer::kFlagNone):
+    HashPrinter(const google::LogSeverity& severity = google::INFO, const long& flags = Printer::kFlagNone):
       Printer(severity, flags){}
-    HashPrinter(Printer *parent):
+    HashPrinter(Printer* parent):
       Printer(parent){}
     ~HashPrinter() = default;
 
-    bool Print(BinaryObject *obj) const{
+    bool Print(BinaryObject* obj) const{
       LOG_AT_LEVEL(GetSeverity()) << obj->GetHash();
       return true;
     }
@@ -71,11 +71,11 @@ namespace Token{
 
   class PrettyPrinter : Printer{
    public:
-    PrettyPrinter(const google::LogSeverity &severity = google::INFO, const long &flags = Printer::kFlagNone):
+    PrettyPrinter(const google::LogSeverity& severity = google::INFO, const long& flags = Printer::kFlagNone):
       Printer(severity, flags){}
     ~PrettyPrinter() = default;
 
-    bool Print(const BlockPtr &blk) const{
+    bool Print(const BlockPtr& blk) const{
       LOG_AT_LEVEL(GetSeverity()) << "Block #" << blk->GetHeight() << ":";
       LOG_AT_LEVEL(GetSeverity()) << "Hash: " << blk->GetHash();
       LOG_AT_LEVEL(GetSeverity()) << "Created: " << GetTimestampFormattedReadable(blk->GetTimestamp());
@@ -85,7 +85,7 @@ namespace Token{
       return true;
     }
 
-    bool Print(const TransactionPtr &tx) const{
+    bool Print(const TransactionPtr& tx) const{
       LOG_AT_LEVEL(GetSeverity()) << "Transaction #" << tx->GetIndex() << ":";
       LOG_AT_LEVEL(GetSeverity()) << "Hash: " << tx->GetHash();
       LOG_AT_LEVEL(GetSeverity()) << "Created: " << GetTimestampFormattedReadable(tx->GetTimestamp());
@@ -94,7 +94,7 @@ namespace Token{
       return true;
     }
 
-    bool Print(const UnclaimedTransactionPtr &utxo) const{
+    bool Print(const UnclaimedTransactionPtr& utxo) const{
       LOG_AT_LEVEL(GetSeverity()) << "Unclaimed Transaction " << utxo->GetHash();
       LOG_AT_LEVEL(GetSeverity()) << "Location: " << utxo->GetTransaction() << "[" << utxo->GetIndex() << "]";
       LOG_AT_LEVEL(GetSeverity()) << "User: " << utxo->GetUser();
@@ -102,15 +102,15 @@ namespace Token{
       return true;
     }
 
-    bool operator()(const BlockPtr &blk) const{
+    bool operator()(const BlockPtr& blk) const{
       return Print(blk);
     }
 
-    bool operator()(const TransactionPtr &tx) const{
+    bool operator()(const TransactionPtr& tx) const{
       return Print(tx);
     }
 
-    bool operator()(const UnclaimedTransactionPtr &utxo) const{
+    bool operator()(const UnclaimedTransactionPtr& utxo) const{
       return Print(utxo);
     }
   };

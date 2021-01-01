@@ -64,7 +64,7 @@ namespace Token{
     return Thread::Start(&thread_, "RestService", &HandleServiceThread, 0);
   }
 
-  void RestService::OnShutdown(uv_async_t *handle){
+  void RestService::OnShutdown(uv_async_t* handle){
     SetState(RestService::kStopped);
     uv_stop(handle->loop);
     if(!HttpService::ShutdownService(handle->loop))
@@ -80,7 +80,7 @@ namespace Token{
 
   void RestService::HandleServiceThread(uword parameter){
     SetState(RestService::kStarting);
-    uv_loop_t *loop = uv_loop_new();
+    uv_loop_t* loop = uv_loop_new();
     uv_async_init(loop, &shutdown_, &OnShutdown);
 
     uv_tcp_t server;
@@ -93,7 +93,7 @@ namespace Token{
     }
 
     int result;
-    if((result = uv_listen((uv_stream_t *) &server, 100, &OnNewConnection)) != 0){
+    if((result = uv_listen((uv_stream_t*) &server, 100, &OnNewConnection)) != 0){
       LOG(WARNING) << "the rest service couldn't listen on port " << port << ": " << uv_strerror(result);
       goto exit;
     }
@@ -106,8 +106,8 @@ namespace Token{
     pthread_exit(nullptr);
   }
 
-  void RestService::OnNewConnection(uv_stream_t *stream, int status){
-    HttpSession *session = new HttpSession(stream->loop);
+  void RestService::OnNewConnection(uv_stream_t* stream, int status){
+    HttpSession* session = new HttpSession(stream->loop);
     if(!Accept(stream, session)){
       LOG(WARNING) << "couldn't accept new connection.";
       return;
@@ -120,8 +120,8 @@ namespace Token{
     }
   }
 
-  void RestService::OnMessageReceived(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buff){
-    HttpSession *session = (HttpSession *) stream->data;
+  void RestService::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
+    HttpSession* session = (HttpSession*) stream->data;
     if(nread == UV_EOF)
       return;
 
@@ -142,7 +142,7 @@ namespace Token{
 
       // weirdness :(
       request.SetParameters(match.GetParameters());
-      HttpRouteHandler &handler = match.GetHandler();
+      HttpRouteHandler& handler = match.GetHandler();
       handler(session, &request);
     }
   }
@@ -150,18 +150,18 @@ namespace Token{
 /*****************************************************************************
  *                      BlockChainController
  *****************************************************************************/
-  void BlockChainController::HandleGetBlockChain(HttpSession *session, HttpRequest *request){
+  void BlockChainController::HandleGetBlockChain(HttpSession* session, HttpRequest* request){
     HashList blocks;
     BlockChain::GetBlocks(blocks);
     SendJson(session, blocks);
   }
 
-  void BlockChainController::HandleGetBlockChainHead(HttpSession *session, HttpRequest *request){
+  void BlockChainController::HandleGetBlockChainHead(HttpSession* session, HttpRequest* request){
     BlockPtr head = BlockChain::GetHead();
     SendJson(session, head);
   }
 
-  void BlockChainController::HandleGetBlockChainBlock(HttpSession *session, HttpRequest *request){
+  void BlockChainController::HandleGetBlockChainBlock(HttpSession* session, HttpRequest* request){
     Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
     if(!BlockChain::HasBlock(hash)){
       LOG(WARNING) << "couldn't find block: " << hash;
@@ -175,7 +175,7 @@ namespace Token{
 /*****************************************************************************
  *                      UnclaimedTransactionPoolController
  *****************************************************************************/
-  void UnclaimedTransactionPoolController::HandleGetUnclaimedTransaction(HttpSession *session, HttpRequest *request){
+  void UnclaimedTransactionPoolController::HandleGetUnclaimedTransaction(HttpSession* session, HttpRequest* request){
     Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
     if(!ObjectPool::HasUnclaimedTransaction(hash))
       return SendNotFound(session, hash);
@@ -184,15 +184,15 @@ namespace Token{
     SendJson(session, val);
   }
 
-  void UnclaimedTransactionPoolController::HandleGetUnclaimedTransactions(HttpSession *session, HttpRequest *request){
+  void UnclaimedTransactionPoolController::HandleGetUnclaimedTransactions(HttpSession* session, HttpRequest* request){
     HashList hashes;
     if(!ObjectPool::GetUnclaimedTransactions(hashes))
       return SendInternalServerError(session, "Cannot Get Unclaimed Transactions");
     SendJson(session, hashes);
   }
 
-  void UnclaimedTransactionPoolController::HandleGetUserUnclaimedTransactions(HttpSession *session,
-                                                                              HttpRequest *request){
+  void UnclaimedTransactionPoolController::HandleGetUserUnclaimedTransactions(HttpSession* session,
+                                                                              HttpRequest* request){
     std::string user = request->GetParameterValue("user_id");
     HashList hashes;
     if(!ObjectPool::GetHashList(user, hashes))
@@ -203,14 +203,14 @@ namespace Token{
 /*****************************************************************************
  *                      BlockPoolController
  *****************************************************************************/
-  void BlockPoolController::HandleGetBlocks(HttpSession *session, HttpRequest *request){
+  void BlockPoolController::HandleGetBlocks(HttpSession* session, HttpRequest* request){
     HashList hashes;
     if(!ObjectPool::GetBlocks(hashes))
       return SendInternalServerError(session, "Cannot get list of blocks from pool.");
     SendJson(session, hashes);
   }
 
-  void BlockPoolController::HandleGetBlock(HttpSession *session, HttpRequest *request){
+  void BlockPoolController::HandleGetBlock(HttpSession* session, HttpRequest* request){
     Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
     if(!ObjectPool::HasObject(hash))
       return SendNotFound(session, hash);

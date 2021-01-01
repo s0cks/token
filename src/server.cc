@@ -32,7 +32,7 @@ namespace Token{
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
 
-  uv_tcp_t *Server::GetHandle(){
+  uv_tcp_t* Server::GetHandle(){
     return &handle_;
   }
 
@@ -97,13 +97,13 @@ namespace Token{
     return ss.str();
   }
 
-  void Server::OnWalk(uv_handle_t *handle, void *data){
+  void Server::OnWalk(uv_handle_t* handle, void* data){
     uv_close(handle, &OnClose);
   }
 
-  void Server::OnClose(uv_handle_t *handle){}
+  void Server::OnClose(uv_handle_t* handle){}
 
-  void Server::HandleTerminateCallback(uv_async_t *handle){
+  void Server::HandleTerminateCallback(uv_async_t* handle){
     SetState(Server::kStopping);
     uv_stop(handle->loop);
 
@@ -138,7 +138,7 @@ namespace Token{
   void Server::HandleServerThread(uword parameter){
     LOG(INFO) << "starting server...";
     SetState(State::kStarting);
-    uv_loop_t *loop = uv_loop_new();
+    uv_loop_t* loop = uv_loop_new();
     uv_async_init(loop, &shutdown_, &HandleTerminateCallback);
 
     struct sockaddr_in addr;
@@ -147,12 +147,12 @@ namespace Token{
     uv_tcp_keepalive(GetHandle(), 1, 60);
 
     int err;
-    if((err = uv_tcp_bind(GetHandle(), (const struct sockaddr *) &addr, 0)) != 0){
+    if((err = uv_tcp_bind(GetHandle(), (const struct sockaddr*) &addr, 0)) != 0){
       LOG(ERROR) << "couldn't bind the server: " << uv_strerror(err);
       goto exit;
     }
 
-    if((err = uv_listen((uv_stream_t *) GetHandle(), 100, &OnNewConnection)) != 0){
+    if((err = uv_listen((uv_stream_t*) GetHandle(), 100, &OnNewConnection)) != 0){
       LOG(ERROR) << "server couldn't listen: " << uv_strerror(err);
       goto exit;
     }
@@ -165,18 +165,18 @@ namespace Token{
     pthread_exit(0);
   }
 
-  void Server::OnNewConnection(uv_stream_t *stream, int status){
+  void Server::OnNewConnection(uv_stream_t* stream, int status){
     if(status != 0){
       LOG(ERROR) << "connection error: " << uv_strerror(status);
       return;
     }
 
-    ServerSession *session = ServerSession::NewInstance(stream->loop);
+    ServerSession* session = ServerSession::NewInstance(stream->loop);
     session->SetState(Session::kConnecting);
     LOG(INFO) << "client is connecting...";
 
     int err;
-    if((err = uv_accept(stream, (uv_stream_t *) session->GetStream())) != 0){
+    if((err = uv_accept(stream, (uv_stream_t*) session->GetStream())) != 0){
       LOG(ERROR) << "client accept error: " << uv_strerror(err);
       return;
     }
@@ -188,8 +188,8 @@ namespace Token{
     }
   }
 
-  void Server::OnMessageReceived(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buff){
-    ServerSession *session = (ServerSession *) stream->data;
+  void Server::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
+    ServerSession* session = (ServerSession*) stream->data;
     if(nread == UV_EOF){
       LOG(ERROR) << "client disconnected!";
       return;
@@ -204,7 +204,7 @@ namespace Token{
       return;
     }
 
-    BufferPtr &rbuff = session->GetReadBuffer();
+    BufferPtr& rbuff = session->GetReadBuffer();
 
     intptr_t offset = 0;
     std::vector<MessagePtr> messages;
@@ -232,7 +232,7 @@ namespace Token{
 
     for(size_t idx = 0; idx < messages.size(); idx++){
       MessagePtr msg = messages[idx];
-      HandleMessageTask *task = HandleMessageTask::NewInstance(session, msg);
+      HandleMessageTask* task = HandleMessageTask::NewInstance(session, msg);
       switch(msg->GetMessageType()){
 #define DEFINE_HANDLER_CASE(Name) \
             case Message::k##Name##MessageType: \
@@ -249,14 +249,14 @@ namespace Token{
     rbuff->Reset();
   }
 
-  void ServerSession::HandleNotFoundMessage(HandleMessageTask *task){
+  void ServerSession::HandleNotFoundMessage(HandleMessageTask* task){
     //TODO: implement HandleNotFoundMessage
     LOG(WARNING) << "not implemented";
     return;
   }
 
-  void ServerSession::HandleVersionMessage(HandleMessageTask *task){
-    ServerSession *session = task->GetSession<ServerSession>();
+  void ServerSession::HandleVersionMessage(HandleMessageTask* task){
+    ServerSession* session = task->GetSession<ServerSession>();
     //TODO:
     // - state check
     // - version check
@@ -266,8 +266,8 @@ namespace Token{
 
   //TODO:
   // - verify nonce
-  void ServerSession::HandleVerackMessage(HandleMessageTask *task){
-    ServerSession *session = task->GetSession<ServerSession>();
+  void ServerSession::HandleVerackMessage(HandleMessageTask* task){
+    ServerSession* session = task->GetSession<ServerSession>();
     VerackMessagePtr msg = task->GetMessage<VerackMessage>();
 
     BlockPtr head = BlockChain::GetHead();
@@ -285,8 +285,8 @@ namespace Token{
     }
   }
 
-  void ServerSession::HandleGetDataMessage(HandleMessageTask *task){
-    ServerSession *session = task->GetSession<ServerSession>();
+  void ServerSession::HandleGetDataMessage(HandleMessageTask* task){
+    ServerSession* session = task->GetSession<ServerSession>();
     GetDataMessagePtr msg = task->GetMessage<GetDataMessage>();
 
     std::vector<InventoryItem> items;
@@ -296,7 +296,7 @@ namespace Token{
     }
 
     std::vector<MessagePtr> response;
-    for(auto &item : items){
+    for(auto& item : items){
       Hash hash = item.GetHash();
       LOG(INFO) << "searching for: " << hash;
       if(item.ItemExists()){
@@ -340,7 +340,7 @@ namespace Token{
     session->Send(response);
   }
 
-  void ServerSession::HandlePrepareMessage(HandleMessageTask *task){
+  void ServerSession::HandlePrepareMessage(HandleMessageTask* task){
     PrepareMessagePtr msg = task->GetMessage<PrepareMessage>();
     ProposalPtr proposal = msg->GetProposal();
     if(!proposal){
@@ -351,8 +351,8 @@ namespace Token{
     proposal->SetPhase(Proposal::kProposalPhase);
   }
 
-  void ServerSession::HandlePromiseMessage(HandleMessageTask *task){
-    ServerSession *session = task->GetSession<ServerSession>();
+  void ServerSession::HandlePromiseMessage(HandleMessageTask* task){
+    ServerSession* session = task->GetSession<ServerSession>();
     PromiseMessagePtr msg = task->GetMessage<PromiseMessage>();
     ProposalPtr proposal = msg->GetProposal();
     if(proposal->GetProposer() == Server::GetID()){
@@ -362,8 +362,8 @@ namespace Token{
     }
   }
 
-  void ServerSession::HandleCommitMessage(HandleMessageTask *task){
-    ServerSession *session = task->GetSession<ServerSession>();
+  void ServerSession::HandleCommitMessage(HandleMessageTask* task){
+    ServerSession* session = task->GetSession<ServerSession>();
     CommitMessagePtr msg = task->GetMessage<CommitMessage>();
     ProposalPtr proposal = msg->GetProposal();
     if(proposal->GetProposer() == Server::GetID()){
@@ -373,21 +373,21 @@ namespace Token{
     }
   }
 
-  void ServerSession::HandleAcceptedMessage(HandleMessageTask *task){
-    ServerSession *session = task->GetSession<ServerSession>();
+  void ServerSession::HandleAcceptedMessage(HandleMessageTask* task){
+    ServerSession* session = task->GetSession<ServerSession>();
     AcceptedMessagePtr msg = task->GetMessage<AcceptedMessage>();
     ProposalPtr proposal = msg->GetProposal();
     proposal->AcceptProposal(session->GetID().ToString()); //TODO: remove ToString()
   }
 
-  void ServerSession::HandleRejectedMessage(HandleMessageTask *task){
-    ServerSession *session = task->GetSession<ServerSession>();
+  void ServerSession::HandleRejectedMessage(HandleMessageTask* task){
+    ServerSession* session = task->GetSession<ServerSession>();
     AcceptedMessagePtr msg = task->GetMessage<AcceptedMessage>();
     ProposalPtr proposal = msg->GetProposal();
     proposal->RejectProposal(session->GetID().ToString()); //TODO: remove ToString()
   }
 
-  void ServerSession::HandleBlockMessage(HandleMessageTask *task){
+  void ServerSession::HandleBlockMessage(HandleMessageTask* task){
     BlockMessagePtr msg = task->GetMessage<BlockMessage>();
     BlockPtr blk = msg->GetValue();
     Hash hash = blk->GetHash();
@@ -397,7 +397,7 @@ namespace Token{
     }
   }
 
-  void ServerSession::HandleTransactionMessage(HandleMessageTask *task){
+  void ServerSession::HandleTransactionMessage(HandleMessageTask* task){
     TransactionMessagePtr msg = task->GetMessage<TransactionMessage>();
     TransactionPtr tx = msg->GetValue();
     Hash hash = tx->GetHash();
@@ -407,12 +407,12 @@ namespace Token{
       ObjectPool::PutObject(hash, tx);
   }
 
-  void ServerSession::HandleUnclaimedTransactionMessage(HandleMessageTask *task){
+  void ServerSession::HandleUnclaimedTransactionMessage(HandleMessageTask* task){
 
   }
 
-  void ServerSession::HandleInventoryMessage(HandleMessageTask *task){
-    ServerSession *session = task->GetSession<ServerSession>();
+  void ServerSession::HandleInventoryMessage(HandleMessageTask* task){
+    ServerSession* session = task->GetSession<ServerSession>();
     InventoryMessagePtr msg = task->GetMessage<InventoryMessage>();
 
     std::vector<InventoryItem> items;
@@ -422,7 +422,7 @@ namespace Token{
     }
 
     std::vector<InventoryItem> needed;
-    for(auto &item : items){
+    for(auto& item : items){
       if(!item.ItemExists()) needed.push_back(item);
     }
 
@@ -430,8 +430,8 @@ namespace Token{
     if(!needed.empty()) session->Send(GetDataMessage::NewInstance(needed));
   }
 
-  void ServerSession::HandleGetBlocksMessage(HandleMessageTask *task){
-    ServerSession *session = task->GetSession<ServerSession>();
+  void ServerSession::HandleGetBlocksMessage(HandleMessageTask* task){
+    ServerSession* session = task->GetSession<ServerSession>();
     GetBlocksMessagePtr msg = task->GetMessage<GetBlocksMessage>();
 
     Hash start = msg->GetHeadHash();
@@ -457,8 +457,8 @@ namespace Token{
     session->Send(InventoryMessage::NewInstance(items));
   }
 
-  void ServerSession::HandleGetPeersMessage(HandleMessageTask *task){
-    ServerSession *session = task->GetSession<ServerSession>();
+  void ServerSession::HandleGetPeersMessage(HandleMessageTask* task){
+    ServerSession* session = task->GetSession<ServerSession>();
     LOG(INFO) << "getting peers....";
     PeerList peers;
     /*
@@ -472,7 +472,7 @@ namespace Token{
     session->Send(PeerListMessage::NewInstance(peers));
   }
 
-  void ServerSession::HandlePeerListMessage(HandleMessageTask *task){
+  void ServerSession::HandlePeerListMessage(HandleMessageTask* task){
     //TODO: implement ServerSession::HandlePeerListMessage(HandleMessageTask*);
   }
 }

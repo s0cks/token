@@ -17,10 +17,10 @@ namespace Token{
     ~JobScheduler() = delete;
 
     static bool Initialize();
-    static bool Schedule(Job *job);
-    static JobWorker *GetWorker(const std::thread::id &thread);
-    static JobWorker *GetThreadWorker();
-    static JobWorker *GetRandomWorker();
+    static bool Schedule(Job* job);
+    static JobWorker* GetWorker(const std::thread::id& thread);
+    static JobWorker* GetThreadWorker();
+    static JobWorker* GetRandomWorker();
     static void PrintWorkerStatistics();
   };
 }

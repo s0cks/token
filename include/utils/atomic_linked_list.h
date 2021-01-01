@@ -10,11 +10,11 @@ namespace Token{
     friend
     class AtomicLinkedList;
    private:
-    LinkedListNode *prev_;
-    LinkedListNode *next_;
+    LinkedListNode* prev_;
+    LinkedListNode* next_;
     T value_;
    public:
-    LinkedListNode(const T &value):
+    LinkedListNode(const T& value):
       value_(value){}
     ~LinkedListNode() = default;
   };
@@ -26,8 +26,8 @@ namespace Token{
     friend
     class AtomicLinkedList;
    private:
-    std::atomic<LinkedListNode<T> *> prev_;
-    std::atomic<LinkedListNode<T> *> next_;
+    std::atomic<LinkedListNode<T>*> prev_;
+    std::atomic<LinkedListNode<T>*> next_;
    public:
 
   };
@@ -35,8 +35,8 @@ namespace Token{
   template<typename T>
   class AtomicLinkedList{
    private:
-    AtomicLinkedListNode<T> *head_;
-    AtomicLinkedListNode<T> *tail_;
+    AtomicLinkedListNode<T>* head_;
+    AtomicLinkedListNode<T>* tail_;
    public:
     AtomicLinkedList():
       head_(new AtomicLinkedListNode<T>()),
@@ -50,11 +50,11 @@ namespace Token{
 
     }
 
-    void PushFront(const T &val){
-      LinkedListNode<T> *node = new LinkedListNode<T>(val);
+    void PushFront(const T& val){
+      LinkedListNode<T>* node = new LinkedListNode<T>(val);
       node->prev_ = head_;
 
-      AtomicLinkedListNode<T> *next;
+      AtomicLinkedListNode<T>* next;
       do{
         next = head_->next_.load();
         node->next_ = next;
@@ -62,11 +62,11 @@ namespace Token{
       node->next_->prev_ = node;
     }
 
-    void PushBack(const T &val){
-      LinkedListNode<T> *node = new LinkedListNode<T>(val);
+    void PushBack(const T& val){
+      LinkedListNode<T>* node = new LinkedListNode<T>(val);
       node->next_ = tail_->next_;
 
-      LinkedListNode<T> *prev;
+      LinkedListNode<T>* prev;
       do{
         prev = tail_->prev_.load();
         node->prev_ = prev;
@@ -78,8 +78,8 @@ namespace Token{
       return head_->next_ == tail_;
     }
 
-    T &PopFront(){
-      LinkedListNode<T> *node;
+    T& PopFront(){
+      LinkedListNode<T>* node;
       T val;
       do{
         node = head_->next_.load();
@@ -90,8 +90,8 @@ namespace Token{
       return std::move(val);
     }
 
-    T &PopBack(){
-      LinkedListNode<T> *node;
+    T& PopBack(){
+      LinkedListNode<T>* node;
       T val;
 
       do{

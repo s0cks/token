@@ -8,13 +8,13 @@ namespace Token{
   class TimelineEvent{
    public:
     struct TimestampComparator{
-      bool operator()(const TimelineEvent &a, const TimelineEvent &b){
+      bool operator()(const TimelineEvent& a, const TimelineEvent& b){
         return a.timestamp_ < b.timestamp_;
       }
     };
 
     struct NameComparator{
-      bool operator()(const TimelineEvent &a, const TimelineEvent &b){
+      bool operator()(const TimelineEvent& a, const TimelineEvent& b){
         return a.name_ < b.name_;
       }
     };
@@ -22,10 +22,10 @@ namespace Token{
     Timestamp timestamp_;
     std::string name_;
    public:
-    TimelineEvent(const std::string &name, const Timestamp timestamp = GetCurrentTimestamp()):
+    TimelineEvent(const std::string& name, const Timestamp timestamp = GetCurrentTimestamp()):
       timestamp_(timestamp),
       name_(name){}
-    TimelineEvent(const TimelineEvent &event):
+    TimelineEvent(const TimelineEvent& event):
       timestamp_(event.timestamp_),
       name_(event.name_){}
     ~TimelineEvent() = default;
@@ -38,17 +38,17 @@ namespace Token{
       return name_;
     }
 
-    void operator=(const TimelineEvent &event){
+    void operator=(const TimelineEvent& event){
       timestamp_ = event.timestamp_;
       name_ = event.name_;
     }
 
-    friend bool operator==(const TimelineEvent &a, const TimelineEvent &b){
+    friend bool operator==(const TimelineEvent& a, const TimelineEvent& b){
       return a.GetTimestamp() == b.GetTimestamp()
-        && a.GetName() == b.GetName();
+             && a.GetName() == b.GetName();
     }
 
-    friend bool operator!=(const TimelineEvent &a, const TimelineEvent &b){
+    friend bool operator!=(const TimelineEvent& a, const TimelineEvent& b){
       return !operator==(a, b);
     }
   };
@@ -62,10 +62,10 @@ namespace Token{
     std::string name_;
     TimelineEventSet events_;
    public:
-    Timeline(const std::string &name):
+    Timeline(const std::string& name):
       name_(name),
       events_(){}
-    Timeline(const Timeline &timeline):
+    Timeline(const Timeline& timeline):
       name_(timeline.name_),
       events_(timeline.events_){}
     ~Timeline() = default;
@@ -74,7 +74,7 @@ namespace Token{
       return name_;
     }
 
-    TimelineEventSet &events(){
+    TimelineEventSet& events(){
       return events_;
     }
 
@@ -112,12 +112,12 @@ namespace Token{
       return events_.end();
     }
 
-    void operator=(const Timeline &timeline){
+    void operator=(const Timeline& timeline){
       name_ = timeline.name_;
       events_ = timeline.events_;
     }
 
-    friend Timeline &operator<<(Timeline &timeline, const std::string &name){
+    friend Timeline& operator<<(Timeline& timeline, const std::string& name){
       timeline.events_.insert(TimelineEvent(name));
       return timeline;
     }
@@ -125,11 +125,11 @@ namespace Token{
 
   class TimelinePrinter : public Printer{
    public:
-    TimelinePrinter(const google::LogSeverity &severity = google::INFO, const long &flags = Printer::kFlagNone):
+    TimelinePrinter(const google::LogSeverity& severity = google::INFO, const long& flags = Printer::kFlagNone):
       Printer(severity, flags){}
     ~TimelinePrinter() = default;
 
-    bool Print(const Timeline &timeline) const{
+    bool Print(const Timeline& timeline) const{
       LOG_AT_LEVEL(GetSeverity()) << timeline.GetName();
       LOG_AT_LEVEL(GetSeverity()) << "---------------------------------------------";
       LOG_AT_LEVEL(GetSeverity()) << "  Start: " << GetTimestampFormattedReadable(timeline.GetStartTime());
@@ -145,7 +145,7 @@ namespace Token{
         std::sort(events.begin(), events.end(), TimelineEvent::TimestampComparator());
 
         Timestamp last = timeline.GetStartTime();
-        for(auto &event : events){
+        for(auto& event : events){
           int64_t total_seconds = (event.GetTimestamp() - last);
 
           LOG_AT_LEVEL(GetSeverity()) << "    - " << event.GetName() << " (" << total_seconds << " Seconds)";
@@ -157,12 +157,12 @@ namespace Token{
       return true;
     }
 
-    bool operator()(const Timeline &timeline) const{
+    bool operator()(const Timeline& timeline) const{
       return Print(timeline);
     }
 
     static inline bool
-    PrintTimeline(const Timeline &timeline, const google::LogSeverity &severity = google::INFO){
+    PrintTimeline(const Timeline& timeline, const google::LogSeverity& severity = google::INFO){
       TimelinePrinter printer(severity);
       return printer(timeline);
     }

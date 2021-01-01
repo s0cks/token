@@ -14,13 +14,13 @@ namespace Token{
     static const intptr_t kSize = UUID::kSize + NodeAddress::kSize;
 
     struct IDComparator{
-      bool operator()(const Peer &a, const Peer &b){
+      bool operator()(const Peer& a, const Peer& b){
         return a.uuid_ < b.uuid_;
       }
     };
 
     struct AddressComparator{
-      bool operator()(const Peer &a, const Peer &b){
+      bool operator()(const Peer& a, const Peer& b){
         return a.address_ < b.address_;
       }
     };
@@ -28,13 +28,13 @@ namespace Token{
     UUID uuid_;
     NodeAddress address_;
    public:
-    Peer(const UUID &uuid, const NodeAddress &address):
+    Peer(const UUID& uuid, const NodeAddress& address):
       uuid_(uuid),
       address_(address){}
-    Peer(const BufferPtr &buff):
+    Peer(const BufferPtr& buff):
       uuid_(buff),
       address_(buff){}
-    Peer(const Peer &other):
+    Peer(const Peer& other):
       uuid_(other.uuid_),
       address_(other.address_){}
     ~Peer() = default;
@@ -47,31 +47,31 @@ namespace Token{
       return address_;
     }
 
-    bool Write(const BufferPtr &buff) const{
+    bool Write(const BufferPtr& buff) const{
       uuid_.Write(buff);
       address_.Write(buff);
       return true;
     }
 
-    void operator=(const Peer &other){
+    void operator=(const Peer& other){
       uuid_ = other.uuid_;
       address_ = other.address_;
     }
 
-    friend bool operator==(const Peer &a, const Peer &b){
+    friend bool operator==(const Peer& a, const Peer& b){
       return a.uuid_ == b.uuid_
-        && a.address_ == b.address_;
+             && a.address_ == b.address_;
     }
 
-    friend bool operator!=(const Peer &a, const Peer &b){
+    friend bool operator!=(const Peer& a, const Peer& b){
       return !operator==(a, b);
     }
 
-    friend bool operator<(const Peer &a, const Peer &b){
+    friend bool operator<(const Peer& a, const Peer& b){
       return a.address_ < b.address_;
     }
 
-    friend std::ostream &operator<<(std::ostream &stream, const Peer &peer){
+    friend std::ostream& operator<<(std::ostream& stream, const Peer& peer){
       stream << peer.GetID() << "(" << peer.GetAddress() << ")";
       return stream;
     }
@@ -94,7 +94,7 @@ namespace Token{
     uv_async_t accepted_;
     uv_async_t rejected_;
 
-    void SetInfo(const Peer &info){
+    void SetInfo(const Peer& info){
       info_ = info;
     }
 
@@ -105,22 +105,22 @@ namespace Token{
     bool Connect();
     bool Disconnect();
 
-    static void OnConnect(uv_connect_t *conn, int status);
-    static void OnMessageReceived(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buff);
-    static void OnDisconnect(uv_async_t *handle);
+    static void OnConnect(uv_connect_t* conn, int status);
+    static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
+    static void OnDisconnect(uv_async_t* handle);
     // Paxos
-    static void OnPrepare(uv_async_t *handle);
-    static void OnPromise(uv_async_t *handle);
-    static void OnCommit(uv_async_t *handle);
-    static void OnAccepted(uv_async_t *handle);
-    static void OnRejected(uv_async_t *handle);
+    static void OnPrepare(uv_async_t* handle);
+    static void OnPromise(uv_async_t* handle);
+    static void OnCommit(uv_async_t* handle);
+    static void OnAccepted(uv_async_t* handle);
+    static void OnRejected(uv_async_t* handle);
 
 #define DECLARE_MESSAGE_HANDLER(Name) \
         static void Handle##Name##Message(HandleMessageTask* task);
     FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
    public:
-    PeerSession(uv_loop_t *loop, const NodeAddress &address):
+    PeerSession(uv_loop_t* loop, const NodeAddress& address):
       Session(loop),
       thread_(pthread_self()),
       info_(UUID(), address),

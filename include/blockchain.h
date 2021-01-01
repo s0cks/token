@@ -40,7 +40,7 @@ namespace Token{
 #undef DEFINE_STATE
     };
 
-    friend std::ostream &operator<<(std::ostream &stream, const State &state){
+    friend std::ostream& operator<<(std::ostream& stream, const State& state){
       switch(state){
 #define DEFINE_TOSTRING(Name) \
                 case State::k##Name: \
@@ -59,7 +59,7 @@ namespace Token{
 #undef DEFINE_STATUS
     };
 
-    friend std::ostream &operator<<(std::ostream &stream, const Status &status){
+    friend std::ostream& operator<<(std::ostream& stream, const Status& status){
       switch(status){
 #define DEFINE_TOSTRING(Name) \
                 case Status::k##Name: \
@@ -73,13 +73,13 @@ namespace Token{
     }
    private:
     BlockChain() = delete;
-    static leveldb::DB *GetIndex();
+    static leveldb::DB* GetIndex();
     static void SetState(State state);
     static void SetStatus(Status status);
-    static bool PutBlock(const Hash &hash, BlockPtr blk);
-    static bool PutReference(const std::string &name, const Hash &hash);
-    static bool RemoveReference(const std::string &name);
-    static bool Append(const BlockPtr &blk);
+    static bool PutBlock(const Hash& hash, BlockPtr blk);
+    static bool PutReference(const std::string& name, const Hash& hash);
+    static bool RemoveReference(const std::string& name);
+    static bool Append(const BlockPtr& blk);
    public:
     ~BlockChain() = delete;
 
@@ -87,13 +87,13 @@ namespace Token{
     static Status GetStatus();
     static std::string GetStatusMessage();
     static bool Initialize();
-    static bool VisitHeaders(BlockChainHeaderVisitor *vis);
-    static bool VisitBlocks(BlockChainBlockVisitor *vis);
-    static bool GetBlocks(HashList &hashes);
-    static bool HasBlock(const Hash &hash);
-    static bool HasReference(const std::string &name);
-    static Hash GetReference(const std::string &name);
-    static BlockPtr GetBlock(const Hash &hash);
+    static bool VisitHeaders(BlockChainHeaderVisitor* vis);
+    static bool VisitBlocks(BlockChainBlockVisitor* vis);
+    static bool GetBlocks(HashList& hashes);
+    static bool HasBlock(const Hash& hash);
+    static bool HasReference(const std::string& name);
+    static Hash GetReference(const std::string& name);
+    static BlockPtr GetBlock(const Hash& hash);
     static BlockPtr GetBlock(int64_t height);
     static BlockPtr GetHead();
     static BlockPtr GetGenesis();
@@ -129,7 +129,7 @@ namespace Token{
     BlockChainBlockVisitor() = default;
    public:
     virtual ~BlockChainBlockVisitor() = default;
-    virtual bool Visit(const BlockPtr &blk) = 0;
+    virtual bool Visit(const BlockPtr& blk) = 0;
   };
 
   class BlockChainHeaderVisitor{
@@ -137,7 +137,7 @@ namespace Token{
     BlockChainHeaderVisitor() = delete;
    public:
     virtual ~BlockChainHeaderVisitor() = default;
-    virtual bool Visit(const BlockHeader &blk) = 0;
+    virtual bool Visit(const BlockHeader& blk) = 0;
   };
 }
 

@@ -78,7 +78,7 @@ namespace Token{
   };*/
 
   static inline void
-  OrphanTransaction(const TransactionPtr &tx){
+  OrphanTransaction(const TransactionPtr& tx){
     Hash hash = tx->GetHash();
     LOG(WARNING) << "orphaning transaction: " << hash;
     if(!ObjectPool::RemoveObject(hash))
@@ -86,7 +86,7 @@ namespace Token{
   }
 
   static inline void
-  OrphanBlock(const BlockPtr &blk){
+  OrphanBlock(const BlockPtr& blk){
     Hash hash = blk->GetHash();
     LOG(WARNING) << "orphaning block: " << hash;
     if(!ObjectPool::RemoveObject(hash))
@@ -110,7 +110,7 @@ namespace Token{
     block_ = blk;
   }
 
-  void BlockDiscoveryThread::SetProposal(const ProposalPtr &proposal){
+  void BlockDiscoveryThread::SetProposal(const ProposalPtr& proposal){
     LOCK_GUARD;
     proposal_ = proposal;
   }
@@ -185,20 +185,20 @@ namespace Token{
     return Thread::Stop(thread_);
   }
 
-  void BlockDiscoveryThread::SetState(const State &state){
+  void BlockDiscoveryThread::SetState(const State& state){
     LOCK;
     state_ = state;
     UNLOCK;
     SIGNAL_ALL;
   }
 
-  void BlockDiscoveryThread::SetStatus(const Status &status){
+  void BlockDiscoveryThread::SetStatus(const Status& status){
     LOCK;
     status_ = status;
     UNLOCK;
   }
 
-  void BlockDiscoveryThread::WaitForState(const State &state){
+  void BlockDiscoveryThread::WaitForState(const State& state){
     LOCK;
     while(state_ != state) WAIT;
     UNLOCK;

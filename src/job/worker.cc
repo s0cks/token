@@ -3,12 +3,12 @@
 #include "utils/timeline.h"
 
 namespace Token{
-  Job *JobWorker::GetNextJob(){
-    Job *job = queue_.Pop();
+  Job* JobWorker::GetNextJob(){
+    Job* job = queue_.Pop();
     if(job)
       return job;
 
-    JobWorker *worker = JobScheduler::GetRandomWorker();
+    JobWorker* worker = JobScheduler::GetRandomWorker();
     if(worker == this){
       std::this_thread::yield();
       return nullptr;
@@ -21,7 +21,7 @@ namespace Token{
     return worker->queue_.Steal();
   }
 
-  void JobWorker::HandleThread(JobWorker *worker){
+  void JobWorker::HandleThread(JobWorker* worker){
     LOG(INFO) << "starting worker....";
     worker->SetState(JobWorker::kRunning);
 
@@ -36,10 +36,10 @@ namespace Token{
 
     sleep(2);
     while(worker->IsRunning()){
-      Job *next = worker->GetNextJob();
+      Job* next = worker->GetNextJob();
       if(next){
 #ifdef TOKEN_DEBUG
-        Histogram &histogram = worker->GetHistogram();
+        Histogram& histogram = worker->GetHistogram();
         Timeline timeline("RunTask");
         timeline << "Start";
 #endif//TOKEN_DEBUG

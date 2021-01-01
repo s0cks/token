@@ -31,7 +31,7 @@ namespace Token{
 #undef DEFINE_SERVER_STATE
     };
 
-    friend std::ostream &operator<<(std::ostream &stream, const State &state){
+    friend std::ostream& operator<<(std::ostream& stream, const State& state){
       switch(state){
 #define DEFINE_TOSTRING(Name) \
                 case Server::k##Name: \
@@ -50,7 +50,7 @@ namespace Token{
 #undef DEFINE_SERVER_STATUS
     };
 
-    friend std::ostream &operator<<(std::ostream &stream, const Status &status){
+    friend std::ostream& operator<<(std::ostream& stream, const Status& status){
       switch(status){
 #define DEFINE_TOSTRING(Name) \
                 case Server::k##Name: \
@@ -65,14 +65,14 @@ namespace Token{
    private:
     Server() = delete;
 
-    static uv_tcp_t *GetHandle();
+    static uv_tcp_t* GetHandle();
     static void SetStatus(Status status);
     static void SetState(State state);
-    static void OnClose(uv_handle_t *handle);
-    static void OnWalk(uv_handle_t *handle, void *data);
-    static void HandleTerminateCallback(uv_async_t *handle);
-    static void OnNewConnection(uv_stream_t *stream, int status);
-    static void OnMessageReceived(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
+    static void OnClose(uv_handle_t* handle);
+    static void OnWalk(uv_handle_t* handle, void* data);
+    static void HandleTerminateCallback(uv_async_t* handle);
+    static void OnNewConnection(uv_stream_t* stream, int status);
+    static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
     static void HandleServerThread(uword parameter);
    public:
     ~Server() = delete;
@@ -101,11 +101,11 @@ namespace Token{
    private:
     UUID uuid_;
 
-    ServerSession(uv_loop_t *loop):
+    ServerSession(uv_loop_t* loop):
       Session(loop),
       uuid_(){}
 
-    void SetID(const UUID &uuid){
+    void SetID(const UUID& uuid){
       uuid_ = uuid;
     }
 
@@ -124,7 +124,7 @@ namespace Token{
       return ss.str();
     }
 
-    static ServerSession *NewInstance(uv_loop_t *loop){
+    static ServerSession* NewInstance(uv_loop_t* loop){
       return new ServerSession(loop);
     }
   };
