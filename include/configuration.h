@@ -41,54 +41,54 @@ namespace Token{
 #define PROPERTY_SERVER_MAXPEERS "MaxNumberOfPeers"
 #define PROPERTY_SERVER_MAXPEERS_DEFAULT 4
 
-    class BlockChainConfiguration{
-        //TODO: refactor
-    private:
-        BlockChainConfiguration() = delete;
-        static bool SaveConfiguration();
-        static bool LoadConfiguration();
-        static bool GenerateConfiguration();
+  class BlockChainConfiguration{
+    //TODO: refactor
+   private:
+    BlockChainConfiguration() = delete;
+    static bool SaveConfiguration();
+    static bool LoadConfiguration();
+    static bool GenerateConfiguration();
 
-        static libconfig::Setting& GetRootProperty();
-        static libconfig::Setting& GetProperty(const std::string& name, libconfig::Setting::Type type);
+    static libconfig::Setting &GetRootProperty();
+    static libconfig::Setting &GetProperty(const std::string &name, libconfig::Setting::Type type);
 
-        static inline libconfig::Setting&
-        GetServerProperties(){
-            return GetProperty(PROPERTY_SERVER, libconfig::Setting::TypeGroup);
-        }
+    static inline libconfig::Setting &
+    GetServerProperties(){
+      return GetProperty(PROPERTY_SERVER, libconfig::Setting::TypeGroup);
+    }
 
-        static inline libconfig::Setting&
-        GetHealthCheckProperties(){
-            return GetProperty(PROPERTY_HEALTHCHECK, libconfig::Setting::TypeGroup);
-        }
-    public:
-        ~BlockChainConfiguration() = delete;
-        static bool Initialize();
+    static inline libconfig::Setting &
+    GetHealthCheckProperties(){
+      return GetProperty(PROPERTY_HEALTHCHECK, libconfig::Setting::TypeGroup);
+    }
+   public:
+    ~BlockChainConfiguration() = delete;
+    static bool Initialize();
 
-        // Health Check Service
-        // HealthCheck.Port
-        static int32_t GetHealthCheckPort();
-        static bool SetHealthCheckPort(int32_t port);
+    // Health Check Service
+    // HealthCheck.Port
+    static int32_t GetHealthCheckPort();
+    static bool SetHealthCheckPort(int32_t port);
 
-        // Server
-        // Server.Id
-        static UUID GetSererID();
-        static bool SetServerID(const UUID& uuid);
-        // Server.CallbackAddress
-        static NodeAddress GetServerCallbackAddress();
-        static bool SetServerCallbackAddress(const NodeAddress& address);
-        // Server.MaxNumberOfPeers
-        static int32_t GetMaxNumberOfPeers();
-        static bool SetMaxNumberOfPeers(int32_t value);
-        // Server.Peers
-        static bool GetPeerList(std::set<NodeAddress>& peers);
-        static bool SetPeerList(const std::set<NodeAddress>& peers);
+    // Server
+    // Server.Id
+    static UUID GetSererID();
+    static bool SetServerID(const UUID &uuid);
+    // Server.CallbackAddress
+    static NodeAddress GetServerCallbackAddress();
+    static bool SetServerCallbackAddress(const NodeAddress &address);
+    // Server.MaxNumberOfPeers
+    static int32_t GetMaxNumberOfPeers();
+    static bool SetMaxNumberOfPeers(int32_t value);
+    // Server.Peers
+    static bool GetPeerList(std::set<NodeAddress> &peers);
+    static bool SetPeerList(const std::set<NodeAddress> &peers);
 
-        static inline std::string
-        GetConfigurationFilename(){
-            return FLAGS_path + "/" + BLOCKCHAIN_CONFIGURATION_FILENAME;
-        }
-    };
+    static inline std::string
+    GetConfigurationFilename(){
+      return FLAGS_path + "/" + BLOCKCHAIN_CONFIGURATION_FILENAME;
+    }
+  };
 }
 
 #endif //TOKEN_CONFIGURATION_H

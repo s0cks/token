@@ -3,40 +3,40 @@
 #include "job/process_transaction.h"
 
 namespace Token{
-    JobResult ProcessBlockJob::DoWork(){
-        if(!GetBlock()->Accept(this))
-            return Failed("Cannot visit the block transactions.");
+  JobResult ProcessBlockJob::DoWork(){
+    if(!GetBlock()->Accept(this))
+      return Failed("Cannot visit the block transactions.");
 
-        for(auto& it : hash_lists_){
-            const User& user = it.first;
-            HashList& hashes = it.second;
-            ObjectPool::GetHashList(user, hashes);
+    for(auto &it : hash_lists_){
+      const User &user = it.first;
+      HashList &hashes = it.second;
+      ObjectPool::GetHashList(user, hashes);
 
-            std::string key = user.Get();
+      std::string key = user.Get();
 
-            int64_t val_size = GetBufferSize(hashes);
-            uint8_t val_data[val_size];
-            Encode(hashes, val_data, val_size);
-            leveldb::Slice value((char*)val_data, val_size);
+      int64_t val_size = GetBufferSize(hashes);
+      uint8_t val_data[val_size];
+      Encode(hashes, val_data, val_size);
+      leveldb::Slice value((char *) val_data, val_size);
 
-            GetBatch()->Delete(key);
-            GetBatch()->Put(key, value);
-        }
-
-        leveldb::Status status;
-        if(!(status = Write()).ok()){
-            std::stringstream ss;
-            ss << "Cannot write changes: " << status.ToString();
-            return Failed(ss);
-        }
-        return Success("Finished.");
+      GetBatch()->Delete(key);
+      GetBatch()->Put(key, value);
     }
 
-    bool ProcessBlockJob::Visit(const TransactionPtr& tx){
-        JobWorker* worker = JobScheduler::GetThreadWorker();
-        ProcessTransactionJob* job = new ProcessTransactionJob(this, tx);
-        worker->Submit(job);
-        worker->Wait(job);
-        return true;
+    leveldb::Status status;
+    if(!(status = Write()).ok()){
+      std::stringstream ss;
+      ss << "Cannot write changes: " << status.ToString();
+      return Failed(ss);
     }
+    return Success("Finished.");
+  }
+
+  bool ProcessBlockJob::Visit(const TransactionPtr &tx){
+    JobWorker *worker = JobScheduler::GetThreadWorker();
+    ProcessTransactionJob *job = new ProcessTransactionJob(this, tx);
+    worker->Submit(job);
+    worker->Wait(job);
+    return true;
+  }
 }

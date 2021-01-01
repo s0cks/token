@@ -12,40 +12,40 @@
 #include "utils/timeline.h"
 
 namespace Token{
-    static inline bool
-    ShouldLoadSnapshot(){
-        return !FLAGS_snapshot.empty();
-    }
+  static inline bool
+  ShouldLoadSnapshot(){
+    return !FLAGS_snapshot.empty();
+  }
 
-    static inline std::string
-    GetDataDirectory(){
-        return FLAGS_path + "/data";
-    }
+  static inline std::string
+  GetDataDirectory(){
+    return FLAGS_path + "/data";
+  }
 
-    static inline std::string
-    GetIndexFilename(){
-        return GetDataDirectory() + "/index";
-    }
+  static inline std::string
+  GetIndexFilename(){
+    return GetDataDirectory() + "/index";
+  }
 
-    static inline std::string
-    GetNewBlockFilename(const BlockPtr& blk){
-        std::stringstream ss;
-        ss << GetDataDirectory() + "/blk" << blk->GetHeight() << ".dat";
-        return ss.str();
-    }
+  static inline std::string
+  GetNewBlockFilename(const BlockPtr &blk){
+    std::stringstream ss;
+    ss << GetDataDirectory() + "/blk" << blk->GetHeight() << ".dat";
+    return ss.str();
+  }
 
-    static inline std::string
-    GetBlockHeightKey(int64_t height){
-        std::stringstream ss;
-        ss << "blk" << height;
-        return ss.str();
-    }
+  static inline std::string
+  GetBlockHeightKey(int64_t height){
+    std::stringstream ss;
+    ss << "blk" << height;
+    return ss.str();
+  }
 
-    static std::recursive_mutex mutex_;
-    static std::condition_variable cond_;
-    static BlockChain::State state_ = BlockChain::kUninitialized;
-    static BlockChain::Status status_ = BlockChain::kOk;
-    static leveldb::DB* index_ = nullptr;
+  static std::recursive_mutex mutex_;
+  static std::condition_variable cond_;
+  static BlockChain::State state_ = BlockChain::kUninitialized;
+  static BlockChain::Status status_ = BlockChain::kOk;
+  static leveldb::DB *index_ = nullptr;
 
 #define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
 #define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
@@ -53,316 +53,317 @@ namespace Token{
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
 
-    std::string BlockChain::GetStatusMessage(){
-        std::stringstream ss;
-        LOCK_GUARD;
+  std::string BlockChain::GetStatusMessage(){
+    std::stringstream ss;
+    LOCK_GUARD;
 
-        ss << "[";
-        switch(state_){
+    ss << "[";
+    switch(state_){
 #define DEFINE_STATE_MESSAGE(Name) \
             case BlockChain::k##Name: \
                 ss << #Name; \
                 break;
-            FOR_EACH_BLOCKCHAIN_STATE(DEFINE_STATE_MESSAGE)
+      FOR_EACH_BLOCKCHAIN_STATE(DEFINE_STATE_MESSAGE)
 #undef DEFINE_STATE_MESSAGE
-        }
-        ss << "] ";
+    }
+    ss << "] ";
 
-        switch(status_){
+    switch(status_){
 #define DEFINE_STATUS_MESSAGE(Name) \
             case BlockChain::k##Name:{ \
                 ss << #Name; \
                 break; \
             }
-            FOR_EACH_BLOCKCHAIN_STATUS(DEFINE_STATUS_MESSAGE)
+      FOR_EACH_BLOCKCHAIN_STATUS(DEFINE_STATUS_MESSAGE)
 #undef DEFINE_STATUS_MESSAGE
-        }
-        return ss.str();
+    }
+    return ss.str();
+  }
+
+  leveldb::DB *BlockChain::GetIndex(){
+    return index_;
+  }
+
+  bool BlockChain::Initialize(){
+    if(IsInitialized()){
+      LOG(WARNING) << "cannot reinitialize the block chain!";
+      return false;
     }
 
-    leveldb::DB* BlockChain::GetIndex(){
-        return index_;
+    if(!FileExists(GetDataDirectory())){
+      if(!CreateDirectory(GetDataDirectory())){
+        LOG(WARNING) << "couldn't create block chain index in directory: " << GetDataDirectory();
+        return false;
+      }
     }
 
-    bool BlockChain::Initialize(){
-        if(IsInitialized()){
-            LOG(WARNING) << "cannot reinitialize the block chain!";
-            return false;
-        }
+    leveldb::Options options;
+    options.create_if_missing = true;
+    if(!leveldb::DB::Open(options, GetIndexFilename(), &index_).ok()){
+      LOG(WARNING) << "couldn't initialize block chain index in file: " << GetIndexFilename();
+      return false;
+    }
 
-        if(!FileExists(GetDataDirectory())){
-            if(!CreateDirectory(GetDataDirectory())){
-                LOG(WARNING) << "couldn't create block chain index in directory: " << GetDataDirectory();
-                return false;
-            }
-        }
+    LOG(INFO) << "initializing the block chain....";
+    SetState(BlockChain::kInitializing);
 
-        leveldb::Options options;
-        options.create_if_missing = true;
-        if(!leveldb::DB::Open(options, GetIndexFilename(), &index_).ok()){
-            LOG(WARNING) << "couldn't initialize block chain index in file: " << GetIndexFilename();
-            return false;
-        }
-
-        LOG(INFO) << "initializing the block chain....";
-        SetState(BlockChain::kInitializing);
-
-        Keychain::Initialize();
-        ObjectPool::Initialize();
-        if(!HasBlocks()){
-            BlockPtr genesis = Block::Genesis();
-            Hash hash = genesis->GetHash();
+    Keychain::Initialize();
+    ObjectPool::Initialize();
+    if(!HasBlocks()){
+      BlockPtr genesis = Block::Genesis();
+      Hash hash = genesis->GetHash();
 
 #ifdef TOKEN_DEBUG
-            Timeline tl("ProcessGenesisBlock");
-            tl << "Start";
-            auto start = std::chrono::steady_clock::now();
+      Timeline tl("ProcessGenesisBlock");
+      tl << "Start";
+      auto start = std::chrono::steady_clock::now();
 #endif//TOKEN_DEBUG
 
 
-            // [Before - Work Stealing]
-            //  - ProcessGenesisBlock Timeline (19s)
-            // [After - Work Stealing]
-            //  - ProcessGenesisBlock Timeline (4s)
-            JobWorker* worker = JobScheduler::GetRandomWorker();
-            ProcessBlockJob* job = new ProcessBlockJob(genesis);
-            worker->Submit(job);
-            worker->Wait(job);
+      // [Before - Work Stealing]
+      //  - ProcessGenesisBlock Timeline (19s)
+      // [After - Work Stealing]
+      //  - ProcessGenesisBlock Timeline (4s)
+      JobWorker *worker = JobScheduler::GetRandomWorker();
+      ProcessBlockJob *job = new ProcessBlockJob(genesis);
+      worker->Submit(job);
+      worker->Wait(job);
 #ifdef TOKEN_DEBUG
-            auto stop = std::chrono::steady_clock::now();
-            tl << "Stop";
-            TimelinePrinter::PrintTimeline(tl);
-            //JobScheduler::PrintWorkerStatistics();
+      auto stop = std::chrono::steady_clock::now();
+      tl << "Stop";
+      TimelinePrinter::PrintTimeline(tl);
+      //JobScheduler::PrintWorkerStatistics();
 
-            LOG(INFO) << "total time: " << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() << "ms";
+      LOG(INFO) << "total time: " << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count()
+                << "ms";
 #endif//TOKEN_DEBUG
 
-            PutBlock(hash, genesis);
-            PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
-            PutReference(BLOCKCHAIN_REFERENCE_GENESIS, hash);
-        }
-
-        LOG(INFO) << "block chain initialized!";
-        BlockChain::SetState(BlockChain::kInitialized);
-        return true;
+      PutBlock(hash, genesis);
+      PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
+      PutReference(BLOCKCHAIN_REFERENCE_GENESIS, hash);
     }
 
-    BlockChain::State BlockChain::GetState(){
-        LOCK_GUARD;
-        return state_;
+    LOG(INFO) << "block chain initialized!";
+    BlockChain::SetState(BlockChain::kInitialized);
+    return true;
+  }
+
+  BlockChain::State BlockChain::GetState(){
+    LOCK_GUARD;
+    return state_;
+  }
+
+  void BlockChain::SetState(State state){
+    LOCK_GUARD;
+    state_ = state;
+    SIGNAL_ALL;
+  }
+
+  BlockChain::Status BlockChain::GetStatus(){
+    LOCK_GUARD;
+    return status_;
+  }
+
+  void BlockChain::SetStatus(Status status){
+    LOCK_GUARD;
+    status_ = status;
+    SIGNAL_ALL;
+  }
+
+  BlockPtr BlockChain::GetGenesis(){
+    LOCK_GUARD;
+    return GetBlock(GetReference(BLOCKCHAIN_REFERENCE_GENESIS));
+  }
+
+  BlockPtr BlockChain::GetHead(){
+    return GetBlock(GetReference(BLOCKCHAIN_REFERENCE_HEAD));
+  }
+
+  bool BlockChain::PutBlock(const Hash &hash, BlockPtr blk){
+    if(HasBlock(hash)){
+      LOG(WARNING) << "cannot overwrite existing block data for: " << hash;
+      return false;
     }
 
-    void BlockChain::SetState(State state){
-        LOCK_GUARD;
-        state_ = state;
-        SIGNAL_ALL;
+    int64_t size = blk->GetBufferSize();
+    BufferPtr buff = Buffer::NewInstance(size);
+    blk->Write(buff);
+
+    leveldb::Slice key((char *) hash.data(), Hash::GetSize());
+    leveldb::Slice value(buff->data(), size);
+
+    leveldb::WriteOptions opts;
+    opts.sync = true;
+    leveldb::Status status;
+    if(!(status = GetIndex()->Put(opts, key, value)).ok()){
+      LOG(WARNING) << "cannot index object " << hash << ": " << status.ToString();
+      return false;
     }
 
-    BlockChain::Status BlockChain::GetStatus(){
-        LOCK_GUARD;
-        return status_;
+    LOG(INFO) << "indexed block: " << hash;
+    return true;
+  }
+
+  BlockPtr BlockChain::GetBlock(const Hash &hash){
+    leveldb::Slice key((char *) hash.data(), Hash::GetSize());
+    std::string value;
+
+    leveldb::ReadOptions opts;
+    leveldb::Status status;
+    if(!(status = GetIndex()->Get(opts, key, &value)).ok()){
+      LOG(WARNING) << "cannot get " << hash << ": " << status.ToString();
+      return BlockPtr(nullptr);
     }
 
-    void BlockChain::SetStatus(Status status){
-        LOCK_GUARD;
-        status_ = status;
-        SIGNAL_ALL;
+    BufferPtr buff = Buffer::From(value);
+    return Block::NewInstance(buff);
+  }
+
+  BlockPtr BlockChain::GetBlock(int64_t height){
+    //TODO: implement
+    return BlockPtr(nullptr);
+  }
+
+  bool BlockChain::HasReference(const std::string &name){
+    leveldb::ReadOptions options;
+    std::string value;
+    return GetIndex()->Get(options, name, &value).ok();
+  }
+
+  bool BlockChain::RemoveReference(const std::string &name){
+    leveldb::WriteOptions options;
+    std::string value;
+
+    leveldb::Status status = GetIndex()->Delete(options, name);
+    if(!status.ok()){
+      LOG(WARNING) << "couldn't remove reference " << name << ": " << status.ToString();
+      return false;
     }
 
-    BlockPtr BlockChain::GetGenesis(){
-        LOCK_GUARD;
-        return GetBlock(GetReference(BLOCKCHAIN_REFERENCE_GENESIS));
+    LOG(INFO) << "removed reference: " << name;
+    return true;
+  }
+
+  bool BlockChain::PutReference(const std::string &name, const Hash &hash){
+    leveldb::WriteOptions options;
+    options.sync = true;
+
+    leveldb::Status status = GetIndex()->Put(options, name, hash.HexString());
+    if(!status.ok()){
+      LOG(WARNING) << "couldn't set reference " << name << " to " << hash << ": " << status.ToString();
+      return false;
     }
 
-    BlockPtr BlockChain::GetHead(){
-        return GetBlock(GetReference(BLOCKCHAIN_REFERENCE_HEAD));
+    LOG(INFO) << "set reference " << name << " := " << hash;
+    return true;
+  }
+
+  Hash BlockChain::GetReference(const std::string &name){
+    std::string value;
+
+    leveldb::Status status;
+    leveldb::ReadOptions options;
+    if(!(status = GetIndex()->Get(options, name, &value)).ok()){
+      LOG(WARNING) << "couldn't find reference " << name << ": " << status.ToString();
+      return Hash();
     }
 
-    bool BlockChain::PutBlock(const Hash& hash, BlockPtr blk){
-        if(HasBlock(hash)){
-            LOG(WARNING) << "cannot overwrite existing block data for: " << hash;
-            return false;
-        }
+    return Hash::FromHexString(value);
+  }
 
-        int64_t size = blk->GetBufferSize();
-        BufferPtr buff = Buffer::NewInstance(size);
-        blk->Write(buff);
+  bool BlockChain::HasBlock(const Hash &hash){
+    leveldb::Slice key((char *) hash.data(), Hash::GetSize());
 
-        leveldb::Slice key((char*)hash.data(), Hash::GetSize());
-        leveldb::Slice value(buff->data(), size);
+    leveldb::ReadOptions options;
+    std::string filename;
 
-        leveldb::WriteOptions opts;
-        opts.sync = true;
-        leveldb::Status status;
-        if(!(status = GetIndex()->Put(opts, key, value)).ok()){
-            LOG(WARNING) << "cannot index object " << hash << ": " << status.ToString();
-            return false;
-        }
+    LOCK_GUARD;
+    leveldb::Status status = GetIndex()->Get(options, key, &filename);
+    if(!status.ok()){
+      LOG(WARNING) << "couldn't find block " << hash << ": " << status.ToString();
+      return false;
+    }
+    return true;
+  }
 
-        LOG(INFO) << "indexed block: " << hash;
-        return true;
+  bool BlockChain::Append(const BlockPtr &block){
+    LOCK_GUARD;
+    BlockPtr head = GetHead();
+    Hash hash = block->GetHash();
+    Hash phash = block->GetPreviousHash();
+
+    LOG(INFO) << "appending new block:";
+    LOG(INFO) << "  - Parent Hash: " << phash;
+    LOG(INFO) << "  - Hash: " << hash;
+    if(HasBlock(hash)){
+      LOG(WARNING) << "duplicate block found for: " << hash;
+      return false;
     }
 
-    BlockPtr BlockChain::GetBlock(const Hash& hash){
-        leveldb::Slice key((char*)hash.data(), Hash::GetSize());
-        std::string value;
-
-        leveldb::ReadOptions opts;
-        leveldb::Status status;
-        if(!(status = GetIndex()->Get(opts, key, &value)).ok()){
-            LOG(WARNING) << "cannot get " << hash << ": " << status.ToString();
-            return BlockPtr(nullptr);
-        }
-
-        BufferPtr buff = Buffer::From(value);
-        return Block::NewInstance(buff);
+    if(block->IsGenesis()){
+      LOG(WARNING) << "cannot append genesis block: " << hash;
+      return false;
     }
 
-    BlockPtr BlockChain::GetBlock(int64_t height){
-        //TODO: implement
-        return BlockPtr(nullptr);
+    if(!HasBlock(phash)){
+      LOG(WARNING) << "cannot find parent block: " << phash;
+      return false;
     }
 
-    bool BlockChain::HasReference(const std::string& name){
-        leveldb::ReadOptions options;
-        std::string value;
-        return GetIndex()->Get(options, name, &value).ok();
+    PutBlock(hash, block);
+    if(head->GetHeight() < block->GetHeight())
+      PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
+    return true;
+  }
+
+  bool BlockChain::VisitBlocks(BlockChainBlockVisitor *vis){
+    Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
+    do{
+      BlockPtr blk = GetBlock(current);
+      if(!vis->Visit(blk))
+        return false;
+      current = blk->GetPreviousHash();
+    } while(!current.IsNull());
+    return true;
+  }
+
+  bool BlockChain::GetBlocks(HashList &hashes){
+    Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
+    do{
+      BlockPtr blk = GetBlock(current);
+      hashes.insert(blk->GetHash());
+      current = blk->GetPreviousHash();
+    } while(!current.IsNull());
+    return true;
+  }
+
+  bool BlockChain::VisitHeaders(BlockChainHeaderVisitor *vis){
+    //TODO: Optimize BlockChain::VisitHeaders
+    Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
+    do{
+      BlockPtr blk = GetBlock(current);
+      if(!vis->Visit(blk->GetHeader()))
+        return false;
+      current = blk->GetPreviousHash();
+    } while(!current.IsNull());
+    return true;
+  }
+
+  int64_t BlockChain::GetNumberOfBlocks(){
+    int64_t count = 0;
+
+    DIR *dir;
+    struct dirent *ent;
+    if((dir = opendir(GetDataDirectory().c_str())) != NULL){
+      while((ent = readdir(dir)) != NULL){
+        std::string filename(ent->d_name);
+        if(EndsWith(filename, ".dat")) count++;
+      }
+      closedir(dir);
+    } else{
+      LOG(WARNING) << "couldn't list files in block chain index: " << GetDataDirectory();
+      return 0;
     }
-
-    bool BlockChain::RemoveReference(const std::string& name){
-        leveldb::WriteOptions options;
-        std::string value;
-
-        leveldb::Status status = GetIndex()->Delete(options, name);
-        if(!status.ok()){
-            LOG(WARNING) << "couldn't remove reference " << name << ": " << status.ToString();
-            return false;
-        }
-
-        LOG(INFO) << "removed reference: " << name;
-        return true;
-    }
-
-    bool BlockChain::PutReference(const std::string& name, const Hash& hash){
-        leveldb::WriteOptions options;
-        options.sync = true;
-
-        leveldb::Status status = GetIndex()->Put(options, name, hash.HexString());
-        if(!status.ok()){
-            LOG(WARNING) << "couldn't set reference " << name << " to " << hash << ": " << status.ToString();
-            return false;
-        }
-
-        LOG(INFO) << "set reference " << name << " := " << hash;
-        return true;
-    }
-
-    Hash BlockChain::GetReference(const std::string& name){
-        std::string value;
-
-        leveldb::Status status;
-        leveldb::ReadOptions options;
-        if(!(status = GetIndex()->Get(options, name, &value)).ok()){
-            LOG(WARNING) << "couldn't find reference " << name << ": " << status.ToString();
-            return Hash();
-        }
-
-        return Hash::FromHexString(value);
-    }
-
-    bool BlockChain::HasBlock(const Hash& hash){
-        leveldb::Slice key((char*)hash.data(), Hash::GetSize());
-
-        leveldb::ReadOptions options;
-        std::string filename;
-
-        LOCK_GUARD;
-        leveldb::Status status = GetIndex()->Get(options, key, &filename);
-        if(!status.ok()){
-            LOG(WARNING) << "couldn't find block " << hash << ": " << status.ToString();
-            return false;
-        }
-        return true;
-    }
-
-    bool BlockChain::Append(const BlockPtr& block){
-        LOCK_GUARD;
-        BlockPtr head = GetHead();
-        Hash hash = block->GetHash();
-        Hash phash = block->GetPreviousHash();
-
-        LOG(INFO) << "appending new block:";
-        LOG(INFO) << "  - Parent Hash: " << phash;
-        LOG(INFO) << "  - Hash: " << hash;
-        if(HasBlock(hash)){
-            LOG(WARNING) << "duplicate block found for: " << hash;
-            return false;
-        }
-
-        if(block->IsGenesis()){
-            LOG(WARNING) << "cannot append genesis block: " << hash;
-            return false;
-        }
-
-        if(!HasBlock(phash)){
-            LOG(WARNING) << "cannot find parent block: " << phash;
-            return false;
-        }
-
-        PutBlock(hash, block);
-        if(head->GetHeight() < block->GetHeight())
-            PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
-        return true;
-    }
-
-    bool BlockChain::VisitBlocks(BlockChainBlockVisitor* vis){
-        Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
-        do{
-            BlockPtr blk = GetBlock(current);
-            if(!vis->Visit(blk))
-                return false;
-            current = blk->GetPreviousHash();
-        } while(!current.IsNull());
-        return true;
-    }
-
-    bool BlockChain::GetBlocks(HashList& hashes){
-        Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
-        do{
-            BlockPtr blk = GetBlock(current);
-            hashes.insert(blk->GetHash());
-            current = blk->GetPreviousHash();
-        } while(!current.IsNull());
-        return true;
-    }
-
-    bool BlockChain::VisitHeaders(BlockChainHeaderVisitor* vis){
-        //TODO: Optimize BlockChain::VisitHeaders
-        Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
-        do{
-            BlockPtr blk = GetBlock(current);
-            if(!vis->Visit(blk->GetHeader()))
-                return false;
-            current = blk->GetPreviousHash();
-        } while(!current.IsNull());
-        return true;
-    }
-
-    int64_t BlockChain::GetNumberOfBlocks(){
-        int64_t count = 0;
-
-        DIR* dir;
-        struct dirent* ent;
-        if((dir = opendir(GetDataDirectory().c_str())) != NULL){
-            while((ent = readdir(dir)) != NULL){
-                std::string filename(ent->d_name);
-                if(EndsWith(filename, ".dat")) count++;
-            }
-            closedir(dir);
-        } else{
-            LOG(WARNING) << "couldn't list files in block chain index: " << GetDataDirectory();
-            return 0;
-        }
-        return count;
-    }
+    return count;
+  }
 }

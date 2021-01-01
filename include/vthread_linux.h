@@ -8,9 +8,9 @@
 #include <pthread.h>
 
 namespace Token{
-    typedef pthread_key_t ThreadLocalKey;
-    typedef pthread_t ThreadId;
-    typedef void (*ThreadHandlerFunction)(uword parameter);
+  typedef pthread_key_t ThreadLocalKey;
+  typedef pthread_t ThreadId;
+  typedef void (*ThreadHandlerFunction)(uword parameter);
 }
 
 #endif //TOKEN_VTHREAD_LINUX_H

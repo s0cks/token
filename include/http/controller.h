@@ -6,90 +6,90 @@
 #include "http/request.h"
 
 namespace Token{
-    class HttpController{
-    protected:
-        HttpController() = delete;
+  class HttpController{
+   protected:
+    HttpController() = delete;
 
-        static inline void
-        SendText(HttpSession* session, const std::string& body, const HttpStatusCode& status_code){
-            HttpTextResponse response(session, status_code, body);
-            response.SetHeader("Content-Type", CONTENT_TYPE_TEXT_PLAIN);
-            response.SetHeader("Content-Length", body.size());
-            session->Send(&response);
-        }
+    static inline void
+    SendText(HttpSession *session, const std::string &body, const HttpStatusCode &status_code){
+      HttpTextResponse response(session, status_code, body);
+      response.SetHeader("Content-Type", CONTENT_TYPE_TEXT_PLAIN);
+      response.SetHeader("Content-Length", body.size());
+      session->Send(&response);
+    }
 
-        static inline void
-        SendText(HttpSession* session, const std::stringstream& ss, const HttpStatusCode& status_code){
-            return SendText(session, ss.str(), status_code);
-        }
+    static inline void
+    SendText(HttpSession *session, const std::stringstream &ss, const HttpStatusCode &status_code){
+      return SendText(session, ss.str(), status_code);
+    }
 
-        static inline void
-        SendOk(HttpSession* session){
-            return SendText(session, "Ok", STATUS_CODE_OK);
-        }
+    static inline void
+    SendOk(HttpSession *session){
+      return SendText(session, "Ok", STATUS_CODE_OK);
+    }
 
-        static inline void
-        SendInternalServerError(HttpSession* session, const std::string& msg="Internal Server Error"){
-            return SendText(session, msg, STATUS_CODE_INTERNAL_SERVER_ERROR);
-        }
+    static inline void
+    SendInternalServerError(HttpSession *session, const std::string &msg = "Internal Server Error"){
+      return SendText(session, msg, STATUS_CODE_INTERNAL_SERVER_ERROR);
+    }
 
-        static inline void
-        SendNotSupported(HttpSession* session, const std::string& path){
-            std::stringstream ss;
-            ss << "Not Supported.";
-            return SendText(session, ss, STATUS_CODE_NOTSUPPORTED);
-        }
+    static inline void
+    SendNotSupported(HttpSession *session, const std::string &path){
+      std::stringstream ss;
+      ss << "Not Supported.";
+      return SendText(session, ss, STATUS_CODE_NOTSUPPORTED);
+    }
 
-        static inline void
-        SendNotFound(HttpSession* session, const std::string& path){
-            std::stringstream ss;
-            ss << "Not Found: " << path;
-            return SendText(session, ss, STATUS_CODE_NOTFOUND);
-        }
+    static inline void
+    SendNotFound(HttpSession *session, const std::string &path){
+      std::stringstream ss;
+      ss << "Not Found: " << path;
+      return SendText(session, ss, STATUS_CODE_NOTFOUND);
+    }
 
-        static inline void
-        SendNotFound(HttpSession* session, const Hash& hash){
-            std::stringstream ss;
-            ss << "Not Found: " << hash;
-            return SendText(session, ss, STATUS_CODE_NOTFOUND);
-        }
+    static inline void
+    SendNotFound(HttpSession *session, const Hash &hash){
+      std::stringstream ss;
+      ss << "Not Found: " << hash;
+      return SendText(session, ss, STATUS_CODE_NOTFOUND);
+    }
 
-        static inline void
-        SendJson(HttpSession* session, const JsonString& json, const HttpStatusCode& status_code=STATUS_CODE_OK){
-            HttpJsonResponse response(session, status_code, json);
-            session->Send(&response);
-        }
+    static inline void
+    SendJson(HttpSession *session, const JsonString &json, const HttpStatusCode &status_code = STATUS_CODE_OK){
+      HttpJsonResponse response(session, status_code, json);
+      session->Send(&response);
+    }
 
-        static inline void
-        SendJson(HttpSession* session, const BlockPtr& blk){
-            JsonString json;
-            ToJson(blk, json);
-            return SendJson(session, json, STATUS_CODE_OK);
-        }
+    static inline void
+    SendJson(HttpSession *session, const BlockPtr &blk){
+      JsonString json;
+      ToJson(blk, json);
+      return SendJson(session, json, STATUS_CODE_OK);
+    }
 
-        static inline void
-        SendJson(HttpSession* session, const TransactionPtr& tx){
-            JsonString json;
-            ToJson(tx, json);
-            return SendJson(session, json, STATUS_CODE_OK);
-        }
+    static inline void
+    SendJson(HttpSession *session, const TransactionPtr &tx){
+      JsonString json;
+      ToJson(tx, json);
+      return SendJson(session, json, STATUS_CODE_OK);
+    }
 
-        static inline void
-        SendJson(HttpSession* session, const UnclaimedTransactionPtr& utxo){
-            JsonString json;
-            ToJson(utxo, json);
-            return SendJson(session, json, STATUS_CODE_OK);
-        }
+    static inline void
+    SendJson(HttpSession *session, const UnclaimedTransactionPtr &utxo){
+      JsonString json;
+      ToJson(utxo, json);
+      return SendJson(session, json, STATUS_CODE_OK);
+    }
 
-        static inline void
-        SendJson(HttpSession* session, const HashList& hashes){
-            JsonString json;
-            ToJson(hashes, json);
-            return SendJson(session, json, STATUS_CODE_OK);
-        }
-    public:
-        virtual ~HttpController() = delete;
-    };
+    static inline void
+    SendJson(HttpSession *session, const HashList &hashes){
+      JsonString json;
+      ToJson(hashes, json);
+      return SendJson(session, json, STATUS_CODE_OK);
+    }
+   public:
+    virtual ~HttpController() = delete;
+  };
 
 #define HTTP_CONTROLLER_ENDPOINT(Name) \
     static void Handle##Name(HttpSession* session, HttpRequest* request)

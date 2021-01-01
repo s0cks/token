@@ -11,55 +11,55 @@
 #include "unclaimed_transaction.h"
 
 namespace Token{
-    class ClientSession : public ThreadedSession{
-    private:
-        NodeAddress address_;
-        UUID id_;
-        Message* next_;
+  class ClientSession : public ThreadedSession{
+   private:
+    NodeAddress address_;
+    UUID id_;
+    MessagePtr next_;
 
-        void SetNextMessage(Message* msg);
-        void WaitForNextMessage();
-        Message* GetNextMessage();
-        static void OnConnect(uv_connect_t* conn, int status);
-        static void OnShutdown(uv_async_t* handle);
-        static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
-        static void* SessionThread(void* data);
-    public:
-        ClientSession(const NodeAddress& address, uv_loop_t* loop=uv_loop_new()):
-            ThreadedSession(loop),
-            address_(address),
-            id_(),
-            next_(nullptr){}
-        ~ClientSession() = default;
+    void SetNextMessage(const MessagePtr &msg);
+    void WaitForNextMessage();
+    MessagePtr GetNextMessage();
+    static void OnConnect(uv_connect_t *conn, int status);
+    static void OnShutdown(uv_async_t *handle);
+    static void OnMessageReceived(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buff);
+    static void *SessionThread(void *data);
+   public:
+    ClientSession(const NodeAddress &address, uv_loop_t *loop = uv_loop_new()):
+        ThreadedSession(loop),
+        address_(address),
+        id_(),
+        next_(nullptr){}
+    ~ClientSession() = default;
 
-        bool Connect(){
-            int err;
-            if((err = pthread_create(&thread_, NULL, &SessionThread, this)) != 0){
-                LOG(WARNING) << "couldn't start session thread: " << strerror(err);
-                return false;
-            }
-            return true;
-        }
+    bool Connect(){
+      int err;
+      if((err = pthread_create(&thread_, NULL, &SessionThread, this)) != 0){
+        LOG(WARNING) << "couldn't start session thread: " << strerror(err);
+        return false;
+      }
+      return true;
+    }
 
-        NodeAddress GetAddress() const{
-            return address_;
-        }
+    NodeAddress GetAddress() const{
+      return address_;
+    }
 
-        UUID GetID() const{
-            return id_;
-        }
+    UUID GetID() const{
+      return id_;
+    }
 
-        std::string ToString() const{
-            //TODO: implement ClientSession::ToString()
-            return "ClientSession()";
-        }
+    std::string ToString() const{
+      //TODO: implement ClientSession::ToString()
+      return "ClientSession()";
+    }
 
-        BlockPtr GetBlock(const Hash& hash);
-        bool GetBlockChain(std::set<Hash>& blocks);
-        bool GetPeers(PeerList& peers);
-        bool SendTransaction(const TransactionPtr& tx);
-        UnclaimedTransactionPtr GetUnclaimedTransaction(const Hash& hash);
-    };
+    BlockPtr GetBlock(const Hash &hash);
+    bool GetBlockChain(std::set<Hash> &blocks);
+    bool GetPeers(PeerList &peers);
+    bool SendTransaction(const TransactionPtr &tx);
+    UnclaimedTransactionPtr GetUnclaimedTransaction(const Hash &hash);
+  };
 }
 
 #endif //TOKEN_CLIENT_H

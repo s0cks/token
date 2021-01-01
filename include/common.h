@@ -54,135 +54,135 @@ namespace Token{
 #define TOKEN_MINOR_VERSION 0
 #define TOKEN_REVISION_VERSION 0
 
-    static const size_t kWordSize = sizeof(uintptr_t);
-    static const size_t kBitsPerByte = 8;
-    static const size_t kBitsPerWord = sizeof(uintptr_t)*kBitsPerByte;
-    static const uintptr_t kUWordOne = 1U;
+  static const size_t kWordSize = sizeof(uintptr_t);
+  static const size_t kBitsPerByte = 8;
+  static const size_t kBitsPerWord = sizeof(uintptr_t) * kBitsPerByte;
+  static const uintptr_t kUWordOne = 1U;
 
-    typedef uintptr_t uword;
+  typedef uintptr_t uword;
 
-    static inline uword
-    RoundUpPowTwo(uword x){
-        x = x - 1;
-        x = x | (x >> 1);
-        x = x | (x >> 2);
-        x = x | (x >> 4);
-        x = x | (x >> 8);
-        x = x | (x >> 16);
+  static inline uword
+  RoundUpPowTwo(uword x){
+    x = x - 1;
+    x = x | (x >> 1);
+    x = x | (x >> 2);
+    x = x | (x >> 4);
+    x = x | (x >> 8);
+    x = x | (x >> 16);
 #if defined(ARCHITECTURE_IS_X64)
-        x = x | (x >> 32);
+    x = x | (x >> 32);
 #endif
-        return x + 1;
+    return x + 1;
+  }
+
+  typedef int64_t Timestamp;
+
+  static Timestamp
+  GetCurrentTimestamp(){
+    return time(NULL);
+  }
+
+  static inline std::string
+  GetTimestampFormattedReadable(Timestamp timestamp = GetCurrentTimestamp()){
+    //TODO: fix usage of gmtime
+    struct tm *timeinfo = gmtime((time_t *) &timestamp);
+    char buff[256];
+    strftime(buff, sizeof(buff), "%m/%d/%Y %H:%M:%S", timeinfo);
+    return std::string(buff);
+  }
+
+  static inline std::string
+  GetTimestampFormattedFileSafe(Timestamp timestamp = GetCurrentTimestamp()){
+    //TODO: fix usage of gmtime
+    struct tm *timeinfo = gmtime((time_t *) &timestamp);
+    char buff[256];
+    strftime(buff, sizeof(buff), "%Y%m%d-%H%M%S", timeinfo);
+    return std::string(buff);
+  }
+
+  static bool
+  EndsWith(const std::string &str, const std::string &suffix){
+    return str.size() >= suffix.size() &&
+        str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
+  }
+
+  static bool
+  BeginsWith(const std::string &str, const std::string prefix){
+    return str.size() >= prefix.size() &&
+        str.compare(0, prefix.size(), prefix) == 0;
+  }
+
+  static inline size_t
+  GetFilesize(const std::string &filename){
+    //TODO: optimize function for std::fstream
+    std::ifstream fd(filename, std::ios::binary | std::ios::ate);
+    return fd.tellg();
+  }
+
+  static inline bool
+  FileExists(const std::string &name){
+    std::ifstream f(name.c_str());
+    return f.good();
+  }
+
+  static inline bool
+  DeleteFile(const std::string &name){
+    return remove(name.c_str()) == 0;
+  }
+
+  static inline bool
+  CreateDirectory(const std::string &path){
+    return (mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) != -1;
+  }
+
+  template<class container>
+  static inline void
+  SplitString(const std::string &str, container &cont, char delimiter = ' '){
+    if(str.find(delimiter) == std::string::npos){ // delimiter not found, return whole
+      cont.push_back(str);
+      return;
+    }
+    std::stringstream ss(str);
+    std::string token;
+    while(std::getline(ss, token, delimiter)) cont.push_back(token);
+  }
+
+  template<typename T>
+  static inline std::vector<std::vector<T>>
+  Chunk(const std::vector<T> &source, int64_t size){
+    std::vector<std::vector<T>> result;
+    result.reserve((source.size() + size - 1) / size);
+
+    auto start = source.begin();
+    auto end = source.end();
+    while(start != end){
+      auto next = std::distance(start, end) >= size
+                  ? start + size
+                  : end;
+
+      result.emplace_back(start, next);
+      start = next;
     }
 
-    typedef int64_t Timestamp;
+    return result;
+  }
 
-    static Timestamp
-    GetCurrentTimestamp(){
-        return time(NULL);
+  std::string GetVersion();
+
+  class SignalHandlers{
+   private:
+    static void HandleInterrupt(int signum);
+    static void HandleSegfault(int signum);
+
+    SignalHandlers() = delete;
+   public:
+    ~SignalHandlers() = delete;
+
+    static void Initialize(){
+      signal(SIGINT, &HandleInterrupt);
+      signal(SIGSEGV, &HandleSegfault);
     }
-
-    static inline std::string
-    GetTimestampFormattedReadable(Timestamp timestamp=GetCurrentTimestamp()){
-        //TODO: fix usage of gmtime
-        struct tm* timeinfo = gmtime((time_t*)&timestamp);
-        char buff[256];
-        strftime(buff, sizeof(buff), "%m/%d/%Y %H:%M:%S", timeinfo);
-        return std::string(buff);
-    }
-
-    static inline std::string
-    GetTimestampFormattedFileSafe(Timestamp timestamp=GetCurrentTimestamp()){
-        //TODO: fix usage of gmtime
-        struct tm* timeinfo = gmtime((time_t*)&timestamp);
-        char buff[256];
-        strftime(buff, sizeof(buff), "%Y%m%d-%H%M%S", timeinfo);
-        return std::string(buff);
-    }
-
-    static bool
-    EndsWith(const std::string& str, const std::string& suffix){
-        return str.size() >= suffix.size() &&
-               str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
-    }
-
-    static bool
-    BeginsWith(const std::string& str, const std::string prefix){
-        return str.size() >= prefix.size() &&
-                str.compare(0, prefix.size(), prefix) == 0;
-    }
-
-    static inline size_t
-    GetFilesize(const std::string& filename){
-        //TODO: optimize function for std::fstream
-        std::ifstream fd(filename, std::ios::binary|std::ios::ate);
-        return fd.tellg();
-    }
-
-    static inline bool
-    FileExists(const std::string& name){
-        std::ifstream f(name.c_str());
-        return f.good();
-    }
-
-    static inline bool
-    DeleteFile(const std::string& name){
-        return remove(name.c_str()) == 0;
-    }
-
-    static inline bool
-    CreateDirectory(const std::string& path){
-        return (mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) != -1;
-    }
-
-    template<class container>
-    static inline void
-    SplitString(const std::string& str, container& cont, char delimiter=' '){
-        if(str.find(delimiter) == std::string::npos){ // delimiter not found, return whole
-            cont.push_back(str);
-            return;
-        }
-        std::stringstream ss(str);
-        std::string token;
-        while(std::getline(ss, token, delimiter)) cont.push_back(token);
-    }
-
-    template<typename T>
-    static inline std::vector<std::vector<T>>
-    Chunk(const std::vector<T>& source, int64_t size){
-        std::vector<std::vector<T>> result;
-        result.reserve((source.size() + size - 1) / size);
-
-        auto start = source.begin();
-        auto end = source.end();
-        while (start != end) {
-            auto next = std::distance(start, end) >= size
-                        ? start + size
-                        : end;
-
-            result.emplace_back(start, next);
-            start = next;
-        }
-
-        return result;
-    }
-
-    std::string GetVersion();
-
-    class SignalHandlers{
-    private:
-        static void HandleInterrupt(int signum);
-        static void HandleSegfault(int signum);
-
-        SignalHandlers() = delete;
-    public:
-        ~SignalHandlers() = delete;
-
-        static void Initialize(){
-            signal(SIGINT, &HandleInterrupt);
-            signal(SIGSEGV, &HandleSegfault);
-        }
-    };
+  };
 }
 
 // Command Line Flags
