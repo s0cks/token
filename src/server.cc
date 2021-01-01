@@ -5,7 +5,6 @@
 
 #include "pool.h"
 #include "server.h"
-#include "task/task.h"
 #include "configuration.h"
 #include "proposal.h"
 #include "unclaimed_transaction.h"

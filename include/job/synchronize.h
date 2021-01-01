@@ -1,26 +1,15 @@
-#ifndef TOKEN_SYNCHRONIZE_BLOCKCHAIN_TASK_H
-#define TOKEN_SYNCHRONIZE_BLOCKCHAIN_TASK_H
+#ifndef TOKEN_INCLUDE_JOB_SYNCHRONIZE_H
+#define TOKEN_INCLUDE_JOB_SYNCHRONIZE_H
 
-#include "task.h"
 #include "pool.h"
-#include "block.h"
-
-#include "job/scheduler.h"
+#include "job/job.h"
 #include "job/process_block.h"
 
 namespace Token{
-  class SynchronizeBlockChainTask : public AsyncSessionTask{
+  class SynchronizeJob : public Job{
    private:
+    Session* session_;
     BlockHeader head_;
-
-    SynchronizeBlockChainTask(uv_loop_t* loop, Session* session, const BlockHeader& head):
-      AsyncSessionTask(loop, session),
-      head_(head){}
-
-    static inline InventoryItem
-    GetItem(const Hash hash){
-      return InventoryItem(InventoryItem::kBlock, hash);
-    }
 
     bool ProcessBlock(const BlockPtr& blk){
       BlockHeader header = blk->GetHeader();
@@ -35,8 +24,8 @@ namespace Token{
       BlockChain::Append(blk);
       return true;
     }
-
-    AsyncTaskResult DoWork(){
+   protected:
+    JobResult DoWork(){
       std::deque<Hash> work; // we are queuing the blocks just in-case there is an unresolved previous Hash
       work.push_back(head_.GetHash());
       do{
@@ -60,31 +49,22 @@ namespace Token{
         if(!ProcessBlock(blk)){
           std::stringstream ss;
           ss << "couldn't process block: " << hash;
-          return AsyncTaskResult(AsyncTaskResult::kFailed, ss.str());
+          return Failed(ss);
         }
       } while(!work.empty());
-      return AsyncTaskResult(AsyncTaskResult::kSuccessful, "synchronized block chain");
+      return Success("done.");
     }
    public:
-    ~SynchronizeBlockChainTask() = default;
-
-   DEFINE_ASYNC_TASK(SynchronizeBlockChain);
-
-    InventoryItem GetHead() const{
-      return InventoryItem(InventoryItem::kBlock, head_.GetHash());
-    }
-
-    std::string ToString() const{
-      //TODO: refactor
-      std::stringstream ss;
-      ss << "SynchronizeBlockChainTask()";
-      return ss.str();
-    }
-
-    static SynchronizeBlockChainTask* NewInstance(uv_loop_t* loop, Session* session, const BlockHeader& head){
-      return new SynchronizeBlockChainTask(loop, session, head);
-    }
+    SynchronizeJob(Job* parent, Session* session, const BlockHeader& head):
+      Job(parent, "Synchronize"),
+      session_(session),
+      head_(head){}
+    SynchronizeJob(Session* session, const BlockHeader& head):
+      Job(nullptr, "Synchronize"),
+      session_(session),
+      head_(head){}
+    ~SynchronizeJob() = default;
   };
 }
 
-#endif //TOKEN_SYNCHRONIZE_BLOCKCHAIN_TASK_H
+#endif //TOKEN_INCLUDE_JOB_SYNCHRONIZE_H

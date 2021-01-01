@@ -1,7 +1,8 @@
 #include "server.h"
 #include "discovery.h"
+#include "job/scheduler.h"
+#include "job/synchronize.h"
 #include "peer/peer_session.h"
-#include "task/synchronize_task.h"
 
 namespace Token{
   bool PeerSession::Connect(){
@@ -233,9 +234,11 @@ namespace Token{
       if(local_head == remote_head){
         LOG(INFO) << "skipping remote <HEAD> := " << remote_head;
       } else if(local_head < remote_head){
-        SynchronizeBlockChainTask
-          * sync_task = SynchronizeBlockChainTask::NewInstance(session->GetLoop(), session, remote_head);
-        sync_task->Submit();
+        SynchronizeJob* job = new SynchronizeJob(session, remote_head);
+        if(!JobScheduler::Schedule(job)){
+          LOG(WARNING) << "couldn't schedule SynchronizeJob";
+          return;
+        }
         session->Send(GetBlocksMessage::NewInstance());
       }
     }

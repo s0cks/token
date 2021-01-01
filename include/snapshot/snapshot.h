@@ -4,6 +4,7 @@
 #include <memory>
 #include "block.h"
 #include "section.h"
+#include "job/job.h"
 #include "utils/file_reader.h"
 #include "utils/file_writer.h"
 
@@ -167,6 +168,23 @@ namespace Token{
       SnapshotBlockChainSection blocks(this);
       return std::make_shared<Snapshot>(GetFilename(), prologue, blocks);
     }
+  };
+
+  class SnapshotJob : public Job{
+   protected:
+    JobResult DoWork(){
+      SnapshotWriter writer;
+      if(!writer.WriteSnapshot()){
+        std::stringstream ss;
+        ss << "Couldn't write snapshot to: " << writer.GetFilename();
+        return Failed(ss);
+      }
+      return Success("done.");
+    }
+   public:
+    SnapshotJob(Job* parent): Job(parent, "CreateSnapshot"){}
+    SnapshotJob(): SnapshotJob(nullptr){}
+    ~SnapshotJob() = default;
   };
 }
 
