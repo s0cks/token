@@ -1,3 +1,5 @@
+#ifdef TOKEN_ENABLE_SERVER
+
 #include "server.h"
 #include "vthread.h"
 #include "client.h"
@@ -226,3 +228,5 @@ namespace Token{
     return false;
   }
 }
+
+#endif//TOKEN_ENABLE_SERVER

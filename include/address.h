@@ -21,7 +21,7 @@ namespace Token{
       hints.ai_flags |= AI_CANONNAME;
 
       std::string address;
-      int32_t port = FLAGS_port;
+      int32_t port = FLAGS_server_port;
       if(hostname.find(":") != std::string::npos){
         std::vector<std::string> parts;
         SplitString(hostname, parts, ':');

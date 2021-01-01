@@ -1,4 +1,4 @@
-#ifdef TOKEN_ENABLE_HEALTHCHECK
+#ifdef TOKEN_ENABLE_HEALTH_SERVICE
 
 #include <mutex>
 #include <condition_variable>
@@ -72,7 +72,7 @@ namespace Token{
     uv_tcp_t server;
     uv_tcp_init(loop, &server);
 
-    int32_t port = BlockChainConfiguration::GetHealthCheckPort();
+    int32_t port = FLAGS_healthcheck_port;
     if(!Bind(&server, port)){
       LOG(WARNING) << "couldn't bind health check service on port: " << port;
       goto exit;
@@ -149,4 +149,4 @@ namespace Token{
   }
 }
 
-#endif//TOKEN_ENABLE_HEALTHCHECK
+#endif//TOKEN_ENABLE_HEALTH_SERVICE

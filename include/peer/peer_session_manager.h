@@ -1,6 +1,8 @@
 #ifndef TOKEN_PEER_SESSION_MANAGER_H
 #define TOKEN_PEER_SESSION_MANAGER_H
 
+#ifdef TOKEN_ENABLE_SERVER
+
 #include "peer/peer_session.h"
 
 namespace Token{
@@ -89,4 +91,5 @@ namespace Token{
   };
 }
 
+#endif//TOKEN_ENABLE_SERVER
 #endif //TOKEN_PEER_SESSION_MANAGER_H

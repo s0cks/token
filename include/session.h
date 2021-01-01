@@ -1,6 +1,8 @@
 #ifndef TOKEN_SESSION_H
 #define TOKEN_SESSION_H
 
+#ifdef TOKEN_ENABLE_SERVER
+
 #include <uv.h>
 #include <mutex>
 #include <uuid/uuid.h>
@@ -149,4 +151,5 @@ namespace Token{
   };
 }
 
+#endif//TOKEN_ENABLE_SERVER
 #endif //TOKEN_SESSION_H

@@ -1,12 +1,17 @@
 #include "common.h"
 
-// BlockChain flags
-DEFINE_string(path, "", "The FS path for the BlockChain");
-DEFINE_uint32(port, 0, "The port for the BlockChain ledger");
-DEFINE_string(peer, "", "The address of the peer to connect to on boot");
-
-// Initialization Flags
-DEFINE_string(snapshot, "", "The path to load a snapshot from, will reinitialize the block chain");
-
-// Debug Flags
+DEFINE_string(path, "", "The path for the local ledger to be stored in.");
 DEFINE_bool(enable_snapshots, false, "Enable snapshots of the block chain");
+
+#ifdef TOKEN_ENABLE_SERVER
+  DEFINE_string(remote, "", "The hostname for the remote ledger to synchronize with.");
+  DEFINE_int32(server_port, 0, "The port for the ledger RPC service.");
+#endif//TOKEN_ENABLE_SERVER
+
+#ifdef TOKEN_ENABLE_HEALTH_SERVICE
+  DEFINE_int32(healthcheck_port, 0, "The port for the ledger health check service.");
+#endif//TOKEN_ENABLE_HEALTHCHECK
+
+#ifdef TOKEN_ENABLE_REST_SERVICE
+  DEFINE_int32(service_port, 0, "The port for the ledger rest service.");
+#endif//TOKEN_ENABLE_REST

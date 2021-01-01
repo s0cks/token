@@ -1,7 +1,7 @@
 #ifndef TOKEN_REST_SERVICE_H
 #define TOKEN_REST_SERVICE_H
 
-#ifdef TOKEN_ENABLE_REST
+#ifdef TOKEN_ENABLE_REST_SERVICE
 
 #include <uv.h>
 #include <libconfig.h++>
@@ -151,6 +151,6 @@ namespace Token{
   };
 }
 
-#endif//TOKEN_ENABLE_REST
+#endif//TOKEN_ENABLE_REST_SERVICE
 
 #endif //TOKEN_REST_SERVICE_H

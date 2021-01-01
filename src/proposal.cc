@@ -10,9 +10,11 @@ namespace Token{
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
 
+  #ifdef TOKEN_ENABLE_SERVER
   std::shared_ptr<PeerSession> Proposal::GetPeer() const{
     return PeerSessionManager::GetSession(GetProposer());
   }
+  #endif//TOKEN_ENABLE_SERVER
 
   Proposal::Phase Proposal::GetPhase(){
     LOCK_GUARD;
@@ -104,9 +106,13 @@ namespace Token{
   }
 
   int Proposal::GetRequiredNumberOfPeers(){
-    int32_t peers = PeerSessionManager::GetNumberOfConnectedPeers();
-    if(peers == 0) return 0;
-    else if(peers == 1) return 1;
-    return peers / 2;
+    #ifdef TOKEN_ENABLE_SERVER
+      int32_t peers = PeerSessionManager::GetNumberOfConnectedPeers();
+      if(peers == 0) return 0;
+      else if(peers == 1) return 1;
+      return peers / 2;
+    #else
+      return 0;
+    #endif//TOKEN_ENABLE_SERVER
   }
 }

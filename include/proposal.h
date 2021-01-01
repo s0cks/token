@@ -230,7 +230,10 @@ namespace Token{
       return ss.str();
     }
 
+    #ifdef TOKEN_ENABLE_SERVER
     std::shared_ptr<PeerSession> GetPeer() const;
+    #endif//TOKEN_ENABLE_SERVER
+
     Phase GetPhase();
     Result GetResult();
     int64_t GetNumberOfAccepted();

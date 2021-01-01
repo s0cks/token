@@ -8,11 +8,13 @@ set(PROTO_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protos")
 
 file(GLOB_RECURSE TOKEN_CMAKE_MODULES ${CMAKE_MODULE_PATH}/*.cmake)
 
-set(ENABLE_HEALTHCHECK ON)
-set(ENABLE_REST ON)
+set(ENABLE_SERVER ON)
+set(ENABLE_HEALTH_SERVICE ON)
+set(ENABLE_REST_SERVICE ON)
 
-option(ENABLE_HEALTHCHECK "Enable the HealthCheck Service")
-option(ENABLE_REST "Enable the REST Service")
+option(ENABLE_SERVER "Enables the block chain server.")
+option(ENABLE_HEALTH_SERVICE "Enable the health http service.")
+option(ENABLE_REST_SERVICE "Enable the rest http service.")
 
 # Monkey Patching for Debug Mode
 if(CMAKE_BUILD_TYPE MATCHES Debug)
@@ -22,17 +24,23 @@ else()
   message(STATUS "Compiling w/o debug mode")
 endif (CMAKE_BUILD_TYPE MATCHES Debug)
 
+# Compile w/ the server if enabled
+if(ENABLE_SERVER)
+  message(STATUS "Compiling w/ the server enabled.")
+  add_compile_definitions(TOKEN_ENABLE_SERVER)
+endif(ENABLE_SERVER)
+
 # Compile w/ the rest service if enabled
-if(ENABLE_REST)
-  message(STATUS "Compiling w/ the rest service enabled")
-  add_compile_definitions(TOKEN_ENABLE_REST)
-endif(ENABLE_REST)
+if(ENABLE_REST_SERVICE)
+  message(STATUS "Compiling w/ the rest http service enabled.")
+  add_compile_definitions(TOKEN_ENABLE_REST_SERVICE)
+endif(ENABLE_REST_SERVICE)
 
 # Compile w/ the health check service if enabled
-if(ENABLE_HEALTHCHECK)
-  message(STATUS "Compiling w/ the health-check service enabled")
-  add_compile_definitions(TOKEN_ENABLE_HEALTHCHECK)
-endif(ENABLE_HEALTHCHECK)
+if(ENABLE_HEALTH_SERVICE)
+  message(STATUS "Compiling w/ the health-check http service enabled.")
+  add_compile_definitions(TOKEN_ENABLE_HEALTH_SERVICE)
+endif(ENABLE_HEALTH_SERVICE)
 
 # Packages
 find_package(Threads)

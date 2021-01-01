@@ -1,6 +1,8 @@
 #ifndef TOKEN_PEER_SESSION_H
 #define TOKEN_PEER_SESSION_H
 
+#ifdef TOKEN_ENABLE_SERVER
+
 #include <cstdint>
 #include "uuid.h"
 #include "block.h"
@@ -185,5 +187,7 @@ namespace Token{
     }
   };
 }
+
+#endif//TOKEN_ENABLE_SERVER
 
 #endif //TOKEN_PEER_SESSION_H

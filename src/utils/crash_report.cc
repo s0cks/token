@@ -1,10 +1,14 @@
 #include <glog/logging.h>
 #include "pool.h"
-#include "server.h"
 #include "version.h"
+#include "blockchain.h"
 #include "utils/printer.h"
 #include "utils/crash_report.h"
-#include "peer/peer_session_manager.h"
+
+#ifdef TOKEN_ENABLE_SERVER
+  #include "server.h"
+  #include "peer/peer_session_manager.h"
+#endif//TOKEN_ENABLE_SERVER
 
 namespace Token{
   bool CrashReport::PrintNewCrashReport(const std::string& cause, const google::LogSeverity& severity){
@@ -86,6 +90,7 @@ namespace Token{
       LOG_AT_LEVEL(GetSeverity()) << "Block Pool (" << ObjectPool::GetStatus() << "): " << ObjectPool::GetState();
     }
 
+    #ifdef TOKEN_ENABLE_SERVER
     if(Server::IsRunning() && Server::IsOk()){
       LOG_AT_LEVEL(GetSeverity()) << "Server (" << Server::GetStatus() << "): ";
 
@@ -103,6 +108,7 @@ namespace Token{
     } else{
       LOG_AT_LEVEL(GetSeverity()) << "Server (" << Server::GetStatus() << "): " << Server::GetState();
     }
+    #endif//TOKEN_ENABLE_SERVER
     return true;
   }
 }

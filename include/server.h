@@ -1,6 +1,8 @@
 #ifndef TOKEN_SERVER_H
 #define TOKEN_SERVER_H
 
+#ifdef TOKEN_ENABLE_SERVER
+
 #include <uv.h>
 #include <sstream>
 #include "address.h"
@@ -130,4 +132,5 @@ namespace Token{
   };
 }
 
+#endif//TOKEN_ENABLE_SERVER
 #endif //TOKEN_SERVER_H

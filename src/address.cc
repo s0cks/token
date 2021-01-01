@@ -63,7 +63,7 @@ namespace Token{
       port_ = GetPortFrom(parts[1]);
     } else{
       address_ = GetAddressFrom(address);
-      port_ = FLAGS_port;// is this valid?
+      port_ = FLAGS_server_port;
     }
   }
 

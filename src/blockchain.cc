@@ -12,11 +12,6 @@
 #include "utils/timeline.h"
 
 namespace Token{
-  static inline bool
-  ShouldLoadSnapshot(){
-    return !FLAGS_snapshot.empty();
-  }
-
   static inline std::string
   GetDataDirectory(){
     return FLAGS_path + "/data";

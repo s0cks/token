@@ -1,6 +1,8 @@
 #ifndef TOKEN_CLIENT_H
 #define TOKEN_CLIENT_H
 
+#ifdef TOKEN_ENABLE_SERVER
+
 #include "uuid.h"
 #include "block.h"
 #include "session.h"
@@ -62,4 +64,5 @@ namespace Token{
   };
 }
 
-#endif //TOKEN_CLIENT_H
+#endif//TOKEN_ENABLE_SERVER
+#endif//TOKEN_CLIENT_H

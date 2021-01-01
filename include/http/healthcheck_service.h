@@ -1,7 +1,7 @@
 #ifndef TOKEN_HEALTHCHECK_SERVICE_H
 #define TOKEN_HEALTHCHECK_SERVICE_H
 
-#ifdef TOKEN_ENABLE_HEALTHCHECK
+#ifdef TOKEN_ENABLE_HEALTH_SERVICE
 
 #include <uv.h>
 #include <libconfig.h++>
@@ -105,6 +105,6 @@ namespace Token{
   };
 }
 
-#endif//TOKEN_ENABLE_HEALTHCHECK
+#endif//TOKEN_ENABLE_HEALTH_SERVICE
 
 #endif //TOKEN_HEALTHCHECK_SERVICE_H

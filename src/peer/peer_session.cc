@@ -1,3 +1,5 @@
+#ifdef TOKEN_ENABLE_SERVER
+
 #include "server.h"
 #include "discovery.h"
 #include "job/scheduler.h"
@@ -338,3 +340,5 @@ namespace Token{
     //TODO: implement PeerSession::HandlePeerListMessage(HandleMessageTask*);
   }
 }
+
+#endif//TOKEN_ENABLE_SERVER

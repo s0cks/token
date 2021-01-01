@@ -1,4 +1,5 @@
-#include <uuid/uuid.h>
+#ifdef TOKEN_ENABLE_SERVER
+
 #include <algorithm>
 #include <random>
 #include <condition_variable>
@@ -140,7 +141,7 @@ namespace Token{
     uv_async_init(loop, &shutdown_, &HandleTerminateCallback);
 
     struct sockaddr_in addr;
-    uv_ip4_addr("0.0.0.0", FLAGS_port, &addr);
+    uv_ip4_addr("0.0.0.0", FLAGS_server_port, &addr);
     uv_tcp_init(loop, GetHandle());
     uv_tcp_keepalive(GetHandle(), 1, 60);
 
@@ -155,7 +156,7 @@ namespace Token{
       goto exit;
     }
 
-    LOG(INFO) << "server " << GetID() << " listening @" << FLAGS_port;
+    LOG(INFO) << "server " << GetID() << " listening @" << FLAGS_server_port;
     SetState(State::kRunning);
     uv_run(loop, UV_RUN_DEFAULT);
     LOG(INFO) << "server is stopping...";
@@ -445,3 +446,5 @@ namespace Token{
     //TODO: implement ServerSession::HandlePeerListMessage(HandleMessageTask*);
   }
 }
+
+#endif//TOKEN_ENABLE_SERVER

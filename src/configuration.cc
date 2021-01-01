@@ -31,11 +31,8 @@ namespace Token{
 #define ENVIRONMENT_TOKEN_CALLBACK_ADDRESS "TOKEN_CALLBACK_ADDRESS"
 
   bool BlockChainConfiguration::GenerateConfiguration(){
-    GetProperty(PROPERTY_HEALTHCHECK, libconfig::Setting::TypeGroup);
-    SetHealthCheckPort(PROPERTY_HEALTHCHECK_PORT_DEFAULT);
-
     GetProperty(PROPERTY_SERVER, libconfig::Setting::TypeGroup);
-    SetServerID(PROPERTY_SERVER_ID_DEFAULT);
+    SetServerID(UUID());
     SetMaxNumberOfPeers(PROPERTY_SERVER_MAXPEERS_DEFAULT);
     std::set<NodeAddress> peers;
     SetPeerList(peers);
@@ -106,8 +103,8 @@ namespace Token{
 
   bool BlockChainConfiguration::GetPeerList(std::set<NodeAddress>& results){
     LOCK_GUARD;
-    if(!FLAGS_peer.empty())
-      results.insert(NodeAddress(FLAGS_peer));
+    if(!FLAGS_remote.empty())
+      results.insert(NodeAddress(FLAGS_remote));
 
     if(HasEnvironmentVariable(ENVIRONMENT_TOKEN_LEDGER)){
       std::string phostname = GetEnvironmentVariable(ENVIRONMENT_TOKEN_LEDGER);
@@ -126,27 +123,12 @@ namespace Token{
     return true;
   }
 
-  int32_t BlockChainConfiguration::GetHealthCheckPort(){
-    return GetHealthCheckProperties().lookup(PROPERTY_HEALTHCHECK_PORT);
-  }
-
   UUID BlockChainConfiguration::GetSererID(){
     return UUID(GetServerProperties().lookup(PROPERTY_SERVER_ID));
   }
 
   NodeAddress BlockChainConfiguration::GetServerCallbackAddress(){
     return NodeAddress::ResolveAddress(GetEnvironmentVariable(ENVIRONMENT_TOKEN_CALLBACK_ADDRESS));
-  }
-
-  bool BlockChainConfiguration::SetHealthCheckPort(int32_t port){
-    LOCK_GUARD;
-    libconfig::Setting& health_check = GetHealthCheckProperties();
-    health_check.add(PROPERTY_HEALTHCHECK_PORT, libconfig::Setting::TypeInt) = port;
-    if(!SaveConfiguration()){
-      LOG(WARNING) << "couldn't save the configuration";
-      return false;
-    }
-    return true;
   }
 
   bool BlockChainConfiguration::SetPeerList(const std::set<NodeAddress>& peers){

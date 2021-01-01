@@ -6,7 +6,10 @@
 #include "proposal.h"
 #include "job/scheduler.h"
 #include "job/process_block.h"
+
+#ifdef TOKEN_ENABLE_SERVER
 #include "peer/peer_session_manager.h"
+#endif//TOKEN_ENABLE_SERVER
 
 namespace Token{
   class ProposalHandler{
@@ -20,14 +23,6 @@ namespace Token{
     bool CommitProposal() const;
     bool CancelProposal() const;
     bool TransitionToPhase(const Proposal::Phase& phase) const;
-
-    static inline int32_t
-    GetRequiredNumberOfPeers(){
-      int32_t peers = PeerSessionManager::GetNumberOfConnectedPeers();
-      if(peers == 0) return 0;
-      else if(peers == 1) return 1;
-      return peers / 2;
-    }
    public:
     virtual ~ProposalHandler() = default;
 
@@ -43,9 +38,11 @@ namespace Token{
       return proposal_->GetHash();
     }
 
+    #ifdef TOKEN_ENABLE_SERVER
     std::shared_ptr<PeerSession> GetProposer() const{
       return proposal_->GetPeer();
     }
+    #endif//TOKEN_ENABLE_SERVER
 
     Proposal::Result GetResult() const{
       return proposal_->GetResult();
@@ -73,7 +70,10 @@ namespace Token{
       // 1. Voting Phase
       if(!TransitionToPhase(Proposal::kVotingPhase))
         return false;
+      #ifdef TOKEN_ENABLE_SERVER
       PeerSessionManager::BroadcastPrepare();
+      #endif//TOKEN_ENABLE_SERVER
+
       GetProposal()->WaitForRequiredResponses(); // TODO: add timeout here
       if(WasRejected())
         CancelProposal();
@@ -81,7 +81,10 @@ namespace Token{
       // 2. Commit Phase
       if(!TransitionToPhase(Proposal::kCommitPhase))
         return false;
+      #ifdef TOKEN_ENABLE_SERVER
       PeerSessionManager::BroadcastCommit();
+      #endif//TOKEN_ENABLE_SERVER
+
       GetProposal()->WaitForRequiredResponses(); //TODO: add timeout here
       if(WasRejected())
         CancelProposal();
@@ -93,6 +96,7 @@ namespace Token{
     }
   };
 
+  #ifdef TOKEN_ENABLE_SERVER
   class PeerProposalHandler : public ProposalHandler{
    public:
     PeerProposalHandler(const ProposalPtr& proposal):
@@ -147,6 +151,7 @@ namespace Token{
       return true;
     }
   };
+  #endif//TOKEN_ENABLE_SERVER
 }
 
 #endif //TOKEN_PROPOSAL_HANDLER_H

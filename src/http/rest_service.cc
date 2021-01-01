@@ -1,4 +1,4 @@
-#ifdef TOKEN_ENABLE_REST
+#ifdef TOKEN_ENABLE_REST_SERVICE
 
 #include <mutex>
 #include <condition_variable>
@@ -86,7 +86,7 @@ namespace Token{
     uv_tcp_t server;
     uv_tcp_init(loop, &server);
 
-    int32_t port = FLAGS_port + 2; //TODO: fixme
+    int32_t port = FLAGS_service_port;
     if(!Bind(&server, port)){
       LOG(WARNING) << "couldn't bind the rest service on port: " << port;
       goto exit;
@@ -240,4 +240,4 @@ namespace Token{
   }
 }
 
-#endif//TOKEN_ENABLE_REST
+#endif//TOKEN_ENABLE_REST_SERVICE

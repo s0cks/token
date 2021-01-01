@@ -100,7 +100,11 @@ namespace Token{
   }
 
   ProposalPtr BlockDiscoveryThread::CreateNewProposal(BlockPtr blk){
-    ProposalPtr proposal = std::make_shared<Proposal>(blk, Server::GetID());
+    #ifdef TOKEN_ENABLE_SERVER
+      ProposalPtr proposal = std::make_shared<Proposal>(blk, Server::GetID());
+    #else
+      ProposalPtr proposal = std::make_shared<Proposal>(blk, UUID());
+    #endif//TOKEN_ENABLE_SERVER
     SetProposal(proposal);
     return proposal;
   }
@@ -135,15 +139,17 @@ namespace Token{
     SetState(BlockDiscoveryThread::kRunning);
     while(!IsStopped()){
       if(HasProposal()){
-        ProposalPtr proposal = GetProposal();
-        LOG(INFO) << "proposal #" << proposal->GetHeight() << " has been started by " << proposal->GetProposer();
-        PeerProposalHandler handler(proposal);
-        if(!handler.ProcessProposal()){
-          // should we reject the proposal just in-case?
-          LOG(WARNING) << "couldn't process proposal #" << proposal->GetHeight() << ".";
-          SetProposal(nullptr);
-          goto exit;
-        }
+        #ifdef TOKEN_ENABLE_SERVER
+          ProposalPtr proposal = GetProposal();
+          LOG(INFO) << "proposal #" << proposal->GetHeight() << " has been started by " << proposal->GetProposer();
+          PeerProposalHandler handler(proposal);
+          if(!handler.ProcessProposal()){
+            // should we reject the proposal just in-case?
+            LOG(WARNING) << "couldn't process proposal #" << proposal->GetHeight() << ".";
+            SetProposal(nullptr);
+            goto exit;
+          }
+        #endif//TOKEN_ENABLE_SERVER
       } else if(ObjectPool::GetNumberOfTransactions() >= 2){
         BlockPtr blk = CreateNewBlock(2);
         Hash hash = blk->GetHash();

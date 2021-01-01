@@ -39,7 +39,7 @@ namespace Token{
   }
 
   bool ProposalHandler::WasRejected() const{
-    return GetRequiredNumberOfPeers() > 0
+    return Proposal::GetRequiredNumberOfPeers() > 0
            && proposal_->GetNumberOfRejected() >= proposal_->GetNumberOfAccepted();
   }
 

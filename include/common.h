@@ -194,17 +194,32 @@ namespace Token{
   };
 }
 
-// Command Line Flags
+// --path "/usr/share/ledger"
 DECLARE_string(path);
-DECLARE_uint32(port);
-DECLARE_string(heap_size);
-DECLARE_string(peer);
-
-// Initialization Flags
-DECLARE_string(snapshot); //TODO: rename snapshot flag
-
-// Debug Flags
+// --enable-snapshots
 DECLARE_bool(enable_snapshots);
+
+#ifdef TOKEN_ENABLE_SERVER
+  // --remote "localhost:8080"
+  DECLARE_string(remote);
+  // --server-port 8080
+  DECLARE_int32(server_port);
+#endif//TOKEN_ENABLE_SERVER
+
+#ifdef TOKEN_ENABLE_HEALTH_SERVICE
+  // --healthcheck-port 8081
+  DECLARE_int32(healthcheck_port);
+#endif//TOKEN_ENABLE_HEALTH_SERVICE
+
+#ifdef TOKEN_ENABLE_REST_SERVICE
+  // --service-port 8082
+  DECLARE_int32(service_port);
+#endif//TOKEN_ENABLE_REST_SERVICE
+
+static inline bool
+IsValidPort(int32_t port){
+  return port > 0;
+}
 
 #define TOKEN_BLOCKCHAIN_HOME (FLAGS_path)
 
