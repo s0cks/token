@@ -5,6 +5,10 @@
 #include "printer.h"
 
 namespace Token{
+  typedef std::chrono::steady_clock Clock;
+  typedef Clock::time_point Timepoint;
+  typedef Clock::duration Duration;
+
   class TimelineEvent{
    public:
     struct TimestampComparator{
@@ -19,10 +23,10 @@ namespace Token{
       }
     };
    private:
-    Timestamp timestamp_;
+    Timepoint timestamp_;
     std::string name_;
    public:
-    TimelineEvent(const std::string& name, const Timestamp timestamp = GetCurrentTimestamp()):
+    TimelineEvent(const std::string& name, const Timepoint& timestamp=Clock::now()):
       timestamp_(timestamp),
       name_(name){}
     TimelineEvent(const TimelineEvent& event):
@@ -30,7 +34,7 @@ namespace Token{
       name_(event.name_){}
     ~TimelineEvent() = default;
 
-    Timestamp GetTimestamp() const{
+    Timepoint GetTimestamp() const{
       return timestamp_;
     }
 
@@ -59,6 +63,8 @@ namespace Token{
   class TimelineEventVisitor;
   class Timeline{
    private:
+    typedef std::chrono::steady_clock::time_point Timepoint;
+
     std::string name_;
     TimelineEventSet events_;
    public:
@@ -82,17 +88,17 @@ namespace Token{
       return events_;
     }
 
-    int64_t GetStartTime() const{
-      if(events_.empty()) return 0;
+    Timepoint GetStartTime() const{
+      if(events_.empty()) return Clock::now();
       return (*events_.begin()).GetTimestamp();
     }
 
-    int64_t GetStopTime() const{
-      if(events_.empty()) return 0;
+    Timepoint GetStopTime() const{
+      if(events_.empty()) return Clock::now();
       return (*events_.rbegin()).GetTimestamp();
     }
 
-    int64_t GetTotalTime() const{
+    Duration GetTotalTime() const{
       return GetStopTime() - GetStartTime();
     }
 
@@ -132,9 +138,9 @@ namespace Token{
     bool Print(const Timeline& timeline) const{
       LOG_AT_LEVEL(GetSeverity()) << timeline.GetName();
       LOG_AT_LEVEL(GetSeverity()) << "---------------------------------------------";
-      LOG_AT_LEVEL(GetSeverity()) << "  Start: " << GetTimestampFormattedReadable(timeline.GetStartTime());
-      LOG_AT_LEVEL(GetSeverity()) << "  Stop: " << GetTimestampFormattedReadable(timeline.GetStopTime());
-      LOG_AT_LEVEL(GetSeverity()) << "  Total Time (Seconds): " << timeline.GetTotalTime();
+      LOG_AT_LEVEL(GetSeverity()) << "  Start: " << GetTimestampFormattedReadable(timeline.GetStartTime().time_since_epoch().count());
+      LOG_AT_LEVEL(GetSeverity()) << "  Stop: " << GetTimestampFormattedReadable(timeline.GetStopTime().time_since_epoch().count());
+      LOG_AT_LEVEL(GetSeverity()) << "  Total Time (Seconds): " << timeline.GetTotalTime().count();
 
       if(IsDetailed()){
         //TODO: TimelinePrinter::Print(const Timeline&) - ordering can be weird
@@ -144,11 +150,11 @@ namespace Token{
         std::copy(timeline.begin(), timeline.end(), std::inserter(events, events.begin()));
         std::sort(events.begin(), events.end(), TimelineEvent::TimestampComparator());
 
-        Timestamp last = timeline.GetStartTime();
+        auto last = timeline.GetStartTime();
         for(auto& event : events){
-          int64_t total_seconds = (event.GetTimestamp() - last);
+          auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(event.GetTimestamp() - last);
 
-          LOG_AT_LEVEL(GetSeverity()) << "    - " << event.GetName() << " (" << total_seconds << " Seconds)";
+          LOG_AT_LEVEL(GetSeverity()) << "    - " << event.GetName() << " (" << duration.count() << " Milliseconds)";
 
           last = event.GetTimestamp();
         }

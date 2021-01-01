@@ -4,6 +4,8 @@
 #include <pthread.h>
 #include "job/worker.h"
 
+#include "utils/json_conversion.h"
+
 namespace Token{
   class Job;
   class JobScheduler{
@@ -21,7 +23,7 @@ namespace Token{
     static JobWorker* GetWorker(const std::thread::id& thread);
     static JobWorker* GetThreadWorker();
     static JobWorker* GetRandomWorker();
-    static void PrintWorkerStatistics();
+    static bool GetWorkerStatistics(JsonString& json);
   };
 }
 

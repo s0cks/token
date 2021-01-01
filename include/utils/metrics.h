@@ -3,11 +3,13 @@
 
 #include <set>
 #include <map>
+#include <mutex>
 #include <cmath>
 #include <vector>
 #include <string>
 #include <memory>
 #include <random>
+#include <atomic>
 #include <iostream>
 #include <glog/logging.h>
 #include <algorithm>
@@ -50,15 +52,17 @@ namespace Token{
 
     class Counter : public Metric{
      private:
-      int64_t value_;
+      std::atomic<int64_t> value_;
      public:
       Counter(const std::string& name, const int64_t& initial = 0):
         Metric(name),
-        value_(initial){}
+        value_(){
+        value_.store(0, std::memory_order_seq_cst);
+      }
       ~Counter() = default;
 
-      int64_t& Get(){
-        return value_;
+      int64_t Get(){
+        return value_.load(std::memory_order_seq_cst);
       }
 
       int64_t Get() const{
@@ -93,7 +97,7 @@ namespace Token{
       virtual ~Gauge() = default;
       virtual int64_t Get() const = 0;
 
-     DEFINE_METRIC_TYPE(Gauge);
+      DEFINE_METRIC_TYPE(Gauge);
     };
 
     typedef std::vector<int64_t> SnapshotData;
@@ -157,15 +161,11 @@ namespace Token{
       }
 
       int64_t GetMin() const{
-        return !IsEmpty()
-               ? 0
-               : data_.front();
+        return data_.front();
       }
 
       int64_t GetMax() const{
-        return !IsEmpty()
-               ? 0
-               : data_.back();
+        return data_.back();
       }
 
       double GetMean() const{
@@ -207,14 +207,15 @@ namespace Token{
       Sample() = default;
      public:
       virtual ~Sample() = default;
-      virtual int64_t GetSize() const = 0;
+      virtual int64_t GetSize() = 0;
       virtual void Clear() = 0;
       virtual void Update(int64_t value) = 0;
-      virtual std::shared_ptr<Snapshot> GetSnapshot() const = 0;
+      virtual std::shared_ptr<Snapshot> GetSnapshot() = 0;
     };
 
     class UniformSample : public Sample{
      private:
+      std::mutex mutex_;
       int64_t size_;
       int64_t count_;
       SnapshotData data_;
@@ -227,24 +228,28 @@ namespace Token{
       }
      public:
       UniformSample(int64_t size = Sample::kDefaultSampleSize):
+        mutex_(),
         size_(size),
         count_(0),
         data_(size, 0){}
       ~UniformSample() = default;
 
       void Clear(){
+        std::lock_guard<std::mutex> guard(mutex_);
         for(int64_t i = 0; i < size_; i++)
           data_[i] = 0;
         count_ = 0;
       }
 
-      int64_t GetSize() const{
+      int64_t GetSize(){
+        std::lock_guard<std::mutex> guard(mutex_);
         int64_t size = data_.size();
         int64_t count = count_;
         return std::min(count, size);
       }
 
       void Update(int64_t value){
+        std::lock_guard<std::mutex> guard(mutex_);
         int64_t count = count_++;
         int64_t size = data_.size();
         if(count <= size){
@@ -256,8 +261,9 @@ namespace Token{
         }
       }
 
-      std::shared_ptr<Snapshot> GetSnapshot() const{
-        return std::make_shared<Snapshot>(SnapshotData(data_));
+      std::shared_ptr<Snapshot> GetSnapshot(){
+        std::lock_guard<std::mutex> guard(mutex_);
+        return std::make_shared<Snapshot>(data_);
       }
     };
 

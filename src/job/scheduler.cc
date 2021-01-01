@@ -50,14 +50,45 @@ namespace Token{
     return (worker && worker->IsRunning()) ? worker : nullptr;
   }
 
-  void JobScheduler::PrintWorkerStatistics(){
-    for(int idx = 0; idx < JobScheduler::kMaxNumberOfWorkers; idx++){
-      JobWorker* worker = &workers_[idx];
-      std::shared_ptr<Metrics::Snapshot> snapshot = worker->GetHistogram()->GetSnapshot();
-      LOG(INFO) << "worker #" << worker->GetWorkerID() << " statistics:";
-      LOG(INFO) << " - min time: " << snapshot->GetMin();
-      LOG(INFO) << " - max time: " << snapshot->GetMax();
-      LOG(INFO) << " - mean time: " << snapshot->GetMean();
+  static inline std::string
+  GetWorkerID(JobWorker* worker){
+    std::stringstream ss;
+    ss << "worker-" << worker->GetWorkerID();
+    return ss.str();
+  }
+
+  bool JobScheduler::GetWorkerStatistics(JsonString& json){
+    JsonWriter writer(json);
+    writer.StartObject();
+    {
+      for(int idx = 0; idx < JobScheduler::kMaxNumberOfWorkers; idx++){
+        JobWorker* worker = &workers_[idx];
+        std::string worker_id = GetWorkerID(worker);
+        if(!worker || !worker->IsRunning()){
+          SetFieldNull(writer, worker_id);
+          continue;
+        }
+
+        std::shared_ptr<Metrics::Snapshot> snapshot = worker->GetHistogram()->GetSnapshot();
+        writer.Key(worker_id.data(), worker_id.length());
+        writer.StartObject();
+        {
+          SetField(writer, "NumberOfJobsRan", worker->GetJobsRan()->Get());
+          SetField(writer, "NumberOfJobsDiscarded", worker->GetJobsDiscarded()->Get());
+
+          writer.Key("RuntimeMilliseconds");
+          writer.StartObject();
+          {
+            SetField(writer, "Min", snapshot->GetMin());
+            SetField(writer, "Mean", snapshot->GetMean());
+            SetField(writer, "Max", snapshot->GetMax());
+          }
+          writer.EndObject();
+        }
+        writer.EndObject();
+      }
     }
+    writer.EndObject();
+    return true;
   }
 }

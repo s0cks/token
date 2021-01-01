@@ -13,6 +13,12 @@ namespace Token{
   typedef rapidjson::Writer<JsonString> JsonWriter;
 
   static inline void
+  SetFieldNull(JsonWriter& writer, const std::string& name){
+    writer.Key(name.data(), name.length());
+    writer.Null();
+  }
+
+  static inline void
   SetField(JsonWriter& writer, const std::string& name, const int64_t& value){
     writer.Key(name.data(), name.length());
     writer.Int64(value);

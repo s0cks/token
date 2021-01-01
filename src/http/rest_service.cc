@@ -4,6 +4,7 @@
 #include <condition_variable>
 #include "pool.h"
 #include "blockchain.h"
+#include "job/scheduler.h"
 #include "http/rest_service.h"
 
 namespace Token{
@@ -59,6 +60,7 @@ namespace Token{
     }
 
     LOG(INFO) << "starting the rest service....";
+    InfoController::Initialize(&router_);
     ObjectPoolController::Initialize(&router_);
     BlockChainController::Initialize(&router_);
     return Thread::Start(&thread_, "RestService", &HandleServiceThread, 0);
@@ -146,6 +148,16 @@ namespace Token{
       handler(session, request);
     }
   }
+
+/*****************************************************************************
+ *                      InfoController
+ *****************************************************************************/
+ void InfoController::HandleGetStats(HttpSession* session, const HttpRequestPtr& request){
+   JsonString json;
+   if(!JobScheduler::GetWorkerStatistics(json))
+     return SendInternalServerError(session, "Cannot get job scheduler worker statistics.");
+   return SendJson(session, json);
+ }
 
 /*****************************************************************************
  *                      BlockChainController

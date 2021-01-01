@@ -1,3 +1,4 @@
+#include <chrono>
 #include "job/worker.h"
 #include "job/scheduler.h"
 #include "utils/timeline.h"
@@ -39,7 +40,9 @@ namespace Token{
       Job* next = worker->GetNextJob();
       if(next){
 #ifdef TOKEN_DEBUG
+        Counter& num_ran = worker->GetJobsRan();
         Histogram& histogram = worker->GetHistogram();
+
         Timeline timeline("RunTask");
         timeline << "Start";
 #endif//TOKEN_DEBUG
@@ -49,23 +52,16 @@ namespace Token{
           continue;
         }
 
+        num_ran->Increment();
 #ifdef TOKEN_DEBUG
-        timeline << "Stop";
-        histogram->Update(timeline.GetTotalTime());
-#endif//TOKEN_DEBUG
-
         LOG(INFO) << next->GetName() << " has finished.";
-
-#ifdef TOKEN_DEBUG
-//                LOG(INFO) << next->GetName() << " task:";
-//                LOG(INFO) << " - result: " << next->GetResult();
-//                LOG(INFO) << " - start: " << GetTimestampFormattedReadable(timeline.GetStartTime());
-//                LOG(INFO) << " - stop: " << GetTimestampFormattedReadable(timeline.GetStartTime());
-//                LOG(INFO) << " - total time (Seconds): " << timeline.GetTotalTime();
+        timeline << "Stop";
+        LOG(INFO) << "total time: " << timeline.GetTotalTime().count();
+        histogram->Update(timeline.GetTotalTime().count());
 #endif//TOKEN_DEBUG
       }
     }
-    finish:
+  finish:
     pthread_exit(nullptr);
   }
 }

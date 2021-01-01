@@ -4,7 +4,6 @@
 #ifdef TOKEN_ENABLE_REST_SERVICE
 
 #include <uv.h>
-#include <libconfig.h++>
 #include "vthread.h"
 #include "http/router.h"
 #include "http/session.h"
@@ -13,6 +12,19 @@
 #include "http/controller.h"
 
 namespace Token{
+  class InfoController : HttpController{
+   private:
+    InfoController() = delete;
+
+    HTTP_CONTROLLER_ENDPOINT(GetStats);
+   public:
+    ~InfoController() = delete;
+
+    HTTP_CONTROLLER_INIT(){
+      HTTP_CONTROLLER_GET("/info/stats", GetStats);
+    }
+  };
+
   class BlockChainController : HttpController{
    private:
     BlockChainController() = delete;

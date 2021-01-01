@@ -60,6 +60,14 @@ namespace Token{
       return histogram_;
     }
 
+    Counter& GetJobsRan(){
+      return num_ran_;
+    }
+
+    Counter& GetJobsDiscarded(){
+      return num_discarded_;
+    }
+
     Job* GetNextJob();
     static void HandleThread(JobWorker* worker);
    public:
