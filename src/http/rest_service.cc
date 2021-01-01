@@ -58,6 +58,7 @@ namespace Token{
     }
 
     LOG(INFO) << "starting the rest service....";
+    DebugController::Initialize(&router_);
     BlockChainController::Initialize(&router_);
     BlockPoolController::Initialize(&router_);
     UnclaimedTransactionPoolController::Initialize(&router_);
@@ -131,37 +132,37 @@ namespace Token{
       return;
     }
 
-    HttpRequest request(session, buff->base, buff->len);
-    HttpRouterMatch match = router_.Find(&request);
+    HttpRequestPtr request = HttpRequest::NewInstance(session, buff->base, buff->len);
+    HttpRouterMatch match = router_.Find(request);
     if(match.IsNotFound()){
-      SendNotFound(session, &request);
+      SendNotFound(session, request);
     } else if(match.IsMethodNotSupported()){
-      SendNotSupported(session, &request);
+      SendNotSupported(session, request);
     } else{
       assert(match.IsOk());
 
       // weirdness :(
-      request.SetParameters(match.GetParameters());
+      request->SetParameters(match.GetParameters());
       HttpRouteHandler& handler = match.GetHandler();
-      handler(session, &request);
+      handler(session, request);
     }
   }
 
 /*****************************************************************************
  *                      BlockChainController
  *****************************************************************************/
-  void BlockChainController::HandleGetBlockChain(HttpSession* session, HttpRequest* request){
+  void BlockChainController::HandleGetBlockChain(HttpSession* session, const HttpRequestPtr& request){
     HashList blocks;
     BlockChain::GetBlocks(blocks);
     SendJson(session, blocks);
   }
 
-  void BlockChainController::HandleGetBlockChainHead(HttpSession* session, HttpRequest* request){
+  void BlockChainController::HandleGetBlockChainHead(HttpSession* session, const HttpRequestPtr& request){
     BlockPtr head = BlockChain::GetHead();
     SendJson(session, head);
   }
 
-  void BlockChainController::HandleGetBlockChainBlock(HttpSession* session, HttpRequest* request){
+  void BlockChainController::HandleGetBlockChainBlock(HttpSession* session, const HttpRequestPtr& request){
     Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
     if(!BlockChain::HasBlock(hash)){
       LOG(WARNING) << "couldn't find block: " << hash;
@@ -175,7 +176,7 @@ namespace Token{
 /*****************************************************************************
  *                      UnclaimedTransactionPoolController
  *****************************************************************************/
-  void UnclaimedTransactionPoolController::HandleGetUnclaimedTransaction(HttpSession* session, HttpRequest* request){
+  void UnclaimedTransactionPoolController::HandleGetUnclaimedTransaction(HttpSession* session, const HttpRequestPtr& request){
     Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
     if(!ObjectPool::HasUnclaimedTransaction(hash))
       return SendNotFound(session, hash);
@@ -184,7 +185,7 @@ namespace Token{
     SendJson(session, val);
   }
 
-  void UnclaimedTransactionPoolController::HandleGetUnclaimedTransactions(HttpSession* session, HttpRequest* request){
+  void UnclaimedTransactionPoolController::HandleGetUnclaimedTransactions(HttpSession* session, const HttpRequestPtr& request){
     HashList hashes;
     if(!ObjectPool::GetUnclaimedTransactions(hashes))
       return SendInternalServerError(session, "Cannot Get Unclaimed Transactions");
@@ -192,7 +193,7 @@ namespace Token{
   }
 
   void UnclaimedTransactionPoolController::HandleGetUserUnclaimedTransactions(HttpSession* session,
-                                                                              HttpRequest* request){
+                                                                              const HttpRequestPtr& request){
     std::string user = request->GetParameterValue("user_id");
     HashList hashes;
     if(!ObjectPool::GetHashList(user, hashes))
@@ -203,18 +204,26 @@ namespace Token{
 /*****************************************************************************
  *                      BlockPoolController
  *****************************************************************************/
-  void BlockPoolController::HandleGetBlocks(HttpSession* session, HttpRequest* request){
+  void BlockPoolController::HandleGetBlocks(HttpSession* session, const HttpRequestPtr& request){
     HashList hashes;
     if(!ObjectPool::GetBlocks(hashes))
       return SendInternalServerError(session, "Cannot get list of blocks from pool.");
     SendJson(session, hashes);
   }
 
-  void BlockPoolController::HandleGetBlock(HttpSession* session, HttpRequest* request){
+  void BlockPoolController::HandleGetBlock(HttpSession* session, const HttpRequestPtr& request){
     Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
     if(!ObjectPool::HasObject(hash))
       return SendNotFound(session, hash);
     BlockPtr blk = ObjectPool::GetBlock(hash);
     SendJson(session, blk);
   }
+
+/*****************************************************************************
+ *                      DebugController
+ *****************************************************************************/
+ void DebugController::HandleGetSwagger(HttpSession* session, const HttpRequestPtr& request){
+   std::string filename = "/home/tazz/CLionProjects/libtoken-ledger/swagger.json";
+   SendFile(session, filename);
+ }
 }

@@ -103,15 +103,20 @@ namespace Token{
 
   class CrashReportPrinter : public Printer{
    private:
+    std::string cause_;
+
     bool PrintBanner();
     bool PrintStackTrace();
     bool PrintSystemInformation();
    public:
-    CrashReportPrinter(const google::LogSeverity& severity = google::INFO, const long& flags = Printer::kFlagNone):
-      Printer(severity, flags){}
-    CrashReportPrinter(Printer* printer):
-      Printer(printer){}
+    CrashReportPrinter(const std::string& cause, const google::LogSeverity& severity = google::INFO, const long& flags = Printer::kFlagNone):
+      Printer(severity, flags),
+      cause_(cause){}
     ~CrashReportPrinter() = default;
+
+    std::string GetCause() const{
+      return cause_;
+    }
 
     bool Print(){
       return PrintBanner()

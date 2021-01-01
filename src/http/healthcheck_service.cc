@@ -122,27 +122,27 @@ namespace Token{
       return;
     }
 
-    HttpRequest request(session, buff->base, buff->len);
-    HttpRouterMatch match = router_.Find(&request);
+    HttpRequestPtr request = HttpRequest::NewInstance(session, buff->base, buff->len);
+    HttpRouterMatch match = router_.Find(request);
     if(match.IsNotFound()){
-      SendNotFound(session, &request);
+      SendNotFound(session, request);
     } else if(match.IsMethodNotSupported()){
-      SendNotSupported(session, &request);
+      SendNotSupported(session, request);
     } else{
       assert(match.IsOk());
 
       // weirdness :(
-      request.SetParameters(match.GetParameters());
+      request->SetParameters(match.GetParameters());
       HttpRouteHandler& handler = match.GetHandler();
-      handler(session, &request);
+      handler(session, request);
     }
   }
 
-  void HealthController::HandleGetReadyStatus(HttpSession* session, HttpRequest* request){
+  void HealthController::HandleGetReadyStatus(HttpSession* session, const HttpRequestPtr& request){
     SendOk(session); //TODO: implement
   }
 
-  void HealthController::HandleGetLiveStatus(HttpSession* session, HttpRequest* request){
+  void HealthController::HandleGetLiveStatus(HttpSession* session, const HttpRequestPtr& request){
     SendOk(session); //TODO: implement
   }
 }

@@ -119,6 +119,15 @@ namespace Token{
     return fd.tellg();
   }
 
+  static inline int64_t
+  GetFilesize(std::fstream& fd){
+    int64_t start = fd.tellg();
+    fd.seekg(0, std::ios::end);
+    int64_t size = fd.tellg() - start;
+    fd.seekg(0, std::ios::beg);
+    return size;
+  }
+
   static inline bool
   FileExists(const std::string& name){
     std::ifstream f(name.c_str());

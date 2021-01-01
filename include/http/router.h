@@ -6,7 +6,7 @@
 #include "http/request.h"
 
 namespace Token{
-  typedef void (* HttpRouteHandler)(HttpSession*, HttpRequest*);
+  typedef void (* HttpRouteHandler)(HttpSession*, const HttpRequestPtr&);
 
   class HttpRoute{
     friend class HttpRouter;
@@ -255,7 +255,7 @@ namespace Token{
       Insert(GetRoot(), HttpMethod::kDelete, path, handler);
     }
 
-    HttpRouterMatch Find(HttpRequest* request){
+    HttpRouterMatch Find(const HttpRequestPtr& request){
       return Search(GetRoot(), request->GetMethod(), request->GetPath());
     }
   };

@@ -8,9 +8,16 @@
 #include <json/writer.h>
 #include <unordered_map>
 #include <http_parser.h>
+#include "utils/buffer.h"
 #include "utils/json_conversion.h"
 
 namespace Token{
+  class HttpRequest;
+  typedef std::shared_ptr<HttpRequest> HttpRequestPtr;
+
+  class HttpResponse;
+  typedef std::shared_ptr<HttpResponse> HttpResponsePtr;
+
   enum HttpMethod{
     kGet,
     kPut,
@@ -104,6 +111,11 @@ namespace Token{
     std::string GetParameterValue(const std::string& name) const{
       auto pos = parameters_.find(name);
       return pos != parameters_.end() ? pos->second : "";
+    }
+
+    static HttpRequestPtr
+    NewInstance(HttpSession* session, const char* data, size_t len){
+      return std::make_shared<HttpRequest>(session, data, len);
     }
   };
 
@@ -202,6 +214,49 @@ namespace Token{
     }
   };
 
+  class HttpBinaryResponse : public HttpResponse{
+   private:
+    BufferPtr body_;
+   protected:
+    bool Write(const BufferPtr& buff) const{
+      WriteHttp(buff);
+      WriteHeaders(buff);
+      buff->PutBytes(body_);
+      return true;
+    }
+   public:
+    HttpBinaryResponse(HttpSession* session,
+                       const HttpStatusCode& status_code,
+                       const std::string& filename,
+                       const std::string& content_type=CONTENT_TYPE_TEXT_PLAIN):
+      HttpResponse(session, status_code),
+      body_(){
+      std::fstream fd(filename, std::ios::in|std::ios::binary);
+      int64_t fsize = GetFilesize(fd);
+      body_ = Buffer::NewInstance(fsize);
+      if(!body_->ReadBytesFrom(fd, fsize)){
+        LOG(WARNING) << "couldn't read " << fsize << " bytes from: " << filename;
+        SetHeader("Content-Length", 0);
+      } else{
+        SetHeader("Content-Length", fsize);
+      }
+      SetHeader("Content-Type", content_type);
+    }
+    ~HttpBinaryResponse() = default;
+
+    int64_t GetContentLength() const{
+      return body_->GetWrittenBytes();
+    }
+
+    static inline HttpResponsePtr
+    NewInstance(HttpSession* session,
+                const HttpStatusCode& status_code,
+                const std::string& filename,
+                const std::string& content_type=CONTENT_TYPE_TEXT_PLAIN){
+      return std::make_shared<HttpBinaryResponse>(session, status_code, filename, content_type);
+    }
+  };
+
   class HttpTextResponse : public HttpResponse{
    private:
     std::string body_;
@@ -220,6 +275,11 @@ namespace Token{
 
     int64_t GetContentLength() const{
       return body_.size();
+    }
+
+    static inline HttpResponsePtr
+    NewInstance(HttpSession* session, const HttpStatusCode& status_code, const std::string& body){
+      return std::make_shared<HttpTextResponse>(session, status_code, body);
     }
   };
 
@@ -244,6 +304,11 @@ namespace Token{
 
     int64_t GetContentLength() const{
       return body_.GetSize();
+    }
+
+    static inline HttpResponsePtr
+    NewInstance(HttpSession* session, const HttpStatusCode& status_code, const JsonString& body){
+      return std::make_shared<HttpJsonResponse>(session, status_code, body);
     }
   };
 }

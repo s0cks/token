@@ -109,7 +109,7 @@ namespace Token{
 
     Keychain::Initialize();
     ObjectPool::Initialize();
-    if(!HasBlocks()){
+    if(!HasReference(BLOCKCHAIN_REFERENCE_HEAD)){
       BlockPtr genesis = Block::Genesis();
       Hash hash = genesis->GetHash();
 

@@ -158,19 +158,29 @@ namespace Token{
       }
     }
 
-    bool ReadBytesFrom(std::fstream& stream, intptr_t size){
-      uint8_t bytes[size];
-      if(!stream.read((char*) bytes, size)){
+    bool ReadBytesFrom(std::fstream& stream, int64_t size){
+      if(GetBufferSize() < size){
+        LOG(WARNING) << "cannot read " << size << " bytes into a buffer of size: " << GetBufferSize();
+        return false;
+      }
+
+      if(!stream.read((char*)&data_[wpos_], size)){
         LOG(WARNING) << "cannot read " << size << " bytes from file";
         return false;
       }
-      PutBytes(bytes, size);
+
+      wpos_ += size;
       return true;
     }
 
     void PutBytes(uint8_t* bytes, intptr_t size){
       memcpy(&raw()[wpos_], bytes, size);
       wpos_ += size;
+    }
+
+    bool PutBytes(const BufferPtr& buff){
+      PutBytes(buff->data_, buff->wpos_);
+      return true;
     }
 
     bool GetBytes(uint8_t* result, intptr_t size){
@@ -291,6 +301,17 @@ namespace Token{
 
     static inline BufferPtr From(const leveldb::Slice& slice){
       return From(slice.data(), slice.size());
+    }
+
+    static inline BufferPtr FromFile(const std::string& filename){
+      std::fstream fd(filename, std::ios::in|std::ios::binary);
+      size_t size = GetFilesize(fd);
+      BufferPtr buff = NewInstance(size);
+      if(!buff->ReadBytesFrom(fd, static_cast<int64_t>(size))){
+        LOG(WARNING) << "couldn't read " << size << " bytes from: " << filename;
+        return BufferPtr(nullptr);
+      }
+      return buff;
     }
   };
 }

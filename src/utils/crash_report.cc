@@ -8,12 +8,12 @@
 
 namespace Token{
   bool CrashReport::PrintNewCrashReport(const std::string& cause, const google::LogSeverity& severity){
-    CrashReportPrinter printer(severity);
+    CrashReportPrinter printer(cause, severity);
     return printer.Print();
   }
 
   bool CrashReport::PrintNewCrashReportAndExit(const std::string& cause, const google::LogSeverity& severity, int code){
-    CrashReportPrinter printer(severity);
+    CrashReportPrinter printer(cause, severity);
     return printer.Print();
   }
 
@@ -53,6 +53,7 @@ namespace Token{
     LOG_AT_LEVEL(GetSeverity()) << "Version: " << Version();
     LOG_AT_LEVEL(GetSeverity()) << "Debug Mode: " << (TOKEN_DEBUG ? "Enabled" : "Disabled");
     LOG_AT_LEVEL(GetSeverity()) << "Ledger Home: " << TOKEN_BLOCKCHAIN_HOME;
+    LOG_AT_LEVEL(GetSeverity()) << "Cause: " << GetCause();
 #ifdef OS_IS_LINUX
     LOG_AT_LEVEL(GetSeverity()) << "Operating System: Linux";
 #elif OS_IS_WINDOWS

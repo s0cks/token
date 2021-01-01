@@ -55,6 +55,15 @@ namespace Token{
     }
 
     static inline void
+    SendFile(HttpSession* session,
+             const std::string& filename,
+             const HttpStatusCode& status_code=STATUS_CODE_OK,
+             const std::string& content_type=CONTENT_TYPE_TEXT_PLAIN){
+      HttpBinaryResponse response(session, status_code, filename, content_type);
+      session->Send(&response);
+    }
+
+    static inline void
     SendJson(HttpSession* session, const JsonString& json, const HttpStatusCode& status_code = STATUS_CODE_OK){
       HttpJsonResponse response(session, status_code, json);
       session->Send(&response);
@@ -92,7 +101,7 @@ namespace Token{
   };
 
 #define HTTP_CONTROLLER_ENDPOINT(Name) \
-    static void Handle##Name(HttpSession* session, HttpRequest* request)
+    static void Handle##Name(HttpSession* session, const HttpRequestPtr& request)
 
 #define HTTP_CONTROLLER_GET(Path, Name) \
     router->Get((Path), &Handle##Name)
