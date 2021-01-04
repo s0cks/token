@@ -127,7 +127,7 @@ namespace Token{
     SetState(State::kRunning);
     uv_run(loop, UV_RUN_DEFAULT);
     LOG(INFO) << "server is stopping...";
-    exit:
+  exit:
     pthread_exit(0);
   }
 

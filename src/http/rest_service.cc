@@ -67,10 +67,11 @@ namespace Token{
   }
 
   void RestService::OnShutdown(uv_async_t* handle){
+    SetState(RestService::kStopping);
+    if(!HttpService::ShutdownService(handle->loop)){
+      LOG(WARNING) << "couldn't shutdown the rest service.";
+    }
     SetState(RestService::kStopped);
-    uv_stop(handle->loop);
-    if(!HttpService::ShutdownService(handle->loop))
-      LOG(WARNING) << "couldn't shutdown the HealthCheck service";
   }
 
   bool RestService::Stop(){
@@ -103,8 +104,8 @@ namespace Token{
     LOG(INFO) << "rest service listening @" << port;
     SetState(State::kRunning);
     uv_run(loop, UV_RUN_DEFAULT);
-    exit:
-    uv_loop_close(loop);
+    LOG(INFO) << "the rest service has stopped.";
+  exit:
     pthread_exit(nullptr);
   }
 
@@ -156,7 +157,7 @@ namespace Token{
    JsonString body;
     if(!JobScheduler::GetWorkerStatistics(body))
       return SendInternalServerError(session, "Cannot get job scheduler worker statistics.");
-   std::shared_ptr<HttpJsonResponse> response = std::make_shared<HttpJsonResponse>(session, STATUS_CODE_OK, &body);
+   std::shared_ptr<HttpJsonResponse> response = std::make_shared<HttpJsonResponse>(session, STATUS_CODE_OK, body);
    session->Send(response);
  }
 
@@ -190,8 +191,8 @@ namespace Token{
     JsonString body;
     if(!ObjectPool::GetStats(body))
       return SendInternalServerError(session, "Cannot get ObjectPool stats.");
-    HttpJsonResponse response(session, STATUS_CODE_OK, &body);
-    session->Send(&response);
+    HttpResponsePtr resp = HttpJsonResponse::NewInstance(session, STATUS_CODE_OK, body);
+    session->Send(resp);
   }
 
   void ObjectPoolController::HandleGetBlock(HttpSession* session, const HttpRequestPtr& request){
@@ -230,8 +231,8 @@ namespace Token{
     JsonString body;
     if(!ObjectPool::GetUnclaimedTransactions(body))
       return SendInternalServerError(session, "Cannot Get Unclaimed Transactions");
-    HttpJsonResponse response(session, STATUS_CODE_OK, &body);
-    session->Send(&response);
+    HttpResponsePtr resp = HttpJsonResponse::NewInstance(session, STATUS_CODE_OK, body);
+    session->Send(resp);
   }
 
   void ObjectPoolController::HandleGetUserUnclaimedTransactions(HttpSession* session, const HttpRequestPtr& request){

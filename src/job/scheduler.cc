@@ -9,12 +9,10 @@
 namespace Token{
   const int32_t JobScheduler::kMaxNumberOfJobs = 1024;
 
-  static std::mutex mutex_; //TODO: remove?
   static std::default_random_engine engine;
   static std::vector<JobWorker*> workers_;
 
   bool JobScheduler::Initialize(){
-    std::unique_lock<std::mutex> guard(mutex_);
     workers_.reserve(FLAGS_num_worker_threads);
     for(int idx = 0; idx < FLAGS_num_worker_threads; idx++){
       workers_[idx] = new JobWorker(idx, JobScheduler::kMaxNumberOfJobs);
@@ -31,7 +29,6 @@ namespace Token{
   }
 
   JobWorker* JobScheduler::GetWorker(const ThreadId& thread){
-    std::unique_lock<std::mutex> guard(mutex_);
     for(int idx = 0; idx < FLAGS_num_worker_threads; idx++){
       if(pthread_equal(workers_[idx]->GetThreadID(), thread))
         return workers_[idx];
@@ -45,7 +42,6 @@ namespace Token{
   }
 
   JobWorker* JobScheduler::GetRandomWorker(){
-    std::unique_lock<std::mutex> guard(mutex_);
     std::uniform_int_distribution<int> distribution(0, FLAGS_num_worker_threads - 1);
     int idx = distribution(engine);
     JobWorker* worker = workers_[idx];

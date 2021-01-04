@@ -137,7 +137,7 @@ namespace Token{
   void BlockDiscoveryThread::HandleThread(uword parameter){
     LOG(INFO) << "starting the block discovery thread....";
     SetState(BlockDiscoveryThread::kRunning);
-    while(!IsStopped()){
+    while(IsRunning()){
       if(HasProposal()){
         #ifdef TOKEN_ENABLE_SERVER
           ProposalPtr proposal = GetProposal();
@@ -170,7 +170,7 @@ namespace Token{
         }
       }
     }
-    exit:
+  exit:
     SetState(BlockDiscoveryThread::kStopped);
     pthread_exit(NULL);
   }
@@ -188,6 +188,7 @@ namespace Token{
       LOG(WARNING) << "the block discovery thread is not running.";
       return false;
     }
+    SetState(BlockDiscoveryThread::kStopping);
     return Thread::StopThread(thread_);
   }
 

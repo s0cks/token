@@ -17,11 +17,22 @@ namespace Token{
     uv_stop(loop);
 
     int result;
-    if((result = uv_loop_close(loop)) == UV_EBUSY)
+    if((result = uv_loop_close(loop)) == UV_EBUSY){
       uv_walk(loop, &OnWalk, NULL);
+      uv_run(loop, UV_RUN_DEFAULT);
+      uv_stop(loop);
+      if((result = uv_loop_close(loop)) != 0){
+        LOG(INFO) << "shutdown result: " << uv_strerror(result);
+        return false;
+      }
+      return true;
+    }
 
-    uv_run(loop, UV_RUN_DEFAULT);
-    return (result = uv_loop_close(loop)) == 0;
+    if(result != 0){
+      LOG(INFO) << "shutdown result: " << uv_strerror(result);
+      return false;
+    }
+    return true;
   }
 
   bool HttpService::Bind(uv_tcp_t* server, const int32_t& port){
@@ -48,19 +59,15 @@ namespace Token{
     std::stringstream ss;
     ss << "Not Supported.";
     std::string body = ss.str();
-    HttpTextResponse response(session, STATUS_CODE_NOTSUPPORTED, body);
-    response.SetHeader("Content-Type", CONTENT_TYPE_TEXT_PLAIN);
-    response.SetHeader("Content-Length", body.size());
-    session->Send(&response);
+    HttpResponsePtr resp = HttpTextResponse::NewInstance(session, STATUS_CODE_NOTSUPPORTED, body);
+    session->Send(resp);
   }
 
   void HttpService::SendNotFound(HttpSession* session, const HttpRequestPtr& request){
     std::stringstream ss;
     ss << "Not Found: " << request->GetPath();
     std::string body = ss.str();
-    HttpTextResponse response(session, STATUS_CODE_NOTFOUND, body);
-    response.SetHeader("Content-Type", CONTENT_TYPE_TEXT_PLAIN);
-    response.SetHeader("Content-Length", body.size());
-    session->Send(&response);
+    HttpResponsePtr resp = HttpTextResponse::NewInstance(session, STATUS_CODE_NOTFOUND, body);
+    session->Send(resp);
   }
 }

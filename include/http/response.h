@@ -183,26 +183,24 @@ namespace Token{
 
   class HttpJsonResponse : public HttpResponse{
    private:
-    JsonString* body_;
+    const JsonString& body_;
    protected:
     bool Write(const BufferPtr& buffer) const{
       HttpResponse::Write(buffer);
-      LOG(INFO) << "writing " << body_->GetLength();
-      LOG(INFO) << "remaining bytes: " << buffer->GetWrittenBytes();
-      buffer->PutBytes((uint8_t*)body_->GetString(), body_->GetLength());
+      buffer->PutBytes((uint8_t*)body_.GetString(), body_.GetLength());
       return true;
     }
    public:
-    HttpJsonResponse(HttpSession* session, const HttpStatusCode& status_code, JsonString* body):
+    HttpJsonResponse(HttpSession* session, const HttpStatusCode& status_code, const JsonString& body):
       HttpResponse(session, status_code),
       body_(body){
       SetHeader("Content-Type", CONTENT_TYPE_APPLICATION_JSON);
-      SetHeader("Content-Length", body->GetLength());
+      SetHeader("Content-Length", body.GetLength());
     }
     ~HttpJsonResponse() = default;
 
     static inline HttpResponsePtr
-    NewInstance(HttpSession* session, const HttpStatusCode& status_code, JsonString* body){
+    NewInstance(HttpSession* session, const HttpStatusCode& status_code, const JsonString& body){
       return std::make_shared<HttpJsonResponse>(session, status_code, body);
     }
   };

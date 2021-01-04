@@ -13,8 +13,6 @@ namespace Token{
 
   void HttpSession::Send(const std::shared_ptr<HttpResponse>& response){
     int64_t content_length = RoundUpPowTwo(response->GetBufferSize());
-    LOG(INFO) << "writing " << content_length;
-    LOG(INFO) << "response content-length: " << response->GetContentLength();
     uv_write_t* req = (uv_write_t*)malloc(sizeof(uv_write_t));
     req->data = new HttpSessionWriteRequestData(this, content_length);
     BufferPtr& buffer = ((HttpSessionWriteRequestData*) req->data)->buffer;
@@ -23,20 +21,6 @@ namespace Token{
     uv_buf_t buff;
     buff.base = buffer->data();
     buff.len = content_length;
-    uv_write(req, (uv_stream_t*)&handle_, &buff, 1, &OnResponseSent);
-  }
-
-  void HttpSession::Send(HttpResponse* response){
-    int64_t content_length = response->GetBufferSize();
-
-    uv_write_t* req = (uv_write_t*)malloc(sizeof(uv_write_t));
-    req->data = new HttpSessionWriteRequestData(this, content_length);
-    BufferPtr& buffer = ((HttpSessionWriteRequestData*) req->data)->buffer;
-    response->Write(buffer);
-
-    uv_buf_t buff;
-    buff.base = buffer->data();
-    buff.len = buffer->GetWrittenBytes();
     uv_write(req, (uv_stream_t*)&handle_, &buff, 1, &OnResponseSent);
   }
 

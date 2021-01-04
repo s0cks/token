@@ -65,7 +65,6 @@ namespace Token{
     }
 
     void Send(const HttpResponsePtr& resp);
-    void Send(HttpResponse* response);
     void Close();
   };
 }

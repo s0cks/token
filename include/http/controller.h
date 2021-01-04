@@ -13,10 +13,8 @@ namespace Token{
 
     static inline void
     SendText(HttpSession* session, const std::string& body, const HttpStatusCode& status_code){
-      HttpTextResponse response(session, status_code, body);
-      response.SetHeader("Content-Type", CONTENT_TYPE_TEXT_PLAIN);
-      response.SetHeader("Content-Length", body.size());
-      session->Send(&response);
+      HttpResponsePtr resp = HttpTextResponse::NewInstance(session, status_code, body);
+      session->Send(resp);
     }
 
     static inline void
@@ -65,32 +63,32 @@ namespace Token{
              const std::string& filename,
              const HttpStatusCode& status_code = STATUS_CODE_OK,
              const std::string& content_type = CONTENT_TYPE_TEXT_PLAIN){
-      HttpBinaryResponse response(session, status_code, filename, content_type);
-      session->Send(&response);
+      HttpResponsePtr resp = HttpBinaryResponse::NewInstance(session, status_code, filename, content_type);
+      session->Send(resp);
     }
 
     static inline void
     SendJson(HttpSession* session, const BlockPtr& val){
       JsonString body;
       ToJson(val, body);
-      HttpJsonResponse response(session, STATUS_CODE_OK, &body);
-      return session->Send(&response);
+      HttpResponsePtr resp = HttpJsonResponse::NewInstance(session, STATUS_CODE_OK, body);
+      return session->Send(resp);
     }
 
     static inline void
     SendJson(HttpSession* session, const TransactionPtr& val){
       JsonString body;
       ToJson(val, body);
-      HttpJsonResponse response(session, STATUS_CODE_OK, &body);
-      return session->Send(&response);
+      HttpResponsePtr resp = HttpJsonResponse::NewInstance(session, STATUS_CODE_OK, body);
+      return session->Send(resp);
     }
 
     static inline void
     SendJson(HttpSession* session, const UnclaimedTransactionPtr& val){
       JsonString body;
       ToJson(val, body);
-      HttpJsonResponse response(session, STATUS_CODE_OK, &body);
-      return session->Send(&response);
+      HttpResponsePtr resp = HttpJsonResponse::NewInstance(session, STATUS_CODE_OK, body);
+      return session->Send(resp);
     }
    public:
     virtual ~HttpController() = delete;
