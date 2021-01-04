@@ -198,6 +198,8 @@ namespace Token{
 DECLARE_string(path);
 // --enable-snapshots
 DECLARE_bool(enable_snapshots);
+// --num-worker-threads
+DECLARE_int32(num_worker_threads);
 
 #ifdef TOKEN_ENABLE_SERVER
   // --remote "localhost:8080"

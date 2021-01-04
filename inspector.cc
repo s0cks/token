@@ -30,8 +30,8 @@ main(int argc, char **argv){
     }
 
     SnapshotInspector inspector;
-    Snapshot *snapshot = Snapshot::ReadSnapshot(inspector_path);
-    inspector.Inspect(snapshot);
+    SnapshotPtr snapshot = Snapshot::ReadSnapshot(inspector_path);
+    inspector.Inspect(snapshot.get());
   } else if(FLAGS_inspector_tool == "heap-dump"){
     LOG(INFO) << "Please enter a heap dump to inspect (type .exit to quit):";
     std::cin >> inspector_path;

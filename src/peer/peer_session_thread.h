@@ -8,9 +8,13 @@
 #include <memory>
 #include <iostream>
 #include <condition_variable>
+
+#include "vthread.h"
 #include "peer/peer_session.h"
 
 namespace Token{
+  typedef int16_t WorkerId;
+
 #define FOR_EACH_PEER_SESSION_MANAGER_STATE(V) \
     V(Starting)                                \
     V(Idle)                                    \
@@ -66,8 +70,9 @@ namespace Token{
 
     static const int64_t kRequestTimeoutIntervalMilliseconds = 1000;
    private:
-    int32_t worker_;
     pthread_t thread_;
+    WorkerId worker_;
+
     std::mutex mutex_;
     std::condition_variable cond_;
     State state_;
@@ -86,11 +91,11 @@ namespace Token{
       thread->GetCurrentSession()->Disconnect();
     }
 
-    static void* HandleThread(void* data);
+    static void HandleThread(uword parameter);
    public:
-    PeerSessionThread(int32_t worker, uv_loop_t* loop = uv_loop_new()):
-      worker_(worker),
+    PeerSessionThread(const WorkerId& worker, uv_loop_t* loop = uv_loop_new()):
       thread_(),
+      worker_(worker),
       mutex_(),
       cond_(),
       state_(),
@@ -101,7 +106,7 @@ namespace Token{
         uv_loop_delete(loop_);
     }
 
-    int32_t GetWorkerID() const{
+    WorkerId GetWorkerID() const{
       return worker_;
     }
 

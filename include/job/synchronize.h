@@ -2,6 +2,7 @@
 #define TOKEN_INCLUDE_JOB_SYNCHRONIZE_H
 
 #include "pool.h"
+#include "session.h"
 #include "job/job.h"
 #include "job/process_block.h"
 

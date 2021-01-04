@@ -4,11 +4,7 @@
 #ifdef TOKEN_ENABLE_SERVER
 
 #include <cstdint>
-#include "uuid.h"
-#include "block.h"
-#include "address.h"
 #include "session.h"
-#include "message.h"
 
 namespace Token{
   class Peer{

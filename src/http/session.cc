@@ -11,10 +11,25 @@ namespace Token{
       buffer(Buffer::NewInstance(size)){}
   };
 
+  void HttpSession::Send(const std::shared_ptr<HttpResponse>& response){
+    int64_t content_length = RoundUpPowTwo(response->GetBufferSize());
+    LOG(INFO) << "writing " << content_length;
+    LOG(INFO) << "response content-length: " << response->GetContentLength();
+    uv_write_t* req = (uv_write_t*)malloc(sizeof(uv_write_t));
+    req->data = new HttpSessionWriteRequestData(this, content_length);
+    BufferPtr& buffer = ((HttpSessionWriteRequestData*) req->data)->buffer;
+    response->Write(buffer);
+
+    uv_buf_t buff;
+    buff.base = buffer->data();
+    buff.len = content_length;
+    uv_write(req, (uv_stream_t*)&handle_, &buff, 1, &OnResponseSent);
+  }
+
   void HttpSession::Send(HttpResponse* response){
     int64_t content_length = response->GetBufferSize();
 
-    uv_write_t* req = (uv_write_t*) malloc(sizeof(uv_write_t));
+    uv_write_t* req = (uv_write_t*)malloc(sizeof(uv_write_t));
     req->data = new HttpSessionWriteRequestData(this, content_length);
     BufferPtr& buffer = ((HttpSessionWriteRequestData*) req->data)->buffer;
     response->Write(buffer);
@@ -22,13 +37,14 @@ namespace Token{
     uv_buf_t buff;
     buff.base = buffer->data();
     buff.len = buffer->GetWrittenBytes();
-    uv_write(req, (uv_stream_t*) &handle_, &buff, 1, &OnResponseSent);
+    uv_write(req, (uv_stream_t*)&handle_, &buff, 1, &OnResponseSent);
   }
 
   void HttpSession::OnResponseSent(uv_write_t* req, int status){
     if(status != 0)
       LOG(WARNING) << "failed to send the response: " << uv_strerror(status);
-    free(req->data);
+    if(req->data)
+      delete ((HttpSessionWriteRequestData*)req->data);
     free(req);
   }
 

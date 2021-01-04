@@ -12,11 +12,10 @@ namespace Token{
 
   class Buffer : public std::enable_shared_from_this<Buffer>{
    private:
-    intptr_t bsize_;
-    intptr_t wpos_;
-    intptr_t rpos_;
+    int64_t bsize_;
+    int64_t wpos_;
+    int64_t rpos_;
     uint8_t* data_;
-    bool owned_; //TODO: fixme
 
     uint8_t* raw(){
       return data_;
@@ -58,8 +57,7 @@ namespace Token{
       bsize_(size),
       wpos_(0),
       rpos_(0),
-      data_(nullptr),
-      owned_(true){
+      data_(nullptr){
       data_ = (uint8_t*) malloc(sizeof(uint8_t) * size);
       memset(data(), 0, GetBufferSize());
     }
@@ -67,13 +65,12 @@ namespace Token{
       bsize_(size),
       wpos_(size),
       rpos_(0),
-      data_(nullptr),
-      owned_(false){
-      data_ = (uint8_t*) data;
+      data_(nullptr){
+      data_ = (uint8_t*)malloc(sizeof(uint8_t)*size);
+      memcpy(data_, data, size);
     }
-
     ~Buffer(){
-      if(data_ && owned_)
+      if(data_)
         free(data_);
     }
 
@@ -93,15 +90,19 @@ namespace Token{
       return (uint8_t*) raw() + GetBufferSize();
     }
 
-    intptr_t GetBufferSize() const{
+    int64_t GetBufferSize() const{
       return bsize_;
     }
 
-    intptr_t GetWrittenBytes() const{
+    int64_t GetWrittenBytes() const{
       return wpos_;
     }
 
-    intptr_t GetReadBytes() const{
+    int64_t GetBytesRemaining() const{
+      return GetBufferSize() - GetWrittenBytes();
+    }
+
+    int64_t GetReadBytes() const{
       return rpos_;
     }
 
@@ -173,7 +174,7 @@ namespace Token{
       return true;
     }
 
-    void PutBytes(uint8_t* bytes, intptr_t size){
+    void PutBytes(uint8_t* bytes, int64_t size){
       memcpy(&raw()[wpos_], bytes, size);
       wpos_ += size;
     }

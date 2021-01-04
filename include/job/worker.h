@@ -1,14 +1,14 @@
 #ifndef TOKEN_WORKER_H
 #define TOKEN_WORKER_H
 
-#include <thread>
 #include <atomic>
+#include "vthread.h"
 #include "job/job.h"
 #include "job/queue.h"
 #include "utils/metrics.h"
 
 namespace Token{
-  typedef int16_t JobWorkerId;
+  typedef int8_t WorkerId;
 
 #define FOR_EACH_JOB_POOL_WORKER_STATE(V) \
     V(Starting)                           \
@@ -39,9 +39,9 @@ namespace Token{
       }
     }
    private:
-    std::thread thread_;
-    std::thread::id thread_id_;
-    JobWorkerId id_;
+    ThreadId thread_;
+    WorkerId worker_;
+
     std::atomic<State> state_;
     JobQueue queue_;
     Histogram histogram_;
@@ -49,7 +49,7 @@ namespace Token{
     Counter num_discarded_;
 
     void SetState(const State& state){
-      state_ = state;
+      state_.store(state, std::memory_order_seq_cst);
     }
 
     bool Schedule(Job* job){
@@ -69,29 +69,28 @@ namespace Token{
     }
 
     Job* GetNextJob();
-    static void HandleThread(JobWorker* worker);
+    static void HandleThread(uword parameter);
    public:
-    JobWorker(const JobWorkerId& id, size_t max_queue_size):
+    JobWorker(const WorkerId& worker_id, size_t max_queue_size):
       thread_(),
-      thread_id_(),
-      id_(id),
+      worker_(worker_id),
       state_(State::kStarting),
       queue_(max_queue_size),
       histogram_(new Metrics::Histogram("TaskHistogram")),
       num_ran_(new Metrics::Counter("NumRan")),
       num_discarded_(new Metrics::Counter("NumDiscarded")){}
-    ~JobWorker() = default;
+    ~JobWorker() = delete;
 
-    JobWorkerId GetWorkerID() const{
-      return id_;
+    ThreadId GetThreadID() const{
+      return thread_;
     }
 
-    std::thread::id GetThreadID() const{
-      return thread_.get_id();
+    WorkerId GetWorkerID() const{
+      return worker_;
     }
 
-    const std::atomic<State>& GetState(){
-      return state_;
+    State GetState() const{
+      return state_.load(std::memory_order_seq_cst);
     }
 
     bool Wait(Job* job){
@@ -100,15 +99,14 @@ namespace Token{
     }
 
     bool Start(){
-      thread_ = std::thread(&HandleThread, this);
-      thread_id_ = thread_.get_id();
-      return true;
+      char name[16];
+      snprintf(name, 16, "worker-%" PRId16, GetWorkerID());
+      return Thread::StartThread(&thread_, name, &HandleThread, (uword)this);
     }
 
     bool Stop(){
       SetState(JobWorker::kStopping);
-      thread_.join();
-      return true;
+      return Thread::StopThread(thread_);
     }
 
     bool Submit(Job* job){

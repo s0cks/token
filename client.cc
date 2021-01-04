@@ -34,14 +34,12 @@ main(int argc, char **argv){
     return EXIT_FAILURE;
   }
 
-  if(FLAGS_peer.empty()){
+  if(FLAGS_remote.empty()){
     LOG(WARNING) << "please specify a peer address using --peer";
     return EXIT_FAILURE;
   }
 
-  LOG(INFO) << "peer: " << FLAGS_peer;
-
-  NodeAddress address(FLAGS_peer);
+  NodeAddress address(FLAGS_remote);
   ClientSession *client = new ClientSession(address);
   if(!client->Connect()){
     LOG(ERROR) << "couldn't connect to the peer: " << address;

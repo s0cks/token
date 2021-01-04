@@ -1,9 +1,9 @@
 #ifndef TOKEN_VTHREAD_LINUX_H
 #define TOKEN_VTHREAD_LINUX_H
 
-#if !defined(TOKEN_VTHREAD_H)
+#ifndef TOKEN_VTHREAD_H
 #error "Please include vthread.h instead"
-#endif// !TOKEN_VTHREAD_H
+#endif//TOKEN_VTHREAD_H
 
 #include <pthread.h>
 

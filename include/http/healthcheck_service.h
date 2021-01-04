@@ -7,8 +7,6 @@
 #include <libconfig.h++>
 #include "vthread.h"
 #include "http/router.h"
-#include "http/session.h"
-#include "http/request.h"
 #include "http/service.h"
 #include "http/controller.h"
 

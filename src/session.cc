@@ -1,6 +1,5 @@
 #ifdef TOKEN_ENABLE_SERVER
 
-#include "message.h"
 #include "session.h"
 
 namespace Token{

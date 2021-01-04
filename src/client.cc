@@ -1,6 +1,6 @@
 #ifdef TOKEN_ENABLE_SERVER
 
-#include "server.h"
+#include "server/server.h"
 #include "vthread.h"
 #include "client.h"
 

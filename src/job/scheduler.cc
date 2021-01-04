@@ -8,16 +8,17 @@
 
 namespace Token{
   const int32_t JobScheduler::kMaxNumberOfJobs = 1024;
-  const int16_t JobScheduler::kMaxNumberOfWorkers = 10;
 
+  static std::mutex mutex_; //TODO: remove?
   static std::default_random_engine engine;
-  static JobWorker* workers_ = nullptr;
+  static std::vector<JobWorker*> workers_;
 
   bool JobScheduler::Initialize(){
-    workers_ = (JobWorker*) malloc(sizeof(JobWorker) * kMaxNumberOfWorkers);
-    for(int idx = 0; idx < JobScheduler::kMaxNumberOfWorkers; idx++){
-      JobWorker* worker = new(&workers_[idx]) JobWorker(idx, JobScheduler::kMaxNumberOfJobs);
-      if(!worker->Start()){
+    std::unique_lock<std::mutex> guard(mutex_);
+    workers_.reserve(FLAGS_num_worker_threads);
+    for(int idx = 0; idx < FLAGS_num_worker_threads; idx++){
+      workers_[idx] = new JobWorker(idx, JobScheduler::kMaxNumberOfJobs);
+      if(!workers_[idx]->Start()){
         LOG(WARNING) << "couldn't start job pool worker #" << idx;
         return false;
       }
@@ -29,24 +30,25 @@ namespace Token{
     return GetRandomWorker()->Schedule(job);
   }
 
-  JobWorker* JobScheduler::GetWorker(const std::thread::id& thread){
-    for(int idx = 0; idx < JobScheduler::kMaxNumberOfWorkers; idx++){
-      if(workers_[idx].GetThreadID() == thread)
-        return &workers_[idx];
+  JobWorker* JobScheduler::GetWorker(const ThreadId& thread){
+    std::unique_lock<std::mutex> guard(mutex_);
+    for(int idx = 0; idx < FLAGS_num_worker_threads; idx++){
+      if(pthread_equal(workers_[idx]->GetThreadID(), thread))
+        return workers_[idx];
     }
     LOG(INFO) << "cannot find worker: " << thread;
     return nullptr;
   }
 
   JobWorker* JobScheduler::GetThreadWorker(){
-    return GetWorker(std::this_thread::get_id());
+    return GetWorker(pthread_self());
   }
 
   JobWorker* JobScheduler::GetRandomWorker(){
-    std::uniform_int_distribution<int> distribution(0, JobScheduler::kMaxNumberOfWorkers);
-
+    std::unique_lock<std::mutex> guard(mutex_);
+    std::uniform_int_distribution<int> distribution(0, FLAGS_num_worker_threads - 1);
     int idx = distribution(engine);
-    JobWorker* worker = &workers_[idx];
+    JobWorker* worker = workers_[idx];
     return (worker && worker->IsRunning()) ? worker : nullptr;
   }
 
@@ -61,8 +63,8 @@ namespace Token{
     JsonWriter writer(json);
     writer.StartObject();
     {
-      for(int idx = 0; idx < JobScheduler::kMaxNumberOfWorkers; idx++){
-        JobWorker* worker = &workers_[idx];
+      for(int idx = 0; idx < FLAGS_num_worker_threads; idx++){
+        JobWorker* worker = workers_[idx];
         std::string worker_id = GetWorkerID(worker);
         if(!worker || !worker->IsRunning()){
           SetFieldNull(writer, worker_id);

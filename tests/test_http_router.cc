@@ -27,9 +27,9 @@ namespace Token{
         router->Get("/hello/world", NULL);
 
         std::string request_body = HttpGetRequestBody("/hello/world");
-        HttpRequest request(nullptr, request_body.data(), request_body.length());
+        HttpRequestPtr request = std::make_shared<HttpRequest>(nullptr, request_body.data(), request_body.length());
 
-        HttpRouterMatch match = router->Find(&request);
+        HttpRouterMatch match = router->Find(request);
         ASSERT_TRUE(match.IsOk());
     }
 
@@ -38,9 +38,9 @@ namespace Token{
         router->Get("/hello/world", NULL);
 
         std::string request_body = HttpDeleteRequestBody("/hello/world");
-        HttpRequest request(nullptr, request_body.data(), request_body.length());
+        HttpRequestPtr request = std::make_shared<HttpRequest>(nullptr, request_body.data(), request_body.length());
 
-        HttpRouterMatch match = router->Find(&request);
+        HttpRouterMatch match = router->Find(request);
         ASSERT_TRUE(match.IsMethodNotSupported());
     }
 
@@ -49,9 +49,9 @@ namespace Token{
         router->Put("/account/:id", NULL);
 
         std::string request_body = HttpPutRequestBody("/account/TestUser");
-        HttpRequest request(nullptr, request_body.data(), request_body.length());
+        HttpRequestPtr request = std::make_shared<HttpRequest>(nullptr, request_body.data(), request_body.length());
 
-        HttpRouterMatch match = router->Find(&request);
+        HttpRouterMatch match = router->Find(request);
         ASSERT_TRUE(match.IsOk());
         ASSERT_EQ(match.GetParameterValue("id"), "TestUser");
     }

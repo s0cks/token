@@ -45,17 +45,17 @@ namespace Token{
 #define PRIVATE_KEYFILE (TOKEN_BLOCKCHAIN_HOME + "/chain")
 #define PUBLIC_KEYFILE (TOKEN_BLOCKCHAIN_HOME + "/chain.pub")
 
-  void Keychain::Initialize(){
+  bool Keychain::Initialize(){
     if(!FileExists(PRIVATE_KEYFILE)){
       if(!FileExists(PUBLIC_KEYFILE)){
-        if(FileExists((TOKEN_BLOCKCHAIN_HOME + "/state"))){
+        if(FileExists((TOKEN_BLOCKCHAIN_HOME + "/data"))){
           LOG(WARNING) << "Failed to load block chain keys:" << std::endl;
           LOG(WARNING) << "  - Private Key: " << PRIVATE_KEYFILE << " - Missing" << std::endl;
           LOG(WARNING) << "  - Public Key: " << PUBLIC_KEYFILE << " - Missing" << std::endl;
           LOG(WARNING) << "Please recover the keys before running this node" << std::endl;
           LOG(WARNING)
             << "The node will require it's original keys, or it will need to be reinitialized before running";
-          return;
+          return false;
         }
 
         try{
@@ -75,20 +75,21 @@ namespace Token{
           LOG(WARNING) << "An exception occurred when generating the block chain keys: " << std::endl;
           LOG(WARNING) << "\t" << ex.what();
         }
+      } else{
+        LOG(WARNING) << "Failed to load block chain keys:" << std::endl;
+        LOG(WARNING) << "  - Private Key: " << PRIVATE_KEYFILE << " - Missing" << std::endl;
+        LOG(WARNING) << "  - Public Key: " << PUBLIC_KEYFILE << " - Found" << std::endl;
+        return false;
       }
-
-      LOG(WARNING) << "Failed to load block chain keys:" << std::endl;
-      LOG(WARNING) << "  - Private Key: " << PRIVATE_KEYFILE << " - Missing" << std::endl;
-      LOG(WARNING) << "  - Public Key: " << PUBLIC_KEYFILE << " - Found" << std::endl;
-      return;
     }
 
     CryptoPP::RSA::PrivateKey privateKey;
     CryptoPP::RSA::PublicKey publicKey;
     LoadKeys(&privateKey, &publicKey);
+    return true;
   }
 
-  void Keychain::LoadKeys(CryptoPP::RSA::PrivateKey* privKey, CryptoPP::RSA::PublicKey* pubKey){
+  bool Keychain::LoadKeys(CryptoPP::RSA::PrivateKey* privKey, CryptoPP::RSA::PublicKey* pubKey){
     try{
       CryptoPP::AutoSeededRandomPool rng;
 
@@ -98,14 +99,15 @@ namespace Token{
         LOG(WARNING) << "Failed to load block chain keys:" << std::endl;
         LOG(WARNING) << "  - Private Key: " << PRIVATE_KEYFILE << " - Missing" << std::endl;
         LOG(WARNING) << "  - Public Key: " << PUBLIC_KEYFILE << " - Found" << std::endl;
-        return;
+        return false;
       }
+
       DecodePrivateKey(privKey, privateKeyFilename);
       if(!privKey->Validate(rng, 3)){
         LOG(WARNING) << "Failed to load block chain keys:" << std::endl;
         LOG(WARNING) << "  - Private Key: " << PRIVATE_KEYFILE << " - Invalid" << std::endl;
         LOG(WARNING) << "  - Public Key: " << PUBLIC_KEYFILE << " - Found" << std::endl;
-        return;
+        return false;
       }
 
       // 2. Load + Validate Public Key
@@ -114,27 +116,29 @@ namespace Token{
         LOG(WARNING) << "Failed to load block chain keys:" << std::endl;
         LOG(WARNING) << "  - Private Key: " << PRIVATE_KEYFILE << " - Found" << std::endl;
         LOG(WARNING) << "  - Public Key: " << PUBLIC_KEYFILE << " - Missing" << std::endl;
-        return;
+        return false;
       }
+
       DecodePublicKey(pubKey, publicKeyFilename);
       if(!pubKey->Validate(rng, 3)){
         LOG(WARNING) << "Failed to load block chain keys:" << std::endl;
         LOG(WARNING) << "  - Private Key: " << PRIVATE_KEYFILE << " - Valid" << std::endl;
         LOG(WARNING) << "  - Public Key: " << PUBLIC_KEYFILE << " - Invalid" << std::endl;
-        return;
+        return false;
       }
 
       // 3. Consistency Check
       if((privKey->GetModulus() != pubKey->GetModulus())
          || (privKey->GetPublicExponent() != pubKey->GetPublicExponent())){
         LOG(WARNING) << "Keys didn't pass round-trip consistency check";
-        return;
+        return false;
       }
 
       LOG(INFO) << "initialized block chain keychain";
+      return true;
     } catch(CryptoPP::Exception& ex){
-      LOG(WARNING) << "Failed to load block chain keys: " << ex.what();
-      return;
+      LOG(WARNING) << "failed to load block chain keys: " << ex.what();
+      return false;
     }
   }
 }

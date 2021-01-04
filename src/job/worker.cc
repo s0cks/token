@@ -11,23 +11,25 @@ namespace Token{
 
     JobWorker* worker = JobScheduler::GetRandomWorker();
     if(worker == this){
-      std::this_thread::yield();
+      pthread_yield();
       return nullptr;
     }
 
     if(!worker){
-      std::this_thread::yield();
+      pthread_yield();
       return nullptr;
     }
     return worker->queue_.Steal();
   }
 
-  void JobWorker::HandleThread(JobWorker* worker){
+  void JobWorker::HandleThread(uword parameter){
+    JobWorker* instance = ((JobWorker*)parameter);
+
     LOG(INFO) << "starting worker....";
-    worker->SetState(JobWorker::kRunning);
+    instance->SetState(JobWorker::kRunning);
 
     char truncated_name[16];
-    snprintf(truncated_name, 15, "Worker%" PRId16, worker->GetWorkerID());
+    snprintf(truncated_name, 15, "worker-%" PRId16, instance->GetWorkerID());
 
     int result;
     if((result = pthread_setname_np(pthread_self(), truncated_name)) != 0){
@@ -36,15 +38,14 @@ namespace Token{
     }
 
     sleep(2);
-    while(worker->IsRunning()){
-      Job* next = worker->GetNextJob();
+    while(instance->IsRunning()){
+      Job* next = instance->GetNextJob();
       if(next){
 #ifdef TOKEN_DEBUG
-        Counter& num_ran = worker->GetJobsRan();
-        Histogram& histogram = worker->GetHistogram();
+        Counter& num_ran = instance->GetJobsRan();
+        Histogram& histogram = instance->GetHistogram();
 
-        Timeline timeline("RunTask");
-        timeline << "Start";
+        Timepoint start = Clock::now();
 #endif//TOKEN_DEBUG
 
         if(!next->Run()){
@@ -55,9 +56,8 @@ namespace Token{
         num_ran->Increment();
 #ifdef TOKEN_DEBUG
         LOG(INFO) << next->GetName() << " has finished.";
-        timeline << "Stop";
-        LOG(INFO) << "total time: " << timeline.GetTotalTime().count();
-        histogram->Update(timeline.GetTotalTime().count());
+        auto total_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start).count();
+        histogram->Update(total_time_ms);
 #endif//TOKEN_DEBUG
       }
     }

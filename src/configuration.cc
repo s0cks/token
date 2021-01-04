@@ -34,9 +34,11 @@ namespace Token{
     GetProperty(PROPERTY_SERVER, libconfig::Setting::TypeGroup);
     SetServerID(UUID());
     SetMaxNumberOfPeers(PROPERTY_SERVER_MAXPEERS_DEFAULT);
+
     std::set<NodeAddress> peers;
     SetPeerList(peers);
-    return true;
+
+    return SaveConfiguration();
   }
 
   bool BlockChainConfiguration::SaveConfiguration(){
@@ -153,8 +155,7 @@ namespace Token{
     libconfig::Setting& server = GetServerProperties();
     if(server.exists(PROPERTY_SERVER_ID))
       server.remove(PROPERTY_SERVER_ID);
-    server.add(PROPERTY_SERVER_ID, libconfig::Setting::Type::TypeString);
-    uuid.ToString();
+    server.add(PROPERTY_SERVER_ID, libconfig::Setting::Type::TypeString) = uuid.ToString();
     if(!SaveConfiguration()){
       LOG(WARNING) << "couldn't save the configuration";
       return false;

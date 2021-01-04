@@ -2,7 +2,7 @@
 #include "utils/crash_report.h"
 
 #ifdef TOKEN_ENABLE_SERVER
-  #include "server.h"
+  #include "server/server.h"
   #include "peer/peer_session_manager.h"
 #endif//TOKEN_ENABLE_SERVER
 

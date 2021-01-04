@@ -48,33 +48,6 @@ namespace Token{
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
 
-  std::string BlockChain::GetStatusMessage(){
-    std::stringstream ss;
-    LOCK_GUARD;
-
-    ss << "[";
-    switch(state_){
-#define DEFINE_STATE_MESSAGE(Name) \
-            case BlockChain::k##Name: \
-                ss << #Name; \
-                break;
-      FOR_EACH_BLOCKCHAIN_STATE(DEFINE_STATE_MESSAGE)
-#undef DEFINE_STATE_MESSAGE
-    }
-    ss << "] ";
-
-    switch(status_){
-#define DEFINE_STATUS_MESSAGE(Name) \
-            case BlockChain::k##Name:{ \
-                ss << #Name; \
-                break; \
-            }
-      FOR_EACH_BLOCKCHAIN_STATUS(DEFINE_STATUS_MESSAGE)
-#undef DEFINE_STATUS_MESSAGE
-    }
-    return ss.str();
-  }
-
   leveldb::DB* BlockChain::GetIndex(){
     return index_;
   }
@@ -101,19 +74,9 @@ namespace Token{
 
     LOG(INFO) << "initializing the block chain....";
     SetState(BlockChain::kInitializing);
-
-    Keychain::Initialize();
-    ObjectPool::Initialize();
     if(!HasReference(BLOCKCHAIN_REFERENCE_HEAD)){
       BlockPtr genesis = Block::Genesis();
       Hash hash = genesis->GetHash();
-
-#ifdef TOKEN_DEBUG
-      Timeline tl("ProcessGenesisBlock");
-      tl << "Start";
-      auto start = std::chrono::steady_clock::now();
-#endif//TOKEN_DEBUG
-
 
       // [Before - Work Stealing]
       //  - ProcessGenesisBlock Timeline (19s)
@@ -123,15 +86,6 @@ namespace Token{
       ProcessBlockJob* job = new ProcessBlockJob(genesis);
       worker->Submit(job);
       worker->Wait(job);
-#ifdef TOKEN_DEBUG
-      auto stop = std::chrono::steady_clock::now();
-      tl << "Stop";
-      TimelinePrinter::PrintTimeline(tl);
-      //JobScheduler::PrintWorkerStatistics();
-
-      LOG(INFO) << "total time: " << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count()
-                << "ms";
-#endif//TOKEN_DEBUG
 
       PutBlock(hash, genesis);
       PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);

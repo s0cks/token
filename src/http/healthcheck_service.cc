@@ -7,44 +7,31 @@
 #include "http/healthcheck_service.h"
 
 namespace Token{
-  static pthread_t thread_;
-  static std::mutex mutex_;
-  static std::condition_variable cond_;
-
-#define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
-#define LOCK std::unique_lock<std::mutex> lock(mutex_)
-#define WAIT cond_.wait(lock)
-#define SIGNAL_ONE cond_.notify_one()
-#define SIGNAL_ALL cond_.notify_all()
-
-  static HealthCheckService::State state_ = HealthCheckService::kStopped;
-  static HealthCheckService::Status status_ = HealthCheckService::kOk;
-  static HttpRouter router_;
-  static uv_async_t shutdown_;
+  static ThreadId thread_;
+  static std::atomic<HealthCheckService::State> state_ = { HealthCheckService::kStopped };
+  static std::atomic<HealthCheckService::Status> status_ = { HealthCheckService::kOk };
+  static HttpRouter* router_ = nullptr;
+  static uv_tcp_t* server_ = nullptr;
+  static uv_async_t* shutdown_ = nullptr;
 
   HealthCheckService::State HealthCheckService::GetState(){
-    LOCK_GUARD;
-    return state_;
+    return state_.load(std::memory_order_seq_cst);
   }
 
   void HealthCheckService::SetState(State state){
-    LOCK_GUARD;
-    state_ = state;
+    state_.store(state, std::memory_order_seq_cst);
   }
 
   HealthCheckService::Status HealthCheckService::GetStatus(){
-    LOCK_GUARD;
-    return status_;
+    return status_.load(std::memory_order_seq_cst);
   }
 
   void HealthCheckService::SetStatus(Status status){
-    LOCK_GUARD;
-    status_ = status;
+    status_.store(status, std::memory_order_seq_cst);
   }
 
   void HealthCheckService::WaitForState(State state){
-    LOCK;
-    while(state_ != state) WAIT;
+    //TODO: implement
   }
 
   bool HealthCheckService::Start(){
@@ -52,34 +39,36 @@ namespace Token{
       LOG(WARNING) << "the health check service is already running.";
       return false;
     }
+
     LOG(INFO) << "initializing the health check service....";
-    HealthController::Initialize(&router_);
-    return Thread::Start(&thread_, "HealthCheckService", &HandleServiceThread, 0);
+    router_ = new HttpRouter();
+    server_ = new uv_tcp_t();
+    shutdown_ = new uv_async_t();
+    HealthController::Initialize(router_);
+    return Thread::StartThread(&thread_, "health-svc", &HandleServiceThread, 0);
   }
 
   bool HealthCheckService::Stop(){
     if(!IsRunning())
       return true; // should we return false?
-    uv_async_send(&shutdown_);
-    return Thread::Stop(thread_);
+    uv_async_send(shutdown_);
+    return Thread::StopThread(thread_);
   }
 
   void HealthCheckService::HandleServiceThread(uword parameter){
     SetState(HealthCheckService::kStarting);
     uv_loop_t* loop = uv_loop_new();
-    uv_async_init(loop, &shutdown_, &OnShutdown);
+    uv_async_init(loop, shutdown_, &OnShutdown);
 
-    uv_tcp_t server;
-    uv_tcp_init(loop, &server);
-
+    uv_tcp_init(loop, server_);
     int32_t port = FLAGS_healthcheck_port;
-    if(!Bind(&server, port)){
+    if(!Bind(server_, port)){
       LOG(WARNING) << "couldn't bind health check service on port: " << port;
       goto exit;
     }
 
     int result;
-    if((result = uv_listen((uv_stream_t*) &server, 100, &OnNewConnection)) != 0){
+    if((result = uv_listen((uv_stream_t*)server_, 100, &OnNewConnection)) != 0){
       LOG(WARNING) << "health check service couldn't listen on port " << port << ": " << uv_strerror(result);
       goto exit;
     }
@@ -100,7 +89,7 @@ namespace Token{
   }
 
   void HealthCheckService::OnNewConnection(uv_stream_t* stream, int status){
-    HttpSession* session = new HttpSession(stream->loop);
+    HttpSession* session = new HttpSession(stream);
     if(!Accept(stream, session)){
       LOG(WARNING) << "couldn't accept new connection.";
       return;
@@ -125,7 +114,7 @@ namespace Token{
     }
 
     HttpRequestPtr request = HttpRequest::NewInstance(session, buff->base, buff->len);
-    HttpRouterMatch match = router_.Find(request);
+    HttpRouterMatch match = router_->Find(request);
     if(match.IsNotFound()){
       SendNotFound(session, request);
     } else if(match.IsMethodNotSupported()){

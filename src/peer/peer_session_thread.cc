@@ -27,8 +27,8 @@ namespace Token{
     return ss.str();
   }
 
-  void* PeerSessionThread::HandleThread(void* data){
-    PeerSessionThread* thread = (PeerSessionThread*) data;
+  void PeerSessionThread::HandleThread(uword parameter){
+    PeerSessionThread* thread = (PeerSessionThread*)parameter;
     thread->SetState(State::kStarting);
 
     char truncated_name[16];
@@ -75,23 +75,9 @@ namespace Token{
   }
 
   bool PeerSessionThread::Start(){
-    int result;
-    pthread_attr_t thread_attr;
-    if((result = pthread_attr_init(&thread_attr)) != 0){
-      LOG(WARNING) << "couldn't initialize the thread attributes: " << strerror(result);
-      return false;
-    }
-
-    if((result = pthread_create(&thread_, &thread_attr, &HandleThread, this)) != 0){
-      LOG(WARNING) << "couldn't start the session thread: " << strerror(result);
-      return false;
-    }
-
-    if((result = pthread_attr_destroy(&thread_attr)) != 0){
-      LOG(WARNING) << "couldn't destroy the thread attributes: " << strerror(result);
-      return false;
-    }
-    return true;
+    char name[16];
+    snprintf(name, 16, "peer-%" PRId16, GetWorkerID());
+    return Thread::StartThread(&thread_, name, &HandleThread, (uword)this);
   }
 
   bool PeerSessionThread::Stop(){

@@ -3,9 +3,10 @@
 
 #include <uv.h>
 #include <glog/logging.h>
+
 #include "uuid.h"
 #include "utils/buffer.h"
-#include "http/request.h"
+#include "http/response.h"
 
 namespace Token{
   class HttpSession{
@@ -31,14 +32,15 @@ namespace Token{
     static void OnResponseSent(uv_write_t* req, int status);
     static void OnClose(uv_handle_t* handle);
    public:
-    HttpSession(uv_loop_t* loop):
+    HttpSession(uv_stream_t* stream):
       session_id_(),
       handle_(),
       rbuff_(BufferPtr(nullptr)),
       wbuff_(BufferPtr(nullptr)){
       handle_.data = this;
+      stream->data = this;
       int err;
-      if((err = uv_tcp_init(loop, &handle_)) != 0){
+      if((err = uv_tcp_init(stream->loop, &handle_)) != 0){
         LOG(WARNING) << "couldn't initialize the HttpSession::handle: " << uv_strerror(err);
         return;
       }
@@ -62,6 +64,7 @@ namespace Token{
       return ss.str();
     }
 
+    void Send(const HttpResponsePtr& resp);
     void Send(HttpResponse* response);
     void Close();
   };

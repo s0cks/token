@@ -4,6 +4,7 @@
 #include <rapidjson/document.h>
 #include "http/router.h"
 #include "http/request.h"
+#include "http/response.h"
 
 namespace Token{
   class HttpController{
@@ -69,37 +70,27 @@ namespace Token{
     }
 
     static inline void
-    SendJson(HttpSession* session, const JsonString& json, const HttpStatusCode& status_code = STATUS_CODE_OK){
-      HttpJsonResponse response(session, status_code, json);
-      session->Send(&response);
+    SendJson(HttpSession* session, const BlockPtr& val){
+      JsonString body;
+      ToJson(val, body);
+      HttpJsonResponse response(session, STATUS_CODE_OK, &body);
+      return session->Send(&response);
     }
 
     static inline void
-    SendJson(HttpSession* session, const BlockPtr& blk){
-      JsonString json;
-      ToJson(blk, json);
-      return SendJson(session, json, STATUS_CODE_OK);
+    SendJson(HttpSession* session, const TransactionPtr& val){
+      JsonString body;
+      ToJson(val, body);
+      HttpJsonResponse response(session, STATUS_CODE_OK, &body);
+      return session->Send(&response);
     }
 
     static inline void
-    SendJson(HttpSession* session, const TransactionPtr& tx){
-      JsonString json;
-      ToJson(tx, json);
-      return SendJson(session, json, STATUS_CODE_OK);
-    }
-
-    static inline void
-    SendJson(HttpSession* session, const UnclaimedTransactionPtr& utxo){
-      JsonString json;
-      ToJson(utxo, json);
-      return SendJson(session, json, STATUS_CODE_OK);
-    }
-
-    static inline void
-    SendJson(HttpSession* session, const HashList& hashes){
-      JsonString json;
-      ToJson(hashes, json);
-      return SendJson(session, json, STATUS_CODE_OK);
+    SendJson(HttpSession* session, const UnclaimedTransactionPtr& val){
+      JsonString body;
+      ToJson(val, body);
+      HttpJsonResponse response(session, STATUS_CODE_OK, &body);
+      return session->Send(&response);
     }
    public:
     virtual ~HttpController() = delete;

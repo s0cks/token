@@ -12,7 +12,6 @@ namespace Token{
     friend class JobWorker;
    public:
     static const int32_t kMaxNumberOfJobs;
-    static const int16_t kMaxNumberOfWorkers;
    private:
     JobScheduler() = delete;
    public:
@@ -20,7 +19,7 @@ namespace Token{
 
     static bool Initialize();
     static bool Schedule(Job* job);
-    static JobWorker* GetWorker(const std::thread::id& thread);
+    static JobWorker* GetWorker(const ThreadId& thread);
     static JobWorker* GetThreadWorker();
     static JobWorker* GetRandomWorker();
     static bool GetWorkerStatistics(JsonString& json);

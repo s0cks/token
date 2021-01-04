@@ -30,28 +30,33 @@ namespace Token{
     }
   };
 
+  bool Thread::SetThreadName(ThreadId thread, const char* name){
+    char truncated_name[16];
+    snprintf(truncated_name, 15, "%s", name);
+    int result;
+    if((result = pthread_setname_np(thread, truncated_name)) != 0){
+      LOG(WARNING) << "couldn't set thread name: " << strerror(result);
+      return false;
+    }
+    return true;
+  }
+
   static void*
   HandleThread(void* pdata){
     ThreadStartData* data = (ThreadStartData*) pdata;
     ThreadHandlerFunction func = data->GetFunction();
     uword parameter = data->GetParameter();
 
-    char truncated_name[16];
-    snprintf(truncated_name, 15, "%s", data->GetName());
-
-    int result;
-    if((result = pthread_setname_np(pthread_self(), truncated_name)) != 0){
-      LOG(WARNING) << "couldn't set thread name: " << strerror(result);
+    if(!Thread::SetThreadName(pthread_self(), data->GetName()) != 0)
       goto exit;
-    }
 
     func(parameter);
-    exit:
+  exit:
     delete data;
     pthread_exit(NULL);
   }
 
-  bool Thread::Start(ThreadId* thread, const char* name, ThreadHandlerFunction function, uword parameter){
+  bool Thread::StartThread(ThreadId* thread, const char* name, ThreadHandlerFunction function, uword parameter){
     int result;
     pthread_attr_t attrs;
     if((result = pthread_attr_init(&attrs)) != 0){
@@ -72,7 +77,7 @@ namespace Token{
     return true;
   }
 
-  bool Thread::Stop(ThreadId thread){
+  bool Thread::StopThread(ThreadId thread){
     int result;
     if((result = pthread_join(thread, NULL)) != 0){
       LOG(WARNING) << "couldn't join thread: " << strerror(result);

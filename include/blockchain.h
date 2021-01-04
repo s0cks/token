@@ -12,6 +12,9 @@
 #include "unclaimed_transaction.h"
 
 namespace Token{
+#define BLOCKCHAIN_REFERENCE_GENESIS "<GENESIS>"
+#define BLOCKCHAIN_REFERENCE_HEAD "<HEAD>"
+
 #define FOR_EACH_BLOCKCHAIN_STATE(V) \
     V(Uninitialized)                 \
     V(Initializing)                  \
@@ -22,9 +25,6 @@ namespace Token{
     V(Ok)                             \
     V(Warning)                        \
     V(Error)
-
-#define BLOCKCHAIN_REFERENCE_GENESIS "<GENESIS>"
-#define BLOCKCHAIN_REFERENCE_HEAD "<HEAD>"
 
   class BlockChainBlockVisitor;
   class BlockChainHeaderVisitor;
@@ -85,7 +85,6 @@ namespace Token{
 
     static State GetState();
     static Status GetStatus();
-    static std::string GetStatusMessage();
     static bool Initialize();
     static bool VisitHeaders(BlockChainHeaderVisitor* vis);
     static bool VisitBlocks(BlockChainBlockVisitor* vis);

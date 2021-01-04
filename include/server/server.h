@@ -5,10 +5,8 @@
 
 #include <uv.h>
 #include <sstream>
-#include "address.h"
-#include "message.h"
 #include "vthread.h"
-#include "session.h"
+#include "configuration.h"
 
 namespace Token{
 #define FOR_EACH_SERVER_STATE(V) \
@@ -23,9 +21,7 @@ namespace Token{
     V(Warning)                    \
     V(Error)
 
-  class PeerSession;
-  class HandleMessageTask;
-  class Server : Thread{
+  class Server{
    public:
     enum State{
 #define DEFINE_SERVER_STATE(Name) k##Name,
@@ -81,11 +77,13 @@ namespace Token{
 
     static State GetState();
     static Status GetStatus();
-    static std::string GetStatusMessage();
-    static UUID GetID();
     static void WaitForState(State state);
     static bool Start();
     static bool Stop();
+
+    static inline UUID GetID(){
+      return BlockChainConfiguration::GetSererID();
+    }
 
 #define DEFINE_STATE_CHECK(Name) \
         static inline bool Is##Name(){ return GetState() == Server::k##Name; }
@@ -96,39 +94,6 @@ namespace Token{
         static inline bool Is##Name(){ return GetStatus() == Server::k##Name; }
     FOR_EACH_SERVER_STATUS(DEFINE_STATUS_CHECK)
 #undef DEFINE_STATUS_CHECK
-  };
-
-  class ServerSession : public Session{
-    friend class Server;
-   private:
-    UUID uuid_;
-
-    ServerSession(uv_loop_t* loop):
-      Session(loop),
-      uuid_(){}
-
-    void SetID(const UUID& uuid){
-      uuid_ = uuid;
-    }
-
-#define DECLARE_MESSAGE_HANDLER(Name) \
-        static void Handle##Name##Message(ServerSession*, const Name##MessagePtr& msg);
-    FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
-#undef DECLARE_MESSAGE_HANDLER
-   public:
-    UUID GetID() const{
-      return uuid_;
-    }
-
-    std::string ToString() const{
-      std::stringstream ss;
-      ss << "ServerSession(" << GetID() << ")";
-      return ss.str();
-    }
-
-    static ServerSession* NewInstance(uv_loop_t* loop){
-      return new ServerSession(loop);
-    }
   };
 }
 

@@ -1,6 +1,6 @@
 #ifdef TOKEN_ENABLE_SERVER
 
-#include "server.h"
+#include "server/server.h"
 #include "discovery.h"
 #include "job/scheduler.h"
 #include "job/synchronize.h"

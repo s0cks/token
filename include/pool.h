@@ -332,16 +332,12 @@ namespace Token{
 
 #define DEFINE_CHECK(Name) \
         static inline bool Is##Name(){ return GetState() == ObjectPool::k##Name; }
-
     FOR_EACH_POOL_STATE(DEFINE_CHECK)
-
 #undef DEFINE_CHECK
 
 #define DEFINE_CHECK(Name) \
         static inline bool Is##Name(){ return GetStatus() == ObjectPool::k##Name; }
-
     FOR_EACH_POOL_STATUS(DEFINE_CHECK)
-
 #undef DEFINE_CHECK
   };
 }

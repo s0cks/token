@@ -4,6 +4,7 @@
 #include <uv.h>
 #include "http/session.h"
 #include "http/request.h"
+#include "http/response.h"
 
 namespace Token{
   class HttpSession;

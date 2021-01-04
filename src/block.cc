@@ -1,5 +1,5 @@
 #include "block.h"
-#include "server.h"
+#include "server/server.h"
 #include "blockchain.h"
 #include "utils/crash_report.h"
 

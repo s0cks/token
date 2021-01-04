@@ -1,4 +1,4 @@
-#include "server.h"
+#include "server/server.h"
 #include "discovery.h"
 #include "proposal_handler.h"
 
@@ -180,7 +180,7 @@ namespace Token{
       LOG(WARNING) << "the block discovery thread is already running.";
       return false;
     }
-    return Thread::Start(&thread_, "Discovery", &HandleThread, 0);
+    return Thread::StartThread(&thread_, "miner", &HandleThread, 0);
   }
 
   bool BlockDiscoveryThread::Stop(){
@@ -188,7 +188,7 @@ namespace Token{
       LOG(WARNING) << "the block discovery thread is not running.";
       return false;
     }
-    return Thread::Stop(thread_);
+    return Thread::StopThread(thread_);
   }
 
   void BlockDiscoveryThread::SetState(const State& state){
