@@ -16,7 +16,7 @@ namespace Token{
             ss << "TestToken" << idx;
             outputs.push_back(Output("TestUser", ss.str()));
         }
-        return std::make_shared<Transaction>(index, inputs, outputs, timestamp);
+        return std::make_shared<Transaction>(timestamp, index, inputs, outputs);
     }
 
     TEST(TestMerkle, test_audit_proof){

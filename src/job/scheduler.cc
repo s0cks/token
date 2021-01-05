@@ -13,8 +13,8 @@ namespace Token{
   static std::vector<JobWorker*> workers_;
 
   bool JobScheduler::Initialize(){
-    workers_.reserve(FLAGS_num_worker_threads);
-    for(int idx = 0; idx < FLAGS_num_worker_threads; idx++){
+    workers_.reserve(FLAGS_num_workers);
+    for(int idx = 0; idx < FLAGS_num_workers; idx++){
       workers_[idx] = new JobWorker(idx, JobScheduler::kMaxNumberOfJobs);
       if(!workers_[idx]->Start()){
         LOG(WARNING) << "couldn't start job pool worker #" << idx;
@@ -29,7 +29,7 @@ namespace Token{
   }
 
   JobWorker* JobScheduler::GetWorker(const ThreadId& thread){
-    for(int idx = 0; idx < FLAGS_num_worker_threads; idx++){
+    for(int idx = 0; idx < FLAGS_num_workers; idx++){
       if(pthread_equal(workers_[idx]->GetThreadID(), thread))
         return workers_[idx];
     }
@@ -42,46 +42,36 @@ namespace Token{
   }
 
   JobWorker* JobScheduler::GetRandomWorker(){
-    std::uniform_int_distribution<int> distribution(0, FLAGS_num_worker_threads - 1);
+    std::uniform_int_distribution<int> distribution(0, FLAGS_num_workers - 1);
     int idx = distribution(engine);
     JobWorker* worker = workers_[idx];
     return (worker && worker->IsRunning()) ? worker : nullptr;
-  }
-
-  static inline std::string
-  GetWorkerID(JobWorker* worker){
-    std::stringstream ss;
-    ss << "worker-" << worker->GetWorkerID();
-    return ss.str();
   }
 
   bool JobScheduler::GetWorkerStatistics(JsonString& json){
     JsonWriter writer(json);
     writer.StartObject();
     {
-      for(int idx = 0; idx < FLAGS_num_worker_threads; idx++){
+      for(int idx = 0; idx < FLAGS_num_workers; idx++){
         JobWorker* worker = workers_[idx];
-        std::string worker_id = GetWorkerID(worker);
+
+        char name[10];
+        snprintf(name, 10, "worker-%02d", idx);
+
         if(!worker || !worker->IsRunning()){
-          SetFieldNull(writer, worker_id);
+          SetFieldNull(writer, name);
           continue;
         }
 
         std::shared_ptr<Metrics::Snapshot> snapshot = worker->GetHistogram()->GetSnapshot();
-        writer.Key(worker_id.data(), worker_id.length());
+        writer.Key(name, 9);
         writer.StartObject();
         {
           SetField(writer, "NumberOfJobsRan", worker->GetJobsRan()->Get());
           SetField(writer, "NumberOfJobsDiscarded", worker->GetJobsDiscarded()->Get());
-
-          writer.Key("RuntimeMilliseconds");
-          writer.StartObject();
-          {
-            SetField(writer, "Min", snapshot->GetMin());
-            SetField(writer, "Mean", snapshot->GetMean());
-            SetField(writer, "Max", snapshot->GetMax());
-          }
-          writer.EndObject();
+          SetField(writer, "MinTime", snapshot->GetMin());
+          SetField(writer, "MeanTime", snapshot->GetMean());
+          SetField(writer, "MaxTime", snapshot->GetMax());
         }
         writer.EndObject();
       }

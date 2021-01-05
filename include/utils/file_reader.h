@@ -90,6 +90,10 @@ namespace Token{
     std::string ReadString();
     bool ReadBytes(uint8_t* bytes, size_t size);
 
+    ObjectTag ReadObjectTag(){
+      return ObjectTag(ReadUnsignedLong());
+    }
+
     #define DEFINE_READ(Name, Type) \
       Type Read##Name(){ return Read<Type>(); } \
       u##Type Read##Unsigned##Name(){ return Read<u##Type>(); }
@@ -110,6 +114,25 @@ namespace Token{
       FileReader(parent){}
    public:
     virtual ~BinaryFileReader() = default;
+  };
+
+  class BinaryObjectFileReader : public BinaryFileReader{
+   protected:
+    ObjectTag tag_;
+   public:
+    BinaryObjectFileReader(const std::string& filename, const ObjectTag::Type& tag_type):
+      BinaryFileReader(filename),
+      tag_(tag_type){}
+    virtual ~BinaryObjectFileReader() = default;
+
+    bool ValidateTag(){
+      ObjectTag tag = ReadObjectTag();
+      if(tag_ != tag){
+        LOG(WARNING) << "object tag of " << tag << " != " << tag_;
+        return false;
+      }
+      return true;
+    }
   };
 
   #undef FOR_EACH_RAW_TYPE

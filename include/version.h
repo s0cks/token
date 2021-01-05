@@ -63,14 +63,14 @@ namespace Token{
       revision_ = other.revision_;
     }
 
-    bool operator==(const Version& other){
-      return major_ == other.major_
-             && minor_ == other.minor_
-             && revision_ == other.revision_;
+    friend bool operator==(const Version& a, const Version& b){
+      return a.major_ == b.major_
+          && a.minor_ == b.minor_
+          && a.revision_ == b.revision_;
     }
 
-    bool operator!=(const Version& other){
-      return !operator==(other);
+    friend bool operator!=(const Version& a, const Version& b){
+      return !operator==(a, b);
     }
 
     bool operator<(const Version& other){

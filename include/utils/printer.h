@@ -6,8 +6,8 @@
 namespace Token{
   class Printer{
    public:
-    static const int kFlagNone = 0;
-    static const int kFlagDetailed = 1 << 1;
+    static const int kFlagNone;
+    static const int kFlagDetailed;
    protected:
     Printer* parent_;
     google::LogSeverity severity_;
@@ -81,7 +81,15 @@ namespace Token{
       LOG_AT_LEVEL(GetSeverity()) << "Created: " << GetTimestampFormattedReadable(blk->GetTimestamp());
       LOG_AT_LEVEL(GetSeverity()) << "Previous: " << blk->GetPreviousHash();
       LOG_AT_LEVEL(GetSeverity()) << "Merkle Root: " << blk->GetMerkleRoot();
-      LOG_AT_LEVEL(GetSeverity()) << "Number of Transactions: " << blk->GetNumberOfTransactions();
+      if(!IsDetailed()){
+        LOG_AT_LEVEL(GetSeverity()) << "Number of Transactions: " << blk->GetNumberOfTransactions();
+        return true;
+      }
+
+      LOG_AT_LEVEL(GetSeverity()) << "Transactions:";
+      for(auto& tx : blk->transactions()){
+        Print(tx);
+      }
       return true;
     }
 
@@ -89,8 +97,23 @@ namespace Token{
       LOG_AT_LEVEL(GetSeverity()) << "Transaction #" << tx->GetIndex() << ":";
       LOG_AT_LEVEL(GetSeverity()) << "Hash: " << tx->GetHash();
       LOG_AT_LEVEL(GetSeverity()) << "Created: " << GetTimestampFormattedReadable(tx->GetTimestamp());
-      LOG_AT_LEVEL(GetSeverity()) << "Number of Inputs: " << tx->GetNumberOfInputs();
-      LOG_AT_LEVEL(GetSeverity()) << "Number of Outputs: " << tx->GetNumberOfOutputs();
+      if(!IsDetailed()){
+        LOG_AT_LEVEL(GetSeverity()) << "Number of Inputs: " << tx->GetNumberOfInputs();
+      } else{
+        LOG_AT_LEVEL(GetSeverity()) << "Inputs (" << tx->GetNumberOfInputs() << "):";
+        for(auto& it : tx->inputs()){
+          LOG_AT_LEVEL(GetSeverity()) << " - " << it;
+        }
+      }
+
+      if(!IsDetailed()){
+        LOG_AT_LEVEL(GetSeverity()) << "Number of Outputs: " << tx->GetNumberOfOutputs();
+      } else{
+        LOG_AT_LEVEL(GetSeverity()) << "Outputs (" << tx->GetNumberOfOutputs() << "):";
+        for(auto& it : tx->outputs()){
+          LOG_AT_LEVEL(GetSeverity()) << " - " << it;
+        }
+      }
       return true;
     }
 

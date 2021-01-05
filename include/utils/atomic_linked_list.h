@@ -46,9 +46,7 @@ namespace Token{
       tail_->prev_.store(head_->next_);
       tail_->next_.store(nullptr);
     }
-    ~AtomicLinkedList(){
-
-    }
+    ~AtomicLinkedList() = default;
 
     void PushFront(const T& val){
       LinkedListNode<T>* node = new LinkedListNode<T>(val);

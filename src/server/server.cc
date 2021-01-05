@@ -5,10 +5,11 @@
 #include <condition_variable>
 
 #include "pool.h"
+#include "utils/tcp.h"
 #include "configuration.h"
 #include "server/server.h"
-#include "server/server_session.h"
 #include "utils/crash_report.h"
+#include "server/server_session.h"
 #include "unclaimed_transaction.h"
 #include "peer/peer_session_manager.h"
 
@@ -105,29 +106,27 @@ namespace Token{
     LOG(INFO) << "starting server...";
     SetState(State::kStarting);
     uv_loop_t* loop = uv_loop_new();
-    uv_async_init(loop, &shutdown_, &HandleTerminateCallback);
-
-    struct sockaddr_in addr;
-    uv_ip4_addr("0.0.0.0", FLAGS_server_port, &addr);
     uv_tcp_init(loop, GetHandle());
     uv_tcp_keepalive(GetHandle(), 1, 60);
 
-    int err;
-    if((err = uv_tcp_bind(GetHandle(), (const struct sockaddr*) &addr, 0)) != 0){
-      LOG(ERROR) << "couldn't bind the server: " << uv_strerror(err);
+    uv_async_init(loop, &shutdown_, &HandleTerminateCallback);
+
+    if(!ServerBind(GetHandle(), FLAGS_server_port)){
+      SetState(State::kStopping);
       goto exit;
     }
 
-    if((err = uv_listen((uv_stream_t*) GetHandle(), 100, &OnNewConnection)) != 0){
-      LOG(ERROR) << "server couldn't listen: " << uv_strerror(err);
+    if(!ServerListen((uv_stream_t*)GetHandle(), &OnNewConnection)){
+      SetState(State::kStopping);
       goto exit;
     }
+
+    SetState(State::kRunning);
 
     LOG(INFO) << "server " << GetID() << " listening @" << FLAGS_server_port;
-    SetState(State::kRunning);
     uv_run(loop, UV_RUN_DEFAULT);
-    LOG(INFO) << "server is stopping...";
   exit:
+    SetState(State::kStopped);
     pthread_exit(0);
   }
 
@@ -140,16 +139,14 @@ namespace Token{
     ServerSession* session = ServerSession::NewInstance(stream->loop);
     session->SetState(Session::kConnecting);
     LOG(INFO) << "client is connecting...";
-
-    int err;
-    if((err = uv_accept(stream, (uv_stream_t*) session->GetStream())) != 0){
-      LOG(ERROR) << "client accept error: " << uv_strerror(err);
+    if(!ServerAccept(stream, session->GetStream())){
+      //TODO: session->Disconnect();
       return;
     }
 
     LOG(INFO) << "client connected";
-    if((err = uv_read_start(session->GetStream(), &ServerSession::AllocBuffer, &OnMessageReceived)) != 0){
-      LOG(ERROR) << "client read error: " << uv_strerror(err);
+    if(!ServerReadStart(session->GetStream(), &ServerSession::AllocBuffer, &OnMessageReceived)){
+      //TODO: session->Disconnect();
       return;
     }
   }
@@ -171,46 +168,21 @@ namespace Token{
     }
 
     BufferPtr& rbuff = session->GetReadBuffer();
-
-    intptr_t offset = 0;
-    std::vector<MessagePtr> messages;
-    do{
-      int32_t mtype = rbuff->GetInt();
-      int64_t msize = rbuff->GetLong();
-
-      switch(mtype){
-#define DEFINE_DECODE(Name) \
-                case Message::MessageType::k##Name##MessageType:{ \
-                    MessagePtr msg = Name##Message::NewInstance(rbuff); \
-                    LOG(INFO) << "received message: " << msg->ToString(); \
-                    messages.push_back(msg); \
-                    break; \
-                }
-        FOR_EACH_MESSAGE_TYPE(DEFINE_DECODE)
-#undef DEFINE_DECODE
-        case Message::MessageType::kUnknownMessageType:
-        default:LOG(ERROR) << "unknown message type " << mtype << " of size " << msize;
-          break;
-      }
-
-      offset += (msize + Message::kHeaderSize);
-    } while((offset + Message::kHeaderSize) < nread);
-
-    for(size_t idx = 0; idx < messages.size(); idx++){
-      MessagePtr msg = messages[idx];
-      switch(msg->GetMessageType()){
+    MessageBufferReader reader(rbuff, static_cast<int64_t>(nread));
+    while(reader.HasNext()){
+      MessagePtr next = reader.Next();
+      switch(next->GetMessageType()){
 #define DEFINE_HANDLER_CASE(Name) \
-            case Message::k##Name##MessageType: \
-                session->Handle##Name##Message(session, std::static_pointer_cast<Name##Message>(msg)); \
-                break;
-        FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLER_CASE);
+        case Message::k##Name##MessageType: \
+            session->Handle##Name##Message(session, std::static_pointer_cast<Name##Message>(next)); \
+            break;
+        FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLER_CASE)
 #undef DEFINE_HANDLER_CASE
         case Message::kUnknownMessageType:
         default: //TODO: handle properly
           break;
       }
     }
-
     rbuff->Reset();
   }
 }

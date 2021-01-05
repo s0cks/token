@@ -83,6 +83,20 @@ namespace Token{
     session->Disconnect();
   }
 
+  void PeerSession::OnDiscovery(uv_async_t* handle){
+    PeerSession* session = (PeerSession*)handle->data;
+    if(!BlockDiscoveryThread::HasProposal()){
+      LOG(WARNING) << "there is no active proposal.";
+      return;
+    }
+
+    ProposalPtr proposal = BlockDiscoveryThread::GetProposal();
+    Hash hash = proposal->GetHash();
+
+    LOG(INFO) << "broadcasting newly discovered block hash: " << hash;
+    session->Send(InventoryMessage::NewInstance(hash, InventoryItem::kBlock));
+  }
+
   void PeerSession::OnPrepare(uv_async_t* handle){
     PeerSession* session = (PeerSession*) handle->data;
     if(!BlockDiscoveryThread::HasProposal()){
@@ -167,43 +181,21 @@ namespace Token{
     } else if(nread == 0){
       LOG(WARNING) << "zero message size received";
       return;
-    } else if(nread >= 4096){
-      LOG(ERROR) << "too large of a buffer";
+    } else if(nread > Session::kBufferSize){
+      LOG(ERROR) << nread << "is too large of a buffer";
       return;
     }
 
-    uint32_t offset = 0;
-    std::vector<MessagePtr> messages;
-
     BufferPtr& rbuff = session->GetReadBuffer();
-    do{
-      uint32_t mtype = rbuff->GetInt();
-      intptr_t msize = rbuff->GetLong();
+    MessageBufferReader reader(rbuff, static_cast<int64_t>(nread));
 
-      switch(mtype){
-#define DEFINE_DECODE(Name) \
-                case Message::MessageType::k##Name##MessageType:{ \
-                    MessagePtr msg = Name##Message::NewInstance(rbuff); \
-                    messages.push_back(msg); \
-                    break; \
-                }
-        FOR_EACH_MESSAGE_TYPE(DEFINE_DECODE)
-#undef DEFINE_DECODE
-        case Message::MessageType::kUnknownMessageType:
-        default:LOG(ERROR) << "unknown message type " << mtype << " of size " << msize;
-          break;
-      }
-
-      offset += (msize + Message::kHeaderSize);
-    } while((offset + Message::kHeaderSize) < nread);
-
-    for(size_t idx = 0; idx < messages.size(); idx++){
-      MessagePtr msg = messages[idx];
-      switch(msg->GetMessageType()){
+    while(reader.HasNext()){
+      MessagePtr next = reader.Next();
+      switch(next->GetMessageType()){
 #define DEFINE_HANDLER_CASE(Name) \
-            case Message::k##Name##MessageType: \
-                session->Handle##Name##Message(session, std::static_pointer_cast<Name##Message>(msg)); \
-                break;
+        case Message::k##Name##MessageType: \
+            session->Handle##Name##Message(session, std::static_pointer_cast<Name##Message>(next)); \
+            break;
         FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLER_CASE);
 #undef DEFINE_HANDLER_CASE
         case Message::kUnknownMessageType:
@@ -218,7 +210,7 @@ namespace Token{
 
   void PeerSession::HandleVersionMessage(PeerSession* session, const VersionMessagePtr& msg){
     BlockPtr head = BlockChain::GetHead();
-    session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), head->GetHeader()));
+    session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), Server::GetCallbackAddress(), Version(), head->GetHeader(), Hash::GenerateNonce()));
   }
 
   void PeerSession::HandleVerackMessage(PeerSession* session, const VerackMessagePtr& msg){
@@ -273,7 +265,7 @@ namespace Token{
         if(BlockChain::HasBlock(hash)){
           LOG(INFO) << "item " << hash << " found in block chain";
           block = BlockChain::GetBlock(hash);
-        } else if(ObjectPool::HasObject(hash)){
+        } else if(ObjectPool::HasBlock(hash)){
           LOG(INFO) << "item " << hash << " found in block pool";
           block = ObjectPool::GetBlock(hash);
         } else{
@@ -281,9 +273,10 @@ namespace Token{
           response.push_back(NotFoundMessage::NewInstance());
           break;
         }
+
         response.push_back(BlockMessage::NewInstance(block));
       } else if(item.IsTransaction()){
-        if(!ObjectPool::HasObject(hash)){
+        if(!ObjectPool::HasTransaction(hash)){
           LOG(WARNING) << "cannot find transaction: " << hash;
           response.push_back(NotFoundMessage::NewInstance());
           break;
@@ -299,15 +292,11 @@ namespace Token{
   void PeerSession::HandleBlockMessage(PeerSession* session, const BlockMessagePtr& msg){
     BlockPtr blk = msg->GetValue();
     Hash hash = blk->GetHash();
-    ObjectPool::PutObject(hash, blk);
+    ObjectPool::PutBlock(hash, blk);
     LOG(INFO) << "received block: " << hash;
   }
 
   void PeerSession::HandleTransactionMessage(PeerSession* session, const TransactionMessagePtr& msg){
-
-  }
-
-  void PeerSession::HandleUnclaimedTransactionMessage(PeerSession* session, const UnclaimedTransactionMessagePtr& msg){
 
   }
 

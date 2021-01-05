@@ -3,6 +3,8 @@
 
 #include "object.h"
 #include "utils/buffer.h"
+#include "utils/file_writer.h"
+#include "utils/file_reader.h"
 
 namespace Token{
   class UnclaimedTransaction;
@@ -29,7 +31,11 @@ namespace Token{
     UnclaimedTransaction(const Hash& hash, int32_t index, const std::string& user, const std::string& product):
       UnclaimedTransaction(hash, index, User(user), Product(product)){}
     UnclaimedTransaction(const BufferPtr& buffer):
-      UnclaimedTransaction(buffer->GetHash(), buffer->GetLong(), buffer->GetUser(), buffer->GetProduct()){}
+      BinaryObject(),
+      hash_(buffer->GetHash()),
+      index_(buffer->GetLong()),
+      user_(buffer->GetUser()),
+      product_(buffer->GetProduct()){}
     ~UnclaimedTransaction(){}
 
     Hash GetTransaction() const{
@@ -57,6 +63,14 @@ namespace Token{
       buff->PutLong(index_);
       buff->PutUser(user_);
       buff->PutProduct(product_);
+      return true;
+    }
+
+    bool Write(BinaryFileWriter* writer) const{
+      writer->WriteHash(hash_);
+      writer->WriteLong(index_);
+      writer->WriteUser(user_);
+      writer->WriteProduct(product_);
       return true;
     }
 

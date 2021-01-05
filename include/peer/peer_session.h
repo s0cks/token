@@ -86,6 +86,7 @@ namespace Token{
     BlockHeader head_;
     uv_async_t disconnect_;
     // Needed for Paxos
+    uv_async_t discovery_;
     uv_async_t prepare_;
     uv_async_t promise_;
     uv_async_t commit_;
@@ -112,6 +113,7 @@ namespace Token{
     static void OnCommit(uv_async_t* handle);
     static void OnAccepted(uv_async_t* handle);
     static void OnRejected(uv_async_t* handle);
+    static void OnDiscovery(uv_async_t* handle);
 
 #define DECLARE_MESSAGE_HANDLER(Name) \
         static void Handle##Name##Message(PeerSession* session, const Name##MessagePtr& msg);
@@ -124,17 +126,20 @@ namespace Token{
       info_(UUID(), address),
       head_(),
       disconnect_(),
+      discovery_(),
       prepare_(),
       promise_(),
       commit_(),
       accepted_(),
       rejected_(){
       disconnect_.data = this;
+      discovery_.data = this;
       prepare_.data = this;
       promise_.data = this;
       commit_.data = this;
       accepted_.data = this;
       rejected_.data = this;
+      uv_async_init(loop, &discovery_, &OnDiscovery);
       uv_async_init(loop, &disconnect_, &OnDisconnect);
       uv_async_init(loop, &prepare_, &OnPrepare);
       uv_async_init(loop, &promise_, &OnPromise);
@@ -174,6 +179,10 @@ namespace Token{
 
     void SendCommit(){
       uv_async_send(&commit_);
+    }
+
+    void SendDiscoveredBlockHash(){
+      uv_async_send(&discovery_);
     }
 
     std::string ToString() const{

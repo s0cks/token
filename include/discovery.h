@@ -62,7 +62,7 @@ namespace Token{
     static void SetStatus(const Status& status);
     static void HandleThread(uword parameter);
     static ProposalPtr CreateNewProposal(BlockPtr blk);
-    static BlockPtr CreateNewBlock(intptr_t size);
+    static BlockPtr CreateNewBlock();
    public:
     ~BlockDiscoveryThread() = delete;
 

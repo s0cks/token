@@ -13,7 +13,7 @@
 namespace Token{
   class Hash{
    public:
-    static const size_t kSize = 256 / 8;
+    static const int64_t kSize = 256 / 8;
    public:
     struct Hasher{
      public:
@@ -66,7 +66,11 @@ namespace Token{
       data_(){
       SetNull();
     }
-    Hash(uint8_t* data, int64_t size = Hash::GetSize()):
+    Hash(uint8_t* data, int64_t size=Hash::GetSize()):
+      data_(){
+      memcpy(data_, data, size);
+    }
+    Hash(const uint8_t* data, int64_t size = Hash::GetSize()):
       data_(){
       memcpy(data_, data, size);
     }

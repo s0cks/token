@@ -1,5 +1,5 @@
 #include "test_suite.h"
-#include "object_tag.h"
+#include "object.h"
 
 namespace Token{
     TEST(TestObjectTag, test_pos){

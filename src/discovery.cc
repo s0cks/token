@@ -1,5 +1,6 @@
 #include "server/server.h"
 #include "discovery.h"
+#include "block_builder.h"
 #include "proposal_handler.h"
 
 namespace Token{
@@ -29,59 +30,11 @@ namespace Token{
         (ProposalInstance)->SetStatus(Proposal::Result::kRejected); \
     }
 
-  /*TODO: refactor
-  class TransactionPoolBlockBuilder : public ObjectPoolTransactionVisitor{
-  //TODO: rebuild class
-  private:
-      int64_t size_;
-      TransactionList transactions_;
-  public:
-      TransactionPoolBlockBuilder(int64_t size=Block::kMaxTransactionsForBlock):
-          ObjectPoolTransactionVisitor(),
-          size_(size),
-          transactions_(){}
-      ~TransactionPoolBlockBuilder(){}
-
-      BlockPtr GetBlock() const{
-          // Get the Parent Block
-          BlockHeader parent = BlockChain::GetHead()->GetHeader();
-          // Sort the Transactions by Timestamp
-          //TODO: remove copy
-          TransactionList transactions(transactions_);
-          std::sort(transactions.begin(), transactions.end(), Transaction::TimestampComparator());
-          // Return a New Block of size Block::kMaxTransactionsForBlock, using sorted Transactions
-          return std::make_shared<Block>(parent, transactions);
-      }
-
-      int64_t GetBlockSize() const{
-          return size_;
-      }
-
-      int64_t GetNumberOfTransactions() const{
-          return transactions_.size();
-      }
-
-      bool Visit(const TransactionPtr& tx) const{
-          if((GetNumberOfTransactions() + 1) >= GetBlockSize())
-              return false;
-          transactions_.push_back(tx);
-          return true;
-      }
-
-      static BlockPtr Build(intptr_t size){
-          TransactionPoolBlockBuilder builder(size);
-          TransactionPool::Accept(&builder);
-          BlockPtr block = builder.GetBlock();
-          ObjectPool::PutObject(block->GetHash(), block);
-          return block;
-      }
-  };*/
-
   static inline void
   OrphanTransaction(const TransactionPtr& tx){
     Hash hash = tx->GetHash();
     LOG(WARNING) << "orphaning transaction: " << hash;
-    if(!ObjectPool::RemoveObject(hash))
+    if(!ObjectPool::RemoveTransaction(hash))
       LOG(WARNING) << "couldn't remove transaction " << hash << " from pool.";
   }
 
@@ -89,12 +42,12 @@ namespace Token{
   OrphanBlock(const BlockPtr& blk){
     Hash hash = blk->GetHash();
     LOG(WARNING) << "orphaning block: " << hash;
-    if(!ObjectPool::RemoveObject(hash))
+    if(!ObjectPool::RemoveBlock(hash))
       LOG(WARNING) << "couldn't remove block " << hash << " from pool.";
   }
 
-  BlockPtr BlockDiscoveryThread::CreateNewBlock(intptr_t size){
-    BlockPtr blk = Block::Genesis(); //TODO: TransactionPoolBlockBuilder::Build(size);
+  BlockPtr BlockDiscoveryThread::CreateNewBlock(){
+    BlockPtr blk = BlockBuilder::BuildNewBlock();
     SetBlock(blk);
     return blk;
   }
@@ -150,8 +103,8 @@ namespace Token{
             goto exit;
           }
         #endif//TOKEN_ENABLE_SERVER
-      } else if(ObjectPool::GetNumberOfTransactions() >= 2){
-        BlockPtr blk = CreateNewBlock(2);
+      } else if(ObjectPool::GetNumberOfTransactions() >= Block::kMaxTransactionsForBlock){
+        BlockPtr blk = CreateNewBlock();
         Hash hash = blk->GetHash();
 //TODO:
 //                if(!BlockVerifier::IsValid(blk, true)){
@@ -162,6 +115,8 @@ namespace Token{
 
         LOG(INFO) << "discovered block " << hash << ", creating proposal....";
         ProposalPtr proposal = CreateNewProposal(blk);
+        PeerSessionManager::BroadcastDiscoveredBlock();
+
         NewProposalHandler handler(proposal);
         if(!handler.ProcessProposal()){
           LOG(WARNING) << "couldn't process proposal #" << proposal->GetHeight() << ".";

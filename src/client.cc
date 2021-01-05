@@ -101,11 +101,8 @@ namespace Token{
       switch(mtype){
         case Message::MessageType::kVersionMessageType:{
           //TODO: convert to ClientVerack or something better than this garble
-          ClientType type = ClientType::kClient;
-          BlockPtr genesis = Block::Genesis();
-          NodeAddress callback;
-          Version version;
-          client->Send(VerackMessage::NewInstance(type, client->GetID(), genesis->GetHeader(), version, callback));
+          BlockPtr head = Block::Genesis();
+          client->Send(VerackMessage::NewInstance(ClientType::kClient, Server::GetID(), NodeAddress(), Version(), head->GetHeader(), Hash::GenerateNonce()));
           break;
         }
         case Message::MessageType::kVerackMessageType:{
@@ -118,9 +115,6 @@ namespace Token{
         case Message::MessageType::kNotFoundMessageType:client->SetNextMessage(NotFoundMessage::NewInstance(rbuff));
           break;
         case Message::MessageType::kBlockMessageType:client->SetNextMessage(BlockMessage::NewInstance(rbuff));
-          break;
-        case Message::MessageType::kUnclaimedTransactionMessageType:
-          client->SetNextMessage(UnclaimedTransactionMessage::NewInstance(rbuff));
           break;
         case Message::MessageType::kInventoryMessageType:{
           InventoryMessagePtr inv = std::make_shared<InventoryMessage>(rbuff);
@@ -175,29 +169,7 @@ namespace Token{
   }
 
   UnclaimedTransactionPtr ClientSession::GetUnclaimedTransaction(const Hash& hash){
-    LOG(INFO) << "getting unclaimed transactions " << hash;
-    if(IsConnecting()){
-      LOG(INFO) << "waiting for client to connect...";
-      WaitForState(Session::kConnected);
-    }
-
-    std::vector<InventoryItem> items = {
-      InventoryItem(InventoryItem::kUnclaimedTransaction, hash),
-    };
-    Send(GetDataMessage::NewInstance(items));
-    do{
-      WaitForNextMessage();
-      MessagePtr next = GetNextMessage();
-
-      if(next->IsUnclaimedTransactionMessage()){
-        return std::static_pointer_cast<UnclaimedTransactionMessage>(next)->GetValue();
-      } else if(next->IsNotFoundMessage()){
-        return nullptr;
-      } else{
-        LOG(WARNING) << "cannot handle " << next;
-        continue;
-      }
-    } while(true);
+    return UnclaimedTransactionPtr(nullptr);
   }
 
   bool ClientSession::GetPeers(PeerList& peers){

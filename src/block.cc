@@ -48,7 +48,7 @@ namespace Token{
       outputs_c.push_back(Output("VenueC", "TestToken"));
     }
 
-    TransactionList transactions;
+    TransactionSet transactions;
     transactions.insert(Transaction::NewInstance(1, inputs, outputs_a, 0));
     transactions.insert(Transaction::NewInstance(2, inputs, outputs_b, 0));
     transactions.insert(Transaction::NewInstance(3, inputs, outputs_c, 0));
@@ -69,11 +69,21 @@ namespace Token{
     return tx_bloom_.Contains(hash);
   }
 
+  bool Block::WriteToFile(const std::string& filename) const{
+    BinaryObjectFileWriter writer(filename);
+    return writer.WriteObject(shared_from_this());
+  }
+
   Hash Block::GetMerkleRoot() const{
     MerkleTreeBuilder builder;
     if(!Accept(&builder))
       return Hash();
     std::shared_ptr<MerkleTree> tree = builder.Build();
     return tree->GetRootHash();
+  }
+
+  BlockPtr Block::FromFile(const std::string& filename){
+    BlockFileReader reader(filename);
+    return reader.ReadBlock();
   }
 }

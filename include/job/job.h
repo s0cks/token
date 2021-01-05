@@ -2,7 +2,7 @@
 #define TOKEN_JOB_H
 
 #include <leveldb/write_batch.h>
-#include "object.h"
+#include "transaction.h"
 
 namespace Token{
 #define FOR_EACH_JOB_RESULT_STATUS(V) \
@@ -170,6 +170,10 @@ namespace Token{
       return name_;
     }
 
+    JobResult& GetResult(){
+      return result_;
+    }
+
     JobResult GetResult() const{
       return result_;
     }
@@ -187,6 +191,137 @@ namespace Token{
       result_ = DoWork();
       Finish();
       return true;
+    }
+  };
+
+  class BatchWriteJob : public Job{
+   protected:
+    leveldb::WriteBatch batch_;
+
+    BatchWriteJob(Job* parent, const std::string& name):
+      Job(parent, name),
+      batch_(){}
+   public:
+    ~BatchWriteJob() = default;
+
+    leveldb::WriteBatch& GetBatch(){
+      return batch_;
+    }
+
+    void Append(const leveldb::WriteBatch& batch){
+      batch_.Append(batch);
+    }
+  };
+
+  template<typename T>
+  class ObjectListJob : public Job{
+   public:
+    using iterator_type = typename T::iterator;
+    using const_iterator_type = typename T::const_iterator;
+   protected:
+    T values_;
+
+    ObjectListJob(Job* parent, const std::string& name, const T& values):
+      Job(parent, name),
+      values_(){
+      LOG(INFO) << "processing " << values.size() << " values.";
+      std::copy(values.begin(), values.end(), std::back_inserter(values_));
+    }
+   public:
+    virtual ~ObjectListJob() = default;
+
+    T& values(){
+      return values_;
+    }
+
+    T values() const{
+      return values_;
+    }
+
+    iterator_type values_begin(){
+      return values_.begin();
+    }
+
+    const_iterator_type values_begin() const{
+      return values_.begin();
+    }
+
+    iterator_type values_end(){
+      return values_.end();
+    }
+
+    const_iterator_type values_end() const{
+      return values_.end();
+    }
+  };
+
+  class OutputListJob : public BatchWriteJob{
+   protected:
+    OutputList outputs_;
+
+    OutputListJob(Job* parent, const std::string& name, const OutputList& outputs):
+      BatchWriteJob(parent, name),
+      outputs_(outputs){}
+   public:
+    ~OutputListJob() = default;
+
+    OutputList& outputs(){
+      return outputs_;
+    }
+
+    OutputList outputs() const{
+      return outputs_;
+    }
+
+    OutputList::iterator outputs_begin(){
+      return outputs_.begin();
+    }
+
+    OutputList::const_iterator outputs_begin() const{
+      return outputs_.begin();
+    }
+
+    OutputList::iterator outputs_end(){
+      return outputs_.end();
+    }
+
+    OutputList::const_iterator outputs_end() const{
+      return outputs_.end();
+    }
+  };
+
+  class InputListJob : public BatchWriteJob{
+   protected:
+    InputList inputs_;
+
+    InputListJob(Job* parent, const std::string& name, const InputList& inputs):
+      BatchWriteJob(parent, name),
+      inputs_(inputs){}
+   public:
+    virtual ~InputListJob() = default;
+
+    InputList& inputs(){
+      return inputs_;
+    }
+
+    InputList inputs() const{
+      return inputs_;
+    }
+
+    InputList::iterator inputs_begin(){
+      return inputs_.begin();
+    }
+
+    InputList::const_iterator inputs_begin() const{
+      return inputs_.begin();
+    }
+
+    InputList::iterator inputs_end(){
+      return inputs_.end();
+    }
+
+    InputList::const_iterator inputs_end() const{
+      return inputs_.end();
     }
   };
 }

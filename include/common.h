@@ -192,6 +192,19 @@ namespace Token{
       signal(SIGSEGV, &HandleSegfault);
     }
   };
+
+  static inline bool
+  HasEnvironmentVariable(const std::string& name){ //TODO: move HasEnvironmentVariable to common
+    char* val = getenv(name.data());
+    return val != NULL;
+  }
+
+  static inline std::string
+  GetEnvironmentVariable(const std::string& name){ //TODO: move GetEnvironmentVariable to common
+    char* val = getenv(name.data());
+    if(val == NULL) return "";
+    return std::string(val);
+  }
 }
 
 // --path "/usr/share/ledger"
@@ -199,13 +212,15 @@ DECLARE_string(path);
 // --enable-snapshots
 DECLARE_bool(enable_snapshots);
 // --num-worker-threads
-DECLARE_int32(num_worker_threads);
+DECLARE_int32(num_workers);
 
 #ifdef TOKEN_ENABLE_SERVER
   // --remote "localhost:8080"
   DECLARE_string(remote);
   // --server-port 8080
   DECLARE_int32(server_port);
+  // --num-peer-threads
+  DECLARE_int32(num_peers);
 #endif//TOKEN_ENABLE_SERVER
 
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE

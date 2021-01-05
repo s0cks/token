@@ -94,6 +94,13 @@ namespace Token{
         static inline bool Is##Name(){ return GetStatus() == Server::k##Name; }
     FOR_EACH_SERVER_STATUS(DEFINE_STATUS_CHECK)
 #undef DEFINE_STATUS_CHECK
+
+#define ENVIRONMENT_TOKEN_CALLBACK_ADDRESS "TOKEN_CALLBACK_ADDRESS"
+
+    static inline NodeAddress
+    GetCallbackAddress(){
+      return NodeAddress::ResolveAddress(GetEnvironmentVariable(ENVIRONMENT_TOKEN_CALLBACK_ADDRESS));
+    }
   };
 }
 

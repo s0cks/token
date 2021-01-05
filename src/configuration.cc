@@ -4,18 +4,7 @@
 #include "configuration.h"
 
 namespace Token{
-  static inline bool
-  HasEnvironmentVariable(const std::string& name){ //TODO: move HasEnvironmentVariable to common
-    char* val = getenv(name.data());
-    return val != NULL;
-  }
 
-  static inline std::string
-  GetEnvironmentVariable(const std::string& name){ //TODO: move GetEnvironmentVariable to common
-    char* val = getenv(name.data());
-    if(val == NULL) return "";
-    return std::string(val);
-  }
 
   static std::mutex mutex_;
   static std::condition_variable cond_;
@@ -28,12 +17,10 @@ namespace Token{
 #define SIGNAL_ALL cond_.notify_all()
 
 #define ENVIRONMENT_TOKEN_LEDGER "TOKEN_LEDGER"
-#define ENVIRONMENT_TOKEN_CALLBACK_ADDRESS "TOKEN_CALLBACK_ADDRESS"
 
   bool BlockChainConfiguration::GenerateConfiguration(){
     GetProperty(PROPERTY_SERVER, libconfig::Setting::TypeGroup);
     SetServerID(UUID());
-    SetMaxNumberOfPeers(PROPERTY_SERVER_MAXPEERS_DEFAULT);
 
     std::set<NodeAddress> peers;
     SetPeerList(peers);
@@ -129,10 +116,6 @@ namespace Token{
     return UUID(GetServerProperties().lookup(PROPERTY_SERVER_ID));
   }
 
-  NodeAddress BlockChainConfiguration::GetServerCallbackAddress(){
-    return NodeAddress::ResolveAddress(GetEnvironmentVariable(ENVIRONMENT_TOKEN_CALLBACK_ADDRESS));
-  }
-
   bool BlockChainConfiguration::SetPeerList(const std::set<NodeAddress>& peers){
     LOCK_GUARD;
     libconfig::Setting& server = GetServerProperties();
@@ -161,33 +144,5 @@ namespace Token{
       return false;
     }
     return true;
-  }
-
-  bool BlockChainConfiguration::SetServerCallbackAddress(const NodeAddress& address){
-    LOCK_GUARD;
-    libconfig::Setting& server = GetServerProperties();
-    if(server.exists(PROPERTY_SERVER_CALLBACK_ADDRESS))
-      server.remove(PROPERTY_SERVER_CALLBACK_ADDRESS);
-    server.add(PROPERTY_SERVER_CALLBACK_ADDRESS, libconfig::Setting::TypeString) = address.ToString();
-    if(!SaveConfiguration()){
-      LOG(WARNING) << "couldn't save the configuration";
-      return false;
-    }
-    return true;
-  }
-
-  int32_t BlockChainConfiguration::GetMaxNumberOfPeers(){
-    return GetServerProperties().lookup(PROPERTY_SERVER_MAXPEERS);
-  }
-
-  bool BlockChainConfiguration::SetMaxNumberOfPeers(int32_t value){
-    LOCK_GUARD;
-    libconfig::Setting& server = GetServerProperties();
-    libconfig::Setting& property =
-      server.exists(PROPERTY_SERVER_MAXPEERS)
-      ? server.lookup(PROPERTY_SERVER_MAXPEERS)
-      : server.add(PROPERTY_SERVER_MAXPEERS, libconfig::Setting::TypeInt);
-    property = value;
-    return SaveConfiguration();
   }
 }

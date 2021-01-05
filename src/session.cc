@@ -87,26 +87,18 @@ namespace Token{
   }
 
   void Session::Send(const MessagePtr& msg){
-    // TODO: convert to message header struct
-    int32_t type = msg->GetMessageType();
-    int64_t size = msg->GetMessageSize();
-    int64_t total_size = Message::kHeaderSize + size;
 #ifdef TOKEN_DEBUG
-    LOG(INFO) << "sending " << msg->ToString() << " (" << total_size << " bytes)";
+    LOG(INFO) << "sending " << msg->ToString() << " (" << msg->GetBufferSize() << " bytes)";
 #endif//TOKEN_DEBUG
 
     BufferPtr& wbuff = GetWriteBuffer();
-    wbuff->PutInt(type);
-    wbuff->PutLong(size);
     if(!msg->Write(wbuff)){
-      std::stringstream ss;
-      ss << "couldn't encode message: " << msg->ToString();
-      SESSION_WARNING(ss.str());
+      LOG(WARNING) << "couldn't serialize message " << msg->ToString();
       return;
     }
 
     uv_buf_t buff;
-    buff.len = total_size;
+    buff.len = wbuff->GetWrittenBytes();
     buff.base = wbuff->data();
 
     uv_write_t* req = (uv_write_t*) malloc(sizeof(uv_write_t));
@@ -121,15 +113,22 @@ namespace Token{
       return;
     }
 
+  #ifdef TOKEN_DEBUG
+    LOG(INFO) << "sending " << total_messages << " messages....";
+  #endif//TOKEN_DEBUG
+
     BufferPtr& wbuff = GetWriteBuffer();
-    int64_t offset = 0;
     uv_buf_t buffers[total_messages];
+
+    int64_t offset = 0;
     for(size_t idx = 0; idx < total_messages; idx++){
       MessagePtr msg = messages[idx];
       int64_t total_size = msg->GetBufferSize();
+
 #ifdef TOKEN_DEBUG
       LOG(INFO) << "sending " << msg->ToString() << " (" << total_size << " Bytes)";
 #endif//TOKEN_DEBUG
+
       if(!msg->Write(wbuff)){
         LOG(WARNING) << "couldn't encode message: " << msg->ToString();
         return;

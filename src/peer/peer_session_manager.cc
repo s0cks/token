@@ -6,7 +6,7 @@
 namespace Token{
   static std::mutex mutex_;
   static std::condition_variable cond_;
-  static std::unique_ptr<PeerSessionThread>* threads_;
+  static PeerSessionThread** threads_;
 
   static std::mutex requests_mutex_;
   static std::condition_variable requests_cond_;
@@ -20,15 +20,13 @@ namespace Token{
 
   bool PeerSessionManager::Initialize(){
     LOCK_GUARD;
-
-    int32_t nworkers = BlockChainConfiguration::GetMaxNumberOfPeers();
-    threads_ = new std::unique_ptr<PeerSessionThread>[nworkers];
-    for(int32_t idx = 0;
-        idx < nworkers;
-        idx++){
-
-      threads_[idx] = std::unique_ptr<PeerSessionThread>(new PeerSessionThread(idx));
-      threads_[idx]->Start();
+    threads_ = (PeerSessionThread**)malloc(sizeof(PeerSessionThread*)*FLAGS_num_peers);
+    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
+      threads_[idx] = new PeerSessionThread(idx);
+      if(!threads_[idx]->Start()){
+        LOG(WARNING) << "couldn't start peer session #" << idx;
+        return false;
+      }
     }
 
     PeerList peers;
@@ -43,10 +41,9 @@ namespace Token{
   }
 
   bool PeerSessionManager::Shutdown(){
-    int32_t nworkers = BlockChainConfiguration::GetMaxNumberOfPeers();
     LOCK_GUARD;
-    for(int32_t idx = 0; idx < nworkers; idx++){
-      std::unique_ptr<PeerSessionThread>& thread = threads_[idx];
+    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
+      PeerSessionThread* thread = threads_[idx];
       if(thread->IsRunning()){
         std::shared_ptr<PeerSession> session = thread->GetCurrentSession();
         session->Disconnect();
@@ -62,11 +59,9 @@ namespace Token{
   }
 
   std::shared_ptr<PeerSession> PeerSessionManager::GetSession(const NodeAddress& address){
-    int32_t nworkers = BlockChainConfiguration::GetMaxNumberOfPeers();
-
     LOCK_GUARD;
-    for(int32_t idx = 0; idx < nworkers; idx++){
-      std::unique_ptr<PeerSessionThread>& thread = threads_[idx];
+    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
+      PeerSessionThread* thread = threads_[idx];
       if(thread->IsRunning()){
         std::shared_ptr<PeerSession> session = thread->GetCurrentSession();
         if(session->GetAddress() == address)
@@ -77,11 +72,9 @@ namespace Token{
   }
 
   std::shared_ptr<PeerSession> PeerSessionManager::GetSession(const UUID& uuid){
-    int32_t nworkers = BlockChainConfiguration::GetMaxNumberOfPeers();
-
     LOCK_GUARD;
-    for(int32_t idx = 0; idx < nworkers; idx++){
-      std::unique_ptr<PeerSessionThread>& thread = threads_[idx];
+    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
+      PeerSessionThread* thread = threads_[idx];
       if(thread->IsRunning()){
         std::shared_ptr<PeerSession> session = thread->GetCurrentSession();
         if(session->GetID() == uuid)
@@ -92,22 +85,21 @@ namespace Token{
   }
 
   bool PeerSessionManager::GetConnectedPeers(std::set<UUID>& peers){
-    int32_t nworkers = BlockChainConfiguration::GetMaxNumberOfPeers();
     LOCK_GUARD;
-    for(int32_t idx = 0; idx < nworkers; idx++){
-      if(threads_[idx] && threads_[idx]->HasSession())
-        peers.insert(threads_[idx]->GetCurrentSession()->GetID());
+    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
+      PeerSessionThread* thread = threads_[idx];
+      if(thread && thread->HasSession())
+        peers.insert(thread->GetCurrentSession()->GetID());
     }
     return true;
   }
 
   int32_t PeerSessionManager::GetNumberOfConnectedPeers(){
-    int32_t nworkers = BlockChainConfiguration::GetMaxNumberOfPeers();
     int32_t count = 0;
-
     LOCK_GUARD;
-    for(int32_t idx = 0; idx < nworkers; idx++){
-      if(threads_[idx]->IsRunning())
+    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
+      PeerSessionThread* thread = threads_[idx];
+      if(thread->IsRunning())
         count++;
     }
     return count;
@@ -120,10 +112,9 @@ namespace Token{
   }
 
   bool PeerSessionManager::IsConnectedTo(const UUID& uuid){
-    int32_t nworkers = BlockChainConfiguration::GetMaxNumberOfPeers();
     LOCK_GUARD;
-    for(int32_t idx = 0; idx < nworkers; idx++){
-      std::unique_ptr<PeerSessionThread>& thread = threads_[idx];
+    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
+      PeerSessionThread* thread = threads_[idx];
       if(thread->IsRunning()){
         std::shared_ptr<PeerSession> session = thread->GetCurrentSession();
         if(session->GetID() == uuid)
@@ -134,10 +125,9 @@ namespace Token{
   }
 
   bool PeerSessionManager::IsConnectedTo(const NodeAddress& address){
-    int32_t nworkers = BlockChainConfiguration::GetMaxNumberOfPeers();
     LOCK_GUARD;
-    for(int32_t idx = 0; idx < nworkers; idx++){
-      std::unique_ptr<PeerSessionThread>& thread = threads_[idx];
+    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
+      PeerSessionThread* thread = threads_[idx];
       if(thread->IsRunning()){
         std::shared_ptr<PeerSession> session = thread->GetCurrentSession();
         if(session->GetAddress() == address)
@@ -148,28 +138,35 @@ namespace Token{
   }
 
   void PeerSessionManager::BroadcastPrepare(){
-    int32_t nworkers = BlockChainConfiguration::GetMaxNumberOfPeers();
     LOCK_GUARD;
-    for(int32_t idx = 0; idx < nworkers; idx++){
-      std::unique_ptr<PeerSessionThread>& thread = threads_[idx];
+    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
+      PeerSessionThread* thread = threads_[idx];
       if(thread->IsRunning())
         thread->GetCurrentSession()->SendPrepare();
     }
   }
 
   void PeerSessionManager::BroadcastCommit(){
-    int32_t nworkers = BlockChainConfiguration::GetMaxNumberOfPeers();
     LOCK_GUARD;
-    for(int32_t idx = 0; idx < nworkers; idx++){
-      std::unique_ptr<PeerSessionThread>& thread = threads_[idx];
+    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
+      PeerSessionThread* thread = threads_[idx];
       if(thread->IsRunning())
         thread->GetCurrentSession()->SendCommit();
     }
   }
 
+  void PeerSessionManager::BroadcastDiscoveredBlock(){
+    LOCK_GUARD;
+    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
+      PeerSessionThread* thread = threads_[idx];
+      if(thread->IsRunning())
+        thread->GetCurrentSession()->SendDiscoveredBlockHash();
+    }
+  }
+
   bool PeerSessionManager::ScheduleRequest(const NodeAddress& next, int16_t attempts){
     std::unique_lock<std::mutex> lock(requests_mutex_);
-    if((int32_t) requests_.size() == BlockChainConfiguration::GetMaxNumberOfPeers())
+    if((int32_t) requests_.size() == FLAGS_num_peers)
       return false;
     requests_.push(ConnectRequest(next, attempts));
     requests_cond_.notify_one();
@@ -178,7 +175,7 @@ namespace Token{
 
   bool PeerSessionManager::RescheduleRequest(const ConnectRequest& request){
     std::unique_lock<std::mutex> lock(requests_mutex_);
-    if((int32_t) requests_.size() == BlockChainConfiguration::GetMaxNumberOfPeers())
+    if((int32_t) requests_.size() == FLAGS_num_peers)
       return false;
     requests_.push(ConnectRequest(request, true));
     requests_cond_.notify_one();

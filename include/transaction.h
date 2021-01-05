@@ -5,12 +5,14 @@
 #include "hash.h"
 #include "object.h"
 #include "utils/buffer.h"
+#include "utils/file_reader.h"
+#include "utils/file_writer.h"
 #include "unclaimed_transaction.h"
 
 namespace Token{
   typedef std::shared_ptr<Transaction> TransactionPtr;
 
-  class Input : public BinaryObject{
+  class Input : public SerializableObject{
     friend class Transaction;
    public:
     static const int64_t kSize = Hash::kSize + sizeof(int64_t) + User::kSize;
@@ -20,29 +22,37 @@ namespace Token{
     User user_;//TODO: remove field
    public:
     Input(const Hash& tx_hash, int64_t index, const User& user):
-      BinaryObject(),
+      SerializableObject(),
       hash_(tx_hash),
       index_(index),
       user_(user){}
     Input(const Hash& tx_hash, int64_t index, const std::string& user):
       Input(tx_hash, index, User(user)){}
     Input(const BufferPtr& buff):
-      Input(buff->GetHash(), buff->GetInt(), buff->GetUser()){}
+      Input(buff->GetHash(), buff->GetLong(), buff->GetUser()){}
+    Input(BinaryFileReader* reader):
+      Input(reader->ReadHash(), reader->ReadLong(), reader->ReadUser()){}
     ~Input(){}
 
     int64_t GetOutputIndex() const{
       return index_;
     }
 
+    Hash& GetTransactionHash(){
+      return hash_;
+    }
+
     Hash GetTransactionHash() const{
       return hash_;
+    }
+
+    User& GetUser(){
+      return user_;
     }
 
     User GetUser() const{
       return user_;
     }
-
-    UnclaimedTransactionPtr GetUnclaimedTransaction() const; //TODO: remove
 
     int64_t GetBufferSize() const{
       return Input::kSize;
@@ -55,10 +65,21 @@ namespace Token{
       return true;
     }
 
+    bool Write(BinaryFileWriter* writer) const{
+      writer->WriteHash(hash_);
+      writer->WriteLong(index_);
+      writer->WriteUser(user_);
+      return true;
+    }
+
     std::string ToString() const{
       std::stringstream stream;
       stream << "Input(" << GetTransactionHash() << "[" << GetOutputIndex() << "]" << ", " << GetUser() << ")";
       return stream.str();
+    }
+
+    friend std::ostream& operator<<(std::ostream& stream, const Input& input){
+      return stream << input.ToString();
     }
 
     void operator=(const Input& other){
@@ -86,7 +107,7 @@ namespace Token{
     }
   };
 
-  class Output : public BinaryObject{
+  class Output : public SerializableObject{
     friend class Transaction;
    public:
     static const int64_t kSize = User::kSize + Product::kSize;
@@ -95,13 +116,21 @@ namespace Token{
     Product product_;
    public:
     Output(const User& user, const Product& product):
-      BinaryObject(),
+      SerializableObject(),
       user_(user),
       product_(product){}
+    Output(const std::string& user, const Product& product):
+      Output(User(user), product){}
     Output(const std::string& user, const std::string& product):
       Output(User(user), Product(product)){}
     Output(const BufferPtr& buff):
-      Output(buff->GetUser(), buff->GetProduct()){}
+      SerializableObject(),
+      user_(buff->GetUser()),
+      product_(buff->GetProduct()){}
+    Output(BinaryFileReader* reader):
+      SerializableObject(),
+      user_(reader->ReadUser()),
+      product_(reader->ReadProduct()){}
     ~Output(){}
 
     User GetUser() const{
@@ -122,10 +151,20 @@ namespace Token{
       return true;
     }
 
+    bool Write(BinaryFileWriter* writer) const{
+      writer->WriteUser(user_);
+      writer->WriteProduct(product_);
+      return true;
+    }
+
     std::string ToString() const{
       std::stringstream stream;
       stream << "Output(" << GetUser() << "; " << GetProduct() << ")";
       return stream.str();
+    }
+
+    friend std::ostream& operator<<(std::ostream& stream, const Output& output){
+      return stream << output.ToString();
     }
 
     void operator=(const Output& other){
@@ -162,29 +201,17 @@ namespace Token{
     struct DefaultComparator{
       bool operator()(const TransactionPtr& a, const TransactionPtr& b){
         if(a->timestamp_ < b->timestamp_){
-          return -1;
+          return true;
         } else if(a->timestamp_ > b->timestamp_){
-          return +1;
+          return false;
         }
-
-        if(a->index_ < b->index_){
-          return -1;
-        } else if(a->index_ > b->index_){
-          return +1;
-        }
-        return 0;
+        return a->index_ < b->index_;
       }
     };
 
     struct TimestampComparator{
       bool operator()(const TransactionPtr& a, const TransactionPtr& b){
         return a->timestamp_ < b->timestamp_;
-      }
-    };
-
-    struct IndexComparator{
-      bool operator()(const TransactionPtr& a, const TransactionPtr& b){
-        return a->index_ < b->index_;
       }
     };
 
@@ -197,10 +224,10 @@ namespace Token{
     OutputList outputs_;
     std::string signature_;
    public:
-    Transaction(int64_t index,
+    Transaction(const Timestamp& timestamp,
+                const int64_t& index,
                 const InputList& inputs,
-                const OutputList& outputs,
-                Timestamp timestamp = GetCurrentTimestamp()):
+                const OutputList& outputs):
       BinaryObject(),
       timestamp_(timestamp),
       index_(index),
@@ -304,6 +331,26 @@ namespace Token{
       return true;
     }
 
+    bool Write(BinaryFileWriter* writer) const{
+      writer->WriteLong(timestamp_);
+      writer->WriteLong(index_);
+      writer->WriteList(inputs_);
+      writer->WriteList(outputs_);
+      return true;
+    }
+
+    bool Equals(const TransactionPtr& tx) const{
+      if(timestamp_ != tx->timestamp_)
+        return false;
+      if(index_ != tx->index_)
+        return false;
+      if(!std::equal(inputs_.begin(), inputs_.end(), tx->inputs_.begin(), [](const Input& a, const Input& b){ return a == b; }))
+        return false;
+      if(!std::equal(outputs_.begin(), outputs_.end(), tx->outputs_.begin(), [](const Output& a, const Output& b){ return a == b; }))
+        return false;
+      return true;
+    }
+
     bool Sign();
     bool VisitInputs(TransactionInputVisitor* vis) const;
     bool VisitOutputs(TransactionOutputVisitor* vis) const;
@@ -315,57 +362,16 @@ namespace Token{
       return stream.str();
     }
 
-    void operator=(const Transaction& other){
-      timestamp_ = other.timestamp_;
-      index_ = other.index_;
-      inputs_ = other.inputs_;
-      outputs_ = other.outputs_;
-      //TODO: copy transaction signature
-    }
-
-    bool operator==(const Transaction& other){
-      return timestamp_ == other.timestamp_
-             && index_ == other.index_
-             && inputs_ == other.inputs_
-             && outputs_ == other.outputs_;
-      //TODO: compare transaction signature
-    }
-
-    bool operator!=(const Transaction& other){
-      return timestamp_ != other.timestamp_
-             && index_ != other.index_
-             && inputs_ != other.inputs_
-             && outputs_ != other.outputs_;
-      //TODO: compare transaction signature
-    }
-
-    static TransactionPtr NewInstance(int64_t index,
+    static TransactionPtr NewInstance(const int64_t& index,
                                       const InputList& inputs,
                                       const OutputList& outputs,
-                                      const Timestamp& timestamp = GetCurrentTimestamp()){
-      return std::make_shared<Transaction>(index, inputs, outputs, timestamp);
-    }
-
-    static TransactionPtr NewInstance(const BufferPtr& buff){
-      Timestamp timestamp = buff->GetLong();
-      int64_t index = buff->GetLong();
-
-      InputList inputs;
-
-      int64_t idx;
-      int64_t num_inputs = buff->GetLong();
-      for(idx = 0; idx < num_inputs; idx++)
-        inputs.push_back(Input(buff));
-
-      OutputList outputs;
-      int64_t num_outputs = buff->GetLong();
-      for(idx = 0; idx < num_outputs; idx++)
-        outputs.push_back(Output(buff));
-      return std::make_shared<Transaction>(index, inputs, outputs, timestamp);
-    }
+                                      const Timestamp& timestamp = GetCurrentTimestamp());
+    static TransactionPtr NewInstance(const BufferPtr& buff);
+    static TransactionPtr NewInstance(BinaryFileReader* reader);
   };
 
-  typedef std::set<TransactionPtr, Transaction::DefaultComparator> TransactionList;
+  typedef std::vector<TransactionPtr> TransactionList;
+  typedef std::set<TransactionPtr, Transaction::DefaultComparator> TransactionSet;
 
   class TransactionInputVisitor{
    protected:

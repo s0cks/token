@@ -25,20 +25,20 @@ namespace Token{
     }
     UUID(const BufferPtr& buff):
       uuid_(){
-      if(!buff->GetBytes((uint8_t*) uuid_, kSize))
+      if(!buff->GetBytes((uint8_t*)uuid_, kSize))
         LOG(WARNING) << "cannot read uuid from bytes";
     }
     ~UUID() = default;
 
     bool Write(const BufferPtr& buff) const{
-      buff->PutBytes((uint8_t*) uuid_, kSize);
+      buff->PutBytes((uint8_t*)uuid_, kSize);
       return true;
     }
 
     std::string ToString() const{
       char uuid_str[37];
       uuid_unparse(uuid_, uuid_str);
-      return std::string(uuid_str);
+      return std::string(uuid_str, 37);
     }
 
     void operator=(const UUID& other){

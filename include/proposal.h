@@ -111,6 +111,9 @@ namespace Token{
     V(Accepted)                     \
     V(Rejected)
 
+  class Proposal;
+  typedef std::shared_ptr<Proposal> ProposalPtr;
+
   class PeerSession;
   class PrepareMessage;
   class Proposal : public Object{
@@ -224,6 +227,10 @@ namespace Token{
       return raw_.Encode(buff);
     }
 
+    bool Equals(const ProposalPtr& proposal) const{
+      return raw_ == proposal->raw_;
+    }
+
     std::string ToString() const{
       std::stringstream ss;
       ss << "Proposal(#" << GetHeight() << ")";
@@ -256,8 +263,6 @@ namespace Token{
     FOR_EACH_PROPOSAL_RESULT(DEFINE_RESULT_CHECK)
 #undef DEFINE_RESULT_CHECK
   };
-
-  typedef std::shared_ptr<Proposal> ProposalPtr;
 }
 
 #endif //TOKEN_PROPOSAL_H

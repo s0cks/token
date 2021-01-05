@@ -1,4 +1,7 @@
 #include "test_suite.h"
+
+#ifdef TOKEN_ENABE_COMPRESSION
+
 #include "utils/compression.h"
 
 namespace Token{
@@ -15,3 +18,5 @@ namespace Token{
     ASSERT_EQ(buff3->GetString(11), "Hello World");
   }
 }
+
+#endif//TOKEN_ENABLE_COMPRESSION

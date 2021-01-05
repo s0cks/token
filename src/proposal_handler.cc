@@ -17,7 +17,7 @@ namespace Token{
       return false;
     }
 
-    if(!ObjectPool::RemoveObject(hash)){
+    if(!ObjectPool::RemoveBlock(hash)){
       LOG(WARNING) << "couldn't remove block " << hash << " from pool.";
       return false;
     }
@@ -65,7 +65,7 @@ namespace Token{
         GetProposal()->SetPhase(phase);
         return true;
       case Proposal::kQuorumPhase:
-        if(!(GetProposal()->IsVoting() || GetProposal()->IsCommit())){
+        if(GetProposal()->IsQuorum()){ //TODO fix flow logic?
           CANNOT_TRANSITION_TO(GetProposal()->GetPhase(), phase);
           return false;
         }

@@ -88,6 +88,7 @@ namespace Token{
     static std::shared_ptr<PeerSession> GetSession(const NodeAddress& address);
     static void BroadcastPrepare();
     static void BroadcastCommit();
+    static void BroadcastDiscoveredBlock();
   };
 }
 

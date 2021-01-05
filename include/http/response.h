@@ -11,9 +11,6 @@ namespace Token{
 
   typedef int16_t HttpStatusCode;
 
-#define CONTENT_TYPE_TEXT_PLAIN "text/plain"
-#define CONTENT_TYPE_APPLICATION_JSON "application/json"
-
 #define STATUS_CODE_OK 200
 #define STATUS_CODE_CLIENT_ERROR 400
 #define STATUS_CODE_NOTFOUND 404
@@ -99,14 +96,13 @@ namespace Token{
     }
 
     int64_t GetContentLength() const{
-      std::string length = GetHeaderValue("Content-Length");
+      std::string length = GetHeaderValue(HTTP_HEADER_CONTENT_LENGTH);
       return atoll(length.data());
     }
 
     int64_t GetBufferSize() const{
       int64_t size = 0;
       size += GetHttpMessageHeader().size();
-      LOG(INFO) << "writing " << headers_.size() << " headers...";
       for(auto& it : headers_)
         size += GetHttpHeader(it.first, it.second).length();
       size += GetContentLength();
@@ -127,7 +123,7 @@ namespace Token{
     HttpBinaryResponse(HttpSession* session,
                        const HttpStatusCode& status_code,
                        const std::string& filename,
-                       const std::string& content_type = CONTENT_TYPE_TEXT_PLAIN):
+                       const std::string& content_type=HTTP_CONTENT_TYPE_TEXT_PLAIN):
       HttpResponse(session, status_code),
       body_(){
       std::fstream fd(filename, std::ios::in | std::ios::binary);
@@ -135,11 +131,11 @@ namespace Token{
       body_ = Buffer::NewInstance(fsize);
       if(!body_->ReadBytesFrom(fd, fsize)){
         LOG(WARNING) << "couldn't read " << fsize << " bytes from: " << filename;
-        SetHeader("Content-Length", 0);
+        SetHeader(HTTP_HEADER_CONTENT_LENGTH, 0);
       } else{
-        SetHeader("Content-Length", fsize);
+        SetHeader(HTTP_HEADER_CONTENT_LENGTH, fsize);
       }
-      SetHeader("Content-Type", content_type);
+      SetHeader(HTTP_HEADER_CONTENT_TYPE, content_type);
     }
     ~HttpBinaryResponse() = default;
 
@@ -147,7 +143,7 @@ namespace Token{
     NewInstance(HttpSession* session,
                 const HttpStatusCode& status_code,
                 const std::string& filename,
-                const std::string& content_type = CONTENT_TYPE_TEXT_PLAIN){
+                const std::string& content_type=HTTP_CONTENT_TYPE_TEXT_PLAIN){
       return std::make_shared<HttpBinaryResponse>(session, status_code, filename, content_type);
     }
   };
@@ -167,8 +163,8 @@ namespace Token{
       HttpResponse(session, status_code),
       body_(strdup(body.data())),
       length_(strlen(body.data())){
-      SetHeader("Content-Type", CONTENT_TYPE_TEXT_PLAIN);
-      SetHeader("Content-Length", body.length());
+      SetHeader(HTTP_HEADER_CONTENT_TYPE, HTTP_CONTENT_TYPE_TEXT_PLAIN);
+      SetHeader(HTTP_HEADER_CONTENT_LENGTH, body.length());
     }
     ~HttpTextResponse(){
       if(body_)
@@ -194,8 +190,8 @@ namespace Token{
     HttpJsonResponse(HttpSession* session, const HttpStatusCode& status_code, const JsonString& body):
       HttpResponse(session, status_code),
       body_(body){
-      SetHeader("Content-Type", CONTENT_TYPE_APPLICATION_JSON);
-      SetHeader("Content-Length", body.GetLength());
+      SetHeader(HTTP_HEADER_CONTENT_TYPE, HTTP_CONTENT_TYPE_APPLICATION_JSON);
+      SetHeader(HTTP_HEADER_CONTENT_LENGTH, body.GetLength());
     }
     ~HttpJsonResponse() = default;
 

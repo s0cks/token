@@ -44,7 +44,6 @@ namespace Token{
     version_.Write(buff);
     buff->PutHash(nonce_);
     node_id_.Write(buff);
-    LOG(INFO) << "writing callback: " << callback_;
     callback_.Write(buff);
     head_.Write(buff);
     return true;
@@ -75,16 +74,12 @@ namespace Token{
   }
 
   bool InventoryMessage::Encode(const BufferPtr& buff) const{
-    buff->PutLong(GetNumberOfItems());
-    for(auto& it : items_)
-      it.Encode(buff);
+    buff->PutList(items_);
     return true;
   }
 
   bool GetDataMessage::Encode(const BufferPtr& buff) const{
-    buff->PutLong(GetNumberOfItems());
-    for(auto& it : items_)
-      it.Encode(buff);
+    buff->PutList(items_);
     return true;
   }
 

@@ -2,10 +2,8 @@
 #define TOKEN_FILE_WRITER_H
 
 #include <iostream>
-#include "buffer.h"
 #include "object.h"
 #include "version.h"
-#include "object_tag.h"
 
 namespace Token{
   #define FOR_EACH_RAW_TYPE(V) \
@@ -121,11 +119,6 @@ namespace Token{
     }
     BinaryFileWriter(BinaryFileWriter* parent):
       FileWriter(parent){}
-
-    template<typename T>
-    void Write(const T& value){
-
-    }
    public:
     ~BinaryFileWriter() = default;
 
@@ -143,19 +136,51 @@ namespace Token{
       return true;
     }
 
-    bool WriteObjectTag(const ObjectTag::Type& tag){
-      ObjectTag val(tag);
-      return WriteUnsignedLong(val.data());
+    bool WriteObjectTag(const ObjectTag& tag){
+      return WriteUnsignedLong(tag.data());
     }
 
-    inline bool
-    WriteBytes(Buffer* buff){
-      return WriteBytes((uint8_t*) buff->data(), buff->GetWrittenBytes());
+    bool WriteObjectTag(const ObjectTag::Type& tag){
+      return WriteObjectTag(ObjectTag(tag));
     }
 
     template<typename T>
     inline bool WriteObject(T* value){
       return WriteObject((Object*) value);
+    }
+
+    template<class T>
+    bool WriteList(const std::vector<T>& items){
+      WriteLong((int64_t)items.size());
+      for(auto& item : items){
+        if(!item.Write(this))
+          return false;
+      }
+      return true;
+    }
+
+    template<class T, class C>
+    bool WriteSet(const std::set<T, C>& items){
+      WriteLong((int64_t)items.size());
+      for(auto& item : items){
+        if(!item->Write(this))
+          return false;
+      }
+      return true;
+    }
+  };
+
+  class BinaryObjectFileWriter : public BinaryFileWriter{
+   public:
+    BinaryObjectFileWriter(const std::string& filename):
+      BinaryFileWriter(filename){}
+    virtual ~BinaryObjectFileWriter() = default;
+
+    template<class T>
+    bool WriteObject(const std::shared_ptr<T>& val){
+      ObjectTag tag = val->tag();
+      WriteObjectTag(tag);
+      return val->Write(this);
     }
   };
 

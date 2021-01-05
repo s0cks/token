@@ -1,29 +1,18 @@
 #ifndef TOKEN_BLOCK_H
 #define TOKEN_BLOCK_H
 
-#include <json/json.h>
 #include "hash.h"
 #include "bloom.h"
 #include "transaction.h"
 #include "utils/buffer.h"
+#include "utils/file_reader.h"
+#include "utils/file_writer.h"
 
 namespace Token{
   class Block;
   typedef std::shared_ptr<Block> BlockPtr;
 
   class BlockHeader{
-   public:
-    struct TimestampComparator{
-      bool operator()(const BlockHeader& a, const BlockHeader& b){
-        return a.timestamp_ < b.timestamp_;
-      }
-    };
-
-    struct HeightComparator{
-      bool operator()(const BlockHeader& a, const BlockHeader& b){
-        return a.height_ < b.height_;
-      }
-    };
    private:
     Timestamp timestamp_;
     int64_t height_;
@@ -125,47 +114,20 @@ namespace Token{
   };
 
   class BlockVisitor;
-  class Block : public BinaryObject{
+  class Block : public BinaryObject, public std::enable_shared_from_this<Block>{
     //TODO:
     // - validation logic
     friend class BlockHeader;
     friend class BlockChain;
     friend class BlockMessage;
    public:
-    static const int64_t kMaxTransactionsForBlock = 40000;
-    static const int64_t kNumberOfGenesisOutputs = 1000; // TODO: changeme
-
-    struct TimestampComparator{
-      bool operator()(Block* a, Block* b){
-        return a->GetTimestamp() < b->GetTimestamp();
-      }
-    };
-
-    struct HeightComparator{
-      bool operator()(Block* a, Block* b){
-        if(!a) return -1;
-        if(!b) return 1;
-        return a->GetHeight() < b->GetHeight();
-      }
-    };
-
-    enum RawBlockLayout{
-      kTimestampOffset = 0,
-      kTimestampSize = 64,
-
-      kHeightOffset = kTimestampSize + kTimestampOffset,
-      kHeightSize = 64,
-
-      kPreviousHashOffset = kHeightOffset + kHeightSize,
-      kPreviousHashSize = Hash::kSize,
-
-      kTransactionListOffset = kPreviousHashOffset + kPreviousHashSize,
-    };
+    static const int64_t kMaxTransactionsForBlock = 2;
+    static const int64_t kNumberOfGenesisOutputs = 10; // TODO: changeme
    private:
     Timestamp timestamp_;
     int64_t height_;
     Hash previous_hash_;
-    TransactionList transactions_;
+    TransactionSet transactions_;
     BloomFilter tx_bloom_; // transient
    public:
     Block():
@@ -177,7 +139,7 @@ namespace Token{
       tx_bloom_(){}
     Block(int64_t height,
           const Hash& phash,
-          const TransactionList& transactions,
+          const TransactionSet& transactions,
           Timestamp timestamp = GetCurrentTimestamp()):
       BinaryObject(),
       timestamp_(timestamp),
@@ -190,9 +152,9 @@ namespace Token{
           tx_bloom_.Put(it->GetHash());
       }
     }
-    Block(const BlockPtr& parent, const TransactionList& transactions, Timestamp timestamp = GetCurrentTimestamp()):
+    Block(const BlockPtr& parent, const TransactionSet& transactions, Timestamp timestamp = GetCurrentTimestamp()):
       Block(parent->GetHeight() + 1, parent->GetHash(), transactions, timestamp){}
-    Block(const BlockHeader& parent, const TransactionList& transactions, Timestamp timestamp = GetCurrentTimestamp()):
+    Block(const BlockHeader& parent, const TransactionSet& transactions, Timestamp timestamp = GetCurrentTimestamp()):
       Block(parent.GetHeight() + 1, parent.GetHash(), transactions, timestamp){}
     ~Block() = default;
 
@@ -216,32 +178,36 @@ namespace Token{
       return transactions_.size();
     }
 
-    TransactionList& transactions(){
+    TransactionSet& transactions(){
       return transactions_;
     }
 
-    TransactionList transactions() const{
+    TransactionSet transactions() const{
       return transactions_;
     }
 
-    TransactionList::iterator transactions_begin(){
+    TransactionSet::iterator transactions_begin(){
       return transactions_.begin();
     }
 
-    TransactionList::const_iterator transactions_begin() const{
+    TransactionSet::const_iterator transactions_begin() const{
       return transactions_.begin();
     }
 
-    TransactionList::iterator transactions_end(){
+    TransactionSet::iterator transactions_end(){
       return transactions_.end();
     }
 
-    TransactionList::const_iterator transactions_end() const{
+    TransactionSet::const_iterator transactions_end() const{
       return transactions_.end();
     }
 
     bool IsGenesis(){
       return GetHeight() == 0;
+    }
+
+    ObjectTag tag() const{
+      return ObjectTag(ObjectTag::kBlock);
     }
 
     std::string ToString() const{
@@ -262,16 +228,41 @@ namespace Token{
     }
 
     bool Write(const BufferPtr& buff) const{
-      buff->PutLong(timestamp_);
-      buff->PutLong(height_);
-      buff->PutHash(previous_hash_);
-      buff->PutSet(transactions_);
+      return buff->PutLong(timestamp_)
+          && buff->PutLong(height_)
+          && buff->PutHash(previous_hash_)
+          && buff->PutSet(transactions_);
+    }
+
+    bool Write(BinaryFileWriter* writer) const{
+      writer->WriteLong(timestamp_);
+      writer->WriteLong(height_);
+      writer->WriteHash(previous_hash_);
+      writer->WriteSet(transactions_);
       return true;
     }
+
+    bool Equals(const BlockPtr& blk) const{
+      if(timestamp_ != blk->timestamp_)
+        return false;
+      if(height_ != blk->height_)
+        return false;
+      if(previous_hash_ != blk->previous_hash_)
+        return false;
+      if(transactions_.size() != blk->transactions_.size())
+        return false;
+      return std::equal(transactions_.begin(),
+                        transactions_.end(),
+                        blk->transactions_.begin(),
+                        [](const TransactionPtr& a, const TransactionPtr& b){
+        return a->Equals(b);
+      });
+   }
 
     Hash GetMerkleRoot() const;
     bool Accept(BlockVisitor* vis) const;
     bool Contains(const Hash& hash) const;
+    bool WriteToFile(const std::string& filename) const;
 
     void operator=(const Block& other){
       timestamp_ = other.timestamp_;
@@ -303,17 +294,32 @@ namespace Token{
 
       int64_t idx;
       int64_t num_transactions = buff->GetLong();
-      TransactionList transactions;
+      TransactionSet transactions;
       for(idx = 0; idx < num_transactions; idx++)
         transactions.insert(Transaction::NewInstance(buff));
 
       return std::make_shared<Block>(height, previous_hash, transactions, timestamp);
     }
 
-    static inline BlockPtr
-    NewInstance(const BlockPtr& parent, const TransactionList& txs, const Timestamp& timestamp = GetCurrentTimestamp()){
-      return BlockPtr(new Block(parent, txs, timestamp));
+    static BlockPtr NewInstance(BinaryFileReader* reader){
+      Timestamp timestamp = reader->ReadLong();
+      int64_t height = reader->ReadLong();
+      Hash phash = reader->ReadHash();
+
+      int64_t idx;
+      int64_t num_transactions = reader->ReadLong();
+      TransactionSet transactions;
+      for(idx = 0; idx < num_transactions; idx++)
+        transactions.insert(Transaction::NewInstance(reader));
+      return std::make_shared<Block>(height, phash, transactions, timestamp);
     }
+
+    static inline BlockPtr
+    NewInstance(const BlockPtr& parent, const TransactionSet& txs, const Timestamp& timestamp = GetCurrentTimestamp()){
+      return std::make_shared<Block>(parent, txs, timestamp);
+    }
+
+    static BlockPtr FromFile(const std::string& filename);
   };
 
   class BlockVisitor{
@@ -324,6 +330,21 @@ namespace Token{
     virtual bool VisitStart(){ return true; }
     virtual bool Visit(const TransactionPtr& tx) = 0;
     virtual bool VisitEnd(){ return true; }
+  };
+
+  class BlockFileReader : BinaryObjectFileReader{
+   public:
+    BlockFileReader(const std::string& filename):
+      BinaryObjectFileReader(filename, ObjectTag::kBlock){}
+    ~BlockFileReader() = default;
+
+    BlockPtr ReadBlock(){
+      if(!ValidateTag()){
+        LOG(WARNING) << "couldn't validate block tag.";
+        return BlockPtr(nullptr);
+      }
+      return Block::NewInstance(this);
+    }
   };
 }
 

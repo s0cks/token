@@ -4,6 +4,12 @@
 #include <unordered_map>
 
 namespace Token{
+#define HTTP_HEADER_CONTENT_TYPE "Content-Type"
+#define HTTP_HEADER_CONTENT_LENGTH "Content-Length"
+
+#define HTTP_CONTENT_TYPE_TEXT_PLAIN "text/plain"
+#define HTTP_CONTENT_TYPE_APPLICATION_JSON "application/json"
+
   typedef std::unordered_map<std::string, std::string> HttpHeadersMap;
 }
 

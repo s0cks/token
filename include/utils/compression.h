@@ -1,5 +1,5 @@
-#ifndef TOKEN_INCLUDE_UTILS_COMPRESSOR_H
-#define TOKEN_INCLUDE_UTILS_COMPRESSOR_H
+#ifndef TOKEN_UTILS_COMPRESSION_H
+#define TOKEN_UTILS_COMPRESSION_H
 
 #include <zlib.h>
 #include "utils/buffer.h"
@@ -42,4 +42,4 @@ namespace Token{
   }
 }
 
-#endif //TOKEN_INCLUDE_UTILS_COMPRESSOR_H
+#endif //TOKEN_UTILS_COMPRESSION_H

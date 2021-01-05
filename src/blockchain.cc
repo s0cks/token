@@ -7,7 +7,7 @@
 #include "keychain.h"
 #include "blockchain.h"
 #include "job/scheduler.h"
-#include "job/process_block.h"
+#include "job/processor.h"
 #include "unclaimed_transaction.h"
 #include "utils/timeline.h"
 
@@ -67,8 +67,9 @@ namespace Token{
 
     leveldb::Options options;
     options.create_if_missing = true;
-    if(!leveldb::DB::Open(options, GetIndexFilename(), &index_).ok()){
-      LOG(WARNING) << "couldn't initialize block chain index in file: " << GetIndexFilename();
+    leveldb::Status status;
+    if(!(status = leveldb::DB::Open(options, GetIndexFilename(), &index_)).ok()){
+      LOG(WARNING) << "couldn't initialize the block chain index in " << GetIndexFilename() << ": " << status.ToString();
       return false;
     }
 
@@ -134,17 +135,18 @@ namespace Token{
       return false;
     }
 
-    int64_t size = blk->GetBufferSize();
-    BufferPtr buff = Buffer::NewInstance(size);
-    blk->Write(buff);
+    std::string filename = GetNewBlockFilename(blk);
+    if(!blk->WriteToFile(filename)){
+      LOG(WARNING) << "cannot write block data to file: " << filename;
+      return false;
+    }
 
     leveldb::Slice key((char*) hash.data(), Hash::GetSize());
-    leveldb::Slice value(buff->data(), size);
 
     leveldb::WriteOptions opts;
     opts.sync = true;
     leveldb::Status status;
-    if(!(status = GetIndex()->Put(opts, key, value)).ok()){
+    if(!(status = GetIndex()->Put(opts, key, filename)).ok()){
       LOG(WARNING) << "cannot index object " << hash << ": " << status.ToString();
       return false;
     }
@@ -155,17 +157,15 @@ namespace Token{
 
   BlockPtr BlockChain::GetBlock(const Hash& hash){
     leveldb::Slice key((char*) hash.data(), Hash::GetSize());
-    std::string value;
+    std::string filename;
 
     leveldb::ReadOptions opts;
     leveldb::Status status;
-    if(!(status = GetIndex()->Get(opts, key, &value)).ok()){
+    if(!(status = GetIndex()->Get(opts, key, &filename)).ok()){
       LOG(WARNING) << "cannot get " << hash << ": " << status.ToString();
       return BlockPtr(nullptr);
     }
-
-    BufferPtr buff = Buffer::From(value);
-    return Block::NewInstance(buff);
+    return Block::FromFile(filename);
   }
 
   BlockPtr BlockChain::GetBlock(int64_t height){
@@ -229,7 +229,6 @@ namespace Token{
     LOCK_GUARD;
     leveldb::Status status = GetIndex()->Get(options, key, &filename);
     if(!status.ok()){
-      LOG(WARNING) << "couldn't find block " << hash << ": " << status.ToString();
       return false;
     }
     return true;

@@ -197,7 +197,7 @@ namespace Token{
 
   void ObjectPoolController::HandleGetBlock(HttpSession* session, const HttpRequestPtr& request){
     Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
-    if(!ObjectPool::HasObject(hash))
+    if(!ObjectPool::HasBlock(hash))
       return SendNotFound(session, hash);
     BlockPtr blk = ObjectPool::GetBlock(hash);
     SendJson(session, blk);
@@ -209,7 +209,7 @@ namespace Token{
 
   void ObjectPoolController::HandleGetTransaction(HttpSession* session, const HttpRequestPtr& request){
     Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
-    if(!ObjectPool::HasObject(hash))
+    if(!ObjectPool::HasTransaction(hash))
       return SendNotFound(session, hash);
     TransactionPtr tx = ObjectPool::GetTransaction(hash);
     SendJson(session, tx);
@@ -230,21 +230,21 @@ namespace Token{
   void ObjectPoolController::HandleGetUnclaimedTransactions(HttpSession* session, const HttpRequestPtr& request){
     JsonString body;
     if(!ObjectPool::GetUnclaimedTransactions(body))
-      return SendInternalServerError(session, "Cannot Get Unclaimed Transactions");
+      return SendInternalServerError(session, "Cannot GetObject Unclaimed Transactions");
     HttpResponsePtr resp = HttpJsonResponse::NewInstance(session, STATUS_CODE_OK, body);
     session->Send(resp);
   }
 
   void ObjectPoolController::HandleGetUserUnclaimedTransactions(HttpSession* session, const HttpRequestPtr& request){
-//    std::string user = request->GetParameterValue("user");
-//    JsonString json;
-//    if(!ObjectPool::GetUnclaimedTransactionsFor(user, json)){
-//      std::stringstream ss;
-//      ss << "Cannot get unclaimed transactions for: " << user;
-//      return SendNotFound(session, ss);
-//    }
-//    SendJson(session, json);
-    return SendNotSupported(session, "Not Implemented.");
+    std::string user = request->GetParameterValue("user");
+    JsonString json;
+    if(!ObjectPool::GetUnclaimedTransactionsFor(user, json)){
+      std::stringstream ss;
+      ss << "Cannot get unclaimed transactions for: " << user;
+      return SendNotFound(session, ss);
+    }
+    HttpResponsePtr resp = HttpJsonResponse::NewInstance(session, STATUS_CODE_OK, json);
+    session->Send(resp);
   }
 }
 

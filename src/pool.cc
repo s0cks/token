@@ -2,6 +2,7 @@
 #include <glog/logging.h>
 #include <condition_variable>
 #include "pool.h"
+#include "utils/kvstore.h"
 
 namespace Token{
   static std::mutex mutex_;
@@ -14,6 +15,7 @@ namespace Token{
 #define LOCK std::unique_lock<std::mutex> lock(mutex_)
 #define UNLOCK lock.unlock()
 #define WAIT cond_.wait(lock)
+#define WAIT_TIMED(Timeout) cond_.wait_for(lock, std::chrono::milliseconds((Timeout)))
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
 
@@ -84,25 +86,7 @@ namespace Token{
     SIGNAL_ALL;
   }
 
-  class BlockChainComparator : public leveldb::Comparator{
-   public:
-    int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const{
-      Hash h1((uint8_t*) a.data());
-      Hash h2((uint8_t*) b.data());
-      if(h1 < h2)
-        return -1;
-      else if(h1 > h2)
-        return +1;
-      return 0;
-    }
 
-    const char* Name() const{
-      return "ObjectPoolComparator";
-    }
-
-    void FindShortestSeparator(std::string* str, const leveldb::Slice& slice) const{}
-    void FindShortSuccessor(std::string* str) const{}
-  };
 
   bool ObjectPool::Initialize(){
     if(IsInitialized()){
@@ -120,7 +104,7 @@ namespace Token{
     }
 
     leveldb::Options options;
-    options.comparator = new BlockChainComparator();
+    options.comparator = new ObjectHashKey::Comparator();
     options.create_if_missing = true;
 
     leveldb::Status status;
@@ -134,126 +118,72 @@ namespace Token{
     return true;
   }
 
-  bool ObjectPool::HasObject(const Hash& hash){
-    leveldb::ReadOptions readOpts;
-    std::string key = hash.HexString();
-    std::string filename;
-    return GetIndex()->Get(readOpts, key, &filename).ok();
-  }
+  bool ObjectPool::WaitForBlock(const Hash& hash, const int64_t timeout_ms){
+    LOG(INFO) << "waiting " << timeout_ms << "ms for: " << hash;
 
-  bool ObjectPool::HasObjectByType(const Hash& hash, const ObjectTag::Type& type){
-    leveldb::ReadOptions readOpts;
-    std::string key = hash.HexString();
-    std::string filename;
-
-    leveldb::Status status;
-    if((status = GetIndex()->Get(readOpts, key, &filename)).IsNotFound())
-      return false;
-    return false; //TODO: fixme
-  }
-
-  bool ObjectPool::WaitForObject(const Hash& hash){
     LOCK;
-    while(!HasObject(hash)) WAIT;
+    WAIT_TIMED(timeout_ms);
     UNLOCK;
+
+    if(!HasBlock(hash)){
+      LOG(WARNING) << hash << " wasn't resolved before timeout.";
+      return false;
+    }
     return true;
   }
 
-  bool ObjectPool::RemoveObject(const Hash& hash){
-    if(!HasObject(hash)){
-      LOG(WARNING) << "cannot remove non-existent object " << hash << " from pool.";
-      return false;
-    }
-
-    leveldb::WriteOptions writeOpts;
-    writeOpts.sync = true;
-
-    std::string key = hash.HexString();
-    std::string filename = GetDataFilename(hash);
-
-    leveldb::Status status;
-    if(!(status = GetIndex()->Delete(writeOpts, key)).ok()){
-      LOG(WARNING) << "couldn't remove object " << hash << " from pool: " << status.ToString();
-      SetStatus(ObjectPool::kWarning);
-      return false;
-    }
-
-    if(!DeleteFile(filename)){
-      LOG(WARNING) << "couldn't remove object pool file: " << filename;
-      SetStatus(ObjectPool::kWarning);
-      return false;
-    }
-
-    LOG(INFO) << "remove object " << hash << " from pool.";
-    return true;
-  }
-
-  leveldb::Status ObjectPool::IndexObject(const Hash& hash, const std::string& filename){
-    leveldb::WriteOptions writeOpts;
-    writeOpts.sync = true;
-    return GetIndex()->Put(writeOpts, hash.HexString(), filename);
-  }
-
-  bool ObjectPool::PutObject(const Hash& hash, const BlockPtr& val){
-    if(HasObject(hash)){
+  bool ObjectPool::PutBlock(const Hash& hash, const BlockPtr& val){
+    if(HasBlock(hash)){
       LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash;
       SetStatus(ObjectPool::kWarning);
       return false;
     }
 
-    ObjectPoolKey pkey(ObjectTag::kBlock, hash);
-    BufferPtr kdata = Buffer::NewInstance(ObjectPoolKey::kSize);
-    pkey.Write(kdata);
-
-    int64_t vsize = val->GetBufferSize();
-    BufferPtr vdata = Buffer::NewInstance(vsize);
-    val->Write(vdata);
-
-    leveldb::Slice key(kdata->data(), ObjectPoolKey::kSize);
-    leveldb::Slice value(vdata->data(), vsize);
-
-    leveldb::WriteOptions opts;
-    opts.sync = true;
     leveldb::Status status;
-    if(!(status = GetIndex()->Put(opts, key, value)).ok()){
+    if(!(status = PutObject(GetIndex(), hash, val)).ok()){
       LOG(WARNING) << "cannot index object " << hash << ": " << status.ToString();
       SetStatus(ObjectPool::kWarning);
       return false;
     }
 
-    //TODO: should we signal
+    SIGNAL_ALL;
     LOG(INFO) << "indexed object: " << hash;
     return true;
   }
 
-  bool ObjectPool::PutObject(const Hash& hash, const TransactionPtr& val){
-    if(HasObject(hash)){
+  bool ObjectPool::PutTransaction(const Hash& hash, const TransactionPtr& val){
+    if(HasTransaction(hash)){
       LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash;
       SetStatus(ObjectPool::kWarning);
       return false;
     }
 
-    ObjectPoolKey pkey(ObjectTag::kBlock, hash);
-    BufferPtr kdata = Buffer::NewInstance(ObjectPoolKey::kSize);
-    pkey.Write(kdata);
-
-    int64_t vsize = val->GetBufferSize();
-    BufferPtr vdata = Buffer::NewInstance(vsize);
-    val->Write(vdata);
-
-    leveldb::Slice key(kdata->data(), ObjectPoolKey::kSize);
-    leveldb::Slice value(vdata->data(), vsize);
-
-    leveldb::WriteOptions opts;
-    opts.sync = true;
     leveldb::Status status;
-    if(!(status = GetIndex()->Put(opts, key, value)).ok()){
+    if(!(status = PutObject(GetIndex(), hash, val)).ok()){
       LOG(WARNING) << "cannot index object " << hash << ": " << status.ToString();
       SetStatus(ObjectPool::kWarning);
       return false;
     }
 
-    //TODO: should we signal
+    SIGNAL_ALL;
+    LOG(INFO) << "indexed object: " << hash;
+    return true;
+  }
+
+  bool ObjectPool::PutUnclaimedTransaction(const Hash& hash, const UnclaimedTransactionPtr& val){
+    if(HasUnclaimedTransaction(hash)){
+      LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash;
+      SetStatus(ObjectPool::kWarning);
+      return false;
+    }
+
+    leveldb::Status status;
+    if(!(status = PutObject(GetIndex(), hash, val)).ok()){
+      LOG(WARNING) << "cannot index object " << hash << ": " << status.ToString();
+      return false;
+    }
+
+    SIGNAL_ALL;
     LOG(INFO) << "indexed object: " << hash;
     return true;
   }
@@ -285,41 +215,10 @@ namespace Token{
     return true;
   }
 
-  bool ObjectPool::PutObject(const Hash& hash, const UnclaimedTransactionPtr& val){
-    if(HasObject(hash)){
-      LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash;
-      SetStatus(ObjectPool::kWarning);
-      return false;
-    }
-
-    ObjectPoolKey pkey(ObjectTag::kBlock, hash);
-    BufferPtr kdata = Buffer::NewInstance(ObjectPoolKey::kSize);
-    pkey.Write(kdata);
-
-    int64_t vsize = val->GetBufferSize();
-    BufferPtr vdata = Buffer::NewInstance(vsize);
-    val->Write(vdata);
-
-    leveldb::Slice key(kdata->data(), ObjectPoolKey::kSize);
-    leveldb::Slice value(vdata->data(), vsize);
-
-    leveldb::WriteOptions opts;
-    opts.sync = true;
-    leveldb::Status status;
-    if(!(status = GetIndex()->Put(opts, key, value)).ok()){
-      LOG(WARNING) << "cannot index object " << hash << ": " << status.ToString();
-      return false;
-    }
-
-    //TODO: should we signal
-    LOG(INFO) << "indexed object: " << hash;
-    return true;
-  }
-
   bool ObjectPool::GetBlocks(HashList& hashes){
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectPoolKey key(it->key());
+      ObjectHashKey key(it->key());
       if(key.IsBlock())
         hashes.insert(key.GetHash());
     }
@@ -332,9 +231,9 @@ namespace Token{
     JsonWriter writer(json);
     writer.StartArray();
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectPoolKey key(it->key());
+      ObjectHashKey key(it->key());
       if(key.IsBlock()){
-        Hash& hash = key.GetHash();
+        Hash hash = key.GetHash();
         std::string hex = hash.HexString();
         writer.String(hex.data(), 64);
       }
@@ -346,7 +245,7 @@ namespace Token{
   bool ObjectPool::GetTransactions(HashList& hashes){
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectPoolKey key(it->key());
+      ObjectHashKey key(it->key());
       if(key.IsTransaction())
         hashes.insert(key.GetHash());
     }
@@ -359,9 +258,9 @@ namespace Token{
     JsonWriter writer(json);
     writer.StartArray();
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectPoolKey key(it->key());
+      ObjectHashKey key(it->key());
       if(key.IsTransaction()){
-        Hash& hash = key.GetHash();
+        Hash hash = key.GetHash();
         std::string hex = hash.HexString();
         writer.String(hex.data(), 64);
       }
@@ -373,7 +272,7 @@ namespace Token{
   bool ObjectPool::GetUnclaimedTransactions(HashList& hashes){
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectPoolKey key(it->key());
+      ObjectHashKey key(it->key());
       if(key.IsUnclaimedTransaction())
         hashes.insert(key.GetHash());
     }
@@ -386,9 +285,9 @@ namespace Token{
     JsonWriter writer(json);
     writer.StartArray();
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectPoolKey key(it->key());
+      ObjectHashKey key(it->key());
       if(key.IsUnclaimedTransaction()){
-        Hash& hash = key.GetHash();
+        Hash hash = key.GetHash();
         std::string hex = hash.HexString();
         writer.String(hex.data(), 64);
       }
@@ -400,7 +299,7 @@ namespace Token{
   bool ObjectPool::GetUnclaimedTransactionsFor(const User& user, HashList& hashes){
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectPoolKey key(it->key());
+      ObjectHashKey key(it->key());
       if(!key.IsUnclaimedTransaction())
         continue;
 
@@ -447,71 +346,74 @@ namespace Token{
   }
 
   bool ObjectPool::VisitTransactions(ObjectPoolTransactionVisitor* vis){
-    if(!vis)
-      return false;
-    return false;
+    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
+    for(it->SeekToFirst(); it->Valid(); it->Next()){
+      ObjectHashKey key(it->key());
+      if(!key.IsTransaction())
+        continue;
+
+      BufferPtr buff = Buffer::From(it->value());
+      TransactionPtr val = Transaction::NewInstance(buff);
+      if(!vis->Visit(val))
+        return false;
+    }
+    delete it;
+    return true;
   }
 
   bool ObjectPool::VisitUnclaimedTransactions(ObjectPoolUnclaimedTransactionVisitor* vis){
-    if(!vis)
-      return false;
-    return false;
+    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
+    for(it->SeekToFirst(); it->Valid(); it->Next()){
+      ObjectHashKey key(it->key());
+      if(!key.IsUnclaimedTransaction())
+        continue;
+
+      BufferPtr buff = Buffer::From(it->value());
+      UnclaimedTransactionPtr val = UnclaimedTransaction::NewInstance(buff);
+      if(!vis->Visit(val))
+        return false;
+    }
+    delete it;
+    return true;
   }
 
   BlockPtr ObjectPool::GetBlock(const Hash& hash){
-    ObjectPoolKey pkey(ObjectTag::kBlock, hash);
-    BufferPtr kdata = Buffer::NewInstance(ObjectPoolKey::kSize);
-    pkey.Write(kdata);
+    std::string data;
 
-    leveldb::Slice key(kdata->data(), ObjectPoolKey::kSize);
-    std::string value;
-
-    leveldb::ReadOptions opts;
     leveldb::Status status;
-    if(!(status = GetIndex()->Get(opts, key, &value)).ok()){
+    if(!(status = GetBlockObject(GetIndex(), hash, &data)).ok()){
       LOG(WARNING) << "cannot get " << hash << ": " << status.ToString();
       return BlockPtr(nullptr);
     }
 
-    BufferPtr buff = Buffer::From(value);
+    BufferPtr buff = Buffer::From(data);
     return Block::NewInstance(buff);
   }
 
   TransactionPtr ObjectPool::GetTransaction(const Hash& hash){
-    ObjectPoolKey pkey(ObjectTag::kTransaction, hash);
-    BufferPtr kdata = Buffer::NewInstance(ObjectPoolKey::kSize);
-    pkey.Write(kdata);
-
-    leveldb::Slice key(kdata->data(), ObjectPoolKey::kSize);
-    std::string value;
+    std::string data;
 
     leveldb::ReadOptions opts;
     leveldb::Status status;
-    if(!(status = GetIndex()->Get(opts, key, &value)).ok()){
+    if(!(status = GetTransactionObject(GetIndex(), hash, &data)).ok()){
       LOG(WARNING) << "cannot get " << hash << ": " << status.ToString();
       return TransactionPtr(nullptr);
     }
 
-    BufferPtr buff = Buffer::From(value);
+    BufferPtr buff = Buffer::From(data);
     return Transaction::NewInstance(buff);
   }
 
   UnclaimedTransactionPtr ObjectPool::GetUnclaimedTransaction(const Hash& hash){
-    ObjectPoolKey pkey(ObjectTag::kUnclaimedTransaction, hash);
-    BufferPtr kdata = Buffer::NewInstance(ObjectPoolKey::kSize);
-    pkey.Write(kdata);
+    std::string data;
 
-    leveldb::Slice key(kdata->data(), ObjectTag::kUnclaimedTransaction);
-    std::string value;
-
-    leveldb::ReadOptions opts;
     leveldb::Status status;
-    if(!(status = GetIndex()->Get(opts, key, &value)).ok()){
+    if(!(status = ::Token::GetUnclaimedTransactionObject(GetIndex(), hash, &data)).ok()){
       LOG(WARNING) << "cannot get " << hash << ": " << status.ToString();
       return UnclaimedTransactionPtr(nullptr);
     }
 
-    BufferPtr buff = Buffer::From(value);
+    BufferPtr buff = Buffer::From(data);
     return UnclaimedTransaction::NewInstance(buff);
   }
 
@@ -524,31 +426,13 @@ namespace Token{
   int64_t ObjectPool::GetNumberOfObjects(){
     int64_t count = 0;
 
-    DIR* dir;
-    struct dirent* ent;
-    if((dir = opendir(GetDataDirectory().c_str())) != NULL){
-      while((ent = readdir(dir)) != NULL){
-        std::string name(ent->d_name);
-        std::string filename = (GetDataDirectory() + "/" + name);
-        if(!EndsWith(filename, ".dat"))
-          continue;
-
-        //TODO: fixme
-      }
-      closedir(dir);
-    }
-    return count;
-  }
-
-  int64_t ObjectPool::GetNumberOfObjectsByType(const ObjectTag::Type& type){
-    int64_t count = 0;
-    ObjectTag tag(type);
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectPoolKey key(it->key());
-      if(key.GetTag() == tag)
+      ObjectHashKey key(it->key());
+      if(key.IsValid())
         count++;
     }
+
     delete it;
     return count;
   }
@@ -560,7 +444,7 @@ namespace Token{
 
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectPoolKey key(it->key());
+      ObjectHashKey key(it->key());
       if(key.IsBlock()){
         num_blocks++;
       } else if(key.IsTransaction()){
@@ -579,6 +463,97 @@ namespace Token{
       SetField(writer, "NumberOfUnclaimedTransactions", num_unclaimed_transactions);
     }
     writer.EndObject();
+    return true;
+  }
+
+  UnclaimedTransactionPtr ObjectPool::FindUnclaimedTransaction(const Input& input){
+    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
+    for(it->SeekToFirst(); it->Valid(); it->Next()){
+      ObjectHashKey key(it->key());
+      if(!key.IsUnclaimedTransaction())
+        continue;
+
+      BufferPtr val = Buffer::From(it->value());
+      UnclaimedTransactionPtr value = UnclaimedTransaction::NewInstance(val);
+      if(value->GetTransaction() == input.GetTransactionHash() && value->GetIndex() == input.GetOutputIndex())
+        return value;
+    }
+    delete it;
+    return UnclaimedTransactionPtr(nullptr);
+  }
+
+  bool ObjectPool::HasUnclaimedTransaction(const Hash& hash){
+    return HasObject(GetIndex(), hash, Object::Type::kUnclaimedTransaction);
+  }
+
+  bool ObjectPool::HasTransaction(const Hash& hash){
+    return HasObject(GetIndex(), hash, Object::Type::kTransaction);
+  }
+
+  bool ObjectPool::HasBlock(const Hash& hash){
+    return HasObject(GetIndex(), hash, Object::Type::kBlock);
+  }
+
+  int64_t ObjectPool::GetNumberOfBlocks(){
+    int64_t count = 0;
+    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
+    for(it->SeekToFirst(); it->Valid(); it->Next()){
+      ObjectHashKey key(it->key());
+      if(key.IsBlock())
+        count++;
+    }
+    delete it;
+    return count;
+  }
+
+  int64_t ObjectPool::GetNumberOfTransactions(){
+    int64_t count = 0;
+    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
+    for(it->SeekToFirst(); it->Valid(); it->Next()){
+      ObjectHashKey key(it->key());
+      if(key.IsTransaction())
+        count++;
+    }
+    delete it;
+    return count;
+  }
+
+  int64_t ObjectPool::GetNumberOfUnclaimedTransactions(){
+    int64_t count = 0;
+    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
+    for(it->SeekToFirst(); it->Valid(); it->Next()){
+      ObjectHashKey key(it->key());
+      if(key.IsUnclaimedTransaction())
+        count++;
+    }
+    delete it;
+    return count;
+  }
+
+  bool ObjectPool::RemoveBlock(const Hash& hash){
+    leveldb::Status status;
+    if(!(status = RemoveObject(GetIndex(), hash, Object::Type::kBlock)).ok()){
+      LOG(WARNING) << "cannot remove block " << hash << " from pool.";
+      return false;
+    }
+    return true;
+  }
+
+  bool ObjectPool::RemoveTransaction(const Hash& hash){
+    leveldb::Status status;
+    if(!(status = RemoveObject(GetIndex(), hash, Object::Type::kTransaction)).ok()){
+      LOG(WARNING) << "cannot remove transaction " << hash << " from pool.";
+      return false;
+    }
+    return true;
+  }
+
+  bool ObjectPool::RemoveUnclaimedTransaction(const Hash& hash){
+    leveldb::Status status;
+    if(!(status = RemoveObject(GetIndex(), hash, Object::Type::kUnclaimedTransaction)).ok()){
+      LOG(WARNING) << "cannot remove unclaimed transaction " << hash << " from pool.";
+      return false;
+    }
     return true;
   }
 }

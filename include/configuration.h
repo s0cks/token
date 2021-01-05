@@ -42,14 +42,6 @@ namespace Token{
     static UUID GetSererID();
     static bool SetServerID(const UUID& uuid);
 
-    // Server.CallbackAddress
-    static NodeAddress GetServerCallbackAddress();
-    static bool SetServerCallbackAddress(const NodeAddress& address);
-
-    // Server.MaxNumberOfPeers
-    static int32_t GetMaxNumberOfPeers();
-    static bool SetMaxNumberOfPeers(int32_t value);
-
     // Server.Peers
     static bool GetPeerList(std::set<NodeAddress>& peers);
     static bool SetPeerList(const std::set<NodeAddress>& peers);

@@ -4,8 +4,9 @@
 #include <memory>
 #include "pool.h"
 #include "proposal.h"
+#include "job/verifier.h"
 #include "job/scheduler.h"
-#include "job/process_block.h"
+#include "job/processor.h"
 
 #ifdef TOKEN_ENABLE_SERVER
 #include "peer/peer_session_manager.h"
@@ -114,16 +115,14 @@ namespace Token{
     bool ProcessProposal() const{
       std::shared_ptr<PeerSession> proposer = GetProposer();
       Hash hash = GetProposalHash();
-      if(!ObjectPool::HasObject(hash)){
+      if(!ObjectPool::HasBlock(hash)){
         //TODO: fix requesting of data
         LOG(INFO) << hash << " cannot be found, requesting block from peer: " << proposer->GetID();
         std::vector<InventoryItem> items = {
           InventoryItem(InventoryItem::kBlock, hash)
         };
         GetProposer()->Send(GetDataMessage::NewInstance(items));
-        LOG(INFO) << "waiting....";
-        ObjectPool::WaitForObject(hash); //TODO: add timeout
-        if(!ObjectPool::HasObject(hash)){
+        if(!ObjectPool::WaitForBlock(hash)){
           LOG(INFO) << "cannot resolve block " << hash << ", rejecting....";
           return CancelProposal();
         }
@@ -131,11 +130,19 @@ namespace Token{
 
       BlockPtr blk = ObjectPool::GetBlock(hash);
       LOG(INFO) << "proposal " << hash << " has entered the voting phase.";
-//TODO:
-//            if(!BlockVerifier::IsValid(blk)){
-//                LOG(WARNING) << "cannot validate block " << hash << ", rejecting....";
-//                return CancelProposal();
-//            }
+
+      JobWorker* worker = JobScheduler::GetRandomWorker();
+      VerifyBlockJob* job = new VerifyBlockJob(blk);
+      worker->Submit(job);
+      worker->Wait(job);
+
+      JobResult& result = job->GetResult();
+      if(!result.IsSuccessful()){
+        LOG(WARNING) << "block " << hash << " is invalid:";
+        LOG(WARNING) << result.GetMessage();
+        return CancelProposal();
+      }
+
       proposer->SendAccepted();
 
       GetProposal()->WaitForPhase(Proposal::kCommitPhase);

@@ -4,7 +4,7 @@
 #include "pool.h"
 #include "session.h"
 #include "job/job.h"
-#include "job/process_block.h"
+#include "job/processor.h"
 
 namespace Token{
   class SynchronizeJob : public Job{
@@ -21,7 +21,7 @@ namespace Token{
       worker->Submit(job);
       worker->Wait(job);
 
-      ObjectPool::RemoveObject(hash);
+      ObjectPool::RemoveBlock(hash);
       BlockChain::Append(blk);
       return true;
     }
@@ -33,9 +33,9 @@ namespace Token{
         Hash hash = work.front();
         work.pop_front();
 
-        if(!ObjectPool::HasObject(hash)){
+        if(!ObjectPool::HasBlock(hash)){
           LOG(WARNING) << "waiting for: " << hash;
-          ObjectPool::WaitForObject(hash);
+          ObjectPool::WaitForBlock(hash);
         }
 
         BlockPtr blk = ObjectPool::GetBlock(hash);

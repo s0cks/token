@@ -24,7 +24,7 @@ namespace Token{
     //TODO:
     // - verify nonce
     BlockPtr head = BlockChain::GetHead();
-    session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), head->GetHeader()));
+    session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), Server::GetCallbackAddress(), Version(), head->GetHeader(), Hash::GenerateNonce()));
 
     UUID id = msg->GetID();
     if(session->IsConnecting()){
@@ -54,7 +54,7 @@ namespace Token{
           BlockPtr block;
           if(BlockChain::HasBlock(hash)){
             block = BlockChain::GetBlock(hash);
-          } else if(ObjectPool::HasObject(hash)){
+          } else if(ObjectPool::HasBlock(hash)){
             block = ObjectPool::GetBlock(hash);
           } else{
             LOG(WARNING) << "cannot find block: " << hash;
@@ -63,7 +63,7 @@ namespace Token{
           }
           response.push_back(BlockMessage::NewInstance(block));
         } else if(item.IsTransaction()){
-          if(!ObjectPool::HasObject(hash)){
+          if(!ObjectPool::HasTransaction(hash)){
             LOG(WARNING) << "cannot find transaction: " << hash;
             response.push_back(NotFoundMessage::NewInstance());
             break;
@@ -71,15 +71,6 @@ namespace Token{
 
           TransactionPtr tx = ObjectPool::GetTransaction(hash);
           response.push_back(TransactionMessage::NewInstance(tx));//TODO: fix
-        } else if(item.IsUnclaimedTransaction()){
-          if(!ObjectPool::HasUnclaimedTransaction(hash)){
-            LOG(WARNING) << "couldn't find unclaimed transaction: " << hash;
-            response.push_back(NotFoundMessage::NewInstance());
-            break;
-          }
-
-          UnclaimedTransactionPtr utxo = ObjectPool::GetUnclaimedTransaction(hash);
-          response.push_back(UnclaimedTransactionMessage::NewInstance(utxo));
         }
       } else{
         session->Send(NotFoundMessage::NewInstance());
@@ -130,8 +121,8 @@ namespace Token{
   void ServerSession::HandleBlockMessage(ServerSession* session, const BlockMessagePtr& msg){
     BlockPtr blk = msg->GetValue();
     Hash hash = blk->GetHash();
-    if(!ObjectPool::HasObject(hash)){
-      ObjectPool::PutObject(hash, blk);
+    if(!ObjectPool::HasBlock(hash)){
+      ObjectPool::PutBlock(hash, blk);
       //TODO: Server::Broadcast(InventoryMessage::NewInstance(blk));
     }
   }
@@ -141,11 +132,9 @@ namespace Token{
     Hash hash = tx->GetHash();
 
     LOG(INFO) << "received transaction: " << hash;
-    if(!ObjectPool::HasObject(hash))
-      ObjectPool::PutObject(hash, tx);
+    if(!ObjectPool::HasTransaction(hash))
+      ObjectPool::PutTransaction(hash, tx);
   }
-
-  void ServerSession::HandleUnclaimedTransactionMessage(ServerSession* session, const UnclaimedTransactionMessagePtr& msg){}
 
   void ServerSession::HandleInventoryMessage(ServerSession* session, const InventoryMessagePtr& msg){
     std::vector<InventoryItem> items;

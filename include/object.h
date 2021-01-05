@@ -9,27 +9,52 @@
 #include "utils/bitfield.h"
 
 namespace Token{
-  class Object;
+  class Buffer;
+  typedef std::shared_ptr<Buffer> BufferPtr;
 
   class Object{
-    friend class Thread;
-    friend class BinaryFileWriter;
+   public:
+    enum class Type{
+      kBlock=1,
+      kTransaction=2,
+      kUnclaimedTransaction=3,
+    };
+
+    friend std::ostream& operator<<(std::ostream& stream, const Type& type){
+      switch(type){
+        case Type::kBlock:
+          return stream << "Block";
+        case Type::kTransaction:
+          return stream << "Transaction";
+        case Type::kUnclaimedTransaction:
+          return stream << "UnclaimedTransaction";
+        default:
+          return stream << "Unknown";
+      }
+    }
    public:
     virtual ~Object() = default;
     virtual std::string ToString() const = 0;
   };
 
-  class Buffer;
-  typedef std::shared_ptr<Buffer> BufferPtr;
+  class BinaryFileWriter;
+  class SerializableObject : public Object{
+   protected:
+    SerializableObject():
+      Object(){}
+   public:
+    virtual ~SerializableObject() = default;
 
-  class BinaryObject : public Object{
+    virtual int64_t GetBufferSize() const = 0;
+    virtual bool Write(const BufferPtr& buff) const = 0;
+    virtual bool Write(BinaryFileWriter* writer) const{ return false; }
+  };
+
+  class BinaryObject : public SerializableObject{
    protected:
     BinaryObject() = default;
    public:
     virtual ~BinaryObject() = default;
-
-    virtual int64_t GetBufferSize() const = 0;
-    virtual bool Write(const BufferPtr& buff) const = 0;
     Hash GetHash() const;
   };
 
@@ -169,6 +194,120 @@ namespace Token{
     friend std::ostream& operator<<(std::ostream& stream, const User& user){
       stream << user.str();
       return stream;
+    }
+  };
+
+  class ObjectTag{
+   public:
+    enum Type{
+      kNone = 0,
+      kBlock = 1,
+      kTransaction,
+      kUnclaimedTransaction,
+    };
+
+    friend std::ostream& operator<<(std::ostream& stream, const Type& type){
+      switch(type){
+        case Type::kBlock:return stream << "Block";
+        case Type::kTransaction:return stream << "Transaction";
+        case Type::kUnclaimedTransaction:return stream << "UnclaimedTransaction";
+        case Type::kNone:
+        default:return stream << "None";
+      }
+    }
+
+    static const int32_t kMagic;
+   private:
+    enum ObjectTagLayout{
+      kMagicFieldOffset = 0,
+      kMagicFieldSize = 32,
+      kTypeFieldOffset = kMagicFieldOffset + kMagicFieldSize,
+      kTypeFieldSize = 32,
+    };
+
+    class MagicField : public BitField<uint64_t, int32_t, kMagicFieldOffset, kMagicFieldSize>{};
+    class TypeField : public BitField<uint64_t, Type, kTypeFieldOffset, kTypeFieldSize>{};
+
+    uint64_t value_;
+
+    ObjectTag(const int32_t& magic, const Type& type):
+      value_(MagicField::Encode(magic) | MagicField::Encode(type)){}
+
+    int32_t GetMagicField() const{
+      return MagicField::Decode(value_);
+    }
+
+    void SetMagicField(const int32_t& magic){
+      value_ = MagicField::Update(magic, value_);
+    }
+
+    Type GetTypeField() const{
+      return TypeField::Decode(value_);
+    }
+
+    void SetTypeField(const Type& type){
+      value_ = TypeField::Update(type, value_);
+    }
+   public:
+    ObjectTag(uint8_t* data):
+      value_(*(uint64_t*) data){}
+    ObjectTag():
+      value_(MagicField::Encode(kMagic)|TypeField::Encode(Type::kNone)){}
+    ObjectTag(const uint64_t& tag):
+      value_(tag){}
+    ObjectTag(const Type& type):
+      value_(MagicField::Encode(kMagic)|TypeField::Encode(type)){}
+    ObjectTag(const ObjectTag& tag):
+      value_(tag.value_){}
+    ~ObjectTag() = default;
+
+    uint64_t& data(){
+      return value_;
+    }
+
+    uint64_t data() const{
+      return value_;
+    }
+
+    bool IsMagic() const{
+      return GetMagicField() == kMagic;
+    }
+
+    bool IsNone() const{
+      return GetTypeField() == Type::kNone;
+    }
+
+    bool IsBlock() const{
+      return GetTypeField() == Type::kBlock;
+    }
+
+    bool IsTransaction() const{
+      return GetTypeField() == Type::kTransaction;
+    }
+
+    bool IsUnclaimedTransaction() const{
+      return GetTypeField() == Type::kUnclaimedTransaction;
+    }
+
+    void operator=(const ObjectTag& tag){
+      value_ = tag.value_;
+    }
+
+    friend bool operator==(const ObjectTag& a, const ObjectTag& b){
+      return a.value_ == b.value_;
+    }
+
+    friend bool operator!=(const ObjectTag& a, const ObjectTag& b){
+      return a.value_ != b.value_;
+    }
+
+    friend std::ostream& operator<<(std::ostream& stream, const ObjectTag& tag){
+      return stream << tag.GetTypeField();
+    }
+
+    static inline int64_t
+    GetSize(){
+      return sizeof(uint64_t);
     }
   };
 }

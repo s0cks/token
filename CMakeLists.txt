@@ -8,21 +8,27 @@ set(PROTO_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protos")
 
 file(GLOB_RECURSE TOKEN_CMAKE_MODULES ${CMAKE_MODULE_PATH}/*.cmake)
 
-set(ENABLE_SERVER ON)
-set(ENABLE_HEALTH_SERVICE ON)
-set(ENABLE_REST_SERVICE ON)
+option(ENABLE_COMPRESSION "Enables compression." OFF)
+option(ENABLE_SERVER "Enables the block chain server." ON)
+option(ENABLE_HEALTH_SERVICE "Enable the health http service." ON)
+option(ENABLE_REST_SERVICE "Enable the rest http service." ON)
 
-option(ENABLE_SERVER "Enables the block chain server.")
-option(ENABLE_HEALTH_SERVICE "Enable the health http service.")
-option(ENABLE_REST_SERVICE "Enable the rest http service.")
+message(STATUS "ENABLE_REST := ${ENABLE_REST}")
+message (STATUS "ENABLE_HEALTH := ${ENABLE_HEALTH}")
 
 # Monkey Patching for Debug Mode
 if(CMAKE_BUILD_TYPE MATCHES Debug)
-  message(STATUS "Compiling w/ debug mode")
+  message(STATUS "Compiling w/ debug mode.")
   add_compile_definitions(TOKEN_DEBUG)
 else()
-  message(STATUS "Compiling w/o debug mode")
+  message(STATUS "Compiling w/o debug mode.")
 endif (CMAKE_BUILD_TYPE MATCHES Debug)
+
+# Compile w/ compression enabled
+if(ENABLE_COMPRESSION)
+  message(STATUS "Compiling w/ compression enabled.")
+  add_compile_definitions(TOKEN_ENABLE_COMPRESSION)
+endif(ENABLE_COMPRESSION)
 
 # Compile w/ the server if enabled
 if(ENABLE_SERVER)
@@ -49,14 +55,15 @@ find_package(Crypto++ REQUIRED)
 find_package(LevelDB REQUIRED)
 find_package(Glog REQUIRED)
 find_package(Gflags REQUIRED)
-find_package(Libuv REQUIRED)
 find_package(GTest REQUIRED)
+find_package(Libuv REQUIRED)
 find_package(HttpParser REQUIRED)
-find_package(JsonCpp REQUIRED)
-find_package(ZLIB REQUIRED)
+
+if(ENABLE_COMPRESSION)
+  find_package(ZLIB REQUIRED)
+endif(ENABLE_COMPRESSION)
 
 # Include Directories
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(include)
 include_directories(src)
 include_directories(tests)
@@ -64,22 +71,29 @@ include_directories(tests)
 # Source Sets
 file(GLOB_RECURSE TOKEN_HEADERS include/*.h)
 file(GLOB_RECURSE TOKEN_SOURCES src/*.h src/*.cc)
-file(GLOB_RECURSE TOKEN_PROTOS protos/*.proto)
 file(GLOB_RECURSE TOKEN_TEST_SOURCES tests/*.h tests/*.cc)
 
 # Define Libraries
 set(TOKEN_LIBRARIES
+  ${CMAKE_THREAD_LIBS_INIT} # pthreads
   ${CRYPTO++_LIBRARIES} # crypto++
   ${GLOG_LIBRARIES} # glog
   ${LevelDB_LIBRARY} # leveldb
-  ${LIBUV_LIBRARIES} # libuv
   ${GFLAGS_LIBRARIES} # gflags
   config++ # config++
   ${UUID_LIBRARIES} # uuid
-  ${CMAKE_THREAD_LIBS_INIT} # pthread
+  ${LIBUV_LIBRARIES} # libuv
   ${HTTPPARSER_LIBRARIES} # http-parser
-  ${ZLIB_LIBRARIES} # zlib
 )
+
+if(ENABLE_COMPRESSION)
+  message(STATUS "Appending the zlib libraries.")
+  list(APPEND TOKEN_LIBRARIES ${ZLIB_LIBRARIES}) # zlib
+endif(ENABLE_COMPRESSION)
+
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+  message(STATUS "Compiling token w/ the following libraries: ${TOKEN_LIBRARIES}")
+endif(CMAKE_BUILD_TYPE MATCHES Debug)
 
 # Token Ledger Library
 add_library("token-ledger" SHARED ${TOKEN_HEADERS} ${TOKEN_SOURCES})
@@ -91,14 +105,17 @@ target_compile_options(token-ledger PRIVATE -Werror -Wall)
 # Token Server Executable
 add_executable("token-node" main.cc)
 target_link_libraries("token-node" "token-ledger" ${TOKEN_LIBRARIES})
+target_compile_options(token-node PRIVATE -Werror -Wall)
 
 # Token Client Executable
 add_executable("token-client" client.cc)
 target_link_libraries("token-client" "token-ledger" ${TOKEN_LIBRARIES})
+target_compile_options(token-client PRIVATE -Werror -Wall)
 
 # Token Inspect Client Executable
 add_executable("token-inspector" inspector.cc)
 target_link_libraries("token-inspector" "token-ledger" ${TOKEN_LIBRARIES})
+target_compile_options(token-inspector PRIVATE -Werror -Wall)
 
 if(CMAKE_BUILD_TYPE MATCHES Debug)
   # Token Unit Tests

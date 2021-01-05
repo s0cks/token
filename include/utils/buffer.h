@@ -4,7 +4,6 @@
 #include <set>
 #include <vector>
 #include "object.h"
-#include "object_tag.h"
 
 namespace Token{
   class Buffer;
@@ -26,9 +25,12 @@ namespace Token{
     }
 
     template<typename T>
-    void Append(T value){
+    bool Append(T value){
+      if((wpos_ + static_cast<int64_t>(sizeof(T))) > GetBufferSize())
+        return false;
       memcpy(&raw()[wpos_], &value, sizeof(T));
       wpos_ += sizeof(T);
+      return true;
     }
 
     template<typename T>
@@ -39,11 +41,11 @@ namespace Token{
 
     template<typename T>
     T Read(intptr_t idx){
-      if((idx + (intptr_t) sizeof(T)) > GetBufferSize()){
+      if((idx + (intptr_t)sizeof(T)) > GetBufferSize()){
         LOG(INFO) << "cannot read " << sizeof(T) << " bytes from pos: " << idx;
         return 0;
       }
-      return *(T*) (raw() + idx);
+      return *(T*)(raw()+idx);
     }
 
     template<typename T>
@@ -108,14 +110,14 @@ namespace Token{
 
     //@format:off
 #define DEFINE_PUT(Name, Type) \
-        void Put##Unsigned##Name(u##Type value){ \
-            Append<u##Type>(value); \
+        bool Put##Unsigned##Name(u##Type value){ \
+            return Append<u##Type>(value); \
         } \
         void Put##Unsigned##Name(intptr_t pos, u##Type value){ \
             Insert<u##Type>(value, pos); \
         } \
-        void Put##Name(Type value){ \
-            Append<u##Type>(value); \
+        bool Put##Name(Type value){ \
+            return Append<Type>(value); \
         } \
         void Put##Name(intptr_t pos, Type value){ \
             Insert<Type>(value, pos); \
@@ -216,9 +218,12 @@ namespace Token{
       return product;
     }
 
-    void PutHash(const Hash& value){
-      memcpy(&raw()[wpos_], value.data(), Hash::GetSize());
-      wpos_ += Hash::GetSize();
+    bool PutHash(const Hash& value){
+      if((wpos_ + Hash::kSize) > GetBufferSize())
+        return false;
+      memcpy(&raw()[wpos_], value.data(), Hash::kSize);
+      wpos_ += Hash::kSize;
+      return true;
     }
 
     Hash
@@ -257,11 +262,15 @@ namespace Token{
     }
 
     template<class T, class C>
-    void PutSet(const std::set<T, C>& items){
-      PutLong(items.size());
+    bool PutSet(const std::set<T, C>& items){
+      if(!PutLong(items.size()))
+        return false;
+
       for(auto& item : items){
-        item->Write(shared_from_this());
+        if(!item->Write(shared_from_this()))
+          return false;
       }
+      return true;
     }
 
     void Reset(){
