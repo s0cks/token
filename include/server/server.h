@@ -32,9 +32,9 @@ namespace Token{
     friend std::ostream& operator<<(std::ostream& stream, const State& state){
       switch(state){
 #define DEFINE_TOSTRING(Name) \
-                case Server::k##Name: \
-                    stream << #Name; \
-                    return stream;
+        case Server::k##Name: \
+            stream << #Name; \
+            return stream;
         FOR_EACH_SERVER_STATE(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
         default:stream << "Unknown";
@@ -51,9 +51,9 @@ namespace Token{
     friend std::ostream& operator<<(std::ostream& stream, const Status& status){
       switch(status){
 #define DEFINE_TOSTRING(Name) \
-                case Server::k##Name: \
-                    stream << #Name; \
-                    return stream;
+        case Server::k##Name: \
+            stream << #Name; \
+            return stream;
         FOR_EACH_SERVER_STATUS(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
         default:stream << "Unknown";
@@ -86,12 +86,12 @@ namespace Token{
     }
 
 #define DEFINE_STATE_CHECK(Name) \
-        static inline bool Is##Name(){ return GetState() == Server::k##Name; }
+    static inline bool Is##Name(){ return GetState() == Server::k##Name; }
     FOR_EACH_SERVER_STATE(DEFINE_STATE_CHECK)
 #undef DEFINE_STATE_CHECK
 
 #define DEFINE_STATUS_CHECK(Name) \
-        static inline bool Is##Name(){ return GetStatus() == Server::k##Name; }
+    static inline bool Is##Name(){ return GetStatus() == Server::k##Name; }
     FOR_EACH_SERVER_STATUS(DEFINE_STATUS_CHECK)
 #undef DEFINE_STATUS_CHECK
 
