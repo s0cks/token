@@ -135,7 +135,6 @@ namespace Token{
   #define DEFINE_TYPE_METHODS(Name) \
     static bool WaitFor##Name(const Hash& hash, const int64_t timeout_ms=1000*5); \
     static bool Put##Name(const Hash& hash, const Name##Ptr& val);                \
-    static bool Get##Name##s(HashList& hashes);                                   \
     static bool Get##Name##s(JsonString& json);                                   \
     static bool Has##Name(const Hash& hash);                                      \
     static bool Remove##Name(const Hash& hash);                                   \
@@ -145,27 +144,20 @@ namespace Token{
     FOR_EACH_POOL_TYPE(DEFINE_TYPE_METHODS)
   #undef DEFINE_TYPE_METHODS
 
+    static bool GetUnclaimedTransactionData(const User& user, JsonString& json);
+
     static int64_t GetNumberOfObjects();
     static bool GetStats(JsonString& json);
-    static bool PutHashList(const User& user, const HashList& hashes);
-    static bool GetUnclaimedTransactionsFor(const User& user, HashList& hashes);
-    static bool GetUnclaimedTransactionsFor(const User& user, JsonString& json);
-    static bool HasUnclaimedTransactions(const User& user);
     static UnclaimedTransactionPtr FindUnclaimedTransaction(const Input& input);
     static leveldb::Status Write(leveldb::WriteBatch* update);
 
-    static inline bool
-    PutHashList(const std::string& user, const HashList& hashes){
-      return PutHashList(User(user), hashes);
-    }
-
 #define DEFINE_CHECK(Name) \
-        static inline bool Is##Name(){ return GetState() == ObjectPool::k##Name; }
+    static inline bool Is##Name(){ return GetState() == ObjectPool::k##Name; }
     FOR_EACH_POOL_STATE(DEFINE_CHECK)
 #undef DEFINE_CHECK
 
 #define DEFINE_CHECK(Name) \
-        static inline bool Is##Name(){ return GetStatus() == ObjectPool::k##Name; }
+    static inline bool Is##Name(){ return GetStatus() == ObjectPool::k##Name; }
     FOR_EACH_POOL_STATUS(DEFINE_CHECK)
 #undef DEFINE_CHECK
   };

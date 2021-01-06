@@ -3,6 +3,7 @@
 #include <mutex>
 #include <condition_variable>
 #include "pool.h"
+#include "wallet.h"
 #include "blockchain.h"
 #include "job/scheduler.h"
 #include "http/rest_service.h"
@@ -127,7 +128,6 @@ namespace Token{
     HttpSession* session = (HttpSession*)stream->data;
     if(nread == UV_EOF)
       return;
-
     if(nread < 0){
       LOG(WARNING) << "server read failure: " << uv_strerror(nread);
       session->Close();
@@ -238,11 +238,24 @@ namespace Token{
   void ObjectPoolController::HandleGetUserUnclaimedTransactions(HttpSession* session, const HttpRequestPtr& request){
     std::string user = request->GetParameterValue("user");
     JsonString json;
-    if(!ObjectPool::GetUnclaimedTransactionsFor(user, json)){
+    if(!WalletManager::GetWallet(user, json)){
       std::stringstream ss;
       ss << "Cannot get unclaimed transactions for: " << user;
       return SendNotFound(session, ss);
     }
+    HttpResponsePtr resp = HttpJsonResponse::NewInstance(session, STATUS_CODE_OK, json);
+    session->Send(resp);
+  }
+
+  void ObjectPoolController::HandleGetUserUnclaimedTransactionsData(HttpSession* session, const HttpRequestPtr& request){
+    User user = request->GetParameterValue("user");
+    JsonString json;
+    if(!ObjectPool::GetUnclaimedTransactionData(user, json)){
+      std::stringstream ss;
+      ss << "Cannot get unclaimed transactions for: " << user;
+      return SendNotFound(session, ss);
+    }
+
     HttpResponsePtr resp = HttpJsonResponse::NewInstance(session, STATUS_CODE_OK, json);
     session->Send(resp);
   }

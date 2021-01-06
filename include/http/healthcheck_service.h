@@ -55,10 +55,12 @@ namespace Token{
     friend std::ostream& operator<<(std::ostream& stream, const State& state){
       switch(state){
 #define DECLARE_TOSTRING(Name) \
-                case State::k##Name: \
-                    stream << #Name; \
-                    return stream;
+        case State::k##Name: \
+            stream << #Name; \
+            return stream;
         FOR_EACH_HEALTHCHECK_SERVER_STATE(DECLARE_TOSTRING)
+        default:
+          return stream << "Unknown";
 #undef DECLARE_TOSTRING
       }
     }
@@ -70,6 +72,8 @@ namespace Token{
                     stream << #Name;  \
                     return stream;
         FOR_EACH_HEALTHCHECK_SERVER_STATUS(DECLARE_TOSTRING)
+        default:
+          return stream << "Unknown";
 #undef DECLARE_TOSTRING
       }
     }

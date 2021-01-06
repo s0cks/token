@@ -16,15 +16,16 @@ namespace Token{
   class ProcessBlockJob;
 
   //TODO: fixme
-  typedef std::map<std::string, HashList> UserHashLists;
+  typedef std::map<User, Wallet> UserWallets;
 
   class ProcessBlockJob : public Job, BlockVisitor{
     friend class ProcessTransactionJob;
    protected:
     BlockPtr block_;
     std::mutex mutex_; //TODO: remove mutex
-    leveldb::WriteBatch batch_;
-    UserHashLists hash_lists_;
+    leveldb::WriteBatch batch_pool_;
+    leveldb::WriteBatch batch_wallet_;
+    UserWallets wallets_;
     bool clean_; //TODO: remove clean flag?
 
     JobResult DoWork();
@@ -33,14 +34,10 @@ namespace Token{
       Job(nullptr, "ProcessBlock"),
       block_(blk),
       mutex_(),
-      batch_(),
-      hash_lists_(),
+      batch_pool_(),
+      batch_wallet_(),
       clean_(clean){}
     ~ProcessBlockJob(){}
-
-    leveldb::WriteBatch& GetBatch(){
-      return batch_;
-    }
 
     BlockPtr GetBlock() const{
       return block_;
@@ -54,33 +51,48 @@ namespace Token{
 
     void Append(const leveldb::WriteBatch& batch){
       std::lock_guard<std::mutex> guard(mutex_);
-      batch_.Append(batch);
+      batch_pool_.Append(batch);
     }
 
-    void Append(const leveldb::WriteBatch& batch, const UserHashLists& hashes){
+    void Append(const leveldb::WriteBatch& batch, const UserWallets& hashes){
       std::lock_guard<std::mutex> guard(mutex_);
       for(auto& it : hashes){
-        LOG(INFO) << "appending " << it.second.size() << " hashes for " << it.first;
-        auto pos = hash_lists_.find(it.first);
-        if(pos == hash_lists_.end()){
-          LOG(INFO) << "creating new hash list";
-          hash_lists_.insert({it.first, it.second});
+        auto pos = wallets_.find(it.first);
+        if(pos == wallets_.end()){
+          LOG(INFO) << "creating new wallet for " << it.first;
+          wallets_.insert({it.first, it.second});
           continue;
         }
 
-        const HashList& src = it.second;
-        HashList& dst = pos->second;
+        const Wallet& src = it.second;
+        Wallet& dst = pos->second;
         dst.insert(src.begin(), src.end());
-        hash_lists_.insert({it.first, dst});
+        wallets_.insert({it.first, dst});
       }
-      batch_.Append(batch);
+      batch_pool_.Append(batch);
     }
 
     leveldb::Status Write(){
       std::lock_guard<std::mutex> guard(mutex_);
-      if(batch_.ApproximateSize() == 0)
-        LOG(WARNING) << "writing batch of size 0";
-      return ObjectPool::Write(&batch_);
+      if(batch_pool_.ApproximateSize() == 0){
+        return leveldb::Status::IOError("the object pool write batch  is ~0b in size.");
+      }
+
+      if(batch_wallet_.ApproximateSize() == 0){
+        return leveldb::Status::IOError("the wallet write batch is ~0b in size.");
+      }
+
+      leveldb::Status status;
+      if(!(status = ObjectPool::Write(&batch_pool_)).ok()){
+        LOG(WARNING) << "error occurred when writing the object pool batch: " << status.ToString();
+        return leveldb::Status::IOError("cannot write the object pool batch.");
+      }
+
+      if(!(status = WalletManager::Write(&batch_wallet_)).ok()){
+        LOG(WARNING) << "error occurred when writing the wallet batch: " << status.ToString();
+        return leveldb::Status::IOError("cannot write the wallet batch.");
+      }
+      return leveldb::Status::OK();
     }
   };
 
@@ -107,7 +119,7 @@ namespace Token{
       return transaction_;
     }
 
-    void Append(const leveldb::WriteBatch& batch, const UserHashLists& hashes){
+    void Append(const leveldb::WriteBatch& batch, const UserWallets& hashes){
       return ((ProcessBlockJob*)GetParent())->Append(batch, hashes);
     }
   };
@@ -157,7 +169,7 @@ namespace Token{
       return ((ProcessTransactionJob*)GetParent())->GetTransaction();
     }
 
-    void Append(const leveldb::WriteBatch& batch, const UserHashLists& hashes){
+    void Append(const leveldb::WriteBatch& batch, const UserWallets& hashes){
       return ((ProcessTransactionJob*)GetParent())->Append(batch, hashes);
     }
   };
@@ -167,13 +179,12 @@ namespace Token{
     static const int64_t kMaxNumberOfOutputs = 128;
    private:
     int64_t offset_;
-    UserHashLists hashes_;
+    UserWallets wallets_;
 
     inline UnclaimedTransactionPtr
     CreateUnclaimedTransaction(const Output& output){
       TransactionPtr tx = GetTransaction();
       int64_t index = GetNextOutputIndex();
-      LOG(INFO) << "creating unclaimed transaction for " << tx->GetHash() << "[" << index << "]";
       return std::make_shared<UnclaimedTransaction>(tx->GetHash(), index, output.GetUser(), output.GetProduct());
     }
 
@@ -182,13 +193,13 @@ namespace Token{
     }
 
     void Track(const User& user, const Hash& hash){
-      auto pos = hashes_.find(user.str());
-      if(pos == hashes_.end()){
-        hashes_.insert({user.str(), HashList{hash}});
+      auto pos = wallets_.find(user.str());
+      if(pos == wallets_.end()){
+        wallets_.insert({user.str(), Wallet{hash}});
         return;
       }
 
-      HashList& list = pos->second;
+      Wallet& list = pos->second;
       list.insert(hash);
     }
    protected:
@@ -197,9 +208,10 @@ namespace Token{
         UnclaimedTransactionPtr val = CreateUnclaimedTransaction(it);
         Hash hash = val->GetHash();
         PutObject(batch_, hash, val);
+        Track(val->GetUser(), hash);
       }
 
-      ((ProcessTransactionOutputsJob*)GetParent())->Append(GetBatch(), hashes_);
+      ((ProcessTransactionOutputsJob*)GetParent())->Append(GetBatch(), wallets_);
       return Success("done.");
     }
    public:

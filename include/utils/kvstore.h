@@ -3,8 +3,11 @@
 
 #include <leveldb/db.h>
 #include <leveldb/slice.h>
+#include <leveldb/comparator.h>
+#include <leveldb/write_batch.h>
 #include "hash.h"
 #include "object.h"
+#include "wallet.h"
 #include "unclaimed_transaction.h"
 
 namespace Token{
@@ -15,6 +18,45 @@ namespace Token{
     virtual ~KeyType() = default;
     virtual char* data() const = 0;
     virtual size_t size() const = 0;
+  };
+
+  class UserKey : public KeyType{
+   public:
+    class Comparator : public leveldb::Comparator{
+     public:
+      int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const{
+        UserKey k1(a);
+        UserKey k2(b);
+        return User::Compare(k1.user(), k2.user());
+      }
+
+      const char* Name() const{
+        return "UserKeyComparator";
+      }
+
+      void FindShortestSeparator(std::string* str, const leveldb::Slice& slice) const{}
+      void FindShortSuccessor(std::string* str) const{}
+    };
+   private:
+    const User data_;
+   public:
+    UserKey(const User& user):
+      data_(user){}
+    UserKey(const leveldb::Slice& slice):
+      data_((uint8_t*)slice.data(), (int64_t)slice.size()){}
+    ~UserKey() = default;
+
+    const User& user(){
+      return data_;
+    }
+
+    char* data() const{
+      return data_.data();
+    }
+
+    size_t size() const{
+      return data_.size();
+    }
   };
 
   class ObjectHashKey : public KeyType{
@@ -174,6 +216,30 @@ namespace Token{
     return GetObject(index, ObjectHashKey(Object::Type::kUnclaimedTransaction, hash), val);
   }
 
+  static inline leveldb::Status
+  GetWallet(leveldb::DB* index, const User& user, std::string* val){
+    return GetObject(index, UserKey(user), val);
+  }
+
+  template<class K>
+  static inline leveldb::Status
+  PutObject(leveldb::DB* index, const K& k, const BufferPtr& v){
+    leveldb::Slice key(k.data(), k.size());
+    leveldb::Slice val(v->data(), v->GetWrittenBytes());
+
+    leveldb::WriteOptions writeOpts;
+    writeOpts.sync = true;
+    return index->Put(writeOpts, key, val);
+  }
+
+  template<class K>
+  static inline void
+  PutObject(leveldb::WriteBatch& batch, const K& k, const BufferPtr& v){
+    leveldb::Slice key(k.data(), k.size());
+    leveldb::Slice val(v->data(), v->GetWrittenBytes());
+    return batch.Put(key, val);
+  }
+
   template<class K, class V>
   static inline leveldb::Status
   PutObject(leveldb::DB* index, const K& k, const std::shared_ptr<V>& obj){
@@ -183,13 +249,7 @@ namespace Token{
       ss << "Cannot serialize object to buffer of size: " << vdata->GetBufferSize();
       return leveldb::Status::InvalidArgument(ss.str());
     }
-
-    leveldb::Slice key(k.data(), k.size());
-    leveldb::Slice val(vdata->data(), vdata->GetWrittenBytes());
-
-    leveldb::WriteOptions writeOpts;
-    writeOpts.sync = true;
-    return index->Put(writeOpts, key, val);
+    return PutObject(index, k, vdata);
   }
 
   template<class K, class V>
@@ -201,10 +261,7 @@ namespace Token{
       ss << "Cannot serialize object to buffer of size: " << vdata->GetBufferSize();
       return;
     }
-
-    leveldb::Slice key(k.data(), k.size());
-    leveldb::Slice val(vdata->data(), vdata->GetWrittenBytes());
-    return batch.Put(key, val);
+    return PutObject(batch, k, vdata);
   }
 
   static inline leveldb::Status
@@ -237,6 +294,20 @@ namespace Token{
     return PutObject(batch, ObjectHashKey(Object::Type::kUnclaimedTransaction, hash), val);
   }
 
+  static inline leveldb::Status
+  PutObject(leveldb::DB* index, const User& user, const Wallet& wallet){
+    BufferPtr buff = Buffer::NewInstance(GetBufferSize(wallet));
+    Encode(wallet, buff);
+    return PutObject(index, UserKey(user), buff);
+  }
+
+  static inline void
+  PutObject(leveldb::WriteBatch& batch, const User& user, const Wallet& wallet){
+    BufferPtr buff = Buffer::NewInstance(GetBufferSize(wallet));
+    Encode(wallet, buff);
+    return PutObject(batch, UserKey(user), buff);
+  }
+
   template<class K>
   static inline bool
   HasObject(leveldb::DB* index, const K& k){
@@ -251,6 +322,11 @@ namespace Token{
   static inline bool
   HasObject(leveldb::DB* index, const Hash& hash, const Object::Type& type){
     return HasObject(index, ObjectHashKey(type, hash));
+  }
+
+  static inline bool
+  HasObject(leveldb::DB* index, const User& user){
+    return HasObject(index, UserKey(user));
   }
 
   template<class K>
@@ -276,9 +352,19 @@ namespace Token{
     return RemoveObject(index, ObjectHashKey(type, hash));
   }
 
+  static inline leveldb::Status
+  RemoveObject(leveldb::DB* index, const User& user){
+    return RemoveObject(index, UserKey(user));
+  }
+
   static inline void
   RemoveObject(leveldb::WriteBatch& batch, const Hash& hash, const Object::Type& type){
     return RemoveObject(batch, ObjectHashKey(type, hash));
+  }
+
+  static inline void
+  RemoveObject(leveldb::WriteBatch& batch, const User& user){
+    return RemoveObject(batch, UserKey(user));
   }
 }
 

@@ -122,7 +122,7 @@ namespace Token{
     friend class BlockMessage;
    public:
     static const int64_t kMaxTransactionsForBlock = 2;
-    static const int64_t kNumberOfGenesisOutputs = 10; // TODO: changeme
+    static const int64_t kNumberOfGenesisOutputs = 10000; // TODO: changeme
    private:
     Timestamp timestamp_;
     int64_t height_;

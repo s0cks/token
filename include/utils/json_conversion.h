@@ -44,10 +44,10 @@ namespace Token{
     SetField(writer, name, product.str());
   }
 
-  void ToJson(const HashList& hashes, JsonString& json);
   void ToJson(const BlockPtr& blk, JsonString& json);
   void ToJson(const TransactionPtr& tx, JsonString& json);
   void ToJson(const UnclaimedTransactionPtr& utxo, JsonString& json);
+  void ToJson(const UnclaimedTransactionPtr& utxo, JsonWriter& writer);
 }
 
 #endif //TOKEN_JSON_CONVERSION_H

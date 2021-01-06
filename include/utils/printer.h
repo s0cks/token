@@ -137,6 +137,80 @@ namespace Token{
       return Print(utxo);
     }
   };
+
+  class BannerPrinter : Printer{
+   public:
+    static const int kDefaultSize = 75;
+   private:
+    int size_;
+
+    static inline std::string
+    CreateBanner(){
+      std::stringstream ss;
+      ss << "Token v" << Token::GetVersion();
+#ifdef TOKEN_DEBUG
+      ss << " (Debug Mode Enabled)";
+#endif//TOKEN_DEBUG
+      return ss.str();
+    }
+
+    static inline std::string
+    CreateMarquee(int size){
+      std::string text = CreateBanner();
+
+      int offset = (size - text.size()) / 2;
+
+      std::stringstream ss;
+      ss << '#';
+      int i;
+      for(i = 0; i < offset - 2; i++)
+        ss << ' ';
+      ss << text;
+      for(i = (i + text.size()); i < size - 2; i++)
+        ss << ' ';
+      ss << '#';
+      return ss.str();
+    }
+
+    static inline std::string
+    CreateGutter(int size){
+      std::stringstream ss;
+      for(int i = 0; i < size; i++)
+        ss << '#';
+      return ss.str();
+    }
+   public:
+    BannerPrinter(int size=BannerPrinter::kDefaultSize, const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone):
+      Printer(severity, flags),
+      size_(size){}
+    BannerPrinter(Printer* parent, int size=BannerPrinter::kDefaultSize):
+      Printer(parent),
+      size_(size){}
+    ~BannerPrinter() = default;
+
+    int GetSize() const{
+      return size_;
+    }
+
+    bool Print() const{
+      LOG_AT_LEVEL(GetSeverity()) << CreateGutter(GetSize());
+      LOG_AT_LEVEL(GetSeverity()) << CreateMarquee(GetSize());
+      LOG_AT_LEVEL(GetSeverity()) << CreateGutter(GetSize());
+      return true;
+    }
+
+    static inline bool
+    PrintBanner(Printer* parent, int size=BannerPrinter::kDefaultSize){
+      BannerPrinter printer(parent, size);
+      return printer.Print();
+    }
+
+    static inline bool
+    PrintBanner(int size=BannerPrinter::kDefaultSize, const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone){
+      BannerPrinter printer(size, severity, flags);
+      return printer.Print();
+    }
+  };
 }
 
 #endif //TOKEN_PRINTER_H

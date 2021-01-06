@@ -25,41 +25,8 @@ namespace Token{
   }
 
   static inline std::string
-  GetDataDirectory(){
-    return TOKEN_BLOCKCHAIN_HOME + "/pool";
-  }
-
-  static inline std::string
   GetIndexFilename(){
-    return GetDataDirectory() + "/index";
-  }
-
-  static inline std::string
-  GetDataFilename(const Hash& hash){
-    std::stringstream filename;
-    filename << GetDataDirectory() << "/" << hash << ".dat";
-    return filename.str();
-  }
-
-  static inline std::string
-  GetBlockFilename(const Hash& hash){
-    std::stringstream filename;
-    filename << GetDataDirectory() << "/b" << hash << ".dat";
-    return filename.str();
-  }
-
-  static inline std::string
-  GetTransactionFilename(const Hash& hash){
-    std::stringstream filename;
-    filename << GetDataDirectory() << "/t" << hash << ".dat";
-    return filename.str();
-  }
-
-  static inline std::string
-  GetUnclaimedTransactionFilename(const Hash& hash){
-    std::stringstream filename;
-    filename << GetDataDirectory() << "/u" << hash << ".dat";
-    return filename.str();
+    return TOKEN_BLOCKCHAIN_HOME + "/pool";
   }
 
   ObjectPool::State ObjectPool::GetState(){
@@ -86,8 +53,6 @@ namespace Token{
     SIGNAL_ALL;
   }
 
-
-
   bool ObjectPool::Initialize(){
     if(IsInitialized()){
       LOG(WARNING) << "cannot re-initialize the object pool.";
@@ -96,13 +61,6 @@ namespace Token{
 
     LOG(INFO) << "initializing the object pool....";
     SetState(ObjectPool::kInitializing);
-    if(!FileExists(GetDataDirectory())){
-      if(!CreateDirectory(GetDataDirectory())){
-        LOG(WARNING) << "cannot create the object pool directory: " << GetDataDirectory();
-        return false;
-      }
-    }
-
     leveldb::Options options;
     options.comparator = new ObjectHashKey::Comparator();
     options.create_if_missing = true;
@@ -188,43 +146,6 @@ namespace Token{
     return true;
   }
 
-  bool ObjectPool::HasUnclaimedTransactions(const User& user){
-    std::string key = user.Get();
-    std::string value;
-    leveldb::Status status;
-    return GetIndex()->Get(leveldb::ReadOptions(), key, &value).ok();
-  }
-
-  bool ObjectPool::PutHashList(const User& user, const HashList& hashes){
-    std::string key = user.Get();
-
-    int64_t val_size = GetBufferSize(hashes);
-    uint8_t val_data[val_size];
-    Encode(hashes, val_data, val_size);
-    leveldb::Slice value((char*) val_data, val_size);
-
-    leveldb::WriteOptions opts;
-    opts.sync = true;
-    leveldb::Status status;
-    if(!(status = GetIndex()->Put(opts, key, value)).ok()){
-      LOG(WARNING) << "cannot index hash list for user " << user << ": " << status.ToString();
-      return false;
-    }
-
-    LOG(INFO) << "indexed hash list for user: " << user;
-    return true;
-  }
-
-  bool ObjectPool::GetBlocks(HashList& hashes){
-    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
-    for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectHashKey key(it->key());
-      if(key.IsBlock())
-        hashes.insert(key.GetHash());
-    }
-    return true;
-  }
-
   bool ObjectPool::GetBlocks(JsonString& json){
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
 
@@ -239,16 +160,6 @@ namespace Token{
       }
     }
     writer.EndArray();
-    return true;
-  }
-
-  bool ObjectPool::GetTransactions(HashList& hashes){
-    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
-    for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectHashKey key(it->key());
-      if(key.IsTransaction())
-        hashes.insert(key.GetHash());
-    }
     return true;
   }
 
@@ -269,16 +180,6 @@ namespace Token{
     return true;
   }
 
-  bool ObjectPool::GetUnclaimedTransactions(HashList& hashes){
-    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
-    for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectHashKey key(it->key());
-      if(key.IsUnclaimedTransaction())
-        hashes.insert(key.GetHash());
-    }
-    return true;
-  }
-
   bool ObjectPool::GetUnclaimedTransactions(JsonString& json){
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
 
@@ -291,48 +192,6 @@ namespace Token{
         std::string hex = hash.HexString();
         writer.String(hex.data(), 64);
       }
-    }
-    writer.EndArray();
-    return true;
-  }
-
-  bool ObjectPool::GetUnclaimedTransactionsFor(const User& user, HashList& hashes){
-    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
-    for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectHashKey key(it->key());
-      if(!key.IsUnclaimedTransaction())
-        continue;
-
-      BufferPtr val = Buffer::From(it->value());
-      UnclaimedTransactionPtr value = UnclaimedTransaction::NewInstance(val);
-      if(value->GetUser() == user)
-        hashes.insert(key.GetHash());
-    }
-    return true;
-  }
-
-  bool ObjectPool::GetUnclaimedTransactionsFor(const User& user, JsonString& json){
-    std::string key = user.str();
-    std::string value;
-
-    leveldb::ReadOptions opts;
-    leveldb::Status status;
-    if(!(status = GetIndex()->Get(opts, key, &value)).ok()){
-      LOG(WARNING) << "cannot get hash list for " << user << ": " << status.ToString();
-      return false;
-    }
-
-    int64_t size = (int64_t) value.size();
-    uint8_t* bytes = (uint8_t*)value.data();
-
-    JsonWriter writer(json);
-    writer.StartArray();
-    int64_t offset = 0;
-    while(offset < size){
-      Hash hash(&bytes[offset], Hash::kSize);
-      std::string hex = hash.HexString();
-      writer.String(hex.data(), 64);
-      offset += Hash::kSize;
     }
     writer.EndArray();
     return true;
@@ -554,6 +413,26 @@ namespace Token{
       LOG(WARNING) << "cannot remove unclaimed transaction " << hash << " from pool.";
       return false;
     }
+    return true;
+  }
+
+  bool ObjectPool::GetUnclaimedTransactionData(const User& user, JsonString& json){
+    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
+
+    JsonWriter writer(json);
+    writer.StartArray();
+    for(it->SeekToFirst(); it->Valid(); it->Next()){
+      ObjectHashKey key(it->key());
+      if(key.IsUnclaimedTransaction()){
+        BufferPtr buff = Buffer::From(it->value());
+        UnclaimedTransactionPtr utxo = UnclaimedTransaction::NewInstance(buff);
+        if(utxo->GetUser() != user)
+          continue;
+
+        ToJson(utxo, writer);
+      }
+    }
+    writer.EndArray();
     return true;
   }
 }

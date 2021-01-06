@@ -60,18 +60,10 @@ namespace Token{
    private:
     std::string filename_;
     std::string cause_;
-#ifdef OS_IS_LINUX
-    StackTrace trace_;
 
     CrashReport(const std::string& filename, const std::string& cause):
       filename_(filename),
-      cause_(cause),
-      trace_(){}
-#else
-    CrashReport(const std::string& filename, const std::string& cause):
-        filename_(filename),
-        cause_(cause){}
-#endif//OS_IS_LINUX
+      cause_(cause){}
    public:
     ~CrashReport() = default;
 
@@ -83,19 +75,19 @@ namespace Token{
       return cause_;
     }
 
-    static bool PrintNewCrashReport(const std::string& cause, const google::LogSeverity& severity = google::INFO);
+    static bool PrintNewCrashReport(const std::string& cause, const google::LogSeverity& severity = google::ERROR);
     static bool PrintNewCrashReportAndExit(const std::string& cause,
-                                           const google::LogSeverity& severity = google::INFO,
+                                           const google::LogSeverity& severity = google::ERROR,
                                            int code = EXIT_FAILURE);
 
     static inline bool
-    PrintNewCrashReport(const std::stringstream& ss, const google::LogSeverity& severity = google::INFO){
+    PrintNewCrashReport(const std::stringstream& ss, const google::LogSeverity& severity = google::ERROR){
       return PrintNewCrashReport(ss.str(), severity);
     }
 
     static inline bool
     PrintNewCrashReportAndExit(const std::stringstream& ss,
-                               const google::LogSeverity& severity = google::INFO,
+                               const google::LogSeverity& severity = google::ERROR,
                                int code = EXIT_FAILURE){
       return PrintNewCrashReportAndExit(ss.str(), severity, code);
     }
@@ -105,8 +97,19 @@ namespace Token{
    private:
     std::string cause_;
 
+    template<class T>
+    bool PrintState(const std::string& name){
+      LOG_AT_LEVEL(GetSeverity()) << name << ": " << T::GetState() << " [" << T::GetStatus() << "]";
+      return true;
+    }
+
     bool PrintBanner();
-    bool PrintStackTrace();
+    bool PrintCrashInformation();
+    bool PrintPeerInformation();
+    bool PrintServerInformation();
+    bool PrintRestServiceInformation();
+    bool PrintHealthServiceInformation();
+    bool PrintHostInformation();
     bool PrintSystemInformation();
    public:
     CrashReportPrinter(const std::string& cause,
@@ -121,9 +124,47 @@ namespace Token{
     }
 
     bool Print(){
-      return PrintBanner()
-             && PrintSystemInformation()
-             && PrintStackTrace();
+      if(!PrintBanner()){
+        LOG(WARNING) << "couldn't print the banner.";
+        return false;
+      }
+
+      if(!PrintSystemInformation()){
+        LOG(WARNING) << "couldn't print the system information.";
+        return false;
+      }
+
+#ifdef TOKEN_ENABLE_HEALTH_SERVICE
+      if(!PrintHealthServiceInformation()){
+        LOG(WARNING) << "couldn't print the health service information.";
+        return false;
+      }
+#endif//TOKEN_ENABLE_HEALTH_SERVICE
+
+#ifdef TOKEN_ENABLE_REST_SERVICE
+      if(!PrintRestServiceInformation()){
+        LOG(WARNING) << "couldn't print the rest service information.";
+        return false;
+      }
+#endif//TOKEN_ENABLE_REST_SERVICE
+
+#ifdef TOKEN_ENABLE_SERVER
+      if(!PrintServerInformation()){
+        LOG(WARNING) << "couldn't print the server information.";
+        return false;
+      }
+
+      if(!PrintPeerInformation()){
+        LOG(WARNING) << "couldn't print the peer information.";
+        return false;
+      }
+#endif//TOKEN_ENABLE_SERVER
+
+      if(!PrintCrashInformation()){
+        LOG(WARNING) << "couldn't print the crash information.";
+        return false;
+      }
+      return true;
     }
   };
 }

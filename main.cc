@@ -1,13 +1,12 @@
 #include <thread>
 #include "pool.h"
+#include "wallet.h"
 #include "keychain.h"
 #include "discovery.h"
 #include "blockchain.h"
 #include "configuration.h"
 #include "job/scheduler.h"
 #include "utils/crash_report.h"
-
-#include "utils/kvstore.h"
 
 #ifdef TOKEN_ENABLE_SERVER
   #include "server/server.h"
@@ -22,8 +21,6 @@
   #include "http/rest_service.h"
 #endif//TOKEN_ENABLE_REST
 
-#include "job/verifier.h"
-
 static inline void
 InitializeLogging(char *arg0){
   using namespace Token;
@@ -31,56 +28,34 @@ InitializeLogging(char *arg0){
   google::InitGoogleLogging(arg0);
 }
 
-static inline void
-PrintBanner(){
-  // Print Debug Banner in Logs
-  std::string header = "Token v" + Token::GetVersion() + " Debug Mode Enabled!";
-  size_t total_size = 50;
-  size_t middle = (total_size - header.size()) / 2;
-
-  std::stringstream ss1;
-  for(size_t idx = 0; idx < total_size; idx++) ss1 << "#";
-
-  std::stringstream ss2;
-  ss2 << "#";
-  for(size_t idx = 0; idx < middle; idx++) ss2 << " ";
-  ss2 << header;
-  for(size_t idx = 0; idx < middle - 1; idx++) ss2 << " ";
-  ss2 << "#";
-
-  LOG(INFO) << ss1.str();
-  LOG(INFO) << ss2.str();
-  LOG(INFO) << ss1.str();
-}
-
-static inline bool
-AppendDummy(){
-  using namespace Token;
-  sleep(5);
-  LOG(INFO) << "getting unclaimed transactions";
-  HashList utxos;
-  if(!ObjectPool::GetUnclaimedTransactions(utxos)){
-    LOG(ERROR) << "couldn't get unclaimed transactions for";
-    return false;
-  }
-  LOG(INFO) << "spending " << utxos.size() << " unclaimed transactions";
-  int64_t idx = 0;
-  for(auto& it : utxos){
-    LOG(INFO) << "spending token: " << it;
-    UnclaimedTransactionPtr utxo = ObjectPool::GetUnclaimedTransaction(it);
-    InputList inputs = {Input(utxo->GetTransaction(), utxo->GetIndex(), utxo->GetUser())};
-    OutputList outputs = {Output("TestUser2", "TestToken2")};
-    TransactionPtr tx = Transaction::NewInstance(idx++, inputs, outputs);
-
-    ObjectPool::PutTransaction(tx->GetHash(), tx);
-
-
-    sleep(2);
-    if(idx == 2)
-      break;
-  }
-  return true;
-}
+//static inline bool
+//AppendDummy(){
+//  using namespace Token;
+//  sleep(5);
+//  LOG(INFO) << "getting unclaimed transactions";
+//  HashList utxos;
+//  if(!ObjectPool::GetUnclaimedTransactions(utxos)){
+//    LOG(ERROR) << "couldn't get unclaimed transactions for";
+//    return false;
+//  }
+//  LOG(INFO) << "spending " << utxos.size() << " unclaimed transactions";
+//  int64_t idx = 0;
+//  for(auto& it : utxos){
+//    LOG(INFO) << "spending token: " << it;
+//    UnclaimedTransactionPtr utxo = ObjectPool::GetUnclaimedTransaction(it);
+//    InputList inputs = {Input(utxo->GetTransaction(), utxo->GetIndex(), utxo->GetUser())};
+//    OutputList outputs = {Output("TestUser2", "TestToken2")};
+//    TransactionPtr tx = Transaction::NewInstance(idx++, inputs, outputs);
+//
+//    ObjectPool::PutTransaction(tx->GetHash(), tx);
+//
+//
+//    sleep(2);
+//    if(idx == 2)
+//      break;
+//  }
+//  return true;
+//}
 
 //TODO:
 // - create global environment teardown and deconstruct routines
@@ -98,8 +73,10 @@ main(int argc, char **argv){
   // Initialize the Logging Framework
   InitializeLogging(argv[0]);
 
+  // ~16.07s on boot for 30k Tokens (not initialized)
+  // ~2s on boot for 30k tokens (initialized)
   #ifdef TOKEN_DEBUG
-    PrintBanner();
+    BannerPrinter::PrintBanner();
   #endif//TOKEN_DEBUG
 
   // Load the configuration
@@ -131,6 +108,12 @@ main(int argc, char **argv){
   // Initialize the object pool
   if(!ObjectPool::Initialize()){
     CrashReport::PrintNewCrashReport("Failed to load the object pool.");
+    return EXIT_FAILURE;
+  }
+
+  // Initialize the wallet manager
+  if(!WalletManager::Initialize()){
+    CrashReport::PrintNewCrashReport("Failed to initialize the wallet manager.");
     return EXIT_FAILURE;
   }
 
@@ -173,9 +156,6 @@ main(int argc, char **argv){
     LOG(INFO) << "Number of Unclaimed Transactions: " << ObjectPool::GetNumberOfUnclaimedTransactions();
   #endif//TOKEN_DEBUG
 
-//  if(!AppendDummy()){
-//    CrashReport::PrintNewCrashReport("Cannot append dummy block.");
-//    return EXIT_FAILURE;
-//  }
+  CrashReport::PrintNewCrashReport("This is a test", google::INFO);
   return EXIT_SUCCESS;
 }

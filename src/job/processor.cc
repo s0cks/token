@@ -1,3 +1,4 @@
+#include "wallet.h"
 #include "job/scheduler.h"
 #include "job/processor.h"
 
@@ -6,24 +7,13 @@ namespace Token{
     if(!GetBlock()->Accept(this))
       return Failed("Cannot visit the block transactions.");
 
-    for(auto it = hash_lists_.begin();
-          it != hash_lists_.end();
-          it++){
-      const User& user = (*it).first;
-      HashList& hashes = (*it).second;
-      ObjectPool::GetUnclaimedTransactionsFor(user, hashes);
-
-      LOG(INFO) << user << " now has " << hashes.size() << " unclaimed transactions.";
-
-      std::string key = user.Get();
-
-      int64_t val_size = GetBufferSize(hashes);
-      uint8_t val_data[val_size];
-      Encode(hashes, val_data, val_size);
-      leveldb::Slice value((char*) val_data, val_size);
-
-      batch_.Delete(key);
-      batch_.Put(key, value);
+    for(auto& it : wallets_){
+      const User& user = it.first;
+      Wallet& wallet = it.second;
+      WalletManager::GetWallet(user, wallet);
+      LOG(INFO) << user << " now has " << wallet.size() << " unclaimed transactions.";
+      RemoveObject(batch_wallet_, user);
+      PutObject(batch_wallet_, user, wallet);
     }
 
     LOG(INFO) << "writing changes....";

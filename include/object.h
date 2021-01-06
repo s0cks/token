@@ -90,7 +90,7 @@ namespace Token{
     }
 
     std::string str() const{
-      return std::string(data(), Size);
+      return std::string(data(), std::min(strlen((char*)data_), (size_t)Size));
     }
 
     static inline int64_t
@@ -120,10 +120,6 @@ namespace Token{
 
     int64_t size() const{
       return std::min((int64_t) strlen((char*) data_), Base::GetSize());
-    }
-
-    std::string Get() const{
-      return std::string((char*) data_, Base::GetSize());
     }
 
     void operator=(const Product& product){
@@ -171,10 +167,6 @@ namespace Token{
       return std::min((int64_t) strlen((char*) data_), Base::GetSize());
     }
 
-    std::string Get() const{
-      return std::string((char*) data_, Base::GetSize());
-    }
-
     void operator=(const User& user){
       memcpy(data(), user.data(), Base::GetSize());
     }
@@ -187,13 +179,17 @@ namespace Token{
       return Base::Compare(a, b) != 0;
     }
 
-    friend int operator<(const User& a, const User& b){
-      return Base::Compare(a, b);
+    friend bool operator<(const User& a, const User& b){
+      return Base::Compare(a, b) < 0;
     }
 
     friend std::ostream& operator<<(std::ostream& stream, const User& user){
       stream << user.str();
       return stream;
+    }
+
+    static int Compare(const User& a, const User& b){
+      return Base::Compare(a, b);
     }
   };
 

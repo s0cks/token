@@ -43,12 +43,13 @@ namespace Token{
     friend std::ostream& operator<<(std::ostream& stream, const State& state){
       switch(state){
 #define DEFINE_TOSTRING(Name) \
-                case State::k##Name: \
-                    stream << #Name; \
-                    return stream;
+        case State::k##Name: \
+            stream << #Name; \
+            return stream;
         FOR_EACH_BLOCKCHAIN_STATE(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
-        default:stream << "Unknown";
+        default:
+          stream << "Unknown";
           return stream;
       }
     }
@@ -88,7 +89,6 @@ namespace Token{
     static bool Initialize();
     static bool VisitHeaders(BlockChainHeaderVisitor* vis);
     static bool VisitBlocks(BlockChainBlockVisitor* vis);
-    static bool GetBlocks(HashList& hashes);
     static bool HasBlock(const Hash& hash);
     static bool HasReference(const std::string& name);
     static Hash GetReference(const std::string& name);

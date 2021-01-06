@@ -181,44 +181,6 @@ namespace Token{
       return Hash(data);
     }
   };
-
-  typedef std::unordered_set<Hash, Hash::Hasher, Hash::Equal> HashList;
-
-  static inline int64_t
-  GetBufferSize(const HashList& hashes){
-    return hashes.size() * Hash::kSize;
-  }
-
-  static inline bool
-  Encode(const HashList& hashes, uint8_t* bytes, const int64_t& size){
-    int64_t bsize = GetBufferSize(hashes);
-    if(size < bsize)
-      return false;
-    int64_t offset = 0;
-    for(auto& it : hashes){
-      it.Encode(&bytes[offset], it.size());
-      offset += it.size();
-    }
-    return true;
-  }
-
-  static inline bool
-  Decode(uint8_t* bytes, const int64_t& size, HashList& hashes){
-    int64_t offset = 0;
-    while(offset < size){
-      hashes.insert(Hash(&bytes[offset], Hash::GetSize()));
-      offset += Hash::GetSize();
-    }
-    return true;
-  }
-
-  static inline void
-  Print(const HashList& hashes, const google::LogSeverity& severity = google::INFO){
-    LOG_AT_LEVEL(severity) << "Hash List:";
-    for(auto& it : hashes){
-      LOG_AT_LEVEL(severity) << " - " << it;
-    }
-  }
 }
 
 #endif //TOKEN_HASH_H
