@@ -121,9 +121,9 @@ namespace Token{
     }
    public:
     HttpBinaryResponse(HttpSession* session,
-                       const HttpStatusCode& status_code,
-                       const std::string& filename,
-                       const std::string& content_type=HTTP_CONTENT_TYPE_TEXT_PLAIN):
+      const HttpStatusCode& status_code,
+      const std::string& filename,
+      const std::string& content_type = HTTP_CONTENT_TYPE_TEXT_PLAIN):
       HttpResponse(session, status_code),
       body_(){
       std::fstream fd(filename, std::ios::in | std::ios::binary);
@@ -141,9 +141,9 @@ namespace Token{
 
     static inline HttpResponsePtr
     NewInstance(HttpSession* session,
-                const HttpStatusCode& status_code,
-                const std::string& filename,
-                const std::string& content_type=HTTP_CONTENT_TYPE_TEXT_PLAIN){
+      const HttpStatusCode& status_code,
+      const std::string& filename,
+      const std::string& content_type = HTTP_CONTENT_TYPE_TEXT_PLAIN){
       return std::make_shared<HttpBinaryResponse>(session, status_code, filename, content_type);
     }
   };
@@ -155,7 +155,7 @@ namespace Token{
    protected:
     bool Write(const BufferPtr& buff) const{
       HttpResponse::Write(buff);
-      buff->PutBytes((uint8_t*)body_, length_);
+      buff->PutBytes((uint8_t*) body_, length_);
       return true;
     }
    public:
@@ -167,8 +167,9 @@ namespace Token{
       SetHeader(HTTP_HEADER_CONTENT_LENGTH, body.length());
     }
     ~HttpTextResponse(){
-      if(body_)
-        free((void*)body_);
+      if(body_){
+        free((void*) body_);
+      }
     }
 
     static inline HttpResponsePtr
@@ -183,7 +184,7 @@ namespace Token{
    protected:
     bool Write(const BufferPtr& buffer) const{
       HttpResponse::Write(buffer);
-      buffer->PutBytes((uint8_t*)body_.GetString(), body_.GetLength());
+      buffer->PutBytes((uint8_t*) body_.GetString(), body_.GetLength());
       return true;
     }
    public:

@@ -9,7 +9,7 @@ namespace Token{
     sockaddr_in bind_address;
     uv_ip4_addr("0.0.0.0", port, &bind_address);
     int err;
-    if((err = uv_tcp_bind(server, (struct sockaddr*)&bind_address, 0)) != 0){
+    if((err = uv_tcp_bind(server, (struct sockaddr*) &bind_address, 0)) != 0){
       LOG(ERROR) << "server bind failure: " << uv_strerror(err);
       return false;
     }

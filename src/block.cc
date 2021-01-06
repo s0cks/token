@@ -56,11 +56,13 @@ namespace Token{
   }
 
   bool Block::Accept(BlockVisitor* vis) const{
-    if(!vis->VisitStart())
+    if(!vis->VisitStart()){
       return false;
+    }
     for(auto& tx : transactions_){
-      if(!vis->Visit(tx))
+      if(!vis->Visit(tx)){
         return false;
+      }
     }
     return vis->VisitEnd();
   }
@@ -76,8 +78,9 @@ namespace Token{
 
   Hash Block::GetMerkleRoot() const{
     MerkleTreeBuilder builder;
-    if(!Accept(&builder))
+    if(!Accept(&builder)){
       return Hash();
+    }
     std::shared_ptr<MerkleTree> tree = builder.Build();
     return tree->GetRootHash();
   }

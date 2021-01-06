@@ -102,7 +102,14 @@ namespace Token{
         case Message::MessageType::kVersionMessageType:{
           //TODO: convert to ClientVerack or something better than this garble
           BlockPtr head = Block::Genesis();
-          client->Send(VerackMessage::NewInstance(ClientType::kClient, Server::GetID(), NodeAddress(), Version(), head->GetHeader(), Hash::GenerateNonce()));
+          client->Send(
+            VerackMessage::NewInstance(
+              ClientType::kClient,
+              Server::GetID(),
+              NodeAddress(),
+              Version(),
+              head->GetHeader(),
+              Hash::GenerateNonce()));
           break;
         }
         case Message::MessageType::kVerackMessageType:{

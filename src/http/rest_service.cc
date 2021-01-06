@@ -76,8 +76,9 @@ namespace Token{
   }
 
   bool RestService::Stop(){
-    if(!IsRunning())
-      return true; // should we return false?
+    if(!IsRunning()){
+      return true;
+    } // should we return false?
     uv_async_send(&shutdown_);
     return Thread::StopThread(thread_);
   }
@@ -106,7 +107,7 @@ namespace Token{
     SetState(State::kRunning);
     uv_run(loop, UV_RUN_DEFAULT);
     LOG(INFO) << "the rest service has stopped.";
-  exit:
+    exit:
     pthread_exit(nullptr);
   }
 
@@ -125,9 +126,10 @@ namespace Token{
   }
 
   void RestService::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
-    HttpSession* session = (HttpSession*)stream->data;
-    if(nread == UV_EOF)
+    HttpSession* session = (HttpSession*) stream->data;
+    if(nread == UV_EOF){
       return;
+    }
     if(nread < 0){
       LOG(WARNING) << "server read failure: " << uv_strerror(nread);
       session->Close();
@@ -153,13 +155,14 @@ namespace Token{
 /*****************************************************************************
  *                      InfoController
  *****************************************************************************/
- void InfoController::HandleGetStats(HttpSession* session, const HttpRequestPtr& request){
-   JsonString body;
-    if(!JobScheduler::GetWorkerStatistics(body))
+  void InfoController::HandleGetStats(HttpSession* session, const HttpRequestPtr& request){
+    JsonString body;
+    if(!JobScheduler::GetWorkerStatistics(body)){
       return SendInternalServerError(session, "Cannot get job scheduler worker statistics.");
-   std::shared_ptr<HttpJsonResponse> response = std::make_shared<HttpJsonResponse>(session, STATUS_CODE_OK, body);
-   session->Send(response);
- }
+    }
+    std::shared_ptr<HttpJsonResponse> response = std::make_shared<HttpJsonResponse>(session, STATUS_CODE_OK, body);
+    session->Send(response);
+  }
 
 /*****************************************************************************
  *                      BlockChainController
@@ -189,16 +192,18 @@ namespace Token{
  *****************************************************************************/
   void ObjectPoolController::HandleGetStats(HttpSession* session, const HttpRequestPtr& request){
     JsonString body;
-    if(!ObjectPool::GetStats(body))
+    if(!ObjectPool::GetStats(body)){
       return SendInternalServerError(session, "Cannot get ObjectPool stats.");
+    }
     HttpResponsePtr resp = HttpJsonResponse::NewInstance(session, STATUS_CODE_OK, body);
     session->Send(resp);
   }
 
   void ObjectPoolController::HandleGetBlock(HttpSession* session, const HttpRequestPtr& request){
     Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
-    if(!ObjectPool::HasBlock(hash))
+    if(!ObjectPool::HasBlock(hash)){
       return SendNotFound(session, hash);
+    }
     BlockPtr blk = ObjectPool::GetBlock(hash);
     SendJson(session, blk);
   }
@@ -209,8 +214,9 @@ namespace Token{
 
   void ObjectPoolController::HandleGetTransaction(HttpSession* session, const HttpRequestPtr& request){
     Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
-    if(!ObjectPool::HasTransaction(hash))
+    if(!ObjectPool::HasTransaction(hash)){
       return SendNotFound(session, hash);
+    }
     TransactionPtr tx = ObjectPool::GetTransaction(hash);
     SendJson(session, tx);
   }
@@ -221,16 +227,18 @@ namespace Token{
 
   void ObjectPoolController::HandleGetUnclaimedTransaction(HttpSession* session, const HttpRequestPtr& request){
     Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
-    if(!ObjectPool::HasUnclaimedTransaction(hash))
+    if(!ObjectPool::HasUnclaimedTransaction(hash)){
       return SendNotFound(session, hash);
+    }
     UnclaimedTransactionPtr val = ObjectPool::GetUnclaimedTransaction(hash);
     SendJson(session, val);
   }
 
   void ObjectPoolController::HandleGetUnclaimedTransactions(HttpSession* session, const HttpRequestPtr& request){
     JsonString body;
-    if(!ObjectPool::GetUnclaimedTransactions(body))
+    if(!ObjectPool::GetUnclaimedTransactions(body)){
       return SendInternalServerError(session, "Cannot GetObject Unclaimed Transactions");
+    }
     HttpResponsePtr resp = HttpJsonResponse::NewInstance(session, STATUS_CODE_OK, body);
     session->Send(resp);
   }
@@ -247,7 +255,8 @@ namespace Token{
     session->Send(resp);
   }
 
-  void ObjectPoolController::HandleGetUserUnclaimedTransactionsData(HttpSession* session, const HttpRequestPtr& request){
+  void ObjectPoolController::HandleGetUserUnclaimedTransactionsData(HttpSession* session,
+    const HttpRequestPtr& request){
     User user = request->GetParameterValue("user");
     JsonString json;
     if(!ObjectPool::GetUnclaimedTransactionData(user, json)){

@@ -5,7 +5,6 @@
 
 namespace Token{
 
-
   static std::mutex mutex_;
   static std::condition_variable cond_;
   static libconfig::Config config_;
@@ -92,8 +91,9 @@ namespace Token{
 
   bool BlockChainConfiguration::GetPeerList(std::set<NodeAddress>& results){
     LOCK_GUARD;
-    if(!FLAGS_remote.empty())
+    if(!FLAGS_remote.empty()){
       results.insert(NodeAddress(FLAGS_remote));
+    }
 
     if(HasEnvironmentVariable(ENVIRONMENT_TOKEN_LEDGER)){
       std::string phostname = GetEnvironmentVariable(ENVIRONMENT_TOKEN_LEDGER);
@@ -119,8 +119,9 @@ namespace Token{
   bool BlockChainConfiguration::SetPeerList(const std::set<NodeAddress>& peers){
     LOCK_GUARD;
     libconfig::Setting& server = GetServerProperties();
-    if(server.exists(PROPERTY_SERVER_PEER_LIST))
+    if(server.exists(PROPERTY_SERVER_PEER_LIST)){
       server.remove(PROPERTY_SERVER_PEER_LIST);
+    }
     libconfig::Setting& property = server.add(PROPERTY_SERVER_PEER_LIST, libconfig::Setting::TypeList);
     for(auto& it : peers){
       property.add(libconfig::Setting::TypeString) = it.ToString();
@@ -136,8 +137,9 @@ namespace Token{
   bool BlockChainConfiguration::SetServerID(const UUID& uuid){
     LOCK_GUARD;
     libconfig::Setting& server = GetServerProperties();
-    if(server.exists(PROPERTY_SERVER_ID))
+    if(server.exists(PROPERTY_SERVER_ID)){
       server.remove(PROPERTY_SERVER_ID);
+    }
     server.add(PROPERTY_SERVER_ID, libconfig::Setting::Type::TypeString) = uuid.ToString();
     if(!SaveConfiguration()){
       LOG(WARNING) << "couldn't save the configuration";

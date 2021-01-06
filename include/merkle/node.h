@@ -18,14 +18,16 @@ namespace Token{
 
     void SetLeft(MerkleNode* node){
       lchild_ = node;
-      if(node)
+      if(node){
         node->SetParent(this);
+      }
     }
 
     void SetRight(MerkleNode* node){
       rchild_ = node;
-      if(node)
+      if(node){
         node->SetParent(this);
+      }
     }
 
     Hash ComputeHash() const{

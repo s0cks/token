@@ -180,10 +180,12 @@ namespace Token{
       return ss.str();
     }
    public:
-    BannerPrinter(int size=BannerPrinter::kDefaultSize, const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone):
+    BannerPrinter(int size = BannerPrinter::kDefaultSize,
+      const google::LogSeverity& severity = google::INFO,
+      const long& flags = Printer::kFlagNone):
       Printer(severity, flags),
       size_(size){}
-    BannerPrinter(Printer* parent, int size=BannerPrinter::kDefaultSize):
+    BannerPrinter(Printer* parent, int size = BannerPrinter::kDefaultSize):
       Printer(parent),
       size_(size){}
     ~BannerPrinter() = default;
@@ -200,13 +202,15 @@ namespace Token{
     }
 
     static inline bool
-    PrintBanner(Printer* parent, int size=BannerPrinter::kDefaultSize){
+    PrintBanner(Printer* parent, int size = BannerPrinter::kDefaultSize){
       BannerPrinter printer(parent, size);
       return printer.Print();
     }
 
     static inline bool
-    PrintBanner(int size=BannerPrinter::kDefaultSize, const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone){
+    PrintBanner(int size = BannerPrinter::kDefaultSize,
+      const google::LogSeverity& severity = google::INFO,
+      const long& flags = Printer::kFlagNone){
       BannerPrinter printer(size, severity, flags);
       return printer.Print();
     }

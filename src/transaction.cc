@@ -10,9 +10,9 @@ namespace Token{
   const int64_t Transaction::kMaxNumberOfOutputs = 40000;
 
   TransactionPtr Transaction::NewInstance(const int64_t& index,
-                                          const InputList& inputs,
-                                          const OutputList& outputs,
-                                          const Timestamp& timestamp){
+    const InputList& inputs,
+    const OutputList& outputs,
+    const Timestamp& timestamp){
     return std::make_shared<Transaction>(timestamp, index, inputs, outputs);
   }
 
@@ -53,15 +53,17 @@ namespace Token{
 
   bool Transaction::VisitInputs(TransactionInputVisitor* vis) const{
     for(auto& it : inputs_)
-      if(!vis->Visit(it))
+      if(!vis->Visit(it)){
         return false;
+      }
     return true;
   }
 
   bool Transaction::VisitOutputs(TransactionOutputVisitor* vis) const{
     for(auto& it : outputs_)
-      if(!vis->Visit(it))
+      if(!vis->Visit(it)){
         return false;
+      }
     return true;
   }
 
@@ -89,7 +91,8 @@ namespace Token{
       sigData.resize(length);
 
       std::string signature;
-      CryptoPP::ArraySource source(sigData.data(), sigData.size(), true, new CryptoPP::HexEncoder(new CryptoPP::StringSink(signature)));
+      CryptoPP::ArraySource
+        source(sigData.data(), sigData.size(), true, new CryptoPP::HexEncoder(new CryptoPP::StringSink(signature)));
 
       LOG(INFO) << "signature: " << signature;
       signature_ = signature;

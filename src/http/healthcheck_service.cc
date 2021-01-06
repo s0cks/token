@@ -8,8 +8,8 @@
 
 namespace Token{
   static ThreadId thread_;
-  static std::atomic<HealthCheckService::State> state_ = { HealthCheckService::kStopped };
-  static std::atomic<HealthCheckService::Status> status_ = { HealthCheckService::kOk };
+  static std::atomic<HealthCheckService::State> state_ = {HealthCheckService::kStopped};
+  static std::atomic<HealthCheckService::Status> status_ = {HealthCheckService::kOk};
   static HttpRouter* router_ = nullptr;
   static uv_tcp_t* server_ = nullptr;
   static uv_async_t* shutdown_ = nullptr;
@@ -49,8 +49,9 @@ namespace Token{
   }
 
   bool HealthCheckService::Stop(){
-    if(!IsRunning())
-      return true; // should we return false?
+    if(!IsRunning()){
+      return true;
+    } // should we return false?
     uv_async_send(shutdown_);
     return Thread::StopThread(thread_);
   }
@@ -68,7 +69,7 @@ namespace Token{
     }
 
     int result;
-    if((result = uv_listen((uv_stream_t*)server_, 100, &OnNewConnection)) != 0){
+    if((result = uv_listen((uv_stream_t*) server_, 100, &OnNewConnection)) != 0){
       LOG(WARNING) << "health check service couldn't listen on port " << port << ": " << uv_strerror(result);
       goto exit;
     }
@@ -104,8 +105,9 @@ namespace Token{
 
   void HealthCheckService::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
     HttpSession* session = (HttpSession*) stream->data;
-    if(nread == UV_EOF)
+    if(nread == UV_EOF){
       return;
+    }
 
     if(nread < 0){
       LOG(WARNING) << "server read failure: " << uv_strerror(nread);

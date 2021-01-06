@@ -132,7 +132,7 @@ namespace Token{
      */
     static bool Initialize();
 
-  #define DEFINE_TYPE_METHODS(Name) \
+#define DEFINE_TYPE_METHODS(Name) \
     static bool WaitFor##Name(const Hash& hash, const int64_t timeout_ms=1000*5); \
     static bool Put##Name(const Hash& hash, const Name##Ptr& val);                \
     static bool Get##Name##s(JsonString& json);                                   \
@@ -142,7 +142,7 @@ namespace Token{
     static Name##Ptr Get##Name(const Hash& hash);                                 \
     static int64_t GetNumberOf##Name##s();
     FOR_EACH_POOL_TYPE(DEFINE_TYPE_METHODS)
-  #undef DEFINE_TYPE_METHODS
+#undef DEFINE_TYPE_METHODS
 
     static bool GetUnclaimedTransactionData(const User& user, JsonString& json);
 

@@ -48,8 +48,7 @@ namespace Token{
             return stream;
         FOR_EACH_BLOCKCHAIN_STATE(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
-        default:
-          stream << "Unknown";
+        default:stream << "Unknown";
           return stream;
       }
     }

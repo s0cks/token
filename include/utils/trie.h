@@ -126,7 +126,7 @@ namespace Token{
     }
 
     std::shared_ptr<TrieNode<K, V, kAlphabetSize>> Search(const std::shared_ptr<TrieNode<K, V, kAlphabetSize>>& node,
-                                                          const K& key){
+      const K& key){
       std::shared_ptr<TrieNode<K, V, kAlphabetSize>> n = node;
 
       const char* word = key.data();

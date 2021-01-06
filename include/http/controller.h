@@ -60,9 +60,9 @@ namespace Token{
 
     static inline void
     SendFile(HttpSession* session,
-             const std::string& filename,
-             const HttpStatusCode& status_code = STATUS_CODE_OK,
-             const std::string& content_type = HTTP_CONTENT_TYPE_TEXT_PLAIN){
+      const std::string& filename,
+      const HttpStatusCode& status_code = STATUS_CODE_OK,
+      const std::string& content_type = HTTP_CONTENT_TYPE_TEXT_PLAIN){
       HttpResponsePtr resp = HttpBinaryResponse::NewInstance(session, status_code, filename, content_type);
       session->Send(resp);
     }

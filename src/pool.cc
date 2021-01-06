@@ -198,8 +198,9 @@ namespace Token{
   }
 
   bool ObjectPool::VisitBlocks(ObjectPoolBlockVisitor* vis){
-    if(!vis)
+    if(!vis){
       return false;
+    }
 
     return false;
   }
@@ -208,13 +209,15 @@ namespace Token{
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
       ObjectHashKey key(it->key());
-      if(!key.IsTransaction())
+      if(!key.IsTransaction()){
         continue;
+      }
 
       BufferPtr buff = Buffer::From(it->value());
       TransactionPtr val = Transaction::NewInstance(buff);
-      if(!vis->Visit(val))
+      if(!vis->Visit(val)){
         return false;
+      }
     }
     delete it;
     return true;
@@ -224,13 +227,15 @@ namespace Token{
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
       ObjectHashKey key(it->key());
-      if(!key.IsUnclaimedTransaction())
+      if(!key.IsUnclaimedTransaction()){
         continue;
+      }
 
       BufferPtr buff = Buffer::From(it->value());
       UnclaimedTransactionPtr val = UnclaimedTransaction::NewInstance(buff);
-      if(!vis->Visit(val))
+      if(!vis->Visit(val)){
         return false;
+      }
     }
     delete it;
     return true;
@@ -288,8 +293,9 @@ namespace Token{
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
       ObjectHashKey key(it->key());
-      if(key.IsValid())
+      if(key.IsValid()){
         count++;
+      }
     }
 
     delete it;
@@ -329,13 +335,15 @@ namespace Token{
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
       ObjectHashKey key(it->key());
-      if(!key.IsUnclaimedTransaction())
+      if(!key.IsUnclaimedTransaction()){
         continue;
+      }
 
       BufferPtr val = Buffer::From(it->value());
       UnclaimedTransactionPtr value = UnclaimedTransaction::NewInstance(val);
-      if(value->GetTransaction() == input.GetTransactionHash() && value->GetIndex() == input.GetOutputIndex())
+      if(value->GetTransaction() == input.GetTransactionHash() && value->GetIndex() == input.GetOutputIndex()){
         return value;
+      }
     }
     delete it;
     return UnclaimedTransactionPtr(nullptr);
@@ -358,8 +366,9 @@ namespace Token{
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
       ObjectHashKey key(it->key());
-      if(key.IsBlock())
+      if(key.IsBlock()){
         count++;
+      }
     }
     delete it;
     return count;
@@ -370,8 +379,9 @@ namespace Token{
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
       ObjectHashKey key(it->key());
-      if(key.IsTransaction())
+      if(key.IsTransaction()){
         count++;
+      }
     }
     delete it;
     return count;
@@ -382,8 +392,9 @@ namespace Token{
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
       ObjectHashKey key(it->key());
-      if(key.IsUnclaimedTransaction())
+      if(key.IsUnclaimedTransaction()){
         count++;
+      }
     }
     delete it;
     return count;
@@ -426,8 +437,9 @@ namespace Token{
       if(key.IsUnclaimedTransaction()){
         BufferPtr buff = Buffer::From(it->value());
         UnclaimedTransactionPtr utxo = UnclaimedTransaction::NewInstance(buff);
-        if(utxo->GetUser() != user)
+        if(utxo->GetUser() != user){
           continue;
+        }
 
         ToJson(utxo, writer);
       }

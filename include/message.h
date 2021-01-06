@@ -121,11 +121,11 @@ namespace Token{
     BlockHeader head_;
    public:
     VersionMessage(ClientType type,
-                   const Version& version,
-                   const UUID& node_id,
-                   Timestamp timestamp,
-                   const Hash& nonce,
-                   const BlockHeader& head):
+      const Version& version,
+      const UUID& node_id,
+      Timestamp timestamp,
+      const Hash& nonce,
+      const BlockHeader& head):
       Message(),
       timestamp_(timestamp),
       client_type_(type),
@@ -183,11 +183,11 @@ namespace Token{
 
       VersionMessagePtr msg = std::static_pointer_cast<VersionMessage>(obj);
       return timestamp_ == msg->timestamp_
-          && client_type_ == msg->client_type_
-          && version_ == msg->version_
-          && nonce_ == msg->nonce_
-          && node_id_ == msg->node_id_
-          && head_ == msg->head_;
+             && client_type_ == msg->client_type_
+             && version_ == msg->version_
+             && nonce_ == msg->nonce_
+             && node_id_ == msg->node_id_
+             && head_ == msg->head_;
     }
 
     DECLARE_MESSAGE(Version);
@@ -197,11 +197,11 @@ namespace Token{
     }
 
     static MessagePtr NewInstance(ClientType type,
-                                  const UUID& node_id,
-                                  const BlockHeader& head,
-                                  const Version& version = Version(),
-                                  const Hash& nonce = Hash::GenerateNonce(),
-                                  Timestamp timestamp = GetCurrentTimestamp()){
+      const UUID& node_id,
+      const BlockHeader& head,
+      const Version& version = Version(),
+      const Hash& nonce = Hash::GenerateNonce(),
+      Timestamp timestamp = GetCurrentTimestamp()){
       return std::make_shared<VersionMessage>(type, version, node_id, timestamp, nonce, head);
     }
 
@@ -222,12 +222,12 @@ namespace Token{
     BlockHeader head_;
    public:
     VerackMessage(ClientType type,
-                  const UUID& node_id,
-                  const NodeAddress& callback,
-                  const Version& version,
-                  const BlockHeader& head,
-                  const Hash& nonce,
-                  Timestamp timestamp=GetCurrentTimestamp()):
+      const UUID& node_id,
+      const NodeAddress& callback,
+      const Version& version,
+      const BlockHeader& head,
+      const Hash& nonce,
+      Timestamp timestamp = GetCurrentTimestamp()):
       Message(),
       timestamp_(timestamp),
       client_type_(type),
@@ -276,27 +276,28 @@ namespace Token{
     }
 
     bool Equals(const MessagePtr& obj) const{
-      if(!obj->IsVerackMessage())
+      if(!obj->IsVerackMessage()){
         return false;
+      }
       VerackMessagePtr msg = std::static_pointer_cast<VerackMessage>(obj);
       return timestamp_ == msg->timestamp_
-          && client_type_ == msg->client_type_
-          && version_ == msg->version_
-          && nonce_ == msg->nonce_
-          && node_id_ == msg->node_id_
-          && callback_ == msg->callback_
-          && head_ == msg->head_;
+             && client_type_ == msg->client_type_
+             && version_ == msg->version_
+             && nonce_ == msg->nonce_
+             && node_id_ == msg->node_id_
+             && callback_ == msg->callback_
+             && head_ == msg->head_;
     }
 
     DECLARE_MESSAGE(Verack);
 
     static MessagePtr NewInstance(ClientType type,
-                                  const UUID& node_id,
-                                  const NodeAddress& callback,
-                                  const Version& version,
-                                  const BlockHeader& head,
-                                  const Hash& nonce,
-                                  Timestamp timestamp=GetCurrentTimestamp()){
+      const UUID& node_id,
+      const NodeAddress& callback,
+      const Version& version,
+      const BlockHeader& head,
+      const Hash& nonce,
+      Timestamp timestamp = GetCurrentTimestamp()){
       return std::make_shared<VerackMessage>(type, node_id, callback, version, head, nonce, timestamp);
     }
 
@@ -356,8 +357,9 @@ namespace Token{
     DECLARE_MESSAGE(Prepare);
 
     bool Equals(const MessagePtr& obj) const{
-      if(!obj->IsPrepareMessage())
+      if(!obj->IsPrepareMessage()){
         return false;
+      }
       return PaxosMessage::ProposalEquals(std::static_pointer_cast<PaxosMessage>(obj));
     }
 
@@ -381,8 +383,9 @@ namespace Token{
     DECLARE_MESSAGE(Promise);
 
     bool Equals(const MessagePtr& obj) const{
-      if(!obj->IsPromiseMessage())
+      if(!obj->IsPromiseMessage()){
         return false;
+      }
       return PaxosMessage::ProposalEquals(std::static_pointer_cast<PaxosMessage>(obj));
     }
 
@@ -406,8 +409,9 @@ namespace Token{
     DECLARE_MESSAGE(Commit);
 
     bool Equals(const MessagePtr& obj) const{
-      if(!obj->IsCommitMessage())
+      if(!obj->IsCommitMessage()){
         return false;
+      }
       return PaxosMessage::ProposalEquals(std::static_pointer_cast<PaxosMessage>(obj));
     }
 
@@ -431,8 +435,9 @@ namespace Token{
     DECLARE_MESSAGE(Accepted);
 
     bool Equals(const MessagePtr& obj) const{
-      if(!obj->IsAcceptedMessage())
+      if(!obj->IsAcceptedMessage()){
         return false;
+      }
       return PaxosMessage::ProposalEquals(std::static_pointer_cast<PaxosMessage>(obj));
     }
 
@@ -456,8 +461,9 @@ namespace Token{
     DECLARE_MESSAGE(Rejected);
 
     bool Equals(const MessagePtr& obj) const{
-      if(!obj->IsRejectedMessage())
+      if(!obj->IsRejectedMessage()){
         return false;
+      }
       return PaxosMessage::ProposalEquals(std::static_pointer_cast<PaxosMessage>(obj));
     }
 
@@ -516,8 +522,9 @@ namespace Token{
     DECLARE_MESSAGE_TYPE(Transaction);
 
     bool Equals(const MessagePtr& obj) const{
-      if(!obj->IsTransactionMessage())
+      if(!obj->IsTransactionMessage()){
         return false;
+      }
       //TODO: implement
       return true;
     }
@@ -556,8 +563,9 @@ namespace Token{
     DECLARE_MESSAGE_TYPE(Block);
 
     bool Equals(const MessagePtr& obj) const{
-      if(!obj->IsBlockMessage())
+      if(!obj->IsBlockMessage()){
         return false;
+      }
       BlockMessagePtr msg = std::static_pointer_cast<BlockMessage>(obj);
       return GetValue()->Equals(msg->GetValue());
     }
@@ -702,8 +710,9 @@ namespace Token{
     DECLARE_MESSAGE(Inventory);
 
     bool Equals(const MessagePtr& obj) const{
-      if(!obj->IsInventoryMessage())
+      if(!obj->IsInventoryMessage()){
         return false;
+      }
       InventoryMessagePtr msg = std::static_pointer_cast<InventoryMessage>(obj);
       return items_ == msg->items_;
     }
@@ -755,8 +764,9 @@ namespace Token{
     DECLARE_MESSAGE(GetData);
 
     bool Equals(const MessagePtr& obj) const{
-      if(!obj->IsGetDataMessage())
+      if(!obj->IsGetDataMessage()){
         return false;
+      }
       GetDataMessagePtr msg = std::static_pointer_cast<GetDataMessage>(obj);
       return items_ == msg->items_;
     }
@@ -811,16 +821,17 @@ namespace Token{
     DECLARE_MESSAGE(GetBlocks);
 
     bool Equals(const MessagePtr& obj) const{
-      if(!obj->IsGetBlocksMessage())
+      if(!obj->IsGetBlocksMessage()){
         return false;
+      }
       GetBlocksMessagePtr msg = std::static_pointer_cast<GetBlocksMessage>(obj);
       return start_ == msg->start_
-          && stop_ == msg->stop_;
+             && stop_ == msg->stop_;
     }
 
     static MessagePtr NewInstance(const BufferPtr& buff);
     static MessagePtr NewInstance(const Hash& start_hash = BlockChain::GetHead()->GetHash(),
-                                  const Hash& stop_hash = Hash()){
+      const Hash& stop_hash = Hash()){
       return std::make_shared<GetBlocksMessage>(start_hash, stop_hash);
     }
   };
@@ -842,8 +853,9 @@ namespace Token{
     DECLARE_MESSAGE(NotFound);
 
     bool Equals(const MessagePtr& obj) const{
-      if(!obj->IsNotFoundMessage())
+      if(!obj->IsNotFoundMessage()){
         return false;
+      }
       NotFoundMessagePtr msg = std::static_pointer_cast<NotFoundMessage>(obj);
       return item_ == msg->item_;
     }
@@ -864,8 +876,9 @@ namespace Token{
     DECLARE_MESSAGE(GetPeers);
 
     bool Equals(const MessagePtr& obj) const{
-      if(!obj->IsGetPeersMessage())
+      if(!obj->IsGetPeersMessage()){
         return false;
+      }
       return true;
     }
 
@@ -915,8 +928,9 @@ namespace Token{
     DECLARE_MESSAGE(PeerList);
 
     bool Equals(const MessagePtr& obj) const{
-      if(!obj->IsPeerListMessage())
+      if(!obj->IsPeerListMessage()){
         return false;
+      }
       PeerListMessagePtr msg = std::static_pointer_cast<PeerListMessage>(obj);
       return peers_ == msg->peers_;
     }
@@ -956,7 +970,7 @@ namespace Token{
       int64_t msize = buff_->GetLong();
 
       #ifdef TOKEN_DEBUG
-        LOG(INFO) << "decoding message type " << mtype << " (" << msize << " bytes)....";
+      LOG(INFO) << "decoding message type " << mtype << " (" << msize << " bytes)....";
       #endif//TOKEN_DEBUG
 
       switch(mtype){
@@ -968,8 +982,7 @@ namespace Token{
         FOR_EACH_MESSAGE_TYPE(DEFINE_DECODE)
 #undef DEFINE_DECODE
         case Message::MessageType::kUnknownMessageType:
-        default:
-          LOG(ERROR) << "unknown message type " << mtype << " of size " << msize;
+        default:LOG(ERROR) << "unknown message type " << mtype << " of size " << msize;
           return nullptr;
       }
     }

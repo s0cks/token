@@ -26,8 +26,9 @@ namespace Token{
 
     template<typename T>
     bool Append(T value){
-      if((wpos_ + static_cast<int64_t>(sizeof(T))) > GetBufferSize())
+      if((wpos_ + static_cast<int64_t>(sizeof(T))) > GetBufferSize()){
         return false;
+      }
       memcpy(&raw()[wpos_], &value, sizeof(T));
       wpos_ += sizeof(T);
       return true;
@@ -41,11 +42,11 @@ namespace Token{
 
     template<typename T>
     T Read(intptr_t idx){
-      if((idx + (intptr_t)sizeof(T)) > GetBufferSize()){
+      if((idx + (intptr_t) sizeof(T)) > GetBufferSize()){
         LOG(INFO) << "cannot read " << sizeof(T) << " bytes from pos: " << idx;
         return 0;
       }
-      return *(T*)(raw()+idx);
+      return *(T*) (raw() + idx);
     }
 
     template<typename T>
@@ -68,12 +69,13 @@ namespace Token{
       wpos_(size),
       rpos_(0),
       data_(nullptr){
-      data_ = (uint8_t*)malloc(sizeof(uint8_t)*size);
+      data_ = (uint8_t*) malloc(sizeof(uint8_t) * size);
       memcpy(data_, data, size);
     }
     ~Buffer(){
-      if(data_)
+      if(data_){
         free(data_);
+      }
     }
 
     uint8_t operator[](intptr_t idx){
@@ -219,8 +221,9 @@ namespace Token{
     }
 
     bool PutHash(const Hash& value){
-      if((wpos_ + Hash::kSize) > GetBufferSize())
+      if((wpos_ + Hash::kSize) > GetBufferSize()){
         return false;
+      }
       memcpy(&raw()[wpos_], value.data(), Hash::kSize);
       wpos_ += Hash::kSize;
       return true;
@@ -263,12 +266,14 @@ namespace Token{
 
     template<class T, class C>
     bool PutSet(const std::set<T, C>& items){
-      if(!PutLong(items.size()))
+      if(!PutLong(items.size())){
         return false;
+      }
 
       for(auto& item : items){
-        if(!item->Write(shared_from_this()))
+        if(!item->Write(shared_from_this())){
           return false;
+        }
       }
       return true;
     }
@@ -280,14 +285,16 @@ namespace Token{
     }
 
     void SetWritePosition(int64_t pos){
-      if(pos > GetBufferSize())
+      if(pos > GetBufferSize()){
         return;
+      }
       wpos_ = pos;
     }
 
     void SetReadPosition(int64_t pos){
-      if(pos > GetBufferSize())
+      if(pos > GetBufferSize()){
         return;
+      }
       rpos_ = pos;
     }
 

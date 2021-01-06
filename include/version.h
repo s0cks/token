@@ -65,8 +65,8 @@ namespace Token{
 
     friend bool operator==(const Version& a, const Version& b){
       return a.major_ == b.major_
-          && a.minor_ == b.minor_
-          && a.revision_ == b.revision_;
+             && a.minor_ == b.minor_
+             && a.revision_ == b.revision_;
     }
 
     friend bool operator!=(const Version& a, const Version& b){

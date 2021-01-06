@@ -66,7 +66,7 @@ namespace Token{
       data_(){
       SetNull();
     }
-    Hash(uint8_t* data, int64_t size=Hash::GetSize()):
+    Hash(uint8_t* data, int64_t size = Hash::GetSize()):
       data_(){
       memcpy(data_, data, size);
     }
@@ -90,8 +90,9 @@ namespace Token{
 
     bool IsNull() const{
       for(int64_t idx = 0; idx < GetSize(); idx++){
-        if(data_[idx] != 0)
+        if(data_[idx] != 0){
           return false;
+        }
       }
       return true;
     }
@@ -105,15 +106,17 @@ namespace Token{
     }
 
     bool Encode(uint8_t* bytes, const int64_t& size) const{
-      if(size < (int64_t) kSize)
+      if(size < (int64_t) kSize){
         return false;
+      }
       memcpy(bytes, data_, kSize);
       return true;
     }
 
     bool Encode(leveldb::Slice* slice) const{
-      if(!slice)
+      if(!slice){
         return false;
+      }
       uint8_t bytes[kSize];
       Encode(bytes, kSize);
       (*slice) = leveldb::Slice((char*) bytes, kSize);

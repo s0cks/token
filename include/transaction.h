@@ -101,8 +101,9 @@ namespace Token{
     }
 
     friend bool operator<(const Input& a, const Input& b){
-      if(a.hash_ == b.hash_)
+      if(a.hash_ == b.hash_){
         return a.index_ < b.index_;
+      }
       return a.hash_ < b.hash_;
     }
   };
@@ -183,8 +184,9 @@ namespace Token{
     }
 
     friend bool operator<(const Output& a, const Output& b){
-      if(a.user_ == b.user_)
+      if(a.user_ == b.user_){
         return a.product_ < b.product_;
+      }
       return a.user_ < b.user_;
     }
   };
@@ -225,9 +227,9 @@ namespace Token{
     std::string signature_;
    public:
     Transaction(const Timestamp& timestamp,
-                const int64_t& index,
-                const InputList& inputs,
-                const OutputList& outputs):
+      const int64_t& index,
+      const InputList& inputs,
+      const OutputList& outputs):
       BinaryObject(),
       timestamp_(timestamp),
       index_(index),
@@ -340,14 +342,28 @@ namespace Token{
     }
 
     bool Equals(const TransactionPtr& tx) const{
-      if(timestamp_ != tx->timestamp_)
+      if(timestamp_ != tx->timestamp_){
         return false;
-      if(index_ != tx->index_)
+      }
+      if(index_ != tx->index_){
         return false;
-      if(!std::equal(inputs_.begin(), inputs_.end(), tx->inputs_.begin(), [](const Input& a, const Input& b){ return a == b; }))
+      }
+      if(!std::equal(
+        inputs_.begin(),
+        inputs_.end(),
+        tx->inputs_.begin(),
+        [](const Input& a, const Input& b){ return a == b; }
+      )){
         return false;
-      if(!std::equal(outputs_.begin(), outputs_.end(), tx->outputs_.begin(), [](const Output& a, const Output& b){ return a == b; }))
+      }
+      if(!std::equal(
+        outputs_.begin(),
+        outputs_.end(),
+        tx->outputs_.begin(),
+        [](const Output& a, const Output& b){ return a == b; }
+      )){
         return false;
+      }
       return true;
     }
 
@@ -363,9 +379,9 @@ namespace Token{
     }
 
     static TransactionPtr NewInstance(const int64_t& index,
-                                      const InputList& inputs,
-                                      const OutputList& outputs,
-                                      const Timestamp& timestamp = GetCurrentTimestamp());
+      const InputList& inputs,
+      const OutputList& outputs,
+      const Timestamp& timestamp = GetCurrentTimestamp());
     static TransactionPtr NewInstance(const BufferPtr& buff);
     static TransactionPtr NewInstance(BinaryFileReader* reader);
   };

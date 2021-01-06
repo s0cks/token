@@ -27,22 +27,26 @@ namespace Token{
   }
 
   bool MerkleTree::VisitLeaves(MerkleTreeVisitor* vis) const{
-    if(!vis->VisitStart())
+    if(!vis->VisitStart()){
       return false;
+    }
     for(auto& it : leaves_){
       MerkleNode* node;
-      if(!(node = GetNode(it)) || !vis->Visit(node))
+      if(!(node = GetNode(it)) || !vis->Visit(node)){
         return false;
+      }
     }
     return vis->VisitEnd();
   }
 
   bool MerkleTree::VisitNodes(MerkleTreeVisitor* vis) const{
-    if(!vis->VisitStart())
+    if(!vis->VisitStart()){
       return false;
+    }
     for(auto& it : nodes_){
-      if(!vis->Visit(it.second))
+      if(!vis->Visit(it.second)){
         return false;
+      }
     }
     return vis->VisitEnd();
   }
@@ -73,15 +77,17 @@ namespace Token{
 
   MerkleNode* MerkleTree::GetNode(const Hash& hash) const{
     auto pos = nodes_.find(hash);
-    if(pos == nodes_.end())
+    if(pos == nodes_.end()){
       return nullptr;
+    }
     return pos->second;
   }
 
   bool MerkleTree::BuildAuditProof(const Hash& hash, MerkleProof& trail){
     MerkleNode* node;
-    if(!(node = GetNode(hash)))
+    if(!(node = GetNode(hash))){
       return false;
+    }
     BuildAuditTrail(trail, node->GetParent(), node);
     return true;
   }

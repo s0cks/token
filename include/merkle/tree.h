@@ -64,8 +64,9 @@ namespace Token{
     }
 
     bool GetLeaves(std::vector<Hash>& leaves) const{
-      if(IsEmpty())
+      if(IsEmpty()){
         return false;
+      }
       std::copy(leaves_.begin(), leaves_.end(), std::back_inserter(leaves));
       return leaves.size() == leaves_.size();
     }

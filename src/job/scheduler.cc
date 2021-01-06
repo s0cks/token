@@ -30,8 +30,9 @@ namespace Token{
 
   JobWorker* JobScheduler::GetWorker(const ThreadId& thread){
     for(int idx = 0; idx < FLAGS_num_workers; idx++){
-      if(pthread_equal(workers_[idx]->GetThreadID(), thread))
+      if(pthread_equal(workers_[idx]->GetThreadID(), thread)){
         return workers_[idx];
+      }
     }
     LOG(INFO) << "cannot find worker: " << thread;
     return nullptr;

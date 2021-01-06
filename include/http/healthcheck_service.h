@@ -59,8 +59,7 @@ namespace Token{
             stream << #Name; \
             return stream;
         FOR_EACH_HEALTHCHECK_SERVER_STATE(DECLARE_TOSTRING)
-        default:
-          return stream << "Unknown";
+        default:return stream << "Unknown";
 #undef DECLARE_TOSTRING
       }
     }
@@ -72,8 +71,7 @@ namespace Token{
                     stream << #Name;  \
                     return stream;
         FOR_EACH_HEALTHCHECK_SERVER_STATUS(DECLARE_TOSTRING)
-        default:
-          return stream << "Unknown";
+        default:return stream << "Unknown";
 #undef DECLARE_TOSTRING
       }
     }

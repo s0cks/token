@@ -84,7 +84,7 @@ namespace Token{
   }
 
   void PeerSession::OnDiscovery(uv_async_t* handle){
-    PeerSession* session = (PeerSession*)handle->data;
+    PeerSession* session = (PeerSession*) handle->data;
     if(!BlockDiscoveryThread::HasProposal()){
       LOG(WARNING) << "there is no active proposal.";
       return;
@@ -210,7 +210,14 @@ namespace Token{
 
   void PeerSession::HandleVersionMessage(PeerSession* session, const VersionMessagePtr& msg){
     BlockPtr head = BlockChain::GetHead();
-    session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), Server::GetCallbackAddress(), Version(), head->GetHeader(), Hash::GenerateNonce()));
+    session->Send(
+      VerackMessage::NewInstance(
+        ClientType::kNode,
+        Server::GetID(),
+        Server::GetCallbackAddress(),
+        Version(),
+        head->GetHeader(),
+        Hash::GenerateNonce()));
   }
 
   void PeerSession::HandleVerackMessage(PeerSession* session, const VerackMessagePtr& msg){
@@ -313,8 +320,9 @@ namespace Token{
 
     std::vector<InventoryItem> needed;
     for(auto& item : items){
-      if(!item.ItemExists())
+      if(!item.ItemExists()){
         needed.push_back(item);
+      }
     }
 
     LOG(INFO) << "downloading " << needed.size() << "/" << items.size() << " items from inventory....";

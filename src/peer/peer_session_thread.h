@@ -102,8 +102,9 @@ namespace Token{
       status_(),
       loop_(loop){}
     ~PeerSessionThread(){
-      if(loop_)
+      if(loop_){
         uv_loop_delete(loop_);
+      }
     }
 
     WorkerId GetWorkerID() const{

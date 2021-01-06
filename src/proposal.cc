@@ -107,12 +107,12 @@ namespace Token{
 
   int Proposal::GetRequiredNumberOfPeers(){
     #ifdef TOKEN_ENABLE_SERVER
-      int32_t peers = PeerSessionManager::GetNumberOfConnectedPeers();
-      if(peers == 0) return 0;
-      else if(peers == 1) return 1;
-      return peers / 2;
+    int32_t peers = PeerSessionManager::GetNumberOfConnectedPeers();
+    if(peers == 0){ return 0; }
+    else if(peers == 1) return 1;
+    return peers / 2;
     #else
-      return 0;
+    return 0;
     #endif//TOKEN_ENABLE_SERVER
   }
 }

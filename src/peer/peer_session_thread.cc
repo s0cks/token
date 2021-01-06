@@ -28,7 +28,7 @@ namespace Token{
   }
 
   void PeerSessionThread::HandleThread(uword parameter){
-    PeerSessionThread* thread = (PeerSessionThread*)parameter;
+    PeerSessionThread* thread = (PeerSessionThread*) parameter;
     thread->SetState(State::kStarting);
 
     char truncated_name[16];
@@ -77,7 +77,7 @@ namespace Token{
   bool PeerSessionThread::Start(){
     char name[16];
     snprintf(name, 16, "peer-%" PRId16, GetWorkerID());
-    return Thread::StartThread(&thread_, name, &HandleThread, (uword)this);
+    return Thread::StartThread(&thread_, name, &HandleThread, (uword) this);
   }
 
   bool PeerSessionThread::Stop(){

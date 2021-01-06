@@ -15,21 +15,17 @@ namespace Token{
   class Object{
    public:
     enum class Type{
-      kBlock=1,
-      kTransaction=2,
-      kUnclaimedTransaction=3,
+      kBlock = 1,
+      kTransaction = 2,
+      kUnclaimedTransaction = 3,
     };
 
     friend std::ostream& operator<<(std::ostream& stream, const Type& type){
       switch(type){
-        case Type::kBlock:
-          return stream << "Block";
-        case Type::kTransaction:
-          return stream << "Transaction";
-        case Type::kUnclaimedTransaction:
-          return stream << "UnclaimedTransaction";
-        default:
-          return stream << "Unknown";
+        case Type::kBlock:return stream << "Block";
+        case Type::kTransaction:return stream << "Transaction";
+        case Type::kUnclaimedTransaction:return stream << "UnclaimedTransaction";
+        default:return stream << "Unknown";
       }
     }
    public:
@@ -90,7 +86,7 @@ namespace Token{
     }
 
     std::string str() const{
-      return std::string(data(), std::min(strlen((char*)data_), (size_t)Size));
+      return std::string(data(), std::min(strlen((char*) data_), (size_t) Size));
     }
 
     static inline int64_t
@@ -248,11 +244,11 @@ namespace Token{
     ObjectTag(uint8_t* data):
       value_(*(uint64_t*) data){}
     ObjectTag():
-      value_(MagicField::Encode(kMagic)|TypeField::Encode(Type::kNone)){}
+      value_(MagicField::Encode(kMagic) | TypeField::Encode(Type::kNone)){}
     ObjectTag(const uint64_t& tag):
       value_(tag){}
     ObjectTag(const Type& type):
-      value_(MagicField::Encode(kMagic)|TypeField::Encode(type)){}
+      value_(MagicField::Encode(kMagic) | TypeField::Encode(type)){}
     ObjectTag(const ObjectTag& tag):
       value_(tag.value_){}
     ~ObjectTag() = default;

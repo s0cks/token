@@ -4,8 +4,9 @@
 
 namespace Token{
   JobResult ProcessBlockJob::DoWork(){
-    if(!GetBlock()->Accept(this))
+    if(!GetBlock()->Accept(this)){
       return Failed("Cannot visit the block transactions.");
+    }
 
     for(auto& it : wallets_){
       const User& user = it.first;
@@ -60,8 +61,9 @@ namespace Token{
 
       InputList chunk(start, next);
       ProcessInputListJob* job = new ProcessInputListJob(this, chunk);
-      if(!worker->Submit(job))
+      if(!worker->Submit(job)){
         return Failed("Cannot schedule ProcessInputListJob()");
+      }
       start = next;
     }
 
@@ -83,8 +85,9 @@ namespace Token{
 
       OutputList chunk(start, next);
       ProcessOutputListJob* job = new ProcessOutputListJob(this, nworker++, chunk);
-      if(!worker->Submit(job))
+      if(!worker->Submit(job)){
         return Failed("Cannot schedule ProcessOutputListJob()");
+      }
 
       start = next;
     }

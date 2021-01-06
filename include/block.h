@@ -36,11 +36,11 @@ namespace Token{
       hash_(blk.hash_),
       bloom_(blk.bloom_){}
     BlockHeader(Timestamp timestamp,
-                int64_t height,
-                const Hash& phash,
-                const Hash& merkle_root,
-                const Hash& hash,
-                const BloomFilter& tx_bloom):
+      int64_t height,
+      const Hash& phash,
+      const Hash& merkle_root,
+      const Hash& hash,
+      const BloomFilter& tx_bloom):
       timestamp_(timestamp),
       height_(height),
       previous_hash_(phash),
@@ -138,9 +138,9 @@ namespace Token{
       transactions_(),
       tx_bloom_(){}
     Block(int64_t height,
-          const Hash& phash,
-          const TransactionSet& transactions,
-          Timestamp timestamp = GetCurrentTimestamp()):
+      const Hash& phash,
+      const TransactionSet& transactions,
+      Timestamp timestamp = GetCurrentTimestamp()):
       BinaryObject(),
       timestamp_(timestamp),
       height_(height),
@@ -229,35 +229,40 @@ namespace Token{
 
     bool Write(const BufferPtr& buff) const{
       return buff->PutLong(timestamp_)
-          && buff->PutLong(height_)
-          && buff->PutHash(previous_hash_)
-          && buff->PutSet(transactions_);
+             && buff->PutLong(height_)
+             && buff->PutHash(previous_hash_)
+             && buff->PutSet(transactions_);
     }
 
     bool Write(BinaryFileWriter* writer) const{
-      writer->WriteLong(timestamp_);
-      writer->WriteLong(height_);
-      writer->WriteHash(previous_hash_);
-      writer->WriteSet(transactions_);
-      return true;
+      return writer->WriteLong(timestamp_)
+             && writer->WriteLong(height_)
+             && writer->WriteHash(previous_hash_)
+             && writer->WriteSet(transactions_);
     }
 
     bool Equals(const BlockPtr& blk) const{
-      if(timestamp_ != blk->timestamp_)
+      if(timestamp_ != blk->timestamp_){
         return false;
-      if(height_ != blk->height_)
+      }
+      if(height_ != blk->height_){
         return false;
-      if(previous_hash_ != blk->previous_hash_)
+      }
+      if(previous_hash_ != blk->previous_hash_){
         return false;
-      if(transactions_.size() != blk->transactions_.size())
+      }
+      if(transactions_.size() != blk->transactions_.size()){
         return false;
-      return std::equal(transactions_.begin(),
-                        transactions_.end(),
-                        blk->transactions_.begin(),
-                        [](const TransactionPtr& a, const TransactionPtr& b){
-        return a->Equals(b);
-      });
-   }
+      }
+      return std::equal(
+        transactions_.begin(),
+        transactions_.end(),
+        blk->transactions_.begin(),
+        [](const TransactionPtr& a, const TransactionPtr& b){
+          return a->Equals(b);
+        }
+      );
+    }
 
     Hash GetMerkleRoot() const;
     bool Accept(BlockVisitor* vis) const;

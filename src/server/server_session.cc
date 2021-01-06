@@ -24,7 +24,14 @@ namespace Token{
     //TODO:
     // - verify nonce
     BlockPtr head = BlockChain::GetHead();
-    session->Send(VerackMessage::NewInstance(ClientType::kNode, Server::GetID(), Server::GetCallbackAddress(), Version(), head->GetHeader(), Hash::GenerateNonce()));
+    session->Send(
+      VerackMessage::NewInstance(
+        ClientType::kNode,
+        Server::GetID(),
+        Server::GetCallbackAddress(),
+        Version(),
+        head->GetHeader(),
+        Hash::GenerateNonce()));
 
     UUID id = msg->GetID();
     if(session->IsConnecting()){
@@ -132,8 +139,9 @@ namespace Token{
     Hash hash = tx->GetHash();
 
     LOG(INFO) << "received transaction: " << hash;
-    if(!ObjectPool::HasTransaction(hash))
+    if(!ObjectPool::HasTransaction(hash)){
       ObjectPool::PutTransaction(hash, tx);
+    }
   }
 
   void ServerSession::HandleInventoryMessage(ServerSession* session, const InventoryMessagePtr& msg){
@@ -165,8 +173,8 @@ namespace Token{
       BlockPtr stop_block = BlockChain::GetBlock(start_block->GetHeight() > amt ? start_block->GetHeight() + amt : amt);
 
       for(uint32_t idx = start_block->GetHeight() + 1;
-          idx <= stop_block->GetHeight();
-          idx++){
+        idx <= stop_block->GetHeight();
+        idx++){
         BlockPtr block = BlockChain::GetBlock(idx);
         LOG(INFO) << "adding " << block;
         items.push_back(InventoryItem(block));

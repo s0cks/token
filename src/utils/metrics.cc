@@ -7,20 +7,23 @@ namespace Token{
   static HistogramMap histograms_;
 
   bool MetricRegistry::Register(const Counter& counter){
-    if(!metrics_.insert(counter).second)
+    if(!metrics_.insert(counter).second){
       return false;
+    }
     return counters_.insert({counter->GetName(), counter}).second;
   }
 
   bool MetricRegistry::Register(const Gauge& gauge){
-    if(!metrics_.insert(gauge).second)
+    if(!metrics_.insert(gauge).second){
       return false;
+    }
     return gauges_.insert({gauge->GetName(), gauge}).second;
   }
 
   bool MetricRegistry::Register(const Histogram& histogram){
-    if(!metrics_.insert(histogram).second)
+    if(!metrics_.insert(histogram).second){
       return false;
+    }
     return histograms_.insert({histogram->GetName(), histogram}).second;
   }
 
@@ -41,29 +44,33 @@ namespace Token{
 
   Counter MetricRegistry::GetCounter(const std::string& name){
     auto pos = counters_.find(name);
-    if(pos == counters_.end())
+    if(pos == counters_.end()){
       return Counter(nullptr);
+    }
     return pos->second;
   }
 
   Gauge MetricRegistry::GetGauge(const std::string& name){
     auto pos = gauges_.find(name);
-    if(pos == gauges_.end())
+    if(pos == gauges_.end()){
       return Gauge(nullptr);
+    }
     return pos->second;
   }
 
   Histogram MetricRegistry::GetHistogram(const std::string& name){
     auto pos = histograms_.find(name);
-    if(pos == histograms_.end())
+    if(pos == histograms_.end()){
       return Histogram(nullptr);
+    }
     return pos->second;
   }
 
   bool MetricRegistry::VisitMetrics(MetricRegistryVisitor* vis){
     for(auto& it : metrics_){
-      if(!vis->Visit(it))
+      if(!vis->Visit(it)){
         return false;
+      }
     }
     return true;
   }
@@ -71,8 +78,9 @@ namespace Token{
   bool MetricRegistry::VisitGauges(MetricRegistryVisitor* vis){
     //TODO: optimize
     for(auto& it : metrics_){
-      if(it->IsGauge() && !vis->Visit(it))
+      if(it->IsGauge() && !vis->Visit(it)){
         return false;
+      }
     }
     return true;
   }
@@ -80,8 +88,9 @@ namespace Token{
   bool MetricRegistry::VisitCounters(MetricRegistryVisitor* vis){
     //TODO: optimize
     for(auto& it : metrics_){
-      if(it->IsCounter() && !vis->Visit(it))
+      if(it->IsCounter() && !vis->Visit(it)){
         return false;
+      }
     }
     return true;
   }
@@ -89,8 +98,9 @@ namespace Token{
   bool MetricRegistry::VisitHistograms(MetricRegistryVisitor* vis){
     //TODO: optimize
     for(auto& it : metrics_){
-      if(it->IsHistogram() && !vis->Visit(it))
+      if(it->IsHistogram() && !vis->Visit(it)){
         return false;
+      }
     }
     return true;
   }

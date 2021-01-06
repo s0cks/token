@@ -40,8 +40,9 @@ namespace Token{
     }
    public:
     virtual ~FileWriter(){
-      if(HasFilePointer() && !HasParent())
+      if(HasFilePointer() && !HasParent()){
         Close();
+      }
     }
 
     std::string GetFilename() const{
@@ -151,20 +152,22 @@ namespace Token{
 
     template<class T>
     bool WriteList(const std::vector<T>& items){
-      WriteLong((int64_t)items.size());
+      WriteLong((int64_t) items.size());
       for(auto& item : items){
-        if(!item.Write(this))
+        if(!item.Write(this)){
           return false;
+        }
       }
       return true;
     }
 
     template<class T, class C>
     bool WriteSet(const std::set<T, C>& items){
-      WriteLong((int64_t)items.size());
+      WriteLong((int64_t) items.size());
       for(auto& item : items){
-        if(!item->Write(this))
+        if(!item->Write(this)){
           return false;
+        }
       }
       return true;
     }

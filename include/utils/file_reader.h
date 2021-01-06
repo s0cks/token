@@ -63,8 +63,9 @@ namespace Token{
     }
    public:
     virtual ~FileReader(){
-      if(HasFilePointer() && !HasParent())
+      if(HasFilePointer() && !HasParent()){
         Close();
+      }
     }
 
     std::string GetFilename() const{

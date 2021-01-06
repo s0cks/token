@@ -135,8 +135,9 @@ namespace Token{
   ProposalPtr PaxosMessage::GetProposal() const{
     if(BlockDiscoveryThread::HasProposal()){
       ProposalPtr proposal = BlockDiscoveryThread::GetProposal();
-      if(proposal->GetRaw() == GetRaw())
+      if(proposal->GetRaw() == GetRaw()){
         return proposal;
+      }
       return nullptr; //TODO: invalid state?
     }
 
@@ -214,8 +215,8 @@ namespace Token{
   bool PeerListMessage::Encode(const BufferPtr& buff) const{
     buff->PutLong(GetNumberOfPeers());
     for(auto it = peers_begin();
-        it != peers_end();
-        it++){
+      it != peers_end();
+      it++){
       it->Write(buff);
     }
     return true;

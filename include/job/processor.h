@@ -120,7 +120,7 @@ namespace Token{
     }
 
     void Append(const leveldb::WriteBatch& batch, const UserWallets& hashes){
-      return ((ProcessBlockJob*)GetParent())->Append(batch, hashes);
+      return ((ProcessBlockJob*) GetParent())->Append(batch, hashes);
     }
   };
 
@@ -133,7 +133,7 @@ namespace Token{
     ~ProcessTransactionInputsJob() = default;
 
     TransactionPtr GetTransaction() const{
-      return ((ProcessTransactionJob*)GetParent())->GetTransaction();
+      return ((ProcessTransactionJob*) GetParent())->GetTransaction();
     }
   };
 
@@ -148,7 +148,7 @@ namespace Token{
         //TODO: remove input
       }
 
-      ((ProcessTransactionInputsJob*)GetParent())->Append(GetBatch());
+      ((ProcessTransactionInputsJob*) GetParent())->Append(GetBatch());
       return Success("done.");
     }
    public:
@@ -166,11 +166,11 @@ namespace Token{
     ~ProcessTransactionOutputsJob() = default;
 
     TransactionPtr GetTransaction() const{
-      return ((ProcessTransactionJob*)GetParent())->GetTransaction();
+      return ((ProcessTransactionJob*) GetParent())->GetTransaction();
     }
 
     void Append(const leveldb::WriteBatch& batch, const UserWallets& hashes){
-      return ((ProcessTransactionJob*)GetParent())->Append(batch, hashes);
+      return ((ProcessTransactionJob*) GetParent())->Append(batch, hashes);
     }
   };
 
@@ -211,7 +211,7 @@ namespace Token{
         Track(val->GetUser(), hash);
       }
 
-      ((ProcessTransactionOutputsJob*)GetParent())->Append(GetBatch(), wallets_);
+      ((ProcessTransactionOutputsJob*) GetParent())->Append(GetBatch(), wallets_);
       return Success("done.");
     }
    public:

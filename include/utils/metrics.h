@@ -97,7 +97,7 @@ namespace Token{
       virtual ~Gauge() = default;
       virtual int64_t Get() const = 0;
 
-      DEFINE_METRIC_TYPE(Gauge);
+     DEFINE_METRIC_TYPE(Gauge);
     };
 
     typedef std::vector<int64_t> SnapshotData;
@@ -169,8 +169,9 @@ namespace Token{
       }
 
       double GetMean() const{
-        if(IsEmpty())
+        if(IsEmpty()){
           return 0;
+        }
         int64_t mean = 0;
         for(auto& it : data_)
           mean += it;
@@ -178,14 +179,16 @@ namespace Token{
       }
 
       double GetPercentile(const Percentile& percentile) const{
-        if(IsEmpty())
+        if(IsEmpty()){
           return 0;
+        }
 
         double pos = GetQuantile(percentile) * (GetSize() + 1);
-        if(pos < 1)
+        if(pos < 1){
           return data_.front();
-        else if(pos > GetSize())
+        } else if(pos > GetSize()){
           return data_.back();
+        }
 
         double lower = data_[pos - 1];
         double upper = data_[pos];
@@ -256,8 +259,9 @@ namespace Token{
           data_[count - 1] = value;
         } else{
           int64_t rand = GetRandom(count);
-          if(rand < size)
+          if(rand < size){
             data_[rand] = value;
+          }
         }
       }
 

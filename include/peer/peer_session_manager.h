@@ -63,8 +63,9 @@ namespace Token{
       }
 
       friend bool operator<(const ConnectRequest& a, const ConnectRequest& b){
-        if(a.address_ == b.address_)
+        if(a.address_ == b.address_){
           return a.attempts_ < b.attempts_;
+        }
         return a.address_ < b.address_;
       }
     };

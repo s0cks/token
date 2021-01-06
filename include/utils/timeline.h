@@ -26,7 +26,7 @@ namespace Token{
     Timepoint timestamp_;
     std::string name_;
    public:
-    TimelineEvent(const std::string& name, const Timepoint& timestamp=Clock::now()):
+    TimelineEvent(const std::string& name, const Timepoint& timestamp = Clock::now()):
       timestamp_(timestamp),
       name_(name){}
     TimelineEvent(const TimelineEvent& event):
@@ -138,8 +138,10 @@ namespace Token{
     bool Print(const Timeline& timeline) const{
       LOG_AT_LEVEL(GetSeverity()) << timeline.GetName();
       LOG_AT_LEVEL(GetSeverity()) << "---------------------------------------------";
-      LOG_AT_LEVEL(GetSeverity()) << "  Start: " << GetTimestampFormattedReadable(timeline.GetStartTime().time_since_epoch().count());
-      LOG_AT_LEVEL(GetSeverity()) << "  Stop: " << GetTimestampFormattedReadable(timeline.GetStopTime().time_since_epoch().count());
+      LOG_AT_LEVEL(GetSeverity()) << "  Start: "
+                                  << GetTimestampFormattedReadable(timeline.GetStartTime().time_since_epoch().count());
+      LOG_AT_LEVEL(GetSeverity()) << "  Stop: "
+                                  << GetTimestampFormattedReadable(timeline.GetStopTime().time_since_epoch().count());
       LOG_AT_LEVEL(GetSeverity()) << "  Total Time (Seconds): " << timeline.GetTotalTime().count();
 
       if(IsDetailed()){

@@ -41,8 +41,9 @@ namespace Token{
         Job* job = jobs_[top % jobs_.size()];
         size_t expected_top = top + 1;
         size_t desired_top = expected_top;
-        if(!top_.compare_exchange_weak(top, desired_top, std::memory_order_acq_rel))
+        if(!top_.compare_exchange_weak(top, desired_top, std::memory_order_acq_rel)){
           return nullptr;
+        }
         return job;
       }
       return nullptr;
@@ -63,8 +64,9 @@ namespace Token{
           size_t expected = top;
           size_t next = top + 1;
           size_t desired = next;
-          if(!top_.compare_exchange_strong(expected, desired, std::memory_order_acq_rel))
+          if(!top_.compare_exchange_strong(expected, desired, std::memory_order_acq_rel)){
             job = nullptr;
+          }
           bottom_.store(next, std::memory_order_release);
         }
         return job;

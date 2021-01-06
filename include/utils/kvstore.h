@@ -43,7 +43,7 @@ namespace Token{
     UserKey(const User& user):
       data_(user){}
     UserKey(const leveldb::Slice& slice):
-      data_((uint8_t*)slice.data(), (int64_t)slice.size()){}
+      data_((uint8_t*) slice.data(), (int64_t) slice.size()){}
     ~UserKey() = default;
 
     const User& user(){
@@ -67,13 +67,13 @@ namespace Token{
       kMagicOffset = 0,
       kBytesForMagic = sizeof(int16_t),
 
-      kTypeOffset = kMagicOffset+kBytesForMagic,
+      kTypeOffset = kMagicOffset + kBytesForMagic,
       kBytesForType = sizeof(Object::Type),
 
-      kHashOffset = kTypeOffset+kBytesForType,
+      kHashOffset = kTypeOffset + kBytesForType,
       kBytesForHash = Hash::kSize,
 
-      kTotalSize = kHashOffset+kBytesForHash,
+      kTotalSize = kHashOffset + kBytesForHash,
     };
 
     class Comparator : public leveldb::Comparator{
@@ -125,23 +125,25 @@ namespace Token{
       if(value.size() < kTotalSize){
         LOG(WARNING) << "copying partial key of size " << value.size() << "(value.size() - kTotalSize).";
       } else if(value.size() > kTotalSize){
-        LOG(WARNING) << "copying partial key of size " << value.size() << "(" << (value.size() - kTotalSize) << " bytes remaining).";
+        LOG(WARNING) << "copying partial key of size " << value.size() << "(" << (value.size() - kTotalSize)
+                     << " bytes remaining).";
       }
-      memcpy(data_, value.data(), std::min(value.size(), (size_t)kTotalSize));
+      memcpy(data_, value.data(), std::min(value.size(), (size_t) kTotalSize));
     }
     ObjectHashKey(const std::string& value):
       data_(){
       if(value.size() < kTotalSize){
         LOG(WARNING) << "copying partial key of size " << value.size() << "(value.size() - kTotalSize).";
       } else if(value.size() > kTotalSize){
-        LOG(WARNING) << "copying partial key of size " << value.size() << "(" << (value.size() - kTotalSize) << " bytes remaining).";
+        LOG(WARNING) << "copying partial key of size " << value.size() << "(" << (value.size() - kTotalSize)
+                     << " bytes remaining).";
       }
-      memcpy(data_, value.data(), std::min(value.size(), (size_t)kTotalSize));
+      memcpy(data_, value.data(), std::min(value.size(), (size_t) kTotalSize));
     }
     ~ObjectHashKey() = default;
 
     char* data() const{
-      return (char*)data_;
+      return (char*) data_;
     }
 
     size_t size() const{
@@ -149,7 +151,7 @@ namespace Token{
     }
 
     Object::Type GetType() const{
-      return *((Object::Type*)&data_[kTypeOffset]);
+      return *((Object::Type*) &data_[kTypeOffset]);
     }
 
     Hash GetHash() const{
@@ -157,7 +159,7 @@ namespace Token{
     }
 
     int16_t GetMagic() const{
-      return *((int16_t*)&data_[kMagicOffset]);
+      return *((int16_t*) &data_[kMagicOffset]);
     }
 
     bool IsValid() const{
@@ -314,8 +316,9 @@ namespace Token{
     leveldb::Slice key(k.data(), k.size());
     std::string data;
     leveldb::Status status = GetObject(index, key, &data);
-    if(status.IsNotFound())
+    if(status.IsNotFound()){
       return false;
+    }
     return status.ok();
   }
 

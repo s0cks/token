@@ -20,11 +20,13 @@ namespace Token{
 
   static inline bool
   Encode(const Wallet& wallet, BufferPtr& buff){
-    if(!buff->PutLong(wallet.size()))
+    if(!buff->PutLong(wallet.size())){
       return false;
+    }
     for(auto& it : wallet)
-      if(!buff->PutHash(it))
+      if(!buff->PutHash(it)){
         return false;
+      }
     return true;
   }
 
@@ -32,8 +34,9 @@ namespace Token{
   Decode(BufferPtr& buff, Wallet& wallet){
     int64_t size = buff->GetLong();
     for(int64_t idx = 0; idx < size; idx++)
-      if(!wallet.insert(buff->GetHash()).second)
+      if(!wallet.insert(buff->GetHash()).second){
         return false;
+      }
     return true;
   }
 
@@ -64,8 +67,7 @@ namespace Token{
           return stream << #Name;
         FOR_EACH_WALLET_MANAGER_STATE(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
-        default:
-          return stream << "Unknown";
+        default:return stream << "Unknown";
       }
     }
 
@@ -82,8 +84,7 @@ namespace Token{
           return stream << #Name;
         FOR_EACH_WALLET_MANAGER_STATUS(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
-        default:
-          return stream << "Unknown";
+        default:return stream << "Unknown";
       }
     }
    private:

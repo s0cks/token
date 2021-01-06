@@ -96,7 +96,8 @@ namespace Token{
       LOG_AT_LEVEL(GetSeverity()) << "\tTotal Number of Objects: " << ObjectPool::GetNumberOfObjects();
       LOG_AT_LEVEL(GetSeverity()) << "\tTotal Number of Blocks: " << ObjectPool::GetNumberOfBlocks();
       LOG_AT_LEVEL(GetSeverity()) << "\tTotal Number of Transactions: " << ObjectPool::GetNumberOfTransactions();
-      LOG_AT_LEVEL(GetSeverity()) << "\tTotal Number of Unclaimed Transactions: " << ObjectPool::GetNumberOfUnclaimedTransactions();
+      LOG_AT_LEVEL(GetSeverity()) << "\tTotal Number of Unclaimed Transactions: "
+                                  << ObjectPool::GetNumberOfUnclaimedTransactions();
     } else{
       PrintState<ObjectPool>("Pool");
     }

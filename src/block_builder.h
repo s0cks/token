@@ -35,8 +35,9 @@ namespace Token{
           return BlockPtr(nullptr);
         }
 
-        if((index++) >= Block::kMaxTransactionsForBlock)
+        if((index++) >= Block::kMaxTransactionsForBlock){
           break;
+        }
       }
 
       BlockPtr head = BlockChain::GetHead();
@@ -51,7 +52,7 @@ namespace Token{
 
     bool Visit(const TransactionPtr& tx){
       #ifdef TOKEN_DEBUG
-        LOG(INFO) << "visiting transaction " << tx->GetHash() << "....";
+      LOG(INFO) << "visiting transaction " << tx->GetHash() << "....";
       #endif//TOKEN_DEBUG
       transactions_.push_back(tx);
       return true;

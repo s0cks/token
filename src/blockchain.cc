@@ -69,7 +69,8 @@ namespace Token{
     options.create_if_missing = true;
     leveldb::Status status;
     if(!(status = leveldb::DB::Open(options, GetIndexFilename(), &index_)).ok()){
-      LOG(WARNING) << "couldn't initialize the block chain index in " << GetIndexFilename() << ": " << status.ToString();
+      LOG(WARNING) << "couldn't initialize the block chain index in " << GetIndexFilename() << ": "
+                   << status.ToString();
       return false;
     }
 
@@ -259,8 +260,9 @@ namespace Token{
     }
 
     PutBlock(hash, block);
-    if(head->GetHeight() < block->GetHeight())
+    if(head->GetHeight() < block->GetHeight()){
       PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
+    }
     return true;
   }
 
@@ -268,8 +270,9 @@ namespace Token{
     Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
     do{
       BlockPtr blk = GetBlock(current);
-      if(!vis->Visit(blk))
+      if(!vis->Visit(blk)){
         return false;
+      }
       current = blk->GetPreviousHash();
     } while(!current.IsNull());
     return true;
@@ -280,8 +283,9 @@ namespace Token{
     Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
     do{
       BlockPtr blk = GetBlock(current);
-      if(!vis->Visit(blk->GetHeader()))
+      if(!vis->Visit(blk->GetHeader())){
         return false;
+      }
       current = blk->GetPreviousHash();
     } while(!current.IsNull());
     return true;

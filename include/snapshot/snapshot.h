@@ -36,8 +36,8 @@ namespace Token{
       prologue_(),
       blocks_(){}
     Snapshot(const std::string& filename,
-             const SnapshotPrologueSection& prologue,
-             const SnapshotBlockChainSection& blocks):
+      const SnapshotPrologueSection& prologue,
+      const SnapshotBlockChainSection& blocks):
       filename_(filename),
       prologue_(prologue),
       blocks_(blocks){}

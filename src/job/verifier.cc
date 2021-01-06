@@ -31,14 +31,16 @@ namespace Token{
     VerifyTransactionInputsJob* verify_inputs = new VerifyTransactionInputsJob(this, transaction_->inputs());
     worker->Submit(verify_inputs);
     worker->Wait(verify_inputs);
-    if(!verify_inputs->GetResult().IsSuccessful())
+    if(!verify_inputs->GetResult().IsSuccessful()){
       return verify_inputs->GetResult();
+    }
 
     VerifyTransactionOutputsJob* verify_outputs = new VerifyTransactionOutputsJob(this, transaction_->outputs());
     worker->Submit(verify_outputs);
     worker->Wait(verify_outputs);
-    if(!verify_outputs->GetResult().IsSuccessful())
+    if(!verify_outputs->GetResult().IsSuccessful()){
       return verify_outputs->GetResult();
+    }
 
     return Success("done.");
   }
@@ -60,8 +62,9 @@ namespace Token{
 
       InputList chunk(start, next);
       VerifyInputListJob* job = new VerifyInputListJob(this, chunk);
-      if(!worker->Submit(job))
+      if(!worker->Submit(job)){
         return Failed("Cannot schedule VerifyInputListJob()");
+      }
       jobs.push_back(job);
       start = next;
     }
@@ -100,8 +103,8 @@ namespace Token{
     }
 
     return invalid_.empty()
-         ? Success("done.")
-         : Failed("Not all transactions are valid.");
+           ? Success("done.")
+           : Failed("Not all transactions are valid.");
   }
 
   JobResult VerifyTransactionOutputsJob::DoWork(){
@@ -118,8 +121,9 @@ namespace Token{
 
       OutputList chunk(start, next);
       VerifyOutputListJob* job = new VerifyOutputListJob(this, chunk);
-      if(!worker->Submit(job))
+      if(!worker->Submit(job)){
         return Failed("Cannot schedule VerifyInputListJob()");
+      }
       start = next;
     }
 

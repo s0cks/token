@@ -75,8 +75,9 @@ namespace Token{
     uv_stop(handle->loop);
 
     int err;
-    if((err = uv_loop_close(handle->loop)) == UV_EBUSY)
+    if((err = uv_loop_close(handle->loop)) == UV_EBUSY){
       uv_walk(handle->loop, &OnWalk, NULL);
+    }
 
     uv_run(handle->loop, UV_RUN_DEFAULT);
     if((err = uv_loop_close(handle->loop))){
@@ -96,8 +97,9 @@ namespace Token{
   }
 
   bool Server::Stop(){
-    if(!IsRunning())
-      return true; // should we return false?
+    if(!IsRunning()){
+      return true;
+    } // should we return false?
     uv_async_send(&shutdown_);
     return Thread::StopThread(thread_);
   }
@@ -116,7 +118,7 @@ namespace Token{
       goto exit;
     }
 
-    if(!ServerListen((uv_stream_t*)GetHandle(), &OnNewConnection)){
+    if(!ServerListen((uv_stream_t*) GetHandle(), &OnNewConnection)){
       SetState(State::kStopping);
       goto exit;
     }
@@ -125,7 +127,7 @@ namespace Token{
 
     LOG(INFO) << "server " << GetID() << " listening @" << FLAGS_server_port;
     uv_run(loop, UV_RUN_DEFAULT);
-  exit:
+    exit:
     SetState(State::kStopped);
     pthread_exit(0);
   }

@@ -77,8 +77,8 @@ namespace Token{
 
     static bool PrintNewCrashReport(const std::string& cause, const google::LogSeverity& severity = google::ERROR);
     static bool PrintNewCrashReportAndExit(const std::string& cause,
-                                           const google::LogSeverity& severity = google::ERROR,
-                                           int code = EXIT_FAILURE);
+      const google::LogSeverity& severity = google::ERROR,
+      int code = EXIT_FAILURE);
 
     static inline bool
     PrintNewCrashReport(const std::stringstream& ss, const google::LogSeverity& severity = google::ERROR){
@@ -87,8 +87,8 @@ namespace Token{
 
     static inline bool
     PrintNewCrashReportAndExit(const std::stringstream& ss,
-                               const google::LogSeverity& severity = google::ERROR,
-                               int code = EXIT_FAILURE){
+      const google::LogSeverity& severity = google::ERROR,
+      int code = EXIT_FAILURE){
       return PrintNewCrashReportAndExit(ss.str(), severity, code);
     }
   };
@@ -113,8 +113,8 @@ namespace Token{
     bool PrintSystemInformation();
    public:
     CrashReportPrinter(const std::string& cause,
-                       const google::LogSeverity& severity = google::INFO,
-                       const long& flags = Printer::kFlagNone):
+      const google::LogSeverity& severity = google::INFO,
+      const long& flags = Printer::kFlagNone):
       Printer(severity, flags),
       cause_(cause){}
     ~CrashReportPrinter() = default;

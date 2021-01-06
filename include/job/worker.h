@@ -101,7 +101,7 @@ namespace Token{
     bool Start(){
       char name[16];
       snprintf(name, 16, "worker-%" PRId16, GetWorkerID());
-      return Thread::StartThread(&thread_, name, &HandleThread, (uword)this);
+      return Thread::StartThread(&thread_, name, &HandleThread, (uword) this);
     }
 
     bool Stop(){

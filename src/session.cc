@@ -113,9 +113,9 @@ namespace Token{
       return;
     }
 
-  #ifdef TOKEN_DEBUG
+      #ifdef TOKEN_DEBUG
     LOG(INFO) << "sending " << total_messages << " messages....";
-  #endif//TOKEN_DEBUG
+    #endif//TOKEN_DEBUG
 
     BufferPtr& wbuff = GetWriteBuffer();
     uv_buf_t buffers[total_messages];

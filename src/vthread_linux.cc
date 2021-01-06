@@ -13,8 +13,9 @@ namespace Token{
       function_(function),
       parameter_(parameter){}
     ~ThreadStartData(){
-      if(name_)
+      if(name_){
         free((void*) name_);
+      }
     }
 
     const char* GetName() const{
@@ -47,11 +48,12 @@ namespace Token{
     ThreadHandlerFunction func = data->GetFunction();
     uword parameter = data->GetParameter();
 
-    if(!Thread::SetThreadName(pthread_self(), data->GetName()) != 0)
+    if(!Thread::SetThreadName(pthread_self(), data->GetName()) != 0){
       goto exit;
+    }
 
     func(parameter);
-  exit:
+    exit:
     delete data;
     pthread_exit(NULL);
   }

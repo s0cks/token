@@ -215,22 +215,22 @@ DECLARE_bool(enable_snapshots);
 DECLARE_int32(num_workers);
 
 #ifdef TOKEN_ENABLE_SERVER
-  // --remote "localhost:8080"
-  DECLARE_string(remote);
-  // --server-port 8080
-  DECLARE_int32(server_port);
-  // --num-peer-threads
-  DECLARE_int32(num_peers);
+// --remote "localhost:8080"
+DECLARE_string(remote);
+// --server-port 8080
+DECLARE_int32(server_port);
+// --num-peer-threads
+DECLARE_int32(num_peers);
 #endif//TOKEN_ENABLE_SERVER
 
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
-  // --healthcheck-port 8081
-  DECLARE_int32(healthcheck_port);
+// --healthcheck-port 8081
+DECLARE_int32(healthcheck_port);
 #endif//TOKEN_ENABLE_HEALTH_SERVICE
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
-  // --service-port 8082
-  DECLARE_int32(service_port);
+// --service-port 8082
+DECLARE_int32(service_port);
 #endif//TOKEN_ENABLE_REST_SERVICE
 
 static inline bool

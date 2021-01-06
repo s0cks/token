@@ -72,7 +72,7 @@ namespace Token{
     ~VerifyTransactionInputsJob() = default;
 
     TransactionPtr GetTransaction() const{
-      return ((VerifyTransactionJob*)GetParent())->GetTransaction();
+      return ((VerifyTransactionJob*) GetParent())->GetTransaction();
     }
   };
 
@@ -120,7 +120,7 @@ namespace Token{
     ~VerifyTransactionOutputsJob() = default;
 
     TransactionPtr GetTransaction() const{
-      return ((VerifyTransactionJob*)GetParent())->GetTransaction();
+      return ((VerifyTransactionJob*) GetParent())->GetTransaction();
     }
   };
 

@@ -175,23 +175,27 @@ namespace Token{
             i++;
           }
 
-          if(!curr->children_[pos])
+          if(!curr->children_[pos]){
             curr->children_[pos] = new Node(method, handler, name);
+          }
           curr = curr->children_[pos];
         } else if(c == '/'){
           int pos = 28;
-          if(!curr->children_[pos])
+          if(!curr->children_[pos]){
             curr->children_[pos] = new Node(method, handler, "/");
+          }
           curr = curr->children_[pos];
         } else if(c == '_'){
           int pos = 29;
-          if(!curr->children_[pos])
+          if(!curr->children_[pos]){
             curr->children_[pos] = new Node(method, handler, "_");
+          }
           curr = curr->children_[pos];
         } else{
           int pos = (int) tolower(c) - 'a';
-          if(!curr->children_[pos])
+          if(!curr->children_[pos]){
             curr->children_[pos] = new Node(method, handler, c);
+          }
           curr = curr->children_[pos];
         }
       }
@@ -208,8 +212,9 @@ namespace Token{
 
           std::string value = "";
           while(i != path.end()){
-            if((*i) == '/')
+            if((*i) == '/'){
               break;
+            }
             value += (*i);
             i++;
           }
@@ -217,25 +222,29 @@ namespace Token{
           params.insert({curr->key_, value});
         } else if(curr->children_[28]){
           int pos = 28;
-          if(!curr->children_[pos])
+          if(!curr->children_[pos]){
             return HttpRouterMatch(HttpRouterMatch::kNotFound);
+          }
           curr = curr->children_[pos];
         } else if(curr->children_[29]){
           int pos = 29;
-          if(!curr->children_[pos])
+          if(!curr->children_[pos]){
             return HttpRouterMatch(HttpRouterMatch::kNotFound);
+          }
           curr = curr->children_[pos];
         } else{
           int pos = (int) tolower(c) - 'a';
-          if(!curr->children_[pos])
+          if(!curr->children_[pos]){
             return HttpRouterMatch(HttpRouterMatch::kNotFound);
+          }
           curr = curr->children_[pos];
         }
       }
 
       HttpRoute& route = curr->route_;
-      if(route.GetMethod() != method)
+      if(route.GetMethod() != method){
         return HttpRouterMatch(HttpRouterMatch::kMethodNotSupported);
+      }
       return HttpRouterMatch(HttpRouterMatch::kOk, params, route.handler_);
     }
 

@@ -32,8 +32,9 @@ namespace Token{
   }
 
   bool ProposalHandler::CancelProposal() const{
-    if(!TransitionToPhase(Proposal::kQuorumPhase))
+    if(!TransitionToPhase(Proposal::kQuorumPhase)){
       return false;
+    }
     GetProposal()->SetResult(Proposal::kRejected);
     return true;
   }

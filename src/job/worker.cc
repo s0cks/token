@@ -6,8 +6,9 @@
 namespace Token{
   Job* JobWorker::GetNextJob(){
     Job* job = queue_.Pop();
-    if(job)
+    if(job){
       return job;
+    }
 
     JobWorker* worker = JobScheduler::GetRandomWorker();
     if(worker == this){
@@ -23,7 +24,7 @@ namespace Token{
   }
 
   void JobWorker::HandleThread(uword parameter){
-    JobWorker* instance = ((JobWorker*)parameter);
+    JobWorker* instance = ((JobWorker*) parameter);
 
     LOG(INFO) << "starting worker....";
     instance->SetState(JobWorker::kRunning);
@@ -61,7 +62,7 @@ namespace Token{
 #endif//TOKEN_DEBUG
       }
     }
-  finish:
+    finish:
     pthread_exit(nullptr);
   }
 }

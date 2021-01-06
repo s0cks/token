@@ -20,7 +20,7 @@ namespace Token{
 
   bool PeerSessionManager::Initialize(){
     LOCK_GUARD;
-    threads_ = (PeerSessionThread**)malloc(sizeof(PeerSessionThread*)*FLAGS_num_peers);
+    threads_ = (PeerSessionThread**) malloc(sizeof(PeerSessionThread*) * FLAGS_num_peers);
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
       threads_[idx] = new PeerSessionThread(idx);
       if(!threads_[idx]->Start()){
@@ -64,8 +64,9 @@ namespace Token{
       PeerSessionThread* thread = threads_[idx];
       if(thread->IsRunning()){
         std::shared_ptr<PeerSession> session = thread->GetCurrentSession();
-        if(session->GetAddress() == address)
+        if(session->GetAddress() == address){
           return session;
+        }
       }
     }
     return nullptr;
@@ -77,8 +78,9 @@ namespace Token{
       PeerSessionThread* thread = threads_[idx];
       if(thread->IsRunning()){
         std::shared_ptr<PeerSession> session = thread->GetCurrentSession();
-        if(session->GetID() == uuid)
+        if(session->GetID() == uuid){
           return session;
+        }
       }
     }
     return nullptr;
@@ -88,8 +90,9 @@ namespace Token{
     LOCK_GUARD;
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
       PeerSessionThread* thread = threads_[idx];
-      if(thread && thread->HasSession())
+      if(thread && thread->HasSession()){
         peers.insert(thread->GetCurrentSession()->GetID());
+      }
     }
     return true;
   }
@@ -99,15 +102,17 @@ namespace Token{
     LOCK_GUARD;
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
       PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning())
+      if(thread->IsRunning()){
         count++;
+      }
     }
     return count;
   }
 
   bool PeerSessionManager::ConnectTo(const NodeAddress& address){
-    if(IsConnectedTo(address))
+    if(IsConnectedTo(address)){
       return false;
+    }
     return ScheduleRequest(address);
   }
 
@@ -117,8 +122,9 @@ namespace Token{
       PeerSessionThread* thread = threads_[idx];
       if(thread->IsRunning()){
         std::shared_ptr<PeerSession> session = thread->GetCurrentSession();
-        if(session->GetID() == uuid)
+        if(session->GetID() == uuid){
           return true;
+        }
       }
     }
     return false;
@@ -130,8 +136,9 @@ namespace Token{
       PeerSessionThread* thread = threads_[idx];
       if(thread->IsRunning()){
         std::shared_ptr<PeerSession> session = thread->GetCurrentSession();
-        if(session->GetAddress() == address)
+        if(session->GetAddress() == address){
           return true;
+        }
       }
     }
     return false;
@@ -141,8 +148,9 @@ namespace Token{
     LOCK_GUARD;
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
       PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning())
+      if(thread->IsRunning()){
         thread->GetCurrentSession()->SendPrepare();
+      }
     }
   }
 
@@ -150,8 +158,9 @@ namespace Token{
     LOCK_GUARD;
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
       PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning())
+      if(thread->IsRunning()){
         thread->GetCurrentSession()->SendCommit();
+      }
     }
   }
 
@@ -159,15 +168,17 @@ namespace Token{
     LOCK_GUARD;
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
       PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning())
+      if(thread->IsRunning()){
         thread->GetCurrentSession()->SendDiscoveredBlockHash();
+      }
     }
   }
 
   bool PeerSessionManager::ScheduleRequest(const NodeAddress& next, int16_t attempts){
     std::unique_lock<std::mutex> lock(requests_mutex_);
-    if((int32_t) requests_.size() == FLAGS_num_peers)
+    if((int32_t) requests_.size() == FLAGS_num_peers){
       return false;
+    }
     requests_.push(ConnectRequest(next, attempts));
     requests_cond_.notify_one();
     return true;
@@ -175,8 +186,9 @@ namespace Token{
 
   bool PeerSessionManager::RescheduleRequest(const ConnectRequest& request){
     std::unique_lock<std::mutex> lock(requests_mutex_);
-    if((int32_t) requests_.size() == FLAGS_num_peers)
+    if((int32_t) requests_.size() == FLAGS_num_peers){
       return false;
+    }
     requests_.push(ConnectRequest(request, true));
     requests_cond_.notify_one();
     return true;
@@ -185,8 +197,9 @@ namespace Token{
   bool PeerSessionManager::GetNextRequest(ConnectRequest& request, int64_t timeoutms){
     std::unique_lock<std::mutex> lock(requests_mutex_);
     requests_cond_.wait_for(lock, std::chrono::milliseconds(timeoutms));
-    if(requests_.empty())
+    if(requests_.empty()){
       return false;
+    }
     request = requests_.front();
     requests_.pop();
     return true;

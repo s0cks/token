@@ -126,8 +126,9 @@ namespace Token{
       result_(JobResult::kUnscheduled, "Unscheduled"),
       unfinished_(){
       unfinished_.store(1, std::memory_order_seq_cst);
-      if(parent != nullptr)
+      if(parent != nullptr){
         parent->IncrementUnfinishedJobs();
+      }
     }
 
     virtual JobResult DoWork() = 0;
@@ -145,10 +146,12 @@ namespace Token{
     }
 
     bool Finish(){
-      if(!DecrementUnfinishedJobs())
+      if(!DecrementUnfinishedJobs()){
         return false;
-      if(HasParent())
+      }
+      if(HasParent()){
         return GetParent()->Finish();
+      }
       return true;
     }
    public:
@@ -185,8 +188,9 @@ namespace Token{
     }
 
     bool Run(){
-      if(IsFinished())
+      if(IsFinished()){
         return false;
+      }
       LOG(INFO) << "running " << GetName() << " job....";
       result_ = DoWork();
       Finish();

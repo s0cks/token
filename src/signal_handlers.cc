@@ -25,30 +25,30 @@ namespace Token{
   static inline void
   Terminate(int signum){
     #ifdef TOKEN_ENABLE_REST_SERVICE
-      if(IsValidPort(FLAGS_service_port) && RestService::IsRunning()){
-        LOG(INFO) << "terminating the rest service....";
-        if(!RestService::Stop()){
-          PrintFatalCrashReport("Cannot shutdown the rest service thread.");
-          goto terminate;
-        }
-      }
-    #endif//TOKEN_ENABLE_REST_SERVICE
-
-    #ifdef TOKEN_ENABLE_SERVER
-      LOG(INFO) << "terminating the peer session manager....";
-      if(!PeerSessionManager::Shutdown()){
-        PrintFatalCrashReport("Cannot shutdown the peer session manager threads.");
+    if(IsValidPort(FLAGS_service_port) && RestService::IsRunning()){
+      LOG(INFO) << "terminating the rest service....";
+      if(!RestService::Stop()){
+        PrintFatalCrashReport("Cannot shutdown the rest service thread.");
         goto terminate;
       }
+    }
+      #endif//TOKEN_ENABLE_REST_SERVICE
 
-      if(IsValidPort(FLAGS_server_port) && Server::IsRunning()){
-        LOG(INFO) << "terminating the server....";
-        if(!Server::Stop()){
-          PrintFatalCrashReport("Cannot shutdown the server thread.");
-          goto terminate;
-        }
+      #ifdef TOKEN_ENABLE_SERVER
+    LOG(INFO) << "terminating the peer session manager....";
+    if(!PeerSessionManager::Shutdown()){
+      PrintFatalCrashReport("Cannot shutdown the peer session manager threads.");
+      goto terminate;
+    }
+
+    if(IsValidPort(FLAGS_server_port) && Server::IsRunning()){
+      LOG(INFO) << "terminating the server....";
+      if(!Server::Stop()){
+        PrintFatalCrashReport("Cannot shutdown the server thread.");
+        goto terminate;
       }
-    #endif//TOKEN_ENABLE_SERVER
+    }
+      #endif//TOKEN_ENABLE_SERVER
 
     LOG(INFO) << "terminating the block discovery thread....";
     if(!BlockDiscoveryThread::Stop()){
@@ -56,16 +56,16 @@ namespace Token{
       goto terminate;
     }
 
-    #ifdef TOKEN_ENABLE_HEALTH_SERVICE
-      if(IsValidPort(FLAGS_healthcheck_port) && HealthCheckService::IsRunning()){
-        LOG(INFO) << "terminating the health check service....";
-        if(!HealthCheckService::Stop()){
-          PrintFatalCrashReport("Cannot shutdown the health check service");
-          goto terminate;
-        }
+      #ifdef TOKEN_ENABLE_HEALTH_SERVICE
+    if(IsValidPort(FLAGS_healthcheck_port) && HealthCheckService::IsRunning()){
+      LOG(INFO) << "terminating the health check service....";
+      if(!HealthCheckService::Stop()){
+        PrintFatalCrashReport("Cannot shutdown the health check service");
+        goto terminate;
       }
-    #endif//TOKEN_ENABLE_HEALTH_SERVICE
-  terminate:
+    }
+      #endif//TOKEN_ENABLE_HEALTH_SERVICE
+    terminate:
     exit(signum);
   }
 
