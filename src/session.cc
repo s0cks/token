@@ -120,25 +120,14 @@ namespace Token{
     BufferPtr& wbuff = GetWriteBuffer();
     uv_buf_t buffers[total_messages];
 
-    int64_t offset = 0;
-    for(size_t idx = 0; idx < total_messages; idx++){
-      MessagePtr msg = messages[idx];
-      int64_t total_size = msg->GetBufferSize();
-
-#ifdef TOKEN_DEBUG
-      LOG(INFO) << "sending " << msg->ToString() << " (" << total_size << " Bytes)";
-#endif//TOKEN_DEBUG
-
-      if(!msg->Write(wbuff)){
-        LOG(WARNING) << "couldn't encode message: " << msg->ToString();
+    int64_t idx = 0;
+    MessageBufferWriter writer(wbuff, messages);
+    while(writer.HasNext()){
+      if(!writer.WriteNext(&buffers[idx])){
+        LOG(WARNING) << "couldn't write message (#" << idx << "): " << writer.Next()->ToString() << ".";
         return;
       }
-
-      buffers[idx].len = total_size;
-      buffers[idx].base = &wbuff->data()[offset];
-      offset += total_size;
     }
-    messages.clear();
 
     uv_write_t* req = (uv_write_t*) malloc(sizeof(uv_write_t));
     req->data = this;

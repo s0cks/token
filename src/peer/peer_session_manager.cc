@@ -6,6 +6,8 @@
 namespace Token{
   static std::mutex mutex_;
   static std::condition_variable cond_;
+  static PeerSessionManager::State state_ = PeerSessionManager::kUninitialized;
+  static PeerSessionManager::Status status_ = PeerSessionManager::kOk;
   static PeerSessionThread** threads_;
 
   static std::mutex requests_mutex_;
@@ -14,9 +16,34 @@ namespace Token{
 
 #define LOCK_GUARD std::lock_guard<std::mutex> __guard__(mutex_)
 #define LOCK std::unique_lock<std::mutex> __lock__(mutex_)
+#define UNLOCK __lock__.unlock()
 #define WAIT cond_.wait(__lock__)
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
+
+  PeerSessionManager::State PeerSessionManager::GetState(){
+    LOCK_GUARD;
+    return state_;
+  }
+
+  void PeerSessionManager::SetState(const State& state){
+    LOCK;
+    state_ = state;
+    UNLOCK;
+    SIGNAL_ALL;
+  }
+
+  PeerSessionManager::Status PeerSessionManager::GetStatus(){
+    LOCK_GUARD;
+    return status_;
+  }
+
+  void PeerSessionManager::SetStatus(const Status& status){
+    LOCK;
+    status_ = status;
+    UNLOCK;
+    SIGNAL_ALL;
+  }
 
   bool PeerSessionManager::Initialize(){
     LOCK_GUARD;

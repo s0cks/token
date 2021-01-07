@@ -8,7 +8,7 @@
 #include "utils/metrics.h"
 
 namespace Token{
-  typedef int8_t WorkerId;
+  typedef int32_t WorkerId;
 
 #define FOR_EACH_JOB_POOL_WORKER_STATE(V) \
     V(Starting)                           \
@@ -110,7 +110,10 @@ namespace Token{
     }
 
     bool Submit(Job* job){
-      return queue_.Push(job);
+      if(job != nullptr && !queue_.Push(job))
+        return false;
+      LOG(INFO) << "[worker-" << GetWorkerID() << "] submitting: " << job->GetName();
+      return true;
     }
 
 #define DEFINE_CHECK(Name) \

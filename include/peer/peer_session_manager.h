@@ -6,10 +6,22 @@
 #include "peer/peer_session.h"
 
 namespace Token{
+#define FOR_EACH_PEER_SESSION_MANAGER_STATE(V) \
+  V(Uninitialized)                             \
+  V(Initializing)                              \
+  V(Initialized)
+
+#define FOR_EACH_PEER_SESSION_MANAGER_STATUS(V) \
+  V(Ok)                                         \
+  V(Warning)                                    \
+  V(Error)
+
   class PeerSessionManager{
+    //TODO:
     // - saving peers
     // - monitoring of peers
     // - heartbeats for the peers
+    // - leverage state-machine
     friend class PeerSessionThread;
    public:
     static const int16_t kMaxNumberOfAttempts = 3;
@@ -69,15 +81,55 @@ namespace Token{
         return a.address_ < b.address_;
       }
     };
+
+    enum State{
+#define DEFINE_STATE(Name) k##Name,
+      FOR_EACH_PEER_SESSION_MANAGER_STATE(DEFINE_STATE)
+#undef DEFINE_STATE
+    };
+
+    friend std::ostream& operator<<(std::ostream& stream, const State& state){
+      switch(state){
+#define DEFINE_TOSTRING(Name) \
+        case State::k##Name:  \
+          return stream << #Name;
+        FOR_EACH_PEER_SESSION_MANAGER_STATE(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
+        default:
+          return stream << "Unknown";
+      }
+    }
+
+    enum Status{
+#define DEFINE_STATUS(Name) k##Name,
+      FOR_EACH_PEER_SESSION_MANAGER_STATUS(DEFINE_STATUS)
+#undef DEFINE_STATUS
+    };
+
+    friend std::ostream& operator<<(std::ostream& stream, const Status& status){
+      switch(status){
+#define DEFINE_TOSTRING(Name) \
+        case Status::k##Name:   \
+          return stream << #Name;
+        FOR_EACH_PEER_SESSION_MANAGER_STATUS(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
+        default:
+          return stream << "Unknown";
+      }
+    }
    private:
     PeerSessionManager() = delete;
 
+    static void SetState(const State& state);
+    static void SetStatus(const Status& status);
     static bool ScheduleRequest(const NodeAddress& address, int16_t attempts = 1);
     static bool RescheduleRequest(const ConnectRequest& request);
     static bool GetNextRequest(ConnectRequest& request, int64_t timeoutms);
    public:
     ~PeerSessionManager() = delete;
 
+    static State GetState();
+    static Status GetStatus();
     static bool Initialize();
     static bool Shutdown();
     static bool ConnectTo(const NodeAddress& address);
@@ -85,11 +137,16 @@ namespace Token{
     static bool IsConnectedTo(const NodeAddress& address);
     static bool GetConnectedPeers(std::set<UUID>& peers);
     static int32_t GetNumberOfConnectedPeers();
-    static std::shared_ptr<PeerSession> GetSession(const UUID& uuid);
-    static std::shared_ptr<PeerSession> GetSession(const NodeAddress& address);
+    static PeerSessionPtr GetSession(const UUID& uuid);
+    static PeerSessionPtr GetSession(const NodeAddress& address);
     static void BroadcastPrepare();
     static void BroadcastCommit();
     static void BroadcastDiscoveredBlock();
+
+    static inline bool
+    HasConnectedPeers(){
+      return GetNumberOfConnectedPeers() > 0;
+    }
   };
 }
 

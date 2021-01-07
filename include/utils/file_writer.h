@@ -171,6 +171,11 @@ namespace Token{
       }
       return true;
     }
+
+    bool WriteReference(const TransactionReference& ref){
+      return WriteHash(ref.GetTransactionHash())
+          && WriteLong(ref.GetIndex());
+    }
   };
 
   class BinaryObjectFileWriter : public BinaryFileWriter{

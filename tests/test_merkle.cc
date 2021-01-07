@@ -4,7 +4,7 @@
 namespace Token{
     TEST(TestMerkle, test_tree){
         BlockPtr genesis = Block::Genesis();
-        ASSERT_EQ(genesis->GetMerkleRoot(), Hash::FromHexString("CC564DCFA3662175D10865FF6D639A651E0FF6769F93F0D33143D0E202011C9D"));
+        ASSERT_EQ(genesis->GetMerkleRoot(), Hash::FromHexString("B3863C87CD23972C5B322B5E88145E671B9C42E7C8DDE5AC7065EFB1E0E2B4FB"));
     }
 
     static inline TransactionPtr
@@ -46,27 +46,20 @@ namespace Token{
     TEST(TestMerkle, test_append){
         BlockPtr genesis = Block::Genesis();
         MerkleTreePtr tree1 = MerkleTreeBuilder::Build(genesis);
-        ASSERT_EQ(tree1->GetRootHash(), Hash::FromHexString("CC564DCFA3662175D10865FF6D639A651E0FF6769F93F0D33143D0E202011C9D"));
+        ASSERT_EQ(tree1->GetRootHash(), Hash::FromHexString("B3863C87CD23972C5B322B5E88145E671B9C42E7C8DDE5AC7065EFB1E0E2B4FB"));
 
         TransactionPtr tx = CreateTransaction(0, 1);
         BlockPtr blk1 = BlockPtr(new Block(genesis, { tx }));
         MerkleTreePtr tree2 = MerkleTreeBuilder::Build(blk1);
         tree1->Append(tree2);
 
-        LOG(INFO) << "Merkle Tree #3 (Leaves) " << tree1->GetRootHash() << ":";
-        MerkleTreePrinter logger;
-        ASSERT_TRUE(tree1->VisitLeaves(&logger));
-
         Hash h1 = tx->GetHash();
-        LOG(INFO) << "auditing for: " << h1;
         MerkleProof p1;
         ASSERT_TRUE(tree1->BuildAuditProof(h1, p1));
         ASSERT_TRUE(tree1->VerifyAuditProof(h1, p1));
     }
 
     TEST(TestMerkle, test_consistency_proof){
-        MerkleTreePrinter logger;
-
         TransactionPtr tx1 = CreateTransaction(0, 1);
         TransactionPtr tx2 = CreateTransaction(1, 1);
 
@@ -75,9 +68,6 @@ namespace Token{
             tx2->GetHash(),
         };
         MerkleTreePtr tree1 = MerkleTreePtr(new MerkleTree(tree1_data));
-
-        LOG(INFO) << "Merkle Tree #1 (" << tree1->GetNumberOfLeaves() << " Leaves) " << tree1->GetRootHash() << ":";
-        ASSERT_TRUE(tree1->VisitLeaves(&logger));
 
         Hash old_root = tree1->GetRootHash();
 
@@ -90,17 +80,12 @@ namespace Token{
         MerkleTreePtr tree2 = MerkleTreePtr(new MerkleTree(tree2_data));
         tree1->Append(tree2);
 
-        LOG(INFO) << "Merkle Tree #1 (" << tree1->GetNumberOfLeaves() << " Leaves) " << tree1->GetRootHash() << ":";
-        ASSERT_TRUE(tree1->VisitLeaves(&logger));
-
         MerkleProof proof;
         ASSERT_TRUE(tree1->BuildConsistencyProof(2, proof));
         ASSERT_TRUE(tree1->VerifyConsistencyProof(old_root, proof));
     }
 
     TEST(TestMerkle, test_consistency_proof_2){
-        MerkleTreePrinter logger;
-
         TransactionPtr tx1 = CreateTransaction(0, 1);
         TransactionPtr tx2 = CreateTransaction(1, 1);
 
@@ -111,9 +96,6 @@ namespace Token{
         MerkleTreePtr tree1 = MerkleTreePtr(new MerkleTree(tree1_data));
 
         Hash r1 = tree1->GetRootHash();
-
-        LOG(INFO) << "Merkle Tree #1 (" << tree1->GetNumberOfLeaves() << " Leaves) " << tree1->GetRootHash() << ":";
-        ASSERT_TRUE(tree1->VisitLeaves(&logger));
 
         TransactionPtr tx3 = CreateTransaction(2, 1);
         TransactionPtr tx4 = CreateTransaction(3, 1);
@@ -132,9 +114,6 @@ namespace Token{
             tx5->GetHash(),
             tx6->GetHash(),
         };
-
-        LOG(INFO) << "Merkle Tree #1 (" << tree1->GetNumberOfLeaves() << " Leaves) " << tree1->GetRootHash() << ":";
-        ASSERT_TRUE(tree1->VisitLeaves(&logger));
 
         MerkleProof p1;
         ASSERT_TRUE(tree1->BuildConsistencyProof(2, p1));

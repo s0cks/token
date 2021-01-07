@@ -4,7 +4,6 @@
 #include <uv.h>
 #include <glog/logging.h>
 
-#include "uuid.h"
 #include "utils/buffer.h"
 #include "http/response.h"
 

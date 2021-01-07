@@ -16,7 +16,7 @@ namespace Token{
     return std::make_shared<Transaction>(timestamp, index, inputs, outputs);
   }
 
-  TransactionPtr Transaction::NewInstance(const BufferPtr& buff){
+  TransactionPtr Transaction::FromBytes(const BufferPtr& buff){
     Timestamp timestamp = buff->GetLong();
     int64_t index = buff->GetLong();
 

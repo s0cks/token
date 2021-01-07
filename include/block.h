@@ -269,30 +269,9 @@ namespace Token{
     bool Contains(const Hash& hash) const;
     bool WriteToFile(const std::string& filename) const;
 
-    void operator=(const Block& other){
-      timestamp_ = other.timestamp_;
-      height_ = other.height_;
-      previous_hash_ = other.previous_hash_;
-      transactions_ = other.transactions_;
-    }
-
-    friend bool operator==(const Block& a, const Block& b){
-      return a.timestamp_ == b.timestamp_
-             && a.height_ == b.height_
-             && a.GetHash() == b.GetHash();
-    }
-
-    friend bool operator!=(const Block& a, const Block& b){
-      return !operator==(a, b);
-    }
-
-    friend bool operator<(const Block& a, const Block& b){
-      return a.height_ < b.height_;
-    }
-
     static BlockPtr Genesis();
 
-    static BlockPtr NewInstance(const BufferPtr& buff){
+    static BlockPtr FromBytes(const BufferPtr& buff){
       Timestamp timestamp = buff->GetLong();
       int64_t height = buff->GetLong();
       Hash previous_hash = buff->GetHash();
@@ -301,7 +280,7 @@ namespace Token{
       int64_t num_transactions = buff->GetLong();
       TransactionSet transactions;
       for(idx = 0; idx < num_transactions; idx++)
-        transactions.insert(Transaction::NewInstance(buff));
+        transactions.insert(Transaction::FromBytes(buff));
 
       return std::make_shared<Block>(height, previous_hash, transactions, timestamp);
     }

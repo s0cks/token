@@ -28,34 +28,42 @@ InitializeLogging(char *arg0){
   google::InitGoogleLogging(arg0);
 }
 
-//static inline bool
-//AppendDummy(){
-//  using namespace Token;
-//  sleep(5);
-//  LOG(INFO) << "getting unclaimed transactions";
-//  HashList utxos;
-//  if(!ObjectPool::GetUnclaimedTransactions(utxos)){
-//    LOG(ERROR) << "couldn't get unclaimed transactions for";
-//    return false;
-//  }
-//  LOG(INFO) << "spending " << utxos.size() << " unclaimed transactions";
-//  int64_t idx = 0;
-//  for(auto& it : utxos){
-//    LOG(INFO) << "spending token: " << it;
-//    UnclaimedTransactionPtr utxo = ObjectPool::GetUnclaimedTransaction(it);
-//    InputList inputs = {Input(utxo->GetTransaction(), utxo->GetIndex(), utxo->GetUser())};
-//    OutputList outputs = {Output("TestUser2", "TestToken2")};
-//    TransactionPtr tx = Transaction::NewInstance(idx++, inputs, outputs);
-//
-//    ObjectPool::PutTransaction(tx->GetHash(), tx);
-//
-//
-//    sleep(2);
-//    if(idx == 2)
-//      break;
-//  }
-//  return true;
-//}
+static inline bool
+AppendDummy(int total_spends){
+  using namespace Token;
+  sleep(5);
+
+  Wallet wallet;
+  if(!WalletManager::GetWallet("VenueA", wallet)){
+    LOG(WARNING) << "couldn't get the wallet for VenueA";
+    return false;
+  }
+
+  LOG(INFO) << "spending " << total_spends << " unclaimed transactions";
+
+  int64_t idx = 0;
+  for(auto& it : wallet){
+    UnclaimedTransactionPtr utxo = ObjectPool::GetUnclaimedTransaction(it);
+
+    LOG(INFO) << "spending " << it << " (" << utxo->GetReference() << ")";
+    InputList inputs = {
+      Input(utxo->GetReference(), utxo->GetUser()),
+    };
+    OutputList outputs = {
+      Output("TestUser2", "TestToken2")
+    };
+    TransactionPtr tx = Transaction::NewInstance(idx++, inputs, outputs);
+    Hash hash = tx->GetHash();
+    if(!ObjectPool::PutTransaction(hash, tx)){
+      LOG(WARNING) << "cannot add new transaction " << hash << " to object pool.";
+      return false;
+    }
+
+    if(idx == total_spends)
+      return true;
+  }
+  return false;
+}
 
 //TODO:
 // - create global environment teardown and deconstruct routines
@@ -151,11 +159,18 @@ main(int argc, char **argv){
   #endif//TOKEN_ENABLE_REST_SERVICE
 
   #ifdef TOKEN_DEBUG
-    LOG(INFO) << "Number of Objects: " << ObjectPool::GetNumberOfObjects();
-    LOG(INFO) << "Number of Blocks: " << ObjectPool::GetNumberOfBlocks();
-    LOG(INFO) << "Number of Unclaimed Transactions: " << ObjectPool::GetNumberOfUnclaimedTransactions();
+    LOG(INFO) << "Chain:";
+    LOG(INFO) << " - Head: " << BlockChain::GetReference(BLOCKCHAIN_REFERENCE_HEAD);
+    LOG(INFO) << " - Genesis: " << BlockChain::GetReference(BLOCKCHAIN_REFERENCE_GENESIS);
+
+    ObjectPoolStats pool_stats = ObjectPool::GetStats();
+    LOG(INFO) << "Pool Stats:";
+    LOG(INFO) << " - Number of Objects: " << pool_stats.GetNumberOfObjects();
+    LOG(INFO) << " - Number of Blocks: " << pool_stats.GetNumberOfBlocks();
+    LOG(INFO) << " - Number of Transactions: " << pool_stats.GetNumberOfTransactions();
+    LOG(INFO) << " - Number of Unclaimed Transactions: " << pool_stats.GetNumberOfUnclaimedTransactions();
   #endif//TOKEN_DEBUG
 
-  CrashReport::PrintNewCrashReport("This is a test", google::INFO);
+  AppendDummy(2);
   return EXIT_SUCCESS;
 }

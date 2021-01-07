@@ -214,7 +214,7 @@ namespace Token{
       }
 
       BufferPtr buff = Buffer::From(it->value());
-      TransactionPtr val = Transaction::NewInstance(buff);
+      TransactionPtr val = Transaction::FromBytes(buff);
       if(!vis->Visit(val)){
         return false;
       }
@@ -232,7 +232,7 @@ namespace Token{
       }
 
       BufferPtr buff = Buffer::From(it->value());
-      UnclaimedTransactionPtr val = UnclaimedTransaction::NewInstance(buff);
+      UnclaimedTransactionPtr val = UnclaimedTransaction::FromBytes(buff);
       if(!vis->Visit(val)){
         return false;
       }
@@ -251,7 +251,7 @@ namespace Token{
     }
 
     BufferPtr buff = Buffer::From(data);
-    return Block::NewInstance(buff);
+    return Block::FromBytes(buff);
   }
 
   TransactionPtr ObjectPool::GetTransaction(const Hash& hash){
@@ -265,20 +265,20 @@ namespace Token{
     }
 
     BufferPtr buff = Buffer::From(data);
-    return Transaction::NewInstance(buff);
+    return Transaction::FromBytes(buff);
   }
 
   UnclaimedTransactionPtr ObjectPool::GetUnclaimedTransaction(const Hash& hash){
     std::string data;
 
     leveldb::Status status;
-    if(!(status = ::Token::GetUnclaimedTransactionObject(GetIndex(), hash, &data)).ok()){
+    if(!(status = GetUnclaimedTransactionObject(GetIndex(), hash, &data)).ok()){
       LOG(WARNING) << "cannot get " << hash << ": " << status.ToString();
       return UnclaimedTransactionPtr(nullptr);
     }
 
     BufferPtr buff = Buffer::From(data);
-    return UnclaimedTransaction::NewInstance(buff);
+    return UnclaimedTransaction::FromBytes(buff);
   }
 
   leveldb::Status ObjectPool::Write(leveldb::WriteBatch* update){
@@ -300,6 +300,26 @@ namespace Token{
 
     delete it;
     return count;
+  }
+
+  ObjectPoolStats ObjectPool::GetStats(){
+    int64_t num_blocks = 0;
+    int64_t num_transactions = 0;
+    int64_t num_unclaimed_transactions = 0;
+
+    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
+    for(it->SeekToFirst(); it->Valid(); it->Next()){
+      ObjectHashKey key(it->key());
+      if(key.IsBlock()){
+        num_blocks++;
+      } else if(key.IsTransaction()){
+        num_transactions++;
+      } else if(key.IsUnclaimedTransaction()){
+        num_unclaimed_transactions++;
+      }
+    }
+    delete it;
+    return ObjectPoolStats(num_blocks, num_transactions, num_unclaimed_transactions);
   }
 
   bool ObjectPool::GetStats(JsonString& json){
@@ -332,6 +352,7 @@ namespace Token{
   }
 
   UnclaimedTransactionPtr ObjectPool::FindUnclaimedTransaction(const Input& input){
+    LOG(INFO) << "searching for: " << input;
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
       ObjectHashKey key(it->key());
@@ -340,10 +361,12 @@ namespace Token{
       }
 
       BufferPtr val = Buffer::From(it->value());
-      UnclaimedTransactionPtr value = UnclaimedTransaction::NewInstance(val);
-      if(value->GetTransaction() == input.GetTransactionHash() && value->GetIndex() == input.GetOutputIndex()){
+      UnclaimedTransactionPtr value = UnclaimedTransaction::FromBytes(val);
+
+      TransactionReference& r1 = value->GetReference();
+      const TransactionReference& r2 = input.GetReference();
+      if(r1 == r2)
         return value;
-      }
     }
     delete it;
     return UnclaimedTransactionPtr(nullptr);
@@ -436,7 +459,7 @@ namespace Token{
       ObjectHashKey key(it->key());
       if(key.IsUnclaimedTransaction()){
         BufferPtr buff = Buffer::From(it->value());
-        UnclaimedTransactionPtr utxo = UnclaimedTransaction::NewInstance(buff);
+        UnclaimedTransactionPtr utxo = UnclaimedTransaction::FromBytes(buff);
         if(utxo->GetUser() != user){
           continue;
         }

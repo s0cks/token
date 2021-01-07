@@ -117,17 +117,34 @@ namespace Token{
     return PrintState<Server>("Server");
   }
 
+  static inline std::string
+  GetPeerInfo(const std::shared_ptr<PeerSession>& session){
+    std::stringstream ss;
+    ss << session->GetID() << " (" << session->GetAddress() << ")";
+    return ss.str();
+  }
+
+  static inline std::string
+  GetPeerStatus(const std::shared_ptr<PeerSession>& session){
+    std::stringstream ss;
+    ss << session->GetStatus() << " [" << session->GetStatus() << "]";
+    return ss.str();
+  }
+
   bool CrashReportPrinter::PrintPeerInformation(){
+    PrintState<PeerSessionManager>("Peer Session Manager");
+
     std::set<UUID> peers;
-    if(PeerSessionManager::GetConnectedPeers(peers)){
-      LOG_AT_LEVEL(GetSeverity()) << "\tPeers:";
-      for(auto& it : peers){
-        std::shared_ptr<PeerSession> session = PeerSessionManager::GetSession(it);
-        UUID id = session->GetID();
-        NodeAddress addr = session->GetAddress();
-        LOG_AT_LEVEL(GetSeverity()) << "\t - " << id << " (" << addr << "): " << session->GetState() << " ["
-                                    << session->GetStatus() << "]";
-      }
+    if(!PeerSessionManager::GetConnectedPeers(peers))
+      return false;
+
+    if(peers.empty())
+      return true;
+
+    LOG_AT_LEVEL(GetSeverity()) << "\tSessions:";
+    for(auto& it : peers){
+      PeerSessionPtr session = PeerSessionManager::GetSession(it);
+      LOG_AT_LEVEL(GetSeverity()) << "\t  - " << GetPeerInfo(session) << ": " << GetPeerStatus(session);
     }
     return true;
   }

@@ -95,18 +95,7 @@ namespace Token{
       LOG(WARNING) << "cannot get wallet for user " << user << ": " << status.ToString();
       return false;
     }
-
-    int64_t size = (int64_t) data.size();
-    uint8_t* bytes = (uint8_t*) data.data();
-
-    int64_t offset = 0;
-    while(offset < size){
-      Hash hash(&bytes[offset], Hash::kSize);
-      if(!wallet.insert(hash).second){
-        return false;
-      }
-    }
-    return true;
+    return Decode(data, wallet);
   }
 
   bool WalletManager::GetWallet(const User& user, JsonString& json){

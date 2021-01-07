@@ -3,7 +3,6 @@
 
 #ifdef TOKEN_ENABLE_SERVER
 
-#include "uuid.h"
 #include "block.h"
 #include "session.h"
 #include "command.h"

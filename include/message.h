@@ -3,7 +3,6 @@
 
 #include <set>
 #include "object.h"
-#include "uuid.h"
 #include "address.h"
 #include "version.h"
 #include "proposal.h"
@@ -28,17 +27,15 @@ namespace Token{
     V(GetPeers) \
     V(PeerList)
 
-#define FORWARD_DECLARE(Name) class Name##Message;
-  FOR_EACH_MESSAGE_TYPE(FORWARD_DECLARE)
-#undef FORWARD_DECLARE
-
-#define DEFINE_PTR(Name) \
-    typedef std::shared_ptr<Name##Message> Name##MessagePtr;
-  FOR_EACH_MESSAGE_TYPE(DEFINE_PTR)
-#undef DEFINE_PTR
-
   class Message;
   typedef std::shared_ptr<Message> MessagePtr;
+
+#define DEFINE_MESSAGE(Name) \
+  class Name##Message;        \
+  typedef std::shared_ptr<Name##Message> Name##MessagePtr;
+
+  FOR_EACH_MESSAGE_TYPE(DEFINE_MESSAGE)
+#undef DEFINE_MESSAGE
 
   class Message : public SerializableObject{
     friend class Session;
@@ -94,12 +91,11 @@ namespace Token{
 #undef DEFINE_CHECK
   };
 
-#define DECLARE_MESSAGE_TYPE(Name) \
+#define DEFINE_MESSAGE_TYPE(Name) \
     virtual MessageType GetMessageType() const{ return Message::k##Name##MessageType; } \
     virtual const char* GetName() const{ return #Name; }
-
-#define DECLARE_MESSAGE(Name) \
-    DECLARE_MESSAGE_TYPE(Name) \
+#define DEFINE_MESSAGE(Name) \
+    DEFINE_MESSAGE_TYPE(Name) \
     virtual int64_t GetMessageSize() const; \
     virtual bool Encode(const BufferPtr& buff) const;
 
@@ -139,7 +135,7 @@ namespace Token{
       client_type_(static_cast<ClientType>(buff->GetInt())),
       version_(buff),
       nonce_(buff->GetHash()),
-      node_id_(buff),
+      node_id_(buff->GetUUID()),
       head_(buff){}
     ~VersionMessage() = default;
 
@@ -190,7 +186,7 @@ namespace Token{
              && head_ == msg->head_;
     }
 
-    DECLARE_MESSAGE(Version);
+    DEFINE_MESSAGE(Version);
 
     static MessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<VersionMessage>(buff);
@@ -242,7 +238,7 @@ namespace Token{
       client_type_(static_cast<ClientType>(buff->GetInt())),
       version_(buff),
       nonce_(buff->GetHash()),
-      node_id_(buff),
+      node_id_(buff->GetUUID()),
       callback_(buff),
       head_(buff){}
     ~VerackMessage() = default;
@@ -289,7 +285,7 @@ namespace Token{
              && head_ == msg->head_;
     }
 
-    DECLARE_MESSAGE(Verack);
+    DEFINE_MESSAGE(Verack);
 
     static MessagePtr NewInstance(ClientType type,
       const UUID& node_id,
@@ -354,7 +350,7 @@ namespace Token{
       PaxosMessage(Message::kPrepareMessageType, buff){}
     ~PrepareMessage(){}
 
-    DECLARE_MESSAGE(Prepare);
+    DEFINE_MESSAGE(Prepare);
 
     bool Equals(const MessagePtr& obj) const{
       if(!obj->IsPrepareMessage()){
@@ -380,7 +376,7 @@ namespace Token{
       PaxosMessage(Message::kPromiseMessageType, buff){}
     ~PromiseMessage(){}
 
-    DECLARE_MESSAGE(Promise);
+    DEFINE_MESSAGE(Promise);
 
     bool Equals(const MessagePtr& obj) const{
       if(!obj->IsPromiseMessage()){
@@ -406,7 +402,7 @@ namespace Token{
       PaxosMessage(Message::kCommitMessageType, buff){}
     ~CommitMessage(){}
 
-    DECLARE_MESSAGE(Commit);
+    DEFINE_MESSAGE(Commit);
 
     bool Equals(const MessagePtr& obj) const{
       if(!obj->IsCommitMessage()){
@@ -432,7 +428,7 @@ namespace Token{
       PaxosMessage(Message::kAcceptedMessageType, buff){}
     ~AcceptedMessage(){}
 
-    DECLARE_MESSAGE(Accepted);
+    DEFINE_MESSAGE(Accepted);
 
     bool Equals(const MessagePtr& obj) const{
       if(!obj->IsAcceptedMessage()){
@@ -458,7 +454,7 @@ namespace Token{
       PaxosMessage(Message::kRejectedMessageType, buff){}
     ~RejectedMessage(){}
 
-    DECLARE_MESSAGE(Rejected);
+    DEFINE_MESSAGE(Rejected);
 
     bool Equals(const MessagePtr& obj) const{
       if(!obj->IsRejectedMessage()){
@@ -488,7 +484,7 @@ namespace Token{
       value_(value){}
     ObjectMessage(const BufferPtr& buff):
       Message(),
-      value_(T::NewInstance(buff)){}
+      value_(T::FromBytes(buff)){}
    public:
     virtual ~ObjectMessage() = default;
 
@@ -519,7 +515,7 @@ namespace Token{
       return ss.str();
     }
 
-    DECLARE_MESSAGE_TYPE(Transaction);
+    DEFINE_MESSAGE_TYPE(Transaction);
 
     bool Equals(const MessagePtr& obj) const{
       if(!obj->IsTransactionMessage()){
@@ -560,7 +556,7 @@ namespace Token{
       return ss.str();
     }
 
-    DECLARE_MESSAGE_TYPE(Block);
+    DEFINE_MESSAGE_TYPE(Block);
 
     bool Equals(const MessagePtr& obj) const{
       if(!obj->IsBlockMessage()){
@@ -707,7 +703,7 @@ namespace Token{
       return items.size() == items_.size();
     }
 
-    DECLARE_MESSAGE(Inventory);
+    DEFINE_MESSAGE(Inventory);
 
     bool Equals(const MessagePtr& obj) const{
       if(!obj->IsInventoryMessage()){
@@ -761,7 +757,7 @@ namespace Token{
       return items.size() == items_.size();
     }
 
-    DECLARE_MESSAGE(GetData);
+    DEFINE_MESSAGE(GetData);
 
     bool Equals(const MessagePtr& obj) const{
       if(!obj->IsGetDataMessage()){
@@ -818,7 +814,7 @@ namespace Token{
       return ss.str();
     }
 
-    DECLARE_MESSAGE(GetBlocks);
+    DEFINE_MESSAGE(GetBlocks);
 
     bool Equals(const MessagePtr& obj) const{
       if(!obj->IsGetBlocksMessage()){
@@ -850,7 +846,7 @@ namespace Token{
       return message_;
     }
 
-    DECLARE_MESSAGE(NotFound);
+    DEFINE_MESSAGE(NotFound);
 
     bool Equals(const MessagePtr& obj) const{
       if(!obj->IsNotFoundMessage()){
@@ -873,7 +869,7 @@ namespace Token{
       Message(){}
     ~GetPeersMessage() = default;
 
-    DECLARE_MESSAGE(GetPeers);
+    DEFINE_MESSAGE(GetPeers);
 
     bool Equals(const MessagePtr& obj) const{
       if(!obj->IsGetPeersMessage()){
@@ -925,7 +921,7 @@ namespace Token{
       return peers_.end();
     }
 
-    DECLARE_MESSAGE(PeerList);
+    DEFINE_MESSAGE(PeerList);
 
     bool Equals(const MessagePtr& obj) const{
       if(!obj->IsPeerListMessage()){
@@ -938,6 +934,57 @@ namespace Token{
     static MessagePtr NewInstance(const BufferPtr& buff);
     static MessagePtr NewInstance(const PeerList& peers){
       return std::make_shared<PeerListMessage>(peers);
+    }
+  };
+
+  typedef std::vector<MessagePtr> MessageList;
+
+  class MessageBufferWriter{
+   private:
+    BufferPtr buff_;
+    MessageList& messages_;
+    MessageList::iterator next_;
+    MessageList::iterator end_;
+    int64_t offset_;
+
+    char* raw(){
+      return buff_->data();
+    }
+   public:
+    MessageBufferWriter(const BufferPtr& buff, MessageList& messages):
+      buff_(buff),
+      messages_(messages),
+      next_(messages.begin()),
+      end_(messages.end()),
+      offset_(0){}
+    ~MessageBufferWriter() = default;
+
+    MessageList& messages(){
+      return messages_;
+    }
+
+    MessagePtr Next() const{
+      return (*next_);
+    }
+
+    bool HasNext() const{
+      return next_ != end_;
+    }
+
+    bool WriteNext(uv_buf_t* buff){
+      MessagePtr next = (*next_);
+      int64_t total_size = next->GetBufferSize();
+      if(!next->Write(buff_)){
+        LOG(ERROR) << "cannot serialize " << next->GetName() << "(" << total_size << " bytes) to buffer.";
+        return false;
+      }
+
+      buff->len = total_size;
+      buff->base = &raw()[offset_];
+
+      offset_ += total_size;
+      next_++;
+      return true;
     }
   };
 

@@ -2,14 +2,21 @@
 #include "block.h"
 
 namespace Token{
-    TEST(TestBlock, test_hash){
-        BlockPtr genesis = Block::Genesis();
-        ASSERT_EQ(genesis->GetHash(), Hash::FromHexString("28C4AD5C28971E661C770253EF4F3FE9F3881394168140CF26F86C3B0C5B8C8A"));
-    }
+  static inline BlockPtr
+  CreateA(){
+    // predictable
+    return Block::Genesis();
+  }
 
-    TEST(TestBlock, test_eq){
-        BlockPtr a = Block::Genesis();
-        BlockPtr b = Block::Genesis();
-        ASSERT_TRUE(a->GetHash() == b->GetHash());
-    }
+  static inline BlockPtr
+  CreateB(){
+    // unpredictable
+    BlockPtr genesis = Block::Genesis();
+    return Block::NewInstance(genesis, {});
+  }
+
+  DEFINE_BINARY_OBJECT_POSITIVE_TEST(Block, CreateA);
+  DEFINE_BINARY_OBJECT_NEGATIVE_TEST(Block, CreateA, CreateB);
+  DEFINE_BINARY_OBJECT_HASH_TEST(Block, CreateA, "1191F9F9657BB3AB6D6E043D7B4017507D802795FE58EFA3043A066980C32C72");
+  DEFINE_BINARY_OBJECT_SERIALIZATION_TEST(Block, CreateA);
 }

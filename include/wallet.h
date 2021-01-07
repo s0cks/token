@@ -15,18 +15,34 @@ namespace Token{
 
   static inline int64_t
   GetBufferSize(const Wallet& wallet){
-    return wallet.size() * Hash::kSize;
+    int64_t size = 0;
+    size += sizeof(int64_t);
+    size += (wallet.size() * Hash::kSize);
+    return size;
   }
 
   static inline bool
   Encode(const Wallet& wallet, BufferPtr& buff){
-    if(!buff->PutLong(wallet.size())){
+    if(!buff->PutLong(wallet.size()))
       return false;
-    }
-    for(auto& it : wallet)
+
+    for(auto& it : wallet){
       if(!buff->PutHash(it)){
+        LOG(WARNING) << "couldn't serialize wallet hash: " << it;
         return false;
       }
+    }
+    return true;
+  }
+
+  static inline bool
+  Decode(const std::string& data, Wallet& wallet){
+    Buffer buff(data);
+    int64_t len = buff.GetLong();
+    LOG(INFO) << "reading " << len << " tokens from wallet.";
+    for(int64_t idx = 0; idx < len; idx++)
+      if(!wallet.insert(buff.GetHash()).second)
+        return false;
     return true;
   }
 
@@ -34,9 +50,8 @@ namespace Token{
   Decode(BufferPtr& buff, Wallet& wallet){
     int64_t size = buff->GetLong();
     for(int64_t idx = 0; idx < size; idx++)
-      if(!wallet.insert(buff->GetHash()).second){
+      if(!wallet.insert(buff->GetHash()).second)
         return false;
-      }
     return true;
   }
 
@@ -106,6 +121,26 @@ namespace Token{
     static bool GetWallet(const User& user, JsonString& json);
     static leveldb::Status Write(leveldb::WriteBatch* batch);
     static int64_t GetNumberOfWallets();
+
+    static inline bool
+    GetWallet(const std::string& user, Wallet& wallet){
+      return GetWallet(User(user), wallet);
+    }
+
+    static inline bool
+    PutWallet(const std::string& user, const Wallet& wallet){
+      return PutWallet(User(user), wallet);
+    }
+
+    static inline bool
+    RemoveWallet(const std::string& user){
+      return RemoveWallet(User(user));
+    }
+
+    static inline bool
+    HasWallet(const std::string& user){
+      return HasWallet(User(user));
+    }
 
 #define DEFINE_CHECK(Name) \
     static bool Is##Name(){ return GetState() == State::k##Name; }

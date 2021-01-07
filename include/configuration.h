@@ -4,7 +4,6 @@
 #include <set>
 #include <vector>
 #include <libconfig.h++>
-#include "uuid.h"
 #include "address.h"
 
 namespace Token{
@@ -15,8 +14,6 @@ namespace Token{
 #define PROPERTY_SERVER_ID "Id"
 #define PROPERTY_SERVER_CALLBACK_ADDRESS "CallbackAddress"
 #define PROPERTY_SERVER_PEER_LIST "Peers"
-#define PROPERTY_SERVER_MAXPEERS "MaxNumberOfPeers"
-#define PROPERTY_SERVER_MAXPEERS_DEFAULT 4
 
   class BlockChainConfiguration{
     //TODO: refactor

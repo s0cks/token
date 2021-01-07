@@ -54,6 +54,45 @@ namespace Token{
     virtual bool Visit(const UnclaimedTransactionPtr& utxo) const = 0;
   };
 
+  class ObjectPoolStats{
+    friend class ObjectPool;
+   private:
+    int64_t num_objects_;
+    int64_t num_blocks_;
+    int64_t num_transactions_;
+    int64_t num_unclaimed_transactions_;
+
+    ObjectPoolStats(int64_t nblocks, int64_t ntxs, int64_t nutxos):
+      num_objects_(nblocks+ntxs+nutxos),
+      num_blocks_(nblocks),
+      num_transactions_(ntxs),
+      num_unclaimed_transactions_(nutxos){}
+   public:
+    ~ObjectPoolStats() = default;
+
+    int64_t GetNumberOfObjects() const{
+      return num_objects_;
+    }
+
+    int64_t GetNumberOfBlocks() const{
+      return num_blocks_;
+    }
+
+    int64_t GetNumberOfTransactions() const{
+      return num_transactions_;
+    }
+
+    int64_t GetNumberOfUnclaimedTransactions() const{
+      return num_unclaimed_transactions_;
+    }
+
+    void operator=(const ObjectPoolStats& stats){
+      num_blocks_ = stats.num_blocks_;
+      num_transactions_ = stats.num_transactions_;
+      num_unclaimed_transactions_ = stats.num_unclaimed_transactions_;
+    }
+  };
+
 #define FOR_EACH_POOL_STATE(V) \
     V(Uninitialized)           \
     V(Initializing)            \
@@ -148,6 +187,7 @@ namespace Token{
 
     static int64_t GetNumberOfObjects();
     static bool GetStats(JsonString& json);
+    static ObjectPoolStats GetStats();
     static UnclaimedTransactionPtr FindUnclaimedTransaction(const Input& input);
     static leveldb::Status Write(leveldb::WriteBatch* update);
 

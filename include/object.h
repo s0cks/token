@@ -4,11 +4,31 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <uuid/uuid.h>
 #include <leveldb/slice.h>
 #include "hash.h"
 #include "utils/bitfield.h"
 
 namespace Token{
+#define FOR_EACH_RAW_TYPE(V) \
+  V(Byte, int8_t)            \
+  V(Short, int16_t)          \
+  V(Int, int32_t)            \
+  V(Long, int64_t)
+
+//TODO: better naming conventions
+#define FOR_EACH_BASIC_TYPE(V) \
+  V(User)                      \
+  V(Product)                   \
+  V(Hash)                      \
+  V(UUID)
+
+#define FOR_EACH_TYPE(V) \
+  V(Input)               \
+  V(Output)              \
+  V(Transaction)         \
+  V(Block)
+
   class Buffer;
   typedef std::shared_ptr<Buffer> BufferPtr;
 
@@ -150,8 +170,7 @@ namespace Token{
     User(const uint8_t* bytes, int64_t size):
       Base(bytes, size){}
     User(const User& user):
-      Base(){
-      memcpy(data(), user.data(), Base::GetSize());
+      Base(){memcpy(data(), user.data(), Base::GetSize());
     }
     User(const std::string& value):
       Base(){
@@ -189,6 +208,7 @@ namespace Token{
     }
   };
 
+  //TODO: refactor
   class ObjectTag{
    public:
     enum Type{
@@ -300,6 +320,101 @@ namespace Token{
     static inline int64_t
     GetSize(){
       return sizeof(uint64_t);
+    }
+  };
+
+  class TransactionReference{
+   public:
+    static const int64_t kSize = Hash::kSize + sizeof(int64_t);
+   private:
+    Hash transaction_;
+    int64_t index_;
+   public:
+    TransactionReference(const Hash& tx, int64_t index):
+      transaction_(tx),
+      index_(index){}
+    TransactionReference(const TransactionReference& ref):
+      transaction_(ref.transaction_),
+      index_(ref.index_){}
+    ~TransactionReference() = default;
+
+    Hash GetTransactionHash() const{
+      return transaction_;
+    }
+
+    int64_t GetIndex() const{
+      return index_;
+    }
+
+    TransactionReference& operator=(const TransactionReference& ref){
+      transaction_ = ref.transaction_;
+      index_ = ref.index_;
+      return (*this);
+    }
+
+    friend bool operator==(const TransactionReference& a, const TransactionReference& b){
+      return a.transaction_ == b.transaction_ && a.index_ == b.index_;
+    }
+
+    friend bool operator!=(const TransactionReference& a, const TransactionReference& b){
+      return !operator==(a, b);
+    }
+
+    friend bool operator<(const TransactionReference& a, const TransactionReference& b){
+      if(a.transaction_ == b.transaction_)
+        return a.index_ < b.index_;
+      return a.transaction_ < b.transaction_;
+    }
+
+    friend std::ostream& operator<<(std::ostream& stream, const TransactionReference& ref){
+      return stream << ref.GetTransactionHash() << "[" << ref.GetIndex() << "]";
+    }
+  };
+
+  class UUID : public RawType<16>{
+   public:
+    static const int64_t kSize = 16;
+   public:
+    UUID():
+      RawType(){
+      uuid_generate_time_safe(data_);
+    }
+    UUID(uint8_t* bytes, int64_t size):
+      RawType(bytes, size){}
+    UUID(const std::string& uuid):
+      RawType(){
+      uuid_parse(uuid.data(), data_);
+    }
+    UUID(const UUID& other):
+      RawType(){
+      uuid_copy(data_, other.data_);
+    }
+    ~UUID() = default;
+
+    std::string ToString() const{
+      char uuid_str[37];
+      uuid_unparse(data_, uuid_str);
+      return std::string(uuid_str, 37);
+    }
+
+    void operator=(const UUID& other){
+      uuid_copy(data_, other.data_);
+    }
+
+    friend bool operator==(const UUID& a, const UUID& b){
+      return uuid_compare(a.data_, b.data_) == 0;
+    }
+
+    friend bool operator!=(const UUID& a, const UUID& b){
+      return uuid_compare(a.data_, b.data_) != 0;
+    }
+
+    friend bool operator<(const UUID& a, const UUID& b){
+      return uuid_compare(a.data_, b.data_) < 0;
+    }
+
+    friend std::ostream& operator<<(std::ostream& stream, const UUID& uuid){
+      return stream << uuid.ToString();
     }
   };
 }

@@ -15,14 +15,14 @@
 namespace Token{
   typedef int16_t WorkerId;
 
-#define FOR_EACH_PEER_SESSION_MANAGER_STATE(V) \
+#define FOR_EACH_PEER_SESSION_STATE(V) \
     V(Starting)                                \
     V(Idle)                                    \
     V(Running)                                 \
     V(Stopping)                                \
     V(Stopped)
 
-#define FOR_EACH_PEER_SESSION_MANAGER_STATUS(V) \
+#define FOR_EACH_PEER_SESSION_STATUS(V) \
     V(Ok)                                       \
     V(Warning)                                  \
     V(Error)
@@ -32,7 +32,7 @@ namespace Token{
    public:
     enum State{
 #define DEFINE_STATE(Name) k##Name,
-      FOR_EACH_PEER_SESSION_MANAGER_STATE(DEFINE_STATE)
+      FOR_EACH_PEER_SESSION_STATE(DEFINE_STATE)
 #undef DEFINE_STATE
     };
 
@@ -42,7 +42,7 @@ namespace Token{
                 case State::k##Name: \
                     stream << #Name; \
                     return stream;
-        FOR_EACH_PEER_SESSION_MANAGER_STATE(DEFINE_TOSTRING)
+        FOR_EACH_PEER_SESSION_STATE(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
         default:stream << "Unknown";
           return stream;
@@ -51,7 +51,7 @@ namespace Token{
 
     enum Status{
 #define DEFINE_STATUS(Name) k##Name,
-      FOR_EACH_PEER_SESSION_MANAGER_STATUS(DEFINE_STATUS)
+      FOR_EACH_PEER_SESSION_STATUS(DEFINE_STATUS)
 #undef DEFINE_STATUS
     };
 
@@ -61,7 +61,7 @@ namespace Token{
                 case Status::k##Name: \
                     stream << #Name; \
                     return stream;
-        FOR_EACH_PEER_SESSION_MANAGER_STATUS(DEFINE_TOSTRING)
+        FOR_EACH_PEER_SESSION_STATUS(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
         default:stream << "Unknown";
           return stream;
@@ -78,9 +78,9 @@ namespace Token{
     State state_;
     Status status_;
     uv_loop_t* loop_;
-    std::shared_ptr<PeerSession> session_;
+    PeerSessionPtr session_;
 
-    std::shared_ptr<PeerSession> CreateNewSession(const NodeAddress& address){
+    PeerSessionPtr CreateNewSession(const NodeAddress& address){
       std::unique_lock<std::mutex> guard(mutex_);
       session_ = std::make_shared<PeerSession>(GetLoop(), address);
       return session_;
@@ -135,7 +135,7 @@ namespace Token{
       status_ = status;
     }
 
-    std::shared_ptr<PeerSession> GetCurrentSession(){
+    PeerSessionPtr GetCurrentSession(){
       std::lock_guard<std::mutex> guard(mutex_);
       return session_;
     }
@@ -150,12 +150,12 @@ namespace Token{
     bool Stop();
 #define DEFINE_CHECK(Name) \
         bool Is##Name(){ return GetState() == State::k##Name; }
-    FOR_EACH_PEER_SESSION_MANAGER_STATE(DEFINE_CHECK)
+    FOR_EACH_PEER_SESSION_STATE(DEFINE_CHECK)
 #undef DEFINE_CHECK
 
 #define DEFINE_CHECK(Name) \
         bool Is##Name(){ return GetStatus() == Status::k##Name; }
-    FOR_EACH_PEER_SESSION_MANAGER_STATUS(DEFINE_CHECK)
+    FOR_EACH_PEER_SESSION_STATUS(DEFINE_CHECK)
 #undef DEFINE_CHECK
   };
 }

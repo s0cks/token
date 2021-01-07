@@ -15,6 +15,7 @@ namespace Token{
     int64_t wpos_;
     int64_t rpos_;
     uint8_t* data_;
+    bool owned_;
 
     uint8_t* raw(){
       return data_;
@@ -26,27 +27,29 @@ namespace Token{
 
     template<typename T>
     bool Append(T value){
-      if((wpos_ + static_cast<int64_t>(sizeof(T))) > GetBufferSize()){
+      if((wpos_ + (int64_t)sizeof(T)) > GetBufferSize())
         return false;
-      }
       memcpy(&raw()[wpos_], &value, sizeof(T));
       wpos_ += sizeof(T);
       return true;
     }
 
     template<typename T>
-    void Insert(T value, intptr_t idx){
-      memcpy(&raw()[idx], (uint8_t*) &value, sizeof(T));
-      wpos_ = idx + (intptr_t) sizeof(T);
+    bool Insert(T value, int64_t idx){
+      if((idx + (int64_t)sizeof(T)) > GetBufferSize())
+        return false;
+      memcpy(&raw()[idx], (uint8_t*)&value, sizeof(T));
+      wpos_ = idx + (int64_t)sizeof(T);
+      return true;
     }
 
     template<typename T>
-    T Read(intptr_t idx){
-      if((idx + (intptr_t) sizeof(T)) > GetBufferSize()){
+    T Read(int64_t idx){
+      if((idx + (int64_t)sizeof(T)) > GetBufferSize()){
         LOG(INFO) << "cannot read " << sizeof(T) << " bytes from pos: " << idx;
         return 0;
       }
-      return *(T*) (raw() + idx);
+      return *(T*)(raw() + idx);
     }
 
     template<typename T>
@@ -55,12 +58,29 @@ namespace Token{
       rpos_ += sizeof(T);
       return data;
     }
+
+    template<class T>
+    bool PutType(const T& val){
+      if((wpos_ + T::kSize) > GetBufferSize())
+        return false;
+      memcpy(&raw()[wpos_], val.data(), T::kSize);
+      wpos_ += T::kSize;
+      return true;
+    }
+
+    template<class T>
+    T GetType(){
+      T val(&raw()[rpos_], T::kSize);
+      rpos_ += T::kSize;
+      return val;
+    }
    public:
     Buffer(int64_t size):
       bsize_(size),
       wpos_(0),
       rpos_(0),
-      data_(nullptr){
+      data_(nullptr),
+      owned_(true){
       data_ = (uint8_t*) malloc(sizeof(uint8_t) * size);
       memset(data(), 0, GetBufferSize());
     }
@@ -68,14 +88,22 @@ namespace Token{
       bsize_(size),
       wpos_(size),
       rpos_(0),
-      data_(nullptr){
+      data_(nullptr),
+      owned_(true){
       data_ = (uint8_t*) malloc(sizeof(uint8_t) * size);
       memcpy(data_, data, size);
     }
+    Buffer(const std::string& data):
+      bsize_(data.size()),
+      wpos_(data.size()),
+      rpos_(0),
+      data_(nullptr),
+      owned_(false){
+      data_ = (uint8_t*)data.data();
+    }
     ~Buffer(){
-      if(data_){
+      if(owned_ && data_)
         free(data_);
-      }
     }
 
     uint8_t operator[](intptr_t idx){
@@ -110,45 +138,35 @@ namespace Token{
       return rpos_;
     }
 
-    //@format:off
+#define DEFINE_PUT_SIGNED(Name, Type) \
+    bool Put##Name(const Type& val){ return Append<Type>(val); } \
+    bool Put##Name(const Type& val, int64_t pos){ return Insert<Type>(val, pos); }
+#define DEFINE_PUT_UNSIGNED(Name, Type) \
+    bool PutUnsigned##Name(const u##Type& val){ return Append<u##Type>(val); } \
+    bool PutUnsigned##Name(const u##Type& val, int64_t pos){ return Insert<u##Type>(val, pos); }
 #define DEFINE_PUT(Name, Type) \
-        bool Put##Unsigned##Name(u##Type value){ \
-            return Append<u##Type>(value); \
-        } \
-        void Put##Unsigned##Name(intptr_t pos, u##Type value){ \
-            Insert<u##Type>(value, pos); \
-        } \
-        bool Put##Name(Type value){ \
-            return Append<Type>(value); \
-        } \
-        void Put##Name(intptr_t pos, Type value){ \
-            Insert<Type>(value, pos); \
-        }
-        DEFINE_PUT(Byte, int8_t)
-        DEFINE_PUT(Short, int16_t)
-        DEFINE_PUT(Int, int32_t)
-        DEFINE_PUT(Long, int64_t)
-#undef DEFINE_PUT
+    DEFINE_PUT_SIGNED(Name, Type) \
+    DEFINE_PUT_UNSIGNED(Name, Type)
 
+#define DEFINE_GET_SIGNED(Name, Type) \
+    Type Get##Name(){ return Read<Type>(); } \
+    Type Get##Name(int64_t pos){ return Read<Type>(pos); }
+#define DEFINE_GET_UNSIGNED(Name, Type) \
+    Type GetUnsigned##Name(){ return Read<u##Type>(); } \
+    Type GetUnsigned##Name(int64_t pos){ return Read<u##Type>(pos); }
 #define DEFINE_GET(Name, Type) \
-        Type Get##Unsigned##Name(){ \
-            return Read<u##Type > (); \
-        } \
-        Type Get##Unsigned##Name(intptr_t pos){ \
-            return Read<u##Type > (pos); \
-        } \
-        Type Get##Name(){ \
-            return Read<Type>(); \
-        } \
-        Type Get##Name(intptr_t pos){ \
-            return Read<Type>(pos); \
-        }
-        DEFINE_GET(Byte, int8_t)
-        DEFINE_GET(Short, int16_t)
-        DEFINE_GET(Int, int32_t)
-        DEFINE_GET(Long, int64_t)
-#undef DEFINE_GET
-//@format:on
+    DEFINE_GET_SIGNED(Name, Type) \
+    DEFINE_GET_UNSIGNED(Name, Type)
+#define DEFINE_PUT_TYPE(Name) \
+    bool Put##Name(const Name& val){ return PutType<Name>(val); }
+#define DEFINE_GET_TYPE(Name) \
+    Name Get##Name(){ return GetType<Name>(); }
+
+    FOR_EACH_RAW_TYPE(DEFINE_PUT);
+    FOR_EACH_RAW_TYPE(DEFINE_GET);
+    FOR_EACH_BASIC_TYPE(DEFINE_PUT_TYPE);
+    FOR_EACH_BASIC_TYPE(DEFINE_GET_TYPE);
+
     void WriteBytesTo(std::fstream& stream, intptr_t size){
       uint8_t bytes[size];
       GetBytes(bytes, size);
@@ -198,44 +216,6 @@ namespace Token{
       return true;
     }
 
-    void PutUser(const User& user){
-      memcpy(&raw()[wpos_], user.data(), User::GetSize());
-      wpos_ += User::GetSize();
-    }
-
-    User GetUser(){
-      User user(&raw()[rpos_], User::GetSize());
-      rpos_ += User::GetSize();
-      return user;
-    }
-
-    void PutProduct(const Product& product){
-      memcpy(&raw()[wpos_], product.data(), Product::GetSize());
-      wpos_ += Product::GetSize();
-    }
-
-    Product GetProduct(){
-      Product product(&raw()[rpos_], Product::GetSize());
-      rpos_ += Product::GetSize();
-      return product;
-    }
-
-    bool PutHash(const Hash& value){
-      if((wpos_ + Hash::kSize) > GetBufferSize()){
-        return false;
-      }
-      memcpy(&raw()[wpos_], value.data(), Hash::kSize);
-      wpos_ += Hash::kSize;
-      return true;
-    }
-
-    Hash
-    GetHash(){
-      Hash hash(&raw()[rpos_], Hash::GetSize());
-      rpos_ += Hash::GetSize();
-      return hash;
-    }
-
     void PutString(const std::string& value){
       memcpy(&raw()[wpos_], value.data(), value.length());
       wpos_ += value.length();
@@ -246,14 +226,6 @@ namespace Token{
       memcpy(&raw()[rpos_], data, size);
       rpos_ += size;
       return std::string(data, size);
-    }
-
-    ObjectTag GetObjectTag(){
-      return ObjectTag(GetUnsignedLong());
-    }
-
-    void PutObjectTag(const ObjectTag& tag){
-      PutUnsignedLong(tag.data());
     }
 
     template<class T>
@@ -269,13 +241,23 @@ namespace Token{
       if(!PutLong(items.size())){
         return false;
       }
-
       for(auto& item : items){
         if(!item->Write(shared_from_this())){
           return false;
         }
       }
       return true;
+    }
+
+    bool PutReference(const TransactionReference& ref){
+      return PutHash(ref.GetTransactionHash())
+          && PutLong(ref.GetIndex());
+    }
+
+    TransactionReference GetReference(){
+      Hash hash = GetHash();
+      int64_t index = GetLong();
+      return TransactionReference(hash, index);
     }
 
     void Reset(){

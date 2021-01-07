@@ -31,8 +31,7 @@ namespace Token{
   void ToJson(const UnclaimedTransactionPtr& utxo, JsonWriter& writer){
     writer.StartObject();
     SetField(writer, "Hash", utxo->GetHash());
-    SetField(writer, "TransactionHash", utxo->GetTransaction());
-    SetField(writer, "OutputIndex", utxo->GetIndex());
+    SetField(writer, "Transaction", utxo->GetReference());
     SetField(writer, "User", utxo->GetUser());
     SetField(writer, "Product", utxo->GetProduct());
     writer.EndObject();

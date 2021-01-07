@@ -98,13 +98,11 @@ namespace Token{
 #define DEFINE_MESSAGE_SERIALIZATION_TEST_CASE(Name) \
   TEST(Test##Name##MessageSerialization, test_pos){  \
     MessagePtr a = New##Name##Message();             \
-    LOG(INFO) << "a := " << a->ToString();           \
     BufferPtr tmp = Buffer::NewInstance(a->GetBufferSize()); \
     ASSERT_TRUE(a->Write(tmp));                      \
     ASSERT_EQ(tmp->GetInt(), static_cast<int32_t>(Message::k##Name##MessageType)); \
     ASSERT_EQ(tmp->GetLong(), (a->GetBufferSize() - Message::kHeaderSize));        \
     MessagePtr b = Name##Message::NewInstance(tmp);  \
-    LOG(INFO) << "b := " << b->ToString();           \
     ASSERT_TRUE(a->Equals(b));                       \
   }
   FOR_EACH_MESSAGE_TYPE(DEFINE_MESSAGE_SERIALIZATION_TEST_CASE);

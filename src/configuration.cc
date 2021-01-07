@@ -92,7 +92,8 @@ namespace Token{
   bool BlockChainConfiguration::GetPeerList(std::set<NodeAddress>& results){
     LOCK_GUARD;
     if(!FLAGS_remote.empty()){
-      results.insert(NodeAddress(FLAGS_remote));
+      if(!NodeAddress::ResolveAddresses(FLAGS_remote, results))
+        LOG(WARNING) << "couldn't resolve peer: " << FLAGS_remote;
     }
 
     if(HasEnvironmentVariable(ENVIRONMENT_TOKEN_LEDGER)){

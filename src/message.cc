@@ -21,7 +21,7 @@ namespace Token{
     buff->PutInt(static_cast<int32_t>(client_type_));
     version_.Write(buff);
     buff->PutHash(nonce_);
-    node_id_.Write(buff);
+    buff->PutUUID(node_id_);
     head_.Write(buff);
     return true;
   }
@@ -43,7 +43,7 @@ namespace Token{
     buff->PutInt(static_cast<int32_t>(GetClientType()));
     version_.Write(buff);
     buff->PutHash(nonce_);
-    node_id_.Write(buff);
+    buff->PutUUID(node_id_);
     callback_.Write(buff);
     head_.Write(buff);
     return true;

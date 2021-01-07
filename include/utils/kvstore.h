@@ -225,7 +225,7 @@ namespace Token{
 
   template<class K>
   static inline leveldb::Status
-  PutObject(leveldb::DB* index, const K& k, const BufferPtr& v){
+  PutRawObject(leveldb::DB* index, const K& k, const BufferPtr& v){
     leveldb::Slice key(k.data(), k.size());
     leveldb::Slice val(v->data(), v->GetWrittenBytes());
 
@@ -236,7 +236,7 @@ namespace Token{
 
   template<class K>
   static inline void
-  PutObject(leveldb::WriteBatch& batch, const K& k, const BufferPtr& v){
+  PutRawObject(leveldb::WriteBatch& batch, const K& k, const BufferPtr& v){
     leveldb::Slice key(k.data(), k.size());
     leveldb::Slice val(v->data(), v->GetWrittenBytes());
     return batch.Put(key, val);
@@ -251,7 +251,7 @@ namespace Token{
       ss << "Cannot serialize object to buffer of size: " << vdata->GetBufferSize();
       return leveldb::Status::InvalidArgument(ss.str());
     }
-    return PutObject(index, k, vdata);
+    return PutRawObject(index, k, vdata);
   }
 
   template<class K, class V>
@@ -263,7 +263,7 @@ namespace Token{
       ss << "Cannot serialize object to buffer of size: " << vdata->GetBufferSize();
       return;
     }
-    return PutObject(batch, k, vdata);
+    return PutRawObject(batch, k, vdata);
   }
 
   static inline leveldb::Status
@@ -300,14 +300,14 @@ namespace Token{
   PutObject(leveldb::DB* index, const User& user, const Wallet& wallet){
     BufferPtr buff = Buffer::NewInstance(GetBufferSize(wallet));
     Encode(wallet, buff);
-    return PutObject(index, UserKey(user), buff);
+    return PutRawObject(index, UserKey(user), buff);
   }
 
   static inline void
   PutObject(leveldb::WriteBatch& batch, const User& user, const Wallet& wallet){
     BufferPtr buff = Buffer::NewInstance(GetBufferSize(wallet));
     Encode(wallet, buff);
-    return PutObject(batch, UserKey(user), buff);
+    return PutRawObject(batch, UserKey(user), buff);
   }
 
   template<class K>

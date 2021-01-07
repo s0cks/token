@@ -15,35 +15,39 @@ namespace Token{
   class Input : public SerializableObject{
     friend class Transaction;
    public:
-    static const int64_t kSize = Hash::kSize + sizeof(int64_t) + User::kSize;
+    static const int64_t kSize = TransactionReference::kSize + User::kSize;
    private:
-    Hash hash_;
-    int64_t index_;
+    TransactionReference reference_;
     User user_;//TODO: remove field
    public:
-    Input(const Hash& tx_hash, int64_t index, const User& user):
+    Input(const TransactionReference& ref, const User& user):
       SerializableObject(),
-      hash_(tx_hash),
-      index_(index),
+      reference_(ref),
       user_(user){}
-    Input(const Hash& tx_hash, int64_t index, const std::string& user):
-      Input(tx_hash, index, User(user)){}
+    Input(const Hash& tx, int64_t index, const User& user):
+      SerializableObject(),
+      reference_(tx, index),
+      user_(user){}
+    Input(const Hash& tx, int64_t index, const std::string& user):
+      SerializableObject(),
+      reference_(tx, index),
+      user_(user){}
     Input(const BufferPtr& buff):
-      Input(buff->GetHash(), buff->GetLong(), buff->GetUser()){}
+      SerializableObject(),
+      reference_(buff->GetReference()),
+      user_(buff->GetUser()){}
     Input(BinaryFileReader* reader):
-      Input(reader->ReadHash(), reader->ReadLong(), reader->ReadUser()){}
+      SerializableObject(),
+      reference_(reader->ReadHash(), reader->ReadLong()),
+      user_(reader->ReadUser()){}
     ~Input(){}
 
-    int64_t GetOutputIndex() const{
-      return index_;
+    TransactionReference& GetReference(){
+      return reference_;
     }
 
-    Hash& GetTransactionHash(){
-      return hash_;
-    }
-
-    Hash GetTransactionHash() const{
-      return hash_;
+    TransactionReference GetReference() const{
+      return reference_;
     }
 
     User& GetUser(){
@@ -59,22 +63,19 @@ namespace Token{
     }
 
     bool Write(const BufferPtr& buffer) const{
-      buffer->PutHash(hash_);
-      buffer->PutLong(index_);
-      buffer->PutUser(user_);
-      return true;
+      return buffer->PutReference(reference_)
+          && buffer->PutUser(user_);
     }
 
     bool Write(BinaryFileWriter* writer) const{
-      writer->WriteHash(hash_);
-      writer->WriteLong(index_);
+      writer->WriteReference(reference_);
       writer->WriteUser(user_);
       return true;
     }
 
     std::string ToString() const{
       std::stringstream stream;
-      stream << "Input(" << GetTransactionHash() << "[" << GetOutputIndex() << "]" << ", " << GetUser() << ")";
+      stream << "Input(" << reference_ << ", " << GetUser() << ")";
       return stream.str();
     }
 
@@ -83,28 +84,21 @@ namespace Token{
     }
 
     void operator=(const Input& other){
-      hash_ = other.hash_;
+      reference_ = other.reference_;
       user_ = other.user_;
-      index_ = other.index_;
     }
 
     friend bool operator==(const Input& a, const Input& b){
-      return a.hash_ == b.hash_
-             && a.index_ == b.index_
+      return a.reference_ == b.reference_
              && a.user_ == b.user_;
     }
 
     friend bool operator!=(const Input& a, const Input& b){
-      return a.hash_ != b.hash_
-             && a.index_ != b.index_
-             && a.user_ != b.user_;
+      return !operator==(a, b);
     }
 
     friend bool operator<(const Input& a, const Input& b){
-      if(a.hash_ == b.hash_){
-        return a.index_ < b.index_;
-      }
-      return a.hash_ < b.hash_;
+      return a.reference_ < b.reference_;
     }
   };
 
@@ -382,7 +376,7 @@ namespace Token{
       const InputList& inputs,
       const OutputList& outputs,
       const Timestamp& timestamp = GetCurrentTimestamp());
-    static TransactionPtr NewInstance(const BufferPtr& buff);
+    static TransactionPtr FromBytes(const BufferPtr& buff);
     static TransactionPtr NewInstance(BinaryFileReader* reader);
   };
 

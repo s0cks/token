@@ -16,7 +16,6 @@ namespace Token{
     static const int64_t kSize = 256 / 8;
    public:
     struct Hasher{
-     public:
       size_t operator()(const Hash& hash) const{
         uint64_t a = ((uint64_t*) hash.data())[0];
         uint64_t b = ((uint64_t*) hash.data())[1];
@@ -33,9 +32,8 @@ namespace Token{
     };
 
     struct Equal{
-     public:
       bool operator()(const Hash& a, const Hash& b) const{
-        return a.Compare(b) == 0;
+        return a == b;
       }
     };
    private:
@@ -150,7 +148,7 @@ namespace Token{
     }
 
     void operator=(const Hash& other){
-      memcpy(data_, other.data_, sizeof(data_));
+      memcpy(data_, other.data_, kSize);
     }
 
     friend std::ostream& operator<<(std::ostream& stream, const Hash& hash){

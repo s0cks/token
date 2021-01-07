@@ -115,7 +115,7 @@ namespace Token{
     State GetState();
     Status GetStatus();
     void Send(const MessagePtr& msg);
-    void Send(std::vector<MessagePtr>& messages);
+    void Send(MessageList& messages);
 
 #define DEFINE_STATE_CHECK(Name) \
         bool Is##Name(){ return GetState() == State::k##Name; }

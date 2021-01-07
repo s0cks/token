@@ -3,7 +3,6 @@
 
 #include <set>
 #include <condition_variable>
-#include "uuid.h"
 #include "block.h"
 
 namespace Token{
@@ -39,7 +38,7 @@ namespace Token{
       timestamp_(buff->GetLong()),
       height_(buff->GetLong()),
       hash_(buff->GetHash()),
-      proposer_(buff){}
+      proposer_(buff->GetUUID()){}
     RawProposal(const RawProposal& proposal):
       timestamp_(proposal.GetTimestamp()),
       height_(proposal.GetHeight()),
@@ -67,7 +66,7 @@ namespace Token{
       buff->PutLong(GetTimestamp());
       buff->PutLong(GetHeight());
       buff->PutHash(GetHash());
-      proposer_.Write(buff);
+      buff->PutUUID(proposer_);
       return true;
     }
 

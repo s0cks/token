@@ -119,7 +119,7 @@ namespace Token{
 
     bool Print(const UnclaimedTransactionPtr& utxo) const{
       LOG_AT_LEVEL(GetSeverity()) << "Unclaimed Transaction " << utxo->GetHash();
-      LOG_AT_LEVEL(GetSeverity()) << "Location: " << utxo->GetTransaction() << "[" << utxo->GetIndex() << "]";
+      LOG_AT_LEVEL(GetSeverity()) << "Location: " << utxo->GetReference();
       LOG_AT_LEVEL(GetSeverity()) << "User: " << utxo->GetUser();
       LOG_AT_LEVEL(GetSeverity()) << "Product: " << utxo->GetProduct();
       return true;
@@ -135,6 +135,24 @@ namespace Token{
 
     bool operator()(const UnclaimedTransactionPtr& utxo) const{
       return Print(utxo);
+    }
+
+    static inline bool
+    PrettyPrint(const BlockPtr& blk, const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone){
+      PrettyPrinter printer(severity, flags);
+      return printer.Print(blk);
+    }
+
+    static inline bool
+    PrettyPrint(const TransactionPtr& tx, const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone){
+      PrettyPrinter printer(severity, flags);
+      return printer.Print(tx);
+    }
+
+    static inline bool
+    PrettyPrint(const UnclaimedTransactionPtr& utxo, const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone){
+      PrettyPrinter printer(severity, flags);
+      return printer.Print(utxo);
     }
   };
 

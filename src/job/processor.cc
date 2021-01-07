@@ -32,6 +32,7 @@ namespace Token{
     ProcessTransactionJob* job = new ProcessTransactionJob(this, tx);
     worker->Submit(job);
     worker->Wait(job);
+    RemoveObject(batch_pool_, tx->GetHash(), Object::Type::kTransaction);
     return true;
   }
 
@@ -51,6 +52,7 @@ namespace Token{
     JobWorker* worker = JobScheduler::GetThreadWorker();
 
     TransactionPtr tx = GetTransaction();
+
     InputList& inputs = tx->inputs();
     auto start = inputs.begin();
     auto end = inputs.end();

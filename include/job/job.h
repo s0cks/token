@@ -191,7 +191,7 @@ namespace Token{
       if(IsFinished()){
         return false;
       }
-      LOG(INFO) << "running " << GetName() << " job....";
+
       result_ = DoWork();
       Finish();
       return true;
@@ -300,7 +300,7 @@ namespace Token{
 
     InputListJob(Job* parent, const std::string& name, const InputList& inputs):
       BatchWriteJob(parent, name),
-      inputs_(inputs){}
+      inputs_(inputs.begin(), inputs.end()){}
    public:
     virtual ~InputListJob() = default;
 

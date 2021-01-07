@@ -44,6 +44,15 @@ namespace Token{
     SetField(writer, name, product.str());
   }
 
+  static inline void
+  SetField(JsonWriter& writer, const std::string& name, const TransactionReference& ref){
+    writer.Key(name.data(), name.length());
+    writer.StartObject();
+      SetField(writer, "Hash", ref.GetTransactionHash());
+      SetField(writer, "OutputIndex", ref.GetIndex());
+    writer.EndObject();
+  }
+
   void ToJson(const BlockPtr& blk, JsonString& json);
   void ToJson(const TransactionPtr& tx, JsonString& json);
   void ToJson(const UnclaimedTransactionPtr& utxo, JsonString& json);

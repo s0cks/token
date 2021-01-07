@@ -7,6 +7,9 @@
 #include "session.h"
 
 namespace Token{
+  class PeerSession;
+  typedef std::shared_ptr<PeerSession> PeerSessionPtr;
+
   class Peer{
    public:
     static const intptr_t kSize = UUID::kSize + NodeAddress::kSize;
@@ -30,7 +33,7 @@ namespace Token{
       uuid_(uuid),
       address_(address){}
     Peer(const BufferPtr& buff):
-      uuid_(buff),
+      uuid_(buff->GetUUID()),
       address_(buff){}
     Peer(const Peer& other):
       uuid_(other.uuid_),
@@ -46,7 +49,7 @@ namespace Token{
     }
 
     bool Write(const BufferPtr& buff) const{
-      uuid_.Write(buff);
+      buff->PutUUID(uuid_);
       address_.Write(buff);
       return true;
     }
@@ -75,7 +78,6 @@ namespace Token{
     }
   };
 
-  class HandleMessageTask;
   class PeerSession : public Session{
     friend class Server;
     friend class PeerSessionThread;

@@ -242,8 +242,7 @@ namespace Token{
     Hash phash = block->GetPreviousHash();
 
     LOG(INFO) << "appending new block:";
-    LOG(INFO) << "  - Parent Hash: " << phash;
-    LOG(INFO) << "  - Hash: " << hash;
+    PrettyPrinter::PrettyPrint(block);
     if(HasBlock(hash)){
       LOG(WARNING) << "duplicate block found for: " << hash;
       return false;
