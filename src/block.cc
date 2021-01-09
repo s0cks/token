@@ -10,8 +10,8 @@ namespace Token{
     previous_hash_(buff->GetHash()),
     merkle_root_(buff->GetHash()),
     hash_(buff->GetHash()),
-    bloom_(){
-  }
+    bloom_(),
+    num_transactions_(buff->GetLong()){}
 
   BlockPtr BlockHeader::GetData() const{
     return BlockChain::GetBlock(GetHash());
@@ -23,6 +23,7 @@ namespace Token{
     buff->PutHash(previous_hash_);
     buff->PutHash(merkle_root_);
     buff->PutHash(hash_);
+    buff->PutLong(num_transactions_);
     return true;
   }
 

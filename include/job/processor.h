@@ -176,7 +176,7 @@ namespace Token{
 
   class ProcessOutputListJob : public OutputListJob{
    public:
-    static const int64_t kMaxNumberOfOutputs = 128;
+    static const int64_t kMaxNumberOfOutputs = 64;
    private:
     int64_t offset_;
     UserWallets wallets_;

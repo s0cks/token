@@ -75,6 +75,20 @@ namespace Token{
       Printer(severity, flags){}
     ~PrettyPrinter() = default;
 
+    bool Print(const BlockHeader& blk) const{
+      if(IsDetailed()){
+        LOG_AT_LEVEL(GetSeverity()) << "Block #" << blk.GetHeight() << ":";
+        LOG_AT_LEVEL(GetSeverity()) << "Hash: " << blk.GetHash();
+        LOG_AT_LEVEL(GetSeverity()) << "Created: " << GetTimestampFormattedReadable(blk.GetTimestamp());
+        LOG_AT_LEVEL(GetSeverity()) << "Previous: " << blk.GetPreviousHash();
+        LOG_AT_LEVEL(GetSeverity()) << "Merkle Root: " << blk.GetMerkleRoot();
+        LOG_AT_LEVEL(GetSeverity()) << "Number of Transactions: " << blk.GetNumberOfTransactions();
+      } else{
+        LOG_AT_LEVEL(GetSeverity()) << "#" << blk.GetHeight() << "(" << blk.GetHash() << ")";
+      }
+      return true;
+    }
+
     bool Print(const BlockPtr& blk) const{
       LOG_AT_LEVEL(GetSeverity()) << "Block #" << blk->GetHeight() << ":";
       LOG_AT_LEVEL(GetSeverity()) << "Hash: " << blk->GetHash();
@@ -87,9 +101,8 @@ namespace Token{
       }
 
       LOG_AT_LEVEL(GetSeverity()) << "Transactions:";
-      for(auto& tx : blk->transactions()){
+      for(auto& tx : blk->transactions())
         Print(tx);
-      }
       return true;
     }
 

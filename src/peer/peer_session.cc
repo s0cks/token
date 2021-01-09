@@ -151,6 +151,7 @@ namespace Token{
                    << proposal->GetResult() << "])";
       return;
     }
+    LOG(INFO) << "accepting " << session->GetInfo() << "'s proposal for: " << proposal->ToString();
     session->Send(AcceptedMessage::NewInstance(proposal));
   }
 

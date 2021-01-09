@@ -6,17 +6,16 @@
 namespace Token{
   Job* JobWorker::GetNextJob(){
     Job* job = queue_.Pop();
-    if(job){
+    if(job)
       return job;
-    }
 
     JobWorker* worker = JobScheduler::GetRandomWorker();
-    if(worker == this){
+    if(!worker){
       pthread_yield();
       return nullptr;
     }
 
-    if(!worker){
+    if(pthread_equal(worker->GetThreadID(), pthread_self())){
       pthread_yield();
       return nullptr;
     }
@@ -42,12 +41,10 @@ namespace Token{
     while(instance->IsRunning()){
       Job* next = instance->GetNextJob();
       if(next){
-#ifdef TOKEN_DEBUG
         LOG(INFO) << "[worker-" << instance->GetWorkerID() << "] running " << next->GetName() << "....";
         Counter& num_ran = instance->GetJobsRan();
         Histogram& histogram = instance->GetHistogram();
         Timepoint start = Clock::now();
-#endif//TOKEN_DEBUG
 
         if(!next->Run()){
           LOG(WARNING) << "couldn't run the \"" << next->GetName() << "\" job.";
@@ -55,11 +52,9 @@ namespace Token{
         }
 
         num_ran->Increment();
-#ifdef TOKEN_DEBUG
-        LOG(INFO) << "[worker-" << instance->GetWorkerID() << "] " << next->GetName() << " has finished.";
-        auto total_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start).count();
-        histogram->Update(total_time_ms);
-#endif//TOKEN_DEBUG
+        auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start);
+        histogram->Update(duration_ms.count());
+        LOG(INFO) << "[worker-" << instance->GetWorkerID() << "] " << next->GetName() << " has finished (" << duration_ms.count() << "ms).";
       }
     }
     finish:

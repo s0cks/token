@@ -121,6 +121,12 @@ namespace Token{
     SIGNAL_ALL;
   }
 
+  BlockChainStats BlockChain::GetStats(){
+    BlockPtr genesis = GetGenesis();
+    BlockPtr head = GetHead();
+    return BlockChainStats(genesis->GetHeader(), head->GetHeader());
+  }
+
   BlockPtr BlockChain::GetGenesis(){
     LOCK_GUARD;
     return GetBlock(GetReference(BLOCKCHAIN_REFERENCE_GENESIS));

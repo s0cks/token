@@ -2,7 +2,7 @@
 
 DEFINE_string(path, "", "The path for the local ledger to be stored in.");
 DEFINE_bool(enable_snapshots, false, "Enable snapshots of the block chain");
-DEFINE_int32(num_workers, 8, "Define the number of worker pool threads");
+DEFINE_int32(num_workers, 4, "Define the number of worker pool threads");
 
 #ifdef TOKEN_ENABLE_SERVER
 DEFINE_string(remote, "", "The hostname for the remote ledger to synchronize with.");

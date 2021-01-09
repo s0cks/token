@@ -20,6 +20,7 @@ namespace Token{
     Hash merkle_root_;
     Hash hash_;
     BloomFilter bloom_;
+    int64_t num_transactions_;
    public:
     BlockHeader():
       timestamp_(0),
@@ -27,26 +28,30 @@ namespace Token{
       previous_hash_(),
       merkle_root_(), // fill w/ genesis's merkle root
       hash_(), //TODO: fill w/ genesis's Hash
-      bloom_(){}
+      bloom_(),
+      num_transactions_(0){}
     BlockHeader(const BlockHeader& blk):
       timestamp_(blk.timestamp_),
       height_(blk.height_),
       previous_hash_(blk.previous_hash_),
       merkle_root_(blk.merkle_root_),
       hash_(blk.hash_),
-      bloom_(blk.bloom_){}
+      bloom_(blk.bloom_),
+      num_transactions_(blk.num_transactions_){}
     BlockHeader(Timestamp timestamp,
       int64_t height,
       const Hash& phash,
       const Hash& merkle_root,
       const Hash& hash,
-      const BloomFilter& tx_bloom):
+      const BloomFilter& tx_bloom,
+      int64_t num_transactions):
       timestamp_(timestamp),
       height_(height),
       previous_hash_(phash),
       merkle_root_(merkle_root),
       hash_(hash),
-      bloom_(tx_bloom){}
+      bloom_(tx_bloom),
+      num_transactions_(num_transactions){}
     BlockHeader(const BufferPtr& buff);
     ~BlockHeader(){}
 
@@ -68,6 +73,10 @@ namespace Token{
 
     Hash GetHash() const{
       return hash_;
+    }
+
+    int64_t GetNumberOfTransactions() const{
+      return num_transactions_;
     }
 
     bool Contains(const Hash& hash) const{
@@ -159,7 +168,7 @@ namespace Token{
     ~Block() = default;
 
     BlockHeader GetHeader() const{
-      return BlockHeader(timestamp_, height_, previous_hash_, GetMerkleRoot(), GetHash(), tx_bloom_);
+      return BlockHeader(timestamp_, height_, previous_hash_, GetMerkleRoot(), GetHash(), tx_bloom_, transactions_.size());
     }
 
     Timestamp GetTimestamp() const{

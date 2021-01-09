@@ -25,13 +25,9 @@ namespace Token{
   Encode(const Wallet& wallet, BufferPtr& buff){
     if(!buff->PutLong(wallet.size()))
       return false;
-
-    for(auto& it : wallet){
-      if(!buff->PutHash(it)){
-        LOG(WARNING) << "couldn't serialize wallet hash: " << it;
+    for(auto& it : wallet)
+      if(!buff->PutHash(it))
         return false;
-      }
-    }
     return true;
   }
 

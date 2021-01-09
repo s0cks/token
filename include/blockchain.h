@@ -26,6 +26,41 @@ namespace Token{
     V(Warning)                        \
     V(Error)
 
+  class BlockChainStats{
+   private:
+    BlockHeader genesis_;
+    BlockHeader head_;
+   public:
+    BlockChainStats(const BlockHeader& genesis, const BlockHeader& head):
+      genesis_(genesis),
+      head_(head){}
+    BlockChainStats(const BlockChainStats& stats):
+      genesis_(stats.genesis_),
+      head_(stats.head_){}
+    ~BlockChainStats() = default;
+
+    BlockHeader& GetGenesis(){
+      return genesis_;
+    }
+
+    BlockHeader GetGenesis() const{
+      return genesis_;
+    }
+
+    BlockHeader& GetHead(){
+      return head_;
+    }
+
+    BlockHeader GetHead() const{
+      return head_;
+    }
+
+    void operator=(const BlockChainStats& stats){
+      head_ = stats.head_;
+      genesis_ = stats.genesis_;
+    }
+  };
+
   class BlockChainBlockVisitor;
   class BlockChainHeaderVisitor;
   class BlockChain{
@@ -96,6 +131,7 @@ namespace Token{
     static BlockPtr GetHead();
     static BlockPtr GetGenesis();
     static int64_t GetNumberOfBlocks();
+    static BlockChainStats GetStats();
 
     static inline bool HasBlocks(){
       return GetNumberOfBlocks() > 0;

@@ -1,5 +1,6 @@
 #include <thread>
 #include "pool.h"
+#include "stats.h"
 #include "wallet.h"
 #include "keychain.h"
 #include "discovery.h"
@@ -159,18 +160,7 @@ main(int argc, char **argv){
   #endif//TOKEN_ENABLE_REST_SERVICE
 
   #ifdef TOKEN_DEBUG
-    LOG(INFO) << "Chain:";
-    LOG(INFO) << " - Head: " << BlockChain::GetReference(BLOCKCHAIN_REFERENCE_HEAD);
-    LOG(INFO) << " - Genesis: " << BlockChain::GetReference(BLOCKCHAIN_REFERENCE_GENESIS);
-
-    ObjectPoolStats pool_stats = ObjectPool::GetStats();
-    LOG(INFO) << "Pool Stats:";
-    LOG(INFO) << " - Number of Objects: " << pool_stats.GetNumberOfObjects();
-    LOG(INFO) << " - Number of Blocks: " << pool_stats.GetNumberOfBlocks();
-    LOG(INFO) << " - Number of Transactions: " << pool_stats.GetNumberOfTransactions();
-    LOG(INFO) << " - Number of Unclaimed Transactions: " << pool_stats.GetNumberOfUnclaimedTransactions();
+    StatsPrinter::PrintAllStats(google::INFO, Printer::kFlagDetailed);
   #endif//TOKEN_DEBUG
-
-  AppendDummy(2);
   return EXIT_SUCCESS;
 }

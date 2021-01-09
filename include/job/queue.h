@@ -39,11 +39,10 @@ namespace Token{
       size_t bottom = bottom_.load(std::memory_order_acquire);
       if(top < bottom){
         Job* job = jobs_[top % jobs_.size()];
-        size_t expected_top = top + 1;
-        size_t desired_top = expected_top;
-        if(!top_.compare_exchange_weak(top, desired_top, std::memory_order_acq_rel)){
+        size_t next = top + 1;
+        size_t desired_top = next;
+        if(!top_.compare_exchange_weak(top, desired_top, std::memory_order_acq_rel))
           return nullptr;
-        }
         return job;
       }
       return nullptr;

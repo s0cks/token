@@ -49,6 +49,17 @@ namespace Token{
     return (worker && worker->IsRunning()) ? worker : nullptr;
   }
 
+  JobSchedulerStats JobScheduler::GetStats(){
+    JobWorkerStats workers[FLAGS_num_workers];
+    for(int idx = 0; idx < FLAGS_num_workers; idx++){
+      JobWorker* worker = workers_[idx];
+      if(!worker || !worker->IsRunning())
+        continue;
+      workers[idx] = worker->GetStats();
+    }
+    return JobSchedulerStats(workers);
+  }
+
   bool JobScheduler::GetWorkerStatistics(JsonString& json){
     JsonWriter writer(json);
     writer.StartObject();

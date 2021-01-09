@@ -85,9 +85,9 @@ namespace Token{
       if(!TransitionToPhase(Proposal::kCommitPhase)){
         return false;
       }
-      #ifdef TOKEN_ENABLE_SERVER
+    #ifdef TOKEN_ENABLE_SERVER
       PeerSessionManager::BroadcastCommit();
-      #endif//TOKEN_ENABLE_SERVER
+    #endif//TOKEN_ENABLE_SERVER
 
       GetProposal()->WaitForRequiredResponses(); //TODO: add timeout here
       if(WasRejected()){
@@ -146,7 +146,6 @@ namespace Token{
         LOG(WARNING) << result.GetMessage();
         return CancelProposal();
       }
-
       proposer->SendAccepted();
 
       GetProposal()->WaitForPhase(Proposal::kCommitPhase);

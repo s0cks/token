@@ -125,7 +125,7 @@ namespace Token{
       name_(name),
       result_(JobResult::kUnscheduled, "Unscheduled"),
       unfinished_(){
-      unfinished_.store(1, std::memory_order_seq_cst);
+      unfinished_.store(1, std::memory_order_relaxed);
       if(parent != nullptr){
         parent->IncrementUnfinishedJobs();
       }
@@ -134,15 +134,15 @@ namespace Token{
     virtual JobResult DoWork() = 0;
 
     int32_t GetUnfinishedJobs() const{
-      return unfinished_.load(std::memory_order_seq_cst);
+      return unfinished_.load(std::memory_order_relaxed);
     }
 
     bool IncrementUnfinishedJobs(){
-      return unfinished_.fetch_add(1, std::memory_order_seq_cst) == 1;
+      return unfinished_.fetch_add(1, std::memory_order_relaxed) == 1;
     }
 
     bool DecrementUnfinishedJobs(){
-      return unfinished_.fetch_sub(1, std::memory_order_seq_cst) == 1;
+      return unfinished_.fetch_sub(1, std::memory_order_relaxed) == 1;
     }
 
     bool Finish(){

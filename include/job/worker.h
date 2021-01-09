@@ -6,9 +6,76 @@
 #include "job/job.h"
 #include "job/queue.h"
 #include "utils/metrics.h"
+#include "utils/work_stealing_queue.h"
 
 namespace Token{
   typedef int32_t WorkerId;
+
+  class JobWorkerStats{
+   private:
+    WorkerId worker_id_;
+    int64_t num_ran_;
+    int64_t num_discarded_;
+    int64_t time_min_;
+    int64_t time_mean_;
+    int64_t time_max_;
+   public:
+    JobWorkerStats():
+      worker_id_(0),
+      num_ran_(0),
+      num_discarded_(0),
+      time_min_(0),
+      time_mean_(0),
+      time_max_(0){}
+    JobWorkerStats(const WorkerId& worker_id, int64_t num_ran, int64_t num_discarded, int64_t time_min, int64_t time_mean, int64_t time_max):
+      worker_id_(worker_id),
+      num_ran_(num_ran),
+      num_discarded_(num_discarded),
+      time_min_(time_min),
+      time_mean_(time_mean),
+      time_max_(time_max){}
+    JobWorkerStats(const JobWorkerStats& stats):
+      worker_id_(stats.worker_id_),
+      num_ran_(stats.num_ran_),
+      num_discarded_(stats.num_discarded_),
+      time_min_(stats.time_min_),
+      time_mean_(stats.time_mean_),
+      time_max_(stats.time_max_){}
+    ~JobWorkerStats() = default;
+
+    WorkerId GetWorkerID() const{
+      return worker_id_;
+    }
+
+    int64_t GetNumberOfJobsRan() const{
+      return num_ran_;
+    }
+
+    int64_t GetNumberOfJobsDiscarded() const{
+      return num_discarded_;
+    }
+
+    int64_t GetMinimumTime() const{
+      return time_min_;
+    }
+
+    int64_t GetMeanTime() const{
+      return time_mean_;
+    }
+
+    int64_t GetMaximumTime() const{
+      return time_max_;
+    }
+
+    void operator=(const JobWorkerStats& stats){
+      worker_id_ = stats.worker_id_;
+      num_ran_ = stats.num_ran_;
+      num_discarded_ = stats.num_discarded_;
+      time_min_ = stats.time_min_;
+      time_mean_ = stats.time_mean_;
+      time_max_ = stats.time_max_;
+    }
+  };
 
 #define FOR_EACH_JOB_POOL_WORKER_STATE(V) \
     V(Starting)                           \
@@ -41,9 +108,8 @@ namespace Token{
    private:
     ThreadId thread_;
     WorkerId worker_;
-
     std::atomic<State> state_;
-    JobQueue queue_;
+    WorkStealingQueue<Job*> queue_;
     Histogram histogram_;
     Counter num_ran_;
     Counter num_discarded_;
@@ -71,7 +137,7 @@ namespace Token{
     Job* GetNextJob();
     static void HandleThread(uword parameter);
    public:
-    JobWorker(const WorkerId& worker_id, size_t max_queue_size):
+    JobWorker(const WorkerId& worker_id, int64_t max_queue_size):
       thread_(),
       worker_(worker_id),
       state_(State::kStarting),
@@ -114,6 +180,11 @@ namespace Token{
         return false;
       LOG(INFO) << "[worker-" << GetWorkerID() << "] submitting: " << job->GetName();
       return true;
+    }
+
+    JobWorkerStats GetStats() const{
+      std::shared_ptr<Metrics::Snapshot> snapshot = histogram_->GetSnapshot();
+      return JobWorkerStats(worker_, num_ran_->Get(), num_discarded_->Get(), snapshot->GetMin(), snapshot->GetMean(), snapshot->GetMax());
     }
 
 #define DEFINE_CHECK(Name) \
