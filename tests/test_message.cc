@@ -15,31 +15,46 @@ namespace Token{
 
   static inline MessagePtr
   NewPrepareMessage(){
-    ProposalPtr proposal = std::make_shared<Proposal>(UUID(), 0, Hash::GenerateNonce());
+    int64_t height = 1;
+    UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
+    Hash hash = Hash::FromHexString("1191F9F9657BB3AB6D6E043D7B4017507D802795FE58EFA3043A066980C32C72");
+    ProposalPtr proposal = std::make_shared<Proposal>(uuid, height, hash);
     return PrepareMessage::NewInstance(proposal);
   }
 
   static inline MessagePtr
   NewPromiseMessage(){
-    ProposalPtr proposal = std::make_shared<Proposal>(UUID(), 0, Hash::GenerateNonce());
+    int64_t height = 1;
+    UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
+    Hash hash = Hash::FromHexString("1191F9F9657BB3AB6D6E043D7B4017507D802795FE58EFA3043A066980C32C72");
+    ProposalPtr proposal = std::make_shared<Proposal>(uuid, height, hash);
     return PromiseMessage::NewInstance(proposal);
   }
 
   static inline MessagePtr
   NewCommitMessage(){
-    ProposalPtr proposal = std::make_shared<Proposal>(UUID(), 0, Hash::GenerateNonce());
+    int64_t height = 1;
+    UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
+    Hash hash = Hash::FromHexString("1191F9F9657BB3AB6D6E043D7B4017507D802795FE58EFA3043A066980C32C72");
+    ProposalPtr proposal = std::make_shared<Proposal>(uuid, height, hash);
     return CommitMessage::NewInstance(proposal);
   }
 
   static inline MessagePtr
   NewAcceptedMessage(){
-    ProposalPtr proposal = std::make_shared<Proposal>(UUID(), 0, Hash::GenerateNonce());
+    int64_t height = 1;
+    UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
+    Hash hash = Hash::FromHexString("1191F9F9657BB3AB6D6E043D7B4017507D802795FE58EFA3043A066980C32C72");
+    ProposalPtr proposal = std::make_shared<Proposal>(uuid, height, hash);
     return AcceptedMessage::NewInstance(proposal);
   }
 
   static inline MessagePtr
   NewRejectedMessage(){
-    ProposalPtr proposal = std::make_shared<Proposal>(UUID(), 0, Hash::GenerateNonce());
+    int64_t height = 1;
+    UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
+    Hash hash = Hash::FromHexString("1191F9F9657BB3AB6D6E043D7B4017507D802795FE58EFA3043A066980C32C72");
+    ProposalPtr proposal = std::make_shared<Proposal>(uuid, height, hash);
     return RejectedMessage::NewInstance(proposal);
   }
 
@@ -100,6 +115,7 @@ namespace Token{
     MessagePtr a = New##Name##Message();             \
     BufferPtr tmp = Buffer::NewInstance(a->GetBufferSize()); \
     ASSERT_TRUE(a->Write(tmp));                      \
+    ASSERT_EQ(tmp->GetWrittenBytes(), a->GetBufferSize()); \
     ASSERT_EQ(tmp->GetInt(), static_cast<int32_t>(Message::k##Name##MessageType)); \
     ASSERT_EQ(tmp->GetLong(), (a->GetBufferSize() - Message::kHeaderSize));        \
     MessagePtr b = Name##Message::NewInstance(tmp);  \

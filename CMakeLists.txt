@@ -56,6 +56,8 @@ find_package(GTest REQUIRED)
 find_package(Libuv REQUIRED)
 find_package(HttpParser REQUIRED)
 
+find_package(ZXing REQUIRED)
+
 if(ENABLE_COMPRESSION)
   find_package(ZLIB REQUIRED)
 endif(ENABLE_COMPRESSION)
@@ -79,6 +81,7 @@ set(TOKEN_LIBRARIES
   ${GFLAGS_LIBRARIES} # gflags
   config++ # config++
   ${UUID_LIBRARIES} # uuid
+  ${ZXING_LIBRARIES} # zxing
   ${LIBUV_LIBRARIES} # libuv
   ${HTTPPARSER_LIBRARIES} # http-parser
 )
@@ -96,7 +99,7 @@ endif(CMAKE_BUILD_TYPE MATCHES Debug)
 add_library("token-ledger" SHARED ${TOKEN_HEADERS} ${TOKEN_SOURCES})
 set_target_properties("token-ledger" PROPERTIES VERSION ${TOKEN_VERSION})
 set_target_properties("token-ledger" PROPERTIES PUBLIC_HEADER "${TOKEN_HEADERS}")
-target_link_libraries("${PROJECT_NAME}-ledger" ${TOKEN_LIBRARIES})
+target_link_libraries("${PROJECT_NAME}-ledger" ${TOKEN_LIBRARIES} png)
 target_compile_options(token-ledger PRIVATE -Werror -Wall)
 
 # Token Server Executable

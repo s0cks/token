@@ -4,7 +4,6 @@
 #include <atomic>
 #include "vthread.h"
 #include "job/job.h"
-#include "job/queue.h"
 #include "utils/metrics.h"
 #include "utils/work_stealing_queue.h"
 
@@ -77,6 +76,8 @@ namespace Token{
     }
   };
 
+  typedef WorkStealingQueue<Job*> JobQueue;
+
 #define FOR_EACH_JOB_POOL_WORKER_STATE(V) \
     V(Starting)                           \
     V(Idle)                               \
@@ -109,7 +110,7 @@ namespace Token{
     ThreadId thread_;
     WorkerId worker_;
     std::atomic<State> state_;
-    WorkStealingQueue<Job*> queue_;
+    JobQueue queue_;
     Histogram histogram_;
     Counter num_ran_;
     Counter num_discarded_;
@@ -132,6 +133,10 @@ namespace Token{
 
     Counter& GetJobsDiscarded(){
       return num_discarded_;
+    }
+
+    JobQueue* GetQueue(){
+      return &queue_;
     }
 
     Job* GetNextJob();

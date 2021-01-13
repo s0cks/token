@@ -4,7 +4,7 @@
 
 namespace Token{
   JobResult VerifyBlockJob::DoWork(){
-    JobWorker* worker = JobScheduler::GetThreadWorker();
+    JobQueue* queue = JobScheduler::GetThreadQueue();
     std::vector<VerifyTransactionJob*> jobs;
 
     LOG(INFO) << "verifying " << block_->GetNumberOfTransactions() << " transactions....";
@@ -12,12 +12,13 @@ namespace Token{
       Hash hash = it->GetHash();
       LOG(INFO) << "visiting transaction " << hash;
       VerifyTransactionJob* verify_tx = new VerifyTransactionJob(this, it);
-      worker->Submit(verify_tx);
+      queue->Push(verify_tx);
+
       jobs.push_back(verify_tx);
     }
 
     for(auto& it : jobs){
-      worker->Wait(it);
+      while(!it->IsFinished()); // spin
       JobResult& result = it->GetResult();
       if(!result.IsSuccessful()){
         return result;
@@ -27,17 +28,17 @@ namespace Token{
   }
 
   JobResult VerifyTransactionJob::DoWork(){
-    JobWorker* worker = JobScheduler::GetThreadWorker();
+    JobQueue* queue = JobScheduler::GetThreadQueue();
     VerifyTransactionInputsJob* verify_inputs = new VerifyTransactionInputsJob(this, transaction_->inputs());
-    worker->Submit(verify_inputs);
-    worker->Wait(verify_inputs);
+    queue->Push(verify_inputs);
+    while(!verify_inputs->IsFinished()); //spin
     if(!verify_inputs->GetResult().IsSuccessful()){
       return verify_inputs->GetResult();
     }
 
     VerifyTransactionOutputsJob* verify_outputs = new VerifyTransactionOutputsJob(this, transaction_->outputs());
-    worker->Submit(verify_outputs);
-    worker->Wait(verify_outputs);
+    queue->Push(verify_outputs);
+    while(!verify_outputs->IsFinished()); //spin
     if(!verify_outputs->GetResult().IsSuccessful()){
       return verify_outputs->GetResult();
     }
@@ -46,7 +47,7 @@ namespace Token{
   }
 
   JobResult VerifyTransactionInputsJob::DoWork(){
-    JobWorker* worker = JobScheduler::GetThreadWorker();
+    JobQueue* queue = JobScheduler::GetThreadQueue();
     std::vector<VerifyInputListJob*> jobs;
 
     TransactionPtr tx = GetTransaction();
@@ -62,7 +63,7 @@ namespace Token{
 
       InputList chunk(start, next);
       VerifyInputListJob* job = new VerifyInputListJob(this, chunk);
-      if(!worker->Submit(job)){
+      if(!queue->Push(job)){
         return Failed("Cannot schedule VerifyInputListJob()");
       }
       jobs.push_back(job);
@@ -70,7 +71,7 @@ namespace Token{
     }
 
     for(auto& it : jobs){
-      worker->Wait(it);
+      while(!it->IsFinished()); //spin
 
       JobResult& result = it->GetResult();
       if(!result.IsSuccessful()){
@@ -108,7 +109,7 @@ namespace Token{
   }
 
   JobResult VerifyTransactionOutputsJob::DoWork(){
-    JobWorker* worker = JobScheduler::GetThreadWorker();
+    JobQueue* queue = JobScheduler::GetThreadQueue();
 
     TransactionPtr tx = GetTransaction();
     OutputList& outputs = tx->outputs();
@@ -121,7 +122,7 @@ namespace Token{
 
       OutputList chunk(start, next);
       VerifyOutputListJob* job = new VerifyOutputListJob(this, chunk);
-      if(!worker->Submit(job)){
+      if(!queue->Push(job)){
         return Failed("Cannot schedule VerifyInputListJob()");
       }
       start = next;

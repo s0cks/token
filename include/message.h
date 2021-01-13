@@ -47,6 +47,18 @@ namespace Token{
 #undef DECLARE_MESSAGE_TYPE
     };
 
+    friend std::ostream& operator<<(std::ostream& stream, const MessageType& type){
+      switch(type){
+#define DEFINE_TOSTRING(Name) \
+        case MessageType::k##Name##MessageType: \
+          return stream << #Name;
+        FOR_EACH_MESSAGE_TYPE(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
+        default:
+          return stream << "Unknown";
+      }
+    }
+
     static const int64_t kHeaderSize = sizeof(int32_t) + sizeof(int64_t);
    protected:
     Message() = default;
@@ -78,9 +90,9 @@ namespace Token{
     }
 
     bool Write(const BufferPtr& buff) const{
-      buff->PutInt(static_cast<int32_t>(GetMessageType()));
-      buff->PutLong(GetMessageSize());
-      return Encode(buff);
+      return buff->PutInt(static_cast<int32_t>(GetMessageType()))
+          && buff->PutLong(GetMessageSize())
+          && Encode(buff);
     }
 
     virtual bool Equals(const MessagePtr& msg) const = 0;
@@ -176,7 +188,6 @@ namespace Token{
         LOG(WARNING) << "not a version message.";
         return false;
       }
-
       VersionMessagePtr msg = std::static_pointer_cast<VersionMessage>(obj);
       return timestamp_ == msg->timestamp_
              && client_type_ == msg->client_type_
@@ -338,13 +349,14 @@ namespace Token{
     ProposalPtr GetProposal() const;
 
     bool ProposalEquals(const std::shared_ptr<PaxosMessage>& msg) const{
+      LOG(INFO) << raw_ << " <=> " <<msg->raw_;
       return raw_ == msg->raw_;
     }
   };
 
   class PrepareMessage : public PaxosMessage{
    public:
-    PrepareMessage(ProposalPtr proposal):
+    PrepareMessage(const ProposalPtr& proposal):
       PaxosMessage(Message::kPrepareMessageType, proposal){}
     PrepareMessage(const BufferPtr& buff):
       PaxosMessage(Message::kPrepareMessageType, buff){}
@@ -353,9 +365,8 @@ namespace Token{
     DEFINE_MESSAGE(Prepare);
 
     bool Equals(const MessagePtr& obj) const{
-      if(!obj->IsPrepareMessage()){
+      if(!obj->IsPrepareMessage())
         return false;
-      }
       return PaxosMessage::ProposalEquals(std::static_pointer_cast<PaxosMessage>(obj));
     }
 
@@ -405,9 +416,8 @@ namespace Token{
     DEFINE_MESSAGE(Commit);
 
     bool Equals(const MessagePtr& obj) const{
-      if(!obj->IsCommitMessage()){
+      if(!obj->IsCommitMessage())
         return false;
-      }
       return PaxosMessage::ProposalEquals(std::static_pointer_cast<PaxosMessage>(obj));
     }
 
@@ -946,10 +956,6 @@ namespace Token{
     MessageList::iterator next_;
     MessageList::iterator end_;
     int64_t offset_;
-
-    char* raw(){
-      return buff_->data();
-    }
    public:
     MessageBufferWriter(const BufferPtr& buff, MessageList& messages):
       buff_(buff),
@@ -963,7 +969,7 @@ namespace Token{
       return messages_;
     }
 
-    MessagePtr Next() const{
+    MessagePtr& Next(){
       return (*next_);
     }
 
@@ -972,7 +978,7 @@ namespace Token{
     }
 
     bool WriteNext(uv_buf_t* buff){
-      MessagePtr next = (*next_);
+      MessagePtr& next = (*next_);
       int64_t total_size = next->GetBufferSize();
       if(!next->Write(buff_)){
         LOG(ERROR) << "cannot serialize " << next->GetName() << "(" << total_size << " bytes) to buffer.";
@@ -980,7 +986,7 @@ namespace Token{
       }
 
       buff->len = total_size;
-      buff->base = &raw()[offset_];
+      buff->base = &buff_->data()[offset_];
 
       offset_ += total_size;
       next_++;
@@ -1016,9 +1022,9 @@ namespace Token{
       Message::MessageType mtype = static_cast<Message::MessageType>(buff_->GetInt());
       int64_t msize = buff_->GetLong();
 
-      #ifdef TOKEN_DEBUG
+    #ifdef TOKEN_DEBUG
       LOG(INFO) << "decoding message type " << mtype << " (" << msize << " bytes)....";
-      #endif//TOKEN_DEBUG
+    #endif//TOKEN_DEBUG
 
       switch(mtype){
 #define DEFINE_DECODE(Name) \

@@ -27,6 +27,7 @@
 #include <iomanip>
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wformat-truncation"
 
 //TODO: cleanup
 namespace Token{

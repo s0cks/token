@@ -33,6 +33,11 @@ namespace Token{
     }
 
     static inline void
+    SendInternalServerError(HttpSession* session, const std::stringstream& ss){
+      return SendInternalServerError(session, ss.str());
+    }
+
+    static inline void
     SendNotSupported(HttpSession* session, const std::string& path){
       std::stringstream ss;
       ss << "Not Supported.";
@@ -63,7 +68,7 @@ namespace Token{
       const std::string& filename,
       const HttpStatusCode& status_code = STATUS_CODE_OK,
       const std::string& content_type = HTTP_CONTENT_TYPE_TEXT_PLAIN){
-      HttpResponsePtr resp = HttpBinaryResponse::NewInstance(session, status_code, filename, content_type);
+      HttpResponsePtr resp = HttpFileResponse::NewInstance(session, status_code, filename, content_type);
       session->Send(resp);
     }
 

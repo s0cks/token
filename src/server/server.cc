@@ -127,7 +127,7 @@ namespace Token{
 
     LOG(INFO) << "server " << GetID() << " listening @" << FLAGS_server_port;
     uv_run(loop, UV_RUN_DEFAULT);
-    exit:
+  exit:
     SetState(State::kStopped);
     pthread_exit(0);
   }
@@ -169,8 +169,12 @@ namespace Token{
       return;
     }
 
+    int64_t total_bytes = static_cast<int64_t>(nread);
+    LOG(INFO) << "read " << total_bytes << " total bytes.";
+
     BufferPtr& rbuff = session->GetReadBuffer();
-    MessageBufferReader reader(rbuff, static_cast<int64_t>(nread));
+
+    MessageBufferReader reader(rbuff, total_bytes);
     while(reader.HasNext()){
       MessagePtr next = reader.Next();
       switch(next->GetMessageType()){

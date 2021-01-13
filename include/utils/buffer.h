@@ -138,6 +138,19 @@ namespace Token{
       return rpos_;
     }
 
+    bool Resize(int64_t nsize){
+      if(nsize <= GetBufferSize())
+        return true;
+      uint8_t* ndata;
+      if(!(ndata = (uint8_t*)realloc(data_, nsize))){
+        LOG(WARNING) << "couldn't reallocate buffer of size " << GetBufferSize() << " to: " << nsize;
+        return false;
+      }
+      data_ = ndata;
+      bsize_ = nsize;
+      return true;
+    }
+
 #define DEFINE_PUT_SIGNED(Name, Type) \
     bool Put##Name(const Type& val){ return Append<Type>(val); } \
     bool Put##Name(const Type& val, int64_t pos){ return Insert<Type>(val, pos); }
@@ -196,14 +209,16 @@ namespace Token{
       return true;
     }
 
-    void PutBytes(uint8_t* bytes, int64_t size){
+    bool PutBytes(uint8_t* bytes, int64_t size){
+      if((wpos_ + size) > GetBufferSize())
+        return false;
       memcpy(&raw()[wpos_], bytes, size);
       wpos_ += size;
+      return true;
     }
 
     bool PutBytes(const BufferPtr& buff){
-      PutBytes(buff->data_, buff->wpos_);
-      return true;
+      return PutBytes(buff->data_, buff->wpos_);
     }
 
     bool GetBytes(uint8_t* result, intptr_t size){

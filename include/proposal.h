@@ -40,10 +40,10 @@ namespace Token{
       hash_(buff->GetHash()),
       proposer_(buff->GetUUID()){}
     RawProposal(const RawProposal& proposal):
-      timestamp_(proposal.GetTimestamp()),
-      height_(proposal.GetHeight()),
-      hash_(proposal.GetHash()),
-      proposer_(proposal.GetProposer()){}
+      timestamp_(proposal.timestamp_),
+      height_(proposal.height_),
+      hash_(proposal.hash_),
+      proposer_(proposal.proposer_){}
     ~RawProposal() = default;
 
     int64_t GetTimestamp() const{
@@ -63,18 +63,17 @@ namespace Token{
     }
 
     bool Encode(const BufferPtr& buff) const{
-      buff->PutLong(GetTimestamp());
-      buff->PutLong(GetHeight());
-      buff->PutHash(GetHash());
-      buff->PutUUID(proposer_);
-      return true;
+      return buff->PutLong(GetTimestamp())
+          && buff->PutLong(GetHeight())
+          && buff->PutHash(GetHash())
+          && buff->PutUUID(proposer_);
     }
 
     void operator=(const RawProposal& proposal){
-      timestamp_ = proposal.GetTimestamp();
-      height_ = proposal.GetHeight();
-      hash_ = proposal.GetHash();
-      proposer_ = proposal.GetProposer();
+      timestamp_ = proposal.timestamp_;
+      height_ = proposal.height_;
+      hash_ = proposal.hash_;
+      proposer_ = proposal.proposer_;
     }
 
     friend bool operator==(const RawProposal& a, const RawProposal& b){
@@ -86,6 +85,16 @@ namespace Token{
 
     friend bool operator!=(const RawProposal& a, const RawProposal& b){
       return !operator==(a, b);
+    }
+
+    friend std::ostream& operator<<(std::ostream& stream, const RawProposal& proposal){
+      stream << "Proposal(";
+      stream << GetTimestampFormattedReadable(proposal.GetTimestamp()) << ", ";
+      stream << "#" << proposal.GetHeight() << ", ";
+      stream << proposal.GetHash() << ", ";
+      stream << proposal.GetProposer();
+      stream << ")";
+      return stream;
     }
 
     static inline int64_t
@@ -232,7 +241,7 @@ namespace Token{
 
     std::string ToString() const{
       std::stringstream ss;
-      ss << "Proposal(#" << GetHeight() << ")";
+      ss << "Proposal(#" << GetHeight() << ", " << GetHash() << ", " << GetProposer() << ")";
       return ss.str();
     }
 

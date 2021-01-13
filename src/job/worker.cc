@@ -9,17 +9,18 @@ namespace Token{
     if(job)
       return job;
 
-    JobWorker* worker = JobScheduler::GetRandomWorker();
-    if(!worker){
+    JobQueue* queue = JobScheduler::GetRandomQueue();
+    if(!queue){
       pthread_yield();
       return nullptr;
     }
 
-    if(pthread_equal(worker->GetThreadID(), pthread_self())){
-      pthread_yield();
-      return nullptr;
-    }
-    return worker->queue_.Steal();
+// TODO:
+//    if(pthread_equal(worker->GetThreadID(), pthread_self())){
+//      pthread_yield();
+//      return nullptr;
+//    }
+    return queue->Steal();
   }
 
   void JobWorker::HandleThread(uword parameter){
@@ -57,7 +58,7 @@ namespace Token{
         LOG(INFO) << "[worker-" << instance->GetWorkerID() << "] " << next->GetName() << " has finished (" << duration_ms.count() << "ms).";
       }
     }
-    finish:
+  finish:
     pthread_exit(nullptr);
   }
 }

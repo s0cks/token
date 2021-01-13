@@ -13,13 +13,14 @@ namespace Token{
     BlockHeader head_;
 
     bool ProcessBlock(const BlockPtr& blk){
+      JobQueue* queue = JobScheduler::GetThreadQueue();
       BlockHeader header = blk->GetHeader();
       Hash hash = header.GetHash();
 
-      JobWorker* worker = JobScheduler::GetRandomWorker();
+
       ProcessBlockJob* job = new ProcessBlockJob(blk);
-      worker->Submit(job);
-      worker->Wait(job);
+      queue->Push(job);
+      while(!job->IsFinished()); //spin
 
       ObjectPool::RemoveBlock(hash);
       BlockChain::Append(blk);

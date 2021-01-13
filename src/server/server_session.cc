@@ -39,7 +39,7 @@ namespace Token{
       session->SetState(Session::State::kConnected);
       if(msg->IsNode()){
         NodeAddress paddr = msg->GetCallbackAddress();
-        LOG(INFO) << "peer connected from: " << paddr;
+        LOG(INFO) << "peer " << id << " connected from: " << paddr;
         PeerSessionManager::ConnectTo(paddr);
       }
     }

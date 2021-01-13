@@ -28,31 +28,30 @@ namespace Token{
   }
 
   bool ProcessBlockJob::Visit(const TransactionPtr& tx){
-    JobWorker* worker = JobScheduler::GetThreadWorker();
+    JobQueue* queue = JobScheduler::GetThreadQueue();
     ProcessTransactionJob* job = new ProcessTransactionJob(this, tx);
-    worker->Submit(job);
-    worker->Wait(job);
+    queue->Push(job);
+    while(!job->IsFinished()); // spin
     RemoveObject(batch_pool_, tx->GetHash(), Object::Type::kTransaction);
     return true;
   }
 
   JobResult ProcessTransactionJob::DoWork(){
-    JobWorker* worker = JobScheduler::GetThreadWorker();
+    JobQueue* queue = JobScheduler::GetThreadQueue();
     ProcessTransactionInputsJob* process_inputs = new ProcessTransactionInputsJob(this);
-    worker->Submit(process_inputs);
-    worker->Wait(process_inputs);
+    queue->Push(process_inputs);
+    while(!process_inputs->IsFinished()); // spin
 
     ProcessTransactionOutputsJob* process_outputs = new ProcessTransactionOutputsJob(this);
-    worker->Submit(process_outputs);
-    worker->Wait(process_outputs);
+    queue->Push(process_outputs);
+    while(!process_outputs->IsFinished()); // spin
     return Success("done.");
   }
 
   JobResult ProcessTransactionInputsJob::DoWork(){
-    JobWorker* worker = JobScheduler::GetThreadWorker();
+    JobQueue* queue = JobScheduler::GetThreadQueue();
 
     TransactionPtr tx = GetTransaction();
-
     InputList& inputs = tx->inputs();
     auto start = inputs.begin();
     auto end = inputs.end();
@@ -63,7 +62,7 @@ namespace Token{
 
       InputList chunk(start, next);
       ProcessInputListJob* job = new ProcessInputListJob(this, chunk);
-      if(!worker->Submit(job)){
+      if(!queue->Push(job)){
         return Failed("Cannot schedule ProcessInputListJob()");
       }
       start = next;
@@ -73,7 +72,7 @@ namespace Token{
   }
 
   JobResult ProcessTransactionOutputsJob::DoWork(){
-    JobWorker* worker = JobScheduler::GetThreadWorker();
+    JobQueue* queue = JobScheduler::GetThreadQueue();
     TransactionPtr tx = GetTransaction();
 
     int64_t nworker = 0;
@@ -87,7 +86,7 @@ namespace Token{
 
       OutputList chunk(start, next);
       ProcessOutputListJob* job = new ProcessOutputListJob(this, nworker++, chunk);
-      if(!worker->Submit(job)){
+      if(!queue->Push(job)){
         return Failed("Cannot schedule ProcessOutputListJob()");
       }
 

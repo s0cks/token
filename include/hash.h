@@ -1,6 +1,7 @@
 #ifndef TOKEN_HASH_H
 #define TOKEN_HASH_H
 
+#include <bitset>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -125,6 +126,22 @@ namespace Token{
       std::string hash;
       CryptoPP::ArraySource source(data(), size(), true, new CryptoPP::HexEncoder(new CryptoPP::StringSink(hash)));
       return hash;
+    }
+
+    std::string BinaryString() const{
+      std::stringstream ss;
+      std::bitset<256> bits;
+      for(int idx = 0; idx < kSize; idx++){
+        uint8_t curr = data_[idx];
+        int offset = idx * CHAR_BIT;
+        for(int bit = 0; bit < CHAR_BIT; bit++){
+          bits[offset] = curr & 1;
+          offset++;
+          curr >>= 1;
+        }
+      }
+      ss << bits;
+      return ss.str();
     }
 
     inline int Compare(const Hash& other) const{

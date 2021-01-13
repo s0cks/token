@@ -56,17 +56,22 @@ namespace Token{
   class Job;
   class JobScheduler{
     friend class JobWorker;
+    friend class BlockChain;
+    friend class BlockDiscoveryThread;
    public:
     static const int32_t kMaxNumberOfJobs;
    private:
     JobScheduler() = delete;
+
+    static bool RegisterQueue(const ThreadId& thread, JobQueue* queue);
    public:
     ~JobScheduler() = delete;
 
     static bool Initialize();
     static bool Schedule(Job* job);
-    static JobWorker* GetWorker(const ThreadId& thread);
-    static JobWorker* GetThreadWorker();
+    static JobQueue* GetWorker(const ThreadId& thread);
+    static JobQueue* GetThreadQueue();
+    static JobQueue* GetRandomQueue();
     static JobWorker* GetRandomWorker();
     static JobSchedulerStats GetStats();
     static bool GetWorkerStatistics(JsonString& json);

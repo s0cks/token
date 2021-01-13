@@ -110,7 +110,7 @@ namespace Token{
     }
   };
 
-  class HttpBinaryResponse : public HttpResponse{
+  class HttpFileResponse : public HttpResponse{
    private:
     BufferPtr body_;
    protected:
@@ -120,7 +120,7 @@ namespace Token{
       return true;
     }
    public:
-    HttpBinaryResponse(HttpSession* session,
+    HttpFileResponse(HttpSession* session,
       const HttpStatusCode& status_code,
       const std::string& filename,
       const std::string& content_type = HTTP_CONTENT_TYPE_TEXT_PLAIN):
@@ -137,14 +137,14 @@ namespace Token{
       }
       SetHeader(HTTP_HEADER_CONTENT_TYPE, content_type);
     }
-    ~HttpBinaryResponse() = default;
+    ~HttpFileResponse() = default;
 
     static inline HttpResponsePtr
     NewInstance(HttpSession* session,
       const HttpStatusCode& status_code,
       const std::string& filename,
       const std::string& content_type = HTTP_CONTENT_TYPE_TEXT_PLAIN){
-      return std::make_shared<HttpBinaryResponse>(session, status_code, filename, content_type);
+      return std::make_shared<HttpFileResponse>(session, status_code, filename, content_type);
     }
   };
 
@@ -199,6 +199,29 @@ namespace Token{
     static inline HttpResponsePtr
     NewInstance(HttpSession* session, const HttpStatusCode& status_code, const JsonString& body){
       return std::make_shared<HttpJsonResponse>(session, status_code, body);
+    }
+  };
+
+  class HttpBinaryResponse : public HttpResponse{
+   private:
+    const BufferPtr data_;
+   protected:
+    bool Write(const BufferPtr& buff) const{
+      return HttpResponse::Write(buff)
+          && buff->PutBytes(data_);
+    }
+   public:
+    HttpBinaryResponse(HttpSession* session, const HttpStatusCode& status_code, const std::string& content_type, const BufferPtr& data):
+      HttpResponse(session, status_code),
+      data_(data){
+      SetHeader(HTTP_HEADER_CONTENT_TYPE, content_type);
+      SetHeader(HTTP_HEADER_CONTENT_LENGTH, data->GetWrittenBytes());
+    }
+    ~HttpBinaryResponse() = default;
+
+    static inline HttpResponsePtr
+    NewInstance(HttpSession* session, const HttpStatusCode& status_code, const std::string& content_type, const BufferPtr& data){
+      return std::make_shared<HttpBinaryResponse>(session, status_code, content_type, data);
     }
   };
 }

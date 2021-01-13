@@ -9,6 +9,7 @@ namespace Token{
 
 #define HTTP_CONTENT_TYPE_TEXT_PLAIN "text/plain"
 #define HTTP_CONTENT_TYPE_APPLICATION_JSON "application/json"
+  #define HTTP_CONTENT_TYPE_IMAGE_PNG "image/png"
 
   typedef std::unordered_map<std::string, std::string> HttpHeadersMap;
 }

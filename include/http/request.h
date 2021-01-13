@@ -105,6 +105,18 @@ namespace Token{
       return pos != parameters_.end() ? pos->second : "";
     }
 
+    User GetUserParameterValue(const std::string& name="user") const{
+      return User(GetParameterValue(name));
+    }
+
+    Product GetProductParameterValue(const std::string& name="product") const{
+      return Product(GetParameterValue(name));
+    }
+
+    Hash GetHashParameterValue(const std::string& name="hash") const{
+      return Hash::FromHexString(GetParameterValue(name));
+    }
+
     static HttpRequestPtr
     NewInstance(HttpSession* session, const char* data, size_t len){
       return std::make_shared<HttpRequest>(session, data, len);

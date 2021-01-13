@@ -8,6 +8,8 @@
 #include "job/scheduler.h"
 #include "http/rest_service.h"
 
+#include "utils/qrcode.h"
+
 namespace Token{
   static pthread_t thread_;
   static std::mutex mutex_;
@@ -226,12 +228,20 @@ namespace Token{
   }
 
   void ObjectPoolController::HandleGetUnclaimedTransaction(HttpSession* session, const HttpRequestPtr& request){
-    Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
+    Hash hash = request->GetHashParameterValue();
     if(!ObjectPool::HasUnclaimedTransaction(hash)){
       return SendNotFound(session, hash);
     }
-    UnclaimedTransactionPtr val = ObjectPool::GetUnclaimedTransaction(hash);
-    SendJson(session, val);
+
+    BufferPtr data = Buffer::NewInstance(65536);
+    if(!WriteQRCode(data, hash)){
+      std::stringstream ss;
+      ss << "Cannot generate qr-code for: " << hash;
+      return SendInternalServerError(session, ss);
+    }
+
+    HttpResponsePtr response = HttpBinaryResponse::NewInstance(session, STATUS_CODE_OK, HTTP_CONTENT_TYPE_IMAGE_PNG, data);
+    return session->Send(response);
   }
 
   void ObjectPoolController::HandleGetUnclaimedTransactions(HttpSession* session, const HttpRequestPtr& request){
@@ -243,30 +253,39 @@ namespace Token{
     session->Send(resp);
   }
 
-  void ObjectPoolController::HandleGetUserUnclaimedTransactions(HttpSession* session, const HttpRequestPtr& request){
-    std::string user = request->GetParameterValue("user");
-    JsonString json;
-    if(!WalletManager::GetWallet(user, json)){
+  void ObjectPoolController::HandleGetUnclaimedTransactionCode(HttpSession* session, const HttpRequestPtr& request){
+    Hash hash = request->GetHashParameterValue();
+    if(!ObjectPool::HasUnclaimedTransaction(hash)){
       std::stringstream ss;
-      ss << "Cannot get unclaimed transactions for: " << user;
-      return SendNotFound(session, ss);
-    }
-    HttpResponsePtr resp = HttpJsonResponse::NewInstance(session, STATUS_CODE_OK, json);
-    session->Send(resp);
-  }
-
-  void ObjectPoolController::HandleGetUserUnclaimedTransactionsData(HttpSession* session,
-    const HttpRequestPtr& request){
-    User user = request->GetParameterValue("user");
-    JsonString json;
-    if(!ObjectPool::GetUnclaimedTransactionData(user, json)){
-      std::stringstream ss;
-      ss << "Cannot get unclaimed transactions for: " << user;
+      ss << "Cannot find: " << hash;
       return SendNotFound(session, ss);
     }
 
-    HttpResponsePtr resp = HttpJsonResponse::NewInstance(session, STATUS_CODE_OK, json);
-    session->Send(resp);
+    Bitmap bitmap(16, 16);
+    std::string bits = hash.BinaryString();
+    for(size_t y = 0; y < 16; y++){
+      for(size_t x = 0; x < 16; x++){
+        char c = bits[16*y+x];
+        switch(c){
+          case '1':
+            bitmap.Put(x, y, 255, 255, 255);
+            break;
+          case '0':
+            bitmap.Put(x, y, 0, 0, 0);
+            break;
+        }
+      }
+    }
+
+    BufferPtr data = Buffer::NewInstance(1024);
+    if(!WritePNG(data, &bitmap)){
+      std::stringstream ss;
+      ss << "Cannot generate code for: " << hash;
+      return SendInternalServerError(session, ss);
+    }
+
+    HttpResponsePtr response = HttpBinaryResponse::NewInstance(session, STATUS_CODE_OK, HTTP_CONTENT_TYPE_IMAGE_PNG, data);
+    return session->Send(response);
   }
 }
 

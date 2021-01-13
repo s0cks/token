@@ -15,10 +15,21 @@
 namespace Token{
   class ProposalHandler{
    protected:
+    JobQueue& queue_;
     ProposalPtr proposal_;
 
-    ProposalHandler(const ProposalPtr& proposal):
+    ProposalHandler(JobQueue& queue, const ProposalPtr& proposal):
+      queue_(queue),
       proposal_(proposal){}
+
+    JobResult ProcessBlock(const BlockPtr& blk) const{
+      ProcessBlockJob* job = new ProcessBlockJob(blk, true);
+      queue_.Push(job);
+      while(!job->IsFinished()); //spin
+      JobResult result(job->GetResult());
+      delete job;
+      return result;
+    }
 
     bool WasRejected() const;
     bool CommitProposal() const;
@@ -49,23 +60,14 @@ namespace Token{
       return proposal_->GetResult();
     }
 
-    virtual bool ProcessBlock(const BlockPtr& blk) const = 0;
     virtual bool ProcessProposal() const = 0;
   };
 
   class NewProposalHandler : public ProposalHandler{
    public:
-    NewProposalHandler(const ProposalPtr& proposal):
-      ProposalHandler(proposal){}
+    NewProposalHandler(JobQueue& queue, const ProposalPtr& proposal):
+      ProposalHandler(queue, proposal){}
     ~NewProposalHandler() = default;
-
-    bool ProcessBlock(const BlockPtr& blk) const{
-      JobWorker* worker = JobScheduler::GetRandomWorker();
-      ProcessBlockJob* job = new ProcessBlockJob(blk, true);
-      worker->Submit(job);
-      worker->Wait(job);
-      return true;
-    }
 
     bool ProcessProposal() const{
       // 1. Voting Phase
@@ -104,17 +106,9 @@ namespace Token{
   #ifdef TOKEN_ENABLE_SERVER
   class PeerProposalHandler : public ProposalHandler{
    public:
-    PeerProposalHandler(const ProposalPtr& proposal):
-      ProposalHandler(proposal){}
+    PeerProposalHandler(JobQueue& queue, const ProposalPtr& proposal):
+      ProposalHandler(queue, proposal){}
     ~PeerProposalHandler() = default;
-
-    bool ProcessBlock(const BlockPtr& blk) const{
-      JobWorker* worker = JobScheduler::GetRandomWorker();
-      ProcessBlockJob* job = new ProcessBlockJob(blk);
-      worker->Submit(job);
-      worker->Wait(job);
-      return true;
-    }
 
     bool ProcessProposal() const{
       std::shared_ptr<PeerSession> proposer = GetProposer();
@@ -135,12 +129,7 @@ namespace Token{
       BlockPtr blk = ObjectPool::GetBlock(hash);
       LOG(INFO) << "proposal " << hash << " has entered the voting phase.";
 
-      JobWorker* worker = JobScheduler::GetRandomWorker();
-      VerifyBlockJob* job = new VerifyBlockJob(blk);
-      worker->Submit(job);
-      worker->Wait(job);
-
-      JobResult& result = job->GetResult();
+      JobResult result = ProcessBlock(blk);
       if(!result.IsSuccessful()){
         LOG(WARNING) << "block " << hash << " is invalid:";
         LOG(WARNING) << result.GetMessage();

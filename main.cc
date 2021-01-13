@@ -9,6 +9,8 @@
 #include "job/scheduler.h"
 #include "utils/crash_report.h"
 
+#include "utils/qrcode.h"
+
 #ifdef TOKEN_ENABLE_SERVER
   #include "server/server.h"
   #include "peer/peer_session_manager.h"
@@ -162,5 +164,7 @@ main(int argc, char **argv){
   #ifdef TOKEN_DEBUG
     StatsPrinter::PrintAllStats(google::INFO, Printer::kFlagDetailed);
   #endif//TOKEN_DEBUG
+
+  AppendDummy(2);
   return EXIT_SUCCESS;
 }

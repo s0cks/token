@@ -7,8 +7,10 @@ namespace Token{
   bool ProposalHandler::CommitProposal() const{
     Hash hash = GetProposal()->GetHash();
     BlockPtr blk = ObjectPool::GetBlock(hash);
-    if(!ProcessBlock(blk)){
-      LOG(WARNING) << "couldn't process block " << hash << ".";
+
+    JobResult result = ProcessBlock(blk);
+    if(!result.IsSuccessful()){
+      LOG(WARNING) << "couldn't process block " << hash << ": " << result.GetMessage();
       return false;
     }
 

@@ -105,6 +105,7 @@ namespace Token{
     }
 
     ProposalPtr proposal = BlockDiscoveryThread::GetProposal();
+    LOG(INFO) << "sending new proposal: " << proposal->GetRaw();
     session->Send(PrepareMessage::NewInstance(proposal));
   }
 

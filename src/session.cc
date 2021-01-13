@@ -98,7 +98,7 @@ namespace Token{
     }
 
     uv_buf_t buff;
-    buff.len = wbuff->GetWrittenBytes();
+    buff.len = msg->GetBufferSize();
     buff.base = wbuff->data();
 
     uv_write_t* req = (uv_write_t*) malloc(sizeof(uv_write_t));
@@ -113,8 +113,8 @@ namespace Token{
       return;
     }
 
-      #ifdef TOKEN_DEBUG
-    LOG(INFO) << "sending " << total_messages << " messages....";
+    #ifdef TOKEN_DEBUG
+      LOG(INFO) << "sending " << total_messages << " messages....";
     #endif//TOKEN_DEBUG
 
     BufferPtr& wbuff = GetWriteBuffer();
@@ -123,6 +123,8 @@ namespace Token{
     int64_t idx = 0;
     MessageBufferWriter writer(wbuff, messages);
     while(writer.HasNext()){
+      MessagePtr& next = writer.Next();
+      LOG(INFO) << "writing " << writer.Next()->ToString() << "(" << next->GetBufferSize() << ")";
       if(!writer.WriteNext(&buffers[idx])){
         LOG(WARNING) << "couldn't write message (#" << idx << "): " << writer.Next()->ToString() << ".";
         return;

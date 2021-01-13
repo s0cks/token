@@ -8,6 +8,7 @@ namespace Token{
 
   static std::mutex mutex_;
   static std::condition_variable cond_;
+  static JobQueue queue_(JobScheduler::kMaxNumberOfJobs);
   static BlockDiscoveryThread::State state_ = BlockDiscoveryThread::kStopped;
   static BlockDiscoveryThread::Status status_ = BlockDiscoveryThread::kOk;
 
@@ -53,11 +54,11 @@ namespace Token{
   }
 
   ProposalPtr BlockDiscoveryThread::CreateNewProposal(BlockPtr blk){
-    #ifdef TOKEN_ENABLE_SERVER
+  #ifdef TOKEN_ENABLE_SERVER
     ProposalPtr proposal = std::make_shared<Proposal>(blk, Server::GetID());
-    #else
+  #else
     ProposalPtr proposal = std::make_shared<Proposal>(blk, UUID());
-    #endif//TOKEN_ENABLE_SERVER
+  #endif//TOKEN_ENABLE_SERVER
     SetProposal(proposal);
     return proposal;
   }
@@ -68,6 +69,7 @@ namespace Token{
   }
 
   void BlockDiscoveryThread::SetProposal(const ProposalPtr& proposal){
+    LOG(INFO) << "setting proposal to: " << proposal->ToString();
     LOCK_GUARD;
     proposal_ = proposal;
   }
@@ -90,19 +92,24 @@ namespace Token{
   void BlockDiscoveryThread::HandleThread(uword parameter){
     LOG(INFO) << "starting the block discovery thread....";
     SetState(BlockDiscoveryThread::kRunning);
+    if(!JobScheduler::RegisterQueue(pthread_self(), &queue_)){
+      LOG(WARNING) << "couldn't register the block discovery work queue.";
+      goto exit;
+    }
+
     while(IsRunning()){
       if(HasProposal()){
-        #ifdef TOKEN_ENABLE_SERVER
+    #ifdef TOKEN_ENABLE_SERVER
         ProposalPtr proposal = GetProposal();
         LOG(INFO) << "proposal #" << proposal->GetHeight() << " has been started by " << proposal->GetProposer();
-        PeerProposalHandler handler(proposal);
+        PeerProposalHandler handler(queue_, proposal);
         if(!handler.ProcessProposal()){
           // should we reject the proposal just in-case?
           LOG(WARNING) << "couldn't process proposal #" << proposal->GetHeight() << ".";
           SetProposal(nullptr);
           goto exit;
         }
-        #endif//TOKEN_ENABLE_SERVER
+    #endif//TOKEN_ENABLE_SERVER
       } else if(ObjectPool::GetNumberOfTransactions() >= Block::kMaxTransactionsForBlock){
         BlockPtr blk = CreateNewBlock();
         Hash hash = blk->GetHash();
@@ -117,7 +124,7 @@ namespace Token{
         ProposalPtr proposal = CreateNewProposal(blk);
         PeerSessionManager::BroadcastDiscoveredBlock();
 
-        NewProposalHandler handler(proposal);
+        NewProposalHandler handler(queue_, proposal);
         if(!handler.ProcessProposal()){
           LOG(WARNING) << "couldn't process proposal #" << proposal->GetHeight() << ".";
           SetProposal(nullptr);
@@ -125,7 +132,7 @@ namespace Token{
         }
       }
     }
-    exit:
+  exit:
     SetState(BlockDiscoveryThread::kStopped);
     pthread_exit(NULL);
   }

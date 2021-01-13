@@ -72,8 +72,6 @@ namespace Token{
     Status status_;
     uv_loop_t* loop_;
     uv_tcp_t handle_;
-    BufferPtr rbuff_;
-    BufferPtr wbuff_;
 
     Session(uv_loop_t* loop);
 
@@ -96,22 +94,6 @@ namespace Token{
     static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff);
     static void OnMessageSent(uv_write_t* req, int status);
    public:
-    BufferPtr& GetReadBuffer(){
-      return rbuff_;
-    }
-
-    BufferPtr GetReadBuffer() const{
-      return rbuff_;
-    }
-
-    BufferPtr& GetWriteBuffer(){
-      return wbuff_;
-    }
-
-    BufferPtr GetWriteBuffer() const{
-      return wbuff_;
-    }
-
     State GetState();
     Status GetStatus();
     void Send(const MessagePtr& msg);

@@ -38,6 +38,7 @@ namespace Token{
 
   static std::recursive_mutex mutex_;
   static std::condition_variable cond_;
+  static JobQueue queue_(JobScheduler::kMaxNumberOfJobs);
   static BlockChain::State state_ = BlockChain::kUninitialized;
   static BlockChain::Status status_ = BlockChain::kOk;
   static leveldb::DB* index_ = nullptr;
@@ -76,6 +77,11 @@ namespace Token{
 
     LOG(INFO) << "initializing the block chain....";
     SetState(BlockChain::kInitializing);
+    if(!JobScheduler::RegisterQueue(pthread_self(), &queue_)){
+      LOG(WARNING) << "couldn't register the block chain work queue.";
+      return false;
+    }
+
     if(!HasReference(BLOCKCHAIN_REFERENCE_HEAD)){
       BlockPtr genesis = Block::Genesis();
       Hash hash = genesis->GetHash();
@@ -84,10 +90,10 @@ namespace Token{
       //  - ProcessGenesisBlock Timeline (19s)
       // [After - Work Stealing]
       //  - ProcessGenesisBlock Timeline (4s)
-      JobWorker* worker = JobScheduler::GetRandomWorker();
+      JobQueue* queue = JobScheduler::GetThreadQueue();
       ProcessBlockJob* job = new ProcessBlockJob(genesis);
-      worker->Submit(job);
-      worker->Wait(job);
+      queue->Push(job);
+      while(!job->IsFinished()); //spin
 
       PutBlock(hash, genesis);
       PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);

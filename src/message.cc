@@ -17,13 +17,12 @@ namespace Token{
   }
 
   bool VersionMessage::Encode(const BufferPtr& buff) const{
-    buff->PutLong(timestamp_);
-    buff->PutInt(static_cast<int32_t>(client_type_));
-    version_.Write(buff);
-    buff->PutHash(nonce_);
-    buff->PutUUID(node_id_);
-    head_.Write(buff);
-    return true;
+    return buff->PutLong(timestamp_)
+        && buff->PutInt(static_cast<int32_t>(client_type_))
+        && version_.Write(buff)
+        && buff->PutHash(nonce_)
+        && buff->PutUUID(node_id_)
+        && head_.Write(buff);
   }
 
   int64_t VerackMessage::GetMessageSize() const{
@@ -39,14 +38,13 @@ namespace Token{
   }
 
   bool VerackMessage::Encode(const BufferPtr& buff) const{
-    buff->PutLong(timestamp_);
-    buff->PutInt(static_cast<int32_t>(GetClientType()));
-    version_.Write(buff);
-    buff->PutHash(nonce_);
-    buff->PutUUID(node_id_);
-    callback_.Write(buff);
-    head_.Write(buff);
-    return true;
+    return buff->PutLong(timestamp_)
+        && buff->PutInt(static_cast<int32_t>(GetClientType()))
+        && version_.Write(buff)
+        && buff->PutHash(nonce_)
+        && buff->PutUUID(node_id_)
+        && callback_.Write(buff)
+        && head_.Write(buff);
   }
 
   bool InventoryItem::ItemExists() const{
@@ -119,31 +117,21 @@ namespace Token{
 
   int64_t NotFoundMessage::GetMessageSize() const{
     int64_t size = 0;
-    size += InventoryItem::GetSize(); // item_
-    size += sizeof(uint32_t); // length(message_)
-    size += message_.length(); // message_
+    size += sizeof(int32_t);
+    size += Hash::kSize;
+    size += message_.length();
     return size;
   }
 
   bool NotFoundMessage::Encode(const BufferPtr& buff) const{
-    buff->PutShort(static_cast<uint16_t>(item_.GetType()));
+    buff->PutInt(static_cast<int32_t>(item_.GetType()));
     buff->PutHash(item_.GetHash());
     buff->PutString(message_);
     return true;
   }
 
   ProposalPtr PaxosMessage::GetProposal() const{
-    if(BlockDiscoveryThread::HasProposal()){
-      ProposalPtr proposal = BlockDiscoveryThread::GetProposal();
-      if(proposal->GetRaw() == GetRaw()){
-        return proposal;
-      }
-      return nullptr; //TODO: invalid state?
-    }
-
-    ProposalPtr proposal = std::make_shared<Proposal>(raw_);
-    BlockDiscoveryThread::SetProposal(proposal);
-    return proposal;
+    return std::make_shared<Proposal>(raw_);
   }
 
   int64_t PrepareMessage::GetMessageSize() const{

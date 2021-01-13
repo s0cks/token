@@ -31,8 +31,8 @@ namespace Token{
     PeerSessionThread* thread = (PeerSessionThread*) parameter;
     thread->SetState(State::kStarting);
 
-    char truncated_name[16];
-    snprintf(truncated_name, 15, "PeerSession-%" PRId32, thread->GetWorkerID());
+    char truncated_name[15];
+    snprintf(truncated_name, 15, "PeerSession-%02d", static_cast<int>(thread->GetWorkerID()));
     pthread_setname_np(pthread_self(), truncated_name);
 
     // start-up logic here
