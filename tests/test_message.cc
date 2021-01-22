@@ -15,46 +15,41 @@ namespace Token{
 
   static inline MessagePtr
   NewPrepareMessage(){
-    int64_t height = 1;
+    BlockHeader blk = Block::Genesis()->GetHeader();
     UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
-    Hash hash = Hash::FromHexString("1191F9F9657BB3AB6D6E043D7B4017507D802795FE58EFA3043A066980C32C72");
-    ProposalPtr proposal = std::make_shared<Proposal>(uuid, height, hash);
+    ProposalPtr proposal = std::make_shared<Proposal>(uuid, blk);
     return PrepareMessage::NewInstance(proposal);
   }
 
   static inline MessagePtr
   NewPromiseMessage(){
-    int64_t height = 1;
+    BlockHeader blk = Block::Genesis()->GetHeader();
     UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
-    Hash hash = Hash::FromHexString("1191F9F9657BB3AB6D6E043D7B4017507D802795FE58EFA3043A066980C32C72");
-    ProposalPtr proposal = std::make_shared<Proposal>(uuid, height, hash);
+    ProposalPtr proposal = std::make_shared<Proposal>(uuid, blk);
     return PromiseMessage::NewInstance(proposal);
   }
 
   static inline MessagePtr
   NewCommitMessage(){
-    int64_t height = 1;
+    BlockHeader blk = Block::Genesis()->GetHeader();
     UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
-    Hash hash = Hash::FromHexString("1191F9F9657BB3AB6D6E043D7B4017507D802795FE58EFA3043A066980C32C72");
-    ProposalPtr proposal = std::make_shared<Proposal>(uuid, height, hash);
+    ProposalPtr proposal = std::make_shared<Proposal>(uuid, blk);
     return CommitMessage::NewInstance(proposal);
   }
 
   static inline MessagePtr
   NewAcceptedMessage(){
-    int64_t height = 1;
+    BlockHeader blk = Block::Genesis()->GetHeader();
     UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
-    Hash hash = Hash::FromHexString("1191F9F9657BB3AB6D6E043D7B4017507D802795FE58EFA3043A066980C32C72");
-    ProposalPtr proposal = std::make_shared<Proposal>(uuid, height, hash);
+    ProposalPtr proposal = std::make_shared<Proposal>(uuid, blk);
     return AcceptedMessage::NewInstance(proposal);
   }
 
   static inline MessagePtr
   NewRejectedMessage(){
-    int64_t height = 1;
+    BlockHeader blk = Block::Genesis()->GetHeader();
     UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
-    Hash hash = Hash::FromHexString("1191F9F9657BB3AB6D6E043D7B4017507D802795FE58EFA3043A066980C32C72");
-    ProposalPtr proposal = std::make_shared<Proposal>(uuid, height, hash);
+    ProposalPtr proposal = std::make_shared<Proposal>(uuid, blk);
     return RejectedMessage::NewInstance(proposal);
   }
 

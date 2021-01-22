@@ -1,7 +1,6 @@
 #include "pool.h"
 #include "message.h"
-#include "proposal.h"
-#include "discovery.h"
+#include "consensus/proposal.h"
 #include "unclaimed_transaction.h"
 
 namespace Token{

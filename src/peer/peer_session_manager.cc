@@ -9,9 +9,6 @@ namespace Token{
   static PeerSessionManager::State state_ = PeerSessionManager::kUninitialized;
   static PeerSessionManager::Status status_ = PeerSessionManager::kOk;
   static PeerSessionThread** threads_;
-
-  static std::mutex requests_mutex_;
-  static std::condition_variable requests_cond_;
   static std::queue<PeerSessionManager::ConnectRequest> requests_;
 
 #define LOCK_GUARD std::lock_guard<std::mutex> __guard__(mutex_)
@@ -22,7 +19,7 @@ namespace Token{
 #define SIGNAL_ALL cond_.notify_all()
 
   PeerSessionManager::State PeerSessionManager::GetState(){
-    LOCK_GUARD;
+    std::lock_guard<std::mutex> guard(mutex_);
     return state_;
   }
 
@@ -34,7 +31,7 @@ namespace Token{
   }
 
   PeerSessionManager::Status PeerSessionManager::GetStatus(){
-    LOCK_GUARD;
+    std::lock_guard<std::mutex> guard(mutex_);
     return status_;
   }
 
@@ -46,8 +43,8 @@ namespace Token{
   }
 
   bool PeerSessionManager::Initialize(){
-    LOCK_GUARD;
-    threads_ = (PeerSessionThread**) malloc(sizeof(PeerSessionThread*) * FLAGS_num_peers);
+    std::unique_lock<std::mutex> lock(mutex_);
+    threads_ = (PeerSessionThread**)malloc(sizeof(PeerSessionThread*) * FLAGS_num_peers);
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
       threads_[idx] = new PeerSessionThread(idx);
       if(!threads_[idx]->Start()){
@@ -55,6 +52,7 @@ namespace Token{
         return false;
       }
     }
+    lock.unlock();
 
     PeerList peers;
     if(!BlockChainConfiguration::GetPeerList(peers)){
@@ -68,29 +66,27 @@ namespace Token{
   }
 
   bool PeerSessionManager::Shutdown(){
-    LOCK_GUARD;
+    std::lock_guard<std::mutex> guard(mutex_);
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
       PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning()){
-        std::shared_ptr<PeerSession> session = thread->GetCurrentSession();
+      if(thread->IsRunning() && thread->HasSession()){
+        PeerSession* session = thread->GetCurrentSession();
         session->Disconnect();
         session->WaitForState(PeerSession::kDisconnected);
       }
 
-#ifdef TOKEN_DEBUG
       LOG(INFO) << "stopping peer session thread #" << idx << "....";
-#endif//TOKEN_DEBUG
       thread->Stop();
     }
     return true;
   }
 
-  std::shared_ptr<PeerSession> PeerSessionManager::GetSession(const NodeAddress& address){
-    LOCK_GUARD;
+  PeerSession* PeerSessionManager::GetSession(const NodeAddress& address){
+    std::lock_guard<std::mutex> guard(mutex_);
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
       PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning()){
-        std::shared_ptr<PeerSession> session = thread->GetCurrentSession();
+      if(thread->IsRunning() && thread->HasSession()){
+        PeerSession* session = thread->GetCurrentSession();
         if(session->GetAddress() == address){
           return session;
         }
@@ -99,56 +95,54 @@ namespace Token{
     return nullptr;
   }
 
-  std::shared_ptr<PeerSession> PeerSessionManager::GetSession(const UUID& uuid){
-    LOCK_GUARD;
+  PeerSession* PeerSessionManager::GetSession(const UUID& uuid){
+    std::lock_guard<std::mutex> guard(mutex_);
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
       PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning()){
-        std::shared_ptr<PeerSession> session = thread->GetCurrentSession();
-        if(session->GetID() == uuid){
+      if(thread->IsRunning() && thread->HasSession()){
+        PeerSession* session = thread->GetCurrentSession();
+        LOG(INFO) << "checking " << session->GetID() << " <=> " << uuid;
+        if(session->GetID() == uuid)
           return session;
-        }
       }
     }
     return nullptr;
   }
 
   bool PeerSessionManager::GetConnectedPeers(std::set<UUID>& peers){
-    LOCK_GUARD;
+    std::lock_guard<std::mutex> guard(mutex_);
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
       PeerSessionThread* thread = threads_[idx];
-      if(thread && thread->HasSession()){
+      if(thread && thread->HasSession())
         peers.insert(thread->GetCurrentSession()->GetID());
-      }
     }
     return true;
   }
 
   int32_t PeerSessionManager::GetNumberOfConnectedPeers(){
+    std::lock_guard<std::mutex> guard(mutex_);
+
     int32_t count = 0;
-    LOCK_GUARD;
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
       PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning()){
+      if(thread->IsRunning() && thread->HasSession())
         count++;
-      }
     }
     return count;
   }
 
   bool PeerSessionManager::ConnectTo(const NodeAddress& address){
-    if(IsConnectedTo(address)){
+    if(IsConnectedTo(address))
       return false;
-    }
     return ScheduleRequest(address);
   }
 
   bool PeerSessionManager::IsConnectedTo(const UUID& uuid){
-    LOCK_GUARD;
+    std::lock_guard<std::mutex> guard(mutex_);
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
       PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning()){
-        std::shared_ptr<PeerSession> session = thread->GetCurrentSession();
+      if(thread->IsRunning() && thread->HasSession()){
+        PeerSession* session = thread->GetCurrentSession();
         if(session->GetID() == uuid){
           return true;
         }
@@ -158,11 +152,11 @@ namespace Token{
   }
 
   bool PeerSessionManager::IsConnectedTo(const NodeAddress& address){
-    LOCK_GUARD;
+    std::lock_guard<std::mutex> guard(mutex_);
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
       PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning()){
-        std::shared_ptr<PeerSession> session = thread->GetCurrentSession();
+      if(thread->IsRunning() && thread->HasSession()){
+        PeerSession* session = thread->GetCurrentSession();
         if(session->GetAddress() == address){
           return true;
         }
@@ -172,61 +166,67 @@ namespace Token{
   }
 
   void PeerSessionManager::BroadcastPrepare(){
-    LOCK_GUARD;
+    std::lock_guard<std::mutex> guard(mutex_);
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
       PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning()){
+      if(thread->IsRunning() && thread->HasSession())
         thread->GetCurrentSession()->SendPrepare();
-      }
     }
   }
 
   void PeerSessionManager::BroadcastCommit(){
-    LOCK_GUARD;
+    std::lock_guard<std::mutex> guard(mutex_);
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
       PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning()){
+      if(thread->IsRunning() && thread->HasSession())
         thread->GetCurrentSession()->SendCommit();
-      }
     }
   }
 
   void PeerSessionManager::BroadcastDiscoveredBlock(){
-    LOCK_GUARD;
+    std::lock_guard<std::mutex> guard(mutex_);
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
       PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning()){
+      if(thread->IsRunning() && thread->HasSession())
         thread->GetCurrentSession()->SendDiscoveredBlockHash();
-      }
     }
   }
 
   bool PeerSessionManager::ScheduleRequest(const NodeAddress& next, int16_t attempts){
-    std::unique_lock<std::mutex> lock(requests_mutex_);
-    if((int32_t) requests_.size() == FLAGS_num_peers){
+    std::unique_lock<std::mutex> lock(mutex_);
+    if((int32_t)requests_.size() == FLAGS_num_peers){
+      lock.unlock();
       return false;
     }
+
     requests_.push(ConnectRequest(next, attempts));
-    requests_cond_.notify_one();
+    lock.unlock();
+    cond_.notify_one();
     return true;
   }
 
   bool PeerSessionManager::RescheduleRequest(const ConnectRequest& request){
-    std::unique_lock<std::mutex> lock(requests_mutex_);
+    std::unique_lock<std::mutex> lock(mutex_);
     if((int32_t) requests_.size() == FLAGS_num_peers){
+      lock.unlock();
       return false;
     }
+
+    lock.unlock();
     requests_.push(ConnectRequest(request, true));
-    requests_cond_.notify_one();
+    cond_.notify_one();
     return true;
   }
 
   bool PeerSessionManager::GetNextRequest(ConnectRequest& request, int64_t timeoutms){
-    std::unique_lock<std::mutex> lock(requests_mutex_);
-    requests_cond_.wait_for(lock, std::chrono::milliseconds(timeoutms));
+    std::unique_lock<std::mutex> lock(mutex_);
+    cond_.wait_for(lock, std::chrono::milliseconds(timeoutms));
     if(requests_.empty()){
+      lock.unlock();
       return false;
     }
+
+    lock.unlock();
     request = requests_.front();
     requests_.pop();
     return true;

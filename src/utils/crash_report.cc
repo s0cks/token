@@ -118,14 +118,14 @@ namespace Token{
   }
 
   static inline std::string
-  GetPeerInfo(const std::shared_ptr<PeerSession>& session){
+  GetPeerInfo(PeerSession* session){
     std::stringstream ss;
     ss << session->GetID() << " (" << session->GetAddress() << ")";
     return ss.str();
   }
 
   static inline std::string
-  GetPeerStatus(const std::shared_ptr<PeerSession>& session){
+  GetPeerStatus(PeerSession* session){
     std::stringstream ss;
     ss << session->GetStatus() << " [" << session->GetStatus() << "]";
     return ss.str();
@@ -143,7 +143,7 @@ namespace Token{
 
     LOG_AT_LEVEL(GetSeverity()) << "\tSessions:";
     for(auto& it : peers){
-      PeerSessionPtr session = PeerSessionManager::GetSession(it);
+      PeerSession* session = PeerSessionManager::GetSession(it);
       LOG_AT_LEVEL(GetSeverity()) << "\t  - " << GetPeerInfo(session) << ": " << GetPeerStatus(session);
     }
     return true;

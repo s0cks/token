@@ -86,13 +86,10 @@ namespace Token{
     }
     Buffer(const char* data, size_t size):
       bsize_(size),
-      wpos_(size),
+      wpos_(0),
       rpos_(0),
-      data_(nullptr),
-      owned_(true){
-      data_ = (uint8_t*) malloc(sizeof(uint8_t) * size);
-      memcpy(data_, data, size);
-    }
+      data_((uint8_t*)data),
+      owned_(false){}
     Buffer(const std::string& data):
       bsize_(data.size()),
       wpos_(data.size()),
@@ -315,6 +312,14 @@ namespace Token{
 
     static inline BufferPtr From(const leveldb::Slice& slice){
       return From(slice.data(), slice.size());
+    }
+
+    static inline BufferPtr From(uv_buf_t* buff){
+      return From(buff->base, buff->len);
+    }
+
+    static inline BufferPtr From(const uv_buf_t* buff){
+      return From(buff->base, buff->len);
     }
 
     static inline BufferPtr FromFile(const std::string& filename){

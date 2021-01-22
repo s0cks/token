@@ -112,7 +112,7 @@ namespace Token{
 
     JsonWriter writer(json);
     writer.StartArray();
-    int64_t offset = 0;
+    int64_t offset = sizeof(int64_t);
     while(offset < size){
       Hash hash(&bytes[offset], Hash::kSize);
       std::string hex = hash.HexString();

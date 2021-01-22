@@ -3,10 +3,12 @@
 
 #include <memory>
 #include "pool.h"
-#include "proposal.h"
 #include "job/verifier.h"
 #include "job/scheduler.h"
 #include "job/processor.h"
+
+#include "consensus/proposal.h"
+#include "consensus/proposal_manager.h"
 
 #ifdef TOKEN_ENABLE_SERVER
 #include "peer/peer_session_manager.h"
@@ -51,7 +53,7 @@ namespace Token{
     }
 
     #ifdef TOKEN_ENABLE_SERVER
-    std::shared_ptr<PeerSession> GetProposer() const{
+    PeerSession* GetProposer() const{
       return proposal_->GetPeer();
     }
     #endif//TOKEN_ENABLE_SERVER
@@ -98,8 +100,7 @@ namespace Token{
 
       // 3. Quorum Phase
       CommitProposal();
-      BlockDiscoveryThread::ClearProposal();
-      return true;
+      return ProposalManager::ClearProposal();
     }
   };
 
@@ -111,7 +112,7 @@ namespace Token{
     ~PeerProposalHandler() = default;
 
     bool ProcessProposal() const{
-      std::shared_ptr<PeerSession> proposer = GetProposer();
+      PeerSession* proposer = GetProposer();
       Hash hash = GetProposalHash();
       if(!ObjectPool::HasBlock(hash)){
         //TODO: fix requesting of data
@@ -144,10 +145,8 @@ namespace Token{
         return CancelProposal();
       }
       proposer->SendAccepted();
-
-      GetProposal()->WaitForPhase(Proposal::kQuorumPhase);
       LOG(INFO) << "proposal " << hash << " has finished, result: " << GetResult();
-      return true;
+      return ProposalManager::ClearProposal();
     }
   };
   #endif//TOKEN_ENABLE_SERVER

@@ -4,8 +4,6 @@
 #include <uv.h>
 #include <string>
 #include <sstream>
-#include <json/value.h>
-#include <json/writer.h>
 #include <unordered_map>
 #include <http_parser.h>
 

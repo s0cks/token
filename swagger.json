@@ -58,15 +58,131 @@
           }
         }
       }
+    },
+    "/wallet/:user": {
+      "get": {
+        "summary": "Returns the wallet for the user specified.",
+        "parameters": [
+          { "$ref": "#/parameters/User" }
+        ],
+        "responses": {
+          "200": {
+            "description": "The wallet was found.",
+            "schema": {
+              "$ref": "#/definitions/HashList"
+            }
+          }
+        }
+      }
+    },
+    "/wallet/:user/tokens/:hash": {
+      "get": {
+        "summary": "Returns the QR for the token specified.",
+        "parameters": [
+          { "$ref":  "#/parameters/User" },
+          { "$ref":  "#/parameters/Hash" }
+        ],
+        "responses": {
+          "200": {
+            "description": "The QR for the token."
+          }
+        }
+      }
+    },
+    "/pool/stats": {
+      "get": {
+        "summary": "Returns the stats for the object pool.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The object pool stats."
+          }
+        }
+      }
+    },
+    "/pool/blocks": {
+      "get": {
+        "summary": "Returns the current blocks that are in the object pool.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The list of blocks that are in the object pool."
+          }
+        }
+      }
+    },
+    "/pool/blocks/data/:hash": {
+      "get": {
+        "summary": "Returns the block in the object pool by hash",
+        "parameters": [
+          { "$ref": "#/parameters/Hash" }
+        ],
+        "responses": {
+          "200": {
+            "description": "The block was found."
+          }
+        }
+      }
+    },
+    "/pool/transactions": {
+      "get": {
+        "summary": "Returns the list of transactions in the object pool.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The list of transactions in the object pool."
+          }
+        }
+      }
+    },
+    "/pool/transactions/data/:hash": {
+      "get": {
+        "summary": "Returns the transaction in the object pool.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The transaction was found."
+          }
+        }
+      }
+    },
+    "/pool/utxos": {
+      "get": {
+        "summary": "Returns the list of unclaimed transactions in the object pool.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The list of unclaimed transactions in the object pool."
+          }
+        }
+      }
+    },
+    "/pool/utxos/:hash": {
+      "get": {
+        "summary": "Returns the unclaimed transaction in the object pool.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The unclaimed transaction was found."
+          }
+        }
+      }
     }
   },
   "parameters": {
     "Hash": {
-      "name": "Hash",
+      "name": "hash",
       "type": "string",
       "in": "path",
       "required": true,
-      "description": "The SHA256 hash of an object"
+      "description": "The hash of an object"
+    },
+    "User": {
+      "name": "user",
+      "type": "string",
+      "in": "path",
+      "required": true,
+      "description": "The ID of the user."
     }
   },
   "responses": {

@@ -27,21 +27,23 @@ spec:
       containers:
         - name: main-node
           imagePullPolicy: IfNotPresent
-          image: gcr.io/tkn-events/token-ledger:1.6.1
+          image: gcr.io/tkn-events/token-ledger:latest
           env:
             - name: TOKEN_CALLBACK_ADDRESS
-              value: main.ledger-prod:8080
+              value: main.ledger-prod:8081
           ports:
-            - name: rpc
+            - name: http
               containerPort: 8080
-            - name: health
+            - name: rpc
               containerPort: 8081
+            - name: health
+              containerPort: 8082
           volumeMounts:
             - name: ledger
               mountPath: /usr/share/ledger
           readinessProbe:
             httpGet:
-              port: 8081
+              port: 8082
               path: /ready
               scheme: HTTP
             initialDelaySeconds: 30
@@ -51,7 +53,7 @@ spec:
             timeoutSeconds: 5
           livenessProbe:
             httpGet:
-              port: 8081
+              port: 8082
               path: /live
               scheme: HTTP
             initialDelaySeconds: 30

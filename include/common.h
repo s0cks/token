@@ -215,6 +215,11 @@ DECLARE_bool(enable_snapshots);
 // --num-worker-threads
 DECLARE_int32(num_workers);
 
+#ifdef TOKEN_DEBUG
+DECLARE_int64(miner_interval);
+DECLARE_bool(append_test);
+#endif//TOKEN_DEBUG
+
 #ifdef TOKEN_ENABLE_SERVER
 // --remote "localhost:8080"
 DECLARE_string(remote);

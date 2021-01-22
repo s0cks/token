@@ -4,46 +4,18 @@
 #include "peer/peer_session_manager.h"
 
 namespace Token{
-  std::string PeerSessionThread::GetStatusMessage(){
-    std::stringstream ss;
-    switch(GetState()){
-      case PeerSessionThread::kStarting:ss << "Starting...";
-        break;
-      case PeerSessionThread::kIdle:ss << "Idle.";
-        break;
-      case PeerSessionThread::kRunning:{
-        std::shared_ptr<PeerSession> session = GetCurrentSession();
-        ss << session->GetState() << " " << session->GetInfo();
-        break;
-      }
-      case PeerSessionThread::kStopped:ss << "Stopped.";
-        break;
-      default:ss << "Unknown!";
-        break;
-    }
-
-    ss << " ";
-    ss << "[" << GetStatus() << "]";
-    return ss.str();
-  }
-
   void PeerSessionThread::HandleThread(uword parameter){
     PeerSessionThread* thread = (PeerSessionThread*) parameter;
     thread->SetState(State::kStarting);
 
-    char truncated_name[15];
-    snprintf(truncated_name, 15, "PeerSession-%02d", static_cast<int>(thread->GetWorkerID()));
-    pthread_setname_np(pthread_self(), truncated_name);
-
+    thread->SetState(State::kRunning);
     // start-up logic here
     while(!thread->IsStopping()){
-      thread->SetState(State::kIdle);
       PeerSessionManager::ConnectRequest request;
       if(PeerSessionManager::GetNextRequest(request, PeerSessionThread::kRequestTimeoutIntervalMilliseconds)){
         NodeAddress paddr = request.GetAddress();
-        LOG(INFO) << "connecting to peer: " << paddr;
-        std::shared_ptr<PeerSession> session = thread->CreateNewSession(paddr);
-        thread->SetState(PeerSessionThread::kRunning);
+        LOG(INFO) << "[" << thread->GetThreadName() << "] connecting to peer: " << paddr;
+        PeerSession* session = thread->CreateNewSession(paddr);
         if(!session->Connect()){
           if(request.ShouldReschedule()){
             int32_t backoffs = request.GetNumberOfAttempts() * PeerSessionManager::kRetryBackoffSeconds;
@@ -75,9 +47,7 @@ namespace Token{
   }
 
   bool PeerSessionThread::Start(){
-    char name[16];
-    snprintf(name, 16, "peer-%" PRId16, GetWorkerID());
-    return Thread::StartThread(&thread_, name, &HandleThread, (uword) this);
+    return Thread::StartThread(&thread_, thread_name_.data(), &HandleThread, (uword) this);
   }
 
   bool PeerSessionThread::Stop(){

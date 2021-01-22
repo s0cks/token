@@ -65,9 +65,8 @@ namespace Token{
   class BlockChainHeaderVisitor;
   class BlockChain{
     friend class Server;
-    friend class ProposalHandler; //TODO: revoke access?
     friend class SynchronizeJob; //TODO: revoke access
-    friend class BlockDiscoveryThread; //TODO: revoke access
+    friend class ProposalHandler; //TODO: revoke access?
    public:
     enum State{
 #define DEFINE_STATE(Name) k##Name,
@@ -78,13 +77,12 @@ namespace Token{
     friend std::ostream& operator<<(std::ostream& stream, const State& state){
       switch(state){
 #define DEFINE_TOSTRING(Name) \
-        case State::k##Name: \
-            stream << #Name; \
-            return stream;
+        case State::k##Name:  \
+          return stream << #Name;
         FOR_EACH_BLOCKCHAIN_STATE(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
-        default:stream << "Unknown";
-          return stream;
+        default:
+          return stream << "Unknown";
       }
     }
 
@@ -97,13 +95,12 @@ namespace Token{
     friend std::ostream& operator<<(std::ostream& stream, const Status& status){
       switch(status){
 #define DEFINE_TOSTRING(Name) \
-                case Status::k##Name: \
-                    stream << #Name; \
-                    return stream;
+        case Status::k##Name: \
+            return stream << #Name;
         FOR_EACH_BLOCKCHAIN_STATUS(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
-        default:stream << "Unknown";
-          return stream;
+        default:
+          return stream << "Unknown";
       }
     }
    private:

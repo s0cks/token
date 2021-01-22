@@ -38,6 +38,7 @@ namespace Token{
       kBlock = 1,
       kTransaction = 2,
       kUnclaimedTransaction = 3,
+      kReference = 4,
     };
 
     friend std::ostream& operator<<(std::ostream& stream, const Type& type){

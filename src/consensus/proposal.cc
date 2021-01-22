@@ -1,5 +1,5 @@
 #include "server/server.h"
-#include "proposal.h"
+#include "consensus/proposal.h"
 #include "peer/peer_session_manager.h"
 
 namespace Token{
@@ -11,7 +11,7 @@ namespace Token{
 #define SIGNAL_ALL cond_.notify_all()
 
   #ifdef TOKEN_ENABLE_SERVER
-  std::shared_ptr<PeerSession> Proposal::GetPeer() const{
+  PeerSession* Proposal::GetPeer() const{
     return PeerSessionManager::GetSession(GetProposer());
   }
   #endif//TOKEN_ENABLE_SERVER
@@ -84,7 +84,8 @@ namespace Token{
     }
 
     LOCK_GUARD;
-    if(!accepted_.insert(node).second) LOG(WARNING) << "couldn't accept acceptance vote from node: " << node;
+    if(!accepted_.insert(node).second)
+      LOG(WARNING) << "couldn't accept acceptance vote from node: " << node;
     SIGNAL_ALL;
   }
 
@@ -114,5 +115,43 @@ namespace Token{
     #else
     return 0;
     #endif//TOKEN_ENABLE_SERVER
+  }
+
+#define CANNOT_TRANSITION_TO(From, To) \
+  LOG(ERROR) << "cannot transition " << GetRaw() << " from " << (From) << " phase to: " << (To) << " phase.";
+
+  bool Proposal::TransitionToPhase(const Phase& phase){
+    LOG(INFO) << "transitioning " << GetRaw() << " to phase: " << phase;
+    switch(phase){
+      case Proposal::kVotingPhase:{
+        if(!IsProposal()){
+          CANNOT_TRANSITION_TO(GetPhase(), phase);
+          return false;
+        }
+        SetPhase(phase);
+        return true;
+      }
+      case Proposal::kCommitPhase:{
+        if(!IsVoting()){
+          CANNOT_TRANSITION_TO(GetPhase(), phase);
+          return false;
+        }
+        SetPhase(phase);
+        return true;
+      }
+      case Proposal::kQuorumPhase:{
+        if(IsQuorum()){ //TODO fix flow logic?
+          CANNOT_TRANSITION_TO(GetPhase(), phase);
+          return false;
+        }
+        SetPhase(phase);
+        return true;
+      }
+      case Proposal::kProposalPhase:
+      default:{
+        CANNOT_TRANSITION_TO(GetPhase(), phase);
+        return false;
+      }
+    }
   }
 }

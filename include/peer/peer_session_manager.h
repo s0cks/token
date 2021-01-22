@@ -137,8 +137,8 @@ namespace Token{
     static bool IsConnectedTo(const NodeAddress& address);
     static bool GetConnectedPeers(std::set<UUID>& peers);
     static int32_t GetNumberOfConnectedPeers();
-    static PeerSessionPtr GetSession(const UUID& uuid);
-    static PeerSessionPtr GetSession(const NodeAddress& address);
+    static PeerSession* GetSession(const UUID& uuid);
+    static PeerSession* GetSession(const NodeAddress& address);
     static void BroadcastPrepare();
     static void BroadcastCommit();
     static void BroadcastDiscoveredBlock();

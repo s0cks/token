@@ -14,7 +14,11 @@ spec:
     component: main
     environment: prod
   ports:
-    - name: rpc
+    - name: http
       port: 8080
       targetPort: 8080
+      protocol: TCP
+    - name: rpc
+      port: 8081
+      targetPort: 8081
       protocol: TCP

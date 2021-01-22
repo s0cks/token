@@ -5,6 +5,9 @@
 #include "server/server_session.h"
 #include "peer/peer_session_manager.h"
 
+#include "consensus/proposal.h"
+#include "consensus/proposal_manager.h"
+
 namespace Token{
   void ServerSession::HandleNotFoundMessage(ServerSession* session, const NotFoundMessagePtr& msg){
     //TODO: implement HandleNotFoundMessage
@@ -32,7 +35,6 @@ namespace Token{
         Version(),
         head->GetHeader(),
         Hash::GenerateNonce()));
-
     UUID id = msg->GetID();
     if(session->IsConnecting()){
       session->SetID(id);
@@ -89,25 +91,53 @@ namespace Token{
   }
 
   void ServerSession::HandlePrepareMessage(ServerSession* session, const PrepareMessagePtr& msg){
-    ProposalPtr proposal = msg->GetProposal();
-    if(!proposal){
-      LOG(ERROR) << "cannot get proposal from BlockDiscoveryThread.";
+    if(ProposalManager::HasProposal()){
+      LOG(WARNING) << "proposal manager already has a proposal.";
+      session->Send(RejectedMessage::NewInstance(msg->GetProposal()));
       return;
     }
-    proposal->SetPhase(Proposal::kProposalPhase);
+
+    ProposalPtr proposal = msg->GetProposal();
+    // Stop miner..
+    if(!ProposalManager::SetProposal(proposal)){
+      LOG(WARNING) << "cannot set the active proposal to: " << proposal->ToString();
+      session->Send(RejectedMessage::NewInstance(proposal));
+      return;
+    }
+
+    session->Send(AcceptedMessage::NewInstance(proposal));
   }
 
   void ServerSession::HandlePromiseMessage(ServerSession* session, const PromiseMessagePtr& msg){
-    ProposalPtr proposal = msg->GetProposal();
-    if(proposal->GetProposer() == Server::GetID()){
-      proposal->AcceptProposal(session->GetID().ToString());//TODO: remove ToString()
-    } else{
-      proposal->SetPhase(Proposal::kVotingPhase);
+    if(!ProposalManager::HasProposal()){
+      LOG(WARNING) << "received promise message for no active proposal of: " << msg->GetProposal()->ToString();
+      session->Send(RejectedMessage::NewInstance(msg->GetProposal()));
+      return;
     }
+
+    if(!ProposalManager::IsProposalFor(msg->GetProposal())){
+      LOG(WARNING) << "received promise message for invalid proposal: " << msg->GetProposal()->ToString();
+      session->Send(RejectedMessage::NewInstance(msg->GetProposal()));
+      return;
+    }
+
+    ProposalPtr proposal = ProposalManager::GetProposal();
+    if(!proposal->TransitionToPhase(Proposal::kVotingPhase)){
+      session->Send(RejectedMessage::NewInstance(proposal));
+      return;
+    }
+
+    session->Send(AcceptedMessage::NewInstance(proposal));
   }
 
   void ServerSession::HandleCommitMessage(ServerSession* session, const CommitMessagePtr& msg){
-    ProposalPtr proposal = msg->GetProposal();
+    ProposalPtr remote_proposal = msg->GetProposal();
+    if(!ProposalManager::IsProposalFor(remote_proposal)){
+      LOG(WARNING) << "received accepted message from peer for inactive proposal: " << remote_proposal->ToString();
+      return;
+    }
+
+    ProposalPtr proposal = ProposalManager::GetProposal();
     if(proposal->GetProposer() == Server::GetID()){
       proposal->AcceptProposal(session->GetID().ToString());//TODO: remove ToString()
     } else{
@@ -116,12 +146,24 @@ namespace Token{
   }
 
   void ServerSession::HandleAcceptedMessage(ServerSession* session, const AcceptedMessagePtr& msg){
-    ProposalPtr proposal = msg->GetProposal();
+    ProposalPtr remote_proposal = msg->GetProposal();
+    if(!ProposalManager::IsProposalFor(remote_proposal)){
+      LOG(WARNING) << "received accepted message from peer for inactive proposal: " << remote_proposal->ToString();
+      return;
+    }
+
+    ProposalPtr proposal = ProposalManager::GetProposal();
     proposal->AcceptProposal(session->GetID().ToString()); //TODO: remove ToString()
   }
 
   void ServerSession::HandleRejectedMessage(ServerSession* session, const RejectedMessagePtr& msg){
-    ProposalPtr proposal = msg->GetProposal();
+    ProposalPtr remote_proposal = msg->GetProposal();
+    if(!ProposalManager::IsProposalFor(remote_proposal)){
+      LOG(WARNING) << "received accepted message from peer for inactive proposal: " << remote_proposal->ToString();
+      return;
+    }
+
+    ProposalPtr proposal = ProposalManager::GetProposal();
     proposal->RejectProposal(session->GetID().ToString()); //TODO: remove ToString()
   }
 
@@ -172,7 +214,7 @@ namespace Token{
       BlockPtr start_block = BlockChain::GetBlock(start);
       BlockPtr stop_block = BlockChain::GetBlock(start_block->GetHeight() > amt ? start_block->GetHeight() + amt : amt);
 
-      for(uint32_t idx = start_block->GetHeight() + 1;
+      for(int64_t idx = start_block->GetHeight() + 1;
         idx <= stop_block->GetHeight();
         idx++){
         BlockPtr block = BlockChain::GetBlock(idx);

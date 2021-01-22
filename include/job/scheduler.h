@@ -57,6 +57,7 @@ namespace Token{
   class JobScheduler{
     friend class JobWorker;
     friend class BlockChain;
+    friend class BlockMiner;
     friend class BlockDiscoveryThread;
    public:
     static const int32_t kMaxNumberOfJobs;

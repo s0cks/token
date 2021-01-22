@@ -65,6 +65,7 @@ namespace Token{
     LOG(INFO) << "starting the rest service....";
     InfoController::Initialize(&router_);
     ObjectPoolController::Initialize(&router_);
+    WalletController::Initialize(&router_);
     BlockChainController::Initialize(&router_);
     return Thread::StartThread(&thread_, "rest-svc", &HandleServiceThread, 0);
   }
@@ -233,15 +234,7 @@ namespace Token{
       return SendNotFound(session, hash);
     }
 
-    BufferPtr data = Buffer::NewInstance(65536);
-    if(!WriteQRCode(data, hash)){
-      std::stringstream ss;
-      ss << "Cannot generate qr-code for: " << hash;
-      return SendInternalServerError(session, ss);
-    }
 
-    HttpResponsePtr response = HttpBinaryResponse::NewInstance(session, STATUS_CODE_OK, HTTP_CONTENT_TYPE_IMAGE_PNG, data);
-    return session->Send(response);
   }
 
   void ObjectPoolController::HandleGetUnclaimedTransactions(HttpSession* session, const HttpRequestPtr& request){
@@ -253,38 +246,44 @@ namespace Token{
     session->Send(resp);
   }
 
-  void ObjectPoolController::HandleGetUnclaimedTransactionCode(HttpSession* session, const HttpRequestPtr& request){
+  void WalletController::HandleGetUserWalletTokenCode(HttpSession* session, const HttpRequestPtr& request){
+    User user = request->GetUserParameterValue();
     Hash hash = request->GetHashParameterValue();
+
     if(!ObjectPool::HasUnclaimedTransaction(hash)){
       std::stringstream ss;
       ss << "Cannot find: " << hash;
       return SendNotFound(session, ss);
     }
 
-    Bitmap bitmap(16, 16);
-    std::string bits = hash.BinaryString();
-    for(size_t y = 0; y < 16; y++){
-      for(size_t x = 0; x < 16; x++){
-        char c = bits[16*y+x];
-        switch(c){
-          case '1':
-            bitmap.Put(x, y, 255, 255, 255);
-            break;
-          case '0':
-            bitmap.Put(x, y, 0, 0, 0);
-            break;
-        }
-      }
+    UnclaimedTransactionPtr utxo = ObjectPool::GetUnclaimedTransaction(hash);
+    if(utxo->GetUser() != user){
+      std::stringstream ss;
+      ss << hash << " isn't owned by " << user;
+      return SendNotFound(session, ss);
     }
 
-    BufferPtr data = Buffer::NewInstance(1024);
-    if(!WritePNG(data, &bitmap)){
+    BufferPtr data = Buffer::NewInstance(65536);
+    if(!WriteQRCode(data, hash)){
       std::stringstream ss;
-      ss << "Cannot generate code for: " << hash;
+      ss << "Cannot generate qr-code for: " << hash;
       return SendInternalServerError(session, ss);
     }
 
     HttpResponsePtr response = HttpBinaryResponse::NewInstance(session, STATUS_CODE_OK, HTTP_CONTENT_TYPE_IMAGE_PNG, data);
+    return session->Send(response);
+  }
+
+  void WalletController::HandleGetUserWallet(HttpSession* session, const HttpRequestPtr& request){
+    User user = request->GetUserParameterValue();
+    JsonString body;
+    if(!WalletManager::GetWallet(user, body)){
+      std::stringstream ss;
+      ss << "Cannot get wallet for: " << user;
+      return SendInternalServerError(session, ss);
+    }
+
+    HttpResponsePtr response = HttpJsonResponse::NewInstance(session, STATUS_CODE_OK, body);
     return session->Send(response);
   }
 }

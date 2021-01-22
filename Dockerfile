@@ -6,10 +6,11 @@ ENV CMAKE_VERSION=3.17.2
 ENV NODE_VERSION=12.15.0
 ENV GTEST_VERSION=release-1.10.0
 ENV HTTP_PARSER_VERSION=v2.9.4
-ENV JSONLIB_VERSION=1.9.4
+ENV ZXING_VERSION=v1.1.1
+ENV CRYPTOPP_VERSION=CRYPTOPP_8_4_0
+ENV RAPIDJSON_VERSION=v1.1.0
+ENV LEVELDB_VERSION=1.22
 
-#TODO:
-# - remove dnsutils
 RUN apt-get update && apt-get install -y \
     autoconf \
     automake \
@@ -17,7 +18,6 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     curl \
     git \
-    dnsutils \
     wget \
     unzip \
     libtool \
@@ -29,7 +29,6 @@ RUN apt-get update && apt-get install -y \
     libconfig++-dev \
     libgflags-dev \
     libgoogle-glog-dev \
-    libleveldb-dev \
     libuv1-dev \
     uuid-dev
 
@@ -53,10 +52,10 @@ RUN git clone https://github.com/google/googletest.git -b ${GTEST_VERSION} \
  && cmake --build . --target install
 
 # Build Crypto++
-#RUN git clone https://github.com/weidai11/cryptopp \
-#  && cd cryptopp \
-#  && make libcryptopp.so \
-#  && make install PREFIX=/usr/local
+RUN git clone https://github.com/weidai11/cryptopp \
+  && cd cryptopp \
+  && make libcryptopp.so \
+  && make install PREFIX=/usr/local
 
 # Build and Install HttpParser
 RUN git clone https://github.com/nodejs/http-parser -b ${HTTP_PARSER_VERSION} \
@@ -64,12 +63,25 @@ RUN git clone https://github.com/nodejs/http-parser -b ${HTTP_PARSER_VERSION} \
  && make \
  && make install PREFIX=/usr/local
 
-# Build and Install jsoncpp
-RUN git clone https://github.com/open-source-parsers/jsoncpp.git -b ${JSONLIB_VERSION} \
- && cd jsoncpp \
- && mkdir -p build \
- && cd build \
- && cmake -DBUILD_STATIC_LIBS=OFF -DBUILD_SHARED_LIBS=ON .. \
+# Build & Install ZXing-cpp
+RUN git clone https://github.com/nu-book/zxing-cpp.git -b ${ZXING_VERSION} \
+ && cd zxing-cpp \
+ && mkdir build/ \
+ && cd build/ \
+ && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local/ .. \
+ && cmake --build . --target install
+
+# Build & Install rapidjson
+RUN git clone https://github.com/Tencent/rapidjson.git -b ${RAPIDJSON_VERSION} \
+ && cp -r rapidjson/include/rapidjson /usr/local/include/ \
+ && ls -lash /usr/local/include/
+
+# Build & Install LevelDB
+RUN git clone --recurse-submodules https://github.com/google/leveldb.git -b ${LEVELDB_VERSION} \
+ && cd leveldb/ \
+ && mkdir build/ \
+ && cd build/ \
+ && cmake -DCMAKE_BUILD_TYPE=Release .. \
  && cmake --build . --target install
 
 # Copy The Ledger Source
@@ -80,13 +92,16 @@ COPY src /usr/src/libtoken-ledger/src/
 COPY tests /usr/src/libtoken-ledger/tests/
 COPY CMakeLists.txt main.cc client.cc tests.cc inspector.cc /usr/src/libtoken-ledger/
 WORKDIR /usr/src/libtoken-ledger/build
-RUN cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/usr/local ..\
+RUN cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/usr/local/ ..\
  && cmake --build . --target install \
  && ldconfig
 
 USER root
-CMD [ "token-node", "--path", "/usr/share/ledger", "--port", "8080" ]
-# Expose the RPC Service
+CMD [ "token-node", "--path", "/usr/share/ledger", "--service-port", "8080", "--server-port", "8081", "--healthcheck-port", "8082", "--miner-interval", "30000" ]
+
+# Expose the REST Service
 EXPOSE 8080
-# Expose the HealthCheck Service
+# Expose the RPC Service
 EXPOSE 8081
+# Expose the HealthCheck Service
+EXPOSE 8082

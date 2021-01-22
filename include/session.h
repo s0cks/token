@@ -110,23 +110,9 @@ namespace Token{
 #undef DEFINE_STATUS_CHECK
 
 #define DEFINE_STATE_WAITER(Name) \
-        bool WaitFor##Name##State(intptr_t timeout=30){ return WaitForState(State::k##Name, timeout); }
+        bool WaitFor##Name##State(int64_t timeout=30){ return WaitForState(State::k##Name, timeout); }
     FOR_EACH_SESSION_STATE(DEFINE_STATE_WAITER)
 #undef DEFINE_STATE_WAITER
-  };
-
-  class ThreadedSession : public Session{
-   protected:
-    pthread_t thread_;
-    uv_async_t shutdown_;
-
-    ThreadedSession(uv_loop_t* loop):
-      Session(loop),
-      thread_(){}
-   public:
-    virtual ~ThreadedSession() = default;
-    virtual bool Connect() = 0;
-    bool Disconnect();
   };
 }
 

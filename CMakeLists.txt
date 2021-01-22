@@ -55,7 +55,6 @@ find_package(Gflags REQUIRED)
 find_package(GTest REQUIRED)
 find_package(Libuv REQUIRED)
 find_package(HttpParser REQUIRED)
-
 find_package(ZXing REQUIRED)
 
 if(ENABLE_COMPRESSION)

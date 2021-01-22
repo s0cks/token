@@ -172,9 +172,7 @@ namespace Token{
     int64_t total_bytes = static_cast<int64_t>(nread);
     LOG(INFO) << "read " << total_bytes << " total bytes.";
 
-    BufferPtr& rbuff = session->GetReadBuffer();
-
-    MessageBufferReader reader(rbuff, total_bytes);
+    MessageBufferReader reader(buff, total_bytes);
     while(reader.HasNext()){
       MessagePtr next = reader.Next();
       switch(next->GetMessageType()){
@@ -189,7 +187,7 @@ namespace Token{
           break;
       }
     }
-    rbuff->Reset();
+    free(buff->base);
   }
 }
 

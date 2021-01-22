@@ -184,7 +184,7 @@ namespace Token{
    protected:
     bool Write(const BufferPtr& buffer) const{
       HttpResponse::Write(buffer);
-      buffer->PutBytes((uint8_t*) body_.GetString(), body_.GetLength());
+      buffer->PutBytes((uint8_t*) body_.GetString(), body_.GetSize());
       return true;
     }
    public:
@@ -192,7 +192,7 @@ namespace Token{
       HttpResponse(session, status_code),
       body_(body){
       SetHeader(HTTP_HEADER_CONTENT_TYPE, HTTP_CONTENT_TYPE_APPLICATION_JSON);
-      SetHeader(HTTP_HEADER_CONTENT_LENGTH, body.GetLength());
+      SetHeader(HTTP_HEADER_CONTENT_LENGTH, body.GetSize());
     }
     ~HttpJsonResponse() = default;
 

@@ -92,6 +92,7 @@ namespace Token{
       previous_hash_ = other.previous_hash_;
       merkle_root_ = other.merkle_root_;
       hash_ = other.hash_;
+      num_transactions_ = other.num_transactions_;
       return (*this);
     }
 

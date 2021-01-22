@@ -62,7 +62,7 @@ namespace Token{
     LOG(INFO) << "initializing the object pool....";
     SetState(ObjectPool::kInitializing);
     leveldb::Options options;
-    options.comparator = new ObjectHashKey::Comparator();
+    options.comparator = new ObjectKey::Comparator();
     options.create_if_missing = true;
 
     leveldb::Status status;
@@ -152,7 +152,7 @@ namespace Token{
     JsonWriter writer(json);
     writer.StartArray();
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectHashKey key(it->key());
+      ObjectKey key(it->key());
       if(key.IsBlock()){
         Hash hash = key.GetHash();
         std::string hex = hash.HexString();
@@ -169,7 +169,7 @@ namespace Token{
     JsonWriter writer(json);
     writer.StartArray();
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectHashKey key(it->key());
+      ObjectKey key(it->key());
       if(key.IsTransaction()){
         Hash hash = key.GetHash();
         std::string hex = hash.HexString();
@@ -186,7 +186,7 @@ namespace Token{
     JsonWriter writer(json);
     writer.StartArray();
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectHashKey key(it->key());
+      ObjectKey key(it->key());
       if(key.IsUnclaimedTransaction()){
         Hash hash = key.GetHash();
         std::string hex = hash.HexString();
@@ -208,7 +208,7 @@ namespace Token{
   bool ObjectPool::VisitTransactions(ObjectPoolTransactionVisitor* vis){
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectHashKey key(it->key());
+      ObjectKey key(it->key());
       if(!key.IsTransaction()){
         continue;
       }
@@ -226,7 +226,7 @@ namespace Token{
   bool ObjectPool::VisitUnclaimedTransactions(ObjectPoolUnclaimedTransactionVisitor* vis){
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectHashKey key(it->key());
+      ObjectKey key(it->key());
       if(!key.IsUnclaimedTransaction()){
         continue;
       }
@@ -292,7 +292,7 @@ namespace Token{
 
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectHashKey key(it->key());
+      ObjectKey key(it->key());
       if(key.IsValid()){
         count++;
       }
@@ -309,7 +309,7 @@ namespace Token{
 
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectHashKey key(it->key());
+      ObjectKey key(it->key());
       if(key.IsBlock()){
         num_blocks++;
       } else if(key.IsTransaction()){
@@ -329,7 +329,7 @@ namespace Token{
 
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectHashKey key(it->key());
+      ObjectKey key(it->key());
       if(key.IsBlock()){
         num_blocks++;
       } else if(key.IsTransaction()){
@@ -355,7 +355,7 @@ namespace Token{
     LOG(INFO) << "searching for: " << input;
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectHashKey key(it->key());
+      ObjectKey key(it->key());
       if(!key.IsUnclaimedTransaction()){
         continue;
       }
@@ -388,7 +388,7 @@ namespace Token{
     int64_t count = 0;
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectHashKey key(it->key());
+      ObjectKey key(it->key());
       if(key.IsBlock()){
         count++;
       }
@@ -401,7 +401,7 @@ namespace Token{
     int64_t count = 0;
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectHashKey key(it->key());
+      ObjectKey key(it->key());
       if(key.IsTransaction()){
         count++;
       }
@@ -414,7 +414,7 @@ namespace Token{
     int64_t count = 0;
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectHashKey key(it->key());
+      ObjectKey key(it->key());
       if(key.IsUnclaimedTransaction()){
         count++;
       }
@@ -456,7 +456,7 @@ namespace Token{
     JsonWriter writer(json);
     writer.StartArray();
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectHashKey key(it->key());
+      ObjectKey key(it->key());
       if(key.IsUnclaimedTransaction()){
         BufferPtr buff = Buffer::From(it->value());
         UnclaimedTransactionPtr utxo = UnclaimedTransaction::FromBytes(buff);

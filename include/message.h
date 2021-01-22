@@ -5,7 +5,7 @@
 #include "object.h"
 #include "address.h"
 #include "version.h"
-#include "proposal.h"
+#include "consensus/proposal.h"
 #include "blockchain.h"
 #include "configuration.h"
 
@@ -78,7 +78,7 @@ namespace Token{
 
     virtual std::string ToString() const{
       std::stringstream ss;
-      ss << GetName() << "Message(" << GetMessageSize() << " Bytes)";
+      ss << GetName() << "Message(" << GetBufferSize() << " Bytes)";
       return ss.str();
     }
 
@@ -742,6 +742,10 @@ namespace Token{
     static MessagePtr NewInstance(const BlockPtr& blk){
       return NewInstance(blk->GetHash(), InventoryItem::kBlock);
     }
+
+    static MessagePtr NewInstance(const BlockHeader& blk){
+      return NewInstance(blk.GetHash(), InventoryItem::kBlock);
+    }
   };
 
   class GetDataMessage : public Message{
@@ -951,18 +955,14 @@ namespace Token{
 
   class MessageBufferWriter{
    private:
-    BufferPtr buff_;
     MessageList& messages_;
     MessageList::iterator next_;
     MessageList::iterator end_;
-    int64_t offset_;
    public:
-    MessageBufferWriter(const BufferPtr& buff, MessageList& messages):
-      buff_(buff),
+    MessageBufferWriter(MessageList& messages):
       messages_(messages),
       next_(messages.begin()),
-      end_(messages.end()),
-      offset_(0){}
+      end_(messages.end()){}
     ~MessageBufferWriter() = default;
 
     MessageList& messages(){
@@ -980,15 +980,13 @@ namespace Token{
     bool WriteNext(uv_buf_t* buff){
       MessagePtr& next = (*next_);
       int64_t total_size = next->GetBufferSize();
-      if(!next->Write(buff_)){
-        LOG(ERROR) << "cannot serialize " << next->GetName() << "(" << total_size << " bytes) to buffer.";
-        return false;
-      }
 
+      buff->base = (char*)malloc(sizeof(uint8_t)*total_size);
       buff->len = total_size;
-      buff->base = &buff_->data()[offset_];
 
-      offset_ += total_size;
+      BufferPtr wrap = Buffer::From(buff);
+      if(!next->Write(wrap))
+        return false;
       next_++;
       return true;
     }
@@ -997,25 +995,13 @@ namespace Token{
   class MessageBufferReader{
    private:
     BufferPtr buff_;
-    int64_t length_;
-    int64_t offset_;
    public:
-    MessageBufferReader(const BufferPtr& buff, int64_t length):
-      buff_(buff),
-      length_(length),
-      offset_(0){}
+    MessageBufferReader(const uv_buf_t* buff, int64_t nread):
+      buff_(Buffer::From(buff->base, nread)){}
     ~MessageBufferReader() = default;
 
-    int64_t GetBufferLength() const{
-      return length_;
-    }
-
-    int64_t GetCurrentOffset() const{
-      return offset_;
-    }
-
     bool HasNext() const{
-      return (GetCurrentOffset() + Message::kHeaderSize) < GetBufferLength();
+      return buff_->GetReadBytes() + Message::kHeaderSize < buff_->GetBufferSize();
     }
 
     MessagePtr Next(){
@@ -1029,13 +1015,13 @@ namespace Token{
       switch(mtype){
 #define DEFINE_DECODE(Name) \
           case Message::MessageType::k##Name##MessageType:{ \
-              offset_ += msize;                             \
               return Name##Message::NewInstance(buff_);     \
           }
         FOR_EACH_MESSAGE_TYPE(DEFINE_DECODE)
 #undef DEFINE_DECODE
         case Message::MessageType::kUnknownMessageType:
-        default:LOG(ERROR) << "unknown message type " << mtype << " of size " << msize;
+        default:
+          LOG(ERROR) << "unknown message type " << mtype << " of size " << msize;
           return nullptr;
       }
     }

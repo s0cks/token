@@ -1,10 +1,12 @@
 #ifdef TOKEN_ENABLE_SERVER
 
 #include "server/server.h"
-#include "discovery.h"
 #include "job/scheduler.h"
 #include "job/synchronize.h"
 #include "peer/peer_session.h"
+
+#include "consensus/proposal.h"
+#include "consensus/proposal_manager.h"
 
 namespace Token{
   bool PeerSession::Connect(){
@@ -85,38 +87,38 @@ namespace Token{
 
   void PeerSession::OnDiscovery(uv_async_t* handle){
     PeerSession* session = (PeerSession*) handle->data;
-    if(!BlockDiscoveryThread::HasProposal()){
+    if(ProposalManager::HasProposal()){
       LOG(WARNING) << "there is no active proposal.";
       return;
     }
 
-    ProposalPtr proposal = BlockDiscoveryThread::GetProposal();
-    Hash hash = proposal->GetHash();
+    ProposalPtr proposal = ProposalManager::GetProposal();
+    BlockHeader blk = proposal->GetBlock();
 
-    LOG(INFO) << "broadcasting newly discovered block hash: " << hash;
-    session->Send(InventoryMessage::NewInstance(hash, InventoryItem::kBlock));
+    LOG(INFO) << "broadcasting newly discovered block hash: " << blk;
+    session->Send(InventoryMessage::NewInstance(blk));
   }
 
   void PeerSession::OnPrepare(uv_async_t* handle){
     PeerSession* session = (PeerSession*) handle->data;
-    if(!BlockDiscoveryThread::HasProposal()){
+    if(!ProposalManager::HasProposal()){
       LOG(WARNING) << "there is no active proposal.";
       return;
     }
 
-    ProposalPtr proposal = BlockDiscoveryThread::GetProposal();
+    ProposalPtr proposal = ProposalManager::GetProposal();
     LOG(INFO) << "sending new proposal: " << proposal->GetRaw();
     session->Send(PrepareMessage::NewInstance(proposal));
   }
 
   void PeerSession::OnPromise(uv_async_t* handle){
     PeerSession* session = (PeerSession*) handle->data;
-    if(!BlockDiscoveryThread::HasProposal()){
+    if(!ProposalManager::HasProposal()){
       LOG(WARNING) << "there is no active proposal.";
       return;
     }
 
-    ProposalPtr proposal = BlockDiscoveryThread::GetProposal();
+    ProposalPtr proposal = ProposalManager::GetProposal();
     if(!proposal->IsProposal()){
       LOG(WARNING) << "cannot send another promise to the peer.";
       return;
@@ -126,12 +128,12 @@ namespace Token{
 
   void PeerSession::OnCommit(uv_async_t* handle){
     PeerSession* session = (PeerSession*) handle->data;
-    if(!BlockDiscoveryThread::HasProposal()){
+    if(!ProposalManager::HasProposal()){
       LOG(WARNING) << "there is no active proposal.";
       return;
     }
 
-    ProposalPtr proposal = BlockDiscoveryThread::GetProposal();
+    ProposalPtr proposal = ProposalManager::GetProposal();
     if(!proposal->IsCommit()){
       LOG(WARNING) << "cannot send another commit to the peer.";
       return;
@@ -141,39 +143,30 @@ namespace Token{
 
   void PeerSession::OnAccepted(uv_async_t* handle){
     PeerSession* session = (PeerSession*) handle->data;
-    if(!BlockDiscoveryThread::HasProposal()){
+    if(!ProposalManager::HasProposal()){
       LOG(WARNING) << "there is no active proposal.";
       return;
     }
 
-    ProposalPtr proposal = BlockDiscoveryThread::GetProposal();
-    if(!proposal->IsProposal() && !proposal->IsVoting() && !proposal->IsCommit()){
-      LOG(WARNING) << "cannot accept proposal #" << proposal->GetHeight() << " (" << proposal->GetPhase() << " ["
-                   << proposal->GetResult() << "])";
-      return;
-    }
-    LOG(INFO) << "accepting " << session->GetInfo() << "'s proposal for: " << proposal->ToString();
+    ProposalPtr proposal = ProposalManager::GetProposal();
+    LOG(INFO) << "accepting " << session->GetInfo() << "'s proposal: " << proposal->ToString();
     session->Send(AcceptedMessage::NewInstance(proposal));
   }
 
   void PeerSession::OnRejected(uv_async_t* handle){
     PeerSession* session = (PeerSession*) handle->data;
-    if(!BlockDiscoveryThread::HasProposal()){
+    if(!ProposalManager::HasProposal()){
       LOG(WARNING) << "there is no active proposal.";
       return;
     }
 
-    ProposalPtr proposal = BlockDiscoveryThread::GetProposal();
-    if(!proposal->IsProposal() && !proposal->IsVoting() && !proposal->IsCommit()){
-      LOG(WARNING) << "cannot reject proposal #" << proposal->GetHeight() << " (" << proposal->GetPhase() << " ["
-                   << proposal->GetResult() << "])";
-      return;
-    }
+    ProposalPtr proposal = ProposalManager::GetProposal();
+    LOG(INFO) << "rejecting " << session->GetInfo() << "'s proposal: " << proposal->ToString();
     session->Send(RejectedMessage::NewInstance(proposal));
   }
 
   void PeerSession::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
-    PeerSession* session = (PeerSession*) stream->data;
+    PeerSession* session = (PeerSession*)stream->data;
     if(nread == UV_EOF){
       LOG(ERROR) << "client disconnected!";
       return;
@@ -188,9 +181,7 @@ namespace Token{
       return;
     }
 
-    BufferPtr& rbuff = session->GetReadBuffer();
-    MessageBufferReader reader(rbuff, static_cast<int64_t>(nread));
-
+    MessageBufferReader reader(buff, static_cast<int64_t>(nread));
     while(reader.HasNext()){
       MessagePtr next = reader.Next();
       switch(next->GetMessageType()){
@@ -205,7 +196,7 @@ namespace Token{
           break;
       }
     }
-    rbuff->Reset();
+    free(buff->base);
   }
 
   void PeerSession::HandleGetBlocksMessage(PeerSession* session, const GetBlocksMessagePtr& msg){}

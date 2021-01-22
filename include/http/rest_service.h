@@ -47,11 +47,13 @@ namespace Token{
     WalletController() = delete;
 
     HTTP_CONTROLLER_ENDPOINT(GetUserWallet);
+    HTTP_CONTROLLER_ENDPOINT(GetUserWalletTokenCode);
    public:
     ~WalletController() = delete;
 
     HTTP_CONTROLLER_INIT(){
       HTTP_CONTROLLER_GET("/wallet/:user", GetUserWallet);
+      HTTP_CONTROLLER_GET("/wallet/:user/tokens/:hash", GetUserWalletTokenCode);
     }
   };
 
@@ -73,7 +75,6 @@ namespace Token{
     // Unclaimed Transactions
     HTTP_CONTROLLER_ENDPOINT(GetUnclaimedTransaction);
     HTTP_CONTROLLER_ENDPOINT(GetUnclaimedTransactions);
-    HTTP_CONTROLLER_ENDPOINT(GetUnclaimedTransactionCode);
    public:
     ~ObjectPoolController() = delete;
 
@@ -92,7 +93,6 @@ namespace Token{
       // Unclaimed Transactions
       HTTP_CONTROLLER_GET("/pool/utxos", GetUnclaimedTransactions);
       HTTP_CONTROLLER_GET("/pool/utxos/:hash", GetUnclaimedTransaction);
-      HTTP_CONTROLLER_GET("/pool/utxos/:hash/code", GetUnclaimedTransactionCode);
     }
   };
 

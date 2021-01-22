@@ -1,4 +1,3 @@
-#include "discovery.h"
 #include "utils/crash_report.h"
 
 #ifdef TOKEN_ENABLE_SERVER
@@ -24,7 +23,7 @@ namespace Token{
 
   static inline void
   Terminate(int signum){
-    #ifdef TOKEN_ENABLE_REST_SERVICE
+#ifdef TOKEN_ENABLE_REST_SERVICE
     if(IsValidPort(FLAGS_service_port) && RestService::IsRunning()){
       LOG(INFO) << "terminating the rest service....";
       if(!RestService::Stop()){
@@ -32,9 +31,9 @@ namespace Token{
         goto terminate;
       }
     }
-      #endif//TOKEN_ENABLE_REST_SERVICE
+#endif//TOKEN_ENABLE_REST_SERVICE
 
-      #ifdef TOKEN_ENABLE_SERVER
+#ifdef TOKEN_ENABLE_SERVER
     LOG(INFO) << "terminating the peer session manager....";
     if(!PeerSessionManager::Shutdown()){
       PrintFatalCrashReport("Cannot shutdown the peer session manager threads.");
@@ -48,15 +47,9 @@ namespace Token{
         goto terminate;
       }
     }
-      #endif//TOKEN_ENABLE_SERVER
+#endif//TOKEN_ENABLE_SERVER
 
-    LOG(INFO) << "terminating the block discovery thread....";
-    if(!BlockDiscoveryThread::Stop()){
-      PrintFatalCrashReport("Cannot shutdown the block discovery thread.");
-      goto terminate;
-    }
-
-      #ifdef TOKEN_ENABLE_HEALTH_SERVICE
+#ifdef TOKEN_ENABLE_HEALTH_SERVICE
     if(IsValidPort(FLAGS_healthcheck_port) && HealthCheckService::IsRunning()){
       LOG(INFO) << "terminating the health check service....";
       if(!HealthCheckService::Stop()){
@@ -64,7 +57,7 @@ namespace Token{
         goto terminate;
       }
     }
-      #endif//TOKEN_ENABLE_HEALTH_SERVICE
+#endif//TOKEN_ENABLE_HEALTH_SERVICE
     terminate:
     exit(signum);
   }

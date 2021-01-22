@@ -1,10 +1,12 @@
 #include "pool.h"
-#include "discovery.h"
 #include "proposal_handler.h"
 #include "snapshot/snapshot.h"
 
 namespace Token{
   bool ProposalHandler::CommitProposal() const{
+    if(!TransitionToPhase(Proposal::kQuorumPhase))
+      return false;
+
     Hash hash = GetProposal()->GetHash();
     BlockPtr blk = ObjectPool::GetBlock(hash);
 
@@ -30,15 +32,16 @@ namespace Token{
       if(!JobScheduler::Schedule(job))
         LOG(WARNING) << "couldn't schedule new snapshot.";
     }
+
+    LOG(INFO) << "proposal " << proposal_->ToString() << " has finished.";
     return true;
   }
 
   bool ProposalHandler::CancelProposal() const{
-    if(!TransitionToPhase(Proposal::kQuorumPhase)){
+    if(!TransitionToPhase(Proposal::kQuorumPhase))
       return false;
-    }
     GetProposal()->SetResult(Proposal::kRejected);
-    return true;
+    return ProposalManager::ClearProposal();
   }
 
   bool ProposalHandler::WasRejected() const{
@@ -50,33 +53,6 @@ namespace Token{
     LOG(ERROR) << "cannot transition proposal #" << GetProposalID() << " from " << (From) << " phase to " << (To) << " phase.";
 
   bool ProposalHandler::TransitionToPhase(const Proposal::Phase& phase) const{
-    //TODO: better error handling
-    LOG(INFO) << "transitioning proposal #" << GetProposalID() << " to phase: " << phase;
-    switch(phase){
-      case Proposal::kVotingPhase:
-        if(!GetProposal()->IsProposal()){
-          CANNOT_TRANSITION_TO(GetProposal()->GetPhase(), phase);
-          return false;
-        }
-        GetProposal()->SetPhase(phase);
-        return true;
-      case Proposal::kCommitPhase:
-        if(!GetProposal()->IsVoting()){
-          CANNOT_TRANSITION_TO(GetProposal()->GetPhase(), phase);
-          return false;
-        }
-        GetProposal()->SetPhase(phase);
-        return true;
-      case Proposal::kQuorumPhase:
-        if(GetProposal()->IsQuorum()){ //TODO fix flow logic?
-          CANNOT_TRANSITION_TO(GetProposal()->GetPhase(), phase);
-          return false;
-        }
-        GetProposal()->SetPhase(phase);
-        return true;
-      case Proposal::kProposalPhase:
-      default:CANNOT_TRANSITION_TO(GetProposal()->GetPhase(), phase);
-        return false;
-    }
+    return proposal_->TransitionToPhase(phase);
   }
 }

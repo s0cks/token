@@ -70,7 +70,8 @@ namespace Token{
 
     static const int64_t kRequestTimeoutIntervalMilliseconds = 1000;
    private:
-    pthread_t thread_;
+    std::string thread_name_;
+    ThreadId thread_;
     WorkerId worker_;
 
     std::mutex mutex_;
@@ -78,33 +79,45 @@ namespace Token{
     State state_;
     Status status_;
     uv_loop_t* loop_;
-    PeerSessionPtr session_;
+    PeerSession* session_;
 
-    PeerSessionPtr CreateNewSession(const NodeAddress& address){
-      std::unique_lock<std::mutex> guard(mutex_);
-      session_ = std::make_shared<PeerSession>(GetLoop(), address);
+    PeerSession* CreateNewSession(const NodeAddress& address){
+      std::lock_guard<std::mutex> guard(mutex_);
+      session_ = new PeerSession(GetLoop(), address);
       return session_;
     }
 
-    static void HandleDisconnect(uv_async_t* handle){
-      PeerSessionThread* thread = (PeerSessionThread*) handle->data;
-      thread->GetCurrentSession()->Disconnect();
+    static inline std::string
+    GetWorkerThreadName(const WorkerId& worker){
+      std::stringstream ss;
+      ss << "peer-" << worker;
+      return ss.str();
     }
 
     static void HandleThread(uword parameter);
    public:
     PeerSessionThread(const WorkerId& worker, uv_loop_t* loop = uv_loop_new()):
+      thread_name_(GetWorkerThreadName(worker)),
       thread_(),
       worker_(worker),
       mutex_(),
       cond_(),
-      state_(),
-      status_(),
-      loop_(loop){}
+      state_(State::kStopped),
+      status_(Status::kOk),
+      loop_(loop),
+      session_(nullptr){}
     ~PeerSessionThread(){
       if(loop_){
         uv_loop_delete(loop_);
       }
+    }
+
+    std::string GetThreadName() const{
+      return thread_name_;
+    }
+
+    ThreadId GetThreadID() const{
+      return thread_;
     }
 
     WorkerId GetWorkerID() const{
@@ -135,17 +148,16 @@ namespace Token{
       status_ = status;
     }
 
-    PeerSessionPtr GetCurrentSession(){
+    PeerSession* GetCurrentSession(){
       std::lock_guard<std::mutex> guard(mutex_);
       return session_;
     }
 
     bool HasSession(){
       std::lock_guard<std::mutex> guard(mutex_);
-      return session_.get() != nullptr;
+      return session_ != nullptr;
     }
 
-    std::string GetStatusMessage();
     bool Start();
     bool Stop();
 #define DEFINE_CHECK(Name) \

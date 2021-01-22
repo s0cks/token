@@ -68,6 +68,8 @@ namespace Token{
 
     leveldb::Options options;
     options.create_if_missing = true;
+    options.comparator = new ObjectKey::Comparator();
+
     leveldb::Status status;
     if(!(status = leveldb::DB::Open(options, GetIndexFilename(), &index_)).ok()){
       LOG(WARNING) << "couldn't initialize the block chain index in " << GetIndexFilename() << ": "
@@ -148,18 +150,20 @@ namespace Token{
       return false;
     }
 
+    ObjectKey okey(Object::Type::kBlock, hash);
     std::string filename = GetNewBlockFilename(blk);
     if(!blk->WriteToFile(filename)){
       LOG(WARNING) << "cannot write block data to file: " << filename;
       return false;
     }
 
-    leveldb::Slice key((char*) hash.data(), Hash::GetSize());
+    leveldb::Slice key(okey.data(), okey.size());
+    leveldb::Slice value(filename.data(), filename.size());
 
     leveldb::WriteOptions opts;
     opts.sync = true;
     leveldb::Status status;
-    if(!(status = GetIndex()->Put(opts, key, filename)).ok()){
+    if(!(status = GetIndex()->Put(opts, key, value)).ok()){
       LOG(WARNING) << "cannot index object " << hash << ": " << status.ToString();
       return false;
     }
@@ -169,15 +173,16 @@ namespace Token{
   }
 
   BlockPtr BlockChain::GetBlock(const Hash& hash){
-    leveldb::Slice key((char*) hash.data(), Hash::GetSize());
-    std::string filename;
+    ObjectKey okey(Object::Type::kBlock, hash);
 
-    leveldb::ReadOptions opts;
+    std::string filename;
     leveldb::Status status;
-    if(!(status = GetIndex()->Get(opts, key, &filename)).ok()){
+    leveldb::Slice key(okey.data(), okey.size());
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), key, &filename)).ok()){
       LOG(WARNING) << "cannot get " << hash << ": " << status.ToString();
       return BlockPtr(nullptr);
     }
+
     return Block::FromFile(filename);
   }
 
@@ -187,17 +192,23 @@ namespace Token{
   }
 
   bool BlockChain::HasReference(const std::string& name){
-    leveldb::ReadOptions options;
+    ObjectKey okey(Object::Type::kReference, name);
+
     std::string value;
-    return GetIndex()->Get(options, name, &value).ok();
+    leveldb::Slice key(okey.data(), okey.size());
+    return GetIndex()->Get(leveldb::ReadOptions(), key, &value).ok();
   }
 
   bool BlockChain::RemoveReference(const std::string& name){
     leveldb::WriteOptions options;
-    std::string value;
+    options.sync = true;
 
-    leveldb::Status status = GetIndex()->Delete(options, name);
-    if(!status.ok()){
+    ObjectKey okey(Object::Type::kReference, name);
+
+    std::string value;
+    leveldb::Slice key(okey.data(), okey.size());
+    leveldb::Status status;
+    if(!(status = GetIndex()->Delete(options, key)).ok()){
       LOG(WARNING) << "couldn't remove reference " << name << ": " << status.ToString();
       return false;
     }
@@ -210,8 +221,11 @@ namespace Token{
     leveldb::WriteOptions options;
     options.sync = true;
 
-    leveldb::Status status = GetIndex()->Put(options, name, hash.HexString());
-    if(!status.ok()){
+    ObjectKey okey(Object::Type::kReference, name);
+
+    leveldb::Status status;
+    leveldb::Slice key(okey.data(), okey.size());
+    if(!(status = GetIndex()->Put(options, key, hash.HexString())).ok()){
       LOG(WARNING) << "couldn't set reference " << name << " to " << hash << ": " << status.ToString();
       return false;
     }
@@ -221,11 +235,12 @@ namespace Token{
   }
 
   Hash BlockChain::GetReference(const std::string& name){
-    std::string value;
+    ObjectKey okey(Object::Type::kReference, name);
 
+    std::string value;
     leveldb::Status status;
-    leveldb::ReadOptions options;
-    if(!(status = GetIndex()->Get(options, name, &value)).ok()){
+    leveldb::Slice key(okey.data(), okey.size());
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), key, &value)).ok()){
       LOG(WARNING) << "couldn't find reference " << name << ": " << status.ToString();
       return Hash();
     }
@@ -234,21 +249,14 @@ namespace Token{
   }
 
   bool BlockChain::HasBlock(const Hash& hash){
-    leveldb::Slice key((char*) hash.data(), Hash::GetSize());
+    ObjectKey okey(Object::Type::kBlock, hash);
 
-    leveldb::ReadOptions options;
     std::string filename;
-
-    LOCK_GUARD;
-    leveldb::Status status = GetIndex()->Get(options, key, &filename);
-    if(!status.ok()){
-      return false;
-    }
-    return true;
+    leveldb::Slice key(okey.data(), okey.size());
+    return GetIndex()->Get(leveldb::ReadOptions(), key, &filename).ok();
   }
 
   bool BlockChain::Append(const BlockPtr& block){
-    LOCK_GUARD;
     BlockPtr head = GetHead();
     Hash hash = block->GetHash();
     Hash phash = block->GetPreviousHash();
@@ -271,9 +279,8 @@ namespace Token{
     }
 
     PutBlock(hash, block);
-    if(head->GetHeight() < block->GetHeight()){
+    if(head->GetHeight() < block->GetHeight())
       PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
-    }
     return true;
   }
 
@@ -281,9 +288,8 @@ namespace Token{
     Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
     do{
       BlockPtr blk = GetBlock(current);
-      if(!vis->Visit(blk)){
+      if(!vis->Visit(blk))
         return false;
-      }
       current = blk->GetPreviousHash();
     } while(!current.IsNull());
     return true;

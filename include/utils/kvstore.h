@@ -59,7 +59,7 @@ namespace Token{
     }
   };
 
-  class ObjectHashKey : public KeyType{
+  class ObjectKey : public KeyType{
    public:
     static const int16_t kMagic = 0xFAFE;
 
@@ -79,8 +79,8 @@ namespace Token{
     class Comparator : public leveldb::Comparator{
      public:
       int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const{
-        ObjectHashKey k1(a);
-        ObjectHashKey k2(b);
+        ObjectKey k1(a);
+        ObjectKey k2(b);
 
         Object::Type t1 = k1.GetType();
         Object::Type t2 = k2.GetType();
@@ -90,6 +90,18 @@ namespace Token{
           return +1;
         }
 
+        if(k1.IsReference() && k2.IsReference()){
+          std::string r1 = k1.GetReference();
+          std::string r2 = k2.GetReference();
+          if(r1 < r2){
+            return -1;
+          } else if(r1 > r2){
+            return +1;
+          }
+
+          return 0;
+        }
+
         Hash h1 = k1.GetHash();
         Hash h2 = k2.GetHash();
         if(h1 < h2){
@@ -97,6 +109,7 @@ namespace Token{
         } else if(h1 > h2){
           return +1;
         }
+
         return 0;
       }
 
@@ -114,13 +127,19 @@ namespace Token{
       return data_;
     }
    public:
-    ObjectHashKey(const Object::Type& type, const Hash& hash):
+    ObjectKey(const Object::Type& type, const std::string& value):
+      data_(){
+      memcpy(&data_[kMagicOffset], &kMagic, kBytesForMagic);
+      memcpy(&data_[kTypeOffset], &type, kBytesForType);
+      memcpy(&data_[kHashOffset], value.data(), std::min(value.length(), (size_t)kBytesForHash));
+    }
+    ObjectKey(const Object::Type& type, const Hash& hash):
       data_(){
       memcpy(&data_[kMagicOffset], &kMagic, kBytesForMagic);
       memcpy(&data_[kTypeOffset], &type, kBytesForType);
       memcpy(&data_[kHashOffset], hash.data(), kBytesForHash);
     }
-    ObjectHashKey(const leveldb::Slice& value):
+    ObjectKey(const leveldb::Slice& value):
       data_(){
       if(value.size() < kTotalSize){
         LOG(WARNING) << "copying partial key of size " << value.size() << "(value.size() - kTotalSize).";
@@ -130,7 +149,7 @@ namespace Token{
       }
       memcpy(data_, value.data(), std::min(value.size(), (size_t) kTotalSize));
     }
-    ObjectHashKey(const std::string& value):
+    ObjectKey(const std::string& value):
       data_(){
       if(value.size() < kTotalSize){
         LOG(WARNING) << "copying partial key of size " << value.size() << "(value.size() - kTotalSize).";
@@ -140,7 +159,7 @@ namespace Token{
       }
       memcpy(data_, value.data(), std::min(value.size(), (size_t) kTotalSize));
     }
-    ~ObjectHashKey() = default;
+    ~ObjectKey() = default;
 
     char* data() const{
       return (char*) data_;
@@ -156,6 +175,10 @@ namespace Token{
 
     Hash GetHash() const{
       return Hash(&data_[kHashOffset], kBytesForHash);
+    }
+
+    std::string GetReference() const{
+      return std::string((char*)&data_[kHashOffset], kBytesForHash);
     }
 
     int16_t GetMagic() const{
@@ -178,19 +201,23 @@ namespace Token{
       return GetType() == Object::Type::kUnclaimedTransaction;
     }
 
-    void operator=(const ObjectHashKey& key){
+    bool IsReference() const{
+      return GetType() == Object::Type::kReference;
+    }
+
+    void operator=(const ObjectKey& key){
       memcpy(data_, key.data_, kTotalSize);
     }
 
-    friend bool operator==(const ObjectHashKey& a, const ObjectHashKey& b){
+    friend bool operator==(const ObjectKey& a, const ObjectKey& b){
       return memcmp(a.data_, b.data_, kTotalSize) == 0;
     }
 
-    friend bool operator!=(const ObjectHashKey& a, const ObjectHashKey& b){
+    friend bool operator!=(const ObjectKey& a, const ObjectKey& b){
       return memcmp(a.data_, b.data_, kTotalSize) != 0;
     }
 
-    friend std::ostream& operator<<(std::ostream& stream, const ObjectHashKey& key){
+    friend std::ostream& operator<<(std::ostream& stream, const ObjectKey& key){
       return stream << "Key(" << key.GetType() << "," << key.GetHash() << ")";
     }
   };
@@ -205,17 +232,17 @@ namespace Token{
 
   static inline leveldb::Status
   GetBlockObject(leveldb::DB* index, const Hash& hash, std::string* val){
-    return GetObject(index, ObjectHashKey(Object::Type::kBlock, hash), val);
+    return GetObject(index, ObjectKey(Object::Type::kBlock, hash), val);
   }
 
   static inline leveldb::Status
   GetTransactionObject(leveldb::DB* index, const Hash& hash, std::string* val){
-    return GetObject(index, ObjectHashKey(Object::Type::kTransaction, hash), val);
+    return GetObject(index, ObjectKey(Object::Type::kTransaction, hash), val);
   }
 
   static inline leveldb::Status
   GetUnclaimedTransactionObject(leveldb::DB* index, const Hash& hash, std::string* val){
-    return GetObject(index, ObjectHashKey(Object::Type::kUnclaimedTransaction, hash), val);
+    return GetObject(index, ObjectKey(Object::Type::kUnclaimedTransaction, hash), val);
   }
 
   static inline leveldb::Status
@@ -268,32 +295,32 @@ namespace Token{
 
   static inline leveldb::Status
   PutObject(leveldb::DB* index, const Hash& hash, const BlockPtr& val){
-    return PutObject(index, ObjectHashKey(Object::Type::kBlock, hash), val);
+    return PutObject(index, ObjectKey(Object::Type::kBlock, hash), val);
   }
 
   static inline void
   PutObject(leveldb::WriteBatch& batch, const Hash& hash, const BlockPtr& val){
-    return PutObject(batch, ObjectHashKey(Object::Type::kBlock, hash), val);
+    return PutObject(batch, ObjectKey(Object::Type::kBlock, hash), val);
   }
 
   static inline leveldb::Status
   PutObject(leveldb::DB* index, const Hash& hash, const TransactionPtr& val){
-    return PutObject(index, ObjectHashKey(Object::Type::kTransaction, hash), val);
+    return PutObject(index, ObjectKey(Object::Type::kTransaction, hash), val);
   }
 
   static inline void
   PutObject(leveldb::WriteBatch& batch, const Hash& hash, const TransactionPtr& val){
-    return PutObject(batch, ObjectHashKey(Object::Type::kTransaction, hash), val);
+    return PutObject(batch, ObjectKey(Object::Type::kTransaction, hash), val);
   }
 
   static inline leveldb::Status
   PutObject(leveldb::DB* index, const Hash& hash, const UnclaimedTransactionPtr& val){
-    return PutObject(index, ObjectHashKey(Object::Type::kUnclaimedTransaction, hash), val);
+    return PutObject(index, ObjectKey(Object::Type::kUnclaimedTransaction, hash), val);
   }
 
   static inline void
   PutObject(leveldb::WriteBatch& batch, const Hash& hash, const UnclaimedTransactionPtr& val){
-    return PutObject(batch, ObjectHashKey(Object::Type::kUnclaimedTransaction, hash), val);
+    return PutObject(batch, ObjectKey(Object::Type::kUnclaimedTransaction, hash), val);
   }
 
   static inline leveldb::Status
@@ -324,7 +351,7 @@ namespace Token{
 
   static inline bool
   HasObject(leveldb::DB* index, const Hash& hash, const Object::Type& type){
-    return HasObject(index, ObjectHashKey(type, hash));
+    return HasObject(index, ObjectKey(type, hash));
   }
 
   static inline bool
@@ -352,7 +379,7 @@ namespace Token{
 
   static inline leveldb::Status
   RemoveObject(leveldb::DB* index, const Hash& hash, const Object::Type& type){
-    return RemoveObject(index, ObjectHashKey(type, hash));
+    return RemoveObject(index, ObjectKey(type, hash));
   }
 
   static inline leveldb::Status
@@ -362,7 +389,7 @@ namespace Token{
 
   static inline void
   RemoveObject(leveldb::WriteBatch& batch, const Hash& hash, const Object::Type& type){
-    return RemoveObject(batch, ObjectHashKey(type, hash));
+    return RemoveObject(batch, ObjectKey(type, hash));
   }
 
   static inline void

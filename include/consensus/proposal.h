@@ -1,61 +1,49 @@
 #ifndef TOKEN_PROPOSAL_H
 #define TOKEN_PROPOSAL_H
 
-#include <set>
+#include <mutex>
 #include <condition_variable>
 #include "block.h"
 
 namespace Token{
   class RawProposal{
-    //TODO:
-    // - Merge RawProposal w/ BlockHeader?
-   public:
-    struct TimestampComparator{
-      bool operator()(const RawProposal& a, const RawProposal& b){
-        return a.GetTimestamp() < b.GetTimestamp();
-      }
-    };
-
-    struct HeightComparator{
-      bool operator()(const RawProposal& a, const RawProposal& b){
-        return a.GetHeight() < b.GetHeight();
-      }
-    };
    private:
-    int64_t timestamp_;
-    int64_t height_;
-    Hash hash_;
+    BlockHeader block_;
     UUID proposer_;
    public:
-    RawProposal(const UUID& proposer, int64_t height, const Hash& hash, int64_t timestamp = GetCurrentTimestamp()):
-      timestamp_(timestamp),
-      height_(height),
-      hash_(hash),
+    RawProposal(const BlockHeader& blk, const UUID& proposer):
+      block_(blk),
       proposer_(proposer){}
-    RawProposal(const UUID& proposer, const BlockHeader& blk, int64_t timestamp = GetCurrentTimestamp()):
-      RawProposal(proposer, blk.GetHeight(), blk.GetHash(), timestamp){}
     RawProposal(const BufferPtr& buff):
-      timestamp_(buff->GetLong()),
-      height_(buff->GetLong()),
-      hash_(buff->GetHash()),
+      block_(buff),
       proposer_(buff->GetUUID()){}
     RawProposal(const RawProposal& proposal):
-      timestamp_(proposal.timestamp_),
-      height_(proposal.height_),
-      hash_(proposal.hash_),
+      block_(proposal.block_),
       proposer_(proposal.proposer_){}
     ~RawProposal() = default;
 
-    int64_t GetTimestamp() const{
-      return timestamp_;
+    BlockHeader& GetBlock(){
+      return block_;
+    }
+
+    BlockHeader GetBlock() const{
+      return block_;
     }
 
     int64_t GetHeight() const{
-      return height_;
+      return block_.GetHeight();
+    }
+
+    Timestamp GetTimestamp() const{
+      return block_.GetTimestamp();
+    }
+
+    Hash GetPreviousHash() const{
+      return block_.GetPreviousHash();
     }
 
     Hash GetHash() const{
-      return hash_;
+      return block_.GetHash();
     }
 
     UUID GetProposer() const{
@@ -63,24 +51,17 @@ namespace Token{
     }
 
     bool Encode(const BufferPtr& buff) const{
-      return buff->PutLong(GetTimestamp())
-          && buff->PutLong(GetHeight())
-          && buff->PutHash(GetHash())
+      return block_.Write(buff)
           && buff->PutUUID(proposer_);
     }
 
     void operator=(const RawProposal& proposal){
-      timestamp_ = proposal.timestamp_;
-      height_ = proposal.height_;
-      hash_ = proposal.hash_;
+      block_ = proposal.block_;
       proposer_ = proposal.proposer_;
     }
 
     friend bool operator==(const RawProposal& a, const RawProposal& b){
-      return a.timestamp_ == b.timestamp_
-             && a.height_ == b.height_
-             && a.hash_ == b.hash_
-             && a.proposer_ == b.proposer_;
+      return a.block_ == b.block_ && a.proposer_ == b.proposer_;
     }
 
     friend bool operator!=(const RawProposal& a, const RawProposal& b){
@@ -100,9 +81,7 @@ namespace Token{
     static inline int64_t
     GetSize(){
       int64_t size = 0;
-      size += sizeof(int64_t);
-      size += sizeof(int64_t);
-      size += Hash::GetSize();
+      size += BlockHeader::GetSize();
       size += UUID::kSize;
       return size;
     }
@@ -187,17 +166,20 @@ namespace Token{
       raw_(proposal),
       accepted_(),
       rejected_(){}
-    Proposal(const UUID& proposer, int64_t height, const Hash& hash, int64_t timestamp = GetCurrentTimestamp()):
+    Proposal(const UUID& proposer, const BlockHeader& blk):
       Object(),
       phase_(Proposal::kProposalPhase),
       result_(Proposal::kNone),
-      raw_(proposer, height, hash, timestamp),
+      raw_(blk, proposer),
       accepted_(),
       rejected_(){}
-    Proposal(BlockPtr blk, const UUID& proposer, int64_t timestamp = GetCurrentTimestamp()):
-      Proposal(proposer, blk->GetHeight(), blk->GetHash(), timestamp){}
-    Proposal(const BlockHeader& blk, const UUID& proposer, int64_t timestamp = GetCurrentTimestamp()):
-      Proposal(proposer, blk.GetHeight(), blk.GetHash(), timestamp){}
+    Proposal(BlockPtr blk, const UUID& proposer):
+      Object(),
+      phase_(Proposal::kProposalPhase),
+      result_(Proposal::kNone),
+      raw_(blk->GetHeader(), proposer),
+      accepted_(),
+      rejected_(){}
     Proposal(const BufferPtr& buff):
       Object(),
       phase_(Proposal::kProposalPhase),
@@ -209,6 +191,14 @@ namespace Token{
 
     RawProposal& GetRaw(){
       return raw_;
+    }
+
+    BlockHeader& GetBlock(){
+      return raw_.GetBlock();
+    }
+
+    BlockHeader GetBlock() const{
+      return raw_.GetBlock();
     }
 
     int64_t GetTimestamp() const{
@@ -239,6 +229,10 @@ namespace Token{
       return raw_ == proposal->raw_;
     }
 
+    bool IsStartedBy(const UUID& uuid){
+      return GetProposer() == uuid;
+    }
+
     std::string ToString() const{
       std::stringstream ss;
       ss << "Proposal(#" << GetHeight() << ", " << GetHash() << ", " << GetProposer() << ")";
@@ -246,7 +240,7 @@ namespace Token{
     }
 
     #ifdef TOKEN_ENABLE_SERVER
-    std::shared_ptr<PeerSession> GetPeer() const;
+    PeerSession* GetPeer() const;
     #endif//TOKEN_ENABLE_SERVER
 
     Phase GetPhase();
@@ -254,6 +248,7 @@ namespace Token{
     int64_t GetNumberOfAccepted();
     int64_t GetNumberOfRejected();
     int64_t GetNumberOfResponses();
+    bool TransitionToPhase(const Phase& phase);
     bool HasResponseFrom(const std::string& node_id);
     void AcceptProposal(const std::string& node);
     void RejectProposal(const std::string& node);

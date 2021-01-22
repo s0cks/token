@@ -13,7 +13,6 @@ namespace Token{
   class Output;
   class Transaction;
   class UnclaimedTransaction : public BinaryObject{
-    friend class UnclaimedTransactionMessage;
    public:
     static const int64_t kSize = TransactionReference::kSize + User::kSize + Product::kSize;
    private:

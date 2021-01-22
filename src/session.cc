@@ -32,9 +32,7 @@ namespace Token{
     state_(State::kDisconnected),
     status_(Status::kOk),
     loop_(loop),
-    handle_(),
-    rbuff_(Buffer::NewInstance(kBufferSize)),
-    wbuff_(Buffer::NewInstance(kBufferSize)){
+    handle_(){
     handle_.data = this;
 
     uv_tcp_keepalive(GetHandle(), 1, 60);
@@ -48,10 +46,8 @@ namespace Token{
   }
 
   void Session::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
-    Session* session = (Session*) handle->data;
-    BufferPtr& rbuff = session->GetReadBuffer();
     buff->len = suggested_size;
-    buff->base = rbuff->data();
+    buff->base = (char*)malloc(sizeof(uint8_t)*suggested_size);
   }
 
   void Session::SetState(Session::State state){
@@ -86,24 +82,23 @@ namespace Token{
     return status_;
   }
 
-  void Session::Send(const MessagePtr& msg){
-#ifdef TOKEN_DEBUG
-    LOG(INFO) << "sending " << msg->ToString() << " (" << msg->GetBufferSize() << " bytes)";
-#endif//TOKEN_DEBUG
+  struct SessionWriteData{
+    uv_write_t request;
+    Session* session;
+    BufferPtr buffer;
 
-    BufferPtr& wbuff = GetWriteBuffer();
-    if(!msg->Write(wbuff)){
-      LOG(WARNING) << "couldn't serialize message " << msg->ToString();
-      return;
+    SessionWriteData(Session* s):
+      request(),
+      session(s),
+      buffer(Buffer::NewInstance(65536)){
+      request.data = this;
     }
+    ~SessionWriteData() = default;
+  };
 
-    uv_buf_t buff;
-    buff.len = msg->GetBufferSize();
-    buff.base = wbuff->data();
-
-    uv_write_t* req = (uv_write_t*) malloc(sizeof(uv_write_t));
-    req->data = this;
-    uv_write(req, GetStream(), &buff, 1, &OnMessageSent);
+  void Session::Send(const MessagePtr& msg){
+    MessageList messages = { msg };
+    return Send(messages);
   }
 
   void Session::Send(std::vector<MessagePtr>& messages){
@@ -113,70 +108,32 @@ namespace Token{
       return;
     }
 
-    #ifdef TOKEN_DEBUG
-      LOG(INFO) << "sending " << total_messages << " messages....";
-    #endif//TOKEN_DEBUG
-
-    BufferPtr& wbuff = GetWriteBuffer();
+    LOG(INFO) << "sending " << total_messages << " messages....";
+    SessionWriteData* data = new SessionWriteData(this);
     uv_buf_t buffers[total_messages];
 
-    int64_t idx = 0;
-    MessageBufferWriter writer(wbuff, messages);
-    while(writer.HasNext()){
-      MessagePtr& next = writer.Next();
-      LOG(INFO) << "writing " << writer.Next()->ToString() << "(" << next->GetBufferSize() << ")";
-      if(!writer.WriteNext(&buffers[idx])){
-        LOG(WARNING) << "couldn't write message (#" << idx << "): " << writer.Next()->ToString() << ".";
+    int64_t offset = 0;
+    for(size_t idx = 0; idx < total_messages; idx++){
+      MessagePtr& msg = messages[idx];
+      LOG(INFO) << "sending " << msg->ToString();
+      if(!msg->Write(data->buffer)){
+        LOG(WARNING) << "couldn't write " << msg->ToString();
         return;
       }
+
+      int64_t msg_size = msg->GetBufferSize();
+      buffers[idx].base = &data->buffer->data()[offset];
+      buffers[idx].len = msg_size;
+      offset += msg_size;
     }
 
-    uv_write_t* req = (uv_write_t*) malloc(sizeof(uv_write_t));
-    req->data = this;
-    uv_write(req, GetStream(), buffers, total_messages, &OnMessageSent);
+    uv_write(&data->request, GetStream(), buffers, total_messages, &OnMessageSent);
   }
 
   void Session::OnMessageSent(uv_write_t* req, int status){
-    Session* session = (Session*) req->data;
-    session->GetWriteBuffer()->Reset();
     if(status != 0)
       LOG(ERROR) << "failed to send message: " << uv_strerror(status);
-    free(req);
-  }
-
-  /*void Session::SendInventory(std::vector<InventoryItem>& items){
-      std::vector<Message*> data;
-
-      size_t n = InventoryMessage::kMaxAmountOfItemsPerMessage;
-      size_t size = (items.size() - 1) / n + 1;
-      for(size_t idx = 0; idx < size; idx++){
-          auto start = std::next(items.cbegin(), idx*n);
-          auto end = std::next(items.cbegin(), idx*n+n);
-
-          std::vector<InventoryItem> inv(n);
-          if(idx*n+n > items.size()){
-              end = items.cend();
-              inv.resize(items.size()-idx*n);
-          }
-          std::copy(start, end, inv.begin());
-
-          data.push_back(InventoryMessage::NewInstance(inv));
-      }
-      Send(data);
-  }*/
-
-  bool ThreadedSession::Disconnect(){
-    if(pthread_self() == thread_){
-      // Inside Session OSThreadBase
-      uv_read_stop(GetStream());
-      uv_stop(GetLoop());
-      uv_loop_close(GetLoop());
-      SetState(State::kDisconnected);
-    } else{
-      // Outside Session OSThreadBase
-      uv_async_send(&shutdown_);
-    }
-    return true;
+    delete (SessionWriteData*)req->data;
   }
 }
 

@@ -3,13 +3,12 @@
 #include "stats.h"
 #include "wallet.h"
 #include "keychain.h"
-#include "discovery.h"
 #include "blockchain.h"
 #include "configuration.h"
 #include "job/scheduler.h"
 #include "utils/crash_report.h"
 
-#include "utils/qrcode.h"
+#include "miner.h"
 
 #ifdef TOKEN_ENABLE_SERVER
   #include "server/server.h"
@@ -34,7 +33,7 @@ InitializeLogging(char *arg0){
 static inline bool
 AppendDummy(int total_spends){
   using namespace Token;
-  sleep(5);
+  sleep(10);
 
   Wallet wallet;
   if(!WalletManager::GetWallet("VenueA", wallet)){
@@ -134,12 +133,6 @@ main(int argc, char **argv){
     return EXIT_FAILURE;
   }
 
-  // Start the block discovery thread
-  if(!BlockDiscoveryThread::Start()){
-    CrashReport::PrintNewCrashReport("Failed to start the block discovery thread.");
-    return EXIT_FAILURE;
-  }
-
   // Start the server if enabled
   #ifdef TOKEN_ENABLE_SERVER
     if(IsValidPort(FLAGS_server_port) && !Server::Start()){
@@ -165,6 +158,16 @@ main(int argc, char **argv){
     StatsPrinter::PrintAllStats(google::INFO, Printer::kFlagDetailed);
   #endif//TOKEN_DEBUG
 
-  AppendDummy(2);
+  if(!BlockMiner::Start()){
+    CrashReport::PrintNewCrashReport("Cannot start the block miner.");
+    return EXIT_FAILURE;
+  }
+
+  if(FLAGS_append_test && !AppendDummy(Block::kMaxTransactionsForBlock)){
+    CrashReport::PrintNewCrashReport("Cannot append dummy transactions.");
+    return EXIT_FAILURE;
+  }
+
+  Server::WaitForState(Server::kStopped);
   return EXIT_SUCCESS;
 }
