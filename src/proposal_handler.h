@@ -72,31 +72,36 @@ namespace Token{
     ~NewProposalHandler() = default;
 
     bool ProcessProposal() const{
-      // 1. Voting Phase
-      if(!TransitionToPhase(Proposal::kVotingPhase)){
-        return false;
-      }
-      #ifdef TOKEN_ENABLE_SERVER
+    #ifdef TOKEN_ENABLE_SERVER
       PeerSessionManager::BroadcastPrepare();
-      #endif//TOKEN_ENABLE_SERVER
+    #endif//TOKEN_ENABLE_SERVER
+
+      GetProposal()->WaitForRequiredResponses();//TODO: add timeout here
+      if(WasRejected())
+        return CancelProposal();
+
+
+      // 1. Voting Phase
+      if(!TransitionToPhase(Proposal::kVotingPhase))
+        return false;
+    #ifdef TOKEN_ENABLE_SERVER
+      PeerSessionManager::BroadcastPromise();
+    #endif//TOKEN_ENABLE_SERVER
 
       GetProposal()->WaitForRequiredResponses(); // TODO: add timeout here
-      if(WasRejected()){
-        CancelProposal();
-      }
+      if(WasRejected())
+        return CancelProposal();
 
       // 2. Commit Phase
-      if(!TransitionToPhase(Proposal::kCommitPhase)){
+      if(!TransitionToPhase(Proposal::kCommitPhase))
         return false;
-      }
     #ifdef TOKEN_ENABLE_SERVER
       PeerSessionManager::BroadcastCommit();
     #endif//TOKEN_ENABLE_SERVER
 
       GetProposal()->WaitForRequiredResponses(); //TODO: add timeout here
-      if(WasRejected()){
-        CancelProposal();
-      }
+      if(WasRejected())
+        return CancelProposal();
 
       // 3. Quorum Phase
       CommitProposal();

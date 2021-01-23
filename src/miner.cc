@@ -10,39 +10,31 @@
 #include "consensus/proposal_manager.h"
 
 namespace Token{
-  static std::mutex mutex_;
-  static std::condition_variable cond_;
-
   static ThreadId thread_;
-  static BlockMiner::State state_ = BlockMiner::kStoppedState;
-  static BlockMiner::Status status_ = BlockMiner::kOkStatus;
+  static std::atomic<BlockMiner::State> state_ = { BlockMiner::kStoppedState };
+  static std::atomic<BlockMiner::Status> status_ = { BlockMiner::kOkStatus };
   static JobQueue queue_(JobScheduler::kMaxNumberOfJobs);
 
-  static uv_async_t shutdown_;
   static uv_timer_t miner_timer_;
+  static uv_async_t shutdown_;
+  static uv_async_t on_promise_;
+  static uv_async_t on_commit_;
+  static uv_async_t on_quorum_;
 
   BlockMiner::State BlockMiner::GetState(){
-    std::lock_guard<std::mutex> guard(mutex_);
-    return state_;
+    return state_.load(std::memory_order_relaxed);
   }
 
   void BlockMiner::SetState(const State& state){
-    std::unique_lock<std::mutex> lock(mutex_);
-    state_ = state;
-    lock.unlock();
-    cond_.notify_all();
+    state_.store(state, std::memory_order_relaxed);
   }
 
   BlockMiner::Status BlockMiner::GetStatus(){
-    std::lock_guard<std::mutex> guard(mutex_);
-    return status_;
+    return status_.load(std::memory_order_relaxed);
   }
 
   void BlockMiner::SetStatus(const Status& status){
-    std::unique_lock<std::mutex> lock(mutex_);
-    status_ = status;
-    lock.unlock();
-    cond_.notify_all();
+    status_.store(status, std::memory_order_relaxed);
   }
 
   int BlockMiner::StartMinerTimer(){
@@ -93,6 +85,10 @@ namespace Token{
     uv_loop_t* loop = uv_loop_new();
     uv_timer_init(loop, &miner_timer_);
 
+    uv_async_init(loop, &on_promise_, &OnPromiseCallback);
+    uv_async_init(loop, &on_commit_, &OnCommitCallback);
+    uv_async_init(loop, &on_quorum_, &OnQuorumCallback);
+
     int err;
     if((err = StartMinerTimer()) != 0){
       LOG(WARNING) << "couldn't start the miner timer: " << uv_strerror(err);
@@ -125,5 +121,39 @@ namespace Token{
       return true; // should we return false?
     uv_async_send(&shutdown_);
     return Thread::StopThread(thread_);
+  }
+
+  void BlockMiner::OnPromise(){
+    uv_async_send(&on_promise_);
+  }
+
+  void BlockMiner::OnCommit(){
+    uv_async_send(&on_commit_);
+  }
+
+  void BlockMiner::OnQuorum(){
+    uv_async_send(&on_quorum_);
+  }
+
+  void BlockMiner::OnPromiseCallback(uv_async_t* handle){
+    ProposalPtr proposal = ProposalManager::GetProposal();
+    PeerSession* session = proposal->GetPeer();
+    if(!proposal->TransitionToPhase(Proposal::kVotingPhase))
+      return session->SendRejected();
+    return session->SendAccepted();
+  }
+
+  void BlockMiner::OnCommitCallback(uv_async_t* handle){
+    ProposalPtr proposal = ProposalManager::GetProposal();
+    PeerSession* session = proposal->GetPeer();
+    if(!proposal->TransitionToPhase(Proposal::kCommitPhase))
+      return session->SendRejected();
+    return session->SendAccepted();
+  }
+
+  void BlockMiner::OnQuorumCallback(uv_async_t* handle){
+    ProposalPtr proposal = ProposalManager::GetProposal();
+    if(!proposal->TransitionToPhase(Proposal::kQuorumPhase))
+      return;
   }
 }

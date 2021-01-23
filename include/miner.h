@@ -59,10 +59,12 @@ namespace Token{
     static void SetState(const State& state);
     static void SetStatus(const Status& status);
     static void HandleMine(uv_timer_t* handle);
+    static void OnPromiseCallback(uv_async_t* handle);
+    static void OnCommitCallback(uv_async_t* handle);
+    static void OnQuorumCallback(uv_async_t* handle);
 
     static int StartMinerTimer();
     static int StopMinerTimer();
-
     static void HandleThread(uword param);
    public:
     ~BlockMiner() = delete;
@@ -71,6 +73,9 @@ namespace Token{
     static Status GetStatus();
     static bool Stop();
     static bool Start();
+    static void OnPromise();
+    static void OnCommit();
+    static void OnQuorum();
 
 #define DEFINE_CHECK(Name) \
     static inline bool Is##Name##State(){ return GetState() == State::k##Name##State; }

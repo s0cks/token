@@ -170,11 +170,10 @@ namespace Token{
     }
 
     int64_t total_bytes = static_cast<int64_t>(nread);
-    LOG(INFO) << "read " << total_bytes << " total bytes.";
-
     MessageBufferReader reader(buff, total_bytes);
     while(reader.HasNext()){
       MessagePtr next = reader.Next();
+      LOG(INFO) << "next: " << next->ToString();
       switch(next->GetMessageType()){
 #define DEFINE_HANDLER_CASE(Name) \
         case Message::k##Name##MessageType: \

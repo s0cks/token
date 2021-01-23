@@ -44,7 +44,7 @@ namespace Token{
 
   bool PeerSessionManager::Initialize(){
     std::unique_lock<std::mutex> lock(mutex_);
-    threads_ = (PeerSessionThread**)malloc(sizeof(PeerSessionThread*) * FLAGS_num_peers);
+    threads_ = (PeerSessionThread**) malloc(sizeof(PeerSessionThread*) * FLAGS_num_peers);
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
       threads_[idx] = new PeerSessionThread(idx);
       if(!threads_[idx]->Start()){
@@ -165,32 +165,20 @@ namespace Token{
     return false;
   }
 
-  void PeerSessionManager::BroadcastPrepare(){
-    std::lock_guard<std::mutex> guard(mutex_);
-    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
-      PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning() && thread->HasSession())
-        thread->GetCurrentSession()->SendPrepare();
-    }
+#define DEFINE_PAXOS_BROADCAST(Name) \
+  void PeerSessionManager::Broadcast##Name(){ \
+    std::lock_guard<std::mutex> guard(mutex_);\
+    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){ \
+      PeerSessionThread* thread = threads_[idx];        \
+      if(thread->IsRunning() && thread->HasSession())   \
+        thread->GetCurrentSession()->Send##Name();      \
+    }                                \
   }
 
-  void PeerSessionManager::BroadcastCommit(){
-    std::lock_guard<std::mutex> guard(mutex_);
-    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
-      PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning() && thread->HasSession())
-        thread->GetCurrentSession()->SendCommit();
-    }
-  }
-
-  void PeerSessionManager::BroadcastDiscoveredBlock(){
-    std::lock_guard<std::mutex> guard(mutex_);
-    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
-      PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning() && thread->HasSession())
-        thread->GetCurrentSession()->SendDiscoveredBlockHash();
-    }
-  }
+  DEFINE_PAXOS_BROADCAST(Prepare);
+  DEFINE_PAXOS_BROADCAST(Promise);
+  DEFINE_PAXOS_BROADCAST(Commit);
+  DEFINE_PAXOS_BROADCAST(DiscoveredBlock);
 
   bool PeerSessionManager::ScheduleRequest(const NodeAddress& next, int16_t attempts){
     std::unique_lock<std::mutex> lock(mutex_);

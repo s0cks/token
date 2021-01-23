@@ -87,7 +87,7 @@ namespace Token{
 
   void PeerSession::OnDiscovery(uv_async_t* handle){
     PeerSession* session = (PeerSession*) handle->data;
-    if(ProposalManager::HasProposal()){
+    if(!ProposalManager::HasProposal()){
       LOG(WARNING) << "there is no active proposal.";
       return;
     }
@@ -119,7 +119,7 @@ namespace Token{
     }
 
     ProposalPtr proposal = ProposalManager::GetProposal();
-    if(!proposal->IsProposal()){
+    if(!proposal->IsVoting()){
       LOG(WARNING) << "cannot send another promise to the peer.";
       return;
     }
@@ -184,6 +184,7 @@ namespace Token{
     MessageBufferReader reader(buff, static_cast<int64_t>(nread));
     while(reader.HasNext()){
       MessagePtr next = reader.Next();
+      LOG(INFO) << "next: " << next->ToString();
       switch(next->GetMessageType()){
 #define DEFINE_HANDLER_CASE(Name) \
         case Message::k##Name##MessageType: \
@@ -245,8 +246,23 @@ namespace Token{
   void PeerSession::HandlePrepareMessage(PeerSession* session, const PrepareMessagePtr& msg){}
   void PeerSession::HandlePromiseMessage(PeerSession* session, const PromiseMessagePtr& msg){}
   void PeerSession::HandleCommitMessage(PeerSession* session, const CommitMessagePtr& msg){}
-  void PeerSession::HandleAcceptedMessage(PeerSession* session, const AcceptedMessagePtr& msg){}
   void PeerSession::HandleRejectedMessage(PeerSession* session, const RejectedMessagePtr& msg){}
+
+  void PeerSession::HandleAcceptedMessage(PeerSession* session, const AcceptedMessagePtr& msg){
+    ProposalPtr remote_proposal = msg->GetProposal();
+    if(!ProposalManager::HasProposal()){
+      LOG(WARNING) << "there is no active proposal.";
+      return session->Send(RejectedMessage::NewInstance(remote_proposal));
+    }
+
+    if(!ProposalManager::IsProposalFor(remote_proposal)){
+      LOG(WARNING) << "active proposal is not: " << remote_proposal->ToString();
+      return session->Send(RejectedMessage::NewInstance(remote_proposal));
+    }
+
+    ProposalPtr proposal = ProposalManager::GetProposal();
+    proposal->AcceptProposal(session->GetID().ToString()); //TODO: fix cast?
+  }
 
   void PeerSession::HandleGetDataMessage(PeerSession* session, const GetDataMessagePtr& msg){
     std::vector<InventoryItem> items;

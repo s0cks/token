@@ -1007,11 +1007,6 @@ namespace Token{
     MessagePtr Next(){
       Message::MessageType mtype = static_cast<Message::MessageType>(buff_->GetInt());
       int64_t msize = buff_->GetLong();
-
-    #ifdef TOKEN_DEBUG
-      LOG(INFO) << "decoding message type " << mtype << " (" << msize << " bytes)....";
-    #endif//TOKEN_DEBUG
-
       switch(mtype){
 #define DEFINE_DECODE(Name) \
           case Message::MessageType::k##Name##MessageType:{ \

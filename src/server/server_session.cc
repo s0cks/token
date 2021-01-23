@@ -8,6 +8,8 @@
 #include "consensus/proposal.h"
 #include "consensus/proposal_manager.h"
 
+#include "miner.h"
+
 namespace Token{
   void ServerSession::HandleNotFoundMessage(ServerSession* session, const NotFoundMessagePtr& msg){
     //TODO: implement HandleNotFoundMessage
@@ -91,80 +93,34 @@ namespace Token{
   }
 
   void ServerSession::HandlePrepareMessage(ServerSession* session, const PrepareMessagePtr& msg){
-    if(ProposalManager::HasProposal()){
-      LOG(WARNING) << "proposal manager already has a proposal.";
-      session->Send(RejectedMessage::NewInstance(msg->GetProposal()));
-      return;
-    }
-
     ProposalPtr proposal = msg->GetProposal();
-    // Stop miner..
-    if(!ProposalManager::SetProposal(proposal)){
-      LOG(WARNING) << "cannot set the active proposal to: " << proposal->ToString();
-      session->Send(RejectedMessage::NewInstance(proposal));
-      return;
-    }
-
-    session->Send(AcceptedMessage::NewInstance(proposal));
+    if(!ProposalManager::SetProposal(proposal))
+      return session->Send(RejectedMessage::NewInstance(proposal));
+    return session->Send(AcceptedMessage::NewInstance(proposal));
   }
 
   void ServerSession::HandlePromiseMessage(ServerSession* session, const PromiseMessagePtr& msg){
-    if(!ProposalManager::HasProposal()){
-      LOG(WARNING) << "received promise message for no active proposal of: " << msg->GetProposal()->ToString();
-      session->Send(RejectedMessage::NewInstance(msg->GetProposal()));
-      return;
-    }
-
-    if(!ProposalManager::IsProposalFor(msg->GetProposal())){
-      LOG(WARNING) << "received promise message for invalid proposal: " << msg->GetProposal()->ToString();
-      session->Send(RejectedMessage::NewInstance(msg->GetProposal()));
-      return;
-    }
-
-    ProposalPtr proposal = ProposalManager::GetProposal();
-    if(!proposal->TransitionToPhase(Proposal::kVotingPhase)){
-      session->Send(RejectedMessage::NewInstance(proposal));
-      return;
-    }
-
-    session->Send(AcceptedMessage::NewInstance(proposal));
+    if(!ProposalManager::IsProposalFor(msg->GetProposal()))
+      return session->Send(RejectedMessage::NewInstance(msg->GetProposal()));
+    BlockMiner::OnPromise();
   }
 
   void ServerSession::HandleCommitMessage(ServerSession* session, const CommitMessagePtr& msg){
-    ProposalPtr remote_proposal = msg->GetProposal();
-    if(!ProposalManager::IsProposalFor(remote_proposal)){
-      LOG(WARNING) << "received accepted message from peer for inactive proposal: " << remote_proposal->ToString();
-      return;
-    }
-
-    ProposalPtr proposal = ProposalManager::GetProposal();
-    if(proposal->GetProposer() == Server::GetID()){
-      proposal->AcceptProposal(session->GetID().ToString());//TODO: remove ToString()
-    } else{
-      proposal->SetPhase(Proposal::kCommitPhase);
-    }
+    if(!ProposalManager::IsProposalFor(msg->GetProposal()))
+      return session->Send(RejectedMessage::NewInstance(msg->GetProposal()));
+    BlockMiner::OnCommit();
   }
 
   void ServerSession::HandleAcceptedMessage(ServerSession* session, const AcceptedMessagePtr& msg){
-    ProposalPtr remote_proposal = msg->GetProposal();
-    if(!ProposalManager::IsProposalFor(remote_proposal)){
-      LOG(WARNING) << "received accepted message from peer for inactive proposal: " << remote_proposal->ToString();
-      return;
-    }
-
-    ProposalPtr proposal = ProposalManager::GetProposal();
-    proposal->AcceptProposal(session->GetID().ToString()); //TODO: remove ToString()
+    if(!ProposalManager::IsProposalFor(msg->GetProposal()))
+      return session->Send(RejectedMessage::NewInstance(msg->GetProposal()));
+    BlockMiner::OnQuorum();
   }
 
   void ServerSession::HandleRejectedMessage(ServerSession* session, const RejectedMessagePtr& msg){
-    ProposalPtr remote_proposal = msg->GetProposal();
-    if(!ProposalManager::IsProposalFor(remote_proposal)){
-      LOG(WARNING) << "received accepted message from peer for inactive proposal: " << remote_proposal->ToString();
-      return;
-    }
-
-    ProposalPtr proposal = ProposalManager::GetProposal();
-    proposal->RejectProposal(session->GetID().ToString()); //TODO: remove ToString()
+    if(!ProposalManager::IsProposalFor(msg->GetProposal()))
+      return session->Send(RejectedMessage::NewInstance(msg->GetProposal()));
+    BlockMiner::OnQuorum();
   }
 
   void ServerSession::HandleBlockMessage(ServerSession* session, const BlockMessagePtr& msg){

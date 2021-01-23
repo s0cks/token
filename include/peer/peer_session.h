@@ -183,7 +183,7 @@ namespace Token{
       uv_async_send(&commit_);
     }
 
-    void SendDiscoveredBlockHash(){
+    void SendDiscoveredBlock(){
       uv_async_send(&discovery_);
     }
 

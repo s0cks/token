@@ -140,6 +140,7 @@ namespace Token{
     static PeerSession* GetSession(const UUID& uuid);
     static PeerSession* GetSession(const NodeAddress& address);
     static void BroadcastPrepare();
+    static void BroadcastPromise();
     static void BroadcastCommit();
     static void BroadcastDiscoveredBlock();
 
