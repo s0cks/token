@@ -106,11 +106,6 @@ add_executable("token-node" main.cc)
 target_link_libraries("token-node" "token-ledger" ${TOKEN_LIBRARIES})
 target_compile_options(token-node PRIVATE -Werror -Wall)
 
-# Token Client Executable
-add_executable("token-client" client.cc)
-target_link_libraries("token-client" "token-ledger" ${TOKEN_LIBRARIES})
-target_compile_options(token-client PRIVATE -Werror -Wall)
-
 # Token Inspect Client Executable
 add_executable("token-inspector" inspector.cc)
 target_link_libraries("token-inspector" "token-ledger" ${TOKEN_LIBRARIES})

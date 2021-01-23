@@ -154,9 +154,8 @@ namespace Token{
     int64_t length_;
    protected:
     bool Write(const BufferPtr& buff) const{
-      HttpResponse::Write(buff);
-      buff->PutBytes((uint8_t*) body_, length_);
-      return true;
+      return HttpResponse::Write(buff)
+          && buff->PutBytes((uint8_t*)body_, length_);
     }
    public:
     HttpTextResponse(HttpSession* session, const HttpStatusCode& status_code, const std::string& body):

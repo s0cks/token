@@ -132,11 +132,21 @@ namespace Token{
   }
 
   void HealthController::HandleGetReadyStatus(HttpSession* session, const HttpRequestPtr& request){
-    SendOk(session); //TODO: implement
+    JsonString json;
+    JsonWriter writer(json);
+    writer.StartObject();
+      SetField(writer, "message", "Ok");
+    writer.EndObject();
+    return session->Send(HttpJsonResponse::NewInstance(session, STATUS_CODE_OK, json));
   }
 
   void HealthController::HandleGetLiveStatus(HttpSession* session, const HttpRequestPtr& request){
-    SendOk(session); //TODO: implement
+    JsonString json;
+    JsonWriter writer(json);
+    writer.StartObject();
+      SetField(writer, "message", "Ok");
+    writer.EndObject();
+    return session->Send(HttpJsonResponse::NewInstance(session, STATUS_CODE_OK, json));
   }
 }
 

@@ -21,11 +21,11 @@ RUN apt-get update && apt-get install -y \
     wget \
     unzip \
     libtool \
+    libpng-dev \
     libdevmapper-dev \
     libpopt-dev \
     libgcrypt20-dev \
     libuuid1 \
-    libcrypto++-dev \
     libconfig++-dev \
     libgflags-dev \
     libgoogle-glog-dev \
@@ -81,23 +81,26 @@ RUN git clone --recurse-submodules https://github.com/google/leveldb.git -b ${LE
  && cd leveldb/ \
  && mkdir build/ \
  && cd build/ \
- && cmake -DCMAKE_BUILD_TYPE=Release .. \
+ && cmake -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release .. \
  && cmake --build . --target install
 
 # Copy The Ledger Source
-RUN mkdir -p /usr/src/libtoken-ledger/build
+COPY CMakeLists.txt main.cc tests.cc inspector.cc entrypoint.sh /usr/src/libtoken-ledger/
 COPY cmake /usr/src/libtoken-ledger/cmake/
 COPY include /usr/src/libtoken-ledger/include/
 COPY src /usr/src/libtoken-ledger/src/
 COPY tests /usr/src/libtoken-ledger/tests/
-COPY CMakeLists.txt main.cc client.cc tests.cc inspector.cc /usr/src/libtoken-ledger/
-WORKDIR /usr/src/libtoken-ledger/build
-RUN cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/usr/local/ ..\
+RUN mkdir -p /usr/src/libtoken-ledger/build
+
+WORKDIR /usr/src/libtoken-ledger
+RUN cd build/ \
+ && cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/usr/local/ ..\
  && cmake --build . --target install \
  && ldconfig
+RUN chmod +x ./entrypoint.sh
 
 USER root
-CMD [ "token-node", "--path", "/usr/share/ledger", "--service-port", "8080", "--server-port", "8081", "--healthcheck-port", "8082", "--miner-interval", "30000" ]
+ENTRYPOINT [ "/usr/src/libtoken-ledger/entrypoint.sh" ]
 
 # Expose the REST Service
 EXPOSE 8080

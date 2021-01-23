@@ -135,6 +135,7 @@ main(int argc, char **argv){
 
   // Start the server if enabled
   #ifdef TOKEN_ENABLE_SERVER
+    LOG(INFO) << "using server port: " << FLAGS_server_port;
     if(IsValidPort(FLAGS_server_port) && !Server::Start()){
       CrashReport::PrintNewCrashReport("Failed to start the server.");
       return EXIT_FAILURE;

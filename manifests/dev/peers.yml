@@ -1,38 +1,40 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: main
-  namespace: ledger-prod
+  name: peers
+  namespace: ledger-dev
   labels:
     app: token
     tier: ledger
-    component: main
-    environment: prod
+    component: peers
+    environment: dev
 spec:
-  serviceName: main
+  serviceName: peers
   replicas: 1
   selector:
     matchLabels:
       tier: ledger
-      component: main
-      environment: prod
+      component: peers
+      environment: dev
   template:
     metadata:
-      namespace: ledger-prod
+      namespace: ledger-dev
       labels:
         app: token
         tier: ledger
-        component: main
-        environment: prod
+        component: peers
+        environment: dev
     spec:
       dnsPolicy: ClusterFirstWithHostNet
       containers:
-        - name: main-node
-          imagePullPolicy: Always
-          image: gcr.io/tkn-events/token-ledger:1.7.6
+        - name: peers-node
+          imagePullPolicy: IfNotPresent
+          image: token-ledger:latest
           env:
+            - name: TOKEN_LEDGER
+              value: main.ledger-dev:8081
             - name: TOKEN_CALLBACK_ADDRESS
-              value: main.ledger-prod:8081
+              value: peers.ledger-dev:8081
           ports:
             - name: http
               containerPort: 8080
@@ -66,12 +68,12 @@ spec:
   volumeClaimTemplates:
     - metadata:
         name: ledger
-        namespace: ledger-prod
+        namespace: ledger-dev
         labels:
           app: token
           tier: ledger
-          component: main
-          environment: prod
+          component: peers
+          environment: dev
       spec:
         accessModes: [ "ReadWriteOnce" ]
         resources:

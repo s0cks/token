@@ -14,6 +14,7 @@ namespace Token{
     static inline void
     SendText(HttpSession* session, const std::string& body, const HttpStatusCode& status_code){
       HttpResponsePtr resp = HttpTextResponse::NewInstance(session, status_code, body);
+      LOG(INFO) << "sending: " << body;
       session->Send(resp);
     }
 
