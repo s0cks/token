@@ -26,6 +26,7 @@ namespace Token{
     http_parser parser_;
     http_parser_settings settings_;
     std::string path_;
+    std::string body_;
     ParameterMap parameters_;
 
     static int
@@ -34,15 +35,24 @@ namespace Token{
       request->path_ = std::string(data, len);
       return 0;
     }
+
+    static int
+    OnParseBody(http_parser* parser, const char* data, size_t len){
+      HttpRequest* request = (HttpRequest*)parser->data;
+      request->body_ = std::string(data, len);
+      return 0;
+    }
    public:
     HttpRequest(HttpSession* session, const char* data, size_t len):
       session_(session),
       parser_(),
       settings_(),
       path_(),
+      body_(),
       parameters_(){
       parser_.data = this;
       settings_.on_url = &OnParseURL;
+      settings_.on_body = &OnParseBody;
       http_parser_init(&parser_, HTTP_REQUEST);
       size_t parsed;
       if((parsed = http_parser_execute(&parser_, &settings_, data, len)) == 0){
@@ -55,6 +65,14 @@ namespace Token{
     void SetParameters(const ParameterMap& parameters){
       parameters_.clear();
       parameters_.insert(parameters.begin(), parameters.end());
+    }
+
+    std::string GetBody() const{
+      return body_;
+    }
+
+    void GetBody(JsonDocument& doc) const{
+      doc.Parse(body_.data(), body_.length());
     }
 
     std::string GetPath() const{

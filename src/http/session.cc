@@ -3,25 +3,29 @@
 
 namespace Token{
   struct HttpSessionWriteRequestData{
+    uv_write_t request;
     HttpSession* session;
     BufferPtr buffer;
 
-    HttpSessionWriteRequestData(HttpSession* s, int64_t size):
+    HttpSessionWriteRequestData(HttpSession* s, const HttpResponsePtr& response):
+      request(),
       session(s),
-      buffer(Buffer::NewInstance(size)){}
+      buffer(Buffer::NewInstance(response->GetBufferSize())){
+      request.data = this;
+    }
   };
 
   void HttpSession::Send(const std::shared_ptr<HttpResponse>& response){
-    int64_t content_length = RoundUpPowTwo(response->GetBufferSize());
-    uv_write_t* req = (uv_write_t*) malloc(sizeof(uv_write_t));
-    req->data = new HttpSessionWriteRequestData(this, content_length);
-    BufferPtr& buffer = ((HttpSessionWriteRequestData*) req->data)->buffer;
-    response->Write(buffer);
+    HttpSessionWriteRequestData* data = new HttpSessionWriteRequestData(this, response);
+    if(!response->Write(data->buffer)){
+      LOG(WARNING) << "couldn't encode http response: " << response->ToString();
+      return;
+    }
 
     uv_buf_t buff;
-    buff.base = buffer->data();
-    buff.len = content_length;
-    uv_write(req, (uv_stream_t*) &handle_, &buff, 1, &OnResponseSent);
+    buff.base = data->buffer->data();
+    buff.len = data->buffer->GetWrittenBytes();
+    uv_write(&data->request, GetStream(), &buff, 1, &OnResponseSent);
   }
 
   void HttpSession::OnResponseSent(uv_write_t* req, int status){
@@ -30,7 +34,6 @@ namespace Token{
     if(req->data){
       delete ((HttpSessionWriteRequestData*) req->data);
     }
-    free(req);
   }
 
   void HttpSession::Close(){

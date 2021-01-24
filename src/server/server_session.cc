@@ -94,6 +94,8 @@ namespace Token{
 
   void ServerSession::HandlePrepareMessage(ServerSession* session, const PrepareMessagePtr& msg){
     ProposalPtr proposal = msg->GetProposal();
+    if(!BlockMiner::Pause())
+      return session->Send(RejectedMessage::NewInstance(proposal));
     if(!ProposalManager::SetProposal(proposal))
       return session->Send(RejectedMessage::NewInstance(proposal));
     return session->Send(AcceptedMessage::NewInstance(proposal));
@@ -102,25 +104,35 @@ namespace Token{
   void ServerSession::HandlePromiseMessage(ServerSession* session, const PromiseMessagePtr& msg){
     if(!ProposalManager::IsProposalFor(msg->GetProposal()))
       return session->Send(RejectedMessage::NewInstance(msg->GetProposal()));
-    BlockMiner::OnPromise();
+    ProposalPtr proposal = ProposalManager::GetProposal();
+    if(!proposal->TransitionToPhase(Proposal::kVotingPhase))
+      return session->Send(RejectedMessage::NewInstance(proposal));
+    return session->Send(AcceptedMessage::NewInstance(proposal));
   }
 
   void ServerSession::HandleCommitMessage(ServerSession* session, const CommitMessagePtr& msg){
     if(!ProposalManager::IsProposalFor(msg->GetProposal()))
       return session->Send(RejectedMessage::NewInstance(msg->GetProposal()));
-    BlockMiner::OnCommit();
+    ProposalPtr proposal = ProposalManager::GetProposal();
+    if(!proposal->TransitionToPhase(Proposal::kCommitPhase))
+      return session->Send(RejectedMessage::NewInstance(proposal));
+    if(!BlockMiner::Commit(proposal))
+      return session->Send(RejectedMessage::NewInstance(proposal));
+    return session->Send(AcceptedMessage::NewInstance(proposal));
   }
 
   void ServerSession::HandleAcceptedMessage(ServerSession* session, const AcceptedMessagePtr& msg){
     if(!ProposalManager::IsProposalFor(msg->GetProposal()))
       return session->Send(RejectedMessage::NewInstance(msg->GetProposal()));
-    BlockMiner::OnQuorum();
+    ProposalPtr proposal = ProposalManager::GetProposal();
+    proposal->AcceptProposal(session->GetID().ToString());
   }
 
   void ServerSession::HandleRejectedMessage(ServerSession* session, const RejectedMessagePtr& msg){
     if(!ProposalManager::IsProposalFor(msg->GetProposal()))
       return session->Send(RejectedMessage::NewInstance(msg->GetProposal()));
-    BlockMiner::OnQuorum();
+    ProposalPtr proposal = ProposalManager::GetProposal();
+    proposal->AcceptProposal(session->GetID().ToString());
   }
 
   void ServerSession::HandleBlockMessage(ServerSession* session, const BlockMessagePtr& msg){

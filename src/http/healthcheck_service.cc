@@ -118,9 +118,13 @@ namespace Token{
     HttpRequestPtr request = HttpRequest::NewInstance(session, buff->base, buff->len);
     HttpRouterMatch match = router_->Find(request);
     if(match.IsNotFound()){
-      SendNotFound(session, request);
+      std::stringstream ss;
+      ss << "Cannot find: " << request->GetPath();
+      return session->Send(NewNotFoundResponse(session, ss));
     } else if(match.IsMethodNotSupported()){
-      SendNotSupported(session, request);
+      std::stringstream ss;
+      ss << "Method Not Supported for: " << request->GetPath();
+      return session->Send(NewNotSupportedResponse(session, ss));
     } else{
       assert(match.IsOk());
 
@@ -132,21 +136,11 @@ namespace Token{
   }
 
   void HealthController::HandleGetReadyStatus(HttpSession* session, const HttpRequestPtr& request){
-    JsonString json;
-    JsonWriter writer(json);
-    writer.StartObject();
-      SetField(writer, "message", "Ok");
-    writer.EndObject();
-    return session->Send(HttpJsonResponse::NewInstance(session, STATUS_CODE_OK, json));
+    return session->Send(NewOkResponse(session));
   }
 
   void HealthController::HandleGetLiveStatus(HttpSession* session, const HttpRequestPtr& request){
-    JsonString json;
-    JsonWriter writer(json);
-    writer.StartObject();
-      SetField(writer, "message", "Ok");
-    writer.EndObject();
-    return session->Send(HttpJsonResponse::NewInstance(session, STATUS_CODE_OK, json));
+    return session->Send(NewOkResponse(session));
   }
 }
 

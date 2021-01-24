@@ -8,6 +8,7 @@
 #include "block.h"
 
 namespace Token{
+  typedef rapidjson::Document JsonDocument;
   typedef rapidjson::StringBuffer JsonString;
   typedef rapidjson::Writer<JsonString> JsonWriter;
 
@@ -53,10 +54,10 @@ namespace Token{
     writer.EndObject();
   }
 
-  void ToJson(const BlockPtr& blk, JsonString& json);
-  void ToJson(const TransactionPtr& tx, JsonString& json);
-  void ToJson(const UnclaimedTransactionPtr& utxo, JsonString& json);
-  void ToJson(const UnclaimedTransactionPtr& utxo, JsonWriter& writer);
+  void SetField(JsonWriter& writer, const std::string& name, const BlockPtr& val);
+  void SetField(JsonWriter& writer, const std::string& name, const TransactionPtr& val);
+  void SetField(JsonWriter& writer, const std::string& name, const UnclaimedTransactionPtr& val);
+  void SetField(JsonWriter& writer, const std::string& name, const HashList& val);
 }
 
 #endif //TOKEN_JSON_CONVERSION_H

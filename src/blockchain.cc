@@ -145,11 +145,6 @@ namespace Token{
   }
 
   bool BlockChain::PutBlock(const Hash& hash, BlockPtr blk){
-    if(HasBlock(hash)){
-      LOG(WARNING) << "cannot overwrite existing block data for: " << hash;
-      return false;
-    }
-
     ObjectKey okey(Object::Type::kBlock, hash);
     std::string filename = GetNewBlockFilename(blk);
     if(!blk->WriteToFile(filename)){
@@ -253,7 +248,12 @@ namespace Token{
 
     std::string filename;
     leveldb::Slice key(okey.data(), okey.size());
-    return GetIndex()->Get(leveldb::ReadOptions(), key, &filename).ok();
+    leveldb::Status status;
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), key, &filename)).ok()){
+      LOG(WARNING) << "cannot find block " << hash << ": " << status.ToString();
+      return false;
+    }
+    return true;
   }
 
   bool BlockChain::Append(const BlockPtr& block){
@@ -275,12 +275,31 @@ namespace Token{
 
     if(!HasBlock(phash)){
       LOG(WARNING) << "cannot find parent block: " << phash;
+      LOG(WARNING) << "head: " << GetReference(BLOCKCHAIN_REFERENCE_HEAD);
+      LOG(WARNING) << "blocks:";
+      HashList blocks;
+      if(BlockChain::GetBlocks(blocks)){
+        for(auto& it : blocks)
+          LOG(WARNING) << "- " << it;
+      } else{
+        LOG(WARNING) << "n/a";
+      }
       return false;
     }
 
     PutBlock(hash, block);
     if(head->GetHeight() < block->GetHeight())
       PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
+    return true;
+  }
+
+  bool BlockChain::GetBlocks(HashList& hashes){
+    Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
+    do{
+      BlockPtr blk = GetBlock(current);
+      hashes.push_back(blk->GetHash());
+      current = blk->GetPreviousHash();
+    } while(!current.IsNull());
     return true;
   }
 

@@ -109,7 +109,6 @@ namespace Token{
         } else if(h1 > h2){
           return +1;
         }
-
         return 0;
       }
 

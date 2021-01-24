@@ -2,6 +2,11 @@
 #include "consensus/proposal.h"
 #include "peer/peer_session_manager.h"
 
+#include "pool.h"
+#include "job/scheduler.h"
+#include "job/processor.h"
+#include "snapshot/snapshot.h"
+
 namespace Token{
 #define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
 #define LOCK std::unique_lock<std::mutex> lock(mutex_)

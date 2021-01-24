@@ -115,6 +115,7 @@ namespace Token{
     static bool PutWallet(const User& user, const Wallet& wallet);
     static bool GetWallet(const User& user, Wallet& wallet);
     static bool GetWallet(const User& user, JsonString& json);
+    static bool GetWallet(const User& user, JsonWriter& writer);
     static leveldb::Status Write(leveldb::WriteBatch* batch);
     static int64_t GetNumberOfWallets();
 

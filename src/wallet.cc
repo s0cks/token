@@ -98,6 +98,30 @@ namespace Token{
     return Decode(data, wallet);
   }
 
+  bool WalletManager::GetWallet(const User& user, JsonWriter& writer){
+    std::string data;
+
+    leveldb::Status status;
+    if(!(status = GetObject(GetIndex(), UserKey(user), &data)).ok()){
+      LOG(WARNING) << "cannot get wallet for user " << user << ": " << status.ToString();
+      return false;
+    }
+
+    int64_t size = (int64_t) data.size();
+    uint8_t* bytes = (uint8_t*) data.data();
+
+    writer.StartArray();
+    int64_t offset = sizeof(int64_t);
+    while(offset < size){
+      Hash hash(&bytes[offset], Hash::kSize);
+      std::string hex = hash.HexString();
+      writer.String(hex.data(), 64);
+      offset += Hash::kSize;
+    }
+    writer.EndArray();
+    return true;
+  }
+
   bool WalletManager::GetWallet(const User& user, JsonString& json){
     std::string data;
 

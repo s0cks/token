@@ -1,39 +1,45 @@
 #include "utils/json_conversion.h"
 
 namespace Token{
-  void ToJson(const BlockPtr& blk, JsonString& json){
-    JsonWriter writer(json);
+  void SetField(JsonWriter& writer, const std::string& name, const BlockPtr& val){
+    writer.Key(name.data(), name.length());
     writer.StartObject();
-    SetField(writer, "Hash", blk->GetHash());
-    SetField(writer, "Timestamp", blk->GetTimestamp());
-    SetField(writer, "PreviousHash", blk->GetPreviousHash());
-    SetField(writer, "Height", blk->GetHeight());
-    SetField(writer, "MerkleRoot", blk->GetMerkleRoot());
+      SetField(writer, "Hash", val->GetHash());
+      SetField(writer, "Timestamp", val->GetTimestamp());
+      SetField(writer, "PreviousHash", val->GetPreviousHash());
+      SetField(writer, "Height", val->GetHeight());
+      SetField(writer, "MerkleRoot", val->GetMerkleRoot());
     writer.EndObject();
   }
 
-  void ToJson(const TransactionPtr& tx, JsonString& json){
-    JsonWriter writer(json);
+  void SetField(JsonWriter& writer, const std::string& name, const TransactionPtr& val){
+    writer.Key(name.data(), name.length());
     writer.StartObject();
-    SetField(writer, "Hash", tx->GetHash());
-    SetField(writer, "Timestamp", tx->GetTimestamp());
-    SetField(writer, "Index", tx->GetIndex());
-    SetField(writer, "NumberOfInputs", tx->GetNumberOfInputs());
-    SetField(writer, "NumberOfOutputs", tx->GetNumberOfOutputs());
+      SetField(writer, "Hash", val->GetHash());
+      SetField(writer, "Timestamp", val->GetTimestamp());
+      SetField(writer, "Index", val->GetIndex());
+      SetField(writer, "NumberOfInputs", val->GetNumberOfInputs());
+      SetField(writer, "NumberOfOutputs", val->GetNumberOfOutputs());
     writer.EndObject();
   }
 
-  void ToJson(const UnclaimedTransactionPtr& utxo, JsonString& json){
-    JsonWriter writer(json);
-    ToJson(utxo, writer);
+  void SetField(JsonWriter& writer, const std::string& name, const UnclaimedTransactionPtr& val){
+    writer.Key(name.data(), name.length());
+    writer.StartObject();
+      SetField(writer, "Hash", val->GetHash());
+      SetField(writer, "Transaction", val->GetReference());
+      SetField(writer, "User", val->GetUser());
+      SetField(writer, "Product", val->GetProduct());
+    writer.EndObject();
   }
 
-  void ToJson(const UnclaimedTransactionPtr& utxo, JsonWriter& writer){
-    writer.StartObject();
-    SetField(writer, "Hash", utxo->GetHash());
-    SetField(writer, "Transaction", utxo->GetReference());
-    SetField(writer, "User", utxo->GetUser());
-    SetField(writer, "Product", utxo->GetProduct());
-    writer.EndObject();
+  void SetField(JsonWriter& writer, const std::string& name, const HashList& val){
+    writer.Key(name.data(), name.length());
+    writer.StartArray();
+      for(auto& it : val){
+        std::string hex = it.HexString();
+        writer.String(hex.data(), hex.length());
+      }
+    writer.EndArray();
   }
 }

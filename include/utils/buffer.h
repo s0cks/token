@@ -228,9 +228,12 @@ namespace Token{
       return true;
     }
 
-    void PutString(const std::string& value){
+    bool PutString(const std::string& value){
+      if((wpos_ + value.length()) > (size_t)GetBufferSize())
+        return false;
       memcpy(&raw()[wpos_], value.data(), value.length());
       wpos_ += value.length();
+      return true;
     }
 
     std::string GetString(int64_t size){

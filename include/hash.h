@@ -199,6 +199,8 @@ namespace Token{
       return Hash(data);
     }
   };
+
+  typedef std::vector<Hash> HashList;
 }
 
 #endif //TOKEN_HASH_H

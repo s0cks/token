@@ -449,25 +449,4 @@ namespace Token{
     }
     return true;
   }
-
-  bool ObjectPool::GetUnclaimedTransactionData(const User& user, JsonString& json){
-    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
-
-    JsonWriter writer(json);
-    writer.StartArray();
-    for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectKey key(it->key());
-      if(key.IsUnclaimedTransaction()){
-        BufferPtr buff = Buffer::From(it->value());
-        UnclaimedTransactionPtr utxo = UnclaimedTransaction::FromBytes(buff);
-        if(utxo->GetUser() != user){
-          continue;
-        }
-
-        ToJson(utxo, writer);
-      }
-    }
-    writer.EndArray();
-    return true;
-  }
 }

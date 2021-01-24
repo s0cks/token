@@ -5,8 +5,8 @@
     "title": "Token REST Api",
     "description": "~ TBD ~"
   },
-  "host": "localhost:8082",
-  "basePath": "/v1",
+  "host": "localhost:8081",
+  "basePath": "/",
   "schemes": [
     "https"
   ],
@@ -22,23 +22,51 @@
         "summary": "Get the list of blocks in the ledger",
         "responses": {
           "200": {
-            "description": "The request was successful.",
+            "description": "The list of blocks in the ledger.",
             "schema": {
-              "$ref": "#/definitions/HashList"
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/HashList"
+                }
+              }
             }
+          },
+          "204": {
+            "$ref": "#/responses/InternalServerError"
+          },
+          "500": {
+            "$ref": "#/responses/InternalServerError"
           }
         }
       }
     },
     "/chain/head": {
       "get": {
-        "summary": "Get the HEAD for the ledger",
+        "summary": "Returns the <HEAD> (top) block for the ledger.",
         "responses": {
           "200": {
-            "description": "The request was successful.",
+            "description": "The <HEAD> block was found.",
             "schema": {
-              "$ref": "#/definitions/Block"
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/Block"
+                }
+              }
             }
+          },
+          "204": {
+            "$ref": "#/responses/NoContent"
+          },
+          "500": {
+            "$ref": "#/responses/InternalServerError"
           }
         }
       }
@@ -51,10 +79,24 @@
         ],
         "responses": {
           "200": {
-            "description": "The request was successful.",
+            "description": "The block was found.",
             "schema": {
-              "$ref": "#/definitions/Block"
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/Block"
+                }
+              }
             }
+          },
+          "204": {
+            "$ref": "#/responses/NoContent"
+          },
+          "500": {
+            "$ref": "#/responses/InternalServerError"
           }
         }
       }
@@ -67,10 +109,66 @@
         ],
         "responses": {
           "200": {
-            "description": "The wallet was found.",
+            "description": "The requested wallet was found.",
             "schema": {
-              "$ref": "#/definitions/HashList"
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/HashList"
+                }
+              }
             }
+          },
+          "204": {
+            "$ref": "#/responses/NoContent"
+          },
+          "500": {
+            "$ref": "#/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/wallet/:user/spend": {
+      "post": {
+        "summary": "Spend a token from a user's wallet.",
+        "parameters": [
+          { "$ref": "#/parameters/User" },
+          {
+            "description": "The spend request",
+            "in": "body",
+            "name": "SpendRequest",
+            "schema": {
+              "type": "object",
+              "required": [
+                "token",
+                "recipient"
+              ],
+              "properties": {
+                "token": {
+                  "$ref": "#/definitions/Hash"
+                },
+                "recipient": {
+                  "$ref": "#/definitions/UserId"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request was successful.",
+            "schema": {
+              
+            }
+          },
+          "204": {
+            "$ref": "#/responses/NoContent"
+          },
+          "500": {
+            "$ref": "#/responses/InternalServerError"
           }
         }
       }
@@ -85,17 +183,12 @@
         "responses": {
           "200": {
             "description": "The QR for the token."
-          }
-        }
-      }
-    },
-    "/pool/stats": {
-      "get": {
-        "summary": "Returns the stats for the object pool.",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "The object pool stats."
+          },
+          "204": {
+            "$ref": "#/responses/NoContent"
+          },
+          "500": {
+            "$ref": "#/responses/InternalServerError"
           }
         }
       }
@@ -106,7 +199,24 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "The list of blocks that are in the object pool."
+            "description": "The list of blocks in the object pool.",
+            "schema": {
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/HashList"
+                }
+              }
+            }
+          },
+          "204": {
+            "$ref": "#/responses/NoContent"
+          },
+          "500": {
+            "$ref": "#/responses/InternalServerError"
           }
         }
       }
@@ -119,7 +229,24 @@
         ],
         "responses": {
           "200": {
-            "description": "The block was found."
+            "description": "The requested block was found.",
+            "schema": {
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/Block"
+                }
+              }
+            }
+          },
+          "204": {
+            "$ref": "#/responses/NoContent"
+          },
+          "500": {
+            "$ref": "#/responses/InternalServerError"
           }
         }
       }
@@ -130,7 +257,24 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "The list of transactions in the object pool."
+            "description": "The list of transactions in the object pool.",
+            "schema": {
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/HashList"
+                }
+              }
+            }
+          },
+          "204": {
+            "$ref": "#/responses/NoContent"
+          },
+          "500": {
+            "$ref": "#/responses/InternalServerError"
           }
         }
       }
@@ -141,7 +285,24 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "The transaction was found."
+            "description": "The transaction object was found.",
+            "schema": {
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/Transaction"
+                }
+              }
+            }
+          },
+          "204": {
+            "$ref": "#/responses/NoContent"
+          },
+          "500": {
+            "$ref": "#/responses/InternalServerError"
           }
         }
       }
@@ -149,10 +310,26 @@
     "/pool/utxos": {
       "get": {
         "summary": "Returns the list of unclaimed transactions in the object pool.",
-        "parameters": [],
         "responses": {
           "200": {
-            "description": "The list of unclaimed transactions in the object pool."
+            "description": "The list of unclaimed transactions in the object pool.",
+            "schema": {
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/HashList"
+                }
+              }
+            }
+          },
+          "204": {
+            "$ref": "#/responses/NoContent"
+          },
+          "500": {
+            "$ref": "#/responses/InternalServerError"
           }
         }
       }
@@ -160,10 +337,29 @@
     "/pool/utxos/:hash": {
       "get": {
         "summary": "Returns the unclaimed transaction in the object pool.",
-        "parameters": [],
+        "parameters": [
+          { "$ref": "#/parameters/Hash" }
+        ],
         "responses": {
           "200": {
-            "description": "The unclaimed transaction was found."
+            "description": "The unclaimed transaction was found.",
+            "schema": {
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "description": "The unclaimed transaction requested.",
+                  "$ref": "#/definitions/UnclaimedTransaction"
+                }
+              }
+            }
+          },
+          "204": {
+            "$ref": "#/responses/NoContent"
+          },
+          "500": {
+            "$ref": "#/responses/InternalServerError"
           }
         }
       }
@@ -186,34 +382,67 @@
     }
   },
   "responses": {
-    "NotFound": {
-      "description": "The requested hash cannot be found in the ledger.",
+    "NoContent": {
+      "description": "The requested data wasn't found.",
       "schema": {
-        "$ref": "#/definitions/DataNotFound"
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "$ref": "#/definitions/Error"
+          }
+        }
+      }
+    },
+    "NotFound": {
+      "description": "The requested object wasn't found.",
+      "schema": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "$ref": "#/definitions/Error"
+          }
+        }
+      }
+    },
+    "InternalServerError": {
+      "description": "An error has occurred that the server doesn't know how to handle.",
+      "schema": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "$ref": "#/definitions/Error"
+          }
+        }
       }
     }
   },
   "definitions": {
-    "DataNotFound": {
+    "Error": {
       "type": "object",
-      "description": "The specified data wasn't found in the ledger",
+      "description": "An error.",
       "required": [
-        "Hash",
-        "Type",
-        "Message"
+        "message",
+        "code"
       ],
       "properties": {
-        "Hash": {
-          "description": "The hash of the object",
-          "$ref": "#/definitions/Hash"
+        "message": {
+          "type": "string",
+          "description": "The error message.",
+          "example": "An error has occurred."
         },
-        "Type": {
-          "description": "The type of object requested",
-          "$ref": "#/definitions/Type"
-        },
-        "Message": {
-          "description": "The description of the error",
-          "type": "string"
+        "code": {
+          "type": "number",
+          "description": "The error code.",
+          "example": 404
         }
       }
     },
@@ -223,13 +452,20 @@
       "description": "The type of object, usually associated w/ a Hash object"
     },
     "Hash": {
-      "type": "string"
+      "type": "string",
+      "description": "A hash of an object."
     },
     "HashList": {
       "type": "array",
+      "description": "A list of object hashes.",
       "items": {
         "$ref": "#/definitions/Hash"
       }
+    },
+    "UserId": {
+      "type": "string",
+      "description": "The ID of a user.",
+      "example": ""
     },
     "User": {
       "type": "object",

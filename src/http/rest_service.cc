@@ -142,9 +142,13 @@ namespace Token{
     HttpRequestPtr request = HttpRequest::NewInstance(session, buff->base, buff->len);
     HttpRouterMatch match = router_.Find(request);
     if(match.IsNotFound()){
-      SendNotFound(session, request);
+      std::stringstream ss;
+      ss << "Cannot find: " << request->GetPath();
+      return session->Send(NewNotFoundResponse(session, ss));
     } else if(match.IsMethodNotSupported()){
-      SendNotSupported(session, request);
+      std::stringstream ss;
+      ss << "Method Not Supported for: " << request->GetPath();
+      return session->Send(NewNotSupportedResponse(session, ss));
     } else{
       assert(match.IsOk());
 
@@ -159,132 +163,175 @@ namespace Token{
  *                      InfoController
  *****************************************************************************/
   void InfoController::HandleGetStats(HttpSession* session, const HttpRequestPtr& request){
-    JsonString body;
-    if(!JobScheduler::GetWorkerStatistics(body)){
-      return SendInternalServerError(session, "Cannot get job scheduler worker statistics.");
-    }
-    std::shared_ptr<HttpJsonResponse> response = std::make_shared<HttpJsonResponse>(session, STATUS_CODE_OK, body);
-    session->Send(response);
+    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kOk);
+
+    JsonString& json = response->GetBody();
+    if(!JobScheduler::GetWorkerStatistics(json))
+      return session->Send(NewInternalServerErrorResponse(session, "Cannot get job scheduler statistics."));
+
+    response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);
+    response->SetHeader("Content-Length", json.GetSize());
+    return session->Send(std::static_pointer_cast<HttpResponse>(response));
   }
 
 /*****************************************************************************
  *                      BlockChainController
  *****************************************************************************/
   void BlockChainController::HandleGetBlockChain(HttpSession* session, const HttpRequestPtr& request){
-    return SendNotSupported(session, "Not Implemented.");
+    return session->Send(NewNoContentResponse(session, "Cannot get the list of blocks in the blockchain."));
   }
 
   void BlockChainController::HandleGetBlockChainHead(HttpSession* session, const HttpRequestPtr& request){
     BlockPtr head = BlockChain::GetHead();
-    SendJson(session, head);
+    HttpResponsePtr response = NewOkResponse(session, head);
+    return session->Send(response);
   }
 
   void BlockChainController::HandleGetBlockChainBlock(HttpSession* session, const HttpRequestPtr& request){
     Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
-    if(!BlockChain::HasBlock(hash)){
-      LOG(WARNING) << "couldn't find block: " << hash;
-      return SendNotFound(session, hash);
-    }
-
+    if(!BlockChain::HasBlock(hash))
+      return session->Send(NewNoContentResponse(session, hash));
     BlockPtr blk = BlockChain::GetBlock(hash);
-    SendJson(session, blk);
+    return session->Send(NewOkResponse(session, blk));
   }
 
 /*****************************************************************************
  *                      ObjectPoolController
  *****************************************************************************/
   void ObjectPoolController::HandleGetStats(HttpSession* session, const HttpRequestPtr& request){
-    JsonString body;
-    if(!ObjectPool::GetStats(body)){
-      return SendInternalServerError(session, "Cannot get ObjectPool stats.");
-    }
-    HttpResponsePtr resp = HttpJsonResponse::NewInstance(session, STATUS_CODE_OK, body);
-    session->Send(resp);
+    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kOk);
+
+    JsonString& body = response->GetBody();
+    if(!ObjectPool::GetStats(body))
+      return session->Send(NewInternalServerErrorResponse(session, "Cannot get object pool stats."));
+
+    response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);
+    response->SetHeader("Content-Length", body.GetSize());
+    return session->Send(std::static_pointer_cast<HttpResponse>(response));
   }
 
   void ObjectPoolController::HandleGetBlock(HttpSession* session, const HttpRequestPtr& request){
     Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
-    if(!ObjectPool::HasBlock(hash)){
-      return SendNotFound(session, hash);
-    }
+    if(!ObjectPool::HasBlock(hash))
+      return session->Send(NewNoContentResponse(session, hash));
     BlockPtr blk = ObjectPool::GetBlock(hash);
-    SendJson(session, blk);
+    return session->Send(NewOkResponse(session, blk));
   }
 
   void ObjectPoolController::HandleGetBlocks(HttpSession* session, const HttpRequestPtr& request){
-    return SendNotSupported(session, "Not Implemented.");
+
   }
 
   void ObjectPoolController::HandleGetTransaction(HttpSession* session, const HttpRequestPtr& request){
     Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
-    if(!ObjectPool::HasTransaction(hash)){
-      return SendNotFound(session, hash);
-    }
+    if(!ObjectPool::HasTransaction(hash))
+      return session->Send(NewNoContentResponse(session, hash));
     TransactionPtr tx = ObjectPool::GetTransaction(hash);
-    SendJson(session, tx);
+    return session->Send(NewOkResponse(session, tx));
   }
 
   void ObjectPoolController::HandleGetTransactions(HttpSession* session, const HttpRequestPtr& request){
-    return SendNotSupported(session, "Not Implemented.");
+    return session->Send(NewNotImplementedResponse(session, "Not Implemented."));
   }
 
   void ObjectPoolController::HandleGetUnclaimedTransaction(HttpSession* session, const HttpRequestPtr& request){
     Hash hash = request->GetHashParameterValue();
-    if(!ObjectPool::HasUnclaimedTransaction(hash)){
-      return SendNotFound(session, hash);
-    }
-
-
+    if(!ObjectPool::HasUnclaimedTransaction(hash))
+      return session->Send(NewNoContentResponse(session, hash));
+    UnclaimedTransactionPtr utxo = ObjectPool::GetUnclaimedTransaction(hash);
+    return session->Send(NewOkResponse(session, utxo));
   }
 
   void ObjectPoolController::HandleGetUnclaimedTransactions(HttpSession* session, const HttpRequestPtr& request){
-    JsonString body;
-    if(!ObjectPool::GetUnclaimedTransactions(body)){
-      return SendInternalServerError(session, "Cannot GetObject Unclaimed Transactions");
-    }
-    HttpResponsePtr resp = HttpJsonResponse::NewInstance(session, STATUS_CODE_OK, body);
-    session->Send(resp);
+    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kOk);
+
+    JsonString& body = response->GetBody();
+    if(!ObjectPool::GetUnclaimedTransactions(body))
+      return session->Send(NewInternalServerErrorResponse(session, "Cannot get the list of unclaimed transactions in the object pool."));
+
+    response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);
+    response->SetHeader("Content-Length", body.GetSize());
+    return session->Send(std::static_pointer_cast<HttpResponse>(response));
   }
 
   void WalletController::HandleGetUserWalletTokenCode(HttpSession* session, const HttpRequestPtr& request){
     User user = request->GetUserParameterValue();
     Hash hash = request->GetHashParameterValue();
 
-    if(!ObjectPool::HasUnclaimedTransaction(hash)){
-      std::stringstream ss;
-      ss << "Cannot find: " << hash;
-      return SendNotFound(session, ss);
-    }
+    if(!ObjectPool::HasUnclaimedTransaction(hash))
+      return session->Send(NewNoContentResponse(session, hash));
 
     UnclaimedTransactionPtr utxo = ObjectPool::GetUnclaimedTransaction(hash);
-    if(utxo->GetUser() != user){
-      std::stringstream ss;
-      ss << hash << " isn't owned by " << user;
-      return SendNotFound(session, ss);
-    }
-
     BufferPtr data = Buffer::NewInstance(65536);
     if(!WriteQRCode(data, hash)){
       std::stringstream ss;
       ss << "Cannot generate qr-code for: " << hash;
-      return SendInternalServerError(session, ss);
+      return session->Send(NewInternalServerErrorResponse(session, ss));
     }
-
-    HttpResponsePtr response = HttpBinaryResponse::NewInstance(session, STATUS_CODE_OK, HTTP_CONTENT_TYPE_IMAGE_PNG, data);
-    return session->Send(response);
+    return session->Send(HttpBinaryResponse::NewInstance(session, HttpStatusCode::kOk, HTTP_CONTENT_TYPE_IMAGE_PNG, data));
   }
 
   void WalletController::HandleGetUserWallet(HttpSession* session, const HttpRequestPtr& request){
     User user = request->GetUserParameterValue();
-    JsonString body;
-    if(!WalletManager::GetWallet(user, body)){
-      std::stringstream ss;
-      ss << "Cannot get wallet for: " << user;
-      return SendInternalServerError(session, ss);
-    }
 
-    HttpResponsePtr response = HttpJsonResponse::NewInstance(session, STATUS_CODE_OK, body);
-    return session->Send(response);
+    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kOk);
+
+    JsonString& body = response->GetBody();
+    JsonWriter writer(body);
+    writer.StartObject();
+      writer.Key("data");
+      writer.StartObject();
+        SetField(writer, "user", user);
+        writer.Key("wallet");
+        if(!WalletManager::GetWallet(user, writer)){
+          std::stringstream ss;
+          ss << "Cannot find wallet for: " << user;
+          return session->Send(NewNoContentResponse(session, ss));
+        }
+      writer.EndObject();
+    writer.EndObject();
+
+    response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);
+    response->SetHeader("Content-Length", body.GetSize());
+    return session->Send(std::static_pointer_cast<HttpResponse>(response));
+  }
+
+  void WalletController::HandlePostUserWalletSpend(HttpSession* session, const HttpRequestPtr& request){
+    User user = request->GetUserParameterValue();
+
+    JsonDocument doc;
+    request->GetBody(doc);
+
+    InputList inputs = {};
+    if(!doc.HasMember("token"))
+      return session->Send(NewInternalServerErrorResponse(session, "request is missing 'token' field."));
+    if(!doc["token"].IsString())
+      return session->Send(NewInternalServerErrorResponse(session, "'token' field is not a string."));
+    Hash in_hash = Hash::FromHexString(doc["token"].GetString());
+    if(!ObjectPool::HasUnclaimedTransaction(in_hash)){
+      std::stringstream ss;
+      ss << "Cannot find token: " << in_hash;
+      return session->Send(NewNotFoundResponse(session, ss));
+    }
+    UnclaimedTransactionPtr in_val = ObjectPool::GetUnclaimedTransaction(in_hash);
+    inputs.push_back(Input(in_val->GetReference(), in_val->GetUser())); //TODO: is this the right user?
+
+    OutputList outputs = {};
+    if(!doc.HasMember("recipient"))
+      return session->Send(NewInternalServerErrorResponse(session, "request is missing 'recipient' field."));
+    if(!doc["recipient"].IsString())
+      return session->Send(NewInternalServerErrorResponse(session, "'recipient' field is not a string."));
+    User recipient(std::string(doc["recipient"].GetString()));
+    outputs.push_back(Output(recipient, in_val->GetProduct()));
+
+    TransactionPtr tx = Transaction::NewInstance(0, inputs, outputs);
+    Hash hash = tx->GetHash();
+    if(!ObjectPool::PutTransaction(hash, tx)){
+      std::stringstream ss;
+      ss << "Cannot insert newly created transaction into object pool: " << hash;
+      return session->Send(NewInternalServerErrorResponse(session, ss));
+    }
+    return session->Send(NewOkResponse(session, tx));
   }
 }
 

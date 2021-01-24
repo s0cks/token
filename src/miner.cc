@@ -6,6 +6,7 @@
 #include "server/server.h"
 #include "block_builder.h"
 #include "proposal_handler.h"
+#include "snapshot/snapshot.h"
 #include "peer/peer_session_manager.h"
 #include "consensus/proposal_manager.h"
 
@@ -19,6 +20,8 @@ namespace Token{
   static uv_async_t shutdown_;
   static uv_async_t on_promise_;
   static uv_async_t on_commit_;
+  static uv_async_t on_accepted_;
+  static uv_async_t on_rejected_;
   static uv_async_t on_quorum_;
 
   BlockMiner::State BlockMiner::GetState(){
@@ -87,6 +90,8 @@ namespace Token{
 
     uv_async_init(loop, &on_promise_, &OnPromiseCallback);
     uv_async_init(loop, &on_commit_, &OnCommitCallback);
+    uv_async_init(loop, &on_accepted_, &OnAcceptedCallback);
+    uv_async_init(loop, &on_rejected_, &OnRejectedCallback);
     uv_async_init(loop, &on_quorum_, &OnQuorumCallback);
 
     int err;
@@ -151,9 +156,61 @@ namespace Token{
     return session->SendAccepted();
   }
 
+  void BlockMiner::OnAcceptedCallback(uv_async_t* handle){
+
+  }
+
+  void BlockMiner::OnRejectedCallback(uv_async_t* handle){
+
+  }
+
   void BlockMiner::OnQuorumCallback(uv_async_t* handle){
     ProposalPtr proposal = ProposalManager::GetProposal();
     if(!proposal->TransitionToPhase(Proposal::kQuorumPhase))
       return;
+  }
+
+  static inline JobResult
+  ProcessBlock(const BlockPtr& blk){
+    ProcessBlockJob* job = new ProcessBlockJob(blk, true);
+    queue_.Push(job);
+    while(!job->IsFinished()); //spin
+    JobResult result(job->GetResult());
+    delete job;
+    return result;
+  }
+
+  bool BlockMiner::Commit(const ProposalPtr& proposal){
+    if(!proposal->TransitionToPhase(Proposal::kQuorumPhase))
+      return false;
+
+    Hash hash = proposal->GetHash();
+    BlockPtr blk = ObjectPool::GetBlock(hash);
+
+    JobResult result = ProcessBlock(blk);
+    if(!result.IsSuccessful()){
+      LOG(WARNING) << "couldn't process block " << hash << ": " << result.GetMessage();
+      return false;
+    }
+
+    if(!BlockChain::Append(blk)){
+      LOG(WARNING) << "couldn't append block " << hash << ".";
+      return false;
+    }
+
+    if(!ObjectPool::RemoveBlock(hash)){
+      LOG(WARNING) << "couldn't remove block " << hash << " from pool.";
+      return false;
+    }
+
+    if(FLAGS_enable_snapshots){
+      LOG(INFO) << "scheduling new snapshot....";
+      SnapshotJob* job = new SnapshotJob();
+      if(!JobScheduler::Schedule(job))
+        LOG(WARNING) << "couldn't schedule new snapshot.";
+    }
+
+    LOG(INFO) << "proposal " << proposal->ToString() << " has finished.";
+    return BlockMiner::Resume();
   }
 }

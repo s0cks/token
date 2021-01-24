@@ -183,8 +183,6 @@ namespace Token{
     FOR_EACH_POOL_TYPE(DEFINE_TYPE_METHODS)
 #undef DEFINE_TYPE_METHODS
 
-    static bool GetUnclaimedTransactionData(const User& user, JsonString& json);
-
     static int64_t GetNumberOfObjects();
     static bool GetStats(JsonString& json);
     static ObjectPoolStats GetStats();

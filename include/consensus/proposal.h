@@ -248,6 +248,7 @@ namespace Token{
     int64_t GetNumberOfAccepted();
     int64_t GetNumberOfRejected();
     int64_t GetNumberOfResponses();
+    bool Commit();
     bool TransitionToPhase(const Phase& phase);
     bool HasResponseFrom(const std::string& node_id);
     void AcceptProposal(const std::string& node);

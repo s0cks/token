@@ -67,6 +67,24 @@ AppendDummy(int total_spends){
   return false;
 }
 
+class BlockChainPrinter : public Token::BlockChainBlockVisitor, Token::Printer{
+ public:
+  BlockChainPrinter(const google::LogSeverity& severity, const long& flags):
+    Token::BlockChainBlockVisitor(),
+    Token::Printer(severity, flags){}
+  ~BlockChainPrinter() = default;
+
+  bool Visit(const Token::BlockPtr& blk){
+    LOG_AT_LEVEL(GetSeverity()) << blk->GetHash();
+    return true;
+  }
+
+  static bool Print(const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone){
+    BlockChainPrinter printer(severity, flags);
+    return Token::BlockChain::VisitBlocks(&printer);
+  }
+};
+
 //TODO:
 // - create global environment teardown and deconstruct routines
 // - validity/consistency checks on block chain data
@@ -169,6 +187,16 @@ main(int argc, char **argv){
     return EXIT_FAILURE;
   }
 
+#ifdef TOKEN_ENABLE_SERVER
   Server::WaitForState(Server::kStopped);
+#endif//TOKEN_ENABLE_SERVER
+
+#ifdef TOKEN_ENABLE_REST_SERVICE
+  RestService::WaitForState(RestService::kStopped);
+#endif//TOKEN_ENABLE_REST_SERVICE
+
+#ifdef TOKEN_ENABLE_HEALTH_SERVICE
+  HealthCheckService::WaitForState(HealthCheckService::kStopped);
+#endif//TOKEN_ENABLE_HEALTH_SERVICE
   return EXIT_SUCCESS;
 }

@@ -65,8 +65,9 @@ namespace Token{
   class BlockChainHeaderVisitor;
   class BlockChain{
     friend class Server;
+    friend class BlockMiner;
+    friend class ProposalHandler;
     friend class SynchronizeJob; //TODO: revoke access
-    friend class ProposalHandler; //TODO: revoke access?
    public:
     enum State{
 #define DEFINE_STATE(Name) k##Name,
@@ -118,6 +119,7 @@ namespace Token{
     static State GetState();
     static Status GetStatus();
     static bool Initialize();
+    static bool GetBlocks(HashList& hashes);
     static bool VisitHeaders(BlockChainHeaderVisitor* vis);
     static bool VisitBlocks(BlockChainBlockVisitor* vis);
     static bool HasBlock(const Hash& hash);

@@ -29,7 +29,7 @@ spec:
       containers:
         - name: main-node
           imagePullPolicy: Always
-          image: gcr.io/tkn-events/token-ledger:1.7.6
+          image: gcr.io/tkn-events/token-ledger:1.7.8
           env:
             - name: TOKEN_CALLBACK_ADDRESS
               value: main.ledger-prod:8081

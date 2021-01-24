@@ -54,20 +54,4 @@ namespace Token{
     }
     return true;
   }
-
-  void HttpService::SendNotSupported(HttpSession* session, const HttpRequestPtr& request){
-    std::stringstream ss;
-    ss << "Not Supported.";
-    std::string body = ss.str();
-    HttpResponsePtr resp = HttpTextResponse::NewInstance(session, STATUS_CODE_NOTSUPPORTED, body);
-    session->Send(resp);
-  }
-
-  void HttpService::SendNotFound(HttpSession* session, const HttpRequestPtr& request){
-    std::stringstream ss;
-    ss << "Not Found: " << request->GetPath();
-    std::string body = ss.str();
-    HttpResponsePtr resp = HttpTextResponse::NewInstance(session, STATUS_CODE_NOTFOUND, body);
-    session->Send(resp);
-  }
 }

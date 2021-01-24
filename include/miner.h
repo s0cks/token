@@ -3,6 +3,7 @@
 
 #include <ostream>
 #include "vthread.h"
+#include "consensus/proposal.h"
 
 namespace Token{
 #define FOR_EACH_MINER_STATE(V) \
@@ -61,6 +62,8 @@ namespace Token{
     static void HandleMine(uv_timer_t* handle);
     static void OnPromiseCallback(uv_async_t* handle);
     static void OnCommitCallback(uv_async_t* handle);
+    static void OnAcceptedCallback(uv_async_t* handle);
+    static void OnRejectedCallback(uv_async_t* handle);
     static void OnQuorumCallback(uv_async_t* handle);
 
     static int StartMinerTimer();
@@ -73,9 +76,32 @@ namespace Token{
     static Status GetStatus();
     static bool Stop();
     static bool Start();
+    static bool Commit(const ProposalPtr& proposal);
     static void OnPromise();
     static void OnCommit();
+    static void OnAccepted();
+    static void OnRejected();
     static void OnQuorum();
+
+    static inline bool Pause(){
+      int err;
+      if((err = StopMinerTimer()) != 0){
+        LOG(ERROR) << "cannot pause the block miner: " << uv_strerror(err);
+        return false;
+      }
+      LOG(INFO) << "pausing the block miner.";
+      return true;
+    }
+
+    static inline bool Resume(){
+      int err;
+      if((err = StartMinerTimer()) != 0){
+        LOG(ERROR) << "cannot resume the block miner: " << uv_strerror(err);
+        return false;
+      }
+      LOG(INFO) << "resuming the block miner.";
+      return true;
+    }
 
 #define DEFINE_CHECK(Name) \
     static inline bool Is##Name##State(){ return GetState() == State::k##Name##State; }
