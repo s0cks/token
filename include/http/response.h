@@ -60,7 +60,7 @@ namespace Token{
       session_(session),
       status_code_(code),
       headers_(){
-      SetHeader("Access-Control-Allow-Origin", "*");
+      InitHttpResponseHeaders(headers_);
     }
     virtual ~HttpResponse() = default;
 
@@ -72,18 +72,20 @@ namespace Token{
       return status_code_;
     }
 
-    void SetHeader(const std::string& key, const std::string& value){
-      auto pos = headers_.insert({key, value});
-      if(!pos.second)
-        LOG(WARNING) << "cannot add header " << key << ":" << value;
+    bool SetHeader(const std::string& name, const std::string& val){
+      return SetHttpHeader(headers_, name, val);
     }
 
-    void SetHeader(const std::string& key, const long& value){
-      std::stringstream val;
-      val << value;
-      auto pos = headers_.insert({key, val.str()});
-      if(!pos.second)
-        LOG(WARNING) << "cannot add header " << key << ":" << value;
+    bool SetHeader(const std::string& name, const std::stringstream& val){
+      return SetHttpHeader(headers_, name, val);
+    }
+
+    bool SetHeader(const std::string& name, const long& val){
+      return SetHttpHeader(headers_, name, val);
+    }
+
+    bool SetHeader(const std::string& name, const Timepoint& val){
+      return SetHttpHeader(headers_, name, val);
     }
 
     bool HasHeaderValue(const std::string& key){

@@ -29,7 +29,7 @@ spec:
       containers:
         - name: main-node
           imagePullPolicy: IfNotPresent
-          image: token-ledger:latest
+          image: token-ledger:1.8.0
           env:
             - name: TOKEN_CALLBACK_ADDRESS
               value: main.ledger-dev:8081

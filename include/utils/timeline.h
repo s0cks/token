@@ -5,10 +5,6 @@
 #include "printer.h"
 
 namespace Token{
-  typedef std::chrono::steady_clock Clock;
-  typedef Clock::time_point Timepoint;
-  typedef Clock::duration Duration;
-
   class TimelineEvent{
    public:
     struct TimestampComparator{

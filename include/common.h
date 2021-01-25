@@ -206,6 +206,10 @@ namespace Token{
     if(val == NULL) return "";
     return std::string(val);
   }
+
+  typedef std::chrono::system_clock Clock;
+  typedef Clock::time_point Timepoint; //TODO: rename to Timestamp
+  typedef Clock::duration Duration;
 }
 
 // --path "/usr/share/ledger"
