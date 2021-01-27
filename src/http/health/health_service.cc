@@ -4,7 +4,7 @@
 #include <condition_variable>
 #include "configuration.h"
 #include "http/controller.h"
-#include "http/healthcheck_service.h"
+#include "http/health/health_service.h"
 
 namespace Token{
   static ThreadId thread_;

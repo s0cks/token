@@ -28,8 +28,8 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       containers:
         - name: main-node
-          imagePullPolicy: Always
-          image: gcr.io/tkn-events/token-ledger:1.8.0
+          imagePullPolicy: IfNotPresent
+          image: gcr.io/tkn-events/token-ledger:1.8.1
           env:
             - name: TOKEN_CALLBACK_ADDRESS
               value: main.ledger-prod:8081

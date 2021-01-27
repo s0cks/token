@@ -52,7 +52,7 @@ namespace Token{
   InitHttpResponseHeaders(HttpHeadersMap& headers){
     SetHttpHeader(headers, HTTP_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, "*");
     SetHttpHeader(headers, "Date", Clock::now());
-    SetHttpHeader(headers, "Server", Server::GetID());
+    //SetHttpHeader(headers, "Server", Server::GetID());
   }
 }
 

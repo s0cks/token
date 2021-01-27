@@ -1,23 +1,12 @@
-#include <mutex>
 #include <glog/logging.h>
-#include <condition_variable>
 #include "pool.h"
 #include "utils/kvstore.h"
+#include "utils/relaxed_atomic.h"
 
 namespace Token{
-  static std::mutex mutex_;
-  static std::condition_variable cond_;
-  static ObjectPool::State state_ = ObjectPool::kUninitialized;
-  static ObjectPool::Status status_ = ObjectPool::kOk;
+  static RelaxedAtomic<ObjectPool::State> state_ = { ObjectPool::kUninitialized };
+  static RelaxedAtomic<ObjectPool::Status> status_ = { ObjectPool::kOk };
   static leveldb::DB* index_ = nullptr;
-
-#define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
-#define LOCK std::unique_lock<std::mutex> lock(mutex_)
-#define UNLOCK lock.unlock()
-#define WAIT cond_.wait(lock)
-#define WAIT_TIMED(Timeout) cond_.wait_for(lock, std::chrono::milliseconds((Timeout)))
-#define SIGNAL_ONE cond_.notify_one()
-#define SIGNAL_ALL cond_.notify_all()
 
   static inline leveldb::DB*
   GetIndex(){
@@ -30,27 +19,19 @@ namespace Token{
   }
 
   ObjectPool::State ObjectPool::GetState(){
-    LOCK_GUARD;
     return state_;
   }
 
   void ObjectPool::SetState(const State& state){
-    LOCK;
     state_ = state;
-    UNLOCK;
-    SIGNAL_ALL;
   }
 
   ObjectPool::Status ObjectPool::GetStatus(){
-    LOCK_GUARD;
     return status_;
   }
 
   void ObjectPool::SetStatus(const Status& status){
-    LOCK;
     status_ = status;
-    UNLOCK;
-    SIGNAL_ALL;
   }
 
   bool ObjectPool::Initialize(){
@@ -78,11 +59,7 @@ namespace Token{
 
   bool ObjectPool::WaitForBlock(const Hash& hash, const int64_t timeout_ms){
     LOG(INFO) << "waiting " << timeout_ms << "ms for: " << hash;
-
-    LOCK;
-    WAIT_TIMED(timeout_ms);
-    UNLOCK;
-
+    //TODO: add wait logic
     if(!HasBlock(hash)){
       LOG(WARNING) << hash << " wasn't resolved before timeout.";
       return false;
@@ -93,7 +70,6 @@ namespace Token{
   bool ObjectPool::PutBlock(const Hash& hash, const BlockPtr& val){
     if(HasBlock(hash)){
       LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash;
-      SetStatus(ObjectPool::kWarning);
       return false;
     }
 
@@ -104,7 +80,6 @@ namespace Token{
       return false;
     }
 
-    SIGNAL_ALL;
     LOG(INFO) << "indexed object: " << hash;
     return true;
   }
@@ -112,18 +87,15 @@ namespace Token{
   bool ObjectPool::PutTransaction(const Hash& hash, const TransactionPtr& val){
     if(HasTransaction(hash)){
       LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash;
-      SetStatus(ObjectPool::kWarning);
       return false;
     }
 
     leveldb::Status status;
     if(!(status = PutObject(GetIndex(), hash, val)).ok()){
       LOG(WARNING) << "cannot index object " << hash << ": " << status.ToString();
-      SetStatus(ObjectPool::kWarning);
       return false;
     }
 
-    SIGNAL_ALL;
     LOG(INFO) << "indexed object: " << hash;
     return true;
   }
@@ -141,7 +113,6 @@ namespace Token{
       return false;
     }
 
-    SIGNAL_ALL;
     LOG(INFO) << "indexed object: " << hash;
     return true;
   }

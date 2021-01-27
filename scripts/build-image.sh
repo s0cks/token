@@ -11,12 +11,14 @@ if [[ "$VERSION" == "latest" ]]; then
   docker build . \
     --build-arg "GITHUB_TOKEN=$GITHUB_TOKEN" \
     --build-arg "TOKEN_VERSION=master" \
-    -t "$COMPONENT:$VERSION" \
+    -t "$COMPONENT:latest" \
     -t "$REGISTRY_HOSTNAME/$PROJECT/$COMPONENT:latest"
 else
   docker build . \
     --build-arg "GITHUB_TOKEN=$GITHUB_TOKEN" \
     --build-arg "TOKEN_VERSION=$VERSION" \
     -t "$COMPONENT:$VERSION" \
-    -t "$REGISTRY_HOSTNAME/$PROJECT/$COMPONENT:$VERSION"
+    -t "$REGISTRY_HOSTNAME/$PROJECT/$COMPONENT:$VERSION" \
+    -t "$COMPONENT:latest" \
+    -t "$REGISTRY_HOSTNAME/$PROJECT/$COMPONENT:latest"
 fi

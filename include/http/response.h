@@ -20,7 +20,7 @@ namespace Token{
   V(NotImplemented, 501)
 
   enum HttpStatusCode{
-#define DEFINE_CODE(Name, Val) k##Name = Val,
+#define DEFINE_CODE(Name, Val) kHttp##Name = Val,
     FOR_EACH_HTTP_RESPONSE(DEFINE_CODE)
 #undef DEFINE_CODE
   };
@@ -225,7 +225,7 @@ namespace Token{
   };
 
   static inline HttpResponsePtr
-  NewOkResponse(HttpSession* session, const HttpStatusCode& status_code=HttpStatusCode::kOk, const std::string& msg="Ok"){
+  NewOkResponse(HttpSession* session, const HttpStatusCode& status_code=HttpStatusCode::kHttpOk, const std::string& msg="Ok"){
     HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, status_code);
 
     JsonString& body = response->GetBody();
@@ -241,7 +241,7 @@ namespace Token{
 
   static inline HttpResponsePtr
   NewOkResponse(HttpSession* session, const BlockPtr& blk){
-    std::shared_ptr<HttpJsonResponse> response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kOk);
+    std::shared_ptr<HttpJsonResponse> response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kHttpOk);
 
     JsonString& body = response->GetBody();
     JsonWriter writer(body);
@@ -257,7 +257,7 @@ namespace Token{
 
   static inline HttpResponsePtr
   NewOkResponse(HttpSession* session, const TransactionPtr& tx){
-    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kOk);
+    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kHttpOk);
 
     JsonString& body = response->GetBody();
     JsonWriter writer(body);
@@ -272,7 +272,7 @@ namespace Token{
 
   static inline HttpResponsePtr
   NewOkResponse(HttpSession* session, const UnclaimedTransactionPtr& utxo){
-    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kOk);
+    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kHttpOk);
 
     JsonString& body = response->GetBody();
     JsonWriter writer(body);
@@ -303,32 +303,32 @@ namespace Token{
 
   static inline HttpResponsePtr
   NewInternalServerErrorResponse(HttpSession* session, const std::string& message){
-    return NewErrorResponse(session, HttpStatusCode::kInternalServerError, message);
+    return NewErrorResponse(session, HttpStatusCode::kHttpInternalServerError, message);
   }
 
   static inline HttpResponsePtr
   NewInternalServerErrorResponse(HttpSession* session, const std::stringstream& message){
-    return NewErrorResponse(session, HttpStatusCode::kInternalServerError, message.str());
+    return NewErrorResponse(session, HttpStatusCode::kHttpInternalServerError, message.str());
   }
 
   static inline HttpResponsePtr
   NewNotImplementedResponse(HttpSession* session, const std::string& msg){
-    return NewErrorResponse(session, HttpStatusCode::kNotImplemented, msg);
+    return NewErrorResponse(session, HttpStatusCode::kHttpNotImplemented, msg);
   }
 
   static inline HttpResponsePtr
   NewNotImplementedResponse(HttpSession* session, const std::stringstream& msg){
-    return NewErrorResponse(session, HttpStatusCode::kNotImplemented, msg.str());
+    return NewErrorResponse(session, HttpStatusCode::kHttpNotImplemented, msg.str());
   }
 
   static inline HttpResponsePtr
   NewNoContentResponse(HttpSession* session, const std::string& msg){
-    return NewErrorResponse(session, HttpStatusCode::kNoContent, msg);
+    return NewErrorResponse(session, HttpStatusCode::kHttpNoContent, msg);
   }
 
   static inline HttpResponsePtr
   NewNoContentResponse(HttpSession* session, const std::stringstream& msg){
-    return NewErrorResponse(session, HttpStatusCode::kNoContent, msg.str());
+    return NewErrorResponse(session, HttpStatusCode::kHttpNoContent, msg.str());
   }
 
   static inline HttpResponsePtr
@@ -340,12 +340,12 @@ namespace Token{
 
   static inline HttpResponsePtr
   NewNotFoundResponse(HttpSession* session, const std::string& msg){
-    return NewErrorResponse(session, HttpStatusCode::kNotFound, msg);
+    return NewErrorResponse(session, HttpStatusCode::kHttpNotFound, msg);
   }
 
   static inline HttpResponsePtr
   NewNotFoundResponse(HttpSession* session, const std::stringstream& msg){
-    return NewErrorResponse(session, HttpStatusCode::kNotFound, msg.str());
+    return NewErrorResponse(session, HttpStatusCode::kHttpNotFound, msg.str());
   }
 
   static inline HttpResponsePtr
@@ -357,12 +357,12 @@ namespace Token{
 
   static inline HttpResponsePtr
   NewNotSupportedResponse(HttpSession* session, const std::string& msg){
-    return NewErrorResponse(session, HttpStatusCode::kNotImplemented, msg);
+    return NewErrorResponse(session, HttpStatusCode::kHttpNotImplemented, msg);
   }
 
   static inline HttpResponsePtr
   NewNotSupportedResponse(HttpSession* session, const std::stringstream& msg){
-    return NewErrorResponse(session, HttpStatusCode::kNotImplemented, msg.str());
+    return NewErrorResponse(session, HttpStatusCode::kHttpNotImplemented, msg.str());
   }
 }
 

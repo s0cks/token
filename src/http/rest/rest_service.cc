@@ -6,7 +6,7 @@
 #include "wallet.h"
 #include "blockchain.h"
 #include "job/scheduler.h"
-#include "http/rest_service.h"
+#include "http/rest/rest_service.h"
 
 #include "utils/qrcode.h"
 
@@ -163,7 +163,7 @@ namespace Token{
  *                      InfoController
  *****************************************************************************/
   void InfoController::HandleGetStats(HttpSession* session, const HttpRequestPtr& request){
-    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kOk);
+    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kHttpOk);
 
     JsonString& json = response->GetBody();
     if(!JobScheduler::GetWorkerStatistics(json))
@@ -199,7 +199,7 @@ namespace Token{
  *                      ObjectPoolController
  *****************************************************************************/
   void ObjectPoolController::HandleGetStats(HttpSession* session, const HttpRequestPtr& request){
-    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kOk);
+    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kHttpOk);
 
     JsonString& body = response->GetBody();
     if(!ObjectPool::GetStats(body))
@@ -243,7 +243,7 @@ namespace Token{
   }
 
   void ObjectPoolController::HandleGetUnclaimedTransactions(HttpSession* session, const HttpRequestPtr& request){
-    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kOk);
+    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kHttpOk);
 
     JsonString& body = response->GetBody();
     if(!ObjectPool::GetUnclaimedTransactions(body))
@@ -268,13 +268,13 @@ namespace Token{
       ss << "Cannot generate qr-code for: " << hash;
       return session->Send(NewInternalServerErrorResponse(session, ss));
     }
-    return session->Send(HttpBinaryResponse::NewInstance(session, HttpStatusCode::kOk, HTTP_CONTENT_TYPE_IMAGE_PNG, data));
+    return session->Send(HttpBinaryResponse::NewInstance(session, HttpStatusCode::kHttpOk, HTTP_CONTENT_TYPE_IMAGE_PNG, data));
   }
 
   void WalletController::HandleGetUserWallet(HttpSession* session, const HttpRequestPtr& request){
     User user = request->GetUserParameterValue();
 
-    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kOk);
+    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kHttpOk);
 
     JsonString& body = response->GetBody();
     JsonWriter writer(body);

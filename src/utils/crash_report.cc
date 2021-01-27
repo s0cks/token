@@ -12,11 +12,11 @@
 #endif//TOKEN_ENABLE_SERVER
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
-  #include "http/rest_service.h"
+  #include "http/rest/rest_service.h"
 #endif//TOKEN_ENABLE_REST_SERVICE
 
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
-  #include "http/healthcheck_service.h"
+  #include "http/health/health_service.h"
 #endif//TOKEN_ENABLE_HEALTH_SERVICE
 
 namespace Token{

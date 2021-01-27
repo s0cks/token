@@ -59,8 +59,6 @@ namespace Token{
   class TimelineEventVisitor;
   class Timeline{
    private:
-    typedef std::chrono::steady_clock::time_point Timepoint;
-
     std::string name_;
     TimelineEventSet events_;
    public:

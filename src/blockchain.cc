@@ -1,9 +1,8 @@
-#include <mutex>
 #include <sstream>
 #include <leveldb/db.h>
 #include <glog/logging.h>
-#include <condition_variable>
-#include "pool.h"
+#include <utils/relaxed_atomic.h>
+
 #include "keychain.h"
 #include "blockchain.h"
 #include "job/scheduler.h"
@@ -36,18 +35,10 @@ namespace Token{
     return ss.str();
   }
 
-  static std::recursive_mutex mutex_;
-  static std::condition_variable cond_;
+  static RelaxedAtomic<BlockChain::State> state_ = { BlockChain::kUninitialized };
+  static RelaxedAtomic<BlockChain::Status> status_ = { BlockChain::kOk };
   static JobQueue queue_(JobScheduler::kMaxNumberOfJobs);
-  static BlockChain::State state_ = BlockChain::kUninitialized;
-  static BlockChain::Status status_ = BlockChain::kOk;
   static leveldb::DB* index_ = nullptr;
-
-#define LOCK_GUARD std::lock_guard<std::recursive_mutex> guard(mutex_)
-#define LOCK std::unique_lock<std::recursive_mutex> lock(mutex_)
-#define WAIT cond_.wait(lock)
-#define SIGNAL_ONE cond_.notify_one()
-#define SIGNAL_ALL cond_.notify_all()
 
   leveldb::DB* BlockChain::GetIndex(){
     return index_;
@@ -108,25 +99,19 @@ namespace Token{
   }
 
   BlockChain::State BlockChain::GetState(){
-    LOCK_GUARD;
     return state_;
   }
 
   void BlockChain::SetState(State state){
-    LOCK_GUARD;
     state_ = state;
-    SIGNAL_ALL;
   }
 
   BlockChain::Status BlockChain::GetStatus(){
-    LOCK_GUARD;
     return status_;
   }
 
   void BlockChain::SetStatus(Status status){
-    LOCK_GUARD;
     status_ = status;
-    SIGNAL_ALL;
   }
 
   BlockChainStats BlockChain::GetStats(){
@@ -136,7 +121,6 @@ namespace Token{
   }
 
   BlockPtr BlockChain::GetGenesis(){
-    LOCK_GUARD;
     return GetBlock(GetReference(BLOCKCHAIN_REFERENCE_GENESIS));
   }
 
