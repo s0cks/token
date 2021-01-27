@@ -26,6 +26,7 @@ namespace Token{
     V(Warning)                        \
     V(Error)
 
+  //TODO: refactor BlockChainStats
   class BlockChainStats{
    private:
     BlockHeader genesis_;
