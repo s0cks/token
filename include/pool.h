@@ -25,34 +25,16 @@ namespace Token{
     virtual ~ObjectPoolVisitor() = default;
   };
 
-  class ObjectPoolBlockVisitor : ObjectPoolVisitor{
-   protected:
-    ObjectPoolBlockVisitor() = default;
-
-   public:
-    virtual ~ObjectPoolBlockVisitor() = default;
-
-    virtual bool Visit(const BlockPtr& blk) const = 0;
+#define GENERATE_TYPE_VISITOR(Name) \
+  class ObjectPool##Name##Visitor : public ObjectPoolVisitor{ \
+    protected:                      \
+      ObjectPool##Name##Visitor() = default;                  \
+    public:                         \
+      virtual ~ObjectPool##Name##Visitor() = default;         \
+      virtual bool Visit(const Name##Ptr& val) = 0;           \
   };
-
-  class ObjectPoolTransactionVisitor : ObjectPoolVisitor{
-   protected:
-    ObjectPoolTransactionVisitor() = default;
-
-   public:
-    virtual ~ObjectPoolTransactionVisitor() = default;
-    virtual bool Visit(const TransactionPtr& tx) = 0;
-  };
-
-  class ObjectPoolUnclaimedTransactionVisitor : ObjectPoolVisitor{
-   protected:
-    ObjectPoolUnclaimedTransactionVisitor() = default;
-
-   public:
-    virtual ~ObjectPoolUnclaimedTransactionVisitor() = default;
-
-    virtual bool Visit(const UnclaimedTransactionPtr& utxo) const = 0;
-  };
+  FOR_EACH_POOL_TYPE(GENERATE_TYPE_VISITOR)
+#undef GENERATE_TYPE_VISITOR
 
   class ObjectPoolStats{
     friend class ObjectPool;
@@ -174,7 +156,7 @@ namespace Token{
 #define DEFINE_TYPE_METHODS(Name) \
     static bool WaitFor##Name(const Hash& hash, const int64_t timeout_ms=1000*5); \
     static bool Put##Name(const Hash& hash, const Name##Ptr& val);                \
-    static bool Get##Name##s(JsonString& json);                                   \
+    static bool Get##Name##s(JsonWriter& json);                                   \
     static bool Has##Name(const Hash& hash);                                      \
     static bool Remove##Name(const Hash& hash);                                   \
     static bool Visit##Name##s(ObjectPool##Name##Visitor* vis);                   \
@@ -183,6 +165,7 @@ namespace Token{
     FOR_EACH_POOL_TYPE(DEFINE_TYPE_METHODS)
 #undef DEFINE_TYPE_METHODS
 
+    //TODO: refactor
     static int64_t GetNumberOfObjects();
     static bool GetStats(JsonString& json);
     static ObjectPoolStats GetStats();

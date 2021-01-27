@@ -177,6 +177,14 @@ namespace Token{
     FOR_EACH_BASIC_TYPE(DEFINE_PUT_TYPE);
     FOR_EACH_BASIC_TYPE(DEFINE_GET_TYPE);
 
+#undef DEFINE_PUT_SIGNED
+#undef DEFINE_PUT_UNSIGNED
+#undef DEFINE_PUT_TYPE
+
+#undef DEFINE_GET_SIGNED
+#undef DEFINE_GET_UNSIGNED
+#undef DEFINE_GET_TYPE
+
     void WriteBytesTo(std::fstream& stream, intptr_t size){
       uint8_t bytes[size];
       GetBytes(bytes, size);

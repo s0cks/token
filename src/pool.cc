@@ -67,191 +67,6 @@ namespace Token{
     return true;
   }
 
-  bool ObjectPool::PutBlock(const Hash& hash, const BlockPtr& val){
-    if(HasBlock(hash)){
-      LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash;
-      return false;
-    }
-
-    leveldb::Status status;
-    if(!(status = PutObject(GetIndex(), hash, val)).ok()){
-      LOG(WARNING) << "cannot index object " << hash << ": " << status.ToString();
-      SetStatus(ObjectPool::kWarning);
-      return false;
-    }
-
-    LOG(INFO) << "indexed object: " << hash;
-    return true;
-  }
-
-  bool ObjectPool::PutTransaction(const Hash& hash, const TransactionPtr& val){
-    if(HasTransaction(hash)){
-      LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash;
-      return false;
-    }
-
-    leveldb::Status status;
-    if(!(status = PutObject(GetIndex(), hash, val)).ok()){
-      LOG(WARNING) << "cannot index object " << hash << ": " << status.ToString();
-      return false;
-    }
-
-    LOG(INFO) << "indexed object: " << hash;
-    return true;
-  }
-
-  bool ObjectPool::PutUnclaimedTransaction(const Hash& hash, const UnclaimedTransactionPtr& val){
-    if(HasUnclaimedTransaction(hash)){
-      LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash;
-      SetStatus(ObjectPool::kWarning);
-      return false;
-    }
-
-    leveldb::Status status;
-    if(!(status = PutObject(GetIndex(), hash, val)).ok()){
-      LOG(WARNING) << "cannot index object " << hash << ": " << status.ToString();
-      return false;
-    }
-
-    LOG(INFO) << "indexed object: " << hash;
-    return true;
-  }
-
-  bool ObjectPool::GetBlocks(JsonString& json){
-    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
-
-    JsonWriter writer(json);
-    writer.StartArray();
-    for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectKey key(it->key());
-      if(key.IsBlock()){
-        Hash hash = key.GetHash();
-        std::string hex = hash.HexString();
-        writer.String(hex.data(), 64);
-      }
-    }
-    writer.EndArray();
-    return true;
-  }
-
-  bool ObjectPool::GetTransactions(JsonString& json){
-    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
-
-    JsonWriter writer(json);
-    writer.StartArray();
-    for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectKey key(it->key());
-      if(key.IsTransaction()){
-        Hash hash = key.GetHash();
-        std::string hex = hash.HexString();
-        writer.String(hex.data(), 64);
-      }
-    }
-    writer.EndArray();
-    return true;
-  }
-
-  bool ObjectPool::GetUnclaimedTransactions(JsonString& json){
-    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
-
-    JsonWriter writer(json);
-    writer.StartArray();
-    for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectKey key(it->key());
-      if(key.IsUnclaimedTransaction()){
-        Hash hash = key.GetHash();
-        std::string hex = hash.HexString();
-        writer.String(hex.data(), 64);
-      }
-    }
-    writer.EndArray();
-    return true;
-  }
-
-  bool ObjectPool::VisitBlocks(ObjectPoolBlockVisitor* vis){
-    if(!vis){
-      return false;
-    }
-
-    return false;
-  }
-
-  bool ObjectPool::VisitTransactions(ObjectPoolTransactionVisitor* vis){
-    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
-    for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectKey key(it->key());
-      if(!key.IsTransaction()){
-        continue;
-      }
-
-      BufferPtr buff = Buffer::From(it->value());
-      TransactionPtr val = Transaction::FromBytes(buff);
-      if(!vis->Visit(val)){
-        return false;
-      }
-    }
-    delete it;
-    return true;
-  }
-
-  bool ObjectPool::VisitUnclaimedTransactions(ObjectPoolUnclaimedTransactionVisitor* vis){
-    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
-    for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectKey key(it->key());
-      if(!key.IsUnclaimedTransaction()){
-        continue;
-      }
-
-      BufferPtr buff = Buffer::From(it->value());
-      UnclaimedTransactionPtr val = UnclaimedTransaction::FromBytes(buff);
-      if(!vis->Visit(val)){
-        return false;
-      }
-    }
-    delete it;
-    return true;
-  }
-
-  BlockPtr ObjectPool::GetBlock(const Hash& hash){
-    std::string data;
-
-    leveldb::Status status;
-    if(!(status = GetBlockObject(GetIndex(), hash, &data)).ok()){
-      LOG(WARNING) << "cannot get " << hash << ": " << status.ToString();
-      return BlockPtr(nullptr);
-    }
-
-    BufferPtr buff = Buffer::From(data);
-    return Block::FromBytes(buff);
-  }
-
-  TransactionPtr ObjectPool::GetTransaction(const Hash& hash){
-    std::string data;
-
-    leveldb::ReadOptions opts;
-    leveldb::Status status;
-    if(!(status = GetTransactionObject(GetIndex(), hash, &data)).ok()){
-      LOG(WARNING) << "cannot get " << hash << ": " << status.ToString();
-      return TransactionPtr(nullptr);
-    }
-
-    BufferPtr buff = Buffer::From(data);
-    return Transaction::FromBytes(buff);
-  }
-
-  UnclaimedTransactionPtr ObjectPool::GetUnclaimedTransaction(const Hash& hash){
-    std::string data;
-
-    leveldb::Status status;
-    if(!(status = GetUnclaimedTransactionObject(GetIndex(), hash, &data)).ok()){
-      LOG(WARNING) << "cannot get " << hash << ": " << status.ToString();
-      return UnclaimedTransactionPtr(nullptr);
-    }
-
-    BufferPtr buff = Buffer::From(data);
-    return UnclaimedTransaction::FromBytes(buff);
-  }
-
   leveldb::Status ObjectPool::Write(leveldb::WriteBatch* update){
     leveldb::WriteOptions opts;
     opts.sync = true;
@@ -343,81 +158,105 @@ namespace Token{
     return UnclaimedTransactionPtr(nullptr);
   }
 
-  bool ObjectPool::HasUnclaimedTransaction(const Hash& hash){
-    return HasObject(GetIndex(), hash, Object::Type::kUnclaimedTransaction);
+#define DEFINE_PUT_TYPE(Name) \
+  bool ObjectPool::Put##Name(const Hash& hash, const Name##Ptr& val){ \
+    if(Has##Name(hash)){      \
+      LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash; \
+      return false;           \
+    }                         \
+    leveldb::Status status;   \
+    if(!(status = PutObject(GetIndex(), hash, val)).ok()){            \
+      LOG(WARNING) << "cannot index object " << hash << ": " << status.ToString();\
+      return false;           \
+    }                         \
+    LOG(INFO) << "indexed object " << hash;                           \
+    return true;              \
   }
+  FOR_EACH_POOL_TYPE(DEFINE_PUT_TYPE)
+#undef DEFINE_PUT_TYPE
 
-  bool ObjectPool::HasTransaction(const Hash& hash){
-    return HasObject(GetIndex(), hash, Object::Type::kTransaction);
+#define DEFINE_GET_TYPE(Name) \
+  Name##Ptr ObjectPool::Get##Name(const Hash& hash){ \
+    std::string data;         \
+    leveldb::Status status;   \
+    if(!(status = Get##Name##Object(GetIndex(), hash, &data)).ok()){ \
+      LOG(WARNING) << "cannot get " << hash << ": " << status.ToString(); \
+      return Name##Ptr(nullptr);                     \
+    }                         \
+    BufferPtr buff = Buffer::From(data);             \
+    return Name::FromBytes(buff);                    \
   }
+  FOR_EACH_POOL_TYPE(DEFINE_GET_TYPE)
+#undef DEFINE_GET_TYPE
 
-  bool ObjectPool::HasBlock(const Hash& hash){
-    return HasObject(GetIndex(), hash, Object::Type::kBlock);
+#define DEFINE_HAS_TYPE(Name) \
+  bool ObjectPool::Has##Name(const Hash& hash){ \
+    return HasObject(GetIndex(), hash, Object::Type::k##Name); \
   }
+  FOR_EACH_POOL_TYPE(DEFINE_HAS_TYPE);
+#undef DEFINE_HAS_TYPE
 
-  int64_t ObjectPool::GetNumberOfBlocks(){
-    int64_t count = 0;
-    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
-    for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectKey key(it->key());
-      if(key.IsBlock()){
-        count++;
-      }
-    }
-    delete it;
-    return count;
+#define DEFINE_GET_TYPE_COUNT(Name) \
+  int64_t ObjectPool::GetNumberOf##Name##s(){ \
+    int64_t count = 0;              \
+    leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
+    for(iter->SeekToFirst(); iter->Valid(); iter->Next()){                     \
+      ObjectKey key(iter->key());     \
+      if(key.Is##Name())            \
+        count++;                    \
+    }                               \
+    delete iter;                    \
+    return count;                   \
   }
+  FOR_EACH_POOL_TYPE(DEFINE_GET_TYPE_COUNT)
+#undef DEFINE_GET_TYPE_COUNT
 
-  int64_t ObjectPool::GetNumberOfTransactions(){
-    int64_t count = 0;
-    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
-    for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectKey key(it->key());
-      if(key.IsTransaction()){
-        count++;
-      }
-    }
-    delete it;
-    return count;
+#define DEFINE_REMOVE_TYPE(Name) \
+  bool ObjectPool::Remove##Name(const Hash& hash){ \
+    leveldb::Status status;      \
+    if(!(status = RemoveObject(GetIndex(), hash, Object::Type::k##Name)).ok()){ \
+      LOG(WARNING) << "cannot remove " << hash << " from pool: " << status.ToString(); \
+      return false;              \
+    }                            \
+    return true;                 \
   }
+  FOR_EACH_POOL_TYPE(DEFINE_REMOVE_TYPE)
+#undef DEFINE_REMOVE_TYPE
 
-  int64_t ObjectPool::GetNumberOfUnclaimedTransactions(){
-    int64_t count = 0;
-    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
-    for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectKey key(it->key());
-      if(key.IsUnclaimedTransaction()){
-        count++;
-      }
-    }
-    delete it;
-    return count;
+#define DEFINE_VISIT_TYPE(Name) \
+  bool ObjectPool::Visit##Name##s(ObjectPool##Name##Visitor* vis){ \
+    leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
+    for(iter->SeekToFirst(); iter->Valid(); iter->Next()){         \
+      ObjectKey key(iter->key());                                  \
+      if(!key.Is##Name())       \
+        continue;               \
+      BufferPtr buffer = Buffer::From(iter->value());              \
+      Name##Ptr val = Name::FromBytes(buffer);                     \
+      if(!vis->Visit(val))     \
+        return false;           \
+    }                           \
+    delete iter;                \
+    return true;                \
   }
+  FOR_EACH_POOL_TYPE(DEFINE_VISIT_TYPE)
+#undef DEFINE_VISIT_TYPE
 
-  bool ObjectPool::RemoveBlock(const Hash& hash){
-    leveldb::Status status;
-    if(!(status = RemoveObject(GetIndex(), hash, Object::Type::kBlock)).ok()){
-      LOG(WARNING) << "cannot remove block " << hash << " from pool.";
-      return false;
-    }
-    return true;
+#define DEFINE_GET_TYPE_HASHES(Name) \
+  bool ObjectPool::Get##Name##s(JsonWriter& writer){ \
+    leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
+    writer.StartArray();             \
+    for(iter->SeekToFirst(); iter->Valid(); iter->Next()){                     \
+      ObjectKey key(iter->key());    \
+      if(key.Is##Name()){            \
+        Hash hash = key.GetHash();   \
+        std::string hex = hash.HexString();          \
+        writer.String(hex.data(), 64);               \
+      }                              \
+    }                                \
+    writer.EndArray();               \
+    delete iter;                     \
+    return true;                     \
   }
-
-  bool ObjectPool::RemoveTransaction(const Hash& hash){
-    leveldb::Status status;
-    if(!(status = RemoveObject(GetIndex(), hash, Object::Type::kTransaction)).ok()){
-      LOG(WARNING) << "cannot remove transaction " << hash << " from pool.";
-      return false;
-    }
-    return true;
-  }
-
-  bool ObjectPool::RemoveUnclaimedTransaction(const Hash& hash){
-    leveldb::Status status;
-    if(!(status = RemoveObject(GetIndex(), hash, Object::Type::kUnclaimedTransaction)).ok()){
-      LOG(WARNING) << "cannot remove unclaimed transaction " << hash << " from pool.";
-      return false;
-    }
-    return true;
-  }
+  FOR_EACH_POOL_TYPE(DEFINE_GET_TYPE_HASHES)
+#undef DEFINE_GET_TYPE_HASHES
 }

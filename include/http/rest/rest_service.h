@@ -12,92 +12,6 @@
 #include "http/controller.h"
 
 namespace Token{
-  class InfoController : HttpController{
-   private:
-    InfoController() = delete;
-
-    HTTP_CONTROLLER_ENDPOINT(GetStats);
-   public:
-    ~InfoController() = delete;
-
-    HTTP_CONTROLLER_INIT(){
-      HTTP_CONTROLLER_GET("/info/stats", GetStats);
-    }
-  };
-
-  class BlockChainController : HttpController{
-   private:
-    BlockChainController() = delete;
-
-    HTTP_CONTROLLER_ENDPOINT(GetBlockChain);
-    HTTP_CONTROLLER_ENDPOINT(GetBlockChainHead);
-    HTTP_CONTROLLER_ENDPOINT(GetBlockChainBlock);
-   public:
-    ~BlockChainController() = delete;
-
-    HTTP_CONTROLLER_INIT(){
-      HTTP_CONTROLLER_GET("/chain", GetBlockChain);
-      HTTP_CONTROLLER_GET("/chain/head", GetBlockChainHead);
-      HTTP_CONTROLLER_GET("/chain/data/:hash", GetBlockChainBlock);
-    }
-  };
-
-  class WalletController : HttpController{
-   private:
-    WalletController() = delete;
-
-    HTTP_CONTROLLER_ENDPOINT(GetUserWallet);
-    HTTP_CONTROLLER_ENDPOINT(PostUserWalletSpend);
-    HTTP_CONTROLLER_ENDPOINT(GetUserWalletTokenCode);
-   public:
-    ~WalletController() = delete;
-
-    HTTP_CONTROLLER_INIT(){
-      HTTP_CONTROLLER_GET("/wallet/:user", GetUserWallet);
-      HTTP_CONTROLLER_POST("/wallet/:user/spend", PostUserWalletSpend);
-      HTTP_CONTROLLER_GET("/wallet/:user/tokens/:hash", GetUserWalletTokenCode);
-    }
-  };
-
-  class ObjectPoolController : HttpController{
-   private:
-    ObjectPoolController() = delete;
-
-    // Core
-    HTTP_CONTROLLER_ENDPOINT(GetStats);
-
-    // Blocks
-    HTTP_CONTROLLER_ENDPOINT(GetBlock);
-    HTTP_CONTROLLER_ENDPOINT(GetBlocks);
-
-    // Transactions
-    HTTP_CONTROLLER_ENDPOINT(GetTransaction);
-    HTTP_CONTROLLER_ENDPOINT(GetTransactions);
-
-    // Unclaimed Transactions
-    HTTP_CONTROLLER_ENDPOINT(GetUnclaimedTransaction);
-    HTTP_CONTROLLER_ENDPOINT(GetUnclaimedTransactions);
-   public:
-    ~ObjectPoolController() = delete;
-
-    HTTP_CONTROLLER_INIT(){
-      // Core
-      HTTP_CONTROLLER_GET("/pool/stats", GetStats);
-
-      // Blocks
-      HTTP_CONTROLLER_GET("/pool/blocks", GetBlocks);
-      HTTP_CONTROLLER_GET("/pool/blocks/data/:hash", GetBlock);
-
-      // Transactions
-      HTTP_CONTROLLER_GET("/pool/transactions", GetTransactions);
-      HTTP_CONTROLLER_GET("/pool/transactions/data/:hash", GetTransaction);
-
-      // Unclaimed Transactions
-      HTTP_CONTROLLER_GET("/pool/utxos", GetUnclaimedTransactions);
-      HTTP_CONTROLLER_GET("/pool/utxos/:hash", GetUnclaimedTransaction);
-    }
-  };
-
 #define FOR_EACH_REST_SERVICE_STATE(V) \
     V(Starting)                        \
     V(Running)                         \
@@ -160,11 +74,11 @@ namespace Token{
    public:
     ~RestService() = delete;
 
-    static void WaitForState(State state);
     static State GetState();
     static Status GetStatus();
     static bool Start();
     static bool Stop();
+    static void WaitForState(State state);
 
 #define DEFINE_CHECK(Name) \
         static inline bool Is##Name(){ return GetState() == State::k##Name; }
