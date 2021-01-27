@@ -16,18 +16,25 @@ namespace Token{
   V(Int, int32_t)            \
   V(Long, int64_t)
 
-//TODO: better naming conventions
+#define FOR_EACH_SERIALIZABLE_TYPE(V) \
+  V(Hash)                             \
+  V(UUID)                             \
+  V(User)                             \
+  V(Product)
+
 #define FOR_EACH_BASIC_TYPE(V) \
-  V(User)                      \
-  V(Product)                   \
-  V(Hash)                      \
-  V(UUID)
+  FOR_EACH_SERIALIZABLE_TYPE(V) \
+  V(Input)                     \
+  V(Output)
+
+#define FOR_EACH_POOL_TYPE(V) \
+  V(Block)                    \
+  V(Transaction)              \
+  V(UnclaimedTransaction)
 
 #define FOR_EACH_TYPE(V) \
-  V(Input)               \
-  V(Output)              \
-  V(Transaction)         \
-  V(Block)
+  FOR_EACH_BASIC_TYPE(V) \
+  FOR_EACH_POOL_TYPE(V)
 
   class Buffer;
   typedef std::shared_ptr<Buffer> BufferPtr;
@@ -35,18 +42,21 @@ namespace Token{
   class Object{
    public:
     enum class Type{
-      kBlock = 1,
-      kTransaction = 2,
-      kUnclaimedTransaction = 3,
-      kReference = 4,
+#define DEFINE_TYPE(Name) k##Name##Type,
+      FOR_EACH_TYPE(DEFINE_TYPE)
+#undef DEFINE_TYPE
+      kReferenceType, //TODO: refactor kReferenceType,
     };
 
     friend std::ostream& operator<<(std::ostream& stream, const Type& type){
       switch(type){
-        case Type::kBlock:return stream << "Block";
-        case Type::kTransaction:return stream << "Transaction";
-        case Type::kUnclaimedTransaction:return stream << "UnclaimedTransaction";
-        default:return stream << "Unknown";
+#define DEFINE_TOSTRING(Name) \
+        case Object::Type::k##Name##Type: \
+          return stream << #Name;
+        FOR_EACH_TYPE(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
+        default:
+          return stream << "Unknown";
       }
     }
    public:
@@ -77,6 +87,8 @@ namespace Token{
 
   template<int64_t Size>
   class RawType{
+   public:
+    static const int64_t kSize = Size;
    protected:
     uint8_t data_[Size];
 
@@ -119,8 +131,7 @@ namespace Token{
   class Product : public RawType<64>{
     using Base = RawType<64>;
    public:
-    static const int64_t kSize = 64;
-
+    static const int64_t kSize = Base::kSize;
     Product():
       Base(){}
     Product(const uint8_t* bytes, int64_t size):
@@ -164,8 +175,7 @@ namespace Token{
   class User : public RawType<64>{
     using Base = RawType<64>;
    public:
-    static const int64_t kSize = 64;
-
+    static const int64_t kSize = Base::kSize;
     User():
       Base(){}
     User(const uint8_t* bytes, int64_t size):

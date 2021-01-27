@@ -8,8 +8,9 @@
 #include "block.h"
 #include "transaction.h"
 #include "merkle/tree.h"
-#include "utils/printer.h"
 #include "unclaimed_transaction.h"
+#include "utils/printer.h"
+#include "utils/json_conversion.h"
 
 namespace Token{
 #define BLOCKCHAIN_REFERENCE_GENESIS "<GENESIS>"
@@ -25,42 +26,6 @@ namespace Token{
     V(Ok)                             \
     V(Warning)                        \
     V(Error)
-
-  //TODO: refactor BlockChainStats
-  class BlockChainStats{
-   private:
-    BlockHeader genesis_;
-    BlockHeader head_;
-   public:
-    BlockChainStats(const BlockHeader& genesis, const BlockHeader& head):
-      genesis_(genesis),
-      head_(head){}
-    BlockChainStats(const BlockChainStats& stats):
-      genesis_(stats.genesis_),
-      head_(stats.head_){}
-    ~BlockChainStats() = default;
-
-    BlockHeader& GetGenesis(){
-      return genesis_;
-    }
-
-    BlockHeader GetGenesis() const{
-      return genesis_;
-    }
-
-    BlockHeader& GetHead(){
-      return head_;
-    }
-
-    BlockHeader GetHead() const{
-      return head_;
-    }
-
-    void operator=(const BlockChainStats& stats){
-      head_ = stats.head_;
-      genesis_ = stats.genesis_;
-    }
-  };
 
   class BlockChainBlockVisitor;
   class BlockChainHeaderVisitor;
@@ -108,8 +73,11 @@ namespace Token{
    private:
     BlockChain() = delete;
     static leveldb::DB* GetIndex();
-    static void SetState(State state);
-    static void SetStatus(Status status);
+
+    static void SetState(const State& state);
+    static void SetStatus(const Status& status);
+
+
     static bool PutBlock(const Hash& hash, BlockPtr blk);
     static bool PutReference(const std::string& name, const Hash& hash);
     static bool RemoveReference(const std::string& name);
@@ -120,7 +88,6 @@ namespace Token{
     static State GetState();
     static Status GetStatus();
     static bool Initialize();
-    static bool GetBlocks(HashList& hashes);
     static bool VisitHeaders(BlockChainHeaderVisitor* vis);
     static bool VisitBlocks(BlockChainBlockVisitor* vis);
     static bool HasBlock(const Hash& hash);
@@ -131,7 +98,12 @@ namespace Token{
     static BlockPtr GetHead();
     static BlockPtr GetGenesis();
     static int64_t GetNumberOfBlocks();
-    static BlockChainStats GetStats();
+
+    static bool GetBlocks(Json::Writer& writer);
+
+    #ifdef TOKEN_DEBUG
+    static bool GetStats(Json::Writer& writer);
+    #endif//TOKEN_DEBUG
 
     static inline bool HasBlocks(){
       return GetNumberOfBlocks() > 0;

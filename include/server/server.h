@@ -33,12 +33,11 @@ namespace Token{
       switch(state){
 #define DEFINE_TOSTRING(Name) \
         case Server::k##Name: \
-            stream << #Name; \
-            return stream;
+            return stream << #Name;
         FOR_EACH_SERVER_STATE(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
-        default:stream << "Unknown";
-          return stream;
+        default:
+          return stream << "Unknown";
       }
     }
 
@@ -52,34 +51,38 @@ namespace Token{
       switch(status){
 #define DEFINE_TOSTRING(Name) \
         case Server::k##Name: \
-            stream << #Name; \
-            return stream;
+            return stream << #Name;
         FOR_EACH_SERVER_STATUS(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
-        default:stream << "Unknown";
-          return stream;
+        default:
+          return stream << "Unknown";
       }
     }
    private:
     Server() = delete;
 
     static uv_tcp_t* GetHandle();
-    static void SetStatus(Status status);
-    static void SetState(State state);
+    static void SetState(const State& state);
+    static void SetStatus(const Status& status);
     static void OnClose(uv_handle_t* handle);
     static void OnWalk(uv_handle_t* handle, void* data);
     static void HandleTerminateCallback(uv_async_t* handle);
     static void OnNewConnection(uv_stream_t* stream, int status);
     static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
     static void HandleServerThread(uword parameter);
+    static bool SendShutdown();
    public:
     ~Server() = delete;
 
     static State GetState();
     static Status GetStatus();
-    static void WaitForState(State state);
-    static bool Start();
-    static bool Stop();
+    static bool JoinThread();
+    static bool StartThread();
+
+    static inline bool
+    Shutdown(){
+      return SendShutdown() && JoinThread();
+    }
 
     static inline UUID GetID(){
       return BlockChainConfiguration::GetSererID();

@@ -1,6 +1,5 @@
 #include <thread>
 #include "pool.h"
-#include "stats.h"
 #include "wallet.h"
 #include "keychain.h"
 #include "blockchain.h"
@@ -115,7 +114,7 @@ main(int argc, char **argv){
 
   // Start the health service if enabled
   #ifdef TOKEN_ENABLE_HEALTH_SERVICE
-    if(IsValidPort(FLAGS_healthcheck_port) && !HealthCheckService::Start()){
+    if(IsValidPort(FLAGS_healthcheck_port) && !HealthCheckService::StartThread()){
       CrashReport::PrintNewCrashReport("Failed to start the health check service.");
       return EXIT_FAILURE;
     }
@@ -154,7 +153,7 @@ main(int argc, char **argv){
   // Start the server if enabled
   #ifdef TOKEN_ENABLE_SERVER
     LOG(INFO) << "using server port: " << FLAGS_server_port;
-    if(IsValidPort(FLAGS_server_port) && !Server::Start()){
+    if(IsValidPort(FLAGS_server_port) && !Server::StartThread()){
       CrashReport::PrintNewCrashReport("Failed to start the server.");
       return EXIT_FAILURE;
     }
@@ -167,36 +166,41 @@ main(int argc, char **argv){
 
   // Start the rest service if enabled
   #ifdef TOKEN_ENABLE_REST_SERVICE
-    if(IsValidPort(FLAGS_service_port) && !RestService::Start()){
+    if(IsValidPort(FLAGS_service_port) && !RestService::StartThread()){
       CrashReport::PrintNewCrashReport("Failed to start the rest service.");
       return EXIT_FAILURE;
     }
   #endif//TOKEN_ENABLE_REST_SERVICE
-
-  #ifdef TOKEN_DEBUG
-    StatsPrinter::PrintAllStats(google::INFO, Printer::kFlagDetailed);
-  #endif//TOKEN_DEBUG
-
-  if(!BlockMiner::Start()){
-    CrashReport::PrintNewCrashReport("Cannot start the block miner.");
-    return EXIT_FAILURE;
-  }
 
   if(FLAGS_append_test && !AppendDummy(Block::kMaxTransactionsForBlock)){
     CrashReport::PrintNewCrashReport("Cannot append dummy transactions.");
     return EXIT_FAILURE;
   }
 
+  if(!BlockMiner::Start()){
+    CrashReport::PrintNewCrashReport("Cannot start the block miner.");
+    return EXIT_FAILURE;
+  }
+
 #ifdef TOKEN_ENABLE_SERVER
-  Server::WaitForState(Server::kStopped);
+  if(Server::IsRunning() && !Server::JoinThread()){
+    CrashReport::PrintNewCrashReport("Cannot join the server thread.");
+    return EXIT_FAILURE;
+  }
 #endif//TOKEN_ENABLE_SERVER
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
-  RestService::WaitForState(RestService::kStopped);
+  if(RestService::IsRunning() && !RestService::JoinThread()){
+    CrashReport::PrintNewCrashReport("Cannot join the rest service thread.");
+    return EXIT_FAILURE;
+  }
 #endif//TOKEN_ENABLE_REST_SERVICE
 
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
-  HealthCheckService::WaitForState(HealthCheckService::kStopped);
+  if(HealthCheckService::IsRunning() && !HealthCheckService::JoinThread()){
+    CrashReport::PrintNewCrashReport("Cannot join the health check service thread.");
+    return EXIT_FAILURE;
+  }
 #endif//TOKEN_ENABLE_HEALTH_SERVICE
   return EXIT_SUCCESS;
 }

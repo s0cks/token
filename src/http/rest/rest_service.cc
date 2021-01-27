@@ -21,12 +21,6 @@ namespace Token{
     state_ = state;
   }
 
-  void RestService::WaitForState(State state){
-    //TODO: fix logic
-    State current = GetState();
-    while(!state_.compare_exchange_weak(current, state));
-  }
-
   RestService::Status RestService::GetStatus(){
     return status_;
   }
@@ -35,7 +29,7 @@ namespace Token{
     status_ = status;
   }
 
-  bool RestService::Start(){
+  bool RestService::StartThread(){
     if(!IsStopped()){
       LOG(WARNING) << "the rest service is already running.";
       return false;
@@ -56,11 +50,21 @@ namespace Token{
     SetState(RestService::kStopped);
   }
 
-  bool RestService::Stop(){
+  bool RestService::SendShutdown(){
     if(!IsRunning()){
+      LOG(WARNING) << "rest service isn't running.";
       return true;
-    } // should we return false?
-    uv_async_send(&shutdown_);
+    }
+
+    int err;
+    if((err = uv_async_send(&shutdown_)) != 0){
+      LOG(ERROR) << "cannot invoke send shutdown notice to rest service event loop: " << uv_strerror(err);
+      return false;
+    }
+    return true;
+  }
+
+  bool RestService::JoinThread(){
     return Thread::StopThread(thread_);
   }
 

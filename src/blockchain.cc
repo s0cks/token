@@ -88,6 +88,13 @@ namespace Token{
       queue->Push(job);
       while(!job->IsFinished()); //spin
 
+      if(!job->CommitAllChanges()){
+        LOG(ERROR) << "couldn't commit changes.";
+        SetState(BlockChain::kUninitialized);
+        SetStatus(BlockChain::kError);
+        return false;
+      }
+
       PutBlock(hash, genesis);
       PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
       PutReference(BLOCKCHAIN_REFERENCE_GENESIS, hash);
@@ -102,7 +109,7 @@ namespace Token{
     return state_;
   }
 
-  void BlockChain::SetState(State state){
+  void BlockChain::SetState(const State& state){
     state_ = state;
   }
 
@@ -110,14 +117,8 @@ namespace Token{
     return status_;
   }
 
-  void BlockChain::SetStatus(Status status){
+  void BlockChain::SetStatus(const Status& status){
     status_ = status;
-  }
-
-  BlockChainStats BlockChain::GetStats(){
-    BlockPtr genesis = GetGenesis();
-    BlockPtr head = GetHead();
-    return BlockChainStats(genesis->GetHeader(), head->GetHeader());
   }
 
   BlockPtr BlockChain::GetGenesis(){
@@ -129,7 +130,7 @@ namespace Token{
   }
 
   bool BlockChain::PutBlock(const Hash& hash, BlockPtr blk){
-    ObjectKey okey(Object::Type::kBlock, hash);
+    ObjectKey okey(Object::Type::kBlockType, hash);
     std::string filename = GetNewBlockFilename(blk);
     if(!blk->WriteToFile(filename)){
       LOG(WARNING) << "cannot write block data to file: " << filename;
@@ -152,7 +153,7 @@ namespace Token{
   }
 
   BlockPtr BlockChain::GetBlock(const Hash& hash){
-    ObjectKey okey(Object::Type::kBlock, hash);
+    ObjectKey okey(Object::Type::kBlockType, hash);
 
     std::string filename;
     leveldb::Status status;
@@ -171,7 +172,7 @@ namespace Token{
   }
 
   bool BlockChain::HasReference(const std::string& name){
-    ObjectKey okey(Object::Type::kReference, name);
+    ObjectKey okey(Object::Type::kReferenceType, name);
 
     std::string value;
     leveldb::Slice key(okey.data(), okey.size());
@@ -182,7 +183,7 @@ namespace Token{
     leveldb::WriteOptions options;
     options.sync = true;
 
-    ObjectKey okey(Object::Type::kReference, name);
+    ObjectKey okey(Object::Type::kReferenceType, name);
 
     std::string value;
     leveldb::Slice key(okey.data(), okey.size());
@@ -200,7 +201,7 @@ namespace Token{
     leveldb::WriteOptions options;
     options.sync = true;
 
-    ObjectKey okey(Object::Type::kReference, name);
+    ObjectKey okey(Object::Type::kReferenceType, name);
 
     leveldb::Status status;
     leveldb::Slice key(okey.data(), okey.size());
@@ -214,7 +215,7 @@ namespace Token{
   }
 
   Hash BlockChain::GetReference(const std::string& name){
-    ObjectKey okey(Object::Type::kReference, name);
+    ObjectKey okey(Object::Type::kReferenceType, name);
 
     std::string value;
     leveldb::Status status;
@@ -228,7 +229,7 @@ namespace Token{
   }
 
   bool BlockChain::HasBlock(const Hash& hash){
-    ObjectKey okey(Object::Type::kBlock, hash);
+    ObjectKey okey(Object::Type::kBlockType, hash);
 
     std::string filename;
     leveldb::Slice key(okey.data(), okey.size());
@@ -259,31 +260,12 @@ namespace Token{
 
     if(!HasBlock(phash)){
       LOG(WARNING) << "cannot find parent block: " << phash;
-      LOG(WARNING) << "head: " << GetReference(BLOCKCHAIN_REFERENCE_HEAD);
-      LOG(WARNING) << "blocks:";
-      HashList blocks;
-      if(BlockChain::GetBlocks(blocks)){
-        for(auto& it : blocks)
-          LOG(WARNING) << "- " << it;
-      } else{
-        LOG(WARNING) << "n/a";
-      }
       return false;
     }
 
     PutBlock(hash, block);
     if(head->GetHeight() < block->GetHeight())
       PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
-    return true;
-  }
-
-  bool BlockChain::GetBlocks(HashList& hashes){
-    Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
-    do{
-      BlockPtr blk = GetBlock(current);
-      hashes.push_back(blk->GetHash());
-      current = blk->GetPreviousHash();
-    } while(!current.IsNull());
     return true;
   }
 
@@ -328,4 +310,31 @@ namespace Token{
     }
     return count;
   }
+
+  bool BlockChain::GetBlocks(Json::Writer& writer){
+    writer.StartArray();
+    {
+      Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
+      do{
+        BlockPtr blk = GetBlock(current);
+        Json::Append(writer, current);
+        current = blk->GetPreviousHash();
+      } while(!current.IsNull());
+      return true;
+    }
+    writer.EndArray();
+    return true;
+  }
+
+#ifdef TOKEN_DEBUG
+  bool BlockChain::GetStats(Json::Writer& writer){
+    writer.StartObject();
+    {
+      Json::SetField(writer, "head", GetReference(BLOCKCHAIN_REFERENCE_HEAD));
+      Json::SetField(writer, "genesis", GetReference(BLOCKCHAIN_REFERENCE_GENESIS));
+    }
+    writer.EndObject();
+    return true;
+  }
+#endif//TOKEN_DEBUG
 }

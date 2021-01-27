@@ -72,27 +72,51 @@ namespace Token{
       batch_pool_.Append(batch);
     }
 
-    leveldb::Status Write(){
-      std::lock_guard<std::mutex> guard(mutex_);
-      if(batch_pool_.ApproximateSize() == 0){
-        return leveldb::Status::IOError("the object pool write batch  is ~0b in size.");
-      }
+    int64_t GetWalletWriteSize() const{
+      return batch_wallet_.ApproximateSize();
+    }
 
-      if(batch_wallet_.ApproximateSize() == 0){
-        return leveldb::Status::IOError("the wallet write batch is ~0b in size.");
-      }
+    int64_t GetPoolWriteSize() const{
+      return batch_wallet_.ApproximateSize();
+    }
 
+    int64_t GetTotalWriteSize() const{
+      return GetWalletWriteSize() + GetPoolWriteSize();
+    }
+
+    leveldb::Status CommitPoolChanges(){
+      if(batch_pool_.ApproximateSize() == 0)
+        return leveldb::Status::IOError("the object pool batch write is ~0b in size");
+      return ObjectPool::Write(&batch_pool_);
+    }
+
+    leveldb::Status CommitWalletChanges(){
+      if(batch_wallet_.ApproximateSize() == 0)
+        return leveldb::Status::IOError("the wallet batch write is ~0b in size");
+      for(auto& it : wallets_){
+        const User& user = it.first;
+        Wallet& wallet = it.second;
+        WalletManager::GetWallet(user, wallet);
+        LOG(INFO) << user << " now has " << wallet.size() << " unclaimed transactions.";
+        RemoveObject(batch_wallet_, user);
+        PutObject(batch_wallet_, user, wallet);
+      }
+      return WalletManager::Write(&batch_wallet_);
+    }
+
+    bool CommitAllChanges(){
       leveldb::Status status;
-      if(!(status = ObjectPool::Write(&batch_pool_)).ok()){
-        LOG(WARNING) << "error occurred when writing the object pool batch: " << status.ToString();
-        return leveldb::Status::IOError("cannot write the object pool batch.");
+      if(!(status = CommitPoolChanges()).ok()){
+        LOG(ERROR) << "cannot commit pool changes: " << status.ToString();
+        return false;
       }
 
-      if(!(status = WalletManager::Write(&batch_wallet_)).ok()){
-        LOG(WARNING) << "error occurred when writing the wallet batch: " << status.ToString();
-        return leveldb::Status::IOError("cannot write the wallet batch.");
+      if(!(status = CommitWalletChanges()).ok()){
+        LOG(ERROR) << "cannot commit wallet changes: " << status.ToString();
+        return false;
       }
-      return leveldb::Status::OK();
+
+      return true;
     }
   };
 

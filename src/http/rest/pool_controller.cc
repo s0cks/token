@@ -7,8 +7,9 @@ namespace Token{
   void ObjectPoolController::HandleGetStats(HttpSession* session, const HttpRequestPtr& request){
     HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kHttpOk);
 
-    JsonString& body = response->GetBody();
-    if(!ObjectPool::GetStats(body))
+    Json::String& body = response->GetBody();
+    Json::Writer writer(body);
+    if(!ObjectPool::GetStats(writer))
       return session->Send(NewInternalServerErrorResponse(session, "Cannot get object pool stats."));
 
     response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);
@@ -51,9 +52,15 @@ namespace Token{
   void ObjectPoolController::HandleGetUnclaimedTransactions(HttpSession* session, const HttpRequestPtr& request){
     HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kHttpOk);
 
-    JsonString& body = response->GetBody();
-    if(!ObjectPool::GetUnclaimedTransactions(body))
-      return session->Send(NewInternalServerErrorResponse(session, "Cannot get the list of unclaimed transactions in the object pool."));
+    Json::String& body = response->GetBody();
+    Json::Writer writer(body);
+    writer.StartObject();
+    {
+      writer.Key("data");
+      if(!ObjectPool::GetUnclaimedTransactions(writer))
+        return session->Send(NewInternalServerErrorResponse(session, "Cannot get the list of unclaimed transactions in the object pool."));
+    }
+    writer.EndObject();
 
     response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);
     response->SetHeader("Content-Length", body.GetSize());

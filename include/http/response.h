@@ -167,7 +167,7 @@ namespace Token{
 
   class HttpJsonResponse : public HttpResponse{
    private:
-    JsonString body_;
+    Json::String body_;
    protected:
     bool Write(const BufferPtr& buffer) const{
       if(!HttpResponse::Write(buffer)){
@@ -187,7 +187,7 @@ namespace Token{
       body_(){}
     ~HttpJsonResponse() = default;
 
-    JsonString& GetBody(){
+    Json::String& GetBody(){
       return body_;
     }
 
@@ -228,10 +228,10 @@ namespace Token{
   NewOkResponse(HttpSession* session, const HttpStatusCode& status_code=HttpStatusCode::kHttpOk, const std::string& msg="Ok"){
     HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, status_code);
 
-    JsonString& body = response->GetBody();
-    JsonWriter writer(body);
+    Json::String& body = response->GetBody();
+    Json::Writer writer(body);
     writer.StartObject();
-      SetField(writer, "data", msg);
+      Json::SetField(writer, "data", msg);
     writer.EndObject();
 
     response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);
@@ -243,10 +243,10 @@ namespace Token{
   NewOkResponse(HttpSession* session, const BlockPtr& blk){
     std::shared_ptr<HttpJsonResponse> response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kHttpOk);
 
-    JsonString& body = response->GetBody();
-    JsonWriter writer(body);
+    Json::String& body = response->GetBody();
+    Json::Writer writer(body);
     writer.StartObject();
-      SetField(writer, "data", blk);
+      Json::SetField(writer, "data", blk);
     writer.EndObject();
     response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);
     response->SetHeader("Content-Length", body.GetSize());
@@ -259,10 +259,10 @@ namespace Token{
   NewOkResponse(HttpSession* session, const TransactionPtr& tx){
     HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kHttpOk);
 
-    JsonString& body = response->GetBody();
-    JsonWriter writer(body);
+    Json::String& body = response->GetBody();
+    Json::Writer writer(body);
     writer.StartObject();
-      SetField(writer, "data", tx);
+      Json::SetField(writer, "data", tx);
     writer.EndObject();
 
     response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);
@@ -274,10 +274,10 @@ namespace Token{
   NewOkResponse(HttpSession* session, const UnclaimedTransactionPtr& utxo){
     HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kHttpOk);
 
-    JsonString& body = response->GetBody();
-    JsonWriter writer(body);
+    Json::String& body = response->GetBody();
+    Json::Writer writer(body);
     writer.StartObject();
-      SetField(writer, "data", utxo);
+      Json::SetField(writer, "data", utxo);
     writer.EndObject();
 
     response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);
@@ -289,11 +289,11 @@ namespace Token{
   NewErrorResponse(HttpSession* session, const HttpStatusCode& status_code, const std::string& msg){
     HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, status_code);
 
-    JsonString& body = response->GetBody();
-    JsonWriter writer(body);
+    Json::String& body = response->GetBody();
+    Json::Writer writer(body);
     writer.StartObject();
-      SetField(writer, "code", status_code);
-      SetField(writer, "message", msg);
+      Json::SetField(writer, "code", status_code);
+      Json::SetField(writer, "message", msg);
     writer.EndObject();
 
     response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);

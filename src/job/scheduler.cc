@@ -73,19 +73,10 @@ namespace Token{
     return pos->second;
   }
 
-  JobSchedulerStats JobScheduler::GetStats(){
-    JobWorkerStats workers[FLAGS_num_workers];
-    for(int idx = 0; idx < FLAGS_num_workers; idx++){
-      JobWorker* worker = workers_[idx];
-      if(!worker || !worker->IsRunning())
-        continue;
-      workers[idx] = worker->GetStats();
-    }
-    return JobSchedulerStats(workers);
-  }
+  bool JobScheduler::GetStats(Json::Writer& writer){
+    int64_t total_ran = 0;
+    int64_t total_discarded = 0;
 
-  bool JobScheduler::GetWorkerStatistics(JsonString& json){
-    JsonWriter writer(json);
     writer.StartObject();
     {
       for(int idx = 0; idx < FLAGS_num_workers; idx++){
@@ -95,22 +86,37 @@ namespace Token{
         snprintf(name, 10, "worker-%02" PRId32, idx);
 
         if(!worker || !worker->IsRunning()){
-          SetFieldNull(writer, name);
+          Json::SetFieldNull(writer, name);
           continue;
         }
+
+        int64_t num_ran = worker->GetJobsRan()->Get();
+        int64_t num_discarded = worker->GetJobsDiscarded()->Get();
 
         std::shared_ptr<Metrics::Snapshot> snapshot = worker->GetHistogram()->GetSnapshot();
         writer.Key(name, 9);
         writer.StartObject();
         {
-          SetField(writer, "NumberOfJobsRan", worker->GetJobsRan()->Get());
-          SetField(writer, "NumberOfJobsDiscarded", worker->GetJobsDiscarded()->Get());
-          SetField(writer, "MinTime", snapshot->GetMin());
-          SetField(writer, "MeanTime", snapshot->GetMean());
-          SetField(writer, "MaxTime", snapshot->GetMax());
+          Json::SetField(writer, "total_ran", num_ran);
+          Json::SetField(writer, "total_discarded", num_discarded);
+          //TODO: refactor fields?
+          Json::SetField(writer, "MinTime", snapshot->GetMin());
+          Json::SetField(writer, "MeanTime", snapshot->GetMean());
+          Json::SetField(writer, "MaxTime", snapshot->GetMax());
         }
         writer.EndObject();
+
+        total_ran += num_ran;
+        total_discarded += num_discarded;
       }
+
+      writer.Key("overall");
+      writer.StartObject();
+      {
+        Json::SetField(writer, "total_ran", total_ran);
+        Json::SetField(writer, "total_discarded", total_discarded);
+      }
+      writer.EndObject();
     }
     writer.EndObject();
     return true;

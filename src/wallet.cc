@@ -4,8 +4,8 @@
 #include "utils/kvstore.h"
 
 namespace Token{
-  void ToJson(const Wallet& hashes, JsonString& sb){
-    JsonWriter writer(sb);
+  void ToJson(const Wallet& hashes, Json::String& sb){
+    Json::Writer writer(sb);
     writer.StartArray();
     for(auto& it : hashes){
       std::string hash = it.HexString();
@@ -98,7 +98,7 @@ namespace Token{
     return Decode(data, wallet);
   }
 
-  bool WalletManager::GetWallet(const User& user, JsonWriter& writer){
+  bool WalletManager::GetWallet(const User& user, Json::Writer& writer){
     std::string data;
 
     leveldb::Status status;
@@ -122,7 +122,7 @@ namespace Token{
     return true;
   }
 
-  bool WalletManager::GetWallet(const User& user, JsonString& json){
+  bool WalletManager::GetWallet(const User& user, Json::String& json){
     std::string data;
 
     leveldb::Status status;
@@ -134,7 +134,7 @@ namespace Token{
     int64_t size = (int64_t) data.size();
     uint8_t* bytes = (uint8_t*) data.data();
 
-    JsonWriter writer(json);
+    Json::Writer writer(json);
     writer.StartArray();
     int64_t offset = sizeof(int64_t);
     while(offset < size){

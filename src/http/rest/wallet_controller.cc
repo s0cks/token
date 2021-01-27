@@ -28,19 +28,23 @@ namespace Token{
 
     HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kHttpOk);
 
-    JsonString& body = response->GetBody();
-    JsonWriter writer(body);
+    Json::String& body = response->GetBody();
+    Json::Writer writer(body);
     writer.StartObject();
-    writer.Key("data");
-    writer.StartObject();
-    SetField(writer, "user", user);
-    writer.Key("wallet");
-    if(!WalletManager::GetWallet(user, writer)){
-      std::stringstream ss;
-      ss << "Cannot find wallet for: " << user;
-      return session->Send(NewNoContentResponse(session, ss));
+    {
+      writer.Key("data");
+      writer.StartObject();
+      {
+        Json::SetField(writer, "user", user);
+        writer.Key("wallet");
+        if(!WalletManager::GetWallet(user, writer)){
+          std::stringstream ss;
+          ss << "Cannot find wallet for: " << user;
+          return session->Send(NewNoContentResponse(session, ss));
+        }
+      }
+      writer.EndObject();
     }
-    writer.EndObject();
     writer.EndObject();
 
     response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);
@@ -51,7 +55,7 @@ namespace Token{
   void WalletController::HandlePostUserWalletSpend(HttpSession* session, const HttpRequestPtr& request){
     User user = request->GetUserParameterValue();
 
-    JsonDocument doc;
+    Json::Document doc;
     request->GetBody(doc);
 
     InputList inputs = {};

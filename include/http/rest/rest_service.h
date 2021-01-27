@@ -71,14 +71,19 @@ namespace Token{
     static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
     static void OnShutdown(uv_async_t* handle);
     static void HandleServiceThread(uword parameter);
+    static bool SendShutdown();
    public:
     ~RestService() = delete;
 
     static State GetState();
     static Status GetStatus();
-    static bool Start();
-    static bool Stop();
-    static void WaitForState(State state);
+    static bool JoinThread();
+    static bool StartThread();
+
+    static inline bool
+    Shutdown(){
+      return SendShutdown() && JoinThread();
+    }
 
 #define DEFINE_CHECK(Name) \
         static inline bool Is##Name(){ return GetState() == State::k##Name; }

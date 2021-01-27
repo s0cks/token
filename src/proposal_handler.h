@@ -24,13 +24,24 @@ namespace Token{
       queue_(queue),
       proposal_(proposal){}
 
-    JobResult ProcessBlock(const BlockPtr& blk) const{
+
+    bool ProcessBlock(const BlockPtr& blk) const{
       ProcessBlockJob* job = new ProcessBlockJob(blk, true);
       queue_.Push(job);
       while(!job->IsFinished()); //spin
-      JobResult result(job->GetResult());
+
+      if(!job->GetResult().IsSuccessful()){
+        LOG(ERROR) << "ProcessBlockJob finished w/: " << job->GetResult();
+        return false;
+      }
+
+      if(!job->CommitAllChanges()){
+        LOG(ERROR) << "couldn't commit changes to block chain.";
+        return false;
+      }
+
       delete job;
-      return result;
+      return true;
     }
 
     bool WasRejected() const;
@@ -135,10 +146,8 @@ namespace Token{
       BlockPtr blk = ObjectPool::GetBlock(hash);
       LOG(INFO) << "proposal " << hash << " has entered the voting phase.";
 
-      JobResult result = ProcessBlock(blk);
-      if(!result.IsSuccessful()){
-        LOG(WARNING) << "block " << hash << " is invalid:";
-        LOG(WARNING) << result.GetMessage();
+      if(!ProcessBlock(blk)){
+        LOG(WARNING) << "couldn't process block: " << hash;
         return CancelProposal();
       }
       proposer->SendAccepted();

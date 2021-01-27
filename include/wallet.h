@@ -51,7 +51,7 @@ namespace Token{
     return true;
   }
 
-  void ToJson(const Wallet& hashes, JsonString& json);
+  void ToJson(const Wallet& hashes, Json::String& json);
 
 #define FOR_EACH_WALLET_MANAGER_STATE(V) \
   V(Uninitialized)                       \
@@ -95,7 +95,8 @@ namespace Token{
           return stream << #Name;
         FOR_EACH_WALLET_MANAGER_STATUS(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
-        default:return stream << "Unknown";
+        default:
+          return stream << "Unknown";
       }
     }
    private:
@@ -114,8 +115,8 @@ namespace Token{
     static bool RemoveWallet(const User& user);
     static bool PutWallet(const User& user, const Wallet& wallet);
     static bool GetWallet(const User& user, Wallet& wallet);
-    static bool GetWallet(const User& user, JsonString& json);
-    static bool GetWallet(const User& user, JsonWriter& writer);
+    static bool GetWallet(const User& user, Json::String& json);
+    static bool GetWallet(const User& user, Json::Writer& writer);
     static leveldb::Status Write(leveldb::WriteBatch* batch);
     static int64_t GetNumberOfWallets();
 

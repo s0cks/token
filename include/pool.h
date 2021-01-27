@@ -12,11 +12,6 @@
 #include "utils/json_conversion.h"
 
 namespace Token{
-  #define FOR_EACH_POOL_TYPE(V) \
-    V(Block)                           \
-    V(Transaction)                     \
-    V(UnclaimedTransaction)
-
   class ObjectPoolVisitor{
    protected:
     ObjectPoolVisitor() = default;
@@ -35,45 +30,6 @@ namespace Token{
   };
   FOR_EACH_POOL_TYPE(GENERATE_TYPE_VISITOR)
 #undef GENERATE_TYPE_VISITOR
-
-  class ObjectPoolStats{
-    friend class ObjectPool;
-   private:
-    int64_t num_objects_;
-    int64_t num_blocks_;
-    int64_t num_transactions_;
-    int64_t num_unclaimed_transactions_;
-
-    ObjectPoolStats(int64_t nblocks, int64_t ntxs, int64_t nutxos):
-      num_objects_(nblocks+ntxs+nutxos),
-      num_blocks_(nblocks),
-      num_transactions_(ntxs),
-      num_unclaimed_transactions_(nutxos){}
-   public:
-    ~ObjectPoolStats() = default;
-
-    int64_t GetNumberOfObjects() const{
-      return num_objects_;
-    }
-
-    int64_t GetNumberOfBlocks() const{
-      return num_blocks_;
-    }
-
-    int64_t GetNumberOfTransactions() const{
-      return num_transactions_;
-    }
-
-    int64_t GetNumberOfUnclaimedTransactions() const{
-      return num_unclaimed_transactions_;
-    }
-
-    void operator=(const ObjectPoolStats& stats){
-      num_blocks_ = stats.num_blocks_;
-      num_transactions_ = stats.num_transactions_;
-      num_unclaimed_transactions_ = stats.num_unclaimed_transactions_;
-    }
-  };
 
 #define FOR_EACH_POOL_STATE(V) \
     V(Uninitialized)           \
@@ -96,13 +52,12 @@ namespace Token{
     friend std::ostream& operator<<(std::ostream& stream, const State& state){
       switch(state){
 #define DEFINE_TOSTRING(Name) \
-                case State::k##Name: \
-                    stream << #Name; \
-                    return stream;
+        case State::k##Name: \
+            return stream << #Name;
         FOR_EACH_POOL_STATE(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
-        default:stream << "Unknown";
-          return stream;
+        default:
+          return stream << "Unknown";
       }
     }
 
@@ -115,13 +70,12 @@ namespace Token{
     friend std::ostream& operator<<(std::ostream& stream, const Status& status){
       switch(status){
 #define DEFINE_TOSTRING(Name) \
-                case Status::k##Name: \
-                    stream << #Name; \
-                    return stream;
+        case Status::k##Name: \
+            return stream << #Name;
         FOR_EACH_POOL_STATUS(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
-        default:stream << "Unknown";
-          return stream;
+        default:
+          return stream << "Unknown";
       }
     }
 
@@ -156,7 +110,7 @@ namespace Token{
 #define DEFINE_TYPE_METHODS(Name) \
     static bool WaitFor##Name(const Hash& hash, const int64_t timeout_ms=1000*5); \
     static bool Put##Name(const Hash& hash, const Name##Ptr& val);                \
-    static bool Get##Name##s(JsonWriter& json);                                   \
+    static bool Get##Name##s(Json::Writer& json);                                   \
     static bool Has##Name(const Hash& hash);                                      \
     static bool Remove##Name(const Hash& hash);                                   \
     static bool Visit##Name##s(ObjectPool##Name##Visitor* vis);                   \
@@ -167,10 +121,12 @@ namespace Token{
 
     //TODO: refactor
     static int64_t GetNumberOfObjects();
-    static bool GetStats(JsonString& json);
-    static ObjectPoolStats GetStats();
     static UnclaimedTransactionPtr FindUnclaimedTransaction(const Input& input);
     static leveldb::Status Write(leveldb::WriteBatch* update);
+
+    #ifdef TOKEN_DEBUG
+      static bool GetStats(Json::Writer& json);
+    #endif//TOKEN_DEBUG
 
 #define DEFINE_CHECK(Name) \
     static inline bool Is##Name(){ return GetState() == ObjectPool::k##Name; }

@@ -10,9 +10,8 @@ namespace Token{
     Hash hash = GetProposal()->GetHash();
     BlockPtr blk = ObjectPool::GetBlock(hash);
 
-    JobResult result = ProcessBlock(blk);
-    if(!result.IsSuccessful()){
-      LOG(WARNING) << "couldn't process block " << hash << ": " << result.GetMessage();
+    if(!ProcessBlock(blk)){
+      LOG(WARNING) << "couldn't process block " << hash;
       return false;
     }
 

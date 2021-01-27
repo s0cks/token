@@ -29,6 +29,7 @@ namespace Token{
           continue;
         }
 
+        thread->ClearCurrentSession();
         if(session->IsError() && request.ShouldReschedule()){
           if(request.ShouldReschedule()){
             int32_t backoffs = request.GetNumberOfAttempts() * PeerSessionManager::kRetryBackoffSeconds;

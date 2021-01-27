@@ -7,23 +7,6 @@ namespace Token{
     if(!GetBlock()->Accept(this)){
       return Failed("Cannot visit the block transactions.");
     }
-
-    for(auto& it : wallets_){
-      const User& user = it.first;
-      Wallet& wallet = it.second;
-      WalletManager::GetWallet(user, wallet);
-      LOG(INFO) << user << " now has " << wallet.size() << " unclaimed transactions.";
-      RemoveObject(batch_wallet_, user);
-      PutObject(batch_wallet_, user, wallet);
-    }
-
-    LOG(INFO) << "writing changes....";
-    leveldb::Status status;
-    if(!(status = Write()).ok()){
-      std::stringstream ss;
-      ss << "Cannot write changes: " << status.ToString();
-      return Failed(ss);
-    }
     return Success("Finished.");
   }
 
@@ -31,8 +14,7 @@ namespace Token{
     JobQueue* queue = JobScheduler::GetThreadQueue();
     ProcessTransactionJob* job = new ProcessTransactionJob(this, tx);
     queue->Push(job);
-    while(!job->IsFinished()); // spin
-    RemoveObject(batch_pool_, tx->GetHash(), Object::Type::kTransaction);
+    RemoveObject(batch_pool_, tx->GetHash(), Object::Type::kTransactionType);
     return true;
   }
 
@@ -40,11 +22,9 @@ namespace Token{
     JobQueue* queue = JobScheduler::GetThreadQueue();
     ProcessTransactionInputsJob* process_inputs = new ProcessTransactionInputsJob(this);
     queue->Push(process_inputs);
-    while(!process_inputs->IsFinished()); // spin
 
     ProcessTransactionOutputsJob* process_outputs = new ProcessTransactionOutputsJob(this);
     queue->Push(process_outputs);
-    while(!process_outputs->IsFinished()); // spin
     return Success("done.");
   }
 

@@ -88,27 +88,7 @@ namespace Token{
     return count;
   }
 
-  ObjectPoolStats ObjectPool::GetStats(){
-    int64_t num_blocks = 0;
-    int64_t num_transactions = 0;
-    int64_t num_unclaimed_transactions = 0;
-
-    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
-    for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectKey key(it->key());
-      if(key.IsBlock()){
-        num_blocks++;
-      } else if(key.IsTransaction()){
-        num_transactions++;
-      } else if(key.IsUnclaimedTransaction()){
-        num_unclaimed_transactions++;
-      }
-    }
-    delete it;
-    return ObjectPoolStats(num_blocks, num_transactions, num_unclaimed_transactions);
-  }
-
-  bool ObjectPool::GetStats(JsonString& json){
+  bool ObjectPool::GetStats(Json::Writer& writer){
     int64_t num_blocks = 0;
     int64_t num_transactions = 0;
     int64_t num_unclaimed_transactions = 0;
@@ -126,12 +106,11 @@ namespace Token{
     }
     delete it;
 
-    JsonWriter writer(json);
     writer.StartObject();
     {
-      SetField(writer, "NumberOfBlocks", num_blocks);
-      SetField(writer, "NumberOfTransactions", num_transactions);
-      SetField(writer, "NumberOfUnclaimedTransactions", num_unclaimed_transactions);
+      Json::SetField(writer, "NumberOfBlocks", num_blocks);
+      Json::SetField(writer, "NumberOfTransactions", num_transactions);
+      Json::SetField(writer, "NumberOfUnclaimedTransactions", num_unclaimed_transactions);
     }
     writer.EndObject();
     return true;
@@ -191,7 +170,7 @@ namespace Token{
 
 #define DEFINE_HAS_TYPE(Name) \
   bool ObjectPool::Has##Name(const Hash& hash){ \
-    return HasObject(GetIndex(), hash, Object::Type::k##Name); \
+    return HasObject(GetIndex(), hash, Object::Type::k##Name##Type); \
   }
   FOR_EACH_POOL_TYPE(DEFINE_HAS_TYPE);
 #undef DEFINE_HAS_TYPE
@@ -214,7 +193,7 @@ namespace Token{
 #define DEFINE_REMOVE_TYPE(Name) \
   bool ObjectPool::Remove##Name(const Hash& hash){ \
     leveldb::Status status;      \
-    if(!(status = RemoveObject(GetIndex(), hash, Object::Type::k##Name)).ok()){ \
+    if(!(status = RemoveObject(GetIndex(), hash, Object::Type::k##Name##Type)).ok()){ \
       LOG(WARNING) << "cannot remove " << hash << " from pool: " << status.ToString(); \
       return false;              \
     }                            \
@@ -242,7 +221,7 @@ namespace Token{
 #undef DEFINE_VISIT_TYPE
 
 #define DEFINE_GET_TYPE_HASHES(Name) \
-  bool ObjectPool::Get##Name##s(JsonWriter& writer){ \
+  bool ObjectPool::Get##Name##s(Json::Writer& writer){ \
     leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
     writer.StartArray();             \
     for(iter->SeekToFirst(); iter->Valid(); iter->Next()){                     \

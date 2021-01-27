@@ -1,40 +1,41 @@
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
 
-#include <mutex>
-#include <condition_variable>
 #include "configuration.h"
 #include "http/controller.h"
 #include "http/health/health_service.h"
+#include "utils/relaxed_atomic.h"
 
 namespace Token{
   static ThreadId thread_;
-  static std::atomic<HealthCheckService::State> state_ = {HealthCheckService::kStopped};
-  static std::atomic<HealthCheckService::Status> status_ = {HealthCheckService::kOk};
+  static RelaxedAtomic<HealthCheckService::State> state_ = { HealthCheckService::kStopped };
+  static RelaxedAtomic<HealthCheckService::Status> status_ = { HealthCheckService::kOk };
   static HttpRouter* router_ = nullptr;
-  static uv_tcp_t* server_ = nullptr;
-  static uv_async_t* shutdown_ = nullptr;
+  static uv_tcp_t server_;
+  static uv_async_t shutdown_;
 
   HealthCheckService::State HealthCheckService::GetState(){
-    return state_.load(std::memory_order_seq_cst);
+    return state_;
   }
 
   void HealthCheckService::SetState(State state){
-    state_.store(state, std::memory_order_seq_cst);
+    state_ = state;
   }
 
   HealthCheckService::Status HealthCheckService::GetStatus(){
-    return status_.load(std::memory_order_seq_cst);
+    return status_;
   }
 
   void HealthCheckService::SetStatus(Status status){
-    status_.store(status, std::memory_order_seq_cst);
+    status_ = status;
   }
 
   void HealthCheckService::WaitForState(State state){
-    //TODO: implement
+    //TODO: fix logic
+    State current = state_.load();
+    while(state_.compare_exchange_strong(current, state, std::memory_order_seq_cst));
   }
 
-  bool HealthCheckService::Start(){
+  bool HealthCheckService::StartThread(){
     if(!IsStopped()){
       LOG(WARNING) << "the health check service is already running.";
       return false;
@@ -42,34 +43,42 @@ namespace Token{
 
     LOG(INFO) << "initializing the health check service....";
     router_ = new HttpRouter();
-    server_ = new uv_tcp_t();
-    shutdown_ = new uv_async_t();
     HealthController::Initialize(router_);
     return Thread::StartThread(&thread_, "health-svc", &HandleServiceThread, 0);
   }
 
-  bool HealthCheckService::Stop(){
+  bool HealthCheckService::SendShutdown(){
     if(!IsRunning()){
+      LOG(WARNING) << "the health check service isn't running.";
       return true;
-    } // should we return false?
-    uv_async_send(shutdown_);
+    }
+
+    int err;
+    if((err = uv_async_send(&shutdown_)) != 0){
+      LOG(ERROR) << "cannot invoke send shutdown notice to health service event loop: " << uv_strerror(err);
+      return false;
+    }
+    return true;
+  }
+
+  bool HealthCheckService::JoinThread(){
     return Thread::StopThread(thread_);
   }
 
   void HealthCheckService::HandleServiceThread(uword parameter){
     SetState(HealthCheckService::kStarting);
     uv_loop_t* loop = uv_loop_new();
-    uv_async_init(loop, shutdown_, &OnShutdown);
+    uv_async_init(loop, &shutdown_, &OnShutdown);
 
-    uv_tcp_init(loop, server_);
+    uv_tcp_init(loop, &server_);
     int32_t port = FLAGS_healthcheck_port;
-    if(!Bind(server_, port)){
+    if(!Bind(&server_, port)){
       LOG(WARNING) << "couldn't bind health check service on port: " << port;
       goto exit;
     }
 
     int result;
-    if((result = uv_listen((uv_stream_t*) server_, 100, &OnNewConnection)) != 0){
+    if((result = uv_listen((uv_stream_t*)&server_, 100, &OnNewConnection)) != 0){
       LOG(WARNING) << "health check service couldn't listen on port " << port << ": " << uv_strerror(result);
       goto exit;
     }

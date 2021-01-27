@@ -9,58 +9,34 @@
 #include "configuration.h"
 #include "server/server.h"
 #include "utils/crash_report.h"
+#include "utils/relaxed_atomic.h"
 #include "server/server_session.h"
-#include "unclaimed_transaction.h"
 #include "peer/peer_session_manager.h"
 
 namespace Token{
   static pthread_t thread_;
-  static uv_tcp_t* handle_ = new uv_tcp_t();
+  static uv_tcp_t* handle_ = new uv_tcp_t(); // TODO: don't alloc handle_
   static uv_async_t shutdown_;
-
-  static std::mutex mutex_;
-  static std::condition_variable cond_;
-  static Server::State state_ = Server::State::kStopped;
-  static Server::Status status_ = Server::Status::kOk;
-
-#define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
-#define LOCK std::unique_lock<std::mutex> lock(mutex_)
-#define UNLOCK lock.unlock()
-#define WAIT cond_.wait(lock)
-#define SIGNAL_ONE cond_.notify_one()
-#define SIGNAL_ALL cond_.notify_all()
+  static RelaxedAtomic<Server::State> state_ = { Server::kStopped };
+  static RelaxedAtomic<Server::Status> status_ = { Server::kOk };
 
   uv_tcp_t* Server::GetHandle(){
     return handle_;
   }
 
-  void Server::WaitForState(Server::State state){
-    LOCK;
-    while(state_ != state) WAIT;
-    UNLOCK;
-  }
-
-  void Server::SetState(Server::State state){
-    LOCK;
+  void Server::SetState(const State& state){
     state_ = state;
-    UNLOCK;
-    SIGNAL_ALL;
   }
 
   Server::State Server::GetState(){
-    LOCK_GUARD;
     return state_;
   }
 
-  void Server::SetStatus(Server::Status status){
-    LOCK;
+  void Server::SetStatus(const Status& status){
     status_ = status;
-    UNLOCK;
-    SIGNAL_ALL;
   }
 
   Server::Status Server::GetStatus(){
-    LOCK_GUARD;
     return status_;
   }
 
@@ -88,20 +64,27 @@ namespace Token{
     SetState(Server::kStopped);
   }
 
-  bool Server::Start(){
+  bool Server::StartThread(){
     if(!IsStopped()){
       LOG(WARNING) << "the server is already running.";
       return false;
     }
+
     return Thread::StartThread(&thread_, "server", &HandleServerThread, 0);
   }
 
-  bool Server::Stop(){
+  bool Server::SendShutdown(){
     if(!IsRunning()){
+      LOG(WARNING) << "server is not running.";
       return true;
-    } // should we return false?
-    uv_async_send(&shutdown_);
-    return Thread::StopThread(thread_);
+    }
+
+    int err;
+    if((err = uv_async_send(&shutdown_)) != 0){
+      LOG(ERROR) << "cannot invoke send shutdown notice to server event loop: " << uv_strerror(err);
+      return false;
+    }
+    return true;
   }
 
   void Server::HandleServerThread(uword parameter){
@@ -187,6 +170,10 @@ namespace Token{
       }
     }
     free(buff->base);
+  }
+
+  bool Server::JoinThread(){
+    return Thread::StopThread(thread_);
   }
 }
 

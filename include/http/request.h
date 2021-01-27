@@ -71,7 +71,7 @@ namespace Token{
       return body_;
     }
 
-    void GetBody(JsonDocument& doc) const{
+    void GetBody(Json::Document& doc) const{
       doc.Parse(body_.data(), body_.length());
     }
 

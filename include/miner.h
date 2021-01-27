@@ -68,7 +68,6 @@ namespace Token{
 
     static int StartMinerTimer();
     static int StopMinerTimer();
-    static void HandleThread(uword param);
    public:
     ~BlockMiner() = delete;
 

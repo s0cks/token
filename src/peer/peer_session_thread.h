@@ -87,6 +87,11 @@ namespace Token{
       return session_;
     }
 
+    void ClearCurrentSession(){
+      std::lock_guard<std::mutex> guard(mutex_);
+      session_ = nullptr;
+    }
+
     static inline std::string
     GetWorkerThreadName(const WorkerId& worker){
       std::stringstream ss;

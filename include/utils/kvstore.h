@@ -188,20 +188,15 @@ namespace Token{
       return GetMagic() == kMagic;
     }
 
-    bool IsBlock() const{
-      return GetType() == Object::Type::kBlock;
+#define DEFINE_CHECK(Name) \
+    bool Is##Name() const{ \
+      return GetType() == Object::Type::k##Name##Type; \
     }
-
-    bool IsTransaction() const{
-      return GetType() == Object::Type::kTransaction;
-    }
-
-    bool IsUnclaimedTransaction() const{
-      return GetType() == Object::Type::kUnclaimedTransaction;
-    }
+    FOR_EACH_POOL_TYPE(DEFINE_CHECK)
+#undef DEFINE_CHECK
 
     bool IsReference() const{
-      return GetType() == Object::Type::kReference;
+      return GetType() == Object::Type::kReferenceType;
     }
 
     void operator=(const ObjectKey& key){
@@ -229,20 +224,13 @@ namespace Token{
     return index->Get(readOpts, key, val);
   }
 
-  static inline leveldb::Status
-  GetBlockObject(leveldb::DB* index, const Hash& hash, std::string* val){
-    return GetObject(index, ObjectKey(Object::Type::kBlock, hash), val);
+#define DEFINE_GETTER(Name) \
+  static inline leveldb::Status \
+  Get##Name##Object(leveldb::DB* index, const Hash& hash, std::string* val){ \
+    return GetObject(index, ObjectKey(Object::Type::k##Name##Type, hash), val); \
   }
-
-  static inline leveldb::Status
-  GetTransactionObject(leveldb::DB* index, const Hash& hash, std::string* val){
-    return GetObject(index, ObjectKey(Object::Type::kTransaction, hash), val);
-  }
-
-  static inline leveldb::Status
-  GetUnclaimedTransactionObject(leveldb::DB* index, const Hash& hash, std::string* val){
-    return GetObject(index, ObjectKey(Object::Type::kUnclaimedTransaction, hash), val);
-  }
+  FOR_EACH_POOL_TYPE(DEFINE_GETTER)
+#undef DEFINE_GETTER
 
   static inline leveldb::Status
   GetWallet(leveldb::DB* index, const User& user, std::string* val){
@@ -292,35 +280,17 @@ namespace Token{
     return PutRawObject(batch, k, vdata);
   }
 
-  static inline leveldb::Status
-  PutObject(leveldb::DB* index, const Hash& hash, const BlockPtr& val){
-    return PutObject(index, ObjectKey(Object::Type::kBlock, hash), val);
+#define DEFINE_WRITERS(Name) \
+  static inline leveldb::Status \
+  PutObject(leveldb::DB* index, const Hash& hash, const Name##Ptr& val){ \
+    return PutObject(index, ObjectKey(Object::Type::k##Name##Type, hash), val); \
+  }                                \
+  static inline void   \
+  PutObject(leveldb::WriteBatch& batch, const Hash& hash, const Name##Ptr& val){ \
+    return PutObject(batch, ObjectKey(Object::Type::k##Name##Type, hash), val);  \
   }
-
-  static inline void
-  PutObject(leveldb::WriteBatch& batch, const Hash& hash, const BlockPtr& val){
-    return PutObject(batch, ObjectKey(Object::Type::kBlock, hash), val);
-  }
-
-  static inline leveldb::Status
-  PutObject(leveldb::DB* index, const Hash& hash, const TransactionPtr& val){
-    return PutObject(index, ObjectKey(Object::Type::kTransaction, hash), val);
-  }
-
-  static inline void
-  PutObject(leveldb::WriteBatch& batch, const Hash& hash, const TransactionPtr& val){
-    return PutObject(batch, ObjectKey(Object::Type::kTransaction, hash), val);
-  }
-
-  static inline leveldb::Status
-  PutObject(leveldb::DB* index, const Hash& hash, const UnclaimedTransactionPtr& val){
-    return PutObject(index, ObjectKey(Object::Type::kUnclaimedTransaction, hash), val);
-  }
-
-  static inline void
-  PutObject(leveldb::WriteBatch& batch, const Hash& hash, const UnclaimedTransactionPtr& val){
-    return PutObject(batch, ObjectKey(Object::Type::kUnclaimedTransaction, hash), val);
-  }
+  FOR_EACH_POOL_TYPE(DEFINE_WRITERS)
+#undef DEFINE_WRITERS
 
   static inline leveldb::Status
   PutObject(leveldb::DB* index, const User& user, const Wallet& wallet){

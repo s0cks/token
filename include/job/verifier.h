@@ -4,7 +4,6 @@
 #include "job.h"
 #include "block.h"
 #include "transaction.h"
-#include "utils/atomic_linked_list.h"
 
 namespace Token{
   class VerifyBlockJob;

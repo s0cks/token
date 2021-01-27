@@ -54,8 +54,10 @@ namespace Token{
       return;
     }
 
-    if(ObjectPool::GetNumberOfTransactions() == 0 || ObjectPool::GetNumberOfTransactions() < Block::kMaxTransactionsForBlock)
+    if(ObjectPool::GetNumberOfTransactions() == 0){
+      LOG(WARNING) << "no transactions in object pool, skipping mining cycle.";
       return; // skip
+    }
 
     BlockPtr blk = BlockBuilder::BuildNewBlock();
     Hash hash = blk->GetHash();
@@ -81,7 +83,15 @@ namespace Token{
     }
   }
 
-  void BlockMiner::HandleThread(uword param){
+  bool BlockMiner::Start(){
+    if(!IsStoppedState())
+      return false;
+
+    if(!JobScheduler::RegisterQueue(thread_, &queue_)){
+      LOG(WARNING) << "couldn't register block miner work queue.";
+      return false;
+    }
+
     LOG(INFO) << "starting block miner thread....";
     SetState(BlockMiner::kStartingState);
 
@@ -106,19 +116,7 @@ namespace Token{
     }
   exit:
     SetState(BlockMiner::kStoppedState);
-    pthread_exit(0);
-  }
-
-  bool BlockMiner::Start(){
-    if(!IsStoppedState())
-      return false;
-
-    if(!JobScheduler::RegisterQueue(thread_, &queue_)){
-      LOG(WARNING) << "couldn't register block miner work queue.";
-      return false;
-    }
-
-    return Thread::StartThread(&thread_, "miner", &HandleThread, 0);
+    return true;
   }
 
   bool BlockMiner::Stop(){

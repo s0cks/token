@@ -26,7 +26,7 @@ namespace Token{
 #ifdef TOKEN_ENABLE_REST_SERVICE
     if(IsValidPort(FLAGS_service_port) && RestService::IsRunning()){
       LOG(INFO) << "terminating the rest service....";
-      if(!RestService::Stop()){
+      if(!RestService::Shutdown()){
         PrintFatalCrashReport("Cannot shutdown the rest service thread.");
         goto terminate;
       }
@@ -42,7 +42,7 @@ namespace Token{
 
     if(IsValidPort(FLAGS_server_port) && Server::IsRunning()){
       LOG(INFO) << "terminating the server....";
-      if(!Server::Stop()){
+      if(!Server::Shutdown()){
         PrintFatalCrashReport("Cannot shutdown the server thread.");
         goto terminate;
       }
@@ -52,7 +52,7 @@ namespace Token{
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
     if(IsValidPort(FLAGS_healthcheck_port) && HealthCheckService::IsRunning()){
       LOG(INFO) << "terminating the health check service....";
-      if(!HealthCheckService::Stop()){
+      if(!HealthCheckService::Shutdown()){
         PrintFatalCrashReport("Cannot shutdown the health check service");
         goto terminate;
       }

@@ -16,8 +16,6 @@ namespace Token{
   };
 
   void HttpSession::Send(const std::shared_ptr<HttpResponse>& response){
-    LOG(INFO) << "sending: " << response->ToString();
-
     HttpSessionWriteRequestData* data = new HttpSessionWriteRequestData(this, response);
     if(!response->Write(data->buffer)){
       LOG(WARNING) << "couldn't encode http response: " << response->ToString();
