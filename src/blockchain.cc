@@ -36,7 +36,6 @@ namespace Token{
   }
 
   static RelaxedAtomic<BlockChain::State> state_ = { BlockChain::kUninitialized };
-  static RelaxedAtomic<BlockChain::Status> status_ = { BlockChain::kOk };
   static JobQueue queue_(JobScheduler::kMaxNumberOfJobs);
   static leveldb::DB* index_ = nullptr;
 
@@ -91,7 +90,6 @@ namespace Token{
       if(!job->CommitAllChanges()){
         LOG(ERROR) << "couldn't commit changes.";
         SetState(BlockChain::kUninitialized);
-        SetStatus(BlockChain::kError);
         return false;
       }
 
@@ -111,14 +109,6 @@ namespace Token{
 
   void BlockChain::SetState(const State& state){
     state_ = state;
-  }
-
-  BlockChain::Status BlockChain::GetStatus(){
-    return status_;
-  }
-
-  void BlockChain::SetStatus(const Status& status){
-    status_ = status;
   }
 
   BlockPtr BlockChain::GetGenesis(){

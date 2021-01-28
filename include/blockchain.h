@@ -22,11 +22,6 @@ namespace Token{
     V(Initialized)                   \
     V(Synchronizing)                 \
 
-#define FOR_EACH_BLOCKCHAIN_STATUS(V) \
-    V(Ok)                             \
-    V(Warning)                        \
-    V(Error)
-
   class BlockChainBlockVisitor;
   class BlockChainHeaderVisitor;
   class BlockChain{
@@ -52,31 +47,11 @@ namespace Token{
           return stream << "Unknown";
       }
     }
-
-    enum Status{
-#define DEFINE_STATUS(Name) k##Name,
-      FOR_EACH_BLOCKCHAIN_STATUS(DEFINE_STATUS)
-#undef DEFINE_STATUS
-    };
-
-    friend std::ostream& operator<<(std::ostream& stream, const Status& status){
-      switch(status){
-#define DEFINE_TOSTRING(Name) \
-        case Status::k##Name: \
-            return stream << #Name;
-        FOR_EACH_BLOCKCHAIN_STATUS(DEFINE_TOSTRING)
-#undef DEFINE_TOSTRING
-        default:
-          return stream << "Unknown";
-      }
-    }
    private:
     BlockChain() = delete;
     static leveldb::DB* GetIndex();
 
     static void SetState(const State& state);
-    static void SetStatus(const Status& status);
-
 
     static bool PutBlock(const Hash& hash, BlockPtr blk);
     static bool PutReference(const std::string& name, const Hash& hash);
@@ -86,7 +61,6 @@ namespace Token{
     ~BlockChain() = delete;
 
     static State GetState();
-    static Status GetStatus();
     static bool Initialize();
     static bool VisitHeaders(BlockChainHeaderVisitor* vis);
     static bool VisitBlocks(BlockChainBlockVisitor* vis);
@@ -123,11 +97,6 @@ namespace Token{
         static inline bool Is##Name(){ return GetState() == State::k##Name; }
     FOR_EACH_BLOCKCHAIN_STATE(DEFINE_STATE_CHECK)
 #undef DEFINE_STATE_CHECK
-
-#define DEFINE_STATUS_CHECK(Name) \
-        static inline bool Is##Name(){ return GetStatus() == Status::k##Name; }
-    FOR_EACH_BLOCKCHAIN_STATUS(DEFINE_STATUS_CHECK)
-#undef DEFINE_STATUS_CHECK
   };
 
   class BlockChainBlockVisitor{

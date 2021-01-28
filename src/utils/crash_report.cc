@@ -82,8 +82,8 @@ namespace Token{
     LOG_AT_LEVEL(GetSeverity()) << "Home: " << TOKEN_BLOCKCHAIN_HOME;
 
     // Chain Information
-    if(BlockChain::IsInitialized() && BlockChain::IsOk()){
-      LOG_AT_LEVEL(GetSeverity()) << "Block Chain (" << BlockChain::GetStatus() << "):";
+    if(BlockChain::IsInitialized()){
+      LOG_AT_LEVEL(GetSeverity()) << "Block Chain:";
       LOG_AT_LEVEL(GetSeverity()) << "\tGenesis: " << BlockChain::GetReference(BLOCKCHAIN_REFERENCE_GENESIS);
       LOG_AT_LEVEL(GetSeverity()) << "\tHead: " << BlockChain::GetReference(BLOCKCHAIN_REFERENCE_HEAD);
     } else{
@@ -91,8 +91,8 @@ namespace Token{
     }
 
     // Object Pool Information
-    if(ObjectPool::IsInitialized() && ObjectPool::IsOk()){
-      LOG_AT_LEVEL(GetSeverity()) << "Pool (" << ObjectPool::GetStatus() << "):";
+    if(ObjectPool::IsInitialized()){
+      LOG_AT_LEVEL(GetSeverity()) << "Pool: ";
       LOG_AT_LEVEL(GetSeverity()) << "\tTotal Number of Objects: " << ObjectPool::GetNumberOfObjects();
       LOG_AT_LEVEL(GetSeverity()) << "\tTotal Number of Blocks: " << ObjectPool::GetNumberOfBlocks();
       LOG_AT_LEVEL(GetSeverity()) << "\tTotal Number of Transactions: " << ObjectPool::GetNumberOfTransactions();

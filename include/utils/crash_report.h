@@ -99,7 +99,7 @@ namespace Token{
 
     template<class T>
     bool PrintState(const std::string& name){
-      LOG_AT_LEVEL(GetSeverity()) << name << ": " << T::GetState() << " [" << T::GetStatus() << "]";
+      LOG_AT_LEVEL(GetSeverity()) << name << ": " << T::GetState();
       return true;
     }
 

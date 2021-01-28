@@ -111,18 +111,18 @@ namespace Token{
       LOG_AT_LEVEL(GetSeverity()) << "Hash: " << tx->GetHash();
       LOG_AT_LEVEL(GetSeverity()) << "Created: " << GetTimestampFormattedReadable(tx->GetTimestamp());
       if(!IsDetailed()){
-        LOG_AT_LEVEL(GetSeverity()) << "Number of Inputs: " << tx->GetNumberOfInputs();
+        LOG_AT_LEVEL(GetSeverity()) << "Number of Inputs: " << tx->inputs_size();
       } else{
-        LOG_AT_LEVEL(GetSeverity()) << "Inputs (" << tx->GetNumberOfInputs() << "):";
+        LOG_AT_LEVEL(GetSeverity()) << "Inputs (" << tx->inputs_size() << "):";
         for(auto& it : tx->inputs()){
           LOG_AT_LEVEL(GetSeverity()) << " - " << it;
         }
       }
 
       if(!IsDetailed()){
-        LOG_AT_LEVEL(GetSeverity()) << "Number of Outputs: " << tx->GetNumberOfOutputs();
+        LOG_AT_LEVEL(GetSeverity()) << "Number of Outputs: " << tx->outputs_size();
       } else{
-        LOG_AT_LEVEL(GetSeverity()) << "Outputs (" << tx->GetNumberOfOutputs() << "):";
+        LOG_AT_LEVEL(GetSeverity()) << "Outputs (" << tx->outputs_size() << "):";
         for(auto& it : tx->outputs()){
           LOG_AT_LEVEL(GetSeverity()) << " - " << it;
         }

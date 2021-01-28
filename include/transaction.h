@@ -42,37 +42,89 @@ namespace Token{
       user_(reader->ReadUser()){}
     ~Input(){}
 
+    /**
+     * Returns the TransactionReference for this input.
+     *
+     * @see TransactionReference
+     * @return The TransactionReference
+     */
     TransactionReference& GetReference(){
       return reference_;
     }
 
+    /**
+     * Returns a copy of the TransactionReference for this input.
+     *
+     * @see TransactionReference
+     * @return A copy of the TransactionReference
+     */
     TransactionReference GetReference() const{
       return reference_;
     }
 
+    /**
+     * Returns the User for this input.
+     *
+     * @see User
+     * @deprecated
+     * @return The User for this input
+     */
     User& GetUser(){
       return user_;
     }
 
+    /**
+     * Returns a copy of the User for this input.
+     *
+     * @see User
+     * @deprecated
+     * @return A copy of the User for this input
+     */
     User GetUser() const{
       return user_;
     }
 
+    /**
+     * Returns the size of this object (in bytes).
+     *
+     * @return The size of this encoded object in bytes
+     */
     int64_t GetBufferSize() const{
       return Input::kSize;
     }
 
+    /**
+     * Serializes this object to a Buffer.
+     *
+     * @param buffer - The Buffer to write to
+     * @see Buffer
+     * @return True when successful otherwise, false
+     */
     bool Write(const BufferPtr& buffer) const{
       return buffer->PutReference(reference_)
           && buffer->PutUser(user_);
     }
 
+    /**
+     * Serializes this object to a file using a BinaryFileWriter.
+     *
+     * @param writer
+     * @see BinaryFileWriter
+     * @deprecated
+     * @return True when successful otherwise, false
+     */
     bool Write(BinaryFileWriter* writer) const{
       writer->WriteReference(reference_);
       writer->WriteUser(user_);
       return true;
     }
 
+    /**
+     * Returns the description of this object.
+     *
+     * @see Object::ToString()
+     * @return The ToString() description of this object
+     */
     std::string ToString() const{
       std::stringstream stream;
       stream << "Input(" << reference_ << ", " << GetUser() << ")";
@@ -128,30 +180,68 @@ namespace Token{
       product_(reader->ReadProduct()){}
     ~Output(){}
 
+    /**
+     * Returns the User for this Output.
+     *
+     * @see User
+     * @return The User for this Output
+     */
     User GetUser() const{
       return user_;
     }
 
+    /**
+     * Returns the Product for this Output.
+     *
+     * @see Product
+     * @return The Product for this Output
+     */
     Product GetProduct() const{
       return product_;
     }
 
+    /**
+     * Returns the size of this object (in bytes).
+     *
+     * @return The size of this encoded object in bytes
+     */
     int64_t GetBufferSize() const{
       return Output::kSize;
     }
 
+    /**
+     * Serializes this object to a Buffer.
+     *
+     * @param buffer - The Buffer to write to
+     * @see Buffer
+     * @return True when successful otherwise, false
+     */
     bool Write(const BufferPtr& buff) const{
       buff->PutUser(user_);
       buff->PutProduct(product_);
       return true;
     }
 
+    /**
+     * Serializes this object to a file using a BinaryFileWriter.
+     *
+     * @param writer
+     * @see BinaryFileWriter
+     * @deprecated
+     * @return True when successful otherwise, false
+     */
     bool Write(BinaryFileWriter* writer) const{
       writer->WriteUser(user_);
       writer->WriteProduct(product_);
       return true;
     }
 
+    /**
+     * Returns the description of this object.
+     *
+     * @see Object::ToString()
+     * @return The ToString() description of this object
+     */
     std::string ToString() const{
       std::stringstream stream;
       stream << "Output(" << GetUser() << "; " << GetProduct() << ")";
@@ -188,6 +278,8 @@ namespace Token{
   typedef std::vector<Input> InputList;
   typedef std::vector<Output> OutputList;
 
+  //TODO:
+  // - split index functionality into IndexedTransaction vs Transaction
   class TransactionInputVisitor;
   class TransactionOutputVisitor;
   class Transaction : public BinaryObject{
@@ -232,93 +324,89 @@ namespace Token{
       signature_(){}
     ~Transaction() = default;
 
+    /**
+     * Returns the Timestamp for when this transaction occurred (UTC).
+     *
+     * @see Timestamp
+     * @return The Timestamp for when this transaction occurred (UTC)
+     */
     Timestamp GetTimestamp() const{
       return timestamp_;
     }
 
+    /**
+     * Returns the index for this transaction.
+     *
+     * @deprecated
+     * @return The index for this transaction
+     */
     int64_t GetIndex() const{
       return index_;
     }
 
-    int64_t GetNumberOfInputs() const{
-      return inputs_.size();
-    }
+#define DEFINE_CONTAINER_FUNCTIONS(Name, Type) \
+    Type& Name(){ return Name##_; }            \
+    Type Name() const{ return Name##_; }       \
+    Type::iterator Name##_begin(){ return Name##_.begin(); } \
+    Type::iterator Name##_end(){ return Name##_.end(); }     \
+    Type::const_iterator Name##_begin() const{ return Name##_.begin(); } \
+    Type::const_iterator Name##_end() const{ return Name##_.end(); }     \
+    int64_t Name##_size() const{ return Name##_.size(); }
+    DEFINE_CONTAINER_FUNCTIONS(inputs, InputList);
+    DEFINE_CONTAINER_FUNCTIONS(outputs, OutputList);
+#undef DEFINE_CONTAINER_FUNCTIONS
 
-    InputList& inputs(){
-      return inputs_;
-    }
-
-    InputList inputs() const{
-      return inputs_;
-    }
-
-    OutputList& outputs(){
-      return outputs_;
-    }
-
-    OutputList outputs() const{
-      return outputs_;
-    }
-
-    InputList::iterator inputs_begin(){
-      return inputs_.begin();
-    }
-
-    InputList::const_iterator inputs_begin() const{
-      return inputs_.begin();
-    }
-
-    InputList::iterator inputs_end(){
-      return inputs_.end();
-    }
-
-    InputList::const_iterator inputs_end() const{
-      return inputs_.end();
-    }
-
-    int64_t GetNumberOfOutputs() const{
-      return outputs_.size();
-    }
-
-    OutputList::iterator outputs_begin(){
-      return outputs_.begin();
-    }
-
-    OutputList::const_iterator outputs_begin() const{
-      return outputs_.begin();
-    }
-
-    OutputList::iterator outputs_end(){
-      return outputs_.end();
-    }
-
-    OutputList::const_iterator outputs_end() const{
-      return outputs_.end();
-    }
-
+    /**
+     * Returns the attached signature for the transaction.
+     *
+     * @return The signature for the transaction
+     */
     std::string GetSignature() const{
       return signature_;
     }
 
+    /**
+     * Returns true if the transaction has been signed.
+     *
+     * @return True if the transaction has been signed otherwise, false
+     */
     bool IsSigned() const{
       return !signature_.empty();
     }
 
+    /**
+     * Returns whether or not the transaction is a coinbase (index == 0)
+     *
+     * @deprecated
+     * @return True if the transaction is a coinbase otherwise, false
+     */
     bool IsCoinbase() const{
       return GetIndex() == 0;
     }
 
+    /**
+     * Returns the size of this object (in bytes).
+     *
+     * @return The size of this encoded object in bytes
+     */
     int64_t GetBufferSize() const{
       int64_t size = 0;
       size += sizeof(Timestamp); // timestamp_
       size += sizeof(int64_t); // index_
       size += sizeof(int64_t); // num_inputs_
-      size += GetNumberOfInputs() * Input::kSize; // inputs_
+      size += inputs_size() * Input::kSize; // inputs_
       size += sizeof(int64_t); // num_outputs
-      size += GetNumberOfOutputs() * Output::kSize; // outputs_
+      size += outputs_size() * Output::kSize; // outputs_
       return size;
     }
 
+    /**
+     * Serializes this object to a Buffer.
+     *
+     * @param buffer - The Buffer to write to
+     * @see Buffer
+     * @return True when successful otherwise, false
+     */
     bool Write(const BufferPtr& buff) const{
       buff->PutLong(timestamp_);
       buff->PutLong(index_);
@@ -327,6 +415,14 @@ namespace Token{
       return true;
     }
 
+    /**
+     * Serializes this object to a file using a BinaryFileWriter.
+     *
+     * @param writer
+     * @see BinaryFileWriter
+     * @deprecated
+     * @return True when successful otherwise, false
+     */
     bool Write(BinaryFileWriter* writer) const{
       writer->WriteLong(timestamp_);
       writer->WriteLong(index_);
@@ -335,7 +431,14 @@ namespace Token{
       return true;
     }
 
-    bool Equals(const TransactionPtr& tx) const{
+    /**
+     * Compares 2 transactions for equality.
+     *
+     * @deprecated
+     * @param tx - The other transaction
+     * @return True if the 2 transactions are equal.
+     */
+    bool Equals(const TransactionPtr& tx) const{ // convert to Compare(tx1, tx2);
       if(timestamp_ != tx->timestamp_){
         return false;
       }
@@ -361,13 +464,38 @@ namespace Token{
       return true;
     }
 
+    /**
+     * Signs a transaction using the local Keychain's KeyPair.
+     *
+     * @return True if the sign was successful otherwise, false
+     */
     bool Sign();
+
+    /**
+     * Visit all of the inputs for this transaction.
+     *
+     * @param vis - The visitor to call for each input
+     * @return True if the visit was successful otherwise, false
+     */
     bool VisitInputs(TransactionInputVisitor* vis) const;
+
+    /**
+     * Visit all of the outputs for this transaction.
+     *
+     * @param vis - The visitor to call for each output
+     * @return True if the visit was successful otherwise, false
+     */
     bool VisitOutputs(TransactionOutputVisitor* vis) const;
 
+    /**
+     * Returns the description of this object.
+     *
+     * @see Object::ToString()
+     * @return The ToString() description of this object
+     */
     std::string ToString() const{
       std::stringstream stream;
-      stream << "Transaction(#" << GetIndex() << "," << GetNumberOfInputs() << " Inputs, " << GetNumberOfOutputs()
+      stream << "Transaction(#" << GetIndex() << "," << inputs_size() << " Inputs, " << outputs_size()
              << " Outputs)";
       return stream.str();
     }

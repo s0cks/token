@@ -19,8 +19,8 @@ namespace Token{
       SetField(writer, "Hash", val->GetHash());
       SetField(writer, "Timestamp", val->GetTimestamp());
       SetField(writer, "Index", val->GetIndex());
-      SetField(writer, "NumberOfInputs", val->GetNumberOfInputs());
-      SetField(writer, "NumberOfOutputs", val->GetNumberOfOutputs());
+      SetField(writer, "NumberOfInputs", val->inputs_size());
+      SetField(writer, "NumberOfOutputs", val->outputs_size());
       writer.EndObject();
     }
 

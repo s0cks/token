@@ -5,7 +5,6 @@
 
 namespace Token{
   static RelaxedAtomic<ObjectPool::State> state_ = { ObjectPool::kUninitialized };
-  static RelaxedAtomic<ObjectPool::Status> status_ = { ObjectPool::kOk };
   static leveldb::DB* index_ = nullptr;
 
   static inline leveldb::DB*
@@ -24,14 +23,6 @@ namespace Token{
 
   void ObjectPool::SetState(const State& state){
     state_ = state;
-  }
-
-  ObjectPool::Status ObjectPool::GetStatus(){
-    return status_;
-  }
-
-  void ObjectPool::SetStatus(const Status& status){
-    status_ = status;
   }
 
   bool ObjectPool::Initialize(){
@@ -88,6 +79,7 @@ namespace Token{
     return count;
   }
 
+#ifdef TOKEN_DEBUG
   bool ObjectPool::GetStats(Json::Writer& writer){
     int64_t num_blocks = 0;
     int64_t num_transactions = 0;
@@ -115,6 +107,7 @@ namespace Token{
     writer.EndObject();
     return true;
   }
+#endif//TOKEN_DEBUG
 
   UnclaimedTransactionPtr ObjectPool::FindUnclaimedTransaction(const Input& input){
     LOG(INFO) << "searching for: " << input;
