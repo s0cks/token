@@ -4,8 +4,6 @@
 #include <pthread.h>
 #include "job/worker.h"
 
-#include "utils/json_conversion.h"
-
 namespace Token{
   class Job;
   class JobScheduler{

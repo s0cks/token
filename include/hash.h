@@ -5,11 +5,10 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <sstream>
 #include <unordered_set>
 #include <leveldb/slice.h>
-#include <rapidjson/writer.h>
-#include <rapidjson/stringbuffer.h>
-#include "common.h"
+#include "crypto.h"
 
 namespace Token{
   class Hash{

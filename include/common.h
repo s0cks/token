@@ -18,14 +18,10 @@
 #include <glog/logging.h>
 #include <gflags/gflags.h>
 
-#include <cryptopp/sha.h>
-#include <cryptopp/hex.h>
-#include <cryptopp/rsa.h>
-#include <cryptopp/files.h>
-#include <cryptopp/osrng.h>
-#include <cryptopp/pssr.h>
+#include <fstream>
 #include <iomanip>
 
+#pragma GCC diagnostic ignored "-Wunused-function"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wformat-truncation"
 
@@ -247,6 +243,9 @@ static inline bool
 IsValidPort(int32_t port){
   return port > 0;
 }
+
+#include "json.h"
+#include "crypto.h"
 
 #define TOKEN_BLOCKCHAIN_HOME (FLAGS_path)
 

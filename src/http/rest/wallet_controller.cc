@@ -35,7 +35,9 @@ namespace Token{
       writer.Key("data");
       writer.StartObject();
       {
-        Json::SetField(writer, "user", user);
+        writer.Key("user");
+        user.Write(writer);
+
         writer.Key("wallet");
         if(!WalletManager::GetWallet(user, writer)){
           std::stringstream ss;

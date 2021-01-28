@@ -8,7 +8,7 @@
 
 #include "hash.h"
 #include "object.h"
-#include "utils/json_conversion.h"
+#include "utils/buffer.h"
 
 namespace Token{
   typedef std::unordered_set<Hash, Hash::Hasher, Hash::Equal> Wallet;

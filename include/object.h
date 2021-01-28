@@ -6,6 +6,10 @@
 #include <string>
 #include <uuid/uuid.h>
 #include <leveldb/slice.h>
+
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
+
 #include "hash.h"
 #include "utils/bitfield.h"
 
@@ -74,6 +78,7 @@ namespace Token{
 
     virtual int64_t GetBufferSize() const = 0;
     virtual bool Write(const BufferPtr& buff) const = 0;
+    virtual bool Write(Json::Writer& writer) const{ return false; }
     virtual bool Write(BinaryFileWriter* writer) const{ return false; }
   };
 
@@ -87,8 +92,6 @@ namespace Token{
 
   template<int64_t Size>
   class RawType{
-   public:
-    static const int64_t kSize = Size;
    protected:
     uint8_t data_[Size];
 
@@ -118,8 +121,16 @@ namespace Token{
       return (char*) data_;
     }
 
+    int64_t size() const{
+      return std::min(strlen((char*)data_), (size_t)GetSize());
+    }
+
     std::string str() const{
-      return std::string(data(), std::min(strlen((char*) data_), (size_t) Size));
+      return std::string(data(), size());
+    }
+
+    bool Write(Json::Writer& writer) const{
+      return writer.String(data(), size());
     }
 
     static inline int64_t
@@ -131,7 +142,6 @@ namespace Token{
   class Product : public RawType<64>{
     using Base = RawType<64>;
    public:
-    static const int64_t kSize = Base::kSize;
     Product():
       Base(){}
     Product(const uint8_t* bytes, int64_t size):
@@ -145,10 +155,6 @@ namespace Token{
       memcpy(data(), value.data(), std::min((int64_t) value.length(), Base::GetSize()));
     }
     ~Product() = default;
-
-    int64_t size() const{
-      return std::min((int64_t) strlen((char*) data_), Base::GetSize());
-    }
 
     void operator=(const Product& product){
       memcpy(data(), product.data(), Base::GetSize());
@@ -175,7 +181,6 @@ namespace Token{
   class User : public RawType<64>{
     using Base = RawType<64>;
    public:
-    static const int64_t kSize = Base::kSize;
     User():
       Base(){}
     User(const uint8_t* bytes, int64_t size):
@@ -188,10 +193,6 @@ namespace Token{
       memcpy(data(), value.data(), std::min((int64_t) value.length(), Base::GetSize()));
     }
     ~User() = default;
-
-    int64_t size() const{
-      return std::min((int64_t) strlen((char*) data_), Base::GetSize());
-    }
 
     void operator=(const User& user){
       memcpy(data(), user.data(), Base::GetSize());
@@ -216,6 +217,52 @@ namespace Token{
 
     static int Compare(const User& a, const User& b){
       return Base::Compare(a, b);
+    }
+  };
+
+  class UUID : public RawType<16>{
+    using Base = RawType<64>;
+   public:
+    UUID():
+      RawType(){
+      uuid_generate_time_safe(data_);
+    }
+    UUID(uint8_t* bytes, int64_t size):
+      RawType(bytes, size){}
+    UUID(const std::string& uuid):
+      RawType(){
+      uuid_parse(uuid.data(), data_);
+    }
+    UUID(const UUID& other):
+      RawType(){
+      uuid_copy(data_, other.data_);
+    }
+    ~UUID() = default;
+
+    std::string ToString() const{
+      char uuid_str[37];
+      uuid_unparse(data_, uuid_str);
+      return std::string(uuid_str, 37);
+    }
+
+    void operator=(const UUID& other){
+      uuid_copy(data_, other.data_);
+    }
+
+    friend bool operator==(const UUID& a, const UUID& b){
+      return uuid_compare(a.data_, b.data_) == 0;
+    }
+
+    friend bool operator!=(const UUID& a, const UUID& b){
+      return uuid_compare(a.data_, b.data_) != 0;
+    }
+
+    friend bool operator<(const UUID& a, const UUID& b){
+      return uuid_compare(a.data_, b.data_) < 0;
+    }
+
+    friend std::ostream& operator<<(std::ostream& stream, const UUID& uuid){
+      return stream << uuid.ToString();
     }
   };
 
@@ -357,6 +404,13 @@ namespace Token{
       return index_;
     }
 
+    bool Write(Json::Writer& writer) const{
+      return writer.StartObject()
+          && Json::SetField(writer, "hash", transaction_)
+          && Json::SetField(writer, "index", index_)
+          && writer.EndObject();
+    }
+
     TransactionReference& operator=(const TransactionReference& ref){
       transaction_ = ref.transaction_;
       index_ = ref.index_;
@@ -379,53 +433,6 @@ namespace Token{
 
     friend std::ostream& operator<<(std::ostream& stream, const TransactionReference& ref){
       return stream << ref.GetTransactionHash() << "[" << ref.GetIndex() << "]";
-    }
-  };
-
-  class UUID : public RawType<16>{
-   public:
-    static const int64_t kSize = 16;
-   public:
-    UUID():
-      RawType(){
-      uuid_generate_time_safe(data_);
-    }
-    UUID(uint8_t* bytes, int64_t size):
-      RawType(bytes, size){}
-    UUID(const std::string& uuid):
-      RawType(){
-      uuid_parse(uuid.data(), data_);
-    }
-    UUID(const UUID& other):
-      RawType(){
-      uuid_copy(data_, other.data_);
-    }
-    ~UUID() = default;
-
-    std::string ToString() const{
-      char uuid_str[37];
-      uuid_unparse(data_, uuid_str);
-      return std::string(uuid_str, 37);
-    }
-
-    void operator=(const UUID& other){
-      uuid_copy(data_, other.data_);
-    }
-
-    friend bool operator==(const UUID& a, const UUID& b){
-      return uuid_compare(a.data_, b.data_) == 0;
-    }
-
-    friend bool operator!=(const UUID& a, const UUID& b){
-      return uuid_compare(a.data_, b.data_) != 0;
-    }
-
-    friend bool operator<(const UUID& a, const UUID& b){
-      return uuid_compare(a.data_, b.data_) < 0;
-    }
-
-    friend std::ostream& operator<<(std::ostream& stream, const UUID& uuid){
-      return stream << uuid.ToString();
     }
   };
 }

@@ -61,17 +61,17 @@ namespace Token{
 
     template<class T>
     bool PutType(const T& val){
-      if((wpos_ + T::kSize) > GetBufferSize())
+      if((wpos_ + T::GetSize()) > GetBufferSize())
         return false;
-      memcpy(&raw()[wpos_], val.data(), T::kSize);
-      wpos_ += T::kSize;
+      memcpy(&raw()[wpos_], val.data(), T::GetSize());
+      wpos_ += T::GetSize();
       return true;
     }
 
     template<class T>
     T GetType(){
-      T val(&raw()[rpos_], T::kSize);
-      rpos_ += T::kSize;
+      T val(&raw()[rpos_], T::GetSize());
+      rpos_ += T::GetSize();
       return val;
     }
    public:

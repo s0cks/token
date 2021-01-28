@@ -10,7 +10,6 @@
 #include "http/method.h"
 #include "http/header.h"
 #include "utils/buffer.h"
-#include "utils/json_conversion.h"
 
 namespace Token{
   class HttpRequest;

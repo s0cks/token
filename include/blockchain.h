@@ -10,7 +10,6 @@
 #include "merkle/tree.h"
 #include "unclaimed_transaction.h"
 #include "utils/printer.h"
-#include "utils/json_conversion.h"
 
 namespace Token{
 #define BLOCKCHAIN_REFERENCE_GENESIS "<GENESIS>"

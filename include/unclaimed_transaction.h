@@ -13,8 +13,6 @@ namespace Token{
   class Output;
   class Transaction;
   class UnclaimedTransaction : public BinaryObject{
-   public:
-    static const int64_t kSize = TransactionReference::kSize + User::kSize + Product::kSize;
    private:
     TransactionReference reference_;
     User user_;
@@ -59,13 +57,23 @@ namespace Token{
     }
 
     int64_t GetBufferSize() const{
-      return UnclaimedTransaction::kSize;
+      return TransactionReference::kSize
+           + User::GetSize()
+           + Product::GetSize();
     }
 
     bool Write(const BufferPtr& buff) const{
       return buff->PutReference(reference_) &&
              buff->PutUser(user_) &&
              buff->PutProduct(product_);
+    }
+
+    bool Write(Json::Writer& writer) const{
+      return writer.StartObject()
+          && reference_.Write(writer)
+          && user_.Write(writer)
+          && product_.Write(writer)
+          && writer.EndObject();
     }
 
     bool Write(BinaryFileWriter* writer) const{

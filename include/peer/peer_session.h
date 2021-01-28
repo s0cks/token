@@ -12,7 +12,11 @@ namespace Token{
 
   class Peer{
    public:
-    static const intptr_t kSize = UUID::kSize + NodeAddress::kSize;
+    static inline int64_t
+    GetSize(){
+      return UUID::GetSize()
+           + NodeAddress::kSize;
+    }
 
     struct IDComparator{
       bool operator()(const Peer& a, const Peer& b){

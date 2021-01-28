@@ -152,7 +152,7 @@ namespace Token{
 
     template<class T>
     bool WriteList(const std::vector<T>& items){
-      WriteLong((int64_t) items.size());
+      WriteLong((int64_t)items.size());
       for(auto& item : items){
         if(!item.Write(this)){
           return false;

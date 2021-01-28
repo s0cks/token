@@ -15,7 +15,11 @@ namespace Token{
   class Input : public SerializableObject{
     friend class Transaction;
    public:
-    static const int64_t kSize = TransactionReference::kSize + User::kSize;
+    static inline int64_t
+    GetSize(){
+      return TransactionReference::kSize
+           + User::GetSize();
+    }
    private:
     TransactionReference reference_;
     User user_;//TODO: remove field
@@ -90,7 +94,7 @@ namespace Token{
      * @return The size of this encoded object in bytes
      */
     int64_t GetBufferSize() const{
-      return Input::kSize;
+      return GetSize();
     }
 
     /**
@@ -106,6 +110,21 @@ namespace Token{
     }
 
     /**
+     * Serializes this object to Json
+     *
+     * @param writer - The Json writer to use
+     * @see JsonWriter
+     * @see JsonString
+     * @return True when successful otherwise, false
+     */
+    bool Write(Json::Writer& writer) const{
+      return writer.StartObject()
+          && reference_.Write(writer)
+          && user_.Write(writer)
+          && writer.EndObject();
+    }
+
+    /**
      * Serializes this object to a file using a BinaryFileWriter.
      *
      * @param writer
@@ -114,9 +133,8 @@ namespace Token{
      * @return True when successful otherwise, false
      */
     bool Write(BinaryFileWriter* writer) const{
-      writer->WriteReference(reference_);
-      writer->WriteUser(user_);
-      return true;
+      return writer->WriteReference(reference_)
+          && writer->WriteUser(user_);
     }
 
     /**
@@ -157,7 +175,11 @@ namespace Token{
   class Output : public SerializableObject{
     friend class Transaction;
    public:
-    static const int64_t kSize = User::kSize + Product::kSize;
+    static inline int64_t
+    GetSize(){
+      return User::GetSize()
+           + Product::GetSize();
+    }
    private:
     User user_;
     Product product_;
@@ -206,7 +228,8 @@ namespace Token{
      * @return The size of this encoded object in bytes
      */
     int64_t GetBufferSize() const{
-      return Output::kSize;
+      return User::GetSize()
+           + Product::GetSize();
     }
 
     /**
@@ -217,10 +240,24 @@ namespace Token{
      * @return True when successful otherwise, false
      */
     bool Write(const BufferPtr& buff) const{
-      buff->PutUser(user_);
-      buff->PutProduct(product_);
-      return true;
+      return buff->PutUser(user_)
+          && buff->PutProduct(product_);
     }
+
+    /**
+     * Serializes this object to Json
+     *
+     * @param writer - The Json writer to use
+     * @see JsonWriter
+     * @see JsonString
+     * @return True when successful otherwise, false
+     */
+     bool Write(Json::Writer& writer) const{
+       return writer.StartObject()
+           && user_.Write(writer)
+           && product_.Write(writer)
+           && writer.EndObject();
+     }
 
     /**
      * Serializes this object to a file using a BinaryFileWriter.
@@ -394,9 +431,9 @@ namespace Token{
       size += sizeof(Timestamp); // timestamp_
       size += sizeof(int64_t); // index_
       size += sizeof(int64_t); // num_inputs_
-      size += inputs_size() * Input::kSize; // inputs_
+      size += inputs_size() * Input::GetSize(); // inputs_
       size += sizeof(int64_t); // num_outputs
-      size += outputs_size() * Output::kSize; // outputs_
+      size += outputs_size() * Output::GetSize(); // outputs_
       return size;
     }
 
@@ -413,6 +450,15 @@ namespace Token{
       buff->PutList(inputs_);
       buff->PutList(outputs_);
       return true;
+    }
+
+    bool Write(Json::Writer& writer) const{
+      return writer.StartObject()
+          && Json::SetField(writer, "timestamp", timestamp_)
+          && Json::SetField(writer, "index", index_)
+          && Json::SetField(writer, "inputs", inputs_)
+          && Json::SetField(writer, "outputs", outputs_)
+          && writer.EndArray();
     }
 
     /**

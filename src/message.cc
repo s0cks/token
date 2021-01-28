@@ -10,7 +10,7 @@ namespace Token{
     size += sizeof(int32_t); // client_type_
     size += Version::kSize; // version_
     size += Hash::GetSize(); // nonce_
-    size += UUID::kSize; // node_id_
+    size += UUID::GetSize(); // node_id_
     size += BlockHeader::GetSize(); // head_
     return size;
   }
@@ -30,7 +30,7 @@ namespace Token{
     size += sizeof(int32_t); // client_type_
     size += Version::kSize; // version_
     size += Hash::GetSize(); // nonce_
-    size += UUID::kSize; // node_id_
+    size += UUID::GetSize(); // node_id_
     size += NodeAddress::kSize; // callback_
     size += BlockHeader::GetSize(); // head_
     return size;

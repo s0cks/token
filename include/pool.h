@@ -9,7 +9,6 @@
 #include "block.h"
 #include "transaction.h"
 #include "unclaimed_transaction.h"
-#include "utils/json_conversion.h"
 
 namespace Token{
   class ObjectPoolVisitor{

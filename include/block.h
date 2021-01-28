@@ -245,6 +245,11 @@ namespace Token{
              && buff->PutSet(transactions_);
     }
 
+    bool Write(Json::Writer& writer) const{
+      return writer.StartObject()
+          && writer.EndObject();
+    }
+
     bool Write(BinaryFileWriter* writer) const{
       return writer->WriteLong(timestamp_)
              && writer->WriteLong(height_)

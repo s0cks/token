@@ -1,5 +1,7 @@
 #include <mutex>
 #include <condition_variable>
+
+#include "block.h"
 #include "wallet.h"
 #include "utils/kvstore.h"
 

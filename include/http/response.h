@@ -3,7 +3,8 @@
 
 #include <memory>
 #include "http/header.h"
-#include "utils/json_conversion.h"
+
+#include "block.h"
 
 namespace Token{
   class HttpResponse;
@@ -246,7 +247,7 @@ namespace Token{
     Json::String& body = response->GetBody();
     Json::Writer writer(body);
     writer.StartObject();
-      Json::SetField(writer, "data", blk);
+      blk->Write(writer);
     writer.EndObject();
     response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);
     response->SetHeader("Content-Length", body.GetSize());
@@ -262,7 +263,8 @@ namespace Token{
     Json::String& body = response->GetBody();
     Json::Writer writer(body);
     writer.StartObject();
-      Json::SetField(writer, "data", tx);
+      writer.Key("data");
+      tx->Write(writer);
     writer.EndObject();
 
     response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);
@@ -277,7 +279,8 @@ namespace Token{
     Json::String& body = response->GetBody();
     Json::Writer writer(body);
     writer.StartObject();
-      Json::SetField(writer, "data", utxo);
+      writer.Key("data");
+      utxo->Write(writer);
     writer.EndObject();
 
     response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);
