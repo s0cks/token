@@ -183,7 +183,7 @@ main(int argc, char **argv){
   }
 
 #ifdef TOKEN_ENABLE_SERVER
-  if(Server::IsRunning() && !Server::JoinThread()){
+  if(Server::IsRunningState() && !Server::JoinThread()){
     CrashReport::PrintNewCrashReport("Cannot join the server thread.");
     return EXIT_FAILURE;
   }

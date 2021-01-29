@@ -17,8 +17,7 @@ namespace Token{
   static pthread_t thread_;
   static uv_tcp_t* handle_ = new uv_tcp_t(); // TODO: don't alloc handle_
   static uv_async_t shutdown_;
-  static RelaxedAtomic<Server::State> state_ = { Server::kStopped };
-  static RelaxedAtomic<Server::Status> status_ = { Server::kOk };
+  static RelaxedAtomic<Server::State> state_ = { Server::State::kStoppedState };
 
   uv_tcp_t* Server::GetHandle(){
     return handle_;
@@ -32,14 +31,6 @@ namespace Token{
     return state_;
   }
 
-  void Server::SetStatus(const Status& status){
-    status_ = status;
-  }
-
-  Server::Status Server::GetStatus(){
-    return status_;
-  }
-
   void Server::OnWalk(uv_handle_t* handle, void* data){
     uv_close(handle, &OnClose);
   }
@@ -47,7 +38,7 @@ namespace Token{
   void Server::OnClose(uv_handle_t* handle){}
 
   void Server::HandleTerminateCallback(uv_async_t* handle){
-    SetState(Server::kStopping);
+    SetState(Server::kStoppingState);
     uv_stop(handle->loop);
 
     int err;
@@ -61,11 +52,11 @@ namespace Token{
     } else{
       LOG(INFO) << "server loop closed.";
     }
-    SetState(Server::kStopped);
+    SetState(Server::kStoppedState);
   }
 
   bool Server::StartThread(){
-    if(!IsStopped()){
+    if(!IsStoppedState()){
       LOG(WARNING) << "the server is already running.";
       return false;
     }
@@ -74,7 +65,7 @@ namespace Token{
   }
 
   bool Server::SendShutdown(){
-    if(!IsRunning()){
+    if(!IsRunningState()){
       LOG(WARNING) << "server is not running.";
       return true;
     }
@@ -89,7 +80,7 @@ namespace Token{
 
   void Server::HandleServerThread(uword parameter){
     LOG(INFO) << "starting server...";
-    SetState(State::kStarting);
+    SetState(State::kStartingState);
     uv_loop_t* loop = uv_loop_new();
     uv_tcp_init(loop, GetHandle());
     uv_tcp_keepalive(GetHandle(), 1, 60);
@@ -97,21 +88,21 @@ namespace Token{
     uv_async_init(loop, &shutdown_, &HandleTerminateCallback);
 
     if(!ServerBind(GetHandle(), FLAGS_server_port)){
-      SetState(State::kStopping);
+      SetState(State::kStoppingState);
       goto exit;
     }
 
     if(!ServerListen((uv_stream_t*) GetHandle(), &OnNewConnection)){
-      SetState(State::kStopping);
+      SetState(State::kStoppingState);
       goto exit;
     }
 
-    SetState(State::kRunning);
+    SetState(State::kRunningState);
 
     LOG(INFO) << "server " << GetID() << " listening @" << FLAGS_server_port;
     uv_run(loop, UV_RUN_DEFAULT);
   exit:
-    SetState(State::kStopped);
+    SetState(State::kStoppedState);
     pthread_exit(0);
   }
 

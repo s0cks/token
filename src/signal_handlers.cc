@@ -40,7 +40,7 @@ namespace Token{
       goto terminate;
     }
 
-    if(IsValidPort(FLAGS_server_port) && Server::IsRunning()){
+    if(IsValidPort(FLAGS_server_port) && Server::IsRunningState()){
       LOG(INFO) << "terminating the server....";
       if(!Server::Shutdown()){
         PrintFatalCrashReport("Cannot shutdown the server thread.");

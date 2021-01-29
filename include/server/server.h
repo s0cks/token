@@ -16,46 +16,22 @@ namespace Token{
     V(Stopping) \
     V(Stopped)
 
-#define FOR_EACH_SERVER_STATUS(V) \
-    V(Ok)                         \
-    V(Warning)                    \
-    V(Error)
-
   class Server{
    public:
     enum State{
-#define DEFINE_SERVER_STATE(Name) k##Name,
-      FOR_EACH_SERVER_STATE(DEFINE_SERVER_STATE)
-#undef DEFINE_SERVER_STATE
+#define DEFINE_STATE(Name) k##Name##State,
+      FOR_EACH_SERVER_STATE(DEFINE_STATE)
+#undef DEFINE_STATE
     };
 
     friend std::ostream& operator<<(std::ostream& stream, const State& state){
       switch(state){
 #define DEFINE_TOSTRING(Name) \
-        case Server::k##Name: \
+        case Server::k##Name##State: \
             return stream << #Name;
         FOR_EACH_SERVER_STATE(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
-        default:
-          return stream << "Unknown";
-      }
-    }
-
-    enum Status{
-#define DEFINE_SERVER_STATUS(Name) k##Name,
-      FOR_EACH_SERVER_STATUS(DEFINE_SERVER_STATUS)
-#undef DEFINE_SERVER_STATUS
-    };
-
-    friend std::ostream& operator<<(std::ostream& stream, const Status& status){
-      switch(status){
-#define DEFINE_TOSTRING(Name) \
-        case Server::k##Name: \
-            return stream << #Name;
-        FOR_EACH_SERVER_STATUS(DEFINE_TOSTRING)
-#undef DEFINE_TOSTRING
-        default:
-          return stream << "Unknown";
+        default:return stream << "Unknown";
       }
     }
    private:
@@ -63,7 +39,6 @@ namespace Token{
 
     static uv_tcp_t* GetHandle();
     static void SetState(const State& state);
-    static void SetStatus(const Status& status);
     static void OnClose(uv_handle_t* handle);
     static void OnWalk(uv_handle_t* handle, void* data);
     static void HandleTerminateCallback(uv_async_t* handle);
@@ -73,9 +48,7 @@ namespace Token{
     static bool SendShutdown();
    public:
     ~Server() = delete;
-
     static State GetState();
-    static Status GetStatus();
     static bool JoinThread();
     static bool StartThread();
 
@@ -88,15 +61,10 @@ namespace Token{
       return BlockChainConfiguration::GetSererID();
     }
 
-#define DEFINE_STATE_CHECK(Name) \
-    static inline bool Is##Name(){ return GetState() == Server::k##Name; }
-    FOR_EACH_SERVER_STATE(DEFINE_STATE_CHECK)
-#undef DEFINE_STATE_CHECK
-
-#define DEFINE_STATUS_CHECK(Name) \
-    static inline bool Is##Name(){ return GetStatus() == Server::k##Name; }
-    FOR_EACH_SERVER_STATUS(DEFINE_STATUS_CHECK)
-#undef DEFINE_STATUS_CHECK
+#define DEFINE_CHECK(Name) \
+    static inline bool Is##Name##State(){ return GetState() == Server::State::k##Name##State; }
+    FOR_EACH_SERVER_STATE(DEFINE_CHECK)
+#undef DEFINE_CHECK
 
 #define ENVIRONMENT_TOKEN_CALLBACK_ADDRESS "TOKEN_CALLBACK_ADDRESS"
 
