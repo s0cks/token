@@ -1,11 +1,9 @@
 #ifndef TOKEN_COMMON_H
 #define TOKEN_COMMON_H
 
-#include <time.h>
 #include <cstdint>
 #include <cstdlib>
 #include <cassert>
-#include <chrono>
 #include <vector>
 #include <random>
 #include <string>
@@ -14,12 +12,10 @@
 #include <signal.h>
 #include <sys/stat.h>
 #include <uuid/uuid.h>
-
-#include <glog/logging.h>
-#include <gflags/gflags.h>
-
 #include <fstream>
 #include <iomanip>
+#include <glog/logging.h>
+#include <gflags/gflags.h>
 
 #pragma GCC diagnostic ignored "-Wunused-function"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -28,23 +24,23 @@
 //TODO: cleanup
 namespace Token{
 #if defined(__linux__) || defined(__FreeBSD__)
-#define OS_IS_LINUX 1
+  #define OS_IS_LINUX 1
 #elif defined(__APPLE__)
-#define OS_IS_OSX 1
+  #define OS_IS_OSX 1
 #elif defined(_WIN32)
-#define OS_IS_WINDOWS 1
+  #define OS_IS_WINDOWS 1
 #endif
 
 #if defined(_M_X64) || defined(__x86_64__)
-#define ARCHITECTURE_IS_X64 1
+  #define ARCHITECTURE_IS_X64 1
 #elif defined(_M_IX86) || defined(__i386__)
-#define ARCHITECTURE_IS_X32 1
+  #define ARCHITECTURE_IS_X32 1
 #elif defined(__ARMEL__)
-#define ARCHITECTURE_IS_ARM 1
+  #define ARCHITECTURE_IS_ARM 1
 #elif defined(__aarch64__)
-#define ARCHITECTURE_IS_ARM64 1
+  #define ARCHITECTURE_IS_ARM64 1
 #else
-#error "Cannot determine CPU architecture"
+  #error "Cannot determine CPU architecture"
 #endif
 
 #define TOKEN_MAJOR_VERSION 1
@@ -70,31 +66,6 @@ namespace Token{
     x = x | (x >> 32);
 #endif
     return x + 1;
-  }
-
-  typedef int64_t Timestamp;
-
-  static Timestamp
-  GetCurrentTimestamp(){
-    return time(NULL);
-  }
-
-  static inline std::string
-  GetTimestampFormattedReadable(Timestamp timestamp = GetCurrentTimestamp()){
-    //TODO: fix usage of gmtime
-    struct tm* timeinfo = gmtime((time_t*) &timestamp);
-    char buff[256];
-    strftime(buff, sizeof(buff), "%m/%d/%Y %H:%M:%S", timeinfo);
-    return std::string(buff);
-  }
-
-  static inline std::string
-  GetTimestampFormattedFileSafe(Timestamp timestamp = GetCurrentTimestamp()){
-    //TODO: fix usage of gmtime
-    struct tm* timeinfo = gmtime((time_t*) &timestamp);
-    char buff[256];
-    strftime(buff, sizeof(buff), "%Y%m%d-%H%M%S", timeinfo);
-    return std::string(buff);
   }
 
   static bool
@@ -202,10 +173,6 @@ namespace Token{
     if(val == NULL) return "";
     return std::string(val);
   }
-
-  typedef std::chrono::system_clock Clock;
-  typedef Clock::time_point Timepoint; //TODO: rename to Timestamp
-  typedef Clock::duration Duration;
 }
 
 // --path "/usr/share/ledger"
@@ -214,29 +181,31 @@ DECLARE_string(path);
 DECLARE_bool(enable_snapshots);
 // --num-worker-threads
 DECLARE_int32(num_workers);
+// --miner-interval 3600
+DECLARE_int64(miner_interval);
 
 #ifdef TOKEN_DEBUG
-DECLARE_int64(miner_interval);
-DECLARE_bool(append_test);
+  // --append-test
+  DECLARE_bool(append_test);
 #endif//TOKEN_DEBUG
 
 #ifdef TOKEN_ENABLE_SERVER
-// --remote "localhost:8080"
-DECLARE_string(remote);
-// --server-port 8080
-DECLARE_int32(server_port);
-// --num-peer-threads
-DECLARE_int32(num_peers);
+  // --remote "localhost:8080"
+  DECLARE_string(remote);
+  // --server-port 8080
+  DECLARE_int32(server_port);
+  // --num-peer-threads
+  DECLARE_int32(num_peers);
 #endif//TOKEN_ENABLE_SERVER
 
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
-// --healthcheck-port 8081
-DECLARE_int32(healthcheck_port);
+  // --healthcheck-port 8081
+  DECLARE_int32(healthcheck_port);
 #endif//TOKEN_ENABLE_HEALTH_SERVICE
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
-// --service-port 8082
-DECLARE_int32(service_port);
+  // --service-port 8082
+  DECLARE_int32(service_port);
 #endif//TOKEN_ENABLE_REST_SERVICE
 
 static inline bool
@@ -246,6 +215,7 @@ IsValidPort(int32_t port){
 
 #include "json.h"
 #include "crypto.h"
+#include "timestamp.h"
 
 #define TOKEN_BLOCKCHAIN_HOME (FLAGS_path)
 

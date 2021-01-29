@@ -35,12 +35,8 @@ namespace Token{
   }
 
   static inline bool
-  SetHttpHeader(HttpHeadersMap& headers, const std::string& name, const Timepoint& time){
-    std::time_t tt = std::chrono::system_clock::to_time_t(time);
-    std::tm tm = (*std::gmtime(&tt));
-    std::stringstream ss;
-    ss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
-    return SetHttpHeader(headers, name, ss);
+  SetHttpHeader(HttpHeadersMap& headers, const std::string& name, const Timestamp& time){
+    return SetHttpHeader(headers, name, FormatTimestampReadable(time));
   }
 
   static inline bool

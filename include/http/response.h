@@ -85,7 +85,7 @@ namespace Token{
       return SetHttpHeader(headers_, name, val);
     }
 
-    bool SetHeader(const std::string& name, const Timepoint& val){
+    bool SetHeader(const std::string& name, const Timestamp& val){
       return SetHttpHeader(headers_, name, val);
     }
 

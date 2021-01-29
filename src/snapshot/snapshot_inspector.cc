@@ -4,7 +4,7 @@ namespace Token{
   static inline void
   PrintBlock(const BlockPtr& blk){
     LOG(INFO) << "Block #" << blk->GetHeight();
-    LOG(INFO) << "  - Timestamp: " << blk->GetTimestamp();
+    LOG(INFO) << "  - Timestamp: " << FormatTimestampReadable(blk->GetTimestamp());
     LOG(INFO) << "  - Height: " << blk->GetHeight();
     LOG(INFO) << "  - Hash: " << blk->GetHash();
     LOG(INFO) << "  - Previous Hash: " << blk->GetPreviousHash();
@@ -23,7 +23,7 @@ namespace Token{
 
   void SnapshotInspector::PrintSnapshot(Snapshot* snapshot){
     LOG(INFO) << "Snapshot: " << snapshot->GetFilename();
-    LOG(INFO) << "Created: " << GetTimestampFormattedReadable(snapshot->GetTimestamp());
+    LOG(INFO) << "Created: " << FormatTimestampReadable(snapshot->GetTimestamp());
     LOG(INFO) << "Version: " << snapshot->GetVersion();
     LOG(INFO) << "Size: " << GetFilesize(snapshot->GetFilename()) << " Bytes";
   }

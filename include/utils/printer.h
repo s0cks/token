@@ -79,7 +79,7 @@ namespace Token{
       if(IsDetailed()){
         LOG_AT_LEVEL(GetSeverity()) << "Block #" << blk.GetHeight() << ":";
         LOG_AT_LEVEL(GetSeverity()) << "Hash: " << blk.GetHash();
-        LOG_AT_LEVEL(GetSeverity()) << "Created: " << GetTimestampFormattedReadable(blk.GetTimestamp());
+        LOG_AT_LEVEL(GetSeverity()) << "Created: " << FormatTimestampReadable(blk.GetTimestamp());
         LOG_AT_LEVEL(GetSeverity()) << "Previous: " << blk.GetPreviousHash();
         LOG_AT_LEVEL(GetSeverity()) << "Merkle Root: " << blk.GetMerkleRoot();
         LOG_AT_LEVEL(GetSeverity()) << "Number of Transactions: " << blk.GetNumberOfTransactions();
@@ -92,7 +92,7 @@ namespace Token{
     bool Print(const BlockPtr& blk) const{
       LOG_AT_LEVEL(GetSeverity()) << "Block #" << blk->GetHeight() << ":";
       LOG_AT_LEVEL(GetSeverity()) << "Hash: " << blk->GetHash();
-      LOG_AT_LEVEL(GetSeverity()) << "Created: " << GetTimestampFormattedReadable(blk->GetTimestamp());
+      LOG_AT_LEVEL(GetSeverity()) << "Created: " << FormatTimestampReadable(blk->GetTimestamp());
       LOG_AT_LEVEL(GetSeverity()) << "Previous: " << blk->GetPreviousHash();
       LOG_AT_LEVEL(GetSeverity()) << "Merkle Root: " << blk->GetMerkleRoot();
       if(!IsDetailed()){
@@ -109,7 +109,7 @@ namespace Token{
     bool Print(const TransactionPtr& tx) const{
       LOG_AT_LEVEL(GetSeverity()) << "Transaction #" << tx->GetIndex() << ":";
       LOG_AT_LEVEL(GetSeverity()) << "Hash: " << tx->GetHash();
-      LOG_AT_LEVEL(GetSeverity()) << "Created: " << GetTimestampFormattedReadable(tx->GetTimestamp());
+      LOG_AT_LEVEL(GetSeverity()) << "Created: " << FormatTimestampReadable(tx->GetTimestamp());
       if(!IsDetailed()){
         LOG_AT_LEVEL(GetSeverity()) << "Number of Inputs: " << tx->inputs_size();
       } else{

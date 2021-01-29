@@ -70,7 +70,7 @@ namespace Token{
 
     friend std::ostream& operator<<(std::ostream& stream, const RawProposal& proposal){
       stream << "Proposal(";
-      stream << GetTimestampFormattedReadable(proposal.GetTimestamp()) << ", ";
+      stream << FormatTimestampReadable(proposal.GetTimestamp()) << ", ";
       stream << "#" << proposal.GetHeight() << ", ";
       stream << proposal.GetHash() << ", ";
       stream << proposal.GetProposer();
@@ -201,7 +201,7 @@ namespace Token{
       return raw_.GetBlock();
     }
 
-    int64_t GetTimestamp() const{
+    Timestamp GetTimestamp() const{
       return raw_.GetTimestamp();
     }
 

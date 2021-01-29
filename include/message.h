@@ -143,7 +143,7 @@ namespace Token{
       head_(head){}
     VersionMessage(const BufferPtr& buff):
       Message(),
-      timestamp_(buff->GetLong()),
+      timestamp_(FromUnixTimestamp(buff->GetLong())),
       client_type_(static_cast<ClientType>(buff->GetInt())),
       version_(buff),
       nonce_(buff->GetHash()),
@@ -208,7 +208,7 @@ namespace Token{
       const BlockHeader& head,
       const Version& version = Version(),
       const Hash& nonce = Hash::GenerateNonce(),
-      Timestamp timestamp = GetCurrentTimestamp()){
+      Timestamp timestamp = Clock::now()){
       return std::make_shared<VersionMessage>(type, version, node_id, timestamp, nonce, head);
     }
 
@@ -234,7 +234,7 @@ namespace Token{
       const Version& version,
       const BlockHeader& head,
       const Hash& nonce,
-      Timestamp timestamp = GetCurrentTimestamp()):
+      Timestamp timestamp = Clock::now()):
       Message(),
       timestamp_(timestamp),
       client_type_(type),
@@ -245,7 +245,7 @@ namespace Token{
       head_(head){}
     VerackMessage(const BufferPtr& buff):
       Message(),
-      timestamp_(buff->GetLong()),
+      timestamp_(FromUnixTimestamp(buff->GetLong())),
       client_type_(static_cast<ClientType>(buff->GetInt())),
       version_(buff),
       nonce_(buff->GetHash()),
@@ -304,7 +304,7 @@ namespace Token{
       const Version& version,
       const BlockHeader& head,
       const Hash& nonce,
-      Timestamp timestamp = GetCurrentTimestamp()){
+      Timestamp timestamp = Clock::now()){
       return std::make_shared<VerackMessage>(type, node_id, callback, version, head, nonce, timestamp);
     }
 

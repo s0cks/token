@@ -100,7 +100,7 @@ namespace Token{
 
     bool Print(const SnapshotPtr& snapshot){
       LOG_AT_LEVEL(GetSeverity()) << "Filename: " << snapshot->GetFilename();
-      LOG_AT_LEVEL(GetSeverity()) << "Created: " << GetTimestampFormattedReadable(snapshot->GetTimestamp());
+      LOG_AT_LEVEL(GetSeverity()) << "Created: " << FormatTimestampReadable(snapshot->GetTimestamp());
       LOG_AT_LEVEL(GetSeverity()) << "Version: " << snapshot->GetVersion();
       LOG_AT_LEVEL(GetSeverity()) << "Head: " << snapshot->GetHead();
       return true;
@@ -117,7 +117,7 @@ namespace Token{
     GetNewSnapshotFilename(){
       std::stringstream filename;
       filename << Snapshot::GetSnapshotDirectory();
-      filename << "/snapshot-" << GetTimestampFormattedFileSafe(GetCurrentTimestamp()) << ".dat";
+      filename << "/snapshot-" << FormatTimestampFileSafe(Clock::now()) << ".dat";
       return filename.str();
     }
 

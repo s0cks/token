@@ -16,7 +16,7 @@ namespace Token{
   }
 
   bool VersionMessage::Encode(const BufferPtr& buff) const{
-    return buff->PutLong(timestamp_)
+    return buff->PutLong(ToUnixTimestamp(timestamp_))
         && buff->PutInt(static_cast<int32_t>(client_type_))
         && version_.Write(buff)
         && buff->PutHash(nonce_)
@@ -37,7 +37,7 @@ namespace Token{
   }
 
   bool VerackMessage::Encode(const BufferPtr& buff) const{
-    return buff->PutLong(timestamp_)
+    return buff->PutLong(ToUnixTimestamp(timestamp_))
         && buff->PutInt(static_cast<int32_t>(GetClientType()))
         && version_.Write(buff)
         && buff->PutHash(nonce_)

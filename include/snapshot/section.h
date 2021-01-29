@@ -78,7 +78,7 @@ namespace Token{
       version_(version){}
     SnapshotPrologueSection():
       SnapshotSection(SnapshotSection::kPrologue),
-      timestamp_(GetCurrentTimestamp()),
+      timestamp_(Clock::now()),
       version_(){}
     SnapshotPrologueSection(SnapshotReader* reader);
     SnapshotPrologueSection(const SnapshotPrologueSection& section):

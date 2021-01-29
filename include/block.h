@@ -23,7 +23,7 @@ namespace Token{
     int64_t num_transactions_;
    public:
     BlockHeader():
-      timestamp_(0),
+      timestamp_(Clock::now()),
       height_(0),
       previous_hash_(),
       merkle_root_(), // fill w/ genesis's merkle root
@@ -143,7 +143,7 @@ namespace Token{
    public:
     Block():
       BinaryObject(),
-      timestamp_(0),
+      timestamp_(Clock::now()),
       height_(0),
       previous_hash_(),
       transactions_(),
@@ -151,7 +151,7 @@ namespace Token{
     Block(int64_t height,
       const Hash& phash,
       const TransactionSet& transactions,
-      Timestamp timestamp = GetCurrentTimestamp()):
+      Timestamp timestamp = Clock::now()):
       BinaryObject(),
       timestamp_(timestamp),
       height_(height),
@@ -163,9 +163,9 @@ namespace Token{
           tx_bloom_.Put(it->GetHash());
       }
     }
-    Block(const BlockPtr& parent, const TransactionSet& transactions, Timestamp timestamp = GetCurrentTimestamp()):
+    Block(const BlockPtr& parent, const TransactionSet& transactions, Timestamp timestamp = Clock::now()):
       Block(parent->GetHeight() + 1, parent->GetHash(), transactions, timestamp){}
-    Block(const BlockHeader& parent, const TransactionSet& transactions, Timestamp timestamp = GetCurrentTimestamp()):
+    Block(const BlockHeader& parent, const TransactionSet& transactions, Timestamp timestamp = Clock::now()):
       Block(parent.GetHeight() + 1, parent.GetHash(), transactions, timestamp){}
     ~Block() = default;
 
@@ -239,7 +239,7 @@ namespace Token{
     }
 
     bool Write(const BufferPtr& buff) const{
-      return buff->PutLong(timestamp_)
+      return buff->PutLong(ToUnixTimestamp(timestamp_))
              && buff->PutLong(height_)
              && buff->PutHash(previous_hash_)
              && buff->PutSet(transactions_);
@@ -280,7 +280,7 @@ namespace Token{
     static BlockPtr Genesis();
 
     static BlockPtr FromBytes(const BufferPtr& buff){
-      Timestamp timestamp = buff->GetLong();
+      Timestamp timestamp = FromUnixTimestamp(buff->GetLong());
       int64_t height = buff->GetLong();
       Hash previous_hash = buff->GetHash();
 
@@ -294,7 +294,7 @@ namespace Token{
     }
 
     static BlockPtr NewInstance(BinaryFileReader* reader){
-      Timestamp timestamp = reader->ReadLong();
+      Timestamp timestamp = FromUnixTimestamp(reader->ReadLong());
       int64_t height = reader->ReadLong();
       Hash phash = reader->ReadHash();
 
@@ -307,7 +307,7 @@ namespace Token{
     }
 
     static inline BlockPtr
-    NewInstance(const BlockPtr& parent, const TransactionSet& txs, const Timestamp& timestamp = GetCurrentTimestamp()){
+    NewInstance(const BlockPtr& parent, const TransactionSet& txs, const Timestamp& timestamp = Clock::now()){
       return std::make_shared<Block>(parent, txs, timestamp);
     }
 

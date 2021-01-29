@@ -415,7 +415,7 @@ namespace Token{
      * @return True when successful otherwise, false
      */
     bool Write(const BufferPtr& buff) const{
-      buff->PutLong(timestamp_);
+      buff->PutLong(ToUnixTimestamp(timestamp_));
       buff->PutLong(index_);
       buff->PutList(inputs_);
       buff->PutList(outputs_);
@@ -432,7 +432,7 @@ namespace Token{
      */
     bool Write(Json::Writer& writer) const{
       return writer.StartObject()
-             && Json::SetField(writer, "timestamp", timestamp_)
+             && Json::SetField(writer, "timestamp", ToUnixTimestamp(timestamp_))
              && Json::SetField(writer, "index", index_)
              && Json::SetField(writer, "inputs", inputs_)
              && Json::SetField(writer, "outputs", outputs_)
@@ -448,7 +448,7 @@ namespace Token{
      * @return True when successful otherwise, false
      */
     bool Write(BinaryFileWriter* writer) const{
-      writer->WriteLong(timestamp_);
+      writer->WriteLong(ToUnixTimestamp(timestamp_));
       writer->WriteLong(index_);
       writer->WriteList(inputs_);
       writer->WriteList(outputs_);
@@ -527,7 +527,7 @@ namespace Token{
     static TransactionPtr NewInstance(const int64_t& index,
       const InputList& inputs,
       const OutputList& outputs,
-      const Timestamp& timestamp = GetCurrentTimestamp());
+      const Timestamp& timestamp = Clock::now());
     static TransactionPtr FromBytes(const BufferPtr& buff);
     static TransactionPtr NewInstance(BinaryFileReader* reader);
   };

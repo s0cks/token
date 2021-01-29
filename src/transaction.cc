@@ -14,7 +14,7 @@ namespace Token{
   }
 
   TransactionPtr Transaction::FromBytes(const BufferPtr& buff){
-    Timestamp timestamp = buff->GetLong();
+    Timestamp timestamp = FromUnixTimestamp(buff->GetLong());
     int64_t index = buff->GetLong();
 
     InputList inputs;
@@ -32,7 +32,7 @@ namespace Token{
   }
 
   TransactionPtr Transaction::NewInstance(BinaryFileReader* reader){
-    Timestamp timestamp = reader->ReadLong();
+    Timestamp timestamp = FromUnixTimestamp(reader->ReadLong());
     int64_t index = reader->ReadLong();
 
     int64_t idx;

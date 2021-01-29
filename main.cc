@@ -1,5 +1,6 @@
 #include <thread>
 #include "pool.h"
+#include "miner.h"
 #include "wallet.h"
 #include "keychain.h"
 #include "blockchain.h"
@@ -7,20 +8,45 @@
 #include "job/scheduler.h"
 #include "utils/crash_report.h"
 
-#include "miner.h"
+// --path "/usr/share/ledger"
+DEFINE_string(path, "", "The path for the local ledger to be stored in.");
+// --enable-snapshots
+DEFINE_bool(enable_snapshots, false, "Enable snapshots of the block chain");
+// --num-workers 10
+DEFINE_int32(num_workers, 4, "Define the number of worker pool threads");
+// --miner-interval 3600
+DEFINE_int64(miner_interval, 1000 * 60 * 1, "The amount of time between mining blocks in milliseconds.");
+
+#ifdef TOKEN_DEBUG
+  // --append-test
+  DEFINE_bool(append_test, false, "Append a test block upon startup [Debug]");
+#endif//TOKEN_DEBUG
 
 #ifdef TOKEN_ENABLE_SERVER
   #include "server/server.h"
   #include "peer/peer_session_manager.h"
+
+  // --remote localhost:8080
+  DEFINE_string(remote, "", "The hostname for the remote ledger to synchronize with.");
+  // --server-port 8080
+  DEFINE_int32(server_port, 0, "The port for the ledger RPC service.");
+  // --num-peers 12
+  DEFINE_int32(num_peers, 4, "The max number of peers to connect to.");
 #endif//TOKEN_ENABLE_SERVER
 
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
   #include "http/health/health_service.h"
+
+  // --healthcheck-port 8081
+  DEFINE_int32(healthcheck_port, 0, "The port for the ledger health check service.");
 #endif//TOKEN_ENABLE_HEALTHCHECK
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
   #include "http/rest/rest_service.h"
-#endif//TOKEN_ENABLE_REST
+
+  // --service-port 8082
+  DEFINE_int32(service_port, 0, "The port for the ledger rest service.");
+#endif//TOKEN_ENABLE_REST_SERVICE
 
 static inline void
 InitializeLogging(char *arg0){
@@ -29,60 +55,62 @@ InitializeLogging(char *arg0){
   google::InitGoogleLogging(arg0);
 }
 
-static inline bool
-AppendDummy(int total_spends){
-  using namespace Token;
-  sleep(10);
+#ifdef TOKEN_DEBUG
+  static inline bool
+  AppendDummy(int total_spends){
+    using namespace Token;
+    sleep(10);
 
-  Wallet wallet;
-  if(!WalletManager::GetWallet("VenueA", wallet)){
-    LOG(WARNING) << "couldn't get the wallet for VenueA";
-    return false;
-  }
-
-  LOG(INFO) << "spending " << total_spends << " unclaimed transactions";
-
-  int64_t idx = 0;
-  for(auto& it : wallet){
-    UnclaimedTransactionPtr utxo = ObjectPool::GetUnclaimedTransaction(it);
-
-    LOG(INFO) << "spending " << it << " (" << utxo->GetReference() << ")";
-    InputList inputs = {
-      Input(utxo->GetReference(), utxo->GetUser()),
-    };
-    OutputList outputs = {
-      Output("TestUser2", "TestToken2")
-    };
-    TransactionPtr tx = Transaction::NewInstance(idx++, inputs, outputs);
-    Hash hash = tx->GetHash();
-    if(!ObjectPool::PutTransaction(hash, tx)){
-      LOG(WARNING) << "cannot add new transaction " << hash << " to object pool.";
+    Wallet wallet;
+    if(!WalletManager::GetWallet("VenueA", wallet)){
+      LOG(WARNING) << "couldn't get the wallet for VenueA";
       return false;
     }
 
-    if(idx == total_spends)
+    LOG(INFO) << "spending " << total_spends << " unclaimed transactions";
+
+    int64_t idx = 0;
+    for(auto& it : wallet){
+      UnclaimedTransactionPtr utxo = ObjectPool::GetUnclaimedTransaction(it);
+
+      LOG(INFO) << "spending " << it << " (" << utxo->GetReference() << ")";
+      InputList inputs = {
+        Input(utxo->GetReference(), utxo->GetUser()),
+      };
+      OutputList outputs = {
+        Output("TestUser2", "TestToken2")
+      };
+      TransactionPtr tx = Transaction::NewInstance(idx++, inputs, outputs);
+      Hash hash = tx->GetHash();
+      if(!ObjectPool::PutTransaction(hash, tx)){
+        LOG(WARNING) << "cannot add new transaction " << hash << " to object pool.";
+        return false;
+      }
+
+      if(idx == total_spends)
+        return true;
+    }
+    return false;
+  }
+
+  class BlockChainPrinter : public Token::BlockChainBlockVisitor, Token::Printer{
+   public:
+    BlockChainPrinter(const google::LogSeverity& severity, const long& flags):
+      Token::BlockChainBlockVisitor(),
+      Token::Printer(severity, flags){}
+    ~BlockChainPrinter() = default;
+
+    bool Visit(const Token::BlockPtr& blk){
+      LOG_AT_LEVEL(GetSeverity()) << blk->GetHash();
       return true;
-  }
-  return false;
-}
+    }
 
-class BlockChainPrinter : public Token::BlockChainBlockVisitor, Token::Printer{
- public:
-  BlockChainPrinter(const google::LogSeverity& severity, const long& flags):
-    Token::BlockChainBlockVisitor(),
-    Token::Printer(severity, flags){}
-  ~BlockChainPrinter() = default;
-
-  bool Visit(const Token::BlockPtr& blk){
-    LOG_AT_LEVEL(GetSeverity()) << blk->GetHash();
-    return true;
-  }
-
-  static bool Print(const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone){
-    BlockChainPrinter printer(severity, flags);
-    return Token::BlockChain::VisitBlocks(&printer);
-  }
-};
+    static bool Print(const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone){
+      BlockChainPrinter printer(severity, flags);
+      return Token::BlockChain::VisitBlocks(&printer);
+    }
+  };
+#endif//TOKEN_DEBUG
 
 //TODO:
 // - create global environment teardown and deconstruct routines
@@ -104,6 +132,7 @@ main(int argc, char **argv){
   // ~2s on boot for 30k tokens (initialized)
   #ifdef TOKEN_DEBUG
     BannerPrinter::PrintBanner();
+    LOG(INFO) << "current time: " << FormatTimestampReadable(Clock::now());
   #endif//TOKEN_DEBUG
 
   // Load the configuration
@@ -172,10 +201,12 @@ main(int argc, char **argv){
     }
   #endif//TOKEN_ENABLE_REST_SERVICE
 
+#ifdef TOKEN_DEBUG
   if(FLAGS_append_test && !AppendDummy(Block::kMaxTransactionsForBlock)){
     CrashReport::PrintNewCrashReport("Cannot append dummy transactions.");
     return EXIT_FAILURE;
   }
+#endif//TOKEN_DEBUG
 
   if(!BlockMiner::Start()){
     CrashReport::PrintNewCrashReport("Cannot start the block miner.");

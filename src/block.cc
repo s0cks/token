@@ -5,7 +5,7 @@
 
 namespace Token{
   BlockHeader::BlockHeader(const BufferPtr& buff):
-    timestamp_(buff->GetLong()),
+    timestamp_(FromUnixTimestamp(buff->GetLong())),
     height_(buff->GetLong()),
     previous_hash_(buff->GetHash()),
     merkle_root_(buff->GetHash()),
@@ -18,7 +18,7 @@ namespace Token{
   }
 
   bool BlockHeader::Write(const BufferPtr& buff) const{
-    buff->PutLong(timestamp_);
+    buff->PutLong(ToUnixTimestamp(timestamp_));
     buff->PutLong(height_);
     buff->PutHash(previous_hash_);
     buff->PutHash(merkle_root_);
@@ -50,10 +50,10 @@ namespace Token{
     }
 
     TransactionSet transactions;
-    transactions.insert(Transaction::NewInstance(1, inputs, outputs_a, 0));
-    transactions.insert(Transaction::NewInstance(2, inputs, outputs_b, 0));
-    transactions.insert(Transaction::NewInstance(3, inputs, outputs_c, 0));
-    return std::make_shared<Block>(0, Hash(), transactions, 0);
+    transactions.insert(Transaction::NewInstance(1, inputs, outputs_a, FromUnixTimestamp(0)));
+    transactions.insert(Transaction::NewInstance(2, inputs, outputs_b, FromUnixTimestamp(0)));
+    transactions.insert(Transaction::NewInstance(3, inputs, outputs_c, FromUnixTimestamp(0)));
+    return std::make_shared<Block>(0, Hash(), transactions, FromUnixTimestamp(0));
   }
 
   bool Block::Accept(BlockVisitor* vis) const{

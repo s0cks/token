@@ -45,7 +45,7 @@ namespace Token{
         LOG(INFO) << "[worker-" << instance->GetWorkerID() << "] running " << next->GetName() << "....";
         Counter& num_ran = instance->GetJobsRan();
         Histogram& histogram = instance->GetHistogram();
-        Timepoint start = Clock::now();
+        Timestamp start = Clock::now();
 
         if(!next->Run()){
           LOG(WARNING) << "couldn't run the \"" << next->GetName() << "\" job.";

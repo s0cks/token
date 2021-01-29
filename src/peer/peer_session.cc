@@ -215,7 +215,7 @@ namespace Token{
   }
 
   void PeerSession::HandleVerackMessage(PeerSession* session, const VerackMessagePtr& msg){
-    LOG(INFO) << "remote timestamp: " << GetTimestampFormattedReadable(msg->GetTimestamp());
+    LOG(INFO) << "remote timestamp: " << FormatTimestampReadable(msg->GetTimestamp());
     LOG(INFO) << "remote <HEAD>: " << msg->GetHead();
 
     //TODO: session->SetHead(msg->GetHead());

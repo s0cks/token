@@ -4,11 +4,11 @@
 namespace Token{
   SnapshotPrologueSection::SnapshotPrologueSection(SnapshotReader* reader):
     SnapshotSection(Type::kPrologue),
-    timestamp_(reader->ReadLong()),
+    timestamp_(FromUnixTimestamp(reader->ReadLong())),
     version_(reader->ReadVersion()){}
 
   bool SnapshotPrologueSection::Write(SnapshotWriter* writer) const{
-    writer->WriteLong(timestamp_);
+    writer->WriteLong(ToUnixTimestamp(timestamp_));
     writer->WriteVersion(version_);
     return true;
   }

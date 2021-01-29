@@ -65,7 +65,7 @@ namespace Token{
 
   bool CrashReportPrinter::PrintCrashInformation(){
     LOG_AT_LEVEL(GetSeverity()) << "Cause: " << GetCause();
-    LOG_AT_LEVEL(GetSeverity()) << "Timestamp: " << GetTimestampFormattedReadable(GetCurrentTimestamp());
+    LOG_AT_LEVEL(GetSeverity()) << "Timestamp: " << FormatTimestampReadable(Clock::now());
 #ifdef OS_IS_LINUX
     LOG_AT_LEVEL(GetSeverity()) << "Stack Trace:";
     int32_t offset = 4;

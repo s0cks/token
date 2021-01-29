@@ -19,10 +19,10 @@ namespace Token{
       }
     };
    private:
-    Timepoint timestamp_;
+    Timestamp timestamp_;
     std::string name_;
    public:
-    TimelineEvent(const std::string& name, const Timepoint& timestamp = Clock::now()):
+    TimelineEvent(const std::string& name, const Timestamp& timestamp = Clock::now()):
       timestamp_(timestamp),
       name_(name){}
     TimelineEvent(const TimelineEvent& event):
@@ -30,7 +30,7 @@ namespace Token{
       name_(event.name_){}
     ~TimelineEvent() = default;
 
-    Timepoint GetTimestamp() const{
+    Timestamp GetTimestamp() const{
       return timestamp_;
     }
 
@@ -82,12 +82,12 @@ namespace Token{
       return events_;
     }
 
-    Timepoint GetStartTime() const{
+    Timestamp GetStartTime() const{
       if(events_.empty()) return Clock::now();
       return (*events_.begin()).GetTimestamp();
     }
 
-    Timepoint GetStopTime() const{
+    Timestamp GetStopTime() const{
       if(events_.empty()) return Clock::now();
       return (*events_.rbegin()).GetTimestamp();
     }
@@ -133,9 +133,9 @@ namespace Token{
       LOG_AT_LEVEL(GetSeverity()) << timeline.GetName();
       LOG_AT_LEVEL(GetSeverity()) << "---------------------------------------------";
       LOG_AT_LEVEL(GetSeverity()) << "  Start: "
-                                  << GetTimestampFormattedReadable(timeline.GetStartTime().time_since_epoch().count());
+                                  << FormatTimestampReadable(timeline.GetStartTime());
       LOG_AT_LEVEL(GetSeverity()) << "  Stop: "
-                                  << GetTimestampFormattedReadable(timeline.GetStopTime().time_since_epoch().count());
+                                  << FormatTimestampReadable(timeline.GetStopTime());
       LOG_AT_LEVEL(GetSeverity()) << "  Total Time (Seconds): " << timeline.GetTotalTime().count();
 
       if(IsDetailed()){
