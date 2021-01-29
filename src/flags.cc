@@ -3,9 +3,9 @@
 DEFINE_string(path, "", "The path for the local ledger to be stored in.");
 DEFINE_bool(enable_snapshots, false, "Enable snapshots of the block chain");
 DEFINE_int32(num_workers, 4, "Define the number of worker pool threads");
+DEFINE_int64(miner_interval, 1000 * 60 * 1, "The amount of time between mining blocks in milliseconds.");
 
 #ifdef TOKEN_DEBUG
-DEFINE_int64(miner_interval, 1000 * 60 * 1, "The amount of time between mining blocks in milliseconds.");
 DEFINE_bool(append_test, false, "Append a test block upon startup [Debug]");
 #endif//TOKEN_DEBUG
 

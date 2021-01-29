@@ -63,9 +63,9 @@ namespace Token{
     }
 
     bool Write(const BufferPtr& buff) const{
-      return buff->PutReference(reference_) &&
-             buff->PutUser(user_) &&
-             buff->PutProduct(product_);
+      return buff->PutReference(reference_)
+          && buff->PutUser(user_)
+          && buff->PutProduct(product_);
     }
 
     bool Write(Json::Writer& writer) const{
@@ -74,13 +74,6 @@ namespace Token{
           && user_.Write(writer)
           && product_.Write(writer)
           && writer.EndObject();
-    }
-
-    bool Write(BinaryFileWriter* writer) const{
-      writer->WriteReference(reference_);
-      writer->WriteUser(user_);
-      writer->WriteProduct(product_);
-      return true;
     }
 
     bool Equals(const UnclaimedTransactionPtr& val) const{
@@ -95,23 +88,28 @@ namespace Token{
       return stream.str();
     }
 
-    static UnclaimedTransactionPtr NewInstance(const TransactionReference& ref, const User& user, const Product& product){
+    static inline UnclaimedTransactionPtr
+    NewInstance(const TransactionReference& ref, const User& user, const Product& product){
       return std::make_shared<UnclaimedTransaction>(ref, user, product);
     }
 
-    static UnclaimedTransactionPtr NewInstance(const TransactionReference& ref, const std::string& user, const std::string& product){
+    static inline UnclaimedTransactionPtr
+    NewInstance(const TransactionReference& ref, const std::string& user, const std::string& product){
       return std::make_shared<UnclaimedTransaction>(ref, user, product);
     }
 
-    static UnclaimedTransactionPtr NewInstance(const Hash& hash, int64_t index, const User& user, const Product& product){
+    static inline UnclaimedTransactionPtr
+    NewInstance(const Hash& hash, int64_t index, const User& user, const Product& product){
       return std::make_shared<UnclaimedTransaction>(hash, index, user, product);
     }
 
-    static UnclaimedTransactionPtr NewInstance(const Hash& hash, int32_t index, const std::string& user, const std::string& product){
+    static inline UnclaimedTransactionPtr
+    NewInstance(const Hash& hash, int32_t index, const std::string& user, const std::string& product){
       return std::make_shared<UnclaimedTransaction>(hash, index, user, product);
     }
 
-    static UnclaimedTransactionPtr FromBytes(const BufferPtr& buff){
+    static inline UnclaimedTransactionPtr
+    FromBytes(const BufferPtr& buff){
       TransactionReference ref = buff->GetReference();
       User user = buff->GetUser();
       Product product = buff->GetProduct();

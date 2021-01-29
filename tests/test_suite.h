@@ -51,7 +51,7 @@
 #define DEFINE_RAW_OBJECT_SERIALIZATION_TEST(Name, Gen) \
   TEST(Test##Name, test_serialization){                 \
     Name a = Gen();                                     \
-    BufferPtr buff = Buffer::NewInstance(Name::kSize);  \
+    BufferPtr buff = Buffer::NewInstance(Name::GetSize());  \
     ASSERT_TRUE(buff->Put##Name(a));                    \
     Name b = buff->Get##Name();                         \
   }

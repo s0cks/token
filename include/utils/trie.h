@@ -45,20 +45,28 @@ namespace Token{
       for(int idx = 0; idx < kAlphabetSize; idx++)
         children_[idx] = nullptr;
     }
-    ~TrieNode(){
-      delete[] children_;
-    }
+    virtual ~TrieNode() = default;
 
     TrieNode<K, V, kAlphabetSize>* GetParent() const{
       return parent_;
     }
 
-    TrieNode<K, V, kAlphabetSize>* GetChild(int idx) const{
-      return children_[idx];
+    TrieNode<K, V, kAlphabetSize>* GetChild(int pos) const{
+      if(pos < 0 || pos > kAlphabetSize)
+        return nullptr;
+      return children_[pos];
+    }
+
+    K& GetKey(){
+      return key_;
     }
 
     K GetKey() const{
       return key_;
+    }
+
+    V& GetValue(){
+      return value_;
     }
 
     V GetValue() const{
@@ -71,6 +79,19 @@ namespace Token{
 
     bool IsEpsilon() const{
       return epsilon_;
+    }
+
+    bool HasChild(int pos) const{
+      if(pos < 0 || pos > kAlphabetSize)
+        return false;
+      return children_[pos] != nullptr;
+    }
+
+    bool SetChild(int pos, TrieNode<K, V, kAlphabetSize>* node){
+      if(pos < 0 || pos > kAlphabetSize)
+        return false;
+      children_[pos] = node;
+      return true;
     }
   };
 
@@ -119,7 +140,7 @@ namespace Token{
         delete root_;
     }
 
-    TrieNode<K, V, kAlphabetSize> GetRoot() const{
+    TrieNode<K, V, kAlphabetSize>* GetRoot() const{
       return root_;
     }
 

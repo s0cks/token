@@ -250,13 +250,6 @@ namespace Token{
           && writer.EndObject();
     }
 
-    bool Write(BinaryFileWriter* writer) const{
-      return writer->WriteLong(timestamp_)
-             && writer->WriteLong(height_)
-             && writer->WriteHash(previous_hash_)
-             && writer->WriteSet(transactions_);
-    }
-
     bool Equals(const BlockPtr& blk) const{
       if(timestamp_ != blk->timestamp_){
         return false;
@@ -283,7 +276,6 @@ namespace Token{
     Hash GetMerkleRoot() const;
     bool Accept(BlockVisitor* vis) const;
     bool Contains(const Hash& hash) const;
-    bool WriteToFile(const std::string& filename) const;
 
     static BlockPtr Genesis();
 

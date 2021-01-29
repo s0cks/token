@@ -18,7 +18,7 @@ namespace Token{
     static inline int64_t
     GetSize(){
       return TransactionReference::kSize
-           + User::GetSize();
+             + User::GetSize();
     }
    private:
     TransactionReference reference_;
@@ -106,7 +106,7 @@ namespace Token{
      */
     bool Write(const BufferPtr& buffer) const{
       return buffer->PutReference(reference_)
-          && buffer->PutUser(user_);
+             && buffer->PutUser(user_);
     }
 
     /**
@@ -119,22 +119,9 @@ namespace Token{
      */
     bool Write(Json::Writer& writer) const{
       return writer.StartObject()
-          && reference_.Write(writer)
-          && user_.Write(writer)
-          && writer.EndObject();
-    }
-
-    /**
-     * Serializes this object to a file using a BinaryFileWriter.
-     *
-     * @param writer
-     * @see BinaryFileWriter
-     * @deprecated
-     * @return True when successful otherwise, false
-     */
-    bool Write(BinaryFileWriter* writer) const{
-      return writer->WriteReference(reference_)
-          && writer->WriteUser(user_);
+             && reference_.Write(writer)
+             && user_.Write(writer)
+             && writer.EndObject();
     }
 
     /**
@@ -178,7 +165,7 @@ namespace Token{
     static inline int64_t
     GetSize(){
       return User::GetSize()
-           + Product::GetSize();
+             + Product::GetSize();
     }
    private:
     User user_;
@@ -229,7 +216,7 @@ namespace Token{
      */
     int64_t GetBufferSize() const{
       return User::GetSize()
-           + Product::GetSize();
+             + Product::GetSize();
     }
 
     /**
@@ -241,7 +228,7 @@ namespace Token{
      */
     bool Write(const BufferPtr& buff) const{
       return buff->PutUser(user_)
-          && buff->PutProduct(product_);
+             && buff->PutProduct(product_);
     }
 
     /**
@@ -252,25 +239,11 @@ namespace Token{
      * @see JsonString
      * @return True when successful otherwise, false
      */
-     bool Write(Json::Writer& writer) const{
-       return writer.StartObject()
-           && user_.Write(writer)
-           && product_.Write(writer)
-           && writer.EndObject();
-     }
-
-    /**
-     * Serializes this object to a file using a BinaryFileWriter.
-     *
-     * @param writer
-     * @see BinaryFileWriter
-     * @deprecated
-     * @return True when successful otherwise, false
-     */
-    bool Write(BinaryFileWriter* writer) const{
-      writer->WriteUser(user_);
-      writer->WriteProduct(product_);
-      return true;
+    bool Write(Json::Writer& writer) const{
+      return writer.StartObject()
+             && user_.Write(writer)
+             && product_.Write(writer)
+             && writer.EndObject();
     }
 
     /**
@@ -339,9 +312,6 @@ namespace Token{
         return a->timestamp_ < b->timestamp_;
       }
     };
-
-    static const int64_t kMaxNumberOfInputs;
-    static const int64_t kMaxNumberOfOutputs;
    private:
     Timestamp timestamp_;
     int64_t index_;
@@ -452,13 +422,21 @@ namespace Token{
       return true;
     }
 
+    /**
+     * Serializes this object to Json
+     *
+     * @param writer - The Json writer to use
+     * @see JsonWriter
+     * @see JsonString
+     * @return True when successful otherwise, false
+     */
     bool Write(Json::Writer& writer) const{
       return writer.StartObject()
-          && Json::SetField(writer, "timestamp", timestamp_)
-          && Json::SetField(writer, "index", index_)
-          && Json::SetField(writer, "inputs", inputs_)
-          && Json::SetField(writer, "outputs", outputs_)
-          && writer.EndArray();
+             && Json::SetField(writer, "timestamp", timestamp_)
+             && Json::SetField(writer, "index", index_)
+             && Json::SetField(writer, "inputs", inputs_)
+             && Json::SetField(writer, "outputs", outputs_)
+             && writer.EndArray();
     }
 
     /**
@@ -557,21 +535,17 @@ namespace Token{
   typedef std::vector<TransactionPtr> TransactionList;
   typedef std::set<TransactionPtr, Transaction::DefaultComparator> TransactionSet;
 
-  class TransactionInputVisitor{
-   protected:
-    TransactionInputVisitor() = default;
-   public:
-    virtual ~TransactionInputVisitor() = default;
-    virtual bool Visit(const Input& input) = 0;
-  };
-
-  class TransactionOutputVisitor{
-   protected:
-    TransactionOutputVisitor() = default;
-   public:
-    virtual ~TransactionOutputVisitor() = default;
-    virtual bool Visit(const Output& output) = 0;
-  };
+#define DECLARE_TRANSACTION_VISITOR(Name) \
+  class Transaction##Name##Visitor{ \
+    protected:                      \
+      Transaction##Name##Visitor() = default; \
+    public:                         \
+      virtual ~Transaction##Name##Visitor() = default; \
+      virtual bool Visit(const Name& val) = 0;\
+  }
+  DECLARE_TRANSACTION_VISITOR(Input);
+  DECLARE_TRANSACTION_VISITOR(Output);
+#undef DECLARE_TRANSACTION_VISITOR
 }
 
 #endif //TOKEN_TRANSACTION_H

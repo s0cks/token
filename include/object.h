@@ -79,7 +79,7 @@ namespace Token{
     virtual int64_t GetBufferSize() const = 0;
     virtual bool Write(const BufferPtr& buff) const = 0;
     virtual bool Write(Json::Writer& writer) const{ return false; }
-    virtual bool Write(BinaryFileWriter* writer) const{ return false; }
+    bool WriteToFile(BinaryFileWriter* writer) const;
   };
 
   class BinaryObject : public SerializableObject{

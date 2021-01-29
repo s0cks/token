@@ -6,9 +6,6 @@
 #include "unclaimed_transaction.h"
 
 namespace Token{
-  const int64_t Transaction::kMaxNumberOfInputs = 40000;
-  const int64_t Transaction::kMaxNumberOfOutputs = 40000;
-
   TransactionPtr Transaction::NewInstance(const int64_t& index,
     const InputList& inputs,
     const OutputList& outputs,

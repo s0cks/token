@@ -3,7 +3,7 @@
 #include "configuration.h"
 #include "http/controller.h"
 #include "http/health/health_service.h"
-#include "utils/relaxed_atomic.h"
+#include "atomic/relaxed_atomic.h"
 
 namespace Token{
   static ThreadId thread_;
@@ -130,7 +130,7 @@ namespace Token{
       std::stringstream ss;
       ss << "Cannot find: " << request->GetPath();
       return session->Send(NewNotFoundResponse(session, ss));
-    } else if(match.IsMethodNotSupported()){
+    } else if(match.IsNotSupported()){
       std::stringstream ss;
       ss << "Method Not Supported for: " << request->GetPath();
       return session->Send(NewNotSupportedResponse(session, ss));

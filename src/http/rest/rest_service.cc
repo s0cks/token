@@ -1,6 +1,6 @@
 #ifdef TOKEN_ENABLE_REST_SERVICE
 
-#include "utils/relaxed_atomic.h"
+#include "atomic/relaxed_atomic.h"
 #include "http/rest/rest_service.h"
 #include "http/rest/chain_controller.h"
 #include "http/rest/pool_controller.h"
@@ -127,7 +127,7 @@ namespace Token{
       std::stringstream ss;
       ss << "Cannot find: " << request->GetPath();
       return session->Send(NewNotFoundResponse(session, ss));
-    } else if(match.IsMethodNotSupported()){
+    } else if(match.IsNotSupported()){
       std::stringstream ss;
       ss << "Method Not Supported for: " << request->GetPath();
       return session->Send(NewNotSupportedResponse(session, ss));
@@ -136,7 +136,7 @@ namespace Token{
 
       // weirdness :(
       request->SetParameters(match.GetParameters());
-      HttpRouteHandler& handler = match.GetHandler();
+      HttpRouteHandler handler = match.GetHandler();
       handler(session, request);
     }
   }

@@ -72,11 +72,6 @@ namespace Token{
     return tx_bloom_.Contains(hash);
   }
 
-  bool Block::WriteToFile(const std::string& filename) const{
-    BinaryObjectFileWriter writer(filename);
-    return writer.WriteObject(shared_from_this());
-  }
-
   Hash Block::GetMerkleRoot() const{
     MerkleTreeBuilder builder;
     if(!Accept(&builder)){

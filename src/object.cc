@@ -4,6 +4,15 @@
 #include "utils/file_writer.h"
 
 namespace Token{
+  bool SerializableObject::WriteToFile(BinaryFileWriter* writer) const{
+    BufferPtr data = Buffer::NewInstance(GetBufferSize());
+    if(!Write(data)){
+      LOG(WARNING) << "cannot serialize " << ToString() << " to buffer.";
+      return false;
+    }
+    return writer->WriteBytes(data);
+  }
+
   Hash BinaryObject::GetHash() const{
     CryptoPP::SHA256 func;
 

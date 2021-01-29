@@ -1,7 +1,7 @@
 #include <glog/logging.h>
 #include "pool.h"
 #include "utils/kvstore.h"
-#include "utils/relaxed_atomic.h"
+#include "atomic/relaxed_atomic.h"
 
 namespace Token{
   static RelaxedAtomic<ObjectPool::State> state_ = { ObjectPool::kUninitialized };

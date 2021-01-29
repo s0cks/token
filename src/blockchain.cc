@@ -1,7 +1,7 @@
 #include <sstream>
 #include <leveldb/db.h>
 #include <glog/logging.h>
-#include <utils/relaxed_atomic.h>
+#include <atomic/relaxed_atomic.h>
 
 #include "keychain.h"
 #include "blockchain.h"
@@ -119,10 +119,16 @@ namespace Token{
     return GetBlock(GetReference(BLOCKCHAIN_REFERENCE_HEAD));
   }
 
+  static inline bool
+  WriteBlockData(const std::string& filename, const BlockPtr& blk){
+    BinaryObjectFileWriter writer(filename);
+    return writer.WriteObject(blk);
+  }
+
   bool BlockChain::PutBlock(const Hash& hash, BlockPtr blk){
     ObjectKey okey(Object::Type::kBlockType, hash);
     std::string filename = GetNewBlockFilename(blk);
-    if(!blk->WriteToFile(filename)){
+    if(!WriteBlockData(filename, blk)){
       LOG(WARNING) << "cannot write block data to file: " << filename;
       return false;
     }

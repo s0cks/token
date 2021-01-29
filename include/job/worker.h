@@ -5,7 +5,7 @@
 #include "vthread.h"
 #include "job/job.h"
 #include "utils/metrics.h"
-#include "utils/work_stealing_queue.h"
+#include "atomic/wsq.h"
 
 namespace Token{
   typedef int32_t WorkerId;

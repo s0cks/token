@@ -154,7 +154,7 @@ namespace Token{
     bool WriteList(const std::vector<T>& items){
       WriteLong((int64_t)items.size());
       for(auto& item : items){
-        if(!item.Write(this)){
+        if(!item.WriteToFile(this)){
           return false;
         }
       }
@@ -176,6 +176,11 @@ namespace Token{
       return WriteHash(ref.GetTransactionHash())
           && WriteLong(ref.GetIndex());
     }
+
+    inline bool
+    WriteBytes(const BufferPtr& buffer){
+      return WriteBytes((uint8_t*)buffer->data(), buffer->GetWrittenBytes());
+    }
   };
 
   class BinaryObjectFileWriter : public BinaryFileWriter{
@@ -188,7 +193,7 @@ namespace Token{
     bool WriteObject(const std::shared_ptr<T>& val){
       ObjectTag tag = val->tag();
       WriteObjectTag(tag);
-      return val->Write(this);
+      return val->WriteToFile(this);
     }
   };
 

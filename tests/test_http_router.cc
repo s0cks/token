@@ -41,7 +41,7 @@ namespace Token{
         HttpRequestPtr request = std::make_shared<HttpRequest>(nullptr, request_body.data(), request_body.length());
 
         HttpRouterMatch match = router->Find(request);
-        ASSERT_TRUE(match.IsMethodNotSupported());
+        ASSERT_TRUE(match.IsNotSupported());
     }
 
     TEST(TestHttpRouter, test_params){
@@ -52,6 +52,11 @@ namespace Token{
         HttpRequestPtr request = std::make_shared<HttpRequest>(nullptr, request_body.data(), request_body.length());
 
         HttpRouterMatch match = router->Find(request);
+        LOG(INFO) << "parameters (" << match.GetParameters().size() << ")";
+        for(auto& it : match.GetParameters())
+          LOG(INFO) << it.first << " := " << it.second;
+
+        LOG(INFO) << "status: " << match.GetStatus();
         ASSERT_TRUE(match.IsOk());
         ASSERT_EQ(match.GetParameterValue("id"), "TestUser");
     }

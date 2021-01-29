@@ -9,7 +9,7 @@
 #include "configuration.h"
 #include "server/server.h"
 #include "utils/crash_report.h"
-#include "utils/relaxed_atomic.h"
+#include "atomic/relaxed_atomic.h"
 #include "server/server_session.h"
 #include "peer/peer_session_manager.h"
 
