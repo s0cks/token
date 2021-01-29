@@ -18,7 +18,7 @@ namespace Token{
   }
 
   void ObjectPoolController::HandleGetBlock(HttpSession* session, const HttpRequestPtr& request){
-    Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
+    Hash hash = request->GetHashParameterValue();
     if(!ObjectPool::HasBlock(hash))
       return session->Send(NewNoContentResponse(session, hash));
     BlockPtr blk = ObjectPool::GetBlock(hash);
@@ -30,7 +30,7 @@ namespace Token{
   }
 
   void ObjectPoolController::HandleGetTransaction(HttpSession* session, const HttpRequestPtr& request){
-    Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
+    Hash hash = request->GetHashParameterValue();
     if(!ObjectPool::HasTransaction(hash))
       return session->Send(NewNoContentResponse(session, hash));
     TransactionPtr tx = ObjectPool::GetTransaction(hash);

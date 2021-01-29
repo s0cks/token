@@ -24,10 +24,7 @@ namespace Token{
     HttpRoute(const std::string& path, const HttpMethod& method, HttpRouteHandler handler):
       path_(path),
       method_(method),
-      handler_(handler){
-      if(handler == NULL)
-        LOG(WARNING) << "http route handler is null";
-    }
+      handler_(handler){}
     HttpRoute(const HttpRoute& route):
       path_(route.path_),
       method_(route.method_),
@@ -81,24 +78,38 @@ namespace Token{
       }
     }
    private:
+    std::string path_;
     Status status_;
-    ParameterMap parameters_;
+
+    ParameterMap params_path_;
+    ParameterMap params_query_;
+
     HttpRouteHandler handler_;
 
-    HttpRouterMatch(const Status& status, const ParameterMap& params, HttpRouteHandler handler):
+    HttpRouterMatch(const std::string& path, const Status& status, const ParameterMap& params_path, const ParameterMap& params_query, HttpRouteHandler handler):
+      path_(path),
       status_(status),
-      parameters_(params),
+      params_path_(params_path),
+      params_query_(params_query),
       handler_(handler){}
-    HttpRouterMatch(const Status& status):
+    HttpRouterMatch(const std::string& path, const Status& status):
+      path_(path),
       status_(status),
-      parameters_(),
+      params_path_(),
+      params_query_(),
       handler_(){}
    public:
     HttpRouterMatch(const HttpRouterMatch& match):
+      path_(match.path_),
       status_(match.status_),
-      parameters_(match.parameters_),
+      params_path_(),
+      params_query_(),
       handler_(match.handler_){}
     ~HttpRouterMatch() = default;
+
+    std::string GetPath() const{
+      return path_;
+    }
 
     Status GetStatus() const{
       return status_;
@@ -112,16 +123,38 @@ namespace Token{
       return handler_;
     }
 
-    ParameterMap& GetParameters(){
-      return parameters_;
+    ParameterMap& GetPathParameters(){
+      return params_path_;
     }
 
-    ParameterMap GetParameters() const{
-      return parameters_;
+    ParameterMap GetPathParameters() const{
+      return params_path_;
     }
 
-    std::string GetParameterValue(const std::string& name){
-      return parameters_[name];
+    bool HasPathParameter(const std::string& name){
+      auto pos = params_path_.find(name);
+      return pos != params_path_.end();
+    }
+
+    std::string GetPathParameterValue(const std::string& name){
+      return params_path_[name];
+    }
+
+    ParameterMap& GetQueryParameters(){
+      return params_query_;
+    }
+
+    ParameterMap GetQueryParameters() const{
+      return params_query_;
+    }
+
+    bool HasQueryParameter(const std::string& name) const{
+      auto pos = params_query_.find(name);
+      return pos != params_query_.end();
+    }
+
+    std::string GetQueryParameterValue(const std::string& name){
+      return params_query_[name];
     }
 
 #define DEFINE_CHECK(Name) \
@@ -131,9 +164,14 @@ namespace Token{
 
     HttpRouterMatch& operator=(const HttpRouterMatch& match){
       status_ = match.status_;
-      parameters_ = match.parameters_;
+      params_path_ = match.params_path_;
+      params_query_ = match.params_query_;
       handler_ = match.handler_;
       return (*this);
+    }
+
+    friend std::ostream& operator<<(std::ostream& stream, const HttpRouterMatch& match){
+      return stream << "HttpRouterMatch(" << match.GetPath() << ", " << match.GetStatus() << ")";
     }
   };
 
@@ -235,8 +273,9 @@ namespace Token{
   V(94, '}', "%7D") \
   V(95, '~', "%7E")
 
-  static const int64_t kHttpAlphabetSize = 97;
   static const int64_t kHttpPathParameter = 96;
+  static const int64_t kHttpQueryParameter = 97;
+  static const int64_t kHttpAlphabetSize = 98;
 
   class HttpRouter : Trie<char, HttpRoute, kHttpAlphabetSize>{
    private:
@@ -294,37 +333,55 @@ namespace Token{
     }
 
     HttpRouterMatch Search(Node* node, const HttpMethod& method, const std::string& path){
-      ParameterMap params;
+      ParameterMap path_params;
+      ParameterMap query_params;
 
       Node* curr = node;
-      for(auto i = path.begin(); i < path.end(); i++){
-        char c = (*i);
+      for(auto i = path.begin(); i < path.end();){
+        char c = *(i++);
         if(curr->HasChild(kHttpPathParameter)){
           curr = (Node*)curr->GetChild(kHttpPathParameter);
 
-          std::string value = "";
-          while(i != path.end()){
-            if((*i) == '/')
-              break;
+          std::string value(1, c);
+          do{
             value += (*i);
-            i++;
-          }
+          } while((++i) != path.end() && (*i) != '/' && (*i) != '?');
 
           HttpRoute& route = curr->GetValue();
-          params.insert({ route.GetPath(), value});
+          path_params.insert({ route.GetPath(), value});
+        } else if(c == '?'){
+          do{
+            if((*i) == '&')
+              i++;
+
+            std::string key = "";
+            do{
+              key += (*i);
+            } while((++i) != path.end() && (*i) != '=' && (*i) != '/');
+
+            i++;
+
+            std::string value = "";
+            do{
+              value += (*i);
+            } while((++i) != path.end() && (*i) != '&' && (*i) != '/');
+
+            query_params.insert({ key, value });
+          } while(i != path.end() && (*i) == '&' && (*i) != '/');
         } else{
           int pos = GetPosition(c);
-          if(!curr->HasChild(pos))
-            return HttpRouterMatch(HttpRouterMatch::kNotFound);
+          if(!curr->HasChild(pos)){
+            LOG(WARNING) << "cannot find child " << c << "@" << pos;
+            return HttpRouterMatch(path, HttpRouterMatch::kNotFound);
+          }
           curr = (Node*)curr->GetChild(pos);
         }
       }
 
       HttpRoute& route = curr->GetValue();
-      if(route.GetMethod() != method){
-        return HttpRouterMatch(HttpRouterMatch::kNotSupported);
-      }
-      return HttpRouterMatch(HttpRouterMatch::kOk, params, route.handler_);
+      if(route.GetMethod() != method)
+        return HttpRouterMatch(path, HttpRouterMatch::kNotSupported);
+      return HttpRouterMatch(path, HttpRouterMatch::kOk, path_params, query_params, route.handler_);
     }
    public:
     HttpRouter():

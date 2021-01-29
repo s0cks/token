@@ -138,7 +138,8 @@ namespace Token{
       assert(match.IsOk());
 
       // weirdness :(
-      request->SetParameters(match.GetParameters());
+      request->SetPathParameters(match.GetPathParameters());
+      request->SetQueryParameters(match.GetQueryParameters());
       HttpRouteHandler& handler = match.GetHandler();
       handler(session, request);
     }

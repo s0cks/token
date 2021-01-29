@@ -15,7 +15,7 @@ namespace Token{
   }
 
   void BlockChainController::HandleGetBlockChainBlock(HttpSession* session, const HttpRequestPtr& request){
-    Hash hash = Hash::FromHexString(request->GetParameterValue("hash"));
+    Hash hash = request->GetHashParameterValue();
     if(!BlockChain::HasBlock(hash))
       return session->Send(NewNoContentResponse(session, hash));
     BlockPtr blk = BlockChain::GetBlock(hash);

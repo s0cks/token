@@ -26,7 +26,8 @@ namespace Token{
     http_parser_settings settings_;
     std::string path_;
     std::string body_;
-    ParameterMap parameters_;
+    ParameterMap path_params_;
+    ParameterMap query_params_;
 
     static int
     OnParseURL(http_parser* parser, const char* data, size_t len){
@@ -48,7 +49,8 @@ namespace Token{
       settings_(),
       path_(),
       body_(),
-      parameters_(){
+      path_params_(),
+      query_params_(){
       parser_.data = this;
       settings_.on_url = &OnParseURL;
       settings_.on_body = &OnParseBody;
@@ -61,9 +63,14 @@ namespace Token{
     }
     ~HttpRequest(){}
 
-    void SetParameters(const ParameterMap& parameters){
-      parameters_.clear();
-      parameters_.insert(parameters.begin(), parameters.end());
+    void SetPathParameters(const ParameterMap& params){
+      path_params_.clear();
+      path_params_.insert(params.begin(), params.end());
+    }
+
+    void SetQueryParameters(const ParameterMap& params){
+      query_params_.clear();
+      query_params_.insert(params.begin(), params.end());
     }
 
     std::string GetBody() const{
@@ -106,30 +113,40 @@ namespace Token{
       return parser_.method == HTTP_DELETE;
     }
 
-    bool HasParameter(const std::string& name) const{
-      auto pos = parameters_.find(name);
-      return pos != parameters_.end();
+    bool HasPathParameter(const std::string& name) const{
+      auto pos = path_params_.find(name);
+      return pos != path_params_.end();
+    }
+
+    bool HasQueryParameter(const std::string& name) const{
+      auto pos = query_params_.find(name);
+      return pos != query_params_.end();
     }
 
     HttpSession* GetSession() const{
       return session_;
     }
 
-    std::string GetParameterValue(const std::string& name) const{
-      auto pos = parameters_.find(name);
-      return pos != parameters_.end() ? pos->second : "";
+    std::string GetPathParameterValue(const std::string& name) const{
+      auto pos = path_params_.find(name);
+      return pos != path_params_.end() ? pos->second : "";
+    }
+
+    std::string GetQueryParameterValue(const std::string& name) const{
+      auto pos = query_params_.find(name);
+      return pos != query_params_.end() ? pos->second : "";
     }
 
     User GetUserParameterValue(const std::string& name="user") const{
-      return User(GetParameterValue(name));
+      return User(GetPathParameterValue(name));
     }
 
     Product GetProductParameterValue(const std::string& name="product") const{
-      return Product(GetParameterValue(name));
+      return Product(GetPathParameterValue(name));
     }
 
     Hash GetHashParameterValue(const std::string& name="hash") const{
-      return Hash::FromHexString(GetParameterValue(name));
+      return Hash::FromHexString(GetPathParameterValue(name));
     }
 
     static HttpRequestPtr

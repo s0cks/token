@@ -44,7 +44,7 @@ namespace Token{
         ASSERT_TRUE(match.IsNotSupported());
     }
 
-    TEST(TestHttpRouter, test_params){
+    TEST(TestHttpRouter, test_path_params){
         HttpRouter* router = new HttpRouter();
         router->Put("/account/:id", NULL);
 
@@ -52,12 +52,60 @@ namespace Token{
         HttpRequestPtr request = std::make_shared<HttpRequest>(nullptr, request_body.data(), request_body.length());
 
         HttpRouterMatch match = router->Find(request);
-        LOG(INFO) << "parameters (" << match.GetParameters().size() << ")";
-        for(auto& it : match.GetParameters())
-          LOG(INFO) << it.first << " := " << it.second;
-
-        LOG(INFO) << "status: " << match.GetStatus();
+        LOG(INFO) << "match: " << match;
         ASSERT_TRUE(match.IsOk());
-        ASSERT_EQ(match.GetParameterValue("id"), "TestUser");
+        ASSERT_EQ(match.GetPathParameterValue("id"), "TestUser");
     }
+
+    TEST(TestHttpRouter, test_query_params){
+      HttpRouter* router = new HttpRouter();
+      router->Get("/wallet/:user", NULL);
+
+      std::string request_body = HttpGetRequestBody("/wallet/VenueA?scale=64");
+      HttpRequestPtr request = std::make_shared<HttpRequest>(nullptr, request_body.data(), request_body.length());
+
+      HttpRouterMatch match = router->Find(request);
+      LOG(INFO) << "match: " << match;
+      LOG(INFO) << "query parameters:";
+      for(auto& it : match.GetQueryParameters()){
+        LOG(INFO) << " - " << it.first << " := " << it.second;
+      }
+
+      LOG(INFO) << "path parameters:";
+      for(auto& it : match.GetPathParameters()){
+        LOG(INFO) << " - " << it.first << " := " << it.second;
+      }
+
+      ASSERT_TRUE(match.IsOk());
+      ASSERT_EQ(match.GetPathParameterValue("user"), "VenueA");
+      ASSERT_TRUE(match.HasQueryParameter("scale"));
+      ASSERT_EQ(match.GetQueryParameterValue("scale"), "64");
+    }
+
+  TEST(TestHttpRouter, test_query_params2){
+    HttpRouter* router = new HttpRouter();
+    router->Get("/wallet/:user", NULL);
+
+    std::string request_body = HttpGetRequestBody("/wallet/VenueA?scale=64&test=true");
+    HttpRequestPtr request = std::make_shared<HttpRequest>(nullptr, request_body.data(), request_body.length());
+
+    HttpRouterMatch match = router->Find(request);
+    LOG(INFO) << "match: " << match;
+    LOG(INFO) << "query parameters:";
+    for(auto& it : match.GetQueryParameters()){
+      LOG(INFO) << " - " << it.first << " := " << it.second;
+    }
+
+    LOG(INFO) << "path parameters:";
+    for(auto& it : match.GetPathParameters()){
+      LOG(INFO) << " - " << it.first << " := " << it.second;
+    }
+
+    ASSERT_TRUE(match.IsOk());
+    ASSERT_EQ(match.GetPathParameterValue("user"), "VenueA");
+    ASSERT_TRUE(match.HasQueryParameter("scale"));
+    ASSERT_EQ(match.GetQueryParameterValue("scale"), "64");
+    ASSERT_TRUE(match.HasQueryParameter("test"));
+    ASSERT_EQ(match.GetQueryParameterValue("test"), "true");
+  }
 }
