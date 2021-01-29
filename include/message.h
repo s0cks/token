@@ -10,30 +10,12 @@
 #include "configuration.h"
 
 namespace Token{
-#define FOR_EACH_MESSAGE_TYPE(V) \
-    V(Version) \
-    V(Verack) \
-    V(Prepare) \
-    V(Promise) \
-    V(Commit) \
-    V(Accepted) \
-    V(Rejected) \
-    V(GetData) \
-    V(GetBlocks) \
-    V(Block) \
-    V(Transaction) \
-    V(Inventory) \
-    V(NotFound) \
-    V(GetPeers) \
-    V(PeerList)
-
   class Message;
   typedef std::shared_ptr<Message> MessagePtr;
 
 #define DEFINE_MESSAGE(Name) \
   class Name##Message;        \
   typedef std::shared_ptr<Name##Message> Name##MessagePtr;
-
   FOR_EACH_MESSAGE_TYPE(DEFINE_MESSAGE)
 #undef DEFINE_MESSAGE
 

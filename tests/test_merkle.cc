@@ -8,7 +8,7 @@ namespace Token{
     }
 
     static inline TransactionPtr
-    CreateTransaction(int64_t index, int64_t num_outputs, Timestamp timestamp=GetCurrentTimestamp()){
+    CreateTransaction(int64_t index, int64_t num_outputs, Timestamp timestamp=Clock::now()){
         InputList inputs;
         OutputList outputs;
         for(int64_t idx = 0; idx < num_outputs; idx++){

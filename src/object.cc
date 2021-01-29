@@ -30,6 +30,4 @@ namespace Token{
                                  new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(hash.data(), hash.size())));
     return Hash(hash.data(), CryptoPP::SHA256::DIGESTSIZE);
   }
-
-  const int32_t ObjectTag::kMagic = 0xFAFE;
 }

@@ -7,7 +7,7 @@ namespace Token{
     // predictable
     InputList inputs = {};
     OutputList outputs = {};
-    return Transaction::NewInstance(0, inputs, outputs, 0);
+    return Transaction::NewInstance(0, inputs, outputs, FromUnixTimestamp(0));
   }
 
   static TransactionPtr

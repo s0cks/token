@@ -4,6 +4,7 @@
 #include "hash.h"
 #include "object.h"
 #include "version.h"
+#include "object_tag.h"
 
 namespace Token{
   #define FOR_EACH_RAW_TYPE(V) \
@@ -121,9 +122,9 @@ namespace Token{
    protected:
     ObjectTag tag_;
    public:
-    BinaryObjectFileReader(const std::string& filename, const ObjectTag::Type& tag_type):
+    BinaryObjectFileReader(const std::string& filename, const Object::Type& tag_type):
       BinaryFileReader(filename),
-      tag_(tag_type){}
+      tag_(tag_type, 0){} //TODO: fixme
     virtual ~BinaryObjectFileReader() = default;
 
     bool ValidateTag(){

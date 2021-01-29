@@ -4,6 +4,7 @@
 #include <iostream>
 #include "object.h"
 #include "version.h"
+#include "object_tag.h"
 
 namespace Token{
   #define FOR_EACH_RAW_TYPE(V) \
@@ -138,11 +139,11 @@ namespace Token{
     }
 
     bool WriteObjectTag(const ObjectTag& tag){
-      return WriteUnsignedLong(tag.data());
+      return WriteUnsignedLong(tag.raw());
     }
 
-    bool WriteObjectTag(const ObjectTag::Type& tag){
-      return WriteObjectTag(ObjectTag(tag));
+    bool WriteObjectTag(const Object::Type& tag, int16_t size){
+      return WriteObjectTag(ObjectTag(tag, size));
     }
 
     template<typename T>

@@ -218,7 +218,7 @@ namespace Token{
     }
 
     ObjectTag tag() const{
-      return ObjectTag(ObjectTag::kBlock);
+      return ObjectTag(Object::Type::kBlockType, (int16_t)GetBufferSize());
     }
 
     std::string ToString() const{
@@ -327,7 +327,7 @@ namespace Token{
   class BlockFileReader : BinaryObjectFileReader{
    public:
     BlockFileReader(const std::string& filename):
-      BinaryObjectFileReader(filename, ObjectTag::kBlock){}
+      BinaryObjectFileReader(filename, Object::Type::kBlockType){}
     ~BlockFileReader() = default;
 
     BlockPtr ReadBlock(){
