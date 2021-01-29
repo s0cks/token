@@ -6,6 +6,19 @@
 #include "http/rest/wallet_controller.h"
 
 namespace Token{
+  static inline bool
+  ParseInt(const std::string& val, int* result){
+    for(auto c : val){
+      if(!isdigit(c)){
+        (*result) = 0;
+        return false;
+      }
+    }
+
+    (*result) = atoi(val.data());
+    return true;
+  }
+
   void WalletController::HandleGetUserWalletTokenCode(HttpSession* session, const HttpRequestPtr& request){
     User user = request->GetUserParameterValue();
     Hash hash = request->GetHashParameterValue();
@@ -13,7 +26,46 @@ namespace Token{
     if(!ObjectPool::HasUnclaimedTransaction(hash))
       return session->Send(NewNoContentResponse(session, hash));
 
-    DeeplinkGenerator generator; //TODO: add support for variable sizes
+    int width = DEEPLINK_DEFAULT_WIDTH;
+    int height = DEEPLINK_DEFAULT_HEIGHT;
+    if(request->HasQueryParameter("scale")){
+      int scale;
+      if(!ParseInt(request->GetQueryParameterValue("scale"), &scale)){
+        std::stringstream ss;
+        ss << "scale factor of " << request->GetQueryParameterValue("scale") << " is not a valid number";
+        return session->Send(NewInternalServerErrorResponse(session, ss));
+      }
+      width = scale;
+      height = scale;
+    } else if(request->HasQueryParameter("width")){
+      if(!request->HasQueryParameter("height"))
+        return session->Send(NewInternalServerErrorResponse(session, "Please specify a height"));
+      if(!ParseInt(request->GetQueryParameterValue("width"), &width)){
+        std::stringstream ss;
+        ss << "width of " << request->GetQueryParameterValue("width") << " is not a valid number.";
+        return session->Send(NewInternalServerErrorResponse(session, ss));
+      }
+
+      if(!ParseInt(request->GetQueryParameterValue("height"), &height)){
+        std::stringstream ss;
+        ss << "height of " << request->GetQueryParameterValue("height") << " is not a valid number.";
+        return session->Send(NewInternalServerErrorResponse(session, ss));
+      }
+    }
+
+    if(width < DEEPLINK_MIN_WIDTH || width > DEEPLINK_MAX_WIDTH){
+      std::stringstream ss;
+      ss << "Width of " << width << " is invalid. Width constraints: [" << DEEPLINK_MIN_WIDTH << "-" << DEEPLINK_MAX_WIDTH << "]";
+      return session->Send(NewInternalServerErrorResponse(session, ss));
+    }
+
+    if(height < DEEPLINK_MIN_HEIGHT || height > DEEPLINK_MAX_HEIGHT){
+      std::stringstream ss;
+      ss << "Height of " << height << " is invalid. Height constraints: [" << DEEPLINK_MIN_HEIGHT << "-" << DEEPLINK_MAX_HEIGHT << "]";
+      return session->Send(NewInternalServerErrorResponse(session, ss));
+    }
+
+    DeeplinkGenerator generator(width, height);
 
     Bitmap bitmap = generator.Generate(hash);
     BufferPtr data = Buffer::NewInstance(bitmap.width()*bitmap.height());

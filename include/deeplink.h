@@ -18,6 +18,10 @@ namespace Token{
 #define DEEPLINK_DEFAULT_WIDTH 64
 #define DEEPLINK_DEFAULT_HEIGHT 64
 #define DEEPLINK_DEFAULT_ECC -1
+#define DEEPLINK_MIN_WIDTH 16
+#define DEEPLINK_MIN_HEIGHT 16
+#define DEEPLINK_MAX_WIDTH 512
+#define DEEPLINK_MAX_HEIGHT 512
 
   typedef ZXing::Matrix<uint8_t> Bitmap;
 

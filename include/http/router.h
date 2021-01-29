@@ -295,16 +295,13 @@ namespace Token{
 
     bool Insert(Node* node, const HttpMethod& method, const std::string& path, const HttpRouteHandler& handler){
       Node* curr = node;
-      for(auto i = path.begin(); i < path.end(); i++){
-        char c = (*i);
+      for(auto i = path.begin(); i < path.end();){
+        char c = *(i++);
         if(c == ':'){
-          i++;
-
           std::string name = "";
-          while((*i) != '/' && i < path.cend()){
+          do{
             name += (*i);
-            i++;
-          }
+          } while((++i) != path.cend() && (*i) != '/');
 
           if(!curr->HasChild(kHttpPathParameter)){
             if(!curr->SetChild(kHttpPathParameter, new Node(':', HttpRoute(name, method, handler)))){
@@ -312,6 +309,7 @@ namespace Token{
               return false;
             }
           }
+
           curr = (Node*)curr->GetChild(kHttpPathParameter);
         } else{
           int pos = GetPosition(c);
@@ -368,10 +366,11 @@ namespace Token{
 
             query_params.insert({ key, value });
           } while(i != path.end() && (*i) == '&' && (*i) != '/');
+          break;
         } else{
           int pos = GetPosition(c);
           if(!curr->HasChild(pos)){
-            LOG(WARNING) << "cannot find child " << c << "@" << pos;
+            LOG(WARNING) << "cannot find child " << c << "@" << pos << " (parent: " << curr->GetKey() << ")";
             return HttpRouterMatch(path, HttpRouterMatch::kNotFound);
           }
           curr = (Node*)curr->GetChild(pos);
