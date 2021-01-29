@@ -2,7 +2,7 @@
 
 #include "pool.h"
 #include "wallet.h"
-#include "utils/qrcode.h"
+#include "deeplink.h"
 #include "http/rest/wallet_controller.h"
 
 namespace Token{
@@ -13,11 +13,13 @@ namespace Token{
     if(!ObjectPool::HasUnclaimedTransaction(hash))
       return session->Send(NewNoContentResponse(session, hash));
 
-    UnclaimedTransactionPtr utxo = ObjectPool::GetUnclaimedTransaction(hash);
-    BufferPtr data = Buffer::NewInstance(65536);
-    if(!WriteQRCode(data, hash)){
+    DeeplinkGenerator generator; //TODO: add support for variable sizes
+
+    Bitmap bitmap = generator.Generate(hash);
+    BufferPtr data = Buffer::NewInstance(bitmap.width()*bitmap.height());
+    if(!WritePNG(data, bitmap)){
       std::stringstream ss;
-      ss << "Cannot generate qr-code for: " << hash;
+      ss << "Couldn't generate deeplink for: " << hash;
       return session->Send(NewInternalServerErrorResponse(session, ss));
     }
     return session->Send(HttpBinaryResponse::NewInstance(session, HttpStatusCode::kHttpOk, HTTP_CONTENT_TYPE_IMAGE_PNG, data));
