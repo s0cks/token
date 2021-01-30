@@ -1,7 +1,6 @@
 #include "block.h"
 #include "server/server.h"
 #include "blockchain.h"
-#include "utils/crash_report.h"
 
 namespace Token{
   BlockHeader::BlockHeader(const BufferPtr& buff):

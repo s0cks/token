@@ -30,7 +30,7 @@ namespace Token{
         }
 
         thread->ClearCurrentSession();
-        if(session->IsError() && request.ShouldReschedule()){
+        if(session->IsDisconnected() && request.ShouldReschedule()){
           if(request.ShouldReschedule()){
             int32_t backoffs = request.GetNumberOfAttempts() * PeerSessionManager::kRetryBackoffSeconds;
             LOG(WARNING) << "couldn't connect to peer " << paddr << ", rescheduling (" << backoffs << "s)...";

@@ -1,24 +1,20 @@
-#include "utils/crash_report.h"
-
 #ifdef TOKEN_ENABLE_SERVER
   #include "server/server.h"
   #include "peer/peer_session_manager.h"
 #endif//TOKEN_ENABLE_SERVER
 
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
-  #include "http/health/health_service.h"
+  #include "server/http/health/health_service.h"
 #endif//TOKEN_ENABLE_HEALTH_SERVICE
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
-  #include "http/rest/rest_service.h"
+  #include "server/http/rest/rest_service.h"
 #endif//TOKEN_ENABLE_REST_SERVICE
 
 namespace Token{
   static inline void
   PrintFatalCrashReport(const std::string& cause){
-    CrashReportPrinter printer(cause, google::FATAL);
-    if(!printer.Print())
-      LOG(FATAL) << "couldn't print crash report.";
+    //TODO: implement
   }
 
   static inline void
@@ -33,21 +29,21 @@ namespace Token{
     }
 #endif//TOKEN_ENABLE_REST_SERVICE
 
-#ifdef TOKEN_ENABLE_SERVER
+/*#ifdef TOKEN_ENABLE_SERVER
     LOG(INFO) << "terminating the peer session manager....";
     if(!PeerSessionManager::Shutdown()){
       PrintFatalCrashReport("Cannot shutdown the peer session manager threads.");
       goto terminate;
     }
 
-    if(IsValidPort(FLAGS_server_port) && Server::IsRunningState()){
+    if(IsValidPort(FLAGS_server_port) && Server::IsRunning()){
       LOG(INFO) << "terminating the server....";
       if(!Server::Shutdown()){
         PrintFatalCrashReport("Cannot shutdown the server thread.");
         goto terminate;
       }
     }
-#endif//TOKEN_ENABLE_SERVER
+#endif//TOKEN_ENABLE_SERVER*/
 
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
     if(IsValidPort(FLAGS_healthcheck_port) && HealthCheckService::IsRunning()){

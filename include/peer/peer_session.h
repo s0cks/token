@@ -4,7 +4,7 @@
 #ifdef TOKEN_ENABLE_SERVER
 
 #include <cstdint>
-#include "session.h"
+#include "server/session.h"
 
 namespace Token{
   class PeerSession;
@@ -120,6 +120,8 @@ namespace Token{
     static void OnAccepted(uv_async_t* handle);
     static void OnRejected(uv_async_t* handle);
     static void OnDiscovery(uv_async_t* handle);
+
+    void WaitForState(const State& state){}
 
 #define DECLARE_MESSAGE_HANDLER(Name) \
         static void Handle##Name##Message(PeerSession* session, const Name##MessagePtr& msg);

@@ -1,7 +1,6 @@
 #include <glog/logging.h>
 #include "common.h"
 #include "keychain.h"
-#include "utils/crash_report.h"
 
 namespace Token{
   void Decode(CryptoPP::BufferedTransformation& bt, const std::string& filename){

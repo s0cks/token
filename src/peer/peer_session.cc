@@ -1,16 +1,17 @@
 #ifdef TOKEN_ENABLE_SERVER
 
 #include "server/server.h"
+#include "server/rpc/rpc_server.h"
 #include "job/scheduler.h"
 #include "job/synchronize.h"
 #include "peer/peer_session.h"
-
 #include "consensus/proposal.h"
 #include "consensus/proposal_manager.h"
 
 namespace Token{
   bool PeerSession::Connect(){
     //TODO: session->StartHeartbeatTimer();
+    Channel& channel = GetChannel();
     NodeAddress paddr = GetAddress();
 
     struct sockaddr_in addr;
@@ -20,61 +21,35 @@ namespace Token{
     conn.data = this;
 
     int err;
-    if((err = uv_tcp_connect(&conn, GetHandle(), (const struct sockaddr*) &addr, &PeerSession::OnConnect)) != 0){
+    if((err = uv_tcp_connect(&conn, channel.GetHandle(), (const struct sockaddr*) &addr, &PeerSession::OnConnect)) != 0){
       LOG(ERROR) << "couldn't connect to peer " << paddr << ": " << uv_strerror(err);
       return false;
     }
 
-    uv_run(GetLoop(), UV_RUN_DEFAULT);
+    uv_run(channel.GetLoop(), UV_RUN_DEFAULT);
     return true;
   }
 
   bool PeerSession::Disconnect(){
-    if(pthread_self() == thread_){
-      uv_read_stop(GetStream());
-      uv_stop(GetLoop());
-      SetState(State::kDisconnected);
-    } else{
-      uv_async_send(&disconnect_);
-    }
-    //TODO: better error handling for PeerSession::Disconnect()
-    return true;
+    //TODO: implement
+    return false;
   }
-
-#define SESSION_OK_STATUS(Status, Message) \
-    LOG(INFO) << (Message);             \
-    session->SetStatus((Status));
-#define SESSION_OK(Message) \
-    SESSION_OK_STATUS(Session::kOk, (Message));
-#define SESSION_WARNING_STATUS(Status, Message) \
-    LOG(WARNING) << (Message);               \
-    session->SetStatus((Status));
-#define SESSION_WARNING(Message) \
-    SESSION_WARNING_STATUS(Session::kWarning, (Message))
-#define SESSION_ERROR_STATUS(Status, Message) \
-    LOG(ERROR) << (Message);               \
-    session->SetStatus((Status));
-#define SESSION_ERROR(Message) \
-    SESSION_ERROR_STATUS(Session::kError, (Message))
 
   void PeerSession::OnConnect(uv_connect_t* conn, int status){
     PeerSession* session = (PeerSession*) conn->data;
+    Channel& channel = session->GetChannel();
     if(status != 0){
-      std::stringstream ss;
-      ss << "client accept error: " << uv_strerror(status);
-      SESSION_ERROR(ss.str());
+      LOG(WARNING) << "peer connect failure: " << uv_strerror(status);
       session->Disconnect();
       return;
     }
 
-    session->SetState(Session::kConnecting);
+    session->SetState(Session::kConnectingState);
 
     BlockPtr head = BlockChain::GetHead();
-    session->Send(VersionMessage::NewInstance(ClientType::kNode, Server::GetID(), head->GetHeader()));
-    if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
-      std::stringstream ss;
-      ss << "client read error: " << uv_strerror(status);
-      SESSION_ERROR(ss.str());
+    session->Send(VersionMessage::NewInstance(ClientType::kNode, LedgerServer::GetID(), head->GetHeader()));
+    if((status = uv_read_start(channel.GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
+      LOG(WARNING) << "peer read failure: " << uv_strerror(status);
       session->Disconnect();
       return;
     }
@@ -176,7 +151,7 @@ namespace Token{
     } else if(nread == 0){
       LOG(WARNING) << "zero message size received";
       return;
-    } else if(nread > Session::kBufferSize){
+    } else if(nread > 65536){
       LOG(ERROR) << nread << "is too large of a buffer";
       return;
     }
@@ -207,8 +182,8 @@ namespace Token{
     session->Send(
       VerackMessage::NewInstance(
         ClientType::kNode,
-        Server::GetID(),
-        Server::GetCallbackAddress(),
+        LedgerServer::GetID(),
+        LedgerServer::GetCallbackAddress(),
         Version(),
         head->GetHeader(),
         Hash::GenerateNonce()));
@@ -222,7 +197,7 @@ namespace Token{
     if(session->IsConnecting()){
       session->SetInfo(Peer(msg->GetID(), msg->GetCallbackAddress()));
       LOG(INFO) << "connected to peer: " << session->GetInfo();
-      session->SetState(Session::kConnected);
+      session->SetState(Session::kConnectedState);
 
       BlockHeader local_head = BlockChain::GetHead()->GetHeader();
       BlockHeader remote_head = msg->GetHead();

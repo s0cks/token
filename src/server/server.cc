@@ -1,108 +1,43 @@
 #ifdef TOKEN_ENABLE_SERVER
 
-#include <algorithm>
-#include <random>
-#include <condition_variable>
-
-#include "pool.h"
-#include "utils/tcp.h"
 #include "configuration.h"
-#include "server/server.h"
-#include "utils/crash_report.h"
-#include "atomic/relaxed_atomic.h"
-#include "server/server_session.h"
 #include "peer/peer_session_manager.h"
 
+#include "server/server.h"
+#include "server/session.h"
+#include "atomic/relaxed_atomic.h"
+
 namespace Token{
-  static pthread_t thread_;
-  static uv_tcp_t* handle_ = new uv_tcp_t(); // TODO: don't alloc handle_
-  static uv_async_t shutdown_;
-  static RelaxedAtomic<Server::State> state_ = { Server::State::kStoppedState };
-
-  uv_tcp_t* Server::GetHandle(){
-    return handle_;
-  }
-
-  void Server::SetState(const State& state){
-    state_ = state;
-  }
-
-  Server::State Server::GetState(){
-    return state_;
-  }
-
-  void Server::OnWalk(uv_handle_t* handle, void* data){
-    uv_close(handle, &OnClose);
-  }
-
-  void Server::OnClose(uv_handle_t* handle){}
-
-  void Server::HandleTerminateCallback(uv_async_t* handle){
-    SetState(Server::kStoppingState);
-    uv_stop(handle->loop);
-
-    int err;
-    if((err = uv_loop_close(handle->loop)) == UV_EBUSY){
-      uv_walk(handle->loop, &OnWalk, NULL);
-    }
-
-    uv_run(handle->loop, UV_RUN_DEFAULT);
-    if((err = uv_loop_close(handle->loop))){
-      LOG(ERROR) << "failed to close server loop: " << uv_strerror(err);
-    } else{
-      LOG(INFO) << "server loop closed.";
-    }
-    SetState(Server::kStoppedState);
-  }
-
   bool Server::StartThread(){
-    if(!IsStoppedState()){
-      LOG(WARNING) << "the server is already running.";
+    if(IsRunning())
       return false;
-    }
-
-    return Thread::StartThread(&thread_, "server", &HandleServerThread, 0);
-  }
-
-  bool Server::SendShutdown(){
-    if(!IsRunningState()){
-      LOG(WARNING) << "server is not running.";
-      return true;
-    }
-
-    int err;
-    if((err = uv_async_send(&shutdown_)) != 0){
-      LOG(ERROR) << "cannot invoke send shutdown notice to server event loop: " << uv_strerror(err);
-      return false;
-    }
-    return true;
+    return Thread::StartThread(&thread_, "server", &HandleServerThread, (uword)this);
   }
 
   void Server::HandleServerThread(uword parameter){
-    LOG(INFO) << "starting server...";
-    SetState(State::kStartingState);
+    Server* server = (Server*)parameter;
+    server->SetState(Server::kStartingState);
+
     uv_loop_t* loop = uv_loop_new();
-    uv_tcp_init(loop, GetHandle());
-    uv_tcp_keepalive(GetHandle(), 1, 60);
 
-    uv_async_init(loop, &shutdown_, &HandleTerminateCallback);
-
-    if(!ServerBind(GetHandle(), FLAGS_server_port)){
-      SetState(State::kStoppingState);
+    int err;
+    if((err = Bind(server->GetHandle(), FLAGS_server_port)) != 0){
+      LOG(WARNING) << "server bind failure: " << uv_strerror(err);
+      server->SetState(Server::kStoppingState);
       goto exit;
     }
 
-    if(!ServerListen((uv_stream_t*) GetHandle(), &OnNewConnection)){
-      SetState(State::kStoppingState);
+    if((err = Listen(server->GetStream(), &OnNewConnection)) != 0){
+      LOG(WARNING) << "server listen failure: " << uv_strerror(err);
+      server->SetState(Server::kStoppingState);
       goto exit;
     }
 
-    SetState(State::kRunningState);
-
-    LOG(INFO) << "server " << GetID() << " listening @" << FLAGS_server_port;
+    LOG(INFO) << "server listening @" << FLAGS_server_port;
+    server->SetState(State::kRunningState);
     uv_run(loop, UV_RUN_DEFAULT);
   exit:
-    SetState(State::kStoppedState);
+    server->SetState(State::kStoppedState);
     pthread_exit(0);
   }
 
@@ -112,18 +47,18 @@ namespace Token{
       return;
     }
 
-    ServerSession* session = ServerSession::NewInstance(stream->loop);
-    session->SetState(Session::kConnecting);
-    LOG(INFO) << "client is connecting...";
-    if(!ServerAccept(stream, session->GetStream())){
-      //TODO: session->Disconnect();
-      return;
+    ServerSession* session = new ServerSession(stream->loop);
+    session->SetState(Session::kConnectingState);
+
+    int err;
+    if((err = Accept(stream, session->GetChannel())) != 0){
+      LOG(WARNING) << "server accept failure: " << uv_strerror(err);
+      return; //TODO: session->Disconnect();
     }
 
-    LOG(INFO) << "client connected";
-    if(!ServerReadStart(session->GetStream(), &ServerSession::AllocBuffer, &OnMessageReceived)){
-      //TODO: session->Disconnect();
-      return;
+    if((err = ReadStart(session->GetChannel(), &Session::AllocBuffer, &OnMessageReceived)) != 0){
+      LOG(WARNING) << "server read failure: " << uv_strerror(err);
+      return; //TODO: session->Disconnect();
     }
   }
 
@@ -138,7 +73,7 @@ namespace Token{
     } else if(nread == 0){
       LOG(WARNING) << "zero message size received";
       return;
-    } else if(nread > Session::kBufferSize){
+    } else if(nread > 65536){
       LOG(ERROR) << "too large of a buffer: " << nread;
       return;
     }

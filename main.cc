@@ -6,7 +6,8 @@
 #include "blockchain.h"
 #include "configuration.h"
 #include "job/scheduler.h"
-#include "utils/crash_report.h"
+
+#include "crash/crash_report.h"
 
 // --path "/usr/share/ledger"
 DEFINE_string(path, "", "The path for the local ledger to be stored in.");
@@ -23,7 +24,7 @@ DEFINE_int64(miner_interval, 1000 * 60 * 1, "The amount of time between mining b
 #endif//TOKEN_DEBUG
 
 #ifdef TOKEN_ENABLE_SERVER
-  #include "server/server.h"
+  #include "server/rpc/rpc_server.h"
   #include "peer/peer_session_manager.h"
 
   // --remote localhost:8080
@@ -35,14 +36,14 @@ DEFINE_int64(miner_interval, 1000 * 60 * 1, "The amount of time between mining b
 #endif//TOKEN_ENABLE_SERVER
 
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
-  #include "http/health/health_service.h"
+  #include "server/http/health/health_service.h"
 
   // --healthcheck-port 8081
   DEFINE_int32(healthcheck_port, 0, "The port for the ledger health check service.");
 #endif//TOKEN_ENABLE_HEALTHCHECK
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
-  #include "http/rest/rest_service.h"
+  #include "server/http/rest/rest_service.h"
 
   // --service-port 8082
   DEFINE_int32(service_port, 0, "The port for the ledger rest service.");
@@ -74,13 +75,12 @@ InitializeLogging(char *arg0){
       UnclaimedTransactionPtr utxo = ObjectPool::GetUnclaimedTransaction(it);
 
       LOG(INFO) << "spending " << it << " (" << utxo->GetReference() << ")";
-      InputList inputs = {
-        Input(utxo->GetReference(), utxo->GetUser()),
-      };
+      InputList inputs = {};
       OutputList outputs = {
         Output("TestUser2", "TestToken2")
       };
       TransactionPtr tx = Transaction::NewInstance(idx++, inputs, outputs);
+
       Hash hash = tx->GetHash();
       if(!ObjectPool::PutTransaction(hash, tx)){
         LOG(WARNING) << "cannot add new transaction " << hash << " to object pool.";
@@ -181,15 +181,17 @@ main(int argc, char **argv){
 
   // Start the server if enabled
   #ifdef TOKEN_ENABLE_SERVER
-    LOG(INFO) << "using server port: " << FLAGS_server_port;
-    if(IsValidPort(FLAGS_server_port) && !Server::StartThread()){
-      CrashReport::PrintNewCrashReport("Failed to start the server.");
-      return EXIT_FAILURE;
-    }
+    if(IsValidPort(FLAGS_server_port)){
+      LedgerServer* rpc_server = LedgerServer::GetInstance();
+      if(!rpc_server->StartThread()){
+        CrashReport::PrintNewCrashReport("Failed to start the server.");
+        return EXIT_FAILURE;
+      }
 
-    if(IsValidPort(FLAGS_server_port) && !PeerSessionManager::Initialize()){
-      CrashReport::PrintNewCrashReport("Failed to initialize the peer session manager.");
-      return EXIT_FAILURE;
+      if(!PeerSessionManager::Initialize()){
+        CrashReport::PrintNewCrashReport("Failed to initialize the peer session manager.");
+        return EXIT_FAILURE;
+      }
     }
   #endif//TOKEN_ENABLE_SERVER
 
@@ -214,9 +216,12 @@ main(int argc, char **argv){
   }
 
 #ifdef TOKEN_ENABLE_SERVER
-  if(Server::IsRunningState() && !Server::JoinThread()){
-    CrashReport::PrintNewCrashReport("Cannot join the server thread.");
-    return EXIT_FAILURE;
+  if(IsValidPort(FLAGS_server_port)){
+    LedgerServer* rpc_server = LedgerServer::GetInstance();
+    if(rpc_server->IsRunning() && !rpc_server->JoinThread()){
+      CrashReport::PrintNewCrashReport("Cannot join the server thread.");
+      return EXIT_FAILURE;
+    }
   }
 #endif//TOKEN_ENABLE_SERVER
 

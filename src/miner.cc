@@ -3,7 +3,7 @@
 
 #include "pool.h"
 #include "miner.h"
-#include "server/server.h"
+#include "server/rpc/rpc_server.h"
 #include "block_builder.h"
 #include "proposal_handler.h"
 #include "snapshot/snapshot.h"
@@ -64,7 +64,7 @@ namespace Token{
 
     LOG(INFO) << "discovered block " << hash << ", creating proposal....";
 #ifdef TOKEN_ENABLE_SERVER
-    ProposalPtr proposal = std::make_shared<Proposal>(blk, Server::GetID());
+    ProposalPtr proposal = std::make_shared<Proposal>(blk, LedgerServer::GetID());
 #else
     ProposalPtr proposal = std::make_shared<Proposal>(blk, UUID());
 #endif//TOKEN_ENABLE_SERVER

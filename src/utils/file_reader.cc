@@ -1,5 +1,4 @@
 #include "utils/file_reader.h"
-#include "utils/crash_report.h"
 
 #include "utils/buffer.h"
 #include "block.h"

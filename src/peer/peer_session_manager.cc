@@ -72,7 +72,7 @@ namespace Token{
       if(thread->IsRunning() && thread->HasSession()){
         PeerSession* session = thread->GetCurrentSession();
         session->Disconnect();
-        session->WaitForState(PeerSession::kDisconnected);
+        session->WaitForState(Session::kDisconnectedState);
       }
 
       LOG(INFO) << "stopping peer session thread #" << idx << "....";
