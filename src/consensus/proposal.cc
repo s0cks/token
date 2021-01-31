@@ -4,7 +4,6 @@
 
 #include "pool.h"
 #include "job/scheduler.h"
-#include "job/processor.h"
 #include "snapshot/snapshot.h"
 
 namespace Token{

@@ -4,11 +4,11 @@
 #endif//TOKEN_ENABLE_SERVER
 
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
-  #include "http/service_health.h"
+  //#include "http/service_health.h"
 #endif//TOKEN_ENABLE_HEALTH_SERVICE
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
-  #include "http/service_rest.h"
+  //#include "http/service_rest.h"
 #endif//TOKEN_ENABLE_REST_SERVICE
 
 namespace Token{
@@ -20,13 +20,13 @@ namespace Token{
   static inline void
   Terminate(int signum){
 #ifdef TOKEN_ENABLE_REST_SERVICE
-    if(IsValidPort(FLAGS_service_port) && HttpRestService::IsServiceRunning()){
+    /*if(IsValidPort(FLAGS_service_port) && HttpRestService::IsServiceRunning()){
       LOG(INFO) << "terminating the controller service....";
       if(!HttpRestService::Shutdown()){
         PrintFatalCrashReport("Cannot shutdown the controller service thread.");
         goto terminate;
       }
-    }
+    }*/
 #endif//TOKEN_ENABLE_REST_SERVICE
 
 /*#ifdef TOKEN_ENABLE_SERVER
@@ -46,15 +46,14 @@ namespace Token{
 #endif//TOKEN_ENABLE_SERVER*/
 
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
-    if(IsValidPort(FLAGS_healthcheck_port) && HttpHealthService::IsServiceRunning()){
+    /*if(IsValidPort(FLAGS_healthcheck_port) && HttpHealthService::IsServiceRunning()){
       LOG(INFO) << "terminating the health check service....";
       if(!HttpHealthService::Shutdown()){
         PrintFatalCrashReport("Cannot shutdown the health check service");
         goto terminate;
       }
-    }
+    }*/
 #endif//TOKEN_ENABLE_HEALTH_SERVICE
-    terminate:
     exit(signum);
   }
 

@@ -2,15 +2,20 @@
 #define TOKEN_RPC_SESSION_H
 
 #include "session.h"
+#include "rpc/message_rpc.h"
 
 namespace Token{
+  template<class M>
+  class Server;
+
   class RpcSession : public Session<RpcMessage>{
+    friend class LedgerServer;
    protected:
     RpcSession(uv_loop_t* loop):
       Session<RpcMessage>(loop){}
 
 #define DECLARE_MESSAGE_HANDLER(Name) \
-    void On##Name##Message(const Name##MessagePtr& message) = 0;
+    virtual void On##Name##Message(const Name##MessagePtr& message) = 0;
     FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
 

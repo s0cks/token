@@ -2,12 +2,11 @@
 #define TOKEN_RCP_MESSAGE_H
 
 #include <set>
-#include "object.h"
+#include <memory>
 #include "message.h"
+
 #include "address.h"
-#include "version.h"
 #include "blockchain.h"
-#include "configuration.h"
 #include "consensus/proposal.h"
 
 namespace Token{
@@ -15,12 +14,14 @@ namespace Token{
   typedef std::shared_ptr<RpcMessage> RpcMessagePtr;
 
 #define DEFINE_MESSAGE(Name) \
-  class Name##Message;        \
+  class Name##Message;       \
   typedef std::shared_ptr<Name##Message> Name##MessagePtr;
   FOR_EACH_MESSAGE_TYPE(DEFINE_MESSAGE)
 #undef DEFINE_MESSAGE
 
-  class RpcSession;
+  template<class M>
+  class Session;
+
   class RpcMessage : public Message{
     friend class RpcSession;
    public:
@@ -82,7 +83,7 @@ namespace Token{
     FOR_EACH_MESSAGE_TYPE(DEFINE_CHECK)
 #undef DEFINE_CHECK
 
-    static RpcMessagePtr From(RpcSession* session, const BufferPtr& buffer);
+    static RpcMessagePtr From(Session<RpcMessage>* session, const BufferPtr& buffer);
   };
 
 #define DEFINE_RPC_MESSAGE_TYPE(Name) \

@@ -4,7 +4,7 @@
 #include "pool.h"
 #include "job/job.h"
 #include "blockchain.h"
-#include "rpc/session.h"
+#include "rpc/session_rpc.h"
 #include "job/processor.h"
 
 namespace Token{

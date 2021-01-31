@@ -1,5 +1,6 @@
 #ifdef TOKEN_ENABLE_SERVER
 
+#include "configuration.h"
 #include "peer/peer_session_thread.h"
 #include "peer/peer_session_manager.h"
 

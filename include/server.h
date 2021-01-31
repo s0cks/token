@@ -5,6 +5,7 @@
 
 #include <uv.h>
 #include <sstream>
+#include "session.h"
 #include "vthread.h"
 #include "configuration.h"
 #include "atomic/relaxed_atomic.h"
@@ -20,11 +21,10 @@ namespace Token{
 
   typedef int32_t ServerPort;
 
-  template<class M, class S>
+  template<class M>
   class Server{
    private:
-    typedef Server<M, S> BaseType;
-    typedef S SessionType;
+    typedef Server<M> ServerType;
     typedef std::shared_ptr<M> ServerMessagePtr;
    public:
     enum State{
@@ -71,7 +71,7 @@ namespace Token{
 
     static void
     HandleServerThread(uword parameter){
-      Server<M, S>* server = (Server<M, S>*)parameter;
+      ServerType* server = (ServerType*)parameter;
       server->SetState(Server::kStartingState);
 
       const char* name = server->GetName();
@@ -106,14 +106,14 @@ namespace Token{
 
     static void
     OnNewConnection(uv_stream_t* stream, int status){
-      BaseType* server = (BaseType*)stream->data;
+      ServerType* server = (ServerType*)stream->data;
       if(status != 0){
         LOG(ERROR) << "connection error: " << uv_strerror(status);
         return;
       }
 
-      S* session = server->CreateSession();
-      session->SetState(SessionType::kConnectingState);
+      Session<M>* session = server->CreateSession();
+      session->SetState(Session<M>::kConnectingState);
 
       int err;
       if((err = Accept(stream, session)) != 0){
@@ -129,7 +129,7 @@ namespace Token{
 
     static void
     OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
-      SessionType* session = (SessionType*)stream->data;
+      Session<M>* session = (Session<M>*)stream->data;
       if(nread == UV_EOF){
         LOG(ERROR) << "client disconnected!";
         return;
@@ -165,12 +165,12 @@ namespace Token{
     }
 
     static inline int
-    Accept(uv_stream_t* server, SessionType* session){
+    Accept(uv_stream_t* server, Session<M>* session){
       return uv_accept(server, session->GetStream());
     }
 
     static inline int
-    ReadStart(SessionType* session, uv_alloc_cb on_alloc, uv_read_cb on_read){
+    ReadStart(Session<M>* session, uv_alloc_cb on_alloc, uv_read_cb on_read){
       return uv_read_start(session->GetStream(), on_alloc, on_read);
     }
 
@@ -182,7 +182,7 @@ namespace Token{
       return Thread::StopThread(thread_);
     }
 
-    virtual SessionType* CreateSession() const = 0;
+    virtual Session<M>* CreateSession() const = 0;
    public:
     virtual ~Server(){
       if(name_)

@@ -2,8 +2,7 @@
 #define TOKEN_RPC_SERVER_H
 
 #include "server.h"
-#include "rpc/message.h"
-#include "rpc/session.h"
+#include "rpc/session_rpc.h"
 
 namespace Token{
 #define ENVIRONMENT_TOKEN_CALLBACK_ADDRESS "TOKEN_CALLBACK_ADDRESS"
@@ -32,7 +31,7 @@ namespace Token{
     }
   };
 
-  class LedgerServer : public Server<RpcMessage, ServerSession>{
+  class LedgerServer : public Server<RpcMessage>{
    protected:
     ServerSession* CreateSession() const{
       return new ServerSession(GetLoop());

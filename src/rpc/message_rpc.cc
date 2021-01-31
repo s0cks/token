@@ -1,8 +1,8 @@
 #include "pool.h"
-#include "rpc/message.h"
+#include "rpc/message_rpc.h"
 
 namespace Token{
-  RpcMessagePtr RpcMessage::From(RpcSession* session, const BufferPtr& buffer){
+  RpcMessagePtr RpcMessage::From(Session<RpcMessage>* session, const BufferPtr& buffer){
     RpcMessage::MessageType mtype = static_cast<RpcMessage::MessageType>(buffer->GetInt());
     int64_t msize = buffer->GetLong();
     switch(mtype){

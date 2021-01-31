@@ -1,5 +1,5 @@
 #include <glog/logging.h>
-#include "rpc/message.h"
+#include "rpc/message_rpc.h"
 #include "rpc/server_rpc.h"
 
 #include "pool.h"

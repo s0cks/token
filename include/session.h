@@ -2,6 +2,7 @@
 #define TOKEN_SESSION_H
 
 #include "message.h"
+#include "utils/buffer.h"
 #include "atomic/relaxed_atomic.h"
 
 namespace Token{
@@ -11,9 +12,14 @@ namespace Token{
     V(Disconnected)
 
   template<class M>
+  class Server;
+
+  template<class M>
   class Session{
+    friend class Server<M>;
    private:
     typedef Session<M> SessionType;
+    typedef Server<M> ServerType;
     typedef std::shared_ptr<M> SessionMessagePtr;
     typedef std::vector<SessionMessagePtr> SessionMessageList;
 
