@@ -18,7 +18,6 @@ namespace Token{
     static bool Start();
     static bool Shutdown();
     static bool WaitForShutdown();
-    static HttpRouter* GetServiceRouter();
 
 #define DECLARE_STATE_CHECK(Name) \
     static bool IsService##Name();

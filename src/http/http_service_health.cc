@@ -24,10 +24,6 @@ namespace Token{
     return instance.JoinThread();
   }
 
-  HttpRouter* HttpHealthService::GetServiceRouter(){
-    return instance.GetRouter();
-  }
-
 #define DEFINE_STATE_CHECK(Name) \
   bool HttpHealthService::IsService##Name(){ return instance.Is##Name(); }
   FOR_EACH_SERVER_STATE(DEFINE_STATE_CHECK)
