@@ -8,7 +8,7 @@
 #endif//TOKEN_ENABLE_HEALTH_SERVICE
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
-  #include "server/http/rest/rest_service.h"
+  #include "server/http/service.h"
 #endif//TOKEN_ENABLE_REST_SERVICE
 
 namespace Token{
@@ -20,10 +20,10 @@ namespace Token{
   static inline void
   Terminate(int signum){
 #ifdef TOKEN_ENABLE_REST_SERVICE
-    if(IsValidPort(FLAGS_service_port) && RestService::IsRunning()){
-      LOG(INFO) << "terminating the rest service....";
-      if(!RestService::Shutdown()){
-        PrintFatalCrashReport("Cannot shutdown the rest service thread.");
+    if(IsValidPort(FLAGS_service_port) && HttpRestService::IsServiceRunning()){
+      LOG(INFO) << "terminating the controller service....";
+      if(!HttpRestService::Shutdown()){
+        PrintFatalCrashReport("Cannot shutdown the controller service thread.");
         goto terminate;
       }
     }

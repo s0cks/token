@@ -3,7 +3,8 @@
 #include "pool.h"
 #include "wallet.h"
 #include "deeplink.h"
-#include "server/http/rest/wallet_controller.h"
+#include "server/http/service.h"
+#include "server/http/controller/wallet_controller.h"
 
 namespace Token{
   static inline bool

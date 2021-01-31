@@ -7,7 +7,7 @@
 #include <sstream>
 #include "vthread.h"
 #include "configuration.h"
-#include "server/channel.h"
+#include "server/session.h"
 #include "atomic/relaxed_atomic.h"
 
 #define DEFAULT_SERVER_BACKLOG 100
@@ -19,7 +19,15 @@ namespace Token{
     V(Stopping) \
     V(Stopped)
 
+  typedef int32_t ServerPort;
+
+  template<class M, class S>
   class Server{
+   private:
+    using SessionType = S;
+    using BaseType = Server<M, S>;
+
+    typedef std::shared_ptr<M> ServerMessagePtr;
    public:
     enum State{
 #define DEFINE_STATE(Name) k##Name##State,
@@ -34,16 +42,19 @@ namespace Token{
             return stream << #Name;
         FOR_EACH_SERVER_STATE(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
-        default:return stream << "Unknown";
+        default:
+          return stream << "Unknown";
       }
     }
    protected:
-    pthread_t thread_;
+    const char* name_;
+    ThreadId thread_;
     uv_loop_t* loop_;
     uv_tcp_t handle_;
     RelaxedAtomic<State> state_;
 
-    Server(uv_loop_t* loop):
+    Server(uv_loop_t* loop, const char* name):
+      name_(strdup(name)),
       thread_(),
       loop_(loop),
       handle_(),
@@ -59,9 +70,81 @@ namespace Token{
       state_ = state;
     }
 
-    static void HandleServerThread(uword parameter);
-    static void OnNewConnection(uv_stream_t* stream, int status);
-    static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
+    static void
+    HandleServerThread(uword parameter){
+      BaseType* server = (BaseType*)parameter;
+      server->SetState(Server::kStartingState);
+
+      const char* name = server->GetName();
+      int32_t port = server->GetPort();
+
+      int err;
+      if((err = Bind(server->GetHandle(), port)) != 0){
+        LOG(WARNING) << name << " server bind failure: " << uv_strerror(err);
+        server->SetState(Server::kStoppingState);
+        goto exit;
+      }
+
+      if((err = Listen(server->GetStream(), &OnNewConnection)) != 0){
+        LOG(WARNING) << name << " server listen failure: " << uv_strerror(err);
+        server->SetState(Server::kStoppingState);
+        goto exit;
+      }
+
+      LOG(INFO) << name << " server listening @" << port;
+      server->SetState(State::kRunningState);
+      uv_run(server->GetLoop(), UV_RUN_DEFAULT);
+    exit:
+      server->SetState(State::kStoppedState);
+      pthread_exit(0);
+    }
+
+    static void
+    OnNewConnection(uv_stream_t* stream, int status){
+      if(status != 0){
+        LOG(ERROR) << "connection error: " << uv_strerror(status);
+        return;
+      }
+
+      SessionType* session = new SessionType(stream->loop);
+      session->SetState(SessionType::kConnectingState);
+
+      int err;
+      if((err = Accept(stream, session)) != 0){
+        LOG(WARNING) << "server accept failure: " << uv_strerror(err);
+        return; //TODO: session->Disconnect();
+      }
+
+      if((err = ReadStart(session, &SessionType::AllocBuffer, &OnMessageReceived)) != 0){
+        LOG(WARNING) << "server read failure: " << uv_strerror(err);
+        return; //TODO: session->Disconnect();
+      }
+    }
+
+    static void
+    OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
+      SessionType* session = (SessionType*)stream->data;
+      if(nread == UV_EOF){
+        LOG(ERROR) << "client disconnected!";
+        return;
+      } else if(nread < 0){
+        LOG(ERROR) << "[" << nread << "] client read error: " << std::string(uv_strerror(nread));
+        return;
+      } else if(nread == 0){
+        LOG(WARNING) << "zero message size received";
+        return;
+      } else if(nread > 65536){
+        LOG(ERROR) << "too large of a buffer: " << nread;
+        return;
+      }
+
+      BufferPtr buffer = Buffer::From(buff->base, nread);
+      do{
+        ServerMessagePtr message = M::From(session, buffer);
+        session->OnMessageRead(message);
+      } while(buffer->GetReadBytes() < buffer->GetBufferSize());
+      free(buff->base);
+    }
 
     static inline int
     Bind(uv_tcp_t* server, const int32_t port){
@@ -76,19 +159,37 @@ namespace Token{
     }
 
     static inline int
-    Accept(uv_stream_t* server, Channel& channel){
-      return uv_accept(server, channel.GetStream());
+    Accept(uv_stream_t* server, SessionType* session){
+      return uv_accept(server, session->GetStream());
     }
 
     static inline int
-    ReadStart(Channel& channel, uv_alloc_cb on_alloc, uv_read_cb on_read){
-      return uv_read_start(channel.GetStream(), on_alloc, on_read);
+    ReadStart(SessionType* session, uv_alloc_cb on_alloc, uv_read_cb on_read){
+      return uv_read_start(session->GetStream(), on_alloc, on_read);
     }
-   public:
-    virtual ~Server() = default;
 
-    bool JoinThread();
-    bool StartThread();
+    bool StartThread(){
+      return Thread::StartThread(&thread_, name_, &HandleServerThread, (uword)this);
+    }
+
+    bool JoinThread(){
+      return Thread::StopThread(thread_);
+    }
+
+    bool OnMessage(SessionType* session, const BufferPtr& buffer);
+   public:
+    virtual ~Server(){
+      if(name_)
+        free((void*)name_);
+    }
+
+    const char* GetName() const{
+      return name_;
+    }
+
+    virtual ServerPort GetPort() const{
+      return 0;
+    }
 
     pthread_t GetThread() const{
       return thread_;
@@ -111,7 +212,7 @@ namespace Token{
     }
 
 #define DEFINE_STATE_CHECK(Name) \
-    inline bool Is##Name(){ return GetState() == Server::k##Name##State; }
+    inline bool Is##Name(){ return GetState() == Server::State::k##Name##State; }
     FOR_EACH_SERVER_STATE(DEFINE_STATE_CHECK)
 #undef DEFINE_STATE_CHECK
   };

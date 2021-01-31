@@ -120,17 +120,17 @@ namespace Token{
 
   class BinaryObjectFileReader : public BinaryFileReader{
    protected:
-    ObjectTag tag_;
+    Object::Type type_;
    public:
     BinaryObjectFileReader(const std::string& filename, const Object::Type& tag_type):
       BinaryFileReader(filename),
-      tag_(tag_type, 0){} //TODO: fixme
+      type_(tag_type){}
     virtual ~BinaryObjectFileReader() = default;
 
     bool ValidateTag(){
       ObjectTag tag = ReadObjectTag();
-      if(tag_ != tag){
-        LOG(WARNING) << "object tag of " << tag << " != " << tag_;
+      if(tag.GetType() != type_){
+        LOG(WARNING) << "object tag of " << tag << " != " << type_;
         return false;
       }
       return true;

@@ -3,8 +3,8 @@
 
 #include <memory>
 #include "header.h"
-
 #include "block.h"
+#include "server/http/service.h"
 
 namespace Token{
   class HttpResponse;
@@ -27,7 +27,7 @@ namespace Token{
   };
 
   class HttpSession;
-  class HttpResponse{
+  class HttpResponse : public HttpMessage{
     friend class HttpSession;
    protected:
     HttpSession* session_;
@@ -64,6 +64,10 @@ namespace Token{
       InitHttpResponseHeaders(headers_);
     }
     virtual ~HttpResponse() = default;
+
+    const char* GetName() const{
+      return "HttpResponse";
+    }
 
     HttpSession* GetSession() const{
       return session_;
@@ -247,6 +251,7 @@ namespace Token{
     Json::String& body = response->GetBody();
     Json::Writer writer(body);
     writer.StartObject();
+      writer.Key("data");
       blk->Write(writer);
     writer.EndObject();
     response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);

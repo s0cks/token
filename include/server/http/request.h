@@ -10,6 +10,7 @@
 #include "method.h"
 #include "header.h"
 #include "utils/buffer.h"
+#include "server/http/service.h"
 
 namespace Token{
   class HttpRequest;
@@ -18,7 +19,7 @@ namespace Token{
   typedef std::unordered_map<std::string, std::string> ParameterMap;
 
   class HttpSession;
-  class HttpRequest{
+  class HttpRequest : public HttpMessage{
     friend class HttpSession;
    private:
     HttpSession* session_;
@@ -42,8 +43,13 @@ namespace Token{
       request->body_ = std::string(data, len);
       return 0;
     }
+   protected:
+    bool Write(const BufferPtr& buffer) const{
+      return false;
+    }
    public:
     HttpRequest(HttpSession* session, const char* data, size_t len):
+      HttpMessage(),
       session_(session),
       parser_(),
       settings_(),
@@ -62,6 +68,10 @@ namespace Token{
       }
     }
     ~HttpRequest(){}
+
+    const char* GetName() const{
+      return "HttpRequest";
+    }
 
     void SetPathParameters(const ParameterMap& params){
       path_params_.clear();
@@ -149,9 +159,19 @@ namespace Token{
       return Hash::FromHexString(GetPathParameterValue(name));
     }
 
+    std::string ToString() const{
+      std::stringstream ss;
+      ss << "HttpRequest()";
+      return ss.str();
+    }
+
+    int64_t GetBufferSize() const{
+      return 0;
+    }
+
     static HttpRequestPtr
-    NewInstance(HttpSession* session, const char* data, size_t len){
-      return std::make_shared<HttpRequest>(session, data, len);
+    NewInstance(HttpSession* session, const BufferPtr& buffer){
+      return std::make_shared<HttpRequest>(session, buffer->data(), buffer->GetBufferSize());
     }
   };
 }

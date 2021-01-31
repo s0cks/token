@@ -135,6 +135,10 @@ namespace Token{
       return rpos_;
     }
 
+    bool empty() const{
+      return bsize_ == 0;
+    }
+
     bool Resize(int64_t nsize){
       if(nsize <= GetBufferSize())
         return true;
@@ -283,7 +287,11 @@ namespace Token{
       return TransactionReference(hash, index);
     }
 
-    void Reset(){
+    bool HasBytesRemaining(){
+      return GetBufferSize() > 0 && rpos_ < GetBufferSize();
+    }
+
+    void clear(){
       memset(data(), 0, GetBufferSize());
       rpos_ = 0;
       wpos_ = 0;

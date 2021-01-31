@@ -1,19 +1,19 @@
 #include "test_suite.h"
-#include "message.h"
+#include "server/message.h"
 
 namespace Token{
-  static inline MessagePtr
+  static inline RpcMessagePtr
   NewVersionMessage(){
     return VersionMessage::NewInstance(UUID());
   }
 
-  static inline MessagePtr
+  static inline RpcMessagePtr
   NewVerackMessage(){
     BlockPtr head = Block::Genesis();
     return VerackMessage::NewInstance(ClientType::kNode, UUID(), NodeAddress(), Version(), head->GetHeader(), Hash::GenerateNonce());
   }
 
-  static inline MessagePtr
+  static inline RpcMessagePtr
   NewPrepareMessage(){
     BlockHeader blk = Block::Genesis()->GetHeader();
     UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
@@ -21,7 +21,7 @@ namespace Token{
     return PrepareMessage::NewInstance(proposal);
   }
 
-  static inline MessagePtr
+  static inline RpcMessagePtr
   NewPromiseMessage(){
     BlockHeader blk = Block::Genesis()->GetHeader();
     UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
@@ -29,7 +29,7 @@ namespace Token{
     return PromiseMessage::NewInstance(proposal);
   }
 
-  static inline MessagePtr
+  static inline RpcMessagePtr
   NewCommitMessage(){
     BlockHeader blk = Block::Genesis()->GetHeader();
     UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
@@ -37,7 +37,7 @@ namespace Token{
     return CommitMessage::NewInstance(proposal);
   }
 
-  static inline MessagePtr
+  static inline RpcMessagePtr
   NewAcceptedMessage(){
     BlockHeader blk = Block::Genesis()->GetHeader();
     UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
@@ -45,7 +45,7 @@ namespace Token{
     return AcceptedMessage::NewInstance(proposal);
   }
 
-  static inline MessagePtr
+  static inline RpcMessagePtr
   NewRejectedMessage(){
     BlockHeader blk = Block::Genesis()->GetHeader();
     UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
@@ -53,7 +53,7 @@ namespace Token{
     return RejectedMessage::NewInstance(proposal);
   }
 
-  static inline MessagePtr
+  static inline RpcMessagePtr
   NewGetDataMessage(){
     std::vector<InventoryItem> items = {
       InventoryItem(InventoryItem::kBlock, Hash::GenerateNonce()),
@@ -61,17 +61,17 @@ namespace Token{
     return GetDataMessage::NewInstance(items);
   }
 
-  static inline MessagePtr
+  static inline RpcMessagePtr
   NewGetBlocksMessage(){
     return GetBlocksMessage::NewInstance(Hash::GenerateNonce(), Hash::GenerateNonce());
   }
 
-  static inline MessagePtr
+  static inline RpcMessagePtr
   NewBlockMessage(){
     return BlockMessage::NewInstance(Block::Genesis());
   }
 
-  static inline MessagePtr
+  static inline RpcMessagePtr
   NewTransactionMessage(){
     InputList inputs = {
       Input(Hash::GenerateNonce(), 0, "TestUser"),
@@ -82,22 +82,22 @@ namespace Token{
     return TransactionMessage::NewInstance(Transaction::NewInstance(0, inputs, outputs));
   }
 
-  static inline MessagePtr
+  static inline RpcMessagePtr
   NewInventoryMessage(){
     return InventoryMessage::NewInstance(Hash::GenerateNonce(), InventoryItem::kBlock);
   }
 
-  static inline MessagePtr
+  static inline RpcMessagePtr
   NewNotFoundMessage(){
     return NotFoundMessage::NewInstance();
   }
 
-  static inline MessagePtr
+  static inline RpcMessagePtr
   NewGetPeersMessage(){
     return GetPeersMessage::NewInstance();
   }
 
-  static inline MessagePtr
+  static inline RpcMessagePtr
   NewPeerListMessage(){
     PeerList peers = {
       NodeAddress("localhost:8080"),
@@ -107,13 +107,13 @@ namespace Token{
 
 #define DEFINE_MESSAGE_SERIALIZATION_TEST_CASE(Name) \
   TEST(Test##Name##MessageSerialization, test_pos){  \
-    MessagePtr a = New##Name##Message();             \
+    RpcMessagePtr a = New##Name##Message();             \
     BufferPtr tmp = Buffer::NewInstance(a->GetBufferSize()); \
     ASSERT_TRUE(a->Write(tmp));                      \
     ASSERT_EQ(tmp->GetWrittenBytes(), a->GetBufferSize()); \
-    ASSERT_EQ(tmp->GetInt(), static_cast<int32_t>(Message::k##Name##MessageType)); \
-    ASSERT_EQ(tmp->GetLong(), (a->GetBufferSize() - Message::kHeaderSize));        \
-    MessagePtr b = Name##Message::NewInstance(tmp);  \
+    ASSERT_EQ(tmp->GetInt(), static_cast<int32_t>(RpcMessage::k##Name##MessageType)); \
+    ASSERT_EQ(tmp->GetLong(), (a->GetBufferSize() - RpcMessage::kHeaderSize));        \
+    RpcMessagePtr b = Name##Message::NewInstance(tmp);  \
     ASSERT_TRUE(a->Equals(b));                       \
   }
   FOR_EACH_MESSAGE_TYPE(DEFINE_MESSAGE_SERIALIZATION_TEST_CASE);

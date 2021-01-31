@@ -1,6 +1,6 @@
 #include <glog/logging.h>
 #include "pool.h"
-#include "message.h"
+#include "server/message.h"
 #include "server/server.h"
 #include "server/session.h"
 #include "peer/peer_session_manager.h"
@@ -13,41 +13,37 @@
 #include "server/rpc/rpc_server.h"
 
 namespace Token{
-  void Session::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf){
-    buf->base = (char*)malloc(suggested_size);
-    buf->len = suggested_size;
-  }
-
-  void ServerSession::HandleNotFoundMessage(ServerSession* session, const NotFoundMessagePtr& msg){
-    //TODO: implement HandleNotFoundMessage
+  void ServerSession::OnNotFoundMessage(const NotFoundMessagePtr& msg){
+    //TODO: implement OnNotFoundMessage
     LOG(WARNING) << "not implemented";
-    return;
   }
 
-  void ServerSession::HandleVersionMessage(ServerSession* session, const VersionMessagePtr& msg){
+  void ServerSession::OnVersionMessage(const VersionMessagePtr& msg){
     //TODO:
     // - state check
     // - version check
     // - echo nonce
-    session->Send(VersionMessage::NewInstance(LedgerServer::GetID()));
+    UUID id = BlockChainConfiguration::GetSererID();
+    Send(VersionMessage::NewInstance(id));
   }
 
-  void ServerSession::HandleVerackMessage(ServerSession* session, const VerackMessagePtr& msg){
+  void ServerSession::OnVerackMessage(const VerackMessagePtr& msg){
     //TODO:
     // - verify nonce
     BlockPtr head = BlockChain::GetHead();
-    session->Send(
+    Send(
       VerackMessage::NewInstance(
         ClientType::kNode,
-        LedgerServer::GetID(),
+        BlockChainConfiguration::GetSererID(),
         LedgerServer::GetCallbackAddress(),
         Version(),
         head->GetHeader(),
-        Hash::GenerateNonce()));
+        Hash::GenerateNonce())
+    );
     UUID id = msg->GetID();
-    if(session->IsConnecting()){
-      session->SetID(id);
-      session->SetState(Session::kConnectedState);
+    if(IsConnecting()){
+      SetID(id);
+      SetState(Session::kConnectedState);
       if(msg->IsNode()){
         NodeAddress paddr = msg->GetCallbackAddress();
         LOG(INFO) << "peer " << id << " connected from: " << paddr;
@@ -56,14 +52,14 @@ namespace Token{
     }
   }
 
-  void ServerSession::HandleGetDataMessage(ServerSession* session, const GetDataMessagePtr& msg){
+  void ServerSession::OnGetDataMessage(const GetDataMessagePtr& msg){
     std::vector<InventoryItem> items;
     if(!msg->GetItems(items)){
       LOG(WARNING) << "cannot get items from message";
       return;
     }
 
-    std::vector<MessagePtr> response;
+    std::vector<RpcMessagePtr> response;
     for(auto& item : items){
       Hash hash = item.GetHash();
       LOG(INFO) << "searching for: " << hash;
@@ -91,58 +87,58 @@ namespace Token{
           response.push_back(TransactionMessage::NewInstance(tx));//TODO: fix
         }
       } else{
-        session->Send(NotFoundMessage::NewInstance());
+        Send(NotFoundMessage::NewInstance());
         return;
       }
     }
 
-    session->Send(response);
+    Send(response);
   }
 
-  void ServerSession::HandlePrepareMessage(ServerSession* session, const PrepareMessagePtr& msg){
+  void ServerSession::OnPrepareMessage(const PrepareMessagePtr& msg){
     ProposalPtr proposal = msg->GetProposal();
     if(!BlockMiner::Pause())
-      return session->Send(RejectedMessage::NewInstance(proposal));
+      return Send(RejectedMessage::NewInstance(proposal));
     if(!ProposalManager::SetProposal(proposal))
-      return session->Send(RejectedMessage::NewInstance(proposal));
-    return session->Send(AcceptedMessage::NewInstance(proposal));
+      return Send(RejectedMessage::NewInstance(proposal));
+    return Send(AcceptedMessage::NewInstance(proposal));
   }
 
-  void ServerSession::HandlePromiseMessage(ServerSession* session, const PromiseMessagePtr& msg){
+  void ServerSession::OnPromiseMessage(const PromiseMessagePtr& msg){
     if(!ProposalManager::IsProposalFor(msg->GetProposal()))
-      return session->Send(RejectedMessage::NewInstance(msg->GetProposal()));
+      return Send(RejectedMessage::NewInstance(msg->GetProposal()));
     ProposalPtr proposal = ProposalManager::GetProposal();
     if(!proposal->TransitionToPhase(Proposal::kVotingPhase))
-      return session->Send(RejectedMessage::NewInstance(proposal));
-    return session->Send(AcceptedMessage::NewInstance(proposal));
+      return Send(RejectedMessage::NewInstance(proposal));
+    return Send(AcceptedMessage::NewInstance(proposal));
   }
 
-  void ServerSession::HandleCommitMessage(ServerSession* session, const CommitMessagePtr& msg){
+  void ServerSession::OnCommitMessage(const CommitMessagePtr& msg){
     if(!ProposalManager::IsProposalFor(msg->GetProposal()))
-      return session->Send(RejectedMessage::NewInstance(msg->GetProposal()));
+      return Send(RejectedMessage::NewInstance(msg->GetProposal()));
     ProposalPtr proposal = ProposalManager::GetProposal();
     if(!proposal->TransitionToPhase(Proposal::kCommitPhase))
-      return session->Send(RejectedMessage::NewInstance(proposal));
+      return Send(RejectedMessage::NewInstance(proposal));
     if(!BlockMiner::Commit(proposal))
-      return session->Send(RejectedMessage::NewInstance(proposal));
-    return session->Send(AcceptedMessage::NewInstance(proposal));
+      return Send(RejectedMessage::NewInstance(proposal));
+    return Send(AcceptedMessage::NewInstance(proposal));
   }
 
-  void ServerSession::HandleAcceptedMessage(ServerSession* session, const AcceptedMessagePtr& msg){
+  void ServerSession::OnAcceptedMessage(const AcceptedMessagePtr& msg){
     if(!ProposalManager::IsProposalFor(msg->GetProposal()))
-      return session->Send(RejectedMessage::NewInstance(msg->GetProposal()));
+      return Send(RejectedMessage::NewInstance(msg->GetProposal()));
     ProposalPtr proposal = ProposalManager::GetProposal();
-    proposal->AcceptProposal(session->GetID().ToString());
+    proposal->AcceptProposal(GetID().ToString());
   }
 
-  void ServerSession::HandleRejectedMessage(ServerSession* session, const RejectedMessagePtr& msg){
+  void ServerSession::OnRejectedMessage(const RejectedMessagePtr& msg){
     if(!ProposalManager::IsProposalFor(msg->GetProposal()))
-      return session->Send(RejectedMessage::NewInstance(msg->GetProposal()));
+      return Send(RejectedMessage::NewInstance(msg->GetProposal()));
     ProposalPtr proposal = ProposalManager::GetProposal();
-    proposal->AcceptProposal(session->GetID().ToString());
+    proposal->AcceptProposal(GetID().ToString());
   }
 
-  void ServerSession::HandleBlockMessage(ServerSession* session, const BlockMessagePtr& msg){
+  void ServerSession::OnBlockMessage(const BlockMessagePtr& msg){
     BlockPtr blk = msg->GetValue();
     Hash hash = blk->GetHash();
     if(!ObjectPool::HasBlock(hash)){
@@ -151,7 +147,7 @@ namespace Token{
     }
   }
 
-  void ServerSession::HandleTransactionMessage(ServerSession* session, const TransactionMessagePtr& msg){
+  void ServerSession::OnTransactionMessage(const TransactionMessagePtr& msg){
     TransactionPtr tx = msg->GetValue();
     Hash hash = tx->GetHash();
 
@@ -161,7 +157,7 @@ namespace Token{
     }
   }
 
-  void ServerSession::HandleInventoryMessage(ServerSession* session, const InventoryMessagePtr& msg){
+  void ServerSession::OnInventoryMessage(const InventoryMessagePtr& msg){
     std::vector<InventoryItem> items;
     if(!msg->GetItems(items)){
       LOG(WARNING) << "couldn't get items from inventory message";
@@ -174,10 +170,10 @@ namespace Token{
     }
 
     LOG(INFO) << "downloading " << needed.size() << "/" << items.size() << " items from inventory....";
-    if(!needed.empty()) session->Send(GetDataMessage::NewInstance(needed));
+    if(!needed.empty()) Send(GetDataMessage::NewInstance(needed));
   }
 
-  void ServerSession::HandleGetBlocksMessage(ServerSession* session, const GetBlocksMessagePtr& msg){
+  void ServerSession::OnGetBlocksMessage(const GetBlocksMessagePtr& msg){
     Hash start = msg->GetHeadHash();
     Hash stop = msg->GetStopHash();
 
@@ -198,10 +194,10 @@ namespace Token{
       }
     }
 
-    session->Send(InventoryMessage::NewInstance(items));
+    Send(InventoryMessage::NewInstance(items));
   }
 
-  void ServerSession::HandleGetPeersMessage(ServerSession* session, const GetPeersMessagePtr& msg){
+  void ServerSession::OnGetPeersMessage(const GetPeersMessagePtr& msg){
     LOG(INFO) << "getting peers....";
     PeerList peers;
     /*
@@ -212,10 +208,10 @@ namespace Token{
         }
      */
 
-    session->Send(PeerListMessage::NewInstance(peers));
+    Send(PeerListMessage::NewInstance(peers));
   }
 
-  void ServerSession::HandlePeerListMessage(ServerSession* session, const PeerListMessagePtr& msg){
-    //TODO: implement ServerSession::HandlePeerListMessage(HandleMessageTask*);
+  void ServerSession::OnPeerListMessage(const PeerListMessagePtr& msg){
+    //TODO: implement ServerSession::OnPeerListMessage(HandleMessageTask*);
   }
 }

@@ -2,12 +2,17 @@
 #define TOKEN_ROUTER_H
 
 #include <unordered_map>
-#include "session.h"
-#include "request.h"
-
+#include <glog/logging.h>
+#include "server/http/method.h"
 #include "utils/trie.h"
 
 namespace Token{
+  typedef std::unordered_map<std::string, std::string> ParameterMap;
+
+  class HttpSession;
+  class HttpRequest;
+  typedef std::shared_ptr<HttpRequest> HttpRequestPtr;
+
   typedef void (*HttpRouteHandler)(HttpSession*, const HttpRequestPtr&);
 
   class HttpRoute{
@@ -405,9 +410,7 @@ namespace Token{
       Insert(GetRoot(), HttpMethod::kDelete, path, handler);
     }
 
-    HttpRouterMatch Find(const HttpRequestPtr& request){
-      return Search(GetRoot(), request->GetMethod(), request->GetPath());
-    }
+    HttpRouterMatch Find(const HttpRequestPtr& request);
   };
 }
 

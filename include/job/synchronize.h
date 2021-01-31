@@ -9,7 +9,7 @@
 namespace Token{
   class SynchronizeJob : public Job{
    private:
-    Session* session_;
+    Session<RpcMessage>* session_;
     BlockHeader head_;
 
     bool ProcessBlock(const BlockPtr& blk){
@@ -57,11 +57,11 @@ namespace Token{
       return Success("done.");
     }
    public:
-    SynchronizeJob(Job* parent, Session* session, const BlockHeader& head):
+    SynchronizeJob(Job* parent, Session<RpcMessage>* session, const BlockHeader& head):
       Job(parent, "Synchronize"),
       session_(session),
       head_(head){}
-    SynchronizeJob(Session* session, const BlockHeader& head):
+    SynchronizeJob(Session<RpcMessage>* session, const BlockHeader& head):
       Job(nullptr, "Synchronize"),
       session_(session),
       head_(head){}

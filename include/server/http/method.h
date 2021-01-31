@@ -2,6 +2,7 @@
 #define TOKEN_INCLUDE_HTTP_METHOD_H
 
 #include <ostream>
+#include "common.h"
 
 namespace Token{
   enum class HttpMethod{

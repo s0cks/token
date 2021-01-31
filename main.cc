@@ -43,10 +43,10 @@ DEFINE_int64(miner_interval, 1000 * 60 * 1, "The amount of time between mining b
 #endif//TOKEN_ENABLE_HEALTHCHECK
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
-  #include "server/http/rest/rest_service.h"
+  #include "server/http/service.h"
 
   // --service-port 8082
-  DEFINE_int32(service_port, 0, "The port for the ledger rest service.");
+  DEFINE_int32(service_port, 0, "The port for the ledger controller service.");
 #endif//TOKEN_ENABLE_REST_SERVICE
 
 static inline void
@@ -181,24 +181,21 @@ main(int argc, char **argv){
 
   // Start the server if enabled
   #ifdef TOKEN_ENABLE_SERVER
-    if(IsValidPort(FLAGS_server_port)){
-      LedgerServer* rpc_server = LedgerServer::GetInstance();
-      if(!rpc_server->StartThread()){
-        CrashReport::PrintNewCrashReport("Failed to start the server.");
-        return EXIT_FAILURE;
-      }
+    if(IsValidPort(FLAGS_server_port) && !LedgerServer::Start()){
+      CrashReport::PrintNewCrashReport("Failed to start the server.");
+      return EXIT_FAILURE;
+    }
 
-      if(!PeerSessionManager::Initialize()){
-        CrashReport::PrintNewCrashReport("Failed to initialize the peer session manager.");
-        return EXIT_FAILURE;
-      }
+    if(!PeerSessionManager::Initialize()){
+      CrashReport::PrintNewCrashReport("Failed to initialize the peer session manager.");
+      return EXIT_FAILURE;
     }
   #endif//TOKEN_ENABLE_SERVER
 
-  // Start the rest service if enabled
+  // Start the controller service if enabled
   #ifdef TOKEN_ENABLE_REST_SERVICE
-    if(IsValidPort(FLAGS_service_port) && !RestService::StartThread()){
-      CrashReport::PrintNewCrashReport("Failed to start the rest service.");
+    if(IsValidPort(FLAGS_service_port) && !HttpRestService::Start()){
+      CrashReport::PrintNewCrashReport("Failed to start the controller service.");
       return EXIT_FAILURE;
     }
   #endif//TOKEN_ENABLE_REST_SERVICE
@@ -216,18 +213,15 @@ main(int argc, char **argv){
   }
 
 #ifdef TOKEN_ENABLE_SERVER
-  if(IsValidPort(FLAGS_server_port)){
-    LedgerServer* rpc_server = LedgerServer::GetInstance();
-    if(rpc_server->IsRunning() && !rpc_server->JoinThread()){
-      CrashReport::PrintNewCrashReport("Cannot join the server thread.");
-      return EXIT_FAILURE;
-    }
+  if(IsValidPort(FLAGS_server_port) && LedgerServer::IsServerRunning() && !LedgerServer::WaitForShutdown()){
+    CrashReport::PrintNewCrashReport("Cannot join the server thread.");
+    return EXIT_FAILURE;
   }
 #endif//TOKEN_ENABLE_SERVER
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
-  if(RestService::IsRunning() && !RestService::JoinThread()){
-    CrashReport::PrintNewCrashReport("Cannot join the rest service thread.");
+  if(HttpRestService::IsServiceRunning() && !HttpRestService::WaitForShutdown()){
+    CrashReport::PrintNewCrashReport("Cannot join the controller service thread.");
     return EXIT_FAILURE;
   }
 #endif//TOKEN_ENABLE_REST_SERVICE

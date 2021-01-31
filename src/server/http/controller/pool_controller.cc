@@ -1,7 +1,8 @@
 #ifdef TOKEN_ENABLE_REST_SERVICE
 
 #include "pool.h"
-#include "server/http/rest/pool_controller.h"
+#include "server/http/service.h"
+#include "server/http/controller/pool_controller.h"
 
 namespace Token{
   void ObjectPoolController::HandleGetStats(HttpSession* session, const HttpRequestPtr& request){

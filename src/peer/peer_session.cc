@@ -10,8 +10,7 @@
 
 namespace Token{
   bool PeerSession::Connect(){
-    //TODO: session->StartHeartbeatTimer();
-    Channel& channel = GetChannel();
+    //TODO: StartHeartbeatTimer();
     NodeAddress paddr = GetAddress();
 
     struct sockaddr_in addr;
@@ -21,12 +20,12 @@ namespace Token{
     conn.data = this;
 
     int err;
-    if((err = uv_tcp_connect(&conn, channel.GetHandle(), (const struct sockaddr*) &addr, &PeerSession::OnConnect)) != 0){
+    if((err = uv_tcp_connect(&conn, GetHandle(), (const struct sockaddr*) &addr, &PeerSession::OnConnect)) != 0){
       LOG(ERROR) << "couldn't connect to peer " << paddr << ": " << uv_strerror(err);
       return false;
     }
 
-    uv_run(channel.GetLoop(), UV_RUN_DEFAULT);
+    uv_run(GetLoop(), UV_RUN_DEFAULT);
     return true;
   }
 
@@ -37,27 +36,26 @@ namespace Token{
 
   void PeerSession::OnConnect(uv_connect_t* conn, int status){
     PeerSession* session = (PeerSession*) conn->data;
-    Channel& channel = session->GetChannel();
     if(status != 0){
       LOG(WARNING) << "peer connect failure: " << uv_strerror(status);
-      session->Disconnect();
+      //TODO: Disconnect();
       return;
     }
 
     session->SetState(Session::kConnectingState);
 
     BlockPtr head = BlockChain::GetHead();
-    session->Send(VersionMessage::NewInstance(ClientType::kNode, LedgerServer::GetID(), head->GetHeader()));
-    if((status = uv_read_start(channel.GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
+    UUID server_id = BlockChainConfiguration::GetSererID();
+    session->Send(VersionMessage::NewInstance(ClientType::kNode, server_id, head->GetHeader()));
+    if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
       LOG(WARNING) << "peer read failure: " << uv_strerror(status);
-      session->Disconnect();
+      //TODO: Disconnect();
       return;
     }
   }
 
   void PeerSession::OnDisconnect(uv_async_t* handle){
-    PeerSession* session = (PeerSession*) handle->data;
-    session->Disconnect();
+    //TODO: Disconnect();
   }
 
   void PeerSession::OnDiscovery(uv_async_t* handle){
@@ -152,64 +150,53 @@ namespace Token{
       LOG(WARNING) << "zero message size received";
       return;
     } else if(nread > 65536){
-      LOG(ERROR) << nread << "is too large of a buffer";
+      LOG(ERROR) << "too large of a buffer: " << nread;
       return;
     }
 
-    MessageBufferReader reader(buff, static_cast<int64_t>(nread));
-    while(reader.HasNext()){
-      MessagePtr next = reader.Next();
-      LOG(INFO) << "next: " << next->ToString();
-      switch(next->GetMessageType()){
-#define DEFINE_HANDLER_CASE(Name) \
-        case Message::k##Name##MessageType: \
-            session->Handle##Name##Message(session, std::static_pointer_cast<Name##Message>(next)); \
-            break;
-        FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLER_CASE);
-#undef DEFINE_HANDLER_CASE
-        case Message::kUnknownMessageType:
-        default: //TODO: handle properly
-          break;
-      }
-    }
+    BufferPtr buffer = Buffer::From(buff->base, nread);
+    do{
+      RpcMessagePtr message = RpcMessage::From(session, buffer);
+      session->OnMessageRead(message);
+    } while(buffer->GetReadBytes() < buffer->GetBufferSize());
     free(buff->base);
   }
 
-  void PeerSession::HandleGetBlocksMessage(PeerSession* session, const GetBlocksMessagePtr& msg){}
+  void PeerSession::OnGetBlocksMessage(const GetBlocksMessagePtr& msg){}
 
-  void PeerSession::HandleVersionMessage(PeerSession* session, const VersionMessagePtr& msg){
+  void PeerSession::OnVersionMessage(const VersionMessagePtr& msg){
     BlockPtr head = BlockChain::GetHead();
-    session->Send(
+    Send(
       VerackMessage::NewInstance(
         ClientType::kNode,
-        LedgerServer::GetID(),
+        BlockChainConfiguration::GetSererID(),
         LedgerServer::GetCallbackAddress(),
         Version(),
         head->GetHeader(),
         Hash::GenerateNonce()));
   }
 
-  void PeerSession::HandleVerackMessage(PeerSession* session, const VerackMessagePtr& msg){
+  void PeerSession::OnVerackMessage(const VerackMessagePtr& msg){
     LOG(INFO) << "remote timestamp: " << FormatTimestampReadable(msg->GetTimestamp());
     LOG(INFO) << "remote <HEAD>: " << msg->GetHead();
 
-    //TODO: session->SetHead(msg->GetHead());
-    if(session->IsConnecting()){
-      session->SetInfo(Peer(msg->GetID(), msg->GetCallbackAddress()));
-      LOG(INFO) << "connected to peer: " << session->GetInfo();
-      session->SetState(Session::kConnectedState);
+    //TODO: SetHead(msg->GetHead());
+    if(IsConnecting()){
+      SetInfo(Peer(msg->GetID(), msg->GetCallbackAddress()));
+      LOG(INFO) << "connected to peer: " << GetInfo();
+      SetState(Session::kConnectedState);
 
       BlockHeader local_head = BlockChain::GetHead()->GetHeader();
       BlockHeader remote_head = msg->GetHead();
       if(local_head == remote_head){
         LOG(INFO) << "skipping remote <HEAD> := " << remote_head;
       } else if(local_head < remote_head){
-        SynchronizeJob* job = new SynchronizeJob(session, remote_head);
+        SynchronizeJob* job = new SynchronizeJob(this, remote_head);
         if(!JobScheduler::Schedule(job)){
           LOG(WARNING) << "couldn't schedule SynchronizeJob";
           return;
         }
-        session->Send(GetBlocksMessage::NewInstance());
+        Send(GetBlocksMessage::NewInstance());
       }
     }
 
@@ -218,28 +205,28 @@ namespace Token{
     // - state transition
   }
 
-  void PeerSession::HandlePrepareMessage(PeerSession* session, const PrepareMessagePtr& msg){}
-  void PeerSession::HandlePromiseMessage(PeerSession* session, const PromiseMessagePtr& msg){}
-  void PeerSession::HandleCommitMessage(PeerSession* session, const CommitMessagePtr& msg){}
-  void PeerSession::HandleRejectedMessage(PeerSession* session, const RejectedMessagePtr& msg){}
+  void PeerSession::OnPrepareMessage(const PrepareMessagePtr& msg){}
+  void PeerSession::OnPromiseMessage(const PromiseMessagePtr& msg){}
+  void PeerSession::OnCommitMessage(const CommitMessagePtr& msg){}
+  void PeerSession::OnRejectedMessage(const RejectedMessagePtr& msg){}
 
-  void PeerSession::HandleAcceptedMessage(PeerSession* session, const AcceptedMessagePtr& msg){
+  void PeerSession::OnAcceptedMessage(const AcceptedMessagePtr& msg){
     ProposalPtr remote_proposal = msg->GetProposal();
     if(!ProposalManager::HasProposal()){
       LOG(WARNING) << "there is no active proposal.";
-      return session->Send(RejectedMessage::NewInstance(remote_proposal));
+      return Send(RejectedMessage::NewInstance(remote_proposal));
     }
 
     if(!ProposalManager::IsProposalFor(remote_proposal)){
       LOG(WARNING) << "active proposal is not: " << remote_proposal->ToString();
-      return session->Send(RejectedMessage::NewInstance(remote_proposal));
+      return Send(RejectedMessage::NewInstance(remote_proposal));
     }
 
     ProposalPtr proposal = ProposalManager::GetProposal();
-    proposal->AcceptProposal(session->GetID().ToString()); //TODO: fix cast?
+    proposal->AcceptProposal(GetID().ToString()); //TODO: fix cast?
   }
 
-  void PeerSession::HandleGetDataMessage(PeerSession* session, const GetDataMessagePtr& msg){
+  void PeerSession::OnGetDataMessage(const GetDataMessagePtr& msg){
     std::vector<InventoryItem> items;
     if(!msg->GetItems(items)){
       LOG(WARNING) << "cannot get items from message";
@@ -247,7 +234,7 @@ namespace Token{
     }
 
     LOG(INFO) << "getting " << items.size() << " items....";
-    std::vector<MessagePtr> response;
+    std::vector<RpcMessagePtr> response;
     for(auto& item : items){
       Hash hash = item.GetHash();
       LOG(INFO) << "resolving item : " << hash;
@@ -277,25 +264,25 @@ namespace Token{
         response.push_back(TransactionMessage::NewInstance(tx));
       }
     }
-    session->Send(response);
+    Send(response);
   }
 
-  void PeerSession::HandleBlockMessage(PeerSession* session, const BlockMessagePtr& msg){
+  void PeerSession::OnBlockMessage(const BlockMessagePtr& msg){
     BlockPtr blk = msg->GetValue();
     Hash hash = blk->GetHash();
     ObjectPool::PutBlock(hash, blk);
     LOG(INFO) << "received block: " << hash;
   }
 
-  void PeerSession::HandleTransactionMessage(PeerSession* session, const TransactionMessagePtr& msg){
+  void PeerSession::OnTransactionMessage(const TransactionMessagePtr& msg){
 
   }
 
-  void PeerSession::HandleNotFoundMessage(PeerSession* session, const NotFoundMessagePtr& msg){
-    LOG(WARNING) << "(" << session->GetInfo() << "): " << msg->GetMessage();
+  void PeerSession::OnNotFoundMessage(const NotFoundMessagePtr& msg){
+    LOG(WARNING) << "(" << GetInfo() << "): " << msg->GetMessage();
   }
 
-  void PeerSession::HandleInventoryMessage(PeerSession* session, const InventoryMessagePtr& msg){
+  void PeerSession::OnInventoryMessage(const InventoryMessagePtr& msg){
     std::vector<InventoryItem> items;
     if(!msg->GetItems(items)){
       LOG(WARNING) << "couldn't get items from inventory message";
@@ -310,15 +297,15 @@ namespace Token{
     }
 
     LOG(INFO) << "downloading " << needed.size() << "/" << items.size() << " items from inventory....";
-    session->Send(GetDataMessage::NewInstance(items));
+    Send(GetDataMessage::NewInstance(items));
   }
 
-  void PeerSession::HandleGetPeersMessage(PeerSession* session, const GetPeersMessagePtr& msg){
-    //TODO: implement PeerSession::HandleGetPeersMessage(HandleMessageTask*);
+  void PeerSession::OnGetPeersMessage(const GetPeersMessagePtr& msg){
+    //TODO: implement PeerSession::OnGetPeersMessage(HandleMessageTask*);
   }
 
-  void PeerSession::HandlePeerListMessage(PeerSession* session, const PeerListMessagePtr& msg){
-    //TODO: implement PeerSession::HandlePeerListMessage(HandleMessageTask*);
+  void PeerSession::OnPeerListMessage(const PeerListMessagePtr& msg){
+    //TODO: implement PeerSession::OnPeerListMessage(HandleMessageTask*);
   }
 }
 

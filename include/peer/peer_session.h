@@ -82,8 +82,7 @@ namespace Token{
     }
   };
 
-  class PeerSession : public Session{
-    friend class Server;
+  class PeerSession : public RpcSession{
     friend class PeerSessionThread;
     friend class PeerSessionManager;
    private:
@@ -124,12 +123,12 @@ namespace Token{
     void WaitForState(const State& state){}
 
 #define DECLARE_MESSAGE_HANDLER(Name) \
-        static void Handle##Name##Message(PeerSession* session, const Name##MessagePtr& msg);
+    void On##Name##Message(const Name##MessagePtr& msg);
     FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
    public:
     PeerSession(uv_loop_t* loop, const NodeAddress& address):
-      Session(loop),
+      RpcSession(loop),
       thread_(pthread_self()),
       info_(UUID(), address),
       head_(),
@@ -140,6 +139,7 @@ namespace Token{
       commit_(),
       accepted_(),
       rejected_(){
+      handle_.data = this;
       disconnect_.data = this;
       discovery_.data = this;
       prepare_.data = this;

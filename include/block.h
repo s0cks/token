@@ -247,6 +247,11 @@ namespace Token{
 
     bool Write(Json::Writer& writer) const{
       return writer.StartObject()
+          && Json::SetField(writer, "timestamp", ToUnixTimestamp(timestamp_))
+          && Json::SetField(writer, "height", height_)
+          && Json::SetField(writer, "previous_hash", previous_hash_)
+          && Json::SetField(writer, "hash", GetHash())
+          && Json::SetField(writer, "transactions", GetNumberOfTransactions())
           && writer.EndObject();
     }
 

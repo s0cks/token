@@ -13,6 +13,8 @@ option(ENABLE_SERVER "Enables the block chain server." ON)
 option(ENABLE_HEALTH_SERVICE "Enable the health http service." ON)
 option(ENABLE_REST_SERVICE "Enable the rest http service." ON)
 
+set(ENABLE_HEALTH_SERVICE OFF)
+
 # Monkey Patching for Debug Mode
 if(CMAKE_BUILD_TYPE MATCHES Debug)
   message(STATUS "Compiling w/ debug mode.")
@@ -33,7 +35,7 @@ if(ENABLE_SERVER)
   add_compile_definitions(TOKEN_ENABLE_SERVER)
 endif(ENABLE_SERVER)
 
-# Compile w/ the rest service if enabled
+# Compile w/ the controller service if enabled
 if(ENABLE_REST_SERVICE)
   message(STATUS "Compiling w/ the rest http service enabled.")
   add_compile_definitions(TOKEN_ENABLE_REST_SERVICE)

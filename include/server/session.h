@@ -6,13 +6,48 @@
 #include "atomic/relaxed_atomic.h"
 
 namespace Token{
+  template<class S>
+  class SessionWriteData{
+   protected:
+    S* session_;
+    uv_write_t request_;
+    BufferPtr buffer_;
+   public:
+    SessionWriteData(S* session, const int64_t& size):
+      session_(session),
+      request_(),
+      buffer_(Buffer::NewInstance(size)){
+      request_.data = this;
+    }
+    virtual ~SessionWriteData() = default;
+
+    S* GetSession() const{
+      return session_;
+    }
+
+    BufferPtr GetBuffer() const{
+      return buffer_;
+    }
+
+    uv_write_t* GetRequest(){
+      return &request_;
+    }
+  };
+
 #define FOR_EACH_SESSION_STATE(V) \
     V(Connecting)                 \
     V(Connected)                  \
     V(Disconnected)
 
-  class Session{
-    friend class Server; //TODO: revoke access
+  template<class M, class S>
+  class Server;
+
+  template<class M>
+  class Session : public Channel<M>{
+    using Base = Session<M>;
+    friend class Server<M, Base>;
+   private:
+    using SessionMessagePtr = std::shared_ptr<M>;
    public:
     enum State{
 #define DEFINE_STATE(Name) k##Name##State,
@@ -33,44 +68,27 @@ namespace Token{
     }
    protected:
     RelaxedAtomic<State> state_;
-    Channel channel_;
-
-    Channel& GetChannel(){
-      return channel_;
-    }
 
     void SetState(const State& state){
       state_ = state;
     }
 
-    static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf);
+    virtual void OnMessageRead(const SessionMessagePtr& message) = 0;
+
+    static void
+    AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf){
+      buf->base = (char*)malloc(suggested_size);
+      buf->len = suggested_size;
+    }
    public:
     Session(uv_loop_t* loop):
-      state_(Session::kDisconnectedState),
-      channel_(loop){}
+      Channel<M>(loop),
+      state_(Session::kDisconnectedState){}
     virtual ~Session() = default;
 
     State GetState() const{
       return state_;
     }
-
-    inline void Send(const MessageList& messages){
-      return GetChannel().Send(messages);
-    }
-
-    inline void Send(const MessagePtr& msg){
-      MessageList messages = { msg };
-      return GetChannel().Send(messages);
-    }
-
-#define DEFINE_SEND(Name) \
-    inline void           \
-    Send(const Name##MessagePtr& msg){ \
-      MessageList messages = { msg };  \
-      return Send(messages);           \
-    }
-    FOR_EACH_MESSAGE_TYPE(DEFINE_SEND)
-#undef DEFINE_SEND
 
 #define DEFINE_STATE_CHECK(Name) \
     inline bool Is##Name(){ return GetState() == Session::k##Name##State; }
@@ -78,8 +96,55 @@ namespace Token{
 #undef DEFINE_STATE_CHECK
   };
 
-  class ServerSession : public Session{
-    friend class Server;
+  template<class M, class S>
+  class Server;
+
+  class RpcSession : public Session<RpcMessage>{
+   protected:
+    RpcSession(uv_loop_t* loop):
+      Session<RpcMessage>(loop){}
+
+#define DECLARE_MESSAGE_HANDLER(Name) \
+    virtual void On##Name##Message(const Name##MessagePtr& message) = 0;
+    FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
+#undef DECLARE_MESSAGE_HANDLER
+
+    void OnMessageRead(const RpcMessagePtr& message){
+      switch(message->GetMessageType()){
+#define DEFINE_HANDLE(Name) \
+        case RpcMessage::MessageType::k##Name##MessageType: \
+          On##Name##Message(std::static_pointer_cast<Name##Message>(message)); \
+          break;
+        FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLE)
+#undef DEFINE_HANDLE
+        default:
+          break;
+      }
+    }
+   public:
+    virtual ~RpcSession() = default;
+
+    inline void Send(const RpcMessageList& messages){
+      return SendMessages(messages);
+    }
+
+    inline void Send(const RpcMessagePtr& msg){
+      RpcMessageList messages = { msg };
+      return SendMessages(messages);
+    }
+
+#define DEFINE_SEND(Name) \
+    inline void           \
+    Send(const Name##MessagePtr& msg){ \
+      RpcMessageList messages = { msg };  \
+      return SendMessages(messages);           \
+    }
+    FOR_EACH_MESSAGE_TYPE(DEFINE_SEND)
+#undef DEFINE_SEND
+  };
+
+  class ServerSession : public RpcSession{
+    friend class Server<RpcMessage, ServerSession>;
    private:
     UUID id_;
 
@@ -87,14 +152,16 @@ namespace Token{
       id_ = id;
     }
 
-#define DEFINE_HANDLE_MESSAGE(Name) \
-    static void Handle##Name##Message(ServerSession* session, const Name##MessagePtr& msg);
-    FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLE_MESSAGE)
-#undef DEFINE_HANDLE_MESSAGE
+#define DECLARE_HANDLER(Name) \
+    void On##Name##Message(const Name##MessagePtr& msg);
+    FOR_EACH_MESSAGE_TYPE(DECLARE_HANDLER)
+#undef DECLARE_HANDLER
    public:
     ServerSession(uv_loop_t* loop):
-      Session(loop),
-      id_(){}
+      RpcSession(loop),
+      id_(){
+      handle_.data = this;
+    }
     ~ServerSession() = default;
 
     UUID GetID() const{

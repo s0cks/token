@@ -24,7 +24,6 @@ namespace Token{
   class BlockChainBlockVisitor;
   class BlockChainHeaderVisitor;
   class BlockChain{
-    friend class Server;
     friend class BlockMiner;
     friend class ProposalHandler;
     friend class SynchronizeJob; //TODO: revoke access

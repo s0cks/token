@@ -1,9 +1,25 @@
 #include "pool.h"
-#include "message.h"
+#include "server/message.h"
 #include "consensus/proposal.h"
 #include "unclaimed_transaction.h"
 
 namespace Token{
+  RpcMessagePtr RpcMessage::From(RpcSession* session, const BufferPtr& buffer){
+    RpcMessage::MessageType mtype = static_cast<RpcMessage::MessageType>(buffer->GetInt());
+    int64_t msize = buffer->GetLong();
+    switch(mtype){
+#define DEFINE_DECODE(Name) \
+        case RpcMessage::k##Name##MessageType: \
+            return Name##Message::NewInstance(buffer);
+        FOR_EACH_MESSAGE_TYPE(DEFINE_DECODE)
+#undef DEFINE_DECODE
+      case RpcMessage::MessageType::kUnknownMessageType:
+      default:
+        LOG(ERROR) << "unknown message type " << mtype << " of size " << msize;
+        return nullptr;
+    }
+  }
+
   int64_t VersionMessage::GetMessageSize() const{
     int64_t size = 0;
     size += sizeof(Timestamp); // timestamp_
@@ -55,7 +71,7 @@ namespace Token{
     }
   }
 
-  MessagePtr InventoryMessage::NewInstance(const BufferPtr& buff){
+  RpcMessagePtr InventoryMessage::NewInstance(const BufferPtr& buff){
     int64_t num_items = buff->GetLong();
     std::vector<InventoryItem> items;
     for(int64_t idx = 0; idx < num_items; idx++)
@@ -80,7 +96,7 @@ namespace Token{
     return true;
   }
 
-  MessagePtr GetDataMessage::NewInstance(const BufferPtr& buff){
+  RpcMessagePtr GetDataMessage::NewInstance(const BufferPtr& buff){
     int64_t num_items = buff->GetLong();
     std::vector<InventoryItem> items;
     for(int64_t idx = 0; idx < num_items; idx++)
@@ -97,7 +113,7 @@ namespace Token{
 
   const int64_t GetBlocksMessage::kMaxNumberOfBlocks = 32;
 
-  MessagePtr GetBlocksMessage::NewInstance(const BufferPtr& buff){
+  RpcMessagePtr GetBlocksMessage::NewInstance(const BufferPtr& buff){
     Hash start = buff->GetHash();
     Hash stop = buff->GetHash();
     return std::make_shared<GetBlocksMessage>(start, stop);
@@ -109,7 +125,7 @@ namespace Token{
     return true;
   }
 
-  MessagePtr NotFoundMessage::NewInstance(const BufferPtr& buff){
+  RpcMessagePtr NotFoundMessage::NewInstance(const BufferPtr& buff){
     std::string message = ""; //TODO: buff->GetString();
     return std::make_shared<NotFoundMessage>(message);
   }
@@ -177,7 +193,7 @@ namespace Token{
     return Hash::GetSize() * 2;
   }
 
-  MessagePtr PeerListMessage::NewInstance(const BufferPtr& buff){
+  RpcMessagePtr PeerListMessage::NewInstance(const BufferPtr& buff){
     PeerList peers;
 
     int64_t npeers = buff->GetLong();

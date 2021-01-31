@@ -1,57 +1,74 @@
+#ifdef TOKEN_ENABLE_REST_SERVICE
+
 #include "server/http/service.h"
-#include "server/http/session.h"
+
+#include "server/http/controller/chain_controller.h"
+#include "server/http/controller/pool_controller.h"
+#include "server/http/controller/wallet_controller.h"
+#include "server/http/controller/health_controller.h"
 
 namespace Token{
-  void HttpService::AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
-    HttpSession* session = (HttpSession*) handle->data;
-    session->InitReadBuffer(buff, 65536);
+  HttpMessagePtr HttpMessage::From(HttpSession* session, const BufferPtr& buffer){
+    HttpMessagePtr message = HttpRequest::NewInstance(session, buffer);
+    buffer->SetReadPosition(buffer->GetBufferSize());
+    return message;
   }
 
-  void HttpService::OnClose(uv_handle_t* handle){}
-
-  void HttpService::OnWalk(uv_handle_t* handle, void* data){
-    uv_close(handle, &OnClose);
+  HttpRestService::HttpRestService(uv_loop_t* loop):
+    HttpService(loop){
+    HealthController::Initialize(&router_);
+    WalletController::Initialize(&router_);
+    ObjectPoolController::Initialize(&router_);
+    BlockChainController::Initialize(&router_);
   }
 
-  bool HttpService::ShutdownService(uv_loop_t* loop){
-    uv_stop(loop);
+  static HttpRestService instance;
 
-    int result;
-    if((result = uv_loop_close(loop)) == UV_EBUSY){
-      uv_walk(loop, &OnWalk, NULL);
-      uv_run(loop, UV_RUN_DEFAULT);
-      uv_stop(loop);
-      if((result = uv_loop_close(loop)) != 0){
-        LOG(INFO) << "shutdown result: " << uv_strerror(result);
-        return false;
-      }
-      return true;
-    }
-
-    if(result != 0){
-      LOG(INFO) << "shutdown result: " << uv_strerror(result);
-      return false;
-    }
-    return true;
+  bool HttpRestService::Start(){
+    return instance.StartThread();
   }
 
-  bool HttpService::Bind(uv_tcp_t* server, const int32_t& port){
-    sockaddr_in bind_address;
-    uv_ip4_addr("0.0.0.0", port, &bind_address);
-    int err;
-    if((err = uv_tcp_bind(server, (struct sockaddr*) &bind_address, 0)) != 0){
-      LOG(WARNING) << "couldn't bind the health check service on port " << port << ": " << uv_strerror(err);
-      return false;
-    }
-    return true;
+  bool HttpRestService::Shutdown(){
+    LOG(WARNING) << "HttpRestService::Shutdown() not implemented.";
+    return false; //TODO: implement HttpRestService::Shutdown()
   }
 
-  bool HttpService::Accept(uv_stream_t* stream, HttpSession* session){
-    int result;
-    if((result = uv_accept(stream, session->GetStream())) != 0){
-      LOG(WARNING) << "server accept failure: " << uv_strerror(result);
-      return false;
+  bool HttpRestService::WaitForShutdown(){
+    return instance.JoinThread();
+  }
+
+  HttpRouter* HttpRestService::GetServiceRouter(){
+    return instance.GetRouter();
+  }
+
+#define DEFINE_STATE_CHECK(Name) \
+  bool HttpRestService::IsService##Name(){ return instance.Is##Name(); }
+  FOR_EACH_SERVER_STATE(DEFINE_STATE_CHECK)
+#undef DEFINE_STATE_CHECK
+
+  void HttpSession::OnMessageRead(const HttpMessagePtr& msg){
+    HttpRequestPtr request = std::static_pointer_cast<HttpRequest>(msg);
+    HttpRouter* router = HttpRestService::GetServiceRouter();
+
+    HttpRouterMatch match = router->Find(request);
+    if(match.IsNotFound()){
+      std::stringstream ss;
+      ss << "Cannot find: " << request->GetPath();
+      return Send(NewNotFoundResponse(this, ss));
+    } else if(match.IsNotSupported()){
+      std::stringstream ss;
+      ss << "Method Not Supported for: " << request->GetPath();
+      return Send(NewNotSupportedResponse(this, ss));
+    } else{
+      assert(match.IsOk());
+
+      // weirdness :(
+      request->SetPathParameters(match.GetPathParameters());
+      request->SetQueryParameters(match.GetQueryParameters());
+      HttpRouteHandler handler = match.GetHandler();
+      handler(this, request);
     }
-    return true;
   }
 }
+
+#endif//TOKEN_ENABLE_REST_SERVICE

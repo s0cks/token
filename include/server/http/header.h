@@ -2,6 +2,7 @@
 #define TOKEN_INCLUDE_HTTP_HEADER_H
 
 #include <unordered_map>
+#include "object.h"
 
 namespace Token{
 #define HTTP_HEADER_DATE "Date"

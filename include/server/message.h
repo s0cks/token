@@ -10,8 +10,19 @@
 #include "configuration.h"
 
 namespace Token{
+  class Message : public SerializableObject{
+   protected:
+    Message() = default;
+   public:
+    virtual ~Message() = default;
+    virtual const char* GetName() const = 0;
+  };
+
   class Message;
   typedef std::shared_ptr<Message> MessagePtr;
+
+  class RpcMessage;
+  typedef std::shared_ptr<RpcMessage> RpcMessagePtr;
 
 #define DEFINE_MESSAGE(Name) \
   class Name##Message;        \
@@ -19,8 +30,12 @@ namespace Token{
   FOR_EACH_MESSAGE_TYPE(DEFINE_MESSAGE)
 #undef DEFINE_MESSAGE
 
-  class Message : public SerializableObject{
-    friend class Session;
+  template<class M>
+  class Session;
+
+  class RpcSession;
+  class RpcMessage : public Message{
+    friend class RpcSession;
    public:
     enum MessageType{
       kUnknownMessageType = 0,
@@ -43,16 +58,12 @@ namespace Token{
 
     static const int64_t kHeaderSize = sizeof(int32_t) + sizeof(int64_t);
    protected:
-    Message() = default;
+    RpcMessage() = default;
 
     virtual int64_t GetMessageSize() const = 0;
     virtual bool Encode(const BufferPtr& buff) const = 0;
    public:
-    virtual ~Message() = default;
-
-    virtual const char* GetName() const{
-      return "Unknown";
-    }
+    virtual ~RpcMessage() = default;
 
     virtual MessageType GetMessageType() const{
       return MessageType::kUnknownMessageType;
@@ -77,19 +88,21 @@ namespace Token{
           && Encode(buff);
     }
 
-    virtual bool Equals(const MessagePtr& msg) const = 0;
+    virtual bool Equals(const RpcMessagePtr& msg) const = 0;
 
 #define DEFINE_CHECK(Name) \
-    bool Is##Name##Message(){ return GetMessageType() == Message::k##Name##MessageType; }
+    bool Is##Name##Message(){ return GetMessageType() == RpcMessage::k##Name##MessageType; }
     FOR_EACH_MESSAGE_TYPE(DEFINE_CHECK)
 #undef DEFINE_CHECK
+
+    static RpcMessagePtr From(RpcSession* session, const BufferPtr& buffer);
   };
 
-#define DEFINE_MESSAGE_TYPE(Name) \
-    virtual MessageType GetMessageType() const{ return Message::k##Name##MessageType; } \
+#define DEFINE_RPC_MESSAGE_TYPE(Name) \
+    virtual MessageType GetMessageType() const{ return RpcMessage::k##Name##MessageType; } \
     virtual const char* GetName() const{ return #Name; }
-#define DEFINE_MESSAGE(Name) \
-    DEFINE_MESSAGE_TYPE(Name) \
+#define DEFINE_RPC_MESSAGE(Name) \
+    DEFINE_RPC_MESSAGE_TYPE(Name) \
     virtual int64_t GetMessageSize() const; \
     virtual bool Encode(const BufferPtr& buff) const;
 
@@ -101,7 +114,7 @@ namespace Token{
     kClient
   };
 
-  class VersionMessage : public Message{
+  class VersionMessage : public RpcMessage{
    private:
     Timestamp timestamp_;
     ClientType client_type_; //TODO: refactor this field
@@ -116,7 +129,7 @@ namespace Token{
       Timestamp timestamp,
       const Hash& nonce,
       const BlockHeader& head):
-      Message(),
+      RpcMessage(),
       timestamp_(timestamp),
       client_type_(type),
       version_(version),
@@ -124,7 +137,7 @@ namespace Token{
       node_id_(node_id),
       head_(head){}
     VersionMessage(const BufferPtr& buff):
-      Message(),
+      RpcMessage(),
       timestamp_(FromUnixTimestamp(buff->GetLong())),
       client_type_(static_cast<ClientType>(buff->GetInt())),
       version_(buff),
@@ -165,7 +178,7 @@ namespace Token{
       return GetClientType() == ClientType::kClient;
     }
 
-    bool Equals(const MessagePtr& obj) const{
+    bool Equals(const RpcMessagePtr& obj) const{
       if(!obj->IsVersionMessage()){
         LOG(WARNING) << "not a version message.";
         return false;
@@ -179,13 +192,13 @@ namespace Token{
              && head_ == msg->head_;
     }
 
-    DEFINE_MESSAGE(Version);
+    DEFINE_RPC_MESSAGE(Version);
 
-    static MessagePtr NewInstance(const BufferPtr& buff){
+    static RpcMessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<VersionMessage>(buff);
     }
 
-    static MessagePtr NewInstance(ClientType type,
+    static RpcMessagePtr NewInstance(ClientType type,
       const UUID& node_id,
       const BlockHeader& head,
       const Version& version = Version(),
@@ -194,13 +207,13 @@ namespace Token{
       return std::make_shared<VersionMessage>(type, version, node_id, timestamp, nonce, head);
     }
 
-    static MessagePtr NewInstance(const UUID& node_id){
+    static RpcMessagePtr NewInstance(const UUID& node_id){
       BlockPtr genesis = Block::Genesis();
       return NewInstance(ClientType::kClient, node_id, genesis->GetHeader(), Version(), Hash::GenerateNonce());
     }
   };
 
-  class VerackMessage : public Message{
+  class VerackMessage : public RpcMessage{
    private:
     Timestamp timestamp_;
     ClientType client_type_;
@@ -217,7 +230,7 @@ namespace Token{
       const BlockHeader& head,
       const Hash& nonce,
       Timestamp timestamp = Clock::now()):
-      Message(),
+      RpcMessage(),
       timestamp_(timestamp),
       client_type_(type),
       version_(version),
@@ -226,7 +239,7 @@ namespace Token{
       callback_(callback),
       head_(head){}
     VerackMessage(const BufferPtr& buff):
-      Message(),
+      RpcMessage(),
       timestamp_(FromUnixTimestamp(buff->GetLong())),
       client_type_(static_cast<ClientType>(buff->GetInt())),
       version_(buff),
@@ -264,7 +277,7 @@ namespace Token{
       return head_;
     }
 
-    bool Equals(const MessagePtr& obj) const{
+    bool Equals(const RpcMessagePtr& obj) const{
       if(!obj->IsVerackMessage()){
         return false;
       }
@@ -278,9 +291,9 @@ namespace Token{
              && head_ == msg->head_;
     }
 
-    DEFINE_MESSAGE(Verack);
+    DEFINE_RPC_MESSAGE(Verack);
 
-    static MessagePtr NewInstance(ClientType type,
+    static RpcMessagePtr NewInstance(ClientType type,
       const UUID& node_id,
       const NodeAddress& callback,
       const Version& version,
@@ -290,23 +303,23 @@ namespace Token{
       return std::make_shared<VerackMessage>(type, node_id, callback, version, head, nonce, timestamp);
     }
 
-    static MessagePtr NewInstance(const BufferPtr& buff){
+    static RpcMessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<VerackMessage>(buff);
     }
   };
 
   class Proposal;
-  class PaxosMessage : public Message{
+  class PaxosMessage : public RpcMessage{
    protected:
     MessageType type_; //TODO: remove this bs
     RawProposal raw_;
 
     PaxosMessage(MessageType type, ProposalPtr proposal):
-      Message(),
+      RpcMessage(),
       type_(type),
       raw_(proposal->GetRaw()){}
     PaxosMessage(MessageType type, const BufferPtr& buff):
-      Message(),
+      RpcMessage(),
       type_(type),
       raw_(buff){}
 
@@ -339,24 +352,24 @@ namespace Token{
   class PrepareMessage : public PaxosMessage{
    public:
     PrepareMessage(const ProposalPtr& proposal):
-      PaxosMessage(Message::kPrepareMessageType, proposal){}
+      PaxosMessage(RpcMessage::kPrepareMessageType, proposal){}
     PrepareMessage(const BufferPtr& buff):
-      PaxosMessage(Message::kPrepareMessageType, buff){}
+      PaxosMessage(RpcMessage::kPrepareMessageType, buff){}
     ~PrepareMessage(){}
 
-    DEFINE_MESSAGE(Prepare);
+    DEFINE_RPC_MESSAGE(Prepare);
 
-    bool Equals(const MessagePtr& obj) const{
+    bool Equals(const RpcMessagePtr& obj) const{
       if(!obj->IsPrepareMessage())
         return false;
       return PaxosMessage::ProposalEquals(std::static_pointer_cast<PaxosMessage>(obj));
     }
 
-    static MessagePtr NewInstance(const ProposalPtr& proposal){
+    static RpcMessagePtr NewInstance(const ProposalPtr& proposal){
       return std::make_shared<PrepareMessage>(proposal);
     }
 
-    static MessagePtr NewInstance(const BufferPtr& buff){
+    static RpcMessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<PrepareMessage>(buff);
     }
   };
@@ -364,25 +377,25 @@ namespace Token{
   class PromiseMessage : public PaxosMessage{
    public:
     PromiseMessage(ProposalPtr proposal):
-      PaxosMessage(Message::kPromiseMessageType, proposal){}
+      PaxosMessage(RpcMessage::kPromiseMessageType, proposal){}
     PromiseMessage(const BufferPtr& buff):
-      PaxosMessage(Message::kPromiseMessageType, buff){}
+      PaxosMessage(RpcMessage::kPromiseMessageType, buff){}
     ~PromiseMessage(){}
 
-    DEFINE_MESSAGE(Promise);
+    DEFINE_RPC_MESSAGE(Promise);
 
-    bool Equals(const MessagePtr& obj) const{
+    bool Equals(const RpcMessagePtr& obj) const{
       if(!obj->IsPromiseMessage()){
         return false;
       }
       return PaxosMessage::ProposalEquals(std::static_pointer_cast<PaxosMessage>(obj));
     }
 
-    static MessagePtr NewInstance(const ProposalPtr& proposal){
+    static RpcMessagePtr NewInstance(const ProposalPtr& proposal){
       return std::make_shared<PromiseMessage>(proposal);
     }
 
-    static MessagePtr NewInstance(const BufferPtr& buff){
+    static RpcMessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<PromiseMessage>(buff);
     }
   };
@@ -390,24 +403,24 @@ namespace Token{
   class CommitMessage : public PaxosMessage{
    public:
     CommitMessage(ProposalPtr proposal):
-      PaxosMessage(Message::kCommitMessageType, proposal){}
+      PaxosMessage(RpcMessage::kCommitMessageType, proposal){}
     CommitMessage(const BufferPtr& buff):
-      PaxosMessage(Message::kCommitMessageType, buff){}
+      PaxosMessage(RpcMessage::kCommitMessageType, buff){}
     ~CommitMessage(){}
 
-    DEFINE_MESSAGE(Commit);
+    DEFINE_RPC_MESSAGE(Commit);
 
-    bool Equals(const MessagePtr& obj) const{
+    bool Equals(const RpcMessagePtr& obj) const{
       if(!obj->IsCommitMessage())
         return false;
       return PaxosMessage::ProposalEquals(std::static_pointer_cast<PaxosMessage>(obj));
     }
 
-    static MessagePtr NewInstance(const ProposalPtr& proposal){
+    static RpcMessagePtr NewInstance(const ProposalPtr& proposal){
       return std::make_shared<CommitMessage>(proposal);
     }
 
-    static MessagePtr NewInstance(const BufferPtr& buff){
+    static RpcMessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<CommitMessage>(buff);
     }
   };
@@ -415,25 +428,25 @@ namespace Token{
   class AcceptedMessage : public PaxosMessage{
    public:
     AcceptedMessage(ProposalPtr proposal):
-      PaxosMessage(Message::kAcceptedMessageType, proposal){}
+      PaxosMessage(RpcMessage::kAcceptedMessageType, proposal){}
     AcceptedMessage(const BufferPtr& buff):
-      PaxosMessage(Message::kAcceptedMessageType, buff){}
+      PaxosMessage(RpcMessage::kAcceptedMessageType, buff){}
     ~AcceptedMessage(){}
 
-    DEFINE_MESSAGE(Accepted);
+    DEFINE_RPC_MESSAGE(Accepted);
 
-    bool Equals(const MessagePtr& obj) const{
+    bool Equals(const RpcMessagePtr& obj) const{
       if(!obj->IsAcceptedMessage()){
         return false;
       }
       return PaxosMessage::ProposalEquals(std::static_pointer_cast<PaxosMessage>(obj));
     }
 
-    static MessagePtr NewInstance(const ProposalPtr& proposal){
+    static RpcMessagePtr NewInstance(const ProposalPtr& proposal){
       return std::make_shared<AcceptedMessage>(proposal);
     }
 
-    static MessagePtr NewInstance(const BufferPtr& buff){
+    static RpcMessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<AcceptedMessage>(buff);
     }
   };
@@ -441,41 +454,41 @@ namespace Token{
   class RejectedMessage : public PaxosMessage{
    public:
     RejectedMessage(ProposalPtr proposal):
-      PaxosMessage(Message::kRejectedMessageType, proposal){}
+      PaxosMessage(RpcMessage::kRejectedMessageType, proposal){}
     RejectedMessage(const BufferPtr& buff):
-      PaxosMessage(Message::kRejectedMessageType, buff){}
+      PaxosMessage(RpcMessage::kRejectedMessageType, buff){}
     ~RejectedMessage(){}
 
-    DEFINE_MESSAGE(Rejected);
+    DEFINE_RPC_MESSAGE(Rejected);
 
-    bool Equals(const MessagePtr& obj) const{
+    bool Equals(const RpcMessagePtr& obj) const{
       if(!obj->IsRejectedMessage()){
         return false;
       }
       return PaxosMessage::ProposalEquals(std::static_pointer_cast<PaxosMessage>(obj));
     }
 
-    static MessagePtr NewInstance(const ProposalPtr& proposal){
+    static RpcMessagePtr NewInstance(const ProposalPtr& proposal){
       return std::make_shared<RejectedMessage>(proposal);
     }
 
-    static MessagePtr NewInstance(const BufferPtr& buff){
+    static RpcMessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<RejectedMessage>(buff);
     }
   };
 
   template<class T>
-  class ObjectMessage : public Message{
+  class ObjectMessage : public RpcMessage{
    protected:
     typedef std::shared_ptr<T> ObjectPtr;
 
     ObjectPtr value_;
 
     ObjectMessage(const ObjectPtr& value):
-      Message(),
+      RpcMessage(),
       value_(value){}
     ObjectMessage(const BufferPtr& buff):
-      Message(),
+      RpcMessage(),
       value_(T::FromBytes(buff)){}
    public:
     virtual ~ObjectMessage() = default;
@@ -507,9 +520,9 @@ namespace Token{
       return ss.str();
     }
 
-    DEFINE_MESSAGE_TYPE(Transaction);
+    DEFINE_RPC_MESSAGE_TYPE(Transaction);
 
-    bool Equals(const MessagePtr& obj) const{
+    bool Equals(const RpcMessagePtr& obj) const{
       if(!obj->IsTransactionMessage()){
         return false;
       }
@@ -517,11 +530,11 @@ namespace Token{
       return true;
     }
 
-    static MessagePtr NewInstance(const TransactionPtr& tx){
+    static RpcMessagePtr NewInstance(const TransactionPtr& tx){
       return std::make_shared<TransactionMessage>(tx);
     }
 
-    static MessagePtr NewInstance(const BufferPtr& buff){
+    static RpcMessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<TransactionMessage>(buff);
     }
   };
@@ -548,9 +561,9 @@ namespace Token{
       return ss.str();
     }
 
-    DEFINE_MESSAGE_TYPE(Block);
+    DEFINE_RPC_MESSAGE_TYPE(Block);
 
-    bool Equals(const MessagePtr& obj) const{
+    bool Equals(const RpcMessagePtr& obj) const{
       if(!obj->IsBlockMessage()){
         return false;
       }
@@ -558,11 +571,11 @@ namespace Token{
       return GetValue()->Equals(msg->GetValue());
     }
 
-    static MessagePtr NewInstance(const BlockPtr& blk){
+    static RpcMessagePtr NewInstance(const BlockPtr& blk){
       return std::make_shared<BlockMessage>(blk);
     }
 
-    static MessagePtr NewInstance(const BufferPtr& buff){
+    static RpcMessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<BlockMessage>(buff);
     }
   };
@@ -665,20 +678,20 @@ namespace Token{
     }
   };
 
-  class InventoryMessage : public Message{
+  class InventoryMessage : public RpcMessage{
    public:
     static const size_t kMaxAmountOfItemsPerMessage = 50;
    protected:
     std::vector<InventoryItem> items_;
    public:
     InventoryMessage(const std::vector<InventoryItem>& items):
-      Message(),
+      RpcMessage(),
       items_(items){
       if(items_.empty())
         LOG(WARNING) << "inventory created w/ zero size";
     }
     InventoryMessage(const BufferPtr& buff):
-      Message(),
+      RpcMessage(),
       items_(){
       int64_t num_items = buff->GetLong();
       for(int64_t idx = 0; idx < num_items; idx++)
@@ -695,9 +708,9 @@ namespace Token{
       return items.size() == items_.size();
     }
 
-    DEFINE_MESSAGE(Inventory);
+    DEFINE_RPC_MESSAGE(Inventory);
 
-    bool Equals(const MessagePtr& obj) const{
+    bool Equals(const RpcMessagePtr& obj) const{
       if(!obj->IsInventoryMessage()){
         return false;
       }
@@ -705,39 +718,40 @@ namespace Token{
       return items_ == msg->items_;
     }
 
-    static MessagePtr NewInstance(const Hash& hash, const InventoryItem::Type& type){
+    static RpcMessagePtr NewInstance(const Hash& hash, const InventoryItem::Type& type){
       std::vector<InventoryItem> items = {
         InventoryItem(type, hash),
       };
       return NewInstance(items);
     }
 
-    static MessagePtr NewInstance(const BufferPtr& buff);
-    static MessagePtr NewInstance(std::vector<InventoryItem>& items){
+    static RpcMessagePtr NewInstance(const BufferPtr& buff);
+
+    static RpcMessagePtr NewInstance(std::vector<InventoryItem>& items){
       return std::make_shared<InventoryMessage>(items);
     }
 
-    static MessagePtr NewInstance(const Transaction& tx){
+    static RpcMessagePtr NewInstance(const Transaction& tx){
       return NewInstance(tx.GetHash(), InventoryItem::kTransaction);
     }
 
-    static MessagePtr NewInstance(const BlockPtr& blk){
+    static RpcMessagePtr NewInstance(const BlockPtr& blk){
       return NewInstance(blk->GetHash(), InventoryItem::kBlock);
     }
 
-    static MessagePtr NewInstance(const BlockHeader& blk){
+    static RpcMessagePtr NewInstance(const BlockHeader& blk){
       return NewInstance(blk.GetHash(), InventoryItem::kBlock);
     }
   };
 
-  class GetDataMessage : public Message{
+  class GetDataMessage : public RpcMessage{
    public:
     static const size_t kMaxAmountOfItemsPerMessage = 50;
    protected:
     std::vector<InventoryItem> items_;
    public:
     GetDataMessage(const std::vector<InventoryItem>& items):
-      Message(),
+      RpcMessage(),
       items_(items){
       if(items_.empty())
         LOG(WARNING) << "inventory created w/ zero size";
@@ -753,9 +767,9 @@ namespace Token{
       return items.size() == items_.size();
     }
 
-    DEFINE_MESSAGE(GetData);
+    DEFINE_RPC_MESSAGE(GetData);
 
-    bool Equals(const MessagePtr& obj) const{
+    bool Equals(const RpcMessagePtr& obj) const{
       if(!obj->IsGetDataMessage()){
         return false;
       }
@@ -763,19 +777,19 @@ namespace Token{
       return items_ == msg->items_;
     }
 
-    static MessagePtr NewInstance(const BufferPtr& buff);
-    static MessagePtr NewInstance(std::vector<InventoryItem>& items){
+    static RpcMessagePtr NewInstance(const BufferPtr& buff);
+    static RpcMessagePtr NewInstance(std::vector<InventoryItem>& items){
       return std::make_shared<GetDataMessage>(items);
     }
 
-    static MessagePtr NewInstance(const Transaction& tx){
+    static RpcMessagePtr NewInstance(const Transaction& tx){
       std::vector<InventoryItem> items = {
         InventoryItem(tx)
       };
       return NewInstance(items);
     }
 
-    static MessagePtr NewInstance(const BlockPtr& blk){
+    static RpcMessagePtr NewInstance(const BlockPtr& blk){
       std::vector<InventoryItem> items = {
         InventoryItem(blk)
       };
@@ -783,7 +797,7 @@ namespace Token{
     }
   };
 
-  class GetBlocksMessage : public Message{
+  class GetBlocksMessage : public RpcMessage{
    public:
     static const intptr_t kMaxNumberOfBlocks;
    private:
@@ -791,7 +805,7 @@ namespace Token{
     Hash stop_;
    public:
     GetBlocksMessage(const Hash& start_hash, const Hash& stop_hash):
-      Message(),
+      RpcMessage(),
       start_(start_hash),
       stop_(stop_hash){}
     ~GetBlocksMessage(){}
@@ -810,9 +824,9 @@ namespace Token{
       return ss.str();
     }
 
-    DEFINE_MESSAGE(GetBlocks);
+    DEFINE_RPC_MESSAGE(GetBlocks);
 
-    bool Equals(const MessagePtr& obj) const{
+    bool Equals(const RpcMessagePtr& obj) const{
       if(!obj->IsGetBlocksMessage()){
         return false;
       }
@@ -821,20 +835,20 @@ namespace Token{
              && stop_ == msg->stop_;
     }
 
-    static MessagePtr NewInstance(const BufferPtr& buff);
-    static MessagePtr NewInstance(const Hash& start_hash = BlockChain::GetHead()->GetHash(),
+    static RpcMessagePtr NewInstance(const BufferPtr& buff);
+    static RpcMessagePtr NewInstance(const Hash& start_hash = BlockChain::GetHead()->GetHash(),
       const Hash& stop_hash = Hash()){
       return std::make_shared<GetBlocksMessage>(start_hash, stop_hash);
     }
   };
 
-  class NotFoundMessage : public Message{
+  class NotFoundMessage : public RpcMessage{
    private:
     InventoryItem item_;
     std::string message_;
    public:
     NotFoundMessage(const std::string& message):
-      Message(),
+      RpcMessage(),
       message_(message){}
     ~NotFoundMessage() = default;
 
@@ -842,9 +856,9 @@ namespace Token{
       return message_;
     }
 
-    DEFINE_MESSAGE(NotFound);
+    DEFINE_RPC_MESSAGE(NotFound);
 
-    bool Equals(const MessagePtr& obj) const{
+    bool Equals(const RpcMessagePtr& obj) const{
       if(!obj->IsNotFoundMessage()){
         return false;
       }
@@ -852,45 +866,45 @@ namespace Token{
       return item_ == msg->item_;
     }
 
-    static MessagePtr NewInstance(const BufferPtr& buff);
-    static MessagePtr NewInstance(const std::string& message = "Not Found"){
+    static RpcMessagePtr NewInstance(const BufferPtr& buff);
+    static RpcMessagePtr NewInstance(const std::string& message = "Not Found"){
       return std::make_shared<NotFoundMessage>(message);
     }
   };
 
-  class GetPeersMessage : public Message{
+  class GetPeersMessage : public RpcMessage{
    public:
     GetPeersMessage() = default;
     GetPeersMessage(const BufferPtr& buff):
-      Message(){}
+      RpcMessage(){}
     ~GetPeersMessage() = default;
 
-    DEFINE_MESSAGE(GetPeers);
+    DEFINE_RPC_MESSAGE(GetPeers);
 
-    bool Equals(const MessagePtr& obj) const{
+    bool Equals(const RpcMessagePtr& obj) const{
       if(!obj->IsGetPeersMessage()){
         return false;
       }
       return true;
     }
 
-    static MessagePtr NewInstance(const BufferPtr& buff){
+    static RpcMessagePtr NewInstance(const BufferPtr& buff){
       return std::make_shared<GetPeersMessage>(buff);
     }
 
-    static MessagePtr NewInstance(){
+    static RpcMessagePtr NewInstance(){
       return std::make_shared<GetPeersMessage>();
     }
   };
 
   typedef std::set<NodeAddress> PeerList;
 
-  class PeerListMessage : public Message{
+  class PeerListMessage : public RpcMessage{
    private:
     PeerList peers_;
    public:
     PeerListMessage(const PeerList& peers):
-      Message(),
+      RpcMessage(),
       peers_(peers){
       if(peers_.empty())
         LOG(WARNING) << "sending empty peer list";
@@ -917,9 +931,9 @@ namespace Token{
       return peers_.end();
     }
 
-    DEFINE_MESSAGE(PeerList);
+    DEFINE_RPC_MESSAGE(PeerList);
 
-    bool Equals(const MessagePtr& obj) const{
+    bool Equals(const RpcMessagePtr& obj) const{
       if(!obj->IsPeerListMessage()){
         return false;
       }
@@ -927,82 +941,14 @@ namespace Token{
       return peers_ == msg->peers_;
     }
 
-    static MessagePtr NewInstance(const BufferPtr& buff);
-    static MessagePtr NewInstance(const PeerList& peers){
+    static RpcMessagePtr NewInstance(const BufferPtr& buff);
+    static RpcMessagePtr NewInstance(const PeerList& peers){
       return std::make_shared<PeerListMessage>(peers);
     }
   };
 
   typedef std::vector<MessagePtr> MessageList;
-
-  class MessageBufferWriter{
-   private:
-    MessageList& messages_;
-    MessageList::iterator next_;
-    MessageList::iterator end_;
-   public:
-    MessageBufferWriter(MessageList& messages):
-      messages_(messages),
-      next_(messages.begin()),
-      end_(messages.end()){}
-    ~MessageBufferWriter() = default;
-
-    MessageList& messages(){
-      return messages_;
-    }
-
-    MessagePtr& Next(){
-      return (*next_);
-    }
-
-    bool HasNext() const{
-      return next_ != end_;
-    }
-
-    bool WriteNext(uv_buf_t* buff){
-      MessagePtr& next = (*next_);
-      int64_t total_size = next->GetBufferSize();
-
-      buff->base = (char*)malloc(sizeof(uint8_t)*total_size);
-      buff->len = total_size;
-
-      BufferPtr wrap = Buffer::From(buff);
-      if(!next->Write(wrap))
-        return false;
-      next_++;
-      return true;
-    }
-  };
-
-  class MessageBufferReader{
-   private:
-    BufferPtr buff_;
-   public:
-    MessageBufferReader(const uv_buf_t* buff, int64_t nread):
-      buff_(Buffer::From(buff->base, nread)){}
-    ~MessageBufferReader() = default;
-
-    bool HasNext() const{
-      return buff_->GetReadBytes() + Message::kHeaderSize < buff_->GetBufferSize();
-    }
-
-    MessagePtr Next(){
-      Message::MessageType mtype = static_cast<Message::MessageType>(buff_->GetInt());
-      int64_t msize = buff_->GetLong();
-      switch(mtype){
-#define DEFINE_DECODE(Name) \
-          case Message::MessageType::k##Name##MessageType:{ \
-              return Name##Message::NewInstance(buff_);     \
-          }
-        FOR_EACH_MESSAGE_TYPE(DEFINE_DECODE)
-#undef DEFINE_DECODE
-        case Message::MessageType::kUnknownMessageType:
-        default:
-          LOG(ERROR) << "unknown message type " << mtype << " of size " << msize;
-          return nullptr;
-      }
-    }
-  };
+  typedef std::vector<RpcMessagePtr> RpcMessageList;
 };
 
 #endif //TOKEN_MESSAGE_H

@@ -31,7 +31,7 @@ DEFINE_int64(miner_interval, 1000 * 60 * 1, "The amount of time between mining b
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
   // --service-port 8082
-  DEFINE_int32(service_port, 0, "The port for the ledger rest service.");
+  DEFINE_int32(service_port, 0, "The port for the ledger controller service.");
 #endif//TOKEN_ENABLE_REST_SERVICE
 
 int

@@ -8,8 +8,7 @@
 #include "response.h"
 
 namespace Token{
-  class HttpSession{
-    friend class HttpService;
+ /* class HttpSession{
    private:
     UUID session_id_;
     uv_tcp_t handle_;
@@ -65,7 +64,7 @@ namespace Token{
 
     void Send(const HttpResponsePtr& resp);
     void Close();
-  };
+  };*/
 }
 
 #endif //TOKEN_HTTP_SESSION_H
