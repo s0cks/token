@@ -1,4 +1,4 @@
-#include "server/server.h"
+#include "server.h"
 #include "consensus/proposal.h"
 #include "peer/peer_session_manager.h"
 

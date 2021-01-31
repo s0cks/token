@@ -1,4 +1,4 @@
-#include "server/rpc/rpc_server.h"
+#include "rpc/server_rpc.h"
 
 namespace Token{
   static LedgerServer instance;

@@ -192,7 +192,7 @@ DECLARE_int64(miner_interval);
 #ifdef TOKEN_ENABLE_SERVER
   // --remote "localhost:8080"
   DECLARE_string(remote);
-  // --server-port 8080
+  // --rpc-port 8080
   DECLARE_int32(server_port);
   // --num-peer-threads
   DECLARE_int32(num_peers);

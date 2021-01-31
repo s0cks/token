@@ -1,7 +1,6 @@
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
 
 #include "http/service_health.h"
-
 #include "http/controller_health.h"
 
 namespace Token{

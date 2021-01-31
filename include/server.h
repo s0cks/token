@@ -7,7 +7,6 @@
 #include <sstream>
 #include "vthread.h"
 #include "configuration.h"
-#include "server/session.h"
 #include "atomic/relaxed_atomic.h"
 
 #define DEFAULT_SERVER_BACKLOG 100
@@ -24,9 +23,8 @@ namespace Token{
   template<class M, class S>
   class Server{
    private:
-    using SessionType = S;
-    using BaseType = Server<M, S>;
-
+    typedef Server<M, S> BaseType;
+    typedef S SessionType;
     typedef std::shared_ptr<M> ServerMessagePtr;
    public:
     enum State{
@@ -62,7 +60,7 @@ namespace Token{
       handle_.data = this;
       int err;
       if((err = uv_tcp_init(GetLoop(), GetHandle())) != 0){
-        LOG(WARNING) << "server initialize error: " << uv_strerror(err);
+        LOG(WARNING) << "rpc initialize error: " << uv_strerror(err);
         return;
       }
     }
@@ -73,7 +71,7 @@ namespace Token{
 
     static void
     HandleServerThread(uword parameter){
-      BaseType* server = (BaseType*)parameter;
+      Server<M, S>* server = (Server<M, S>*)parameter;
       server->SetState(Server::kStartingState);
 
       const char* name = server->GetName();
@@ -81,23 +79,29 @@ namespace Token{
 
       int err;
       if((err = Bind(server->GetHandle(), port)) != 0){
-        LOG(WARNING) << name << " server bind failure: " << uv_strerror(err);
+        LOG(WARNING) << name << " rpc bind failure: " << uv_strerror(err);
         server->SetState(Server::kStoppingState);
         goto exit;
       }
 
       if((err = Listen(server->GetStream(), &OnNewConnection)) != 0){
-        LOG(WARNING) << name << " server listen failure: " << uv_strerror(err);
+        LOG(WARNING) << name << " rpc listen failure: " << uv_strerror(err);
         server->SetState(Server::kStoppingState);
         goto exit;
       }
 
-      LOG(INFO) << name << " server listening @" << port;
+      LOG(INFO) << name << " rpc listening @" << port;
       server->SetState(State::kRunningState);
       uv_run(server->GetLoop(), UV_RUN_DEFAULT);
     exit:
       server->SetState(State::kStoppedState);
       pthread_exit(0);
+    }
+
+    static void
+    AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf){
+      buf->base = (char*)malloc(suggested_size);
+      buf->len = suggested_size;
     }
 
     static void
@@ -108,17 +112,17 @@ namespace Token{
         return;
       }
 
-      SessionType* session = server->CreateSession();
+      S* session = server->CreateSession();
       session->SetState(SessionType::kConnectingState);
 
       int err;
       if((err = Accept(stream, session)) != 0){
-        LOG(WARNING) << "server accept failure: " << uv_strerror(err);
+        LOG(WARNING) << "rpc accept failure: " << uv_strerror(err);
         return; //TODO: session->Disconnect();
       }
 
-      if((err = ReadStart(session, &SessionType::AllocBuffer, &OnMessageReceived)) != 0){
-        LOG(WARNING) << "server read failure: " << uv_strerror(err);
+      if((err = ReadStart(session, &AllocBuffer, &OnMessageReceived)) != 0){
+        LOG(WARNING) << "rpc read failure: " << uv_strerror(err);
         return; //TODO: session->Disconnect();
       }
     }

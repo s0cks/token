@@ -27,7 +27,7 @@ if(ENABLE_COMPRESSION)
   add_compile_definitions(TOKEN_ENABLE_COMPRESSION)
 endif(ENABLE_COMPRESSION)
 
-# Compile w/ the server if enabled
+# Compile w/ the rpc if enabled
 if(ENABLE_SERVER)
   message(STATUS "Compiling w/ the server enabled.")
   add_compile_definitions(TOKEN_ENABLE_SERVER)

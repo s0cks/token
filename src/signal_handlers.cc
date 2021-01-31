@@ -1,5 +1,5 @@
 #ifdef TOKEN_ENABLE_SERVER
-  #include "server/server.h"
+  #include "server.h"
   #include "peer/peer_session_manager.h"
 #endif//TOKEN_ENABLE_SERVER
 
@@ -37,9 +37,9 @@ namespace Token{
     }
 
     if(IsValidPort(FLAGS_server_port) && Server::IsRunning()){
-      LOG(INFO) << "terminating the server....";
+      LOG(INFO) << "terminating the rpc....";
       if(!Server::Shutdown()){
-        PrintFatalCrashReport("Cannot shutdown the server thread.");
+        PrintFatalCrashReport("Cannot shutdown the rpc thread.");
         goto terminate;
       }
     }

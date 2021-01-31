@@ -1,11 +1,36 @@
 #ifndef TOKEN_RPC_SERVER_H
 #define TOKEN_RPC_SERVER_H
 
-#include "server/server.h"
-#include "server/session.h"
+#include "server.h"
+#include "rpc/message.h"
+#include "rpc/session.h"
 
 namespace Token{
 #define ENVIRONMENT_TOKEN_CALLBACK_ADDRESS "TOKEN_CALLBACK_ADDRESS"
+
+  class ServerSession : public RpcSession{
+    friend class LedgerServer;
+   private:
+    UUID id_;
+
+    void SetID(const UUID& id){
+      id_ = id;
+    }
+
+#define DECLARE_HANDLER(Name) \
+    void On##Name##Message(const std::shared_ptr<Name##Message>& msg);
+    FOR_EACH_MESSAGE_TYPE(DECLARE_HANDLER)
+#undef DECLARE_HANDLER
+   public:
+    ServerSession(uv_loop_t* loop):
+      RpcSession(loop),
+      id_(){}
+    ~ServerSession() = default;
+
+    UUID GetID() const{
+      return id_;
+    }
+  };
 
   class LedgerServer : public Server<RpcMessage, ServerSession>{
    protected:

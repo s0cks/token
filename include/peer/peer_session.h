@@ -3,8 +3,8 @@
 
 #ifdef TOKEN_ENABLE_SERVER
 
-#include <cstdint>
-#include "server/session.h"
+#include "rpc/message.h"
+#include "rpc/session.h"
 
 namespace Token{
   class PeerSession;
@@ -120,10 +120,14 @@ namespace Token{
     static void OnRejected(uv_async_t* handle);
     static void OnDiscovery(uv_async_t* handle);
 
-    void WaitForState(const State& state){}
+    static void
+    AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf){
+      buf->base = (char*)malloc(suggested_size);
+      buf->len = suggested_size;
+    }
 
 #define DECLARE_MESSAGE_HANDLER(Name) \
-    void On##Name##Message(const Name##MessagePtr& msg);
+    void On##Name##Message(const std::shared_ptr<Name##Message>& msg);
     FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
    public:
@@ -139,7 +143,6 @@ namespace Token{
       commit_(),
       accepted_(),
       rejected_(){
-      handle_.data = this;
       disconnect_.data = this;
       discovery_.data = this;
       prepare_.data = this;

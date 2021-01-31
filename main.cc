@@ -24,12 +24,12 @@ DEFINE_int64(miner_interval, 1000 * 60 * 1, "The amount of time between mining b
 #endif//TOKEN_DEBUG
 
 #ifdef TOKEN_ENABLE_SERVER
-  #include "server/rpc/rpc_server.h"
+  #include "rpc/server_rpc.h"
   #include "peer/peer_session_manager.h"
 
   // --remote localhost:8080
   DEFINE_string(remote, "", "The hostname for the remote ledger to synchronize with.");
-  // --server-port 8080
+  // --rpc-port 8080
   DEFINE_int32(server_port, 0, "The port for the ledger RPC service.");
   // --num-peers 12
   DEFINE_int32(num_peers, 4, "The max number of peers to connect to.");
@@ -179,10 +179,10 @@ main(int argc, char **argv){
     return EXIT_FAILURE;
   }
 
-  // Start the server if enabled
+  // Start the rpc if enabled
   #ifdef TOKEN_ENABLE_SERVER
     if(IsValidPort(FLAGS_server_port) && !LedgerServer::Start()){
-      CrashReport::PrintNewCrashReport("Failed to start the server.");
+      CrashReport::PrintNewCrashReport("Failed to start the rpc.");
       return EXIT_FAILURE;
     }
 
@@ -214,7 +214,7 @@ main(int argc, char **argv){
 
 #ifdef TOKEN_ENABLE_SERVER
   if(IsValidPort(FLAGS_server_port) && LedgerServer::IsServerRunning() && !LedgerServer::WaitForShutdown()){
-    CrashReport::PrintNewCrashReport("Cannot join the server thread.");
+    CrashReport::PrintNewCrashReport("Cannot join the rpc thread.");
     return EXIT_FAILURE;
   }
 #endif//TOKEN_ENABLE_SERVER

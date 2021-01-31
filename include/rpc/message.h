@@ -1,26 +1,16 @@
-#ifndef TOKEN_MESSAGE_H
-#define TOKEN_MESSAGE_H
+#ifndef TOKEN_RCP_MESSAGE_H
+#define TOKEN_RCP_MESSAGE_H
 
 #include <set>
 #include "object.h"
+#include "message.h"
 #include "address.h"
 #include "version.h"
-#include "consensus/proposal.h"
 #include "blockchain.h"
 #include "configuration.h"
+#include "consensus/proposal.h"
 
 namespace Token{
-  class Message : public SerializableObject{
-   protected:
-    Message() = default;
-   public:
-    virtual ~Message() = default;
-    virtual const char* GetName() const = 0;
-  };
-
-  class Message;
-  typedef std::shared_ptr<Message> MessagePtr;
-
   class RpcMessage;
   typedef std::shared_ptr<RpcMessage> RpcMessagePtr;
 
@@ -29,9 +19,6 @@ namespace Token{
   typedef std::shared_ptr<Name##Message> Name##MessagePtr;
   FOR_EACH_MESSAGE_TYPE(DEFINE_MESSAGE)
 #undef DEFINE_MESSAGE
-
-  template<class M>
-  class Session;
 
   class RpcSession;
   class RpcMessage : public Message{
@@ -124,26 +111,26 @@ namespace Token{
     BlockHeader head_;
    public:
     VersionMessage(ClientType type,
-      const Version& version,
-      const UUID& node_id,
-      Timestamp timestamp,
-      const Hash& nonce,
-      const BlockHeader& head):
-      RpcMessage(),
-      timestamp_(timestamp),
-      client_type_(type),
-      version_(version),
-      nonce_(nonce),
-      node_id_(node_id),
-      head_(head){}
+                   const Version& version,
+                   const UUID& node_id,
+                   Timestamp timestamp,
+                   const Hash& nonce,
+                   const BlockHeader& head):
+        RpcMessage(),
+        timestamp_(timestamp),
+        client_type_(type),
+        version_(version),
+        nonce_(nonce),
+        node_id_(node_id),
+        head_(head){}
     VersionMessage(const BufferPtr& buff):
-      RpcMessage(),
-      timestamp_(FromUnixTimestamp(buff->GetLong())),
-      client_type_(static_cast<ClientType>(buff->GetInt())),
-      version_(buff),
-      nonce_(buff->GetHash()),
-      node_id_(buff->GetUUID()),
-      head_(buff){}
+        RpcMessage(),
+        timestamp_(FromUnixTimestamp(buff->GetLong())),
+        client_type_(static_cast<ClientType>(buff->GetInt())),
+        version_(buff),
+        nonce_(buff->GetHash()),
+        node_id_(buff->GetUUID()),
+        head_(buff){}
     ~VersionMessage() = default;
 
     Timestamp GetTimestamp() const{
@@ -185,11 +172,11 @@ namespace Token{
       }
       VersionMessagePtr msg = std::static_pointer_cast<VersionMessage>(obj);
       return timestamp_ == msg->timestamp_
-             && client_type_ == msg->client_type_
-             && version_ == msg->version_
-             && nonce_ == msg->nonce_
-             && node_id_ == msg->node_id_
-             && head_ == msg->head_;
+          && client_type_ == msg->client_type_
+          && version_ == msg->version_
+          && nonce_ == msg->nonce_
+          && node_id_ == msg->node_id_
+          && head_ == msg->head_;
     }
 
     DEFINE_RPC_MESSAGE(Version);
@@ -199,11 +186,11 @@ namespace Token{
     }
 
     static RpcMessagePtr NewInstance(ClientType type,
-      const UUID& node_id,
-      const BlockHeader& head,
-      const Version& version = Version(),
-      const Hash& nonce = Hash::GenerateNonce(),
-      Timestamp timestamp = Clock::now()){
+                                     const UUID& node_id,
+                                     const BlockHeader& head,
+                                     const Version& version = Version(),
+                                     const Hash& nonce = Hash::GenerateNonce(),
+                                     Timestamp timestamp = Clock::now()){
       return std::make_shared<VersionMessage>(type, version, node_id, timestamp, nonce, head);
     }
 
@@ -224,29 +211,29 @@ namespace Token{
     BlockHeader head_;
    public:
     VerackMessage(ClientType type,
-      const UUID& node_id,
-      const NodeAddress& callback,
-      const Version& version,
-      const BlockHeader& head,
-      const Hash& nonce,
-      Timestamp timestamp = Clock::now()):
-      RpcMessage(),
-      timestamp_(timestamp),
-      client_type_(type),
-      version_(version),
-      nonce_(nonce),
-      node_id_(node_id),
-      callback_(callback),
-      head_(head){}
+                  const UUID& node_id,
+                  const NodeAddress& callback,
+                  const Version& version,
+                  const BlockHeader& head,
+                  const Hash& nonce,
+                  Timestamp timestamp = Clock::now()):
+        RpcMessage(),
+        timestamp_(timestamp),
+        client_type_(type),
+        version_(version),
+        nonce_(nonce),
+        node_id_(node_id),
+        callback_(callback),
+        head_(head){}
     VerackMessage(const BufferPtr& buff):
-      RpcMessage(),
-      timestamp_(FromUnixTimestamp(buff->GetLong())),
-      client_type_(static_cast<ClientType>(buff->GetInt())),
-      version_(buff),
-      nonce_(buff->GetHash()),
-      node_id_(buff->GetUUID()),
-      callback_(buff),
-      head_(buff){}
+        RpcMessage(),
+        timestamp_(FromUnixTimestamp(buff->GetLong())),
+        client_type_(static_cast<ClientType>(buff->GetInt())),
+        version_(buff),
+        nonce_(buff->GetHash()),
+        node_id_(buff->GetUUID()),
+        callback_(buff),
+        head_(buff){}
     ~VerackMessage() = default;
 
     Timestamp GetTimestamp() const{
@@ -283,23 +270,23 @@ namespace Token{
       }
       VerackMessagePtr msg = std::static_pointer_cast<VerackMessage>(obj);
       return timestamp_ == msg->timestamp_
-             && client_type_ == msg->client_type_
-             && version_ == msg->version_
-             && nonce_ == msg->nonce_
-             && node_id_ == msg->node_id_
-             && callback_ == msg->callback_
-             && head_ == msg->head_;
+          && client_type_ == msg->client_type_
+          && version_ == msg->version_
+          && nonce_ == msg->nonce_
+          && node_id_ == msg->node_id_
+          && callback_ == msg->callback_
+          && head_ == msg->head_;
     }
 
     DEFINE_RPC_MESSAGE(Verack);
 
     static RpcMessagePtr NewInstance(ClientType type,
-      const UUID& node_id,
-      const NodeAddress& callback,
-      const Version& version,
-      const BlockHeader& head,
-      const Hash& nonce,
-      Timestamp timestamp = Clock::now()){
+                                     const UUID& node_id,
+                                     const NodeAddress& callback,
+                                     const Version& version,
+                                     const BlockHeader& head,
+                                     const Hash& nonce,
+                                     Timestamp timestamp = Clock::now()){
       return std::make_shared<VerackMessage>(type, node_id, callback, version, head, nonce, timestamp);
     }
 
@@ -315,13 +302,13 @@ namespace Token{
     RawProposal raw_;
 
     PaxosMessage(MessageType type, ProposalPtr proposal):
-      RpcMessage(),
-      type_(type),
-      raw_(proposal->GetRaw()){}
+        RpcMessage(),
+        type_(type),
+        raw_(proposal->GetRaw()){}
     PaxosMessage(MessageType type, const BufferPtr& buff):
-      RpcMessage(),
-      type_(type),
-      raw_(buff){}
+        RpcMessage(),
+        type_(type),
+        raw_(buff){}
 
     int64_t GetMessageSize() const{
       return RawProposal::GetSize();
@@ -352,9 +339,9 @@ namespace Token{
   class PrepareMessage : public PaxosMessage{
    public:
     PrepareMessage(const ProposalPtr& proposal):
-      PaxosMessage(RpcMessage::kPrepareMessageType, proposal){}
+        PaxosMessage(RpcMessage::kPrepareMessageType, proposal){}
     PrepareMessage(const BufferPtr& buff):
-      PaxosMessage(RpcMessage::kPrepareMessageType, buff){}
+        PaxosMessage(RpcMessage::kPrepareMessageType, buff){}
     ~PrepareMessage(){}
 
     DEFINE_RPC_MESSAGE(Prepare);
@@ -377,9 +364,9 @@ namespace Token{
   class PromiseMessage : public PaxosMessage{
    public:
     PromiseMessage(ProposalPtr proposal):
-      PaxosMessage(RpcMessage::kPromiseMessageType, proposal){}
+        PaxosMessage(RpcMessage::kPromiseMessageType, proposal){}
     PromiseMessage(const BufferPtr& buff):
-      PaxosMessage(RpcMessage::kPromiseMessageType, buff){}
+        PaxosMessage(RpcMessage::kPromiseMessageType, buff){}
     ~PromiseMessage(){}
 
     DEFINE_RPC_MESSAGE(Promise);
@@ -403,9 +390,9 @@ namespace Token{
   class CommitMessage : public PaxosMessage{
    public:
     CommitMessage(ProposalPtr proposal):
-      PaxosMessage(RpcMessage::kCommitMessageType, proposal){}
+        PaxosMessage(RpcMessage::kCommitMessageType, proposal){}
     CommitMessage(const BufferPtr& buff):
-      PaxosMessage(RpcMessage::kCommitMessageType, buff){}
+        PaxosMessage(RpcMessage::kCommitMessageType, buff){}
     ~CommitMessage(){}
 
     DEFINE_RPC_MESSAGE(Commit);
@@ -428,9 +415,9 @@ namespace Token{
   class AcceptedMessage : public PaxosMessage{
    public:
     AcceptedMessage(ProposalPtr proposal):
-      PaxosMessage(RpcMessage::kAcceptedMessageType, proposal){}
+        PaxosMessage(RpcMessage::kAcceptedMessageType, proposal){}
     AcceptedMessage(const BufferPtr& buff):
-      PaxosMessage(RpcMessage::kAcceptedMessageType, buff){}
+        PaxosMessage(RpcMessage::kAcceptedMessageType, buff){}
     ~AcceptedMessage(){}
 
     DEFINE_RPC_MESSAGE(Accepted);
@@ -454,9 +441,9 @@ namespace Token{
   class RejectedMessage : public PaxosMessage{
    public:
     RejectedMessage(ProposalPtr proposal):
-      PaxosMessage(RpcMessage::kRejectedMessageType, proposal){}
+        PaxosMessage(RpcMessage::kRejectedMessageType, proposal){}
     RejectedMessage(const BufferPtr& buff):
-      PaxosMessage(RpcMessage::kRejectedMessageType, buff){}
+        PaxosMessage(RpcMessage::kRejectedMessageType, buff){}
     ~RejectedMessage(){}
 
     DEFINE_RPC_MESSAGE(Rejected);
@@ -485,11 +472,11 @@ namespace Token{
     ObjectPtr value_;
 
     ObjectMessage(const ObjectPtr& value):
-      RpcMessage(),
-      value_(value){}
+        RpcMessage(),
+        value_(value){}
     ObjectMessage(const BufferPtr& buff):
-      RpcMessage(),
-      value_(T::FromBytes(buff)){}
+        RpcMessage(),
+        value_(T::FromBytes(buff)){}
    public:
     virtual ~ObjectMessage() = default;
 
@@ -509,9 +496,9 @@ namespace Token{
     }
    public:
     TransactionMessage(const TransactionPtr& value):
-      ObjectMessage(value){}
+        ObjectMessage(value){}
     TransactionMessage(const BufferPtr& buff):
-      ObjectMessage(buff){}
+        ObjectMessage(buff){}
     ~TransactionMessage() = default;
 
     std::string ToString() const{
@@ -550,9 +537,9 @@ namespace Token{
     }
    public:
     BlockMessage(const BlockPtr& blk):
-      ObjectMessage(blk){}
+        ObjectMessage(blk){}
     BlockMessage(const BufferPtr& buff):
-      ObjectMessage(buff){}
+        ObjectMessage(buff){}
     ~BlockMessage() = default;
 
     std::string ToString() const{
@@ -593,25 +580,25 @@ namespace Token{
     Hash hash_;
    public:
     InventoryItem():
-      type_(kUnknown),
-      hash_(){}
+        type_(kUnknown),
+        hash_(){}
     InventoryItem(Type type, const Hash& hash):
-      type_(type),
-      hash_(hash){}
+        type_(type),
+        hash_(hash){}
     InventoryItem(const Transaction& tx):
-      InventoryItem(kTransaction, tx.GetHash()){}
+        InventoryItem(kTransaction, tx.GetHash()){}
     InventoryItem(const BlockPtr& blk):
-      InventoryItem(kBlock, blk->GetHash()){}
+        InventoryItem(kBlock, blk->GetHash()){}
     InventoryItem(const UnclaimedTransactionPtr& utxo):
-      InventoryItem(kUnclaimedTransaction, utxo->GetHash()){}
+        InventoryItem(kUnclaimedTransaction, utxo->GetHash()){}
     InventoryItem(const BlockHeader& blk):
-      InventoryItem(kBlock, blk.GetHash()){}
+        InventoryItem(kBlock, blk.GetHash()){}
     InventoryItem(const InventoryItem& item):
-      type_(item.type_),
-      hash_(item.hash_){}
+        type_(item.type_),
+        hash_(item.hash_){}
     InventoryItem(const BufferPtr& buff):
-      type_(static_cast<Type>(buff->GetShort())),
-      hash_(buff->GetHash()){}
+        type_(static_cast<Type>(buff->GetShort())),
+        hash_(buff->GetHash()){}
     ~InventoryItem(){}
 
     Type GetType() const{
@@ -649,7 +636,7 @@ namespace Token{
 
     friend bool operator==(const InventoryItem& a, const InventoryItem& b){
       return a.type_ == b.type_ &&
-             a.hash_ == b.hash_;
+          a.hash_ == b.hash_;
     }
 
     friend bool operator!=(const InventoryItem& a, const InventoryItem& b){
@@ -685,14 +672,14 @@ namespace Token{
     std::vector<InventoryItem> items_;
    public:
     InventoryMessage(const std::vector<InventoryItem>& items):
-      RpcMessage(),
-      items_(items){
+        RpcMessage(),
+        items_(items){
       if(items_.empty())
         LOG(WARNING) << "inventory created w/ zero size";
     }
     InventoryMessage(const BufferPtr& buff):
-      RpcMessage(),
-      items_(){
+        RpcMessage(),
+        items_(){
       int64_t num_items = buff->GetLong();
       for(int64_t idx = 0; idx < num_items; idx++)
         items_.push_back(InventoryItem(buff));
@@ -720,7 +707,7 @@ namespace Token{
 
     static RpcMessagePtr NewInstance(const Hash& hash, const InventoryItem::Type& type){
       std::vector<InventoryItem> items = {
-        InventoryItem(type, hash),
+          InventoryItem(type, hash),
       };
       return NewInstance(items);
     }
@@ -751,8 +738,8 @@ namespace Token{
     std::vector<InventoryItem> items_;
    public:
     GetDataMessage(const std::vector<InventoryItem>& items):
-      RpcMessage(),
-      items_(items){
+        RpcMessage(),
+        items_(items){
       if(items_.empty())
         LOG(WARNING) << "inventory created w/ zero size";
     }
@@ -784,14 +771,14 @@ namespace Token{
 
     static RpcMessagePtr NewInstance(const Transaction& tx){
       std::vector<InventoryItem> items = {
-        InventoryItem(tx)
+          InventoryItem(tx)
       };
       return NewInstance(items);
     }
 
     static RpcMessagePtr NewInstance(const BlockPtr& blk){
       std::vector<InventoryItem> items = {
-        InventoryItem(blk)
+          InventoryItem(blk)
       };
       return NewInstance(items);
     }
@@ -805,9 +792,9 @@ namespace Token{
     Hash stop_;
    public:
     GetBlocksMessage(const Hash& start_hash, const Hash& stop_hash):
-      RpcMessage(),
-      start_(start_hash),
-      stop_(stop_hash){}
+        RpcMessage(),
+        start_(start_hash),
+        stop_(stop_hash){}
     ~GetBlocksMessage(){}
 
     Hash GetHeadHash() const{
@@ -832,12 +819,12 @@ namespace Token{
       }
       GetBlocksMessagePtr msg = std::static_pointer_cast<GetBlocksMessage>(obj);
       return start_ == msg->start_
-             && stop_ == msg->stop_;
+          && stop_ == msg->stop_;
     }
 
     static RpcMessagePtr NewInstance(const BufferPtr& buff);
     static RpcMessagePtr NewInstance(const Hash& start_hash = BlockChain::GetHead()->GetHash(),
-      const Hash& stop_hash = Hash()){
+                                     const Hash& stop_hash = Hash()){
       return std::make_shared<GetBlocksMessage>(start_hash, stop_hash);
     }
   };
@@ -848,8 +835,8 @@ namespace Token{
     std::string message_;
    public:
     NotFoundMessage(const std::string& message):
-      RpcMessage(),
-      message_(message){}
+        RpcMessage(),
+        message_(message){}
     ~NotFoundMessage() = default;
 
     std::string GetMessage() const{
@@ -876,7 +863,7 @@ namespace Token{
    public:
     GetPeersMessage() = default;
     GetPeersMessage(const BufferPtr& buff):
-      RpcMessage(){}
+        RpcMessage(){}
     ~GetPeersMessage() = default;
 
     DEFINE_RPC_MESSAGE(GetPeers);
@@ -904,8 +891,8 @@ namespace Token{
     PeerList peers_;
    public:
     PeerListMessage(const PeerList& peers):
-      RpcMessage(),
-      peers_(peers){
+        RpcMessage(),
+        peers_(peers){
       if(peers_.empty())
         LOG(WARNING) << "sending empty peer list";
     }
@@ -947,8 +934,7 @@ namespace Token{
     }
   };
 
-  typedef std::vector<MessagePtr> MessageList;
   typedef std::vector<RpcMessagePtr> RpcMessageList;
-};
+}
 
-#endif //TOKEN_MESSAGE_H
+#endif//TOKEN_RCP_MESSAGE_H

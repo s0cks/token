@@ -1,13 +1,13 @@
 #ifndef TOKEN_HTTP_SESSION_H
 #define TOKEN_HTTP_SESSION_H
 
-#include "http/router.h"
+#include "session.h"
 #include "http/message.h"
-#include "server/session.h"
 
 namespace Token{
+  class HttpRouter;
   class HttpSession : public Session<HttpMessage>{
-    friend class Server<HttpMessage, HttpSession>;
+    friend class HttpService;
    private:
     HttpRouter* router_;
 
@@ -15,9 +15,7 @@ namespace Token{
    public:
     HttpSession(uv_loop_t* loop, HttpRouter* router):
       Session(loop),
-      router_(router){
-      handle_.data = this;
-    }
+      router_(router){}
     ~HttpSession() = default;
 
     void Send(const HttpMessagePtr& msg){

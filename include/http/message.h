@@ -1,7 +1,9 @@
 #ifndef TOKEN_HTTP_MESSAGE_H
 #define TOKEN_HTTP_MESSAGE_H
 
-#include "server/message.h"
+#include <memory>
+#include "message.h"
+#include "utils/buffer.h"
 
 namespace Token{
   class HttpMessage;

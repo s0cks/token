@@ -1,16 +1,14 @@
 #include <glog/logging.h>
+#include "rpc/message.h"
+#include "rpc/server_rpc.h"
+
 #include "pool.h"
-#include "server/message.h"
-#include "server/server.h"
-#include "server/session.h"
+#include "miner.h"
+
 #include "peer/peer_session_manager.h"
 
 #include "consensus/proposal.h"
 #include "consensus/proposal_manager.h"
-
-#include "miner.h"
-
-#include "server/rpc/rpc_server.h"
 
 namespace Token{
   void ServerSession::OnNotFoundMessage(const NotFoundMessagePtr& msg){
@@ -203,7 +201,7 @@ namespace Token{
     /*
     TODO:
         if(!Server::GetPeers(peers)){
-            LOG(ERROR) << "couldn't get list of peers from the server.";
+            LOG(ERROR) << "couldn't get list of peers from the rpc.";
             return;
         }
      */

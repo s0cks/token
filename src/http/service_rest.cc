@@ -1,6 +1,7 @@
 #ifdef TOKEN_ENABLE_REST_SERVICE
 
 #include "http/service_rest.h"
+#include "http/session.h"
 
 #include "http/controller_pool.h"
 #include "http/controller_chain.h"

@@ -1,7 +1,5 @@
 #ifdef TOKEN_ENABLE_SERVER
 
-#include "server/server.h"
-#include "server/rpc/rpc_server.h"
 #include "job/scheduler.h"
 #include "job/synchronize.h"
 #include "peer/peer_session.h"

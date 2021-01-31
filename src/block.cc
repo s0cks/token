@@ -1,5 +1,5 @@
 #include "block.h"
-#include "server/server.h"
+#include "server.h"
 #include "blockchain.h"
 
 namespace Token{

@@ -1,14 +1,13 @@
 #ifndef TOKEN_HTTP_SERVICE_H
 #define TOKEN_HTTP_SERVICE_H
 
-#include "common.h"
+#include "server.h"
 #include "http/router.h"
 #include "http/message.h"
 #include "http/session.h"
-#include "server/server.h"
 
 namespace Token{
-  class HttpService : protected Server<HttpMessage, HttpSession>{
+  class HttpService : public Server<HttpMessage, HttpSession>{
    protected:
     HttpRouter router_;
 

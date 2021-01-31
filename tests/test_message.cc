@@ -1,5 +1,5 @@
 #include "test_suite.h"
-#include "server/message.h"
+#include "message.h"
 
 namespace Token{
   static inline RpcMessagePtr

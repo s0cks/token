@@ -18,7 +18,7 @@ DEFINE_int64(miner_interval, 1000 * 60 * 1, "The amount of time between mining b
 #ifdef TOKEN_ENABLE_SERVER
   // --remote localhost:8080
   DEFINE_string(remote, "", "The hostname for the remote ledger to synchronize with.");
-  // --server-port 8080
+  // --rpc-port 8080
   DEFINE_int32(server_port, 0, "The port for the ledger RPC service.");
   // --num-peers 12
   DEFINE_int32(num_peers, 4, "The max number of peers to connect to.");

@@ -3,13 +3,14 @@
 
 #include "pool.h"
 #include "job/job.h"
+#include "blockchain.h"
+#include "rpc/session.h"
 #include "job/processor.h"
-#include "server/session.h"
 
 namespace Token{
   class SynchronizeJob : public Job{
    private:
-    Session<RpcMessage>* session_;
+    RpcSession* session_;
     BlockHeader head_;
 
     bool ProcessBlock(const BlockPtr& blk){
@@ -57,11 +58,11 @@ namespace Token{
       return Success("done.");
     }
    public:
-    SynchronizeJob(Job* parent, Session<RpcMessage>* session, const BlockHeader& head):
+    SynchronizeJob(Job* parent, RpcSession* session, const BlockHeader& head):
       Job(parent, "Synchronize"),
       session_(session),
       head_(head){}
-    SynchronizeJob(Session<RpcMessage>* session, const BlockHeader& head):
+    SynchronizeJob(RpcSession* session, const BlockHeader& head):
       Job(nullptr, "Synchronize"),
       session_(session),
       head_(head){}

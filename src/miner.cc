@@ -3,7 +3,7 @@
 
 #include "pool.h"
 #include "miner.h"
-#include "server/rpc/rpc_server.h"
+#include "rpc/server_rpc.h"
 #include "block_builder.h"
 #include "proposal_handler.h"
 #include "snapshot/snapshot.h"

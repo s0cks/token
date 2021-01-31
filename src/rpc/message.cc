@@ -1,7 +1,5 @@
 #include "pool.h"
-#include "server/message.h"
-#include "consensus/proposal.h"
-#include "unclaimed_transaction.h"
+#include "rpc/message.h"
 
 namespace Token{
   RpcMessagePtr RpcMessage::From(RpcSession* session, const BufferPtr& buffer){
@@ -11,7 +9,7 @@ namespace Token{
 #define DEFINE_DECODE(Name) \
         case RpcMessage::k##Name##MessageType: \
             return Name##Message::NewInstance(buffer);
-        FOR_EACH_MESSAGE_TYPE(DEFINE_DECODE)
+      FOR_EACH_MESSAGE_TYPE(DEFINE_DECODE)
 #undef DEFINE_DECODE
       case RpcMessage::MessageType::kUnknownMessageType:
       default:
@@ -218,8 +216,8 @@ namespace Token{
   bool PeerListMessage::Encode(const BufferPtr& buff) const{
     buff->PutLong(GetNumberOfPeers());
     for(auto it = peers_begin();
-      it != peers_end();
-      it++){
+        it != peers_end();
+        it++){
       it->Write(buff);
     }
     return true;
