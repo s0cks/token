@@ -2,20 +2,20 @@
 
 #include "blockchain.h"
 #include "http/service.h"
-#include "http/controller/chain_controller.h"
+#include "http/controller_chain.h"
 
 namespace Token{
-  void BlockChainController::HandleGetBlockChain(HttpSession* session, const HttpRequestPtr& request){
+  void ChainController::HandleGetBlockChain(HttpSession* session, const HttpRequestPtr& request){
     return session->Send(NewNoContentResponse(session, "Cannot get the list of blocks in the blockchain."));
   }
 
-  void BlockChainController::HandleGetBlockChainHead(HttpSession* session, const HttpRequestPtr& request){
+  void ChainController::HandleGetBlockChainHead(HttpSession* session, const HttpRequestPtr& request){
     BlockPtr head = BlockChain::GetHead();
     HttpResponsePtr response = NewOkResponse(session, head);
     return session->Send(response);
   }
 
-  void BlockChainController::HandleGetBlockChainBlock(HttpSession* session, const HttpRequestPtr& request){
+  void ChainController::HandleGetBlockChainBlock(HttpSession* session, const HttpRequestPtr& request){
     Hash hash = request->GetHashParameterValue();
     if(!BlockChain::HasBlock(hash))
       return session->Send(NewNoContentResponse(session, hash));

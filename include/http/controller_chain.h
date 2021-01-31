@@ -1,20 +1,20 @@
-#ifndef TOKEN_REST_CHAIN_CONTROLLER_H
-#define TOKEN_REST_CHAIN_CONTROLLER_H
+#ifndef TOKEN_HTTP_CONTROLLER_CHAIN_H
+#define TOKEN_HTTP_CONTROLLER_CHAIN_H
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
 
 #include "http/controller.h"
 
 namespace Token{
-  class BlockChainController : HttpController{
+  class ChainController : HttpController{
    private:
-    BlockChainController() = delete;
+    ChainController() = delete;
 
     HTTP_CONTROLLER_ENDPOINT(GetBlockChain);
     HTTP_CONTROLLER_ENDPOINT(GetBlockChainHead);
     HTTP_CONTROLLER_ENDPOINT(GetBlockChainBlock);
    public:
-    ~BlockChainController() = delete;
+    ~ChainController() = delete;
 
     HTTP_CONTROLLER_INIT(){
       HTTP_CONTROLLER_GET("/chain", GetBlockChain);
@@ -25,4 +25,4 @@ namespace Token{
 }
 
 #endif//TOKEN_ENABLE_REST_SERVICE
-#endif//TOKEN_REST_CHAIN_CONTROLLER_H
+#endif//TOKEN_HTTP_CONTROLLER_CHAIN_H

@@ -2,10 +2,10 @@
 
 #include "pool.h"
 #include "http/service.h"
-#include "http/controller/pool_controller.h"
+#include "http/controller_pool.h"
 
 namespace Token{
-  void ObjectPoolController::HandleGetStats(HttpSession* session, const HttpRequestPtr& request){
+  void PoolController::HandleGetStats(HttpSession* session, const HttpRequestPtr& request){
     HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kHttpOk);
 
     Json::String& body = response->GetBody();
@@ -18,7 +18,7 @@ namespace Token{
     return session->Send(std::static_pointer_cast<HttpResponse>(response));
   }
 
-  void ObjectPoolController::HandleGetBlock(HttpSession* session, const HttpRequestPtr& request){
+  void PoolController::HandleGetBlock(HttpSession* session, const HttpRequestPtr& request){
     Hash hash = request->GetHashParameterValue();
     if(!ObjectPool::HasBlock(hash))
       return session->Send(NewNoContentResponse(session, hash));
@@ -26,11 +26,11 @@ namespace Token{
     return session->Send(NewOkResponse(session, blk));
   }
 
-  void ObjectPoolController::HandleGetBlocks(HttpSession* session, const HttpRequestPtr& request){
+  void PoolController::HandleGetBlocks(HttpSession* session, const HttpRequestPtr& request){
 
   }
 
-  void ObjectPoolController::HandleGetTransaction(HttpSession* session, const HttpRequestPtr& request){
+  void PoolController::HandleGetTransaction(HttpSession* session, const HttpRequestPtr& request){
     Hash hash = request->GetHashParameterValue();
     if(!ObjectPool::HasTransaction(hash))
       return session->Send(NewNoContentResponse(session, hash));
@@ -38,11 +38,11 @@ namespace Token{
     return session->Send(NewOkResponse(session, tx));
   }
 
-  void ObjectPoolController::HandleGetTransactions(HttpSession* session, const HttpRequestPtr& request){
+  void PoolController::HandleGetTransactions(HttpSession* session, const HttpRequestPtr& request){
     return session->Send(NewNotImplementedResponse(session, "Not Implemented."));
   }
 
-  void ObjectPoolController::HandleGetUnclaimedTransaction(HttpSession* session, const HttpRequestPtr& request){
+  void PoolController::HandleGetUnclaimedTransaction(HttpSession* session, const HttpRequestPtr& request){
     Hash hash = request->GetHashParameterValue();
     if(!ObjectPool::HasUnclaimedTransaction(hash))
       return session->Send(NewNoContentResponse(session, hash));
@@ -50,7 +50,7 @@ namespace Token{
     return session->Send(NewOkResponse(session, utxo));
   }
 
-  void ObjectPoolController::HandleGetUnclaimedTransactions(HttpSession* session, const HttpRequestPtr& request){
+  void PoolController::HandleGetUnclaimedTransactions(HttpSession* session, const HttpRequestPtr& request){
     HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kHttpOk);
 
     Json::String& body = response->GetBody();

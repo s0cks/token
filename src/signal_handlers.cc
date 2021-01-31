@@ -4,11 +4,11 @@
 #endif//TOKEN_ENABLE_SERVER
 
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
-  #include "http/health_service.h"
+  #include "http/service_health.h"
 #endif//TOKEN_ENABLE_HEALTH_SERVICE
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
-  #include "http/rest_service.h"
+  #include "http/service_rest.h"
 #endif//TOKEN_ENABLE_REST_SERVICE
 
 namespace Token{

@@ -1,8 +1,8 @@
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
 
-#include "http/health_service.h"
+#include "http/service_health.h"
 
-#include "http/controller/health_controller.h"
+#include "http/controller_health.h"
 
 namespace Token{
   static HttpHealthService instance;

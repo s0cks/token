@@ -1,14 +1,14 @@
-#ifndef TOKEN_REST_POOL_CONTROLLER_H
-#define TOKEN_REST_POOL_CONTROLLER_H
+#ifndef TOKEN_HTTP_CONTROLLER_POOL_H
+#define TOKEN_HTTP_CONTROLLER_POOL_H
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
 
 #include "http/controller.h"
 
 namespace Token{
-  class ObjectPoolController : HttpController{
+  class PoolController : HttpController{
    private:
-    ObjectPoolController() = delete;
+    PoolController() = delete;
 
     // Core
     HTTP_CONTROLLER_ENDPOINT(GetStats);
@@ -25,7 +25,7 @@ namespace Token{
     HTTP_CONTROLLER_ENDPOINT(GetUnclaimedTransaction);
     HTTP_CONTROLLER_ENDPOINT(GetUnclaimedTransactions);
    public:
-    ~ObjectPoolController() = delete;
+    ~PoolController() = delete;
 
     HTTP_CONTROLLER_INIT(){
       // Core
@@ -47,4 +47,4 @@ namespace Token{
 }
 
 #endif//TOKEN_ENABLE_REST_SERVICE
-#endif//TOKEN_REST_POOL_CONTROLLER_H
+#endif//TOKEN_HTTP_CONTROLLER_POOL_H

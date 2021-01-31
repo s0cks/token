@@ -1,18 +1,18 @@
 #ifdef TOKEN_ENABLE_REST_SERVICE
 
-#include "http/rest_service.h"
+#include "http/service_rest.h"
 
-#include "http/controller/pool_controller.h"
-#include "http/controller/chain_controller.h"
-#include "http/controller/wallet_controller.h"
+#include "http/controller_pool.h"
+#include "http/controller_chain.h"
+#include "http/controller_wallet.h"
 
 namespace Token{
   static HttpRestService instance;
 
   HttpRestService::HttpRestService(uv_loop_t* loop):
     HttpService(loop){
-    ObjectPoolController::Initialize(&router_);
-    BlockChainController::Initialize(&router_);
+    PoolController::Initialize(&router_);
+    ChainController::Initialize(&router_);
     WalletController::Initialize(&router_);
   }
 

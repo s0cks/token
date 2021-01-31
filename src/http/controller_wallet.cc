@@ -4,7 +4,7 @@
 #include "wallet.h"
 #include "deeplink.h"
 #include "http/service.h"
-#include "http/controller/wallet_controller.h"
+#include "http/controller_wallet.h"
 
 namespace Token{
   static inline bool
