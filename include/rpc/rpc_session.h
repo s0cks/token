@@ -20,9 +20,9 @@ namespace Token{
 #undef DECLARE_MESSAGE_HANDLER
 
     void OnMessageRead(const RpcMessagePtr& message){
-      switch(message->GetMessageType()){
+      switch(message->GetType()){
 #define DEFINE_HANDLE(Name) \
-        case RpcMessage::MessageType::k##Name##MessageType: \
+        case Type::k##Name##Message: \
           On##Name##Message(std::static_pointer_cast<Name##Message>(message)); \
           break;
         FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLE)

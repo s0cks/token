@@ -1,5 +1,5 @@
 #include "test_suite.h"
-#include "message.h"
+#include "rpc/rpc_message.h"
 
 namespace Token{
   static inline RpcMessagePtr
@@ -110,9 +110,8 @@ namespace Token{
     RpcMessagePtr a = New##Name##Message();             \
     BufferPtr tmp = Buffer::NewInstance(a->GetBufferSize()); \
     ASSERT_TRUE(a->Write(tmp));                      \
-    ASSERT_EQ(tmp->GetWrittenBytes(), a->GetBufferSize()); \
-    ASSERT_EQ(tmp->GetInt(), static_cast<int32_t>(RpcMessage::k##Name##MessageType)); \
-    ASSERT_EQ(tmp->GetLong(), (a->GetBufferSize() - RpcMessage::kHeaderSize));        \
+    ASSERT_EQ(tmp->GetWrittenBytes(), a->GetBufferSize());   \
+    ASSERT_EQ(tmp->GetObjectTag(), ObjectTag(Type::k##Name##Message, a->GetBufferSize())); \
     RpcMessagePtr b = Name##Message::NewInstance(tmp);  \
     ASSERT_TRUE(a->Equals(b));                       \
   }

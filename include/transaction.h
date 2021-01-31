@@ -46,6 +46,10 @@ namespace Token{
       user_(reader->ReadUser()){}
     ~Input(){}
 
+    Type GetType() const{
+      return Type::kInputType;
+    }
+
     /**
      * Returns the TransactionReference for this input.
      *
@@ -189,6 +193,10 @@ namespace Token{
       product_(reader->ReadProduct()){}
     ~Output(){}
 
+    Type GetType() const{
+      return Type::kOutputType;
+    }
+
     /**
      * Returns the User for this Output.
      *
@@ -330,6 +338,10 @@ namespace Token{
       outputs_(outputs),
       signature_(){}
     ~Transaction() = default;
+
+    Type GetType() const{
+      return Type::kTransactionType;
+    }
 
     /**
      * Returns the Timestamp for when this transaction occurred (UTC).

@@ -70,6 +70,10 @@ namespace Token{
     }
     ~HttpRequest(){}
 
+    Type GetType() const{
+      return Type::kHttpRequest;
+    }
+
     const char* GetName() const{
       return "HttpRequest";
     }

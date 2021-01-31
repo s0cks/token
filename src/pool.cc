@@ -163,7 +163,7 @@ namespace Token{
 
 #define DEFINE_HAS_TYPE(Name) \
   bool ObjectPool::Has##Name(const Hash& hash){ \
-    return HasObject(GetIndex(), hash, Object::Type::k##Name##Type); \
+    return HasObject(GetIndex(), hash, Type::k##Name##Type); \
   }
   FOR_EACH_POOL_TYPE(DEFINE_HAS_TYPE);
 #undef DEFINE_HAS_TYPE
@@ -186,7 +186,7 @@ namespace Token{
 #define DEFINE_REMOVE_TYPE(Name) \
   bool ObjectPool::Remove##Name(const Hash& hash){ \
     leveldb::Status status;      \
-    if(!(status = RemoveObject(GetIndex(), hash, Object::Type::k##Name##Type)).ok()){ \
+    if(!(status = RemoveObject(GetIndex(), hash, Type::k##Name##Type)).ok()){ \
       LOG(WARNING) << "cannot remove " << hash << " from pool: " << status.ToString(); \
       return false;              \
     }                            \

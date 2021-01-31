@@ -169,6 +169,10 @@ namespace Token{
       Block(parent.GetHeight() + 1, parent.GetHash(), transactions, timestamp){}
     ~Block() = default;
 
+    Type GetType() const{
+      return Type::kBlockType;
+    }
+
     BlockHeader GetHeader() const{
       return BlockHeader(timestamp_, height_, previous_hash_, GetMerkleRoot(), GetHash(), tx_bloom_, transactions_.size());
     }
@@ -218,7 +222,7 @@ namespace Token{
     }
 
     ObjectTag tag() const{
-      return ObjectTag(Object::Type::kBlockType, (int16_t)GetBufferSize());
+      return ObjectTag(Type::kBlockType, (int16_t)GetBufferSize());
     }
 
     std::string ToString() const{
@@ -332,7 +336,7 @@ namespace Token{
   class BlockFileReader : BinaryObjectFileReader{
    public:
     BlockFileReader(const std::string& filename):
-      BinaryObjectFileReader(filename, Object::Type::kBlockType){}
+      BinaryObjectFileReader(filename, Type::kBlockType){}
     ~BlockFileReader() = default;
 
     BlockPtr ReadBlock(){

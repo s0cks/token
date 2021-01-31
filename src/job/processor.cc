@@ -14,7 +14,7 @@ namespace Token{
     JobQueue* queue = JobScheduler::GetThreadQueue();
     ProcessTransactionJob* job = new ProcessTransactionJob(this, tx);
     queue->Push(job);
-    RemoveObject(batch_pool_, tx->GetHash(), Object::Type::kTransactionType);
+    RemoveObject(batch_pool_, tx->GetHash(), Type::kTransactionType);
     return true;
   }
 

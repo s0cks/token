@@ -65,6 +65,10 @@ namespace Token{
     }
     virtual ~HttpResponse() = default;
 
+    Type GetType() const{
+      return Type::kHttpResponse;
+    }
+
     const char* GetName() const{
       return "HttpResponse";
     }

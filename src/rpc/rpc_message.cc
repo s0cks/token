@@ -3,17 +3,15 @@
 
 namespace Token{
   RpcMessagePtr RpcMessage::From(Session<RpcMessage>* session, const BufferPtr& buffer){
-    RpcMessage::MessageType mtype = static_cast<RpcMessage::MessageType>(buffer->GetInt());
-    int64_t msize = buffer->GetLong();
-    switch(mtype){
+    ObjectTag tag = buffer->GetObjectTag();
+    switch(tag.GetType()){
 #define DEFINE_DECODE(Name) \
-        case RpcMessage::k##Name##MessageType: \
-            return Name##Message::NewInstance(buffer);
+      case Type::k##Name##Message:  \
+        return Name##Message::NewInstance(buffer);
       FOR_EACH_MESSAGE_TYPE(DEFINE_DECODE)
 #undef DEFINE_DECODE
-      case RpcMessage::MessageType::kUnknownMessageType:
       default:
-        LOG(ERROR) << "unknown message type " << mtype << " of size " << msize;
+        LOG(ERROR) << "unknown message: " << tag;
         return nullptr;
     }
   }

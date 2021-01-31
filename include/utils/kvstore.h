@@ -68,7 +68,7 @@ namespace Token{
       kBytesForMagic = sizeof(int16_t),
 
       kTypeOffset = kMagicOffset + kBytesForMagic,
-      kBytesForType = sizeof(Object::Type),
+      kBytesForType = sizeof(Type),
 
       kHashOffset = kTypeOffset + kBytesForType,
       kBytesForHash = Hash::kSize,
@@ -82,8 +82,8 @@ namespace Token{
         ObjectKey k1(a);
         ObjectKey k2(b);
 
-        Object::Type t1 = k1.GetType();
-        Object::Type t2 = k2.GetType();
+        Type t1 = k1.GetType();
+        Type t2 = k2.GetType();
         if(t1 < t2){
           return -1;
         } else if(t1 > t2){
@@ -126,13 +126,13 @@ namespace Token{
       return data_;
     }
    public:
-    ObjectKey(const Object::Type& type, const std::string& value):
+    ObjectKey(const Type& type, const std::string& value):
       data_(){
       memcpy(&data_[kMagicOffset], &kMagic, kBytesForMagic);
       memcpy(&data_[kTypeOffset], &type, kBytesForType);
       memcpy(&data_[kHashOffset], value.data(), std::min(value.length(), (size_t)kBytesForHash));
     }
-    ObjectKey(const Object::Type& type, const Hash& hash):
+    ObjectKey(const Type& type, const Hash& hash):
       data_(){
       memcpy(&data_[kMagicOffset], &kMagic, kBytesForMagic);
       memcpy(&data_[kTypeOffset], &type, kBytesForType);
@@ -168,8 +168,8 @@ namespace Token{
       return kTotalSize;
     }
 
-    Object::Type GetType() const{
-      return *((Object::Type*) &data_[kTypeOffset]);
+    Type GetType() const{
+      return *((Type*) &data_[kTypeOffset]);
     }
 
     Hash GetHash() const{
@@ -190,13 +190,13 @@ namespace Token{
 
 #define DEFINE_CHECK(Name) \
     bool Is##Name() const{ \
-      return GetType() == Object::Type::k##Name##Type; \
+      return GetType() == Type::k##Name##Type; \
     }
     FOR_EACH_POOL_TYPE(DEFINE_CHECK)
 #undef DEFINE_CHECK
 
     bool IsReference() const{
-      return GetType() == Object::Type::kReferenceType;
+      return GetType() == Type::kReferenceType;
     }
 
     void operator=(const ObjectKey& key){
@@ -227,7 +227,7 @@ namespace Token{
 #define DEFINE_GETTER(Name) \
   static inline leveldb::Status \
   Get##Name##Object(leveldb::DB* index, const Hash& hash, std::string* val){ \
-    return GetObject(index, ObjectKey(Object::Type::k##Name##Type, hash), val); \
+    return GetObject(index, ObjectKey(Type::k##Name##Type, hash), val); \
   }
   FOR_EACH_POOL_TYPE(DEFINE_GETTER)
 #undef DEFINE_GETTER
@@ -283,11 +283,11 @@ namespace Token{
 #define DEFINE_WRITERS(Name) \
   static inline leveldb::Status \
   PutObject(leveldb::DB* index, const Hash& hash, const Name##Ptr& val){ \
-    return PutObject(index, ObjectKey(Object::Type::k##Name##Type, hash), val); \
+    return PutObject(index, ObjectKey(Type::k##Name##Type, hash), val); \
   }                                \
   static inline void   \
   PutObject(leveldb::WriteBatch& batch, const Hash& hash, const Name##Ptr& val){ \
-    return PutObject(batch, ObjectKey(Object::Type::k##Name##Type, hash), val);  \
+    return PutObject(batch, ObjectKey(Type::k##Name##Type, hash), val);  \
   }
   FOR_EACH_POOL_TYPE(DEFINE_WRITERS)
 #undef DEFINE_WRITERS
@@ -319,7 +319,7 @@ namespace Token{
   }
 
   static inline bool
-  HasObject(leveldb::DB* index, const Hash& hash, const Object::Type& type){
+  HasObject(leveldb::DB* index, const Hash& hash, const Type& type){
     return HasObject(index, ObjectKey(type, hash));
   }
 
@@ -347,7 +347,7 @@ namespace Token{
   }
 
   static inline leveldb::Status
-  RemoveObject(leveldb::DB* index, const Hash& hash, const Object::Type& type){
+  RemoveObject(leveldb::DB* index, const Hash& hash, const Type& type){
     return RemoveObject(index, ObjectKey(type, hash));
   }
 
@@ -357,7 +357,7 @@ namespace Token{
   }
 
   static inline void
-  RemoveObject(leveldb::WriteBatch& batch, const Hash& hash, const Object::Type& type){
+  RemoveObject(leveldb::WriteBatch& batch, const Hash& hash, const Type& type){
     return RemoveObject(batch, ObjectKey(type, hash));
   }
 

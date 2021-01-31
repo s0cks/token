@@ -287,6 +287,14 @@ namespace Token{
       return TransactionReference(hash, index);
     }
 
+    bool PutObjectTag(const ObjectTag& tag){
+      return PutUnsignedLong(tag.raw());
+    }
+
+    ObjectTag GetObjectTag(){
+      return ObjectTag(GetUnsignedLong());
+    }
+
     bool HasBytesRemaining(){
       return GetBufferSize() > 0 && rpos_ < GetBufferSize();
     }

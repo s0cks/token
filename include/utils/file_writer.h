@@ -142,10 +142,6 @@ namespace Token{
       return WriteUnsignedLong(tag.raw());
     }
 
-    bool WriteObjectTag(const Object::Type& tag, int16_t size){
-      return WriteObjectTag(ObjectTag(tag, size));
-    }
-
     template<typename T>
     inline bool WriteObject(T* value){
       return WriteObject((Object*) value);

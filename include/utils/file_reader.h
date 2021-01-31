@@ -120,9 +120,9 @@ namespace Token{
 
   class BinaryObjectFileReader : public BinaryFileReader{
    protected:
-    Object::Type type_;
+    Type type_;
    public:
-    BinaryObjectFileReader(const std::string& filename, const Object::Type& tag_type):
+    BinaryObjectFileReader(const std::string& filename, const Type& tag_type):
       BinaryFileReader(filename),
       type_(tag_type){}
     virtual ~BinaryObjectFileReader() = default;

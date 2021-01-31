@@ -40,6 +40,10 @@ namespace Token{
       product_(product){}
     ~UnclaimedTransaction(){}
 
+    Type GetType() const{
+      return Type::kUnclaimedTransactionType;
+    }
+
     TransactionReference& GetReference(){
       return reference_;
     }

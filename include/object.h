@@ -60,26 +60,116 @@ namespace Token{
   class Buffer;
   typedef std::shared_ptr<Buffer> BufferPtr;
 
-  class Object{
-   public:
-    enum class Type{
+  enum class Type{
+    kUnknown = 0,
 #define DEFINE_TYPE(Name) k##Name##Type,
-      FOR_EACH_TYPE(DEFINE_TYPE)
+    FOR_EACH_TYPE(DEFINE_TYPE)
 #undef DEFINE_TYPE
-      kReferenceType, //TODO: refactor kReferenceType,
+
+#define DEFINE_MESSAGE_TYPE(Name) k##Name##Message,
+    FOR_EACH_MESSAGE_TYPE(DEFINE_MESSAGE_TYPE)
+#undef DEFINE_MESSAGE_TYPE
+
+    kHttpRequest,
+    kHttpResponse,
+    kReferenceType, //TODO: refactor kReferenceType,
+  };
+
+  static std::ostream& operator<<(std::ostream& stream, const Type& type){
+    switch(type){
+#define DEFINE_TOSTRING(Name) \
+        case Type::k##Name##Type: \
+          return stream << #Name;
+      FOR_EACH_TYPE(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
+      default:
+        return stream << "Unknown";
+    }
+  }
+
+#define TOKEN_OBJECT_TAG_MAGIC 0xFAFE
+
+  typedef int64_t RawObjectTag;
+
+  class ObjectTag{
+   private:
+    enum ObjectTagLayout{
+      // magic
+      kMagicOffset = 0,
+      kBitsForMagic = 16,
+      // type
+      kTypeOffset = kMagicOffset+kBitsForMagic,
+      kBitsForType = 16,
+      // size
+      kSizeOffset = kTypeOffset+kBitsForType,
+      kBitsForSize = 16
     };
 
-    friend std::ostream& operator<<(std::ostream& stream, const Type& type){
-      switch(type){
-#define DEFINE_TOSTRING(Name) \
-        case Object::Type::k##Name##Type: \
-          return stream << #Name;
-        FOR_EACH_TYPE(DEFINE_TOSTRING)
-#undef DEFINE_TOSTRING
-        default:
-          return stream << "Unknown";
-      }
+    class MagicField : public BitField<RawObjectTag, uint16_t, kMagicOffset, kBitsForMagic>{};
+    class TypeField : public BitField<RawObjectTag, uint16_t, kTypeOffset, kBitsForType>{};
+    class SizeField : public BitField<RawObjectTag, uint16_t, kSizeOffset, kBitsForSize>{};
+
+    RawObjectTag raw_;
+   public:
+    ObjectTag():
+        raw_(0){}
+    ObjectTag(const RawObjectTag& raw):
+        raw_(raw){}
+    ObjectTag(const Type& type, const uint16_t& size):
+        raw_(MagicField::Encode(TOKEN_OBJECT_TAG_MAGIC)
+                 |TypeField::Encode(static_cast<uint16_t>(type))
+                 |SizeField::Encode(size)){}
+    ObjectTag(const ObjectTag& tag):
+        raw_(tag.raw_){}
+    ~ObjectTag() = default;
+
+    RawObjectTag& raw(){
+      return raw_;
     }
+
+    RawObjectTag raw() const{
+      return raw_;
+    }
+
+    bool IsValid() const{
+      return MagicField::Decode(raw_)
+          == static_cast<uint16_t>(TOKEN_OBJECT_TAG_MAGIC);
+    }
+
+    Type GetType() const{
+      return static_cast<Type>(TypeField::Decode(raw_));
+    }
+
+    int64_t GetSize() const{
+      return static_cast<int64_t>(SizeField::Decode(raw_));
+    }
+
+#define DEFINE_TYPE_CHECK(Name) \
+    bool Is##Name##Type() const{\
+      return GetType() == Type::k##Name##Type; \
+    }
+    FOR_EACH_TYPE(DEFINE_TYPE_CHECK)
+#undef DEFINE_TYPE_CHECK
+
+    ObjectTag& operator=(const ObjectTag& tag){
+      raw_ = tag.raw_;
+      return (*this);
+    }
+
+    friend bool operator==(const ObjectTag& a, const ObjectTag& b){
+      return a.raw() == b.raw();
+    }
+
+    friend bool operator!=(const ObjectTag& a, const ObjectTag& b){
+      return a.raw() != b.raw();
+    }
+
+    friend std::ostream& operator<<(std::ostream& stream, const ObjectTag& tag){
+      return stream << "ObjectTag(" << tag.GetType() << ", " << tag.GetSize() << ")";
+    }
+  };
+
+  class Object{
    public:
     virtual ~Object() = default;
     virtual std::string ToString() const = 0;
@@ -88,10 +178,24 @@ namespace Token{
   class BinaryFileWriter;
   class SerializableObject : public Object{
    protected:
-    SerializableObject():
-      Object(){}
+    SerializableObject() = default;
    public:
     virtual ~SerializableObject() = default;
+    virtual Type GetType() const = 0;
+
+    ObjectTag GetTag() const{
+      return ObjectTag(GetType(), GetBufferSize());
+    }
+
+#define DEFINE_TYPE_CHECK(Name) \
+    bool Is##Name##Message() const{ return GetType() == Type::k##Name##Message; }
+    FOR_EACH_MESSAGE_TYPE(DEFINE_TYPE_CHECK)
+#undef DEFINE_TYPE_CHECK
+
+#define DEFINE_TYPE_CHECK(Name) \
+    bool Is##Name() const{ return GetType() == Type::k##Name##Type; }
+    FOR_EACH_TYPE(DEFINE_TYPE_CHECK)
+#undef DEFINE_TYPE_CHECK
 
     virtual int64_t GetBufferSize() const = 0;
     virtual bool Write(const BufferPtr& buff) const = 0;

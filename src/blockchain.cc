@@ -126,7 +126,7 @@ namespace Token{
   }
 
   bool BlockChain::PutBlock(const Hash& hash, BlockPtr blk){
-    ObjectKey okey(Object::Type::kBlockType, hash);
+    ObjectKey okey(Type::kBlockType, hash);
     std::string filename = GetNewBlockFilename(blk);
     if(!WriteBlockData(filename, blk)){
       LOG(WARNING) << "cannot write block data to file: " << filename;
@@ -149,7 +149,7 @@ namespace Token{
   }
 
   BlockPtr BlockChain::GetBlock(const Hash& hash){
-    ObjectKey okey(Object::Type::kBlockType, hash);
+    ObjectKey okey(Type::kBlockType, hash);
 
     std::string filename;
     leveldb::Status status;
@@ -168,7 +168,7 @@ namespace Token{
   }
 
   bool BlockChain::HasReference(const std::string& name){
-    ObjectKey okey(Object::Type::kReferenceType, name);
+    ObjectKey okey(Type::kReferenceType, name);
 
     std::string value;
     leveldb::Slice key(okey.data(), okey.size());
@@ -179,7 +179,7 @@ namespace Token{
     leveldb::WriteOptions options;
     options.sync = true;
 
-    ObjectKey okey(Object::Type::kReferenceType, name);
+    ObjectKey okey(Type::kReferenceType, name);
 
     std::string value;
     leveldb::Slice key(okey.data(), okey.size());
@@ -197,7 +197,7 @@ namespace Token{
     leveldb::WriteOptions options;
     options.sync = true;
 
-    ObjectKey okey(Object::Type::kReferenceType, name);
+    ObjectKey okey(Type::kReferenceType, name);
 
     leveldb::Status status;
     leveldb::Slice key(okey.data(), okey.size());
@@ -211,7 +211,7 @@ namespace Token{
   }
 
   Hash BlockChain::GetReference(const std::string& name){
-    ObjectKey okey(Object::Type::kReferenceType, name);
+    ObjectKey okey(Type::kReferenceType, name);
 
     std::string value;
     leveldb::Status status;
@@ -225,7 +225,7 @@ namespace Token{
   }
 
   bool BlockChain::HasBlock(const Hash& hash){
-    ObjectKey okey(Object::Type::kBlockType, hash);
+    ObjectKey okey(Type::kBlockType, hash);
 
     std::string filename;
     leveldb::Slice key(okey.data(), okey.size());
