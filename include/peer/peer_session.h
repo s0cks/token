@@ -3,8 +3,8 @@
 
 #ifdef TOKEN_ENABLE_SERVER
 
-#include "rpc/message_rpc.h"
-#include "rpc/session_rpc.h"
+#include "rpc/rpc_message.h"
+#include "rpc/rpc_session.h"
 
 namespace Token{
   class PeerSession;

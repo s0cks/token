@@ -2,7 +2,7 @@
 #define TOKEN_RPC_SERVER_H
 
 #include "server.h"
-#include "rpc/session_rpc.h"
+#include "rpc/rpc_session.h"
 
 namespace Token{
 #define ENVIRONMENT_TOKEN_CALLBACK_ADDRESS "TOKEN_CALLBACK_ADDRESS"

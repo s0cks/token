@@ -1,6 +1,6 @@
 #include <glog/logging.h>
-#include "rpc/message_rpc.h"
-#include "rpc/server_rpc.h"
+#include "rpc/rpc_message.h"
+#include "rpc/rpc_server.h"
 
 #include "pool.h"
 #include "miner.h"

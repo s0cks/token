@@ -2,7 +2,7 @@
 #define TOKEN_RPC_SESSION_H
 
 #include "session.h"
-#include "rpc/message_rpc.h"
+#include "rpc/rpc_message.h"
 
 namespace Token{
   template<class M>

@@ -24,7 +24,7 @@ DEFINE_int64(miner_interval, 1000 * 60 * 1, "The amount of time between mining b
 #endif//TOKEN_DEBUG
 
 #ifdef TOKEN_ENABLE_SERVER
-  #include "rpc/server_rpc.h"
+  #include "rpc/rpc_server.h"
   #include "peer/peer_session_manager.h"
 
   // --remote localhost:8080
