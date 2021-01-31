@@ -7,10 +7,11 @@
 #include <unordered_map>
 #include <http_parser.h>
 
-#include "method.h"
-#include "header.h"
+#include "http/method.h"
+#include "http/header.h"
+#include "http/message.h"
+#include "http/service.h"
 #include "utils/buffer.h"
-#include "server/http/service.h"
 
 namespace Token{
   class HttpRequest;

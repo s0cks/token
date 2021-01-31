@@ -36,14 +36,14 @@ DEFINE_int64(miner_interval, 1000 * 60 * 1, "The amount of time between mining b
 #endif//TOKEN_ENABLE_SERVER
 
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
-  #include "server/http/health/health_service.h"
+  #include "http/health_service.h"
 
   // --healthcheck-port 8081
   DEFINE_int32(healthcheck_port, 0, "The port for the ledger health check service.");
 #endif//TOKEN_ENABLE_HEALTHCHECK
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
-  #include "server/http/service.h"
+  #include "http/rest_service.h"
 
   // --service-port 8082
   DEFINE_int32(service_port, 0, "The port for the ledger controller service.");
@@ -143,7 +143,7 @@ main(int argc, char **argv){
 
   // Start the health service if enabled
   #ifdef TOKEN_ENABLE_HEALTH_SERVICE
-    if(IsValidPort(FLAGS_healthcheck_port) && !HealthCheckService::StartThread()){
+    if(IsValidPort(FLAGS_healthcheck_port) && !HttpHealthService::Start()){
       CrashReport::PrintNewCrashReport("Failed to start the health check service.");
       return EXIT_FAILURE;
     }
@@ -227,7 +227,7 @@ main(int argc, char **argv){
 #endif//TOKEN_ENABLE_REST_SERVICE
 
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
-  if(HealthCheckService::IsRunning() && !HealthCheckService::JoinThread()){
+  if(HttpHealthService::IsServiceRunning() && !HttpHealthService::WaitForShutdown()){
     CrashReport::PrintNewCrashReport("Cannot join the health check service thread.");
     return EXIT_FAILURE;
   }

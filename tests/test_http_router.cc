@@ -1,7 +1,7 @@
 #include "test_suite.h"
 #include "utils/buffer.h"
-#include "server/http/router.h"
-#include "server/http/request.h"
+#include "http/router.h"
+#include "http/request.h"
 
 namespace Token{
   static inline std::string

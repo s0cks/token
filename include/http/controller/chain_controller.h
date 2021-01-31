@@ -3,7 +3,7 @@
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
 
-#include "server/http/controller.h"
+#include "http/controller.h"
 
 namespace Token{
   class BlockChainController : HttpController{

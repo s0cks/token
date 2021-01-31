@@ -1,8 +1,10 @@
 #ifndef TOKEN_HEALTH_CONTROLLER_H
 #define TOKEN_HEALTH_CONTROLLER_H
 
-#include "server/http/service.h"
-#include "server/http/controller.h"
+#ifdef TOKEN_ENABLE_HEALTH_SERVICE
+
+#include "http/service.h"
+#include "http/controller.h"
 
 namespace Token{
   class HealthController : HttpController{
@@ -21,4 +23,5 @@ namespace Token{
   };
 }
 
+#endif//TOKEN_ENABLE_HEALTH_SERVICE
 #endif//TOKEN_HEALTH_CONTROLLER_H

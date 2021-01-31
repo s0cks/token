@@ -4,11 +4,11 @@
 #endif//TOKEN_ENABLE_SERVER
 
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
-  #include "server/http/health/health_service.h"
+  #include "http/health_service.h"
 #endif//TOKEN_ENABLE_HEALTH_SERVICE
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
-  #include "server/http/service.h"
+  #include "http/rest_service.h"
 #endif//TOKEN_ENABLE_REST_SERVICE
 
 namespace Token{
@@ -46,9 +46,9 @@ namespace Token{
 #endif//TOKEN_ENABLE_SERVER*/
 
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
-    if(IsValidPort(FLAGS_healthcheck_port) && HealthCheckService::IsRunning()){
+    if(IsValidPort(FLAGS_healthcheck_port) && HttpHealthService::IsServiceRunning()){
       LOG(INFO) << "terminating the health check service....";
-      if(!HealthCheckService::Shutdown()){
+      if(!HttpHealthService::Shutdown()){
         PrintFatalCrashReport("Cannot shutdown the health check service");
         goto terminate;
       }

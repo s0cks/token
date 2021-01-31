@@ -1,7 +1,6 @@
 #ifndef TOKEN_CONTROLLER_H
 #define TOKEN_CONTROLLER_H
 
-#include <rapidjson/document.h>
 #include "router.h"
 #include "request.h"
 #include "response.h"

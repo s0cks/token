@@ -8,6 +8,10 @@ namespace Token{
 #define ENVIRONMENT_TOKEN_CALLBACK_ADDRESS "TOKEN_CALLBACK_ADDRESS"
 
   class LedgerServer : public Server<RpcMessage, ServerSession>{
+   protected:
+    ServerSession* CreateSession() const{
+      return new ServerSession(GetLoop());
+    }
    public:
     LedgerServer(uv_loop_t* loop=uv_loop_new()):
       Server(loop, "rpc"){}

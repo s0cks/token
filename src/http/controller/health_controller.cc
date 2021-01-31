@@ -1,4 +1,4 @@
-#include "server/http/controller/health_controller.h"
+#include "http/controller/health_controller.h"
 
 namespace Token{
   void HealthController::HandleGetReadyStatus(HttpSession* session, const HttpRequestPtr& request){

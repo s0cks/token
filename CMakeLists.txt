@@ -13,8 +13,6 @@ option(ENABLE_SERVER "Enables the block chain server." ON)
 option(ENABLE_HEALTH_SERVICE "Enable the health http service." ON)
 option(ENABLE_REST_SERVICE "Enable the rest http service." ON)
 
-set(ENABLE_HEALTH_SERVICE OFF)
-
 # Monkey Patching for Debug Mode
 if(CMAKE_BUILD_TYPE MATCHES Debug)
   message(STATUS "Compiling w/ debug mode.")

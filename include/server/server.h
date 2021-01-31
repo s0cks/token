@@ -59,6 +59,7 @@ namespace Token{
       loop_(loop),
       handle_(),
       state_(Server::kStoppedState){
+      handle_.data = this;
       int err;
       if((err = uv_tcp_init(GetLoop(), GetHandle())) != 0){
         LOG(WARNING) << "server initialize error: " << uv_strerror(err);
@@ -101,12 +102,13 @@ namespace Token{
 
     static void
     OnNewConnection(uv_stream_t* stream, int status){
+      BaseType* server = (BaseType*)stream->data;
       if(status != 0){
         LOG(ERROR) << "connection error: " << uv_strerror(status);
         return;
       }
 
-      SessionType* session = new SessionType(stream->loop);
+      SessionType* session = server->CreateSession();
       session->SetState(SessionType::kConnectingState);
 
       int err;
@@ -176,7 +178,7 @@ namespace Token{
       return Thread::StopThread(thread_);
     }
 
-    bool OnMessage(SessionType* session, const BufferPtr& buffer);
+    virtual SessionType* CreateSession() const = 0;
    public:
     virtual ~Server(){
       if(name_)
@@ -216,42 +218,6 @@ namespace Token{
     FOR_EACH_SERVER_STATE(DEFINE_STATE_CHECK)
 #undef DEFINE_STATE_CHECK
   };
-
-/*//    static uv_tcp_t* GetHandle();
-//    static void SetState(const State& state);
-//    static void OnClose(uv_handle_t* handle);
-//    static void OnWalk(uv_handle_t* handle, void* data);
-//    static void HandleTerminateCallback(uv_async_t* handle);
-//    static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
-//    static void HandleServerThread(uword parameter);
-//    static bool SendShutdown();
-//   public:
-//    ~Server() = delete;
-//    static State GetState();
-//    static bool JoinThread();
-//    static bool StartThread();
-//
-//    static inline bool
-//    Shutdown(){
-//      return SendShutdown() && JoinThread();
-//    }
-//
-//    static inline UUID GetID(){
-//      return BlockChainConfiguration::GetSererID();
-//    }
-//
-//#define DEFINE_CHECK(Name) \
-//    static inline bool Is##Name##State(){ return GetState() == Server::State::k##Name##State; }
-//    FOR_EACH_SERVER_STATE(DEFINE_CHECK)
-//#undef DEFINE_CHECK
-//
-//#define ENVIRONMENT_TOKEN_CALLBACK_ADDRESS "TOKEN_CALLBACK_ADDRESS"
-//
-//    static inline NodeAddress
-//    GetCallbackAddress(){
-//      return NodeAddress::ResolveAddress(GetEnvironmentVariable(ENVIRONMENT_TOKEN_CALLBACK_ADDRESS));
-//    }
-//  };*/
 }
 
 #endif//TOKEN_ENABLE_SERVER

@@ -1,8 +1,8 @@
 #ifdef TOKEN_ENABLE_REST_SERVICE
 
 #include "blockchain.h"
-#include "server/http/service.h"
-#include "server/http/controller/chain_controller.h"
+#include "http/service.h"
+#include "http/controller/chain_controller.h"
 
 namespace Token{
   void BlockChainController::HandleGetBlockChain(HttpSession* session, const HttpRequestPtr& request){

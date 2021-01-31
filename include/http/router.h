@@ -3,7 +3,7 @@
 
 #include <unordered_map>
 #include <glog/logging.h>
-#include "server/http/method.h"
+#include "method.h"
 #include "utils/trie.h"
 
 namespace Token{
