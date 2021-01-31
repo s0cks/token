@@ -36,7 +36,7 @@ namespace Token{
 
     // Server
     // Server.Id
-    static UUID GetSererID();
+    static UUID GetServerId();
     static bool SetServerID(const UUID& uuid);
 
     // Server.Peers

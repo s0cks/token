@@ -113,7 +113,7 @@ namespace Token{
     return true;
   }
 
-  UUID BlockChainConfiguration::GetSererID(){
+  UUID BlockChainConfiguration::GetServerId(){
     return UUID(GetServerProperties().lookup(PROPERTY_SERVER_ID));
   }
 

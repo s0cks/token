@@ -40,6 +40,8 @@ namespace Token{
     template<typename T>
     static inline bool
     SetField(Writer& writer, const std::string& name, const std::vector<T>& cont){
+      if(!writer.Key(name.data(), name.length()))
+        return false;
       if(!writer.StartArray())
         return false;
       for(auto& it : cont)

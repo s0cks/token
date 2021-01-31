@@ -63,8 +63,8 @@ namespace Token{
       settings_.on_body = &OnParseBody;
       http_parser_init(&parser_, HTTP_REQUEST);
       size_t parsed;
-      if((parsed = http_parser_execute(&parser_, &settings_, data, len)) == 0){
-        LOG(WARNING) << "http parser parsed nothing";
+      if((parsed = http_parser_execute(&parser_, &settings_, data, len)) != len){
+        LOG(WARNING) << "http parser parsed nothing: " << http_errno_name((http_errno)parser_.http_errno) << ") " << http_errno_description((http_errno)parser_.http_errno);
         return;
       }
     }
@@ -166,7 +166,10 @@ namespace Token{
 
     std::string ToString() const{
       std::stringstream ss;
-      ss << "HttpRequest()";
+      ss << "HttpRequest(";
+      ss << "path=" << path_ << ", ";
+      ss << "body=" << body_;
+      ss << ")";
       return ss.str();
     }
 

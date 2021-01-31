@@ -3,6 +3,7 @@
 
 #include <unordered_map>
 #include "object.h"
+#include "configuration.h"
 
 namespace Token{
 #define HTTP_HEADER_DATE "Date"
@@ -45,11 +46,19 @@ namespace Token{
     return SetHttpHeader(headers, name, val.str());
   }
 
+  static inline std::string
+  GetServerHeaderValue(){
+    // not safe to call from separate thread?, encoding for Server's UUID is borked
+    std::stringstream ss;
+    ss << "Token-Ledger; Node(" << BlockChainConfiguration::GetServerId().str() << ")";
+    return ss.str();
+  }
+
   static inline void
   InitHttpResponseHeaders(HttpHeadersMap& headers){
     SetHttpHeader(headers, HTTP_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, "*");
-    SetHttpHeader(headers, "Date", Clock::now());
-    //SetHttpHeader(headers, "Server", Server::GetID());
+    SetHttpHeader(headers, HTTP_HEADER_DATE, Clock::now());
+    //TODO: SetHttpHeader(headers, HTTP_HEADER_SERVER, GetServerHeaderValue());
   }
 }
 

@@ -123,9 +123,11 @@ namespace Token{
      */
     bool Write(Json::Writer& writer) const{
       return writer.StartObject()
-             && reference_.Write(writer)
-             && user_.Write(writer)
-             && writer.EndObject();
+          && writer.Key("transaction")
+          && reference_.Write(writer)
+          && writer.Key("user")
+          && user_.Write(writer)
+          && writer.EndObject();
     }
 
     /**
@@ -448,7 +450,7 @@ namespace Token{
              && Json::SetField(writer, "index", index_)
              && Json::SetField(writer, "inputs", inputs_)
              && Json::SetField(writer, "outputs", outputs_)
-             && writer.EndArray();
+             && writer.EndObject();
     }
 
     /**

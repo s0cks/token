@@ -128,18 +128,19 @@ main(int argc, char **argv){
   // Initialize the Logging Framework
   InitializeLogging(argv[0]);
 
-  // ~16.07s on boot for 30k Tokens (not initialized)
-  // ~2s on boot for 30k tokens (initialized)
-  #ifdef TOKEN_DEBUG
-    BannerPrinter::PrintBanner();
-    LOG(INFO) << "current time: " << FormatTimestampReadable(Clock::now());
-  #endif//TOKEN_DEBUG
-
   // Load the configuration
   if(!BlockChainConfiguration::Initialize()){
     CrashReport::PrintNewCrashReport("Failed to load the configuration.");
     return EXIT_FAILURE;
   }
+
+  // ~16.07s on boot for 30k Tokens (not initialized)
+  // ~2s on boot for 30k tokens (initialized)
+  #ifdef TOKEN_DEBUG
+    BannerPrinter::PrintBanner();
+    LOG(INFO) << "current time: " << FormatTimestampReadable(Clock::now());
+    LOG(INFO) << "node id: " << BlockChainConfiguration::GetServerId();
+  #endif//TOKEN_DEBUG
 
   // Start the health service if enabled
   #ifdef TOKEN_ENABLE_HEALTH_SERVICE

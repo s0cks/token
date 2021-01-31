@@ -109,6 +109,72 @@ namespace Token{
     return session->Send(std::static_pointer_cast<HttpResponse>(response));
   }
 
+  static inline bool
+  ParseInputList(HttpSession* session, const Json::Document& doc, InputList& inputs, const char* name="inputs"){
+    if(!doc.HasMember(name)){
+      std::stringstream ss;
+      ss << "request is missing the '" << name << "' field.";
+      session->Send(NewInternalServerErrorResponse(session, ss));
+      return false;
+    }
+
+    if(!doc[name].IsArray()){
+      std::stringstream ss;
+      ss << "'" << name << "' field is not an array.";
+      session->Send(NewInternalServerErrorResponse(session, ss));
+      return false;
+    }
+
+    for(auto& it : doc[name].GetArray()){
+      Hash in_hash = Hash::FromHexString(it.GetString());
+      LOG(INFO) << "using input: " << in_hash;
+      if(!ObjectPool::HasUnclaimedTransaction(in_hash)){
+        std::stringstream ss;
+        ss << "Cannot find token: " << in_hash;
+        session->Send(NewNotFoundResponse(session, ss));
+        return false;
+      }
+      UnclaimedTransactionPtr in_val = ObjectPool::GetUnclaimedTransaction(in_hash);
+      inputs.push_back(Input(in_val->GetReference(), in_val->GetUser()));
+    }
+    return true;
+  }
+
+#define CHECK_TYPE(Object, Name, Type) \
+  if(!(Object).Is##Type()){        \
+    std::stringstream ss; \
+    ss << '\'' << (Name) << '\'' << " is not of type: " << #Type; \
+    session->Send(NewInternalServerErrorResponse(session, ss));   \
+    return false;                      \
+  }
+#define HAS_FIELD(Object, Name, Type) \
+  if(!(Object).HasMember((Name))){\
+    std::stringstream ss; \
+    ss << "missing the '" << (Name) << "' field."; \
+    session->Send(NewInternalServerErrorResponse(session, ss)); \
+    return false;                  \
+  } \
+  CHECK_TYPE((Object)[(Name)], Name, Type)
+
+  static inline bool
+  ParseOutputList(HttpSession* session, const Json::Document& doc, OutputList& outputs, const char* name="outputs"){
+    HAS_FIELD(doc, name, Array);
+
+    for(auto& it : doc[name].GetArray()){
+      CHECK_TYPE(it, name, Object); //TODO: fix name
+      auto obj = it.GetObject();
+
+      HAS_FIELD(obj, "user", String);
+      User user(obj["user"].GetString());
+
+      HAS_FIELD(obj, "product", String);
+      Product product(obj["product"].GetString());
+
+      outputs.push_back(Output(user, product));
+    }
+    return true;
+  }
+
   void WalletController::HandlePostUserWalletSpend(HttpSession* session, const HttpRequestPtr& request){
     User user = request->GetUserParameterValue();
 
@@ -116,27 +182,16 @@ namespace Token{
     request->GetBody(doc);
 
     InputList inputs = {};
-    if(!doc.HasMember("token"))
-      return session->Send(NewInternalServerErrorResponse(session, "request is missing 'token' field."));
-    if(!doc["token"].IsString())
-      return session->Send(NewInternalServerErrorResponse(session, "'token' field is not a string."));
-    Hash in_hash = Hash::FromHexString(doc["token"].GetString());
-    if(!ObjectPool::HasUnclaimedTransaction(in_hash)){
-      std::stringstream ss;
-      ss << "Cannot find token: " << in_hash;
-      return session->Send(NewNotFoundResponse(session, ss));
-    }
-    UnclaimedTransactionPtr in_val = ObjectPool::GetUnclaimedTransaction(in_hash);
-    inputs.push_back(Input(in_val->GetReference(), in_val->GetUser())); //TODO: is this the right user?
+    LOG(INFO) << "parsing inputs....";
+    if(!ParseInputList(session, doc, inputs))
+      return;
 
     OutputList outputs = {};
-    if(!doc.HasMember("recipient"))
-      return session->Send(NewInternalServerErrorResponse(session, "request is missing 'recipient' field."));
-    if(!doc["recipient"].IsString())
-      return session->Send(NewInternalServerErrorResponse(session, "'recipient' field is not a string."));
-    User recipient(std::string(doc["recipient"].GetString()));
-    outputs.push_back(Output(recipient, in_val->GetProduct()));
+    LOG(INFO) << "parsing outputs....";
+    if(!ParseOutputList(session, doc, outputs))
+      return;
 
+    LOG(INFO) << "generating new transaction....";
     TransactionPtr tx = Transaction::NewInstance(0, inputs, outputs);
     Hash hash = tx->GetHash();
     if(!ObjectPool::PutTransaction(hash, tx)){

@@ -137,21 +137,20 @@
         "parameters": [
           { "$ref": "#/parameters/User" },
           {
-            "description": "The spend request",
             "in": "body",
             "name": "SpendRequest",
             "schema": {
               "type": "object",
               "required": [
-                "token",
-                "recipient"
+                "inputs",
+                "outputs"
               ],
               "properties": {
-                "token": {
-                  "$ref": "#/definitions/Hash"
+                "inputs": {
+                  "$ref": "#/definitions/HashList"
                 },
-                "recipient": {
-                  "$ref": "#/definitions/UserId"
+                "outputs": {
+                  "$ref": "#/definitions/OutputList"
                 }
               }
             }
@@ -453,7 +452,8 @@
     },
     "Hash": {
       "type": "string",
-      "description": "A hash of an object."
+      "description": "A hash of an object.",
+      "example": ""
     },
     "HashList": {
       "type": "array",
@@ -465,6 +465,11 @@
     "UserId": {
       "type": "string",
       "description": "The ID of a user.",
+      "example": ""
+    },
+    "ProductId": {
+      "type": "string",
+      "description": "An ID for a product.",
       "example": ""
     },
     "User": {
@@ -546,18 +551,25 @@
       "type": "object",
       "description": "An output to a transaction, used to create a new UnclaimedTransaction in the unclaimed transaction pool",
       "required": [
-        "User",
-        "Product"
+        "user",
+        "product"
       ],
       "properties": {
-        "User": {
-          "type": "string",
-          "description": "The user id that this output belongs to"
+        "user": {
+          "description": "The user that this output is for.",
+          "$ref": "#/definitions/UserId"
         },
-        "Token": {
-          "type": "string",
-          "description": "The id of the token that this Output is referring to"
+        "product": {
+          "description": "The product that this output is for.",
+          "$ref": "#/definitions/ProductId"
         }
+      }
+    },
+    "OutputList": {
+      "type": "array",
+      "description": "A list of Output objects.",
+      "items": {
+        "$ref": "#/definitions/Output"
       }
     },
     "Transaction": {
@@ -589,7 +601,7 @@
         "Outputs": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Output"
+
           },
           "description": "The list of outputs for the transaction"
         },

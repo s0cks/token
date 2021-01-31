@@ -82,7 +82,7 @@ namespace Token{
       for(size_t idx = 0; idx < total_messages; idx++){
         const SessionMessagePtr& msg = messages[idx];
 #ifdef TOKEN_DEBUG
-        LOG(INFO) << "sending " << msg->GetName() << " (" << msg->GetBufferSize() << " Bytes)";
+        LOG(INFO) << "sending " << msg->ToString();
 #endif//TOKEN_DEBUG
         if(!msg->Write(data->buffer)){
           LOG(WARNING) << "couldn't write " << msg->ToString();

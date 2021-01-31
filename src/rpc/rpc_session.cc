@@ -21,7 +21,7 @@ namespace Token{
     // - state check
     // - version check
     // - echo nonce
-    UUID id = BlockChainConfiguration::GetSererID();
+    UUID id = BlockChainConfiguration::GetServerId();
     Send(VersionMessage::NewInstance(id));
   }
 
@@ -32,7 +32,7 @@ namespace Token{
     Send(
       VerackMessage::NewInstance(
         ClientType::kNode,
-        BlockChainConfiguration::GetSererID(),
+        BlockChainConfiguration::GetServerId(),
         LedgerServer::GetCallbackAddress(),
         Version(),
         head->GetHeader(),

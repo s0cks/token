@@ -147,6 +147,7 @@ namespace Token{
       BufferPtr buffer = Buffer::From(buff->base, nread);
       do{
         ServerMessagePtr message = M::From(session, buffer);
+        LOG(INFO) << "read: " << message->ToString();
         session->OnMessageRead(message);
       } while(buffer->GetReadBytes() < buffer->GetBufferSize());
       free(buff->base);

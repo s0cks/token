@@ -86,7 +86,7 @@ namespace Token{
     }
     Buffer(const char* data, size_t size):
       bsize_(size),
-      wpos_(0),
+      wpos_(size),
       rpos_(0),
       data_((uint8_t*)data),
       owned_(false){}

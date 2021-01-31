@@ -112,18 +112,6 @@ namespace Token{
       return atoll(length.data());
     }
 
-    virtual std::string ToString() const{
-      std::stringstream ss;
-
-      BufferPtr buff = Buffer::NewInstance(GetBufferSize());
-      if(!Write(buff)){
-        ss << "N/A";
-      } else{
-        ss << std::string(buff->data(), buff->GetWrittenBytes());
-      }
-      return ss.str();
-    }
-
     int64_t GetBufferSize() const{
       int64_t size = 0;
       size += GetHttpStatusLine(GetStatusCode()).length();
@@ -138,6 +126,7 @@ namespace Token{
 
   class HttpFileResponse : public HttpResponse{
    private:
+    std::string filename_;
     BufferPtr body_;
    protected:
     bool Write(const BufferPtr& buff) const{
@@ -151,6 +140,7 @@ namespace Token{
       const std::string& filename,
       const std::string& content_type = HTTP_CONTENT_TYPE_TEXT_PLAIN):
       HttpResponse(session, status_code),
+      filename_(filename),
       body_(){
       std::fstream fd(filename, std::ios::in | std::ios::binary);
       int64_t fsize = GetFilesize(fd);
@@ -164,6 +154,12 @@ namespace Token{
       SetHeader(HTTP_HEADER_CONTENT_TYPE, content_type);
     }
     ~HttpFileResponse() = default;
+
+    std::string ToString() const{
+      std::stringstream ss;
+      ss << "HttpFileResponse(" << filename_ << ")";
+      return ss.str();
+    }
 
     static inline HttpResponsePtr
     NewInstance(HttpSession* session,
@@ -202,10 +198,16 @@ namespace Token{
 
     std::string ToString() const{
       std::stringstream ss;
-      ss << GetHttpStatusLine(GetStatusCode());
-      for(auto& it : headers_)
-        ss << GetHttpHeaderLine(it.first, it.second);
-      ss << body_.GetString();
+      ss << "HttpJsonResponse(";
+
+      ss << "headers={";
+      for(auto& it : headers_){
+        ss << it.first << ": " << it.second << ",";
+      }
+      ss << "}, ";
+
+      ss << "body=" << body_.GetString();
+      ss << ")";
       return ss.str();
     }
   };
@@ -226,6 +228,22 @@ namespace Token{
       SetHeader(HTTP_HEADER_CONTENT_LENGTH, data->GetWrittenBytes());
     }
     ~HttpBinaryResponse() = default;
+
+    std::string ToString() const{
+      std::stringstream ss;
+      ss << "HttpBinaryResponse(";
+
+      ss << "headers={";
+      for(auto& it : headers_){
+        ss << it.first << ": " << it.second << ",";
+      }
+      ss << "}, ";
+
+      ss << "body=" << data_->GetBufferSize() << " bytes,";
+
+      ss << ")";
+      return ss.str();
+    }
 
     static inline HttpResponsePtr
     NewInstance(HttpSession* session, const HttpStatusCode& status_code, const std::string& content_type, const BufferPtr& data){
