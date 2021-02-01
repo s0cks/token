@@ -1,4 +1,4 @@
-FROM token-ledger-base:1.0.0
+FROM ghcr.io/tokenevents/token-ledger-base:1.0.0
 ARG GITHUB_TOKEN
 
 # Copy The Ledger Source

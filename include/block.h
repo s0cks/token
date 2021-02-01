@@ -170,7 +170,7 @@ namespace Token{
     ~Block() = default;
 
     Type GetType() const{
-      return Type::kBlockType;
+      return Type::kBlock;
     }
 
     BlockHeader GetHeader() const{
@@ -222,7 +222,7 @@ namespace Token{
     }
 
     ObjectTag tag() const{
-      return ObjectTag(Type::kBlockType, (int16_t)GetBufferSize());
+      return ObjectTag(Type::kBlock, (int16_t)GetBufferSize());
     }
 
     std::string ToString() const{
@@ -336,7 +336,7 @@ namespace Token{
   class BlockFileReader : BinaryObjectFileReader{
    public:
     BlockFileReader(const std::string& filename):
-      BinaryObjectFileReader(filename, Type::kBlockType){}
+      BinaryObjectFileReader(filename, Type::kBlock){}
     ~BlockFileReader() = default;
 
     BlockPtr ReadBlock(){

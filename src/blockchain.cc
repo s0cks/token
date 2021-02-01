@@ -126,7 +126,7 @@ namespace Token{
   }
 
   bool BlockChain::PutBlock(const Hash& hash, BlockPtr blk){
-    ObjectKey okey(Type::kBlockType, hash);
+    ObjectKey okey(Type::kBlock, hash);
     std::string filename = GetNewBlockFilename(blk);
     if(!WriteBlockData(filename, blk)){
       LOG(WARNING) << "cannot write block data to file: " << filename;
@@ -149,7 +149,7 @@ namespace Token{
   }
 
   BlockPtr BlockChain::GetBlock(const Hash& hash){
-    ObjectKey okey(Type::kBlockType, hash);
+    ObjectKey okey(Type::kBlock, hash);
 
     std::string filename;
     leveldb::Status status;
@@ -225,7 +225,7 @@ namespace Token{
   }
 
   bool BlockChain::HasBlock(const Hash& hash){
-    ObjectKey okey(Type::kBlockType, hash);
+    ObjectKey okey(Type::kBlock, hash);
 
     std::string filename;
     leveldb::Slice key(okey.data(), okey.size());

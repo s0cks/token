@@ -190,7 +190,7 @@ namespace Token{
 
 #define DEFINE_CHECK(Name) \
     bool Is##Name() const{ \
-      return GetType() == Type::k##Name##Type; \
+      return GetType() == Type::k##Name; \
     }
     FOR_EACH_POOL_TYPE(DEFINE_CHECK)
 #undef DEFINE_CHECK
@@ -227,7 +227,7 @@ namespace Token{
 #define DEFINE_GETTER(Name) \
   static inline leveldb::Status \
   Get##Name##Object(leveldb::DB* index, const Hash& hash, std::string* val){ \
-    return GetObject(index, ObjectKey(Type::k##Name##Type, hash), val); \
+    return GetObject(index, ObjectKey(Type::k##Name, hash), val); \
   }
   FOR_EACH_POOL_TYPE(DEFINE_GETTER)
 #undef DEFINE_GETTER
@@ -283,11 +283,11 @@ namespace Token{
 #define DEFINE_WRITERS(Name) \
   static inline leveldb::Status \
   PutObject(leveldb::DB* index, const Hash& hash, const Name##Ptr& val){ \
-    return PutObject(index, ObjectKey(Type::k##Name##Type, hash), val); \
+    return PutObject(index, ObjectKey(Type::k##Name, hash), val); \
   }                                \
   static inline void   \
   PutObject(leveldb::WriteBatch& batch, const Hash& hash, const Name##Ptr& val){ \
-    return PutObject(batch, ObjectKey(Type::k##Name##Type, hash), val);  \
+    return PutObject(batch, ObjectKey(Type::k##Name, hash), val);  \
   }
   FOR_EACH_POOL_TYPE(DEFINE_WRITERS)
 #undef DEFINE_WRITERS

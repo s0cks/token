@@ -41,7 +41,7 @@ namespace Token{
     ~UnclaimedTransaction(){}
 
     Type GetType() const{
-      return Type::kUnclaimedTransactionType;
+      return Type::kUnclaimedTransaction;
     }
 
     TransactionReference& GetReference(){

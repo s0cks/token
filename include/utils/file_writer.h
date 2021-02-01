@@ -4,7 +4,6 @@
 #include <iostream>
 #include "object.h"
 #include "version.h"
-#include "object_tag.h"
 
 namespace Token{
   #define FOR_EACH_RAW_TYPE(V) \

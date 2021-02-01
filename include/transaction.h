@@ -47,7 +47,7 @@ namespace Token{
     ~Input(){}
 
     Type GetType() const{
-      return Type::kInputType;
+      return Type::kInput;
     }
 
     /**
@@ -196,7 +196,7 @@ namespace Token{
     ~Output(){}
 
     Type GetType() const{
-      return Type::kOutputType;
+      return Type::kOutput;
     }
 
     /**
@@ -342,7 +342,7 @@ namespace Token{
     ~Transaction() = default;
 
     Type GetType() const{
-      return Type::kTransactionType;
+      return Type::kTransaction;
     }
 
     /**

@@ -62,7 +62,7 @@ namespace Token{
 
   enum class Type{
     kUnknown = 0,
-#define DEFINE_TYPE(Name) k##Name##Type,
+#define DEFINE_TYPE(Name) k##Name,
     FOR_EACH_TYPE(DEFINE_TYPE)
 #undef DEFINE_TYPE
 
@@ -78,7 +78,7 @@ namespace Token{
   static std::ostream& operator<<(std::ostream& stream, const Type& type){
     switch(type){
 #define DEFINE_TOSTRING(Name) \
-        case Type::k##Name##Type: \
+        case Type::k##Name: \
           return stream << #Name;
       FOR_EACH_TYPE(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
@@ -146,7 +146,7 @@ namespace Token{
 
 #define DEFINE_TYPE_CHECK(Name) \
     bool Is##Name##Type() const{\
-      return GetType() == Type::k##Name##Type; \
+      return GetType() == Type::k##Name; \
     }
     FOR_EACH_TYPE(DEFINE_TYPE_CHECK)
 #undef DEFINE_TYPE_CHECK
@@ -193,7 +193,7 @@ namespace Token{
 #undef DEFINE_TYPE_CHECK
 
 #define DEFINE_TYPE_CHECK(Name) \
-    bool Is##Name() const{ return GetType() == Type::k##Name##Type; }
+    bool Is##Name() const{ return GetType() == Type::k##Name; }
     FOR_EACH_TYPE(DEFINE_TYPE_CHECK)
 #undef DEFINE_TYPE_CHECK
 

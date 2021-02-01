@@ -6,7 +6,7 @@ COMPONENT="token-ledger"
 REGISTRY_HOSTNAME="gcr.io"
 GITHUB_TOKEN=$(cat ./token.txt)
 
-echo "building $VERSION...."
+echo "building $COMPONENT image v$VERSION...."
 if [[ "$VERSION" == "latest" ]]; then
   docker build . \
     --build-arg "GITHUB_TOKEN=$GITHUB_TOKEN" \
