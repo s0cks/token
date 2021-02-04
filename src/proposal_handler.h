@@ -14,7 +14,7 @@
 #include "peer/peer_session_manager.h"
 #endif//TOKEN_ENABLE_SERVER
 
-namespace Token{
+namespace token{
   class ProposalHandler{
    protected:
     JobQueue& queue_;

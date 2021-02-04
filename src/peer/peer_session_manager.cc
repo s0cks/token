@@ -1,10 +1,11 @@
 #ifdef TOKEN_ENABLE_SERVER
 
 #include "configuration.h"
+#include "peer/peer.h"
 #include "peer/peer_session_thread.h"
 #include "peer/peer_session_manager.h"
 
-namespace Token{
+namespace token{
   static std::mutex mutex_;
   static std::condition_variable cond_;
   static PeerSessionManager::State state_ = PeerSessionManager::kUninitialized;

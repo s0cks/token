@@ -1,6 +1,6 @@
 #include "utils/metrics.h"
 
-namespace Token{
+namespace token{
   static MetricSet metrics_;
   static CounterMap counters_;
   static GaugeMap gauges_;

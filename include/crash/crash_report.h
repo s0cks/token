@@ -5,7 +5,7 @@
 #include <cstdarg>
 #include "common.h"
 
-namespace Token{
+namespace token{
   class CrashReport{
    private:
     std::string filename_;

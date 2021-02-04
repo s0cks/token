@@ -1,6 +1,6 @@
 #include "http/http_controller_health.h"
 
-namespace Token{
+namespace token{
   void HealthController::HandleGetReadyStatus(HttpSession* session, const HttpRequestPtr& request){
     return session->Send(NewOkResponse(session));
   }

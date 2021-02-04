@@ -1,7 +1,7 @@
 #ifndef TOKEN_INCLUDE_MERKLE_PROOF_H
 #define TOKEN_INCLUDE_MERKLE_PROOF_H
 
-namespace Token{
+namespace token{
   class MerkleProofHash{
    public:
     enum Direction{

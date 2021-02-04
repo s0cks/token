@@ -4,7 +4,7 @@
 #include "http/http_service.h"
 #include "http/http_controller_pool.h"
 
-namespace Token{
+namespace token{
   void PoolController::HandleGetStats(HttpSession* session, const HttpRequestPtr& request){
     HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kHttpOk);
 

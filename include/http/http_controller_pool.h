@@ -5,7 +5,7 @@
 
 #include "http/http_controller.h"
 
-namespace Token{
+namespace token{
   class PoolController : HttpController{
    private:
     PoolController() = delete;

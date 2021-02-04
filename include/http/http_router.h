@@ -6,7 +6,7 @@
 #include "http_method.h"
 #include "utils/trie.h"
 
-namespace Token{
+namespace token{
   typedef std::unordered_map<std::string, std::string> ParameterMap;
 
   class HttpSession;

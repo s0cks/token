@@ -4,7 +4,7 @@
 #include <set>
 #include "printer.h"
 
-namespace Token{
+namespace token{
   class TimelineEvent{
    public:
     struct TimestampComparator{

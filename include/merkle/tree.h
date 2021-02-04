@@ -9,7 +9,7 @@
 #include "merkle/proof.h"
 #include "utils/printer.h"
 
-namespace Token{
+namespace token{
   class MerkleTreeVisitor;
   class MerkleTree{
     friend class MerkleTreeBuilder;

@@ -5,7 +5,7 @@
 #include <condition_variable>
 #include "block.h"
 
-namespace Token{
+namespace token{
   class RawProposal{
    private:
     BlockHeader block_;

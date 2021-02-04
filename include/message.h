@@ -4,7 +4,7 @@
 #include <memory>
 #include "object.h"
 
-namespace Token{
+namespace token{
   class Message;
   typedef std::shared_ptr<Message> MessagePtr;
   typedef std::vector<MessagePtr> MessageList;
@@ -14,7 +14,6 @@ namespace Token{
     Message() = default;
    public:
     virtual ~Message() = default;
-    virtual const char* GetName() const = 0;
   };
 };
 

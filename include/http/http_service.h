@@ -6,7 +6,7 @@
 #include "http/http_message.h"
 #include "http/http_session.h"
 
-namespace Token{
+namespace token{
   class HttpService : public Server<HttpMessage>{
    protected:
     HttpRouter router_;

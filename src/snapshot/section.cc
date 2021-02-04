@@ -1,7 +1,7 @@
 #include "snapshot/section.h"
 #include "snapshot/snapshot.h"
 
-namespace Token{
+namespace token{
   SnapshotPrologueSection::SnapshotPrologueSection(SnapshotReader* reader):
     SnapshotSection(Type::kPrologue),
     timestamp_(FromUnixTimestamp(reader->ReadLong())),

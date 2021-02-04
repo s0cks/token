@@ -1,7 +1,7 @@
 #include <sstream>
 #include "common.h"
 
-namespace Token{
+namespace token{
   std::string GetVersion(){
     std::stringstream stream;
     stream << TOKEN_MAJOR_VERSION;

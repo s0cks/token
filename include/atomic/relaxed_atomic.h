@@ -3,7 +3,7 @@
 
 #include <atomic>
 
-namespace Token{
+namespace token{
   template<typename T>
   class RelaxedAtomic{
    private:

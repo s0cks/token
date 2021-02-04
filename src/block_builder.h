@@ -6,7 +6,7 @@
 #include "blockchain.h"
 #include "utils/printer.h"
 
-namespace Token{
+namespace token{
   class BlockBuilder : ObjectPoolTransactionVisitor{
    private:
     TransactionList transactions_;

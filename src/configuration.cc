@@ -3,7 +3,7 @@
 
 #include "configuration.h"
 
-namespace Token{
+namespace token{
 
   static std::mutex mutex_;
   static std::condition_variable cond_;

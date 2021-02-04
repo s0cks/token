@@ -22,7 +22,7 @@
 #pragma GCC diagnostic ignored "-Wformat-truncation"
 
 //TODO: cleanup
-namespace Token{
+namespace token{
 #if defined(__linux__) || defined(__FreeBSD__)
   #define OS_IS_LINUX 1
 #elif defined(__APPLE__)

@@ -1,7 +1,7 @@
 #include "test_suite.h"
 #include "transaction.h"
 
-namespace Token{
+namespace token{
   static TransactionPtr
   CreateA(){
     // predictable

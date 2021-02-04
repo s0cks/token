@@ -7,7 +7,7 @@
 #include "rpc/rpc_session.h"
 #include "job/processor.h"
 
-namespace Token{
+namespace token{
   class SynchronizeJob : public Job{
    private:
     RpcSession* session_;

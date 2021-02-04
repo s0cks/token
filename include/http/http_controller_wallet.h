@@ -5,7 +5,7 @@
 
 #include "http/http_controller.h"
 
-namespace Token{
+namespace token{
   class WalletController : HttpController{
    private:
     WalletController() = delete;

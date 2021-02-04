@@ -11,7 +11,7 @@
 #error "Unsupported"
 #endif
 
-namespace Token{
+namespace token{
   class Thread{
    protected:
     Thread() = delete;

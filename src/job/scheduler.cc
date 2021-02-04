@@ -6,7 +6,7 @@
 #include "job/scheduler.h"
 #include "job/worker.h"
 
-namespace Token{
+namespace token{
   const int32_t JobScheduler::kMaxNumberOfJobs = 1024;
 
   static std::default_random_engine engine;

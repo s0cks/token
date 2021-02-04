@@ -8,7 +8,7 @@
 #include "consensus/proposal.h"
 #include "consensus/proposal_manager.h"
 
-namespace Token{
+namespace token{
   bool PeerSession::Connect(){
     //TODO: StartHeartbeatTimer();
     NodeAddress paddr = GetAddress();
@@ -298,14 +298,6 @@ namespace Token{
 
     LOG(INFO) << "downloading " << needed.size() << "/" << items.size() << " items from inventory....";
     Send(GetDataMessage::NewInstance(items));
-  }
-
-  void PeerSession::OnGetPeersMessage(const GetPeersMessagePtr& msg){
-    //TODO: implement PeerSession::OnGetPeersMessage(HandleMessageTask*);
-  }
-
-  void PeerSession::OnPeerListMessage(const PeerListMessagePtr& msg){
-    //TODO: implement PeerSession::OnPeerListMessage(HandleMessageTask*);
   }
 }
 

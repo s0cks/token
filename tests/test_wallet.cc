@@ -1,7 +1,7 @@
 #include "test_suite.h"
 #include "wallet.h"
 
-namespace Token{
+namespace token{
   static inline bool
   GenerateWallet(Wallet& wallet, int size){
     for(int idx = 0; idx < size; idx++)

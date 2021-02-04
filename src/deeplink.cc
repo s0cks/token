@@ -1,7 +1,7 @@
 #include <glog/logging.h>
 #include "deeplink.h"
 
-namespace Token{
+namespace token{
   struct WriteData{
     BufferPtr buffer;
   };

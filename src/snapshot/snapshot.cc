@@ -1,7 +1,7 @@
 #include "utils/bitfield.h"
 #include "snapshot/snapshot.h"
 
-namespace Token{
+namespace token{
   bool Snapshot::WriteNewSnapshot(){
     CheckSnapshotDirectory();
     SnapshotWriter writer;

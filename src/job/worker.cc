@@ -3,7 +3,7 @@
 #include "job/scheduler.h"
 #include "utils/timeline.h"
 
-namespace Token{
+namespace token{
   Job* JobWorker::GetNextJob(){
     Job* job = queue_.Pop();
     if(job)

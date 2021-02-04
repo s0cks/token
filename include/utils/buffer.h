@@ -5,7 +5,7 @@
 #include <vector>
 #include "object.h"
 
-namespace Token{
+namespace token{
   class Buffer;
   typedef std::shared_ptr<Buffer> BufferPtr;
 
@@ -103,22 +103,6 @@ namespace Token{
         free(data_);
     }
 
-    uint8_t operator[](intptr_t idx){
-      return (raw()[idx]);
-    }
-
-    char* data() const{
-      return (char*) raw();
-    }
-
-    uint8_t* begin() const{
-      return (uint8_t*) raw();
-    }
-
-    uint8_t* end() const{
-      return (uint8_t*) raw() + GetBufferSize();
-    }
-
     int64_t GetBufferSize() const{
       return bsize_;
     }
@@ -127,16 +111,56 @@ namespace Token{
       return wpos_;
     }
 
-    int64_t GetBytesRemaining() const{
-      return GetBufferSize() - GetWrittenBytes();
-    }
-
     int64_t GetReadBytes() const{
       return rpos_;
     }
 
+    uint8_t operator[](intptr_t idx){
+      return (raw()[idx]);
+    }
+
+    char* data() const{
+      return (char*)raw();
+    }
+
+    uint8_t* begin() const{
+      return (uint8_t*)raw();
+    }
+
+    uint8_t* end() const{
+      return (uint8_t*)raw() + GetBufferSize();
+    }
+
     bool empty() const{
       return bsize_ == 0;
+    }
+
+    void clear(){
+      memset(data(), 0, GetBufferSize());
+      rpos_ = 0;
+      wpos_ = 0;
+    }
+
+    int64_t GetBytesRemaining() const{
+      return GetBufferSize() - GetWrittenBytes();
+    }
+
+    bool HasBytesRemaining(){
+      return GetBufferSize() > 0 && rpos_ < GetBufferSize();
+    }
+
+    void SetWritePosition(int64_t pos){
+      if(pos > GetBufferSize()){
+        return;
+      }
+      wpos_ = pos;
+    }
+
+    void SetReadPosition(int64_t pos){
+      if(pos > GetBufferSize()){
+        return;
+      }
+      rpos_ = pos;
     }
 
     bool Resize(int64_t nsize){
@@ -162,6 +186,11 @@ namespace Token{
     DEFINE_PUT_SIGNED(Name, Type) \
     DEFINE_PUT_UNSIGNED(Name, Type)
 
+    FOR_EACH_RAW_TYPE(DEFINE_PUT);
+#undef DEFINE_PUT
+#undef DEFINE_PUT_SIGNED
+#undef DEFINE_PUT_UNSIGNED
+
 #define DEFINE_GET_SIGNED(Name, Type) \
     Type Get##Name(){ return Read<Type>(); } \
     Type Get##Name(int64_t pos){ return Read<Type>(pos); }
@@ -171,23 +200,32 @@ namespace Token{
 #define DEFINE_GET(Name, Type) \
     DEFINE_GET_SIGNED(Name, Type) \
     DEFINE_GET_UNSIGNED(Name, Type)
+
+    FOR_EACH_RAW_TYPE(DEFINE_GET);
+#undef DEFINE_GET
+#undef DEFINE_GET_SIGNED
+#undef DEFINE_GET_UNSIGNED
+
 #define DEFINE_PUT_TYPE(Name) \
     bool Put##Name(const Name& val){ return PutType<Name>(val); }
 #define DEFINE_GET_TYPE(Name) \
     Name Get##Name(){ return GetType<Name>(); }
-
-    FOR_EACH_RAW_TYPE(DEFINE_PUT);
-    FOR_EACH_RAW_TYPE(DEFINE_GET);
     FOR_EACH_SERIALIZABLE_TYPE(DEFINE_PUT_TYPE);
     FOR_EACH_SERIALIZABLE_TYPE(DEFINE_GET_TYPE);
-
-#undef DEFINE_PUT_SIGNED
-#undef DEFINE_PUT_UNSIGNED
+#undef DEFINE_GET_TYPE
 #undef DEFINE_PUT_TYPE
 
-#undef DEFINE_GET_SIGNED
-#undef DEFINE_GET_UNSIGNED
-#undef DEFINE_GET_TYPE
+    bool PutBytes(uint8_t* bytes, int64_t size){
+      if((wpos_ + size) > GetBufferSize())
+        return false;
+      memcpy(&raw()[wpos_], bytes, size);
+      wpos_ += size;
+      return true;
+    }
+
+    bool PutBytes(const BufferPtr& buff){
+      return PutBytes(buff->data_, buff->wpos_);
+    }
 
     void WriteBytesTo(std::fstream& stream, intptr_t size){
       uint8_t bytes[size];
@@ -213,21 +251,8 @@ namespace Token{
         LOG(WARNING) << "cannot read " << size << " bytes from file";
         return false;
       }
-
       wpos_ += size;
       return true;
-    }
-
-    bool PutBytes(uint8_t* bytes, int64_t size){
-      if((wpos_ + size) > GetBufferSize())
-        return false;
-      memcpy(&raw()[wpos_], bytes, size);
-      wpos_ += size;
-      return true;
-    }
-
-    bool PutBytes(const BufferPtr& buff){
-      return PutBytes(buff->data_, buff->wpos_);
     }
 
     bool GetBytes(uint8_t* result, intptr_t size){
@@ -293,30 +318,6 @@ namespace Token{
 
     ObjectTag GetObjectTag(){
       return ObjectTag(GetUnsignedLong());
-    }
-
-    bool HasBytesRemaining(){
-      return GetBufferSize() > 0 && rpos_ < GetBufferSize();
-    }
-
-    void clear(){
-      memset(data(), 0, GetBufferSize());
-      rpos_ = 0;
-      wpos_ = 0;
-    }
-
-    void SetWritePosition(int64_t pos){
-      if(pos > GetBufferSize()){
-        return;
-      }
-      wpos_ = pos;
-    }
-
-    void SetReadPosition(int64_t pos){
-      if(pos > GetBufferSize()){
-        return;
-      }
-      rpos_ = pos;
     }
 
     std::string ToString() const{

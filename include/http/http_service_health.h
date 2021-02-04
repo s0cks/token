@@ -5,7 +5,7 @@
 
 #include "http/http_service.h"
 
-namespace Token{
+namespace token{
   class HttpHealthService : HttpService{
    public:
     HttpHealthService(uv_loop_t* loop=uv_loop_new());

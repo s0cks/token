@@ -4,7 +4,7 @@
 #include <ostream>
 #include "common.h"
 
-namespace Token{
+namespace token{
   enum class HttpMethod{
     kGet,
     kPut,

@@ -3,7 +3,7 @@
 #include "utils/kvstore.h"
 #include "atomic/relaxed_atomic.h"
 
-namespace Token{
+namespace token{
   static RelaxedAtomic<ObjectPool::State> state_ = { ObjectPool::kUninitialized };
   static leveldb::DB* index_ = nullptr;
 

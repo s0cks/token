@@ -5,7 +5,7 @@
 
 #include "peer/peer_session.h"
 
-namespace Token{
+namespace token{
 #define FOR_EACH_PEER_SESSION_MANAGER_STATE(V) \
   V(Uninitialized)                             \
   V(Initializing)                              \

@@ -6,7 +6,7 @@
 #include "snapshot.h"
 #include "inspector.h"
 
-namespace Token{
+namespace token{
 #define FOR_EACH_INSPECTOR_COMMAND(V) \
     V(Status, ".status", 0) \
     V(GetData, "getdata", 1) \

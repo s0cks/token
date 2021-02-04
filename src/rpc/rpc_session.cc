@@ -10,7 +10,7 @@
 #include "consensus/proposal.h"
 #include "consensus/proposal_manager.h"
 
-namespace Token{
+namespace token{
   void ServerSession::OnNotFoundMessage(const NotFoundMessagePtr& msg){
     //TODO: implement OnNotFoundMessage
     LOG(WARNING) << "not implemented";
@@ -193,23 +193,5 @@ namespace Token{
     }
 
     Send(InventoryMessage::NewInstance(items));
-  }
-
-  void ServerSession::OnGetPeersMessage(const GetPeersMessagePtr& msg){
-    LOG(INFO) << "getting peers....";
-    PeerList peers;
-    /*
-    TODO:
-        if(!Server::GetPeers(peers)){
-            LOG(ERROR) << "couldn't get list of peers from the rpc.";
-            return;
-        }
-     */
-
-    Send(PeerListMessage::NewInstance(peers));
-  }
-
-  void ServerSession::OnPeerListMessage(const PeerListMessagePtr& msg){
-    //TODO: implement ServerSession::OnPeerListMessage(HandleMessageTask*);
   }
 }

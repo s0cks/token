@@ -4,7 +4,7 @@
 #include <leveldb/write_batch.h>
 #include "transaction.h"
 
-namespace Token{
+namespace token{
 #define FOR_EACH_JOB_RESULT_STATUS(V) \
     V(Unscheduled)                    \
     V(Successful)                     \

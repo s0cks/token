@@ -10,7 +10,7 @@
 #include <leveldb/slice.h>
 #include "crypto.h"
 
-namespace Token{
+namespace token{
   class Hash{
    public:
     static const int64_t kSize = 256 / 8;

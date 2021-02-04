@@ -2,7 +2,7 @@
 #include "server.h"
 #include "blockchain.h"
 
-namespace Token{
+namespace token{
   BlockHeader::BlockHeader(const BufferPtr& buff):
     timestamp_(FromUnixTimestamp(buff->GetLong())),
     height_(buff->GetLong()),

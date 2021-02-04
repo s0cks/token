@@ -94,32 +94,32 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
   message(STATUS "Compiling token w/ the following libraries: ${TOKEN_LIBRARIES}")
 endif(CMAKE_BUILD_TYPE MATCHES Debug)
 
-# Token Ledger Library
+# token Ledger Library
 add_library("token-ledger" SHARED ${TOKEN_HEADERS} ${TOKEN_SOURCES})
 set_target_properties("token-ledger" PROPERTIES VERSION ${TOKEN_VERSION})
 set_target_properties("token-ledger" PROPERTIES PUBLIC_HEADER "${TOKEN_HEADERS}")
 target_link_libraries("${PROJECT_NAME}-ledger" ${TOKEN_LIBRARIES} png)
 target_compile_options(token-ledger PRIVATE -Werror -Wall)
 
-# Token Server Executable
+# token Server Executable
 add_executable("token-node" main.cc)
 target_link_libraries("token-node" "token-ledger" ${TOKEN_LIBRARIES})
 target_compile_options(token-node PRIVATE -Werror -Wall)
 
-# Token Inspect Client Executable
+# token Inspect Client Executable
 add_executable("token-inspector" inspector.cc)
 target_link_libraries("token-inspector" "token-ledger" ${TOKEN_LIBRARIES})
 target_compile_options(token-inspector PRIVATE -Werror -Wall)
 
 if(CMAKE_BUILD_TYPE MATCHES Debug)
-  # Token Unit Tests
+  # token Unit Tests
   add_executable("token-tests" tests.cc ${TOKEN_TEST_SOURCES})
   target_link_libraries("token-tests" "token-ledger" ${GTEST_BOTH_LIBRARIES} ${TOKEN_LIBRARIES})
   add_test("token-tests" "token-tests")
 endif(CMAKE_BUILD_TYPE MATCHES Debug)
 
 # should we remove this?
-# Install Token Node
+# Install token Node
 
 install(
   DIRECTORY "include/" # source directory

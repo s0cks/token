@@ -6,7 +6,7 @@
 #include "http/http_service.h"
 #include "http/http_controller_wallet.h"
 
-namespace Token{
+namespace token{
   static inline bool
   ParseInt(const std::string& val, int* result){
     for(auto c : val){

@@ -5,7 +5,7 @@
 #include "server.h"
 #include "unclaimed_transaction.h"
 
-namespace Token{
+namespace token{
   TransactionPtr Transaction::NewInstance(const int64_t& index,
     const InputList& inputs,
     const OutputList& outputs,
@@ -68,7 +68,7 @@ namespace Token{
     CryptoPP::SecByteBlock bytes;
     /*
       TODO:
-        if(!Encode(bytes)){
+        if(!WriteMessage(bytes)){
             LOG(WARNING) << "couldn't serialize transaction to bytes";
             return false;
         }

@@ -1,7 +1,7 @@
 #ifndef TOKEN_WORK_STEALING_QUEUE_H
 #define TOKEN_WORK_STEALING_QUEUE_H
 
-namespace Token{
+namespace token{
   template<typename T>
   class WorkStealingQueue{
    private:

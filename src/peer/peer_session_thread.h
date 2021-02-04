@@ -12,7 +12,7 @@
 #include "vthread.h"
 #include "peer/peer_session.h"
 
-namespace Token{
+namespace token{
   typedef int16_t WorkerId;
 
 #define FOR_EACH_PEER_SESSION_STATE(V) \

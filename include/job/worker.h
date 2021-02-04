@@ -7,7 +7,7 @@
 #include "utils/metrics.h"
 #include "atomic/wsq.h"
 
-namespace Token{
+namespace token{
   typedef int32_t WorkerId;
 
   class JobWorkerStats{

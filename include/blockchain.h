@@ -11,7 +11,7 @@
 #include "unclaimed_transaction.h"
 #include "utils/printer.h"
 
-namespace Token{
+namespace token{
 #define BLOCKCHAIN_REFERENCE_GENESIS "<GENESIS>"
 #define BLOCKCHAIN_REFERENCE_HEAD "<HEAD>"
 

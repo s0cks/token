@@ -1,7 +1,7 @@
 #include <cstring>
 #include "vthread.h"
 
-namespace Token{
+namespace token{
   class ThreadStartData{
    private:
     const char* name_;

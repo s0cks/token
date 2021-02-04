@@ -5,7 +5,7 @@
 #include "block.h"
 #include "transaction.h"
 
-namespace Token{
+namespace token{
   class VerifyBlockJob;
   class VerifyTransactionJob;
   class VerifyTransactionInputsJob;

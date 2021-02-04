@@ -5,7 +5,7 @@
 #include "utils/buffer.h"
 #include "atomic/relaxed_atomic.h"
 
-namespace Token{
+namespace token{
 #define FOR_EACH_SESSION_STATE(V) \
     V(Connecting)                 \
     V(Connected)                  \

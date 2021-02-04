@@ -12,7 +12,7 @@
 
 #define DEFAULT_SERVER_BACKLOG 100
 
-namespace Token{
+namespace token{
 #define FOR_EACH_SERVER_STATE(V) \
     V(Starting) \
     V(Running) \

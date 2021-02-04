@@ -10,7 +10,7 @@
 #include "peer/peer_session_manager.h"
 #include "consensus/proposal_manager.h"
 
-namespace Token{
+namespace token{
   static ThreadId thread_;
   static std::atomic<BlockMiner::State> state_ = { BlockMiner::kStoppedState };
   static std::atomic<BlockMiner::Status> status_ = { BlockMiner::kOkStatus };

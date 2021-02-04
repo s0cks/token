@@ -10,7 +10,7 @@
 #include "wallet.h"
 #include "unclaimed_transaction.h"
 
-namespace Token{
+namespace token{
   class KeyType{
    protected:
     KeyType() = default;

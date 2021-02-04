@@ -5,7 +5,7 @@
 #include "object.h"
 #include "configuration.h"
 
-namespace Token{
+namespace token{
 #define HTTP_HEADER_DATE "Date"
 #define HTTP_HEADER_SERVER "Server"
 #define HTTP_HEADER_CONNECTION "Connection"
@@ -50,7 +50,7 @@ namespace Token{
   GetServerHeaderValue(){
     // not safe to call from separate thread?, encoding for Server's UUID is borked
     std::stringstream ss;
-    ss << "Token-Ledger; Node(" << BlockChainConfiguration::GetServerId().str() << ")";
+    ss << "token-Ledger; Node(" << BlockChainConfiguration::GetServerId().str() << ")";
     return ss.str();
   }
 

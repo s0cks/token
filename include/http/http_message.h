@@ -5,7 +5,7 @@
 #include "message.h"
 #include "utils/buffer.h"
 
-namespace Token{
+namespace token{
   template<class M>
   class Session;
 

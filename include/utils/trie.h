@@ -6,7 +6,7 @@
 
 #include <hash.h>
 
-namespace Token{
+namespace token{
   template<class K, class V, int64_t kAlphabetSize>
   class Trie;
 

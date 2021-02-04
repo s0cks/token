@@ -6,7 +6,7 @@
 #include "rpc/rpc_message.h"
 #include "rpc/rpc_session.h"
 
-namespace Token{
+namespace token{
   class PeerSession;
   typedef std::shared_ptr<PeerSession> PeerSessionPtr;
 

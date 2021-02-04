@@ -5,7 +5,7 @@
 #include "vthread.h"
 #include "consensus/proposal.h"
 
-namespace Token{
+namespace token{
 #define FOR_EACH_MINER_STATE(V) \
   V(Starting)                   \
   V(Running)                    \

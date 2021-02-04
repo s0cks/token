@@ -4,7 +4,7 @@
 
 static inline void
 InitializeLogging(char *arg0){
-  using namespace Token;
+  using namespace token;
   google::LogToStderr();
   google::InitGoogleLogging(arg0);
 }
@@ -13,7 +13,7 @@ DEFINE_string(inspector_tool, "", "The inspector tool to use");
 
 int
 main(int argc, char **argv){
-  using namespace Token;
+  using namespace token;
   SignalHandlers::Initialize();
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   InitializeLogging(argv[0]);

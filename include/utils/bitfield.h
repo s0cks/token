@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-namespace Token{
+namespace token{
   template<typename S, typename T, int pos, int size>
   class BitField{
    public:

@@ -1,6 +1,6 @@
 #include "rpc/rpc_server.h"
 
-namespace Token{
+namespace token{
   static LedgerServer instance;
 
   bool LedgerServer::Start(){

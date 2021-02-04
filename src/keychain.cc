@@ -2,7 +2,7 @@
 #include "common.h"
 #include "keychain.h"
 
-namespace Token{
+namespace token{
   void Decode(CryptoPP::BufferedTransformation& bt, const std::string& filename){
     CryptoPP::FileSource source(filename.c_str(), true);
     source.TransferTo(bt);

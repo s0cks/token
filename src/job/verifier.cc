@@ -2,7 +2,7 @@
 #include "job/verifier.h"
 #include "job/scheduler.h"
 
-namespace Token{
+namespace token{
   JobResult VerifyBlockJob::DoWork(){
     JobQueue* queue = JobScheduler::GetThreadQueue();
     std::vector<VerifyTransactionJob*> jobs;

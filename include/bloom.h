@@ -5,7 +5,7 @@
 #include "common.h"
 #include "hash.h"
 
-namespace Token{
+namespace token{
   class BloomFilter{
    private:
     static const size_t kResultSizeBytes = 32;

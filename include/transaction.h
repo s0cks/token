@@ -9,7 +9,7 @@
 #include "utils/file_writer.h"
 #include "unclaimed_transaction.h"
 
-namespace Token{
+namespace token{
   typedef std::shared_ptr<Transaction> TransactionPtr;
 
   class Input : public SerializableObject{

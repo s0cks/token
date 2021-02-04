@@ -4,7 +4,7 @@
 #include <pthread.h>
 #include "job/worker.h"
 
-namespace Token{
+namespace token{
   class Job;
   class JobScheduler{
     friend class JobWorker;

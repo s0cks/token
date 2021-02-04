@@ -1,6 +1,6 @@
 #include "consensus/proposal_manager.h"
 
-namespace Token{
+namespace token{
   static std::mutex mutex_;
   static std::condition_variable cond_;
   static ProposalPtr current_;

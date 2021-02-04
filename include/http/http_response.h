@@ -6,7 +6,7 @@
 #include "block.h"
 #include "http_service.h"
 
-namespace Token{
+namespace token{
   class HttpResponse;
   typedef std::shared_ptr<HttpResponse> HttpResponsePtr;
 
@@ -142,15 +142,8 @@ namespace Token{
       HttpResponse(session, status_code),
       filename_(filename),
       body_(){
-      std::fstream fd(filename, std::ios::in | std::ios::binary);
-      int64_t fsize = GetFilesize(fd);
-      body_ = Buffer::NewInstance(fsize);
-      if(!body_->ReadBytesFrom(fd, fsize)){
-        LOG(WARNING) << "couldn't read " << fsize << " bytes from: " << filename;
-        SetHeader(HTTP_HEADER_CONTENT_LENGTH, 0);
-      } else{
-        SetHeader(HTTP_HEADER_CONTENT_LENGTH, fsize);
-      }
+      body_ = Buffer::FromFile(filename);
+      SetHeader(HTTP_HEADER_CONTENT_LENGTH, body_->GetWrittenBytes());
       SetHeader(HTTP_HEADER_CONTENT_TYPE, content_type);
     }
     ~HttpFileResponse() = default;

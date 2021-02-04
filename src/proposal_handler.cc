@@ -2,7 +2,7 @@
 #include "proposal_handler.h"
 #include "snapshot/snapshot.h"
 
-namespace Token{
+namespace token{
   bool ProposalHandler::CommitProposal() const{
     if(!TransitionToPhase(Proposal::kQuorumPhase))
       return false;

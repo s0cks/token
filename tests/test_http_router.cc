@@ -3,7 +3,7 @@
 #include "http/http_router.h"
 #include "http/http_request.h"
 
-namespace Token{
+namespace token{
   static inline std::string
   HttpGetRequestBody(const std::string& path){
     return "GET " + path + " HTTP/1.1";

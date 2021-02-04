@@ -4,7 +4,7 @@
 #include "session.h"
 #include "rpc/rpc_message.h"
 
-namespace Token{
+namespace token{
   template<class M>
   class Server;
 

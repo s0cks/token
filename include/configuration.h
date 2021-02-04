@@ -6,7 +6,7 @@
 #include <libconfig.h++>
 #include "address.h"
 
-namespace Token{
+namespace token{
 #define BLOCKCHAIN_CONFIGURATION_FILENAME "token.cfg"
 
 // Server Properties

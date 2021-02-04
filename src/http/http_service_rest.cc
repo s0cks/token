@@ -7,7 +7,7 @@
 #include "http/http_controller_chain.h"
 #include "http/http_controller_wallet.h"
 
-namespace Token{
+namespace token{
   static HttpRestService instance;
 
   HttpRestService::HttpRestService(uv_loop_t* loop):

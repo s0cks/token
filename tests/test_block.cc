@@ -1,7 +1,7 @@
 #include "test_suite.h"
 #include "block.h"
 
-namespace Token{
+namespace token{
   static inline BlockPtr
   CreateA(){
     // predictable

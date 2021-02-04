@@ -10,7 +10,7 @@
 #include "unclaimed_transaction.h"
 #include "utils/timeline.h"
 
-namespace Token{
+namespace token{
   static inline std::string
   GetDataDirectory(){
     return FLAGS_path + "/data";

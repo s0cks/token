@@ -5,7 +5,7 @@
 #include "http_request.h"
 #include "http_response.h"
 
-namespace Token{
+namespace token{
   class HttpController{
    protected:
     HttpController() = delete;

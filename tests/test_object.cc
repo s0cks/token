@@ -2,7 +2,7 @@
 #include "object.h"
 #include "utils/buffer.h"
 
-namespace Token{
+namespace token{
   static inline User
   CreateUserA(){
     // predictable

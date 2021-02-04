@@ -51,7 +51,7 @@ DEFINE_int64(miner_interval, 1000 * 60 * 1, "The amount of time between mining b
 
 static inline void
 InitializeLogging(char *arg0){
-  using namespace Token;
+  using namespace token;
   google::LogToStderr();
   google::InitGoogleLogging(arg0);
 }
@@ -59,7 +59,7 @@ InitializeLogging(char *arg0){
 #ifdef TOKEN_DEBUG
   static inline bool
   AppendDummy(int total_spends){
-    using namespace Token;
+    using namespace token;
     sleep(10);
 
     Wallet wallet;
@@ -93,21 +93,21 @@ InitializeLogging(char *arg0){
     return false;
   }
 
-  class BlockChainPrinter : public Token::BlockChainBlockVisitor, Token::Printer{
+  class BlockChainPrinter : public token::BlockChainBlockVisitor, token::Printer{
    public:
     BlockChainPrinter(const google::LogSeverity& severity, const long& flags):
-      Token::BlockChainBlockVisitor(),
-      Token::Printer(severity, flags){}
+        token::BlockChainBlockVisitor(),
+        token::Printer(severity, flags){}
     ~BlockChainPrinter() = default;
 
-    bool Visit(const Token::BlockPtr& blk){
+    bool Visit(const token::BlockPtr& blk){
       LOG_AT_LEVEL(GetSeverity()) << blk->GetHash();
       return true;
     }
 
     static bool Print(const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone){
       BlockChainPrinter printer(severity, flags);
-      return Token::BlockChain::VisitBlocks(&printer);
+      return token::BlockChain::VisitBlocks(&printer);
     }
   };
 #endif//TOKEN_DEBUG
@@ -118,7 +118,7 @@ InitializeLogging(char *arg0){
 // - safer/better shutdown/terminate routines
 int
 main(int argc, char **argv){
-  using namespace Token;
+  using namespace token;
   // Install Signal Handlers
   SignalHandlers::Initialize();
 

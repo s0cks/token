@@ -4,7 +4,7 @@
 #include "server.h"
 #include "rpc/rpc_session.h"
 
-namespace Token{
+namespace token{
 #define ENVIRONMENT_TOKEN_CALLBACK_ADDRESS "TOKEN_CALLBACK_ADDRESS"
 
   class ServerSession : public RpcSession{

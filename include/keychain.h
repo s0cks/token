@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-namespace Token{
+namespace token{
   class Keychain{
    public:
     static const size_t kKeypairSize = 4096;

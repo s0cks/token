@@ -3,7 +3,7 @@
 
 #include "consensus/proposal.h"
 
-namespace Token{
+namespace token{
   class ProposalManager{
    private:
     ProposalManager() = delete;

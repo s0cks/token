@@ -7,7 +7,7 @@
 
 #include <pthread.h>
 
-namespace Token{
+namespace token{
   typedef pthread_key_t ThreadLocalKey;
   typedef pthread_t ThreadId;
   typedef void (* ThreadHandlerFunction)(uword parameter);

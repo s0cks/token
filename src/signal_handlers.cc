@@ -11,7 +11,7 @@
   //#include "http/service_rest.h"
 #endif//TOKEN_ENABLE_REST_SERVICE
 
-namespace Token{
+namespace token{
   static inline void
   PrintFatalCrashReport(const std::string& cause){
     //TODO: implement

@@ -6,7 +6,7 @@
 #include "http/http_service.h"
 #include "http/http_controller.h"
 
-namespace Token{
+namespace token{
   class HealthController : HttpController{
    private:
     HealthController() = delete;

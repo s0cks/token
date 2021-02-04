@@ -4,7 +4,7 @@
 #include "hash.h"
 #include "object.h"
 
-namespace Token{
+namespace token{
   class MerkleNode : public Object{
    protected:
     MerkleNode* parent_;

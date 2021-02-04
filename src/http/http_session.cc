@@ -2,7 +2,7 @@
 #include "http/http_request.h"
 #include "http/http_response.h"
 
-namespace Token{
+namespace token{
   void HttpSession::OnMessageRead(const HttpMessagePtr& msg){
     HttpRequestPtr request = std::static_pointer_cast<HttpRequest>(msg);
     HttpRouterMatch match = router_->Find(request);

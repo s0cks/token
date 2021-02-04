@@ -1,7 +1,7 @@
 #include "test_suite.h"
 #include "unclaimed_transaction.h"
 
-namespace Token{
+namespace token{
   static inline UnclaimedTransactionPtr
   CreateA(){
     // predictable

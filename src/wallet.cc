@@ -5,7 +5,7 @@
 #include "wallet.h"
 #include "utils/kvstore.h"
 
-namespace Token{
+namespace token{
   void ToJson(const Wallet& hashes, Json::String& sb){
     Json::Writer writer(sb);
     writer.StartArray();

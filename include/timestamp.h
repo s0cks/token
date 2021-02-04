@@ -3,7 +3,7 @@
 
 #include <chrono>
 
-namespace Token{
+namespace token{
   typedef std::chrono::system_clock Clock;
   typedef Clock::time_point Timestamp;
   typedef Clock::duration Duration;

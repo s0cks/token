@@ -3,7 +3,7 @@
 #include "utils/bitfield.h"
 #include "utils/file_writer.h"
 
-namespace Token{
+namespace token{
   bool SerializableObject::WriteToFile(BinaryFileWriter* writer) const{
     BufferPtr data = Buffer::NewInstance(GetBufferSize());
     if(!Write(data)){

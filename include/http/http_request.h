@@ -13,7 +13,7 @@
 #include "http/http_service.h"
 #include "utils/buffer.h"
 
-namespace Token{
+namespace token{
   class HttpRequest;
   typedef std::shared_ptr<HttpRequest> HttpRequestPtr;
 

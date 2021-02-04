@@ -1,7 +1,7 @@
 #include "test_suite.h"
 #include "object_tag.h"
 
-namespace Token{
+namespace token{
   TEST(TestObjectTag, test_pos){
     ObjectTag t1(Type::kBlockType, 30000);
     ASSERT_TRUE(t1.IsValid());

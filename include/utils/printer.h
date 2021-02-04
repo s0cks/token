@@ -3,7 +3,7 @@
 
 #include "block.h"
 
-namespace Token{
+namespace token{
   class Printer{
    public:
     static const int kFlagNone;
@@ -178,7 +178,7 @@ namespace Token{
     static inline std::string
     CreateBanner(){
       std::stringstream ss;
-      ss << "Token v" << Token::GetVersion();
+      ss << "token v" << token::GetVersion();
 #ifdef TOKEN_DEBUG
       ss << " (Debug Mode Enabled)";
 #endif//TOKEN_DEBUG

@@ -8,7 +8,7 @@
 
 #include "hash.h"
 
-namespace Token{
+namespace token{
   namespace Json{
     typedef rapidjson::Document Document;
     typedef rapidjson::StringBuffer String;

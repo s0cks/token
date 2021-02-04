@@ -8,7 +8,7 @@
 #include "utils/file_reader.h"
 #include "utils/file_writer.h"
 
-namespace Token{
+namespace token{
   class Snapshot;
   typedef std::shared_ptr<Snapshot> SnapshotPtr;
 

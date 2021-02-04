@@ -10,7 +10,7 @@
 #include "transaction.h"
 #include "unclaimed_transaction.h"
 
-namespace Token{
+namespace token{
   class ObjectPoolVisitor{
    protected:
     ObjectPoolVisitor() = default;

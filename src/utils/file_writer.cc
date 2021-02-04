@@ -1,7 +1,7 @@
 #include "utils/bitfield.h"
 #include "utils/file_writer.h"
 
-namespace Token{
+namespace token{
   #define FOR_EACH_RAW_TYPE(V) \
     V(Byte, int8_t)            \
     V(Short, int16_t)          \

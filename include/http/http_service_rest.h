@@ -5,7 +5,7 @@
 
 #include "http/http_service.h"
 
-namespace Token{
+namespace token{
   class HttpRestService : HttpService{
    public:
     HttpRestService(uv_loop_t* loop=uv_loop_new());

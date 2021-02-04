@@ -3,7 +3,7 @@
 #include "utils/buffer.h"
 #include "block.h"
 
-namespace Token{
+namespace token{
 #define CHECK_FILE_POINTER \
     if(GetFilePointer() == NULL){ \
         LOG(WARNING) << "file " << GetFilename() << " is not opened"; \

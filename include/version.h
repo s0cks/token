@@ -3,7 +3,7 @@
 
 #include "utils/buffer.h"
 
-namespace Token{
+namespace token{
   class Version{
    public:
     static const int64_t kSize = sizeof(int16_t) // Major

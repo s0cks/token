@@ -12,7 +12,7 @@
 #include "hash.h"
 #include "utils/buffer.h"
 
-namespace Token{
+namespace token{
 #define DEEPLINK "https://tknevents-lab.web.app/scan"
 #define DEEPLINK_DEFAULT_FORMAT "QRCode"
 #define DEEPLINK_DEFAULT_WIDTH 64

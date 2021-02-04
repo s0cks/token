@@ -5,7 +5,7 @@
 #include "common.h"
 #include "utils/buffer.h"
 
-namespace Token{
+namespace token{
   class NodeAddress{
    public:
     static const intptr_t kSize = sizeof(uint32_t) + sizeof(uint32_t);

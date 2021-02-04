@@ -2,7 +2,7 @@
 
 #include "blockchain.h"
 
-namespace Token{
+namespace token{
   bool CrashReport::Print() const{
     Print("Cause: %s\n", cause_.data());
     Print("Timestamp: %s\n", FormatTimestampReadable(timestamp_).data());

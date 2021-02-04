@@ -3,7 +3,7 @@
 #include "http/http_service_health.h"
 #include "http/http_controller_health.h"
 
-namespace Token{
+namespace token{
   static HttpHealthService instance;
 
   HttpHealthService::HttpHealthService(uv_loop_t* loop):

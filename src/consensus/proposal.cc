@@ -6,7 +6,7 @@
 #include "job/scheduler.h"
 #include "snapshot/snapshot.h"
 
-namespace Token{
+namespace token{
 #define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
 #define LOCK std::unique_lock<std::mutex> lock(mutex_)
 #define UNLOCK lock.unlock()

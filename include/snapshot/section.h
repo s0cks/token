@@ -4,7 +4,7 @@
 #include "version.h"
 #include "blockchain.h"
 
-namespace Token{
+namespace token{
   typedef uint64_t SnapshotSectionHeader;
 
   class SnapshotWriter;

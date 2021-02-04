@@ -7,7 +7,7 @@
 
 #include "utils/kvstore.h"
 
-namespace Token{
+namespace token{
   class ProcessInputListJob;
   class ProcessTransactionInputsJob;
   class ProcessOutputListJob;

@@ -10,7 +10,7 @@
 #include "object.h"
 #include "utils/buffer.h"
 
-namespace Token{
+namespace token{
   typedef std::unordered_set<Hash, Hash::Hasher, Hash::Equal> Wallet;
 
   static inline int64_t

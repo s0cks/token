@@ -4,7 +4,7 @@
 #include "http/http_service.h"
 #include "http/http_controller_chain.h"
 
-namespace Token{
+namespace token{
   void ChainController::HandleGetBlockChain(HttpSession* session, const HttpRequestPtr& request){
     return session->Send(NewNoContentResponse(session, "Cannot get the list of blocks in the blockchain."));
   }

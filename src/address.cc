@@ -1,6 +1,6 @@
 #include "address.h"
 
-namespace Token{
+namespace token{
   static inline uint32_t
   GetAddressFrom(const std::string& address){
     int a, b, c, d;

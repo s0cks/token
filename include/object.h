@@ -13,7 +13,7 @@
 #include "hash.h"
 #include "utils/bitfield.h"
 
-namespace Token{
+namespace token{
 #define FOR_EACH_RAW_TYPE(V) \
   V(Byte, int8_t)            \
   V(Short, int16_t)          \
@@ -21,21 +21,19 @@ namespace Token{
   V(Long, int64_t)
 
 #define FOR_EACH_MESSAGE_TYPE(V) \
-    V(Version) \
-    V(Verack) \
-    V(Prepare) \
-    V(Promise) \
-    V(Commit) \
-    V(Accepted) \
-    V(Rejected) \
-    V(GetData) \
-    V(GetBlocks) \
-    V(Block) \
-    V(Transaction) \
-    V(Inventory) \
-    V(NotFound) \
-    V(GetPeers) \
-    V(PeerList)
+  V(Version) \
+  V(Verack) \
+  V(Prepare) \
+  V(Promise) \
+  V(Commit) \
+  V(Accepted) \
+  V(Rejected) \
+  V(GetData) \
+  V(GetBlocks) \
+  V(Block) \
+  V(Transaction) \
+  V(Inventory) \
+  V(NotFound)
 
 #define FOR_EACH_SERIALIZABLE_TYPE(V) \
   V(Hash)                             \
@@ -412,8 +410,8 @@ namespace Token{
 
     bool Write(Json::Writer& writer) const{
       return writer.StartObject()
-          && Json::SetField(writer, "hash", transaction_)
-          && Json::SetField(writer, "index", index_)
+            && Json::SetField(writer, "hash", transaction_)
+            && Json::SetField(writer, "index", index_)
           && writer.EndObject();
     }
 

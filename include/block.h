@@ -8,7 +8,7 @@
 #include "utils/file_reader.h"
 #include "utils/file_writer.h"
 
-namespace Token{
+namespace token{
   class Block;
   typedef std::shared_ptr<Block> BlockPtr;
 

@@ -3,7 +3,7 @@
 #include "peer/peer_session_thread.h"
 #include "peer/peer_session_manager.h"
 
-namespace Token{
+namespace token{
   void PeerSessionThread::HandleThread(uword parameter){
     PeerSessionThread* thread = (PeerSessionThread*) parameter;
     thread->SetState(State::kStarting);

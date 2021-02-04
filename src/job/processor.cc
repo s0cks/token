@@ -2,7 +2,7 @@
 #include "job/scheduler.h"
 #include "job/processor.h"
 
-namespace Token{
+namespace token{
   JobResult ProcessBlockJob::DoWork(){
     if(!GetBlock()->Accept(this)){
       return Failed("Cannot visit the block transactions.");

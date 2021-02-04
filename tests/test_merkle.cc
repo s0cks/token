@@ -1,7 +1,7 @@
 #include "test_suite.h"
 #include "merkle/tree.h"
 
-namespace Token{
+namespace token{
     TEST(TestMerkle, test_tree){
         BlockPtr genesis = Block::Genesis();
         ASSERT_EQ(genesis->GetMerkleRoot(), Hash::FromHexString("B3863C87CD23972C5B322B5E88145E671B9C42E7C8DDE5AC7065EFB1E0E2B4FB"));

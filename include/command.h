@@ -5,7 +5,7 @@
 #include <string>
 #include "hash.h"
 
-namespace Token{
+namespace token{
   class Command{
    protected:
     std::string name_;

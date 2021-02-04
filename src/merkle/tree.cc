@@ -1,6 +1,6 @@
 #include "merkle/tree.h"
 
-namespace Token{
+namespace token{
   MerkleNode* MerkleTree::BuildTree(std::vector<MerkleNode*>& nodes){
     if(nodes.size() == 1){
       return nodes.front();

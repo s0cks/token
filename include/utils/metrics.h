@@ -14,7 +14,7 @@
 #include <glog/logging.h>
 #include <algorithm>
 
-namespace Token{
+namespace token{
   namespace Metrics{
 #define FOR_EACH_METRIC_TYPE(V) \
         V(Counter)              \

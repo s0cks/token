@@ -1,6 +1,6 @@
 #include "snapshot/snapshot_inspector.h"
 
-namespace Token{
+namespace token{
   static inline void
   PrintBlock(const BlockPtr& blk){
     LOG(INFO) << "Block #" << blk->GetHeight();
@@ -28,11 +28,11 @@ namespace Token{
     LOG(INFO) << "Size: " << GetFilesize(snapshot->GetFilename()) << " Bytes";
   }
 
-  void SnapshotInspector::HandleStatusCommand(Token::SnapshotInspectorCommand* cmd){
+  void SnapshotInspector::HandleStatusCommand(token::SnapshotInspectorCommand* cmd){
     PrintSnapshot(GetSnapshot());
   }
 
-  void SnapshotInspector::HandleGetDataCommand(Token::SnapshotInspectorCommand* cmd){
+  void SnapshotInspector::HandleGetDataCommand(token::SnapshotInspectorCommand* cmd){
     //TODO: PrintBlock(GetBlock(Hash));
   }
 
@@ -47,7 +47,7 @@ namespace Token{
     }
   };
 
-  void SnapshotInspector::HandleGetBlocksCommand(Token::SnapshotInspectorCommand* cmd){
+  void SnapshotInspector::HandleGetBlocksCommand(token::SnapshotInspectorCommand* cmd){
     LOG(INFO) << "Blocks:";
     SnapshotBlockPrinter printer;
     return; //TODO: fixme

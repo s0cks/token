@@ -1,7 +1,7 @@
 #include "test_suite.h"
 #include "rpc/rpc_message.h"
 
-namespace Token{
+namespace token{
   static inline RpcMessagePtr
   NewVersionMessage(){
     return VersionMessage::NewInstance(UUID());

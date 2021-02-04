@@ -4,7 +4,7 @@
 #include "http/http_message.h"
 #include "session.h"
 
-namespace Token{
+namespace token{
   class HttpRouter;
   class HttpSession : public Session<HttpMessage>{
     friend class HttpService;

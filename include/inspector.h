@@ -7,7 +7,7 @@
 #include <glog/logging.h>
 #include "common.h"
 
-namespace Token{
+namespace token{
   template<typename DataType, typename CommandType>
   class Inspector{
    protected:

@@ -1,6 +1,6 @@
-# Token Ledger
+# token Ledger
 
-This project contains the native code (C++) that runs the Token Distributed Ledger
+This project contains the native code (C++) that runs the token Distributed Ledger
 
 # Documentation
 

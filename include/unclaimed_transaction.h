@@ -6,7 +6,7 @@
 #include "utils/file_writer.h"
 #include "utils/file_reader.h"
 
-namespace Token{
+namespace token{
   class UnclaimedTransaction;
   typedef std::shared_ptr<UnclaimedTransaction> UnclaimedTransactionPtr;
 
