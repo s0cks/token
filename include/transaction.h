@@ -5,8 +5,6 @@
 #include "hash.h"
 #include "object.h"
 #include "utils/buffer.h"
-#include "utils/file_reader.h"
-#include "utils/file_writer.h"
 #include "unclaimed_transaction.h"
 
 namespace token{
@@ -40,10 +38,6 @@ namespace token{
       SerializableObject(),
       reference_(buff->GetReference()),
       user_(buff->GetUser()){}
-    Input(BinaryFileReader* reader):
-      SerializableObject(),
-      reference_(reader->ReadHash(), reader->ReadLong()),
-      user_(reader->ReadUser()){}
     ~Input(){}
 
     Type GetType() const{
@@ -189,10 +183,6 @@ namespace token{
       SerializableObject(),
       user_(buff->GetUser()),
       product_(buff->GetProduct()){}
-    Output(BinaryFileReader* reader):
-      SerializableObject(),
-      user_(reader->ReadUser()),
-      product_(reader->ReadProduct()){}
     ~Output(){}
 
     Type GetType() const{
@@ -454,22 +444,6 @@ namespace token{
     }
 
     /**
-     * Serializes this object to a file using a BinaryFileWriter.
-     *
-     * @param writer
-     * @see BinaryFileWriter
-     * @deprecated
-     * @return True when successful otherwise, false
-     */
-    bool Write(BinaryFileWriter* writer) const{
-      writer->WriteLong(ToUnixTimestamp(timestamp_));
-      writer->WriteLong(index_);
-      writer->WriteList(inputs_);
-      writer->WriteList(outputs_);
-      return true;
-    }
-
-    /**
      * Compares 2 transactions for equality.
      *
      * @deprecated
@@ -543,7 +517,6 @@ namespace token{
       const OutputList& outputs,
       const Timestamp& timestamp = Clock::now());
     static TransactionPtr FromBytes(const BufferPtr& buff);
-    static TransactionPtr NewInstance(BinaryFileReader* reader);
   };
 
   typedef std::vector<TransactionPtr> TransactionList;

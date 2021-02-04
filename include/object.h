@@ -173,7 +173,6 @@ namespace token{
     virtual std::string ToString() const = 0;
   };
 
-  class BinaryFileWriter;
   class SerializableObject : public Object{
    protected:
     SerializableObject() = default;
@@ -195,10 +194,12 @@ namespace token{
     FOR_EACH_TYPE(DEFINE_TYPE_CHECK)
 #undef DEFINE_TYPE_CHECK
 
+    BufferPtr ToBuffer() const;
+    bool ToFile(const std::string& filename) const;
+
     virtual int64_t GetBufferSize() const = 0;
     virtual bool Write(const BufferPtr& buff) const = 0;
     virtual bool Write(Json::Writer& writer) const{ return false; }
-    bool WriteToFile(BinaryFileWriter* writer) const;
   };
 
   class BinaryObject : public SerializableObject{

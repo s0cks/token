@@ -119,16 +119,10 @@ namespace token{
     return GetBlock(GetReference(BLOCKCHAIN_REFERENCE_HEAD));
   }
 
-  static inline bool
-  WriteBlockData(const std::string& filename, const BlockPtr& blk){
-    BinaryObjectFileWriter writer(filename);
-    return writer.WriteObject(blk);
-  }
-
   bool BlockChain::PutBlock(const Hash& hash, BlockPtr blk){
     ObjectKey okey(Type::kBlock, hash);
     std::string filename = GetNewBlockFilename(blk);
-    if(!WriteBlockData(filename, blk)){
+    if(!blk->ToFile(filename)){
       LOG(WARNING) << "cannot write block data to file: " << filename;
       return false;
     }

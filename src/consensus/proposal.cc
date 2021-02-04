@@ -4,7 +4,6 @@
 
 #include "pool.h"
 #include "job/scheduler.h"
-#include "snapshot/snapshot.h"
 
 namespace token{
 #define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)

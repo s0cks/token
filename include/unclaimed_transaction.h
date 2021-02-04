@@ -3,8 +3,6 @@
 
 #include "object.h"
 #include "utils/buffer.h"
-#include "utils/file_writer.h"
-#include "utils/file_reader.h"
 
 namespace token{
   class UnclaimedTransaction;

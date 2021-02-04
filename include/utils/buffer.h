@@ -227,21 +227,24 @@ namespace token{
       return PutBytes(buff->data_, buff->wpos_);
     }
 
-    void WriteBytesTo(std::fstream& stream, intptr_t size){
-      uint8_t bytes[size];
-      GetBytes(bytes, size);
-      if(!stream.write((char*) bytes, size)){
-        LOG(WARNING) << "cannot read " << size << " bytes from file";
-        return;
+    bool WriteTo(std::fstream& stream, int64_t size) const{
+      if(!stream.write(data(), size)){
+        LOG(WARNING) << "cannot write " << size << " bytes from file";
+        return false;
       }
 
       if(!stream.flush()){
         LOG(WARNING) << "cannot flush the file";
-        return;
+        return false;
       }
+      return true;
     }
 
-    bool ReadBytesFrom(std::fstream& stream, int64_t size){
+    bool WriteTo(std::fstream& stream) const{
+      return WriteTo(stream, GetWrittenBytes());
+    }
+
+    bool ReadFrom(std::fstream& stream, int64_t size){
       if(GetBufferSize() < size){
         LOG(WARNING) << "cannot read " << size << " bytes into a buffer of size: " << GetBufferSize();
         return false;
@@ -326,35 +329,42 @@ namespace token{
       return ss.str();
     }
 
-    static inline BufferPtr NewInstance(int64_t size){
+    static inline BufferPtr
+    NewInstance(int64_t size){
       return std::make_shared<Buffer>(size);
     }
 
-    static inline BufferPtr From(const char* data, size_t size){
+    static inline BufferPtr
+    From(const char* data, size_t size){
       return std::make_shared<Buffer>(data, size);
     }
 
-    static inline BufferPtr From(const std::string& slice){
+    static inline BufferPtr
+    From(const std::string& slice){
       return From(slice.data(), slice.size());
     }
 
-    static inline BufferPtr From(const leveldb::Slice& slice){
+    static inline BufferPtr
+    From(const leveldb::Slice& slice){
       return From(slice.data(), slice.size());
     }
 
-    static inline BufferPtr From(uv_buf_t* buff){
+    static inline BufferPtr
+    From(uv_buf_t* buff){
       return From(buff->base, buff->len);
     }
 
-    static inline BufferPtr From(const uv_buf_t* buff){
+    static inline BufferPtr
+    From(const uv_buf_t* buff){
       return From(buff->base, buff->len);
     }
 
-    static inline BufferPtr FromFile(const std::string& filename){
+    static inline BufferPtr
+    FromFile(const std::string& filename){
       std::fstream fd(filename, std::ios::in | std::ios::binary);
       size_t size = GetFilesize(fd);
       BufferPtr buff = NewInstance(size);
-      if(!buff->ReadBytesFrom(fd, static_cast<int64_t>(size))){
+      if(!buff->ReadFrom(fd, static_cast<int64_t>(size))){
         LOG(WARNING) << "couldn't read " << size << " bytes from: " << filename;
         return BufferPtr(nullptr);
       }

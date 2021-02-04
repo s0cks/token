@@ -31,23 +31,6 @@ namespace token{
     return std::make_shared<Transaction>(timestamp, index, inputs, outputs);
   }
 
-  TransactionPtr Transaction::NewInstance(BinaryFileReader* reader){
-    Timestamp timestamp = FromUnixTimestamp(reader->ReadLong());
-    int64_t index = reader->ReadLong();
-
-    int64_t idx;
-    InputList inputs;
-    int64_t num_inputs = reader->ReadLong();
-    for(idx = 0; idx < num_inputs; idx++)
-      inputs.push_back(Input(reader));
-
-    OutputList outputs;
-    int64_t num_outputs = reader->ReadLong();
-    for(idx = 0; idx < num_outputs; idx++)
-      outputs.push_back(Output(reader));
-    return std::make_shared<Transaction>(timestamp, index, inputs, outputs);
-  }
-
   bool Transaction::VisitInputs(TransactionInputVisitor* vis) const{
     for(auto& it : inputs_)
       if(!vis->Visit(it)){

@@ -5,8 +5,6 @@
 #include "bloom.h"
 #include "transaction.h"
 #include "utils/buffer.h"
-#include "utils/file_reader.h"
-#include "utils/file_writer.h"
 
 namespace token{
   class Block;
@@ -221,10 +219,6 @@ namespace token{
       return GetHeight() == 0;
     }
 
-    ObjectTag tag() const{
-      return ObjectTag(Type::kBlock, (int16_t)GetBufferSize());
-    }
-
     std::string ToString() const{
       std::stringstream stream;
       stream << "Block(#" << GetHeight() << ", " << GetNumberOfTransactions() << " Transactions)";
@@ -251,11 +245,11 @@ namespace token{
 
     bool Write(Json::Writer& writer) const{
       return writer.StartObject()
-          && Json::SetField(writer, "timestamp", ToUnixTimestamp(timestamp_))
-          && Json::SetField(writer, "height", height_)
-          && Json::SetField(writer, "previous_hash", previous_hash_)
-          && Json::SetField(writer, "hash", GetHash())
-          && Json::SetField(writer, "transactions", GetNumberOfTransactions())
+            && Json::SetField(writer, "timestamp", ToUnixTimestamp(timestamp_))
+            && Json::SetField(writer, "height", height_)
+            && Json::SetField(writer, "previous_hash", previous_hash_)
+            && Json::SetField(writer, "hash", GetHash())
+            && Json::SetField(writer, "transactions", GetNumberOfTransactions())
           && writer.EndObject();
     }
 
@@ -288,7 +282,13 @@ namespace token{
 
     static BlockPtr Genesis();
 
-    static BlockPtr FromBytes(const BufferPtr& buff){
+    static inline BlockPtr
+    NewInstance(const BlockPtr& parent, const TransactionSet& txs, const Timestamp& timestamp = Clock::now()){
+      return std::make_shared<Block>(parent, txs, timestamp);
+    }
+
+    static inline BlockPtr
+    FromBytes(const BufferPtr& buff){
       Timestamp timestamp = FromUnixTimestamp(buff->GetLong());
       int64_t height = buff->GetLong();
       Hash previous_hash = buff->GetHash();
@@ -302,25 +302,16 @@ namespace token{
       return std::make_shared<Block>(height, previous_hash, transactions, timestamp);
     }
 
-    static BlockPtr NewInstance(BinaryFileReader* reader){
-      Timestamp timestamp = FromUnixTimestamp(reader->ReadLong());
-      int64_t height = reader->ReadLong();
-      Hash phash = reader->ReadHash();
-
-      int64_t idx;
-      int64_t num_transactions = reader->ReadLong();
-      TransactionSet transactions;
-      for(idx = 0; idx < num_transactions; idx++)
-        transactions.insert(Transaction::NewInstance(reader));
-      return std::make_shared<Block>(height, phash, transactions, timestamp);
-    }
-
     static inline BlockPtr
-    NewInstance(const BlockPtr& parent, const TransactionSet& txs, const Timestamp& timestamp = Clock::now()){
-      return std::make_shared<Block>(parent, txs, timestamp);
+    FromFile(const std::string& filename){
+      BufferPtr buffer = Buffer::FromFile(filename);
+      ObjectTag tag = buffer->GetObjectTag();
+      if(!tag.IsBlockType()){
+        LOG(WARNING) << "unexpected tag of " << tag << ", cannot read Block from: " << filename;
+        return BlockPtr(nullptr);
+      }
+      return FromBytes(buffer);
     }
-
-    static BlockPtr FromFile(const std::string& filename);
   };
 
   class BlockVisitor{
@@ -331,21 +322,6 @@ namespace token{
     virtual bool VisitStart(){ return true; }
     virtual bool Visit(const TransactionPtr& tx) = 0;
     virtual bool VisitEnd(){ return true; }
-  };
-
-  class BlockFileReader : BinaryObjectFileReader{
-   public:
-    BlockFileReader(const std::string& filename):
-      BinaryObjectFileReader(filename, Type::kBlock){}
-    ~BlockFileReader() = default;
-
-    BlockPtr ReadBlock(){
-      if(!ValidateTag()){
-        LOG(WARNING) << "couldn't validate block tag.";
-        return BlockPtr(nullptr);
-      }
-      return Block::NewInstance(this);
-    }
   };
 }
 

@@ -79,9 +79,4 @@ namespace token{
     std::shared_ptr<MerkleTree> tree = builder.Build();
     return tree->GetRootHash();
   }
-
-  BlockPtr Block::FromFile(const std::string& filename){
-    BlockFileReader reader(filename);
-    return reader.ReadBlock();
-  }
 }

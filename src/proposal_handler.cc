@@ -1,6 +1,5 @@
 #include "pool.h"
 #include "proposal_handler.h"
-#include "snapshot/snapshot.h"
 
 namespace token{
   bool ProposalHandler::CommitProposal() const{
@@ -25,13 +24,8 @@ namespace token{
       return false;
     }
 
-    if(FLAGS_enable_snapshots){
-      LOG(INFO) << "scheduling new snapshot....";
-      SnapshotJob* job = new SnapshotJob();
-      if(!JobScheduler::Schedule(job))
-        LOG(WARNING) << "couldn't schedule new snapshot.";
-    }
-
+    if(FLAGS_enable_snapshots && !ScheduleSnapshot())
+      LOG(WARNING) << "couldn't schedule new snapshot.";
     LOG(INFO) << "proposal " << proposal_->ToString() << " has finished.";
     return true;
   }

@@ -24,6 +24,14 @@ namespace token{
       queue_(queue),
       proposal_(proposal){}
 
+    bool ScheduleSnapshot() const{
+      LOG(INFO) << "scheduling new snapshot....";
+      LOG(WARNING) << "snapshots have been disabled.";
+//      SnapshotJob* job = new SnapshotJob();
+//      if(!JobScheduler::Schedule(job))
+//        LOG(WARNING) << "couldn't schedule new snapshot.";
+      return false;
+    }
 
     bool ProcessBlock(const BlockPtr& blk) const{
       ProcessBlockJob* job = new ProcessBlockJob(blk, true);

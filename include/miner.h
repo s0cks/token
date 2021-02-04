@@ -68,6 +68,8 @@ namespace token{
 
     static int StartMinerTimer();
     static int StopMinerTimer();
+
+    static bool ScheduleSnapshot();
    public:
     ~BlockMiner() = delete;
 

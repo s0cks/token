@@ -1,16 +1,21 @@
 #include "object.h"
 #include "utils/buffer.h"
 #include "utils/bitfield.h"
-#include "utils/file_writer.h"
 
 namespace token{
-  bool SerializableObject::WriteToFile(BinaryFileWriter* writer) const{
-    BufferPtr data = Buffer::NewInstance(GetBufferSize());
-    if(!Write(data)){
-      LOG(WARNING) << "cannot serialize " << ToString() << " to buffer.";
-      return false;
+  BufferPtr SerializableObject::ToBuffer() const{
+    BufferPtr buffer = Buffer::NewInstance(GetBufferSize());
+    if(!Write(buffer)){
+      LOG(WARNING) << "cannot serialize object " << ToString() << " to buffer of size: " << GetBufferSize();
+      return BufferPtr(nullptr);
     }
-    return writer->WriteBytes(data);
+    return buffer;
+  }
+
+  bool SerializableObject::ToFile(const std::string& filename) const{
+    std::fstream fd(filename, std::ios::out|std::ios::binary);
+    BufferPtr buffer = ToBuffer();
+    return buffer && buffer->WriteTo(fd);
   }
 
   Hash BinaryObject::GetHash() const{

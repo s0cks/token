@@ -6,7 +6,6 @@
 #include "rpc/rpc_server.h"
 #include "block_builder.h"
 #include "proposal_handler.h"
-#include "snapshot/snapshot.h"
 #include "peer/peer_session_manager.h"
 #include "consensus/proposal_manager.h"
 
@@ -178,6 +177,15 @@ namespace token{
     return result;
   }
 
+  bool BlockMiner::ScheduleSnapshot(){
+    LOG(INFO) << "scheduling new snapshot....";
+    LOG(WARNING) << "snapshots have been disabled.";
+//    SnapshotJob* job = new SnapshotJob();
+//    if(!JobScheduler::Schedule(job))
+//      LOG(WARNING) << "couldn't schedule new snapshot.";
+    return false;
+  }
+
   bool BlockMiner::Commit(const ProposalPtr& proposal){
     if(!proposal->TransitionToPhase(Proposal::kQuorumPhase))
       return false;
@@ -201,12 +209,8 @@ namespace token{
       return false;
     }
 
-    if(FLAGS_enable_snapshots){
-      LOG(INFO) << "scheduling new snapshot....";
-      SnapshotJob* job = new SnapshotJob();
-      if(!JobScheduler::Schedule(job))
-        LOG(WARNING) << "couldn't schedule new snapshot.";
-    }
+    if(FLAGS_enable_snapshots && !ScheduleSnapshot())
+      LOG(WARNING) << "couldn't schedule new snapshot.";
 
     LOG(INFO) << "proposal " << proposal->ToString() << " has finished.";
     return BlockMiner::Resume();
