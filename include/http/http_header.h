@@ -58,7 +58,7 @@ namespace token{
   InitHttpResponseHeaders(HttpHeadersMap& headers){
     SetHttpHeader(headers, HTTP_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, "*");
     SetHttpHeader(headers, HTTP_HEADER_DATE, Clock::now());
-    //TODO: SetHttpHeader(headers, HTTP_HEADER_SERVER, GetServerHeaderValue());
+    //TODO:SetHttpHeader(headers, HTTP_HEADER_SERVER, GetServerHeaderValue());
   }
 }
 

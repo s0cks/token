@@ -13,6 +13,7 @@ namespace token{
   class BlockHeader{
    private:
     Timestamp timestamp_;
+    Version version_;
     int64_t height_;
     Hash previous_hash_;
     Hash merkle_root_;
@@ -22,6 +23,7 @@ namespace token{
    public:
     BlockHeader():
       timestamp_(Clock::now()),
+      version_(Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION)),
       height_(0),
       previous_hash_(),
       merkle_root_(), // fill w/ genesis's merkle root
@@ -30,6 +32,7 @@ namespace token{
       num_transactions_(0){}
     BlockHeader(const BlockHeader& blk):
       timestamp_(blk.timestamp_),
+      version_(blk.version_),
       height_(blk.height_),
       previous_hash_(blk.previous_hash_),
       merkle_root_(blk.merkle_root_),
@@ -37,6 +40,7 @@ namespace token{
       bloom_(blk.bloom_),
       num_transactions_(blk.num_transactions_){}
     BlockHeader(Timestamp timestamp,
+      const Version& version,
       int64_t height,
       const Hash& phash,
       const Hash& merkle_root,
@@ -44,6 +48,7 @@ namespace token{
       const BloomFilter& tx_bloom,
       int64_t num_transactions):
       timestamp_(timestamp),
+      version_(version),
       height_(height),
       previous_hash_(phash),
       merkle_root_(merkle_root),
@@ -134,6 +139,7 @@ namespace token{
     static const int64_t kNumberOfGenesisOutputs = 10000; // TODO: changeme
    private:
     Timestamp timestamp_;
+    Version version_;
     int64_t height_;
     Hash previous_hash_;
     TransactionSet transactions_;
@@ -142,16 +148,19 @@ namespace token{
     Block():
       BinaryObject(),
       timestamp_(Clock::now()),
+      version_(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION),
       height_(0),
       previous_hash_(),
       transactions_(),
       tx_bloom_(){}
     Block(int64_t height,
+      const Version& version,
       const Hash& phash,
       const TransactionSet& transactions,
       Timestamp timestamp = Clock::now()):
       BinaryObject(),
       timestamp_(timestamp),
+      version_(version),
       height_(height),
       previous_hash_(phash),
       transactions_(transactions),
@@ -162,9 +171,9 @@ namespace token{
       }
     }
     Block(const BlockPtr& parent, const TransactionSet& transactions, Timestamp timestamp = Clock::now()):
-      Block(parent->GetHeight() + 1, parent->GetHash(), transactions, timestamp){}
+      Block(parent->GetHeight() + 1, Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION), parent->GetHash(), transactions, timestamp){}
     Block(const BlockHeader& parent, const TransactionSet& transactions, Timestamp timestamp = Clock::now()):
-      Block(parent.GetHeight() + 1, parent.GetHash(), transactions, timestamp){}
+      Block(parent.GetHeight() + 1, Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION), parent.GetHash(), transactions, timestamp){}
     ~Block() = default;
 
     Type GetType() const{
@@ -172,11 +181,15 @@ namespace token{
     }
 
     BlockHeader GetHeader() const{
-      return BlockHeader(timestamp_, height_, previous_hash_, GetMerkleRoot(), GetHash(), tx_bloom_, transactions_.size());
+      return BlockHeader(timestamp_, version_, height_, previous_hash_, GetMerkleRoot(), GetHash(), tx_bloom_, transactions_.size());
     }
 
     Timestamp GetTimestamp() const{
       return timestamp_;
+    }
+
+    Version GetVersion() const{
+      return version_;
     }
 
     int64_t GetHeight() const{
@@ -228,6 +241,7 @@ namespace token{
     int64_t GetBufferSize() const{
       int64_t size = 0;
       size += sizeof(Timestamp); // timestamp_
+      size += sizeof(RawVersion); // version_
       size += sizeof(int64_t); // height_
       size += Hash::GetSize(); // previous_hash_
       size += sizeof(int64_t); // num_transactions
@@ -238,14 +252,16 @@ namespace token{
 
     bool Write(const BufferPtr& buff) const{
       return buff->PutLong(ToUnixTimestamp(timestamp_))
-             && buff->PutLong(height_)
-             && buff->PutHash(previous_hash_)
-             && buff->PutSet(transactions_);
+          && buff->PutVersion(version_)
+          && buff->PutLong(height_)
+          && buff->PutHash(previous_hash_)
+          && buff->PutSet(transactions_);
     }
 
     bool Write(Json::Writer& writer) const{
       return writer.StartObject()
             && Json::SetField(writer, "timestamp", ToUnixTimestamp(timestamp_))
+            && Json::SetField(writer, "version", version_.ToString())
             && Json::SetField(writer, "height", height_)
             && Json::SetField(writer, "previous_hash", previous_hash_)
             && Json::SetField(writer, "hash", GetHash())
@@ -290,6 +306,7 @@ namespace token{
     static inline BlockPtr
     FromBytes(const BufferPtr& buff){
       Timestamp timestamp = FromUnixTimestamp(buff->GetLong());
+      Version version = buff->GetVersion();
       int64_t height = buff->GetLong();
       Hash previous_hash = buff->GetHash();
 
@@ -299,7 +316,7 @@ namespace token{
       for(idx = 0; idx < num_transactions; idx++)
         transactions.insert(Transaction::FromBytes(buff));
 
-      return std::make_shared<Block>(height, previous_hash, transactions, timestamp);
+      return std::make_shared<Block>(height, version, previous_hash, transactions, timestamp);
     }
 
     static inline BlockPtr

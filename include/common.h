@@ -68,6 +68,8 @@ namespace token{
     return x + 1;
   }
 
+#define TOKEN_MAGIC 0xFEE
+
   static bool
   EndsWith(const std::string& str, const std::string& suffix){
     return str.size() >= suffix.size() &&

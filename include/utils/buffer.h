@@ -4,6 +4,7 @@
 #include <set>
 #include <vector>
 #include "object.h"
+#include "version.h"
 
 namespace token{
   class Buffer;
@@ -321,6 +322,14 @@ namespace token{
 
     ObjectTag GetObjectTag(){
       return ObjectTag(GetUnsignedLong());
+    }
+
+    bool PutVersion(const Version& val){
+      return PutUnsignedLong(val.raw());
+    }
+
+    Version GetVersion(){
+      return Version(GetUnsignedLong());
     }
 
     std::string ToString() const{

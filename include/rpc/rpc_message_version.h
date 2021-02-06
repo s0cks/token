@@ -51,7 +51,7 @@ namespace token{
         RpcMessage(),
         timestamp_(FromUnixTimestamp(buff->GetLong())),
         client_type_(static_cast<ClientType>(buff->GetInt())),
-        version_(buff),
+        version_(buff->GetVersion()),
         nonce_(buff->GetHash()),
         node_id_(buff->GetUUID()),
         head_(buff){}
@@ -128,7 +128,7 @@ namespace token{
     NewInstance(ClientType type,
                 const UUID& node_id,
                 const BlockHeader& head,
-                const Version& version = Version(),
+                const Version& version = Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION),
                 const Hash& nonce = Hash::GenerateNonce(),
                 Timestamp timestamp = Clock::now()){
       return std::make_shared<VersionMessage>(type, version, node_id, timestamp, nonce, head);
@@ -137,7 +137,8 @@ namespace token{
     static inline RpcMessagePtr
     NewInstance(const UUID& node_id){
       BlockPtr genesis = Block::Genesis();
-      return NewInstance(ClientType::kClient, node_id, genesis->GetHeader(), Version(), Hash::GenerateNonce());
+      Version version = Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
+      return NewInstance(ClientType::kClient, node_id, genesis->GetHeader(), version, Hash::GenerateNonce());
     }
   };
 
@@ -183,7 +184,7 @@ namespace token{
         RpcMessage(),
         timestamp_(FromUnixTimestamp(buff->GetLong())),
         client_type_(static_cast<ClientType>(buff->GetInt())),
-        version_(buff),
+        version_(buff->GetVersion()),
         nonce_(buff->GetHash()),
         node_id_(buff->GetUUID()),
         callback_(buff),

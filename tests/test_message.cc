@@ -10,7 +10,8 @@ namespace token{
   static inline RpcMessagePtr
   NewVerackMessage(){
     BlockPtr head = Block::Genesis();
-    return VerackMessage::NewInstance(ClientType::kNode, UUID(), NodeAddress(), Version(), head->GetHeader(), Hash::GenerateNonce());
+    Version version = Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
+    return VerackMessage::NewInstance(ClientType::kNode, UUID(), NodeAddress(), version, head->GetHeader(), Hash::GenerateNonce());
   }
 
   static inline RpcMessagePtr

@@ -171,7 +171,7 @@ namespace token{
         ClientType::kNode,
         BlockChainConfiguration::GetServerId(),
         LedgerServer::GetCallbackAddress(),
-        Version(),
+        Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION),
         head->GetHeader(),
         Hash::GenerateNonce()));
   }

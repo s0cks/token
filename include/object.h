@@ -90,8 +90,6 @@ namespace token{
     }
   }
 
-#define TOKEN_OBJECT_TAG_MAGIC 0xFAFE
-
   typedef int64_t RawObjectTag;
 
   class ObjectTag{
@@ -139,7 +137,7 @@ namespace token{
     ObjectTag(const RawObjectTag& raw):
       raw_(raw){}
     ObjectTag(const Type& type, const uint16_t& size):
-      raw_(MagicField::Encode(TOKEN_OBJECT_TAG_MAGIC)|TypeField::Encode((uint16_t)type)|SizeField::Encode(size)){}
+      raw_(MagicField::Encode(TOKEN_MAGIC)|TypeField::Encode((uint16_t)type)|SizeField::Encode(size)){}
     ObjectTag(const ObjectTag& tag):
       raw_(tag.raw_){}
     ~ObjectTag() = default;
@@ -154,7 +152,7 @@ namespace token{
 
     bool IsValid() const{
       return MagicField::Decode(raw_)
-          == static_cast<uint16_t>(TOKEN_OBJECT_TAG_MAGIC);
+          == static_cast<uint16_t>(TOKEN_MAGIC);
     }
 
     Type GetType() const{
