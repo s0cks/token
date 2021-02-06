@@ -2,6 +2,7 @@
 #define TOKEN_PRINTER_H
 
 #include "block.h"
+#include "block_header.h"
 
 namespace token{
   class Printer{

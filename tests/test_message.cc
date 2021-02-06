@@ -11,12 +11,12 @@ namespace token{
   NewVerackMessage(){
     BlockPtr head = Block::Genesis();
     Version version = Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
-    return VerackMessage::NewInstance(ClientType::kNode, UUID(), NodeAddress(), version, head->GetHeader(), Hash::GenerateNonce());
+    return VerackMessage::NewInstance(ClientType::kNode, UUID(), NodeAddress(), version, BlockHeader(head), Hash::GenerateNonce());
   }
 
   static inline RpcMessagePtr
   NewPrepareMessage(){
-    BlockHeader blk = Block::Genesis()->GetHeader();
+    BlockHeader blk = BlockHeader(Block::Genesis());
     UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
     ProposalPtr proposal = std::make_shared<Proposal>(uuid, blk);
     return PrepareMessage::NewInstance(proposal);
@@ -24,7 +24,7 @@ namespace token{
 
   static inline RpcMessagePtr
   NewPromiseMessage(){
-    BlockHeader blk = Block::Genesis()->GetHeader();
+    BlockHeader blk = BlockHeader(Block::Genesis());
     UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
     ProposalPtr proposal = std::make_shared<Proposal>(uuid, blk);
     return PromiseMessage::NewInstance(proposal);
@@ -32,7 +32,7 @@ namespace token{
 
   static inline RpcMessagePtr
   NewCommitMessage(){
-    BlockHeader blk = Block::Genesis()->GetHeader();
+    BlockHeader blk = BlockHeader(Block::Genesis());
     UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
     ProposalPtr proposal = std::make_shared<Proposal>(uuid, blk);
     return CommitMessage::NewInstance(proposal);
@@ -40,7 +40,7 @@ namespace token{
 
   static inline RpcMessagePtr
   NewAcceptedMessage(){
-    BlockHeader blk = Block::Genesis()->GetHeader();
+    BlockHeader blk = BlockHeader(Block::Genesis());
     UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
     ProposalPtr proposal = std::make_shared<Proposal>(uuid, blk);
     return AcceptedMessage::NewInstance(proposal);
@@ -48,7 +48,7 @@ namespace token{
 
   static inline RpcMessagePtr
   NewRejectedMessage(){
-    BlockHeader blk = Block::Genesis()->GetHeader();
+    BlockHeader blk = BlockHeader(Block::Genesis());
     UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
     ProposalPtr proposal = std::make_shared<Proposal>(uuid, blk);
     return RejectedMessage::NewInstance(proposal);

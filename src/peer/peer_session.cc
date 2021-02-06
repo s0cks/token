@@ -46,7 +46,7 @@ namespace token{
 
     BlockPtr head = BlockChain::GetHead();
     UUID server_id = ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID);
-    session->Send(VersionMessage::NewInstance(ClientType::kNode, server_id, head->GetHeader()));
+    session->Send(VersionMessage::NewInstance(ClientType::kNode, server_id, BlockHeader(head)));
     if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
       LOG(WARNING) << "peer read failure: " << uv_strerror(status);
       //TODO: Disconnect();
@@ -172,7 +172,7 @@ namespace token{
         ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID),
         LedgerServer::GetCallbackAddress(),
         Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION),
-        head->GetHeader(),
+        BlockHeader(head),
         Hash::GenerateNonce()));
   }
 
@@ -186,7 +186,7 @@ namespace token{
       LOG(INFO) << "connected to peer: " << GetInfo();
       SetState(Session::kConnectedState);
 
-      BlockHeader local_head = BlockChain::GetHead()->GetHeader();
+      BlockHeader local_head = BlockHeader(BlockChain::GetHead());
       BlockHeader remote_head = msg->GetHead();
       if(local_head == remote_head){
         LOG(INFO) << "skipping remote <HEAD> := " << remote_head;

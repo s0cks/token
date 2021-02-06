@@ -43,11 +43,6 @@ namespace token{
     return SetHttpHeader(headers, name, FormatTimestampReadable(time));
   }
 
-  static inline bool
-  SetHttpHeader(HttpHeadersMap& headers, const std::string& name, const UUID& val){
-    return SetHttpHeader(headers, name, val.str());
-  }
-
   static inline std::string
   GetServerHeaderValue(){
     // not safe to call from separate thread?, encoding for Server's UUID is borked

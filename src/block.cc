@@ -3,34 +3,6 @@
 #include "blockchain.h"
 
 namespace token{
-  BlockHeader::BlockHeader(const BufferPtr& buff):
-    timestamp_(FromUnixTimestamp(buff->GetLong())),
-    version_(buff->GetVersion()),
-    height_(buff->GetLong()),
-    previous_hash_(buff->GetHash()),
-    merkle_root_(buff->GetHash()),
-    hash_(buff->GetHash()),
-    bloom_(),
-    num_transactions_(buff->GetLong()){}
-
-  BlockPtr BlockHeader::GetData() const{
-    return BlockChain::GetBlock(GetHash());
-  }
-
-  bool BlockHeader::Write(const BufferPtr& buff) const{
-    buff->PutLong(ToUnixTimestamp(timestamp_));
-    buff->PutVersion(version_);
-    buff->PutLong(height_);
-    buff->PutHash(previous_hash_);
-    buff->PutHash(merkle_root_);
-    buff->PutHash(hash_);
-    buff->PutLong(num_transactions_);
-    return true;
-  }
-
-//######################################################################################################################
-//                                          Block
-//######################################################################################################################
   BlockPtr Block::Genesis(){
     Version version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
 

@@ -264,19 +264,6 @@ namespace token{
     return true;
   }
 
-  bool BlockChain::VisitHeaders(BlockChainHeaderVisitor* vis){
-    //TODO: Optimize BlockChain::VisitHeaders
-    Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
-    do{
-      BlockPtr blk = GetBlock(current);
-      if(!vis->Visit(blk->GetHeader())){
-        return false;
-      }
-      current = blk->GetPreviousHash();
-    } while(!current.IsNull());
-    return true;
-  }
-
   int64_t BlockChain::GetNumberOfBlocks(){
     int64_t count = 0;
 

@@ -15,9 +15,7 @@ namespace token{
 
     bool ProcessBlock(const BlockPtr& blk){
       JobQueue* queue = JobScheduler::GetThreadQueue();
-      BlockHeader header = blk->GetHeader();
-      Hash hash = header.GetHash();
-
+      Hash hash = blk->GetHash();
 
       ProcessBlockJob* job = new ProcessBlockJob(blk);
       queue->Push(job);

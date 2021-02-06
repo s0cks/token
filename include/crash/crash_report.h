@@ -3,7 +3,9 @@
 
 #include <cstdio>
 #include <cstdarg>
+
 #include "common.h"
+#include "timestamp.h"
 
 namespace token{
   class CrashReport{

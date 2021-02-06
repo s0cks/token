@@ -8,14 +8,14 @@ namespace token{
   typedef Clock::time_point Timestamp;
   typedef Clock::duration Duration;
 
-  static inline int64_t
+  static inline uint64_t
   ToUnixTimestamp(const Timestamp& ts=Clock::now()){
     using namespace std::chrono;
     return duration_cast<milliseconds>(ts.time_since_epoch()).count();
   }
 
   static inline Timestamp
-  FromUnixTimestamp(const int64_t& ms){
+  FromUnixTimestamp(const uint64_t& ms){
     using namespace std::chrono;
     return Timestamp(milliseconds(ms));
   }

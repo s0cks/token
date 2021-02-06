@@ -2,6 +2,7 @@
 #define TOKEN_KEYCHAIN_H
 
 #include "common.h"
+#include "crypto.h"
 
 namespace token{
   class Keychain{

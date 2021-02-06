@@ -12,6 +12,7 @@
 #include <rapidjson/stringbuffer.h>
 
 #include "hash.h"
+#include "json.h"
 #include "utils/bitfield.h"
 
 namespace token{
@@ -56,8 +57,6 @@ namespace token{
   FOR_EACH_BASIC_TYPE(V) \
   FOR_EACH_POOL_TYPE(V)
 
-  typedef int16_t ObjectSize;
-
   class Buffer;
   typedef std::shared_ptr<Buffer> BufferPtr;
 
@@ -67,6 +66,7 @@ namespace token{
     FOR_EACH_TYPE(DEFINE_TYPE)
 #undef DEFINE_TYPE
     kReference,
+    kBlockHeader,
 
 #define DEFINE_MESSAGE_TYPE(Name) k##Name##Message,
     FOR_EACH_MESSAGE_TYPE(DEFINE_MESSAGE_TYPE)
@@ -419,6 +419,10 @@ namespace token{
     }
     UUID(uint8_t* bytes, int64_t size):
       RawType(bytes, size){}
+    UUID(const char* uuid):
+      RawType(){
+      uuid_parse(uuid, data_);
+    }
     UUID(const std::string& uuid):
       RawType(){
       memcpy(data(), uuid.data(), kRawUUIDSize);

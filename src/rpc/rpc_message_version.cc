@@ -8,7 +8,7 @@ namespace token{
     size += sizeof(RawVersion); // version_
     size += Hash::GetSize(); // nonce_
     size += UUID::GetSize(); // node_id_
-    size += BlockHeader::GetSize(); // head_
+    size += BlockHeader::kSize; // head_
     return size;
   }
 
@@ -29,7 +29,7 @@ namespace token{
     size += Hash::GetSize(); // nonce_
     size += UUID::GetSize(); // node_id_
     size += NodeAddress::kSize; // callback_
-    size += BlockHeader::GetSize(); // head_
+    size += BlockHeader::kSize; // head_
     return size;
   }
 

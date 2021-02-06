@@ -35,7 +35,7 @@ namespace token{
         ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID),
         LedgerServer::GetCallbackAddress(),
         Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION),
-        head->GetHeader(),
+        BlockHeader(head),
         Hash::GenerateNonce())
     );
     UUID id = msg->GetID();

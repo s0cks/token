@@ -4,6 +4,7 @@
 #include <mutex>
 #include <condition_variable>
 #include "block.h"
+#include "block_header.h"
 
 namespace token{
   class RawProposal{
@@ -81,7 +82,7 @@ namespace token{
     static inline int64_t
     GetSize(){
       int64_t size = 0;
-      size += BlockHeader::GetSize();
+      size += BlockHeader::kSize;
       size += UUID::GetSize();
       return size;
     }
@@ -177,7 +178,7 @@ namespace token{
       Object(),
       phase_(Proposal::kProposalPhase),
       result_(Proposal::kNone),
-      raw_(blk->GetHeader(), proposer),
+      raw_(BlockHeader(blk), proposer),
       accepted_(),
       rejected_(){}
     Proposal(const BufferPtr& buff):

@@ -10,123 +10,6 @@ namespace token{
   class Block;
   typedef std::shared_ptr<Block> BlockPtr;
 
-  class BlockHeader{
-   private:
-    Timestamp timestamp_;
-    Version version_;
-    int64_t height_;
-    Hash previous_hash_;
-    Hash merkle_root_;
-    Hash hash_;
-    BloomFilter bloom_;
-    int64_t num_transactions_;
-   public:
-    BlockHeader():
-      timestamp_(Clock::now()),
-      version_(Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION)),
-      height_(0),
-      previous_hash_(),
-      merkle_root_(), // fill w/ genesis's merkle root
-      hash_(), //TODO: fill w/ genesis's Hash
-      bloom_(),
-      num_transactions_(0){}
-    BlockHeader(const BlockHeader& blk):
-      timestamp_(blk.timestamp_),
-      version_(blk.version_),
-      height_(blk.height_),
-      previous_hash_(blk.previous_hash_),
-      merkle_root_(blk.merkle_root_),
-      hash_(blk.hash_),
-      bloom_(blk.bloom_),
-      num_transactions_(blk.num_transactions_){}
-    BlockHeader(Timestamp timestamp,
-      const Version& version,
-      int64_t height,
-      const Hash& phash,
-      const Hash& merkle_root,
-      const Hash& hash,
-      const BloomFilter& tx_bloom,
-      int64_t num_transactions):
-      timestamp_(timestamp),
-      version_(version),
-      height_(height),
-      previous_hash_(phash),
-      merkle_root_(merkle_root),
-      hash_(hash),
-      bloom_(tx_bloom),
-      num_transactions_(num_transactions){}
-    BlockHeader(const BufferPtr& buff);
-    ~BlockHeader(){}
-
-    Timestamp GetTimestamp() const{
-      return timestamp_;
-    }
-
-    int64_t GetHeight() const{
-      return height_;
-    }
-
-    Hash GetPreviousHash() const{
-      return previous_hash_;
-    }
-
-    Hash GetMerkleRoot() const{
-      return merkle_root_;
-    }
-
-    Hash GetHash() const{
-      return hash_;
-    }
-
-    int64_t GetNumberOfTransactions() const{
-      return num_transactions_;
-    }
-
-    bool Contains(const Hash& hash) const{
-      return bloom_.Contains(hash);
-    }
-
-    BlockPtr GetData() const;
-    bool Write(const BufferPtr& buff) const;
-
-    BlockHeader& operator=(const BlockHeader& other){
-      timestamp_ = other.timestamp_;
-      height_ = other.height_;
-      previous_hash_ = other.previous_hash_;
-      merkle_root_ = other.merkle_root_;
-      hash_ = other.hash_;
-      num_transactions_ = other.num_transactions_;
-      return (*this);
-    }
-
-    friend bool operator==(const BlockHeader& a, const BlockHeader& b){
-      return a.GetHash() == b.GetHash();
-    }
-
-    friend bool operator!=(const BlockHeader& a, const BlockHeader& b){
-      return a.GetHash() != b.GetHash();
-    }
-
-    friend bool operator<(const BlockHeader& a, const BlockHeader& b){
-      return a.GetHeight() < b.GetHeight();
-    }
-
-    friend std::ostream& operator<<(std::ostream& stream, const BlockHeader& header){
-      stream << "#" << header.GetHeight() << "(" << header.GetHash() << ")";
-      return stream;
-    }
-
-    static inline int64_t
-    GetSize(){
-      return sizeof(Timestamp)
-             + sizeof(int64_t)
-             + Hash::GetSize()
-             + Hash::GetSize()
-             + Hash::GetSize()
-             + sizeof(int64_t);
-    }
-  };
-
   class BlockVisitor;
   class Block : public BinaryObject, public std::enable_shared_from_this<Block>{
     //TODO:
@@ -172,16 +55,10 @@ namespace token{
     }
     Block(const BlockPtr& parent, const TransactionSet& transactions, Timestamp timestamp = Clock::now()):
       Block(parent->GetHeight() + 1, Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION), parent->GetHash(), transactions, timestamp){}
-    Block(const BlockHeader& parent, const TransactionSet& transactions, Timestamp timestamp = Clock::now()):
-      Block(parent.GetHeight() + 1, Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION), parent.GetHash(), transactions, timestamp){}
     ~Block() = default;
 
     Type GetType() const{
       return Type::kBlock;
-    }
-
-    BlockHeader GetHeader() const{
-      return BlockHeader(timestamp_, version_, height_, previous_hash_, GetMerkleRoot(), GetHash(), tx_bloom_, transactions_.size());
     }
 
     Timestamp GetTimestamp() const{
@@ -240,7 +117,7 @@ namespace token{
 
     int64_t GetBufferSize() const{
       int64_t size = 0;
-      size += sizeof(Timestamp); // timestamp_
+      size += sizeof(uint64_t); // timestamp_
       size += sizeof(RawVersion); // version_
       size += sizeof(int64_t); // height_
       size += Hash::GetSize(); // previous_hash_
@@ -251,7 +128,7 @@ namespace token{
     }
 
     bool Write(const BufferPtr& buff) const{
-      return buff->PutLong(ToUnixTimestamp(timestamp_))
+      return buff->PutTimestamp(timestamp_)
           && buff->PutVersion(version_)
           && buff->PutLong(height_)
           && buff->PutHash(previous_hash_)
@@ -260,7 +137,7 @@ namespace token{
 
     bool Write(Json::Writer& writer) const{
       return writer.StartObject()
-            && Json::SetField(writer, "timestamp", ToUnixTimestamp(timestamp_))
+            && Json::SetField(writer, "timestamp", timestamp_)
             && Json::SetField(writer, "version", version_.ToString())
             && Json::SetField(writer, "height", height_)
             && Json::SetField(writer, "previous_hash", previous_hash_)

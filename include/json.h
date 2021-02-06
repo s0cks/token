@@ -7,6 +7,8 @@
 #include <rapidjson/stringbuffer.h>
 
 #include "hash.h"
+#include "version.h"
+#include "timestamp.h"
 
 namespace token{
   namespace Json{
@@ -27,6 +29,11 @@ namespace token{
     }
 
     static inline bool
+    SetField(Writer& writer, const std::string& name, const Timestamp& timestamp){
+      return SetField(writer, name, ToUnixTimestamp(timestamp));
+    }
+
+    static inline bool
     SetField(Writer& writer, const std::string& name, const std::string& value){
       return writer.Key(name.data(), name.length())
           && writer.String(value.data(), value.length());
@@ -35,6 +42,11 @@ namespace token{
     static inline bool
     SetField(Writer& writer, const std::string& name, const Hash& val){
       return SetField(writer, name, val.HexString());
+    }
+
+    static inline bool
+    SetField(Writer& writer, const std::string& name, const Version& val){
+      return SetField(writer, name, val.ToString());
     }
 
     template<typename T>

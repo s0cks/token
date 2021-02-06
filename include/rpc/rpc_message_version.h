@@ -5,6 +5,7 @@
 #include "block.h"
 #include "version.h"
 #include "address.h"
+#include "block_header.h"
 #include "rpc/rpc_message.h"
 
 namespace token{
@@ -138,7 +139,7 @@ namespace token{
     NewInstance(const UUID& node_id){
       BlockPtr genesis = Block::Genesis();
       Version version = Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
-      return NewInstance(ClientType::kClient, node_id, genesis->GetHeader(), version, Hash::GenerateNonce());
+      return NewInstance(ClientType::kClient, node_id, BlockHeader(genesis), version, Hash::GenerateNonce());
     }
   };
 

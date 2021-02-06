@@ -215,10 +215,6 @@ IsValidPort(int32_t port){
   return port > 0;
 }
 
-#include "json.h"
-#include "crypto.h"
-#include "timestamp.h"
-
 #define TOKEN_BLOCKCHAIN_HOME (FLAGS_path)
 
 #endif //TOKEN_COMMON_H

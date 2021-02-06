@@ -334,6 +334,14 @@ namespace token{
       return Version(GetUnsignedLong());
     }
 
+    bool PutTimestamp(const Timestamp& timestamp){
+      return PutUnsignedLong(ToUnixTimestamp(timestamp));
+    }
+
+    Timestamp GetTimestamp(){
+      return FromUnixTimestamp(GetUnsignedLong());
+    }
+
     operator leveldb::Slice() const{
       return leveldb::Slice(data(), GetWrittenBytes());
     }
