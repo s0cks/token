@@ -37,7 +37,6 @@ namespace token{
   Decode(const std::string& data, Wallet& wallet){
     Buffer buff(data);
     int64_t len = buff.GetLong();
-    LOG(INFO) << "reading " << len << " tokens from wallet.";
     for(int64_t idx = 0; idx < len; idx++)
       if(!wallet.insert(buff.GetHash()).second)
         return false;

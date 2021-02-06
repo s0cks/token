@@ -8,6 +8,8 @@
 namespace token{
 #define HTTP_HEADER_DATE "Date"
 #define HTTP_HEADER_SERVER "Server"
+#define HTTP_HEADER_X_NODE_ID "X-Token-NodeId"
+#define HTTP_HEADER_X_NODE_VERSION "X-Token-Version"
 #define HTTP_HEADER_CONNECTION "Connection"
 #define HTTP_HEADER_CONTENT_TYPE "Content-Type"
 #define HTTP_HEADER_CONTENT_LENGTH "Content-Length"
@@ -50,7 +52,21 @@ namespace token{
   GetServerHeaderValue(){
     // not safe to call from separate thread?, encoding for Server's UUID is borked
     std::stringstream ss;
-    ss << "token-Ledger; Node(" << BlockChainConfiguration::GetServerId().str() << ")";
+    ss << "LedgerNode/" << Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
+    return ss.str();
+  }
+
+  static inline std::string
+  GetXNodeIDHeaderValue(){
+    std::stringstream ss;
+    ss << ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID).ToString();
+    return ss.str();
+  }
+
+  static inline std::string
+  GetXNodeVersionHeaderValue(){
+    std::stringstream ss;
+    ss << Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
     return ss.str();
   }
 
@@ -58,7 +74,9 @@ namespace token{
   InitHttpResponseHeaders(HttpHeadersMap& headers){
     SetHttpHeader(headers, HTTP_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, "*");
     SetHttpHeader(headers, HTTP_HEADER_DATE, Clock::now());
-    //TODO:SetHttpHeader(headers, HTTP_HEADER_SERVER, GetServerHeaderValue());
+    SetHttpHeader(headers, HTTP_HEADER_SERVER, GetServerHeaderValue());
+    //TODO: fix: SetHttpHeader(headers, HTTP_HEADER_X_NODE_ID, GetXNodeIDHeaderValue());
+    SetHttpHeader(headers, HTTP_HEADER_X_NODE_VERSION, GetXNodeVersionHeaderValue());
   }
 }
 

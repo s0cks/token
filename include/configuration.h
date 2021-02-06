@@ -3,50 +3,82 @@
 
 #include <set>
 #include <vector>
-#include <libconfig.h++>
+#include <leveldb/status.h>
+#include <leveldb/write_batch.h>
+
 #include "address.h"
+#include "peer/peer.h"
 
 namespace token{
-#define BLOCKCHAIN_CONFIGURATION_FILENAME "token.cfg"
+#define TOKEN_CONFIGURATION_NODE_ID "Node.Id"
+#define TOKEN_CONFIGURATION_NODE_PEERS "Node.Peers"
 
-// Server Properties
-#define PROPERTY_SERVER "Server"
-#define PROPERTY_SERVER_ID "Id"
-#define PROPERTY_SERVER_CALLBACK_ADDRESS "CallbackAddress"
-#define PROPERTY_SERVER_PEER_LIST "Peers"
+#define FOR_EACH_CONFIGURATION_MANAGER_STATE(V) \
+  V(Uninitialized)                              \
+  V(Initializing)                               \
+  V(Initialized)
 
-  class BlockChainConfiguration{
-    //TODO: refactor
-   private:
-    BlockChainConfiguration() = delete;
-    static bool SaveConfiguration();
-    static bool LoadConfiguration();
-    static bool GenerateConfiguration();
-
-    static libconfig::Setting& GetRootProperty();
-    static libconfig::Setting& GetProperty(const std::string& name, libconfig::Setting::Type type);
-
-    static inline libconfig::Setting&
-    GetServerProperties(){
-      return GetProperty(PROPERTY_SERVER, libconfig::Setting::TypeGroup);
-    }
+  class ConfigurationManager{
    public:
-    ~BlockChainConfiguration() = delete;
-    static bool Initialize();
+    enum State{
+#define DEFINE_STATE(Name) k##Name##State,
+      FOR_EACH_CONFIGURATION_MANAGER_STATE(DEFINE_STATE)
+#undef DEFINE_STATE
+    };
 
-    // Server
-    // Server.Id
-    static UUID GetServerId();
-    static bool SetServerID(const UUID& uuid);
-
-    // Server.Peers
-    static bool GetPeerList(std::set<NodeAddress>& peers);
-    static bool SetPeerList(const std::set<NodeAddress>& peers);
-
-    static inline std::string
-    GetConfigurationFilename(){
-      return FLAGS_path + "/" + BLOCKCHAIN_CONFIGURATION_FILENAME;
+    friend std::ostream& operator<<(std::ostream& stream, const State& state){
+      switch(state){
+#define DEFINE_TOSTRING(Name) \
+        case State::k##Name##State: \
+          return stream << #Name;
+        FOR_EACH_CONFIGURATION_MANAGER_STATE(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
+        default:
+          return stream << "Unknown";
+      }
     }
+   private:
+    ConfigurationManager() = delete;
+
+    /**
+     * Sets the ConfigurationManager's state
+     *
+     * @see State
+     * @param state - The desired state of the ConfigurationManager
+     */
+    static void SetState(const State& state);
+
+    /**
+     * Sets the default values for all known configuration properties.
+     */
+    static leveldb::Status SetDefaults();
+   public:
+    ~ConfigurationManager() = delete;
+
+    /**
+     * Returns the state of the ConfigurationManager
+     *
+     * @see State
+     * @return The current state of the ConfigurationManager
+     */
+    static State GetState();
+
+    /**
+     * Initializes the ConfigurationManager
+     *
+     * @return true if successful otherwise, false
+     */
+    static bool Initialize();
+    static bool HasProperty(const std::string& name);
+    static bool SetProperty(const std::string& name, const UUID& val);
+    static bool SetProperty(const std::string& name, const PeerList& val);
+    static bool GetPeerList(const std::string& name, PeerList& peers);
+    static UUID GetID(const std::string& name);
+
+#define DEFINE_CHECK(Name) \
+    static inline bool Is##Name##State(){ return GetState() == State::k##Name##State; }
+    FOR_EACH_CONFIGURATION_MANAGER_STATE(DEFINE_CHECK)
+#undef DEFINE_CHECK
   };
 }
 

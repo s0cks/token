@@ -128,9 +128,19 @@ main(int argc, char **argv){
   // Initialize the Logging Framework
   InitializeLogging(argv[0]);
 
+  // Create the home directory if it doesn't exist
+  if(!FileExists(TOKEN_BLOCKCHAIN_HOME)){
+    if(!CreateDirectory(TOKEN_BLOCKCHAIN_HOME)){
+      std::stringstream ss;
+      ss << "Cannot create block chain home directory: " << TOKEN_BLOCKCHAIN_HOME;
+      CrashReport::PrintNewCrashReport(ss);
+      return EXIT_FAILURE;
+    }
+  }
+
   // Load the configuration
-  if(!BlockChainConfiguration::Initialize()){
-    CrashReport::PrintNewCrashReport("Failed to load the configuration.");
+  if(!ConfigurationManager::Initialize()){
+    CrashReport::PrintNewCrashReport("Failed to initialize the configuration manager.");
     return EXIT_FAILURE;
   }
 
@@ -139,7 +149,14 @@ main(int argc, char **argv){
   #ifdef TOKEN_DEBUG
     BannerPrinter::PrintBanner();
     LOG(INFO) << "current time: " << FormatTimestampReadable(Clock::now());
-    LOG(INFO) << "node id: " << BlockChainConfiguration::GetServerId();
+    LOG(INFO) << "node id: " << ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID);
+
+    PeerList peers;
+    if(!ConfigurationManager::GetPeerList(TOKEN_CONFIGURATION_NODE_PEERS, peers)){
+      LOG(WARNING) << "node peers: None";
+    } else{
+      LOG(INFO) << "node peers: " << peers;
+    }
   #endif//TOKEN_DEBUG
 
   // Start the health service if enabled

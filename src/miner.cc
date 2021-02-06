@@ -63,7 +63,7 @@ namespace token{
 
     LOG(INFO) << "discovered block " << hash << ", creating proposal....";
 #ifdef TOKEN_ENABLE_SERVER
-    ProposalPtr proposal = std::make_shared<Proposal>(blk, BlockChainConfiguration::GetServerId());
+    ProposalPtr proposal = std::make_shared<Proposal>(blk, ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID));
 #else
     ProposalPtr proposal = std::make_shared<Proposal>(blk, UUID());
 #endif//TOKEN_ENABLE_SERVER

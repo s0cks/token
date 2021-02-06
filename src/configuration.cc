@@ -1,151 +1,178 @@
-#include <mutex>
-#include <condition_variable>
-
+#include <leveldb/db.h>
+#include <leveldb/status.h>
+#include "utils/kvstore.h"
 #include "configuration.h"
+#include "atomic/relaxed_atomic.h"
 
 namespace token{
+  static RelaxedAtomic<ConfigurationManager::State> state_ = { ConfigurationManager::kUninitializedState };
+  static leveldb::DB* index_ = nullptr;
 
-  static std::mutex mutex_;
-  static std::condition_variable cond_;
-  static libconfig::Config config_;
-
-#define LOCK_GUARD std::lock_guard<std::mutex> guard(mutex_)
-#define LOCK std::unique_lock<std::mutex> lock(mutex_)
-#define WAIT cond_.wait(lock)
-#define SIGNAL_ONE cond_.notify_one()
-#define SIGNAL_ALL cond_.notify_all()
-
-#define ENVIRONMENT_TOKEN_LEDGER "TOKEN_LEDGER"
-
-  bool BlockChainConfiguration::GenerateConfiguration(){
-    GetProperty(PROPERTY_SERVER, libconfig::Setting::TypeGroup);
-    SetServerID(UUID());
-
-    std::set<NodeAddress> peers;
-    SetPeerList(peers);
-
-    return SaveConfiguration();
+  static inline leveldb::DB*
+  GetIndex(){
+    return index_;
   }
 
-  bool BlockChainConfiguration::SaveConfiguration(){
-    std::string filename = GetConfigurationFilename();
-    try{
-      config_.writeFile(filename.data());
-      return true;
-    } catch(const libconfig::FileIOException& exc){
-      LOG(WARNING) << "failed to save configuration to file " << filename << ": " << exc.what();
-      return false;
+  static inline std::string
+  GetIndexFilename(){
+    return TOKEN_BLOCKCHAIN_HOME + "/config";
+  }
+
+  void ConfigurationManager::SetState(const State& state){
+    state_ = state;
+  }
+
+  ConfigurationManager::State ConfigurationManager::GetState(){
+    return state_;
+  }
+
+  static inline void
+  PutDefaultProperty(leveldb::WriteBatch& batch, const std::string& name, const UUID& val){
+    batch.Put(name, val);
+  }
+
+  static inline void
+  PutDefaultProperty(leveldb::WriteBatch& batch, const std::string& name, const PeerList& val){
+    BufferPtr buffer = Buffer::NewInstance(GetBufferSize(val));
+    if(!Encode(buffer, val)){
+      LOG(WARNING) << "cannot serialize peer list to buffer of size " << buffer->GetBufferSize();
+      return;
     }
+    batch.Put(name, buffer->operator leveldb::Slice());
   }
 
-  static inline bool
-  ParseConfiguration(libconfig::Config& config, const std::string& filename){
-    try{
-      LOG(INFO) << "loading block chain configuration file from " << filename << "....";
-      config.readFile(filename.c_str());
-      return true;
-    } catch(const libconfig::ParseException& exc){
-      LOG(WARNING) << "failed to parse configuration from file " << filename << ": " << exc.what();
-      return false;
-    }
-  }
+  leveldb::Status ConfigurationManager::SetDefaults(){
+    leveldb::WriteBatch batch;
 
-  bool BlockChainConfiguration::LoadConfiguration(){
-    std::string filename = GetConfigurationFilename();
-    if(!FileExists(filename)){
-      LOG(INFO) << "generating block chain configuration....";
-      if(!GenerateConfiguration()){
-        LOG(ERROR) << "couldn't generate configuration.";
-        return false;
-      }
-    } else{
-      if(!ParseConfiguration(config_, filename)){
-        if(!GenerateConfiguration()){
-          LOG(ERROR) << "couldn't generate configuration.";
-          return false;
-        }
-      }
-    }
-    return true;
-  }
 
-  bool BlockChainConfiguration::Initialize(){
-    if(!FileExists(TOKEN_BLOCKCHAIN_HOME)){
-      if(!CreateDirectory(TOKEN_BLOCKCHAIN_HOME)){
-        LOG(WARNING) << "couldn't initialize the block chain directory: " << TOKEN_BLOCKCHAIN_HOME;
-        return false;
-      }
-    }
-    return LoadConfiguration();
-  }
+    LOG(INFO) << "setting configuration manager defaults....";
+    PutDefaultProperty(batch, TOKEN_CONFIGURATION_NODE_ID, UUID());
 
-  libconfig::Setting& BlockChainConfiguration::GetRootProperty(){
-    return config_.getRoot();
-  }
-
-  libconfig::Setting& BlockChainConfiguration::GetProperty(const std::string& name, libconfig::Setting::Type type){
-    libconfig::Setting& root = GetRootProperty();
-    if(root.exists(name)) return root.lookup(name);
-    return root.add(name, type);
-  }
-
-  bool BlockChainConfiguration::GetPeerList(std::set<NodeAddress>& results){
-    LOCK_GUARD;
+    PeerList peers;
     if(!FLAGS_remote.empty()){
-      if(!NodeAddress::ResolveAddresses(FLAGS_remote, results))
-        LOG(WARNING) << "couldn't resolve peer: " << FLAGS_remote;
+      if(!NodeAddress::ResolveAddresses(FLAGS_remote, peers))
+        LOG(WARNING) << "cannot resolve peer address for: " << FLAGS_remote;
+    }
+    PutDefaultProperty(batch, TOKEN_CONFIGURATION_NODE_PEERS, peers);
+
+    leveldb::WriteOptions options;
+    options.sync = true;
+    return GetIndex()->Write(options, &batch);
+  }
+
+  bool ConfigurationManager::Initialize(){
+    if(!IsUninitializedState()){
+      LOG(WARNING) << "cannot re-initialize the configuration manager.";
+      return false;
     }
 
-    if(HasEnvironmentVariable(ENVIRONMENT_TOKEN_LEDGER)){
-      std::string phostname = GetEnvironmentVariable(ENVIRONMENT_TOKEN_LEDGER);
-      if(!phostname.empty()){
-        if(!NodeAddress::ResolveAddresses(phostname, results))
-          LOG(WARNING) << "couldn't resolve peer: " << phostname;
+    LOG(INFO) << "initializing the configuration manager....";
+    SetState(ConfigurationManager::kInitializingState);
+
+    bool first_initialization = !FileExists(GetIndexFilename());
+
+    leveldb::Options options;
+    options.create_if_missing = true;
+
+    leveldb::Status status;
+    if(!(status = leveldb::DB::Open(options, GetIndexFilename(), &index_)).ok()){
+      LOG(WARNING) << "couldn't initialize the configuration index " << GetIndexFilename() << ": " << status.ToString();
+      return false;
+    }
+
+    if(first_initialization){
+      if(!(status = SetDefaults()).ok())
+        LOG(WARNING) << "cannot set configuration manager defaults: " << status.ToString();
+    }
+
+    LOG(INFO) << "configuration manager initialized.";
+    SetState(ConfigurationManager::kInitializedState);
+    return true;
+  }
+
+  bool ConfigurationManager::HasProperty(const std::string& name){
+    std::string value;
+
+    leveldb::Status status;
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), name, &value)).ok()){
+      if(status.IsNotFound())
+        return false;
+      LOG(WARNING) << "error getting configuration property " << name << ": " << status.ToString();
+      return false;
+    }
+    return true;
+  }
+
+  bool ConfigurationManager::SetProperty(const std::string& name, const PeerList& val){
+    leveldb::WriteOptions options;
+    options.sync = true;
+
+    BufferPtr buffer = Buffer::NewInstance(GetBufferSize(val));
+    if(!Encode(buffer, val)){
+      LOG(WARNING) << "cannot encode peer list to buffer of size " << buffer->GetBufferSize();
+      return false;
+    }
+
+    leveldb::Slice value = buffer->operator leveldb::Slice();
+    leveldb::Status status;
+    if(!(status = GetIndex()->Put(options, name, value)).ok()){
+      LOG(WARNING) << "cannot put configuration property " << name << ": " << status.ToString();
+      return false;
+    }
+
+#ifdef TOKEN_DEBUG
+    LOG(INFO) << "set configuration property " << name << " to " << val;
+#endif//TOKEN_DEBUG
+    return true;
+  }
+
+  bool ConfigurationManager::SetProperty(const std::string& name, const UUID& val){
+    leveldb::WriteOptions options;
+    options.sync = true;
+
+    leveldb::Status status;
+    if(!(status = GetIndex()->Put(options, name, val)).ok()){
+      LOG(WARNING) << "cannot put configuration property " << name << ": " << status.ToString();
+      return false;
+    }
+
+#ifdef TOKEN_DEBUG
+    LOG(INFO) << "set configuration property " << name << " to " << val;
+#endif//TOKEN_DEBUG
+    return true;
+  }
+
+  UUID ConfigurationManager::GetID(const std::string& name){
+    std::string value;
+
+    leveldb::Status status;
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), name, &value)).ok()){
+      if(status.IsNotFound()){
+        LOG(WARNING) << "cannot find configuration property " << name;
+        return UUID();
       }
-    }
 
-    libconfig::Setting& peers = GetServerProperties().lookup(PROPERTY_SERVER_PEER_LIST);
-    auto iter = peers.begin();
-    while(iter != peers.end()){
-      results.insert(NodeAddress(std::string(iter->c_str())));
-      iter++;
+      LOG(WARNING) << "error getting configuration property " << name << ": " << status.ToString();
+      return UUID();
     }
-    return true;
+    return UUID(value);
   }
 
-  UUID BlockChainConfiguration::GetServerId(){
-    return UUID(GetServerProperties().lookup(PROPERTY_SERVER_ID));
-  }
+  bool ConfigurationManager::GetPeerList(const std::string& name, PeerList& peers){
+    std::string value;
 
-  bool BlockChainConfiguration::SetPeerList(const std::set<NodeAddress>& peers){
-    LOCK_GUARD;
-    libconfig::Setting& server = GetServerProperties();
-    if(server.exists(PROPERTY_SERVER_PEER_LIST)){
-      server.remove(PROPERTY_SERVER_PEER_LIST);
-    }
-    libconfig::Setting& property = server.add(PROPERTY_SERVER_PEER_LIST, libconfig::Setting::TypeList);
-    for(auto& it : peers){
-      property.add(libconfig::Setting::TypeString) = it.ToString();
-    }
+    leveldb::Status status;
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), name, &value)).ok()){
+      if(status.IsNotFound()){
+        LOG(WARNING) << "cannot find configuration property " << name;
+        return false;
+      }
 
-    if(!SaveConfiguration()){
-      LOG(WARNING) << "couldn't save the configuration";
+      LOG(WARNING) << "error getting configuration property " << name << ": " << status.ToString();
       return false;
     }
-    return true;
-  }
 
-  bool BlockChainConfiguration::SetServerID(const UUID& uuid){
-    LOCK_GUARD;
-    libconfig::Setting& server = GetServerProperties();
-    if(server.exists(PROPERTY_SERVER_ID)){
-      server.remove(PROPERTY_SERVER_ID);
-    }
-    server.add(PROPERTY_SERVER_ID, libconfig::Setting::Type::TypeString) = uuid.ToString();
-    if(!SaveConfiguration()){
-      LOG(WARNING) << "couldn't save the configuration";
-      return false;
-    }
-    return true;
+    BufferPtr buffer = Buffer::From(value);
+    return Decode(buffer, peers);
   }
 }

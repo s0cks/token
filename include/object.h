@@ -409,8 +409,9 @@ namespace token{
     }
   };
 
-  class UUID : public RawType<16>{
-    using Base = RawType<64>;
+  static const int16_t kRawUUIDSize = 16;
+  class UUID : public RawType<kRawUUIDSize>{
+    using Base = RawType<kRawUUIDSize>;
    public:
     UUID():
       RawType(){
@@ -420,11 +421,15 @@ namespace token{
       RawType(bytes, size){}
     UUID(const std::string& uuid):
       RawType(){
-      uuid_parse(uuid.data(), data_);
+      memcpy(data(), uuid.data(), kRawUUIDSize);
+    }
+    UUID(const leveldb::Slice& slice):
+      RawType(){
+      memcpy(data(), slice.data(), kRawUUIDSize);
     }
     UUID(const UUID& other):
       RawType(){
-      uuid_copy(data_, other.data_);
+      memcpy(data(), other.data(), kRawUUIDSize);
     }
     ~UUID() = default;
 
@@ -434,8 +439,9 @@ namespace token{
       return std::string(uuid_str, 37);
     }
 
-    void operator=(const UUID& other){
-      uuid_copy(data_, other.data_);
+    UUID& operator=(const UUID& other){
+      memcpy(data(), other.data(), kRawUUIDSize);
+      return (*this);
     }
 
     friend bool operator==(const UUID& a, const UUID& b){
@@ -452,6 +458,10 @@ namespace token{
 
     friend std::ostream& operator<<(std::ostream& stream, const UUID& uuid){
       return stream << uuid.ToString();
+    }
+
+    operator leveldb::Slice() const{
+      return leveldb::Slice(data(), size());
     }
   };
 

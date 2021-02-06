@@ -57,7 +57,7 @@ namespace token{
     lock.unlock();
 
     PeerList peers;
-    if(!BlockChainConfiguration::GetPeerList(peers)){
+    if(!ConfigurationManager::GetPeerList(TOKEN_CONFIGURATION_NODE_PEERS, peers)){
       LOG(WARNING) << "couldn't get list of peers from the configuration.";
       return true;
     }

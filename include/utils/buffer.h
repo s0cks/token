@@ -3,6 +3,8 @@
 
 #include <set>
 #include <vector>
+#include <leveldb/slice.h>
+
 #include "object.h"
 #include "version.h"
 
@@ -330,6 +332,10 @@ namespace token{
 
     Version GetVersion(){
       return Version(GetUnsignedLong());
+    }
+
+    operator leveldb::Slice() const{
+      return leveldb::Slice(data(), GetWrittenBytes());
     }
 
     std::string ToString() const{

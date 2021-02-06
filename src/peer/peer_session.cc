@@ -45,7 +45,7 @@ namespace token{
     session->SetState(Session::kConnectingState);
 
     BlockPtr head = BlockChain::GetHead();
-    UUID server_id = BlockChainConfiguration::GetServerId();
+    UUID server_id = ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID);
     session->Send(VersionMessage::NewInstance(ClientType::kNode, server_id, head->GetHeader()));
     if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
       LOG(WARNING) << "peer read failure: " << uv_strerror(status);
@@ -169,7 +169,7 @@ namespace token{
     Send(
       VerackMessage::NewInstance(
         ClientType::kNode,
-        BlockChainConfiguration::GetServerId(),
+        ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID),
         LedgerServer::GetCallbackAddress(),
         Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION),
         head->GetHeader(),
