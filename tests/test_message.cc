@@ -92,19 +92,6 @@ namespace token{
     return NotFoundMessage::NewInstance();
   }
 
-  static inline RpcMessagePtr
-  NewGetPeersMessage(){
-    return GetPeersMessage::NewInstance();
-  }
-
-  static inline RpcMessagePtr
-  NewPeerListMessage(){
-    PeerList peers = {
-      NodeAddress("localhost:8080"),
-    };
-    return PeerListMessage::NewInstance(peers);
-  }
-
 #define DEFINE_MESSAGE_SERIALIZATION_TEST_CASE(Name) \
   TEST(Test##Name##MessageSerialization, test_pos){  \
     RpcMessagePtr a = New##Name##Message();             \

@@ -4,12 +4,13 @@
 #include <map>
 #include <set>
 #include <leveldb/db.h>
+#include <leveldb/comparator.h>
 
+#include "key.h"
 #include "block.h"
 #include "transaction.h"
 #include "merkle/tree.h"
 #include "unclaimed_transaction.h"
-#include "utils/printer.h"
 
 namespace token{
 #define BLOCKCHAIN_REFERENCE_GENESIS "<GENESIS>"
@@ -45,6 +46,57 @@ namespace token{
           return stream << "Unknown";
       }
     }
+   private:
+    class Comparator : public leveldb::Comparator{
+     private:
+      static inline ObjectTag
+      GetTag(const leveldb::Slice& slice){
+        ObjectTag tag(*((RawObjectTag*)slice.data()));
+        if(!tag.IsValid())
+          LOG(WARNING) << "tag " << tag << " is invalid.";
+        return tag;
+      }
+     public:
+      Comparator() = default;
+      ~Comparator() = default;
+
+      int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const{
+        ObjectTag t1 = GetTag(a);
+        ObjectTag t2 = GetTag(b);
+
+        int result;
+        if((result = ObjectTag::CompareType(t1, t2)) != 0)
+          return result; // not equal
+
+        assert(t1.GetType() == t2.GetType());
+        if(t1.IsBlockType()){
+          BlockKey k1(a);
+          if(!k1.valid())
+            LOG(WARNING) << "k1 doesn't have a valid tag.";
+
+          BlockKey k2(b);
+          if(!k2.valid())
+            LOG(WARNING) << "k2 doesn't have a valid tag.";
+          return BlockKey::CompareHeight(k1, k2);
+        }
+
+        ReferenceKey k1(a);
+        if(!k1.valid())
+          LOG(WARNING) << "k1 doesn't have a valid tag.";
+
+        ReferenceKey k2(b);
+        if(!k2.valid())
+          LOG(WARNING) << "k2 doesn't have a valid tag.";
+        return ReferenceKey::CompareCaseInsensitive(k1, k2);
+      }
+
+      const char* Name() const{
+        return "BlockComparator";
+      }
+
+      void FindShortestSeparator(std::string* str, const leveldb::Slice& slice) const{}
+      void FindShortSuccessor(std::string* str) const {}
+    };
    private:
     BlockChain() = delete;
     static leveldb::DB* GetIndex();

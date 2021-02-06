@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <strings.h>
 #include <uuid/uuid.h>
 #include <leveldb/slice.h>
 
@@ -55,6 +56,8 @@ namespace token{
   FOR_EACH_BASIC_TYPE(V) \
   FOR_EACH_POOL_TYPE(V)
 
+  typedef int16_t ObjectSize;
+
   class Buffer;
   typedef std::shared_ptr<Buffer> BufferPtr;
 
@@ -63,6 +66,7 @@ namespace token{
 #define DEFINE_TYPE(Name) k##Name,
     FOR_EACH_TYPE(DEFINE_TYPE)
 #undef DEFINE_TYPE
+    kReference,
 
 #define DEFINE_MESSAGE_TYPE(Name) k##Name##Message,
     FOR_EACH_MESSAGE_TYPE(DEFINE_MESSAGE_TYPE)
@@ -70,7 +74,6 @@ namespace token{
 
     kHttpRequest,
     kHttpResponse,
-    kReferenceType, //TODO: refactor kReferenceType,
   };
 
   static std::ostream& operator<<(std::ostream& stream, const Type& type){
@@ -80,6 +83,8 @@ namespace token{
           return stream << #Name;
       FOR_EACH_TYPE(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
+      case Type::kReference:
+        return stream << "Reference";
       default:
         return stream << "Unknown";
     }
@@ -90,8 +95,28 @@ namespace token{
   typedef int64_t RawObjectTag;
 
   class ObjectTag{
-   private:
-    enum ObjectTagLayout{
+   public:
+    static inline int
+    CompareType(const ObjectTag& a, const ObjectTag& b){
+      if(a.GetType() < b.GetType()){
+        return -1;
+      } else if(a.GetType() > b.GetType()){
+        return +1;
+      }
+      return 0;
+    }
+
+    static inline int
+    CompareSize(const ObjectTag& a, const ObjectTag& b){
+      if(a.GetSize() < b.GetSize()){
+        return -1;
+      } else if(a.GetSize() > b.GetSize()){
+        return +1;
+      }
+      return 0;
+    }
+
+    enum Layout{
       // magic
       kMagicOffset = 0,
       kBitsForMagic = 16,
@@ -106,19 +131,17 @@ namespace token{
     class MagicField : public BitField<RawObjectTag, uint16_t, kMagicOffset, kBitsForMagic>{};
     class TypeField : public BitField<RawObjectTag, uint16_t, kTypeOffset, kBitsForType>{};
     class SizeField : public BitField<RawObjectTag, uint16_t, kSizeOffset, kBitsForSize>{};
-
+   private:
     RawObjectTag raw_;
    public:
     ObjectTag():
-        raw_(0){}
+      raw_(0){}
     ObjectTag(const RawObjectTag& raw):
-        raw_(raw){}
+      raw_(raw){}
     ObjectTag(const Type& type, const uint16_t& size):
-        raw_(MagicField::Encode(TOKEN_OBJECT_TAG_MAGIC)
-                 |TypeField::Encode(static_cast<uint16_t>(type))
-                 |SizeField::Encode(size)){}
+      raw_(MagicField::Encode(TOKEN_OBJECT_TAG_MAGIC)|TypeField::Encode((uint16_t)type)|SizeField::Encode(size)){}
     ObjectTag(const ObjectTag& tag):
-        raw_(tag.raw_){}
+      raw_(tag.raw_){}
     ~ObjectTag() = default;
 
     RawObjectTag& raw(){
@@ -195,6 +218,7 @@ namespace token{
 #undef DEFINE_TYPE_CHECK
 
     BufferPtr ToBuffer() const;
+    BufferPtr ToBufferTagged() const;
     bool ToFile(const std::string& filename) const;
 
     virtual int64_t GetBufferSize() const = 0;
@@ -210,8 +234,9 @@ namespace token{
     Hash GetHash() const;
   };
 
-  template<int64_t Size>
+  template<int16_t Size>
   class RawType{
+    //TODO: refactor
    protected:
     uint8_t data_[Size];
 
@@ -241,7 +266,7 @@ namespace token{
       return (char*) data_;
     }
 
-    int64_t size() const{
+    size_t size() const{
       return std::min(strlen((char*)data_), (size_t)GetSize());
     }
 
@@ -298,8 +323,9 @@ namespace token{
     }
   };
 
-  class User : public RawType<64>{
-    using Base = RawType<64>;
+  static const int16_t kRawUserSize = 64;
+  class User : public RawType<kRawUserSize>{
+    using Base = RawType<kRawUserSize>;
    public:
     User():
       Base(){}
@@ -319,15 +345,15 @@ namespace token{
     }
 
     friend bool operator==(const User& a, const User& b){
-      return Base::Compare(a, b) == 0;
+      return Compare(a, b) == 0;
     }
 
     friend bool operator!=(const User& a, const User& b){
-      return Base::Compare(a, b) != 0;
+      return Compare(a, b) != 0;
     }
 
     friend bool operator<(const User& a, const User& b){
-      return Base::Compare(a, b) < 0;
+      return Compare(a, b) < 0;
     }
 
     friend std::ostream& operator<<(std::ostream& stream, const User& user){
@@ -337,6 +363,51 @@ namespace token{
 
     static int Compare(const User& a, const User& b){
       return Base::Compare(a, b);
+    }
+  };
+
+  static const int16_t kRawReferenceSize = 64;
+  class Reference : public RawType<kRawReferenceSize>{
+    using Base = RawType<kRawReferenceSize>;
+   public:
+    Reference():
+      Base(){}
+    Reference(const uint8_t* bytes, const int16_t size=kRawReferenceSize):
+      Base(bytes, size){}
+    Reference(const Reference& ref):
+      Base(){
+      memcpy(data(), ref.data(), std::min(ref.size(), (size_t)kRawReferenceSize));
+    }
+    Reference(const std::string& ref):
+      Base(){
+      memcpy(data(), ref.data(), std::min(ref.length(), (size_t)kRawReferenceSize));
+    }
+    ~Reference() = default;
+
+    Reference& operator=(const Reference& ref){
+      memcpy(data(), ref.data(), ref.size());
+      return (*this);
+    }
+
+    friend bool operator==(const Reference& a, const Reference& b){
+      return Compare(a, b) == 0;
+    }
+
+    friend bool operator!=(const Reference& a, const Reference& b){
+      return Compare(a, b) != 0;
+    }
+
+    friend bool operator<(const Reference& a, const Reference& b){
+      return Compare(a, b) < 0;
+    }
+
+    friend std::ostream& operator<<(std::ostream& stream, const Reference& ref){
+      return stream << ref.str();
+    }
+
+    static inline int
+    Compare(const Reference& a, const Reference& b){
+      return strncasecmp(a.data(), b.data(), kRawReferenceSize);
     }
   };
 

@@ -1,10 +1,13 @@
 #ifndef TOKEN_POOL_H
 #define TOKEN_POOL_H
 
+#include <glog/logging.h>
 #include <leveldb/db.h>
 #include <leveldb/slice.h>
 #include <leveldb/comparator.h>
 #include <leveldb/write_batch.h>
+
+#include "key.h"
 #include "hash.h"
 #include "block.h"
 #include "transaction.h"
@@ -54,6 +57,30 @@ namespace token{
           return stream << "Unknown";
       }
     }
+   private:
+    class Comparator : public leveldb::Comparator{
+     public:
+      Comparator() = default;
+      ~Comparator() = default;
+
+      int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const{
+        PoolKey k1(a);
+        if(!k1.valid())
+          LOG(WARNING) << "k1 doesn't have a valid tag";
+
+        PoolKey k2(b);
+        if(!k2.valid())
+          LOG(WARNING) << "k2 doesn't have a valid tag.";
+        return PoolKey::Compare(k1, k2);
+      }
+
+      const char* Name() const{
+        return "ObjectPoolComparator";
+      }
+
+      void FindShortestSeparator(std::string* str, const leveldb::Slice& slice) const{}
+      void FindShortSuccessor(std::string* str) const {}
+    };
    private:
     ObjectPool() = delete;
 

@@ -34,7 +34,7 @@ namespace token{
     LOG(INFO) << "initializing the object pool....";
     SetState(ObjectPool::kInitializing);
     leveldb::Options options;
-    options.comparator = new ObjectKey::Comparator();
+    options.comparator = new ObjectPool::Comparator();
     options.create_if_missing = true;
 
     leveldb::Status status;
@@ -69,10 +69,9 @@ namespace token{
 
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectKey key(it->key());
-      if(key.IsValid()){
+      PoolKey key(it->key());
+      if(key.tag().IsValid())
         count++;
-      }
     }
 
     delete it;
@@ -87,12 +86,16 @@ namespace token{
 
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectKey key(it->key());
-      if(key.IsBlock()){
+      PoolKey key(it->key());
+      ObjectTag tag = key.tag();
+      if(!tag.IsValid())
+        continue;
+
+      if(tag.IsBlockType()){
         num_blocks++;
-      } else if(key.IsTransaction()){
+      } else if(tag.IsTransactionType()){
         num_transactions++;
-      } else if(key.IsUnclaimedTransaction()){
+      } else if(tag.IsUnclaimedTransactionType()){
         num_unclaimed_transactions++;
       }
     }
@@ -113,10 +116,10 @@ namespace token{
     LOG(INFO) << "searching for: " << input;
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      ObjectKey key(it->key());
-      if(!key.IsUnclaimedTransaction()){
+      PoolKey key(it->key());
+      ObjectTag tag = key.tag();
+      if(!tag.IsValid() || !tag.IsUnclaimedTransactionType())
         continue;
-      }
 
       BufferPtr val = Buffer::From(it->value());
       UnclaimedTransactionPtr value = UnclaimedTransaction::FromBytes(val);
@@ -173,8 +176,9 @@ namespace token{
     int64_t count = 0;              \
     leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
     for(iter->SeekToFirst(); iter->Valid(); iter->Next()){                     \
-      ObjectKey key(iter->key());     \
-      if(key.Is##Name())            \
+      PoolKey key(iter->key());     \
+      ObjectTag tag = key.tag();    \
+      if(tag.IsValid() && tag.Is##Name##Type())            \
         count++;                    \
     }                               \
     delete iter;                    \
@@ -199,8 +203,9 @@ namespace token{
   bool ObjectPool::Visit##Name##s(ObjectPool##Name##Visitor* vis){ \
     leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
     for(iter->SeekToFirst(); iter->Valid(); iter->Next()){         \
-      ObjectKey key(iter->key());                                  \
-      if(!key.Is##Name())       \
+      PoolKey key(iter->key()); \
+      ObjectTag tag = key.tag();\
+      if(!tag.IsValid() || !tag.Is##Name##Type())       \
         continue;               \
       BufferPtr buffer = Buffer::From(iter->value());              \
       Name##Ptr val = Name::FromBytes(buffer);                     \
@@ -218,8 +223,9 @@ namespace token{
     leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
     writer.StartArray();             \
     for(iter->SeekToFirst(); iter->Valid(); iter->Next()){                     \
-      ObjectKey key(iter->key());    \
-      if(key.Is##Name()){            \
+      PoolKey key(iter->key());    \
+      ObjectTag tag = key.tag();     \
+      if(tag.IsValid() && tag.Is##Name##Type()){            \
         Hash hash = key.GetHash();   \
         std::string hex = hash.HexString();          \
         writer.String(hex.data(), 64);               \

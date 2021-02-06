@@ -67,7 +67,7 @@ namespace token{
 
     leveldb::Options options;
     options.create_if_missing = true;
-    options.comparator = new UserKey::Comparator();
+    options.comparator = new WalletManager::Comparator();
     leveldb::Status status;
     if(!((status = leveldb::DB::Open(options, GetIndexFilename(), &index_)).ok())){
       LOG(WARNING) << "couldn't initialize the wallet manager index: " << status.ToString();

@@ -12,9 +12,23 @@ namespace token{
     return buffer;
   }
 
+  BufferPtr SerializableObject::ToBufferTagged() const{
+    BufferPtr buffer = Buffer::NewInstance(sizeof(RawObjectTag)+GetBufferSize());
+    if(!buffer->PutObjectTag(GetTag())){
+      LOG(WARNING) << "cannot serialize object tag for " << ToString() << " to buffer of size: " << GetBufferSize();
+      return BufferPtr(nullptr);
+    }
+
+    if(!Write(buffer)){
+      LOG(WARNING) << "cannot serialize object " << ToString() << " to buffer of size: " << GetBufferSize();
+      return BufferPtr(nullptr);
+    }
+    return buffer;
+  }
+
   bool SerializableObject::ToFile(const std::string& filename) const{
     std::fstream fd(filename, std::ios::out|std::ios::binary);
-    BufferPtr buffer = ToBuffer();
+    BufferPtr buffer = ToBufferTagged();
     return buffer && buffer->WriteTo(fd);
   }
 
