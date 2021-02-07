@@ -119,6 +119,67 @@ namespace token{
     return GetBlock(GetReference(BLOCKCHAIN_REFERENCE_HEAD));
   }
 
+  class BlockWriter{
+   private:
+    std::string filename_;
+    BlockPtr block_;
+   public:
+    BlockWriter(const std::string& filename, const BlockPtr& blk):
+      filename_(filename),
+      block_(blk){}
+    ~BlockWriter() = default;
+
+    const char* GetFilename() const{
+      return filename_.data();
+    }
+
+    BlockPtr& GetBlock(){
+      return block_;
+    }
+
+    Hash GetHash() const{
+      return block_->GetHash();
+    }
+
+    bool Write() const{
+      FILE* file = NULL;
+      if(!(file = fopen(GetFilename(), "wb"))){
+        LOG(WARNING) << "cannot write block " << GetHash() << " to file: " << GetFilename();
+        return false;
+      }
+
+      int64_t size = sizeof(RawObjectTag)
+                   + BlockHeader::kSize
+                   + block_->GetTransactionDataBufferSize();
+      ObjectTag tag(Type::kBlock, size);
+      BlockHeader header(block_);
+      TransactionSet& transactions = block_->transactions();
+
+      BufferPtr buffer = Buffer::NewInstance(size);
+      if(!buffer->PutObjectTag(tag)){
+        LOG(WARNING) << "cannot write object tag " << tag << " to buffer of size: " << size;
+        return false;
+      }
+
+      if(!header.Write(buffer)){
+        LOG(WARNING) << "cannot write block header " << header << " to buffer of size: " << size;
+        return false;
+      }
+
+      if(!buffer->PutSet(transactions)){
+        LOG(WARNING) << "cannot write block transaction data to buffer of size: " << size;
+        return false;
+      }
+
+      int err;
+      if((err = fwrite(buffer->data(), sizeof(uint8_t), buffer->GetWrittenBytes(), file)) != buffer->GetWrittenBytes()){
+        LOG(WARNING) << "cannot write buffer of size " << size << " to file " << GetFilename() << ": " << strerror(err);
+        return false;
+      }
+      return true;
+    }
+  };
+
   bool BlockChain::PutBlock(const Hash& hash, BlockPtr blk){
     BlockKey key(blk);
     std::string filename = GetNewBlockFilename(blk);
@@ -132,10 +193,10 @@ namespace token{
       return false;
     }
 
-    if(!blk->ToFile(filename)){
-      LOG(WARNING) << "cannot write block data to file: " << filename;
-      //TODO: remove key from index
-      return false;
+    BlockWriter writer(filename, blk);
+    if(!writer.Write()){
+      LOG(WARNING) << "cannot write block " << hash << " to file: " << filename;
+      return false; //TODO: remove key
     }
 
     LOG(INFO) << "indexed block: " << hash;
@@ -264,6 +325,43 @@ namespace token{
     return true;
   }
 
+  static inline bool
+  IsValidBlock(const std::string& filename){
+    FILE* file = NULL;
+    if((file = fopen(filename.data(), "rb")) == NULL){
+      LOG(WARNING) << "cannot open block file " << filename;
+      return false;
+    }
+
+    int err;
+
+    RawObjectTag raw_tag = 0;
+    if((err = fread(&raw_tag, sizeof(RawObjectTag), 1, file)) != 1){
+      LOG(WARNING) << "cannot read object tag from file " << filename << ": " << strerror(err);
+      return false;
+    }
+
+    ObjectTag tag(raw_tag);
+    if(!tag.IsValid()){
+      LOG(WARNING) << "object tag " << tag << " is not valid.";
+    } else if(!tag.IsBlockType()){
+      LOG(WARNING) << "object tag " << tag << " is not a block.";
+      return false;
+    }
+
+    LOG(INFO) << "read object tag: " << tag;
+
+    uint8_t buff[BlockHeader::kSize];
+    if((err = fread(buff, BlockHeader::kSize, 1, file)) != 1){
+      LOG(WARNING) << "cannot read block header from file " << filename << ": " << strerror(err);
+      return false;
+    }
+
+    BlockHeader header(Buffer::From(buff, BlockHeader::kSize));
+    LOG(INFO) << "read block header: " << header;
+    return true;
+  }
+
   int64_t BlockChain::GetNumberOfBlocks(){
     int64_t count = 0;
 
@@ -272,7 +370,10 @@ namespace token{
     if((dir = opendir(GetDataDirectory().c_str())) != NULL){
       while((ent = readdir(dir)) != NULL){
         std::string filename(ent->d_name);
-        if(EndsWith(filename, ".dat")) count++;
+        std::string abs_path = GetDataDirectory() + '/' + filename;
+        if(EndsWith(filename, ".dat") && IsValidBlock(abs_path)){
+          count++;
+        }
       }
       closedir(dir);
     } else{

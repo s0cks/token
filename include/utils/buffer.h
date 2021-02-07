@@ -87,6 +87,12 @@ namespace token{
       data_ = (uint8_t*) malloc(sizeof(uint8_t) * size);
       memset(data(), 0, GetBufferSize());
     }
+    Buffer(uint8_t* data, int64_t size):
+      bsize_(size),
+      wpos_(size),
+      rpos_(0),
+      data_(data),
+      owned_(false){}
     Buffer(const char* data, size_t size):
       bsize_(size),
       wpos_(size),
@@ -296,13 +302,11 @@ namespace token{
 
     template<class T, class C>
     bool PutSet(const std::set<T, C>& items){
-      if(!PutLong(items.size())){
+      if(!PutLong(items.size()))
         return false;
-      }
       for(auto& item : items){
-        if(!item->Write(shared_from_this())){
+        if(!item->Write(shared_from_this()))
           return false;
-        }
       }
       return true;
     }
@@ -355,6 +359,11 @@ namespace token{
     static inline BufferPtr
     NewInstance(int64_t size){
       return std::make_shared<Buffer>(size);
+    }
+
+    static inline BufferPtr
+    From(uint8_t* data, int64_t size){
+      return std::make_shared<Buffer>(data, size);
     }
 
     static inline BufferPtr

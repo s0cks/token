@@ -144,7 +144,13 @@ namespace token{
     std::string ToString() const{
       std::stringstream ss;
       ss << "BlockHeader(";
-
+      ss << "timestamp=" << FormatTimestampReadable(timestamp_) << ", ";
+      ss << "version=" << version_ << ", ";
+      ss << "height=" << height_ << ", ";
+      ss << "previous_hash=" << previous_hash_ << ", ";
+      ss << "merkle_root=" << merkle_root_ << ", ";
+      ss << "hash=" << hash_ << ", ";
+      ss << "number_of_transactions=" << num_transactions_;
       ss << ")";
       return ss.str();
     }
@@ -161,9 +167,8 @@ namespace token{
       return a.GetHeight() < b.GetHeight();
     }
 
-    friend std::ostream& operator<<(std::ostream& stream, const BlockHeader& header){
-      stream << "#" << header.GetHeight() << "(" << header.GetHash() << ")";
-      return stream;
+    friend std::ostream& operator<<(std::ostream& stream, const BlockHeader& blk){
+      return stream << blk.ToString();
     }
   };
 }

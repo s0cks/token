@@ -115,16 +115,21 @@ namespace token{
       return stream.str();
     }
 
+    int64_t GetTransactionDataBufferSize() const{
+      int64_t size = 0;
+      size += sizeof(int64_t); // num_transactions
+      for(auto& it : transactions_)
+        size += it->GetBufferSize();
+      return size;
+    }
+
     int64_t GetBufferSize() const{
       int64_t size = 0;
       size += sizeof(uint64_t); // timestamp_
       size += sizeof(RawVersion); // version_
       size += sizeof(int64_t); // height_
       size += Hash::GetSize(); // previous_hash_
-      size += sizeof(int64_t); // num_transactions
-      for(auto& it : transactions_)
-        size += it->GetBufferSize();
-      return size;
+      return size + GetTransactionDataBufferSize();
     }
 
     bool Write(const BufferPtr& buff) const{
