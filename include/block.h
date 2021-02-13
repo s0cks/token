@@ -18,12 +18,12 @@ namespace token{
     friend class BlockChain;
     friend class BlockMessage;
    public:
-    static const int64_t kMaxTransactionsForBlock = 2;
-
 #ifdef TOKEN_DEBUG
+    static const int64_t kMaxBlockSize = 128 * kMB;
     static const int64_t kNumberOfGenesisOutputs = 128;
 #else
-    static const int64_t kNumberOfGenesisOutputs = 10000; // TODO: changeme
+    static const int64_t kMaxBlockSize = 1 * kGB;
+    static const int64_t kNumberOfGenesisOutputs = 10000;
 #endif//TOKEN_DEBUG
 
    private:

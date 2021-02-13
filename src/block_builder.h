@@ -24,19 +24,20 @@ namespace token{
 
       std::sort(transactions_.begin(), transactions_.end(), Transaction::TimestampComparator());
 
+      int64_t blk_size = 0;
+
       int64_t index = 0;
       TransactionSet transactions;
       for(auto& it : transactions_){
         TransactionPtr ntx = Transaction::NewInstance(index, it->inputs(), it->outputs(), it->GetTimestamp());
+        if((blk_size + ntx->GetBufferSize()) >= Block::kMaxBlockSize)
+          break;
+
         if(!transactions.insert(ntx).second){
           LOG(WARNING) << "couldn't insert new transaction into transaction list for new block:";
           PrettyPrinter printer(google::WARNING, Printer::kFlagDetailed);
           printer(ntx);
           return BlockPtr(nullptr);
-        }
-
-        if((index++) >= Block::kMaxTransactionsForBlock){
-          break;
         }
       }
 

@@ -221,7 +221,7 @@ main(int argc, char **argv){
 #ifdef TOKEN_DEBUG
   LOG(INFO) << "number of blocks in block chain: " << BlockChain::GetNumberOfBlocks();
 
-  if(FLAGS_append_test && !AppendDummy(Block::kMaxTransactionsForBlock)){
+  if(FLAGS_append_test && !AppendDummy(2)){
     CrashReport::PrintNewCrashReport("Cannot append dummy transactions.");
     return EXIT_FAILURE;
   }
