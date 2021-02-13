@@ -217,4 +217,9 @@ IsValidPort(int32_t port){
 
 #define TOKEN_BLOCKCHAIN_HOME (FLAGS_path)
 
+#define B (1)
+#define KB (1024 * B)
+#define MB (1024 * KB)
+#define GB (1024 * MB)
+
 #endif //TOKEN_COMMON_H
