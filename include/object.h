@@ -260,6 +260,10 @@ namespace token{
    public:
     virtual ~RawType() = default;
 
+    uint8_t* raw_data() const{
+      return (uint8_t*)data_;
+    }
+
     char* data() const{
       return (char*) data_;
     }

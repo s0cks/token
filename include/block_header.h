@@ -6,14 +6,17 @@
 namespace token{
   class BlockHeader : public SerializableObject{
    public:
-    static const int64_t kSize = sizeof(Timestamp) // timestamp
-                               + sizeof(RawVersion) // version
-                               + sizeof(int64_t) // height
-                               + Hash::kSize // previous hash
-                               + Hash::kSize // merkle root
-                               + Hash::kSize // hash
-                               + sizeof(int64_t); // number of transactions
     //TODO: add bloom filter?
+    static inline int64_t
+    GetSize(){
+      return sizeof(Timestamp) // timestamp
+           + sizeof(RawVersion) // version
+           + sizeof(int64_t) // height
+           + Hash::kSize // previous hash
+           + Hash::kSize // merkle root
+           + Hash::kSize // hash
+           + sizeof(int64_t); // number of transactions
+    }
    private:
     Timestamp timestamp_;
     Version version_;
@@ -80,6 +83,10 @@ namespace token{
       return Type::kBlockHeader;
     }
 
+    Version GetVersion() const{
+      return version_;
+    }
+
     Timestamp GetTimestamp() const{
       return timestamp_;
     }
@@ -116,7 +123,7 @@ namespace token{
     }
 
     int64_t GetBufferSize() const{
-      return kSize;
+      return BlockHeader::GetSize();
     }
 
     bool Write(const BufferPtr& buffer) const{

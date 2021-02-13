@@ -19,7 +19,13 @@ namespace token{
     friend class BlockMessage;
    public:
     static const int64_t kMaxTransactionsForBlock = 2;
+
+#ifdef TOKEN_DEBUG
+    static const int64_t kNumberOfGenesisOutputs = 128;
+#else
     static const int64_t kNumberOfGenesisOutputs = 10000; // TODO: changeme
+#endif//TOKEN_DEBUG
+
    private:
     Timestamp timestamp_;
     Version version_;
@@ -75,6 +81,14 @@ namespace token{
 
     Hash GetPreviousHash() const{
       return previous_hash_;
+    }
+
+    BloomFilter& GetBloomFilter(){
+      return tx_bloom_;
+    }
+
+    BloomFilter GetBloomFilter() const{
+      return tx_bloom_;
     }
 
     int64_t GetNumberOfTransactions() const{
@@ -179,6 +193,15 @@ namespace token{
     bool Contains(const Hash& hash) const;
 
     static BlockPtr Genesis();
+
+    static inline BlockPtr
+    NewInstance(int64_t height,
+                const Version& version,
+                const Hash& phash,
+                const TransactionSet& transactions,
+                Timestamp timestamp = Clock::now()){
+      return std::make_shared<Block>(height, version, phash, transactions, timestamp);
+    }
 
     static inline BlockPtr
     NewInstance(const BlockPtr& parent, const TransactionSet& txs, const Timestamp& timestamp = Clock::now()){

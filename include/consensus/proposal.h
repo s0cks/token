@@ -82,7 +82,7 @@ namespace token{
     static inline int64_t
     GetSize(){
       int64_t size = 0;
-      size += BlockHeader::kSize;
+      size += BlockHeader::GetSize();
       size += UUID::GetSize();
       return size;
     }

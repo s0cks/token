@@ -12,6 +12,8 @@
 
 namespace token{
   class Hash{
+    //TODO:
+    // - refactor for RawType class
    public:
     static const int64_t kSize = 256 / 8;
    public:
@@ -93,6 +95,10 @@ namespace token{
         }
       }
       return true;
+    }
+
+    uint8_t* raw_data() const{
+      return (uint8_t*)data_;
     }
 
     unsigned char* data() const{

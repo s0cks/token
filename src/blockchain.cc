@@ -1,14 +1,15 @@
 #include <sstream>
 #include <leveldb/db.h>
 #include <glog/logging.h>
-#include <atomic/relaxed_atomic.h>
 
 #include "keychain.h"
 #include "blockchain.h"
+#include "block_file.h"
 #include "job/scheduler.h"
 #include "job/processor.h"
 #include "unclaimed_transaction.h"
 #include "utils/timeline.h"
+#include "atomic/relaxed_atomic.h"
 
 namespace token{
   static inline std::string
@@ -119,67 +120,6 @@ namespace token{
     return GetBlock(GetReference(BLOCKCHAIN_REFERENCE_HEAD));
   }
 
-  class BlockWriter{
-   private:
-    std::string filename_;
-    BlockPtr block_;
-   public:
-    BlockWriter(const std::string& filename, const BlockPtr& blk):
-      filename_(filename),
-      block_(blk){}
-    ~BlockWriter() = default;
-
-    const char* GetFilename() const{
-      return filename_.data();
-    }
-
-    BlockPtr& GetBlock(){
-      return block_;
-    }
-
-    Hash GetHash() const{
-      return block_->GetHash();
-    }
-
-    bool Write() const{
-      FILE* file = NULL;
-      if(!(file = fopen(GetFilename(), "wb"))){
-        LOG(WARNING) << "cannot write block " << GetHash() << " to file: " << GetFilename();
-        return false;
-      }
-
-      int64_t size = sizeof(RawObjectTag)
-                   + BlockHeader::kSize
-                   + block_->GetTransactionDataBufferSize();
-      ObjectTag tag(Type::kBlock, size);
-      BlockHeader header(block_);
-      TransactionSet& transactions = block_->transactions();
-
-      BufferPtr buffer = Buffer::NewInstance(size);
-      if(!buffer->PutObjectTag(tag)){
-        LOG(WARNING) << "cannot write object tag " << tag << " to buffer of size: " << size;
-        return false;
-      }
-
-      if(!header.Write(buffer)){
-        LOG(WARNING) << "cannot write block header " << header << " to buffer of size: " << size;
-        return false;
-      }
-
-      if(!buffer->PutSet(transactions)){
-        LOG(WARNING) << "cannot write block transaction data to buffer of size: " << size;
-        return false;
-      }
-
-      int err;
-      if((err = fwrite(buffer->data(), sizeof(uint8_t), buffer->GetWrittenBytes(), file)) != buffer->GetWrittenBytes()){
-        LOG(WARNING) << "cannot write buffer of size " << size << " to file " << GetFilename() << ": " << strerror(err);
-        return false;
-      }
-      return true;
-    }
-  };
-
   bool BlockChain::PutBlock(const Hash& hash, BlockPtr blk){
     BlockKey key(blk);
     std::string filename = GetNewBlockFilename(blk);
@@ -193,7 +133,7 @@ namespace token{
       return false;
     }
 
-    BlockWriter writer(filename, blk);
+    BlockFileWriter writer(filename, blk);
     if(!writer.Write()){
       LOG(WARNING) << "cannot write block " << hash << " to file: " << filename;
       return false; //TODO: remove key
@@ -213,7 +153,13 @@ namespace token{
       return BlockPtr(nullptr);
     }
 
-    return Block::FromFile(filename);
+    BlockFileReader reader(filename);
+    if(!reader.HasValidTag()){
+      LOG(WARNING) << "block file " << filename << " has an invalid tag.";
+      return BlockPtr(nullptr);
+    }
+
+    return reader.ReadBlockData();
   }
 
   BlockPtr BlockChain::GetBlock(int64_t height){
@@ -327,38 +273,11 @@ namespace token{
 
   static inline bool
   IsValidBlock(const std::string& filename){
-    FILE* file = NULL;
-    if((file = fopen(filename.data(), "rb")) == NULL){
-      LOG(WARNING) << "cannot open block file " << filename;
+    BlockFileReader reader(filename);
+    if(!reader.HasValidTag()){
+      LOG(WARNING) << filename << " has an invalid tag.";
       return false;
     }
-
-    int err;
-
-    RawObjectTag raw_tag = 0;
-    if((err = fread(&raw_tag, sizeof(RawObjectTag), 1, file)) != 1){
-      LOG(WARNING) << "cannot read object tag from file " << filename << ": " << strerror(err);
-      return false;
-    }
-
-    ObjectTag tag(raw_tag);
-    if(!tag.IsValid()){
-      LOG(WARNING) << "object tag " << tag << " is not valid.";
-    } else if(!tag.IsBlockType()){
-      LOG(WARNING) << "object tag " << tag << " is not a block.";
-      return false;
-    }
-
-    LOG(INFO) << "read object tag: " << tag;
-
-    uint8_t buff[BlockHeader::kSize];
-    if((err = fread(buff, BlockHeader::kSize, 1, file)) != 1){
-      LOG(WARNING) << "cannot read block header from file " << filename << ": " << strerror(err);
-      return false;
-    }
-
-    BlockHeader header(Buffer::From(buff, BlockHeader::kSize));
-    LOG(INFO) << "read block header: " << header;
     return true;
   }
 
@@ -392,7 +311,6 @@ namespace token{
         Json::Append(writer, current);
         current = blk->GetPreviousHash();
       } while(!current.IsNull());
-      return true;
     }
     writer.EndArray();
     return true;
