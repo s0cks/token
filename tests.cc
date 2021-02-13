@@ -11,6 +11,8 @@ DEFINE_int32(num_workers, 4, "Define the number of worker pool threads");
 DEFINE_int64(miner_interval, 1000 * 60 * 1, "The amount of time between mining blocks in milliseconds.");
 
 #ifdef TOKEN_DEBUG
+  // --fresh
+  DEFINE_bool(fresh, false, "Initialize the BlockChain w/ a fresh chain [Debug]");
   // --append-test
   DEFINE_bool(append_test, false, "Append a test block upon startup [Debug]");
 #endif//TOKEN_DEBUG
