@@ -83,7 +83,7 @@ namespace token{
     bool CheckTag(const Type& type) const{
       ObjectTag tag = ReadTag();
       if(!tag.IsValid()){
-        LOG(WARNING) << "tag " << tag << " is not valid.";
+        LOG(WARNING) << "tag " << tag << " is not IsValid.";
         return false;
       }
 

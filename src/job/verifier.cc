@@ -105,7 +105,7 @@ namespace token{
 
     return invalid_.empty()
            ? Success("done.")
-           : Failed("Not all transactions are valid.");
+           : Failed("Not all transactions are IsValid.");
   }
 
   JobResult VerifyTransactionOutputsJob::DoWork(){

@@ -115,7 +115,7 @@ namespace token{
     }
 
     enum Layout{
-      // magic
+      // GetMagic
       kMagicOffset = 0,
       kBitsForMagic = 16,
       // type

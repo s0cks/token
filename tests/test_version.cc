@@ -4,13 +4,13 @@
 namespace token{
   TEST(TestVersion, test_eq){
     Version a(10, 10, 10);
-    ASSERT_TRUE(a.valid());
-    ASSERT_EQ(a.magic(), TOKEN_MAGIC);
+    ASSERT_TRUE(a.IsValid());
+    ASSERT_EQ(a.GetMagic(), TOKEN_MAGIC);
     ASSERT_EQ(a, a);
 
     Version b(10, 10, 10);
-    ASSERT_TRUE(b.valid());
-    ASSERT_EQ(b.magic(), TOKEN_MAGIC);
+    ASSERT_TRUE(b.IsValid());
+    ASSERT_EQ(b.GetMagic(), TOKEN_MAGIC);
 
     ASSERT_EQ(b, b);
     ASSERT_EQ(b, a);
@@ -18,32 +18,32 @@ namespace token{
 
   TEST(TestVersion, test_neq){
     Version a(10, 10, 10);
-    ASSERT_TRUE(a.valid());
-    ASSERT_EQ(a.magic(), TOKEN_MAGIC);
+    ASSERT_TRUE(a.IsValid());
+    ASSERT_EQ(a.GetMagic(), TOKEN_MAGIC);
 
     Version b(11, 10, 10);
-    ASSERT_TRUE(b.valid());
-    ASSERT_EQ(b.magic(), TOKEN_MAGIC);
+    ASSERT_TRUE(b.IsValid());
+    ASSERT_EQ(b.GetMagic(), TOKEN_MAGIC);
 
     ASSERT_NE(a, b);
   }
 
   TEST(TestVersion, test_compare){
     Version a(1, 0, 0);
-    ASSERT_TRUE(a.valid());
-    ASSERT_EQ(a.magic(), TOKEN_MAGIC);
+    ASSERT_TRUE(a.IsValid());
+    ASSERT_EQ(a.GetMagic(), TOKEN_MAGIC);
 
     Version b(1, 1, 0);
-    ASSERT_TRUE(b.valid());
-    ASSERT_EQ(b.magic(), TOKEN_MAGIC);
+    ASSERT_TRUE(b.IsValid());
+    ASSERT_EQ(b.GetMagic(), TOKEN_MAGIC);
 
     Version c(1, 0, 1);
-    ASSERT_TRUE(c.valid());
-    ASSERT_EQ(c.magic(), TOKEN_MAGIC);
+    ASSERT_TRUE(c.IsValid());
+    ASSERT_EQ(c.GetMagic(), TOKEN_MAGIC);
 
     Version d(2, 0, 0);
-    ASSERT_TRUE(d.valid());
-    ASSERT_EQ(d.magic(), TOKEN_MAGIC);
+    ASSERT_TRUE(d.IsValid());
+    ASSERT_EQ(d.GetMagic(), TOKEN_MAGIC);
 
     ASSERT_LT(a, b);
     ASSERT_LT(a, c);

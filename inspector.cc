@@ -25,7 +25,7 @@ main(int argc, char **argv){
 
     if(inspector_path == ".exit") return EXIT_SUCCESS;
     if(!FileExists(inspector_path)){
-      LOG(WARNING) << "Snapshot " << inspector_path << " doesn't exist, please enter a valid snapshot path";
+      LOG(WARNING) << "Snapshot " << inspector_path << " doesn't exist, please enter a IsValid snapshot path";
       return EXIT_FAILURE;
     }
 
@@ -38,7 +38,7 @@ main(int argc, char **argv){
 
     if(inspector_path == ".exit") return EXIT_SUCCESS;
     if(!FileExists(inspector_path)){
-      LOG(ERROR) << "Heap Dump " << inspector_path << " doesn't exist, please enter a valid path";
+      LOG(ERROR) << "Heap Dump " << inspector_path << " doesn't exist, please enter a IsValid path";
       return EXIT_FAILURE;
     }
   }

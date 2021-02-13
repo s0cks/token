@@ -33,7 +33,7 @@ namespace token{
       int scale;
       if(!ParseInt(request->GetQueryParameterValue("scale"), &scale)){
         std::stringstream ss;
-        ss << "scale factor of " << request->GetQueryParameterValue("scale") << " is not a valid number";
+        ss << "scale factor of " << request->GetQueryParameterValue("scale") << " is not a IsValid number";
         return session->Send(NewInternalServerErrorResponse(session, ss));
       }
       width = scale;
@@ -43,13 +43,13 @@ namespace token{
         return session->Send(NewInternalServerErrorResponse(session, "Please specify a height"));
       if(!ParseInt(request->GetQueryParameterValue("width"), &width)){
         std::stringstream ss;
-        ss << "width of " << request->GetQueryParameterValue("width") << " is not a valid number.";
+        ss << "width of " << request->GetQueryParameterValue("width") << " is not a IsValid number.";
         return session->Send(NewInternalServerErrorResponse(session, ss));
       }
 
       if(!ParseInt(request->GetQueryParameterValue("height"), &height)){
         std::stringstream ss;
-        ss << "height of " << request->GetQueryParameterValue("height") << " is not a valid number.";
+        ss << "height of " << request->GetQueryParameterValue("height") << " is not a IsValid number.";
         return session->Send(NewInternalServerErrorResponse(session, ss));
       }
     }

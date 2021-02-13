@@ -117,11 +117,11 @@ namespace token{
       int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const{
         UserKey k1(a);
         if(!k1.valid())
-          LOG(WARNING) << "k1 doesn't have a valid tag.";
+          LOG(WARNING) << "k1 doesn't have a IsValid tag.";
 
         UserKey k2(b);
         if(!k2.valid())
-          LOG(WARNING) << "k2 doesn't have a valid tag.";
+          LOG(WARNING) << "k2 doesn't have a IsValid tag.";
         return UserKey::Compare(k1, k2);
       }
 

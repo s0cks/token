@@ -74,21 +74,21 @@ namespace token{
         if(t1.IsBlockType()){
           BlockKey k1(a);
           if(!k1.valid())
-            LOG(WARNING) << "k1 doesn't have a valid tag.";
+            LOG(WARNING) << "k1 doesn't have a IsValid tag.";
 
           BlockKey k2(b);
           if(!k2.valid())
-            LOG(WARNING) << "k2 doesn't have a valid tag.";
+            LOG(WARNING) << "k2 doesn't have a IsValid tag.";
           return BlockKey::CompareHeight(k1, k2);
         }
 
         ReferenceKey k1(a);
         if(!k1.valid())
-          LOG(WARNING) << "k1 doesn't have a valid tag.";
+          LOG(WARNING) << "k1 doesn't have a IsValid tag.";
 
         ReferenceKey k2(b);
         if(!k2.valid())
-          LOG(WARNING) << "k2 doesn't have a valid tag.";
+          LOG(WARNING) << "k2 doesn't have a IsValid tag.";
         return ReferenceKey::CompareCaseInsensitive(k1, k2);
       }
 
