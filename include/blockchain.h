@@ -20,11 +20,13 @@ namespace token{
     V(Uninitialized)                 \
     V(Initializing)                  \
     V(Initialized)                   \
-    V(Synchronizing)                 \
+    V(Synchronizing)
 
   class BlockChainBlockVisitor;
   class BlockChainHeaderVisitor;
   class BlockChain{
+    friend class BlockChainInitializer;
+
     friend class BlockMiner;
     friend class ProposalHandler;
     friend class SynchronizeJob; //TODO: revoke access
@@ -99,13 +101,22 @@ namespace token{
     };
    private:
     BlockChain() = delete;
+
+    static inline bool
+    ShouldInstallFresh(){ //TODO: rename function/action
+#ifdef TOKEN_DEBUG
+      return !BlockChain::HasReference(BLOCKCHAIN_REFERENCE_GENESIS) || FLAGS_fresh;
+#else
+      return !BlockChain::HasReference(BLOCKCHAIN_REFERENCE_GENESIS);
+#endif//TOKEN_DEBUG
+    }
+
     static leveldb::DB* GetIndex();
-
     static void SetState(const State& state);
-
     static bool PutBlock(const Hash& hash, BlockPtr blk);
     static bool PutReference(const std::string& name, const Hash& hash);
     static bool RemoveReference(const std::string& name);
+    static bool RemoveBlock(const Hash& hash, const BlockPtr& blk);
     static bool Append(const BlockPtr& blk);
    public:
     ~BlockChain() = delete;

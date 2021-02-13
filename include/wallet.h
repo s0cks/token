@@ -54,6 +54,17 @@ namespace token{
 
   void ToJson(const Wallet& hashes, Json::String& json);
 
+  static std::ostream& operator<<(std::ostream& stream, const Wallet& wallet){
+    size_t idx = 0;
+    stream << "[";
+    for(auto& it : wallet){
+      stream << it;
+      if((++idx < wallet.size()))
+        stream << ", ";
+    }
+    return stream << "]";
+  }
+
 #define FOR_EACH_WALLET_MANAGER_STATE(V) \
   V(Uninitialized)                       \
   V(Initializing)                        \

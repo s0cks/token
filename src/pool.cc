@@ -133,6 +133,24 @@ namespace token{
     return UnclaimedTransactionPtr(nullptr);
   }
 
+#define DEFINE_PRINT_TYPE(Name) \
+  bool ObjectPool::Print##Name##s(const google::LogSeverity severity){ \
+    LOG_AT_LEVEL(severity) << "object pool " << #Name << "s:";         \
+    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions()); \
+    for(it->SeekToFirst(); it->Valid(); it->Next()){                   \
+      PoolKey key(it->key());   \
+      ObjectTag tag = key.tag();\
+      if(!tag.IsValid() || !tag.Is##Name##Type())                      \
+        continue;               \
+      Name##Ptr value = Name::FromBytes(Buffer::From(it->value()));    \
+      LOG_AT_LEVEL(severity) << " - " << value->ToString();            \
+    }                           \
+    delete it;                  \
+    return true;                \
+  }
+  FOR_EACH_POOL_TYPE(DEFINE_PRINT_TYPE)
+#undef DEFINE_PRINT_TYPE
+
 #define DEFINE_PUT_TYPE(Name) \
   bool ObjectPool::Put##Name(const Hash& hash, const Name##Ptr& val){ \
     if(Has##Name(hash)){      \

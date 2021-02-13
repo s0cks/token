@@ -1,6 +1,7 @@
 #ifndef TOKEN_HASH_H
 #define TOKEN_HASH_H
 
+#include <set>
 #include <bitset>
 #include <cstdint>
 #include <cstdlib>
@@ -30,6 +31,12 @@ namespace token{
         res = res * 31 + std::hash<uint64_t>()(c);
         res = res * 31 + std::hash<uint64_t>()(d);
         return res;
+      }
+    };
+
+    struct Comparator{
+      bool operator()(const Hash& a, const Hash& b) const{
+        return a < b;
       }
     };
 
@@ -206,6 +213,7 @@ namespace token{
   };
 
   typedef std::vector<Hash> HashList;
+  typedef std::set<Hash, Hash::Comparator> HashSet;
 }
 
 #endif //TOKEN_HASH_H

@@ -85,9 +85,14 @@ namespace token{
     }
 
     std::string ToString() const{
-      std::stringstream stream;
-      stream << "UnclaimedTransaction(" << reference_ << ", " << user_ << ", " << product_ << ")";
-      return stream.str();
+      std::stringstream ss;
+      ss << "UnclaimedTransaction(";
+        ss << "hash=" << GetHash() << ", ";
+        ss << "reference=" << reference_ << ", ";
+        ss << "user=" << user_ << ", ";
+        ss << "product=" << product_;
+      ss << ")";
+      return ss.str();
     }
 
     static inline UnclaimedTransactionPtr

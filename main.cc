@@ -19,6 +19,8 @@ DEFINE_int32(num_workers, 4, "Define the number of worker pool threads");
 DEFINE_int64(miner_interval, 1000 * 60 * 1, "The amount of time between mining blocks in milliseconds.");
 
 #ifdef TOKEN_DEBUG
+  // --fresh
+  DEFINE_bool(fresh, false, "Initialize the BlockChain w/ a fresh chain [Debug]");
   // --append-test
   DEFINE_bool(append_test, false, "Append a test block upon startup [Debug]");
 #endif//TOKEN_DEBUG
@@ -220,6 +222,12 @@ main(int argc, char **argv){
 
 #ifdef TOKEN_DEBUG
   LOG(INFO) << "number of blocks in block chain: " << BlockChain::GetNumberOfBlocks();
+  LOG(INFO) << "number of unclaimed transactions in pool: " << ObjectPool::GetNumberOfUnclaimedTransactions();
+  LOG(INFO) << "number of transactions in pool: " << ObjectPool::GetNumberOfTransactions();
+  LOG(INFO) << "number of blocks in pool: " << ObjectPool::GetNumberOfBlocks();
+
+
+  ObjectPool::PrintUnclaimedTransactions();
 
   if(FLAGS_append_test && !AppendDummy(2)){
     CrashReport::PrintNewCrashReport("Cannot append dummy transactions.");

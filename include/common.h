@@ -187,6 +187,8 @@ DECLARE_int32(num_workers);
 DECLARE_int64(miner_interval);
 
 #ifdef TOKEN_DEBUG
+  // --fresh
+  DECLARE_bool(fresh);
   // --append-test
   DECLARE_bool(append_test);
 #endif//TOKEN_DEBUG

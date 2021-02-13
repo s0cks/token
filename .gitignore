@@ -16,3 +16,4 @@
 !/*.cc
 !/*.sh
 !/swagger.json
+!/.github/

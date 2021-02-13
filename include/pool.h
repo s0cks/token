@@ -118,6 +118,7 @@ namespace token{
      *  - int64_t GetNumberOf<Type>s();
      */
 #define DEFINE_TYPE_METHODS(Name) \
+    static bool Print##Name##s(const google::LogSeverity severity=google::INFO); \
     static bool WaitFor##Name(const Hash& hash, const int64_t timeout_ms=1000*5); \
     static bool Put##Name(const Hash& hash, const Name##Ptr& val);                \
     static bool Get##Name##s(Json::Writer& json);                                   \
@@ -134,9 +135,9 @@ namespace token{
     static UnclaimedTransactionPtr FindUnclaimedTransaction(const Input& input);
     static leveldb::Status Write(leveldb::WriteBatch* update);
 
-    #ifdef TOKEN_DEBUG
+#ifdef TOKEN_DEBUG
       static bool GetStats(Json::Writer& json);
-    #endif//TOKEN_DEBUG
+#endif//TOKEN_DEBUG
 
 #define DEFINE_CHECK(Name) \
     static inline bool Is##Name(){ return GetState() == ObjectPool::k##Name; }

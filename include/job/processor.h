@@ -84,11 +84,7 @@ namespace token{
       return GetWalletWriteSize() + GetPoolWriteSize();
     }
 
-    leveldb::Status CommitPoolChanges(){
-      if(batch_pool_.ApproximateSize() == 0)
-        return leveldb::Status::IOError("the object pool batch write is ~0b in size");
-      return ObjectPool::Write(&batch_pool_);
-    }
+    leveldb::Status CommitPoolChanges();
 
     leveldb::Status CommitWalletChanges(){
       if(batch_wallet_.ApproximateSize() == 0)
@@ -122,12 +118,14 @@ namespace token{
 
   class ProcessTransactionJob : public BatchWriteJob{
    protected:
+    Hash hash_;
     TransactionPtr transaction_;
 
     JobResult DoWork();
    public:
     ProcessTransactionJob(ProcessBlockJob* parent, const TransactionPtr& tx):
       BatchWriteJob(parent, "ProcessTransaction"),
+      hash_(tx->GetHash()),
       transaction_(tx){}
     ~ProcessTransactionJob() = default;
 
@@ -143,8 +141,8 @@ namespace token{
       return transaction_;
     }
 
-    void Append(const leveldb::WriteBatch& batch, const UserWallets& hashes){
-      return ((ProcessBlockJob*) GetParent())->Append(batch, hashes);
+    Hash GetTransactionHash() const{
+      return hash_;
     }
   };
 
@@ -192,10 +190,6 @@ namespace token{
     TransactionPtr GetTransaction() const{
       return ((ProcessTransactionJob*) GetParent())->GetTransaction();
     }
-
-    void Append(const leveldb::WriteBatch& batch, const UserWallets& hashes){
-      return ((ProcessTransactionJob*) GetParent())->Append(batch, hashes);
-    }
   };
 
   class ProcessOutputListJob : public OutputListJob{
@@ -227,17 +221,7 @@ namespace token{
       list.insert(hash);
     }
    protected:
-    JobResult DoWork(){
-      for(auto& it : outputs()){
-        UnclaimedTransactionPtr val = CreateUnclaimedTransaction(it);
-        Hash hash = val->GetHash();
-        PutObject(batch_, hash, val);
-        Track(val->GetUser(), hash);
-      }
-
-      ((ProcessTransactionOutputsJob*) GetParent())->Append(GetBatch(), wallets_);
-      return Success("done.");
-    }
+    JobResult DoWork();
    public:
     ProcessOutputListJob(ProcessTransactionOutputsJob* parent, int64_t wid, const OutputList& outputs):
       OutputListJob(parent, "ProcessOutputListJob", outputs),

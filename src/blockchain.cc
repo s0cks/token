@@ -11,6 +11,8 @@
 #include "utils/timeline.h"
 #include "atomic/relaxed_atomic.h"
 
+#include "blockchain_initializer.h"
+
 namespace token{
   static inline std::string
   GetDataDirectory(){
@@ -68,40 +70,18 @@ namespace token{
       return false;
     }
 
-    LOG(INFO) << "initializing the block chain....";
-    SetState(BlockChain::kInitializing);
     if(!JobScheduler::RegisterQueue(pthread_self(), &queue_)){
       LOG(WARNING) << "couldn't register the block chain work queue.";
       return false;
     }
 
-    if(!HasReference(BLOCKCHAIN_REFERENCE_HEAD)){
-      BlockPtr genesis = Block::Genesis();
-      Hash hash = genesis->GetHash();
-
-      // [Before - Work Stealing]
-      //  - ProcessGenesisBlock Timeline (19s)
-      // [After - Work Stealing]
-      //  - ProcessGenesisBlock Timeline (4s)
-      JobQueue* queue = JobScheduler::GetThreadQueue();
-      ProcessBlockJob* job = new ProcessBlockJob(genesis);
-      queue->Push(job);
-      while(!job->IsFinished()); //spin
-
-      if(!job->CommitAllChanges()){
-        LOG(ERROR) << "couldn't commit changes.";
-        SetState(BlockChain::kUninitialized);
-        return false;
-      }
-
-      PutBlock(hash, genesis);
-      PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
-      PutReference(BLOCKCHAIN_REFERENCE_GENESIS, hash);
+    if(ShouldInstallFresh()){
+      FreshBlockChainInitializer initializer;
+      return initializer.InitializeBlockChain();
+    } else{
+      DefaultBlockChainInitializer initializer;
+      return initializer.InitializeBlockChain();
     }
-
-    LOG(INFO) << "block chain initialized!";
-    BlockChain::SetState(BlockChain::kInitialized);
-    return true;
   }
 
   BlockChain::State BlockChain::GetState(){
@@ -171,6 +151,22 @@ namespace token{
     ReferenceKey key(name);
     std::string value;
     return GetIndex()->Get(leveldb::ReadOptions(), key, &value).ok();
+  }
+
+  bool BlockChain::RemoveBlock(const Hash& hash, const BlockPtr& blk){
+    leveldb::WriteOptions options;
+    options.sync = true;
+
+    BlockKey key(blk);
+
+    leveldb::Status status;
+    if(!(status = GetIndex()->Delete(options, key)).ok()){
+      LOG(WARNING) << "couldn't remove block " << hash << ": " << status.ToString();
+      return false;
+    }
+
+    LOG(INFO) << "removed block: " << hash;
+    return true;
   }
 
   bool BlockChain::RemoveReference(const std::string& name){
