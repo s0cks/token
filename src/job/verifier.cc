@@ -93,7 +93,7 @@ namespace token{
   }
 
   JobResult VerifyInputListJob::DoWork(){
-    for(auto& it : values()){
+    for(auto& it : inputs_){
       UnclaimedTransactionPtr utxo = ObjectPool::FindUnclaimedTransaction(it);
       if(!utxo){
         LOG(WARNING) << "no unclaimed transaction found for: " << it;

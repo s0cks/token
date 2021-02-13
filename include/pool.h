@@ -133,7 +133,7 @@ namespace token{
     //TODO: refactor
     static int64_t GetNumberOfObjects();
     static UnclaimedTransactionPtr FindUnclaimedTransaction(const Input& input);
-    static leveldb::Status Write(leveldb::WriteBatch* update);
+    static leveldb::Status Write(const leveldb::WriteBatch& update);
 
 #ifdef TOKEN_DEBUG
       static bool GetStats(Json::Writer& json);

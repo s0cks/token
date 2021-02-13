@@ -23,7 +23,8 @@ namespace token{
    protected:
     BlockPtr block_;
     std::mutex mutex_; //TODO: remove mutex
-    leveldb::WriteBatch batch_pool_;
+    leveldb::WriteBatch* batch_;
+
     leveldb::WriteBatch batch_wallet_;
     UserWallets wallets_;
     bool clean_; //TODO: remove clean flag?
@@ -34,10 +35,13 @@ namespace token{
       Job(nullptr, "ProcessBlock"),
       block_(blk),
       mutex_(),
-      batch_pool_(),
+      batch_(new leveldb::WriteBatch()),
       batch_wallet_(),
       clean_(clean){}
-    ~ProcessBlockJob(){}
+    ~ProcessBlockJob(){
+      if(batch_)
+        delete batch_;
+    }
 
     BlockPtr GetBlock() const{
       return block_;
@@ -51,7 +55,7 @@ namespace token{
 
     void Append(const leveldb::WriteBatch& batch){
       std::lock_guard<std::mutex> guard(mutex_);
-      batch_pool_.Append(batch);
+      batch_->Append(batch);
     }
 
     void Append(const leveldb::WriteBatch& batch, const UserWallets& hashes){
@@ -69,7 +73,7 @@ namespace token{
         dst.insert(src.begin(), src.end());
         wallets_.insert({it.first, dst});
       }
-      batch_pool_.Append(batch);
+      batch_->Append(batch);
     }
 
     int64_t GetWalletWriteSize() const{
@@ -83,8 +87,6 @@ namespace token{
     int64_t GetTotalWriteSize() const{
       return GetWalletWriteSize() + GetPoolWriteSize();
     }
-
-    leveldb::Status CommitPoolChanges();
 
     leveldb::Status CommitWalletChanges(){
       if(batch_wallet_.ApproximateSize() == 0)
@@ -102,11 +104,6 @@ namespace token{
 
     bool CommitAllChanges(){
       leveldb::Status status;
-      if(!(status = CommitPoolChanges()).ok()){
-        LOG(ERROR) << "cannot commit pool changes: " << status.ToString();
-        return false;
-      }
-
       if(!(status = CommitWalletChanges()).ok()){
         LOG(ERROR) << "cannot commit wallet changes: " << status.ToString();
         return false;
@@ -116,7 +113,7 @@ namespace token{
     }
   };
 
-  class ProcessTransactionJob : public BatchWriteJob{
+  class ProcessTransactionJob : public Job{
    protected:
     Hash hash_;
     TransactionPtr transaction_;
@@ -124,7 +121,7 @@ namespace token{
     JobResult DoWork();
    public:
     ProcessTransactionJob(ProcessBlockJob* parent, const TransactionPtr& tx):
-      BatchWriteJob(parent, "ProcessTransaction"),
+      Job(parent, "ProcessTransaction"),
       hash_(tx->GetHash()),
       transaction_(tx){}
     ~ProcessTransactionJob() = default;
@@ -146,12 +143,12 @@ namespace token{
     }
   };
 
-  class ProcessTransactionInputsJob : public BatchWriteJob{
+  class ProcessTransactionInputsJob : public Job{
    protected:
     JobResult DoWork();
    public:
     ProcessTransactionInputsJob(ProcessTransactionJob* parent):
-      BatchWriteJob(parent, "ProcessTransactionInputsJob"){}
+      Job(parent, "ProcessTransactionInputsJob"){}
     ~ProcessTransactionInputsJob() = default;
 
     TransactionPtr GetTransaction() const{
@@ -159,9 +156,11 @@ namespace token{
     }
   };
 
-  class ProcessInputListJob : public InputListJob{
+  class ProcessInputListJob : public ObjectPoolBatchWriteJob{
    public:
     static const int64_t kMaxNumberOfInputs = 128;
+   private:
+    InputList inputs_;
    protected:
     JobResult DoWork(){
       for(auto& it : inputs_){
@@ -170,21 +169,23 @@ namespace token{
         //TODO: remove input
       }
 
-      ((ProcessTransactionInputsJob*) GetParent())->Append(GetBatch());
+      if(!Commit())
+        return Failed("Cannot commit changes.");
       return Success("done.");
     }
    public:
     ProcessInputListJob(ProcessTransactionInputsJob* parent, const InputList& inputs):
-      InputListJob(parent, "ProcessInputList", inputs){}
+      ObjectPoolBatchWriteJob(parent, "ProcessInputList"),
+      inputs_(inputs){}
     ~ProcessInputListJob() = default;
   };
 
-  class ProcessTransactionOutputsJob : public BatchWriteJob{
+  class ProcessTransactionOutputsJob : public Job{
    protected:
     JobResult DoWork();
    public:
     ProcessTransactionOutputsJob(ProcessTransactionJob* parent):
-      BatchWriteJob(parent, "ProcessTransactionInputsJob"){}
+      Job(parent, "ProcessTransactionInputsJob"){}
     ~ProcessTransactionOutputsJob() = default;
 
     TransactionPtr GetTransaction() const{
@@ -192,10 +193,12 @@ namespace token{
     }
   };
 
-  class ProcessOutputListJob : public OutputListJob{
+  class ProcessOutputListJob : public ObjectPoolBatchWriteJob{
    public:
     static const int64_t kMaxNumberOfOutputs = 64;
    private:
+    OutputList outputs_;
+
     int64_t offset_;
     UserWallets wallets_;
 
@@ -224,7 +227,8 @@ namespace token{
     JobResult DoWork();
    public:
     ProcessOutputListJob(ProcessTransactionOutputsJob* parent, int64_t wid, const OutputList& outputs):
-      OutputListJob(parent, "ProcessOutputListJob", outputs),
+      ObjectPoolBatchWriteJob(parent, "ProcessOutputListJob"),
+      outputs_(outputs),
       offset_(wid * ProcessOutputListJob::kMaxNumberOfOutputs){}
     ~ProcessOutputListJob() = default;
 

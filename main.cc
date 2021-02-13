@@ -226,9 +226,6 @@ main(int argc, char **argv){
   LOG(INFO) << "number of transactions in pool: " << ObjectPool::GetNumberOfTransactions();
   LOG(INFO) << "number of blocks in pool: " << ObjectPool::GetNumberOfBlocks();
 
-
-  ObjectPool::PrintUnclaimedTransactions();
-
   if(FLAGS_append_test && !AppendDummy(2)){
     CrashReport::PrintNewCrashReport("Cannot append dummy transactions.");
     return EXIT_FAILURE;

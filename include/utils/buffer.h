@@ -347,6 +347,10 @@ namespace token{
     }
 
     operator leveldb::Slice() const{
+      return AsSlice();
+    }
+
+    leveldb::Slice AsSlice() const{
       return leveldb::Slice(data(), GetWrittenBytes());
     }
 

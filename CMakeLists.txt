@@ -106,11 +106,6 @@ add_executable("token-node" main.cc)
 target_link_libraries("token-node" "token-ledger" ${TOKEN_LIBRARIES})
 target_compile_options(token-node PRIVATE -Werror -Wall)
 
-# token Inspect Client Executable
-add_executable("token-inspector" inspector.cc)
-target_link_libraries("token-inspector" "token-ledger" ${TOKEN_LIBRARIES})
-target_compile_options(token-inspector PRIVATE -Werror -Wall)
-
 if(CMAKE_BUILD_TYPE MATCHES Debug)
   # token Unit Tests
   add_executable("token-tests" tests.cc ${TOKEN_TEST_SOURCES})

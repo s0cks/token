@@ -75,17 +75,19 @@ namespace token{
     }
   };
 
-  class VerifyInputListJob : public ObjectListJob<InputList>{
+  class VerifyInputListJob : public Job{
    public:
     static const int64_t kMaxNumberOfInputs = 128;
    private:
+    InputList inputs_;
     InputList valid_;
     InputList invalid_;
    protected:
     JobResult DoWork();
    public:
     VerifyInputListJob(VerifyTransactionInputsJob* parent, const InputList& inputs):
-      ObjectListJob(parent, "VerifyInputListJob", inputs),
+      Job(parent, "VerifyInputListJob"),
+      inputs_(inputs),
       valid_(),
       invalid_(){}
     ~VerifyInputListJob() = default;
@@ -123,14 +125,17 @@ namespace token{
     }
   };
 
-  class VerifyOutputListJob : public ObjectListJob<OutputList>{
+  class VerifyOutputListJob : public Job{
    public:
     static const int64_t kMaxNumberOfOutputs = 128;
    protected:
+    OutputList outputs_;
+
     JobResult DoWork();
    public:
     VerifyOutputListJob(VerifyTransactionOutputsJob* parent, const OutputList& outputs):
-      ObjectListJob(parent, "VerifyOutputListJob", outputs){}
+      Job(parent, "VerifyOutputListJob"),
+      outputs_(outputs){}
     ~VerifyOutputListJob() = default;
   };
 }

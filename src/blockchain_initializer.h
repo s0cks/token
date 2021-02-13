@@ -87,18 +87,10 @@ namespace token{
       queue->Push(job);
       while(!job->IsFinished()); //spin
 
-      leveldb::Status status;
-      INITIALIZER_LOG(INFO) << "committing changes....";
-      if(!(status = job->CommitPoolChanges()).ok()){
-        INITIALIZER_LOG(ERROR) << "couldn't commit changes: " << status.ToString();
-        TransitionToState(BlockChain::kUninitialized);
-        return false;
-      }
-
       SetGenesisReference(hash);
       SetNewHead(hash, blk);
       if(!TransitionToState(BlockChain::kInitialized))
-        return false;
+        return TransitionToState(BlockChain::kUninitialized);
 
       INITIALIZER_LOG(INFO) << "block chain initialized.";
       return true;

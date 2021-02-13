@@ -18,6 +18,11 @@ namespace token{
    public:
     static const int64_t kSize = 256 / 8;
    public:
+    static inline int
+    Compare(const Hash& a, const Hash& b){
+      return memcmp(a.data(), b.data(), kSize);
+    }
+
     struct Hasher{
       size_t operator()(const Hash& hash) const{
         uint64_t a = ((uint64_t*) hash.data())[0];
@@ -156,24 +161,20 @@ namespace token{
       return ss.str();
     }
 
-    inline int Compare(const Hash& other) const{
-      return memcmp(data_, other.data_, sizeof(data_));
-    }
-
     friend inline bool operator==(const Hash& a, const Hash& b){
-      return a.Compare(b) == 0;
+      return Compare(a, b) == 0;
     }
 
     friend inline bool operator!=(const Hash& a, const Hash& b){
-      return a.Compare(b) != 0;
+      return Compare(a, b) != 0;
     }
 
     friend inline bool operator<(const Hash& a, const Hash& b){
-      return a.Compare(b) < 0;
+      return Compare(a, b) < 0;
     }
 
     friend inline bool operator>(const Hash& a, const Hash& b){
-      return a.Compare(b) > 0;
+      return Compare(a, b) > 0;
     }
 
     void operator=(const Hash& other){

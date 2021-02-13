@@ -344,8 +344,13 @@ namespace token{
       // compare the objects type first
       if((result = ObjectTag::CompareType(a.tag(), b.tag())) != 0)
         return result; // not equal
-      // if the objects are the same type, compare the hash.
-      return a.GetHash() < b.GetHash();
+
+      // compare the objects size
+      if((result = ObjectTag::CompareSize(a.tag(), b.tag())) != 0)
+        return result; // not-equal
+
+      // if the objects are the same type & size, compare the hash.
+      return Hash::Compare(a.GetHash(), b.GetHash());
     }
    private:
     enum Layout{

@@ -1,9 +1,11 @@
+#include <mutex>
 #include <glog/logging.h>
 #include "pool.h"
 #include "utils/kvstore.h"
 #include "atomic/relaxed_atomic.h"
 
 namespace token{
+  static std::mutex write_mtx_;
   static RelaxedAtomic<ObjectPool::State> state_ = { ObjectPool::kUninitialized };
   static leveldb::DB* index_ = nullptr;
 
@@ -58,10 +60,15 @@ namespace token{
     return true;
   }
 
-  leveldb::Status ObjectPool::Write(leveldb::WriteBatch* update){
+  leveldb::Status ObjectPool::Write(const leveldb::WriteBatch& update){
     leveldb::WriteOptions opts;
     opts.sync = true;
-    return GetIndex()->Write(opts, update);
+
+    std::unique_lock<std::mutex> lock(write_mtx_);
+    leveldb::Status status = GetIndex()->Write(opts, (leveldb::WriteBatch*)&update);
+    lock.unlock();
+
+    return status;
   }
 
   int64_t ObjectPool::GetNumberOfObjects(){

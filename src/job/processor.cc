@@ -6,16 +6,6 @@ namespace token{
 #define JOB_LOG(LevelName) \
   LOG(LevelName) << "[" << GetName() << "] "
 
-  leveldb::Status ProcessBlockJob::CommitPoolChanges(){
-    if(batch_pool_.ApproximateSize() == 0)
-      return leveldb::Status::IOError("the object pool batch write is ~0b in size");
-
-#ifdef TOKEN_DEBUG
-    JOB_LOG(INFO) << "committing ~" << batch_pool_.ApproximateSize() << "b of changes.";
-#endif//TOKEN_DEBUG
-    return ObjectPool::Write(&batch_pool_);
-  }
-
   JobResult ProcessBlockJob::DoWork(){
     if(!GetBlock()->Accept(this)){
       return Failed("Cannot visit the block transactions.");
@@ -27,19 +17,12 @@ namespace token{
     JobQueue* queue = JobScheduler::GetThreadQueue();
     ProcessTransactionJob* job = new ProcessTransactionJob(this, tx);
     queue->Push(job);
-    RemoveObject(batch_pool_, tx->GetHash(), Type::kTransaction);
+    //TODO: RemoveObject(batch_, tx->GetHash(), Type::kTransaction);
     return true;
   }
 
   JobResult ProcessTransactionJob::DoWork(){
     JobQueue* queue = JobScheduler::GetThreadQueue();
-
-#ifdef TOKEN_DEBUG
-    JOB_LOG(INFO) << "processing transaction: " << transaction_->ToString();
-#else
-    JOB_LOG(INFO) << "processing transaction: " << hash_;
-#endif//TOKEN_DEBUG
-
     ProcessTransactionInputsJob* process_inputs = new ProcessTransactionInputsJob(this);
     queue->Push(process_inputs);
 
@@ -97,26 +80,19 @@ namespace token{
   }
 
   JobResult ProcessOutputListJob::DoWork(){
-#ifdef TOKEN_DEBUG
-    JOB_LOG(INFO) << "processing " << outputs_.size() << " outputs....";
-#endif//TOKEN_DEBUG
-
     for(auto& it : outputs_){
       UnclaimedTransactionPtr val = CreateUnclaimedTransaction(it);
       Hash hash = val->GetHash();
-      PutObject(batch_, hash, val);
+      PutUnclaimedTransaction(hash, val);
       Track(val->GetUser(), hash);
     }
 
-    JOB_LOG(INFO) << "wallets (" << wallets_.size() << "):";
-    for(auto& it : wallets_){
-      JOB_LOG(INFO) << " - " << it.first << " (" << it.second.size() << ") " << " := " << it.second;
-    }
-
+    if(!Commit()){
 #ifdef TOKEN_DEBUG
-    JOB_LOG(INFO) << "appending batch of ~" << batch_.ApproximateSize() << "b";
+      JOB_LOG(ERROR) << "cannot commit ~" << GetCurrentBatchSize() << "b of changes to object pool.";
 #endif//TOKEN_DEBUG
-    ((ProcessTransactionOutputsJob*) GetParent())->Append(batch_);
+      return Failed("Cannot Commit Changes.");
+    }
     return Success("done.");
   }
 }

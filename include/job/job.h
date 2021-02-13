@@ -2,7 +2,11 @@
 #define TOKEN_JOB_H
 
 #include <leveldb/write_batch.h>
+
+#include "key.h"
+#include "block.h"
 #include "transaction.h"
+#include "unclaimed_transaction.h"
 
 namespace token{
 #define FOR_EACH_JOB_RESULT_STATUS(V) \
@@ -198,135 +202,81 @@ namespace token{
     }
   };
 
-  class BatchWriteJob : public Job{
+  class ObjectPoolJob : public Job{
    protected:
+    ObjectPoolJob(Job* parent, const std::string& name):
+      Job(parent, name){}
+   public:
+    virtual ~ObjectPoolJob() = default;
+  };
+
+  class ObjectPoolWriteJob : public ObjectPoolJob{
+   protected:
+    ObjectPoolWriteJob(Job* parent, const std::string& name):
+      ObjectPoolJob(parent, name){}
+   public:
+    virtual ~ObjectPoolWriteJob() = default;
+  };
+
+  class ObjectPoolBatchWriteJob : public ObjectPoolJob{
+   protected:
+    int64_t min_bsize_;
+    int64_t max_bsize_;
     leveldb::WriteBatch batch_;
 
-    BatchWriteJob(Job* parent, const std::string& name):
-      Job(parent, name),
+    ObjectPoolBatchWriteJob(Job* parent, const std::string& name):
+      ObjectPoolJob(parent, name),
+      min_bsize_(0),
+      max_bsize_(512 * kMB),
       batch_(){}
+
+    void SetMinimumBatchSize(const int64_t& val){
+      min_bsize_ = val;
+    }
+
+    void SetMaximumBatchSize(const int64_t& val){
+      max_bsize_ = val;
+    }
+
+    inline bool
+    PutTransaction(const Hash& hash, const TransactionPtr& val){
+      PoolKey key(Type::kTransaction, val->GetBufferSize(), hash);
+      BufferPtr value = val->ToBuffer();
+      batch_.Put(key, value->AsSlice());
+      return true;
+    }
+
+    inline bool
+    PutBlock(const Hash& hash, const BlockPtr& val){
+      PoolKey key(Type::kBlock, val->GetBufferSize(), hash);
+      BufferPtr value = val->ToBuffer();
+      batch_.Put(key, value->AsSlice());
+      return true;
+    }
+
+    inline bool
+    PutUnclaimedTransaction(const Hash& hash, const UnclaimedTransactionPtr& val){
+      PoolKey key(Type::kUnclaimedTransaction, val->GetBufferSize(), hash);
+      BufferPtr value = val->ToBuffer();
+      batch_.Put(key, value->AsSlice());
+      return true;
+    }
    public:
-    ~BatchWriteJob() = default;
+    virtual ~ObjectPoolBatchWriteJob() = default;
 
-    leveldb::WriteBatch& GetBatch(){
-      return batch_;
+    int64_t GetMinimumBatchSize() const{
+      return min_bsize_;
     }
 
-    void Append(const leveldb::WriteBatch& batch){
-      batch_.Append(batch);
-    }
-  };
-
-  template<typename T>
-  class ObjectListJob : public Job{
-   public:
-    using iterator_type = typename T::iterator;
-    using const_iterator_type = typename T::const_iterator;
-   protected:
-    T values_;
-
-    ObjectListJob(Job* parent, const std::string& name, const T& values):
-      Job(parent, name),
-      values_(){
-      LOG(INFO) << "processing " << values.size() << " values.";
-      std::copy(values.begin(), values.end(), std::back_inserter(values_));
-    }
-   public:
-    virtual ~ObjectListJob() = default;
-
-    T& values(){
-      return values_;
+    int64_t GetMaximumBatchSize() const{
+      return max_bsize_;
     }
 
-    T values() const{
-      return values_;
+    int64_t GetCurrentBatchSize() const{
+      return batch_.ApproximateSize();
     }
 
-    iterator_type values_begin(){
-      return values_.begin();
-    }
-
-    const_iterator_type values_begin() const{
-      return values_.begin();
-    }
-
-    iterator_type values_end(){
-      return values_.end();
-    }
-
-    const_iterator_type values_end() const{
-      return values_.end();
-    }
-  };
-
-  class OutputListJob : public BatchWriteJob{
-   protected:
-    OutputList outputs_;
-
-    OutputListJob(Job* parent, const std::string& name, const OutputList& outputs):
-      BatchWriteJob(parent, name),
-      outputs_(outputs){}
-   public:
-    ~OutputListJob() = default;
-
-    OutputList& outputs(){
-      return outputs_;
-    }
-
-    OutputList outputs() const{
-      return outputs_;
-    }
-
-    OutputList::iterator outputs_begin(){
-      return outputs_.begin();
-    }
-
-    OutputList::const_iterator outputs_begin() const{
-      return outputs_.begin();
-    }
-
-    OutputList::iterator outputs_end(){
-      return outputs_.end();
-    }
-
-    OutputList::const_iterator outputs_end() const{
-      return outputs_.end();
-    }
-  };
-
-  class InputListJob : public BatchWriteJob{
-   protected:
-    InputList inputs_;
-
-    InputListJob(Job* parent, const std::string& name, const InputList& inputs):
-      BatchWriteJob(parent, name),
-      inputs_(inputs.begin(), inputs.end()){}
-   public:
-    virtual ~InputListJob() = default;
-
-    InputList& inputs(){
-      return inputs_;
-    }
-
-    InputList inputs() const{
-      return inputs_;
-    }
-
-    InputList::iterator inputs_begin(){
-      return inputs_.begin();
-    }
-
-    InputList::const_iterator inputs_begin() const{
-      return inputs_.begin();
-    }
-
-    InputList::iterator inputs_end(){
-      return inputs_.end();
-    }
-
-    InputList::const_iterator inputs_end() const{
-      return inputs_.end();
-    }
+    bool Commit() const;
   };
 }
 
