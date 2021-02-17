@@ -8,8 +8,6 @@ namespace token{
   class UnclaimedTransaction;
   typedef std::shared_ptr<UnclaimedTransaction> UnclaimedTransactionPtr;
 
-  class Output;
-  class Transaction;
   class UnclaimedTransaction : public BinaryObject{
    private:
     TransactionReference reference_;

@@ -81,7 +81,7 @@ InitializeLogging(char *arg0){
       OutputList outputs = {
         Output("TestUser2", "TestToken2")
       };
-      TransactionPtr tx = Transaction::NewInstance(idx++, inputs, outputs);
+      TransactionPtr tx = Transaction::NewInstance(inputs, outputs);
 
       Hash hash = tx->GetHash();
       if(!ObjectPool::PutTransaction(hash, tx)){

@@ -16,6 +16,7 @@
 #include "utils/bitfield.h"
 
 namespace token{
+  //TODO: redo type system
 #define FOR_EACH_RAW_TYPE(V) \
   V(Byte, int8_t)            \
   V(Short, int16_t)          \
@@ -44,7 +45,6 @@ namespace token{
   V(Product)
 
 #define FOR_EACH_BASIC_TYPE(V) \
-  FOR_EACH_SERIALIZABLE_TYPE(V) \
   V(Input)                     \
   V(Output)
 
@@ -54,9 +54,20 @@ namespace token{
   V(UnclaimedTransaction)
 
 #define FOR_EACH_TYPE(V) \
+  FOR_EACH_SERIALIZABLE_TYPE(V) \
   FOR_EACH_BASIC_TYPE(V) \
   FOR_EACH_POOL_TYPE(V)  \
   V(Reference)
+
+#define FORWARD_DECLARE_TYPE(Name) \
+  class Name;                      \
+  typedef std::shared_ptr<Name> Name##Ptr;
+  FOR_EACH_BASIC_TYPE(FORWARD_DECLARE_TYPE)
+  FOR_EACH_POOL_TYPE(FORWARD_DECLARE_TYPE)
+#undef FORWARD_DECLARE_TYPE
+
+  class IndexedTransaction;
+  typedef std::shared_ptr<IndexedTransaction> IndexedTransactionPtr;
 
   class Buffer;
   typedef std::shared_ptr<Buffer> BufferPtr;

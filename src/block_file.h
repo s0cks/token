@@ -27,7 +27,7 @@ namespace token{
       return true;
     }
 
-    bool WriteTransactions(const TransactionSet& transactions) const{
+    bool WriteTransactions(const IndexedTransactionSet& transactions) const{
       return WriteSet(transactions);
     }
    public:
@@ -83,7 +83,7 @@ namespace token{
       return true;
     }
 
-    bool ReadTransactionData(TransactionSet& transactions) const{
+    bool ReadTransactionData(IndexedTransactionSet& transactions) const{
       if(!Seek(sizeof(RawObjectTag)+BlockHeader::GetSize())){ // make constant
         LOG(WARNING) << "cannot seek to the block file data position of file " << GetFilename();
         return false;
@@ -108,7 +108,7 @@ namespace token{
           return false;
         }
 
-        TransactionPtr tx = Transaction::FromBytes(buffer);
+        IndexedTransactionPtr tx = IndexedTransaction::FromBytes(buffer);
         if(!transactions.insert(tx).second){
           LOG(WARNING) << "block file " << GetFilename() << " transaction #" << idx << " cannot add transaction " << tx->GetHash() << " to transaction set.";
           return false;
@@ -124,7 +124,7 @@ namespace token{
         return BlockPtr(nullptr);
       }
 
-      TransactionSet data;
+      IndexedTransactionSet data;
       if(!ReadTransactionData(data)){
         LOG(WARNING) << "cannot read block transaction data.";
         return BlockPtr(nullptr);

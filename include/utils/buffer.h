@@ -346,6 +346,16 @@ namespace token{
       return FromUnixTimestamp(GetUnsignedLong());
     }
 
+    template<class T>
+    bool GetList(std::vector<T>& results){
+      int64_t length = GetLong();
+      for(int64_t idx = 0; idx < length; idx++){
+        T value = T(shared_from_this());
+        results.push_back(value);
+      }
+      return true;
+    }
+
     operator leveldb::Slice() const{
       return AsSlice();
     }

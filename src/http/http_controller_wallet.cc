@@ -192,7 +192,7 @@ namespace token{
       return;
 
     LOG(INFO) << "generating new transaction....";
-    TransactionPtr tx = Transaction::NewInstance(0, inputs, outputs);
+    TransactionPtr tx = Transaction::NewInstance(inputs, outputs);
     Hash hash = tx->GetHash();
     if(!ObjectPool::PutTransaction(hash, tx)){
       std::stringstream ss;

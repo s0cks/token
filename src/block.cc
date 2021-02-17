@@ -24,10 +24,10 @@ namespace token{
       outputs_c.push_back(Output("VenueC", "TestToken"));
     }
 
-    TransactionSet transactions;
-    transactions.insert(Transaction::NewInstance(1, inputs, outputs_a, FromUnixTimestamp(0)));
-    transactions.insert(Transaction::NewInstance(2, inputs, outputs_b, FromUnixTimestamp(0)));
-    transactions.insert(Transaction::NewInstance(3, inputs, outputs_c, FromUnixTimestamp(0)));
+    IndexedTransactionSet transactions;
+    transactions.insert(IndexedTransaction::NewInstance(1, inputs, outputs_a, FromUnixTimestamp(0)));
+    transactions.insert(IndexedTransaction::NewInstance(2, inputs, outputs_b, FromUnixTimestamp(0)));
+    transactions.insert(IndexedTransaction::NewInstance(3, inputs, outputs_c, FromUnixTimestamp(0)));
     return std::make_shared<Block>(0, version, Hash(), transactions, FromUnixTimestamp(0));
   }
 

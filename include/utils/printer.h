@@ -108,7 +108,7 @@ namespace token{
     }
 
     bool Print(const TransactionPtr& tx) const{
-      LOG_AT_LEVEL(GetSeverity()) << "Transaction #" << tx->GetIndex() << ":";
+      LOG_AT_LEVEL(GetSeverity()) << "Transaction:";
       LOG_AT_LEVEL(GetSeverity()) << "Hash: " << tx->GetHash();
       LOG_AT_LEVEL(GetSeverity()) << "Created: " << FormatTimestampReadable(tx->GetTimestamp());
       if(!IsDetailed()){

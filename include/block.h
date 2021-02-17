@@ -31,7 +31,7 @@ namespace token{
     Version version_;
     int64_t height_;
     Hash previous_hash_;
-    TransactionSet transactions_;
+    IndexedTransactionSet transactions_;
     BloomFilter tx_bloom_; // transient
    public:
     Block():
@@ -45,7 +45,7 @@ namespace token{
     Block(int64_t height,
       const Version& version,
       const Hash& phash,
-      const TransactionSet& transactions,
+      const IndexedTransactionSet& transactions,
       Timestamp timestamp = Clock::now()):
       BinaryObject(),
       timestamp_(timestamp),
@@ -59,7 +59,7 @@ namespace token{
           tx_bloom_.Put(it->GetHash());
       }
     }
-    Block(const BlockPtr& parent, const TransactionSet& transactions, Timestamp timestamp = Clock::now()):
+    Block(const BlockPtr& parent, const IndexedTransactionSet& transactions, Timestamp timestamp = Clock::now()):
       Block(parent->GetHeight() + 1, Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION), parent->GetHash(), transactions, timestamp){}
     ~Block() = default;
 
@@ -95,27 +95,27 @@ namespace token{
       return transactions_.size();
     }
 
-    TransactionSet& transactions(){
+    IndexedTransactionSet& transactions(){
       return transactions_;
     }
 
-    TransactionSet transactions() const{
+    IndexedTransactionSet transactions() const{
       return transactions_;
     }
 
-    TransactionSet::iterator transactions_begin(){
+    IndexedTransactionSet::iterator transactions_begin(){
       return transactions_.begin();
     }
 
-    TransactionSet::const_iterator transactions_begin() const{
+    IndexedTransactionSet::const_iterator transactions_begin() const{
       return transactions_.begin();
     }
 
-    TransactionSet::iterator transactions_end(){
+    IndexedTransactionSet::iterator transactions_end(){
       return transactions_.end();
     }
 
-    TransactionSet::const_iterator transactions_end() const{
+    IndexedTransactionSet::const_iterator transactions_end() const{
       return transactions_.end();
     }
 
@@ -198,13 +198,13 @@ namespace token{
     NewInstance(int64_t height,
                 const Version& version,
                 const Hash& phash,
-                const TransactionSet& transactions,
+                const IndexedTransactionSet& transactions,
                 Timestamp timestamp = Clock::now()){
       return std::make_shared<Block>(height, version, phash, transactions, timestamp);
     }
 
     static inline BlockPtr
-    NewInstance(const BlockPtr& parent, const TransactionSet& txs, const Timestamp& timestamp = Clock::now()){
+    NewInstance(const BlockPtr& parent, const IndexedTransactionSet& txs, const Timestamp& timestamp = Clock::now()){
       return std::make_shared<Block>(parent, txs, timestamp);
     }
 
@@ -217,9 +217,9 @@ namespace token{
 
       int64_t idx;
       int64_t num_transactions = buff->GetLong();
-      TransactionSet transactions;
+      IndexedTransactionSet transactions;
       for(idx = 0; idx < num_transactions; idx++)
-        transactions.insert(Transaction::FromBytes(buff));
+        transactions.insert(IndexedTransaction::FromBytes(buff));
 
       return std::make_shared<Block>(height, version, previous_hash, transactions, timestamp);
     }

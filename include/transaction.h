@@ -8,8 +8,6 @@
 #include "unclaimed_transaction.h"
 
 namespace token{
-  typedef std::shared_ptr<Transaction> TransactionPtr;
-
   class Input : public SerializableObject{
     friend class Transaction;
    public:
@@ -313,7 +311,7 @@ namespace token{
         return a->timestamp_ < b->timestamp_;
       }
     };
-   private:
+   protected:
     Timestamp timestamp_;
     InputList inputs_;
     OutputList outputs_;
@@ -462,7 +460,13 @@ namespace token{
      * @param vis - The visitor to call for each input
      * @return True if the visit was successful otherwise, false
      */
-    bool VisitInputs(InputVisitor* vis) const;
+    bool VisitInputs(InputVisitor* vis) const{
+      for(auto& it : inputs_){
+        if(!vis->Visit(it))
+          return false;
+      }
+      return true;
+    }
 
     /**
      * Visit all of the outputs for this transaction.
@@ -470,7 +474,13 @@ namespace token{
      * @param vis - The visitor to call for each output
      * @return True if the visit was successful otherwise, false
      */
-    bool VisitOutputs(OutputVisitor* vis) const;
+    bool VisitOutputs(OutputVisitor* vis) const{
+      for(auto& it : outputs_){
+        if(!vis->Visit(it))
+          return false;
+      }
+      return true;
+    }
 
     /**
      * Returns the description of this object.
@@ -485,15 +495,103 @@ namespace token{
       return stream.str();
     }
 
-    static TransactionPtr NewInstance(const int64_t& index,
-      const InputList& inputs,
-      const OutputList& outputs,
-      const Timestamp& timestamp = Clock::now());
-    static TransactionPtr FromBytes(const BufferPtr& buff);
+    static inline TransactionPtr
+    NewInstance(const InputList& inputs, const OutputList& outputs, const Timestamp& timestamp = Clock::now()){
+      return std::make_shared<Transaction>(timestamp, inputs, outputs);
+    }
+
+    static inline TransactionPtr
+    FromBytes(const BufferPtr& buff){
+      Timestamp timestamp = buff->GetTimestamp();
+
+      InputList inputs;
+      if(!buff->GetList(inputs)){
+        LOG(WARNING) << "cannot read inputs from buffer of size " << buff->GetWrittenBytes();
+        return nullptr;
+      }
+
+      OutputList outputs;
+      if(!buff->GetList(outputs)){
+        LOG(WARNING) << "cannot read outputs from buffer of size " << buff->GetWrittenBytes();
+        return nullptr;
+      }
+      return std::make_shared<Transaction>(timestamp, inputs, outputs);
+    }
   };
 
   typedef std::vector<TransactionPtr> TransactionList;
   typedef std::set<TransactionPtr, Transaction::TimestampComparator> TransactionSet;
+
+  //TODO: rename?
+  class IndexedTransaction : public Transaction{
+   public:
+    struct IndexComparator{
+      bool operator()(const IndexedTransactionPtr& a, const IndexedTransactionPtr& b){
+        return a->GetIndex() < b->GetIndex();
+      }
+    };
+   private:
+    int64_t index_;
+   public:
+    IndexedTransaction(const Timestamp& timestamp, const int64_t& index, const InputList& inputs, const OutputList& outputs):
+        Transaction(timestamp, inputs, outputs),
+        index_(index){}
+    ~IndexedTransaction() = default;
+
+    int64_t GetIndex() const{
+      return index_;
+    }
+
+    bool Write(const BufferPtr& buffer) const{
+      return buffer->PutLong(index_)
+          && Transaction::Write(buffer);
+    }
+
+    int64_t GetBufferSize() const{
+      int64_t size = 0;
+      size += sizeof(int64_t); // index_
+      size += Transaction::GetBufferSize();
+      return size;
+    }
+
+    std::string ToString() const{
+      std::stringstream ss;
+      ss << "IndexedTransaction(";
+      ss << "index=" << index_ << ", ";
+      ss << "timestamp=" << FormatTimestampReadable(timestamp_) << ", ";
+      ss << "inputs=[]" << ", ";
+      ss << "outputs=[]";
+      ss << ")";
+      return ss.str();
+    }
+
+    static inline IndexedTransactionPtr
+    NewInstance(const int64_t& index, const InputList& inputs, const OutputList& outputs, const Timestamp& timestamp=Clock::now()){
+      return std::make_shared<IndexedTransaction>(timestamp, index, inputs, outputs);
+    }
+
+    static inline IndexedTransactionPtr
+    FromBytes(const BufferPtr& buffer){
+      int64_t index = buffer->GetLong();
+      Timestamp timestamp = buffer->GetTimestamp();
+
+      InputList inputs;
+      if(!buffer->GetList(inputs)){
+        LOG(WARNING) << "cannot read input list from buffer of size " << buffer->GetWrittenBytes();
+        return nullptr;
+      }
+
+      OutputList outputs;
+      if(!buffer->GetList(outputs)){
+        LOG(WARNING) << "cannot read output list from buffer of size " << buffer->GetWrittenBytes();
+        return nullptr;
+      }
+      return std::make_shared<IndexedTransaction>(timestamp, index, inputs, outputs);
+    }
+  };
+
+  typedef std::vector<IndexedTransactionPtr> IndexedTransactionList;
+  typedef std::set<IndexedTransactionPtr, IndexedTransaction::IndexComparator> IndexedTransactionSet;
 }
 
 #endif //TOKEN_TRANSACTION_H
