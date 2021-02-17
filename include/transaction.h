@@ -308,17 +308,6 @@ namespace token{
     friend class Block;
     friend class TransactionMessage;
    public:
-    struct DefaultComparator{
-      bool operator()(const TransactionPtr& a, const TransactionPtr& b){
-        if(a->timestamp_ < b->timestamp_){
-          return true;
-        } else if(a->timestamp_ > b->timestamp_){
-          return false;
-        }
-        return a->index_ < b->index_;
-      }
-    };
-
     struct TimestampComparator{
       bool operator()(const TransactionPtr& a, const TransactionPtr& b){
         return a->timestamp_ < b->timestamp_;
@@ -326,18 +315,15 @@ namespace token{
     };
    private:
     Timestamp timestamp_;
-    int64_t index_;
     InputList inputs_;
     OutputList outputs_;
     std::string signature_;
    public:
     Transaction(const Timestamp& timestamp,
-      const int64_t& index,
       const InputList& inputs,
       const OutputList& outputs):
       BinaryObject(),
       timestamp_(timestamp),
-      index_(index),
       inputs_(inputs),
       outputs_(outputs),
       signature_(){}
@@ -355,16 +341,6 @@ namespace token{
      */
     Timestamp GetTimestamp() const{
       return timestamp_;
-    }
-
-    /**
-     * Returns the index for this transaction.
-     *
-     * @deprecated
-     * @return The index for this transaction
-     */
-    int64_t GetIndex() const{
-      return index_;
     }
 
 #define DEFINE_CONTAINER_FUNCTIONS(Name, Type) \
@@ -398,16 +374,6 @@ namespace token{
     }
 
     /**
-     * Returns whether or not the transaction is a coinbase (index == 0)
-     *
-     * @deprecated
-     * @return True if the transaction is a coinbase otherwise, false
-     */
-    bool IsCoinbase() const{
-      return GetIndex() == 0;
-    }
-
-    /**
      * Returns the size of this object (in bytes).
      *
      * @return The size of this encoded object in bytes
@@ -432,7 +398,6 @@ namespace token{
      */
     bool Write(const BufferPtr& buff) const{
       buff->PutLong(ToUnixTimestamp(timestamp_));
-      buff->PutLong(index_);
       buff->PutList(inputs_);
       buff->PutList(outputs_);
       return true;
@@ -449,7 +414,6 @@ namespace token{
     bool Write(Json::Writer& writer) const{
       return writer.StartObject()
              && Json::SetField(writer, "timestamp", ToUnixTimestamp(timestamp_))
-             && Json::SetField(writer, "index", index_)
              && Json::SetField(writer, "inputs", inputs_)
              && Json::SetField(writer, "outputs", outputs_)
              && writer.EndObject();
@@ -464,9 +428,6 @@ namespace token{
      */
     bool Equals(const TransactionPtr& tx) const{ // convert to Compare(tx1, tx2);
       if(timestamp_ != tx->timestamp_){
-        return false;
-      }
-      if(index_ != tx->index_){
         return false;
       }
       if(!std::equal(
@@ -519,7 +480,7 @@ namespace token{
      */
     std::string ToString() const{
       std::stringstream stream;
-      stream << "Transaction(#" << GetIndex() << "," << inputs_size() << " Inputs, " << outputs_size()
+      stream << "Transaction(#" << inputs_size() << " Inputs, " << outputs_size()
              << " Outputs)";
       return stream.str();
     }
@@ -532,7 +493,7 @@ namespace token{
   };
 
   typedef std::vector<TransactionPtr> TransactionList;
-  typedef std::set<TransactionPtr, Transaction::DefaultComparator> TransactionSet;
+  typedef std::set<TransactionPtr, Transaction::TimestampComparator> TransactionSet;
 }
 
 #endif //TOKEN_TRANSACTION_H
