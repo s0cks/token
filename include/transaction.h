@@ -489,10 +489,13 @@ namespace token{
      * @return The ToString() description of this object
      */
     std::string ToString() const{
-      std::stringstream stream;
-      stream << "Transaction(#" << inputs_size() << " Inputs, " << outputs_size()
-             << " Outputs)";
-      return stream.str();
+      std::stringstream ss;
+      ss << "Transaction(";
+      ss << "timestamp=" << FormatTimestampReadable(timestamp_) << ", ";
+      ss << "inputs=[]" << ", "; //TODO: implement
+      ss << "outputs=[]" << ","; //TODO: implement
+      ss << ")";
+      return ss.str();
     }
 
     static inline TransactionPtr
