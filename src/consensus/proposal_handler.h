@@ -43,11 +43,6 @@ namespace token{
         return false;
       }
 
-      if(!job->CommitAllChanges()){
-        LOG(ERROR) << "couldn't commit changes to block chain.";
-        return false;
-      }
-
       delete job;
       return true;
     }

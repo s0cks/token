@@ -21,6 +21,9 @@ namespace token{
 
   typedef int32_t ServerPort;
 
+#define SERVER_LOG(LevelName, Instance) \
+  LOG(LevelName) << "[" << ((Instance)->GetName()) << "] "
+
   template<class M>
   class Server{
    private:
@@ -60,7 +63,7 @@ namespace token{
       handle_.data = this;
       int err;
       if((err = uv_tcp_init(GetLoop(), GetHandle())) != 0){
-        LOG(WARNING) << "rpc initialize error: " << uv_strerror(err);
+        LOG_NAMED(WARNING) << "rpc initialize error: " << uv_strerror(err);
         return;
       }
     }
@@ -74,23 +77,22 @@ namespace token{
       ServerType* server = (ServerType*)parameter;
       server->SetState(Server::kStartingState);
 
-      const char* name = server->GetName();
       int32_t port = server->GetPort();
 
       int err;
       if((err = Bind(server->GetHandle(), port)) != 0){
-        LOG(WARNING) << name << " rpc bind failure: " << uv_strerror(err);
+        SERVER_LOG(WARNING, server) << "bind failure: " << uv_strerror(err);
         server->SetState(Server::kStoppingState);
         goto exit;
       }
 
       if((err = Listen(server->GetStream(), &OnNewConnection)) != 0){
-        LOG(WARNING) << name << " rpc listen failure: " << uv_strerror(err);
+        SERVER_LOG(WARNING, server) "listen failure: " << uv_strerror(err);
         server->SetState(Server::kStoppingState);
         goto exit;
       }
 
-      LOG(INFO) << name << " rpc listening @" << port;
+      SERVER_LOG(INFO, server) << "server listening @" << port;
       server->SetState(State::kRunningState);
       uv_run(server->GetLoop(), UV_RUN_DEFAULT);
     exit:
@@ -108,7 +110,7 @@ namespace token{
     OnNewConnection(uv_stream_t* stream, int status){
       ServerType* server = (ServerType*)stream->data;
       if(status != 0){
-        LOG(ERROR) << "connection error: " << uv_strerror(status);
+        SERVER_LOG(ERROR, server) << "connection error: " << uv_strerror(status);
         return;
       }
 
@@ -117,12 +119,12 @@ namespace token{
 
       int err;
       if((err = Accept(stream, session)) != 0){
-        LOG(WARNING) << "rpc accept failure: " << uv_strerror(err);
+        SERVER_LOG(ERROR, server) << "accept failure: " << uv_strerror(err);
         return; //TODO: session->Disconnect();
       }
 
       if((err = ReadStart(session, &AllocBuffer, &OnMessageReceived)) != 0){
-        LOG(WARNING) << "rpc read failure: " << uv_strerror(err);
+        SERVER_LOG(ERROR, server) << "read failure: " << uv_strerror(err);
         return; //TODO: session->Disconnect();
       }
     }
@@ -131,7 +133,7 @@ namespace token{
     OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
       Session<M>* session = (Session<M>*)stream->data;
       if(nread == UV_EOF){
-        LOG(ERROR) << "client disconnected!";
+        LOG(WARNING) << "client disconnected!";
         return;
       } else if(nread < 0){
         LOG(ERROR) << "[" << nread << "] client read error: " << std::string(uv_strerror(nread));

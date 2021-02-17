@@ -97,7 +97,7 @@ namespace token{
   TEST(Test##Name##MessageSerialization, test_pos){  \
     RpcMessagePtr a = New##Name##Message();             \
     BufferPtr tmp = Buffer::NewInstance(a->GetBufferSize()); \
-    ASSERT_TRUE(a->Write(tmp));                      \
+    ASSERT_TRUE(a->Commit(tmp));                      \
     ASSERT_EQ(tmp->GetWrittenBytes(), a->GetBufferSize());   \
     ASSERT_EQ(tmp->GetObjectTag(), ObjectTag(Type::k##Name##Message, a->GetBufferSize())); \
     RpcMessagePtr b = Name##Message::NewInstance(tmp);  \

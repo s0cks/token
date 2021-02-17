@@ -5,6 +5,7 @@
 
 #include "key.h"
 #include "block.h"
+#include "wallet.h"
 #include "transaction.h"
 #include "unclaimed_transaction.h"
 
@@ -202,33 +203,22 @@ namespace token{
     }
   };
 
-  class ObjectPoolJob : public Job{
-   protected:
-    ObjectPoolJob(Job* parent, const std::string& name):
-      Job(parent, name){}
+  class BatchWriteJob : public Job{
    public:
-    virtual ~ObjectPoolJob() = default;
-  };
-
-  class ObjectPoolWriteJob : public ObjectPoolJob{
-   protected:
-    ObjectPoolWriteJob(Job* parent, const std::string& name):
-      ObjectPoolJob(parent, name){}
-   public:
-    virtual ~ObjectPoolWriteJob() = default;
-  };
-
-  class ObjectPoolBatchWriteJob : public ObjectPoolJob{
+    static const int64_t kMinimumBatchWriteSize = 0;
+    static const int64_t kMaximumBatchWriteSize = 128 * kMB;
    protected:
     int64_t min_bsize_;
     int64_t max_bsize_;
     leveldb::WriteBatch batch_;
 
-    ObjectPoolBatchWriteJob(Job* parent, const std::string& name):
-      ObjectPoolJob(parent, name),
-      min_bsize_(0),
-      max_bsize_(512 * kMB),
+    BatchWriteJob(Job* parent, const std::string& name, int64_t min_bsize, int64_t max_bsize):
+      Job(parent, name),
+      min_bsize_(min_bsize),
+      max_bsize_(max_bsize),
       batch_(){}
+    BatchWriteJob(Job* parent, const std::string& name):
+      BatchWriteJob(parent, name, kMinimumBatchWriteSize, kMaximumBatchWriteSize){}
 
     void SetMinimumBatchSize(const int64_t& val){
       min_bsize_ = val;
@@ -237,6 +227,69 @@ namespace token{
     void SetMaximumBatchSize(const int64_t& val){
       max_bsize_ = val;
     }
+   public:
+    virtual ~BatchWriteJob() = default;
+
+    int64_t GetMinimumBatchSize() const{
+      return min_bsize_;
+    }
+
+    int64_t GetCurrentBatchSize() const{
+      return batch_.ApproximateSize();
+    }
+
+    int64_t GetMaximumBatchSize() const{
+      return max_bsize_;
+    }
+
+    virtual bool Commit() const = 0;
+  };
+
+  class WalletManagerJob : public Job{
+   protected:
+    WalletManagerJob(Job* parent, const std::string& name):
+      Job(parent, name){}
+   public:
+    virtual ~WalletManagerJob() = default;
+  };
+
+  class WalletManagerBatchWriteJob : public BatchWriteJob{
+   protected:
+    WalletManagerBatchWriteJob(Job* parent, const std::string& name, int64_t min_bsize, int64_t max_bsize):
+      BatchWriteJob(parent, name, min_bsize, max_bsize){}
+    WalletManagerBatchWriteJob(Job* parent, const std::string& name):
+      BatchWriteJob(parent, name){}
+
+    //TODO: refactor?
+    void PutWallet(const User& user, const Wallet& wallet){
+      UserKey key(user);
+      BufferPtr buffer = Buffer::NewInstance(GetBufferSize(wallet));
+      if(!Encode(wallet, buffer)){
+        LOG(WARNING) << "cannot encode wallet.";
+        return;
+      }
+      batch_.Put(key, buffer->operator leveldb::Slice());
+    }
+   public:
+    virtual ~WalletManagerBatchWriteJob() = default;
+
+    bool Commit() const;
+  };
+
+  class ObjectPoolJob : public Job{
+   protected:
+    ObjectPoolJob(Job* parent, const std::string& name):
+      Job(parent, name){}
+   public:
+    virtual ~ObjectPoolJob() = default;
+  };
+
+  class ObjectPoolBatchWriteJob : public BatchWriteJob{
+   protected:
+    ObjectPoolBatchWriteJob(Job* parent, const std::string& name, int64_t min_bsize, int64_t max_bsize):
+      BatchWriteJob(parent, name, min_bsize, max_bsize){}
+    ObjectPoolBatchWriteJob(Job* parent, const std::string& name):
+      BatchWriteJob(parent, name){}
 
     inline bool
     PutTransaction(const Hash& hash, const TransactionPtr& val){
@@ -263,18 +316,6 @@ namespace token{
     }
    public:
     virtual ~ObjectPoolBatchWriteJob() = default;
-
-    int64_t GetMinimumBatchSize() const{
-      return min_bsize_;
-    }
-
-    int64_t GetMaximumBatchSize() const{
-      return max_bsize_;
-    }
-
-    int64_t GetCurrentBatchSize() const{
-      return batch_.ApproximateSize();
-    }
 
     bool Commit() const;
   };

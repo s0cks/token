@@ -1,11 +1,14 @@
 #ifndef TOKEN_SCHEDULER_H
 #define TOKEN_SCHEDULER_H
 
-#include <pthread.h>
-#include "job/worker.h"
+#include "vthread.h"
+#include "atomic/wsq.h"
 
 namespace token{
   class Job;
+
+  typedef WorkStealingQueue<Job*> JobQueue;
+
   class JobScheduler{
     friend class JobWorker;
     friend class BlockChain;
@@ -25,7 +28,6 @@ namespace token{
     static JobQueue* GetWorker(const ThreadId& thread);
     static JobQueue* GetThreadQueue();
     static JobQueue* GetRandomQueue();
-    static JobWorker* GetRandomWorker();
 
     #ifdef TOKEN_DEBUG
       static bool GetStats(Json::Writer& json);

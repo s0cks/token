@@ -55,7 +55,8 @@ namespace token{
 
 #define FOR_EACH_TYPE(V) \
   FOR_EACH_BASIC_TYPE(V) \
-  FOR_EACH_POOL_TYPE(V)
+  FOR_EACH_POOL_TYPE(V)  \
+  V(Reference)
 
   class Buffer;
   typedef std::shared_ptr<Buffer> BufferPtr;
@@ -65,7 +66,6 @@ namespace token{
 #define DEFINE_TYPE(Name) k##Name,
     FOR_EACH_TYPE(DEFINE_TYPE)
 #undef DEFINE_TYPE
-    kReference,
     kBlockHeader,
 
 #define DEFINE_MESSAGE_TYPE(Name) k##Name##Message,
@@ -83,8 +83,6 @@ namespace token{
           return stream << #Name;
       FOR_EACH_TYPE(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
-      case Type::kReference:
-        return stream << "Reference";
       default:
         return stream << "Unknown";
     }
@@ -440,6 +438,12 @@ namespace token{
       memcpy(data(), other.data(), kRawUUIDSize);
     }
     ~UUID() = default;
+
+    std::string ToStringAbbreviated() const{
+      char uuid_str[37];
+      uuid_unparse(data_, uuid_str);
+      return std::string(uuid_str, 8);
+    }
 
     std::string ToString() const{
       char uuid_str[37];

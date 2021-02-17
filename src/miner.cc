@@ -5,7 +5,7 @@
 #include "miner.h"
 #include "rpc/rpc_server.h"
 #include "block_builder.h"
-#include "proposal_handler.h"
+#include "consensus/proposal_handler.h"
 #include "peer/peer_session_manager.h"
 #include "consensus/proposal_manager.h"
 

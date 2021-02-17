@@ -49,8 +49,8 @@ namespace token{
       if(!FileExists(PUBLIC_KEYFILE)){
         if(FileExists((TOKEN_BLOCKCHAIN_HOME + "/data"))){
           LOG(WARNING) << "Failed to load block chain keys:" << std::endl;
-          LOG(WARNING) << "  - Private Key: " << PRIVATE_KEYFILE << " - Missing" << std::endl;
-          LOG(WARNING) << "  - Public Key: " << PUBLIC_KEYFILE << " - Missing" << std::endl;
+          LOG(WARNING) << "  - Private KeyType: " << PRIVATE_KEYFILE << " - Missing" << std::endl;
+          LOG(WARNING) << "  - Public KeyType: " << PUBLIC_KEYFILE << " - Missing" << std::endl;
           LOG(WARNING) << "Please recover the keys before running this node" << std::endl;
           LOG(WARNING)
             << "The node will require it's original keys, or it will need to be reinitialized before running";
@@ -60,14 +60,14 @@ namespace token{
         try{
           CryptoPP::AutoSeededRandomPool rng;
 
-          // 1. Generate Private Key
+          // 1. Generate Private KeyType
           CryptoPP::RSA::PrivateKey privKey;
           privKey.GenerateRandomWithKeySize(rng, Keychain::kKeypairSize);
 
-          // 2. Generate Public Key
+          // 2. Generate Public KeyType
           CryptoPP::RSA::PublicKey pubKey(privKey);
 
-          // 3. Write Keys to File
+          // 3. Commit Keys to File
           EncodePrivateKey(&privKey, PRIVATE_KEYFILE);
           EncodePublicKey(&pubKey, PUBLIC_KEYFILE);
         } catch(CryptoPP::Exception& ex){
@@ -76,8 +76,8 @@ namespace token{
         }
       } else{
         LOG(WARNING) << "Failed to load block chain keys:" << std::endl;
-        LOG(WARNING) << "  - Private Key: " << PRIVATE_KEYFILE << " - Missing" << std::endl;
-        LOG(WARNING) << "  - Public Key: " << PUBLIC_KEYFILE << " - Found" << std::endl;
+        LOG(WARNING) << "  - Private KeyType: " << PRIVATE_KEYFILE << " - Missing" << std::endl;
+        LOG(WARNING) << "  - Public KeyType: " << PUBLIC_KEYFILE << " - Found" << std::endl;
         return false;
       }
     }
@@ -92,37 +92,37 @@ namespace token{
     try{
       CryptoPP::AutoSeededRandomPool rng;
 
-      // 1. Load + Validate Private Key
+      // 1. Load + Validate Private KeyType
       std::string privateKeyFilename = (TOKEN_BLOCKCHAIN_HOME + "/chain");
       if(!FileExists(privateKeyFilename)){
         LOG(WARNING) << "Failed to load block chain keys:" << std::endl;
-        LOG(WARNING) << "  - Private Key: " << PRIVATE_KEYFILE << " - Missing" << std::endl;
-        LOG(WARNING) << "  - Public Key: " << PUBLIC_KEYFILE << " - Found" << std::endl;
+        LOG(WARNING) << "  - Private KeyType: " << PRIVATE_KEYFILE << " - Missing" << std::endl;
+        LOG(WARNING) << "  - Public KeyType: " << PUBLIC_KEYFILE << " - Found" << std::endl;
         return false;
       }
 
       DecodePrivateKey(privKey, privateKeyFilename);
       if(!privKey->Validate(rng, 3)){
         LOG(WARNING) << "Failed to load block chain keys:" << std::endl;
-        LOG(WARNING) << "  - Private Key: " << PRIVATE_KEYFILE << " - Invalid" << std::endl;
-        LOG(WARNING) << "  - Public Key: " << PUBLIC_KEYFILE << " - Found" << std::endl;
+        LOG(WARNING) << "  - Private KeyType: " << PRIVATE_KEYFILE << " - Invalid" << std::endl;
+        LOG(WARNING) << "  - Public KeyType: " << PUBLIC_KEYFILE << " - Found" << std::endl;
         return false;
       }
 
-      // 2. Load + Validate Public Key
+      // 2. Load + Validate Public KeyType
       std::string publicKeyFilename = (TOKEN_BLOCKCHAIN_HOME + "/chain.pub");
       if(!FileExists(publicKeyFilename)){
         LOG(WARNING) << "Failed to load block chain keys:" << std::endl;
-        LOG(WARNING) << "  - Private Key: " << PRIVATE_KEYFILE << " - Found" << std::endl;
-        LOG(WARNING) << "  - Public Key: " << PUBLIC_KEYFILE << " - Missing" << std::endl;
+        LOG(WARNING) << "  - Private KeyType: " << PRIVATE_KEYFILE << " - Found" << std::endl;
+        LOG(WARNING) << "  - Public KeyType: " << PUBLIC_KEYFILE << " - Missing" << std::endl;
         return false;
       }
 
       DecodePublicKey(pubKey, publicKeyFilename);
       if(!pubKey->Validate(rng, 3)){
         LOG(WARNING) << "Failed to load block chain keys:" << std::endl;
-        LOG(WARNING) << "  - Private Key: " << PRIVATE_KEYFILE << " - Valid" << std::endl;
-        LOG(WARNING) << "  - Public Key: " << PUBLIC_KEYFILE << " - Invalid" << std::endl;
+        LOG(WARNING) << "  - Private KeyType: " << PRIVATE_KEYFILE << " - Valid" << std::endl;
+        LOG(WARNING) << "  - Public KeyType: " << PUBLIC_KEYFILE << " - Invalid" << std::endl;
         return false;
       }
 

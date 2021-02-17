@@ -4,7 +4,7 @@
 #include "pool.h"
 #include "block.h"
 #include "job/job.h"
-
+#include "job/scheduler.h"
 #include "utils/kvstore.h"
 
 namespace token{
@@ -18,30 +18,43 @@ namespace token{
   //TODO: fixme
   typedef std::map<User, Wallet> UserWallets;
 
-  class ProcessBlockJob : public Job, BlockVisitor{
+  //TODO: refactor code
+  class ProcessBlockJob : public WalletManagerBatchWriteJob, BlockVisitor{
     friend class ProcessTransactionJob;
    protected:
     BlockPtr block_;
     std::mutex mutex_; //TODO: remove mutex
-    leveldb::WriteBatch* batch_;
-
-    leveldb::WriteBatch batch_wallet_;
     UserWallets wallets_;
     bool clean_; //TODO: remove clean flag?
 
+    void Append(const UserWallets& wallets){
+      std::lock_guard<std::mutex> guard(mutex_);
+      for(auto& it : wallets){
+        auto pos = wallets_.find(it.first);
+        if(pos == wallets_.end()){
+          wallets_.insert({ it.first, it.second });
+          continue;
+        }
+
+        auto& existing = pos->second;
+        auto& new_entries = it.second;
+        existing.insert(new_entries.begin(), new_entries.end());
+      }
+    }
+
     JobResult DoWork();
+
+    void BuildBatch(){
+      for(auto& it : wallets_)
+        PutWallet(it.first, it.second);
+    }
    public:
     ProcessBlockJob(const BlockPtr& blk, bool clean = false):
-      Job(nullptr, "ProcessBlock"),
+      WalletManagerBatchWriteJob(nullptr, "ProcessBlock"),
       block_(blk),
-      mutex_(),
-      batch_(new leveldb::WriteBatch()),
-      batch_wallet_(),
+      wallets_(),
       clean_(clean){}
-    ~ProcessBlockJob(){
-      if(batch_)
-        delete batch_;
-    }
+    ~ProcessBlockJob() = default;
 
     BlockPtr GetBlock() const{
       return block_;
@@ -53,63 +66,17 @@ namespace token{
 
     bool Visit(const TransactionPtr& tx);
 
-    void Append(const leveldb::WriteBatch& batch){
-      std::lock_guard<std::mutex> guard(mutex_);
-      batch_->Append(batch);
-    }
-
-    void Append(const leveldb::WriteBatch& batch, const UserWallets& hashes){
-      std::lock_guard<std::mutex> guard(mutex_);
-      for(auto& it : hashes){
-        auto pos = wallets_.find(it.first);
-        if(pos == wallets_.end()){
-          LOG(INFO) << "creating new wallet for " << it.first;
-          wallets_.insert({it.first, it.second});
-          continue;
-        }
-
-        const Wallet& src = it.second;
-        Wallet& dst = pos->second;
-        dst.insert(src.begin(), src.end());
-        wallets_.insert({it.first, dst});
-      }
-      batch_->Append(batch);
-    }
-
-    int64_t GetWalletWriteSize() const{
-      return batch_wallet_.ApproximateSize();
-    }
-
-    int64_t GetPoolWriteSize() const{
-      return batch_wallet_.ApproximateSize();
-    }
-
-    int64_t GetTotalWriteSize() const{
-      return GetWalletWriteSize() + GetPoolWriteSize();
-    }
-
-    leveldb::Status CommitWalletChanges(){
-      if(batch_wallet_.ApproximateSize() == 0)
-        return leveldb::Status::IOError("the wallet batch write is ~0b in size");
-      for(auto& it : wallets_){
-        const User& user = it.first;
-        Wallet& wallet = it.second;
-        WalletManager::GetWallet(user, wallet);
-        LOG(INFO) << user << " now has " << wallet.size() << " unclaimed transactions.";
-        RemoveObject(batch_wallet_, user);
-        PutObject(batch_wallet_, user, wallet);
-      }
-      return WalletManager::Write(&batch_wallet_);
-    }
-
-    bool CommitAllChanges(){
-      leveldb::Status status;
-      if(!(status = CommitWalletChanges()).ok()){
-        LOG(ERROR) << "cannot commit wallet changes: " << status.ToString();
+    static inline bool
+    SubmitAndWait(const BlockPtr& blk){
+      JobQueue* queue = JobScheduler::GetThreadQueue();
+      ProcessBlockJob* job = new ProcessBlockJob(blk);
+      if(!queue->Push(job))
         return false;
-      }
 
-      return true;
+      while(!job->IsFinished()); //spin
+
+      job->BuildBatch();
+      return job->Commit();
     }
   };
 
@@ -126,12 +93,16 @@ namespace token{
       transaction_(tx){}
     ~ProcessTransactionJob() = default;
 
+    void Append(const UserWallets& wallets){
+      return ((ProcessBlockJob*)GetParent())->Append(wallets);
+    }
+
     BlockPtr GetBlock() const{
-      return ((ProcessBlockJob*) GetParent())->GetBlock();
+      return ((ProcessBlockJob*)GetParent())->GetBlock();
     }
 
     bool ShouldClean() const{
-      return ((ProcessBlockJob*) GetParent())->ShouldClean();
+      return ((ProcessBlockJob*)GetParent())->ShouldClean();
     }
 
     TransactionPtr GetTransaction() const{
@@ -152,7 +123,11 @@ namespace token{
     ~ProcessTransactionInputsJob() = default;
 
     TransactionPtr GetTransaction() const{
-      return ((ProcessTransactionJob*) GetParent())->GetTransaction();
+      return ((ProcessTransactionJob*)GetParent())->GetTransaction();
+    }
+
+    void Append(const UserWallets& wallets){
+      return ((ProcessTransactionJob*)GetParent())->Append(wallets);
     }
   };
 
@@ -190,6 +165,10 @@ namespace token{
 
     TransactionPtr GetTransaction() const{
       return ((ProcessTransactionJob*) GetParent())->GetTransaction();
+    }
+
+    void Append(const UserWallets& wallets){
+      return ((ProcessTransactionJob*)GetParent())->Append(wallets);
     }
   };
 
@@ -233,7 +212,7 @@ namespace token{
     ~ProcessOutputListJob() = default;
 
     TransactionPtr GetTransaction() const{
-      return ((ProcessTransactionOutputsJob*) GetParent())->GetTransaction();
+      return ((ProcessTransactionOutputsJob*)GetParent())->GetTransaction();
     }
   };
 }

@@ -7,9 +7,8 @@ namespace token{
   LOG(LevelName) << "[" << GetName() << "] "
 
   JobResult ProcessBlockJob::DoWork(){
-    if(!GetBlock()->Accept(this)){
+    if(!GetBlock()->Accept(this))
       return Failed("Cannot visit the block transactions.");
-    }
     return Success("Finished.");
   }
 
@@ -93,6 +92,8 @@ namespace token{
 #endif//TOKEN_DEBUG
       return Failed("Cannot Commit Changes.");
     }
+
+    ((ProcessTransactionOutputsJob*)GetParent())->Append(wallets_);
     return Success("done.");
   }
 }

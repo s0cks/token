@@ -76,6 +76,7 @@ namespace token{
   V(Error)
 
   class WalletManager{
+    friend class WalletManagerBatchWriteJob;
    public:
     enum State{
 #define DEFINE_STATE(Name) k##Name,
@@ -137,6 +138,7 @@ namespace token{
 
     static void SetState(const State& state);
     static void SetStatus(const Status& status);
+    static leveldb::Status Commit(const leveldb::WriteBatch& batch);
    public:
     ~WalletManager() = delete;
 
@@ -150,7 +152,6 @@ namespace token{
     static bool GetWallet(const User& user, Wallet& wallet);
     static bool GetWallet(const User& user, Json::String& json);
     static bool GetWallet(const User& user, Json::Writer& writer);
-    static leveldb::Status Write(leveldb::WriteBatch* batch);
     static int64_t GetNumberOfWallets();
 
     static inline bool

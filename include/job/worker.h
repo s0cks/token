@@ -4,8 +4,9 @@
 #include <atomic>
 #include "vthread.h"
 #include "job/job.h"
+#include "job/scheduler.h"
+
 #include "utils/metrics.h"
-#include "atomic/wsq.h"
 
 namespace token{
   typedef int32_t WorkerId;
@@ -75,8 +76,6 @@ namespace token{
       time_max_ = stats.time_max_;
     }
   };
-
-  typedef WorkStealingQueue<Job*> JobQueue;
 
 #define FOR_EACH_JOB_POOL_WORKER_STATE(V) \
     V(Starting)                           \

@@ -10,25 +10,14 @@ namespace token{
   class ServerSession : public RpcSession{
     friend class LedgerServer;
    private:
-    UUID id_;
-
-    void SetID(const UUID& id){
-      id_ = id;
-    }
-
 #define DECLARE_HANDLER(Name) \
     void On##Name##Message(const std::shared_ptr<Name##Message>& msg);
     FOR_EACH_MESSAGE_TYPE(DECLARE_HANDLER)
 #undef DECLARE_HANDLER
    public:
     ServerSession(uv_loop_t* loop):
-      RpcSession(loop),
-      id_(){}
+      RpcSession(loop){}
     ~ServerSession() = default;
-
-    UUID GetID() const{
-      return id_;
-    }
   };
 
   class LedgerServer : public Server<RpcMessage>{
@@ -38,7 +27,7 @@ namespace token{
     }
    public:
     LedgerServer(uv_loop_t* loop=uv_loop_new()):
-      Server(loop, "rpc"){}
+      Server(loop, "rpc-server"){}
     ~LedgerServer() = default;
 
     ServerPort GetPort() const{

@@ -52,13 +52,6 @@ namespace token{
     return GetWorker(pthread_self());
   }
 
-  JobWorker* JobScheduler::GetRandomWorker(){
-    std::uniform_int_distribution<int> distribution(0, FLAGS_num_workers - 1);
-    int idx = distribution(engine);
-    JobWorker* worker = workers_[idx];
-    return worker && worker->IsRunning() ? worker : nullptr;
-  }
-
   JobQueue* JobScheduler::GetRandomQueue(){
     std::vector<ThreadId> keys;
     for(auto& it : queues_)

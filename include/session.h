@@ -6,6 +6,9 @@
 #include "atomic/relaxed_atomic.h"
 
 namespace token{
+#define SESSION_LOG(LevelName, Session) \
+  LOG(LevelName) << "[" << (Session)->GetUUID().ToStringAbbreviated() << "]"
+
 #define FOR_EACH_SESSION_STATE(V) \
     V(Connecting)                 \
     V(Connected)                  \
@@ -31,7 +34,9 @@ namespace token{
       SessionWriteData(SessionType* s, int64_t size):
         request(),
         session(s),
-        buffer(Buffer::NewInstance(size)){}
+        buffer(Buffer::NewInstance(size)){
+        request.data = this;
+      }
     };
    public:
     enum State{
@@ -52,6 +57,7 @@ namespace token{
       }
     }
    protected:
+    UUID uuid_;
     uv_loop_t* loop_;
     uv_tcp_t handle_;
     RelaxedAtomic<State> state_;
@@ -60,12 +66,16 @@ namespace token{
       state_ = state;
     }
 
+    void SetUUID(const UUID& uuid){
+      uuid_ = uuid;
+    }
+
     virtual void OnMessageRead(const SessionMessagePtr& message) = 0;
 
     void SendMessages(const SessionMessageList& messages){
       size_t total_messages = messages.size();
       if(total_messages <= 0){
-        LOG(WARNING) << "not sending any messages!";
+        SESSION_LOG(WARNING, this) << "not sending any messages!";
         return;
       }
 
@@ -74,18 +84,23 @@ namespace token{
         total_size += msg->GetBufferSize();
       });
 
-      LOG(INFO) << "sending " << total_messages << " messages....";
+#ifdef TOKEN_DEBUG
+      LOG_UUID(INFO) << "sending " << total_messages << " messages....";
+#endif//TOKEN_DEBUG
+
       SessionWriteData* data = new SessionWriteData(this, total_size);
       uv_buf_t buffers[total_messages];
 
       int64_t offset = 0;
       for(size_t idx = 0; idx < total_messages; idx++){
         const SessionMessagePtr& msg = messages[idx];
+
 #ifdef TOKEN_DEBUG
-        LOG(INFO) << "sending " << msg->ToString();
+        SESSION_LOG(INFO, this) << "sending message #" << idx << ": " << msg->ToString();
 #endif//TOKEN_DEBUG
+
         if(!msg->Write(data->buffer)){
-          LOG(WARNING) << "couldn't write " << msg->ToString();
+          SESSION_LOG(ERROR, this) << "couldn't serialize message #" << idx;
           return;
         }
 
@@ -100,12 +115,14 @@ namespace token{
 
     static void
     OnMessageSent(uv_write_t* req, int status){
+      SessionWriteData* data = (SessionWriteData*)req->data;
       if(status != 0)
-        LOG(ERROR) << "failed to send message: " << uv_strerror(status);
-      delete ((SessionWriteData*)req->data);
+        SESSION_LOG(WARNING, data->session) << "failed to send message: " << uv_strerror(status); //TODO: use SESSION_LOG
+      delete data;
     }
    public:
-    Session(uv_loop_t* loop):
+    Session(uv_loop_t* loop, const UUID& uuid):
+      uuid_(uuid),
       loop_(loop),
       handle_(),
       state_(Session::kDisconnectedState){
@@ -113,16 +130,22 @@ namespace token{
 
       int err;
       if((err = uv_tcp_init(loop_, &handle_)) != 0){
-        LOG(ERROR) << "couldn't initialize the channel handle: " << uv_strerror(err);
+        SESSION_LOG(ERROR, this) << "couldn't initialize the channel handle: " << uv_strerror(err);
         return;
       }
 
       if((err = uv_tcp_keepalive(GetHandle(), 1, 60)) != 0){
-        LOG(WARNING) << "couldn't configure channel keep-alive: " << uv_strerror(err);
+        SESSION_LOG(WARNING, this) << "couldn't configure channel keep-alive: " << uv_strerror(err);
         return;
       }
     }
+    Session(uv_loop_t* loop):
+      Session(loop, UUID()){}
     virtual ~Session() = default;
+
+    UUID GetUUID() const{
+      return uuid_;
+    }
 
     State GetState() const{
       return state_;

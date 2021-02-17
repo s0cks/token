@@ -55,6 +55,7 @@ namespace token{
         return TransitionToState(BlockChain::kUninitialized);
 
       if(BlockChain::HasBlocks()){
+        //TODO: refactor
         INITIALIZER_LOG(WARNING) << "pruning local block chain.....";
         BlockPtr current = BlockChain::GetHead();
         while(current->GetHeight() > 0){
@@ -82,18 +83,15 @@ namespace token{
       // [After - Work Stealing]
       //  - ProcessGenesisBlock Timeline (4s)
       INITIALIZER_LOG(INFO) << "processing genesis....";
-      JobQueue* queue = JobScheduler::GetThreadQueue();
-      ProcessBlockJob* job = new ProcessBlockJob(blk);
-      queue->Push(job);
-      while(!job->IsFinished()); //spin
+      if(!ProcessBlockJob::SubmitAndWait(blk)){
+        INITIALIZER_LOG(ERROR) << "couldn't submit new ProcessBlockJob.";
+        return TransitionToState(BlockChain::kUninitialized);
+      }
 
       SetGenesisReference(hash);
       SetNewHead(hash, blk);
-      if(!TransitionToState(BlockChain::kInitialized))
-        return TransitionToState(BlockChain::kUninitialized);
-
       INITIALIZER_LOG(INFO) << "block chain initialized.";
-      return true;
+      return TransitionToState(BlockChain::kInitialized);
     }
   };
 

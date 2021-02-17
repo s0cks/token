@@ -29,7 +29,7 @@
   TEST(Test##Name, test_serialization){                    \
     Name##Ptr a = Gen();                                   \
     BufferPtr buff = Buffer::NewInstance(a->GetBufferSize()); \
-    ASSERT_TRUE(a->Write(buff));                           \
+    ASSERT_TRUE(a->Commit(buff));                           \
     Name##Ptr b = Name::FromBytes(buff);                   \
     ASSERT_TRUE(a->Equals(b));                             \
   }

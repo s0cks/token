@@ -164,10 +164,10 @@ namespace token{
     return HasObject(GetIndex(), user);
   }
 
-  leveldb::Status WalletManager::Write(leveldb::WriteBatch* batch){
+  leveldb::Status WalletManager::Commit(const leveldb::WriteBatch& batch){
     leveldb::WriteOptions opts;
     opts.sync = true;
-    return GetIndex()->Write(opts, batch);
+    return GetIndex()->Write(opts, (leveldb::WriteBatch*)&batch);
   }
 
   int64_t WalletManager::GetNumberOfWallets(){

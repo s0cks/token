@@ -49,6 +49,214 @@ namespace token{
       }
     }
    private:
+    class BlockKey : public KeyType{
+     public:
+      static inline int
+      CompareHeight(const BlockKey& a, const BlockKey& b){
+        if(a.GetHeight() < b.GetHeight()){
+          return -1;
+        } else if(a.GetHeight() > b.GetHeight()){
+          return +1;
+        }
+        return 0;
+      }
+
+      static inline int
+      CompareSize(const BlockKey& a, const BlockKey& b){
+        return ObjectTag::CompareSize(a.tag(), b.tag());
+      }
+     private:
+      enum Layout{
+        kTagPosition = 0,
+        kBytesForTag = sizeof(RawObjectTag),
+
+        kHeightPosition = kTagPosition+kBytesForTag,
+        kBytesForHeight = sizeof(int64_t),
+
+        kHashPosition = kHeightPosition+kBytesForHeight,
+        kBytesForHash = Hash::kSize,
+
+        kTotalSize = kHashPosition+kBytesForHash,
+      };
+
+      uint8_t data_[kTotalSize];
+
+      inline RawObjectTag*
+      tag_ptr() const{
+        return (RawObjectTag*)&data_[kTagPosition];
+      }
+
+      inline void
+      SetTag(const RawObjectTag& tag){
+        memcpy(&data_[kTagPosition], &tag, kBytesForTag);
+      }
+
+      inline void
+      SetTag(const ObjectTag& tag){
+        return SetTag(tag.raw());
+      }
+
+      inline int64_t*
+      height_ptr() const{
+        return (int64_t*)&data_[kHeightPosition];
+      }
+
+      inline void
+      SetHeight(const int64_t& height){
+        memcpy(&data_[kHeightPosition], &height, kBytesForHeight);
+      }
+
+      inline uint8_t*
+      hash_ptr() const{
+        return (uint8_t*)&data_[kHashPosition];
+      }
+
+      inline void
+      SetHash(const Hash& hash){
+        memcpy(&data_[kHashPosition], hash.data(), kBytesForHash);
+      }
+     public:
+      BlockKey(const int64_t size, const int64_t height, const Hash& hash):
+        KeyType(),
+        data_(){
+        SetTag(ObjectTag(Type::kBlock, size));
+        SetHeight(height);
+        SetHash(hash);
+      }
+      BlockKey(const BlockPtr& blk):
+        KeyType(),
+        data_(){
+        SetTag(blk->GetTag());
+        SetHeight(blk->GetHeight());
+        SetHash(blk->GetHash());
+      }
+      BlockKey(const leveldb::Slice& slice):
+        KeyType(),
+        data_(){
+        memcpy(data(), slice.data(), std::min(slice.size(), (std::size_t)kTotalSize));
+      }
+      ~BlockKey() = default;
+
+      Hash GetHash() const{
+        return Hash(hash_ptr(), kBytesForHash);
+      }
+
+      int64_t GetHeight() const{
+        return *height_ptr();
+      }
+
+      ObjectTag tag() const{
+        return ObjectTag(*tag_ptr());
+      }
+
+      size_t size() const{
+        return kTotalSize;
+      }
+
+      char* data() const{
+        return (char*)data_;
+      }
+
+      std::string ToString() const{
+        std::stringstream ss;
+        ss << "BlockKey(";
+        ss << "tag=" << tag() << ", ";
+        ss << "height=" << GetHeight() << ", ";
+        ss << "hash=" << GetHash();
+        ss << ")";
+        return ss.str();
+      }
+    };
+
+    class ReferenceKey : public KeyType{
+     public:
+      static inline int
+      Compare(const ReferenceKey& a, const ReferenceKey& b){
+        return strncmp(a.data(), b.data(), kRawReferenceSize);
+      }
+
+      static inline int
+      CompareCaseInsensitive(const ReferenceKey& a, const ReferenceKey& b){
+        return strncasecmp(a.data(), b.data(), kRawReferenceSize);
+      }
+     private:
+      enum Layout{
+        kTagPosition = 0,
+        kBytesForTag = sizeof(RawObjectTag),
+
+        kReferencePosition = kTagPosition+kBytesForTag,
+        kBytesForReference = kRawReferenceSize,
+
+        kTotalSize = kReferencePosition+kBytesForReference,
+      };
+
+      uint8_t data_[kTotalSize];
+
+      RawObjectTag* tag_ptr() const{
+        return (RawObjectTag*)&data_[kTagPosition];
+      }
+
+      inline void
+      SetTag(const RawObjectTag& tag){
+        memcpy(&data_[kTagPosition], &tag, kBytesForTag);
+      }
+
+      inline void
+      SetTag(const ObjectTag& tag){
+        return SetTag(tag.raw());
+      }
+
+      inline uint8_t*
+      ref_ptr() const{
+        return (uint8_t*)&data_[kReferencePosition];
+      }
+
+      inline void
+      SetReference(const Reference& ref){
+        memcpy(&data_[kReferencePosition], ref.data(), kBytesForReference);
+      }
+     public:
+      ReferenceKey(const Reference& ref):
+          KeyType(),
+          data_(){
+        SetTag(ObjectTag(Type::kReference, ref.size()));
+        SetReference(ref);
+      }
+      ReferenceKey(const std::string& name):
+          ReferenceKey(Reference(name)){}
+      ReferenceKey(const leveldb::Slice& slice):
+          KeyType(),
+          data_(){
+        memcpy(data(), slice.data(), kTotalSize);
+      }
+      ~ReferenceKey() = default;
+
+      ObjectTag tag() const{
+        return ObjectTag(*tag_ptr());
+      }
+
+      Reference GetReference() const{
+        return Reference(ref_ptr(), kBytesForReference);
+      }
+
+      size_t size() const{
+        return kTotalSize;
+      }
+
+      char* data() const{
+        return (char*)data_;
+      }
+
+      std::string ToString() const{
+        std::stringstream ss;
+        ss << "ReferenceKey(";
+        ss << "tag=" << tag() << ", ";
+        ss << "ref=" << GetReference();
+        ss << ")";
+        return ss.str();
+      }
+    };
+
     class Comparator : public leveldb::Comparator{
      private:
       static inline ObjectTag
@@ -80,16 +288,19 @@ namespace token{
           if(!k2.valid())
             LOG(WARNING) << "k2 doesn't have a IsValid tag.";
           return BlockKey::CompareHeight(k1, k2);
+        } else if(t1.IsReferenceType()){
+          ReferenceKey k1(a);
+          if(!k1.valid())
+            LOG(WARNING) << "k1 doesn't have a IsValid tag.";
+
+          ReferenceKey k2(b);
+          if(!k2.valid())
+            LOG(WARNING) << "k2 doesn't have a IsValid tag.";
+          return ReferenceKey::CompareCaseInsensitive(k1, k2);
         }
 
-        ReferenceKey k1(a);
-        if(!k1.valid())
-          LOG(WARNING) << "k1 doesn't have a IsValid tag.";
-
-        ReferenceKey k2(b);
-        if(!k2.valid())
-          LOG(WARNING) << "k2 doesn't have a IsValid tag.";
-        return ReferenceKey::CompareCaseInsensitive(k1, k2);
+        LOG(ERROR) << "cannot compare keys w/ tag: " << t1 << " <=> " << t2;
+        return 0;
       }
 
       const char* Name() const{

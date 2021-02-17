@@ -11,10 +11,8 @@
 #include "consensus/proposal_manager.h"
 
 namespace token{
-  void ServerSession::OnNotFoundMessage(const NotFoundMessagePtr& msg){
-    //TODO: implement OnNotFoundMessage
-    LOG(WARNING) << "not implemented";
-  }
+#define NOT_IMPLEMENTED \
+  SESSION_LOG(ERROR, this) << "not implemented!"
 
   void ServerSession::OnVersionMessage(const VersionMessagePtr& msg){
     //TODO:
@@ -40,11 +38,11 @@ namespace token{
     );
     UUID id = msg->GetID();
     if(IsConnecting()){
-      SetID(id);
+      SetUUID(id);
       SetState(Session::kConnectedState);
       if(msg->IsNode()){
         NodeAddress paddr = msg->GetCallbackAddress();
-        LOG(INFO) << "peer " << id << " connected from: " << paddr;
+        SESSION_LOG(INFO, this) << "peer " << id << " connected from: " << paddr;
         PeerSessionManager::ConnectTo(paddr);
       }
     }
@@ -53,14 +51,14 @@ namespace token{
   void ServerSession::OnGetDataMessage(const GetDataMessagePtr& msg){
     std::vector<InventoryItem> items;
     if(!msg->GetItems(items)){
-      LOG(WARNING) << "cannot get items from message";
+      SESSION_LOG(WARNING, this) << "cannot get items from message";
       return;
     }
 
     std::vector<RpcMessagePtr> response;
     for(auto& item : items){
       Hash hash = item.GetHash();
-      LOG(INFO) << "searching for: " << hash;
+      SESSION_LOG(INFO, this) << "searching for: " << hash;
       if(item.ItemExists()){
         if(item.IsBlock()){
           BlockPtr block;
@@ -69,14 +67,14 @@ namespace token{
           } else if(ObjectPool::HasBlock(hash)){
             block = ObjectPool::GetBlock(hash);
           } else{
-            LOG(WARNING) << "cannot find block: " << hash;
+            SESSION_LOG(WARNING, this) << "cannot find block: " << hash;
             response.push_back(NotFoundMessage::NewInstance());
             break;
           }
           response.push_back(BlockMessage::NewInstance(block));
         } else if(item.IsTransaction()){
           if(!ObjectPool::HasTransaction(hash)){
-            LOG(WARNING) << "cannot find transaction: " << hash;
+            SESSION_LOG(WARNING, this) << "cannot find transaction: " << hash;
             response.push_back(NotFoundMessage::NewInstance());
             break;
           }
@@ -126,14 +124,14 @@ namespace token{
     if(!ProposalManager::IsProposalFor(msg->GetProposal()))
       return Send(RejectedMessage::NewInstance(msg->GetProposal()));
     ProposalPtr proposal = ProposalManager::GetProposal();
-    proposal->AcceptProposal(GetID().ToString());
+    proposal->AcceptProposal(GetUUID().ToString());
   }
 
   void ServerSession::OnRejectedMessage(const RejectedMessagePtr& msg){
     if(!ProposalManager::IsProposalFor(msg->GetProposal()))
       return Send(RejectedMessage::NewInstance(msg->GetProposal()));
     ProposalPtr proposal = ProposalManager::GetProposal();
-    proposal->AcceptProposal(GetID().ToString());
+    proposal->AcceptProposal(GetUUID().ToString());
   }
 
   void ServerSession::OnBlockMessage(const BlockMessagePtr& msg){
@@ -149,7 +147,7 @@ namespace token{
     TransactionPtr tx = msg->GetValue();
     Hash hash = tx->GetHash();
 
-    LOG(INFO) << "received transaction: " << hash;
+    SESSION_LOG(INFO, this) << "received transaction: " << hash;
     if(!ObjectPool::HasTransaction(hash)){
       ObjectPool::PutTransaction(hash, tx);
     }
@@ -158,7 +156,7 @@ namespace token{
   void ServerSession::OnInventoryMessage(const InventoryMessagePtr& msg){
     std::vector<InventoryItem> items;
     if(!msg->GetItems(items)){
-      LOG(WARNING) << "couldn't get items from inventory message";
+      SESSION_LOG(WARNING, this) << "couldn't get items from inventory message";
       return;
     }
 
@@ -167,7 +165,7 @@ namespace token{
       if(!item.ItemExists()) needed.push_back(item);
     }
 
-    LOG(INFO) << "downloading " << needed.size() << "/" << items.size() << " items from inventory....";
+    SESSION_LOG(INFO, this) << "downloading " << needed.size() << "/" << items.size() << " items from inventory....";
     if(!needed.empty()) Send(GetDataMessage::NewInstance(needed));
   }
 
@@ -178,7 +176,7 @@ namespace token{
     std::vector<InventoryItem> items;
     if(stop.IsNull()){
       intptr_t amt = std::min(GetBlocksMessage::kMaxNumberOfBlocks, BlockChain::GetHead()->GetHeight());
-      LOG(INFO) << "sending " << (amt + 1) << " blocks...";
+      SESSION_LOG(INFO, this) << "sending " << (amt + 1) << " blocks...";
 
       BlockPtr start_block = BlockChain::GetBlock(start);
       BlockPtr stop_block = BlockChain::GetBlock(start_block->GetHeight() > amt ? start_block->GetHeight() + amt : amt);
@@ -187,11 +185,15 @@ namespace token{
         idx <= stop_block->GetHeight();
         idx++){
         BlockPtr block = BlockChain::GetBlock(idx);
-        LOG(INFO) << "adding " << block;
+        SESSION_LOG(INFO, this) << "adding " << block;
         items.push_back(InventoryItem(block));
       }
     }
 
     Send(InventoryMessage::NewInstance(items));
+  }
+
+  void ServerSession::OnNotFoundMessage(const NotFoundMessagePtr& msg){
+    NOT_IMPLEMENTED; //TODO: implement ServerSession::OnNotFoundMessage
   }
 }

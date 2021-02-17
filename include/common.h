@@ -175,6 +175,12 @@ namespace token{
     if(val == NULL) return "";
     return std::string(val);
   }
+
+#define LOG_NAMED(LevelName) \
+  LOG(LevelName) << "[" << GetName() << "] "
+
+#define LOG_UUID(LevelName) \
+  LOG(LevelName) << "[" << GetUUID() << "] "
 }
 
 // --path "/usr/share/ledger"

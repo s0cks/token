@@ -63,12 +63,7 @@ namespace token{
   leveldb::Status ObjectPool::Write(const leveldb::WriteBatch& update){
     leveldb::WriteOptions opts;
     opts.sync = true;
-
-    std::unique_lock<std::mutex> lock(write_mtx_);
-    leveldb::Status status = GetIndex()->Write(opts, (leveldb::WriteBatch*)&update);
-    lock.unlock();
-
-    return status;
+    return GetIndex()->Write(opts, (leveldb::WriteBatch*)&update);
   }
 
   int64_t ObjectPool::GetNumberOfObjects(){
