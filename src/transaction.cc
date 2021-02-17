@@ -31,7 +31,7 @@ namespace token{
     return std::make_shared<Transaction>(timestamp, index, inputs, outputs);
   }
 
-  bool Transaction::VisitInputs(TransactionInputVisitor* vis) const{
+  bool Transaction::VisitInputs(InputVisitor* vis) const{
     for(auto& it : inputs_)
       if(!vis->Visit(it)){
         return false;
@@ -39,7 +39,7 @@ namespace token{
     return true;
   }
 
-  bool Transaction::VisitOutputs(TransactionOutputVisitor* vis) const{
+  bool Transaction::VisitOutputs(OutputVisitor* vis) const{
     for(auto& it : outputs_)
       if(!vis->Visit(it)){
         return false;

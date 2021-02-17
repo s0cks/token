@@ -159,6 +159,22 @@ namespace token{
     }
   };
 
+  class InputVisitor{
+   protected:
+    InputVisitor() = default;
+   public:
+    virtual ~InputVisitor() = default;
+    virtual bool Visit(const Input& input) = 0;
+  };
+
+  class OutputVisitor{
+   protected:
+    OutputVisitor() = default;
+   public:
+    virtual ~OutputVisitor() = default;
+    virtual bool Visit(const Output& output) = 0;
+  };
+
   class Output : public SerializableObject{
     friend class Transaction;
    public:
@@ -288,10 +304,6 @@ namespace token{
   typedef std::vector<Input> InputList;
   typedef std::vector<Output> OutputList;
 
-  //TODO:
-  // - split index functionality into IndexedTransaction vs Transaction
-  class TransactionInputVisitor;
-  class TransactionOutputVisitor;
   class Transaction : public BinaryObject{
     friend class Block;
     friend class TransactionMessage;
@@ -489,7 +501,7 @@ namespace token{
      * @param vis - The visitor to call for each input
      * @return True if the visit was successful otherwise, false
      */
-    bool VisitInputs(TransactionInputVisitor* vis) const;
+    bool VisitInputs(InputVisitor* vis) const;
 
     /**
      * Visit all of the outputs for this transaction.
@@ -497,7 +509,7 @@ namespace token{
      * @param vis - The visitor to call for each output
      * @return True if the visit was successful otherwise, false
      */
-    bool VisitOutputs(TransactionOutputVisitor* vis) const;
+    bool VisitOutputs(OutputVisitor* vis) const;
 
     /**
      * Returns the description of this object.
@@ -521,18 +533,6 @@ namespace token{
 
   typedef std::vector<TransactionPtr> TransactionList;
   typedef std::set<TransactionPtr, Transaction::DefaultComparator> TransactionSet;
-
-#define DECLARE_TRANSACTION_VISITOR(Name) \
-  class Transaction##Name##Visitor{ \
-    protected:                      \
-      Transaction##Name##Visitor() = default; \
-    public:                         \
-      virtual ~Transaction##Name##Visitor() = default; \
-      virtual bool Visit(const Name& val) = 0;\
-  }
-  DECLARE_TRANSACTION_VISITOR(Input);
-  DECLARE_TRANSACTION_VISITOR(Output);
-#undef DECLARE_TRANSACTION_VISITOR
 }
 
 #endif //TOKEN_TRANSACTION_H
