@@ -94,8 +94,6 @@ namespace token{
         LOG(WARNING) << "not a version message.";
         return false;
       }
-      LOG(INFO) << "a: " << ToString();
-      LOG(INFO) << "b: " << obj->ToString();
       VersionMessagePtr msg = std::static_pointer_cast<VersionMessage>(obj);
       return client_type_ == msg->client_type_
           && version_ == msg->version_
@@ -119,12 +117,12 @@ namespace token{
 
     DEFINE_RPC_MESSAGE(Version);
 
-    static inline RpcMessagePtr
+    static inline VersionMessagePtr
     NewInstance(const BufferPtr& buff){
       return std::make_shared<VersionMessage>(buff);
     }
 
-    static inline RpcMessagePtr
+    static inline VersionMessagePtr
     NewInstance(ClientType type,
                 const UUID& node_id,
                 const BlockHeader& head,
@@ -248,7 +246,7 @@ namespace token{
 
     DEFINE_RPC_MESSAGE(Verack);
 
-    static inline RpcMessagePtr
+    static inline VerackMessagePtr
     NewInstance(ClientType type,
                 const UUID& node_id,
                 const NodeAddress& callback,
@@ -259,7 +257,8 @@ namespace token{
       return std::make_shared<VerackMessage>(type, node_id, callback, version, head, nonce, timestamp);
     }
 
-    static inline RpcMessagePtr NewInstance(const BufferPtr& buff){
+    static inline VerackMessagePtr
+    NewInstance(const BufferPtr& buff){
       return std::make_shared<VerackMessage>(buff);
     }
   };

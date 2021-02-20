@@ -148,7 +148,7 @@ namespace token{
 
     DEFINE_RPC_MESSAGE(Inventory);
 
-    static inline RpcMessagePtr
+    static inline InventoryMessagePtr
     NewInstance(const Hash& hash, const InventoryItem::Type& type){
       std::vector<InventoryItem> items = {
           InventoryItem(type, hash),
@@ -156,7 +156,7 @@ namespace token{
       return NewInstance(items);
     }
 
-    static inline RpcMessagePtr
+    static inline InventoryMessagePtr
     NewInstance(const BufferPtr& buff){
       int64_t num_items = buff->GetLong();
       std::vector<InventoryItem> items;
@@ -165,22 +165,22 @@ namespace token{
       return std::make_shared<InventoryMessage>(items);
     }
 
-    static inline RpcMessagePtr
+    static inline InventoryMessagePtr
     NewInstance(std::vector<InventoryItem>& items){
       return std::make_shared<InventoryMessage>(items);
     }
 
-    static inline RpcMessagePtr
+    static inline InventoryMessagePtr
     NewInstance(const Transaction& tx){
       return NewInstance(tx.GetHash(), InventoryItem::kTransaction);
     }
 
-    static inline RpcMessagePtr
+    static inline InventoryMessagePtr
     NewInstance(const BlockPtr& blk){
       return NewInstance(blk->GetHash(), InventoryItem::kBlock);
     }
 
-    static inline RpcMessagePtr
+    static inline InventoryMessagePtr
     NewInstance(const BlockHeader& blk){
       return NewInstance(blk.GetHash(), InventoryItem::kBlock);
     }
@@ -224,7 +224,7 @@ namespace token{
 
     DEFINE_RPC_MESSAGE(GetData);
 
-    static inline RpcMessagePtr
+    static inline GetDataMessagePtr
     NewInstance(const BufferPtr& buff){
       int64_t num_items = buff->GetLong();
       std::vector<InventoryItem> items;
@@ -233,12 +233,12 @@ namespace token{
       return std::make_shared<GetDataMessage>(items);
     }
 
-    static inline RpcMessagePtr
+    static inline GetDataMessagePtr
     NewInstance(std::vector<InventoryItem>& items){
       return std::make_shared<GetDataMessage>(items);
     }
 
-    static inline RpcMessagePtr
+    static inline GetDataMessagePtr
     NewInstance(const Transaction& tx){
       std::vector<InventoryItem> items = {
         InventoryItem(tx)
@@ -246,7 +246,7 @@ namespace token{
       return NewInstance(items);
     }
 
-    static inline RpcMessagePtr
+    static inline GetDataMessagePtr
     NewInstance(const BlockPtr& blk){
       std::vector<InventoryItem> items = {
         InventoryItem(blk)
@@ -284,13 +284,13 @@ namespace token{
 
     DEFINE_RPC_MESSAGE(NotFound);
 
-    static inline RpcMessagePtr
+    static inline NotFoundMessagePtr
     NewInstance(const BufferPtr& buff){
       std::string message = ""; //TODO: buff->GetString();
       return std::make_shared<NotFoundMessage>(message);
     }
 
-    static inline RpcMessagePtr
+    static inline NotFoundMessagePtr
     NewInstance(const std::string& message = "Not Found"){
       return std::make_shared<NotFoundMessage>(message);
     }

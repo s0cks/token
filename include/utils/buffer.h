@@ -293,11 +293,14 @@ namespace token{
     }
 
     template<class T>
-    void PutList(const std::vector<T>& items){
-      PutLong(items.size());
-      for(auto& item : items){
-        item.Write(shared_from_this());
+    bool PutVector(const std::vector<T>& items){
+      if(!PutLong(static_cast<int64_t>(items.size())))
+        return false;
+      for(auto& it : items){
+        if(!it.Write(shared_from_this()))
+          return false;
       }
+      return true;
     }
 
     template<class T, class C>

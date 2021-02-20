@@ -19,13 +19,11 @@ namespace token{
   }
 
   bool InventoryMessage::WriteMessage(const BufferPtr& buff) const{
-    buff->PutList(items_);
-    return true;
+    return buff->PutVector(items_);
   }
 
   bool GetDataMessage::WriteMessage(const BufferPtr& buff) const{
-    buff->PutList(items_);
-    return true;
+    return buff->PutVector(items_);
   }
 
   int64_t GetDataMessage::GetMessageSize() const{

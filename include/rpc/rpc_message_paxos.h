@@ -34,7 +34,6 @@ namespace token{
     ProposalPtr GetProposal() const;
 
     bool ProposalEquals(const std::shared_ptr<PaxosMessage>& msg) const{
-      LOG(INFO) << raw_ << " <=> " <<msg->raw_;
       return raw_ == msg->raw_;
     }
   };
@@ -61,12 +60,12 @@ namespace token{
 
     DEFINE_RPC_MESSAGE(Prepare);
 
-    static inline RpcMessagePtr
+    static inline PrepareMessagePtr
     NewInstance(const ProposalPtr& proposal){
       return std::make_shared<PrepareMessage>(proposal);
     }
 
-    static inline RpcMessagePtr
+    static inline PrepareMessagePtr
     NewInstance(const BufferPtr& buff){
       return std::make_shared<PrepareMessage>(buff);
     }
@@ -95,12 +94,12 @@ namespace token{
 
     DEFINE_RPC_MESSAGE(Promise);
 
-    static inline RpcMessagePtr
+    static inline PromiseMessagePtr
     NewInstance(const ProposalPtr& proposal){
       return std::make_shared<PromiseMessage>(proposal);
     }
 
-    static inline RpcMessagePtr
+    static inline PromiseMessagePtr
     NewInstance(const BufferPtr& buff){
       return std::make_shared<PromiseMessage>(buff);
     }
@@ -128,12 +127,12 @@ namespace token{
 
     DEFINE_RPC_MESSAGE(Commit);
 
-    static inline RpcMessagePtr
+    static inline CommitMessagePtr
     NewInstance(const ProposalPtr& proposal){
       return std::make_shared<CommitMessage>(proposal);
     }
 
-    static inline RpcMessagePtr
+    static inline CommitMessagePtr
     NewInstance(const BufferPtr& buff){
       return std::make_shared<CommitMessage>(buff);
     }
@@ -162,12 +161,12 @@ namespace token{
 
     DEFINE_RPC_MESSAGE(Accepted);
 
-    static inline RpcMessagePtr
+    static inline AcceptedMessagePtr
     NewInstance(const ProposalPtr& proposal){
       return std::make_shared<AcceptedMessage>(proposal);
     }
 
-    static inline RpcMessagePtr
+    static inline AcceptedMessagePtr
     NewInstance(const BufferPtr& buff){
       return std::make_shared<AcceptedMessage>(buff);
     }
@@ -195,12 +194,12 @@ namespace token{
 
     DEFINE_RPC_MESSAGE(Rejected);
 
-    static inline RpcMessagePtr
+    static inline RejectedMessagePtr
     NewInstance(const ProposalPtr& proposal){
       return std::make_shared<RejectedMessage>(proposal);
     }
 
-    static inline RpcMessagePtr
+    static inline RejectedMessagePtr
     NewInstance(const BufferPtr& buff){
       return std::make_shared<RejectedMessage>(buff);
     }

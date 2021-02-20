@@ -544,6 +544,26 @@ namespace token{
       return stream << ref.GetTransactionHash() << "[" << ref.GetIndex() << "]";
     }
   };
+
+  template<typename T>
+  static inline int64_t
+  GetVectorSize(const std::vector<T>& values){
+    int64_t size = 0;
+    size += sizeof(int64_t); // length;
+    for(auto& it : values)
+      size += it.GetBufferSize(); // values[idx]
+    return size;
+  }
+
+  template<typename T, typename C>
+  static inline int64_t
+  GetSetSize(const std::set<T, C>& values){
+    int64_t size = 0;
+    size += sizeof(int64_t); // length;
+    for(auto& it : values)
+      size += it->GetBufferSize(); // values[idx];
+    return size;
+  }
 }
 
 #endif //TOKEN_OBJECT_H

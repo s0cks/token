@@ -378,12 +378,9 @@ namespace token{
      */
     int64_t GetBufferSize() const{
       int64_t size = 0;
-      size += sizeof(Timestamp); // timestamp_
-      size += sizeof(int64_t); // index_
-      size += sizeof(int64_t); // num_inputs_
-      size += inputs_size() * Input::GetSize(); // inputs_
-      size += sizeof(int64_t); // num_outputs
-      size += outputs_size() * Output::GetSize(); // outputs_
+      size += sizeof(RawTimestamp); // timestamp_
+      size += GetVectorSize(inputs_); // inputs_
+      size += GetVectorSize(outputs_); // outputs_
       return size;
     }
 
@@ -395,10 +392,9 @@ namespace token{
      * @return True when successful otherwise, false
      */
     bool Write(const BufferPtr& buff) const{
-      buff->PutLong(ToUnixTimestamp(timestamp_));
-      buff->PutList(inputs_);
-      buff->PutList(outputs_);
-      return true;
+      return buff->PutTimestamp(timestamp_) // timestamp_
+          && buff->PutVector(inputs_) // inputs_
+          && buff->PutVector(outputs_); // outputs
     }
 
     /**

@@ -22,8 +22,7 @@ namespace token{
     }
 
     bool WriteMessage(const BufferPtr& buffer) const{
-      return buffer->PutObjectTag(value_->GetTag())
-          && value_->Write(buffer);
+      return value_->Write(buffer);
     }
    public:
     virtual ~ObjectMessage() = default;
@@ -56,12 +55,12 @@ namespace token{
 
     DEFINE_RPC_OBJECT_MESSAGE_TYPE(Transaction);
 
-    static inline RpcMessagePtr
+    static inline TransactionMessagePtr
     NewInstance(const TransactionPtr& tx){
       return std::make_shared<TransactionMessage>(tx);
     }
 
-    static inline RpcMessagePtr
+    static inline TransactionMessagePtr
     NewInstance(const BufferPtr& buff){
       return std::make_shared<TransactionMessage>(buff);
     }
@@ -77,12 +76,12 @@ namespace token{
 
     DEFINE_RPC_OBJECT_MESSAGE_TYPE(Block);
 
-    static inline RpcMessagePtr
+    static inline BlockMessagePtr
     NewInstance(const BlockPtr& blk){
       return std::make_shared<BlockMessage>(blk);
     }
 
-    static inline RpcMessagePtr
+    static inline BlockMessagePtr
     NewInstance(const BufferPtr& buff){
       return std::make_shared<BlockMessage>(buff);
     }

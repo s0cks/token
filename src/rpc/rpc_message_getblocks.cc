@@ -3,7 +3,7 @@
 namespace token{
   const int64_t GetBlocksMessage::kMaxNumberOfBlocks = 32;
 
-  RpcMessagePtr GetBlocksMessage::NewInstance(const BufferPtr& buff){
+  GetBlocksMessagePtr GetBlocksMessage::NewInstance(const BufferPtr& buff){
     Hash start = buff->GetHash();
     Hash stop = buff->GetHash();
     return std::make_shared<GetBlocksMessage>(start, stop);

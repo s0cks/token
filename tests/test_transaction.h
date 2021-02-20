@@ -5,23 +5,24 @@
 #include "transaction.h"
 
 namespace token{
-  class TestTransaction : public ::testing::Test{
+  class TransactionTest : public BinaryObjectTest<Transaction>{
    protected:
-    TransactionPtr tx1;
-    TransactionPtr tx2;
+    static const std::string kExpectedHash;
+    static const InputList kDefaultInputs;
+    static const OutputList kDefaultOutputs;
+    static const Timestamp kDefaultTimestamp;
 
-    void SetUp(){
-      InputList inputs = {};
-      OutputList outputs = {};
+    TransactionTest() = default;
 
-      tx1 = Transaction::NewInstance(inputs, outputs, FromUnixTimestamp(0));
-      tx2 = Transaction::NewInstance(inputs, outputs);
+    TransactionPtr GetObject() const{
+      return Transaction::NewInstance(kDefaultInputs, kDefaultOutputs, kDefaultTimestamp);
     }
 
-    void TearDown(){}
+    TransactionPtr GetRandomObject() const{
+      return Transaction::NewInstance(kDefaultInputs, kDefaultOutputs, Clock::now());
+    }
    public:
-    TestTransaction() = default;
-    ~TestTransaction() = default;
+    ~TransactionTest() = default;
   };
 }
 

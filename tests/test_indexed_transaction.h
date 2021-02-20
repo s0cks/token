@@ -5,27 +5,25 @@
 #include "transaction.h"
 
 namespace token{
- class TestIndexedTransaction : public ::testing::Test{
-  protected:
-   IndexedTransactionPtr itx1;
-   IndexedTransactionPtr itx2;
+  class IndexedTransactionTest : public BinaryObjectTest<IndexedTransaction>{
+   protected:
+    static const std::string kExpectedHash;
+    static const int64_t kDefaultIndex;
+    static const InputList kDefaultInputs;
+    static const OutputList kDefaultOutputs;
+    static const Timestamp kDefaultTimestamp;
 
-   void SetUp(){
-     InputList inputs = {};
-     OutputList outputs = {};
-     int64_t index = 0;
+    IndexedTransactionTest() = default;
+    ~IndexedTransactionTest() = default;
 
-     itx1 = IndexedTransaction::NewInstance(index, inputs, outputs, FromUnixTimestamp(0));
-     itx2 = IndexedTransaction::NewInstance(index, inputs, outputs);
-   }
+    IndexedTransactionPtr GetObject() const{
+      return IndexedTransaction::NewInstance(kDefaultIndex, kDefaultInputs, kDefaultOutputs, kDefaultTimestamp);
+    }
 
-   void TearDown(){
-
-   }
-  public:
-   TestIndexedTransaction() = default;
-   ~TestIndexedTransaction() = default;
- };
+    IndexedTransactionPtr GetRandomObject() const{
+      return IndexedTransaction::NewInstance(kDefaultIndex, kDefaultInputs, kDefaultOutputs, Clock::now());
+    }
+  };
 }
 
 #endif//TOKEN_TEST_INDEXED_TRANSACTION_H

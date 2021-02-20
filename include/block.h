@@ -153,7 +153,8 @@ namespace token{
       size += sizeof(RawVersion); // version_
       size += sizeof(int64_t); // height_
       size += Hash::GetSize(); // previous_hash_
-      return size + GetTransactionDataBufferSize();
+      size += GetTransactionDataBufferSize();
+      return size;
     }
 
     bool Write(const BufferPtr& buff) const{

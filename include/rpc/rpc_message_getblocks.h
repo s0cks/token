@@ -43,8 +43,8 @@ namespace token{
           && stop_ == msg->stop_;
     }
 
-    static RpcMessagePtr NewInstance(const BufferPtr& buff);
-    static RpcMessagePtr NewInstance(const Hash& start_hash = BlockChain::GetHead()->GetHash(),
+    static GetBlocksMessagePtr NewInstance(const BufferPtr& buff);
+    static GetBlocksMessagePtr NewInstance(const Hash& start_hash = BlockChain::GetHead()->GetHash(),
                                      const Hash& stop_hash = Hash()){
       return std::make_shared<GetBlocksMessage>(start_hash, stop_hash);
     }
