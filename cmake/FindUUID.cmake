@@ -1,57 +1,67 @@
+# - Find UUID
+# Find the native UUID includes and library
+# This module defines
+#  UUID_INCLUDE_DIR, where to find jpeglib.h, etc.
+#  UUID_LIBRARIES, the libraries needed to use UUID.
+#  UUID_FOUND, If false, do not try to use UUID.
+# also defined, but not for general use are
+#  UUID_LIBRARY, where to find the UUID library.
 #
-# This module detects if uuid is installed and determines where the
-# include files and libraries are.
+#  Copyright (c) 2006-2016 Mathieu Malaterre <mathieu.malaterre@gmail.com>
 #
-# This code sets the following variables:
+#  Redistribution and use is allowed according to the terms of the New
+#  BSD license.
+#  For details see the accompanying COPYING-CMAKE-SCRIPTS file.
 #
-# UUID_LIBRARIES       = full path to the uuid libraries
-# UUID_INCLUDE_DIR     = include dir to be used when using the uuid library
-# UUID_FOUND           = set to true if uuid was found successfully
-#
-# UUID_LOCATION
-#   setting this enables search for uuid libraries / headers in this location
-find_package (PkgConfig)
-pkg_check_modules(UUID_PKG uuid)
 
-if (UUID_PKG_FOUND)
-    set (UUID_LIBRARIES ${UUID_PKG_LIBRARIES})
-    set (UUID_INCLUDE_DIRS ${UUID_PKG_INCLUDE_DIRS})
-    if (NOT UUID_INCLUDE_DIRS)
-        set (UUID_INCLUDE_DIRS "/usr/include")
-    endif (NOT UUID_INCLUDE_DIRS)
-    set (UUID_DEFINITIONS "${UUID_PKG_CFLAGS} ${UUID_PKG_CFLAGS_OTHER}")
-else (UUID_PKG_FOUND)
+# On Mac OS X the uuid functions are in the System library.
+if(APPLE)
+    set(UUID_LIBRARY_VAR System)
+else()
+    # Linux type:
+    set(UUID_LIBRARY_VAR uuid)
+endif()
 
-    find_library(UUID_LIBRARIES
-            NAMES uuid
-            HINTS ${UUID_LOCATION}
-            ${CMAKE_INSTALL_PREFIX}/uuid/*/${PLATFORM}/
-            DOC "The uuid library"
-            )
-
-    find_path(UUID_INCLUDE_DIRS
-            NAMES uuid.h
-            HINTS ${UUID_LOCATION}/include/uuid/*
-            ${CMAKE_INSTALL_PREFIX}/uuid/*/${PLATFORM}/
-            DOC "The uuid include directory"
-            )
-
-    set (UUID_DEFINITIONS "")
-endif (UUID_PKG_FOUND)
-
-if (UUID_LIBRARIES)
-    message (STATUS "UUID libraries: ${UUID_LIBRARIES}")
-endif (UUID_LIBRARIES)
-if (UUID_INCLUDE_DIRS)
-    message (STATUS "UUID include dir: ${UUID_INCLUDE_DIRS}")
-endif (UUID_INCLUDE_DIRS)
-
-# -----------------------------------------------------
-# handle the QUIETLY and REQUIRED arguments and set UUID_FOUND to TRUE if
-# all listed variables are TRUE
-# -----------------------------------------------------
-include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args (UUID DEFAULT_MSG
-        UUID_LIBRARIES  UUID_INCLUDE_DIRS
+find_library(UUID_LIBRARY
+        NAMES ${UUID_LIBRARY_VAR}
+        PATHS /lib /usr/lib /usr/local/lib
         )
-mark_as_advanced(UUID_INCLUDE_DIRS UUID_LIBRARIES)
+
+# Must be *after* the lib itself
+set(CMAKE_FIND_FRAMEWORK_SAVE ${CMAKE_FIND_FRAMEWORK})
+set(CMAKE_FIND_FRAMEWORK NEVER)
+
+find_path(UUID_INCLUDE_DIR uuid/uuid.h
+        /usr/local/include
+        /usr/include
+        )
+
+if (UUID_LIBRARY AND UUID_INCLUDE_DIR)
+    set(UUID_LIBRARIES ${UUID_LIBRARY})
+    set(UUID_FOUND "YES")
+else ()
+    set(UUID_FOUND "NO")
+endif ()
+
+
+if (UUID_FOUND)
+    if (NOT UUID_FIND_QUIETLY)
+        message(STATUS "Found UUID: ${UUID_LIBRARIES}")
+    endif ()
+else ()
+    if (UUID_FIND_REQUIRED)
+        message( "library: ${UUID_LIBRARY}" )
+        message( "include: ${UUID_INCLUDE_DIR}" )
+        message(FATAL_ERROR "Could not find UUID library")
+    endif ()
+endif ()
+
+# Deprecated declarations.
+#set (NATIVE_UUID_INCLUDE_PATH ${UUID_INCLUDE_DIR} )
+#get_filename_component (NATIVE_UUID_LIB_PATH ${UUID_LIBRARY} PATH)
+
+mark_as_advanced(
+        UUID_LIBRARY
+        UUID_INCLUDE_DIR
+)
+set(CMAKE_FIND_FRAMEWORK ${CMAKE_FIND_FRAMEWORK_SAVE})
