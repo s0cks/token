@@ -83,7 +83,6 @@ namespace token{
         LOG_AT_LEVEL(GetSeverity()) << "Created: " << FormatTimestampReadable(blk.GetTimestamp());
         LOG_AT_LEVEL(GetSeverity()) << "Previous: " << blk.GetPreviousHash();
         LOG_AT_LEVEL(GetSeverity()) << "Merkle Root: " << blk.GetMerkleRoot();
-        LOG_AT_LEVEL(GetSeverity()) << "Number of Transactions: " << blk.GetNumberOfTransactions();
       } else{
         LOG_AT_LEVEL(GetSeverity()) << "#" << blk.GetHeight() << "(" << blk.GetHash() << ")";
       }

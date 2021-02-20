@@ -1,7 +1,7 @@
 #include "test_block.h"
 
 namespace token{
-  const std::string BlockTest::kExpectedHash = "AC9A79E04E4E280D56730CE4FF5B3D56EC61B3C7C93DDBD03A53479BAF45A2D7";
+  const std::string BlockTest::kExpectedHash = "C6B1B0AB8F039D212EF3E0510E2960BCE1B423AC4EDF13C3613F7B821792C306";
 
   TEST_BINARY_OBJECT_HASH(Block, kExpectedHash);
   TEST_BINARY_OBJECT_WRITE(Block);

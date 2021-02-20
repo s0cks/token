@@ -1,8 +1,8 @@
 #include "test_unclaimed_transaction.h"
 
 namespace token{
-  const std::string UnclaimedTransactionTest::kExpectedHash = "1191F9F9657BB3AB6D6E043D7B4017507D802795FE58EFA3043A066980C32C72";
-  const TransactionReference UnclaimedTransactionTest::kDefaultTransactionReference = TransactionReference(Hash::GenerateNonce(), 0);
+  const std::string UnclaimedTransactionTest::kExpectedHash = "1CBBC63F6CC66AF5F1F716CAAD8066EEF4E8E0F1F99D364D7E751CA6B1A16110";
+  const TransactionReference UnclaimedTransactionTest::kDefaultTransactionReference = TransactionReference(Hash::FromHexString(kExpectedHash), 0);
   const std::string UnclaimedTransactionTest::kDefaultUser = "TestUser";
   const std::string UnclaimedTransactionTest::kDefaultToken = "TestToken";
 

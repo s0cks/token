@@ -88,8 +88,7 @@ namespace token{
         height_,
         previous_hash_,
         GetMerkleRoot(),
-        GetHash(),
-        GetNumberOfTransactions()
+        GetHash()
       );
     }
 

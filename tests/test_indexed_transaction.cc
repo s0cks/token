@@ -1,7 +1,7 @@
 #include "test_indexed_transaction.h"
 
 namespace token{
-  const std::string IndexedTransactionTest::kExpectedHash = "2C34CE1DF23B838C5ABF2A7F6437CCA3D3067ED509FF25F11DF6B11B582B51EB";
+  const std::string IndexedTransactionTest::kExpectedHash = "66687AADF862BD776C8FC18B8E9F8E20089714856EE233B3902A591D0D5F2925";
   const int64_t IndexedTransactionTest::kDefaultIndex = 0;
   const InputList IndexedTransactionTest::kDefaultInputs = {};
   const OutputList IndexedTransactionTest::kDefaultOutputs = {};

@@ -16,8 +16,7 @@ namespace token{
            + sizeof(int64_t) // height
            + Hash::kSize // previous hash
            + Hash::kSize // merkle root
-           + Hash::kSize // hash
-           + sizeof(int64_t); // number of transactions
+           + Hash::kSize; // hash
     }
    private:
     Timestamp timestamp_;
@@ -26,7 +25,6 @@ namespace token{
     Hash previous_hash_;
     Hash merkle_root_;
     Hash hash_;
-    int64_t num_transactions_;
    public:
     BlockHeader():
       SerializableObject(),
@@ -35,23 +33,20 @@ namespace token{
       height_(0),
       previous_hash_(),
       merkle_root_(), // fill w/ genesis's merkle root
-      hash_(), //TODO: fill w/ genesis's Hash
-      num_transactions_(0){}
+      hash_(){} //TODO: fill w/ genesis's Hash
     BlockHeader(Timestamp timestamp,
                 const Version& version,
                 int64_t height,
                 const Hash& phash,
                 const Hash& merkle_root,
-                const Hash& hash,
-                int64_t num_transactions):
+                const Hash& hash):
       SerializableObject(),
       timestamp_(timestamp),
       version_(version),
       height_(height),
       previous_hash_(phash),
       merkle_root_(merkle_root),
-      hash_(hash),
-      num_transactions_(num_transactions){}
+      hash_(hash){}
     BlockHeader(const BufferPtr& buffer):
       SerializableObject(),
       timestamp_(buffer->GetTimestamp()),
@@ -59,8 +54,7 @@ namespace token{
       height_(buffer->GetLong()),
       previous_hash_(buffer->GetHash()),
       merkle_root_(buffer->GetHash()),
-      hash_(buffer->GetHash()),
-      num_transactions_(buffer->GetLong()){}
+      hash_(buffer->GetHash()){}
     BlockHeader(const BlockHeader& blk):
       SerializableObject(),
       timestamp_(blk.timestamp_),
@@ -68,8 +62,7 @@ namespace token{
       height_(blk.height_),
       previous_hash_(blk.previous_hash_),
       merkle_root_(blk.merkle_root_),
-      hash_(blk.hash_),
-      num_transactions_(blk.num_transactions_){}
+      hash_(blk.hash_){}
     ~BlockHeader(){}
 
     Type GetType() const{
@@ -100,10 +93,6 @@ namespace token{
       return hash_;
     }
 
-    int64_t GetNumberOfTransactions() const{
-      return num_transactions_;
-    }
-
     BlockHeader& operator=(const BlockHeader& other){
       timestamp_ = other.timestamp_;
       version_ = other.version_;
@@ -111,7 +100,6 @@ namespace token{
       previous_hash_ = other.previous_hash_;
       merkle_root_ = other.merkle_root_;
       hash_ = other.hash_;
-      num_transactions_ = other.num_transactions_;
       return (*this);
     }
 
@@ -125,8 +113,7 @@ namespace token{
           && buffer->PutLong(height_)
           && buffer->PutHash(previous_hash_)
           && buffer->PutHash(merkle_root_)
-          && buffer->PutHash(hash_)
-          && buffer->PutLong(num_transactions_);
+          && buffer->PutHash(hash_);
     }
 
     bool Write(Json::Writer& writer) const{
@@ -137,7 +124,6 @@ namespace token{
               && Json::SetField(writer, "previous_hash", previous_hash_)
               && Json::SetField(writer, "merkle_root", merkle_root_)
               && Json::SetField(writer, "hash", hash_)
-              && Json::SetField(writer, "number_of_transactions", num_transactions_)
            && writer.EndObject();
     }
 
@@ -149,8 +135,7 @@ namespace token{
       ss << "height=" << height_ << ", ";
       ss << "previous_hash=" << previous_hash_ << ", ";
       ss << "merkle_root=" << merkle_root_ << ", ";
-      ss << "hash=" << hash_ << ", ";
-      ss << "number_of_transactions=" << num_transactions_;
+      ss << "hash=" << hash_;
       ss << ")";
       return ss.str();
     }

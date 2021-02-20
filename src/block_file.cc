@@ -72,10 +72,13 @@ namespace token{
 
   static inline bool
   ReadBlockHeader(FILE* file, BlockHeader* header){
-    BufferPtr buffer = Buffer::NewInstance(BlockHeader::GetSize());
-    if(!ReadBytes(file, buffer, BlockHeader::GetSize()))
-      return false;
-    (*header) = BlockHeader(buffer);
+    Version version = ReadVersion(file);
+    Timestamp timestamp = ReadTimestamp(file);
+    int64_t height = ReadLong(file);
+    Hash phash = ReadHash(file);
+    Hash merkle = ReadHash(file);
+    Hash hash = ReadHash(file);
+    (*header) = BlockHeader(timestamp, version, height, phash, merkle, hash);
     return true;
   }
 
@@ -103,7 +106,7 @@ namespace token{
     }
 
     IndexedTransactionSet txs;
-    if(!ReadSet(file, Type::kTransaction, txs)){
+    if(!ReadSet(file, Type::kIndexedTransaction, txs)){
       LOG(ERROR) << "cannot read transaction data.";
       return BlockPtr(nullptr);
     }
