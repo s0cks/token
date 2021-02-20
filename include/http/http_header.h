@@ -45,16 +45,15 @@ namespace token{
 
   static inline std::string
   GetServerHeaderValue(){
-    // not safe to call from separate thread?, encoding for Server's UUID is borked
     std::stringstream ss;
-    ss << "LedgerNode/" << Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
+    ss << "Node/" << Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
     return ss.str();
   }
 
   static inline std::string
   GetXNodeIDHeaderValue(){
     std::stringstream ss;
-    ss << ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID).ToString();
+    ss << "Node/" << ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID).ToStringAbbreviated();
     return ss.str();
   }
 
@@ -70,7 +69,7 @@ namespace token{
     SetHttpHeader(headers, HTTP_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, "*");
     SetHttpHeader(headers, HTTP_HEADER_DATE, Clock::now());
     SetHttpHeader(headers, HTTP_HEADER_SERVER, GetServerHeaderValue());
-    //TODO: fix: SetHttpHeader(headers, HTTP_HEADER_X_NODE_ID, GetXNodeIDHeaderValue());
+    SetHttpHeader(headers, HTTP_HEADER_X_NODE_ID, GetXNodeIDHeaderValue());
     SetHttpHeader(headers, HTTP_HEADER_X_NODE_VERSION, GetXNodeVersionHeaderValue());
   }
 }
