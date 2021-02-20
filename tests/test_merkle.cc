@@ -7,7 +7,7 @@ namespace token{
         ASSERT_EQ(genesis->GetMerkleRoot(), Hash::FromHexString("B3863C87CD23972C5B322B5E88145E671B9C42E7C8DDE5AC7065EFB1E0E2B4FB"));
     }
 
-    static inline TransactionPtr
+    static inline IndexedTransactionPtr
     CreateTransaction(int64_t index, int64_t num_outputs, Timestamp timestamp=Clock::now()){
         InputList inputs;
         OutputList outputs;
@@ -16,7 +16,7 @@ namespace token{
             ss << "TestToken" << idx;
             outputs.push_back(Output("TestUser", ss.str()));
         }
-        return std::make_shared<Transaction>(timestamp, index, inputs, outputs);
+        return std::make_shared<IndexedTransaction>(timestamp, index, inputs, outputs);
     }
 
     TEST(TestMerkle, test_audit_proof){
@@ -28,7 +28,7 @@ namespace token{
         ASSERT_TRUE(tree1->BuildAuditProof(h1, p1));
         ASSERT_TRUE(tree1->VerifyAuditProof(h1, p1));
 
-        TransactionPtr tx2 = CreateTransaction(0, 1);
+        IndexedTransactionPtr tx2 = CreateTransaction(0, 1);
         Hash h2 = tx2->GetHash();
         MerkleProof p2;
         ASSERT_FALSE(tree1->BuildAuditProof(h2, p2));
@@ -48,7 +48,7 @@ namespace token{
         MerkleTreePtr tree1 = MerkleTreeBuilder::Build(genesis);
         ASSERT_EQ(tree1->GetRootHash(), Hash::FromHexString("B3863C87CD23972C5B322B5E88145E671B9C42E7C8DDE5AC7065EFB1E0E2B4FB"));
 
-        TransactionPtr tx = CreateTransaction(0, 1);
+        IndexedTransactionPtr tx = CreateTransaction(0, 1);
         BlockPtr blk1 = BlockPtr(new Block(genesis, { tx }));
         MerkleTreePtr tree2 = MerkleTreeBuilder::Build(blk1);
         tree1->Append(tree2);

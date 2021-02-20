@@ -178,7 +178,7 @@ namespace token{
       Object(),
       phase_(Proposal::kProposalPhase),
       result_(Proposal::kNone),
-      raw_(BlockHeader(blk), proposer),
+      raw_(blk->GetHeader(), proposer),
       accepted_(),
       rejected_(){}
     Proposal(const BufferPtr& buff):

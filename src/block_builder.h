@@ -45,7 +45,7 @@ namespace token{
       LOG(INFO) << "creating block from parent: ";
       PrettyPrinter::PrettyPrint(head);
 
-      BlockPtr blk = Block::NewInstance(head, transactions);
+      BlockPtr blk = Block::FromParent(head, transactions);
       Hash hash = blk->GetHash();
       if(!ObjectPool::PutBlock(hash, blk)){
         LOG(WARNING) << "couldn't put new block " << hash << " into the object pool.";

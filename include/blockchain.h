@@ -48,7 +48,7 @@ namespace token{
           return stream << "Unknown";
       }
     }
-   private:
+
     class BlockKey : public KeyType{
      public:
       static inline int
@@ -166,6 +166,16 @@ namespace token{
         ss << ")";
         return ss.str();
       }
+
+      friend bool operator==(const BlockKey& a, const BlockKey& b){
+        return CompareHeight(a, b) == 0
+            && CompareSize(a, b) == 0;
+      }
+
+      friend bool operator!=(const BlockKey& a, const BlockKey& b){
+        return CompareHeight(a, b) != 0
+            || CompareSize(a, b) != 0;
+      }
     };
 
     class ReferenceKey : public KeyType{
@@ -257,6 +267,7 @@ namespace token{
       }
     };
 
+   private:
     class Comparator : public leveldb::Comparator{
      private:
       static inline ObjectTag

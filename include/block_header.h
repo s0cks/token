@@ -1,7 +1,9 @@
 #ifndef TOKEN_BLOCK_HEADER_H
 #define TOKEN_BLOCK_HEADER_H
 
-#include "block.h"
+#include "hash.h"
+#include "object.h"
+#include "utils/buffer.h"
 
 namespace token{
   class BlockHeader : public SerializableObject{
@@ -50,15 +52,6 @@ namespace token{
       merkle_root_(merkle_root),
       hash_(hash),
       num_transactions_(num_transactions){}
-    BlockHeader(const BlockPtr& blk):
-      SerializableObject(),
-      timestamp_(blk->GetTimestamp()),
-      version_(blk->GetVersion()),
-      height_(blk->GetHeight()),
-      previous_hash_(blk->GetPreviousHash()),
-      merkle_root_(blk->GetMerkleRoot()),
-      hash_(blk->GetHash()),
-      num_transactions_(blk->GetNumberOfTransactions()){}
     BlockHeader(const BufferPtr& buffer):
       SerializableObject(),
       timestamp_(buffer->GetTimestamp()),

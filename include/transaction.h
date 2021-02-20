@@ -541,6 +541,10 @@ namespace token{
         index_(index){}
     ~IndexedTransaction() = default;
 
+    Type GetType() const{
+      return Type::kIndexedTransaction;
+    }
+
     int64_t GetIndex() const{
       return index_;
     }

@@ -11,47 +11,39 @@ namespace token{
   NewVerackMessage(){
     BlockPtr head = Block::Genesis();
     Version version = Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
-    return VerackMessage::NewInstance(ClientType::kNode, UUID(), NodeAddress(), version, BlockHeader(head), Hash::GenerateNonce());
+    return VerackMessage::NewInstance(ClientType::kNode, UUID(), NodeAddress(), version, head->GetHeader(), Hash::GenerateNonce());
+  }
+
+  static inline ProposalPtr
+  NewProposal(){
+    BlockPtr blk = Block::Genesis();
+    UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
+    return std::make_shared<Proposal>(uuid, blk->GetHeader());
   }
 
   static inline RpcMessagePtr
   NewPrepareMessage(){
-    BlockHeader blk = BlockHeader(Block::Genesis());
-    UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
-    ProposalPtr proposal = std::make_shared<Proposal>(uuid, blk);
-    return PrepareMessage::NewInstance(proposal);
+    return PrepareMessage::NewInstance(NewProposal());
   }
 
   static inline RpcMessagePtr
   NewPromiseMessage(){
-    BlockHeader blk = BlockHeader(Block::Genesis());
-    UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
-    ProposalPtr proposal = std::make_shared<Proposal>(uuid, blk);
-    return PromiseMessage::NewInstance(proposal);
+    return PromiseMessage::NewInstance(NewProposal());
   }
 
   static inline RpcMessagePtr
   NewCommitMessage(){
-    BlockHeader blk = BlockHeader(Block::Genesis());
-    UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
-    ProposalPtr proposal = std::make_shared<Proposal>(uuid, blk);
-    return CommitMessage::NewInstance(proposal);
+    return CommitMessage::NewInstance(NewProposal());
   }
 
   static inline RpcMessagePtr
   NewAcceptedMessage(){
-    BlockHeader blk = BlockHeader(Block::Genesis());
-    UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
-    ProposalPtr proposal = std::make_shared<Proposal>(uuid, blk);
-    return AcceptedMessage::NewInstance(proposal);
+    return AcceptedMessage::NewInstance(NewProposal());
   }
 
   static inline RpcMessagePtr
   NewRejectedMessage(){
-    BlockHeader blk = BlockHeader(Block::Genesis());
-    UUID uuid("f5c39f32-536b-11eb-a930-516c7b33ab9a");
-    ProposalPtr proposal = std::make_shared<Proposal>(uuid, blk);
-    return RejectedMessage::NewInstance(proposal);
+    return RejectedMessage::NewInstance(NewProposal());
   }
 
   static inline RpcMessagePtr
@@ -80,7 +72,7 @@ namespace token{
     OutputList outputs = {
       Output("TestUser", "TestToken"),
     };
-    return TransactionMessage::NewInstance(Transaction::NewInstance(0, inputs, outputs));
+    return TransactionMessage::NewInstance(Transaction::NewInstance(inputs, outputs));
   }
 
   static inline RpcMessagePtr
@@ -97,7 +89,7 @@ namespace token{
   TEST(Test##Name##MessageSerialization, test_pos){  \
     RpcMessagePtr a = New##Name##Message();             \
     BufferPtr tmp = Buffer::NewInstance(a->GetBufferSize()); \
-    ASSERT_TRUE(a->Commit(tmp));                      \
+    ASSERT_TRUE(a->Write(tmp));                      \
     ASSERT_EQ(tmp->GetWrittenBytes(), a->GetBufferSize());   \
     ASSERT_EQ(tmp->GetObjectTag(), ObjectTag(Type::k##Name##Message, a->GetBufferSize())); \
     RpcMessagePtr b = Name##Message::NewInstance(tmp);  \

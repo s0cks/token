@@ -100,6 +100,21 @@ namespace token{
     return GetBlock(GetReference(BLOCKCHAIN_REFERENCE_HEAD));
   }
 
+  static inline bool
+  WriteBlock(const std::string& filename, const Hash& hash, const BlockPtr& blk){
+    FILE* file;
+    if(!(file = fopen(filename.data(), "wb"))){
+      LOG(WARNING) << "cannot open file " << filename << ": " << strerror(errno);
+      return false;
+    }
+
+    if(!WriteBlock(file, blk)){
+      LOG(WARNING) << "cannot write block " << hash << " to file: " << filename;
+      return false;
+    }
+    return true;
+  }
+
   bool BlockChain::PutBlock(const Hash& hash, BlockPtr blk){
     BlockKey key(blk);
     std::string filename = GetNewBlockFilename(blk);
@@ -113,14 +128,29 @@ namespace token{
       return false;
     }
 
-    BlockFileWriter writer(filename, blk);
-    if(!writer.Write()){
-      LOG(WARNING) << "cannot write block " << hash << " to file: " << filename;
-      return false; //TODO: remove key
+    if(!WriteBlock(filename, hash, blk)){
+      LOG(ERROR) << "cannot write block file";
+      return false;//TODO: better error handling
     }
 
     LOG(INFO) << "indexed block: " << hash;
     return true;
+  }
+
+  static inline BlockPtr
+  ReadBlock(const std::string& filename, const Hash& hash){
+    FILE* file;
+    if(!(file = fopen(filename.data(), "rb"))){
+      LOG(ERROR) << "cannot open file " << filename << ": " << strerror(errno);
+      return BlockPtr(nullptr);
+    }
+
+    BlockPtr blk = ReadBlock(file);
+    if(!blk){
+      LOG(ERROR) << "cannot read block " << hash << " from file: " << filename;
+      return BlockPtr(nullptr);
+    }
+    return blk;
   }
 
   BlockPtr BlockChain::GetBlock(const Hash& hash){
@@ -132,14 +162,7 @@ namespace token{
       LOG(WARNING) << "cannot get " << hash << ": " << status.ToString();
       return BlockPtr(nullptr);
     }
-
-    BlockFileReader reader(filename);
-    if(!reader.HasValidTag()){
-      LOG(WARNING) << "block file " << filename << " has an invalid tag.";
-      return BlockPtr(nullptr);
-    }
-
-    return reader.ReadBlockData();
+    return ReadBlock(filename, hash);
   }
 
   BlockPtr BlockChain::GetBlock(int64_t height){
@@ -269,12 +292,9 @@ namespace token{
 
   static inline bool
   IsValidBlock(const std::string& filename){
-    BlockFileReader reader(filename);
-    if(!reader.HasValidTag()){
-      LOG(WARNING) << filename << " has an invalid tag.";
-      return false;
-    }
-    return true;
+    //TODO: implement
+    LOG(ERROR) << "not implemented yet.";
+    return false;
   }
 
   int64_t BlockChain::GetNumberOfBlocks(){

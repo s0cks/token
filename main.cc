@@ -7,6 +7,8 @@
 #include "configuration.h"
 #include "job/scheduler.h"
 
+#include "utils/filesystem.h"
+
 #include "crash/crash_report.h"
 
 // --path "/usr/share/ledger"

@@ -10,32 +10,36 @@
 #include "consensus/proposal.h"
 #include "consensus/proposal_manager.h"
 
+// The server session receives packets sent from peers
+// this is for inbound packets
 namespace token{
 #define NOT_IMPLEMENTED \
   SESSION_LOG(ERROR, this) << "not implemented!"
 
+  //TODO:
+  // - state check
+  // - version check
+  // - echo nonce
   void ServerSession::OnVersionMessage(const VersionMessagePtr& msg){
-    //TODO:
-    // - state check
-    // - version check
-    // - echo nonce
+    // upon receiving a VersionMessage from a new client, respond w/ a VersionMessage
+    // to initiate the connection handshake
     UUID id = ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID);
     Send(VersionMessage::NewInstance(id));
   }
 
+  //TODO:
+  // - verify nonce
   void ServerSession::OnVerackMessage(const VerackMessagePtr& msg){
-    //TODO:
-    // - verify nonce
-    BlockPtr head = BlockChain::GetHead();
-    Send(
-      VerackMessage::NewInstance(
-        ClientType::kNode,
-        ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID),
-        LedgerServer::GetCallbackAddress(),
-        Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION),
-        BlockHeader(head),
-        Hash::GenerateNonce())
-    );
+    // upon receiving a VerackMessage from a new client, respond w/ a VerackMessage
+    // to finish the connection handshake
+    ClientType type = ClientType::kNode;
+    UUID node_id = ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID);
+    NodeAddress callback = LedgerServer::GetCallbackAddress();
+    Version version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
+    BlockPtr head = BlockChain::GetHead(); //TODO: optimize
+    Hash nonce = Hash::GenerateNonce();
+    Send(VerackMessage::NewInstance(type, node_id, callback, version, head->GetHeader(), nonce));
+
     UUID id = msg->GetID();
     if(IsConnecting()){
       SetUUID(id);
@@ -92,6 +96,11 @@ namespace token{
   }
 
   void ServerSession::OnPrepareMessage(const PrepareMessagePtr& msg){
+    // upon receiving a PrepareMessage from a Peer:
+    // - if a proposal is active AND the doesn't match the requested proposal, send a rejection.
+    //  - pause local BlockMiner
+    //  - set the current proposal
+    //  - send an acceptance
     ProposalPtr proposal = msg->GetProposal();
     if(!BlockMiner::Pause())
       return Send(RejectedMessage::NewInstance(proposal));
@@ -101,6 +110,11 @@ namespace token{
   }
 
   void ServerSession::OnPromiseMessage(const PromiseMessagePtr& msg){
+    // upon receiving a PromiseMessage from a Peer:
+    //  - if a proposal isn't active, send a rejection.
+    //  - if the current proposal doesn't match the requested proposal, send a rejection.
+    //  - transition the current proposal to kPromisePhase, send a rejection if this fails.
+    //  - send an acceptance
     if(!ProposalManager::IsProposalFor(msg->GetProposal()))
       return Send(RejectedMessage::NewInstance(msg->GetProposal()));
     ProposalPtr proposal = ProposalManager::GetProposal();
@@ -110,6 +124,12 @@ namespace token{
   }
 
   void ServerSession::OnCommitMessage(const CommitMessagePtr& msg){
+    // upon receiving a CommitMessage from a peer:
+    //  - if a proposal isn't active, send a rejection.
+    //  - if the current proposal doesn't match the requested proposal, send a rejection.
+    //  - transition the current proposal to kCommitPhase, send a rejection if this fails.
+    //  - commit the proposal - send a rejection if this fails.
+    //  - send an acceptance.
     if(!ProposalManager::IsProposalFor(msg->GetProposal()))
       return Send(RejectedMessage::NewInstance(msg->GetProposal()));
     ProposalPtr proposal = ProposalManager::GetProposal();
@@ -121,6 +141,10 @@ namespace token{
   }
 
   void ServerSession::OnAcceptedMessage(const AcceptedMessagePtr& msg){
+    // upon receiving an AcceptedMessage from a peer:
+    //  - if a proposal isn't active, send a rejection.
+    //  - if the current proposal doesn't match the requested proposal, send a rejection.
+    //  - register sender in the accepted list for the current proposal
     if(!ProposalManager::IsProposalFor(msg->GetProposal()))
       return Send(RejectedMessage::NewInstance(msg->GetProposal()));
     ProposalPtr proposal = ProposalManager::GetProposal();
@@ -128,6 +152,10 @@ namespace token{
   }
 
   void ServerSession::OnRejectedMessage(const RejectedMessagePtr& msg){
+    // upon receiving an AcceptedMessage from a peer:
+    //  - if a proposal isn't active, send a rejection.
+    //  - if the current proposal doesn't match the requested proposal, send a rejection.
+    //  - register sender in the rejected list for the current proposal
     if(!ProposalManager::IsProposalFor(msg->GetProposal()))
       return Send(RejectedMessage::NewInstance(msg->GetProposal()));
     ProposalPtr proposal = ProposalManager::GetProposal();
@@ -139,7 +167,7 @@ namespace token{
     Hash hash = blk->GetHash();
     if(!ObjectPool::HasBlock(hash)){
       ObjectPool::PutBlock(hash, blk);
-      //TODO: Server::Broadcast(InventoryMessage::NewInstance(blk));
+      //TODO: Server::Broadcast(InventoryMessage::FromParent(blk));
     }
   }
 

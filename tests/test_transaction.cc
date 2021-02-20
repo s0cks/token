@@ -7,7 +7,7 @@ namespace token{
     // predictable
     InputList inputs = {};
     OutputList outputs = {};
-    return Transaction::NewInstance(0, inputs, outputs, FromUnixTimestamp(0));
+    return Transaction::NewInstance(inputs, outputs, FromUnixTimestamp(0));
   }
 
   static TransactionPtr
@@ -15,7 +15,7 @@ namespace token{
     // unpredictable
     InputList inputs = {};
     OutputList outputs = {};
-    return Transaction::NewInstance(0, inputs, outputs);
+    return Transaction::NewInstance(inputs, outputs);
   }
 
   DEFINE_BINARY_OBJECT_POSITIVE_TEST(Transaction, CreateA);

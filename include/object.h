@@ -78,6 +78,7 @@ namespace token{
     FOR_EACH_TYPE(DEFINE_TYPE)
 #undef DEFINE_TYPE
     kBlockHeader,
+    kIndexedTransaction,
 
 #define DEFINE_MESSAGE_TYPE(Name) k##Name##Message,
     FOR_EACH_MESSAGE_TYPE(DEFINE_MESSAGE_TYPE)

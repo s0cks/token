@@ -4,12 +4,10 @@
 #include "hash.h"
 #include "bloom.h"
 #include "transaction.h"
+#include "block_header.h"
 #include "utils/buffer.h"
 
 namespace token{
-  class Block;
-  typedef std::shared_ptr<Block> BlockPtr;
-
   class BlockVisitor;
   class Block : public BinaryObject, public std::enable_shared_from_this<Block>{
     //TODO:
@@ -81,6 +79,18 @@ namespace token{
 
     Hash GetPreviousHash() const{
       return previous_hash_;
+    }
+
+    BlockHeader GetHeader() const{
+      return BlockHeader(
+        timestamp_,
+        version_,
+        height_,
+        previous_hash_,
+        GetMerkleRoot(),
+        GetHash(),
+        GetNumberOfTransactions()
+      );
     }
 
     BloomFilter& GetBloomFilter(){
@@ -204,7 +214,18 @@ namespace token{
     }
 
     static inline BlockPtr
-    NewInstance(const BlockPtr& parent, const IndexedTransactionSet& txs, const Timestamp& timestamp = Clock::now()){
+    NewInstance(const BlockHeader& header, const IndexedTransactionSet& txs){
+      return std::make_shared<Block>(
+        header.GetHeight(),
+        header.GetVersion(),
+        header.GetPreviousHash(),
+        txs,
+        header.GetTimestamp()
+      );
+    }
+
+    static inline BlockPtr
+    FromParent(const BlockPtr& parent, const IndexedTransactionSet& txs, const Timestamp& timestamp = Clock::now()){
       return std::make_shared<Block>(parent, txs, timestamp);
     }
 

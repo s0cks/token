@@ -8,6 +8,9 @@
 #include "consensus/proposal.h"
 #include "consensus/proposal_manager.h"
 
+// The peer session sends packets to a peer
+// any response received is purely in relation to the sent packets
+// this is for outbound packets
 namespace token{
   bool PeerSession::Connect(){
     //TODO: StartHeartbeatTimer();
@@ -46,12 +49,36 @@ namespace token{
 
     BlockPtr head = BlockChain::GetHead();
     UUID server_id = ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID);
-    session->Send(VersionMessage::NewInstance(ClientType::kNode, server_id, BlockHeader(head)));
+    session->Send(VersionMessage::NewInstance(ClientType::kNode, server_id, head->GetHeader()));
     if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
       LOG(WARNING) << "peer read failure: " << uv_strerror(status);
       //TODO: Disconnect();
       return;
     }
+  }
+
+  void PeerSession::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
+    PeerSession* session = (PeerSession*)stream->data;
+    if(nread == UV_EOF){
+      LOG(ERROR) << "client disconnected!";
+      return;
+    } else if(nread < 0){
+      LOG(ERROR) << "[" << nread << "] client read error: " << std::string(uv_strerror(nread));
+      return;
+    } else if(nread == 0){
+      LOG(WARNING) << "zero message size received";
+      return;
+    } else if(nread > 65536){
+      LOG(ERROR) << "too large of a buffer: " << nread;
+      return;
+    }
+
+    BufferPtr buffer = Buffer::From(buff->base, nread);
+    do{
+      RpcMessagePtr message = RpcMessage::From(session, buffer);
+      session->OnMessageRead(message);
+    } while(buffer->GetReadBytes() < buffer->GetBufferSize());
+    free(buff->base);
   }
 
   void PeerSession::OnDisconnect(uv_async_t* handle){
@@ -138,71 +165,53 @@ namespace token{
     session->Send(RejectedMessage::NewInstance(proposal));
   }
 
-  void PeerSession::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
-    PeerSession* session = (PeerSession*)stream->data;
-    if(nread == UV_EOF){
-      LOG(ERROR) << "client disconnected!";
-      return;
-    } else if(nread < 0){
-      LOG(ERROR) << "[" << nread << "] client read error: " << std::string(uv_strerror(nread));
-      return;
-    } else if(nread == 0){
-      LOG(WARNING) << "zero message size received";
-      return;
-    } else if(nread > 65536){
-      LOG(ERROR) << "too large of a buffer: " << nread;
-      return;
-    }
-
-    BufferPtr buffer = Buffer::From(buff->base, nread);
-    do{
-      RpcMessagePtr message = RpcMessage::From(session, buffer);
-      session->OnMessageRead(message);
-    } while(buffer->GetReadBytes() < buffer->GetBufferSize());
-    free(buff->base);
-  }
-
-  void PeerSession::OnGetBlocksMessage(const GetBlocksMessagePtr& msg){}
-
   void PeerSession::OnVersionMessage(const VersionMessagePtr& msg){
-    BlockPtr head = BlockChain::GetHead();
-    Send(
-      VerackMessage::NewInstance(
-        ClientType::kNode,
-        ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID),
-        LedgerServer::GetCallbackAddress(),
-        Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION),
-        BlockHeader(head),
-        Hash::GenerateNonce()));
+    ClientType type = ClientType::kNode;
+    UUID node_id = ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID);
+    NodeAddress callback = LedgerServer::GetCallbackAddress();
+    Version version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
+    BlockPtr head = BlockChain::GetHead();//TODO: optimize
+    Hash nonce = Hash::GenerateNonce();
+    Send(VerackMessage::NewInstance(type, node_id, callback, version, head->GetHeader(), nonce));
   }
 
+  //TODO:
+  // - nonce check
+  // - state transition
+  // - set remote <HEAD>
   void PeerSession::OnVerackMessage(const VerackMessagePtr& msg){
-    LOG(INFO) << "remote timestamp: " << FormatTimestampReadable(msg->GetTimestamp());
-    LOG(INFO) << "remote <HEAD>: " << msg->GetHead();
+#ifdef TOKEN_DEBUG
+    SESSION_LOG(INFO, this) << "remote timestamp: " << FormatTimestampReadable(msg->GetTimestamp());
+    SESSION_LOG(INFO, this) << "remote <HEAD>: " << msg->GetHead();
+#endif//TOKEN_DEBUG
 
-    //TODO: SetHead(msg->GetHead());
     if(IsConnecting()){
-      SetInfo(Peer(msg->GetID(), msg->GetCallbackAddress()));
-      LOG(INFO) << "connected to peer: " << GetInfo();
+      Peer info(msg->GetID(), msg->GetCallbackAddress());
+      SESSION_LOG(INFO, this) << "connected to peer: " << info;
+      SetInfo(info);
       SetState(Session::kConnectedState);
 
-      BlockHeader local_head = BlockHeader(BlockChain::GetHead());
+      BlockHeader local_head = BlockChain::GetHead()->GetHeader();
       BlockHeader remote_head = msg->GetHead();
-      if(local_head == remote_head){
-        LOG(INFO) << "skipping remote <HEAD> := " << remote_head;
-      } else if(local_head < remote_head){
+      if(local_head < remote_head){
+#ifdef TOKEN_DEBUG
+        SESSION_LOG(INFO, this) << "starting new SynchronizeJob to resolve remote/<HEAD> := " << remote_head;
+#endif//TOKEN_DEBUG
+
         SynchronizeJob* job = new SynchronizeJob(this, remote_head);
         if(!JobScheduler::Schedule(job)){
-          LOG(WARNING) << "couldn't schedule SynchronizeJob";
+          SESSION_LOG(WARNING, this) << "couldn't schedule new SynchronizeJob";
           return;
         }
-        Send(GetBlocksMessage::NewInstance());
-      }
-    }
 
-    //TODO:
-    // - nonce check
-    // - state transition
+        Send(GetBlocksMessage::NewInstance());
+        return;
+      }
+
+#ifdef TOKEN_DEBUG
+      SESSION_LOG(INFO, this) << info << "/<HEAD> == <HEAD>, skipping synchronization.";
+#endif//TOKEN_DEBUG
+    }
   }
 
   void PeerSession::OnPrepareMessage(const PrepareMessagePtr& msg){}
@@ -299,6 +308,8 @@ namespace token{
     LOG(INFO) << "downloading " << needed.size() << "/" << items.size() << " items from inventory....";
     Send(GetDataMessage::NewInstance(items));
   }
+
+  void PeerSession::OnGetBlocksMessage(const GetBlocksMessagePtr& msg){}
 }
 
 #endif//TOKEN_ENABLE_SERVER
