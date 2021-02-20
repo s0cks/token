@@ -7,10 +7,11 @@ namespace token{
   void PeerSessionThread::HandleThread(uword parameter){
     PeerSessionThread* thread = (PeerSessionThread*) parameter;
     thread->SetState(State::kStarting);
+    // start-up logic here
+    uv_async_init(thread->GetLoop(), &thread->disconnect_, &OnDisconnect);
 
     thread->SetState(State::kRunning);
-    // start-up logic here
-    while(!thread->IsStopping()){
+    while(thread->IsRunning()){
       PeerSessionManager::ConnectRequest request;
       if(PeerSessionManager::GetNextRequest(request, PeerSessionThread::kRequestTimeoutIntervalMilliseconds)){
         NodeAddress paddr = request.GetAddress();
@@ -28,6 +29,12 @@ namespace token{
           }
           thread->ClearCurrentSession();
           continue;
+        }
+
+        int err;
+        if((err = uv_run(thread->GetLoop(), UV_RUN_DEFAULT)) != 0){
+          LOG(WARNING) << "couldn't run peer session loop: " << uv_strerror(err);
+          continue; //TODO: better error handling
         }
 
         thread->ClearCurrentSession();
@@ -52,11 +59,30 @@ namespace token{
     return Thread::StartThread(&thread_, thread_name_.data(), &HandleThread, (uword) this);
   }
 
+  void PeerSessionThread::OnWalk(uv_handle_t* handle, void* data){
+    uv_close(handle, &OnClose);
+  }
+
+  void PeerSessionThread::OnClose(uv_handle_t* handle){
+    LOG(INFO) << "on-close.";
+  }
+
+  void PeerSessionThread::OnDisconnect(uv_async_t* handle){
+    PeerSessionThread* thread = (PeerSessionThread*)handle->data;
+    if(!thread->Disconnect())
+      LOG(WARNING) << "couldn't disconnect peer session thread.";
+  }
+
   bool PeerSessionThread::Stop(){
     SetState(PeerSessionThread::kStopping);
 
-    void** result = NULL;
     int err;
+    if((err = uv_async_send(&disconnect_)) != 0){
+      LOG(WARNING) << "cannot send disconnect: " << uv_strerror(err);
+      return false;
+    }
+
+    void** result = NULL;
     if((err = pthread_join(thread_, result)) != 0){
       LOG(WARNING) << "couldn't join thread: " << strerror(err);
       return false;

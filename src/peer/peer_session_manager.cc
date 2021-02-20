@@ -71,12 +71,6 @@ namespace token{
     std::lock_guard<std::mutex> guard(mutex_);
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
       PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning() && thread->HasSession()){
-        PeerSession* session = thread->GetCurrentSession();
-        session->Disconnect();
-        //TODO:session->WaitForState(PeerSession::kDisconnectedState);
-      }
-
       LOG(INFO) << "stopping peer session thread #" << idx << "....";
       thread->Stop();
     }

@@ -223,6 +223,11 @@ main(int argc, char **argv){
   }
 #endif//TOKEN_DEBUG
 
+  if(!PeerSessionManager::Shutdown()){
+    CrashReport::PrintNewCrashReport("Cannot shutdown peers.");
+    return EXIT_FAILURE;
+  }
+
   if(!BlockMiner::Start()){
     CrashReport::PrintNewCrashReport("Cannot start the block miner.");
     return EXIT_FAILURE;

@@ -78,7 +78,10 @@ namespace token{
     std::condition_variable cond_;
     State state_;
     Status status_;
+
     uv_loop_t* loop_;
+    uv_async_t disconnect_;
+
     PeerSession* session_;
 
     PeerSession* CreateNewSession(const NodeAddress& address){
@@ -99,6 +102,24 @@ namespace token{
       return ss.str();
     }
 
+    bool Disconnect(){
+      int err;
+      if((err = uv_loop_close(GetLoop())) == UV_EBUSY)
+        uv_walk(GetLoop(), &OnWalk, NULL);
+
+      uv_run(GetLoop(), UV_RUN_DEFAULT);
+      if((err = uv_loop_close(GetLoop())) != 0){
+        LOG(ERROR) << "failed to close loop: " << uv_strerror(err);
+        return false;
+      }
+
+      LOG(INFO) << "loop closed.";
+      return true;
+    }
+
+    static void OnWalk(uv_handle_t* handle, void* data);
+    static void OnClose(uv_handle_t* handle);
+    static void OnDisconnect(uv_async_t* handle);
     static void HandleThread(uword parameter);
    public:
     PeerSessionThread(const WorkerId& worker, uv_loop_t* loop = uv_loop_new()):
@@ -110,7 +131,10 @@ namespace token{
       state_(State::kStopped),
       status_(Status::kOk),
       loop_(loop),
-      session_(nullptr){}
+      disconnect_(),
+      session_(nullptr){
+      disconnect_.data = this;
+    }
     ~PeerSessionThread(){
       if(loop_){
         uv_loop_delete(loop_);

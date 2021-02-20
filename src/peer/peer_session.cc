@@ -27,13 +27,10 @@ namespace token{
       LOG(ERROR) << "couldn't connect to peer " << paddr << ": " << uv_strerror(err);
       return false;
     }
-
-    uv_run(GetLoop(), UV_RUN_DEFAULT);
     return true;
   }
 
   bool PeerSession::Disconnect(){
-    //TODO: implement
     return false;
   }
 
