@@ -1,7 +1,6 @@
 #include <mutex>
 #include <glog/logging.h>
 #include "pool.h"
-#include "utils/kvstore.h"
 #include "atomic/relaxed_atomic.h"
 
 namespace token{
@@ -159,8 +158,12 @@ namespace token{
       LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash; \
       return false;           \
     }                         \
+    leveldb::WriteOptions options;                                    \
+    options.sync = true;      \
+    PoolKey key(val->GetType(), val->GetBufferSize(), hash);          \
+    BufferPtr buffer = val->ToBuffer();                               \
     leveldb::Status status;   \
-    if(!(status = PutObject(GetIndex(), hash, val)).ok()){            \
+    if(!(status = GetIndex()->Put(options, key, buffer->operator leveldb::Slice())).ok()){ \
       LOG(WARNING) << "cannot index object " << hash << ": " << status.ToString();\
       return false;           \
     }                         \
@@ -172,9 +175,10 @@ namespace token{
 
 #define DEFINE_GET_TYPE(Name) \
   Name##Ptr ObjectPool::Get##Name(const Hash& hash){ \
+    PoolKey key(Type::k##Name, 0, hash);             \
     std::string data;         \
     leveldb::Status status;   \
-    if(!(status = Get##Name##Object(GetIndex(), hash, &data)).ok()){ \
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), key, &data)).ok()){ \
       LOG(WARNING) << "cannot get " << hash << ": " << status.ToString(); \
       return Name##Ptr(nullptr);                     \
     }                         \
@@ -186,7 +190,9 @@ namespace token{
 
 #define DEFINE_HAS_TYPE(Name) \
   bool ObjectPool::Has##Name(const Hash& hash){ \
-    return HasObject(GetIndex(), hash, Type::k##Name); \
+    std::string data;                          \
+    PoolKey key(Type::k##Name, 0, hash);        \
+    return GetIndex()->Get(leveldb::ReadOptions(), key, &data).ok(); \
   }
   FOR_EACH_POOL_TYPE(DEFINE_HAS_TYPE);
 #undef DEFINE_HAS_TYPE
@@ -209,8 +215,11 @@ namespace token{
 
 #define DEFINE_REMOVE_TYPE(Name) \
   bool ObjectPool::Remove##Name(const Hash& hash){ \
+    PoolKey key(Type::k##Name, 0, hash); \
+    leveldb::WriteOptions options;                 \
+    options.sync = true;         \
     leveldb::Status status;      \
-    if(!(status = RemoveObject(GetIndex(), hash, Type::k##Name)).ok()){ \
+    if(!(status = GetIndex()->Delete(options, key)).ok()){ \
       LOG(WARNING) << "cannot remove " << hash << " from pool: " << status.ToString(); \
       return false;              \
     }                            \

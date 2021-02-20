@@ -1,9 +1,11 @@
 #include <mutex>
 #include <condition_variable>
 
+#include <leveldb/db.h>
+#include <leveldb/slice.h>
+
 #include "block.h"
 #include "wallet.h"
-#include "utils/kvstore.h"
 
 namespace token{
   void ToJson(const Wallet& hashes, Json::String& sb){
@@ -79,9 +81,19 @@ namespace token{
     return true;
   }
 
+  //TODO: cleanup
   bool WalletManager::PutWallet(const User& user, const Wallet& wallet){
+    UserKey key(user);
+
+    BufferPtr buffer = Buffer::NewInstance(GetBufferSize(wallet));
+    if(!Encode(wallet, buffer))
+      return false;
+
+    leveldb::WriteOptions options;
+    options.sync = true;
+
     leveldb::Status status;
-    if(!(status = PutObject(GetIndex(), user, wallet)).ok()){
+    if(!(status = GetIndex()->Put(options, key, buffer->operator leveldb::Slice())).ok()){
       LOG(WARNING) << "couldn't index wallet for user " << user << ": " << status.ToString();
       return false;
     }
@@ -90,21 +102,25 @@ namespace token{
     return true;
   }
 
+  //TODO: refactor
   bool WalletManager::GetWallet(const User& user, Wallet& wallet){
+    UserKey key(user);
+
     std::string data;
     leveldb::Status status;
-    if(!(status = GetObject(GetIndex(), UserKey(user), &data)).ok()){
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), key, &data)).ok()){
       LOG(WARNING) << "cannot get wallet for user " << user << ": " << status.ToString();
       return false;
     }
     return Decode(data, wallet);
   }
 
+  //TODO: refactor
   bool WalletManager::GetWallet(const User& user, Json::Writer& writer){
+    UserKey key(user);
     std::string data;
-
     leveldb::Status status;
-    if(!(status = GetObject(GetIndex(), UserKey(user), &data)).ok()){
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), key, &data)).ok()){
       LOG(WARNING) << "cannot get wallet for user " << user << ": " << status.ToString();
       return false;
     }
@@ -124,34 +140,15 @@ namespace token{
     return true;
   }
 
-  bool WalletManager::GetWallet(const User& user, Json::String& json){
-    std::string data;
-
-    leveldb::Status status;
-    if(!(status = GetObject(GetIndex(), UserKey(user), &data)).ok()){
-      LOG(WARNING) << "cannot get wallet for user " << user << ": " << status.ToString();
-      return false;
-    }
-
-    int64_t size = (int64_t) data.size();
-    uint8_t* bytes = (uint8_t*) data.data();
-
-    Json::Writer writer(json);
-    writer.StartArray();
-    int64_t offset = sizeof(int64_t);
-    while(offset < size){
-      Hash hash(&bytes[offset], Hash::kSize);
-      std::string hex = hash.HexString();
-      writer.String(hex.data(), 64);
-      offset += Hash::kSize;
-    }
-    writer.EndArray();
-    return true;
-  }
-
+  //TODO: refactor
   bool WalletManager::RemoveWallet(const User& user){
+    leveldb::WriteOptions options;
+    options.sync = true;
+
+    UserKey key(user);
+
     leveldb::Status status;
-    if(!(status = RemoveObject(GetIndex(), user)).ok()){
+    if(!(status = GetIndex()->Delete(options, key)).ok()){
       LOG(WARNING) << "couldn't remove wallet for user " << user << ": " << status.ToString();
       return false;
     }
@@ -161,7 +158,9 @@ namespace token{
   }
 
   bool WalletManager::HasWallet(const User& user){
-    return HasObject(GetIndex(), user);
+    std::string data;
+    UserKey key(user);
+    return GetIndex()->Get(leveldb::ReadOptions(), key, &data).ok();
   }
 
   leveldb::Status WalletManager::Commit(const leveldb::WriteBatch& batch){

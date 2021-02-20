@@ -26,6 +26,7 @@ namespace token{
           } else{
             LOG(WARNING) << "couldn't connect to peer " << paddr << ".";
           }
+          thread->ClearCurrentSession();
           continue;
         }
 

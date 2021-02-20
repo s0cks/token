@@ -3,7 +3,7 @@
 
 #include <leveldb/write_batch.h>
 
-#include "key.h"
+#include "pool.h"
 #include "block.h"
 #include "wallet.h"
 #include "transaction.h"
@@ -293,7 +293,7 @@ namespace token{
 
     inline bool
     PutTransaction(const Hash& hash, const TransactionPtr& val){
-      PoolKey key(Type::kTransaction, val->GetBufferSize(), hash);
+      ObjectPool::PoolKey key(Type::kTransaction, val->GetBufferSize(), hash);
       BufferPtr value = val->ToBuffer();
       batch_.Put(key, value->AsSlice());
       return true;
@@ -301,7 +301,7 @@ namespace token{
 
     inline bool
     PutBlock(const Hash& hash, const BlockPtr& val){
-      PoolKey key(Type::kBlock, val->GetBufferSize(), hash);
+      ObjectPool::PoolKey key(Type::kBlock, val->GetBufferSize(), hash);
       BufferPtr value = val->ToBuffer();
       batch_.Put(key, value->AsSlice());
       return true;
@@ -309,7 +309,7 @@ namespace token{
 
     inline bool
     PutUnclaimedTransaction(const Hash& hash, const UnclaimedTransactionPtr& val){
-      PoolKey key(Type::kUnclaimedTransaction, val->GetBufferSize(), hash);
+      ObjectPool::PoolKey key(Type::kUnclaimedTransaction, val->GetBufferSize(), hash);
       BufferPtr value = val->ToBuffer();
       batch_.Put(key, value->AsSlice());
       return true;

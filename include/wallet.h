@@ -150,7 +150,6 @@ namespace token{
     static bool RemoveWallet(const User& user);
     static bool PutWallet(const User& user, const Wallet& wallet);
     static bool GetWallet(const User& user, Wallet& wallet);
-    static bool GetWallet(const User& user, Json::String& json);
     static bool GetWallet(const User& user, Json::Writer& writer);
     static int64_t GetNumberOfWallets();
 

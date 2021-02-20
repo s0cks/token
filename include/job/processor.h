@@ -5,7 +5,6 @@
 #include "block.h"
 #include "job/job.h"
 #include "job/scheduler.h"
-#include "utils/kvstore.h"
 
 namespace token{
   class ProcessInputListJob;

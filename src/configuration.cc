@@ -1,6 +1,5 @@
 #include <leveldb/db.h>
 #include <leveldb/status.h>
-#include "utils/kvstore.h"
 #include "configuration.h"
 #include "atomic/relaxed_atomic.h"
 

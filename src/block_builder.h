@@ -29,7 +29,7 @@ namespace token{
       int64_t index = 0;
       IndexedTransactionSet transactions;
       for(auto& it : transactions_){
-        IndexedTransactionPtr ntx = IndexedTransaction::NewInstance(index, it->inputs(), it->outputs(), it->GetTimestamp());
+        IndexedTransactionPtr ntx = IndexedTransaction::NewInstance(index++, it->inputs(), it->outputs(), it->GetTimestamp());
         if((blk_size + ntx->GetBufferSize()) >= Block::kMaxBlockSize)
           break;
 

@@ -62,12 +62,7 @@ namespace token{
     Hash hash = blk->GetHash();
 
     LOG(INFO) << "discovered block " << hash << ", creating proposal....";
-#ifdef TOKEN_ENABLE_SERVER
     ProposalPtr proposal = std::make_shared<Proposal>(blk, ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID));
-#else
-    ProposalPtr proposal = std::make_shared<Proposal>(blk, UUID());
-#endif//TOKEN_ENABLE_SERVER
-
     if(!ProposalManager::SetProposal(proposal)){
       LOG(WARNING) << "cannot set active proposal to: " << proposal->ToString() << ", abandoning proposal.";
       return;

@@ -62,23 +62,24 @@ InitializeLogging(char *arg0){
 
 #ifdef TOKEN_DEBUG
   static inline bool
-  AppendDummy(int total_spends){
+  AppendDummy(const std::string& user, int total_spends){
     using namespace token;
     sleep(10);
 
+    LOG(INFO) << "spending " << total_spends << " unclaimed transactions";
+
     Wallet wallet;
-    if(!WalletManager::GetWallet("VenueA", wallet)){
+    if(!WalletManager::GetWallet(user, wallet)){
       LOG(WARNING) << "couldn't get the wallet for VenueA";
       return false;
     }
-
-    LOG(INFO) << "spending " << total_spends << " unclaimed transactions";
 
     int64_t idx = 0;
     for(auto& it : wallet){
       UnclaimedTransactionPtr utxo = ObjectPool::GetUnclaimedTransaction(it);
 
-      LOG(INFO) << "spending " << it << " (" << utxo->GetReference() << ")";
+      LOG(INFO) << "spending: " << utxo->GetReference();
+
       InputList inputs = {};
       OutputList outputs = {
         Output("TestUser2", "TestToken2")
@@ -91,29 +92,11 @@ InitializeLogging(char *arg0){
         return false;
       }
 
-      if(idx == total_spends)
+      if(++idx == total_spends)
         return true;
     }
     return false;
   }
-
-  class BlockChainPrinter : public token::BlockChainBlockVisitor, token::Printer{
-   public:
-    BlockChainPrinter(const google::LogSeverity& severity, const long& flags):
-        token::BlockChainBlockVisitor(),
-        token::Printer(severity, flags){}
-    ~BlockChainPrinter() = default;
-
-    bool Visit(const token::BlockPtr& blk){
-      LOG_AT_LEVEL(GetSeverity()) << blk->GetHash();
-      return true;
-    }
-
-    static bool Print(const google::LogSeverity& severity=google::INFO, const long& flags=Printer::kFlagNone){
-      BlockChainPrinter printer(severity, flags);
-      return token::BlockChain::VisitBlocks(&printer);
-    }
-  };
 #endif//TOKEN_DEBUG
 
 //TODO:
@@ -224,11 +207,17 @@ main(int argc, char **argv){
 
 #ifdef TOKEN_DEBUG
   LOG(INFO) << "number of blocks in block chain: " << BlockChain::GetNumberOfBlocks();
-  LOG(INFO) << "number of unclaimed transactions in pool: " << ObjectPool::GetNumberOfUnclaimedTransactions();
-  LOG(INFO) << "number of transactions in pool: " << ObjectPool::GetNumberOfTransactions();
-  LOG(INFO) << "number of blocks in pool: " << ObjectPool::GetNumberOfBlocks();
 
-  if(FLAGS_append_test && !AppendDummy(2)){
+  LOG(INFO) << "blocks in pool (" << ObjectPool::GetNumberOfBlocks() << "):";
+  ObjectPool::PrintBlocks();
+
+  LOG(INFO) << "transactions in pool (" << ObjectPool::GetNumberOfTransactions() << "):";
+  ObjectPool::PrintTransactions();
+
+  LOG(INFO) << "unclaimed transactions in pool (" << ObjectPool::GetNumberOfUnclaimedTransactions() << "):";
+  ObjectPool::PrintUnclaimedTransactions();
+
+  if(FLAGS_append_test && !AppendDummy("VenueA", 2)){
     CrashReport::PrintNewCrashReport("Cannot append dummy transactions.");
     return EXIT_FAILURE;
   }

@@ -96,7 +96,7 @@ namespace token{
   }
 
   static inline bool
-  WriteBlock(const std::string& filename, const Hash& hash, const BlockPtr& blk){
+  WriteBlockFile(const std::string& filename, const Hash& hash, const BlockPtr& blk){
     FILE* file;
     if(!(file = fopen(filename.data(), "wb"))){
       LOG(WARNING) << "cannot open file " << filename << ": " << strerror(errno);
@@ -107,7 +107,7 @@ namespace token{
       LOG(WARNING) << "cannot write block " << hash << " to file: " << filename;
       return false;
     }
-    return true;
+    return Flush(file) && Close(file);
   }
 
   bool BlockChain::PutBlock(const Hash& hash, BlockPtr blk){
@@ -123,7 +123,7 @@ namespace token{
       return false;
     }
 
-    if(!WriteBlock(filename, hash, blk)){
+    if(!WriteBlockFile(filename, hash, blk)){
       LOG(ERROR) << "cannot write block file";
       return false;//TODO: better error handling
     }
@@ -133,7 +133,7 @@ namespace token{
   }
 
   static inline BlockPtr
-  ReadBlock(const std::string& filename, const Hash& hash){
+  ReadBlockFile(const std::string& filename, const Hash& hash){
     FILE* file;
     if(!(file = fopen(filename.data(), "rb"))){
       LOG(ERROR) << "cannot open file " << filename << ": " << strerror(errno);
@@ -143,6 +143,8 @@ namespace token{
     BlockPtr blk = ReadBlock(file);
     if(!blk){
       LOG(ERROR) << "cannot read block " << hash << " from file: " << filename;
+      if(!Close(file))
+        LOG(ERROR) << "cannot close block file: " << filename;
       return BlockPtr(nullptr);
     }
     return blk;
@@ -157,7 +159,7 @@ namespace token{
       LOG(WARNING) << "cannot get " << hash << ": " << status.ToString();
       return BlockPtr(nullptr);
     }
-    return ReadBlock(filename, hash);
+    return ReadBlockFile(filename, hash);
   }
 
   BlockPtr BlockChain::GetBlock(int64_t height){
