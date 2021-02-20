@@ -2,15 +2,10 @@
 #include <leveldb/db.h>
 #include <glog/logging.h>
 
-#include "keychain.h"
 #include "blockchain.h"
 #include "block_file.h"
-#include "job/scheduler.h"
-#include "job/processor.h"
 #include "unclaimed_transaction.h"
-#include "utils/timeline.h"
 #include "atomic/relaxed_atomic.h"
-
 #include "blockchain_initializer.h"
 
 namespace token{
