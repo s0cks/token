@@ -103,17 +103,12 @@ namespace token{
     }
 
     bool Disconnect(){
-      int err;
-      if((err = uv_loop_close(GetLoop())) == UV_EBUSY)
-        uv_walk(GetLoop(), &OnWalk, NULL);
-
-      uv_run(GetLoop(), UV_RUN_DEFAULT);
-      if((err = uv_loop_close(GetLoop())) != 0){
-        LOG(ERROR) << "failed to close loop: " << uv_strerror(err);
-        return false;
+      if(HasSession()){
+        PeerSession* session = GetCurrentSession();
+        if(!session->Disconnect())
+          return false;
       }
-
-      LOG(INFO) << "loop closed.";
+      uv_stop(GetLoop());
       return true;
     }
 

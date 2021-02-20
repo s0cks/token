@@ -25,6 +25,8 @@ DEFINE_int64(miner_interval, 1000 * 60 * 1, "The amount of time between mining b
   DEFINE_bool(fresh, false, "Initialize the BlockChain w/ a fresh chain [Debug]");
   // --append-test
   DEFINE_bool(append_test, false, "Append a test block upon startup [Debug]");
+  // --verbose
+  DEFINE_bool(verbose, false, "Turn on verbose logging [Debug]");
 #endif//TOKEN_DEBUG
 
 #ifdef TOKEN_ENABLE_SERVER
@@ -206,16 +208,16 @@ main(int argc, char **argv){
   #endif//TOKEN_ENABLE_REST_SERVICE
 
 #ifdef TOKEN_DEBUG
-  LOG(INFO) << "number of blocks in block chain: " << BlockChain::GetNumberOfBlocks();
-
-  LOG(INFO) << "blocks in pool (" << ObjectPool::GetNumberOfBlocks() << "):";
-  ObjectPool::PrintBlocks();
-
-  LOG(INFO) << "transactions in pool (" << ObjectPool::GetNumberOfTransactions() << "):";
-  ObjectPool::PrintTransactions();
-
-  LOG(INFO) << "unclaimed transactions in pool (" << ObjectPool::GetNumberOfUnclaimedTransactions() << "):";
-  ObjectPool::PrintUnclaimedTransactions();
+  LOG(INFO) << "number of blocks in the chain: " << BlockChain::GetNumberOfBlocks();
+  if(TOKEN_VERBOSE){
+    ObjectPool::PrintBlocks();
+    ObjectPool::PrintTransactions();
+    ObjectPool::PrintUnclaimedTransactions();
+  } else{
+    LOG(INFO) << "number of blocks in the pool: " << ObjectPool::GetNumberOfBlocks();
+    LOG(INFO) << "number of transactions in the pool: " << ObjectPool::GetNumberOfTransactions();
+    LOG(INFO) << "number of unclaimed transactions in the pool: " << ObjectPool::GetNumberOfUnclaimedTransactions();
+  }
 
   if(FLAGS_append_test && !AppendDummy("VenueA", 2)){
     CrashReport::PrintNewCrashReport("Cannot append dummy transactions.");

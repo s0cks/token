@@ -86,7 +86,6 @@ namespace token{
     friend class PeerSessionThread;
     friend class PeerSessionManager;
    private:
-    pthread_t thread_;
     Peer info_;
     BlockHeader head_;
     uv_async_t disconnect_;
@@ -108,6 +107,7 @@ namespace token{
 
     bool Connect();
     bool Disconnect();
+    bool DisconnectPeer();
 
     static void OnConnect(uv_connect_t* conn, int status);
     static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
@@ -119,6 +119,9 @@ namespace token{
     static void OnAccepted(uv_async_t* handle);
     static void OnRejected(uv_async_t* handle);
     static void OnDiscovery(uv_async_t* handle);
+    // Disconnect
+    static void OnWalk(uv_handle_t* handle, void* arg);
+    static void OnClose(uv_handle_t* handle);
 
     static void
     AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf){
@@ -133,7 +136,6 @@ namespace token{
    public:
     PeerSession(uv_loop_t* loop, const NodeAddress& address):
       RpcSession(loop),
-      thread_(pthread_self()),
       info_(UUID(), address),
       head_(),
       disconnect_(),
@@ -150,8 +152,8 @@ namespace token{
       commit_.data = this;
       accepted_.data = this;
       rejected_.data = this;
-      uv_async_init(loop, &discovery_, &OnDiscovery);
       uv_async_init(loop, &disconnect_, &OnDisconnect);
+      uv_async_init(loop, &discovery_, &OnDiscovery);
       uv_async_init(loop, &prepare_, &OnPrepare);
       uv_async_init(loop, &promise_, &OnPromise);
       uv_async_init(loop, &commit_, &OnCommit);

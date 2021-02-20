@@ -31,14 +31,25 @@ namespace token{
   }
 
   bool PeerSession::Disconnect(){
-    return false;
+    int err;
+    if((err = uv_async_send(&disconnect_)) != 0){
+      LOG(WARNING) << "cannot send disconnect to peer: " << uv_strerror(err);
+      return false;
+    }
+    return true;
   }
 
   void PeerSession::OnConnect(uv_connect_t* conn, int status){
-    PeerSession* session = (PeerSession*) conn->data;
+    if(status != 0){
+      LOG(WARNING) << "whaaaat?: " << status;
+      return;
+    }
+
+    PeerSession* session = (PeerSession*)conn->data;
     if(status != 0){
       LOG(WARNING) << "peer connect failure: " << uv_strerror(status);
-      //TODO: Disconnect();
+      if(!session->Disconnect())
+        LOG(WARNING) << "cannot disconnect peer.";
       return;
     }
 
@@ -79,7 +90,31 @@ namespace token{
   }
 
   void PeerSession::OnDisconnect(uv_async_t* handle){
-    //TODO: Disconnect();
+    if(!((PeerSession*)handle->data)->DisconnectPeer())
+      LOG(WARNING) << "cannot disconnect peer.";
+  }
+
+  void PeerSession::OnWalk(uv_handle_t* handle, void* data){
+    uv_close(handle, &OnClose);
+  }
+
+  void PeerSession::OnClose(uv_handle_t* handle){
+    LOG(INFO) << "on-close.";
+  }
+
+  bool PeerSession::DisconnectPeer(){
+    int err;
+    if((err = uv_loop_close(GetLoop())) == UV_EBUSY)
+      uv_walk(GetLoop(), &OnWalk, NULL);
+
+    uv_run(GetLoop(), UV_RUN_DEFAULT);
+    if((err = uv_loop_close(GetLoop())) != 0){
+      LOG(ERROR) << "failed to close loop: " << uv_strerror(err);
+      return false;
+    }
+
+    LOG(INFO) << "loop closed.";
+    return true;
   }
 
   void PeerSession::OnDiscovery(uv_async_t* handle){

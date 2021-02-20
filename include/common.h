@@ -197,6 +197,8 @@ DECLARE_int64(miner_interval);
   DECLARE_bool(fresh);
   // --append-test
   DECLARE_bool(append_test);
+  // --verbose
+  DECLARE_bool(verbose);
 #endif//TOKEN_DEBUG
 
 #ifdef TOKEN_ENABLE_SERVER
@@ -224,6 +226,7 @@ IsValidPort(int32_t port){
 }
 
 #define TOKEN_BLOCKCHAIN_HOME (FLAGS_path)
+#define TOKEN_VERBOSE (FLAGS_verbose)
 
 static const int64_t kB = 1;
 static const int64_t kKB = 1024 * kB;

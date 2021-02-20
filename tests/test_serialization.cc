@@ -85,6 +85,11 @@ namespace token{
 //    ASSERT_EQ(actual, expected);
 //  }
 
+  TEST_F(TestSerialization, test_Vector_rw){
+    //TODO: implement
+    LOG(WARNING) << "not implemented yet.";
+  }
+
   TEST_F(TestSerialization, test_Set_rw){
     BlockPtr blk = Block::Genesis();
     IndexedTransactionSet& txs1 = blk->transactions();

@@ -52,6 +52,8 @@ namespace token{
         LOG(INFO) << "disconnected from peer: " << paddr;
       }
     }
+
+    uv_stop(thread->GetLoop());
     pthread_exit(0);
   }
 
@@ -75,13 +77,14 @@ namespace token{
 
   bool PeerSessionThread::Stop(){
     SetState(PeerSessionThread::kStopping);
-
-    int err;
-    if((err = uv_async_send(&disconnect_)) != 0){
-      LOG(WARNING) << "cannot send disconnect: " << uv_strerror(err);
-      return false;
+    if(HasSession()){
+      if(!GetCurrentSession()->Disconnect()){
+        LOG(WARNING) << "cannot disconnect current session.";
+        return false;
+      }
     }
 
+    int err;
     void** result = NULL;
     if((err = pthread_join(thread_, result)) != 0){
       LOG(WARNING) << "couldn't join thread: " << strerror(err);

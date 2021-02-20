@@ -15,6 +15,8 @@ DEFINE_int64(miner_interval, 1000 * 60 * 1, "The amount of time between mining b
   DEFINE_bool(fresh, false, "Initialize the BlockChain w/ a fresh chain [Debug]");
   // --append-test
   DEFINE_bool(append_test, false, "Append a test block upon startup [Debug]");
+  // --verbose
+  DEFINE_bool(verbose, false, "Turn on verbose logging [Debug]");
 #endif//TOKEN_DEBUG
 
 #ifdef TOKEN_ENABLE_SERVER
