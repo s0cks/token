@@ -528,6 +528,12 @@ namespace token{
   //TODO: rename?
   class IndexedTransaction : public Transaction{
    public:
+    struct HashEqualsComparator{
+      bool operator()(const IndexedTransactionPtr& a, const IndexedTransactionPtr& b){
+        return a->GetHash() == b->GetHash();
+      }
+    };
+
     struct IndexComparator{
       bool operator()(const IndexedTransactionPtr& a, const IndexedTransactionPtr& b){
         return a->GetIndex() < b->GetIndex();

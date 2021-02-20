@@ -115,8 +115,13 @@ namespace token{
   static inline bool
   ReadSet(FILE* file, const Type& type, std::set<std::shared_ptr<T>, C>& data){
     int64_t length = ReadLong(file);
+    LOG(INFO) << "reading " << length << " objects from file.";
     for(int64_t idx = 0; idx < length; idx++){
-      ObjectTag tag = ReadTag(file);
+      RawObjectTag raw_tag = ReadUnsignedLong(file);
+
+      LOG(INFO) << "tag: " << raw_tag;
+
+      ObjectTag tag(raw_tag);
       if(!tag.IsValid()){
         LOG(WARNING) << "#" << idx << " has an invalid tag: " << tag;
         return false;
@@ -196,11 +201,27 @@ namespace token{
       return false;
     }
 
+    LOG(INFO) << "writing " << size << " items to file.";
+
     size_t idx = 0;
     for(auto& it : val){
-      BufferPtr buffer = it->ToBufferTagged();
+      ++idx;
+
+      LOG(INFO) << "writing " << it->ToString() << " to file.";
+
+      ObjectTag tag = it->GetTag();
+
+      LOG(INFO) << "writing tag " << tag.raw() << " to file.";
+
+      if(!WriteTag(file, tag)){
+        LOG(WARNING) << "cannot write tag for #" << (idx) << " to file.";
+        return false;
+      }
+
+      BufferPtr buffer = it->ToBuffer();
+      LOG(INFO) << "writing " << buffer->GetWrittenBytes() << " bytes to file.";
       if(!WriteBytes(file, buffer)){
-        LOG(WARNING) << "cannot write object #" << (++idx) << " in set to file.";
+        LOG(WARNING) << "cannot write object #" << (idx) << " in set to file.";
         return false;
       }
     }

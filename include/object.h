@@ -95,12 +95,14 @@ namespace token{
           return stream << #Name;
       FOR_EACH_TYPE(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
+      case Type::kIndexedTransaction:
+        return stream << "IndexedTransaction";
       default:
         return stream << "Unknown";
     }
   }
 
-  typedef int64_t RawObjectTag;
+  typedef uint64_t RawObjectTag;
 
   class ObjectTag{
    public:
@@ -161,8 +163,7 @@ namespace token{
     }
 
     bool IsValid() const{
-      return MagicField::Decode(raw_)
-          == static_cast<uint16_t>(TOKEN_MAGIC);
+      return MagicField::Decode(raw_) == static_cast<uint16_t>(TOKEN_MAGIC);
     }
 
     Type GetType() const{
@@ -181,7 +182,7 @@ namespace token{
 #undef DEFINE_TYPE_CHECK
 
     ObjectTag& operator=(const ObjectTag& tag){
-      raw_ = tag.raw_;
+      memcpy(&raw_, &tag.raw_, sizeof(RawObjectTag));
       return (*this);
     }
 

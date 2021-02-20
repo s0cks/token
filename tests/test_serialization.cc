@@ -1,5 +1,5 @@
-#include "test_suite.h"
-#include "utils/filesystem.h"
+#include "block.h"
+#include "test_serialization.h"
 
 namespace token{
   static const int8_t kByteMinValue = -128;
@@ -30,22 +30,18 @@ namespace token{
 #undef DEFINE_GENERATE_UNSIGNED
 
 #define DEFINE_SIGNED_READWRITE_CASE(Name, Type) \
-  TEST(TestSerialization, test_##Name##_rw){       \
+  TEST_F(TestSerialization, test_##Name##_rw){       \
     Type value = Generate##Name();               \
-    FILE* file = tmpfile();                      \
-    ASSERT_NE(file, nullptr);                    \
-    ASSERT_TRUE(Write##Name(file, value));       \
-    ASSERT_TRUE(Seek(file, 0));                  \
-    ASSERT_EQ(Read##Name(file), value);          \
+    ASSERT_TRUE(Write##Name(file_, value));       \
+    ASSERT_TRUE(Seek(file_, 0));                  \
+    ASSERT_EQ(Read##Name(file_), value);          \
   }
 #define DEFINE_UNSIGNED_READWRITE_CASE(Name, Type) \
-  TEST(TestSerialization, test_Unsigned##Name##_rw){ \
+  TEST_F(TestSerialization, test_Unsigned##Name##_rw){ \
     u##Type value = GenerateUnsigned##Name();      \
-    FILE* file = tmpfile();                        \
-    ASSERT_NE(file, nullptr);                      \
-    ASSERT_TRUE(WriteUnsigned##Name(file, value)); \
-    ASSERT_TRUE(Seek(file, 0));                    \
-    ASSERT_EQ(ReadUnsigned##Name(file), value);    \
+    ASSERT_TRUE(WriteUnsigned##Name(file_, value)); \
+    ASSERT_TRUE(Seek(file_, 0));                    \
+    ASSERT_EQ(ReadUnsigned##Name(file_), value);    \
   }
 #define DEFINE_READWRITE_CASE(Name, Type) \
   DEFINE_SIGNED_READWRITE_CASE(Name, Type)\
@@ -56,40 +52,49 @@ namespace token{
 #undef DEFINE_SIGNED_READWRITE_CASE
 #undef DEFINE_UNSIGNED_READWRITE_CASE
 
-  TEST(TestSerialization, test_Hash_rw){
+  TEST_F(TestSerialization, test_Hash_rw){
     Hash hash = Hash::GenerateNonce();
-    FILE* file = tmpfile();
-    ASSERT_NE(file, nullptr);
-    ASSERT_TRUE(WriteHash(file, hash));
+    ASSERT_TRUE(WriteHash(file_, hash));
 
-    ASSERT_TRUE(Seek(file, 0));
-    ASSERT_EQ(ReadHash(file), hash);
+    ASSERT_TRUE(Seek(file_, 0));
+    ASSERT_EQ(ReadHash(file_), hash);
   }
 
-  TEST(TestSerialization, test_Version_rw){
-    Version version = Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
-    FILE* file = tmpfile();
-    ASSERT_NE(file, nullptr);
-    ASSERT_TRUE(WriteVersion(file, version));
-    ASSERT_TRUE(Seek(file, 0));
-    ASSERT_EQ(ReadVersion(file), version);
+  TEST_F(TestSerialization, test_Version_rw){
+    Version expected(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
+    ASSERT_TRUE(WriteVersion(file_, expected));
+    ASSERT_TRUE(Seek(file_, 0));
+    Version actual = ReadVersion(file_);
+    ASSERT_EQ(actual, expected);
   }
 
-  TEST(TestSerialization, test_ObjectTag_rw){
-    ObjectTag tag(Type::kBlock, 12974);
-    FILE* file = tmpfile();
-    ASSERT_NE(file, nullptr);
-    ASSERT_TRUE(WriteTag(file, tag));
-    ASSERT_TRUE(Seek(file, 0));
-    ASSERT_EQ(ReadTag(file), tag);
+  TEST_F(TestSerialization, test_ObjectTag_rw){
+    ObjectTag expected(Type::kIndexedTransaction, 16424);
+    ASSERT_TRUE(WriteTag(file_, expected));
+    ASSERT_TRUE(Seek(file_, 0));
+    ObjectTag actual = ReadTag(file_);
+    ASSERT_EQ(actual, expected);
   }
 
-  TEST(TestSerialization, test_Timestamp_rw){
-    Timestamp timestamp = Clock::now();
-    FILE* file = tmpfile();
-    ASSERT_NE(file, nullptr);
-    ASSERT_TRUE(WriteTimestamp(file, timestamp));
-    ASSERT_TRUE(Seek(file, 0));
-    ASSERT_EQ(ReadTimestamp(file), timestamp);
+  TEST_F(TestSerialization, test_Timestamp_rw){
+    Timestamp expected = Clock::now();
+    ASSERT_TRUE(WriteTimestamp(file_, expected));
+    ASSERT_TRUE(Seek(file_, 0));
+    Timestamp actual = ReadTimestamp(file_);
+    ASSERT_EQ(actual, expected);
+  }
+
+  TEST_F(TestSerialization, test_Set_rw){
+    BlockPtr blk = Block::Genesis();
+    IndexedTransactionSet& txs1 = blk->transactions();
+
+    ASSERT_TRUE(WriteSet(file_, txs1));
+    ASSERT_TRUE(Flush(file_));
+    ASSERT_TRUE(Seek(file_, 0));
+
+    IndexedTransactionSet txs2;
+    ASSERT_TRUE(ReadSet(file_, Type::kIndexedTransaction, txs2));
+
+    ASSERT_TRUE(std::equal(txs1.begin(), txs2.end(), txs2.begin(), IndexedTransaction::HashEqualsComparator()));
   }
 }
