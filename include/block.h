@@ -17,7 +17,7 @@ namespace token{
     friend class BlockMessage;
    public:
 #ifdef TOKEN_DEBUG
-    static const int64_t kMaxBlockSize = 128 * kMB;
+    static const int64_t kMaxBlockSize = 128 * token::internal::kMegabytes;
     static const int64_t kNumberOfGenesisOutputs = 128;
 #else
     static const int64_t kMaxBlockSize = 1 * kGB;

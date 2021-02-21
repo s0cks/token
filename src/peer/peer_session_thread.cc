@@ -1,5 +1,7 @@
 #ifdef TOKEN_ENABLE_SERVER
 
+#include <chrono>
+#include <thread>
 #include "peer/peer_session_thread.h"
 #include "peer/peer_session_manager.h"
 
@@ -16,12 +18,27 @@ namespace token{
     return queue->Steal();
   }
 
+  static inline ConnectionAttemptCounter
+  GetMaxAttempts(){
+    return TOKEN_MAX_CONNECTION_ATTEMPTS;
+  }
+
+  static inline ConnectionAttemptCounter
+  GetAttempt(const ConnectionAttemptCounter& counter){
+    return GetMaxAttempts()-counter;
+  }
+
   static inline std::string
-  GetCurrentAttempt(const ConnectionAttemptCounter& attempt){
-    ConnectionAttemptCounter current = TOKEN_MAX_CONNECTION_ATTEMPTS-attempt;
+  GetAttemptStatus(const ConnectionAttemptCounter& counter){
     std::stringstream ss;
-    ss << current << "/" << TOKEN_MAX_CONNECTION_ATTEMPTS;
+    ss << "(" << GetAttempt(counter) << "/" << GetMaxAttempts() << ")";
     return ss.str();
+  }
+
+  static inline Duration
+  GetAttemptBackoffMilliseconds(const ConnectionAttemptCounter& counter){
+    int64_t total_seconds = TOKEN_CONNECTION_BACKOFF_SCALE*(1+GetAttempt(counter));
+    return std::chrono::seconds(total_seconds);
   }
 
   void PeerSessionThread::HandleThread(uword parameter){
@@ -36,26 +53,35 @@ namespace token{
         continue;
 
       NodeAddress paddress = request->GetAddress();
-      ConnectionAttemptCounter attempt = request->GetNumberOfAttemptsRemaining();
+      ConnectionAttemptCounter counter = request->GetNumberOfAttemptsRemaining();
 
       PeerSession* session = thread->CreateNewSession(request->GetAddress());
       if(!session->Connect())
-        THREAD_LOG(WARNING) << "couldn't connect to " << paddress << " (" << GetCurrentAttempt(attempt) << ").";
+        THREAD_LOG(WARNING) << "couldn't connect to " << paddress << " " << GetAttemptStatus(counter) << ".";
 
 #ifdef TOKEN_DEBUG
       THREAD_LOG(INFO) << "session disconnected.";
 #endif//TOKEN_DEBUG
       thread->ClearSession();
-
-      THREAD_LOG(INFO) << "attempts remaining: " << request->GetNumberOfAttemptsRemaining();
       if(request->CanReschedule()){
+        Duration backoff = GetAttemptBackoffMilliseconds(counter);
 #ifdef TOKEN_DEBUG
-        THREAD_LOG(INFO) << "rescheduling connection to " << paddress << " (" << GetCurrentAttempt(attempt) << ")....";
+        THREAD_LOG(INFO) << "waiting for " << std::chrono::duration_cast<std::chrono::milliseconds>(backoff).count() << "ns (back-off)....";
 #endif//TOKEN_DEBUG
-        if(!thread->Schedule(paddress, --attempt)){
-          THREAD_LOG(ERROR) << "couldn't schedule new connection to " << paddress;
-          continue;
-        }
+
+        std::this_thread::sleep_for(backoff);
+
+#ifdef TOKEN_DEBUG
+        THREAD_LOG(INFO) << "rescheduling connection to " << paddress << " " << GetAttemptStatus(counter) << "....";
+#endif//TOKEN_DEBUG
+        if(!thread->Schedule(paddress, counter - 1))
+          THREAD_LOG(ERROR) << "couldn't schedule new connection to " << paddress << ".";
+        continue;
+      } else{
+#ifdef TOKEN_DEBUG
+        THREAD_LOG(INFO) << "not rescheduling connection to " << paddress << ".";
+#endif//TOKEN_DEBUG
+        continue;
       }
     }
     pthread_exit(0);

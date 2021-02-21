@@ -230,10 +230,24 @@ IsValidPort(int32_t port){
 #define TOKEN_BLOCKCHAIN_HOME (FLAGS_path)
 #define TOKEN_VERBOSE (FLAGS_verbose)
 
-static const int64_t kB = 1;
-static const int64_t kKB = 1024 * kB;
-static const int64_t kMB = 1024 * kKB;
-static const int64_t kGB = 1024 * kMB;
-static const int64_t kTB = 1024 * kGB;
+namespace token{
+  namespace internal{
+    // memory sizes
+    static const int64_t kBytes = 1;
+    static const int64_t kKilobytes = 1024 * kBytes;
+    static const int64_t kMegabytes = 1024 * kKilobytes;
+    static const int64_t kGigabytes = 1024 * kMegabytes;
+    static const int64_t kTerabytes = 1024 * kGigabytes;
+
+    // time sizes
+    static const int64_t kMilliseconds = 1;
+    static const int64_t kSeconds = 1000 * kMilliseconds;
+    static const int64_t kMinutes = 60 * kSeconds;
+    static const int64_t kHours = 60 * kMinutes;
+    static const int64_t kDays = 24 * kHours;
+    static const int64_t kWeeks = 7 * kDays;
+    static const int64_t kYears = 52 * kWeeks;
+  }
+}
 
 #endif //TOKEN_COMMON_H

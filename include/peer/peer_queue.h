@@ -13,6 +13,14 @@ namespace token{
   #define TOKEN_CONNECTION_QUEUE_SIZE (FLAGS_num_peers * TOKEN_MAX_CONNECTION_ATTEMPTS)
 #endif//TOKEN_CONNECTION_QUEUE_SIZE
 
+#ifndef TOKEN_CONNECTION_BACKOFF_SCALE
+  #ifdef TOKEN_DEBUG
+    #define TOKEN_CONNECTION_BACKOFF_SCALE 5
+  #else
+    #define TOKEN_CONNECTION_BACKOFF_SCALE 15
+  #endif//TOKEN_DEBUG
+#endif//TOKEN_CONNECTION_BACKOFF_SCALE
+
   typedef int ConnectionAttemptCounter;
 
   class ConnectionRequest{

@@ -206,7 +206,7 @@ namespace token{
   class BatchWriteJob : public Job{
    public:
     static const int64_t kMinimumBatchWriteSize = 0;
-    static const int64_t kMaximumBatchWriteSize = 128 * kMB;
+    static const int64_t kMaximumBatchWriteSize = 128 * token::internal::kMegabytes;
    protected:
     int64_t min_bsize_;
     int64_t max_bsize_;
