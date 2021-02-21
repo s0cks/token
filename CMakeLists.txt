@@ -19,31 +19,31 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
   add_compile_definitions(TOKEN_DEBUG)
 else()
   message(STATUS "Compiling w/o debug mode.")
-endif (CMAKE_BUILD_TYPE MATCHES Debug)
+endif()
 
 # Compile w/ compression enabled
 if(ENABLE_COMPRESSION)
   message(STATUS "Compiling w/ compression enabled.")
   add_compile_definitions(TOKEN_ENABLE_COMPRESSION)
-endif(ENABLE_COMPRESSION)
+endif()
 
 # Compile w/ the rpc if enabled
 if(ENABLE_SERVER)
   message(STATUS "Compiling w/ the server enabled.")
   add_compile_definitions(TOKEN_ENABLE_SERVER)
-endif(ENABLE_SERVER)
+endif()
 
 # Compile w/ the controller service if enabled
 if(ENABLE_REST_SERVICE)
   message(STATUS "Compiling w/ the rest http service enabled.")
   add_compile_definitions(TOKEN_ENABLE_REST_SERVICE)
-endif(ENABLE_REST_SERVICE)
+endif()
 
 # Compile w/ the health check service if enabled
 if(ENABLE_HEALTH_SERVICE)
   message(STATUS "Compiling w/ the health-check http service enabled.")
   add_compile_definitions(TOKEN_ENABLE_HEALTH_SERVICE)
-endif(ENABLE_HEALTH_SERVICE)
+endif()
 
 # Packages
 find_package(Threads)
@@ -59,7 +59,11 @@ find_package(ZXing REQUIRED)
 
 if(ENABLE_COMPRESSION)
   find_package(ZLIB REQUIRED)
-endif(ENABLE_COMPRESSION)
+endif()
+
+if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  include_directories(/usr/local/include)
+endif()
 
 # Include Directories
 include_directories(include)
@@ -88,11 +92,11 @@ set(TOKEN_LIBRARIES
 if(ENABLE_COMPRESSION)
   message(STATUS "Appending the zlib libraries.")
   list(APPEND TOKEN_LIBRARIES ${ZLIB_LIBRARIES}) # zlib
-endif(ENABLE_COMPRESSION)
+endif()
 
 if(CMAKE_BUILD_TYPE MATCHES Debug)
   message(STATUS "Compiling token w/ the following libraries: ${TOKEN_LIBRARIES}")
-endif(CMAKE_BUILD_TYPE MATCHES Debug)
+endif()
 
 # token Ledger Library
 add_library("token-ledger" SHARED ${TOKEN_HEADERS} ${TOKEN_SOURCES})
@@ -111,7 +115,7 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
   add_executable("token-tests" tests.cc ${TOKEN_TEST_SOURCES})
   target_link_libraries("token-tests" "token-ledger" ${GTEST_BOTH_LIBRARIES} ${TOKEN_LIBRARIES})
   add_test("token-tests" "token-tests")
-endif(CMAKE_BUILD_TYPE MATCHES Debug)
+endif()
 
 # should we remove this?
 # Install token Node
