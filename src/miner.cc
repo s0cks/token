@@ -117,7 +117,7 @@ namespace token{
     if(!IsRunningState())
       return true; // should we return false?
     uv_async_send(&shutdown_);
-    return Thread::StopThread(thread_);
+    return ThreadJoin(thread_);
   }
 
   void BlockMiner::OnPromise(){

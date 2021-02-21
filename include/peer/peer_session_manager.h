@@ -3,18 +3,16 @@
 
 #ifdef TOKEN_ENABLE_SERVER
 
+#include "peer/peer_queue.h"
 #include "peer/peer_session.h"
 
 namespace token{
+
+
 #define FOR_EACH_PEER_SESSION_MANAGER_STATE(V) \
   V(Uninitialized)                             \
   V(Initializing)                              \
   V(Initialized)
-
-#define FOR_EACH_PEER_SESSION_MANAGER_STATUS(V) \
-  V(Ok)                                         \
-  V(Warning)                                    \
-  V(Error)
 
   class PeerSessionManager{
     //TODO:
@@ -24,66 +22,10 @@ namespace token{
     // - leverage state-machine
     friend class PeerSessionThread;
    public:
-    static const int16_t kMaxNumberOfAttempts = 3;
     static const int32_t kRetryBackoffSeconds = 15;
 
-    class ConnectRequest{
-      friend class PeerSessionManager;
-     private:
-      NodeAddress address_;
-      int16_t attempts_;
-
-      ConnectRequest(const NodeAddress& addr, int16_t attempts):
-        address_(addr),
-        attempts_(attempts){}
-      ConnectRequest(const ConnectRequest& request, bool is_retry):
-        address_(request.address_),
-        attempts_(is_retry ? request.GetNumberOfAttempts() + 1 : 0){}
-     public:
-      ConnectRequest():
-        address_(),
-        attempts_(0){}
-      ConnectRequest(const ConnectRequest& other):
-        address_(other.address_),
-        attempts_(other.attempts_){}
-      ~ConnectRequest() = default;
-
-      NodeAddress GetAddress() const{
-        return address_;
-      }
-
-      int16_t GetNumberOfAttempts() const{
-        return attempts_;
-      }
-
-      bool ShouldReschedule() const{
-        return GetNumberOfAttempts() < PeerSessionManager::kMaxNumberOfAttempts;
-      }
-
-      void operator=(const ConnectRequest& request){
-        address_ = request.address_;
-        attempts_ = request.attempts_;
-      }
-
-      friend bool operator==(const ConnectRequest& a, const ConnectRequest& b){
-        return a.address_ == b.address_
-               && a.attempts_ == b.attempts_;
-      }
-
-      friend bool operator!=(const ConnectRequest& a, const ConnectRequest& b){
-        return !operator==(a, b);
-      }
-
-      friend bool operator<(const ConnectRequest& a, const ConnectRequest& b){
-        if(a.address_ == b.address_){
-          return a.attempts_ < b.attempts_;
-        }
-        return a.address_ < b.address_;
-      }
-    };
-
     enum State{
-#define DEFINE_STATE(Name) k##Name,
+#define DEFINE_STATE(Name) k##Name##State,
       FOR_EACH_PEER_SESSION_MANAGER_STATE(DEFINE_STATE)
 #undef DEFINE_STATE
     };
@@ -91,27 +33,9 @@ namespace token{
     friend std::ostream& operator<<(std::ostream& stream, const State& state){
       switch(state){
 #define DEFINE_TOSTRING(Name) \
-        case State::k##Name:  \
+        case State::k##Name##State:  \
           return stream << #Name;
         FOR_EACH_PEER_SESSION_MANAGER_STATE(DEFINE_TOSTRING)
-#undef DEFINE_TOSTRING
-        default:
-          return stream << "Unknown";
-      }
-    }
-
-    enum Status{
-#define DEFINE_STATUS(Name) k##Name,
-      FOR_EACH_PEER_SESSION_MANAGER_STATUS(DEFINE_STATUS)
-#undef DEFINE_STATUS
-    };
-
-    friend std::ostream& operator<<(std::ostream& stream, const Status& status){
-      switch(status){
-#define DEFINE_TOSTRING(Name) \
-        case Status::k##Name:   \
-          return stream << #Name;
-        FOR_EACH_PEER_SESSION_MANAGER_STATUS(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
         default:
           return stream << "Unknown";
@@ -121,17 +45,24 @@ namespace token{
     PeerSessionManager() = delete;
 
     static void SetState(const State& state);
-    static void SetStatus(const Status& status);
-    static bool ScheduleRequest(const NodeAddress& address, int16_t attempts = 1);
-    static bool RescheduleRequest(const ConnectRequest& request);
-    static bool GetNextRequest(ConnectRequest& request, int64_t timeoutms);
+    static void RegisterQueue(const ThreadId& thread, ConnectionRequestQueue* queue);
+    static void ScheduleRequest(const NodeAddress& address, const ConnectionAttemptCounter attempts=TOKEN_MAX_CONNECTION_ATTEMPTS);
+    static ConnectionRequestQueue* GetRandomQueue();
+    static ConnectionRequestQueue* GetQueue(const ThreadId& thread);
+
+    static inline ConnectionRequestQueue*
+    GetThreadQueue(){
+      return GetQueue(pthread_self());
+    }
    public:
     ~PeerSessionManager() = delete;
 
     static State GetState();
-    static Status GetStatus();
     static bool Initialize();
+
     static bool Shutdown();
+    static bool WaitForShutdown();
+
     static bool ConnectTo(const NodeAddress& address);
     static bool IsConnectedTo(const UUID& uuid);
     static bool IsConnectedTo(const NodeAddress& address);
@@ -148,6 +79,11 @@ namespace token{
     HasConnectedPeers(){
       return GetNumberOfConnectedPeers() > 0;
     }
+
+#define DEFINE_CHECK(Name) \
+    static inline bool Is##Name##State(){ return GetState() == State::k##Name##State; }
+    FOR_EACH_PEER_SESSION_MANAGER_STATE(DEFINE_CHECK)
+#undef DEFINE_CHECK
   };
 }
 

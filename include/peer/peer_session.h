@@ -88,6 +88,7 @@ namespace token{
    private:
     Peer info_;
     BlockHeader head_;
+    // Disconnect
     uv_async_t disconnect_;
     // Needed for Paxos
     uv_async_t discovery_;
@@ -107,7 +108,6 @@ namespace token{
 
     bool Connect();
     bool Disconnect();
-    bool DisconnectPeer();
 
     static void OnConnect(uv_connect_t* conn, int status);
     static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff);
@@ -134,8 +134,8 @@ namespace token{
     FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
    public:
-    PeerSession(uv_loop_t* loop, const NodeAddress& address):
-      RpcSession(loop),
+    PeerSession(const NodeAddress& address):
+      RpcSession(uv_loop_new()),
       info_(UUID(), address),
       head_(),
       disconnect_(),
@@ -145,20 +145,22 @@ namespace token{
       commit_(),
       accepted_(),
       rejected_(){
+      // core
       disconnect_.data = this;
+      uv_async_init(loop_, &disconnect_, &OnDisconnect);
+      // paxos
       discovery_.data = this;
+      uv_async_init(loop_, &discovery_, &OnDiscovery);
       prepare_.data = this;
+      uv_async_init(loop_, &prepare_, &OnPrepare);
       promise_.data = this;
+      uv_async_init(loop_, &promise_, &OnPromise);
       commit_.data = this;
+      uv_async_init(loop_, &commit_, &OnCommit);
       accepted_.data = this;
+      uv_async_init(loop_, &accepted_, &OnAccepted);
       rejected_.data = this;
-      uv_async_init(loop, &disconnect_, &OnDisconnect);
-      uv_async_init(loop, &discovery_, &OnDiscovery);
-      uv_async_init(loop, &prepare_, &OnPrepare);
-      uv_async_init(loop, &promise_, &OnPromise);
-      uv_async_init(loop, &commit_, &OnCommit);
-      uv_async_init(loop, &accepted_, &OnAccepted);
-      uv_async_init(loop, &rejected_, &OnRejected);
+      uv_async_init(loop_, &rejected_, &OnRejected);
     }
     ~PeerSession() = default;
 

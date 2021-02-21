@@ -31,9 +31,11 @@ namespace token{
     }
   };
 
-  bool Thread::SetThreadName(ThreadId thread, const char* name){
-    char truncated_name[16];
-    snprintf(truncated_name, 15, "%s", name);
+  const int8_t kMaxThreadNameSize = 16;
+
+  bool SetThreadName(const ThreadId& thread, const char* name){
+    char truncated_name[kMaxThreadNameSize];
+    snprintf(truncated_name, kMaxThreadNameSize-1, "%s", name);
     int result;
     if((result = pthread_setname_np(thread, truncated_name)) != 0){
       LOG(WARNING) << "couldn't set thread name: " << strerror(result);
@@ -44,21 +46,21 @@ namespace token{
 
   static void*
   HandleThread(void* pdata){
-    ThreadStartData* data = (ThreadStartData*) pdata;
+    ThreadStartData* data = (ThreadStartData*)pdata;
     ThreadHandlerFunction func = data->GetFunction();
     uword parameter = data->GetParameter();
 
-    if(!Thread::SetThreadName(pthread_self(), data->GetName()) != 0){
+    if(!SetThreadName(pthread_self(), data->GetName()) != 0){
       goto exit;
     }
 
     func(parameter);
-    exit:
+  exit:
     delete data;
     pthread_exit(NULL);
   }
 
-  bool Thread::StartThread(ThreadId* thread, const char* name, ThreadHandlerFunction function, uword parameter){
+  bool ThreadStart(ThreadId* thread, const char* name, ThreadHandlerFunction func, uword parameter){
     int result;
     pthread_attr_t attrs;
     if((result = pthread_attr_init(&attrs)) != 0){
@@ -66,7 +68,7 @@ namespace token{
       return false;
     }
 
-    ThreadStartData* data = new ThreadStartData(name, function, parameter);
+    ThreadStartData* data = new ThreadStartData(name, func, parameter);
     if((result = pthread_create(thread, &attrs, &HandleThread, data)) != 0){
       LOG(WARNING) << "couldn't start the thread: " << strerror(result);
       return false;
@@ -79,12 +81,26 @@ namespace token{
     return true;
   }
 
-  bool Thread::StopThread(ThreadId thread){
+  std::string GetThreadName(const ThreadId& thread){
+    char name[kMaxThreadNameSize];
+    int err;
+    if((err = pthread_getname_np(thread, name, kMaxThreadNameSize)) != 0){
+      LOG(WARNING) << "cannot get name for " << thread << " thread: " << strerror(err);
+      return "unknown";
+    }
+    return std::string(name, kMaxThreadNameSize);
+  }
+
+  bool ThreadJoin(const ThreadId& thread){
     int result;
     if((result = pthread_join(thread, NULL)) != 0){
       LOG(WARNING) << "couldn't join thread: " << strerror(result);
       return false;
     }
     return true;
+  }
+
+  ThreadId GetCurrentThread(){
+    return pthread_self();
   }
 }

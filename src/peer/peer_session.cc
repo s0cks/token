@@ -14,17 +14,27 @@
 namespace token{
   bool PeerSession::Connect(){
     //TODO: StartHeartbeatTimer();
+    int err;
     NodeAddress paddr = GetAddress();
 
     struct sockaddr_in addr;
     uv_ip4_addr(paddr.GetAddress().c_str(), paddr.GetPort(), &addr);
-
     uv_connect_t conn;
     conn.data = this;
 
-    int err;
-    if((err = uv_tcp_connect(&conn, GetHandle(), (const struct sockaddr*) &addr, &PeerSession::OnConnect)) != 0){
-      LOG(ERROR) << "couldn't connect to peer " << paddr << ": " << uv_strerror(err);
+#ifdef TOKEN_DEBUG
+    THREAD_LOG(INFO) << "creating connection to peer " << paddr << "....";
+#endif//TOKEN_DEBUG
+    if((err = uv_tcp_connect(&conn, &handle_, (const struct sockaddr*) &addr, &PeerSession::OnConnect)) != 0){
+      THREAD_LOG(ERROR) << "couldn't connect to peer " << paddr << ": " << uv_strerror(err);
+      return false;
+    }
+
+#ifdef TOKEN_DEBUG
+    THREAD_LOG(INFO) << "starting session loop....";
+#endif//TOKEN_DEBUG
+    if((err = uv_run(GetLoop(), UV_RUN_DEFAULT)) != 0){
+      THREAD_LOG(ERROR) << "couldn't run loop: " << uv_strerror(err);
       return false;
     }
     return true;
@@ -40,16 +50,10 @@ namespace token{
   }
 
   void PeerSession::OnConnect(uv_connect_t* conn, int status){
-    if(status != 0){
-      LOG(WARNING) << "whaaaat?: " << status;
-      return;
-    }
-
     PeerSession* session = (PeerSession*)conn->data;
     if(status != 0){
-      LOG(WARNING) << "peer connect failure: " << uv_strerror(status);
-      if(!session->Disconnect())
-        LOG(WARNING) << "cannot disconnect peer.";
+      THREAD_LOG(ERROR) << "connect failure: " << uv_strerror(status);
+      session->CloseConnection();
       return;
     }
 
@@ -58,9 +62,11 @@ namespace token{
     BlockPtr head = BlockChain::GetHead();
     UUID server_id = ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID);
     session->Send(VersionMessage::NewInstance(ClientType::kNode, server_id, head->GetHeader()));
-    if((status = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
-      LOG(WARNING) << "peer read failure: " << uv_strerror(status);
-      //TODO: Disconnect();
+
+    int err;
+    if((err = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
+      THREAD_LOG(ERROR) << "read failure: " << uv_strerror(err);
+      session->CloseConnection();
       return;
     }
   }
@@ -90,8 +96,8 @@ namespace token{
   }
 
   void PeerSession::OnDisconnect(uv_async_t* handle){
-    if(!((PeerSession*)handle->data)->DisconnectPeer())
-      LOG(WARNING) << "cannot disconnect peer.";
+    PeerSession* session = (PeerSession*)handle->data;
+    session->CloseConnection();
   }
 
   void PeerSession::OnWalk(uv_handle_t* handle, void* data){
@@ -99,22 +105,7 @@ namespace token{
   }
 
   void PeerSession::OnClose(uv_handle_t* handle){
-    LOG(INFO) << "on-close.";
-  }
-
-  bool PeerSession::DisconnectPeer(){
-    int err;
-    if((err = uv_loop_close(GetLoop())) == UV_EBUSY)
-      uv_walk(GetLoop(), &OnWalk, NULL);
-
-    uv_run(GetLoop(), UV_RUN_DEFAULT);
-    if((err = uv_loop_close(GetLoop())) != 0){
-      LOG(ERROR) << "failed to close loop: " << uv_strerror(err);
-      return false;
-    }
-
-    LOG(INFO) << "loop closed.";
-    return true;
+    THREAD_LOG(INFO) << "on-close.";
   }
 
   void PeerSession::OnDiscovery(uv_async_t* handle){

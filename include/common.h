@@ -199,6 +199,8 @@ DECLARE_int64(miner_interval);
   DECLARE_bool(append_test);
   // --verbose
   DECLARE_bool(verbose);
+  // --no-mining
+  DECLARE_bool(no_mining);
 #endif//TOKEN_DEBUG
 
 #ifdef TOKEN_ENABLE_SERVER

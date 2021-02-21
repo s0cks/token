@@ -27,6 +27,8 @@ DEFINE_int64(miner_interval, 1000 * 60 * 1, "The amount of time between mining b
   DEFINE_bool(append_test, false, "Append a test block upon startup [Debug]");
   // --verbose
   DEFINE_bool(verbose, false, "Turn on verbose logging [Debug]");
+  // --no-mining
+  DEFINE_bool(no_mining, false, "Turn off block mining [Debug]");
 #endif//TOKEN_DEBUG
 
 #ifdef TOKEN_ENABLE_SERVER
@@ -225,17 +227,22 @@ main(int argc, char **argv){
   }
 #endif//TOKEN_DEBUG
 
-  if(!PeerSessionManager::Shutdown()){
-    CrashReport::PrintNewCrashReport("Cannot shutdown peers.");
-    return EXIT_FAILURE;
-  }
+//  if(!PeerSessionManager::Shutdown()){
+//    CrashReport::PrintNewCrashReport("Cannot shutdown peers.");
+//    return EXIT_FAILURE;
+//  }
 
-  if(!BlockMiner::Start()){
+  if(!FLAGS_no_mining && !BlockMiner::Start()){
     CrashReport::PrintNewCrashReport("Cannot start the block miner.");
     return EXIT_FAILURE;
   }
 
 #ifdef TOKEN_ENABLE_SERVER
+  if(!PeerSessionManager::WaitForShutdown()){
+    CrashReport::PrintNewCrashReport("Cannot shutdown the peer session manager.");
+    return EXIT_FAILURE;
+  }
+
   if(IsValidPort(FLAGS_server_port) && LedgerServer::IsServerRunning() && !LedgerServer::WaitForShutdown()){
     CrashReport::PrintNewCrashReport("Cannot join the rpc thread.");
     return EXIT_FAILURE;
@@ -243,14 +250,14 @@ main(int argc, char **argv){
 #endif//TOKEN_ENABLE_SERVER
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
-  if(HttpRestService::IsServiceRunning() && !HttpRestService::WaitForShutdown()){
+  if(IsValidPort(FLAGS_service_port) && HttpRestService::IsServiceRunning() && !HttpRestService::WaitForShutdown()){
     CrashReport::PrintNewCrashReport("Cannot join the controller service thread.");
     return EXIT_FAILURE;
   }
 #endif//TOKEN_ENABLE_REST_SERVICE
 
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
-  if(HttpHealthService::IsServiceRunning() && !HttpHealthService::WaitForShutdown()){
+  if(IsValidPort(FLAGS_healthcheck_port) && HttpHealthService::IsServiceRunning() && !HttpHealthService::WaitForShutdown()){
     CrashReport::PrintNewCrashReport("Cannot join the health check service thread.");
     return EXIT_FAILURE;
   }

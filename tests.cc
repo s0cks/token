@@ -17,6 +17,8 @@ DEFINE_int64(miner_interval, 1000 * 60 * 1, "The amount of time between mining b
   DEFINE_bool(append_test, false, "Append a test block upon startup [Debug]");
   // --verbose
   DEFINE_bool(verbose, false, "Turn on verbose logging [Debug]");
+  // --no-mining
+  DEFINE_bool(no_mining, false, "Turn off block mining [Debug]");
 #endif//TOKEN_DEBUG
 
 #ifdef TOKEN_ENABLE_SERVER

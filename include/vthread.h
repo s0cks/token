@@ -12,16 +12,14 @@
 #endif
 
 namespace token{
-  class Thread{
-   protected:
-    Thread() = delete;
-   public:
-    virtual ~Thread() = delete;
+  ThreadId GetCurrentThread();
+  std::string GetThreadName(const ThreadId& thread);
+  bool SetThreadName(const ThreadId& thread, const char* name);
+  bool ThreadStart(ThreadId* thread, const char* name, ThreadHandlerFunction func, uword parameter);
+  bool ThreadJoin(const ThreadId& thread);
 
-    static bool SetThreadName(ThreadId thread, const char* name);
-    static bool StartThread(ThreadId* thread, const char* name, ThreadHandlerFunction function, uword parameter);
-    static bool StopThread(ThreadId thread);
-  };
+#define THREAD_LOG(LevelName) \
+  LOG(LevelName) << "[" << GetThreadName(GetCurrentThread()) << "] "
 }
 
 #endif //TOKEN_VTHREAD_H

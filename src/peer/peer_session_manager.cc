@@ -6,55 +6,38 @@
 #include "peer/peer_session_manager.h"
 
 namespace token{
-  static std::mutex mutex_;
-  static std::condition_variable cond_;
-  static PeerSessionManager::State state_ = PeerSessionManager::kUninitialized;
-  static PeerSessionManager::Status status_ = PeerSessionManager::kOk;
+  static std::default_random_engine engine;
+  static RelaxedAtomic<PeerSessionManager::State> state_ = { PeerSessionManager::kUninitializedState };
   static PeerSessionThread** threads_;
-  static std::queue<PeerSessionManager::ConnectRequest> requests_;
-
-#define LOCK_GUARD std::lock_guard<std::mutex> __guard__(mutex_)
-#define LOCK std::unique_lock<std::mutex> __lock__(mutex_)
-#define UNLOCK __lock__.unlock()
-#define WAIT cond_.wait(__lock__)
-#define SIGNAL_ONE cond_.notify_one()
-#define SIGNAL_ALL cond_.notify_all()
+  static ConnectionRequestQueue queue_(TOKEN_CONNECTION_QUEUE_SIZE);
+  static std::map<ThreadId, ConnectionRequestQueue*> queues_;
 
   PeerSessionManager::State PeerSessionManager::GetState(){
-    std::lock_guard<std::mutex> guard(mutex_);
     return state_;
   }
 
   void PeerSessionManager::SetState(const State& state){
-    LOCK;
     state_ = state;
-    UNLOCK;
-    SIGNAL_ALL;
-  }
-
-  PeerSessionManager::Status PeerSessionManager::GetStatus(){
-    std::lock_guard<std::mutex> guard(mutex_);
-    return status_;
-  }
-
-  void PeerSessionManager::SetStatus(const Status& status){
-    LOCK;
-    status_ = status;
-    UNLOCK;
-    SIGNAL_ALL;
   }
 
   bool PeerSessionManager::Initialize(){
-    std::unique_lock<std::mutex> lock(mutex_);
+    if(!IsUninitializedState()){
+#ifdef TOKEN_DEBUG
+      LOG(WARNING) << "cannot re-initialize the peer session manager.";
+#endif//TOKEN_DEBUG
+      return false;
+    }
+
+    RegisterQueue(pthread_self(), &queue_);//TODO: cross-platform fix
     threads_ = (PeerSessionThread**) malloc(sizeof(PeerSessionThread*) * FLAGS_num_peers);
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
-      threads_[idx] = new PeerSessionThread(idx);
+      PeerSessionThread* thread = threads_[idx] = new PeerSessionThread(idx);
       if(!threads_[idx]->Start()){
         LOG(WARNING) << "couldn't start peer session #" << idx;
         return false;
       }
+      RegisterQueue(thread->GetThreadId(), thread->GetQueue());
     }
-    lock.unlock();
 
     PeerList peers;
     if(!ConfigurationManager::GetPeerList(TOKEN_CONFIGURATION_NODE_PEERS, peers)){
@@ -68,60 +51,46 @@ namespace token{
   }
 
   bool PeerSessionManager::Shutdown(){
-    std::lock_guard<std::mutex> guard(mutex_);
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
       PeerSessionThread* thread = threads_[idx];
-      LOG(INFO) << "stopping peer session thread #" << idx << "....";
-      thread->Stop();
+      if(!thread->Shutdown())
+        return false;
+    }
+    return true;
+  }
+
+  bool PeerSessionManager::WaitForShutdown(){
+    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
+      PeerSessionThread* thread = threads_[idx];
+      if(!thread->WaitForShutdown())
+        return false;
     }
     return true;
   }
 
   PeerSession* PeerSessionManager::GetSession(const NodeAddress& address){
-    std::lock_guard<std::mutex> guard(mutex_);
-    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
-      PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning() && thread->HasSession()){
-        PeerSession* session = thread->GetCurrentSession();
-        if(session->GetAddress() == address){
-          return session;
-        }
-      }
-    }
+    //TODO: implement
+    LOG(ERROR) << "not implemented yet.";
     return nullptr;
   }
 
   PeerSession* PeerSessionManager::GetSession(const UUID& uuid){
-    std::lock_guard<std::mutex> guard(mutex_);
-    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
-      PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning() && thread->HasSession()){
-        PeerSession* session = thread->GetCurrentSession();
-        LOG(INFO) << "checking " << session->GetID() << " <=> " << uuid;
-        if(session->GetID() == uuid)
-          return session;
-      }
-    }
+    //TODO: implement
+    LOG(ERROR) << "not implemented yet.";
     return nullptr;
   }
 
   bool PeerSessionManager::GetConnectedPeers(std::set<UUID>& peers){
-    std::lock_guard<std::mutex> guard(mutex_);
-    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
-      PeerSessionThread* thread = threads_[idx];
-      if(thread && thread->HasSession())
-        peers.insert(thread->GetCurrentSession()->GetID());
-    }
-    return true;
+    //TODO: implement
+    LOG(ERROR) << "not implemented yet.";
+    return false;
   }
 
   int32_t PeerSessionManager::GetNumberOfConnectedPeers(){
-    std::lock_guard<std::mutex> guard(mutex_);
-
     int32_t count = 0;
     for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
       PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning() && thread->HasSession())
+      if(thread->IsConnected())
         count++;
     }
     return count;
@@ -130,90 +99,71 @@ namespace token{
   bool PeerSessionManager::ConnectTo(const NodeAddress& address){
     if(IsConnectedTo(address))
       return false;
-    return ScheduleRequest(address);
+    ScheduleRequest(address);
+    return true;
   }
 
   bool PeerSessionManager::IsConnectedTo(const UUID& uuid){
-    std::lock_guard<std::mutex> guard(mutex_);
-    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
-      PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning() && thread->HasSession()){
-        PeerSession* session = thread->GetCurrentSession();
-        if(session->GetID() == uuid){
-          return true;
-        }
-      }
-    }
+    //TODO: implement
+    LOG(ERROR) << "not implemented yet.";
     return false;
   }
 
   bool PeerSessionManager::IsConnectedTo(const NodeAddress& address){
-    std::lock_guard<std::mutex> guard(mutex_);
-    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){
-      PeerSessionThread* thread = threads_[idx];
-      if(thread->IsRunning() && thread->HasSession()){
-        PeerSession* session = thread->GetCurrentSession();
-        if(session->GetAddress() == address){
-          return true;
-        }
-      }
-    }
+    //TODO: implement
+    LOG(ERROR) << "not implemented yet.";
     return false;
   }
 
 #define DEFINE_PAXOS_BROADCAST(Name) \
-  void PeerSessionManager::Broadcast##Name(){ \
-    std::lock_guard<std::mutex> guard(mutex_);\
-    for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){ \
-      PeerSessionThread* thread = threads_[idx];        \
-      if(thread->IsRunning() && thread->HasSession())   \
-        thread->GetCurrentSession()->Send##Name();      \
-    }                                \
-  }
+  void PeerSessionManager::Broadcast##Name(){}//TODO: implement
 
   DEFINE_PAXOS_BROADCAST(Prepare);
   DEFINE_PAXOS_BROADCAST(Promise);
   DEFINE_PAXOS_BROADCAST(Commit);
   DEFINE_PAXOS_BROADCAST(DiscoveredBlock);
 
-  bool PeerSessionManager::ScheduleRequest(const NodeAddress& next, int16_t attempts){
-    std::unique_lock<std::mutex> lock(mutex_);
-    if((int32_t)requests_.size() == FLAGS_num_peers){
-      lock.unlock();
-      return false;
+  void PeerSessionManager::RegisterQueue(const ThreadId& thread, ConnectionRequestQueue* queue){
+    auto pos = queues_.find(thread);
+    if(pos != queues_.end()){
+      LOG(WARNING) << "cannot re-register queue for " << GetThreadName(thread) << " thread.";
+      return;
     }
-
-    requests_.push(ConnectRequest(next, attempts));
-    lock.unlock();
-    cond_.notify_one();
-    return true;
+    if(!queues_.insert({ thread, queue }).second)
+      LOG(WARNING) << "cannot register queue for " << GetThreadName(thread) << " thread.";
   }
 
-  bool PeerSessionManager::RescheduleRequest(const ConnectRequest& request){
-    std::unique_lock<std::mutex> lock(mutex_);
-    if((int32_t) requests_.size() == FLAGS_num_peers){
-      lock.unlock();
-      return false;
+  ConnectionRequestQueue* PeerSessionManager::GetQueue(const ThreadId& thread){
+    for(auto& it : queues_){
+      if(pthread_equal(it.first, thread))
+        return it.second;
     }
-
-    lock.unlock();
-    requests_.push(ConnectRequest(request, true));
-    cond_.notify_one();
-    return true;
+    LOG(INFO) << "cannot find queue for: " << thread;
+    return nullptr;
   }
 
-  bool PeerSessionManager::GetNextRequest(ConnectRequest& request, int64_t timeoutms){
-    std::unique_lock<std::mutex> lock(mutex_);
-    cond_.wait_for(lock, std::chrono::milliseconds(timeoutms));
-    if(requests_.empty()){
-      lock.unlock();
-      return false;
-    }
+  //TODO: optimize
+  ConnectionRequestQueue* PeerSessionManager::GetRandomQueue(){
+    std::vector<ThreadId> keys;
+    for(auto& it : queues_)
+      keys.push_back(it.first);
 
-    lock.unlock();
-    request = requests_.front();
-    requests_.pop();
-    return true;
+    std::uniform_int_distribution<int> distribution(0, keys.size() - 1);
+
+    auto pos = queues_.find(keys[distribution(engine)]);
+    if(pos == queues_.end())
+      return nullptr;
+    return pos->second;
+  }
+
+  void PeerSessionManager::ScheduleRequest(const NodeAddress& address, const ConnectionAttemptCounter attempts){
+#ifdef TOKEN_DEBUG
+    LOG(INFO) << "scheduling connection request for " << address << " (" << attempts << " attempts)....";
+#endif//TOKEN_DEBUG
+
+    ConnectionRequest* request = new ConnectionRequest(address, attempts); //TODO: memory-leak
+    if(!queue_.Push(request))
+      LOG(WARNING) << "cannot schedule connection request for " << address;
   }
 }
 

@@ -2,6 +2,7 @@
 #define TOKEN_SESSION_H
 
 #include "message.h"
+#include "vthread.h"
 #include "utils/buffer.h"
 #include "atomic/relaxed_atomic.h"
 
@@ -72,6 +73,20 @@ namespace token{
 
     virtual void OnMessageRead(const SessionMessagePtr& message) = 0;
 
+    static void OnClose(uv_handle_t* handle){
+#ifdef TOKEN_DEBUG
+      THREAD_LOG(INFO) << "closing handle....";
+#endif//TOKEN_DEBUG
+    }
+
+    static void OnWalk(uv_handle_t* handle, void* arg){
+      uv_close(handle, &OnClose);
+    }
+
+    void CloseConnection(){
+      uv_walk(loop_, &OnWalk, NULL);
+    }
+
     void SendMessages(const SessionMessageList& messages){
       size_t total_messages = messages.size();
       if(total_messages <= 0){
@@ -134,7 +149,7 @@ namespace token{
         return;
       }
 
-      if((err = uv_tcp_keepalive(GetHandle(), 1, 60)) != 0){
+      if((err = uv_tcp_keepalive(&handle_, 1, 60)) != 0){
         SESSION_LOG(WARNING, this) << "couldn't configure channel keep-alive: " << uv_strerror(err);
         return;
       }

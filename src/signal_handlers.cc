@@ -8,7 +8,7 @@
 #endif//TOKEN_ENABLE_HEALTH_SERVICE
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
-  //#include "http/service_rest.h"
+  #include "http/http_service_rest.h"
 #endif//TOKEN_ENABLE_REST_SERVICE
 
 namespace token{
@@ -19,6 +19,32 @@ namespace token{
 
   static inline void
   Terminate(int signum){
+    // terminate the block miner
+    //TODO: implement
+
+#ifdef TOKEN_ENABLE_REST_SERVICE
+    // terminate the rest service
+    if(IsValidPort(FLAGS_service_port) && HttpRestService::IsServiceRunning()){
+#ifdef TOKEN_DEBUG
+      LOG(INFO) << "terminating the rest service....";
+      if(HttpRestService::Shutdown()){
+        HttpRestService::WaitForShutdown();
+      } else{
+        LOG(WARNING) << "cannot shutdown the rest service.";
+      }
+#endif//TOKEN_DEBUG
+    }
+#endif//TOKEN_ENABLE_REST_SERVICE
+
+    // terminate the peers
+    //TODO: implement
+
+    // terminate the server
+    //TODO: implement
+
+    // terminate the health service
+    //TODO: implement
+
 #ifdef TOKEN_ENABLE_REST_SERVICE
     /*if(IsValidPort(FLAGS_service_port) && HttpRestService::IsServiceRunning()){
       LOG(INFO) << "terminating the controller service....";

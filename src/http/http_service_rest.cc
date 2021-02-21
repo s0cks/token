@@ -22,8 +22,7 @@ namespace token{
   }
 
   bool HttpRestService::Shutdown(){
-    LOG(WARNING) << "HttpRestService::Shutdown() not implemented.";
-    return false; //TODO: implement HttpRestService::Shutdown()
+    return instance.SendShutdown();
   }
 
   bool HttpRestService::WaitForShutdown(){

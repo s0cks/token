@@ -8,6 +8,8 @@
 #include <pthread.h>
 
 namespace token{
+  static const int8_t kThreadNameMaxLength = 16;
+
   typedef pthread_key_t ThreadLocalKey;
   typedef pthread_t ThreadId;
   typedef void (* ThreadHandlerFunction)(uword parameter);

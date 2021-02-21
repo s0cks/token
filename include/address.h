@@ -70,6 +70,34 @@ namespace token{
       }
       return (*addresses.begin());
     }
+
+    static inline int
+    CompareAddress(const NodeAddress& a, const NodeAddress& b){
+      if(a.address_ < b.address_){
+        return -1;
+      } else if(a.address_ > b.address_){
+        return +1;
+      }
+      return 0;
+    }
+
+    static inline int
+    ComparePort(const NodeAddress& a, const NodeAddress& b){
+      if(a.port_ < b.port_){
+        return -1;
+      } else if(a.port_ > b.port_){
+        return +1;
+      }
+      return 0;
+    }
+
+    static inline int
+    Compare(const NodeAddress& a, const NodeAddress& b){
+      int ret;
+      if((ret = CompareAddress(a, b)) != 0)
+        return ret;
+      return ComparePort(a, b);
+    }
    private:
     uint32_t address_;
     uint32_t port_;

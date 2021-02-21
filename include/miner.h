@@ -17,7 +17,7 @@ namespace token{
   V(Warning)                     \
   V(Error)
 
-  class BlockMiner : Thread{
+  class BlockMiner{
    public:
     enum State{
 #define DEFINE_STATE(Name) k##Name##State,
@@ -77,7 +77,9 @@ namespace token{
     static Status GetStatus();
     static bool Stop();
     static bool Start();
+
     static bool Commit(const ProposalPtr& proposal);
+
     static void OnPromise();
     static void OnCommit();
     static void OnAccepted();

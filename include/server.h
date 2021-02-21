@@ -52,6 +52,7 @@ namespace token{
     ThreadId thread_;
     uv_loop_t* loop_;
     uv_tcp_t handle_;
+    uv_async_t shutdown_;
     RelaxedAtomic<State> state_;
 
     Server(uv_loop_t* loop, const char* name):
@@ -59,11 +60,19 @@ namespace token{
       thread_(),
       loop_(loop),
       handle_(),
+      shutdown_(),
       state_(Server::kStoppedState){
+      shutdown_.data = this;
       handle_.data = this;
+
       int err;
-      if((err = uv_tcp_init(GetLoop(), GetHandle())) != 0){
-        LOG_NAMED(WARNING) << "rpc initialize error: " << uv_strerror(err);
+      if((err = uv_tcp_init(loop_, &handle_)) != 0){
+        THREAD_LOG(ERROR) << "cannot initialize server handle: " << uv_strerror(err);
+        return;
+      }
+
+      if((err = uv_async_init(loop_, &shutdown_, &OnShutdown)) != 0){
+        THREAD_LOG(WARNING) << "cannot initialize shutdown callback: " << uv_strerror(err);
         return;
       }
     }
@@ -155,6 +164,20 @@ namespace token{
       free(buff->base);
     }
 
+    static void OnClose(uv_handle_t* handle){
+#ifdef TOKEN_DEBUG
+      THREAD_LOG(INFO) << "on-close.";
+#endif//TOKEN_DEBUG
+    }
+
+    static void OnWalk(uv_handle_t* handle, void* arg){
+      uv_close(handle, &OnClose);
+    }
+
+    static void OnShutdown(uv_async_t* handle){
+      uv_walk(handle->loop, &OnWalk, NULL);
+    }
+
     static inline int
     Bind(uv_tcp_t* server, const int32_t port){
       sockaddr_in bind_address;
@@ -178,11 +201,20 @@ namespace token{
     }
 
     bool StartThread(){
-      return Thread::StartThread(&thread_, name_, &HandleServerThread, (uword)this);
+      return ThreadStart(&thread_, name_, &HandleServerThread, (uword)this);
     }
 
     bool JoinThread(){
-      return Thread::StopThread(thread_);
+      return ThreadJoin(thread_);
+    }
+
+    bool SendShutdown(){
+      int err;
+      if((err = uv_async_send(&shutdown_)) != 0){
+        THREAD_LOG(ERROR) << "cannot send shutdown: " << uv_strerror(err);
+        return false;
+      }
+      return true;
     }
 
     virtual Session<M>* CreateSession() const = 0;
