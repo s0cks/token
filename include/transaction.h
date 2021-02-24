@@ -2,6 +2,8 @@
 #define TOKEN_TRANSACTION_H
 
 #include <set>
+
+#include "json.h"
 #include "hash.h"
 #include "object.h"
 #include "utils/buffer.h"
@@ -192,6 +194,8 @@ namespace token{
     Output(const std::string& user, const Product& product):
       Output(User(user), product){}
     Output(const std::string& user, const std::string& product):
+      Output(User(user), Product(product)){}
+    Output(const char* user, const char* product):
       Output(User(user), Product(product)){}
     Output(const BufferPtr& buff):
       SerializableObject(),

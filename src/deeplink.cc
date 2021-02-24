@@ -1,4 +1,6 @@
 #include <glog/logging.h>
+
+#include "uuid.h"
 #include "deeplink.h"
 
 namespace token{

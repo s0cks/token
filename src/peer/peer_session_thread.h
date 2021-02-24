@@ -121,6 +121,21 @@ namespace token{
       return session_ != nullptr;
     }
 
+    PeerSession* GetPeerSession(){
+      std::lock_guard<std::mutex> guard(session_mtx_);
+      return session_;
+    }
+
+    NodeAddress GetPeerAddress(){
+      std::lock_guard<std::mutex> guard(session_mtx_);
+      return session_->GetAddress();
+    }
+
+    UUID GetPeerID(){
+      std::lock_guard<std::mutex> guard(session_mtx_);
+      return session_->GetID();
+    }
+
 #define DEFINE_STATE_CHECK(Name) \
     inline bool Is##Name##State() const{ return GetState() == State::k##Name##State; }
     FOR_EACH_PEER_SESSION_STATE(DEFINE_STATE_CHECK)

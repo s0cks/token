@@ -1,3 +1,4 @@
+#include "json.h"
 #include "object.h"
 #include "utils/buffer.h"
 #include "utils/bitfield.h"
@@ -48,5 +49,12 @@ namespace token{
                                  true,
                                  new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(hash.data(), hash.size())));
     return Hash(hash.data(), CryptoPP::SHA256::DIGESTSIZE);
+  }
+
+  bool TransactionReference::Write(Json::Writer& writer) const{
+    return writer.StartObject()
+        && Json::SetField(writer, "hash", transaction_)
+        && Json::SetField(writer, "index", index_)
+        && writer.EndObject();
   }
 }

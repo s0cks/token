@@ -17,6 +17,10 @@
 #include <glog/logging.h>
 #include <gflags/gflags.h>
 
+#include <rapidjson/writer.h>
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+
 #pragma GCC diagnostic ignored "-Wunused-function"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wformat-truncation"
@@ -231,6 +235,12 @@ IsValidPort(int32_t port){
 #define TOKEN_VERBOSE (FLAGS_verbose)
 
 namespace token{
+  namespace Json{
+    typedef rapidjson::Document Document;
+    typedef rapidjson::StringBuffer String;
+    typedef rapidjson::Writer<String> Writer;
+  }
+
   namespace internal{
     // memory sizes
     static const int64_t kBytes = 1;

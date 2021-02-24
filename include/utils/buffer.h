@@ -5,8 +5,11 @@
 #include <vector>
 #include <leveldb/slice.h>
 
-#include "object.h"
+#include "uuid.h"
+#include "user.h"
+#include "product.h"
 #include "version.h"
+#include "timestamp.h"
 
 namespace token{
   class Buffer;

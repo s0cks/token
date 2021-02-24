@@ -80,6 +80,10 @@ namespace token{
       return GetNumberOfConnectedPeers() > 0;
     }
 
+#ifdef TOKEN_ENABLE_REST_SERVICE
+    static bool GetConnectedPeers(Json::Writer& writer);
+#endif//TOKEN_ENABLE_REST_SERVICE
+
 #define DEFINE_CHECK(Name) \
     static inline bool Is##Name##State(){ return GetState() == State::k##Name##State; }
     FOR_EACH_PEER_SESSION_MANAGER_STATE(DEFINE_CHECK)

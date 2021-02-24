@@ -5,6 +5,7 @@
 
 #include "http/http_controller_pool.h"
 #include "http/http_controller_chain.h"
+#include "http/http_controller_peers.h"
 #include "http/http_controller_wallet.h"
 
 namespace token{
@@ -15,6 +16,7 @@ namespace token{
     PoolController::Initialize(&router_);
     ChainController::Initialize(&router_);
     WalletController::Initialize(&router_);
+    PeerController::Initialize(&router_);
   }
 
   bool HttpRestService::Start(){

@@ -8,7 +8,7 @@
 
 namespace token{
 #define SESSION_LOG(LevelName, Session) \
-  LOG(LevelName) << "[" << (Session)->GetUUID().ToStringAbbreviated() << "]"
+  LOG(LevelName) << "[" << (Session)->GetUUID().ToStringAbbreviated() << "] "
 
 #define FOR_EACH_SESSION_STATE(V) \
     V(Connecting)                 \

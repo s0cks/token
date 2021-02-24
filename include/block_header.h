@@ -1,6 +1,7 @@
 #ifndef TOKEN_BLOCK_HEADER_H
 #define TOKEN_BLOCK_HEADER_H
 
+#include "json.h"
 #include "hash.h"
 #include "object.h"
 #include "utils/buffer.h"

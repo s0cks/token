@@ -6,16 +6,14 @@
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 
+#include "uuid.h"
 #include "hash.h"
+#include "address.h"
 #include "version.h"
 #include "timestamp.h"
 
 namespace token{
   namespace Json{
-    typedef rapidjson::Document Document;
-    typedef rapidjson::StringBuffer String;
-    typedef rapidjson::Writer<String> Writer;
-
     static inline bool
     SetFieldNull(Writer& writer, const std::string& name){
       return writer.Key(name.data(), name.length())
@@ -46,6 +44,16 @@ namespace token{
 
     static inline bool
     SetField(Writer& writer, const std::string& name, const Version& val){
+      return SetField(writer, name, val.ToString());
+    }
+
+    static inline bool
+    SetField(Writer& writer, const std::string& name, const UUID& val){
+      return SetField(writer, name, val.str());
+    }
+
+    static inline bool
+    SetField(Writer& writer, const std::string& name, const NodeAddress& val){
       return SetField(writer, name, val.ToString());
     }
 

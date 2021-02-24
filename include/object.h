@@ -5,14 +5,12 @@
 #include <vector>
 #include <string>
 #include <strings.h>
-#include <uuid/uuid.h>
 #include <leveldb/slice.h>
 
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
 
 #include "hash.h"
-#include "json.h"
 #include "utils/bitfield.h"
 
 namespace token{
@@ -297,88 +295,6 @@ namespace token{
     }
   };
 
-  class Product : public RawType<64>{
-    using Base = RawType<64>;
-   public:
-    Product():
-      Base(){}
-    Product(const uint8_t* bytes, int64_t size):
-      Base(bytes, size){}
-    Product(const Product& product):
-      Base(){
-      memcpy(data(), product.data(), Base::GetSize());
-    }
-    Product(const std::string& value):
-      Base(){
-      memcpy(data(), value.data(), std::min((int64_t) value.length(), Base::GetSize()));
-    }
-    ~Product() = default;
-
-    void operator=(const Product& product){
-      memcpy(data(), product.data(), Base::GetSize());
-    }
-
-    friend bool operator==(const Product& a, const Product& b){
-      return Base::Compare(a, b) == 0;
-    }
-
-    friend bool operator!=(const Product& a, const Product& b){
-      return Base::Compare(a, b) != 0;
-    }
-
-    friend int operator<(const Product& a, const Product& b){
-      return Base::Compare(a, b);
-    }
-
-    friend std::ostream& operator<<(std::ostream& stream, const Product& product){
-      stream << product.str();
-      return stream;
-    }
-  };
-
-  static const int16_t kRawUserSize = 64;
-  class User : public RawType<kRawUserSize>{
-    using Base = RawType<kRawUserSize>;
-   public:
-    User():
-      Base(){}
-    User(const uint8_t* bytes, int64_t size):
-      Base(bytes, size){}
-    User(const User& user):
-      Base(){memcpy(data(), user.data(), Base::GetSize());
-    }
-    User(const std::string& value):
-      Base(){
-      memcpy(data(), value.data(), std::min((int64_t) value.length(), Base::GetSize()));
-    }
-    ~User() = default;
-
-    void operator=(const User& user){
-      memcpy(data(), user.data(), Base::GetSize());
-    }
-
-    friend bool operator==(const User& a, const User& b){
-      return Compare(a, b) == 0;
-    }
-
-    friend bool operator!=(const User& a, const User& b){
-      return Compare(a, b) != 0;
-    }
-
-    friend bool operator<(const User& a, const User& b){
-      return Compare(a, b) < 0;
-    }
-
-    friend std::ostream& operator<<(std::ostream& stream, const User& user){
-      stream << user.str();
-      return stream;
-    }
-
-    static int Compare(const User& a, const User& b){
-      return Base::Compare(a, b);
-    }
-  };
-
   static const int16_t kRawReferenceSize = 64;
   class Reference : public RawType<kRawReferenceSize>{
     using Base = RawType<kRawReferenceSize>;
@@ -424,72 +340,6 @@ namespace token{
     }
   };
 
-  static const int16_t kRawUUIDSize = 16;
-  class UUID : public RawType<kRawUUIDSize>{
-    using Base = RawType<kRawUUIDSize>;
-   public:
-    UUID():
-      RawType(){
-      uuid_generate_time_safe(data_);
-    }
-    UUID(uint8_t* bytes, int64_t size):
-      RawType(bytes, size){}
-    UUID(const char* uuid):
-      RawType(){
-      uuid_parse(uuid, data_);
-    }
-    UUID(const std::string& uuid):
-      RawType(){
-      memcpy(data(), uuid.data(), kRawUUIDSize);
-    }
-    UUID(const leveldb::Slice& slice):
-      RawType(){
-      memcpy(data(), slice.data(), kRawUUIDSize);
-    }
-    UUID(const UUID& other):
-      RawType(){
-      memcpy(data(), other.data(), kRawUUIDSize);
-    }
-    ~UUID() = default;
-
-    std::string ToStringAbbreviated() const{
-      char uuid_str[37];
-      uuid_unparse(data_, uuid_str);
-      return std::string(uuid_str, 8);
-    }
-
-    std::string ToString() const{
-      char uuid_str[37];
-      uuid_unparse(data_, uuid_str);
-      return std::string(uuid_str, 37);
-    }
-
-    UUID& operator=(const UUID& other){
-      memcpy(data(), other.data(), kRawUUIDSize);
-      return (*this);
-    }
-
-    friend bool operator==(const UUID& a, const UUID& b){
-      return uuid_compare(a.data_, b.data_) == 0;
-    }
-
-    friend bool operator!=(const UUID& a, const UUID& b){
-      return uuid_compare(a.data_, b.data_) != 0;
-    }
-
-    friend bool operator<(const UUID& a, const UUID& b){
-      return uuid_compare(a.data_, b.data_) < 0;
-    }
-
-    friend std::ostream& operator<<(std::ostream& stream, const UUID& uuid){
-      return stream << uuid.ToString();
-    }
-
-    operator leveldb::Slice() const{
-      return leveldb::Slice(data(), size());
-    }
-  };
-
   class TransactionReference{
    public:
     static const int64_t kSize = Hash::kSize + sizeof(int64_t);
@@ -513,12 +363,7 @@ namespace token{
       return index_;
     }
 
-    bool Write(Json::Writer& writer) const{
-      return writer.StartObject()
-            && Json::SetField(writer, "hash", transaction_)
-            && Json::SetField(writer, "index", index_)
-          && writer.EndObject();
-    }
+    bool Write(Json::Writer& writer) const;
 
     TransactionReference& operator=(const TransactionReference& ref){
       transaction_ = ref.transaction_;

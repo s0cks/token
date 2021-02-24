@@ -13,11 +13,11 @@ namespace token{
 #define SIGNAL_ONE cond_.notify_one()
 #define SIGNAL_ALL cond_.notify_all()
 
-  #ifdef TOKEN_ENABLE_SERVER
+#ifdef TOKEN_ENABLE_SERVER
   PeerSession* Proposal::GetPeer() const{
     return PeerSessionManager::GetSession(GetProposer());
   }
-  #endif//TOKEN_ENABLE_SERVER
+#endif//TOKEN_ENABLE_SERVER
 
   Proposal::Phase Proposal::GetPhase(){
     LOCK_GUARD;
