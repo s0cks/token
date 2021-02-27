@@ -13,8 +13,11 @@ namespace token{
 
     void OnMessageRead(const HttpMessagePtr& msg);
    public:
+    HttpSession(uv_loop_t* loop):
+      Session<HttpMessage>(loop),
+      router_(nullptr){}
     HttpSession(uv_loop_t* loop, HttpRouter* router):
-      Session(loop),
+      Session<HttpMessage>(loop),
       router_(router){}
     ~HttpSession() = default;
 

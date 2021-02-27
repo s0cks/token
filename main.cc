@@ -1,4 +1,4 @@
-#include <thread>
+#include "json.h"
 #include "pool.h"
 #include "miner.h"
 #include "wallet.h"
@@ -228,7 +228,19 @@ main(int argc, char **argv){
 #ifdef TOKEN_ENABLE_ELASTICSEARCH
   NodeAddress es_addr = NodeAddress::ResolveAddress("localhost:9200");
   ESClient client(es_addr);
-  if(!client.Connect()){
+
+  Json::String body;
+  Json::Writer writer(body);
+  writer.StartObject();
+    Json::SetField(writer, "@timestamp", FormatTimestampElastic(Clock::now()));
+    Json::SetField(writer, "message", std::string("This is a test"));
+  writer.EndObject();
+
+  HttpRequestPtr request = HttpRequest::FromJson(nullptr, HttpMethod::kPost, "/my-index-000001/_doc?pretty", body);
+  SetHttpHeader(request->GetHeaders(), HTTP_HEADER_CONTENT_TYPE, HTTP_CONTENT_TYPE_APPLICATION_JSON);
+  SetHttpHeader(request->GetHeaders(), HTTP_HEADER_CONTENT_LENGTH, body.GetSize());
+
+  if(!client.SendRequest(request)){
     LOG(ERROR) << "cannot connect to elasticsearch at: " << es_addr;
     return EXIT_FAILURE;
   }

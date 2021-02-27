@@ -15,13 +15,13 @@ namespace token{
   static std::ostream& operator<<(std::ostream& stream, const HttpMethod& method){
     switch(method){
       case HttpMethod::kGet:
-        return stream << "Get";
+        return stream << "GET";
       case HttpMethod::kPut:
-        return stream << "Put";
+        return stream << "PUT";
       case HttpMethod::kPost:
-        return stream << "Post";
+        return stream << "POST";
       case HttpMethod::kDelete:
-        return stream << "Delete";
+        return stream << "DELETE";
       default:
         return stream << "Unknown";
     }

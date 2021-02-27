@@ -4,8 +4,10 @@
 #include <memory>
 #include <http_parser.h>
 
-#include "http_header.h"
+
 #include "block.h"
+#include "http_status.h"
+#include "http_header.h"
 #include "http_service.h"
 
 namespace token{
@@ -15,17 +17,76 @@ namespace token{
   class HttpJsonResponse;
   typedef std::shared_ptr<HttpJsonResponse> HttpJsonResponsePtr;
 
-#define FOR_EACH_HTTP_RESPONSE(V) \
-  V(Ok, 200)                      \
-  V(NoContent, 204)               \
-  V(NotFound, 404)                \
-  V(InternalServerError, 500)     \
-  V(NotImplemented, 501)
+  class HttpResponseParser{
+   private:
+    http_parser parser_;
+    http_parser_settings settings_;
+    std::string body_;
+    HttpStatusCode status_code_;
+    std::string header_;
+    HttpHeadersMap headers_;
 
-  enum HttpStatusCode{
-#define DEFINE_CODE(Name, Val) kHttp##Name = Val,
-    FOR_EACH_HTTP_RESPONSE(DEFINE_CODE)
-#undef DEFINE_CODE
+    static int
+    OnParseBody(http_parser* parser, const char* data, size_t len){
+      HttpResponseParser* response_parser = (HttpResponseParser*)parser->data;
+      response_parser->body_ = std::string(data, len);
+      return 0; //TODO: cleanup
+    }
+
+    static int
+    OnHeaderField(http_parser* parser, const char* data, size_t len){
+      HttpResponseParser* response_parser = (HttpResponseParser*)parser->data;
+      response_parser->header_ = std::string(data, len);
+      return 0;
+    }
+
+    static int
+    OnHeaderValue(http_parser* parser, const char* data, size_t len){
+      HttpResponseParser* response_parser = (HttpResponseParser*)parser->data;
+
+      HttpHeadersMap& headers = response_parser->headers_;
+      std::string& header = response_parser->header_;
+      std::string value(data, len);
+
+      if(!SetHttpHeader(headers, header, value))
+        LOG(WARNING) << "cannot set http header " << header << " := " << value;
+      return 0;
+    }
+
+    static int
+    OnStatus(http_parser* parser, const char* data, size_t len){
+      //TODO: implement
+      return 0;
+    }
+   public:
+    HttpResponseParser():
+      parser_(),
+      settings_(),
+      body_(),
+      status_code_(),
+      headers_(){
+      parser_.data = this;
+      settings_.on_status = &OnStatus;
+      settings_.on_body = &OnParseBody;
+      settings_.on_header_field = &OnHeaderField;
+      settings_.on_header_value = &OnHeaderValue;
+      http_parser_init(&parser_, HTTP_RESPONSE);
+    }
+    ~HttpResponseParser() = default;
+
+    HttpResponsePtr Parse(const char* data, size_t len){
+      size_t parsed;
+      if((parsed = http_parser_execute(&parser_, &settings_, data, len)) != len){
+        LOG(WARNING) << "http parser parsed " << parsed << "/" << len << "bytes: " << http_errno_name((http_errno)parser_.http_errno) << ": " << http_errno_description((http_errno)parser_.http_errno);
+        return nullptr;
+      }
+      return std::make_shared<HttpResponse>(nullptr, headers_, body_);
+    }
+
+    inline HttpResponsePtr
+    Parse(const BufferPtr& buffer){
+      return Parse(buffer->data(), buffer->GetWrittenBytes());
+    }
   };
 
   class HttpSession;
@@ -33,11 +94,7 @@ namespace token{
     friend class HttpSession;
    protected:
     HttpSession* session_;
-
-    http_parser parser_;
-    http_parser_settings settings_;
     std::string body_;
-
     HttpStatusCode status_code_;
     HttpHeadersMap headers_;
 
@@ -74,31 +131,16 @@ namespace token{
     HttpResponse(HttpSession* session, const HttpStatusCode& code):
       HttpMessage(),
       session_(session),
-      parser_(),
-      settings_(),
       body_(),
       status_code_(code),
       headers_(){
       InitHttpResponseHeaders(headers_);
     }
-    HttpResponse(HttpSession* session, const char* data, size_t len):
+    HttpResponse(HttpSession* session, const HttpHeadersMap& headers, const std::string& body):
       HttpMessage(),
       session_(session),
-      parser_(),
-      settings_(),
-      body_(),
-      status_code_(HttpStatusCode::kHttpOk),
-      headers_(){
-      parser_.data = this;
-      settings_.on_body = &OnParseBody;
-      http_parser_init(&parser_, HTTP_RESPONSE);
-
-      size_t parsed;
-      if((parsed = http_parser_execute(&parser_, &settings_, data, len)) != len){
-        LOG(WARNING) << "http parser parsed " << parsed << "/" << len << "bytes: " << http_errno_name((http_errno)parser_.http_errno) << ": " << http_errno_description((http_errno)parser_.http_errno);
-        return;
-      }
-    }
+      body_(body),
+      headers_(headers){}
     virtual ~HttpResponse() = default;
 
     Type GetType() const{
@@ -169,7 +211,8 @@ namespace token{
 
     static inline HttpResponsePtr
     From(HttpSession* session, const BufferPtr& buffer){
-      return std::make_shared<HttpResponse>(session, buffer->data(), buffer->GetWrittenBytes());
+      HttpResponseParser parser;//TODO: use session
+      return parser.Parse(buffer);
     }
   };
 

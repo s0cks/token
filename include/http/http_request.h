@@ -19,56 +19,113 @@ namespace token{
 
   typedef std::unordered_map<std::string, std::string> ParameterMap;
 
-  class HttpSession;
-  class HttpRequest : public HttpMessage{
-    friend class HttpSession;
+  class HttpRequestParser{
    private:
-    HttpSession* session_;
     http_parser parser_;
     http_parser_settings settings_;
     std::string path_;
     std::string body_;
-    ParameterMap path_params_;
-    ParameterMap query_params_;
+    HttpHeadersMap headers_;
 
     static int
     OnParseURL(http_parser* parser, const char* data, size_t len){
-      HttpRequest* request = (HttpRequest*) parser->data;
-      request->path_ = std::string(data, len);
+      HttpRequestParser* p = (HttpRequestParser*)parser->data;
+      p->path_ = std::string(data, len);
       return 0;
     }
 
     static int
     OnParseBody(http_parser* parser, const char* data, size_t len){
-      HttpRequest* request = (HttpRequest*)parser->data;
-      request->body_ = std::string(data, len);
+      HttpRequestParser* p = (HttpRequestParser*)parser->data;
+      p->body_ = std::string(data, len);
       return 0;
     }
-   protected:
-    bool Write(const BufferPtr& buffer) const{
-      return false;
-    }
    public:
-    HttpRequest(HttpSession* session, const char* data, size_t len):
-      HttpMessage(),
-      session_(session),
+    HttpRequestParser():
       parser_(),
       settings_(),
       path_(),
       body_(),
-      path_params_(),
-      query_params_(){
+      headers_(){
       parser_.data = this;
-      settings_.on_url = &OnParseURL;
-      settings_.on_body = &OnParseBody;
       http_parser_init(&parser_, HTTP_REQUEST);
+    }
+
+    HttpRequestPtr Parse(HttpSession* session, const char* data, size_t len){
       size_t parsed;
       if((parsed = http_parser_execute(&parser_, &settings_, data, len)) != len){
         LOG(WARNING) << "http parser parsed nothing: " << http_errno_name((http_errno)parser_.http_errno) << ") " << http_errno_description((http_errno)parser_.http_errno);
-        return;
+        return nullptr;
       }
+      return std::make_shared<HttpRequest>(nullptr);
     }
+
+    inline HttpRequestPtr
+    Parse(HttpSession* session, const BufferPtr& buffer){
+      return Parse(session, buffer->data(), buffer->GetWrittenBytes());
+    }
+  };
+
+  class HttpSession;
+  class HttpRequest : public HttpMessage{
+    friend class HttpSession;
+   private:
+    HttpSession* session_;
+    HttpMethod method_;
+    HttpHeadersMap headers_;
+    std::string path_;
+    std::string body_;
+    ParameterMap path_params_;
+    ParameterMap query_params_;
+   protected:
+    bool Write(const BufferPtr& buffer) const{
+      if(!buffer->PutString(GetHttpStatusLine(method_, path_)))
+        return false;
+      for(auto& hdr : headers_){
+        if(!buffer->PutString(GetHttpHeaderLine(hdr.first, hdr.second)))
+          return false;
+      }
+      return buffer->PutString("\r\n")
+          && buffer->PutString(body_);
+    }
+
+    static inline std::string
+    GetHttpStatusLine(const HttpMethod& method, const std::string& path){
+      std::stringstream ss;
+      ss << method << " " << path << " HTTP/1.1\r\n";
+      return ss.str();
+    }
+
+    static inline std::string
+    GetHttpHeaderLine(const std::string& name, const std::string& value){
+      std::stringstream ss;
+      ss << name << ": " << value << "\r\n";
+      return ss.str();
+    }
+   public:
+    HttpRequest(HttpSession* session):
+      HttpMessage(),
+      session_(session),
+      method_(),
+      headers_(),
+      path_(),
+      body_(),
+      path_params_(),
+      query_params_(){}
+    HttpRequest(HttpSession* session, const HttpMethod& method, const std::string& path, const std::string& body):
+      HttpMessage(),
+      session_(session),
+      method_(method),
+      headers_(),
+      path_(path),
+      body_(body),
+      path_params_(),
+      query_params_(){}
     ~HttpRequest(){}
+
+    HttpHeadersMap& GetHeaders(){
+      return headers_;
+    }
 
     Type GetType() const{
       return Type::kHttpRequest;
@@ -101,31 +158,23 @@ namespace token{
     }
 
     HttpMethod GetMethod() const{
-      switch(parser_.method){
-        case HTTP_GET: return HttpMethod::kGet;
-        case HTTP_PUT: return HttpMethod::kPut;
-        case HTTP_POST: return HttpMethod::kPost;
-        case HTTP_DELETE: return HttpMethod::kDelete;
-        default:
-          // should we do this?
-          return HttpMethod::kGet;
-      }
+      return method_;
     }
 
     bool IsGet() const{
-      return parser_.method == HTTP_GET;
+      return method_ == HttpMethod::kGet;
     }
 
     bool IsPost() const{
-      return parser_.method == HTTP_POST;
+      return method_ == HttpMethod::kPost;
     }
 
     bool IsPut() const{
-      return parser_.method == HTTP_PUT;
+      return method_ == HttpMethod::kPut;
     }
 
     bool IsDelete() const{
-      return parser_.method == HTTP_DELETE;
+      return method_ == HttpMethod::kDelete;
     }
 
     bool HasPathParameter(const std::string& name) const{
@@ -174,12 +223,25 @@ namespace token{
     }
 
     int64_t GetBufferSize() const{
-      return 0;
+      int64_t size = 0;
+      size += GetHttpStatusLine(method_, path_).length();
+      for(auto& it : headers_)
+        size += GetHttpHeaderLine(it.first, it.second).length();
+      size += sizeof('\r');
+      size += sizeof('\n');
+      size += body_.length();
+      return size;
     }
 
     static HttpRequestPtr
     NewInstance(HttpSession* session, const BufferPtr& buffer){
-      return std::make_shared<HttpRequest>(session, buffer->data(), buffer->GetBufferSize());
+      HttpRequestParser parser;
+      return parser.Parse(session, buffer);
+    }
+
+    static inline HttpRequestPtr
+    FromJson(HttpSession* session, const HttpMethod& method, const std::string& path, const Json::String& body){
+      return std::make_shared<HttpRequest>(session, method, path, std::string(body.GetString(), body.GetSize()));
     }
   };
 }

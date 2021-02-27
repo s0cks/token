@@ -125,6 +125,7 @@ namespace token{
         offset += msg_size;
       }
 
+      SESSION_LOG(INFO, this) << "writing: " << std::endl << std::string(data->buffer->data(), data->buffer->GetWrittenBytes());
       uv_write(&data->request, GetStream(), buffers, total_messages, &OnMessageSent);
     }
 
