@@ -37,6 +37,11 @@ namespace token{
   }
 
   static inline std::string
+  FormatTimestampElastic(const Timestamp& ts, const std::string& format="%Y-%m-%dT%H:%M:%S"){
+    return FormatTimestamp(ts, format);
+  }
+
+  static inline std::string
   FormatTimestampFileSafe(const Timestamp& ts, const std::string& format="%Y%m%d-%H%M%S"){
     return FormatTimestamp(ts, format);
   }

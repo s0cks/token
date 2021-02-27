@@ -11,6 +11,10 @@
 
 #include "crash/crash_report.h"
 
+#ifdef TOKEN_ENABLE_ELASTICSEARCH
+  #include "elastic/elastic_client.h"
+#endif//TOKEN_ENABLE_ELASTICSEARCH
+
 // --path "/usr/share/ledger"
 DEFINE_string(path, "", "The path for the local ledger to be stored in.");
 // --enable-snapshots
@@ -220,6 +224,17 @@ main(int argc, char **argv){
     LOG(INFO) << "number of transactions in the pool: " << ObjectPool::GetNumberOfTransactions();
     LOG(INFO) << "number of unclaimed transactions in the pool: " << ObjectPool::GetNumberOfUnclaimedTransactions();
   }
+
+#ifdef TOKEN_ENABLE_ELASTICSEARCH
+  NodeAddress es_addr = NodeAddress::ResolveAddress("localhost:9200");
+  ESClient client(es_addr);
+  if(!client.Connect()){
+    LOG(ERROR) << "cannot connect to elasticsearch at: " << es_addr;
+    return EXIT_FAILURE;
+  }
+
+  LOG(INFO) << "sent data to: " << es_addr;
+#endif//TOKEN_ENABLE_ELASTICSEARCH
 
   if(FLAGS_append_test && !AppendDummy("VenueA", 2)){
     CrashReport::PrintNewCrashReport("Cannot append dummy transactions.");

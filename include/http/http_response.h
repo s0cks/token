@@ -2,6 +2,8 @@
 #define TOKEN_INCLUDE_HTTP_RESPONSE_H
 
 #include <memory>
+#include <http_parser.h>
+
 #include "http_header.h"
 #include "block.h"
 #include "http_service.h"
@@ -31,6 +33,11 @@ namespace token{
     friend class HttpSession;
    protected:
     HttpSession* session_;
+
+    http_parser parser_;
+    http_parser_settings settings_;
+    std::string body_;
+
     HttpStatusCode status_code_;
     HttpHeadersMap headers_;
 
@@ -56,12 +63,41 @@ namespace token{
           return false;
       return buff->PutString("\r\n");
     }
+
+    static int
+    OnParseBody(http_parser* parser, const char* data, size_t len){
+      HttpResponse* response = (HttpResponse*)parser->data;
+      response->body_ = std::string(data, len);
+      return 0;
+    }
    public:
     HttpResponse(HttpSession* session, const HttpStatusCode& code):
+      HttpMessage(),
       session_(session),
+      parser_(),
+      settings_(),
+      body_(),
       status_code_(code),
       headers_(){
       InitHttpResponseHeaders(headers_);
+    }
+    HttpResponse(HttpSession* session, const char* data, size_t len):
+      HttpMessage(),
+      session_(session),
+      parser_(),
+      settings_(),
+      body_(),
+      status_code_(HttpStatusCode::kHttpOk),
+      headers_(){
+      parser_.data = this;
+      settings_.on_body = &OnParseBody;
+      http_parser_init(&parser_, HTTP_RESPONSE);
+
+      size_t parsed;
+      if((parsed = http_parser_execute(&parser_, &settings_, data, len)) != len){
+        LOG(WARNING) << "http parser parsed " << parsed << "/" << len << "bytes: " << http_errno_name((http_errno)parser_.http_errno) << ": " << http_errno_description((http_errno)parser_.http_errno);
+        return;
+      }
     }
     virtual ~HttpResponse() = default;
 
@@ -121,6 +157,19 @@ namespace token{
       size += sizeof('\n');
       size += GetContentLength();
       return size;
+    }
+
+    std::string GetBody() const{
+      return body_;
+    }
+
+    std::string ToString() const{
+      return GetBody();//TODO: implement
+    }
+
+    static inline HttpResponsePtr
+    From(HttpSession* session, const BufferPtr& buffer){
+      return std::make_shared<HttpResponse>(session, buffer->data(), buffer->GetWrittenBytes());
     }
   };
 

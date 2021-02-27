@@ -8,6 +8,7 @@ set(PROTO_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protos")
 
 file(GLOB_RECURSE TOKEN_CMAKE_MODULES ${CMAKE_MODULE_PATH}/*.cmake)
 
+option(ENABLE_ELASTICSEARCH "Enables Elasticsearch Integration." ON)
 option(ENABLE_COMPRESSION "Enables compression." OFF)
 option(ENABLE_SERVER "Enables the block chain server." ON)
 option(ENABLE_HEALTH_SERVICE "Enable the health http service." ON)
@@ -25,6 +26,12 @@ endif()
 if(ENABLE_COMPRESSION)
   message(STATUS "Compiling w/ compression enabled.")
   add_compile_definitions(TOKEN_ENABLE_COMPRESSION)
+endif()
+
+# Compile w/ Elasticsearch support
+if(ENABLE_ELASTICSEARCH)
+  message(STATUS "Compiling w/ Elasticsearch enabled.")
+  add_compile_definitions(TOKEN_ENABLE_ELASTICSEARCH)
 endif()
 
 # Compile w/ the rpc if enabled
