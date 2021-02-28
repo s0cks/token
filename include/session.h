@@ -100,7 +100,7 @@ namespace token{
       });
 
 #ifdef TOKEN_DEBUG
-      LOG_UUID(INFO) << "sending " << total_messages << " messages....";
+      SESSION_LOG(INFO, this) << "sending " << total_messages << " messages....";
 #endif//TOKEN_DEBUG
 
       SessionWriteData* data = new SessionWriteData(this, total_size);
@@ -124,8 +124,6 @@ namespace token{
         buffers[idx].len = msg_size;
         offset += msg_size;
       }
-
-      SESSION_LOG(INFO, this) << "writing: " << std::endl << std::string(data->buffer->data(), data->buffer->GetWrittenBytes());
       uv_write(&data->request, GetStream(), buffers, total_messages, &OnMessageSent);
     }
 

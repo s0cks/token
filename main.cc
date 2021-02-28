@@ -107,6 +107,13 @@ InitializeLogging(char *arg0){
   }
 #endif//TOKEN_DEBUG
 
+static inline token::User
+RandomUser(const std::vector<token::User>& users){
+  static std::default_random_engine engine;
+  static std::uniform_int_distribution<int> distribution(0, users.size());
+  return users[distribution(engine)];
+}
+
 //TODO:
 // - create global environment teardown and deconstruct routines
 // - validity/consistency checks on block chain data
@@ -226,26 +233,12 @@ main(int argc, char **argv){
   }
 
 #ifdef TOKEN_ENABLE_ELASTICSEARCH
-  NodeAddress es_addr = NodeAddress::ResolveAddress("localhost:9200");
-  ESClient client(es_addr);
-
-  Json::String body;
-  Json::Writer writer(body);
-  writer.StartObject();
-    Json::SetField(writer, "@timestamp", FormatTimestampElastic(Clock::now()));
-    Json::SetField(writer, "message", std::string("This is a test"));
-  writer.EndObject();
-
-  HttpRequestPtr request = HttpRequest::FromJson(nullptr, HttpMethod::kPost, "/my-index-000001/_doc?pretty", body);
-  SetHttpHeader(request->GetHeaders(), HTTP_HEADER_CONTENT_TYPE, HTTP_CONTENT_TYPE_APPLICATION_JSON);
-  SetHttpHeader(request->GetHeaders(), HTTP_HEADER_CONTENT_LENGTH, body.GetSize());
-
-  if(!client.SendRequest(request)){
-    LOG(ERROR) << "cannot connect to elasticsearch at: " << es_addr;
+  NodeAddress address = NodeAddress::ResolveAddress("localhost:9200");
+  elastic::SpendEvent event(Clock::now(), User("VenueA"), User("VenueB"), Hash::GenerateNonce());
+  if(!SendEvent(address, "test-events-0000001", event)){
+    CrashReport::PrintNewCrashReport("Cannot send spend event.");
     return EXIT_FAILURE;
   }
-
-  LOG(INFO) << "sent data to: " << es_addr;
 #endif//TOKEN_ENABLE_ELASTICSEARCH
 
   if(FLAGS_append_test && !AppendDummy("VenueA", 2)){
