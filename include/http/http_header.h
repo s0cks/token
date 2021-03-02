@@ -66,6 +66,7 @@ namespace token{
 
   static inline void
   InitHttpResponseHeaders(HttpHeadersMap& headers){
+    SetHttpHeader(headers, HTTP_HEADER_CONNECTION, "close");
     SetHttpHeader(headers, HTTP_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, "*");
     SetHttpHeader(headers, HTTP_HEADER_DATE, Clock::now());
     SetHttpHeader(headers, HTTP_HEADER_SERVER, GetServerHeaderValue());

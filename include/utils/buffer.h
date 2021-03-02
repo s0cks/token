@@ -422,6 +422,28 @@ namespace token{
       }
       return buff;
     }
+
+    static inline BufferPtr
+    CopyFrom(const char* data, size_t len){
+      BufferPtr buffer = Buffer::NewInstance(len);
+      if(!buffer->PutBytes((uint8_t*)data, len)){
+#ifdef TOKEN_DEBUG
+        LOG(WARNING) << "couldn't copy " << len << " bytes to new buffer.";
+#endif//TOKEN_DEBUG
+        return nullptr;
+      }
+      return buffer;
+    }
+
+    static inline BufferPtr
+    CopyFrom(const std::string& data){
+      return CopyFrom(data.data(), data.length());
+    }
+
+    static inline BufferPtr
+    CopyFrom(const Json::String& data){
+      return CopyFrom(data.GetString(), data.GetSize());
+    }
   };
 }
 

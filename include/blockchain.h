@@ -52,28 +52,20 @@ namespace token{
     class BlockKey : public KeyType{
      public:
       static inline int
-      CompareHeight(const BlockKey& a, const BlockKey& b){
-        if(a.GetHeight() < b.GetHeight()){
-          return -1;
-        } else if(a.GetHeight() > b.GetHeight()){
-          return +1;
-        }
-        return 0;
+      CompareSize(const BlockKey& a, const BlockKey& b){
+        return ObjectTag::CompareSize(a.tag(), b.tag());
       }
 
       static inline int
-      CompareSize(const BlockKey& a, const BlockKey& b){
-        return ObjectTag::CompareSize(a.tag(), b.tag());
+      CompareHash(const BlockKey& a, const BlockKey& b){
+        return a.GetHash() < b.GetHash();
       }
      private:
       enum Layout{
         kTagPosition = 0,
         kBytesForTag = sizeof(RawObjectTag),
 
-        kHeightPosition = kTagPosition+kBytesForTag,
-        kBytesForHeight = sizeof(int64_t),
-
-        kHashPosition = kHeightPosition+kBytesForHeight,
+        kHashPosition = kTagPosition+kBytesForTag,
         kBytesForHash = Hash::kSize,
 
         kTotalSize = kHashPosition+kBytesForHash,
@@ -96,16 +88,6 @@ namespace token{
         return SetTag(tag.raw());
       }
 
-      inline int64_t*
-      height_ptr() const{
-        return (int64_t*)&data_[kHeightPosition];
-      }
-
-      inline void
-      SetHeight(const int64_t& height){
-        memcpy(&data_[kHeightPosition], &height, kBytesForHeight);
-      }
-
       inline uint8_t*
       hash_ptr() const{
         return (uint8_t*)&data_[kHashPosition];
@@ -116,18 +98,16 @@ namespace token{
         memcpy(&data_[kHashPosition], hash.data(), kBytesForHash);
       }
      public:
-      BlockKey(const int64_t size, const int64_t height, const Hash& hash):
+      BlockKey(const int64_t size, const Hash& hash):
         KeyType(),
         data_(){
         SetTag(ObjectTag(Type::kBlock, size));
-        SetHeight(height);
         SetHash(hash);
       }
       BlockKey(const BlockPtr& blk):
         KeyType(),
         data_(){
         SetTag(blk->GetTag());
-        SetHeight(blk->GetHeight());
         SetHash(blk->GetHash());
       }
       BlockKey(const leveldb::Slice& slice):
@@ -139,10 +119,6 @@ namespace token{
 
       Hash GetHash() const{
         return Hash(hash_ptr(), kBytesForHash);
-      }
-
-      int64_t GetHeight() const{
-        return *height_ptr();
       }
 
       ObjectTag tag() const{
@@ -161,20 +137,25 @@ namespace token{
         std::stringstream ss;
         ss << "BlockKey(";
         ss << "tag=" << tag() << ", ";
-        ss << "height=" << GetHeight() << ", ";
         ss << "hash=" << GetHash();
         ss << ")";
         return ss.str();
       }
 
       friend bool operator==(const BlockKey& a, const BlockKey& b){
-        return CompareHeight(a, b) == 0
-            && CompareSize(a, b) == 0;
+        return CompareHash(a, b) == 0;
       }
 
       friend bool operator!=(const BlockKey& a, const BlockKey& b){
-        return CompareHeight(a, b) != 0
-            || CompareSize(a, b) != 0;
+        return CompareHash(a, b) != 0;
+      }
+
+      friend bool operator<(const BlockKey& a, const BlockKey& b){
+        return CompareHash(a, b) < 0;
+      }
+
+      friend bool operator>(const BlockKey& a, const BlockKey& b){
+        return CompareHash(a, b) > 0;
       }
     };
 
@@ -267,7 +248,6 @@ namespace token{
       }
     };
 
-   private:
     class Comparator : public leveldb::Comparator{
      private:
       static inline ObjectTag
@@ -298,7 +278,7 @@ namespace token{
           BlockKey k2(b);
           if(!k2.valid())
             LOG(WARNING) << "k2 doesn't have a IsValid tag.";
-          return BlockKey::CompareHeight(k1, k2);
+          return BlockKey::CompareHash(k1, k2);
         } else if(t1.IsReferenceType()){
           ReferenceKey k1(a);
           if(!k1.valid())
@@ -358,9 +338,9 @@ namespace token{
 
     static bool GetBlocks(Json::Writer& writer);
 
-    #ifdef TOKEN_DEBUG
+#ifdef TOKEN_DEBUG
     static bool GetStats(Json::Writer& writer);
-    #endif//TOKEN_DEBUG
+#endif//TOKEN_DEBUG
 
     static inline bool HasBlocks(){
       return GetNumberOfBlocks() > 0;

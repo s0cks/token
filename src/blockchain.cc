@@ -151,7 +151,7 @@ namespace token{
   }
 
   BlockPtr BlockChain::GetBlock(const Hash& hash){
-    BlockKey key(1, 0, hash);
+    BlockKey key(0, hash);
 
     std::string filename;
     leveldb::Status status;
@@ -237,14 +237,13 @@ namespace token{
   }
 
   bool BlockChain::HasBlock(const Hash& hash){
-    BlockKey key(0, 0, hash);
-    std::string filename;
-
-    leveldb::Status status;
-    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), key, &filename)).ok()){
-      LOG(WARNING) << "cannot find block " << hash << ": " << status.ToString();
-      return false;
-    }
+    Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
+    do{
+      LOG(INFO) << "checking " << hash << " <=> " << current;
+      if(current == hash)
+        return true;
+      current = GetBlock(current)->GetPreviousHash();
+    } while(!current.IsNull());
     return true;
   }
 

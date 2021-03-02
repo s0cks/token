@@ -75,15 +75,17 @@ namespace token{
       ss << "Couldn't generate deeplink for: " << hash;
       return session->Send(NewInternalServerErrorResponse(session, ss));
     }
-    return session->Send(HttpBinaryResponse::NewInstance(session, HttpStatusCode::kHttpOk, HTTP_CONTENT_TYPE_IMAGE_PNG, data));
+
+    HttpResponseBuilder builder(session, data);
+    builder.SetStatusCode(HttpStatusCode::kHttpOk);
+    builder.SetHeader(HTTP_HEADER_CONTENT_TYPE, HTTP_CONTENT_TYPE_IMAGE_PNG);
+    builder.SetHeader(HTTP_HEADER_CONTENT_LENGTH, data->GetWrittenBytes());
+    return session->Send(builder.Build());
   }
 
   void WalletController::HandleGetUserWallet(HttpSession* session, const HttpRequestPtr& request){
     User user = request->GetUserParameterValue();
-
-    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kHttpOk);
-
-    Json::String& body = response->GetBody();
+    Json::String body;
     Json::Writer writer(body);
     writer.StartObject();
     {
@@ -103,10 +105,7 @@ namespace token{
       writer.EndObject();
     }
     writer.EndObject();
-
-    response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);
-    response->SetHeader("Content-Length", body.GetSize());
-    return session->Send(std::static_pointer_cast<HttpResponse>(response));
+    return session->Send(NewOkResponse(session, body));
   }
 
   static inline bool

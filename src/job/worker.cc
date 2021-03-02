@@ -4,6 +4,14 @@
 #include "utils/timeline.h"
 
 namespace token{
+  static inline std::string
+  GetWorkerName(const WorkerId& worker){
+    char truncated_name[16];
+    snprintf(truncated_name, 15, "worker-%" PRId16, worker);
+    return std::string(truncated_name, 16);
+  }
+
+
   Job* JobWorker::GetNextJob(){
     Job* job = queue_.Pop();
     if(job)
@@ -25,40 +33,50 @@ namespace token{
 
   void JobWorker::HandleThread(uword parameter){
     JobWorker* instance = ((JobWorker*) parameter);
-
-    LOG(INFO) << "starting worker....";
+#ifdef TOKEN_DEBUG
+    THREAD_LOG(INFO) << "starting....";
+#endif//TOKEN_DEBUG
     instance->SetState(JobWorker::kRunning);
 
-    char truncated_name[16];
-    snprintf(truncated_name, 15, "worker-%" PRId16, instance->GetWorkerID());
-
-    int result;
-    if((result = pthread_setname_np(pthread_self(), truncated_name)) != 0){
-      LOG(WARNING) << "couldn't set thread name: " << strerror(result);
-      goto finish;
-    }
-
-    sleep(2);
+    sleep(2);//TODO: remove this?
     while(instance->IsRunning()){
       Job* next = instance->GetNextJob();
       if(next){
-        LOG(INFO) << "[worker-" << instance->GetWorkerID() << "] running " << next->GetName() << "....";
+        std::string job_name = next->GetName();
+
+#ifdef TOKEN_DEBUG
+        THREAD_LOG(INFO) << "running " << job_name << "....";
+#endif//TOKEN_DEBUG
+        //-----
+        //TODO: refactor
         Counter& num_ran = instance->GetJobsRan();
         Histogram& histogram = instance->GetHistogram();
         Timestamp start = Clock::now();
+        //-----
 
         if(!next->Run()){
-          LOG(WARNING) << "couldn't run the \"" << next->GetName() << "\" job.";
+          THREAD_LOG(WARNING) << "couldn't run the " << job_name << " job.";
           continue;
         }
 
+        //---------
+        //TODO: refactor
         num_ran->Increment();
         auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start);
         histogram->Update(duration_ms.count());
-        LOG(INFO) << "[worker-" << instance->GetWorkerID() << "] " << next->GetName() << " has finished (" << duration_ms.count() << "ms).";
+        //---------
+
+#ifdef TOKEN_DEBUG
+        THREAD_LOG(INFO) << job_name << " has finished (" << duration_ms.count() << "ms).";
+#endif//TOKEN_DEBUG
       }
     }
-  finish:
+
+    instance->SetState(JobWorker::kStopping);
+#ifdef TOKEN_DEBUG
+    THREAD_LOG(INFO) << " stopped.";
+#endif//TOKEN_DEBUG
+    instance->SetState(JobWorker::kStopped);
     pthread_exit(nullptr);
   }
 }

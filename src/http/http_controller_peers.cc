@@ -6,16 +6,12 @@
 
 namespace token{
   void PeerController::HandleGetPeers(HttpSession* session, const HttpRequestPtr& request){
-    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kHttpOk);
-    Json::String& body = response->GetBody();
+    Json::String body;
     Json::Writer writer(body);
 
     if(!PeerSessionManager::GetConnectedPeers(writer))
       return session->Send(NewInternalServerErrorResponse(session, "Cannot get peer info."));
-
-    response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);
-    response->SetHeader("Content-Length", body.GetSize());
-    return session->Send(response);
+    return session->Send(NewOkResponse(session, body));
   }
 }
 

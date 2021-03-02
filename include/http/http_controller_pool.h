@@ -10,9 +10,6 @@ namespace token{
    private:
     PoolController() = delete;
 
-    // Core
-    HTTP_CONTROLLER_ENDPOINT(GetStats);
-
     // Blocks
     HTTP_CONTROLLER_ENDPOINT(GetBlock);
     HTTP_CONTROLLER_ENDPOINT(GetBlocks);
@@ -28,9 +25,6 @@ namespace token{
     ~PoolController() = delete;
 
     HTTP_CONTROLLER_INIT(){
-      // Core
-      HTTP_CONTROLLER_GET("/pool/stats", GetStats);
-
       // Blocks
       HTTP_CONTROLLER_GET("/pool/blocks", GetBlocks);
       HTTP_CONTROLLER_GET("/pool/blocks/data/:hash", GetBlock);

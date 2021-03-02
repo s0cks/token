@@ -246,6 +246,14 @@ namespace token{
       return printer.Print();
     }
   };
+
+  static inline void
+  PrintGutter(const google::LogSeverity& severity=google::INFO, const size_t size=BannerPrinter::kDefaultSize, const char c='#'){
+    std::stringstream ss;
+    for(size_t i = 0; i < size; i++)
+      ss << '#';
+    LOG_AT_LEVEL(severity) << ss.str();
+  }
 }
 
 #endif //TOKEN_PRINTER_H

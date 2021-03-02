@@ -5,7 +5,17 @@ namespace token{
   bool InventoryItem::ItemExists() const{
     switch(type_){
       case kTransaction: return ObjectPool::HasTransaction(hash_);
-      case kBlock: return BlockChain::HasBlock(hash_) || ObjectPool::HasBlock(hash_);
+      case kBlock:{
+        if(BlockChain::HasBlock(hash_)){
+          LOG(INFO) << hash_ << " was found in the blockchain.";
+          return true;
+        } else if(ObjectPool::HasBlock(hash_)){
+          LOG(INFO) << hash_ << " was found in the object pool.";
+          return true;
+        }
+        LOG(WARNING) << "block " << hash_ << " was not found";
+        return false;
+      }
       case kUnclaimedTransaction: return ObjectPool::HasUnclaimedTransaction(hash_);
       default: return false;
     }

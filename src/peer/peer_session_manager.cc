@@ -58,7 +58,7 @@ namespace token{
 
   bool PeerSessionManager::Shutdown(){
     FOR_EACH_WORKER(thread)
-      if(!thread->Shutdown())
+      if (!thread->Shutdown())
         return false;
     END_FOR_EACH_WORKER
     return true;
@@ -66,7 +66,7 @@ namespace token{
 
   bool PeerSessionManager::WaitForShutdown(){
     FOR_EACH_WORKER(thread)
-      if(!thread->WaitForShutdown())
+      if (!thread->WaitForShutdown())
         return false;
     END_FOR_EACH_WORKER
     return true;
@@ -74,7 +74,7 @@ namespace token{
 
   PeerSession* PeerSessionManager::GetSession(const NodeAddress& address){
     FOR_EACH_WORKER(thread)
-      if(thread->IsConnected() && thread->GetPeerAddress() == address)
+      if (thread->IsConnected() && thread->GetPeerAddress() == address)
         return thread->GetPeerSession();
     END_FOR_EACH_WORKER
     return nullptr;
@@ -82,7 +82,7 @@ namespace token{
 
   PeerSession* PeerSessionManager::GetSession(const UUID& uuid){
     FOR_EACH_WORKER(thread)
-      if(thread->IsConnected() && thread->GetPeerID() == uuid)
+      if (thread->IsConnected() && thread->GetPeerID() == uuid)
         return thread->GetPeerSession();
     END_FOR_EACH_WORKER
     return nullptr;
@@ -90,7 +90,7 @@ namespace token{
 
   bool PeerSessionManager::GetConnectedPeers(std::set<UUID>& peers){
     FOR_EACH_WORKER(thread)
-      if(thread->IsConnected() && !peers.insert(thread->GetPeerID()).second)
+      if (thread->IsConnected() && !peers.insert(thread->GetPeerID()).second)
         return false;
     END_FOR_EACH_WORKER
     return true;
@@ -99,14 +99,14 @@ namespace token{
   int32_t PeerSessionManager::GetNumberOfConnectedPeers(){
     int32_t count = 0;
     FOR_EACH_WORKER(thread)
-      if(thread->IsConnected())
+      if (thread->IsConnected())
         count++;
     END_FOR_EACH_WORKER
     return count;
   }
 
   bool PeerSessionManager::ConnectTo(const NodeAddress& address){
-    if(IsConnectedTo(address))
+    if (IsConnectedTo(address))
       return false;
     ScheduleRequest(address);
     return true;
@@ -114,7 +114,7 @@ namespace token{
 
   bool PeerSessionManager::IsConnectedTo(const UUID& uuid){
     FOR_EACH_WORKER(thread)
-      if(thread->IsConnected() && thread->GetPeerID() == uuid)
+      if (thread->IsConnected() && thread->GetPeerID() == uuid)
         return true;
     END_FOR_EACH_WORKER
     return false;
@@ -122,14 +122,21 @@ namespace token{
 
   bool PeerSessionManager::IsConnectedTo(const NodeAddress& address){
     FOR_EACH_WORKER(thread)
-      if(thread->IsConnected() && thread->GetPeerAddress() == address)
+      if (thread->IsConnected() && thread->GetPeerAddress() == address)
         return true;
     END_FOR_EACH_WORKER
     return false;
   }
 
 #define DEFINE_PAXOS_BROADCAST(Name) \
-  void PeerSessionManager::Broadcast##Name(){}//TODO: implement
+  void PeerSessionManager::Broadcast##Name(){ \
+    FOR_EACH_WORKER(thread)          \
+      if(thread->IsConnected()){     \
+        PeerSession* session = thread->GetPeerSession(); \
+        session->Send##Name();       \
+      }                              \
+    END_FOR_EACH_WORKER              \
+  }
 
   DEFINE_PAXOS_BROADCAST(Prepare);
   DEFINE_PAXOS_BROADCAST(Promise);

@@ -6,7 +6,11 @@
 
 namespace token{
   void ChainController::HandleGetBlockChain(HttpSession* session, const HttpRequestPtr& request){
-    return session->Send(NewNoContentResponse(session, "Cannot get the list of blocks in the blockchain."));
+    Json::String body;
+    Json::Writer writer(body);
+    if(!BlockChain::GetBlocks(writer))
+      return session->Send(NewInternalServerErrorResponse(session, "Cannot list block chain blocks."));
+    return session->Send(NewOkResponse(session, body));
   }
 
   void ChainController::HandleGetBlockChainHead(HttpSession* session, const HttpRequestPtr& request){

@@ -21,9 +21,8 @@ namespace token{
   class HttpResponse : public HttpMessage{
     friend class HttpSession;
    protected:
-    std::string body_;
     HttpStatusCode status_code_;
-    HttpHeadersMap headers_;
+    BufferPtr body_;
 
     static inline std::string
     GetHttpStatusLine(const HttpStatusCode& status_code){
@@ -45,27 +44,25 @@ namespace token{
       for(auto& hdr : headers_)
         if(!buff->PutString(GetHttpHeaderLine(hdr.first, hdr.second)))
           return false;
-      return buff->PutString("\r\n");
+      return buff->PutString("\r\n")
+          && buff->PutBytes(body_)
+          && buff->PutString("\r\n");
     }
 
     static int
     OnParseBody(http_parser* parser, const char* data, size_t len){
       HttpResponse* response = (HttpResponse*)parser->data;
-      response->body_ = std::string(data, len);
+      if(!response->body_->PutBytes((uint8_t*)data, len)){
+        LOG(WARNING) << "cannot put body bytes.";
+        return -1;
+      }
       return 0;
     }
    public:
-    HttpResponse(HttpSession* session, const HttpStatusCode& code):
-      HttpMessage(session),
-      body_(),
-      status_code_(code),
-      headers_(){
-      InitHttpResponseHeaders(headers_);
-    }
-    HttpResponse(HttpSession* session, const HttpHeadersMap& headers, const std::string& body):
-      HttpMessage(session),
-      body_(body),
-      headers_(headers){}
+    HttpResponse(HttpSession* session, const HttpHeadersMap& headers, const HttpStatusCode& status_code, const BufferPtr& body):
+      HttpMessage(session, headers),
+      status_code_(status_code),
+      body_(body){}
     virtual ~HttpResponse() = default;
 
     DEFINE_HTTP_MESSAGE(Response);
@@ -75,8 +72,7 @@ namespace token{
     }
 
     int64_t GetContentLength() const{
-      std::string length = GetHeader(HTTP_HEADER_CONTENT_LENGTH);
-      return atoll(length.data());
+      return body_->GetWrittenBytes();
     }
 
     int64_t GetBufferSize() const{
@@ -87,39 +83,75 @@ namespace token{
       size += sizeof('\r');
       size += sizeof('\n');
       size += GetContentLength();
+      size += sizeof('\r');
+      size += sizeof('\n');
       return size;
     }
 
-    std::string GetBody() const{
+    BufferPtr GetBody() const{
       return body_;
     }
 
     std::string ToString() const{
-      return GetBody();//TODO: implement
+      std::stringstream ss;
+      ss << "HttpResponse(";
+        ss << "status_code=" << status_code_ << ", ";
+        ss << "headers=[], ";
+        ss << "body=" << std::string(body_->data(), body_->GetWrittenBytes());
+      ss << ")";
+      return ss.str();
     }
   };
 
   class HttpResponseBuilder : public HttpMessageBuilder<HttpResponse>{
    private:
-    HttpStatusCode status_;
-    std::string body_;
+    HttpStatusCode status_code_;
+    BufferPtr body_;
    public:
     HttpResponseBuilder(HttpSession* session):
       HttpMessageBuilder(session),
-      status_(HttpStatusCode::kHttpOk),
-      body_(){}
+      status_code_(HttpStatusCode::kHttpOk),
+      body_(Buffer::NewInstance(HttpMessage::kDefaultBodySize)){
+      InitHttpResponseHeaders(headers_);
+    }
+    HttpResponseBuilder(HttpSession* session, const BufferPtr& body):
+      HttpMessageBuilder(session),
+      status_code_(HttpStatusCode::kHttpOk),
+      body_(body){
+      InitHttpResponseHeaders(headers_);
+    }
+    HttpResponseBuilder(const HttpResponseBuilder& other):
+      HttpMessageBuilder(other),
+      status_code_(other.status_code_),
+      body_(other.body_){
+      InitHttpResponseHeaders(headers_);
+    }
     ~HttpResponseBuilder() = default;
 
-    void SetStatus(const HttpStatusCode& status_code){
-      status_ = status_code;
+    void SetStatusCode(const HttpStatusCode& status_code){
+      status_code_ = status_code;
     }
 
-    void SetBody(const std::string& val){
-      body_ = val;
+    void SetBody(const BufferPtr& body){
+      body_ = body;
+    }
+
+    void SetBody(const std::string& body){
+      body_ = Buffer::CopyFrom(body);
+    }
+
+    void SetBody(const Json::String& body){
+      body_ = Buffer::CopyFrom(body);
     }
 
     HttpResponsePtr Build() const{
-      return std::make_shared<HttpResponse>(session_, headers_, body_);
+      return std::make_shared<HttpResponse>(session_, headers_, status_code_, body_);
+    }
+
+    void operator=(const HttpResponseBuilder& other){
+      HttpMessageBuilder::operator=(other);
+      status_code_ = other.status_code_;
+      body_ = other.body_;
     }
   };
 
@@ -127,27 +159,35 @@ namespace token{
    private:
     http_parser parser_;
     http_parser_settings settings_;
-    std::string header_;
+    std::string next_header_;
 
-    static int
-    OnParseBody(http_parser* parser, const char* data, size_t len){
-      HttpResponseParser* response_parser = (HttpResponseParser*)parser->data;
-      response_parser->SetBody(std::string(data, len));
-      return 0; //TODO: cleanup
+    void SetNextHeader(const std::string& next){
+      next_header_ = next;
+    }
+
+    bool CreateNextHeader(const std::string& value){
+      auto it = headers_.insert({ next_header_, value });
+      return it.second;
     }
 
     static int
-    OnHeaderField(http_parser* parser, const char* data, size_t len){
-      HttpResponseParser* response_parser = (HttpResponseParser*)parser->data;
-      response_parser->header_ = std::string(data, len);
+    OnParseBody(http_parser* p, const char* data, size_t len){
+      HttpResponseParser* parser = (HttpResponseParser*)p->data;
+      parser->SetBody(Buffer::CopyFrom(data, len));
       return 0;
     }
 
     static int
-    OnHeaderValue(http_parser* parser, const char* data, size_t len){
-      HttpResponseParser* response_parser = (HttpResponseParser*)parser->data;
-      std::string value(data, len);
-      response_parser->SetHeader(response_parser->header_, std::string(data, len));
+    OnHeaderField(http_parser* p, const char* data, size_t len){
+      HttpResponseParser* parser = (HttpResponseParser*)p->data;
+      parser->SetNextHeader(std::string(data, len));
+      return 0;
+    }
+
+    static int
+    OnHeaderValue(http_parser* p, const char* data, size_t len){
+      HttpResponseParser* parser = (HttpResponseParser*)p->data;
+      parser->CreateNextHeader(std::string(data, len));
       return 0;
     }
 
@@ -197,204 +237,54 @@ namespace token{
     }
   };
 
-  class HttpFileResponse : public HttpResponse{
-   private:
-    std::string filename_;
-    BufferPtr body_;
-   protected:
-    bool Write(const BufferPtr& buff) const{
-      HttpResponse::Write(buff);
-      buff->PutBytes(body_);
-      return true;
-    }
-   public:
-    HttpFileResponse(HttpSession* session,
-      const HttpStatusCode& status_code,
-      const std::string& filename,
-      const std::string& content_type = HTTP_CONTENT_TYPE_TEXT_PLAIN):
-      HttpResponse(session, status_code),
-      filename_(filename),
-      body_(){
-      body_ = Buffer::FromFile(filename);
-      SetHeader(HTTP_HEADER_CONTENT_LENGTH, body_->GetWrittenBytes());
-      SetHeader(HTTP_HEADER_CONTENT_TYPE, content_type);
-    }
-    ~HttpFileResponse() = default;
-
-    std::string ToString() const{
-      std::stringstream ss;
-      ss << "HttpFileResponse(" << filename_ << ")";
-      return ss.str();
-    }
-
-    static inline HttpResponsePtr
-    NewInstance(HttpSession* session,
-      const HttpStatusCode& status_code,
-      const std::string& filename,
-      const std::string& content_type = HTTP_CONTENT_TYPE_TEXT_PLAIN){
-      return std::make_shared<HttpFileResponse>(session, status_code, filename, content_type);
-    }
-  };
-
-  class HttpJsonResponse : public HttpResponse{
-   private:
-    Json::String body_;
-   protected:
-    bool Write(const BufferPtr& buffer) const{
-      if(!HttpResponse::Write(buffer)){
-        LOG(WARNING) << "couldn't write http message status & headers.";
-        return false;
-      }
-
-      if(!buffer->PutBytes((uint8_t*)body_.GetString(), body_.GetSize())){
-        LOG(WARNING) << "couldn't write http message body.";
-        return false;
-      }
-      return true;
-    }
-   public:
-    HttpJsonResponse(HttpSession* session, const HttpStatusCode& status_code):
-      HttpResponse(session, status_code),
-      body_(){}
-    ~HttpJsonResponse() = default;
-
-    Json::String& GetBody(){
-      return body_;
-    }
-
-    std::string ToString() const{
-      std::stringstream ss;
-      ss << "HttpJsonResponse(";
-
-      ss << "headers={";
-      for(auto& it : headers_){
-        ss << it.first << ": " << it.second << ",";
-      }
-      ss << "}, ";
-
-      ss << "body=" << body_.GetString();
-      ss << ")";
-      return ss.str();
-    }
-  };
-
-  class HttpBinaryResponse : public HttpResponse{
-   private:
-    const BufferPtr data_;
-   protected:
-    bool Write(const BufferPtr& buff) const{
-      return HttpResponse::Write(buff)
-          && buff->PutBytes(data_);
-    }
-   public:
-    HttpBinaryResponse(HttpSession* session, const HttpStatusCode& status_code, const std::string& content_type, const BufferPtr& data):
-      HttpResponse(session, status_code),
-      data_(data){
-      SetHeader(HTTP_HEADER_CONTENT_TYPE, content_type);
-      SetHeader(HTTP_HEADER_CONTENT_LENGTH, data->GetWrittenBytes());
-    }
-    ~HttpBinaryResponse() = default;
-
-    std::string ToString() const{
-      std::stringstream ss;
-      ss << "HttpBinaryResponse(";
-
-      ss << "headers={";
-      for(auto& it : headers_){
-        ss << it.first << ": " << it.second << ",";
-      }
-      ss << "}, ";
-
-      ss << "body=" << data_->GetBufferSize() << " bytes,";
-
-      ss << ")";
-      return ss.str();
-    }
-
-    static inline HttpResponsePtr
-    NewInstance(HttpSession* session, const HttpStatusCode& status_code, const std::string& content_type, const BufferPtr& data){
-      return std::make_shared<HttpBinaryResponse>(session, status_code, content_type, data);
-    }
-  };
+  static inline HttpResponsePtr
+  NewOkResponse(HttpSession* session, const Json::String& body){
+    HttpResponseBuilder builder(session);
+    builder.SetStatusCode(HttpStatusCode::kHttpOk);
+    builder.SetHeader(HTTP_HEADER_CONTENT_TYPE, HTTP_CONTENT_TYPE_APPLICATION_JSON);
+    builder.SetHeader(HTTP_HEADER_CONTENT_LENGTH, body.GetSize());
+    builder.SetBody(body);
+    return builder.Build();
+  }
 
   static inline HttpResponsePtr
-  NewOkResponse(HttpSession* session, const HttpStatusCode& status_code=HttpStatusCode::kHttpOk, const std::string& msg="Ok"){
-    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, status_code);
-
-    Json::String& body = response->GetBody();
+  NewOkResponse(HttpSession* session, const std::string& msg="Ok"){
+    Json::String body;
     Json::Writer writer(body);
     writer.StartObject();
       Json::SetField(writer, "data", msg);
     writer.EndObject();
-
-    response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);
-    response->SetHeader("Content-Length", body.GetSize());
-    return std::static_pointer_cast<HttpResponse>(response);
+    return NewOkResponse(session, body);
   }
 
+  template<class T>
   static inline HttpResponsePtr
-  NewOkResponse(HttpSession* session, const BlockPtr& blk){
-    std::shared_ptr<HttpJsonResponse> response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kHttpOk);
-
-    Json::String& body = response->GetBody();
+  NewOkResponse(HttpSession* session, const std::shared_ptr<T>& val){
+    Json::String body;
     Json::Writer writer(body);
     writer.StartObject();
       writer.Key("data");
-      blk->Write(writer);
+      val->Write(writer);
     writer.EndObject();
-    response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);
-    response->SetHeader("Content-Length", body.GetSize());
-    response->SetHeader("Connection", "close");
-    response->SetHeader("Content-Encoding", "identity");
-    return std::static_pointer_cast<HttpResponse>(response);
-  }
-
-  static inline HttpResponsePtr
-  NewOkResponse(HttpSession* session, const TransactionPtr& tx){
-    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kHttpOk);
-
-    Json::String& body = response->GetBody();
-    Json::Writer writer(body);
-    writer.StartObject();
-      writer.Key("data");
-      tx->Write(writer);
-    writer.EndObject();
-
-    response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);
-    response->SetHeader("Content-Length", body.GetSize());
-    return std::static_pointer_cast<HttpResponse>(response);
-  }
-
-  static inline HttpResponsePtr
-  NewOkResponse(HttpSession* session, const UnclaimedTransactionPtr& utxo){
-    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, HttpStatusCode::kHttpOk);
-
-    Json::String& body = response->GetBody();
-    Json::Writer writer(body);
-    writer.StartObject();
-      writer.Key("data");
-      utxo->Write(writer);
-    writer.EndObject();
-
-    response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);
-    response->SetHeader("Content-Length", body.GetSize());
-    return std::static_pointer_cast<HttpResponse>(response);
+    return NewOkResponse(session, body);
   }
 
   static inline HttpResponsePtr
   NewErrorResponse(HttpSession* session, const HttpStatusCode& status_code, const std::string& msg){
-    HttpJsonResponsePtr response = std::make_shared<HttpJsonResponse>(session, status_code);
+    HttpResponseBuilder builder(session);
 
-    Json::String& body = response->GetBody();
+    Json::String body;
     Json::Writer writer(body);
     writer.StartObject();
       Json::SetField(writer, "code", status_code);
       Json::SetField(writer, "message", msg);
     writer.EndObject();
 
-    response->SetHeader("Content-Type", HTTP_CONTENT_TYPE_APPLICATION_JSON);
-    response->SetHeader("Content-Length", body.GetSize());
-    return std::static_pointer_cast<HttpResponse>(response);
+    builder.SetStatusCode(status_code);
+    builder.SetHeader(HTTP_HEADER_CONTENT_TYPE, HTTP_CONTENT_TYPE_APPLICATION_JSON);
+    builder.SetHeader(HTTP_HEADER_CONTENT_LENGTH, body.GetSize());
+    builder.SetBody(body);
+    return builder.Build();
   }
 
   static inline HttpResponsePtr

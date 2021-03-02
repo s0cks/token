@@ -31,7 +31,7 @@ namespace token{
     void TearDown(){}
 
     HttpRouterMatch FindMatch(const std::string& request){
-      HttpRequestPtr req = std::make_shared<HttpRequest>(nullptr, request.data(), request.length());
+      HttpRequestPtr req = HttpRequestParser::ParseRequest(nullptr, Buffer::CopyFrom(request));
       return router_.Find(req);
     }
 

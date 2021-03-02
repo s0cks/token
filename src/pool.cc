@@ -26,26 +26,37 @@ namespace token{
     state_ = state;
   }
 
+#define POOL_LOG(LevelName) \
+  LOG(LevelName) << "[ObjectPool] "
+
   bool ObjectPool::Initialize(){
     if(IsInitialized()){
-      LOG(WARNING) << "cannot re-initialize the object pool.";
+#ifdef TOKEN_DEBUG
+      POOL_LOG(WARNING) << "cannot re-initialize the object pool.";
+#endif//TOKEN_DEBUG
       return false;
     }
 
-    LOG(INFO) << "initializing the object pool....";
+#ifdef TOKEN_DEBUG
+    POOL_LOG(INFO) << "initializing....";
+#endif//TOKEN_DEBUG
     SetState(ObjectPool::kInitializing);
+
     leveldb::Options options;
     options.comparator = new ObjectPool::Comparator();
     options.create_if_missing = true;
 
     leveldb::Status status;
     if(!(status = leveldb::DB::Open(options, GetIndexFilename(), &index_)).ok()){
-      LOG(WARNING) << "couldn't initialize the object pool index: " << status.ToString();
+      POOL_LOG(WARNING) << "couldn't initialize the index: " << status.ToString();
       return false;
     }
 
-    LOG(INFO) << "object pool initialized.";
+
     SetState(ObjectPool::kInitialized);
+#ifdef TOKEN_DEBUG
+    POOL_LOG(INFO) << "initialized.";
+#endif//TOKEN_DEBUG
     return true;
   }
 

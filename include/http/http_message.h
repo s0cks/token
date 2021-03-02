@@ -22,6 +22,8 @@ namespace token{
   Type GetType() const{ return Type::kHttp##Name; }
 
   class HttpMessage : public Message{
+   public:
+    static const int64_t kDefaultBodySize = 65536;
    protected:
     HttpSession* session_;
     HttpHeadersMap headers_;
@@ -81,6 +83,9 @@ namespace token{
     HttpMessageBuilder(HttpSession* session):
       session_(session),
       headers_(){}
+    HttpMessageBuilder(const HttpMessageBuilder<M>& other):
+      session_(other.session_),
+      headers_(other.headers_){}
    public:
     virtual ~HttpMessageBuilder() = default;
 
@@ -105,6 +110,11 @@ namespace token{
     }
 
     virtual std::shared_ptr<M> Build() const = 0;
+
+    void operator=(const HttpMessageBuilder<M>& other){
+      session_ = other.session_;
+      headers_ = other.headers_;
+    }
   };
 }
 

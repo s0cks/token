@@ -18,6 +18,11 @@ namespace token{
     writer.EndArray();
   }
 
+#define WMGR_LOG(LevelName) \
+  LOG(LevelName) << "[WalletManager] "
+
+
+  //TODO: remove locking
   static std::mutex mutex_;
   static std::condition_variable cond_;
   static WalletManager::State state_ = WalletManager::kUninitialized;
@@ -60,11 +65,13 @@ namespace token{
 
   bool WalletManager::Initialize(){
     if(IsInitialized()){
-      LOG(WARNING) << "cannot re-initialize the wallet manager.";
+#ifdef TOKEN_DEBUG
+      WMGR_LOG(WARNING) << "cannot re-initialize the wallet manager.";
+#endif//TOKEN_DEBUG
       return false;
     }
 
-    LOG(INFO) << "initializing the wallet manager....";
+    WMGR_LOG(INFO) << "initializing....";
     SetState(WalletManager::kInitializing);
 
     leveldb::Options options;
@@ -72,11 +79,13 @@ namespace token{
     options.comparator = new WalletManager::Comparator();
     leveldb::Status status;
     if(!((status = leveldb::DB::Open(options, GetIndexFilename(), &index_)).ok())){
-      LOG(WARNING) << "couldn't initialize the wallet manager index: " << status.ToString();
+      WMGR_LOG(ERROR) << "couldn't initialize the index: " << status.ToString();
       return false;
     }
 
-    LOG(INFO) << "the wallet manager has been initialized.";
+#ifdef TOKEN_DEBUG
+    WMGR_LOG(INFO) << "initialized.";
+#endif//TOKEN_DEBUG
     SetState(WalletManager::kInitialized);
     return true;
   }

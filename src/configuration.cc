@@ -4,6 +4,9 @@
 #include "atomic/relaxed_atomic.h"
 
 namespace token{
+#define CONFIG_LOG(LevelName) \
+  LOG(LevelName) << "[ConfigManager] "
+
   static RelaxedAtomic<ConfigurationManager::State> state_ = { ConfigurationManager::kUninitializedState };
   static leveldb::DB* index_ = nullptr;
 
@@ -42,15 +45,12 @@ namespace token{
 
   leveldb::Status ConfigurationManager::SetDefaults(){
     leveldb::WriteBatch batch;
-
-
-    LOG(INFO) << "setting configuration manager defaults....";
     PutDefaultProperty(batch, TOKEN_CONFIGURATION_NODE_ID, UUID());
 
     PeerList peers;
     if(!FLAGS_remote.empty()){
       if(!NodeAddress::ResolveAddresses(FLAGS_remote, peers))
-        LOG(WARNING) << "cannot resolve peer address for: " << FLAGS_remote;
+        CONFIG_LOG(WARNING) << "cannot resolve remote address: " << FLAGS_remote;
     }
     PutDefaultProperty(batch, TOKEN_CONFIGURATION_NODE_PEERS, peers);
 
@@ -61,12 +61,16 @@ namespace token{
 
   bool ConfigurationManager::Initialize(){
     if(!IsUninitializedState()){
-      LOG(WARNING) << "cannot re-initialize the configuration manager.";
+#ifdef TOKEN_DEBUG
+      CONFIG_LOG(WARNING) << "cannot re-initialize the configuration manager.";
+#endif//TOKEN_DEBUG
       return false;
     }
 
-    LOG(INFO) << "initializing the configuration manager....";
     SetState(ConfigurationManager::kInitializingState);
+#ifdef TOKEN_DEBUG
+    CONFIG_LOG(INFO) << "initializing....";
+#endif//TOKEN_DEBUG
 
     bool first_initialization = !FileExists(GetIndexFilename());
 
@@ -75,17 +79,21 @@ namespace token{
 
     leveldb::Status status;
     if(!(status = leveldb::DB::Open(options, GetIndexFilename(), &index_)).ok()){
-      LOG(WARNING) << "couldn't initialize the configuration index " << GetIndexFilename() << ": " << status.ToString();
+      CONFIG_LOG(ERROR) << "couldn't initialize the index: " << status.ToString();
       return false;
     }
 
     if(first_initialization){
-      if(!(status = SetDefaults()).ok())
-        LOG(WARNING) << "cannot set configuration manager defaults: " << status.ToString();
+      if(!(status = SetDefaults()).ok()){
+        CONFIG_LOG(ERROR) << "cannot set defaults: " << status.ToString();
+        return false;
+      }
     }
 
-    LOG(INFO) << "configuration manager initialized.";
     SetState(ConfigurationManager::kInitializedState);
+#ifdef TOKEN_DEBUG
+    CONFIG_LOG(INFO) << "initialized.";
+#endif//TOKEN_DEBUG
     return true;
   }
 

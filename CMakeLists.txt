@@ -8,7 +8,7 @@ set(PROTO_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protos")
 
 file(GLOB_RECURSE TOKEN_CMAKE_MODULES ${CMAKE_MODULE_PATH}/*.cmake)
 
-option(ENABLE_ELASTICSEARCH "Enables Elasticsearch Integration." ON)
+option(ENABLE_ELASTICSEARCH "Enables Elasticsearch Integration." OFF)
 option(ENABLE_COMPRESSION "Enables compression." OFF)
 option(ENABLE_SERVER "Enables the block chain server." ON)
 option(ENABLE_HEALTH_SERVICE "Enable the health http service." ON)

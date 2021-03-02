@@ -190,7 +190,11 @@ namespace token{
 
     std::vector<InventoryItem> needed;
     for(auto& item : items){
-      if(!item.ItemExists()) needed.push_back(item);
+      SESSION_LOG(INFO, this) << "checking for " << item;
+      if(!item.ItemExists()){
+        SESSION_LOG(INFO, this) << "not found, requesting....";
+        needed.push_back(item);
+      }
     }
 
     SESSION_LOG(INFO, this) << "downloading " << needed.size() << "/" << items.size() << " items from inventory....";

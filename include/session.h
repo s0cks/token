@@ -109,15 +109,15 @@ namespace token{
       int64_t offset = 0;
       for(size_t idx = 0; idx < total_messages; idx++){
         const SessionMessagePtr& msg = messages[idx];
-
-#ifdef TOKEN_DEBUG
-        SESSION_LOG(INFO, this) << "sending message #" << idx << ": " << msg->ToString();
-#endif//TOKEN_DEBUG
-
         if(!msg->Write(data->buffer)){
           SESSION_LOG(ERROR, this) << "couldn't serialize message #" << idx;
           return;
         }
+
+
+#ifdef TOKEN_DEBUG
+        SESSION_LOG(INFO, this) << "sending message #" << idx << ": " << msg->ToString();
+#endif//TOKEN_DEBUG
 
         int64_t msg_size = msg->GetBufferSize();
         buffers[idx].base = &data->buffer->data()[offset];

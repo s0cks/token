@@ -150,15 +150,6 @@ main(int argc, char **argv){
   // ~2s on boot for 30k tokens (initialized)
   #ifdef TOKEN_DEBUG
     BannerPrinter::PrintBanner();
-    LOG(INFO) << "current time: " << FormatTimestampReadable(Clock::now());
-    LOG(INFO) << "node id: " << ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID);
-
-    PeerList peers;
-    if(!ConfigurationManager::GetPeerList(TOKEN_CONFIGURATION_NODE_PEERS, peers)){
-      LOG(WARNING) << "node peers: None";
-    } else{
-      LOG(INFO) << "node peers: " << peers;
-    }
   #endif//TOKEN_DEBUG
 
   // Start the health service if enabled
@@ -221,6 +212,14 @@ main(int argc, char **argv){
   #endif//TOKEN_ENABLE_REST_SERVICE
 
 #ifdef TOKEN_DEBUG
+  PrintGutter();
+  LOG(INFO) << "current time: " << FormatTimestampReadable(Clock::now());
+  LOG(INFO) << "node: " << ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID);
+
+  PeerList peers;
+  ConfigurationManager::GetPeerList(TOKEN_CONFIGURATION_NODE_PEERS, peers);
+  LOG(INFO) << "peers: " << peers;
+
   LOG(INFO) << "number of blocks in the chain: " << BlockChain::GetNumberOfBlocks();
   if(TOKEN_VERBOSE){
     ObjectPool::PrintBlocks();
@@ -231,6 +230,7 @@ main(int argc, char **argv){
     LOG(INFO) << "number of transactions in the pool: " << ObjectPool::GetNumberOfTransactions();
     LOG(INFO) << "number of unclaimed transactions in the pool: " << ObjectPool::GetNumberOfUnclaimedTransactions();
   }
+  PrintGutter();
 
 #ifdef TOKEN_ENABLE_ELASTICSEARCH
   NodeAddress address = NodeAddress::ResolveAddress("localhost:9200");
