@@ -141,7 +141,7 @@ main(int argc, char **argv){
   }
 
   // Load the configuration
-  if(!ConfigurationManager::Initialize()){
+  if(!ConfigurationManager::Initialize(TOKEN_BLOCKCHAIN_HOME)){
     CrashReport::PrintNewCrashReport("Failed to initialize the configuration manager.");
     return EXIT_FAILURE;
   }
@@ -214,6 +214,7 @@ main(int argc, char **argv){
 #ifdef TOKEN_DEBUG
   PrintGutter();
   LOG(INFO) << "current time: " << FormatTimestampReadable(Clock::now());
+  LOG(INFO) << "home: " << ConfigurationManager::GetString(TOKEN_CONFIGURATION_BLOCKCHAIN_HOME);
   LOG(INFO) << "node: " << ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID);
 
   PeerList peers;

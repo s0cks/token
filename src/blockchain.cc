@@ -2,6 +2,7 @@
 #include <leveldb/db.h>
 #include <glog/logging.h>
 
+#include "configuration.h"
 #include "blockchain.h"
 #include "block_file.h"
 #include "unclaimed_transaction.h"
@@ -10,19 +11,19 @@
 
 namespace token{
   static inline std::string
-  GetDataDirectory(){
-    return FLAGS_path + "/data";
+  GetBlockChainHome(){
+    return ConfigurationManager::GetString(TOKEN_CONFIGURATION_BLOCKCHAIN_HOME);
   }
 
   static inline std::string
   GetIndexFilename(){
-    return GetDataDirectory() + "/index";
+    return GetBlockChainHome() + "/index";
   }
 
   static inline std::string
   GetNewBlockFilename(const BlockPtr& blk){
     std::stringstream ss;
-    ss << GetDataDirectory() + "/blk" << blk->GetHeight() << ".dat";
+    ss << GetBlockChainHome() + "/blk" << blk->GetHeight() << ".dat";
     return ss.str();
   }
 
@@ -47,9 +48,10 @@ namespace token{
       return false;
     }
 
-    if(!FileExists(GetDataDirectory())){
-      if(!CreateDirectory(GetDataDirectory())){
-        LOG(WARNING) << "couldn't create block chain index in directory: " << GetDataDirectory();
+    std::string filename = GetBlockChainHome();
+    if(!FileExists(filename)){
+      if(!CreateDirectory(filename)){
+        LOG(WARNING) << "couldn't create block chain index in directory: " << filename;
         return false;
       }
     }
@@ -237,13 +239,25 @@ namespace token{
   }
 
   bool BlockChain::HasBlock(const Hash& hash){
-    Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
-    do{
-      LOG(INFO) << "checking " << hash << " <=> " << current;
-      if(current == hash)
-        return true;
-      current = GetBlock(current)->GetPreviousHash();
-    } while(!current.IsNull());
+    BlockKey key(0, hash);
+
+    std::string filename;
+    leveldb::Status status;
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), key, &filename)).ok()){
+      if(status.IsNotFound()){
+#ifdef TOKEN_DEBUG
+        LOG(WARNING) << "couldn't find block '" << hash << "'";
+#endif//TOKEN_DEBUG
+        return false;
+      }
+
+#ifdef TOKEN_DEBUG
+      LOG(ERROR) << "error getting block " << hash << ": " << status.ToString();
+#endif//TOKEN_DEBUG
+      return false;
+    }
+
+    LOG(INFO) << "found " << hash << ": " << status.ToString();
     return true;
   }
 
@@ -294,21 +308,23 @@ namespace token{
   }
 
   int64_t BlockChain::GetNumberOfBlocks(){
+    std::string home = GetBlockChainHome();
+
     int64_t count = 0;
 
     DIR* dir;
     struct dirent* ent;
-    if((dir = opendir(GetDataDirectory().c_str())) != NULL){
+    if((dir = opendir(home.c_str())) != NULL){
       while((ent = readdir(dir)) != NULL){
         std::string filename(ent->d_name);
-        std::string abs_path = GetDataDirectory() + '/' + filename;
+        std::string abs_path = home + '/' + filename;
         if(EndsWith(filename, ".dat") && IsValidBlock(abs_path)){
           count++;
         }
       }
       closedir(dir);
     } else{
-      LOG(WARNING) << "couldn't list files in block chain index: " << GetDataDirectory();
+      LOG(WARNING) << "couldn't list files in block chain index: " << home;
       return 0;
     }
     return count;

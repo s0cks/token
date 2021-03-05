@@ -118,9 +118,9 @@ namespace token{
     friend std::ostream& operator<<(std::ostream& stream, const Phase& phase){
       switch(phase){
 #define DEFINE_TOSTRING(Name) \
-                case Phase::k##Name##Phase: \
-                    stream << #Name; \
-                    return stream;
+        case Phase::k##Name##Phase: \
+            stream << #Name; \
+            return stream;
         FOR_EACH_PROPOSAL_PHASE(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
         default:stream << "Unknown";

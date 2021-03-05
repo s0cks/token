@@ -1,12 +1,17 @@
 #include <mutex>
 #include <glog/logging.h>
 #include "pool.h"
+#include "configuration.h"
 #include "atomic/relaxed_atomic.h"
 
 namespace token{
-  static std::mutex write_mtx_;
   static RelaxedAtomic<ObjectPool::State> state_ = { ObjectPool::kUninitialized };
   static leveldb::DB* index_ = nullptr;
+
+  static inline std::string
+  GetBlockChainHome(){
+    return ConfigurationManager::GetString(TOKEN_CONFIGURATION_BLOCKCHAIN_HOME);
+  }
 
   static inline leveldb::DB*
   GetIndex(){
@@ -15,7 +20,7 @@ namespace token{
 
   static inline std::string
   GetIndexFilename(){
-    return TOKEN_BLOCKCHAIN_HOME + "/pool";
+    return GetBlockChainHome() + "/pool";
   }
 
   ObjectPool::State ObjectPool::GetState(){
@@ -37,8 +42,9 @@ namespace token{
       return false;
     }
 
+    std::string pool_directory = GetIndexFilename();
 #ifdef TOKEN_DEBUG
-    POOL_LOG(INFO) << "initializing....";
+    POOL_LOG(INFO) << "initializing in " << pool_directory << "....";
 #endif//TOKEN_DEBUG
     SetState(ObjectPool::kInitializing);
 
@@ -51,7 +57,6 @@ namespace token{
       POOL_LOG(WARNING) << "couldn't initialize the index: " << status.ToString();
       return false;
     }
-
 
     SetState(ObjectPool::kInitialized);
 #ifdef TOKEN_DEBUG

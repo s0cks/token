@@ -8,6 +8,7 @@ namespace token{
   class BlockChainTest : public ::testing::Test{
    protected:
     BlockChainTest() = default;
+    static void SetUpTestSuite();
    public:
     ~BlockChainTest() = default;
   };

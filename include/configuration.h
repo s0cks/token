@@ -12,6 +12,7 @@
 namespace token{
 #define TOKEN_CONFIGURATION_NODE_ID "Node.Id"
 #define TOKEN_CONFIGURATION_NODE_PEERS "Node.Peers"
+#define TOKEN_CONFIGURATION_BLOCKCHAIN_HOME "BlockChain.Home"
 
 #define FOR_EACH_CONFIGURATION_MANAGER_STATE(V) \
   V(Uninitialized)                              \
@@ -51,7 +52,7 @@ namespace token{
     /**
      * Sets the default values for all known configuration properties.
      */
-    static leveldb::Status SetDefaults();
+    static leveldb::Status SetDefaults(const std::string& home_dir);
    public:
     ~ConfigurationManager() = delete;
 
@@ -68,12 +69,13 @@ namespace token{
      *
      * @return true if successful otherwise, false
      */
-    static bool Initialize();
+    static bool Initialize(const std::string& filename);
     static bool HasProperty(const std::string& name);
     static bool SetProperty(const std::string& name, const UUID& val);
     static bool SetProperty(const std::string& name, const PeerList& val);
     static bool GetPeerList(const std::string& name, PeerList& peers);
     static UUID GetID(const std::string& name);
+    static std::string GetString(const std::string& name);
 
 #define DEFINE_CHECK(Name) \
     static inline bool Is##Name##State(){ return GetState() == State::k##Name##State; }

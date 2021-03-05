@@ -6,6 +6,7 @@
 
 #include "block.h"
 #include "wallet.h"
+#include "configuration.h"
 
 namespace token{
   void ToJson(const Wallet& hashes, Json::String& sb){
@@ -35,8 +36,13 @@ namespace token{
   }
 
   static inline std::string
+  GetBlockChainHome(){
+    return ConfigurationManager::GetString(TOKEN_CONFIGURATION_BLOCKCHAIN_HOME);
+  }
+
+  static inline std::string
   GetIndexFilename(){
-    return TOKEN_BLOCKCHAIN_HOME + "/wallet";
+    return GetBlockChainHome() + "/wallet";
   }
 
   WalletManager::State WalletManager::GetState(){

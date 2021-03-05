@@ -26,7 +26,7 @@ namespace token{
   class BlockChainHeaderVisitor;
   class BlockChain{
     friend class BlockChainInitializer;
-
+    friend class BlockChainTest;
     friend class BlockMiner;
     friend class ProposalHandler;
     friend class SynchronizeJob; //TODO: revoke access
@@ -58,7 +58,14 @@ namespace token{
 
       static inline int
       CompareHash(const BlockKey& a, const BlockKey& b){
-        return a.GetHash() < b.GetHash();
+        Hash h1 = a.GetHash();
+        Hash h2 = b.GetHash();
+        if(h1 < h2){
+          return -1;
+        } else if(h1 > h2){
+          return +1;
+        }
+        return 0;
       }
      private:
       enum Layout{
@@ -316,7 +323,6 @@ namespace token{
     static leveldb::DB* GetIndex();
     static void SetState(const State& state);
     static bool PutBlock(const Hash& hash, BlockPtr blk);
-    static bool PutReference(const std::string& name, const Hash& hash);
     static bool RemoveReference(const std::string& name);
     static bool RemoveBlock(const Hash& hash, const BlockPtr& blk);
     static bool Append(const BlockPtr& blk);
@@ -329,6 +335,7 @@ namespace token{
     static bool VisitBlocks(BlockChainBlockVisitor* vis);
     static bool HasBlock(const Hash& hash);
     static bool HasReference(const std::string& name);
+    static bool PutReference(const std::string& name, const Hash& hash);
     static Hash GetReference(const std::string& name);
     static BlockPtr GetBlock(const Hash& hash);
     static BlockPtr GetBlock(int64_t height);
