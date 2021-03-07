@@ -23,7 +23,7 @@ namespace token{
 #endif//TOKEN_DEBUG
 
     leveldb::Status status;
-    if(!(status = WalletManager::Commit(batch_)).ok()){
+    if(!(status = WalletManager::GetInstance()->Commit(batch_)).ok()){
       JOB_LOG(ERROR) << "cannot commit ~" << size << "b of changes to wallet db: " << status.ToString();
       return false;
     }

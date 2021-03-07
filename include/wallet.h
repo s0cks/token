@@ -3,6 +3,8 @@
 
 #include <ostream>
 #include <unordered_set>
+
+#include <leveldb/db.h>
 #include <leveldb/status.h>
 #include <leveldb/comparator.h>
 #include <leveldb/write_batch.h>
@@ -10,7 +12,9 @@
 #include "key.h"
 #include "hash.h"
 #include "object.h"
-#include "utils/buffer.h"
+#include "buffer.h"
+
+#include "atomic/relaxed_atomic.h"
 
 namespace token{
   typedef std::unordered_set<Hash, Hash::Hasher, Hash::Equal> Wallet;
@@ -70,16 +74,11 @@ namespace token{
   V(Initializing)                        \
   V(Initialized)
 
-#define FOR_EACH_WALLET_MANAGER_STATUS(V) \
-  V(Ok)                                   \
-  V(Warning)                              \
-  V(Error)
-
   class WalletManager{
     friend class WalletManagerBatchWriteJob;
    public:
     enum State{
-#define DEFINE_STATE(Name) k##Name,
+#define DEFINE_STATE(Name) k##Name##State,
       FOR_EACH_WALLET_MANAGER_STATE(DEFINE_STATE)
 #undef DEFINE_STATE
     };
@@ -87,32 +86,15 @@ namespace token{
     friend std::ostream& operator<<(std::ostream& stream, const State& state){
       switch(state){
 #define DEFINE_TOSTRING(Name) \
-        case State::k##Name:  \
+        case State::k##Name##State:  \
           return stream << #Name;
         FOR_EACH_WALLET_MANAGER_STATE(DEFINE_TOSTRING)
-#undef DEFINE_TOSTRING
-        default:return stream << "Unknown";
-      }
-    }
-
-    enum Status{
-#define DEFINE_STATUS(Name) k##Name,
-      FOR_EACH_WALLET_MANAGER_STATUS(DEFINE_STATUS)
-#undef DEFINE_STATUS
-    };
-
-    friend std::ostream& operator<<(std::ostream& stream, const Status& status){
-      switch(status){
-#define DEFINE_TOSTRING(Name) \
-        case Status::k##Name: \
-          return stream << #Name;
-        FOR_EACH_WALLET_MANAGER_STATUS(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
         default:
           return stream << "Unknown";
       }
     }
-   private:
+
     class Comparator : public leveldb::Comparator{
      public:
       int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const{
@@ -133,55 +115,75 @@ namespace token{
       void FindShortestSeparator(std::string* str, const leveldb::Slice& slice) const{}
       void FindShortSuccessor(std::string* str) const {}
     };
-   private:
-    WalletManager() = delete;
+   protected:
+    RelaxedAtomic<State> state_;
+    leveldb::DB* index_;
 
-    static void SetState(const State& state);
-    static void SetStatus(const Status& status);
-    static leveldb::Status Commit(const leveldb::WriteBatch& batch);
+    void SetState(const State& state){
+      state_ = state;
+    }
+
+    inline leveldb::DB*
+    GetIndex() const{
+      return index_;
+    }
+
+    bool LoadIndex(const std::string& filename);
+    leveldb::Status Commit(const leveldb::WriteBatch& batch);
    public:
-    ~WalletManager() = delete;
+    WalletManager():
+      state_(State::kUninitializedState),
+      index_(nullptr){}
+    virtual ~WalletManager(){
+      if(index_)
+        delete index_;
+    }
 
-    static State GetState();
-    static Status GetStatus();
-    static bool Initialize();
+    State GetState() const{
+      return state_;
+    }
 
-    static bool HasWallet(const User& user);
-    static bool RemoveWallet(const User& user);
-    static bool PutWallet(const User& user, const Wallet& wallet);
-    static bool GetWallet(const User& user, Wallet& wallet);
-    static bool GetWallet(const User& user, Json::Writer& writer);
-    static int64_t GetNumberOfWallets();
+    bool HasWallet(const User& user) const;
+    bool RemoveWallet(const User& user) const;
+    bool PutWallet(const User& user, const Wallet& wallet) const;
+    bool GetWallet(const User& user, Wallet& wallet) const;
+    bool GetWallet(const User& user, Json::Writer& writer) const;
+    int64_t GetNumberOfWallets() const;
 
-    static inline bool
-    GetWallet(const std::string& user, Wallet& wallet){
+    inline bool
+    GetWallet(const std::string& user, Wallet& wallet) const{
       return GetWallet(User(user), wallet);
     }
 
-    static inline bool
-    PutWallet(const std::string& user, const Wallet& wallet){
+    inline bool
+    PutWallet(const std::string& user, const Wallet& wallet) const{
       return PutWallet(User(user), wallet);
     }
 
-    static inline bool
-    RemoveWallet(const std::string& user){
+    inline bool
+    RemoveWallet(const std::string& user) const{
       return RemoveWallet(User(user));
     }
 
-    static inline bool
-    HasWallet(const std::string& user){
+    inline bool
+    HasWallet(const std::string& user) const{
       return HasWallet(User(user));
     }
 
 #define DEFINE_CHECK(Name) \
-    static bool Is##Name(){ return GetState() == State::k##Name; }
+    bool Is##Name() const{ return GetState() == State::k##Name##State; }
     FOR_EACH_WALLET_MANAGER_STATE(DEFINE_CHECK)
 #undef DEFINE_CHECK
 
-#define DEFINE_CHECK(Name) \
-    static bool Is##Name(){ return GetStatus() == Status::k##Name; }
-    FOR_EACH_WALLET_MANAGER_STATUS(DEFINE_CHECK)
-#undef DEFINE_CHECK
+    static inline std::string
+    GetWalletManagerFilename(){
+      std::stringstream filename;
+      filename << TOKEN_BLOCKCHAIN_HOME << "/wallets";
+      return filename.str();
+    }
+
+    static bool Initialize(const std::string& filename=GetWalletManagerFilename());
+    static WalletManager* GetInstance();
   };
 }
 

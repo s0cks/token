@@ -96,7 +96,7 @@ namespace token{
         user.Write(writer);
 
         writer.Key("wallet");
-        if(!WalletManager::GetWallet(user, writer)){
+        if(!WalletManager::GetInstance()->GetWallet(user, writer)){
           std::stringstream ss;
           ss << "Cannot find wallet for: " << user;
           return session->Send(NewNoContentResponse(session, ss));

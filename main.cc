@@ -7,7 +7,7 @@
 #include "configuration.h"
 #include "job/scheduler.h"
 
-#include "utils/filesystem.h"
+#include "filesystem.h"
 
 #include "crash/crash_report.h"
 
@@ -149,7 +149,7 @@ main(int argc, char **argv){
   // ~16.07s on boot for 30k Tokens (not initialized)
   // ~2s on boot for 30k tokens (initialized)
   #ifdef TOKEN_DEBUG
-    BannerPrinter::PrintBanner();
+    //TODO: BannerPrinter::PrintBanner();
   #endif//TOKEN_DEBUG
 
   // Start the health service if enabled
@@ -212,7 +212,6 @@ main(int argc, char **argv){
   #endif//TOKEN_ENABLE_REST_SERVICE
 
 #ifdef TOKEN_DEBUG
-  PrintGutter();
   LOG(INFO) << "current time: " << FormatTimestampReadable(Clock::now());
   LOG(INFO) << "home: " << ConfigurationManager::GetString(TOKEN_CONFIGURATION_BLOCKCHAIN_HOME);
   LOG(INFO) << "node: " << ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID);
@@ -231,16 +230,6 @@ main(int argc, char **argv){
     LOG(INFO) << "number of transactions in the pool: " << ObjectPool::GetNumberOfTransactions();
     LOG(INFO) << "number of unclaimed transactions in the pool: " << ObjectPool::GetNumberOfUnclaimedTransactions();
   }
-  PrintGutter();
-
-#ifdef TOKEN_ENABLE_ELASTICSEARCH
-  NodeAddress address = NodeAddress::ResolveAddress("localhost:9200");
-  elastic::SpendEvent event(Clock::now(), User("VenueA"), User("VenueB"), Hash::GenerateNonce());
-  if(!SendEvent(address, "test-events-0000001", event)){
-    CrashReport::PrintNewCrashReport("Cannot send spend event.");
-    return EXIT_FAILURE;
-  }
-#endif//TOKEN_ENABLE_ELASTICSEARCH
 
   if(FLAGS_append_test && !AppendDummy("VenueA", 2)){
     CrashReport::PrintNewCrashReport("Cannot append dummy transactions.");

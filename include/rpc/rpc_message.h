@@ -4,7 +4,7 @@
 #include <set>
 #include <memory>
 #include "message.h"
-#include "utils/buffer.h"
+#include "buffer.h"
 
 namespace token{
   template<class M>

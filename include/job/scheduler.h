@@ -13,7 +13,6 @@ namespace token{
     friend class JobWorker;
     friend class BlockChain;
     friend class BlockMiner;
-    friend class BlockDiscoveryThread;
    public:
     static const int32_t kMaxNumberOfJobs;
    private:
@@ -27,10 +26,6 @@ namespace token{
     static JobQueue* GetWorker(const ThreadId& thread);
     static JobQueue* GetThreadQueue();
     static JobQueue* GetRandomQueue();
-
-    #ifdef TOKEN_DEBUG
-      static bool GetStats(Json::Writer& json);
-    #endif//TOKEN_DEBUG
   };
 }
 

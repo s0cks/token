@@ -5,7 +5,7 @@
 #include "bloom.h"
 #include "transaction.h"
 #include "block_header.h"
-#include "utils/buffer.h"
+#include "buffer.h"
 
 namespace token{
   class BlockVisitor;

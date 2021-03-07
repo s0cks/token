@@ -3,7 +3,7 @@
 
 #include "message.h"
 #include "vthread.h"
-#include "utils/buffer.h"
+#include "buffer.h"
 #include "atomic/relaxed_atomic.h"
 
 namespace token{

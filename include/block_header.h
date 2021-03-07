@@ -4,7 +4,7 @@
 #include "json.h"
 #include "hash.h"
 #include "object.h"
-#include "utils/buffer.h"
+#include "buffer.h"
 
 namespace token{
   class BlockHeader : public SerializableObject{

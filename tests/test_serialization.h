@@ -2,7 +2,7 @@
 #define TOKEN_TEST_SERIALIZATION_H
 
 #include "test_suite.h"
-#include "utils/filesystem.h"
+#include "filesystem.h"
 
 namespace token{
   class TestSerialization : public ::testing::Test{

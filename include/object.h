@@ -11,7 +11,7 @@
 #include <rapidjson/stringbuffer.h>
 
 #include "hash.h"
-#include "utils/bitfield.h"
+#include "bitfield.h"
 
 namespace token{
   //TODO: redo type system

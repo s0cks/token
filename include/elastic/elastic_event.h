@@ -1,7 +1,7 @@
 #ifndef TOKEN_ELASTIC_EVENT_H
 #define TOKEN_ELASTIC_EVENT_H
 
-#ifdef TOKEN_ENABLE_ELASTICSEARCH
+#ifdef TOKEN_ENABLE_EXPERIMENTAL
 
 #include "json.h"
 #include "timestamp.h"
@@ -130,5 +130,5 @@ namespace token{
   }
 }
 
-#endif//TOKEN_ENABLE_ELASTICSEARCH
+#endif//TOKEN_ENABLE_EXPERIMENTAL
 #endif//TOKEN_ELASTIC_EVENT_H

@@ -1,7 +1,7 @@
 #ifndef TOKEN_VERSION_H
 #define TOKEN_VERSION_H
 
-#include "utils/bitfield.h"
+#include "bitfield.h"
 
 namespace token{
   typedef uint64_t RawVersion;

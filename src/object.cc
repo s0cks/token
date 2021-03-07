@@ -1,7 +1,7 @@
 #include "json.h"
 #include "object.h"
-#include "utils/buffer.h"
-#include "utils/bitfield.h"
+#include "buffer.h"
+#include "bitfield.h"
 
 namespace token{
   BufferPtr SerializableObject::ToBuffer() const{

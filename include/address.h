@@ -3,7 +3,7 @@
 
 #include <set>
 #include "common.h"
-#include "utils/buffer.h"
+#include "buffer.h"
 
 namespace token{
   class NodeAddress{

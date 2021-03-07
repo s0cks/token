@@ -20,7 +20,7 @@ namespace token{
     ASSERT_TRUE(ConfigurationManager::Initialize(test_directory + "/config"));
     ASSERT_TRUE(ConfigurationManager::SetProperty(TOKEN_CONFIGURATION_BLOCKCHAIN_HOME, test_directory));
 
-    ASSERT_TRUE(WalletManager::Initialize());
+    ASSERT_TRUE(WalletManager::GetInstance()->IsInitialized());
     ASSERT_TRUE(ObjectPool::Initialize());
     ASSERT_TRUE(BlockChain::Initialize());
   }
