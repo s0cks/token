@@ -3,6 +3,7 @@
 
 #include "wallet.h"
 #include "test_suite.h"
+#include "mock_wallet.h"
 
 namespace token{
   class WalletTest : public ::testing::Test{
@@ -16,12 +17,22 @@ namespace token{
    protected:
     WalletManagerTest() = default;
 
-    void SetUp(){
+    static void SetUpTestSuite(){
+      LOG(INFO) << "setting up wallet manager test suite....";
+      char tmp_filename[] = "/tmp/tkn-test-wallet-manager.XXXXXX";
+      char* tmp_directory = mkdtemp(tmp_filename);
+      ASSERT_TRUE(tmp_directory != NULL);
 
+      std::string test_directory(tmp_directory);
+      if(!FileExists(test_directory))
+        ASSERT_TRUE(CreateDirectory(test_directory));
+      LOG(INFO) << "using test directory: " << test_directory;
+
+      ASSERT_TRUE(WalletManager::Initialize(test_directory));
     }
 
-    void TearDown(){
-
+    static void TearDownTestSuite(){
+      LOG(INFO) << "tearing down wallet manager test suite....";
     }
    public:
     ~WalletManagerTest() = default;
