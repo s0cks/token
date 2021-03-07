@@ -8,7 +8,8 @@ set(PROTO_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protos")
 
 file(GLOB_RECURSE TOKEN_CMAKE_MODULES ${CMAKE_MODULE_PATH}/*.cmake)
 
-option(ENABLE_ELASTICSEARCH "Enables Elasticsearch Integration." OFF)
+option(ENABLE_EXPERIMENTAL "Enables experimental features." ON)
+
 option(ENABLE_SERVER "Enables the block chain server." ON)
 option(ENABLE_HEALTH_SERVICE "Enable the health http service." ON)
 option(ENABLE_REST_SERVICE "Enable the rest http service." ON)
@@ -21,10 +22,10 @@ else()
   message(STATUS "Compiling w/o debug mode.")
 endif()
 
-# Compile w/ Elasticsearch support
-if(ENABLE_ELASTICSEARCH)
-  message(STATUS "Compiling w/ Elasticsearch enabled.")
-  add_compile_definitions(TOKEN_ENABLE_ELASTICSEARCH)
+# Compile w/ Experimental Features
+if(ENABLE_EXPERIMENTAL)
+  message(STATUS "Compiling w/ Experimental Features.")
+  add_compile_definitions(TOKEN_ENABLE_EXPERIMENTAL)
 endif()
 
 # Compile w/ the rpc if enabled

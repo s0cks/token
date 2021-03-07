@@ -233,15 +233,6 @@ main(int argc, char **argv){
   }
   PrintGutter();
 
-#ifdef TOKEN_ENABLE_ELASTICSEARCH
-  NodeAddress address = NodeAddress::ResolveAddress("localhost:9200");
-  elastic::SpendEvent event(Clock::now(), User("VenueA"), User("VenueB"), Hash::GenerateNonce());
-  if(!SendEvent(address, "test-events-0000001", event)){
-    CrashReport::PrintNewCrashReport("Cannot send spend event.");
-    return EXIT_FAILURE;
-  }
-#endif//TOKEN_ENABLE_ELASTICSEARCH
-
   if(FLAGS_append_test && !AppendDummy("VenueA", 2)){
     CrashReport::PrintNewCrashReport("Cannot append dummy transactions.");
     return EXIT_FAILURE;
