@@ -12,11 +12,6 @@ namespace token{
   V(Stopping)                   \
   V(Stopped)
 
-#define FOR_EACH_MINER_STATUS(V) \
-  V(Ok)                          \
-  V(Warning)                     \
-  V(Error)
-
   class BlockMiner{
    public:
     enum State{
@@ -36,85 +31,59 @@ namespace token{
           return stream << "Unknown";
       }
     }
+   protected:
+    uv_loop_t* loop_;
+    RelaxedAtomic<State> state_;
+    uv_timer_t timer_;
+    ProposalPtr proposal_;
 
-    enum Status{
-#define DEFINE_STATUS(Name) k##Name##Status,
-      FOR_EACH_MINER_STATUS(DEFINE_STATUS)
-#undef DEFINE_STATUS
-    };
-
-    friend std::ostream& operator<<(std::ostream& stream, const Status& status){
-      switch(status){
-#define DEFINE_TOSTRING(Name) \
-        case Status::k##Name##Status: \
-          return stream << #Name;
-        FOR_EACH_MINER_STATUS(DEFINE_TOSTRING)
-#undef DEFINE_TOSTRING
-        default:
-          return stream << "Unknown";
-      }
+    void SetState(const State& state){
+      state_ = state;
     }
-   private:
-    BlockMiner() = delete;
 
-    static void SetState(const State& state);
-    static void SetStatus(const Status& status);
-    static void HandleMine(uv_timer_t* handle);
-    static void OnPromiseCallback(uv_async_t* handle);
-    static void OnCommitCallback(uv_async_t* handle);
-    static void OnAcceptedCallback(uv_async_t* handle);
-    static void OnRejectedCallback(uv_async_t* handle);
-    static void OnQuorumCallback(uv_async_t* handle);
+    bool StopTimer();
+    bool StartTimer();
+    bool ClearCurrentProposal();
+    ProposalPtr GetCurrentProposal();
+    ProposalPtr CreateNewProposal();
 
-    static int StartMinerTimer();
-    static int StopMinerTimer();
-
-    static bool ScheduleSnapshot();
+    static void OnMine(uv_timer_t* handle);
    public:
-    ~BlockMiner() = delete;
+    BlockMiner(uv_loop_t* loop=uv_loop_new()):
+      loop_(loop),
+      state_(State::kStoppedState),
+      timer_(){
+      timer_.data = this;
+    }
+    ~BlockMiner() = default;
 
-    static State GetState();
-    static Status GetStatus();
-    static bool Stop();
-    static bool Start();
-
-    static bool Commit(const ProposalPtr& proposal);
-
-    static void OnPromise();
-    static void OnCommit();
-    static void OnAccepted();
-    static void OnRejected();
-    static void OnQuorum();
-
-    static inline bool Pause(){
-      int err;
-      if((err = StopMinerTimer()) != 0){
-        LOG(ERROR) << "cannot pause the block miner: " << uv_strerror(err);
-        return false;
-      }
-      LOG(INFO) << "pausing the block miner.";
-      return true;
+    State GetState() const{
+      return state_;
     }
 
-    static inline bool Resume(){
-      int err;
-      if((err = StartMinerTimer()) != 0){
-        LOG(ERROR) << "cannot resume the block miner: " << uv_strerror(err);
-        return false;
-      }
-      LOG(INFO) << "resuming the block miner.";
-      return true;
+    uv_loop_t* GetLoop() const{
+      return loop_;
     }
+
+    bool Run();
 
 #define DEFINE_CHECK(Name) \
-    static inline bool Is##Name##State(){ return GetState() == State::k##Name##State; }
+    inline bool Is##Name() const{ return state_ == State::k##Name##State; }
     FOR_EACH_MINER_STATE(DEFINE_CHECK)
 #undef DEFINE_CHECK
+  };
 
-#define DEFINE_CHECK(Name) \
-    static inline bool Is##Name##Status(){ return GetStatus() == Status::k##Name##Status; }
-    FOR_EACH_MINER_STATUS(DEFINE_CHECK)
-#undef DEFINE_CHECK
+  class BlockMinerThread{
+   private:
+    BlockMinerThread() = delete;
+
+    static void HandleThread(uword param);
+   public:
+    ~BlockMinerThread() = delete;
+
+    static bool Stop();
+    static bool Start();
+    static void Initialize();
   };
 }
 

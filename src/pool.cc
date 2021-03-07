@@ -282,4 +282,37 @@ namespace token{
   }
   FOR_EACH_POOL_TYPE(DEFINE_GET_TYPE_HASHES)
 #undef DEFINE_GET_TYPE_HASHES
+
+#define DEFINE_GET_TYPE_HASHES(Name) \
+  bool ObjectPool::Get##Name##s(HashList& hashes){ \
+    leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
+    for(iter->SeekToFirst(); iter->Valid(); iter->Next()){                     \
+      PoolKey key(iter->key());      \
+      ObjectTag tag = key.tag();     \
+      if(tag.IsValid() && tag.Is##Name##Type()){   \
+        hashes.push_back(key.GetHash());           \
+      }                              \
+    }                                \
+    delete iter;                     \
+    return true;                     \
+  }
+  FOR_EACH_POOL_TYPE(DEFINE_GET_TYPE_HASHES)
+#undef DEFINE_GET_TYPE_HASHES
+
+#define DEFINE_HAS_TYPE(Name) \
+  bool ObjectPool::Has##Name##s(){ \
+    leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
+    for(iter->SeekToFirst(); iter->Valid(); iter->Next()){                     \
+      PoolKey key(iter->key());    \
+      ObjectTag tag = key.tag();   \
+      if(tag.IsValid() && tag.Is##Name##Type()){                               \
+        delete iter;          \
+        return true;          \
+      }                       \
+    }                         \
+    delete iter;              \
+    return false;             \
+  }
+  FOR_EACH_POOL_TYPE(DEFINE_HAS_TYPE)
+#undef DEFINE_HAS_TYPE
 }

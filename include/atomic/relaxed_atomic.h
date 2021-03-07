@@ -13,6 +13,14 @@ namespace token{
       val_(init){}
     ~RelaxedAtomic() = default;
 
+    T fetch_add(T arg, std::memory_order order=std::memory_order_relaxed){
+      return val_.fetch_add(arg, order);
+    }
+
+    T fetch_sub(T arg, std::memory_order order=std::memory_order_relaxed){
+      return val_.fetch_sub(arg, order);
+    }
+
     T load(std::memory_order order=std::memory_order_relaxed) const{
       return val_.load(order);
     }
@@ -42,6 +50,14 @@ namespace token{
       T loaded = arg;
       store(loaded);
       return loaded;
+    }
+
+    T operator+=(T arg){
+      return fetch_add(arg) + arg;
+    }
+
+    T operator-=(T arg){
+      return fetch_sub(arg) - arg;
     }
   };
 }

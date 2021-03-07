@@ -1,10 +1,10 @@
 #ifndef TOKEN_PROPOSAL_H
 #define TOKEN_PROPOSAL_H
 
-#include <mutex>
-#include <condition_variable>
 #include "block.h"
 #include "block_header.h"
+#include "configuration.h"
+#include "atomic/relaxed_atomic.h"
 
 namespace token{
   class RawProposal{
@@ -99,6 +99,14 @@ namespace token{
     V(Accepted)                     \
     V(Rejected)
 
+
+#define FOR_EACH_PROPOSAL_CALLBACK(V) \
+  V(Prepare, on_prepare)   \
+  V(Promise, on_promise)   \
+  V(Commit, on_commit)     \
+  V(Accepted, on_accepted) \
+  V(Rejected, on_rejected)
+
   class Proposal;
   typedef std::shared_ptr<Proposal> ProposalPtr;
 
@@ -109,6 +117,8 @@ namespace token{
     friend class ProposalHandler;
     friend class BlockDiscoveryThread;
    public:
+    static const int64_t kDefaultProposalTimeoutSeconds = 120;
+
     enum Phase{
 #define DEFINE_PHASE(Name) k##Name##Phase,
       FOR_EACH_PROPOSAL_PHASE(DEFINE_PHASE)
@@ -119,12 +129,11 @@ namespace token{
       switch(phase){
 #define DEFINE_TOSTRING(Name) \
         case Phase::k##Name##Phase: \
-            stream << #Name; \
-            return stream;
+          return stream << #Name;
         FOR_EACH_PROPOSAL_PHASE(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
-        default:stream << "Unknown";
-          return stream;
+        default:
+          return stream << "Unknown";
       }
     }
 
@@ -137,86 +146,145 @@ namespace token{
     friend std::ostream& operator<<(std::ostream& stream, const Result& result){
       switch(result){
 #define DEFINE_TOSTRING(Name) \
-                case Result::k##Name: \
-                    stream << #Name; \
-                    return stream;
+        case Result::k##Name: \
+            return stream << #Name;
         FOR_EACH_PROPOSAL_RESULT(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
-        default:stream << "Unknown";
-          return stream;
+        default:
+          return stream << "Unknown";
       }
     }
    private:
-    std::mutex mutex_;
-    std::condition_variable cond_;
-    Phase phase_;
-    Result result_;
     RawProposal raw_;
-    std::set<std::string> accepted_;
-    std::set<std::string> rejected_;
+    RelaxedAtomic<Phase> phase_;
+    RelaxedAtomic<Result> result_;
+    RelaxedAtomic<int64_t> accepted_;
+    RelaxedAtomic<int64_t> rejected_;
+    uv_loop_t* loop_;
+    uv_timer_t timeout_;
 
-    void SetPhase(const Phase& phase);
-    void SetResult(const Result& result);
+#define DEFINE_CALLBACK_HANDLE(Name, Callback) \
+    uv_async_t Callback##_;
+    FOR_EACH_PROPOSAL_CALLBACK(DEFINE_CALLBACK_HANDLE)
+#undef DEFINE_CALLBACK_HANDLE
+
+    void SetPhase(const Phase& phase){
+      phase_ = phase;
+    }
+
+    void SetResult(const Result& result){
+      result_ = result;
+    }
 
     static int GetRequiredNumberOfPeers();
+    static void OnTimeout(uv_timer_t* handle);
+
+#define DECLARE_CALLBACK_HANDLER(Name, Callback) \
+    static void On##Name(uv_async_t* handle);
+    FOR_EACH_PROPOSAL_CALLBACK(DECLARE_CALLBACK_HANDLER)
+#undef DECLARE_CALLBACK_HANDLER
+
+#define DEFINE_CALLBACK_SEND(Name, Callback) \
+    bool Send##Name(){                       \
+        int err;                             \
+        if((err = uv_async_send(&Callback##_)) != 0){ \
+            LOG(ERROR) << "cannot send " << #Name << " callback: " << uv_strerror(err); \
+            return false;                    \
+        }                                    \
+        return true;                         \
+    }
+    FOR_EACH_PROPOSAL_CALLBACK(DEFINE_CALLBACK_SEND)
+#undef DEFINE_CALLBACK_SEND
+
+    bool StartProposalTimeout(){
+      int err;
+      if((err = uv_timer_start(&timeout_, &OnTimeout, kDefaultProposalTimeoutSeconds, 0)) != 0){
+        LOG(ERROR) << "cannot start proposal timeout: " << uv_strerror(err);
+        return false;
+      }
+      return true;
+    }
+
+    bool StopProposalTimeout(){
+      int err;
+      if((err = uv_timer_stop(&timeout_)) != 0){
+        LOG(ERROR) << "cannot stop proposal timeout: " << uv_strerror(err);
+        return false;
+      }
+      return true;
+    }
    public:
-    Proposal(const RawProposal& proposal):
+    Proposal(uv_loop_t* loop, const RawProposal& proposal):
       Object(),
-      phase_(Proposal::kProposalPhase),
-      result_(Proposal::kNone),
       raw_(proposal),
-      accepted_(),
-      rejected_(){}
-    Proposal(const UUID& proposer, const BlockHeader& blk):
-      Object(),
       phase_(Proposal::kProposalPhase),
       result_(Proposal::kNone),
-      raw_(blk, proposer),
-      accepted_(),
-      rejected_(){}
-    Proposal(BlockPtr blk, const UUID& proposer):
-      Object(),
-      phase_(Proposal::kProposalPhase),
-      result_(Proposal::kNone),
-      raw_(blk->GetHeader(), proposer),
-      accepted_(),
-      rejected_(){}
-    Proposal(const BufferPtr& buff):
-      Object(),
-      phase_(Proposal::kProposalPhase),
-      result_(Proposal::kNone),
-      raw_(buff),
-      accepted_(),
-      rejected_(){}
+      accepted_(0),
+      rejected_(0),
+      loop_(loop),
+      timeout_(),
+      on_prepare_(),
+      on_promise_(),
+      on_accepted_(),
+      on_rejected_(){
+
+      int err;
+      if((err = uv_timer_init(loop, &timeout_)) != 0){
+        LOG(ERROR) << "cannot register proposal timeout timer: " << uv_strerror(err);
+        return;
+      }
+
+#define INIT_CALLBACK(Name, Callback) \
+      Callback##_.data = this;        \
+      if((err = uv_async_init(loop_, &Callback##_, &On##Name)) != 0){ \
+        LOG(ERROR) << "cannot register " << #Name << " callback: " << uv_strerror(err); \
+        return;                       \
+      }
+      FOR_EACH_PROPOSAL_CALLBACK(INIT_CALLBACK)
+#undef INIT_CALLBACK
+    }
+    Proposal(uv_loop_t* loop, const UUID& proposer, const BlockHeader& blk):
+      Proposal(loop, RawProposal(blk, proposer)){}
+    Proposal(uv_loop_t* loop, const UUID& proposer, const BlockPtr& blk):
+      Proposal(loop, proposer, blk->GetHeader()){}
     ~Proposal() = default;
 
-    RawProposal& GetRaw(){
+    Phase GetPhase() const{
+      return phase_;
+    }
+
+    Result GetResult() const{
+      return result_;
+    }
+
+    RawProposal& raw(){
       return raw_;
     }
 
-    BlockHeader& GetBlock(){
-      return raw_.GetBlock();
+    RawProposal raw() const{
+      return raw_;
     }
 
-    BlockHeader GetBlock() const{
-      return raw_.GetBlock();
+    uv_loop_t* GetLoop() const{
+      return loop_;
     }
 
-    Timestamp GetTimestamp() const{
-      return raw_.GetTimestamp();
+    int64_t GetNumberOfAcceptedVotes() const{
+      return accepted_;
     }
 
-    int64_t GetHeight() const{
-      return raw_.GetHeight();
+    int64_t GetNumberOfRejectedVotes() const{
+      return rejected_;
     }
 
-    Hash GetHash() const{
-      return raw_.GetHash();
+    int64_t GetNumberOfVotes() const{
+      return accepted_ + rejected_;
     }
 
-    UUID GetProposer() const{
-      return raw_.GetProposer();
-    }
+    bool TransitionToPhase(const Phase& phase);//TODO: encapsulate
+    void AcceptProposal(const UUID& node);
+    void RejectProposal(const UUID& node);
+    void WaitForRequiredResponses(int required = GetRequiredNumberOfPeers());
 
     int64_t GetBufferSize() const{
       return RawProposal::GetSize();
@@ -230,44 +298,34 @@ namespace token{
       return raw_ == proposal->raw_;
     }
 
-    bool IsStartedBy(const UUID& uuid){
-      return GetProposer() == uuid;
-    }
-
     std::string ToString() const{
       std::stringstream ss;
-      ss << "Proposal(#" << GetHeight() << ", " << GetHash() << ", " << GetProposer() << ")";
+      ss << "Proposal(";
+      ss << ")";
       return ss.str();
     }
 
-    #ifdef TOKEN_ENABLE_SERVER
-    PeerSession* GetPeer() const;
-    #endif//TOKEN_ENABLE_SERVER
-
-    Phase GetPhase();
-    Result GetResult();
-    int64_t GetNumberOfAccepted();
-    int64_t GetNumberOfRejected();
-    int64_t GetNumberOfResponses();
-    bool Commit();
-    bool TransitionToPhase(const Phase& phase);
-    bool HasResponseFrom(const std::string& node_id);
-    void AcceptProposal(const std::string& node);
-    void RejectProposal(const std::string& node);
-    void WaitForPhase(const Phase& phase);
-    void WaitForResult(const Result& result);
-    void WaitForRequiredResponses(int required = GetRequiredNumberOfPeers());
-
 #define DEFINE_PHASE_CHECK(Name) \
-        inline bool Is##Name() { return GetPhase() == Proposal::k##Name##Phase; }
+    inline bool Is##Name() { return GetPhase() == Proposal::k##Name##Phase; }
     FOR_EACH_PROPOSAL_PHASE(DEFINE_PHASE_CHECK)
 #undef DEFINE_PHASE_CHECK
 
 #define DEFINE_RESULT_CHECK(Name) \
-        inline bool Is##Name(){ return GetResult() == Proposal::k##Name; }
+    inline bool Is##Name(){ return GetResult() == Proposal::k##Name; }
     FOR_EACH_PROPOSAL_RESULT(DEFINE_RESULT_CHECK)
 #undef DEFINE_RESULT_CHECK
+
+    static inline ProposalPtr
+    NewInstance(uv_loop_t* loop, const UUID& proposer, const BlockPtr& blk){
+      return std::make_shared<Proposal>(loop, proposer, blk);
+    }
+
+    static inline ProposalPtr
+    NewInstance(uv_loop_t* loop, const BlockPtr& blk){
+      return NewInstance(loop, ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID), blk);
+    }
   };
+#undef FOR_EACH_PROPOSAL_CALLBACK
 }
 
 #endif //TOKEN_PROPOSAL_H

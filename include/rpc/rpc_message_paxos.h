@@ -12,7 +12,7 @@ namespace token{
 
     PaxosMessage(ProposalPtr proposal):
       RpcMessage(),
-      raw_(proposal->GetRaw()){}
+      raw_(proposal->raw()){}
     PaxosMessage(const BufferPtr& buff):
       RpcMessage(),
       raw_(buff){}

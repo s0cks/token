@@ -229,7 +229,9 @@ namespace token{
     static bool WaitFor##Name(const Hash& hash, const int64_t timeout_ms=1000*5); \
     static bool Put##Name(const Hash& hash, const Name##Ptr& val);                \
     static bool Get##Name##s(Json::Writer& json);                                   \
-    static bool Has##Name(const Hash& hash);                                      \
+    static bool Get##Name##s(HashList& hashes);                                  \
+    static bool Has##Name(const Hash& hash);                                     \
+    static bool Has##Name##s();   \
     static bool Remove##Name(const Hash& hash);                                   \
     static bool Visit##Name##s(ObjectPool##Name##Visitor* vis);                   \
     static Name##Ptr Get##Name(const Hash& hash);                                 \
