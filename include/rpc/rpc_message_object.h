@@ -2,7 +2,7 @@
 #define TOKEN_RPC_MESSAGE_OBJECT_H
 
 #include "rpc/rpc_message.h"
-#include "utils/buffer.h"
+#include "buffer.h"
 
 namespace token{
   template<class T>

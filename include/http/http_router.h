@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <glog/logging.h>
 #include "http_method.h"
-#include "utils/trie.h"
+#include "trie.h"
 
 namespace token{
   typedef std::unordered_map<std::string, std::string> ParameterMap;

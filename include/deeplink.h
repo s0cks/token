@@ -10,7 +10,7 @@
 #include <ZXing/ZXStrConvWorkaround.h>
 
 #include "hash.h"
-#include "utils/buffer.h"
+#include "buffer.h"
 
 namespace token{
 #define DEEPLINK "https://tknevents-lab.web.app/scan"

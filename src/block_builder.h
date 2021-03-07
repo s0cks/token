@@ -4,7 +4,6 @@
 #include <unordered_set>
 #include "pool.h"
 #include "blockchain.h"
-#include "utils/printer.h"
 
 namespace token{
   class BlockBuilder : ObjectPoolTransactionVisitor{
@@ -35,15 +34,12 @@ namespace token{
 
         if(!transactions.insert(ntx).second){
           LOG(WARNING) << "couldn't insert new transaction into transaction list for new block:";
-          PrettyPrinter printer(google::WARNING, Printer::kFlagDetailed);
-          printer(ntx);
           return BlockPtr(nullptr);
         }
       }
 
       BlockPtr head = BlockChain::GetHead();
       LOG(INFO) << "creating block from parent: ";
-      PrettyPrinter::PrettyPrint(head);
 
       BlockPtr blk = Block::FromParent(head, transactions);
       Hash hash = blk->GetHash();

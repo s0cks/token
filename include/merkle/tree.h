@@ -7,7 +7,6 @@
 #include "merkle/node.h"
 #include "transaction.h"
 #include "merkle/proof.h"
-#include "utils/printer.h"
 
 namespace token{
   class MerkleTreeVisitor;
@@ -110,22 +109,6 @@ namespace token{
     virtual bool VisitStart() const{ return true; }
     virtual bool Visit(MerkleNode* node) const = 0;
     virtual bool VisitEnd() const{ return true; }
-  };
-
-  class MerkleTreePrinter : public MerkleTreeVisitor, Printer{
-   public:
-    MerkleTreePrinter(Printer* parent):
-      MerkleTreeVisitor(),
-      Printer(parent){}
-    MerkleTreePrinter(const google::LogSeverity& severity = google::INFO, const long& flags = Printer::kFlagNone):
-      MerkleTreeVisitor(),
-      Printer(severity, flags){}
-    ~MerkleTreePrinter() = default;
-
-    bool Visit(MerkleNode* node) const{
-      LOG_AT_LEVEL(GetSeverity()) << node->GetHash();
-      return true;
-    }
   };
 
   class MerkleTreeBuilder : public BlockVisitor{

@@ -1,7 +1,6 @@
 #include <chrono>
 #include "job/worker.h"
 #include "job/scheduler.h"
-#include "utils/timeline.h"
 
 namespace token{
   static inline std::string
@@ -49,8 +48,6 @@ namespace token{
 #endif//TOKEN_DEBUG
         //-----
         //TODO: refactor
-        Counter& num_ran = instance->GetJobsRan();
-        Histogram& histogram = instance->GetHistogram();
         Timestamp start = Clock::now();
         //-----
 
@@ -61,9 +58,7 @@ namespace token{
 
         //---------
         //TODO: refactor
-        num_ran->Increment();
         auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start);
-        histogram->Update(duration_ms.count());
         //---------
 
 #ifdef TOKEN_DEBUG

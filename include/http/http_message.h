@@ -3,7 +3,7 @@
 
 #include <memory>
 #include "message.h"
-#include "utils/buffer.h"
+#include "buffer.h"
 
 #include "http/http_header.h"
 #include "http/http_status.h"

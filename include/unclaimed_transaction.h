@@ -2,7 +2,7 @@
 #define TOKEN_UNCLAIMED_TRANSACTION_H
 
 #include "object.h"
-#include "utils/buffer.h"
+#include "buffer.h"
 
 namespace token{
   class UnclaimedTransaction;

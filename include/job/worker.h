@@ -6,8 +6,6 @@
 #include "job/job.h"
 #include "job/scheduler.h"
 
-#include "utils/metrics.h"
-
 namespace token{
   typedef int32_t WorkerId;
 
@@ -110,9 +108,6 @@ namespace token{
     WorkerId worker_;
     std::atomic<State> state_;
     JobQueue queue_;
-    Histogram histogram_;
-    Counter num_ran_;
-    Counter num_discarded_;
 
     void SetState(const State& state){
       state_.store(state, std::memory_order_seq_cst);
@@ -120,18 +115,6 @@ namespace token{
 
     bool Schedule(Job* job){
       return queue_.Push(job);
-    }
-
-    Histogram& GetHistogram(){
-      return histogram_;
-    }
-
-    Counter& GetJobsRan(){
-      return num_ran_;
-    }
-
-    Counter& GetJobsDiscarded(){
-      return num_discarded_;
     }
 
     JobQueue* GetQueue(){
@@ -145,10 +128,7 @@ namespace token{
       thread_(),
       worker_(worker_id),
       state_(State::kStarting),
-      queue_(max_queue_size),
-      histogram_(new Metrics::Histogram("TaskHistogram")),
-      num_ran_(new Metrics::Counter("NumRan")),
-      num_discarded_(new Metrics::Counter("NumDiscarded")){}
+      queue_(max_queue_size){}
     ~JobWorker() = delete;
 
     ThreadId GetThreadID() const{
@@ -184,11 +164,6 @@ namespace token{
         return false;
       LOG(INFO) << "[worker-" << GetWorkerID() << "] submitting: " << job->GetName();
       return true;
-    }
-
-    JobWorkerStats GetStats() const{
-      std::shared_ptr<Metrics::Snapshot> snapshot = histogram_->GetSnapshot();
-      return JobWorkerStats(worker_, num_ran_->Get(), num_discarded_->Get(), snapshot->GetMin(), snapshot->GetMean(), snapshot->GetMax());
     }
 
 #define DEFINE_CHECK(Name) \

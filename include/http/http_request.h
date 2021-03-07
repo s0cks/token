@@ -11,7 +11,7 @@
 #include "http/http_header.h"
 #include "http/http_message.h"
 #include "http/http_service.h"
-#include "utils/buffer.h"
+#include "buffer.h"
 
 namespace token{
   class HttpRequest;
