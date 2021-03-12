@@ -13,6 +13,9 @@
 // any response received is purely in relation to the sent packets
 // this is for outbound packets
 namespace token{
+#define PEER_LOG(LevelName, Session) \
+  LOG(LevelName) << "[peer-" << Session->GetID().ToStringAbbreviated() << "] "
+
 #define NOT_IMPLEMENTED(LevelName, FunctionName) \
   SESSION_LOG(LevelName, this) << (FunctionName) << " is not implemented yet!";
 
@@ -62,7 +65,7 @@ namespace token{
   void PeerSession::OnConnect(uv_connect_t* conn, int status){
     PeerSession* session = (PeerSession*)conn->data;
     if(status != 0){
-      THREAD_LOG(ERROR) << "connect failure: " << uv_strerror(status);
+      PEER_LOG(ERROR, session) << "connect failure: " << uv_strerror(status);
       session->CloseConnection();
       return;
     }
@@ -75,7 +78,7 @@ namespace token{
 
     int err;
     if((err = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
-      THREAD_LOG(ERROR) << "read failure: " << uv_strerror(err);
+      PEER_LOG(ERROR, session) << "read failure: " << uv_strerror(err);
       session->CloseConnection();
       return;
     }
@@ -100,6 +103,9 @@ namespace token{
     BufferPtr buffer = Buffer::From(buff->base, nread);
     do{
       RpcMessagePtr message = RpcMessage::From(session, buffer);
+#ifdef TOKEN_DEBUG
+      PEER_LOG(INFO, session) << "received: " << message->ToString() << " (" << message->GetBufferSize() << "b)";
+#endif//TOKEN_DEBUG
       session->OnMessageRead(message);
     } while(buffer->GetReadBytes() < buffer->GetBufferSize());
     free(buff->base);

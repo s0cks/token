@@ -104,20 +104,12 @@ namespace token{
       return true;
     }
 
-    bool SetActiveProposal(const RawProposal& proposal){
+    bool RegisterNewProposal(RpcSession* session, const RawProposal& proposal){
       std::lock_guard<std::mutex> guard(proposal_mtx_);
       if(proposal_)
         return false;
-      proposal_ = Proposal::NewInstance(nullptr, loop_, proposal, GetRequiredVotes());
+      proposal_ = Proposal::NewInstance(session, loop_, proposal, GetRequiredVotes());
       return true;
-    }
-
-    bool RegisterNewProposal(const RawProposal& proposal){
-      std::lock_guard<std::mutex> guard(proposal_mtx_);
-      if(proposal_)
-        return false;
-      proposal_ = Proposal::NewInstance(nullptr, loop_, proposal, GetRequiredVotes());
-      return proposal_->TransitionToPhase(ProposalPhase::kPreparePhase);
     }
 
     bool ClearActiveProposal(){

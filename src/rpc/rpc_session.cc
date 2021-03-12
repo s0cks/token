@@ -113,7 +113,7 @@ namespace token{
 
 #define PROMISE_PROPOSAL(Proposal, LevelName)({ \
   SESSION_LOG(LevelName, this) << "promising proposal: " << (Proposal); \
-  responses << PromiseMessage::NewInstance(proposal);                   \
+  responses << PromiseMessage::NewInstance((Proposal));                   \
   return Send(responses);                       \
 })
 
@@ -125,7 +125,7 @@ namespace token{
     if(miner->HasActiveProposal())
       REJECT_PROPOSAL(msg->GetProposal(), ERROR, "there is already an active proposal.");
     // set the current proposal to the requested proposal
-    if(!miner->RegisterNewProposal(msg->GetProposal()))
+    if(!miner->RegisterNewProposal(this, msg->GetProposal()))
       REJECT_PROPOSAL(msg->GetProposal(), ERROR, "cannot set active proposal.");
 
     // pause the block miner
@@ -143,6 +143,8 @@ namespace token{
 
     if(!miner->GetActiveProposal()->OnPrepare())
       REJECT_PROPOSAL(msg->GetProposal(), ERROR, "cannot invoke on-prepare");
+
+    PROMISE_PROPOSAL(msg->GetProposal(), INFO);
   }
 
   void ServerSession::OnPromiseMessage(const PromiseMessagePtr& msg){

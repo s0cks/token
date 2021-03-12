@@ -1,3 +1,7 @@
+#ifndef TOKEN_RPC_MESSAGE_H
+#error "Please include rpc/rpc_message.h directly"
+#endif//TOKEN_RPC_MESSAGE_H
+
 #ifndef TOKEN_RPC_MESSAGE_VERSION_H
 #define TOKEN_RPC_MESSAGE_VERSION_H
 
