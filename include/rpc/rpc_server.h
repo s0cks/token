@@ -18,6 +18,14 @@ namespace token{
     ServerSession(uv_loop_t* loop):
       RpcSession(loop){}
     ~ServerSession() = default;
+
+    void SendAccepted(){
+
+    }
+
+    void SendRejected(){
+
+    }
   };
 
   class LedgerServer : public Server<RpcMessage>{

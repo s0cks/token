@@ -7,14 +7,11 @@
 
 #include "peer/peer_session_manager.h"
 
-#include "consensus/proposal.h"
-#include "consensus/proposal_manager.h"
-
 // The server session receives packets sent from peers
 // this is for inbound packets
 namespace token{
-#define NOT_IMPLEMENTED \
-  SESSION_LOG(ERROR, this) << "not implemented!"
+#define NOT_IMPLEMENTED(LevelName, FunctionName) \
+  SESSION_LOG(LevelName, this) << FunctionName << " is not implemented!";
 
   //TODO:
   // - state check
@@ -95,71 +92,85 @@ namespace token{
     Send(response);
   }
 
+#ifdef TOKEN_DEBUG
+  #define REJECT_PROPOSAL(Proposal, LevelName, Message)({ \
+    SESSION_LOG(LevelName, this) << "rejecting proposal " << (Proposal) << ": " << (Message); \
+    responses << RejectedMessage::NewInstance((Proposal));\
+    return Send(responses);                               \
+  })
+#else
+  #define REJECT_PROPOSAL(Proposal, LevelName, Message)({ \
+    responses << RejectedMessage::NewInstance((Proposal));\
+    return Send(responses);                               \
+  })
+#endif//TOKEN_DEBUG
+
+#define ACCEPT_PROPOSAL(Proposal, LevelName)({ \
+  SESSION_LOG(LevelName, this) << "accepting proposal: " << (Proposal); \
+  responses << AcceptedMessage::NewInstance(proposal);                  \
+  return Send(responses);                      \
+})
+
+#define PROMISE_PROPOSAL(Proposal, LevelName)({ \
+  SESSION_LOG(LevelName, this) << "promising proposal: " << (Proposal); \
+  responses << PromiseMessage::NewInstance(proposal);                   \
+  return Send(responses);                       \
+})
+
   void ServerSession::OnPrepareMessage(const PrepareMessagePtr& msg){
-    // upon receiving a PrepareMessage from a Peer:
-    // - if a proposal is active AND the doesn't match the requested proposal, send a rejection.
-    //  - pause local BlockMiner
-    //  - set the current proposal
-    //  - send an acceptance
-    ProposalPtr proposal = msg->GetProposal();
-    if(!BlockMiner::Pause())
-      return Send(RejectedMessage::NewInstance(proposal));
-    if(!ProposalManager::SetProposal(proposal))
-      return Send(RejectedMessage::NewInstance(proposal));
-    return Send(AcceptedMessage::NewInstance(proposal));
+    BlockMiner* miner = BlockMiner::GetInstance();
+    RpcMessageList responses;
+
+    // check that the miner has an active proposal
+    if(miner->HasActiveProposal())
+      REJECT_PROPOSAL(msg->GetProposal(), ERROR, "there is already an active proposal.");
+    // set the current proposal to the requested proposal
+    if(!miner->RegisterNewProposal(msg->GetProposal()))
+      REJECT_PROPOSAL(msg->GetProposal(), ERROR, "cannot set active proposal.");
+
+    // pause the block miner
+    if(!miner->Pause())
+      REJECT_PROPOSAL(msg->GetProposal(), ERROR, "cannot pause the block miner.");
+
+    // request block if it doesn't exist
+    Hash hash = msg->GetProposal().GetValue().GetHash();
+    if(!ObjectPool::HasBlock(hash)){
+#ifdef TOKEN_DEBUG
+      SESSION_LOG(INFO, this) << "cannot find proposed block in pool, requesting block: " << hash;
+#endif//TOKEN_DEBUG
+      responses << GetDataMessage::NewRequestForBlock(hash);
+    }
+
+    if(!miner->GetActiveProposal()->OnPrepare())
+      REJECT_PROPOSAL(msg->GetProposal(), ERROR, "cannot invoke on-prepare");
   }
 
   void ServerSession::OnPromiseMessage(const PromiseMessagePtr& msg){
-    // upon receiving a PromiseMessage from a Peer:
-    //  - if a proposal isn't active, send a rejection.
-    //  - if the current proposal doesn't match the requested proposal, send a rejection.
-    //  - transition the current proposal to kPromisePhase, send a rejection if this fails.
-    //  - send an acceptance
-    if(!ProposalManager::IsProposalFor(msg->GetProposal()))
-      return Send(RejectedMessage::NewInstance(msg->GetProposal()));
-    ProposalPtr proposal = ProposalManager::GetProposal();
-    if(!proposal->TransitionToPhase(Proposal::kVotingPhase))
-      return Send(RejectedMessage::NewInstance(proposal));
-    return Send(AcceptedMessage::NewInstance(proposal));
+    NOT_IMPLEMENTED(WARNING, __TKN_FUNCTION_NAME__);
   }
 
   void ServerSession::OnCommitMessage(const CommitMessagePtr& msg){
-    // upon receiving a CommitMessage from a peer:
-    //  - if a proposal isn't active, send a rejection.
-    //  - if the current proposal doesn't match the requested proposal, send a rejection.
-    //  - transition the current proposal to kCommitPhase, send a rejection if this fails.
-    //  - commit the proposal - send a rejection if this fails.
-    //  - send an acceptance.
-    if(!ProposalManager::IsProposalFor(msg->GetProposal()))
-      return Send(RejectedMessage::NewInstance(msg->GetProposal()));
-    ProposalPtr proposal = ProposalManager::GetProposal();
-    if(!proposal->TransitionToPhase(Proposal::kCommitPhase))
-      return Send(RejectedMessage::NewInstance(proposal));
-    if(!BlockMiner::Commit(proposal))
-      return Send(RejectedMessage::NewInstance(proposal));
-    return Send(AcceptedMessage::NewInstance(proposal));
+    BlockMiner* miner = BlockMiner::GetInstance();
+    RpcMessageList responses;
+
+    // check that the miner has a proposal active.
+    if(!miner->HasActiveProposal())
+      REJECT_PROPOSAL(msg->GetProposal(), ERROR, "no active proposal.");
+    // check that the requested proposal matches the active proposal
+    if(!miner->IsActiveProposal(msg->GetProposal()))
+      REJECT_PROPOSAL(msg->GetProposal(), ERROR, "not the current proposal.");
+
+    ProposalPtr proposal = miner->GetActiveProposal();
+    if(!proposal->OnCommit())
+      REJECT_PROPOSAL(msg->GetProposal(), ERROR, "cannot invoke on-commit");
   }
 
   void ServerSession::OnAcceptedMessage(const AcceptedMessagePtr& msg){
-    // upon receiving an AcceptedMessage from a peer:
-    //  - if a proposal isn't active, send a rejection.
-    //  - if the current proposal doesn't match the requested proposal, send a rejection.
-    //  - register sender in the accepted list for the current proposal
-    if(!ProposalManager::IsProposalFor(msg->GetProposal()))
-      return Send(RejectedMessage::NewInstance(msg->GetProposal()));
-    ProposalPtr proposal = ProposalManager::GetProposal();
-    proposal->AcceptProposal(GetUUID().ToString());
+    NOT_IMPLEMENTED(ERROR, __TKN_FUNCTION_NAME__);
   }
 
   void ServerSession::OnRejectedMessage(const RejectedMessagePtr& msg){
-    // upon receiving an AcceptedMessage from a peer:
-    //  - if a proposal isn't active, send a rejection.
-    //  - if the current proposal doesn't match the requested proposal, send a rejection.
-    //  - register sender in the rejected list for the current proposal
-    if(!ProposalManager::IsProposalFor(msg->GetProposal()))
-      return Send(RejectedMessage::NewInstance(msg->GetProposal()));
-    ProposalPtr proposal = ProposalManager::GetProposal();
-    proposal->AcceptProposal(GetUUID().ToString());
+    NOT_IMPLEMENTED(ERROR, __TKN_FUNCTION_NAME__);
   }
 
   void ServerSession::OnBlockMessage(const BlockMessagePtr& msg){
@@ -226,6 +237,6 @@ namespace token{
   }
 
   void ServerSession::OnNotFoundMessage(const NotFoundMessagePtr& msg){
-    NOT_IMPLEMENTED; //TODO: implement ServerSession::OnNotFoundMessage
+    NOT_IMPLEMENTED(ERROR, __TKN_FUNCTION_NAME__);
   }
 }

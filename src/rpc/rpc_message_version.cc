@@ -1,4 +1,4 @@
-#include "rpc/rpc_message_version.h"
+#include "rpc/rpc_message.h"
 
 namespace token{
   int64_t VersionMessage::GetMessageSize() const{

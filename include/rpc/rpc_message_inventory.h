@@ -1,8 +1,6 @@
 #ifndef TOKEN_RPC_MESSAGE_INVENTORY_H
 #define TOKEN_RPC_MESSAGE_INVENTORY_H
 
-#include "rpc/rpc_message.h"
-
 namespace token{
   class InventoryItem{
    public:
@@ -101,6 +99,8 @@ namespace token{
       return size;
     }
   };
+
+  typedef std::vector<InventoryItem> InventoryItemList;
 
   class InventoryMessage : public RpcMessage{
    public:
@@ -251,6 +251,12 @@ namespace token{
       std::vector<InventoryItem> items = {
         InventoryItem(blk)
       };
+      return NewInstance(items);
+    }
+
+    static inline GetDataMessagePtr
+    NewRequestForBlock(const Hash& hash){
+      InventoryItemList items = { InventoryItem(InventoryItem::kBlock, hash) };
       return NewInstance(items);
     }
   };

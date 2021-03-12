@@ -1,10 +1,6 @@
-#include "rpc/rpc_message_paxos.h"
+#include "rpc/rpc_message.h"
 
 namespace token{
-  ProposalPtr PaxosMessage::GetProposal() const{
-    return std::make_shared<Proposal>(raw_);
-  }
-
   int64_t PrepareMessage::GetMessageSize() const{
     return PaxosMessage::GetMessageSize();
   }

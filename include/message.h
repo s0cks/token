@@ -9,6 +9,12 @@ namespace token{
   typedef std::shared_ptr<Message> MessagePtr;
   typedef std::vector<MessagePtr> MessageList;
 
+  static inline MessageList&
+  operator<<(MessageList& messages, const MessagePtr& msg){
+    messages.push_back(msg);
+    return messages;
+  }
+
   class Message : public SerializableObject{
    protected:
     Message() = default;

@@ -21,18 +21,25 @@ namespace token{
   template<class M>
   class Session{
     friend class Server<M>;
-   private:
-    typedef Session<M> SessionType;
-    typedef Server<M> ServerType;
-    typedef std::shared_ptr<M> SessionMessagePtr;
-    typedef std::vector<SessionMessagePtr> SessionMessageList;
+   protected:
+    typedef M SessionMessageType;
+    typedef std::shared_ptr<SessionMessageType> SessionMessageTypePtr;
+    typedef std::vector<SessionMessageTypePtr> SessionMessageTypeList;
 
+    typedef Session<M> BaseType;
+    typedef Server<M> ServerType;
+
+    friend SessionMessageTypeList& operator<<(SessionMessageTypeList& messages, const SessionMessageTypePtr& msg){
+      messages.push_back(msg);
+      return messages;
+    }
+   private:
     struct SessionWriteData{
       uv_write_t request;
-      SessionType* session;
+      BaseType* session;
       BufferPtr buffer;
 
-      SessionWriteData(SessionType* s, int64_t size):
+      SessionWriteData(BaseType* s, int64_t size):
         request(),
         session(s),
         buffer(Buffer::NewInstance(size)){
@@ -71,7 +78,7 @@ namespace token{
       uuid_ = uuid;
     }
 
-    virtual void OnMessageRead(const SessionMessagePtr& message) = 0;
+    virtual void OnMessageRead(const SessionMessageTypePtr& message) = 0;
 
     static void OnClose(uv_handle_t* handle){
 #ifdef TOKEN_DEBUG
@@ -87,7 +94,7 @@ namespace token{
       uv_walk(loop_, &OnWalk, NULL);
     }
 
-    void SendMessages(const SessionMessageList& messages){
+    void SendMessages(const SessionMessageTypeList& messages){
       size_t total_messages = messages.size();
       if(total_messages <= 0){
         SESSION_LOG(WARNING, this) << "not sending any messages!";
@@ -95,7 +102,7 @@ namespace token{
       }
 
       int64_t total_size = 0;
-      std::for_each(messages.begin(), messages.end(), [&total_size](const SessionMessagePtr& msg){
+      std::for_each(messages.begin(), messages.end(), [&total_size](const SessionMessageTypePtr& msg){
         total_size += msg->GetBufferSize();
       });
 
@@ -108,9 +115,9 @@ namespace token{
 
       int64_t offset = 0;
       for(size_t idx = 0; idx < total_messages; idx++){
-        const SessionMessagePtr& msg = messages[idx];
+        const SessionMessageTypePtr& msg = messages[idx];
         if(!msg->Write(data->buffer)){
-          SESSION_LOG(ERROR, this) << "couldn't serialize message #" << idx;
+          SESSION_LOG(ERROR, this) << "couldn't serialize message #" << idx << ": " << msg->ToString();
           return;
         }
 

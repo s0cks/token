@@ -3,144 +3,185 @@
 
 #include "pool.h"
 #include "miner.h"
-#include "rpc/rpc_server.h"
 #include "block_builder.h"
-#include "consensus/proposal_handler.h"
+#include "job/scheduler.h"
 #include "peer/peer_session_manager.h"
-#include "consensus/proposal_manager.h"
 
 namespace token{
+  BlockMiner* BlockMiner::GetInstance(){
+    static BlockMiner instance;
+    return &instance;
+  }
+
 #define MINER_LOG(LevelName) \
   LOG(LevelName) << "[Miner] "
 
-#define CHECK_UVRESULT(Result, LevelName, Message) \
-  if((err = Result) != 0){                         \
-    MINER_LOG(LevelName) << Message << ": " << uv_strerror(err); \
-    return false;                                  \
-  }
-
-  bool BlockMiner::StartTimer(){
-    int err;
-    CHECK_UVRESULT(uv_timer_start(&timer_, &OnMine, FLAGS_miner_interval, FLAGS_miner_interval), ERROR, "cannot start timer");
+  bool BlockMiner::StartMiningTimer(){
+#ifdef TOKEN_DEBUG
+    MINER_LOG(INFO) << "starting timer....";
+#endif//TOKEN_DEBUG
+    VERIFY_UVRESULT(uv_timer_start(&timer_, &OnMine, FLAGS_miner_interval, FLAGS_miner_interval), MINER_LOG(ERROR), "cannot start timer");
     return true;
   }
 
-  bool BlockMiner::StopTimer(){
-    int err;
-    CHECK_UVRESULT(uv_timer_stop(&timer_), ERROR, "cannot stop timer");
+  bool BlockMiner::StopMiningTimer(){
+#ifdef TOKEN_DEBUG
+    MINER_LOG(INFO) << "stopping timer....";
+#endif//TOKEN_DEBUG
+    VERIFY_UVRESULT(uv_timer_stop(&timer_), MINER_LOG(ERROR), "cannot stop timer");
     return true;
+  }
+
+  static inline void
+  CancelProposal(const ProposalPtr& proposal){
+    MINER_LOG(INFO) << "cancelling proposal: " << proposal->raw();
+  }
+
+  static inline void
+  ExecuteProposalPhase1(const ProposalPtr& proposal){
+    // Phase 1 (Prepare)
+    //TODO: add timestamps
+
+#ifdef TOKEN_DEBUG
+    MINER_LOG(INFO) << "executing proposal phase 1....";
+#endif//TOKEN_DEBUG
+    // transition the proposal to phase 1
+    if(!proposal->TransitionToPhase(ProposalPhase::kPreparePhase))
+      return CancelProposal(proposal);
+
+    Phase1Quorum& quorum = proposal->GetPhase1Quorum();
+    // start phase 1 timer
+    quorum.StartTimer();
+
+    // broadcast prepare to quorum members
+    PeerSessionManager::BroadcastPrepare();
+
+    // wait for the required votes to return from peers
+    quorum.WaitForRequiredVotes();
+
+    // stop the phase 1 timer
+    quorum.StopTimer();
+
+    // check quorum results.
+    QuorumResult result = quorum.GetResult();
+#ifdef TOKEN_DEBUG
+    MINER_LOG(INFO) << "phase 1 result: " << result;
+#endif//TOKEN_DEBUG
+  }
+
+  static inline void
+  ExecuteProposalPhase2(const ProposalPtr& proposal){
+    // Phase 2 (Commit)
+    //TODO: add timestamps
+
+#ifdef TOKEN_DEBUG
+    MINER_LOG(INFO) << "executing proposal phase 2....";
+#endif//TOKEN_DEBUG
+
+    // transition the proposal to phase 2
+    if(!proposal->TransitionToPhase(ProposalPhase::kCommitPhase))
+      return CancelProposal(proposal);
+
+    Phase2Quorum& quorum = proposal->GetPhase2Quorum();
+    // start phase 2 timer
+    quorum.StartTimer();
+
+    // broadcast commit to quorum members
+    PeerSessionManager::BroadcastCommit();
+
+    // wait for the required votes to return from peers
+    quorum.WaitForRequiredVotes();
+
+    // stop phase 2 timer
+    quorum.StopTimer();
+
+    // check quorum results.
+    QuorumResult result = quorum.GetResult();
+#ifdef TOKEN_DEBUG
+    MINER_LOG(INFO) << "phase 2 result: " << result;
+#endif//TOKEN_DEBUG
+
+    // cleanup
+
+  }
+
+  static inline void
+  ExecuteProposal(const ProposalPtr& proposal){
+    ExecuteProposalPhase1(proposal);
+    ExecuteProposalPhase2(proposal);
+    // commit block to block chain
   }
 
   void BlockMiner::OnMine(uv_timer_t* handle){
-    if(ProposalManager::HasProposal()){
-      LOG(WARNING) << "mine called during active proposal.";
-      return;
-    }
-
-    if(ObjectPool::GetNumberOfTransactions() == 0){
-      LOG(WARNING) << "no transactions in object pool, skipping mining cycle.";
+    BlockMiner* miner = (BlockMiner*)handle->data;
+    if(miner->HasActiveProposal()){
+      MINER_LOG(WARNING) << "mine called during active proposal.";
       return; // skip
     }
 
-    BlockMiner* miner = (BlockMiner*)handle->data;
-    BlockPtr blk = BlockBuilder::BuildNewBlock();
-    Hash hash = blk->GetHash();
+    if(ObjectPool::GetNumberOfTransactions() == 0){
+      MINER_LOG(WARNING) << "no transactions in object pool, skipping mining cycle.";
+      return; // skip
+    }
 
-    LOG(INFO) << "discovered block " << hash << ", creating proposal....";
-    ProposalPtr proposal = Proposal::NewInstance(miner->GetLoop(), blk);
-    if(!ProposalManager::SetProposal(proposal)){
-      LOG(WARNING) << "cannot set active proposal to: " << proposal->ToString() << ", abandoning proposal.";
+#ifdef TOKEN_DEBUG
+    MINER_LOG(INFO) << "mining block....";
+#endif//TOKEN_DEBUG
+
+    // pause the miner
+    if(!miner->Pause())
+      MINER_LOG(ERROR) << "cannot pause miner.";
+
+    // create a new block
+    BlockPtr blk = BlockBuilder::BuildNewBlock();
+#ifdef TOKEN_DEBUG
+    MINER_LOG(INFO) << "discovered block: " << blk->GetHeader();
+#else
+    MINER_LOG(INFO) << "discovered block: " << blk->GetHash();
+#endif//TOKEN_DEBUG
+
+    // create a new proposal
+    ProposalPtr proposal = Proposal::NewInstance(nullptr, miner->GetLoop(), blk, GetRequiredVotes());
+    if(!miner->SetActiveProposal(proposal)){
+      MINER_LOG(ERROR) << "cannot set active proposal.";
       return;
     }
 
-#ifdef TOKEN_ENABLE_SERVER
-    PeerSessionManager::BroadcastDiscoveredBlock();
-#endif//TOKEN_ENABLE_SERVER
-
-#ifdef TOKEN_ENABLE_SERVER
-    // 1. prepare phase
-    PeerSessionManager::BroadcastPrepare();
-    proposal->WaitForRequiredResponses();
-#endif//TOKEN_ENABLE_SERVER
-
-//#ifdef TOKEN_ENABLE_SERVER
-//    // 3. commit phase
-//    if(!TransitionToPhase(Proposal::kCommitPhase))
-//      return CancelProposal();
-//    PeerSessionManager::BroadcastCommit();
-//    proposal->WaitForRequiredResponses();
-//    if(WasRejecte())
-//      return CancelProposal();
-//#endif//TOKEN_ENABLE_SERVER
-//
-//#ifdef TOKEN_ENABLE_SERVER
-//    // 4. quorum phase
-//    CommitProposal();
-//#endif//TOKEN_ENABLE_SERVER
+    // execute the proposal
+    ExecuteProposal(proposal);
+    // clear the active proposal
+    if(!miner->ClearActiveProposal())
+      MINER_LOG(WARNING) << "cannot clear the active proposal.";
+    // resume mining
+    if(!miner->Resume())
+      MINER_LOG(WARNING) << "cannot start mining timer.";
   }
 
   bool BlockMiner::Run(){
     if(IsRunning())
       return false;
 
+#ifdef TOKEN_DEBUG
+    MINER_LOG(INFO) << "starting....";
+#endif//TOKEN_DEBUG
     SetState(BlockMiner::kStartingState);
-    if(!StartTimer())
-      LOG(WARNING) << "cannot start miner timer.";
+    VERIFY_UVRESULT(uv_timer_init(loop_, &timer_), MINER_LOG(ERROR), "cannot initialize the miner timer");
+
+    if(!StartMiningTimer())
+      MINER_LOG(WARNING) << "cannot start miner timer.";
+
+#ifdef TOKEN_DEBUG
+    MINER_LOG(INFO) << "running....";
+#endif//TOKEN_DEBUG
     SetState(BlockMiner::kRunningState);
-    int err;
-    CHECK_UVRESULT(uv_run(loop_, UV_RUN_DEFAULT), ERROR, "cannot run block miner loop");
+    VERIFY_UVRESULT(uv_run(loop_, UV_RUN_DEFAULT), MINER_LOG(ERROR), "cannot run block miner loop");
+
     SetState(BlockMiner::kStoppedState);
+#ifdef TOKEN_DEBUG
+    MINER_LOG(INFO) << "stopped.";
+#endif//TOKEN_DEBUG
     return true;
   }
-
-//  static inline JobResult
-//  ProcessBlock(const BlockPtr& blk){
-//    ProcessBlockJob* job = new ProcessBlockJob(blk, true);
-//    queue_.Push(job);
-//    while(!job->IsFinished()); //spin
-//    JobResult result(job->GetResult());
-//    delete job;
-//    return result;
-//  }
-
-//  bool BlockMiner::ScheduleSnapshot(){
-//    LOG(INFO) << "scheduling new snapshot....";
-//    LOG(WARNING) << "snapshots have been disabled.";
-//    SnapshotJob* job = new SnapshotJob();
-//    if(!JobScheduler::Schedule(job))
-//      LOG(WARNING) << "couldn't schedule new snapshot.";
-//    return false;
-//  }
-
-//  bool BlockMiner::Commit(const ProposalPtr& proposal){
-//    if(!proposal->TransitionToPhase(Proposal::kQuorumPhase))
-//      return false;
-//
-//    Hash hash = proposal->GetHash();
-//    BlockPtr blk = ObjectPool::GetBlock(hash);
-//
-//    JobResult result = ProcessBlock(blk);
-//    if(!result.IsSuccessful()){
-//      LOG(WARNING) << "couldn't process block " << hash << ": " << result.GetMessage();
-//      return false;
-//    }
-//
-//    if(!BlockChain::Append(blk)){
-//      LOG(WARNING) << "couldn't append block " << hash << ".";
-//      return false;
-//    }
-//
-//    if(!ObjectPool::RemoveBlock(hash)){
-//      LOG(WARNING) << "couldn't remove block " << hash << " from pool.";
-//      return false;
-//    }
-//
-//    if(FLAGS_enable_snapshots && !ScheduleSnapshot())
-//      LOG(WARNING) << "couldn't schedule new snapshot.";
-//
-//    LOG(INFO) << "proposal " << proposal->ToString() << " has finished.";
-//    return BlockMiner::Resume();
-//  }
 
   static ThreadId thread_;
   static JobQueue queue_(JobScheduler::kMaxNumberOfJobs);

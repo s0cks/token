@@ -34,14 +34,17 @@ namespace token{
    public:
     virtual ~RpcSession() = default;
 
-    inline void Send(const RpcMessageList& messages){
+    inline void Send(const SessionMessageTypeList& messages){
       return SendMessages(messages);
     }
 
-    inline void Send(const RpcMessagePtr& msg){
-      RpcMessageList messages = { msg };
+    inline void Send(const SessionMessageTypePtr& msg){
+      SessionMessageTypeList messages = { msg };
       return SendMessages(messages);
     }
+
+    virtual void SendAccepted() = 0;
+    virtual void SendRejected() = 0;
   };
 }
 

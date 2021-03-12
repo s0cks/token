@@ -21,8 +21,8 @@ namespace token{
 
   typedef int32_t ServerPort;
 
-#define SERVER_LOG(LevelName, Instance) \
-  LOG(LevelName) << "[" << ((Instance)->GetName()) << "] "
+#define SERVER_LOG(LevelName) \
+  LOG(LevelName) << "[Server] "
 
   template<class M>
   class Server{
@@ -70,11 +70,6 @@ namespace token{
         THREAD_LOG(ERROR) << "cannot initialize server handle: " << uv_strerror(err);
         return;
       }
-
-      if((err = uv_async_init(loop_, &shutdown_, &OnShutdown)) != 0){
-        THREAD_LOG(WARNING) << "cannot initialize shutdown callback: " << uv_strerror(err);
-        return;
-      }
     }
 
     void SetState(const State& state){
@@ -90,18 +85,18 @@ namespace token{
 
       int err;
       if((err = Bind(server->GetHandle(), port)) != 0){
-        SERVER_LOG(WARNING, server) << "bind failure: " << uv_strerror(err);
+        SERVER_LOG(WARNING) << "bind failure: " << uv_strerror(err);
         server->SetState(Server::kStoppingState);
         goto exit;
       }
 
       if((err = Listen(server->GetStream(), &OnNewConnection)) != 0){
-        SERVER_LOG(WARNING, server) "listen failure: " << uv_strerror(err);
+        SERVER_LOG(WARNING) "listen failure: " << uv_strerror(err);
         server->SetState(Server::kStoppingState);
         goto exit;
       }
 
-      SERVER_LOG(INFO, server) << "server listening @" << port;
+      SERVER_LOG(INFO) << "server listening @" << port;
       server->SetState(State::kRunningState);
       uv_run(server->GetLoop(), UV_RUN_DEFAULT);
     exit:
@@ -119,7 +114,7 @@ namespace token{
     OnNewConnection(uv_stream_t* stream, int status){
       ServerType* server = (ServerType*)stream->data;
       if(status != 0){
-        SERVER_LOG(ERROR, server) << "connection error: " << uv_strerror(status);
+        SERVER_LOG(ERROR) << "connection error: " << uv_strerror(status);
         return;
       }
 
@@ -128,12 +123,12 @@ namespace token{
 
       int err;
       if((err = Accept(stream, session)) != 0){
-        SERVER_LOG(ERROR, server) << "accept failure: " << uv_strerror(err);
+        SERVER_LOG(ERROR) << "accept failure: " << uv_strerror(err);
         return; //TODO: session->Disconnect();
       }
 
       if((err = ReadStart(session, &AllocBuffer, &OnMessageReceived)) != 0){
-        SERVER_LOG(ERROR, server) << "read failure: " << uv_strerror(err);
+        SERVER_LOG(ERROR) << "read failure: " << uv_strerror(err);
         return; //TODO: session->Disconnect();
       }
     }
@@ -158,7 +153,9 @@ namespace token{
       BufferPtr buffer = Buffer::From(buff->base, nread);
       do{
         ServerMessagePtr message = M::From(session, buffer);
-        LOG(INFO) << "read: " << message->ToString();
+#ifdef TOKEN_DEBUG
+        SERVER_LOG(INFO) << "received " << message->ToString() << " from " << session->GetUUID();
+#endif//TOKEN_DEBUG
         session->OnMessageRead(message);
       } while(buffer->GetReadBytes() < buffer->GetBufferSize());
       free(buff->base);

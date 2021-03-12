@@ -260,4 +260,27 @@ namespace token{
   }
 }
 
+#ifndef __TKN_FUNCTION_NAME__
+  #if OS_IS_WINDOWS
+    #define __TKN_FUNCTION_NAME__ __FUNCTION__
+  #elif OS_IS_LINUX || OS_IS_OSX
+    #define __TKN_FUNCTION_NAME__ __func__
+  #endif
+#endif//__TKN_FUNCTION_NAME__
+
+#define CHECK_UVRESULT(Result, Log, Message)({ \
+  int err;                                           \
+  if((err = (Result)) != 0){                         \
+    Log << Message << ": " << uv_strerror(err);\
+    return;                                    \
+  }                                            \
+})
+#define VERIFY_UVRESULT(Result, Log, Message)({ \
+  int err;                                      \
+  if((err = (Result)) != 0){                    \
+    Log << Message << ": " << uv_strerror(err); \
+    return false;                               \
+  }                                             \
+})
+
 #endif //TOKEN_COMMON_H

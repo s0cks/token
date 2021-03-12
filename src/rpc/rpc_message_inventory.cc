@@ -1,5 +1,5 @@
 #include "pool.h"
-#include "rpc/rpc_message_inventory.h"
+#include "rpc/rpc_message.h"
 
 namespace token{
   bool InventoryItem::ItemExists() const{

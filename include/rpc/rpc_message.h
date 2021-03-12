@@ -3,8 +3,10 @@
 
 #include <set>
 #include <memory>
-#include "message.h"
+#include <vector>
+
 #include "buffer.h"
+#include "message.h"
 
 namespace token{
   template<class M>
@@ -44,17 +46,32 @@ namespace token{
   };
 
 #define DEFINE_RPC_MESSAGE_TYPE(Name) \
-    Type GetType() const{ return Type::k##Name##Message; }
-#define DEFINE_RPC_MESSAGE(Name) \
-    DEFINE_RPC_MESSAGE_TYPE(Name) \
-    virtual int64_t GetMessageSize() const; \
-    virtual bool WriteMessage(const BufferPtr& buff) const;
-}
+  Type GetType() const{ return Type::k##Name##Message; }
 
-#endif//TOKEN_RPC_MESSAGE_H
+#define DEFINE_RPC_MESSAGE(Name) \
+  DEFINE_RPC_MESSAGE_TYPE(Name) \
+  virtual int64_t GetMessageSize() const; \
+  virtual bool WriteMessage(const BufferPtr& buff) const;
+
+#define DEFINE_RPC_MESSAGE_CONSTRUCTORS(Name) \
+  static inline Name##MessagePtr NewInstance(const BufferPtr& buffer){ return std::make_shared<Name##Message>(buffer); }
+}
 
 #include "rpc/rpc_message_version.h"
 #include "rpc/rpc_message_paxos.h"
 #include "rpc/rpc_message_inventory.h"
 #include "rpc/rpc_message_object.h"
 #include "rpc/rpc_message_getblocks.h"
+
+namespace token{
+#define DEFINE_RPC_MESSAGE_LIST_APPEND(Name) \
+  static inline RpcMessageList&              \
+  operator<<(RpcMessageList& messages, const Name##MessagePtr& msg){ \
+    messages.push_back(msg);                 \
+    return messages;                         \
+  }
+  FOR_EACH_MESSAGE_TYPE(DEFINE_RPC_MESSAGE_LIST_APPEND)
+#undef DEFINE_RPC_MESSAGE_LIST_APPEND
+}
+
+#endif//TOKEN_RPC_MESSAGE_H

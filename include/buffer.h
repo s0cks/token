@@ -447,4 +447,16 @@ namespace token{
   };
 }
 
+#define SERIALIZE_BASIC_FIELD(Field, Type) \
+  if(!buff->Put##Type(Field)){                 \
+    LOG(WARNING) << "cannot serialize field " << #Field << " (" << #Type << ")"; \
+    return false;                                \
+  }
+
+#define SERIALIZE_FIELD(Name, Type, Field) \
+  if(!(Field)->Write(buff)){   \
+    LOG(WARNING) << "cannot serialize field " << #Name << " (" << #Type << ")"; \
+    return false;              \
+  }
+
 #endif //TOKEN_BUFFER_H

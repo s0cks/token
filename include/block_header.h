@@ -153,6 +153,10 @@ namespace token{
       return a.GetHeight() < b.GetHeight();
     }
 
+    friend bool operator>(const BlockHeader& a, const BlockHeader& b){
+      return a.GetHeight() > b.GetHeight();
+    }
+
     friend std::ostream& operator<<(std::ostream& stream, const BlockHeader& blk){
       return stream << blk.ToString();
     }

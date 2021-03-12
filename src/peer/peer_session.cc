@@ -5,13 +5,23 @@
 #include "job/synchronize.h"
 #include "rpc/rpc_server.h"
 #include "peer/peer_session.h"
-#include "consensus/proposal.h"
-#include "consensus/proposal_manager.h"
+#include "proposal.h"
+
+#include "miner.h"
 
 // The peer session sends packets to a peer
 // any response received is purely in relation to the sent packets
 // this is for outbound packets
 namespace token{
+#define NOT_IMPLEMENTED(LevelName, FunctionName) \
+  SESSION_LOG(LevelName, this) << (FunctionName) << " is not implemented yet!";
+
+#define CHECK_FOR_ACTIVE_PROPOSAL(Miner, Session, LevelName) \
+  if(!(Miner)->HasActiveProposal()){     \
+    SESSION_LOG(LevelName, Session) << "there is no active proposal."; \
+    return;                                       \
+  }
+
   bool PeerSession::Connect(){
     //TODO: StartHeartbeatTimer();
     int err;
@@ -109,55 +119,43 @@ namespace token{
   }
 
   void PeerSession::OnDiscovery(uv_async_t* handle){
+    BlockMiner* miner = BlockMiner::GetInstance();
     PeerSession* session = (PeerSession*) handle->data;
-    if(!ProposalManager::HasProposal()){
-      LOG(WARNING) << "there is no active proposal.";
-      return;
-    }
+    CHECK_FOR_ACTIVE_PROPOSAL(miner, session, WARNING);
 
-    ProposalPtr proposal = ProposalManager::GetProposal();
-    BlockHeader blk = proposal->GetBlock();
+    ProposalPtr proposal = miner->GetActiveProposal();
+    BlockHeader& blk = proposal->raw().GetValue();
 
     LOG(INFO) << "broadcasting newly discovered block hash: " << blk;
     session->Send(InventoryMessage::NewInstance(blk));
   }
 
   void PeerSession::OnPrepare(uv_async_t* handle){
+    BlockMiner* miner = BlockMiner::GetInstance();
     PeerSession* session = (PeerSession*) handle->data;
-    if(!ProposalManager::HasProposal()){
-      LOG(WARNING) << "there is no active proposal.";
-      return;
-    }
+    CHECK_FOR_ACTIVE_PROPOSAL(miner, session, WARNING);
 
-    ProposalPtr proposal = ProposalManager::GetProposal();
-    LOG(INFO) << "sending new proposal: " << proposal->GetRaw();
+    ProposalPtr proposal = miner->GetActiveProposal();
+    LOG(INFO) << "sending new proposal: " << proposal->raw();
     session->Send(PrepareMessage::NewInstance(proposal));
   }
 
   void PeerSession::OnPromise(uv_async_t* handle){
+    BlockMiner* miner = BlockMiner::GetInstance();
     PeerSession* session = (PeerSession*) handle->data;
-    if(!ProposalManager::HasProposal()){
-      LOG(WARNING) << "there is no active proposal.";
-      return;
-    }
+    CHECK_FOR_ACTIVE_PROPOSAL(miner, session, WARNING);
 
-    ProposalPtr proposal = ProposalManager::GetProposal();
-    if(!proposal->IsVoting()){
-      LOG(WARNING) << "cannot send another promise to the peer.";
-      return;
-    }
+    ProposalPtr proposal = miner->GetActiveProposal();
     session->Send(PromiseMessage::NewInstance(proposal));
   }
 
   void PeerSession::OnCommit(uv_async_t* handle){
+    BlockMiner* miner = BlockMiner::GetInstance();
     PeerSession* session = (PeerSession*) handle->data;
-    if(!ProposalManager::HasProposal()){
-      LOG(WARNING) << "there is no active proposal.";
-      return;
-    }
+    CHECK_FOR_ACTIVE_PROPOSAL(miner, session, WARNING);
 
-    ProposalPtr proposal = ProposalManager::GetProposal();
-    if(!proposal->IsCommit()){
+    ProposalPtr proposal = miner->GetActiveProposal();
+    if(!proposal->InCommitPhase()){
       LOG(WARNING) << "cannot send another commit to the peer.";
       return;
     }
@@ -165,25 +163,21 @@ namespace token{
   }
 
   void PeerSession::OnAccepted(uv_async_t* handle){
+    BlockMiner* miner = BlockMiner::GetInstance();
     PeerSession* session = (PeerSession*) handle->data;
-    if(!ProposalManager::HasProposal()){
-      LOG(WARNING) << "there is no active proposal.";
-      return;
-    }
+    CHECK_FOR_ACTIVE_PROPOSAL(miner, session, WARNING);
 
-    ProposalPtr proposal = ProposalManager::GetProposal();
+    ProposalPtr proposal = miner->GetActiveProposal();
     LOG(INFO) << "accepting " << session->GetInfo() << "'s proposal: " << proposal->ToString();
     session->Send(AcceptedMessage::NewInstance(proposal));
   }
 
   void PeerSession::OnRejected(uv_async_t* handle){
+    BlockMiner* miner = BlockMiner::GetInstance();
     PeerSession* session = (PeerSession*) handle->data;
-    if(!ProposalManager::HasProposal()){
-      LOG(WARNING) << "there is no active proposal.";
-      return;
-    }
+    CHECK_FOR_ACTIVE_PROPOSAL(miner, session, WARNING);
 
-    ProposalPtr proposal = ProposalManager::GetProposal();
+    ProposalPtr proposal = miner->GetActiveProposal();
     LOG(INFO) << "rejecting " << session->GetInfo() << "'s proposal: " << proposal->ToString();
     session->Send(RejectedMessage::NewInstance(proposal));
   }
@@ -237,25 +231,47 @@ namespace token{
     }
   }
 
-  void PeerSession::OnPrepareMessage(const PrepareMessagePtr& msg){}
-  void PeerSession::OnPromiseMessage(const PromiseMessagePtr& msg){}
-  void PeerSession::OnCommitMessage(const CommitMessagePtr& msg){}
-  void PeerSession::OnRejectedMessage(const RejectedMessagePtr& msg){}
+  void PeerSession::OnPrepareMessage(const PrepareMessagePtr& msg){
+    NOT_IMPLEMENTED(ERROR, __TKN_FUNCTION_NAME__);
+  }
+
+  void PeerSession::OnPromiseMessage(const PromiseMessagePtr& msg){
+    BlockMiner* miner = BlockMiner::GetInstance();
+    CHECK_FOR_ACTIVE_PROPOSAL(miner, this, WARNING);
+
+    ProposalPtr proposal = miner->GetActiveProposal();
+    if(!proposal->OnPromise())
+      SESSION_LOG(ERROR, this) << "cannot invoke on-promise.";
+  }
+
+  void PeerSession::OnCommitMessage(const CommitMessagePtr& msg){
+    NOT_IMPLEMENTED(ERROR, __TKN_FUNCTION_NAME__);
+  }
+
+  void PeerSession::OnRejectedMessage(const RejectedMessagePtr& msg){
+    BlockMiner* miner = BlockMiner::GetInstance();
+    CHECK_FOR_ACTIVE_PROPOSAL(miner, this, WARNING);
+
+    ProposalPtr proposal = miner->GetActiveProposal();
+    switch(proposal->GetPhase()){
+      case ProposalPhase::kPreparePhase:
+        proposal->GetPhase1Quorum().RejectProposal(GetUUID());
+        break;
+      case ProposalPhase::kCommitPhase:
+        proposal->GetPhase2Quorum().RejectProposal(GetUUID());
+        break;
+      default:
+        SESSION_LOG(WARNING, this) << "invalid proposal state: " << proposal->GetPhase();
+    }
+  }
 
   void PeerSession::OnAcceptedMessage(const AcceptedMessagePtr& msg){
-    ProposalPtr remote_proposal = msg->GetProposal();
-    if(!ProposalManager::HasProposal()){
-      LOG(WARNING) << "there is no active proposal.";
-      return Send(RejectedMessage::NewInstance(remote_proposal));
-    }
+    BlockMiner* miner = BlockMiner::GetInstance();
+    CHECK_FOR_ACTIVE_PROPOSAL(miner, this, WARNING);
 
-    if(!ProposalManager::IsProposalFor(remote_proposal)){
-      LOG(WARNING) << "active proposal is not: " << remote_proposal->ToString();
-      return Send(RejectedMessage::NewInstance(remote_proposal));
-    }
-
-    ProposalPtr proposal = ProposalManager::GetProposal();
-    proposal->AcceptProposal(GetID().ToString()); //TODO: fix cast?
+    ProposalPtr proposal = miner->GetActiveProposal();
+    Phase2Quorum& quorum = proposal->GetPhase2Quorum();
+    quorum.AcceptProposal(GetUUID());
   }
 
   void PeerSession::OnGetDataMessage(const GetDataMessagePtr& msg){

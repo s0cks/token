@@ -5,7 +5,6 @@
 #include "block.h"
 #include "version.h"
 #include "address.h"
-#include "rpc/rpc_message.h"
 
 namespace token{
 //TODO:
@@ -90,16 +89,14 @@ namespace token{
     }
 
     bool Equals(const RpcMessagePtr& obj) const{
-      if (!obj->IsVersionMessage()){
-        LOG(WARNING) << "not a version message.";
+      if(!obj->IsVersionMessage())
         return false;
-      }
-      VersionMessagePtr msg = std::static_pointer_cast<VersionMessage>(obj);
-      return client_type_ == msg->client_type_
-          && version_ == msg->version_
-          && nonce_ == msg->nonce_
-          && node_id_ == msg->node_id_
-          && head_ == msg->head_;
+      VersionMessagePtr other = std::static_pointer_cast<VersionMessage>(obj);
+      return GetClientType() == other->GetClientType()
+          && GetVersion() == other->GetVersion()
+          && GetNonce() == other->GetNonce()
+          && GetID() == other->GetID()
+          && GetHead() == other->GetHead();
     }
 
     std::string ToString() const{

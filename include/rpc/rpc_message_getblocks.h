@@ -2,7 +2,6 @@
 #define TOKEN_RPC_MESSAGE_GETBLOCKS_H
 
 #include "blockchain.h"
-#include "rpc/rpc_message.h"
 
 namespace token{
   class GetBlocksMessage : public RpcMessage{

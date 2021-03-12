@@ -168,6 +168,7 @@ namespace token{
       return info_;
     }
 
+    //TODO: remove
     UUID GetID() const{
       return info_.GetID();
     }

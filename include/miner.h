@@ -1,9 +1,13 @@
 #ifndef TOKEN_MINER_H
 #define TOKEN_MINER_H
 
+#include <mutex>
 #include <ostream>
+#include <condition_variable>
+
 #include "vthread.h"
-#include "consensus/proposal.h"
+#include "proposal.h"
+#include "peer/peer_session_manager.h"
 
 namespace token{
 #define FOR_EACH_MINER_STATE(V) \
@@ -33,26 +37,36 @@ namespace token{
     }
    protected:
     uv_loop_t* loop_;
-    RelaxedAtomic<State> state_;
     uv_timer_t timer_;
+    RelaxedAtomic<State> state_;
+
+    std::mutex proposal_mtx_;
     ProposalPtr proposal_;
 
     void SetState(const State& state){
       state_ = state;
     }
 
-    bool StopTimer();
-    bool StartTimer();
-    bool ClearCurrentProposal();
-    ProposalPtr GetCurrentProposal();
-    ProposalPtr CreateNewProposal();
+    bool StopMiningTimer();
+    bool StartMiningTimer();
+
+    static inline int16_t
+    GetRequiredVotes(){
+#ifdef TOKEN_ENABLE_SERVER
+      return PeerSessionManager::GetNumberOfConnectedPeers();
+#else
+      return 0;
+#endif//TOKEN_ENABLE_SERVER
+    }
 
     static void OnMine(uv_timer_t* handle);
    public:
     BlockMiner(uv_loop_t* loop=uv_loop_new()):
       loop_(loop),
+      timer_(),
       state_(State::kStoppedState),
-      timer_(){
+      proposal_mtx_(),
+      proposal_(){
       timer_.data = this;
     }
     ~BlockMiner() = default;
@@ -65,12 +79,71 @@ namespace token{
       return loop_;
     }
 
+    ProposalPtr GetActiveProposal(){
+      std::lock_guard<std::mutex> guard(proposal_mtx_);
+      return proposal_;
+    }
+
+    bool HasActiveProposal(){
+      std::lock_guard<std::mutex> guard(proposal_mtx_);
+      return proposal_ != nullptr;
+    }
+
+    bool IsActiveProposal(const RawProposal& proposal){
+      std::lock_guard<std::mutex> guard(proposal_mtx_);
+      if(!proposal_)
+        return false;
+      return proposal_->raw() == proposal;
+    }
+
+    bool SetActiveProposal(const ProposalPtr& proposal){
+      std::lock_guard<std::mutex> guard(proposal_mtx_);
+      if(proposal_)
+        return false;
+      proposal_ = proposal;
+      return true;
+    }
+
+    bool SetActiveProposal(const RawProposal& proposal){
+      std::lock_guard<std::mutex> guard(proposal_mtx_);
+      if(proposal_)
+        return false;
+      proposal_ = Proposal::NewInstance(nullptr, loop_, proposal, GetRequiredVotes());
+      return true;
+    }
+
+    bool RegisterNewProposal(const RawProposal& proposal){
+      std::lock_guard<std::mutex> guard(proposal_mtx_);
+      if(proposal_)
+        return false;
+      proposal_ = Proposal::NewInstance(nullptr, loop_, proposal, GetRequiredVotes());
+      return proposal_->TransitionToPhase(ProposalPhase::kPreparePhase);
+    }
+
+    bool ClearActiveProposal(){
+      std::lock_guard<std::mutex> guard(proposal_mtx_);
+      if(!proposal_)
+        return false;
+      proposal_ = nullptr;
+      return true;
+    }
+
     bool Run();
+
+    inline bool Pause(){
+      return StopMiningTimer();
+    }
+
+    inline bool Resume(){
+      return StartMiningTimer();
+    }
 
 #define DEFINE_CHECK(Name) \
     inline bool Is##Name() const{ return state_ == State::k##Name##State; }
     FOR_EACH_MINER_STATE(DEFINE_CHECK)
 #undef DEFINE_CHECK
+
+    static BlockMiner* GetInstance();
   };
 
   class BlockMinerThread{

@@ -77,7 +77,7 @@ InitializeLogging(char *arg0){
     LOG(INFO) << "spending " << total_spends << " unclaimed transactions";
 
     Wallet wallet;
-    if(!WalletManager::GetWallet(user, wallet)){
+    if(!WalletManager::GetInstance()->GetWallet(user, wallet)){
       LOG(WARNING) << "couldn't get the wallet for VenueA";
       return false;
     }
@@ -242,7 +242,7 @@ main(int argc, char **argv){
 //    return EXIT_FAILURE;
 //  }
 
-  if(!FLAGS_no_mining && !BlockMiner::Start()){
+  if(!FLAGS_no_mining && !BlockMiner::GetInstance()->Run()){
     CrashReport::PrintNewCrashReport("Cannot start the block miner.");
     return EXIT_FAILURE;
   }
