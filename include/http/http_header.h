@@ -50,10 +50,17 @@ namespace token{
     return ss.str();
   }
 
+#define DEFAULT_NODE_ID "Node/Unknown"
+
   static inline std::string
   GetXNodeIDHeaderValue(){
+    UUID node_id;
+    if(!ConfigurationManager::GetInstance()->GetUUID(TOKEN_CONFIGURATION_NODE_ID, node_id)){
+      return DEFAULT_NODE_ID;
+    }
+
     std::stringstream ss;
-    ss << "Node/" << ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID).ToStringAbbreviated();
+    ss << "Node/" << node_id.ToStringAbbreviated();
     return ss.str();
   }
 

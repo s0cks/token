@@ -213,11 +213,11 @@ main(int argc, char **argv){
 
 #ifdef TOKEN_DEBUG
   LOG(INFO) << "current time: " << FormatTimestampReadable(Clock::now());
-  LOG(INFO) << "home: " << ConfigurationManager::GetString(TOKEN_CONFIGURATION_BLOCKCHAIN_HOME);
-  LOG(INFO) << "node: " << ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID);
+  LOG(INFO) << "home: " << TOKEN_BLOCKCHAIN_HOME;
+  LOG(INFO) << "node: " << ConfigurationManager::GetNodeID();
 
   PeerList peers;
-  ConfigurationManager::GetPeerList(TOKEN_CONFIGURATION_NODE_PEERS, peers);
+  ConfigurationManager::GetInstance()->GetPeerList(TOKEN_CONFIGURATION_NODE_PEERS, peers);
   LOG(INFO) << "peers: " << peers;
 
   LOG(INFO) << "number of blocks in the chain: " << BlockChain::GetNumberOfBlocks();

@@ -17,8 +17,8 @@ namespace token{
   void ServerSession::OnVersionMessage(const VersionMessagePtr& msg){
     // upon receiving a VersionMessage from a new client, respond w/ a VersionMessage
     // to initiate the connection handshake
-    UUID id = ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID);
-    Send(VersionMessage::NewInstance(id));
+    UUID node_id = ConfigurationManager::GetNodeID();
+    Send(VersionMessage::NewInstance(node_id));
   }
 
   //TODO:
@@ -27,7 +27,7 @@ namespace token{
     // upon receiving a VerackMessage from a new client, respond w/ a VerackMessage
     // to finish the connection handshake
     ClientType type = ClientType::kNode;
-    UUID node_id = ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID);
+    UUID node_id = ConfigurationManager::GetNodeID();
     NodeAddress callback = LedgerServer::GetCallbackAddress();
     Version version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
     BlockPtr head = BlockChain::GetHead(); //TODO: optimize

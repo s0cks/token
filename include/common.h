@@ -19,6 +19,9 @@
 
 #include <cmath>
 
+#include <leveldb/status.h>
+
+
 #include <rapidjson/writer.h>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
@@ -306,5 +309,11 @@ namespace token{
 
 #define NOT_IMPLEMENTED(LevelName) \
   LOG(LevelName) << __TKN_FUNCTION_NAME__ << " is not implemented yet!"
+
+
+  static inline std::ostream&
+  operator<<(std::ostream& stream, const leveldb::Status& status){
+    return stream << status.ToString();
+  }
 
 #endif //TOKEN_COMMON_H

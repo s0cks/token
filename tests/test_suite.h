@@ -37,6 +37,22 @@ namespace token{
     Name##Ptr b = Name::FromBytes(buff);                    \
     ASSERT_TRUE(a->Equals(b));         \
   }
+
+  class IntegrationTest : public ::testing::Test{
+   protected:
+    IntegrationTest():
+      ::testing::Test(){}
+
+    static inline std::string
+    GenerateRandomTestDirectory(const char* prefix){
+      size_t length = 13 + strlen(prefix);
+      char tmp_filename[length];
+      snprintf(tmp_filename, length, "/tmp/%s.XXXXXX", prefix);
+      return std::string(mkdtemp(tmp_filename));
+    }
+   public:
+    virtual ~IntegrationTest() = default;
+  };
 }
 
 #endif //TOKEN_TEST_SUITE_H

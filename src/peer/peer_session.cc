@@ -68,8 +68,8 @@ namespace token{
     session->SetState(Session::kConnectingState);
 
     BlockPtr head = BlockChain::GetHead();
-    UUID server_id = ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID);
-    session->Send(VersionMessage::NewInstance(ClientType::kNode, server_id, head->GetHeader()));
+    UUID node_id = ConfigurationManager::GetNodeID();
+    session->Send(VersionMessage::NewInstance(ClientType::kNode, node_id, head->GetHeader()));
 
     int err;
     if((err = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
@@ -189,7 +189,7 @@ namespace token{
 
   void PeerSession::OnVersionMessage(const VersionMessagePtr& msg){
     ClientType type = ClientType::kNode;
-    UUID node_id = ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID);
+    UUID node_id = ConfigurationManager::GetNodeID();
     NodeAddress callback = LedgerServer::GetCallbackAddress();
     Version version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
     BlockPtr head = BlockChain::GetHead();//TODO: optimize

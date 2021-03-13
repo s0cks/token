@@ -7,21 +7,28 @@ namespace token{
 #define CONFIG_LOG(LevelName) \
   LOG(LevelName) << "[ConfigManager] "
 
-  static RelaxedAtomic<ConfigurationManager::State> state_ = { ConfigurationManager::kUninitializedState };
-  static leveldb::DB* index_ = nullptr;
+#ifdef TOKEN_DEBUG
+  #define CANNOT_GET_PROPERTY(LevelName, PropertyName) \
+    CONFIG_LOG(LevelName) << "cannot get property '" << (PropertyName) << "'"
 
-  static inline leveldb::DB*
-  GetIndex(){
-    return index_;
-  }
+  #define CANNOT_SET_PROPERTY(LevelName, PropertyName, PropertyValue) \
+    CONFIG_LOG(LevelName) << "cannot set property " << (PropertyName) << " to: " << (PropertyValue)
 
-  void ConfigurationManager::SetState(const State& state){
-    state_ = state;
-  }
+  #define SET_PROPERTY(LevelName, PropertyName, PropertyValue) \
+    CONFIG_LOG(LevelName) << "set property " << (PropertyName) << " to: " << (PropertyValue)
+#else
+  #define CANNOT_GET_PROPERTY(LevelName, PropertyName){}
 
-  ConfigurationManager::State ConfigurationManager::GetState(){
-    return state_;
-  }
+  #define CNANOT_SET_PROPERTY(LevelName, PropertyName, PropertyValue){}
+
+  #define SET_PROPERTY(LevelName, PropertyName, PropertyValue) {}
+#endif//TOKEN_DEBUG
+
+#define ERROR_SETTING_PROPERTY(LevelName, PropertyName, Status) \
+  CONFIG_LOG(LevelName) << "error setting property " << (PropertyName) << ": " << status.ToString()
+
+#define ERROR_GETTING_PROPERTY(LevelName, PropertyName, Status) \
+  CONFIG_LOG(LevelName) << "error getting property " << (PropertyName) << ": " << status.ToString()
 
   static inline void
   PutDefaultProperty(leveldb::WriteBatch& batch, const std::string& name, const UUID& val){
@@ -60,35 +67,34 @@ namespace token{
     return GetIndex()->Write(options, &batch);
   }
 
-  bool ConfigurationManager::Initialize(const std::string& home_dir){
+  leveldb::Status ConfigurationManager::InitializeIndex(const std::string& parent){
     if(!IsUninitializedState()){
 #ifdef TOKEN_DEBUG
       CONFIG_LOG(WARNING) << "cannot re-initialize the configuration manager.";
 #endif//TOKEN_DEBUG
-      return false;
+      return leveldb::Status::NotSupported("Cannot re-initialize the ConfigurationManager.");
     }
 
-    SetState(ConfigurationManager::kInitializingState);
-    std::string config_directory = home_dir + "/config";
+    std::string filename = parent + "/config";
 #ifdef TOKEN_DEBUG
-    CONFIG_LOG(INFO) << "initializing in " << config_directory << "....";
+    CONFIG_LOG(INFO) << "initializing the ConfigurationManager in " << filename << "....";
 #endif//TOKEN_DEBUG
-
-    bool first_initialization = !FileExists(config_directory);
+    SetState(ConfigurationManager::kInitializingState);
+    bool first_initialization = !FileExists(filename);
 
     leveldb::Options options;
     options.create_if_missing = true;
 
     leveldb::Status status;
-    if(!(status = leveldb::DB::Open(options, config_directory, &index_)).ok()){
+    if(!(status = leveldb::DB::Open(options, filename, &index_)).ok()){
       CONFIG_LOG(ERROR) << "couldn't initialize the index: " << status.ToString();
-      return false;
+      return status;
     }
 
     if(first_initialization){
-      if(!(status = SetDefaults(home_dir)).ok()){
+      if(!(status = SetDefaults(filename)).ok()){
         CONFIG_LOG(ERROR) << "cannot set defaults: " << status.ToString();
-        return false;
+        return status;
       }
     }
 
@@ -96,31 +102,27 @@ namespace token{
 #ifdef TOKEN_DEBUG
     CONFIG_LOG(INFO) << "initialized.";
 #endif//TOKEN_DEBUG
-    return true;
+    return leveldb::Status::OK();
   }
 
-  bool ConfigurationManager::HasProperty(const std::string& name){
+  bool ConfigurationManager::HasProperty(const std::string& name) const{
     std::string value;
 
     leveldb::Status status;
     if(!(status = GetIndex()->Get(leveldb::ReadOptions(), name, &value)).ok()){
       if(status.IsNotFound()){
-#ifdef TOKEN_DEBUG
-        CONFIG_LOG(WARNING) << "cannot find property '" << name << "'";
-#endif//TOKEN_DEBUG
+        CANNOT_GET_PROPERTY(WARNING, name);
         return false;
       }
 
-#ifdef TOKEN_DEBUG
-      CONFIG_LOG(ERROR) << "cannot get property " << name << ": " << status.ToString();
-#endif//TOKEN_DEBUG
+      ERROR_GETTING_PROPERTY(ERROR, name, status);
       return false;
     }
     return true;
   }
 
   //TODO: refactor?
-  bool ConfigurationManager::SetProperty(const std::string& name, const PeerList& val){
+  bool ConfigurationManager::PutProperty(const std::string& name, const PeerList& val) const{
     leveldb::WriteOptions options;
     options.sync = true;
 
@@ -133,93 +135,122 @@ namespace token{
     leveldb::Slice value = buffer->operator leveldb::Slice();
     leveldb::Status status;
     if(!(status = GetIndex()->Put(options, name, value)).ok()){
-      LOG(WARNING) << "cannot put configuration property " << name << ": " << status.ToString();
+      ERROR_SETTING_PROPERTY(ERROR, name, status);
       return false;
     }
 
-#ifdef TOKEN_DEBUG
-    LOG(INFO) << "set configuration property " << name << " to " << val;
-#endif//TOKEN_DEBUG
+    SET_PROPERTY(INFO, name, val);
     return true;
   }
 
-  bool ConfigurationManager::SetProperty(const std::string& name, const UUID& val){
+  bool ConfigurationManager::PutProperty(const std::string& name, const UUID& value) const{
+    leveldb::WriteOptions options;
+    options.sync = true;
+
+    leveldb::Status status;
+    if(!(status = GetIndex()->Put(options, name, value)).ok()){
+      ERROR_SETTING_PROPERTY(ERROR, name, status);
+      return false;
+    }
+
+    SET_PROPERTY(INFO, name, value);
+    return true;
+  }
+
+  bool ConfigurationManager::PutProperty(const std::string& name, const std::string& val) const{
     leveldb::WriteOptions options;
     options.sync = true;
 
     leveldb::Status status;
     if(!(status = GetIndex()->Put(options, name, val)).ok()){
-#ifdef TOKEN_DEBUG
-      CONFIG_LOG(ERROR) << "cannot set property " << name << ": " << status.ToString();
-#endif//TOKEN_DEBUG
+      ERROR_SETTING_PROPERTY(ERROR, name, val);
       return false;
     }
 
-#ifdef TOKEN_DEBUG
-    CONFIG_LOG(INFO) << "set configuration property '" << name << "' to: " << val;
-#endif//TOKEN_DEBUG
+    SET_PROPERTY(INFO, name, val);
     return true;
   }
 
-  std::string ConfigurationManager::GetString(const std::string& name){
-    std::string value;
+  bool ConfigurationManager::PutProperty(const std::string& name, const NodeAddress& val) const{
+    leveldb::WriteOptions options;
+    options.sync = true;
 
     leveldb::Status status;
-    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), name, &value)).ok()){
-      if(status.IsNotFound()){
-#ifdef TOKEN_DEBUG
-        CONFIG_LOG(WARNING) << "cannot find property '" << name << "'";
-#endif//TOKEN_DEBUG
-        return "";
-      }
-
-#ifdef TOKEN_DEBUG
-      CONFIG_LOG(ERROR) << "error getting property " << name << ": " << status.ToString();
-#endif//TOKEN_DEBUG
-      return "";
+    if(!(status = GetIndex()->Put(options, name, val)).ok()){
+      ERROR_SETTING_PROPERTY(ERROR, name, val);
+      return false;
     }
-    return value;
+
+    SET_PROPERTY(INFO, name, val);
+    return true;
   }
 
-  UUID ConfigurationManager::GetID(const std::string& name){
-    std::string value;
-
+  bool ConfigurationManager::GetString(const std::string& name, std::string& value) const{
     leveldb::Status status;
     if(!(status = GetIndex()->Get(leveldb::ReadOptions(), name, &value)).ok()){
       if(status.IsNotFound()){
-#ifdef TOKEN_DEBUG
-        CONFIG_LOG(WARNING) << "cannot find property '" << name << "'";
-#endif//TOKEN_DEBUG
-        return UUID();
-      }
-
-#ifdef TOKEN_DEBUG
-      CONFIG_LOG(ERROR) << "error getting property " << name << ": " << status.ToString();
-#endif//TOKEN_DEBUG
-      return UUID();
-    }
-    return UUID(value);
-  }
-
-  bool ConfigurationManager::GetPeerList(const std::string& name, PeerList& peers){
-    std::string value;
-
-    leveldb::Status status;
-    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), name, &value)).ok()){
-      if(status.IsNotFound()){
-#ifdef TOKEN_DEBUG
-        CONFIG_LOG(WARNING) << "cannot find property '" << name << "'";
-#endif//TOKEN_DEBUG
+        CANNOT_GET_PROPERTY(WARNING, name);
         return false;
       }
 
-#ifdef TOKEN_DEBUG
-      CONFIG_LOG(ERROR) << "error getting property " << name << ": " << status.ToString();
-#endif//TOKEN_DEBUG
+      ERROR_GETTING_PROPERTY(ERROR, name, status);
+      return false;
+    }
+    return true;
+  }
+
+  bool ConfigurationManager::GetUUID(const std::string& name, UUID& val) const{
+    std::string value;
+
+    leveldb::Status status;
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), name, &value)).ok()){
+      if(status.IsNotFound()){
+        CANNOT_GET_PROPERTY(WARNING, name);
+        return false;
+      }
+
+      ERROR_SETTING_PROPERTY(ERROR, name, status);
+      return false;
+    }
+
+    val = UUID(value);
+    return true;
+  }
+
+  bool ConfigurationManager::GetPeerList(const std::string& name, PeerList& peers) const{
+    std::string value;
+
+    leveldb::Status status;
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), name, &value)).ok()){
+      if(status.IsNotFound()){
+        CANNOT_GET_PROPERTY(WARNING, name);
+        return false;
+      }
+
+      ERROR_GETTING_PROPERTY(ERROR, name, status);
       return false;
     }
 
     BufferPtr buffer = Buffer::From(value);
     return Decode(buffer, peers);
+  }
+
+  static ConfigurationManager instance;
+
+  bool ConfigurationManager::Initialize(const std::string& filename){
+#ifdef TOKEN_DEBUG
+    CONFIG_LOG(INFO) << "initializing the ConfigurationManager in " << filename << "....";
+#endif//TOKEN_DEBUG
+
+    leveldb::Status status;
+    if(!(status = instance.InitializeIndex(filename)).ok()){
+      CONFIG_LOG(ERROR) << "couldn't initialize the ConfigurationManager in " << filename << ": " << status.ToString();
+      return false;
+    }
+    return true;
+  }
+
+  ConfigurationManager* ConfigurationManager::GetInstance(){
+    return &instance;
   }
 }

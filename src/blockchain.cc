@@ -12,7 +12,7 @@
 namespace token{
   static inline std::string
   GetBlockChainHome(){
-    return ConfigurationManager::GetString(TOKEN_CONFIGURATION_BLOCKCHAIN_HOME);
+    return TOKEN_BLOCKCHAIN_HOME;
   }
 
   static inline std::string

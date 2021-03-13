@@ -183,7 +183,7 @@ namespace token{
     NewInstance(uv_loop_t* loop, const BlockPtr& value, const int16_t& required_votes){
       Timestamp timestamp = Clock::now();
       UUID id = UUID();
-      UUID proposer = ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID);
+      UUID proposer = ConfigurationManager::GetNodeID();
       return NewInstance(loop, timestamp, id, proposer, value->GetHeader(), required_votes);
     }
   };

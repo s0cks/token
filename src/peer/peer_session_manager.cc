@@ -40,7 +40,7 @@ namespace token{
     }
 
     PeerList peers;
-    if (!ConfigurationManager::GetPeerList(TOKEN_CONFIGURATION_NODE_PEERS, peers)){
+    if (!ConfigurationManager::GetInstance()->GetPeerList(TOKEN_CONFIGURATION_NODE_PEERS, peers)){
       LOG(WARNING) << "couldn't get list of peers from the configuration.";
       return true;
     }
