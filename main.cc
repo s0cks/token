@@ -220,7 +220,7 @@ main(int argc, char **argv){
   ConfigurationManager::GetInstance()->GetPeerList(TOKEN_CONFIGURATION_NODE_PEERS, peers);
   LOG(INFO) << "peers: " << peers;
 
-  LOG(INFO) << "number of blocks in the chain: " << BlockChain::GetNumberOfBlocks();
+  LOG(INFO) << "number of blocks in the chain: " << BlockChain::GetInstance()->GetNumberOfBlocks();
   if(TOKEN_VERBOSE){
     ObjectPool::PrintBlocks();
     ObjectPool::PrintTransactions();

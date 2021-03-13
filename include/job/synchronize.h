@@ -11,7 +11,14 @@ namespace token{
   class SynchronizeJob : public Job{
    private:
     RpcSession* session_;
+    BlockChain* chain_;
     BlockHeader head_;
+
+
+    inline BlockChain*
+    GetChain() const{
+      return chain_;
+    }
 
     bool ProcessBlock(const BlockPtr& blk){
       JobQueue* queue = JobScheduler::GetThreadQueue();
@@ -22,7 +29,7 @@ namespace token{
       while(!job->IsFinished()); //spin
 
       ObjectPool::RemoveBlock(hash);
-      BlockChain::Append(blk);
+      GetChain()->Append(blk);
       return true;
     }
    protected:
@@ -40,7 +47,7 @@ namespace token{
 
         BlockPtr blk = ObjectPool::GetBlock(hash);
         Hash phash = blk->GetPreviousHash();
-        if(!BlockChain::HasBlock(phash)){
+        if(!GetChain()->HasBlock(phash)){
           LOG(WARNING) << "parent block " << phash << " not found, resolving...";
           work.push_front(hash);
           work.push_front(phash);
@@ -56,14 +63,13 @@ namespace token{
       return Success("done.");
     }
    public:
-    SynchronizeJob(Job* parent, RpcSession* session, const BlockHeader& head):
-      Job(parent, "Synchronize"),
+    SynchronizeJob(Job* parent, RpcSession* session, BlockChain* chain, const BlockHeader& head):
+      Job(parent, "SynchronizeJob"),
       session_(session),
+      chain_(chain),
       head_(head){}
-    SynchronizeJob(RpcSession* session, const BlockHeader& head):
-      Job(nullptr, "Synchronize"),
-      session_(session),
-      head_(head){}
+    SynchronizeJob(RpcSession* session, BlockChain* chain, const BlockHeader& head):
+      SynchronizeJob(nullptr, session, chain, head){}
     ~SynchronizeJob() = default;
   };
 }

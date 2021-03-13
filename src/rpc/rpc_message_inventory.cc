@@ -6,7 +6,8 @@ namespace token{
     switch(type_){
       case kTransaction: return ObjectPool::HasTransaction(hash_);
       case kBlock:{
-        if(BlockChain::HasBlock(hash_)){
+        BlockChain* chain = BlockChain::GetInstance();
+        if(!chain->HasBlock(hash_)){
           LOG(INFO) << hash_ << " was found in the blockchain.";
           return true;
         } else if(ObjectPool::HasBlock(hash_)){

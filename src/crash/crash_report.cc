@@ -9,10 +9,11 @@ namespace token{
     Print("Stack Trace:\n");
 
     //TODO: implement
-    if(!BlockChain::IsInitialized()){
+    BlockChain* chain = BlockChain::GetInstance();
+    if(!chain->IsInitialized()){
       Print("Block Chain: N/A\n");
     } else{
-      Print("Block Chain: N/A\n");
+      Print("Block Chain: \n");
     }
     return true;
   }

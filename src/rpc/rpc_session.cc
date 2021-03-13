@@ -30,7 +30,7 @@ namespace token{
     UUID node_id = ConfigurationManager::GetNodeID();
     NodeAddress callback = LedgerServer::GetCallbackAddress();
     Version version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
-    BlockPtr head = BlockChain::GetHead(); //TODO: optimize
+    BlockPtr head = BlockChain::GetInstance()->GetHead(); //TODO: optimize
     Hash nonce = Hash::GenerateNonce();
     Send(VerackMessage::NewInstance(type, node_id, callback, version, head->GetHeader(), nonce));
 
@@ -59,9 +59,11 @@ namespace token{
       SESSION_LOG(INFO, this) << "searching for: " << hash;
       if(item.ItemExists()){
         if(item.IsBlock()){
+          BlockChain* chain = BlockChain::GetInstance();
+
           BlockPtr block;
-          if(BlockChain::HasBlock(hash)){
-            block = BlockChain::GetBlock(hash);
+          if(chain->HasBlock(hash)){
+            block = chain->GetBlock(hash);
           } else if(ObjectPool::HasBlock(hash)){
             block = ObjectPool::GetBlock(hash);
           } else{
@@ -211,22 +213,25 @@ namespace token{
     if(!needed.empty()) Send(GetDataMessage::NewInstance(needed));
   }
 
+  //TODO: optimize
   void ServerSession::OnGetBlocksMessage(const GetBlocksMessagePtr& msg){
+    BlockChain* chain = BlockChain::GetInstance();
+
     Hash start = msg->GetHeadHash();
     Hash stop = msg->GetStopHash();
 
     std::vector<InventoryItem> items;
     if(stop.IsNull()){
-      intptr_t amt = std::min(GetBlocksMessage::kMaxNumberOfBlocks, BlockChain::GetHead()->GetHeight());
+      intptr_t amt = std::min(GetBlocksMessage::kMaxNumberOfBlocks, chain->GetHead()->GetHeight());
       SESSION_LOG(INFO, this) << "sending " << (amt + 1) << " blocks...";
 
-      BlockPtr start_block = BlockChain::GetBlock(start);
-      BlockPtr stop_block = BlockChain::GetBlock(start_block->GetHeight() > amt ? start_block->GetHeight() + amt : amt);
+      BlockPtr start_block = chain->GetBlock(start);
+      BlockPtr stop_block = chain->GetBlock(start_block->GetHeight() > amt ? start_block->GetHeight() + amt : amt);
 
       for(int64_t idx = start_block->GetHeight() + 1;
         idx <= stop_block->GetHeight();
         idx++){
-        BlockPtr block = BlockChain::GetBlock(idx);
+        BlockPtr block = chain->GetBlock(idx);
         SESSION_LOG(INFO, this) << "adding " << block;
         items.push_back(InventoryItem(block));
       }

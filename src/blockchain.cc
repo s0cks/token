@@ -2,7 +2,6 @@
 #include <leveldb/db.h>
 #include <glog/logging.h>
 
-#include "configuration.h"
 #include "blockchain.h"
 #include "block_file.h"
 #include "unclaimed_transaction.h"
@@ -34,25 +33,17 @@ namespace token{
     return ss.str();
   }
 
-  static RelaxedAtomic<BlockChain::State> state_ = { BlockChain::kUninitialized };
-  static JobQueue queue_(JobScheduler::kMaxNumberOfJobs);
-  static leveldb::DB* index_ = nullptr;
-
-  leveldb::DB* BlockChain::GetIndex(){
-    return index_;
-  }
-
-  bool BlockChain::Initialize(){
+  //TODO: cleanup
+  leveldb::Status BlockChain::InitializeIndex(const std::string& filename){
     if(IsInitialized()){
       LOG(WARNING) << "cannot reinitialize the block chain!";
-      return false;
+      return leveldb::Status::NotSupported("Cannot re-initialize the block chain");
     }
 
-    std::string filename = GetBlockChainHome();
     if(!FileExists(filename)){
       if(!CreateDirectory(filename)){
         LOG(WARNING) << "couldn't create block chain index in directory: " << filename;
-        return false;
+        return leveldb::Status::IOError("Cannot create the block chain index");
       }
     }
 
@@ -64,37 +55,19 @@ namespace token{
     if(!(status = leveldb::DB::Open(options, GetIndexFilename(), &index_)).ok()){
       LOG(WARNING) << "couldn't initialize the block chain index in " << GetIndexFilename() << ": "
                    << status.ToString();
-      return false;
+      return status;
     }
 
-    if(!JobScheduler::RegisterQueue(pthread_self(), &queue_)){
-      LOG(WARNING) << "couldn't register the block chain work queue.";
-      return false;
-    }
-
-    if(ShouldInstallFresh()){
-      FreshBlockChainInitializer initializer;
-      return initializer.InitializeBlockChain();
+    if(!HasGenesis() || FLAGS_fresh){
+      FreshBlockChainInitializer initializer(this);
+      if(!initializer.InitializeBlockChain())
+        return leveldb::Status::IOError("Cannot create a fresh block chain");
     } else{
-      DefaultBlockChainInitializer initializer;
-      return initializer.InitializeBlockChain();
+      DefaultBlockChainInitializer initializer(this);
+      if(!initializer.InitializeBlockChain())
+        return leveldb::Status::IOError("Cannot initialize the block chain");
     }
-  }
-
-  BlockChain::State BlockChain::GetState(){
-    return state_;
-  }
-
-  void BlockChain::SetState(const State& state){
-    state_ = state;
-  }
-
-  BlockPtr BlockChain::GetGenesis(){
-    return GetBlock(GetReference(BLOCKCHAIN_REFERENCE_GENESIS));
-  }
-
-  BlockPtr BlockChain::GetHead(){
-    return GetBlock(GetReference(BLOCKCHAIN_REFERENCE_HEAD));
+    return leveldb::Status::OK();
   }
 
   static inline bool
@@ -112,7 +85,7 @@ namespace token{
     return Flush(file) && Close(file);
   }
 
-  bool BlockChain::PutBlock(const Hash& hash, BlockPtr blk){
+  bool BlockChain::PutBlock(const Hash& hash, BlockPtr blk) const{
     BlockKey key(blk);
     std::string filename = GetNewBlockFilename(blk);
 
@@ -152,7 +125,7 @@ namespace token{
     return blk;
   }
 
-  BlockPtr BlockChain::GetBlock(const Hash& hash){
+  BlockPtr BlockChain::GetBlock(const Hash& hash) const{
     BlockKey key(0, hash);
 
     std::string filename;
@@ -164,18 +137,18 @@ namespace token{
     return ReadBlockFile(filename, hash);
   }
 
-  BlockPtr BlockChain::GetBlock(int64_t height){
+  BlockPtr BlockChain::GetBlock(const int64_t& height) const{
     //TODO: implement
     return BlockPtr(nullptr);
   }
 
-  bool BlockChain::HasReference(const std::string& name){
+  bool BlockChain::HasReference(const std::string& name) const{
     ReferenceKey key(name);
     std::string value;
     return GetIndex()->Get(leveldb::ReadOptions(), key, &value).ok();
   }
 
-  bool BlockChain::RemoveBlock(const Hash& hash, const BlockPtr& blk){
+  bool BlockChain::RemoveBlock(const Hash& hash, const BlockPtr& blk) const{
     leveldb::WriteOptions options;
     options.sync = true;
 
@@ -191,7 +164,7 @@ namespace token{
     return true;
   }
 
-  bool BlockChain::RemoveReference(const std::string& name){
+  bool BlockChain::RemoveReference(const std::string& name) const{
     leveldb::WriteOptions options;
     options.sync = true;
 
@@ -208,7 +181,7 @@ namespace token{
     return true;
   }
 
-  bool BlockChain::PutReference(const std::string& name, const Hash& hash){
+  bool BlockChain::PutReference(const std::string& name, const Hash& hash) const{
     leveldb::WriteOptions options;
     options.sync = true;
 
@@ -225,7 +198,7 @@ namespace token{
     return true;
   }
 
-  Hash BlockChain::GetReference(const std::string& name){
+  Hash BlockChain::GetReference(const std::string& name) const{
     ReferenceKey key(name);
     std::string value;
 
@@ -238,7 +211,7 @@ namespace token{
     return Hash::FromHexString(value);
   }
 
-  bool BlockChain::HasBlock(const Hash& hash){
+  bool BlockChain::HasBlock(const Hash& hash) const{
     BlockKey key(0, hash);
 
     std::string filename;
@@ -288,7 +261,7 @@ namespace token{
     return true;
   }
 
-  bool BlockChain::VisitBlocks(BlockChainBlockVisitor* vis){
+  bool BlockChain::VisitBlocks(BlockChainBlockVisitor* vis) const{
     Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
     do{
       BlockPtr blk = GetBlock(current);
@@ -306,7 +279,7 @@ namespace token{
     return false;
   }
 
-  int64_t BlockChain::GetNumberOfBlocks(){
+  int64_t BlockChain::GetNumberOfBlocks() const{
     std::string home = GetBlockChainHome();
 
     int64_t count = 0;
@@ -329,7 +302,7 @@ namespace token{
     return count;
   }
 
-  bool BlockChain::GetBlocks(Json::Writer& writer){
+  bool BlockChain::GetBlocks(Json::Writer& writer) const{
     writer.StartArray();
     {
       Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
@@ -343,15 +316,28 @@ namespace token{
     return true;
   }
 
+  static BlockChain instance;
+  static JobQueue queue_(JobScheduler::kMaxNumberOfJobs);
+
+  bool BlockChain::Initialize(const std::string& filename){
 #ifdef TOKEN_DEBUG
-  bool BlockChain::GetStats(Json::Writer& writer){
-    writer.StartObject();
-    {
-      Json::SetField(writer, "head", GetReference(BLOCKCHAIN_REFERENCE_HEAD));
-      Json::SetField(writer, "genesis", GetReference(BLOCKCHAIN_REFERENCE_GENESIS));
+    LOG(INFO) << "initializing the BlockChain in " << filename << "....";
+#endif//TOKEN_DEBUG
+
+    if(!JobScheduler::RegisterQueue(GetCurrentThread(), &queue_)){
+      LOG(ERROR) << "couldn't register BlockChain job queue.";
+      return false;
     }
-    writer.EndObject();
+
+    leveldb::Status status;
+    if(!(status = instance.InitializeIndex(filename)).ok()){
+      LOG(ERROR) << "couldn't initialize the BlockChain in " << filename << ": " << status.ToString();
+      return false;
+    }
     return true;
   }
-#endif//TOKEN_DEBUG
+
+  BlockChain* BlockChain::GetInstance(){
+    return &instance;
+  }
 }

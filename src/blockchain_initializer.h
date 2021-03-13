@@ -12,22 +12,55 @@ namespace token{
 
   class BlockChainInitializer{
    protected:
-    BlockChainInitializer() = default;
+    BlockChain* chain_;
+
+    BlockChainInitializer(BlockChain* chain):
+      chain_(chain){}
+
+    inline BlockChain*
+    GetChain() const{
+      return chain_;
+    }
+
+    inline Hash
+    GetGenesisHash() const{
+      return GetChain()->GetGenesisHash();
+    }
+
+    inline Hash
+    GetHeadHash() const{
+      return GetChain()->GetHeadHash();
+    }
+
+    inline BlockPtr
+    GetGenesis() const{
+      return GetChain()->GetGenesis();
+    }
+
+    inline BlockPtr
+    GetHead() const{
+      return GetChain()->GetHead();
+    }
+
+    inline BlockPtr
+    GetBlock(const Hash& hash) const{
+      return GetChain()->GetBlock(hash);
+    }
 
     inline bool
     SetGenesisReference(const Hash& hash) const{
-      return BlockChain::PutReference(BLOCKCHAIN_REFERENCE_GENESIS, hash);
+      return GetChain()->PutReference(BLOCKCHAIN_REFERENCE_GENESIS, hash);
     }
 
     inline bool
     SetHeadReference(const Hash& hash) const{
-      return BlockChain::PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
+      return GetChain()->PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
     }
 
     inline bool
     PruneBlock(const Hash& hash, const BlockPtr& blk) const{
       INITIALIZER_LOG(INFO) << "pruning " << hash << "....";
-      return BlockChain::RemoveBlock(hash, blk);
+      return GetChain()->RemoveBlock(hash, blk);
     }
 
     bool SetNewHead(const Hash& hash, const BlockPtr& blk) const;
@@ -43,8 +76,8 @@ namespace token{
 
   class FreshBlockChainInitializer : public BlockChainInitializer{
    public:
-    FreshBlockChainInitializer():
-      BlockChainInitializer(){}
+    FreshBlockChainInitializer(BlockChain* chain):
+      BlockChainInitializer(chain){}
     ~FreshBlockChainInitializer() = default;
 
     DEFINE_INITIALIZER(FreshBlockChain);
@@ -54,15 +87,15 @@ namespace token{
       if(!TransitionToState(BlockChain::kInitializing))
         return TransitionToState(BlockChain::kUninitialized);
 
-      if(BlockChain::HasBlocks()){
+      if(GetChain()->HasBlocks()){
         //TODO: refactor
         INITIALIZER_LOG(WARNING) << "pruning local block chain.....";
-        BlockPtr current = BlockChain::GetHead();
+        BlockPtr current = GetHead();
         while(current->GetHeight() > 0){
           Hash hash = current->GetHash();
           if(!PruneBlock(hash, current))
             return false;
-          current = BlockChain::GetBlock(current->GetPreviousHash());
+          current = GetBlock(current->GetPreviousHash());
         }
 
 #ifdef TOKEN_DEBUG
@@ -97,7 +130,8 @@ namespace token{
 
   class DefaultBlockChainInitializer : public BlockChainInitializer{
    public:
-    DefaultBlockChainInitializer() = default;
+    DefaultBlockChainInitializer(BlockChain* chain):
+      BlockChainInitializer(chain){}
     ~DefaultBlockChainInitializer() = default;
 
     DEFINE_INITIALIZER(DefaultBlockChain);

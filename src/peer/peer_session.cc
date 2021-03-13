@@ -67,7 +67,7 @@ namespace token{
 
     session->SetState(Session::kConnectingState);
 
-    BlockPtr head = BlockChain::GetHead();
+    BlockPtr head = BlockChain::GetInstance()->GetHead();
     UUID node_id = ConfigurationManager::GetNodeID();
     session->Send(VersionMessage::NewInstance(ClientType::kNode, node_id, head->GetHeader()));
 
@@ -192,7 +192,7 @@ namespace token{
     UUID node_id = ConfigurationManager::GetNodeID();
     NodeAddress callback = LedgerServer::GetCallbackAddress();
     Version version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
-    BlockPtr head = BlockChain::GetHead();//TODO: optimize
+    BlockPtr head = BlockChain::GetInstance()->GetHead();//TODO: optimize
     Hash nonce = Hash::GenerateNonce();
     Send(VerackMessage::NewInstance(type, node_id, callback, version, head->GetHeader(), nonce));
   }
@@ -207,26 +207,27 @@ namespace token{
     SESSION_LOG(INFO, this) << "remote <HEAD>: " << msg->GetHead();
 #endif//TOKEN_DEBUG
 
+    BlockChain* chain = BlockChain::GetInstance();
     if(IsConnecting()){
       Peer info(msg->GetID(), msg->GetCallbackAddress());
       SESSION_LOG(INFO, this) << "connected to peer: " << info;
       SetInfo(info);
       SetState(Session::kConnectedState);
 
-      BlockHeader local_head = BlockChain::GetHead()->GetHeader();
+      BlockHeader local_head = chain->GetHead()->GetHeader();
       BlockHeader remote_head = msg->GetHead();
       if(local_head < remote_head){
 #ifdef TOKEN_DEBUG
         SESSION_LOG(INFO, this) << "starting new SynchronizeJob to resolve remote/<HEAD> := " << remote_head;
 #endif//TOKEN_DEBUG
 
-        SynchronizeJob* job = new SynchronizeJob(this, remote_head);
+        SynchronizeJob* job = new SynchronizeJob(this, chain, remote_head);
         if(!JobScheduler::Schedule(job)){
           SESSION_LOG(WARNING, this) << "couldn't schedule new SynchronizeJob";
           return;
         }
 
-        Send(GetBlocksMessage::NewInstance());
+        //TODO: Send(GetBlocksMessage::NewInstance());
         return;
       }
 
@@ -283,6 +284,8 @@ namespace token{
   }
 
   void PeerSession::OnGetDataMessage(const GetDataMessagePtr& msg){
+    BlockChain* chain = BlockChain::GetInstance();
+
     std::vector<InventoryItem> items;
     if(!msg->GetItems(items)){
       LOG(WARNING) << "cannot get items from message";
@@ -296,9 +299,9 @@ namespace token{
       LOG(INFO) << "resolving item : " << hash;
       if(item.IsBlock()){
         BlockPtr block;
-        if(BlockChain::HasBlock(hash)){
+        if(chain->HasBlock(hash)){
           LOG(INFO) << "item " << hash << " found in block chain";
-          block = BlockChain::GetBlock(hash);
+          block = chain->GetBlock(hash);
         } else if(ObjectPool::HasBlock(hash)){
           LOG(INFO) << "item " << hash << " found in block pool";
           block = ObjectPool::GetBlock(hash);

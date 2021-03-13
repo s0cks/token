@@ -5,7 +5,7 @@ namespace token{
   LOG(ERROR) << "cannot transition blockchain from " << (From) << " state to " << (To) << " state.";
 
   bool BlockChainInitializer::SetNewHead(const Hash& hash, const BlockPtr& blk) const{
-    if(!BlockChain::PutBlock(hash, blk)){
+    if(!GetChain()->PutBlock(hash, blk)){
 #ifdef TOKEN_DEBUG
       LOG(ERROR) << "cannot put new " << BLOCKCHAIN_REFERENCE_HEAD << " block " << blk->ToString();
 #else
@@ -19,39 +19,39 @@ namespace token{
   bool BlockChainInitializer::TransitionToState(const BlockChain::State& state) const{
     switch(state){
       case BlockChain::State::kInitializing:{
-        if(!BlockChain::IsUninitialized()){
-          CANNOT_TRANSITION(BlockChain::GetState(), state);
+        if(!GetChain()->IsUninitialized()){
+          CANNOT_TRANSITION(GetChain()->GetState(), state);
           return false;
         }
-        BlockChain::SetState(state);
+        GetChain()->SetState(state);
         return true;
       }
       case BlockChain::State::kInitialized:{
-        if(!BlockChain::IsInitializing() && !BlockChain::IsSynchronizing()){
-          CANNOT_TRANSITION(BlockChain::GetState(), state);
+        if(!GetChain()->IsInitializing() && !GetChain()->IsSynchronizing()){
+          CANNOT_TRANSITION(GetChain()->GetState(), state);
           return false;
         }
-        BlockChain::SetState(state);
+        GetChain()->SetState(state);
         return true;
       }
       case BlockChain::State::kSynchronizing:{
-        if(!BlockChain::IsInitialized()){
-          CANNOT_TRANSITION(BlockChain::GetState(), state);
+        if(!GetChain()->IsInitialized()){
+          CANNOT_TRANSITION(GetChain()->GetState(), state);
           return false;
         }
-        BlockChain::SetState(state);
+        GetChain()->SetState(state);
         return true;
       }
       case BlockChain::State::kUninitialized:{
-        if(BlockChain::IsSynchronizing()){
-          CANNOT_TRANSITION(BlockChain::GetState(), state);
+        if(GetChain()->IsSynchronizing()){
+          CANNOT_TRANSITION(GetChain()->GetState(), state);
           return false;
         }
-        BlockChain::SetState(state);
+        GetChain()->SetState(state);
         return true;
       }
       default:{
-        CANNOT_TRANSITION(BlockChain::GetState(), state);
+        CANNOT_TRANSITION(GetChain()->GetState(), state);
         return false;
       }
     }
