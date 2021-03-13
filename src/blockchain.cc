@@ -10,19 +10,14 @@
 
 namespace token{
   static inline std::string
-  GetBlockChainHome(){
-    return TOKEN_BLOCKCHAIN_HOME;
-  }
-
-  static inline std::string
   GetIndexFilename(){
-    return GetBlockChainHome() + "/index";
+    return GetBlockChainDirectory() + "/index";
   }
 
   static inline std::string
   GetNewBlockFilename(const BlockPtr& blk){
     std::stringstream ss;
-    ss << GetBlockChainHome() + "/blk" << blk->GetHeight() << ".dat";
+    ss << GetBlockChainDirectory() << "/blk" << blk->GetHeight() << ".dat";
     return ss.str();
   }
 
@@ -35,12 +30,16 @@ namespace token{
 
   //TODO: cleanup
   leveldb::Status BlockChain::InitializeIndex(const std::string& filename){
-    if(IsInitialized()){
+    if(!IsUninitialized()){
       LOG(WARNING) << "cannot reinitialize the block chain!";
       return leveldb::Status::NotSupported("Cannot re-initialize the block chain");
     }
 
+#ifdef TOKEN_DEBUG
+    LOG(INFO) << "initializing the block chain in " << filename << "....";
+#endif//TOKEN_DEBUG
     if(!FileExists(filename)){
+      LOG(INFO) << "creating " << filename << "....";
       if(!CreateDirectory(filename)){
         LOG(WARNING) << "couldn't create block chain index in directory: " << filename;
         return leveldb::Status::IOError("Cannot create the block chain index");
@@ -280,7 +279,7 @@ namespace token{
   }
 
   int64_t BlockChain::GetNumberOfBlocks() const{
-    std::string home = GetBlockChainHome();
+    std::string home = GetBlockChainDirectory();
 
     int64_t count = 0;
 
@@ -320,10 +319,6 @@ namespace token{
   static JobQueue queue_(JobScheduler::kMaxNumberOfJobs);
 
   bool BlockChain::Initialize(const std::string& filename){
-#ifdef TOKEN_DEBUG
-    LOG(INFO) << "initializing the BlockChain in " << filename << "....";
-#endif//TOKEN_DEBUG
-
     if(!JobScheduler::RegisterQueue(GetCurrentThread(), &queue_)){
       LOG(ERROR) << "couldn't register BlockChain job queue.";
       return false;

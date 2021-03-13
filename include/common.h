@@ -109,8 +109,7 @@ namespace token{
 
   static inline bool
   FileExists(const std::string& name){
-    std::ifstream f(name.c_str());
-    return f.good();
+    return access(name.data(), F_OK) == 0;
   }
 
   static inline bool

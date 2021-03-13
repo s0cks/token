@@ -26,7 +26,7 @@ namespace token{
   static inline std::string
   GetBlockChainDirectory(){
     std::stringstream ss;
-    ss << TOKEN_BLOCKCHAIN_HOME << "/chain";
+    ss << TOKEN_BLOCKCHAIN_HOME << "/data";
     return ss.str();
   }
 
