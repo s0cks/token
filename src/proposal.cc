@@ -37,7 +37,12 @@ namespace token{
 #undef FOR_EACH_PROPOSAL_PHASE_TRANSITIONS
 
   void Proposal::OnPrepare(uv_async_t* handle){
-    NOT_IMPLEMENTED(WARNING);
+#ifdef TOKEN_DEBUG
+    LOG(INFO) << "received OnPrepare";
+#endif//TOKEN_DEBUG
+
+    Proposal* proposal = (Proposal*)handle->data;
+    proposal->SetPhase(ProposalPhase::kPreparePhase);
   }
 
   void Proposal::OnPromise(uv_async_t* handle){

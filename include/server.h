@@ -152,10 +152,16 @@ namespace token{
 
       BufferPtr buffer = Buffer::From(buff->base, nread);
       do{
+#ifdef TOKEN_DEBUG
+        SERVER_LOG(INFO) << (buffer->GetWrittenBytes() - buffer->GetReadBytes()) << " bytes remaining";
+#endif//TOKEN_DEBUG
+
         ServerMessagePtr message = M::From(session, buffer);
+
 #ifdef TOKEN_DEBUG
         SERVER_LOG(INFO) << "received " << message->ToString() << " from " << session->GetUUID();
 #endif//TOKEN_DEBUG
+
         session->OnMessageRead(message);
       } while(buffer->GetReadBytes() < buffer->GetBufferSize());
       free(buff->base);
