@@ -147,20 +147,20 @@ namespace token{
       rejected_(){
       // core
       disconnect_.data = this;
-      uv_async_init(loop_, &disconnect_, &OnDisconnect);
+      CHECK_UVRESULT(uv_async_init(loop_, &disconnect_, &OnDisconnect), LOG(ERROR), "cannot initialize the OnDisconnect callback");
       // paxos
       discovery_.data = this;
-      uv_async_init(loop_, &discovery_, &OnDiscovery);
+      CHECK_UVRESULT(uv_async_init(loop_, &discovery_, &OnDiscovery), LOG(ERROR), "cannot initialize the OnDiscovery callback");
       prepare_.data = this;
-      uv_async_init(loop_, &prepare_, &OnPrepare);
+      CHECK_UVRESULT(uv_async_init(loop_, &prepare_, &OnPrepare), LOG(ERROR), "cannot initialize the OnPrepare callback");
       promise_.data = this;
-      uv_async_init(loop_, &promise_, &OnPromise);
+      CHECK_UVRESULT(uv_async_init(loop_, &promise_, &OnPromise), LOG(ERROR), "cannot initialize the OnPromise callback");
       commit_.data = this;
-      uv_async_init(loop_, &commit_, &OnCommit);
+      CHECK_UVRESULT(uv_async_init(loop_, &commit_, &OnCommit), LOG(ERROR), "cannot initialize the OnCommit callback");
       accepted_.data = this;
-      uv_async_init(loop_, &accepted_, &OnAccepted);
+      CHECK_UVRESULT(uv_async_init(loop_, &accepted_, &OnAccepted), LOG(ERROR), "cannot initialize the OnAccepted callback");
       rejected_.data = this;
-      uv_async_init(loop_, &rejected_, &OnRejected);
+      CHECK_UVRESULT(uv_async_init(loop_, &rejected_, &OnRejected), LOG(ERROR), "cannot initialize the OnRejected callback");
     }
     ~PeerSession() = default;
 
@@ -177,24 +177,29 @@ namespace token{
       return info_.GetAddress();
     }
 
-    void SendPrepare(){
-      uv_async_send(&prepare_);
+    bool SendPrepare(){
+      VERIFY_UVRESULT(uv_async_send(&prepare_), LOG(ERROR), "cannot send OnPrepare");
+      return true;
     }
 
-    void SendPromise(){
-      uv_async_send(&promise_);
+    bool SendPromise(){
+      VERIFY_UVRESULT(uv_async_send(&promise_), LOG(ERROR), "cannot send OnPromise");
+      return true;
     }
 
-    void SendAccepted(){
-      uv_async_send(&accepted_);
+    bool SendAccepted(){
+      VERIFY_UVRESULT(uv_async_send(&accepted_), LOG(ERROR), "cannot send OnAccepted");
+      return true;
     }
 
-    void SendRejected(){
-      uv_async_send(&rejected_);
+    bool SendRejected(){
+      VERIFY_UVRESULT(uv_async_send(&rejected_), LOG(ERROR), "cannot send OnRejected");
+      return true;
     }
 
-    void SendCommit(){
-      uv_async_send(&commit_);
+    bool SendCommit(){
+      VERIFY_UVRESULT(uv_async_send(&commit_), LOG(ERROR), "cannot send OnCommit");
+      return true;
     }
 
     void SendDiscoveredBlock(){

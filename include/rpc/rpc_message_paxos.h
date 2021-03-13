@@ -1,7 +1,7 @@
 #ifndef TOKEN_RPC_MESSAGE_PAXOS_H
 #define TOKEN_RPC_MESSAGE_PAXOS_H
 
-#include "proposal.h"
+#include "consensus/proposal.h"
 
 namespace token{
 #define DEFINE_PAXOS_MESSAGE_CONSTRUCTORS(Name) \
@@ -33,7 +33,7 @@ namespace token{
       raw_(proposal){}
     PaxosMessage(const BufferPtr& buff):
       RpcMessage(),
-      raw_(buff){}
+      raw_(buff->GetTimestamp(), buff->GetUUID(), buff->GetUUID(), BlockHeader(buff)){}
 
     int64_t GetMessageSize() const{
       return raw_.GetBufferSize();

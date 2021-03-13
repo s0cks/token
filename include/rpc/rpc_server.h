@@ -19,12 +19,29 @@ namespace token{
       RpcSession(loop){}
     ~ServerSession() = default;
 
-    void SendAccepted(){
-
+    bool SendPrepare(){
+      NOT_IMPLEMENTED(WARNING);
+      return false;//TODO: implement
     }
 
-    void SendRejected(){
+    bool SendPromise(){
+      NOT_IMPLEMENTED(WARNING);
+      return false;//TODO: implement
+    }
 
+    bool SendCommit(){
+      NOT_IMPLEMENTED(WARNING);
+      return false;//TODO: implement
+    }
+
+    bool SendAccepted(){
+      NOT_IMPLEMENTED(WARNING);
+      return false;//TODO: implement
+    }
+
+    bool SendRejected(){
+      NOT_IMPLEMENTED(WARNING);
+      return false;//TODO: implement
     }
   };
 

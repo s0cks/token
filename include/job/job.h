@@ -319,6 +319,9 @@ namespace token{
 
     bool Commit() const;
   };
+
+#define JOB_LOG(LevelName, Job) \
+  LOG(LevelName) << "[" << (Job)->GetName() << "] "
 }
 
 #endif //TOKEN_JOB_H

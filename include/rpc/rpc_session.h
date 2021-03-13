@@ -43,8 +43,11 @@ namespace token{
       return SendMessages(messages);
     }
 
-    virtual void SendAccepted() = 0;
-    virtual void SendRejected() = 0;
+    virtual bool SendPrepare() = 0;
+    virtual bool SendPromise() = 0;
+    virtual bool SendCommit() = 0;
+    virtual bool SendAccepted() = 0;
+    virtual bool SendRejected() = 0;
   };
 }
 

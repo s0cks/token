@@ -17,6 +17,8 @@
 #include <glog/logging.h>
 #include <gflags/gflags.h>
 
+#include <cmath>
+
 #include <rapidjson/writer.h>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
@@ -72,7 +74,7 @@ namespace token{
     return x + 1;
   }
 
-#define TOKEN_MAGIC 0xFEE
+#define TOKEN_MAGIC 0xFEFE
 
   static bool
   EndsWith(const std::string& str, const std::string& suffix){
@@ -258,6 +260,25 @@ namespace token{
     static const int64_t kWeeks = 7 * kDays;
     static const int64_t kYears = 52 * kWeeks;
   }
+
+  static inline std::string
+  PrettySize(int64_t size){
+    //TODO: optimize using log
+    static const char* units[] = { "b", "kb", "mb", "gb", "tb", "pb" };
+
+    std::stringstream ss;
+    if(size == 0)
+      return "0b";
+
+    int i = 0;
+    while (size > 1024){
+      size /= 1024;
+      i++;
+    }
+
+    ss << i << "." << size << units[i];
+    return ss.str();
+  }
 }
 
 #ifndef __TKN_FUNCTION_NAME__
@@ -270,7 +291,7 @@ namespace token{
 
 #define CHECK_UVRESULT(Result, Log, Message)({ \
   int err;                                           \
-  if((err = (Result)) != 0){                         \
+  if((err = Result) != 0){                         \
     Log << Message << ": " << uv_strerror(err);\
     return;                                    \
   }                                            \
@@ -282,5 +303,8 @@ namespace token{
     return false;                               \
   }                                             \
 })
+
+#define NOT_IMPLEMENTED(LevelName) \
+  LOG(LevelName) << __TKN_FUNCTION_NAME__ << " is not implemented yet!"
 
 #endif //TOKEN_COMMON_H

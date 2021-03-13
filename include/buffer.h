@@ -454,6 +454,12 @@ namespace token{
   }
 
 #define SERIALIZE_FIELD(Name, Type, Field) \
+  if(!(Field).Write(buff)){                \
+    LOG(WARNING) << "cannot serialize field " << #Name << " (" << #Type << ")"; \
+    return false;                          \
+  }
+
+#define SERIALIZE_POINTER_FIELD(Name, Type, Field) \
   if(!(Field)->Write(buff)){   \
     LOG(WARNING) << "cannot serialize field " << #Name << " (" << #Type << ")"; \
     return false;              \

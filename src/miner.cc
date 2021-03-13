@@ -1,20 +1,19 @@
 #include <mutex>
-#include <condition_variable>
 
 #include "pool.h"
 #include "miner.h"
 #include "block_builder.h"
 #include "job/scheduler.h"
-#include "peer/peer_session_manager.h"
+#include "job/job_proposal.h"
 
 namespace token{
+#define MINER_LOG(LevelName) \
+  LOG(LevelName) << "[miner] "
+
   BlockMiner* BlockMiner::GetInstance(){
     static BlockMiner instance;
     return &instance;
   }
-
-#define MINER_LOG(LevelName) \
-  LOG(LevelName) << "[Miner] "
 
   bool BlockMiner::StartMiningTimer(){
 #ifdef TOKEN_DEBUG
@@ -35,81 +34,6 @@ namespace token{
   static inline void
   CancelProposal(const ProposalPtr& proposal){
     MINER_LOG(INFO) << "cancelling proposal: " << proposal->raw();
-  }
-
-  static inline void
-  ExecuteProposalPhase1(const ProposalPtr& proposal){
-    // Phase 1 (Prepare)
-    //TODO: add timestamps
-
-#ifdef TOKEN_DEBUG
-    MINER_LOG(INFO) << "executing proposal phase 1....";
-#endif//TOKEN_DEBUG
-    // transition the proposal to phase 1
-    if(!proposal->TransitionToPhase(ProposalPhase::kPreparePhase))
-      return CancelProposal(proposal);
-
-    Phase1Quorum& quorum = proposal->GetPhase1Quorum();
-    // start phase 1 timer
-    quorum.StartTimer();
-
-    // broadcast prepare to quorum members
-    PeerSessionManager::BroadcastPrepare();
-
-    // wait for the required votes to return from peers
-    quorum.WaitForRequiredVotes();
-
-    // stop the phase 1 timer
-    quorum.StopTimer();
-
-    // check quorum results.
-    QuorumResult result = quorum.GetResult();
-#ifdef TOKEN_DEBUG
-    MINER_LOG(INFO) << "phase 1 result: " << result;
-#endif//TOKEN_DEBUG
-  }
-
-  static inline void
-  ExecuteProposalPhase2(const ProposalPtr& proposal){
-    // Phase 2 (Commit)
-    //TODO: add timestamps
-
-#ifdef TOKEN_DEBUG
-    MINER_LOG(INFO) << "executing proposal phase 2....";
-#endif//TOKEN_DEBUG
-
-    // transition the proposal to phase 2
-    if(!proposal->TransitionToPhase(ProposalPhase::kCommitPhase))
-      return CancelProposal(proposal);
-
-    Phase2Quorum& quorum = proposal->GetPhase2Quorum();
-    // start phase 2 timer
-    quorum.StartTimer();
-
-    // broadcast commit to quorum members
-    PeerSessionManager::BroadcastCommit();
-
-    // wait for the required votes to return from peers
-    quorum.WaitForRequiredVotes();
-
-    // stop phase 2 timer
-    quorum.StopTimer();
-
-    // check quorum results.
-    QuorumResult result = quorum.GetResult();
-#ifdef TOKEN_DEBUG
-    MINER_LOG(INFO) << "phase 2 result: " << result;
-#endif//TOKEN_DEBUG
-
-    // cleanup
-
-  }
-
-  static inline void
-  ExecuteProposal(const ProposalPtr& proposal){
-    ExecuteProposalPhase1(proposal);
-    ExecuteProposalPhase2(proposal);
-    // commit block to block chain
   }
 
   void BlockMiner::OnMine(uv_timer_t* handle){
@@ -141,20 +65,18 @@ namespace token{
 #endif//TOKEN_DEBUG
 
     // create a new proposal
-    ProposalPtr proposal = Proposal::NewInstance(nullptr, miner->GetLoop(), blk, GetRequiredVotes());
+    ProposalPtr proposal = Proposal::NewInstance(miner->GetLoop(), blk, GetRequiredVotes());
     if(!miner->SetActiveProposal(proposal)){
       MINER_LOG(ERROR) << "cannot set active proposal.";
       return;
     }
 
-    // execute the proposal
-    ExecuteProposal(proposal);
-    // clear the active proposal
-    if(!miner->ClearActiveProposal())
-      MINER_LOG(WARNING) << "cannot clear the active proposal.";
-    // resume mining
-    if(!miner->Resume())
-      MINER_LOG(WARNING) << "cannot start mining timer.";
+    ProposalJob* job = new ProposalJob(proposal);
+    if(!JobScheduler::Schedule(job)){
+      MINER_LOG(ERROR) << "cannot schedule ProposalJob";
+      return;
+    }
+    //TODO: free job
   }
 
   bool BlockMiner::Run(){

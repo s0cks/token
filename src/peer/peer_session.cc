@@ -1,13 +1,11 @@
 #ifdef TOKEN_ENABLE_SERVER
 
+#include "miner.h"
 #include "configuration.h"
 #include "job/scheduler.h"
 #include "job/synchronize.h"
 #include "rpc/rpc_server.h"
 #include "peer/peer_session.h"
-#include "proposal.h"
-
-#include "miner.h"
 
 // The peer session sends packets to a peer
 // any response received is purely in relation to the sent packets
@@ -15,9 +13,6 @@
 namespace token{
 #define PEER_LOG(LevelName, Session) \
   LOG(LevelName) << "[peer-" << Session->GetID().ToStringAbbreviated() << "] "
-
-#define NOT_IMPLEMENTED(LevelName, FunctionName) \
-  SESSION_LOG(LevelName, this) << (FunctionName) << " is not implemented yet!";
 
 #define CHECK_FOR_ACTIVE_PROPOSAL(Miner, Session, LevelName) \
   if(!(Miner)->HasActiveProposal()){     \
@@ -142,17 +137,20 @@ namespace token{
     CHECK_FOR_ACTIVE_PROPOSAL(miner, session, WARNING);
 
     ProposalPtr proposal = miner->GetActiveProposal();
-    LOG(INFO) << "sending new proposal: " << proposal->raw();
-    session->Send(PrepareMessage::NewInstance(proposal));
+    RpcMessageList responses;
+    responses << PrepareMessage::NewInstance(proposal);
+    return session->Send(responses);
   }
 
   void PeerSession::OnPromise(uv_async_t* handle){
     BlockMiner* miner = BlockMiner::GetInstance();
     PeerSession* session = (PeerSession*) handle->data;
     CHECK_FOR_ACTIVE_PROPOSAL(miner, session, WARNING);
-
     ProposalPtr proposal = miner->GetActiveProposal();
-    session->Send(PromiseMessage::NewInstance(proposal));
+
+    RpcMessageList responses;
+    responses << PromiseMessage::NewInstance(proposal);
+    return session->Send(responses);
   }
 
   void PeerSession::OnCommit(uv_async_t* handle){
@@ -161,11 +159,10 @@ namespace token{
     CHECK_FOR_ACTIVE_PROPOSAL(miner, session, WARNING);
 
     ProposalPtr proposal = miner->GetActiveProposal();
-    if(!proposal->InCommitPhase()){
-      LOG(WARNING) << "cannot send another commit to the peer.";
-      return;
-    }
-    session->Send(CommitMessage::NewInstance(proposal));
+
+    RpcMessageList responses;
+    responses << CommitMessage::NewInstance(proposal);
+    return session->Send(responses);
   }
 
   void PeerSession::OnAccepted(uv_async_t* handle){
@@ -174,8 +171,9 @@ namespace token{
     CHECK_FOR_ACTIVE_PROPOSAL(miner, session, WARNING);
 
     ProposalPtr proposal = miner->GetActiveProposal();
-    LOG(INFO) << "accepting " << session->GetInfo() << "'s proposal: " << proposal->ToString();
-    session->Send(AcceptedMessage::NewInstance(proposal));
+    RpcMessageList responses;
+    responses << AcceptedMessage::NewInstance(proposal);
+    return session->Send(responses);
   }
 
   void PeerSession::OnRejected(uv_async_t* handle){
@@ -184,8 +182,9 @@ namespace token{
     CHECK_FOR_ACTIVE_PROPOSAL(miner, session, WARNING);
 
     ProposalPtr proposal = miner->GetActiveProposal();
-    LOG(INFO) << "rejecting " << session->GetInfo() << "'s proposal: " << proposal->ToString();
-    session->Send(RejectedMessage::NewInstance(proposal));
+    RpcMessageList responses;
+    responses << RejectedMessage::NewInstance(proposal);
+    return session->Send(responses);
   }
 
   void PeerSession::OnVersionMessage(const VersionMessagePtr& msg){
@@ -238,20 +237,23 @@ namespace token{
   }
 
   void PeerSession::OnPrepareMessage(const PrepareMessagePtr& msg){
-    NOT_IMPLEMENTED(ERROR, __TKN_FUNCTION_NAME__);
+    NOT_IMPLEMENTED(WARNING);
   }
 
   void PeerSession::OnPromiseMessage(const PromiseMessagePtr& msg){
     BlockMiner* miner = BlockMiner::GetInstance();
+
+#ifdef TOKEN_DEBUG
+    PEER_LOG(INFO, this) << "checking for active proposal....";
+#endif//TOKEN_DEBUG
     CHECK_FOR_ACTIVE_PROPOSAL(miner, this, WARNING);
 
     ProposalPtr proposal = miner->GetActiveProposal();
-    if(!proposal->OnPromise())
-      SESSION_LOG(ERROR, this) << "cannot invoke on-promise.";
+    proposal->OnPromise();
   }
 
   void PeerSession::OnCommitMessage(const CommitMessagePtr& msg){
-    NOT_IMPLEMENTED(ERROR, __TKN_FUNCTION_NAME__);
+    NOT_IMPLEMENTED(WARNING);
   }
 
   void PeerSession::OnRejectedMessage(const RejectedMessagePtr& msg){

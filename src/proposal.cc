@@ -1,15 +1,10 @@
 #include "pool.h"
 #include "miner.h"
-#include "proposal.h"
 #include "job/scheduler.h"
+#include "consensus/proposal.h"
 #include "peer/peer_session_manager.h"
 
-
 namespace token{
-  //TODO: refactor
-#define PROPOSAL_LOG(LevelName) \
-  LOG(LevelName) << "[Proposal] "
-
 #define CANNOT_TRANSITION_TO(To) \
   LOG(ERROR) << "cannot transition " << raw() << " from " << GetPhase() << " phase to: " << (To) << " phase.";
 
@@ -42,36 +37,24 @@ namespace token{
 #undef FOR_EACH_PROPOSAL_PHASE_TRANSITIONS
 
   void Proposal::OnPrepare(uv_async_t* handle){
-    Proposal* proposal = (Proposal*)handle->data;
-    RpcSession* session = proposal->GetSession();
-
-    if(!proposal->TransitionToPhase(ProposalPhase::kPreparePhase))
-      return session->SendRejected();
-    return session->SendAccepted();
+    NOT_IMPLEMENTED(WARNING);
   }
 
   void Proposal::OnPromise(uv_async_t* handle){
     Proposal* proposal = (Proposal*)handle->data;
-    RpcSession* session = proposal->GetSession();
-
-    Phase1Quorum& quorum = proposal->GetPhase1Quorum();
-    quorum.PromiseProposal(session->GetUUID()); //TODO: check for duplicate results
-  }
+    Phase1Quorum& p1quorum = proposal->GetPhase1Quorum();
+    p1quorum.PromiseProposal(UUID()); //TODO: fix UUID()
+ }
 
   void Proposal::OnCommit(uv_async_t* handle){
-    Proposal* proposal = (Proposal*)handle->data;
-    RpcSession* session = proposal->GetSession();
-
-    if(!proposal->TransitionToPhase(ProposalPhase::kCommitPhase))
-      return session->SendRejected();
-    return session->SendAccepted();
+    NOT_IMPLEMENTED(WARNING);
   }
 
   void Proposal::OnAccepted(uv_async_t* handle){
-
+    NOT_IMPLEMENTED(WARNING);
   }
 
   void Proposal::OnRejected(uv_async_t* handle){
-
+    NOT_IMPLEMENTED(WARNING);
   }
 }

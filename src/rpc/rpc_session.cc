@@ -10,9 +10,6 @@
 // The server session receives packets sent from peers
 // this is for inbound packets
 namespace token{
-#define NOT_IMPLEMENTED(LevelName, FunctionName) \
-  SESSION_LOG(LevelName, this) << FunctionName << " is not implemented!";
-
   //TODO:
   // - state check
   // - version check
@@ -125,7 +122,7 @@ namespace token{
     if(miner->HasActiveProposal())
       REJECT_PROPOSAL(msg->GetProposal(), ERROR, "there is already an active proposal.");
     // set the current proposal to the requested proposal
-    if(!miner->RegisterNewProposal(this, msg->GetProposal()))
+    if(!miner->RegisterNewProposal(msg->GetProposal()))
       REJECT_PROPOSAL(msg->GetProposal(), ERROR, "cannot set active proposal.");
 
     // pause the block miner
@@ -148,7 +145,7 @@ namespace token{
   }
 
   void ServerSession::OnPromiseMessage(const PromiseMessagePtr& msg){
-    NOT_IMPLEMENTED(WARNING, __TKN_FUNCTION_NAME__);
+    NOT_IMPLEMENTED(WARNING);
   }
 
   void ServerSession::OnCommitMessage(const CommitMessagePtr& msg){
@@ -168,11 +165,11 @@ namespace token{
   }
 
   void ServerSession::OnAcceptedMessage(const AcceptedMessagePtr& msg){
-    NOT_IMPLEMENTED(ERROR, __TKN_FUNCTION_NAME__);
+    NOT_IMPLEMENTED(WARNING);
   }
 
   void ServerSession::OnRejectedMessage(const RejectedMessagePtr& msg){
-    NOT_IMPLEMENTED(ERROR, __TKN_FUNCTION_NAME__);
+    NOT_IMPLEMENTED(WARNING);
   }
 
   void ServerSession::OnBlockMessage(const BlockMessagePtr& msg){
@@ -239,6 +236,6 @@ namespace token{
   }
 
   void ServerSession::OnNotFoundMessage(const NotFoundMessagePtr& msg){
-    NOT_IMPLEMENTED(ERROR, __TKN_FUNCTION_NAME__);
+    NOT_IMPLEMENTED(WARNING);
   }
 }

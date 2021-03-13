@@ -6,10 +6,13 @@
 #include <condition_variable>
 
 #include "vthread.h"
-#include "proposal.h"
+#include "consensus/proposal.h"
 #include "peer/peer_session_manager.h"
 
 namespace token{
+#define MINER_LOG(LevelName) \
+  LOG(LevelName) << "[miner] "
+
 #define FOR_EACH_MINER_STATE(V) \
   V(Starting)                   \
   V(Running)                    \
@@ -43,6 +46,8 @@ namespace token{
     std::mutex proposal_mtx_;
     ProposalPtr proposal_;
 
+    uv_async_t on_promise_;
+
     void SetState(const State& state){
       state_ = state;
     }
@@ -60,6 +65,10 @@ namespace token{
     }
 
     static void OnMine(uv_timer_t* handle);
+
+    static void OnPromise(uv_async_t* handle){
+      MINER_LOG(INFO) << "OnPromise called.";
+    }
    public:
     BlockMiner(uv_loop_t* loop=uv_loop_new()):
       loop_(loop),
@@ -68,6 +77,9 @@ namespace token{
       proposal_mtx_(),
       proposal_(){
       timer_.data = this;
+
+      on_promise_.data = this;
+      CHECK_UVRESULT(uv_async_init(loop, &on_promise_, &OnPromise), MINER_LOG(ERROR), "cannot initialize OnPromise");
     }
     ~BlockMiner() = default;
 
@@ -104,11 +116,11 @@ namespace token{
       return true;
     }
 
-    bool RegisterNewProposal(RpcSession* session, const RawProposal& proposal){
+    bool RegisterNewProposal(const RawProposal& proposal){
       std::lock_guard<std::mutex> guard(proposal_mtx_);
       if(proposal_)
         return false;
-      proposal_ = Proposal::NewInstance(session, loop_, proposal, GetRequiredVotes());
+      proposal_ = Proposal::NewInstance(loop_, proposal, GetRequiredVotes());
       return true;
     }
 
@@ -152,4 +164,5 @@ namespace token{
   };
 }
 
+#undef MINER_LOG
 #endif//TOKEN_MINER_H

@@ -22,7 +22,7 @@ namespace token{
   typedef int32_t ServerPort;
 
 #define SERVER_LOG(LevelName) \
-  LOG(LevelName) << "[Server] "
+  LOG(LevelName) << "[server] "
 
   template<class M>
   class Server{
