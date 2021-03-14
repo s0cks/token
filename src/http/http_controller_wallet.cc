@@ -7,6 +7,12 @@
 #include "http/http_controller_wallet.h"
 
 namespace token{
+#define DEFINE_HTTP_ROUTE_HANDLER(Method, Path, Name) \
+  HTTP_CONTROLLER_ROUTE_HANDLER(WalletController, Name);
+
+  FOR_EACH_WALLET_CONTROLLER_ENDPOINT(DEFINE_HTTP_ROUTE_HANDLER)
+#undef DEFINE_HTTP_ROUTE_HANDLER
+
   static inline bool
   ParseInt(const std::string& val, int* result){
     for(auto c : val){
@@ -20,7 +26,7 @@ namespace token{
     return true;
   }
 
-  void WalletController::HandleGetUserWalletTokenCode(HttpSession* session, const HttpRequestPtr& request){
+  HTTP_CONTROLLER_ENDPOINT_HANDLER(WalletController, GetUserWalletTokenCode){
     User user = request->GetUserParameterValue();
     Hash hash = request->GetHashParameterValue();
 
@@ -83,7 +89,7 @@ namespace token{
     return session->Send(builder.Build());
   }
 
-  void WalletController::HandleGetUserWallet(HttpSession* session, const HttpRequestPtr& request){
+  HTTP_CONTROLLER_ENDPOINT_HANDLER(WalletController, GetUserWallet){
     User user = request->GetUserParameterValue();
     Json::String body;
     Json::Writer writer(body);
@@ -174,7 +180,7 @@ namespace token{
     return true;
   }
 
-  void WalletController::HandlePostUserWalletSpend(HttpSession* session, const HttpRequestPtr& request){
+  HTTP_CONTROLLER_ENDPOINT_HANDLER(WalletController, PostUserWalletSpend){
     User user = request->GetUserParameterValue();
 
     Json::Document doc;

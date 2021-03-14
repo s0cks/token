@@ -450,8 +450,7 @@ namespace token{
       return GetReference(BLOCKCHAIN_REFERENCE_HEAD);
     }
 
-    inline BlockPtr
-    GetHead() const{
+    virtual BlockPtr GetHead() const{
       return GetBlock(GetHeadHash());
     }
 

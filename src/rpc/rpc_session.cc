@@ -47,17 +47,14 @@ namespace token{
   }
 
   void ServerSession::OnGetDataMessage(const GetDataMessagePtr& msg){
-    std::vector<InventoryItem> items;
-    if(!msg->GetItems(items)){
-      SESSION_LOG(WARNING, this) << "cannot get items from message";
-      return;
-    }
 
-    std::vector<RpcMessagePtr> response;
-    for(auto& item : items){
+    RpcMessageList responses;
+    for(auto& item : msg->items()){
       Hash hash = item.GetHash();
-      SESSION_LOG(INFO, this) << "searching for: " << hash;
-      if(item.ItemExists()){
+#ifdef TOKEN_DEBUG
+      SESSION_LOG(INFO, this) << "searching for " << item << "....";
+#endif//TOKEN_DEBUG
+      if(item.Exists()){
         if(item.IsBlock()){
           BlockChain* chain = BlockChain::GetInstance();
 
@@ -67,28 +64,30 @@ namespace token{
           } else if(ObjectPool::HasBlock(hash)){
             block = ObjectPool::GetBlock(hash);
           } else{
-            SESSION_LOG(WARNING, this) << "cannot find block: " << hash;
-            response.push_back(NotFoundMessage::NewInstance());
+            SESSION_LOG(WARNING, this) << "couldn't find: " << item;
+
+            responses << NotFoundMessage::NewInstance("cannot find");
             break;
           }
-          response.push_back(BlockMessage::NewInstance(block));
+
+          responses << BlockMessage::NewInstance(block);
         } else if(item.IsTransaction()){
           if(!ObjectPool::HasTransaction(hash)){
-            SESSION_LOG(WARNING, this) << "cannot find transaction: " << hash;
-            response.push_back(NotFoundMessage::NewInstance());
+            SESSION_LOG(WARNING, this) << "couldn't find: " << item;
+
+            responses << NotFoundMessage::NewInstance("cannot find");
             break;
           }
 
           TransactionPtr tx = ObjectPool::GetTransaction(hash);
-          response.push_back(TransactionMessage::NewInstance(tx));//TODO: fix
+          responses << TransactionMessage::NewInstance(tx);
         }
       } else{
-        Send(NotFoundMessage::NewInstance());
-        return;
+        responses << NotFoundMessage::NewInstance("cannot find");
       }
     }
 
-    Send(response);
+    return Send(responses);
   }
 
 #ifdef TOKEN_DEBUG
@@ -137,7 +136,7 @@ namespace token{
 #ifdef TOKEN_DEBUG
       SESSION_LOG(INFO, this) << "cannot find proposed block in pool, requesting block: " << hash;
 #endif//TOKEN_DEBUG
-      responses << GetDataMessage::NewRequestForBlock(hash);
+      responses << GetDataMessage::ForBlock(hash);
     }
 
     if(!miner->GetActiveProposal()->OnPrepare())
@@ -193,24 +192,27 @@ namespace token{
     }
   }
 
-  void ServerSession::OnInventoryMessage(const InventoryMessagePtr& msg){
-    std::vector<InventoryItem> items;
-    if(!msg->GetItems(items)){
-      SESSION_LOG(WARNING, this) << "couldn't get items from inventory message";
-      return;
-    }
+  void ServerSession::OnInventoryListMessage(const InventoryListMessagePtr& msg){
+    InventoryItems& items = msg->items();
+#ifdef TOKEN_DEBUG
+    SESSION_LOG(INFO, this) << "received an inventory of " << items.size() << " items, resolving....";
+#endif//TOKEN_DEBUG
 
-    std::vector<InventoryItem> needed;
+    InventoryItems needed;
     for(auto& item : items){
-      SESSION_LOG(INFO, this) << "checking for " << item;
-      if(!item.ItemExists()){
-        SESSION_LOG(INFO, this) << "not found, requesting....";
-        needed.push_back(item);
+      if(!item.Exists()){
+#ifdef TOKEN_DEBUG
+        SESSION_LOG(INFO, this) << item << " wasn't found, requesting....";
+#endif//TOKEN_DEBUG
+        needed << item;
       }
     }
 
-    SESSION_LOG(INFO, this) << "downloading " << needed.size() << "/" << items.size() << " items from inventory....";
-    if(!needed.empty()) Send(GetDataMessage::NewInstance(needed));
+#ifdef TOKEN_DEBUG
+    SESSION_LOG(INFO, this) << "resolving " << needed.size() << "/" << items.size() << " items from peer....";
+#endif//TOKEN_DEBUG
+    if(!needed.empty())
+      Send(GetDataMessage::NewInstance(needed));
   }
 
   //TODO: optimize
@@ -220,7 +222,7 @@ namespace token{
     Hash start = msg->GetHeadHash();
     Hash stop = msg->GetStopHash();
 
-    std::vector<InventoryItem> items;
+    InventoryItems items;
     if(stop.IsNull()){
       intptr_t amt = std::min(GetBlocksMessage::kMaxNumberOfBlocks, chain->GetHead()->GetHeight());
       SESSION_LOG(INFO, this) << "sending " << (amt + 1) << " blocks...";
@@ -232,12 +234,14 @@ namespace token{
         idx <= stop_block->GetHeight();
         idx++){
         BlockPtr block = chain->GetBlock(idx);
+
         SESSION_LOG(INFO, this) << "adding " << block;
-        items.push_back(InventoryItem(block));
+
+        items << InventoryItem::Of(block);
       }
     }
 
-    Send(InventoryMessage::NewInstance(items));
+    Send(InventoryListMessage::NewInstance(items));
   }
 
   void ServerSession::OnNotFoundMessage(const NotFoundMessagePtr& msg){

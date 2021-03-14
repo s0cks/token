@@ -212,6 +212,7 @@ main(int argc, char **argv){
   #endif//TOKEN_ENABLE_REST_SERVICE
 
 #ifdef TOKEN_DEBUG
+  sleep(3);
   LOG(INFO) << "current time: " << FormatTimestampReadable(Clock::now());
   LOG(INFO) << "home: " << TOKEN_BLOCKCHAIN_HOME;
   LOG(INFO) << "node: " << ConfigurationManager::GetNodeID();

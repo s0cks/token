@@ -123,9 +123,7 @@ namespace token{
       InventoryMessageTest<GetDataMessage>(){}
 
     GetDataMessagePtr CreateMessage() const{
-      std::vector<InventoryItem> items = {
-        InventoryItem(InventoryItem::kBlock, Hash::GenerateNonce()),
-      };
+      InventoryItems items = { InventoryItem(Type::kBlock, Hash::GenerateNonce()) };
       return GetDataMessage::NewInstance(items);
     }
    public:

@@ -1,22 +1,25 @@
 #ifdef TOKEN_ENABLE_REST_SERVICE
 
+#include "blockchain.h"
 #include "http/http_service_rest.h"
-#include "http/http_session.h"
-
-#include "http/http_controller_pool.h"
-#include "http/http_controller_chain.h"
-#include "http/http_controller_peers.h"
-#include "http/http_controller_wallet.h"
 
 namespace token{
   static HttpRestService instance;
 
   HttpRestService::HttpRestService(uv_loop_t* loop):
-    HttpService(loop){
-    PoolController::Initialize(&router_);
-    ChainController::Initialize(&router_);
-    WalletController::Initialize(&router_);
-    PeerController::Initialize(&router_);
+    HttpService(loop),
+    pool_(std::make_shared<PoolController>()),
+    chain_(std::make_shared<ChainController>(BlockChain::GetInstance())),
+    wallet_(std::make_shared<WalletController>()){
+
+    if(!GetPoolController()->Initialize(&router_))
+      LOG(WARNING) << "couldn't initialize the pool controller.";
+
+    if(!GetChainController()->Initialize(&router_))
+      LOG(WARNING) << "couldn't initialize the chain controller.";
+
+    if(!GetWalletController()->Initialize(&router_))
+      LOG(WARNING) << "couldn't initialize the wallet controller.";
   }
 
   bool HttpRestService::Start(){

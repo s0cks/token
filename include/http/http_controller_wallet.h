@@ -6,20 +6,30 @@
 #include "http/http_controller.h"
 
 namespace token{
+#define FOR_EACH_WALLET_CONTROLLER_ENDPOINT(V) \
+  V(GET, "/wallet/:user", GetUserWallet)       \
+  V(GET, "/wallet/:user/tokens/:hash", GetUserWalletTokenCode) \
+  V(POST, "/wallet/:user/spend", PostUserWalletSpend)
+
   class WalletController : HttpController{
-   private:
-    WalletController() = delete;
+   protected:
+#define DECLARE_ENDPOINT(Method, Path, Name) \
+    HTTP_CONTROLLER_ENDPOINT(Name);
 
-    HTTP_CONTROLLER_ENDPOINT(GetUserWallet);
-    HTTP_CONTROLLER_ENDPOINT(PostUserWalletSpend);
-    HTTP_CONTROLLER_ENDPOINT(GetUserWalletTokenCode);
+    FOR_EACH_WALLET_CONTROLLER_ENDPOINT(DECLARE_ENDPOINT)
+#undef DECLARE_ENDPOINT
    public:
-    ~WalletController() = delete;
+    WalletController():
+      HttpController(){}
+    ~WalletController() = default;
 
-    HTTP_CONTROLLER_INIT(){
-      HTTP_CONTROLLER_GET("/wallet/:user", GetUserWallet);
-      HTTP_CONTROLLER_POST("/wallet/:user/spend", PostUserWalletSpend);
-      HTTP_CONTROLLER_GET("/wallet/:user/tokens/:hash", GetUserWalletTokenCode);
+    bool Initialize(HttpRouter* router){
+#define REGISTER_ENDPOINT(Method, Path, Name) \
+      HTTP_CONTROLLER_##Method(Path, Name);
+
+      FOR_EACH_WALLET_CONTROLLER_ENDPOINT(REGISTER_ENDPOINT)
+#undef REGISTER_ENDPOINT
+      return true;
     }
   };
 }

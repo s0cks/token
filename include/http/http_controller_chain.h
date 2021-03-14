@@ -6,20 +6,38 @@
 #include "http/http_controller.h"
 
 namespace token{
+#define FOR_EACH_CHAIN_CONTROLLER_ENDPOINT(V) \
+  V(GET, "/chain", GetBlockChain)                            \
+  V(GET, "/chain/head", GetBlockChainHead)                        \
+  V(GET, "/chain/data/:hash", GetBlockChainBlock)
+
+  class BlockChain;
   class ChainController : HttpController{
-   private:
-    ChainController() = delete;
+   protected:
+    BlockChain* chain_;
 
-    HTTP_CONTROLLER_ENDPOINT(GetBlockChain);
-    HTTP_CONTROLLER_ENDPOINT(GetBlockChainHead);
-    HTTP_CONTROLLER_ENDPOINT(GetBlockChainBlock);
+    BlockChain* GetChain() const{
+      return chain_;
+    }
    public:
-    ~ChainController() = delete;
+    ChainController(BlockChain* chain):
+      HttpController(),
+      chain_(chain){}
+    ~ChainController() = default;
 
-    HTTP_CONTROLLER_INIT(){
-      HTTP_CONTROLLER_GET("/chain", GetBlockChain);
-      HTTP_CONTROLLER_GET("/chain/head", GetBlockChainHead);
-      HTTP_CONTROLLER_GET("/chain/data/:hash", GetBlockChainBlock);
+#define DECLARE_ENDPOINT(Method, Path, Name) \
+    HTTP_CONTROLLER_ENDPOINT(Name);
+
+    FOR_EACH_CHAIN_CONTROLLER_ENDPOINT(DECLARE_ENDPOINT)
+#undef DECLARE_ENDPOINT
+
+    bool Initialize(HttpRouter* router){
+#define REGISTER_ENDPOINT(Method, Path, Name) \
+      HTTP_CONTROLLER_##Method(Path, Name);
+
+      FOR_EACH_CHAIN_CONTROLLER_ENDPOINT(REGISTER_ENDPOINT)
+#undef REGISTER_ENDPOINT
+      return true;
     }
   };
 }

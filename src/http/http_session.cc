@@ -20,8 +20,10 @@ namespace token{
       // weirdness :(
       request->SetPathParameters(match.GetPathParameters());
       request->SetQueryParameters(match.GetQueryParameters());
-      HttpRouteHandler handler = match.GetHandler();
-      handler(this, request);
+
+      HttpRoute& route = match.GetRoute();
+      HttpRouteHandler handler = route.GetHandler();
+      handler(route.GetOwner(), this, request);
     }
   }
 }

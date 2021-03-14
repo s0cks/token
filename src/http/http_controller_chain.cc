@@ -5,8 +5,14 @@
 #include "http/http_controller_chain.h"
 
 namespace token{
-  void ChainController::HandleGetBlockChain(HttpSession* session, const HttpRequestPtr& request){
-    BlockChain* chain = BlockChain::GetInstance();
+#define DEFINE_ENDPOINT_HANDLER(Method, Path, Name) \
+  HTTP_CONTROLLER_ROUTE_HANDLER(ChainController, Name);
+
+  FOR_EACH_CHAIN_CONTROLLER_ENDPOINT(DEFINE_ENDPOINT_HANDLER)
+#undef DEFINE_ENDPOINT_HANDLER
+
+  HTTP_CONTROLLER_ENDPOINT_HANDLER(ChainController, GetBlockChain){
+    BlockChain* chain = GetChain();
 
     Json::String body;
     Json::Writer writer(body);
@@ -15,15 +21,15 @@ namespace token{
     return session->Send(NewOkResponse(session, body));
   }
 
-  void ChainController::HandleGetBlockChainHead(HttpSession* session, const HttpRequestPtr& request){
-    BlockChain* chain = BlockChain::GetInstance();
+  HTTP_CONTROLLER_ENDPOINT_HANDLER(ChainController, GetBlockChainHead){
+    BlockChain* chain = GetChain();
     BlockPtr head = chain->GetHead();
     HttpResponsePtr response = NewOkResponse(session, head);
     return session->Send(response);
   }
 
-  void ChainController::HandleGetBlockChainBlock(HttpSession* session, const HttpRequestPtr& request){
-    BlockChain* chain = BlockChain::GetInstance();
+  HTTP_CONTROLLER_ENDPOINT_HANDLER(ChainController, GetBlockChainBlock){
+    BlockChain* chain = GetChain();
 
     Hash hash = request->GetHashParameterValue();
     if(!chain->HasBlock(hash))

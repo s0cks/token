@@ -54,7 +54,7 @@ find_package(LevelDB REQUIRED)
 find_package(Glog REQUIRED)
 find_package(Gflags REQUIRED)
 find_package(GTest REQUIRED)
-find_package(Libuv REQUIRED)
+find_package(libuv REQUIRED)
 find_package(HttpParser REQUIRED)
 find_package(ZXing REQUIRED)
 

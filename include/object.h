@@ -29,13 +29,13 @@ namespace token{
   V(Rejected)
 
 #define FOR_EACH_MESSAGE_TYPE(V) \
-  V(Version) \
-  V(Verack) \
-  V(GetData) \
-  V(GetBlocks) \
-  V(Block) \
-  V(Transaction) \
-  V(Inventory) \
+  V(Version)                     \
+  V(Verack)                      \
+  V(GetData)                     \
+  V(GetBlocks)                   \
+  V(Block)                       \
+  V(Transaction)                 \
+  V(InventoryList)               \
   V(NotFound)                    \
   FOR_EACH_PAXOS_MESSAGE_TYPE(V)
 

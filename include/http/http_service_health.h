@@ -4,12 +4,19 @@
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
 
 #include "http/http_service.h"
+#include "http/http_controller_health.h"
 
 namespace token{
   class HttpHealthService : HttpService{
+   protected:
+    std::shared_ptr<HealthController> health_;
    public:
     HttpHealthService(uv_loop_t* loop=uv_loop_new());
     ~HttpHealthService() = default;
+
+    std::shared_ptr<HealthController> GetHealthController() const{
+      return health_;
+    }
 
     ServerPort GetPort() const{
       return FLAGS_healthcheck_port;

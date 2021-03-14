@@ -128,7 +128,7 @@ namespace token{
     BlockHeader& blk = proposal->raw().GetValue();
 
     LOG(INFO) << "broadcasting newly discovered block hash: " << blk;
-    session->Send(InventoryMessage::NewInstance(blk));
+    session->Send(InventoryListMessage::Of(blk));
   }
 
   void PeerSession::OnPrepare(uv_async_t* handle){
@@ -286,44 +286,53 @@ namespace token{
   void PeerSession::OnGetDataMessage(const GetDataMessagePtr& msg){
     BlockChain* chain = BlockChain::GetInstance();
 
-    std::vector<InventoryItem> items;
-    if(!msg->GetItems(items)){
-      LOG(WARNING) << "cannot get items from message";
-      return;
-    }
+#ifdef TOKEN_DEBUG
+    SESSION_LOG(INFO, this) << "getting " << msg->GetNumberOfItems() << " items....";
+#endif//TOKEN_DEBUG
 
-    LOG(INFO) << "getting " << items.size() << " items....";
-    std::vector<RpcMessagePtr> response;
-    for(auto& item : items){
+    RpcMessageList responses;
+    for(auto& item : msg->items()){
+#ifdef TOKEN_DEBUG
+      SESSION_LOG(INFO, this) << "resolving " << item << "....";
+#endif//TOKEN_DEBUG
+
       Hash hash = item.GetHash();
-      LOG(INFO) << "resolving item : " << hash;
       if(item.IsBlock()){
         BlockPtr block;
         if(chain->HasBlock(hash)){
-          LOG(INFO) << "item " << hash << " found in block chain";
+#ifdef TOKEN_DEBUG
+          SESSION_LOG(INFO, this) << item << " was found in the block chain.";
+#endif//TOKEN_DEBUG
+
           block = chain->GetBlock(hash);
         } else if(ObjectPool::HasBlock(hash)){
-          LOG(INFO) << "item " << hash << " found in block pool";
+#ifdef TOKEN_DEBUG
+          SESSION_LOG(INFO, this) << item << " was found in the pool.";
+#endif//TOKEN_DEBUG
+
           block = ObjectPool::GetBlock(hash);
         } else{
-          LOG(WARNING) << "cannot find block: " << hash;
-          response.push_back(NotFoundMessage::NewInstance());
+          SESSION_LOG(WARNING, this) << "cannot find " << item << "!";
+
+          responses << NotFoundMessage::NewInstance("cannot find item");
           break;
         }
 
-        response.push_back(BlockMessage::NewInstance(block));
+        responses << BlockMessage::NewInstance(block);
       } else if(item.IsTransaction()){
         if(!ObjectPool::HasTransaction(hash)){
-          LOG(WARNING) << "cannot find transaction: " << hash;
-          response.push_back(NotFoundMessage::NewInstance());
+          SESSION_LOG(WARNING, this) << "cannot find " << item << "!";
+
+          responses << NotFoundMessage::NewInstance();
           break;
         }
 
         TransactionPtr tx = ObjectPool::GetTransaction(hash);
-        response.push_back(TransactionMessage::NewInstance(tx));
+        responses << TransactionMessage::NewInstance(tx);
       }
     }
-    Send(response);
+
+    Send(responses);
   }
 
   void PeerSession::OnBlockMessage(const BlockMessagePtr& msg){
@@ -341,22 +350,20 @@ namespace token{
     LOG(WARNING) << "(" << GetInfo() << "): " << msg->GetMessage();
   }
 
-  void PeerSession::OnInventoryMessage(const InventoryMessagePtr& msg){
-    std::vector<InventoryItem> items;
-    if(!msg->GetItems(items)){
-      LOG(WARNING) << "couldn't get items from inventory message";
-      return;
-    }
+  void PeerSession::OnInventoryListMessage(const InventoryListMessagePtr& msg){
+    InventoryItems& items = msg->items();
 
-    std::vector<InventoryItem> needed;
+    InventoryItems needed;
     for(auto& item : items){
-      if(!item.ItemExists()){
-        needed.push_back(item);
+      if(!item.Exists()){
+        needed << item;
       }
     }
 
-    LOG(INFO) << "downloading " << needed.size() << "/" << items.size() << " items from inventory....";
-    Send(GetDataMessage::NewInstance(items));
+#ifdef TOKEN_DEBUG
+    SESSION_LOG(INFO, this) << "requesting " << needed.size() << "/" << items.size() << " items from peer....";
+#endif//TOKEN_DEBUG
+    Send(GetDataMessage::NewInstance(needed));
   }
 
   void PeerSession::OnGetBlocksMessage(const GetBlocksMessagePtr& msg){}
