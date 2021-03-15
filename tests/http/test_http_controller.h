@@ -2,7 +2,7 @@
 #define TOKEN_TEST_HTTP_CONTROLLER_H
 
 #include "test_suite.h"
-#include "mocks/mock_http_session.h"
+#include "mock/mock_http_session.h"
 
 namespace token{
   static inline HttpRequestPtr

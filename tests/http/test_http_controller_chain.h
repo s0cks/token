@@ -1,7 +1,7 @@
 #ifndef TOKEN_TEST_HTTP_CONTROLLER_CHAIN_H
 #define TOKEN_TEST_HTTP_CONTROLLER_CHAIN_H
 
-#include "mocks/mock_blockchain.h"
+#include "mock/mock_blockchain.h"
 #include "http/test_http_controller.h"
 #include "http/http_controller_chain.h"
 
