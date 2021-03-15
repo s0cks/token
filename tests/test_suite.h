@@ -53,6 +53,14 @@ namespace token{
    public:
     virtual ~IntegrationTest() = default;
   };
+
+  MATCHER_P(IsHash, hash, "Hashes don't match"){
+    return arg == hash;
+  }
+
+  MATCHER_P(IsUser, name, "The user doesn't match"){
+    return arg == User(name);
+  }
 }
 
 #endif //TOKEN_TEST_SUITE_H

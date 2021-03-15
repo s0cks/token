@@ -10,7 +10,7 @@ namespace token{
     HttpService(loop),
     pool_(std::make_shared<PoolController>()),
     chain_(std::make_shared<ChainController>(BlockChain::GetInstance())),
-    wallet_(std::make_shared<WalletController>()){
+    wallet_(std::make_shared<WalletController>(WalletManager::GetInstance())){
 
     if(!GetPoolController()->Initialize(&router_))
       LOG(WARNING) << "couldn't initialize the pool controller.";

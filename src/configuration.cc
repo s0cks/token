@@ -200,6 +200,12 @@ namespace token{
   }
 
   bool ConfigurationManager::GetUUID(const std::string& name, UUID& val) const{
+    ConfigurationManager* cfg_mngr = ConfigurationManager::GetInstance();
+    if(!cfg_mngr->IsInitializedState()){
+      val = UUID();
+      return true;//TODO: fixme
+    }
+
     std::string value;
 
     leveldb::Status status;

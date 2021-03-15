@@ -92,12 +92,16 @@ namespace token{
       return body_;
     }
 
+    std::string GetBodyAsString() const{
+      return std::string(body_->data(), body_->GetWrittenBytes());
+    }
+
     std::string ToString() const{
       std::stringstream ss;
       ss << "HttpResponse(";
         ss << "status_code=" << status_code_ << ", ";
         ss << "headers=[], ";
-        ss << "body=" << std::string(body_->data(), body_->GetWrittenBytes());
+        ss << "body=" << GetBodyAsString();
       ss << ")";
       return ss.str();
     }

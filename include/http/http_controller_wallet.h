@@ -3,6 +3,7 @@
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
 
+#include "wallet.h"
 #include "http/http_controller.h"
 
 namespace token{
@@ -13,15 +14,22 @@ namespace token{
 
   class WalletController : HttpController{
    protected:
+    WalletManager* wallets_;
+
+    WalletManager* GetWalletManager() const{
+      return wallets_;
+    }
+   public:
+    WalletController(WalletManager* wallets):
+      HttpController(),
+      wallets_(wallets){}
+    ~WalletController() = default;
+
 #define DECLARE_ENDPOINT(Method, Path, Name) \
     HTTP_CONTROLLER_ENDPOINT(Name);
 
     FOR_EACH_WALLET_CONTROLLER_ENDPOINT(DECLARE_ENDPOINT)
 #undef DECLARE_ENDPOINT
-   public:
-    WalletController():
-      HttpController(){}
-    ~WalletController() = default;
 
     bool Initialize(HttpRouter* router){
 #define REGISTER_ENDPOINT(Method, Path, Name) \

@@ -53,10 +53,12 @@ find_package(Crypto++ REQUIRED)
 find_package(LevelDB REQUIRED)
 find_package(Glog REQUIRED)
 find_package(Gflags REQUIRED)
-find_package(GTest REQUIRED)
 find_package(libuv REQUIRED)
 find_package(HttpParser REQUIRED)
 find_package(ZXing REQUIRED)
+
+find_package(GMock REQUIRED)
+find_package(GTest REQUIRED)
 
 if(ENABLE_COMPRESSION)
   find_package(ZLIB REQUIRED)
@@ -90,10 +92,6 @@ set(TOKEN_LIBRARIES
   ${HTTPPARSER_LIBRARIES} # http-parser
 )
 
-if(CMAKE_BUILD_TYPE MATCHES Debug)
-  message(STATUS "Compiling token w/ the following libraries: ${TOKEN_LIBRARIES}")
-endif()
-
 # token Ledger Library
 add_library("token-ledger" SHARED ${TOKEN_HEADERS} ${TOKEN_SOURCES})
 set_target_properties("token-ledger" PROPERTIES VERSION ${TOKEN_VERSION})
@@ -109,7 +107,7 @@ target_compile_options(token-node PRIVATE -Werror -Wall)
 if(CMAKE_BUILD_TYPE MATCHES Debug)
   # token Unit Tests
   add_executable("token-tests" tests.cc ${TOKEN_TEST_SOURCES})
-  target_link_libraries("token-tests" "token-ledger" ${GTEST_BOTH_LIBRARIES} ${TOKEN_LIBRARIES})
+  target_link_libraries("token-tests" "token-ledger" ${GTEST_LIBRARIES} ${GMOCK_LIBRARIES} ${TOKEN_LIBRARIES})
   add_test("token-tests" "token-tests")
 endif()
 

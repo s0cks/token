@@ -142,6 +142,11 @@ namespace token{
       delete data;
     }
    public:
+    Session():
+      uuid_(),
+      loop_(nullptr),
+      handle_(),
+      state_(Session::kDisconnectedState){}
     Session(uv_loop_t* loop, const UUID& uuid):
       uuid_(uuid),
       loop_(loop),

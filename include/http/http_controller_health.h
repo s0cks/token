@@ -14,15 +14,16 @@ namespace token{
   class HealthController : HttpController{
    protected:
 
+   public:
+    HealthController():
+      HttpController(){}
+    ~HealthController() = default;
+
 #define DECLARE_ENDPOINT(Method, Path, Name) \
     HTTP_CONTROLLER_ENDPOINT(Name);
 
     FOR_EACH_HEALTH_CONTROLLER_ENDPOINT(DECLARE_ENDPOINT)
 #undef DECLARE_ENDPOINT
-   public:
-    HealthController():
-      HttpController(){}
-    ~HealthController() = default;
 
     bool Initialize(HttpRouter* router){
 #define REGISTER_ENDPOINT(Method, Path, Name) \

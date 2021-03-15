@@ -91,6 +91,14 @@ namespace token{
 
   HTTP_CONTROLLER_ENDPOINT_HANDLER(WalletController, GetUserWallet){
     User user = request->GetUserParameterValue();
+    if(!GetWalletManager()->HasWallet(user)){
+      std::stringstream ss;
+      ss << "cannot find wallet for: " << user;
+      return session->Send(NewNoContentResponse(session, ss));
+    }
+
+    Wallet wallet = GetWalletManager()->GetUserWallet(user);
+
     Json::String body;
     Json::Writer writer(body);
     writer.StartObject();
@@ -98,15 +106,8 @@ namespace token{
       writer.Key("data");
       writer.StartObject();
       {
-        writer.Key("user");
-        user.Write(writer);
-
-        writer.Key("wallet");
-        if(!WalletManager::GetInstance()->GetWallet(user, writer)){
-          std::stringstream ss;
-          ss << "Cannot find wallet for: " << user;
-          return session->Send(NewNoContentResponse(session, ss));
-        }
+        Json::SetField(writer, "user", user);
+        Json::SetField(writer, "wallet", wallet);
       }
       writer.EndObject();
     }

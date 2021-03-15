@@ -357,7 +357,7 @@ namespace token{
      * @param hash
      * @return
      */
-    bool HasBlock(const Hash& hash) const;
+    virtual bool HasBlock(const Hash& hash) const;
 
     /**
      * TODO
@@ -377,7 +377,7 @@ namespace token{
     /**
      * TODO
      */
-     bool VisitBlocks(BlockChainBlockVisitor* vis) const;
+    bool VisitBlocks(BlockChainBlockVisitor* vis) const;
 
     /**
      * TODO
@@ -391,7 +391,7 @@ namespace token{
      * @param hash
      * @return
      */
-    BlockPtr GetBlock(const Hash& hash) const;
+    virtual BlockPtr GetBlock(const Hash& hash) const;
 
     /**
      * TODO

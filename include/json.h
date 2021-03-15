@@ -62,6 +62,12 @@ namespace token{
       return SetField(writer, name, val.ToString());
     }
 
+    static inline bool
+    Append(Writer& writer, const Hash& hash){
+      std::string hex = hash.HexString();
+      return writer.String(hex.data(), hex.length());
+    }
+
     template<typename T>
     static inline bool
     SetField(Writer& writer, const std::string& name, const std::vector<T>& cont){
@@ -75,10 +81,19 @@ namespace token{
       return writer.EndArray();
     }
 
+    template<class T, class Hasher, class Equals>
     static inline bool
-    Append(Writer& writer, const Hash& hash){
-      std::string hex = hash.HexString();
-      return writer.String(hex.data(), hex.length());
+    SetField(Writer& writer, const std::string& name, const std::unordered_set<T, Hasher, Equals>& cont){
+      if(!writer.Key(name.data(), name.length()))
+        return false;
+
+      if(!writer.StartArray())
+        return false;
+      for(auto& it : cont){
+        if(!Append(writer, it))
+          return false;
+      }
+      return writer.EndArray();
     }
   }
 }

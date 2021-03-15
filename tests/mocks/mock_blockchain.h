@@ -11,7 +11,9 @@ namespace token{
       BlockChain(){}
     ~MockBlockChain() = default;
 
+    MOCK_METHOD(bool, HasBlock, (const Hash&), (const));
     MOCK_METHOD(BlockPtr, GetHead, (), (const));
+    MOCK_METHOD(BlockPtr, GetBlock, (const Hash&), (const));
   };
 }
 

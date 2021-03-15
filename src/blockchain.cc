@@ -304,12 +304,11 @@ namespace token{
   bool BlockChain::GetBlocks(Json::Writer& writer) const{
     writer.StartArray();
     {
-      Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
+      BlockPtr current = GetHead();
       do{
-        BlockPtr blk = GetBlock(current);
-        Json::Append(writer, current);
-        current = blk->GetPreviousHash();
-      } while(!current.IsNull());
+        Json::Append(writer, current->GetHash());
+        current = GetBlock(current->GetPreviousHash());
+      } while(current);
     }
     writer.EndArray();
     return true;
