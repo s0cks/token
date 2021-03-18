@@ -37,6 +37,7 @@ namespace token{
   V(Transaction)                 \
   V(InventoryList)               \
   V(NotFound)                    \
+  V(NotSupported)                \
   FOR_EACH_PAXOS_MESSAGE_TYPE(V)
 
 #define FOR_EACH_SERIALIZABLE_TYPE(V) \

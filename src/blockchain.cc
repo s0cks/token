@@ -314,8 +314,12 @@ namespace token{
     return true;
   }
 
-  static BlockChain instance;
   static JobQueue queue_(JobScheduler::kMaxNumberOfJobs);
+
+  BlockChainPtr BlockChain::GetInstance(){
+    static std::shared_ptr<BlockChain> instance = std::make_shared<BlockChain>();
+    return instance;
+  }
 
   bool BlockChain::Initialize(const std::string& filename){
     if(!JobScheduler::RegisterQueue(GetCurrentThread(), &queue_)){
@@ -324,14 +328,10 @@ namespace token{
     }
 
     leveldb::Status status;
-    if(!(status = instance.InitializeIndex(filename)).ok()){
+    if(!(status = GetInstance()->InitializeIndex(filename)).ok()){
       LOG(ERROR) << "couldn't initialize the BlockChain in " << filename << ": " << status.ToString();
       return false;
     }
     return true;
-  }
-
-  BlockChain* BlockChain::GetInstance(){
-    return &instance;
   }
 }

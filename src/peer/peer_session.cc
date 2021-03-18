@@ -207,7 +207,7 @@ namespace token{
     SESSION_LOG(INFO, this) << "remote <HEAD>: " << msg->GetHead();
 #endif//TOKEN_DEBUG
 
-    BlockChain* chain = BlockChain::GetInstance();
+    BlockChainPtr chain = BlockChain::GetInstance();
     if(IsConnecting()){
       Peer info(msg->GetID(), msg->GetCallbackAddress());
       SESSION_LOG(INFO, this) << "connected to peer: " << info;
@@ -284,7 +284,7 @@ namespace token{
   }
 
   void PeerSession::OnGetDataMessage(const GetDataMessagePtr& msg){
-    BlockChain* chain = BlockChain::GetInstance();
+    BlockChainPtr chain = BlockChain::GetInstance();
 
 #ifdef TOKEN_DEBUG
     SESSION_LOG(INFO, this) << "getting " << msg->GetNumberOfItems() << " items....";
@@ -367,6 +367,10 @@ namespace token{
   }
 
   void PeerSession::OnGetBlocksMessage(const GetBlocksMessagePtr& msg){}
+
+  void PeerSession::OnNotSupportedMessage(const std::shared_ptr<NotSupportedMessage>& msg){
+    NOT_IMPLEMENTED(WARNING);
+  }
 }
 
 #endif//TOKEN_ENABLE_SERVER

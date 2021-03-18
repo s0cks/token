@@ -11,7 +11,7 @@ namespace token{
     BlockPtr parent_;
     TransactionList transactions_;
    public:
-    BlockBuilder(BlockChain* chain):
+    BlockBuilder(const BlockChainPtr& chain):
       ObjectPoolTransactionVisitor(),
       parent_(chain->GetHead()),
       transactions_(){}

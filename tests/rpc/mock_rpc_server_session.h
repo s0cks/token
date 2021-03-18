@@ -8,7 +8,7 @@
 namespace token{
   class MockServerSession : public ServerSession{
    public:
-    MockServerSession(MockBlockChain* chain):
+    MockServerSession(const BlockChainPtr& chain):
       ServerSession(chain){}
     ~MockServerSession() = default;
 

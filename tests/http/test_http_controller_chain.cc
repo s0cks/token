@@ -7,38 +7,38 @@ namespace token{
 
   TEST_F(ChainControllerTest, TestGetBlockChainHead){
     BlockPtr head = Block::Genesis();
-    EXPECT_CALL(chain_, GetHead())
+    EXPECT_CALL(*chain_, GetHead())
         .Times(AtLeast(1))
         .WillRepeatedly(Return(head));
 
     MockHttpSession session;
     EXPECT_CALL(session, Send(ResponseIs(HttpStatusCode::kHttpOk, "{\"data\":{\"timestamp\":0,\"version\":\"1.0.0\",\"height\":0,\"previous_hash\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"hash\":\"A05C67771FB1A82002A7580CAAC5A1B8511B3985EB341319ECFF9FCCA75352EC\",\"transactions\":3}}")))
         .Times(AtLeast(1));
-    controller_.OnGetBlockChainHead(&session, nullptr);
+    GetController()->OnGetBlockChainHead(&session, nullptr);
   }
 
   TEST_F(ChainControllerTest, TestGetBlockChain){
     BlockPtr head = Block::Genesis();
-    EXPECT_CALL(chain_, GetHead())
+    EXPECT_CALL(*chain_, GetHead())
       .Times(AtLeast(1))
       .WillRepeatedly(Return(head));
-    EXPECT_CALL(chain_, GetBlock(IsHash(Hash())))
+    EXPECT_CALL(*chain_, GetBlock(IsHash(Hash())))
       .Times(AtLeast(1))
       .WillRepeatedly(Return(nullptr));
 
     MockHttpSession session;
     EXPECT_CALL(session, Send(ResponseIs(HttpStatusCode::kHttpOk, "[\"A05C67771FB1A82002A7580CAAC5A1B8511B3985EB341319ECFF9FCCA75352EC\"]")))
         .Times(AtLeast(1));
-    controller_.OnGetBlockChain(&session, nullptr);
+    GetController()->OnGetBlockChain(&session, nullptr);
   }
 
   TEST_F(ChainControllerTest, TestGetBlockChainBlock){
     BlockPtr blk = Block::Genesis();
     Hash hash = blk->GetHash();
-    EXPECT_CALL(chain_, GetBlock(IsHash(hash)))
+    EXPECT_CALL(*chain_, GetBlock(IsHash(hash)))
       .Times(AtLeast(1))
       .WillRepeatedly(Return(blk));
-    EXPECT_CALL(chain_, HasBlock(IsHash(hash)))
+    EXPECT_CALL(*chain_, HasBlock(IsHash(hash)))
       .Times(AtLeast(1))
       .WillRepeatedly(Return(true));
 
@@ -50,6 +50,6 @@ namespace token{
 
     EXPECT_CALL(session, Send(ResponseIs(HttpStatusCode::kHttpOk, "{\"data\":{\"timestamp\":0,\"version\":\"1.0.0\",\"height\":0,\"previous_hash\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"hash\":\"A05C67771FB1A82002A7580CAAC5A1B8511B3985EB341319ECFF9FCCA75352EC\",\"transactions\":3}}")))
       .Times(AtLeast(1));
-    controller_.OnGetBlockChainBlock(&session, builder.Build());
+    GetController()->OnGetBlockChainBlock(&session, builder.Build());
   }
 }

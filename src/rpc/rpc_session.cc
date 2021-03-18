@@ -61,7 +61,7 @@ namespace token{
 #endif//TOKEN_DEBUG
       if(item.Exists()){
         if(item.IsBlock()){
-          BlockChain* chain = BlockChain::GetInstance();
+          BlockChainPtr chain = GetChain();
 
           BlockPtr block;
           if(chain->HasBlock(hash)){
@@ -222,7 +222,7 @@ namespace token{
 
   //TODO: optimize
   void ServerSession::OnGetBlocksMessage(const GetBlocksMessagePtr& msg){
-    BlockChain* chain = BlockChain::GetInstance();
+    BlockChainPtr chain = GetChain();
 
     Hash start = msg->GetHeadHash();
     Hash stop = msg->GetStopHash();
@@ -250,6 +250,10 @@ namespace token{
   }
 
   void ServerSession::OnNotFoundMessage(const NotFoundMessagePtr& msg){
+    NOT_IMPLEMENTED(WARNING);
+  }
+
+  void ServerSession::OnNotSupportedMessage(const NotSupportedMessagePtr& msg){
     NOT_IMPLEMENTED(WARNING);
   }
 }

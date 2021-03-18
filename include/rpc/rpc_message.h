@@ -64,6 +64,7 @@ namespace token{
 #include "rpc/rpc_message_inventory.h"
 #include "rpc/rpc_message_object.h"
 #include "rpc/rpc_message_getblocks.h"
+#include "rpc/rpc_message_notsupported.h"
 
 namespace token{
 #define DEFINE_RPC_MESSAGE_LIST_APPEND(Name) \

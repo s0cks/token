@@ -9,7 +9,7 @@ namespace token{
     Print("Stack Trace:\n");
 
     //TODO: implement
-    BlockChain* chain = BlockChain::GetInstance();
+    BlockChainPtr chain = BlockChain::GetInstance();
     if(!chain->IsInitialized()){
       Print("Block Chain: N/A\n");
     } else{

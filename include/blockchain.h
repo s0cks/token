@@ -23,6 +23,9 @@ namespace token{
     V(Initialized)                   \
     V(Synchronizing)
 
+  class BlockChain;
+  typedef std::shared_ptr<BlockChain> BlockChainPtr;
+
   static inline std::string
   GetBlockChainDirectory(){
     std::stringstream ss;
@@ -464,7 +467,7 @@ namespace token{
     FOR_EACH_BLOCKCHAIN_STATE(DEFINE_STATE_CHECK)
 #undef DEFINE_STATE_CHECK
 
-    static BlockChain* GetInstance();
+    static BlockChainPtr GetInstance();
     static bool Initialize(const std::string& filename=GetBlockChainDirectory());
   };
 

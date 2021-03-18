@@ -11,11 +11,10 @@ namespace token{
   class SynchronizeJob : public Job{
    private:
     RpcSession* session_;
-    BlockChain* chain_;
+    BlockChainPtr chain_;
     BlockHeader head_;
 
-
-    inline BlockChain*
+    inline BlockChainPtr
     GetChain() const{
       return chain_;
     }
@@ -63,12 +62,12 @@ namespace token{
       return Success("done.");
     }
    public:
-    SynchronizeJob(Job* parent, RpcSession* session, BlockChain* chain, const BlockHeader& head):
+    SynchronizeJob(Job* parent, RpcSession* session, const BlockChainPtr& chain, const BlockHeader& head):
       Job(parent, "SynchronizeJob"),
       session_(session),
       chain_(chain),
       head_(head){}
-    SynchronizeJob(RpcSession* session, BlockChain* chain, const BlockHeader& head):
+    SynchronizeJob(RpcSession* session, const BlockChainPtr& chain, const BlockHeader& head):
       SynchronizeJob(nullptr, session, chain, head){}
     ~SynchronizeJob() = default;
   };

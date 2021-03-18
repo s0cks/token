@@ -12,7 +12,7 @@ namespace token{
 #undef DEFINE_ENDPOINT_HANDLER
 
   HTTP_CONTROLLER_ENDPOINT_HANDLER(ChainController, GetBlockChain){
-    BlockChain* chain = GetChain();
+    BlockChainPtr chain = GetChain();
 
     Json::String body;
     Json::Writer writer(body);
@@ -22,14 +22,14 @@ namespace token{
   }
 
   HTTP_CONTROLLER_ENDPOINT_HANDLER(ChainController, GetBlockChainHead){
-    BlockChain* chain = GetChain();
+    BlockChainPtr chain = GetChain();
     BlockPtr head = chain->GetHead();
     HttpResponsePtr response = NewOkResponse(session, head);
     return session->Send(response);
   }
 
   HTTP_CONTROLLER_ENDPOINT_HANDLER(ChainController, GetBlockChainBlock){
-    BlockChain* chain = GetChain();
+    BlockChainPtr chain = GetChain();
 
     Hash hash = request->GetHashParameterValue();
     if(!chain->HasBlock(hash))

@@ -8,13 +8,23 @@
 namespace token{
   class ChainControllerTest : public HttpControllerTest{
    protected:
-    ChainController controller_;
-    MockBlockChain chain_;
+    std::shared_ptr<MockBlockChain> chain_;
+    std::shared_ptr<ChainController> controller_;
+
+    inline std::shared_ptr<MockBlockChain>
+    GetChain() const{
+      return chain_;
+    }
+
+    inline std::shared_ptr<ChainController>
+    GetController() const{
+      return controller_;
+    }
    public:
     ChainControllerTest():
       HttpControllerTest(),
-      controller_(&chain_),
-      chain_(){}
+      chain_(std::make_shared<MockBlockChain>()),
+      controller_(std::make_shared<ChainController>(chain_)){}
     ~ChainControllerTest() = default;
   };
 }

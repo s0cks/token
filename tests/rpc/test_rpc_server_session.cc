@@ -34,12 +34,12 @@ namespace token{
       head->GetHeader()
     );
 
-    MockBlockChain chain;
-    EXPECT_CALL(chain, GetHead())
+    std::shared_ptr<MockBlockChain> chain = std::make_shared<MockBlockChain>();
+    EXPECT_CALL(*chain, GetHead())
       .Times(1)
       .WillRepeatedly(testing::Return(head));
 
-    MockServerSession session(&chain);
+    MockServerSession session(chain);
     EXPECT_CALL(session, Send(IsVersionMessage(timestamp, client_type, version, nonce, node_id, head->GetHeader())))
       .Times(testing::AtLeast(1));
     session.OnVersionMessage(message);

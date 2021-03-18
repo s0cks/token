@@ -9,17 +9,17 @@ namespace token{
 
   class ServerSession : public RpcSession{
    public:
-    BlockChain* chain_;
+    BlockChainPtr chain_;
 
-    ServerSession(BlockChain* chain):
+    ServerSession(const BlockChainPtr& chain):
       RpcSession(),
       chain_(chain){}
-    ServerSession(uv_loop_t* loop, BlockChain* chain):
+    ServerSession(uv_loop_t* loop, const BlockChainPtr& chain):
       RpcSession(loop),
       chain_(chain){}
     ~ServerSession() = default;
 
-    BlockChain* GetChain() const{
+    BlockChainPtr GetChain() const{
       return chain_;
     }
 
@@ -56,18 +56,18 @@ namespace token{
 
   class LedgerServer : public Server<RpcMessage>{
    protected:
-    BlockChain* chain_;
+    BlockChainPtr chain_;
 
     ServerSession* CreateSession() const{
       return new ServerSession(GetLoop(), GetChain());
     }
    public:
-    LedgerServer(uv_loop_t* loop=uv_loop_new(), BlockChain* chain=BlockChain::GetInstance()):
+    LedgerServer(uv_loop_t* loop=uv_loop_new(), const BlockChainPtr& chain=BlockChain::GetInstance()):
       Server(loop, "rpc-server"),
       chain_(chain){}
     ~LedgerServer() = default;
 
-    BlockChain* GetChain() const{
+    BlockChainPtr GetChain() const{
       return chain_;
     }
 

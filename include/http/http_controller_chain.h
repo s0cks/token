@@ -14,13 +14,13 @@ namespace token{
   class BlockChain;
   class ChainController : HttpController{
    protected:
-    BlockChain* chain_;
+    BlockChainPtr chain_;
 
-    BlockChain* GetChain() const{
+    BlockChainPtr GetChain() const{
       return chain_;
     }
    public:
-    ChainController(BlockChain* chain):
+    ChainController(const BlockChainPtr& chain):
       HttpController(),
       chain_(chain){}
     ~ChainController() = default;

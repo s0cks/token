@@ -202,6 +202,19 @@ namespace token{
   public:
    ~RejectedMessageTest() = default;
  };
+
+ class NotSupportedMessageTest : public MessageTest<NotSupportedMessage>{
+  protected:
+   NotSupportedMessagePtr
+   CreateMessage() const{
+     return NotSupportedMessage::NewInstance("Not Supported");
+   }
+
+   NotSupportedMessageTest():
+    MessageTest<NotSupportedMessage>(){}
+  public:
+   ~NotSupportedMessageTest() = default;
+ };
 }
 
 #endif//TOKEN_TEST_MESSAGE_H
