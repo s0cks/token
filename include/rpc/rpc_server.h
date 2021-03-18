@@ -8,16 +8,25 @@ namespace token{
 #define ENVIRONMENT_TOKEN_CALLBACK_ADDRESS "TOKEN_CALLBACK_ADDRESS"
 
   class ServerSession : public RpcSession{
-    friend class LedgerServer;
-   private:
+   public:
+    BlockChain* chain_;
+
+    ServerSession(BlockChain* chain):
+      RpcSession(),
+      chain_(chain){}
+    ServerSession(uv_loop_t* loop, BlockChain* chain):
+      RpcSession(loop),
+      chain_(chain){}
+    ~ServerSession() = default;
+
+    BlockChain* GetChain() const{
+      return chain_;
+    }
+
 #define DECLARE_HANDLER(Name) \
-    void On##Name##Message(const std::shared_ptr<Name##Message>& msg);
+    virtual void On##Name##Message(const std::shared_ptr<Name##Message>& msg);
     FOR_EACH_MESSAGE_TYPE(DECLARE_HANDLER)
 #undef DECLARE_HANDLER
-   public:
-    ServerSession(uv_loop_t* loop):
-      RpcSession(loop){}
-    ~ServerSession() = default;
 
     bool SendPrepare(){
       NOT_IMPLEMENTED(WARNING);
@@ -47,13 +56,20 @@ namespace token{
 
   class LedgerServer : public Server<RpcMessage>{
    protected:
+    BlockChain* chain_;
+
     ServerSession* CreateSession() const{
-      return new ServerSession(GetLoop());
+      return new ServerSession(GetLoop(), GetChain());
     }
    public:
-    LedgerServer(uv_loop_t* loop=uv_loop_new()):
-      Server(loop, "rpc-server"){}
+    LedgerServer(uv_loop_t* loop=uv_loop_new(), BlockChain* chain=BlockChain::GetInstance()):
+      Server(loop, "rpc-server"),
+      chain_(chain){}
     ~LedgerServer() = default;
+
+    BlockChain* GetChain() const{
+      return chain_;
+    }
 
     ServerPort GetPort() const{
       return FLAGS_server_port;

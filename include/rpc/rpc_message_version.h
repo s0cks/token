@@ -37,6 +37,20 @@ namespace token{
     UUID node_id_;
     BlockHeader head_;
    public:
+    VersionMessage(const Timestamp& timestamp,
+                   const ClientType& client_type,
+                   const Version& version,
+                   const Hash& nonce,
+                   const UUID& node_id,
+                   const BlockHeader& head):
+       RpcMessage(),
+       timestamp_(timestamp),
+       client_type_(client_type),
+       version_(version),
+       nonce_(nonce),
+       node_id_(node_id),
+       head_(head){}
+    //TODO: remove
     VersionMessage(ClientType type,
                    const Version& version,
                    const UUID& node_id,
@@ -121,6 +135,16 @@ namespace token{
     static inline VersionMessagePtr
     NewInstance(const BufferPtr& buff){
       return std::make_shared<VersionMessage>(buff);
+    }
+
+    static inline VersionMessagePtr
+    NewInstance(const Timestamp& timestamp,
+                const ClientType& client_type,
+                const Version& version,
+                const Hash& nonce,
+                const UUID& node_id,
+                const BlockHeader& head){
+      return std::make_shared<VersionMessage>(timestamp, client_type, version, nonce, node_id, head);
     }
 
     static inline VersionMessagePtr

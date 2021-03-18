@@ -12,6 +12,8 @@ namespace token{
   template<class M>
   class Session;
 
+  class RpcSession;
+
   class RpcMessage;
   typedef std::shared_ptr<RpcMessage> RpcMessagePtr;
   typedef std::vector<RpcMessagePtr> RpcMessageList;

@@ -17,8 +17,13 @@ namespace token{
   void ServerSession::OnVersionMessage(const VersionMessagePtr& msg){
     // upon receiving a VersionMessage from a new client, respond w/ a VersionMessage
     // to initiate the connection handshake
+    Timestamp timestamp = Clock::now();
+    ClientType client_type = ClientType::kNode;
+    Version version = Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
+    Hash nonce = msg->GetNonce();
     UUID node_id = ConfigurationManager::GetNodeID();
-    Send(VersionMessage::NewInstance(node_id));
+    BlockPtr head = GetChain()->GetHead();
+    Send(VersionMessage::NewInstance(timestamp, client_type, version, nonce, node_id, head->GetHeader()));
   }
 
   //TODO:

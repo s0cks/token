@@ -3,7 +3,7 @@
 
 #include "wallet.h"
 #include "test_suite.h"
-#include "mocks/mock_wallet_manager.h"
+#include "mock/mock_wallet_manager.h"
 
 namespace token{
   class WalletTest : public ::testing::Test{
