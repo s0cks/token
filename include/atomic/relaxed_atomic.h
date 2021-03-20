@@ -9,7 +9,7 @@ namespace token{
    private:
     std::atomic<T> val_;
    public:
-    RelaxedAtomic(const T& init):
+    explicit RelaxedAtomic(const T& init):
       val_(init){}
     ~RelaxedAtomic() = default;
 
@@ -37,16 +37,16 @@ namespace token{
       return val_.compare_exchange_strong(expected, desired, order, order);
     }
 
-    operator T() const{
+    explicit operator T() const{
       return load();
     }
 
-    T operator=(T arg){
+    T operator=(T arg){ // NOLINT(misc-unconventional-assign-operator)
       store(arg);
       return arg;
     }
 
-    T operator=(const RelaxedAtomic& arg){
+    T operator=(const RelaxedAtomic& arg){ // NOLINT(misc-unconventional-assign-operator)
       T loaded = arg;
       store(loaded);
       return loaded;
