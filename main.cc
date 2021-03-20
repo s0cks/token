@@ -72,12 +72,15 @@ InitializeLogging(char *arg0){
   static inline bool
   AppendDummy(const std::string& user, int total_spends){
     using namespace token;
+
+    WalletManager* wallets = WalletManager::GetInstance();
+
     sleep(10);
 
     LOG(INFO) << "spending " << total_spends << " unclaimed transactions";
 
     Wallet wallet;
-    if(!WalletManager::GetWallet(user, wallet)){
+    if(!wallets->GetWallet(user, wallet)){
       LOG(WARNING) << "couldn't get the wallet for VenueA";
       return false;
     }

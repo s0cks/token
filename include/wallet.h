@@ -3,6 +3,8 @@
 
 #include <ostream>
 #include <unordered_set>
+
+#include <leveldb/db.h>
 #include <leveldb/status.h>
 #include <leveldb/comparator.h>
 #include <leveldb/write_batch.h>
@@ -117,10 +119,6 @@ namespace token{
     RelaxedAtomic<State> state_;
     leveldb::DB* index_;
 
-    WalletManager():
-      state_(State::kUninitializedState),
-      index_(nullptr){}
-
     void SetState(const State& state){
       state_ = state;
     }
@@ -130,8 +128,12 @@ namespace token{
       return index_;
     }
 
+    bool LoadIndex(const std::string& filename);
     leveldb::Status Commit(const leveldb::WriteBatch& batch);
    public:
+    WalletManager():
+      state_(State::kUninitializedState),
+      index_(nullptr){}
     virtual ~WalletManager(){
       if(index_)
         delete index_;
@@ -173,6 +175,14 @@ namespace token{
     FOR_EACH_WALLET_MANAGER_STATE(DEFINE_CHECK)
 #undef DEFINE_CHECK
 
+    static inline std::string
+    GetWalletManagerFilename(){
+      std::stringstream filename;
+      filename << TOKEN_BLOCKCHAIN_HOME << "/wallets";
+      return filename.str();
+    }
+
+    static bool Initialize(const std::string& filename=GetWalletManagerFilename());
     static WalletManager* GetInstance();
   };
 }

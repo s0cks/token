@@ -9,7 +9,6 @@ set(PROTO_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protos")
 file(GLOB_RECURSE TOKEN_CMAKE_MODULES ${CMAKE_MODULE_PATH}/*.cmake)
 
 option(ENABLE_EXPERIMENTAL "Enables experimental features." ON)
-
 option(ENABLE_SERVER "Enables the block chain server." ON)
 option(ENABLE_HEALTH_SERVICE "Enable the health http service." ON)
 option(ENABLE_REST_SERVICE "Enable the rest http service." ON)
@@ -48,23 +47,17 @@ endif()
 
 # Packages
 find_package(Threads)
-find_package(UUID REQUIRED)
-find_package(Crypto++ REQUIRED)
-find_package(LevelDB REQUIRED)
-find_package(Glog REQUIRED)
-find_package(Gflags REQUIRED)
+find_package(uv REQUIRED)
+find_package(png REQUIRED)
+find_package(glog REQUIRED)
+find_package(gflags REQUIRED)
+find_package(cryptopp REQUIRED)
+find_package(httpparser REQUIRED)
+find_package(leveldb REQUIRED)
+find_package(zxing REQUIRED)
+find_package(uuid REQUIRED)
+
 find_package(GTest REQUIRED)
-find_package(Libuv REQUIRED)
-find_package(HttpParser REQUIRED)
-find_package(ZXing REQUIRED)
-
-if(ENABLE_COMPRESSION)
-  find_package(ZLIB REQUIRED)
-endif()
-
-if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  include_directories(/usr/local/include)
-endif()
 
 # Include Directories
 include_directories(include)
@@ -78,16 +71,16 @@ file(GLOB_RECURSE TOKEN_TEST_SOURCES tests/*.h tests/*.cc)
 
 # Define Libraries
 set(TOKEN_LIBRARIES
-  ${CMAKE_THREAD_LIBS_INIT} # pthreads
-  ${CRYPTO++_LIBRARIES} # crypto++
-  ${GLOG_LIBRARIES} # glog
-  ${LevelDB_LIBRARY} # leveldb
-  ${GFLAGS_LIBRARIES} # gflags
-  config++ # config++
-  ${UUID_LIBRARIES} # uuid
-  ${ZXING_LIBRARIES} # zxing
-  ${LIBUV_LIBRARIES} # libuv
-  ${HTTPPARSER_LIBRARIES} # http-parser
+   ${CMAKE_THREAD_LIBS_INIT} # pthreads
+   ${GLOG_LIBRARIES} # glog
+   ${GFLAGS_LIBRARIES} # gflags
+   ${CRYPTOPP_LIBRARIES} # cryptopp
+   ${UV_LIBRARIES} # libuv
+   ${PNG_LIBRARIES} # libpng
+   ${HTTPPARSER_LIBRARIES} # libhttp-parser
+   ${LEVELDB_LIBRARIES} # leveldb
+   ${ZXING_LIBRARIES} # zxing
+   ${UUID_LIBRARIES} # libuuid
 )
 
 if(CMAKE_BUILD_TYPE MATCHES Debug)
@@ -95,10 +88,10 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
 endif()
 
 # token Ledger Library
-add_library("token-ledger" SHARED ${TOKEN_HEADERS} ${TOKEN_SOURCES})
+add_library("token-ledger" STATIC ${TOKEN_HEADERS} ${TOKEN_SOURCES})
 set_target_properties("token-ledger" PROPERTIES VERSION ${TOKEN_VERSION})
 set_target_properties("token-ledger" PROPERTIES PUBLIC_HEADER "${TOKEN_HEADERS}")
-target_link_libraries("${PROJECT_NAME}-ledger" ${TOKEN_LIBRARIES} png)
+target_link_libraries("${PROJECT_NAME}-ledger" ${TOKEN_LIBRARIES})
 target_compile_options(token-ledger PRIVATE -Werror -Wall)
 
 # token Server Executable

@@ -1,6 +1,7 @@
 #ifndef TOKEN_CRYPTO_H
 #define TOKEN_CRYPTO_H
 
+#include <cryptopp/cryptlib.h>
 #include <cryptopp/sha.h>
 #include <cryptopp/hex.h>
 #include <cryptopp/rsa.h>
