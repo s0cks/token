@@ -1,11 +1,26 @@
 #ifndef TOKEN_RPC_SERVER_H
 #define TOKEN_RPC_SERVER_H
 
+#include "env.h"
 #include "server.h"
 #include "rpc/rpc_session.h"
 
 namespace token{
-#define ENVIRONMENT_TOKEN_CALLBACK_ADDRESS "TOKEN_CALLBACK_ADDRESS"
+#define TOKEN_ENVIRONMENT_VARIABLE_SERVER_CALLBACK_ADDRESS "TOKEN_CALLBACK_ADDRESS"
+
+  static inline NodeAddress
+  GetDefaultServerCallbackAddress(){
+    std::stringstream ss;
+    ss << "localhost:" << FLAGS_server_port;
+    return NodeAddress::ResolveAddress(ss.str());
+  }
+
+  static inline NodeAddress
+  GetServerCallbackAddress(){
+    if(!env::HasVariable(TOKEN_ENVIRONMENT_VARIABLE_SERVER_CALLBACK_ADDRESS))
+      return GetDefaultServerCallbackAddress();
+    return NodeAddress::ResolveAddress(env::GetString(TOKEN_ENVIRONMENT_VARIABLE_SERVER_CALLBACK_ADDRESS));
+  }
 
   class ServerSession : public RpcSession{
    protected:
@@ -132,11 +147,6 @@ namespace token{
     static bool IsServer##Name();
     FOR_EACH_SERVER_STATE(DECLARE_CHECK)
 #undef DECLARE_CHECK
-
-    static inline NodeAddress
-    GetCallbackAddress(){
-      return NodeAddress::ResolveAddress(GetEnvironmentVariable(ENVIRONMENT_TOKEN_CALLBACK_ADDRESS));
-    }
   };
 }
 

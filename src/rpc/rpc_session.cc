@@ -33,7 +33,7 @@ namespace token{
     // to finish the connection handshake
     ClientType type = ClientType::kNode;
     UUID node_id = ConfigurationManager::GetNodeID();
-    NodeAddress callback = LedgerServer::GetCallbackAddress();
+    NodeAddress callback = GetServerCallbackAddress();
     Version version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
     BlockPtr head = BlockChain::GetInstance()->GetHead(); //TODO: optimize
     Hash nonce = Hash::GenerateNonce();

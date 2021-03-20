@@ -171,19 +171,6 @@ namespace token{
     }
   };
 
-  static inline bool
-  HasEnvironmentVariable(const std::string& name){ //TODO: move HasEnvironmentVariable to common
-    char* val = getenv(name.data());
-    return val != NULL;
-  }
-
-  static inline std::string
-  GetEnvironmentVariable(const std::string& name){ //TODO: move GetEnvironmentVariable to common
-    char* val = getenv(name.data());
-    if(val == NULL) return "";
-    return std::string(val);
-  }
-
 #define LOG_NAMED(LevelName) \
   LOG(LevelName) << "[" << GetName() << "] "
 
