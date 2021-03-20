@@ -30,19 +30,16 @@ namespace token{
 
   //TODO: cleanup
   leveldb::Status BlockChain::InitializeIndex(const std::string& filename){
-    if(!IsUninitialized()){
-      LOG(WARNING) << "cannot reinitialize the block chain!";
-      return leveldb::Status::NotSupported("Cannot re-initialize the block chain");
-    }
+    if(!IsUninitialized())
+      return leveldb::Status::NotSupported("cannot re-initialize the block chain");
 
-#ifdef TOKEN_DEBUG
-    LOG(INFO) << "initializing the block chain in " << filename << "....";
-#endif//TOKEN_DEBUG
+    DLOG_CHAIN(INFO) << "initializing in " << filename << "....";
     if(!FileExists(filename)){
-      LOG(INFO) << "creating " << filename << "....";
+      DLOG_CHAIN(INFO) << "creating " << filename << "....";
       if(!CreateDirectory(filename)){
-        LOG(WARNING) << "couldn't create block chain index in directory: " << filename;
-        return leveldb::Status::IOError("Cannot create the block chain index");
+        std::stringstream ss;
+        ss << "couldn't create the block chain directory: " << filename;
+        return leveldb::Status::IOError(ss.str());
       }
     }
 
@@ -52,8 +49,7 @@ namespace token{
 
     leveldb::Status status;
     if(!(status = leveldb::DB::Open(options, GetIndexFilename(), &index_)).ok()){
-      LOG(WARNING) << "couldn't initialize the block chain index in " << GetIndexFilename() << ": "
-                   << status.ToString();
+      DLOG_CHAIN(WARNING) << "couldn't initialize the index: " << status.ToString();
       return status;
     }
 
@@ -69,6 +65,7 @@ namespace token{
     return leveldb::Status::OK();
   }
 
+  //TODO: refactor
   static inline bool
   WriteBlockFile(const std::string& filename, const Hash& hash, const BlockPtr& blk){
     FILE* file;
@@ -93,19 +90,20 @@ namespace token{
 
     leveldb::Status status;
     if(!(status = GetIndex()->Put(opts, key, filename)).ok()){
-      LOG(WARNING) << "cannot index object " << hash << ": " << status.ToString();
+      LOG_CHAIN(WARNING) << "cannot index object " << hash << ": " << status.ToString();
       return false;
     }
 
     if(!WriteBlockFile(filename, hash, blk)){
-      LOG(ERROR) << "cannot write block file";
+      LOG_CHAIN(ERROR) << "cannot write block file";
       return false;//TODO: better error handling
     }
 
-    LOG(INFO) << "indexed block: " << hash;
+    DLOG_CHAIN(INFO) << "indexed block: " << hash;
     return true;
   }
 
+  //TODO: refactor
   static inline BlockPtr
   ReadBlockFile(const std::string& filename, const Hash& hash){
     FILE* file;
@@ -130,8 +128,13 @@ namespace token{
     std::string filename;
     leveldb::Status status;
     if(!(status = GetIndex()->Get(leveldb::ReadOptions(), key, &filename)).ok()){
-      LOG(WARNING) << "cannot get " << hash << ": " << status.ToString();
-      return BlockPtr(nullptr);
+      if(status.IsNotFound()){
+        DLOG_CHAIN(WARNING) << "couldn't find block: " << hash;
+        return nullptr;
+      }
+
+      LOG_CHAIN(ERROR) << "cannot get block " << hash << ": " << status.ToString();
+      return nullptr;
     }
     return ReadBlockFile(filename, hash);
   }
@@ -155,11 +158,11 @@ namespace token{
 
     leveldb::Status status;
     if(!(status = GetIndex()->Delete(options, key)).ok()){
-      LOG(WARNING) << "couldn't remove block " << hash << ": " << status.ToString();
+      LOG_CHAIN(ERROR) << "couldn't remove block " << hash << ": " << status.ToString();
       return false;
     }
 
-    LOG(INFO) << "removed block: " << hash;
+    DLOG_CHAIN(INFO) << "removed block: " << hash;
     return true;
   }
 
@@ -172,11 +175,11 @@ namespace token{
 
     leveldb::Status status;
     if(!(status = GetIndex()->Delete(options, key)).ok()){
-      LOG(WARNING) << "couldn't remove reference " << name << ": " << status.ToString();
+      LOG_CHAIN(ERROR) << "couldn't remove reference " << name << ": " << status.ToString();
       return false;
     }
 
-    LOG(INFO) << "removed reference: " << name;
+    DLOG_CHAIN(INFO) << "removed reference: " << name;
     return true;
   }
 
@@ -189,11 +192,11 @@ namespace token{
 
     leveldb::Status status;
     if(!(status = GetIndex()->Put(options, key, value)).ok()){
-      LOG(WARNING) << "couldn't set reference " << name << " to " << hash << ": " << status.ToString();
+      LOG_CHAIN(ERROR) << "cannot set reference " << name << ": " << status.ToString();
       return false;
     }
 
-    LOG(INFO) << "set reference " << name << " := " << hash;
+    DLOG_CHAIN(INFO) << "set reference " << name << " to " << hash;
     return true;
   }
 
@@ -203,10 +206,14 @@ namespace token{
 
     leveldb::Status status;
     if(!(status = GetIndex()->Get(leveldb::ReadOptions(), key, &value)).ok()){
-      LOG(WARNING) << "couldn't find reference " << name << ": " << status.ToString();
+      if(status.IsNotFound()){
+        DLOG_CHAIN(WARNING) << "couldn't find reference: " << name;
+        return Hash();
+      }
+
+      LOG_CHAIN(ERROR) << "couldn't get reference " << name << ": " << status.ToString();
       return Hash();
     }
-
     return Hash::FromHexString(value);
   }
 
@@ -217,22 +224,17 @@ namespace token{
     leveldb::Status status;
     if(!(status = GetIndex()->Get(leveldb::ReadOptions(), key, &filename)).ok()){
       if(status.IsNotFound()){
-#ifdef TOKEN_DEBUG
-        LOG(WARNING) << "couldn't find block '" << hash << "'";
-#endif//TOKEN_DEBUG
+        DLOG_CHAIN(WARNING) << "couldn't find block: " << hash;
         return false;
       }
 
-#ifdef TOKEN_DEBUG
-      LOG(ERROR) << "error getting block " << hash << ": " << status.ToString();
-#endif//TOKEN_DEBUG
+      LOG_CHAIN(ERROR) << "couldn't get block " << hash << ": " << status.ToString();
       return false;
     }
-
-    LOG(INFO) << "found " << hash << ": " << status.ToString();
     return true;
   }
 
+  //TODO: cleanup logging
   bool BlockChain::Append(const BlockPtr& block){
     BlockPtr head = GetHead();
     Hash hash = block->GetHash();
@@ -273,9 +275,8 @@ namespace token{
 
   static inline bool
   IsValidBlock(const std::string& filename){
-    //TODO: implement
-    LOG(ERROR) << "not implemented yet.";
-    return false;
+     NOT_IMPLEMENTED(ERROR);
+     return false;
   }
 
   int64_t BlockChain::GetNumberOfBlocks() const{

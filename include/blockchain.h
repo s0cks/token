@@ -14,6 +14,11 @@
 #include "unclaimed_transaction.h"
 
 namespace token{
+#define LOG_CHAIN(LevelName) \
+  LOG(LevelName) << "[chain] "
+#define DLOG_CHAIN(LevelName) \
+  DLOG(LevelName) << "[chain] "
+
 #define BLOCKCHAIN_REFERENCE_GENESIS "<GENESIS>"
 #define BLOCKCHAIN_REFERENCE_HEAD "<HEAD>"
 
