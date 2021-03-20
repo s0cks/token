@@ -37,7 +37,7 @@ namespace token{
     }
 
     static void OnCommandReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
-      Inspector* inspector = (Inspector*) stream->data;
+      auto inspector = (Inspector*) stream->data;
       if(nread == UV_EOF){
         LOG(ERROR) << "client disconnected!";
         return;

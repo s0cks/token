@@ -15,7 +15,7 @@ namespace token{
    public:
     HealthController():
       HttpController(){}
-    ~HealthController() = default;
+    ~HealthController() override = default;
 
 #define DECLARE_ENDPOINT(Method, Path, Name) \
     HTTP_CONTROLLER_ENDPOINT(Name);
@@ -23,7 +23,7 @@ namespace token{
     FOR_EACH_HEALTH_CONTROLLER_ENDPOINT(DECLARE_ENDPOINT)
 #undef DECLARE_ENDPOINT
 
-    bool Initialize(HttpRouter* router){
+    bool Initialize(HttpRouter* router) override{
 #define REGISTER_ENDPOINT(Method, Path, Name) \
       HTTP_CONTROLLER_##Method(Path, Name);
 

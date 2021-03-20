@@ -14,8 +14,8 @@ namespace token{
     std::shared_ptr<ChainController> chain_;
     std::shared_ptr<WalletController> wallet_;
    public:
-    HttpRestService(uv_loop_t* loop=uv_loop_new());
-    ~HttpRestService() = default;
+    explicit HttpRestService(uv_loop_t* loop=uv_loop_new());
+    ~HttpRestService() override = default;
 
     std::shared_ptr<PoolController> GetPoolController() const{
       return pool_;
@@ -29,7 +29,7 @@ namespace token{
       return wallet_;
     }
 
-    ServerPort GetPort() const{
+    ServerPort GetPort() const override{
       return FLAGS_service_port;
     }
 

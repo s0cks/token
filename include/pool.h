@@ -121,21 +121,21 @@ namespace token{
       }
      public:
       PoolKey(const ObjectTag& tag, const Hash& hash):
-          KeyType(),
-          data_(){
+        KeyType(),
+        data_(){
         SetTag(tag);
         SetHash(hash);
       }
       PoolKey(const Type& type, const int16_t& size, const Hash& hash):
-          PoolKey(ObjectTag(type, size), hash){}
-      PoolKey(const leveldb::Slice& slice):
-          KeyType(),
-          data_(){
+        PoolKey(ObjectTag(type, size), hash){}
+      explicit PoolKey(const leveldb::Slice& slice):
+        KeyType(),
+        data_(){
         memcpy(data_, slice.data(), std::min(slice.size(), (size_t)kTotalSize));
       }
-      ~PoolKey() = default;
+      ~PoolKey() override = default;
 
-      ObjectTag tag() const{
+      ObjectTag tag() const override{
         return ObjectTag(*tag_ptr());
       }
 
@@ -143,15 +143,15 @@ namespace token{
         return Hash(hash_ptr(), kBytesForHash);
       }
 
-      size_t size() const{
+      size_t size() const override{
         return kTotalSize;
       }
 
-      char* data() const{
+      char* data() const override{
         return (char*)data_;
       }
 
-      std::string ToString() const{
+      std::string ToString() const override{
         std::stringstream ss;
         ss << "PoolKey(";
         ss << "tag=" << tag() << ", ";
@@ -180,9 +180,9 @@ namespace token{
     class Comparator : public leveldb::Comparator{
      public:
       Comparator() = default;
-      ~Comparator() = default;
+      ~Comparator() override = default;
 
-      int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const{
+      int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const override{
         PoolKey k1(a);
         if(!k1.valid())
           LOG(WARNING) << "k1 doesn't have a IsValid tag";
@@ -193,12 +193,12 @@ namespace token{
         return PoolKey::Compare(k1, k2);
       }
 
-      const char* Name() const{
+      const char* Name() const override{
         return "ObjectPoolComparator";
       }
 
-      void FindShortestSeparator(std::string* str, const leveldb::Slice& slice) const{}
-      void FindShortSuccessor(std::string* str) const {}
+      void FindShortestSeparator(std::string* str, const leveldb::Slice& slice) const override{}
+      void FindShortSuccessor(std::string* str) const override {}
     };
    protected:
     RelaxedAtomic<State> state_;
@@ -226,7 +226,7 @@ namespace token{
      * @return The State of the ObjectPool
      */
     State GetState() const{
-      return state_;
+      return (State)state_;
     }
 
     /**
@@ -241,7 +241,7 @@ namespace token{
      *  - int64_t GetNumberOf<Type>s();
      */
 #define DEFINE_TYPE_METHODS(Name) \
-    virtual bool Print##Name##s(const google::LogSeverity severity=google::INFO) const; \
+    bool Print##Name##s(const google::LogSeverity& severity=google::INFO) const; \
     virtual bool Put##Name(const Hash& hash, const Name##Ptr& val) const;               \
     virtual bool Get##Name##s(Json::Writer& json) const;                                \
     virtual bool Get##Name##s(HashList& hashes) const;                                  \

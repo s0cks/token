@@ -50,11 +50,9 @@ namespace token{
     InventoryItem(Type type, const Hash& hash):
       type_(type),
       hash_(hash){}
-    InventoryItem(const BufferPtr& buffer):
+    explicit InventoryItem(const BufferPtr& buffer):
       InventoryItem(static_cast<Type>(buffer->GetUnsignedInt()), buffer->GetHash()){}
-    InventoryItem(const InventoryItem& item):
-      type_(item.type_),
-      hash_(item.hash_){}
+    InventoryItem(const InventoryItem& item) = default;
     ~InventoryItem() = default;
 
     Type GetType() const{
@@ -94,10 +92,7 @@ namespace token{
       return ss.str();
     }
 
-    void operator=(const InventoryItem& item){
-      type_ = item.type_;
-      hash_ = item.hash_;
-    }
+    InventoryItem& operator=(const InventoryItem& item) = default;
 
     friend bool operator==(const InventoryItem& a, const InventoryItem& b){
       return CompareType(a, b) == 0

@@ -48,7 +48,7 @@ namespace token{
       previous_hash_(phash),
       merkle_root_(merkle_root),
       hash_(hash){}
-    BlockHeader(const BufferPtr& buffer):
+    explicit BlockHeader(const BufferPtr& buffer):
       SerializableObject(),
       timestamp_(buffer->GetTimestamp()),
       version_(buffer->GetVersion()),
@@ -64,9 +64,9 @@ namespace token{
       previous_hash_(blk.previous_hash_),
       merkle_root_(blk.merkle_root_),
       hash_(blk.hash_){}
-    ~BlockHeader(){}
+    ~BlockHeader() override = default;
 
-    Type GetType() const{
+    Type GetType() const override{
       return Type::kBlockHeader;
     }
 
@@ -104,11 +104,11 @@ namespace token{
       return (*this);
     }
 
-    int64_t GetBufferSize() const{
+    int64_t GetBufferSize() const override{
       return BlockHeader::GetSize();
     }
 
-    bool Write(const BufferPtr& buffer) const{
+    bool Write(const BufferPtr& buffer) const override{
       return buffer->PutTimestamp(timestamp_)
           && buffer->PutVersion(version_)
           && buffer->PutLong(height_)
@@ -117,7 +117,7 @@ namespace token{
           && buffer->PutHash(hash_);
     }
 
-    bool Write(Json::Writer& writer) const{
+    bool Write(Json::Writer& writer) const override{
       return writer.StartObject()
               && Json::SetField(writer, "timestamp", timestamp_)
               && Json::SetField(writer, "version", version_)
@@ -128,7 +128,7 @@ namespace token{
            && writer.EndObject();
     }
 
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream ss;
       ss << "BlockHeader(";
       ss << "timestamp=" << FormatTimestampReadable(timestamp_) << ", ";

@@ -7,7 +7,6 @@
 namespace token{
   static const int16_t kRawUUIDSize = 16;
   class UUID : public RawType<kRawUUIDSize>{
-    using Base = RawType<kRawUUIDSize>;
    public:
     UUID():
       RawType(){
@@ -15,23 +14,23 @@ namespace token{
     }
     UUID(uint8_t* bytes, int64_t size):
       RawType(bytes, size){}
-    UUID(const char* uuid):
+    explicit UUID(const char* uuid):
       RawType(){
       uuid_parse(uuid, data_);
     }
-    UUID(const std::string& uuid):
+    explicit UUID(const std::string& uuid):
       RawType(){
       memcpy(data(), uuid.data(), kRawUUIDSize);
     }
-    UUID(const leveldb::Slice& slice):
+    explicit UUID(const leveldb::Slice& slice):
       RawType(){
       memcpy(data(), slice.data(), kRawUUIDSize);
     }
     UUID(const UUID& other):
-      RawType(){
+      RawType(other){
       memcpy(data(), other.data(), kRawUUIDSize);
     }
-    ~UUID() = default;
+    ~UUID() override = default;
 
     std::string ToStringAbbreviated() const{
       char uuid_str[37];
@@ -45,8 +44,9 @@ namespace token{
       return std::string(uuid_str, 37);
     }
 
-    void operator=(const UUID& other){
+    UUID& operator=(const UUID& other){
       memcpy(data(), other.data(), kRawUUIDSize);
+      return (*this);
     }
 
     friend bool operator==(const UUID& a, const UUID& b){
@@ -65,7 +65,7 @@ namespace token{
       return stream << uuid.ToString();
     }
 
-    operator leveldb::Slice() const{
+    explicit operator leveldb::Slice() const{
       return leveldb::Slice(data(), size());
     }
   };

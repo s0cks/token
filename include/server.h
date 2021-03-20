@@ -19,8 +19,9 @@ namespace token{
 
   typedef int32_t ServerPort;
 
-#define SERVER_LOG(LevelName) \
+#define LOG_SERVER(LevelName) \
   LOG(LevelName) << "[server] "
+
 #define DLOG_SERVER(LevelName) \
   DLOG(LevelName) << "[server] "
 
@@ -85,23 +86,23 @@ namespace token{
 
       int err;
       if((err = Bind(server->GetHandle(), port)) != 0){
-        SERVER_LOG(WARNING) << "bind failure: " << uv_strerror(err);
+        LOG_SERVER(WARNING) << "bind failure: " << uv_strerror(err);
         server->SetState(Server::kStoppingState);
         goto exit;
       }
 
       if((err = Listen(server->GetStream(), &OnNewConnection)) != 0){
-        SERVER_LOG(WARNING) "listen failure: " << uv_strerror(err);
+        LOG_SERVER(WARNING) "listen failure: " << uv_strerror(err);
         server->SetState(Server::kStoppingState);
         goto exit;
       }
 
-      SERVER_LOG(INFO) << "server listening @" << port;
+      LOG_SERVER(INFO) << "server listening @" << port;
       server->SetState(State::kRunningState);
       uv_run(server->GetLoop(), UV_RUN_DEFAULT);
     exit:
       server->SetState(State::kStoppedState);
-      pthread_exit(0);
+      pthread_exit(nullptr);
     }
 
     static void
@@ -112,9 +113,9 @@ namespace token{
 
     static void
     OnNewConnection(uv_stream_t* stream, int status){
-      ServerType* server = (ServerType*)stream->data;
+      auto server = (ServerType*)stream->data;
       if(status != 0){
-        SERVER_LOG(ERROR) << "connection error: " << uv_strerror(status);
+        LOG_SERVER(ERROR) << "connection error: " << uv_strerror(status);
         return;
       }
 
@@ -123,19 +124,19 @@ namespace token{
 
       int err;
       if((err = Accept(stream, session)) != 0){
-        SERVER_LOG(ERROR) << "accept failure: " << uv_strerror(err);
+        LOG_SERVER(ERROR) << "accept failure: " << uv_strerror(err);
         return; //TODO: session->Disconnect();
       }
 
       if((err = ReadStart(session, &AllocBuffer, &OnMessageReceived)) != 0){
-        SERVER_LOG(ERROR) << "read failure: " << uv_strerror(err);
+        LOG_SERVER(ERROR) << "read failure: " << uv_strerror(err);
         return; //TODO: session->Disconnect();
       }
     }
 
     static void
     OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
-      Session<M>* session = (Session<M>*)stream->data;
+      auto session = (Session<M>*)stream->data;
       if(nread == UV_EOF){
         LOG(WARNING) << "client disconnected!";
         return;
@@ -168,12 +169,12 @@ namespace token{
     }
 
     static void OnShutdown(uv_async_t* handle){
-      uv_walk(handle->loop, &OnWalk, NULL);
+      uv_walk(handle->loop, &OnWalk, nullptr);
     }
 
     static inline int
     Bind(uv_tcp_t* server, const int32_t port){
-      sockaddr_in bind_address;
+      sockaddr_in bind_address{};
       uv_ip4_addr("0.0.0.0", port, &bind_address);
       return uv_tcp_bind(server, (struct sockaddr*)&bind_address, 0);
     }
@@ -242,7 +243,7 @@ namespace token{
     }
 
     State GetState() const{
-      return state_;
+      return (State)state_;
     }
 
 #define DEFINE_STATE_CHECK(Name) \

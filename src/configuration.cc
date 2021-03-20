@@ -1,7 +1,7 @@
 #include <leveldb/db.h>
 #include <leveldb/status.h>
+
 #include "configuration.h"
-#include "atomic/relaxed_atomic.h"
 
 namespace token{
 #define CONFIG_LOG(LevelName) \
@@ -32,7 +32,7 @@ namespace token{
 
   static inline void
   PutDefaultProperty(leveldb::WriteBatch& batch, const std::string& name, const UUID& val){
-    batch.Put(name, val);
+    batch.Put(name, (const leveldb::Slice&)val);
   }
 
   static inline void
@@ -148,7 +148,7 @@ namespace token{
     options.sync = true;
 
     leveldb::Status status;
-    if(!(status = GetIndex()->Put(options, name, value)).ok()){
+    if(!(status = GetIndex()->Put(options, name, (const leveldb::Slice&)value)).ok()){
       ERROR_SETTING_PROPERTY(ERROR, name, status);
       return false;
     }
@@ -176,7 +176,7 @@ namespace token{
     options.sync = true;
 
     leveldb::Status status;
-    if(!(status = GetIndex()->Put(options, name, val)).ok()){
+    if(!(status = GetIndex()->Put(options, name, (const leveldb::Slice&)val)).ok()){
       ERROR_SETTING_PROPERTY(ERROR, name, val);
       return false;
     }

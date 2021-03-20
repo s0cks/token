@@ -1,6 +1,8 @@
 #ifndef TOKEN_PROCESS_BLOCK_H
 #define TOKEN_PROCESS_BLOCK_H
 
+#include <utility>
+
 #include "pool.h"
 #include "block.h"
 #include "job/job.h"
@@ -41,19 +43,19 @@ namespace token{
       }
     }
 
-    JobResult DoWork();
+    JobResult DoWork() override;
 
     void BuildBatch(){
       for(auto& it : wallets_)
         PutWallet(it.first, it.second);
     }
    public:
-    ProcessBlockJob(const BlockPtr& blk, bool clean = false):
+    explicit ProcessBlockJob(BlockPtr blk, bool clean = false):
       WalletManagerBatchWriteJob(nullptr, "ProcessBlock"),
-      block_(blk),
+      block_(std::move(blk)),
       wallets_(),
       clean_(clean){}
-    ~ProcessBlockJob() = default;
+    ~ProcessBlockJob() override = default;
 
     BlockPtr GetBlock() const{
       return block_;
@@ -63,12 +65,12 @@ namespace token{
       return clean_;
     }
 
-    bool Visit(const TransactionPtr& tx);
+    bool Visit(const TransactionPtr& tx) override;
 
     static inline bool
     SubmitAndWait(const BlockPtr& blk){
       JobQueue* queue = JobScheduler::GetThreadQueue();
-      ProcessBlockJob* job = new ProcessBlockJob(blk);
+      auto job = new ProcessBlockJob(blk);
       if(!queue->Push(job))
         return false;
 
@@ -84,13 +86,13 @@ namespace token{
     Hash hash_;
     TransactionPtr transaction_;
 
-    JobResult DoWork();
+    JobResult DoWork() override;
    public:
     ProcessTransactionJob(ProcessBlockJob* parent, const TransactionPtr& tx):
       Job(parent, "ProcessTransaction"),
       hash_(tx->GetHash()),
       transaction_(tx){}
-    ~ProcessTransactionJob() = default;
+    ~ProcessTransactionJob() override = default;
 
     void Append(const UserWallets& wallets){
       return ((ProcessBlockJob*)GetParent())->Append(wallets);
@@ -115,11 +117,11 @@ namespace token{
 
   class ProcessTransactionInputsJob : public Job{
    protected:
-    JobResult DoWork();
+    JobResult DoWork() override;
    public:
-    ProcessTransactionInputsJob(ProcessTransactionJob* parent):
+    explicit ProcessTransactionInputsJob(ProcessTransactionJob* parent):
       Job(parent, "ProcessTransactionInputsJob"){}
-    ~ProcessTransactionInputsJob() = default;
+    ~ProcessTransactionInputsJob() override = default;
 
     TransactionPtr GetTransaction() const{
       return ((ProcessTransactionJob*)GetParent())->GetTransaction();
@@ -136,11 +138,11 @@ namespace token{
    private:
     InputList inputs_;
    protected:
-    JobResult DoWork(){
+    JobResult DoWork() override{
       ObjectPoolPtr pool = ObjectPool::GetInstance();
       for(auto& it : inputs_){
         UnclaimedTransactionPtr utxo = pool->FindUnclaimedTransaction(it);
-        Hash hash = utxo->GetHash();
+        ///Hash hash = utxo->GetHash();
         //TODO: remove input
       }
 
@@ -149,19 +151,19 @@ namespace token{
       return Success("done.");
     }
    public:
-    ProcessInputListJob(ProcessTransactionInputsJob* parent, const InputList& inputs):
+    ProcessInputListJob(ProcessTransactionInputsJob* parent, InputList inputs):
       ObjectPoolBatchWriteJob(parent, "ProcessInputList"),
-      inputs_(inputs){}
-    ~ProcessInputListJob() = default;
+      inputs_(std::move(inputs)){}
+    ~ProcessInputListJob() override = default;
   };
 
   class ProcessTransactionOutputsJob : public Job{
    protected:
-    JobResult DoWork();
+    JobResult DoWork() override;
    public:
-    ProcessTransactionOutputsJob(ProcessTransactionJob* parent):
+    explicit ProcessTransactionOutputsJob(ProcessTransactionJob* parent):
       Job(parent, "ProcessTransactionInputsJob"){}
-    ~ProcessTransactionOutputsJob() = default;
+    ~ProcessTransactionOutputsJob() override = default;
 
     TransactionPtr GetTransaction() const{
       return ((ProcessTransactionJob*) GetParent())->GetTransaction();
@@ -193,23 +195,20 @@ namespace token{
     }
 
     void Track(const User& user, const Hash& hash){
-      auto pos = wallets_.find(user.str());
-      if(pos == wallets_.end()){
-        wallets_.insert({user.str(), Wallet{hash}});
-        return;
-      }
-
-      Wallet& list = pos->second;
+      auto pos = wallets_[user];
+      if(wallets_.find(user) == wallets_.end())
+        wallets_[user] = Wallet{hash};
+      Wallet& list = wallets_[user];
       list.insert(hash);
     }
    protected:
-    JobResult DoWork();
+    JobResult DoWork() override;
    public:
-    ProcessOutputListJob(ProcessTransactionOutputsJob* parent, int64_t wid, const OutputList& outputs):
+    ProcessOutputListJob(ProcessTransactionOutputsJob* parent, int64_t wid, OutputList outputs):
       ObjectPoolBatchWriteJob(parent, "ProcessOutputListJob"),
-      outputs_(outputs),
+      outputs_(std::move(outputs)),
       offset_(wid * ProcessOutputListJob::kMaxNumberOfOutputs){}
-    ~ProcessOutputListJob() = default;
+    ~ProcessOutputListJob() override = default;
 
     TransactionPtr GetTransaction() const{
       return ((ProcessTransactionOutputsJob*)GetParent())->GetTransaction();

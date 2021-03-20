@@ -11,17 +11,17 @@ namespace token{
    protected:
     HttpRouter router_;
 
-    HttpService(uv_loop_t* loop):
+    explicit HttpService(uv_loop_t* loop):
       Server(loop, "http/service"),
       router_(){}
 
-    Session<HttpMessage>* CreateSession() const{
+    Session<HttpMessage>* CreateSession() const override{
       return new HttpSession(GetLoop(), (HttpRouter*)&router_);
     }
    public:
-    virtual ~HttpService() = default;
+    ~HttpService() override = default;
 
-    ServerPort GetPort() const{
+    ServerPort GetPort() const override{
       return FLAGS_service_port;
     }
 

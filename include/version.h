@@ -59,15 +59,14 @@ namespace token{
     class MinorField : public BitField<RawVersion, uint16_t, kMinorPosition, kBitsForMinor>{};
     class RevisionField : public BitField<RawVersion, uint16_t, kRevisionPosition, kBitsForRevision>{};
    public:
-    Version(const RawVersion& raw):
+    explicit Version(const RawVersion& raw):
       raw_(raw){}
     Version(const uint16_t major, const uint16_t minor, const uint16_t revision):
       raw_(MagicField::Encode(TOKEN_MAGIC)
           |MajorField::Encode(major)
           |MinorField::Encode(minor)
           |RevisionField::Encode(revision)){}
-    Version(const Version& version):
-      raw_(version.raw_){}
+    Version(const Version& version) = default;
     ~Version() = default;
 
     RawVersion raw() const{
@@ -100,8 +99,9 @@ namespace token{
       return ss.str();
     }
 
-    Version& operator=(const Version& version){
-      raw_ = version.raw_;
+    Version& operator=(const Version& rhs){
+      if(&rhs != this)
+        raw_ = rhs.raw_;
       return (*this);
     }
 

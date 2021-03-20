@@ -2,6 +2,8 @@
 #define TOKEN_HTTP_CONTROLLER_POOL_H
 
 #include "pool.h"
+
+#include <utility>
 #include "http/http_controller.h"
 
 namespace token{
@@ -23,16 +25,16 @@ namespace token{
     FOR_EACH_POOL_CONTROLLER_ENDPOINT(DECLARE_ENDPOINT)
 #undef DECLARE_ENDPOINT
    public:
-    PoolController(const ObjectPoolPtr& pool):
+    explicit PoolController(ObjectPoolPtr pool):
       HttpController(),
-      pool_(pool){}
-    ~PoolController() = default;
+      pool_(std::move(pool)){}
+    ~PoolController() override = default;
 
     ObjectPoolPtr GetPool() const{
       return pool_;
     }
 
-    bool Initialize(HttpRouter* router){
+    bool Initialize(HttpRouter* router) override{
 #define REGISTER_ENDPOINT(Method, Path, Name) \
       HTTP_CONTROLLER_##Method(Path, Name);
 

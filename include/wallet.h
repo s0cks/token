@@ -31,10 +31,9 @@ namespace token{
   Encode(const Wallet& wallet, BufferPtr& buff){
     if(!buff->PutLong(wallet.size()))
       return false;
-    for(auto& it : wallet)
-      if(!buff->PutHash(it))
-        return false;
-    return true;
+    return std::all_of(wallet.begin(), wallet.end(), [&buff](const Hash& hash){
+      return buff->PutHash(hash);
+    });
   }
 
   static inline bool
@@ -97,7 +96,7 @@ namespace token{
 
     class Comparator : public leveldb::Comparator{
      public:
-      int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const{
+      int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const override{
         UserKey k1(a);
         if(!k1.valid())
           LOG(WARNING) << "k1 doesn't have a IsValid tag.";
@@ -108,12 +107,12 @@ namespace token{
         return UserKey::Compare(k1, k2);
       }
 
-      const char* Name() const{
+      const char* Name() const override{
         return "WalletComparator";
       }
 
-      void FindShortestSeparator(std::string* str, const leveldb::Slice& slice) const{}
-      void FindShortSuccessor(std::string* str) const {}
+      void FindShortestSeparator(std::string* str, const leveldb::Slice& slice) const override{}
+      void FindShortSuccessor(std::string* str) const override {}
     };
    protected:
     RelaxedAtomic<State> state_;
@@ -135,12 +134,11 @@ namespace token{
       state_(State::kUninitializedState),
       index_(nullptr){}
     virtual ~WalletManager(){
-      if(index_)
-        delete index_;
+      delete index_;
     }
 
     State GetState() const{
-      return state_;
+      return (State)state_;
     }
 
     virtual bool HasWallet(const User& user) const;

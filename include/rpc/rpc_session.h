@@ -13,15 +13,15 @@ namespace token{
    protected:
     RpcSession():
       Session<RpcMessage>(){}
-    RpcSession(uv_loop_t* loop):
-      Session<RpcMessage>(loop){}
+    explicit RpcSession(uv_loop_t* loop):
+      Session<RpcMessage>(loop, UUID()){}
 
 #define DECLARE_MESSAGE_HANDLER(Name) \
     virtual void On##Name##Message(const Name##MessagePtr& message) = 0;
     FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
 
-    void OnMessageRead(const RpcMessagePtr& message){
+    void OnMessageRead(const RpcMessagePtr& message) override{
       switch(message->GetType()){
 #define DEFINE_HANDLE(Name) \
         case Type::k##Name##Message: \
@@ -34,7 +34,7 @@ namespace token{
       }
     }
    public:
-    virtual ~RpcSession() = default;
+    ~RpcSession() override = default;
 
     virtual void Send(const SessionMessageTypeList& messages){
       return SendMessages(messages);

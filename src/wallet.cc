@@ -30,7 +30,7 @@ namespace token{
     options.sync = true;
 
     leveldb::Status status;
-    if(!(status = GetIndex()->Put(options, key, buffer->operator leveldb::Slice())).ok()){
+    if(!(status = GetIndex()->Put(options, (const leveldb::Slice&)key, buffer->operator leveldb::Slice())).ok()){
       LOG(WARNING) << "couldn't index wallet for user " << user << ": " << status.ToString();
       return false;
     }
@@ -40,9 +40,10 @@ namespace token{
   }
 
   Wallet WalletManager::GetUserWallet(const User& user) const{
+    UserKey key(user);
     std::string data;
     leveldb::Status status;
-    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), UserKey(user), &data)).ok()){
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &data)).ok()){
       LOG(WARNING) << "cannot get wallet for user " << user << ": " << status.ToString();
       return Wallet();
     }
@@ -60,7 +61,7 @@ namespace token{
 
     std::string data;
     leveldb::Status status;
-    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), key, &data)).ok()){
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &data)).ok()){
       LOG(WARNING) << "cannot get wallet for user " << user << ": " << status.ToString();
       return false;
     }
@@ -72,13 +73,13 @@ namespace token{
     UserKey key(user);
     std::string data;
     leveldb::Status status;
-    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), key, &data)).ok()){
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &data)).ok()){
       LOG(WARNING) << "cannot get wallet for user " << user << ": " << status.ToString();
       return false;
     }
 
-    int64_t size = (int64_t) data.size();
-    uint8_t* bytes = (uint8_t*) data.data();
+    auto size = (int64_t) data.size();
+    auto bytes = (uint8_t*) data.data();
 
     writer.StartArray();
     int64_t offset = sizeof(int64_t);
@@ -100,7 +101,7 @@ namespace token{
     UserKey key(user);
 
     leveldb::Status status;
-    if(!(status = GetIndex()->Delete(options, key)).ok()){
+    if(!(status = GetIndex()->Delete(options, (const leveldb::Slice&)key)).ok()){
       LOG(WARNING) << "couldn't remove wallet for user " << user << ": " << status.ToString();
       return false;
     }
@@ -112,7 +113,7 @@ namespace token{
   bool WalletManager::HasWallet(const User& user) const{
     std::string data;
     UserKey key(user);
-    return GetIndex()->Get(leveldb::ReadOptions(), key, &data).ok();
+    return GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &data).ok();
   }
 
   leveldb::Status WalletManager::Commit(const leveldb::WriteBatch& batch){

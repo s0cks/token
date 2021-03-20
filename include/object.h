@@ -148,12 +148,11 @@ namespace token{
    public:
     ObjectTag():
       raw_(0){}
-    ObjectTag(const RawObjectTag& raw):
+    explicit ObjectTag(const RawObjectTag& raw):
       raw_(raw){}
     ObjectTag(const Type& type, const uint16_t& size):
       raw_(MagicField::Encode(TOKEN_MAGIC)|TypeField::Encode((uint16_t)type)|SizeField::Encode(size)){}
-    ObjectTag(const ObjectTag& tag):
-      raw_(tag.raw_){}
+    ObjectTag(const ObjectTag& tag) = default;
     ~ObjectTag() = default;
 
     RawObjectTag& raw(){
@@ -211,7 +210,7 @@ namespace token{
    protected:
     SerializableObject() = default;
    public:
-    virtual ~SerializableObject() = default;
+    ~SerializableObject() override = default;
     virtual Type GetType() const = 0;
 
     ObjectTag GetTag() const{
@@ -241,7 +240,7 @@ namespace token{
    protected:
     BinaryObject() = default;
    public:
-    virtual ~BinaryObject() = default;
+    ~BinaryObject() override = default;
     Hash GetHash() const;
   };
 
@@ -305,17 +304,17 @@ namespace token{
    public:
     Reference():
       Base(){}
-    Reference(const uint8_t* bytes, const int16_t size=kRawReferenceSize):
+    explicit Reference(const uint8_t* bytes, const int16_t size=kRawReferenceSize):
       Base(bytes, size){}
     Reference(const Reference& ref):
-      Base(){
+      Base(ref){
       memcpy(data(), ref.data(), std::min(ref.size(), (size_t)kRawReferenceSize));
     }
-    Reference(const std::string& ref):
+    explicit Reference(const std::string& ref):
       Base(){
       memcpy(data(), ref.data(), std::min(ref.length(), (size_t)kRawReferenceSize));
     }
-    ~Reference() = default;
+    ~Reference() override = default;
 
     Reference& operator=(const Reference& ref){
       memcpy(data(), ref.data(), ref.size());
@@ -354,9 +353,7 @@ namespace token{
     TransactionReference(const Hash& tx, int64_t index):
       transaction_(tx),
       index_(index){}
-    TransactionReference(const TransactionReference& ref):
-      transaction_(ref.transaction_),
-      index_(ref.index_){}
+    TransactionReference(const TransactionReference& ref) = default;
     ~TransactionReference() = default;
 
     Hash GetTransactionHash() const{
@@ -369,11 +366,7 @@ namespace token{
 
     bool Write(Json::Writer& writer) const;
 
-    TransactionReference& operator=(const TransactionReference& ref){
-      transaction_ = ref.transaction_;
-      index_ = ref.index_;
-      return (*this);
-    }
+    TransactionReference& operator=(const TransactionReference& ref) = default;
 
     friend bool operator==(const TransactionReference& a, const TransactionReference& b){
       return a.transaction_ == b.transaction_ && a.index_ == b.index_;

@@ -104,7 +104,7 @@ namespace token{
      * @return The current state of the ConfigurationManager
      */
     State GetState() const{
-      return state_;
+      return (State)state_;
     }
 
     /**

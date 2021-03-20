@@ -5,13 +5,13 @@
 
 namespace token{
   static std::default_random_engine engine;
-  static RelaxedAtomic<PeerSessionManager::State> state_ = {PeerSessionManager::kUninitializedState};
+  static RelaxedAtomic<PeerSessionManager::State> state_(PeerSessionManager::State::kUninitializedState);
   static PeerSessionThread** threads_;
   static ConnectionRequestQueue queue_(TOKEN_CONNECTION_QUEUE_SIZE);
   static std::map<ThreadId, ConnectionRequestQueue*> queues_;
 
   PeerSessionManager::State PeerSessionManager::GetState(){
-    return state_;
+    return (State)state_;
   }
 
   void PeerSessionManager::SetState(const State& state){

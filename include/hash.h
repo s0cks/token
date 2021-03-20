@@ -53,12 +53,12 @@ namespace token{
    private:
     uint8_t data_[kSize];
 
-    Hash(const unsigned char* data):
+    explicit Hash(const unsigned char* data):
       data_(){
       memcpy(data_, data, sizeof(data_));
     }
 
-    Hash(const std::string& hex):
+    explicit Hash(const std::string& hex):
       data_(){
       CryptoPP::StringSource source(hex, true, new CryptoPP::HexDecoder(new CryptoPP::ArraySink(data_, GetSize())));
     }
@@ -78,15 +78,15 @@ namespace token{
       data_(){
       SetNull();
     }
-    Hash(uint8_t* data, int64_t size = Hash::GetSize()):
+    explicit Hash(uint8_t* data, int64_t size = Hash::GetSize()):
       data_(){
       memcpy(data_, data, size);
     }
-    Hash(const uint8_t* data, int64_t size = Hash::GetSize()):
+    explicit Hash(const uint8_t* data, int64_t size = Hash::GetSize()):
       data_(){
       memcpy(data_, data, size);
     }
-    Hash(const leveldb::Slice& slice, int64_t size = Hash::GetSize()):
+    explicit Hash(const leveldb::Slice& slice, int64_t size = Hash::GetSize()):
       data_(){
       memcpy(data_, slice.data(), std::min((int64_t) slice.size(), size));
     }
@@ -177,8 +177,10 @@ namespace token{
       return Compare(a, b) > 0;
     }
 
-    void operator=(const Hash& other){
-      memcpy(data_, other.data_, kSize);
+    Hash& operator=(const Hash& rhs){
+      if(&rhs != this)
+        std::copy_n(rhs.data_, kSize, data_);
+      return (*this);
     }
 
     friend std::ostream& operator<<(std::ostream& stream, const Hash& hash){

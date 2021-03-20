@@ -2,6 +2,7 @@
 #define TOKEN_ROUTER_H
 
 #include <unordered_map>
+#include <utility>
 #include <glog/logging.h>
 #include "http_method.h"
 #include "trie.h"
@@ -29,16 +30,12 @@ namespace token{
       path_(),
       method_(),
       handler_(){}
-    HttpRoute(HttpController* owner, const std::string& path, const HttpMethod& method, HttpRouteHandler handler):
+    HttpRoute(HttpController* owner, std::string path, const HttpMethod& method, HttpRouteHandler handler):
       owner_(owner),
-      path_(path),
+      path_(std::move(path)),
       method_(method),
       handler_(handler){}
-    HttpRoute(const HttpRoute& route):
-      owner_(route.owner_),
-      path_(route.path_),
-      method_(route.method_),
-      handler_(route.handler_){}
+    HttpRoute(const HttpRoute& route) = default;
     ~HttpRoute() = default;
 
     HttpController* GetOwner() const{
@@ -57,12 +54,7 @@ namespace token{
       return handler_;
     }
 
-    void operator=(const HttpRoute& route){
-      owner_ = route.owner_;
-      path_ = route.path_;
-      method_ = route.method_;
-      handler_ = route.handler_;
-    }
+    HttpRoute& operator=(const HttpRoute& route) = default;
   };
 
 #define FOR_EACH_HTTP_ROUTER_MATCH_STATUS(V) \
@@ -100,14 +92,18 @@ namespace token{
 
     HttpRoute route_;
 
-    HttpRouterMatch(const std::string& path, const Status& status, const ParameterMap& params_path, const ParameterMap& params_query, const HttpRoute& route):
-      path_(path),
+    HttpRouterMatch(std::string path,
+                    const Status& status,
+                    ParameterMap params_path,
+                    ParameterMap params_query,
+                    const HttpRoute& route):
+      path_(std::move(path)),
       status_(status),
-      params_path_(params_path),
-      params_query_(params_query),
+      params_path_(std::move(params_path)),
+      params_query_(std::move(params_query)),
       route_(route){}
-    HttpRouterMatch(const std::string& path, const Status& status):
-      path_(path),
+    HttpRouterMatch(std::string path, const Status& status):
+      path_(std::move(path)),
       status_(status),
       params_path_(),
       params_query_(),
@@ -176,12 +172,7 @@ namespace token{
     FOR_EACH_HTTP_ROUTER_MATCH_STATUS(DEFINE_CHECK)
 #undef DEFINE_CHECK
 
-    void operator=(const HttpRouterMatch& match){
-      status_ = match.status_;
-      params_path_ = match.params_path_;
-      params_query_ = match.params_query_;
-      route_ = match.route_;
-    }
+    HttpRouterMatch& operator=(const HttpRouterMatch& match) = default;
 
     friend std::ostream& operator<<(std::ostream& stream, const HttpRouterMatch& match){
       return stream << "HttpRouterMatch(" << match.GetPath() << ", " << match.GetStatus() << ")";
@@ -295,23 +286,27 @@ namespace token{
     using Base = Trie<char, HttpRoute, kHttpAlphabetSize>;
     using Node = TrieNode<char, HttpRoute, kHttpAlphabetSize>;
 
-    int GetPosition(char c) const{
+    static inline int
+    GetPosition(char c) {
       switch(c){
 #define DEFINE_CHECK(Decimal, Char, Encoding) \
         case (Char):                          \
           return (Decimal);
         FOR_EACH_URL_ENCODED_CHARACTER(DEFINE_CHECK)
 #undef DEFINE_CHECK
+        default:
+          return (int)c;
       }
       return 0;
     }
 
-    bool Insert(Node* node, HttpController* owner, const HttpMethod& method, const std::string& path, const HttpRouteHandler& handler){
+    static inline bool
+    Insert(Node* node, HttpController* owner, const HttpMethod& method, const std::string& path, const HttpRouteHandler& handler){
       Node* curr = node;
       for(auto i = path.begin(); i < path.end();){
         char c = *(i++);
         if(c == ':'){
-          std::string name = "";
+          std::string name;
           do{
             name += (*i);
           } while((++i) != path.cend() && (*i) != '/');
@@ -343,7 +338,8 @@ namespace token{
       return true;
     }
 
-    HttpRouterMatch Search(Node* node, const HttpMethod& method, const std::string& path){
+    static inline HttpRouterMatch
+    Search(Node* node, const HttpMethod& method, const std::string& path){
       ParameterMap path_params;
       ParameterMap query_params;
 
@@ -365,14 +361,14 @@ namespace token{
             if((*i) == '&')
               i++;
 
-            std::string key = "";
+            std::string key;
             do{
               key += (*i);
             } while((++i) != path.end() && (*i) != '=' && (*i) != '/');
 
             i++;
 
-            std::string value = "";
+            std::string value;
             do{
               value += (*i);
             } while((++i) != path.end() && (*i) != '&' && (*i) != '/');
@@ -398,7 +394,7 @@ namespace token{
    public:
     HttpRouter():
       Base(){}
-    HttpRouter(const HttpRouteHandler& default_handler):
+    explicit HttpRouter(const HttpRouteHandler& default_handler):
       Base(){}
     ~HttpRouter() = default;
 

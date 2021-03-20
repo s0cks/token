@@ -81,7 +81,7 @@ namespace token{
     return Flush(file) && Close(file);
   }
 
-  bool BlockChain::PutBlock(const Hash& hash, BlockPtr blk) const{
+  bool BlockChain::PutBlock(const Hash& hash, const BlockPtr& blk) const{
     BlockKey key(blk);
     std::string filename = GetNewBlockFilename(blk);
 
@@ -89,7 +89,7 @@ namespace token{
     opts.sync = true;
 
     leveldb::Status status;
-    if(!(status = GetIndex()->Put(opts, key, filename)).ok()){
+    if(!(status = GetIndex()->Put(opts, (const leveldb::Slice&)key, filename)).ok()){
       LOG_CHAIN(WARNING) << "cannot index object " << hash << ": " << status.ToString();
       return false;
     }
@@ -127,7 +127,7 @@ namespace token{
 
     std::string filename;
     leveldb::Status status;
-    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), key, &filename)).ok()){
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &filename)).ok()){
       if(status.IsNotFound()){
         DLOG_CHAIN(WARNING) << "couldn't find block: " << hash;
         return nullptr;
@@ -147,7 +147,7 @@ namespace token{
   bool BlockChain::HasReference(const std::string& name) const{
     ReferenceKey key(name);
     std::string value;
-    return GetIndex()->Get(leveldb::ReadOptions(), key, &value).ok();
+    return GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &value).ok();
   }
 
   bool BlockChain::RemoveBlock(const Hash& hash, const BlockPtr& blk) const{
@@ -157,7 +157,7 @@ namespace token{
     BlockKey key(blk);
 
     leveldb::Status status;
-    if(!(status = GetIndex()->Delete(options, key)).ok()){
+    if(!(status = GetIndex()->Delete(options, (const leveldb::Slice&)key)).ok()){
       LOG_CHAIN(ERROR) << "couldn't remove block " << hash << ": " << status.ToString();
       return false;
     }
@@ -174,7 +174,7 @@ namespace token{
     std::string value;
 
     leveldb::Status status;
-    if(!(status = GetIndex()->Delete(options, key)).ok()){
+    if(!(status = GetIndex()->Delete(options, (const leveldb::Slice&)key)).ok()){
       LOG_CHAIN(ERROR) << "couldn't remove reference " << name << ": " << status.ToString();
       return false;
     }
@@ -191,7 +191,7 @@ namespace token{
     std::string value = hash.HexString();
 
     leveldb::Status status;
-    if(!(status = GetIndex()->Put(options, key, value)).ok()){
+    if(!(status = GetIndex()->Put(options, (const leveldb::Slice&)key, value)).ok()){
       LOG_CHAIN(ERROR) << "cannot set reference " << name << ": " << status.ToString();
       return false;
     }
@@ -205,7 +205,7 @@ namespace token{
     std::string value;
 
     leveldb::Status status;
-    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), key, &value)).ok()){
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &value)).ok()){
       if(status.IsNotFound()){
         DLOG_CHAIN(WARNING) << "couldn't find reference: " << name;
         return Hash();
@@ -222,7 +222,7 @@ namespace token{
 
     std::string filename;
     leveldb::Status status;
-    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), key, &filename)).ok()){
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &filename)).ok()){
       if(status.IsNotFound()){
         DLOG_CHAIN(WARNING) << "couldn't find block: " << hash;
         return false;
@@ -279,7 +279,7 @@ namespace token{
      return false;
   }
 
-  int64_t BlockChain::GetNumberOfBlocks() const{
+  int64_t BlockChain::GetNumberOfBlocks() const{//TODO: refactor
     std::string home = GetBlockChainDirectory();
 
     int64_t count = 0;

@@ -15,7 +15,7 @@ namespace token{
     ResolveAddresses(const std::string& hostname, Container& results){
       void* ptr;
 
-      struct addrinfo hints;
+      struct addrinfo hints{};
       memset(&hints, 0, sizeof(hints));
       hints.ai_family = PF_UNSPEC;
       hints.ai_socktype = SOCK_STREAM;
@@ -23,16 +23,16 @@ namespace token{
 
       std::string address;
       int32_t port = FLAGS_server_port;
-      if(hostname.find(":") != std::string::npos){
+      if(hostname.find(':') != std::string::npos){
         std::vector<std::string> parts;
         SplitString(hostname, parts, ':');
         address = parts[0];
-        port = atoi(parts[1].data());
+        port = strtol(parts[1].data(), nullptr, 10);
       }
 
       struct addrinfo* res;
       int err;
-      if((err = getaddrinfo(address.data(), NULL, &hints, &res)) != 0){
+      if((err = getaddrinfo(address.data(), nullptr, &hints, &res)) != 0){
         LOG(WARNING) << "couldn't get " << hostname << "'s ip: " << gai_strerror(err);
         return false;
       }
@@ -102,11 +102,11 @@ namespace token{
     uint32_t address_;
     uint32_t port_;
    public:
-    NodeAddress(const std::string& address);
+    explicit NodeAddress(const std::string& address);
     NodeAddress(const std::string& address, uint32_t port);
-    NodeAddress(const uv_tcp_t* stream);
+    explicit NodeAddress(const uv_tcp_t* stream);
     NodeAddress(const NodeAddress& other);
-    NodeAddress(const BufferPtr& buff):
+    explicit NodeAddress(const BufferPtr& buff):
       address_(buff->GetUnsignedInt()),
       port_(buff->GetUnsignedInt()){}
     NodeAddress():
@@ -128,11 +128,7 @@ namespace token{
       return true;
     }
 
-    NodeAddress& operator=(const NodeAddress& other){
-      address_ = other.address_;
-      port_ = other.port_;
-      return (*this);
-    }
+    NodeAddress& operator=(const NodeAddress& other) = default;
 
     friend bool operator==(const NodeAddress& a, const NodeAddress& b){
       return a.address_ == b.address_
@@ -152,7 +148,7 @@ namespace token{
       return stream;
     }
 
-    operator leveldb::Slice() const{
+    explicit operator leveldb::Slice() const{
       return leveldb::Slice();//TODO: implement
     }
   };

@@ -59,9 +59,9 @@ namespace token{
     }
     Block(const BlockPtr& parent, const IndexedTransactionSet& transactions, Timestamp timestamp = Clock::now()):
       Block(parent->GetHeight() + 1, Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION), parent->GetHash(), transactions, timestamp){}
-    ~Block() = default;
+    ~Block() override = default;
 
-    Type GetType() const{
+    Type GetType() const override{
       return Type::kBlock;
     }
 
@@ -128,11 +128,11 @@ namespace token{
       return transactions_.end();
     }
 
-    bool IsGenesis(){
+    bool IsGenesis() const{
       return GetHeight() == 0;
     }
 
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream stream;
       stream << "Block(#" << GetHeight() << ", " << GetNumberOfTransactions() << " Transactions)";
       return stream.str();
@@ -146,7 +146,7 @@ namespace token{
       return size;
     }
 
-    int64_t GetBufferSize() const{
+    int64_t GetBufferSize() const override{
       int64_t size = 0;
       size += sizeof(uint64_t); // timestamp_
       size += sizeof(RawVersion); // version_
@@ -156,7 +156,7 @@ namespace token{
       return size;
     }
 
-    bool Write(const BufferPtr& buff) const{
+    bool Write(const BufferPtr& buff) const override{
       return buff->PutTimestamp(timestamp_)
           && buff->PutVersion(version_)
           && buff->PutLong(height_)
@@ -164,7 +164,7 @@ namespace token{
           && buff->PutSetOf(transactions_);
     }
 
-    bool Write(Json::Writer& writer) const{
+    bool Write(Json::Writer& writer) const override{
       return writer.StartObject()
             && Json::SetField(writer, "timestamp", timestamp_)
             && Json::SetField(writer, "version", version_.ToString())

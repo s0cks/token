@@ -11,17 +11,18 @@ namespace token{
    private:
     HttpRouter* router_;
 
-    void OnMessageRead(const HttpMessagePtr& msg);
+    void OnMessageRead(const HttpMessagePtr& msg) override;
    public:
     HttpSession():
-      Session<HttpMessage>(){}
-    HttpSession(uv_loop_t* loop):
-      Session<HttpMessage>(loop),
+      Session<HttpMessage>(),
+      router_(nullptr){}
+    explicit HttpSession(uv_loop_t* loop):
+      Session<HttpMessage>(loop, UUID()),
       router_(nullptr){}
     HttpSession(uv_loop_t* loop, HttpRouter* router):
-      Session<HttpMessage>(loop),
+      Session<HttpMessage>(loop, UUID()),
       router_(router){}
-    ~HttpSession() = default;
+    ~HttpSession() override = default;
 
     virtual void Send(const HttpMessagePtr& msg){
       return SendMessages({ msg });

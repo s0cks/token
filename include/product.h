@@ -12,22 +12,23 @@ namespace token{
       Base(){}
     Product(const uint8_t* bytes, int64_t size):
       Base(bytes, size){}
-    Product(const char* value):
+    explicit Product(const char* value):
       Base(){
       memcpy(data(), value, std::min((int64_t)strlen(value), kBytesForProduct));
     }
-    Product(const std::string& value):
+    explicit Product(const std::string& value):
       Base(){
       memcpy(data(), value.data(), std::min((int64_t) value.length(), Base::GetSize()));
     }
     Product(const Product& product):
-      Base(){
+      Base(product){
       memcpy(data(), product.data(), Base::GetSize());
     }
-    ~Product() = default;
+    ~Product() override = default;
 
-    void operator=(const Product& product){
+    Product& operator=(const Product& product){
       memcpy(data(), product.data(), Base::GetSize());
+      return (*this);
     }
 
     friend bool operator==(const Product& a, const Product& b){

@@ -2,6 +2,7 @@
 #define TOKEN_TRANSACTION_H
 
 #include <set>
+#include <utility>
 
 #include "json.h"
 #include "hash.h"
@@ -34,13 +35,13 @@ namespace token{
       SerializableObject(),
       reference_(tx, index),
       user_(user){}
-    Input(const BufferPtr& buff):
+    explicit Input(const BufferPtr& buff):
       SerializableObject(),
       reference_(buff->GetReference()),
       user_(buff->GetUser()){}
-    ~Input(){}
+    ~Input() override = default;
 
-    Type GetType() const{
+    Type GetType() const override{
       return Type::kInput;
     }
 
@@ -91,7 +92,7 @@ namespace token{
      *
      * @return The size of this encoded object in bytes
      */
-    int64_t GetBufferSize() const{
+    int64_t GetBufferSize() const override{
       return GetSize();
     }
 
@@ -102,7 +103,7 @@ namespace token{
      * @see Buffer
      * @return True when successful otherwise, false
      */
-    bool Write(const BufferPtr& buffer) const{
+    bool Write(const BufferPtr& buffer) const override{
       return buffer->PutReference(reference_)
              && buffer->PutUser(user_);
     }
@@ -115,7 +116,7 @@ namespace token{
      * @see JsonString
      * @return True when successful otherwise, false
      */
-    bool Write(Json::Writer& writer) const{
+    bool Write(Json::Writer& writer) const override{
       return writer.StartObject()
           && writer.Key("transaction")
           && reference_.Write(writer)
@@ -130,7 +131,7 @@ namespace token{
      * @see Object::ToString()
      * @return The ToString() description of this object
      */
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream stream;
       stream << "Input(" << reference_ << ", " << GetUser() << ")";
       return stream.str();
@@ -140,10 +141,7 @@ namespace token{
       return stream << input.ToString();
     }
 
-    void operator=(const Input& other){
-      reference_ = other.reference_;
-      user_ = other.user_;
-    }
+    Input& operator=(const Input& other) = default;
 
     friend bool operator==(const Input& a, const Input& b){
       return a.reference_ == b.reference_
@@ -197,13 +195,13 @@ namespace token{
       Output(User(user), Product(product)){}
     Output(const char* user, const char* product):
       Output(User(user), Product(product)){}
-    Output(const BufferPtr& buff):
+    explicit Output(const BufferPtr& buff):
       SerializableObject(),
       user_(buff->GetUser()),
       product_(buff->GetProduct()){}
-    ~Output(){}
+    ~Output() override = default;
 
-    Type GetType() const{
+    Type GetType() const override{
       return Type::kOutput;
     }
 
@@ -232,7 +230,7 @@ namespace token{
      *
      * @return The size of this encoded object in bytes
      */
-    int64_t GetBufferSize() const{
+    int64_t GetBufferSize() const override{
       return User::GetSize()
              + Product::GetSize();
     }
@@ -244,7 +242,7 @@ namespace token{
      * @see Buffer
      * @return True when successful otherwise, false
      */
-    bool Write(const BufferPtr& buff) const{
+    bool Write(const BufferPtr& buff) const override{
       return buff->PutUser(user_)
              && buff->PutProduct(product_);
     }
@@ -257,7 +255,7 @@ namespace token{
      * @see JsonString
      * @return True when successful otherwise, false
      */
-    bool Write(Json::Writer& writer) const{
+    bool Write(Json::Writer& writer) const override{
       return writer.StartObject()
              && user_.Write(writer)
              && product_.Write(writer)
@@ -270,7 +268,7 @@ namespace token{
      * @see Object::ToString()
      * @return The ToString() description of this object
      */
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream stream;
       stream << "Output(" << GetUser() << "; " << GetProduct() << ")";
       return stream.str();
@@ -280,10 +278,7 @@ namespace token{
       return stream << output.ToString();
     }
 
-    void operator=(const Output& other){
-      user_ = other.user_;
-      product_ = other.product_;
-    }
+    Output& operator=(const Output& other) = default;
 
     friend bool operator==(const Output& a, const Output& b){
       return a.user_ == b.user_
@@ -322,16 +317,16 @@ namespace token{
     std::string signature_;
    public:
     Transaction(const Timestamp& timestamp,
-      const InputList& inputs,
-      const OutputList& outputs):
+      InputList inputs,
+      OutputList  outputs):
       BinaryObject(),
       timestamp_(timestamp),
-      inputs_(inputs),
-      outputs_(outputs),
+      inputs_(std::move(inputs)),
+      outputs_(std::move(outputs)),
       signature_(){}
-    ~Transaction() = default;
+    ~Transaction() override = default;
 
-    Type GetType() const{
+    Type GetType() const override{
       return Type::kTransaction;
     }
 
@@ -380,7 +375,7 @@ namespace token{
      *
      * @return The size of this encoded object in bytes
      */
-    int64_t GetBufferSize() const{
+    int64_t GetBufferSize() const override{
       int64_t size = 0;
       size += sizeof(RawTimestamp); // timestamp_
       size += GetVectorSize(inputs_); // inputs_
@@ -395,7 +390,7 @@ namespace token{
      * @see Buffer
      * @return True when successful otherwise, false
      */
-    bool Write(const BufferPtr& buff) const{
+    bool Write(const BufferPtr& buff) const override{
       return buff->PutTimestamp(timestamp_) // timestamp_
           && buff->PutVector(inputs_) // inputs_
           && buff->PutVector(outputs_); // outputs
@@ -409,7 +404,7 @@ namespace token{
      * @see JsonString
      * @return True when successful otherwise, false
      */
-    bool Write(Json::Writer& writer) const{
+    bool Write(Json::Writer& writer) const override{
       return writer.StartObject()
              && Json::SetField(writer, "timestamp", ToUnixTimestamp(timestamp_))
              && Json::SetField(writer, "inputs", inputs_)
@@ -488,7 +483,7 @@ namespace token{
      * @see Object::ToString()
      * @return The ToString() description of this object
      */
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream ss;
       ss << "Transaction(";
       ss << "timestamp=" << FormatTimestampReadable(timestamp_) << ", ";
@@ -543,11 +538,11 @@ namespace token{
     int64_t index_;
    public:
     IndexedTransaction(const Timestamp& timestamp, const int64_t& index, const InputList& inputs, const OutputList& outputs):
-        Transaction(timestamp, inputs, outputs),
-        index_(index){}
-    ~IndexedTransaction() = default;
+      Transaction(timestamp, inputs, outputs),
+      index_(index){}
+    ~IndexedTransaction() override = default;
 
-    Type GetType() const{
+    Type GetType() const override{
       return Type::kIndexedTransaction;
     }
 
@@ -555,19 +550,19 @@ namespace token{
       return index_;
     }
 
-    bool Write(const BufferPtr& buffer) const{
+    bool Write(const BufferPtr& buffer) const override{
       return buffer->PutLong(index_)
           && Transaction::Write(buffer);
     }
 
-    int64_t GetBufferSize() const{
+    int64_t GetBufferSize() const override{
       int64_t size = 0;
       size += sizeof(int64_t); // index_
       size += Transaction::GetBufferSize();
       return size;
     }
 
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream ss;
       ss << "IndexedTransaction(";
       ss << "index=" << index_ << ", ";

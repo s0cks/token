@@ -2,6 +2,7 @@
 #define TOKEN_HTTP_MESSAGE_H
 
 #include <memory>
+#include <utility>
 #include "message.h"
 #include "buffer.h"
 
@@ -18,8 +19,8 @@ namespace token{
   typedef std::shared_ptr<HttpMessage> HttpMessagePtr;
 
 #define DEFINE_HTTP_MESSAGE(Name) \
-  const char* GetName() const{ return #Name; } \
-  Type GetType() const{ return Type::kHttp##Name; }
+  const char* GetName() const override{ return #Name; } \
+  Type GetType() const override{ return Type::kHttp##Name; }
 
   class HttpMessage : public Message{
    public:
@@ -28,16 +29,16 @@ namespace token{
     HttpSession* session_;
     HttpHeadersMap headers_;
 
-    HttpMessage(HttpSession* session):
+    explicit HttpMessage(HttpSession* session):
       Message(),
       session_(session),
       headers_(){}
-    HttpMessage(HttpSession* session, const HttpHeadersMap& headers):
+    HttpMessage(HttpSession* session, HttpHeadersMap headers):
       Message(),
       session_(session),
-      headers_(headers){}
+      headers_(std::move(headers)){}
    public:
-    virtual ~HttpMessage() = default;
+    ~HttpMessage() override = default;
 
     HttpSession* GetSession() const{
       return session_;
@@ -80,7 +81,7 @@ namespace token{
     HttpSession* session_;
     HttpHeadersMap headers_;
 
-    HttpMessageBuilder(HttpSession* session):
+    explicit HttpMessageBuilder(HttpSession* session):
       session_(session),
       headers_(){}
     HttpMessageBuilder(const HttpMessageBuilder<M>& other):
@@ -111,10 +112,7 @@ namespace token{
 
     virtual std::shared_ptr<M> Build() const = 0;
 
-    void operator=(const HttpMessageBuilder<M>& other){
-      session_ = other.session_;
-      headers_ = other.headers_;
-    }
+    HttpMessageBuilder& operator=(const HttpMessageBuilder<M>& rhs) = default;
   };
 }
 

@@ -3,6 +3,8 @@
 
 #include <leveldb/write_batch.h>
 
+#include <utility>
+
 #include "pool.h"
 #include "block.h"
 #include "wallet.h"
@@ -41,12 +43,10 @@ namespace token{
     Status status_;
     std::string message_;
    public:
-    JobResult(const Status& status, const std::string& msg):
+    JobResult(const Status& status, std::string  msg):
       status_(status),
-      message_(msg){}
-    JobResult(const JobResult& result):
-      status_(result.status_),
-      message_(result.message_){}
+      message_(std::move(msg)){}
+    JobResult(const JobResult& result) = default;
     ~JobResult() = default;
 
     Status GetStatus() const{
@@ -77,10 +77,7 @@ namespace token{
       return GetStatus() == JobResult::kCancelled;
     }
 
-    void operator=(const JobResult& result){
-      status_ = result.status_;
-      message_ = result.message_;
-    }
+    JobResult& operator=(const JobResult& result) = default;
 
     friend std::ostream& operator<<(std::ostream& stream, const JobResult& result){
       stream << result.GetMessage() << " [" << result.GetStatus() << "]";
@@ -125,9 +122,9 @@ namespace token{
     JobResult result_;
     std::atomic<int32_t> unfinished_;
 
-    Job(Job* parent, const std::string& name):
+    Job(Job* parent, std::string  name):
       parent_(parent),
-      name_(name),
+      name_(std::move(name)),
       result_(JobResult::kUnscheduled, "Unscheduled"),
       unfinished_(){
       unfinished_.store(1, std::memory_order_relaxed);
@@ -160,7 +157,7 @@ namespace token{
       return true;
     }
    public:
-    virtual ~Job() = default;
+    ~Job() override = default;
 
     Job* GetParent() const{
       return parent_;
@@ -186,7 +183,7 @@ namespace token{
       return result_;
     }
 
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream ss;
       ss << GetName() << "Job()";
       return ss.str();
@@ -228,7 +225,7 @@ namespace token{
       max_bsize_ = val;
     }
    public:
-    virtual ~BatchWriteJob() = default;
+    ~BatchWriteJob() override = default;
 
     int64_t GetMinimumBatchSize() const{
       return min_bsize_;
@@ -250,7 +247,7 @@ namespace token{
     WalletManagerJob(Job* parent, const std::string& name):
       Job(parent, name){}
    public:
-    virtual ~WalletManagerJob() = default;
+    ~WalletManagerJob() override = default;
   };
 
   class WalletManagerBatchWriteJob : public BatchWriteJob{
@@ -268,12 +265,12 @@ namespace token{
         LOG(WARNING) << "cannot encode wallet.";
         return;
       }
-      batch_.Put(key, buffer->operator leveldb::Slice());
+      batch_.Put((leveldb::Slice&)key, buffer->operator leveldb::Slice());
     }
    public:
-    virtual ~WalletManagerBatchWriteJob() = default;
+    ~WalletManagerBatchWriteJob() override = default;
 
-    bool Commit() const;
+    bool Commit() const override;
   };
 
   class ObjectPoolJob : public Job{
@@ -281,7 +278,7 @@ namespace token{
     ObjectPoolJob(Job* parent, const std::string& name):
       Job(parent, name){}
    public:
-    virtual ~ObjectPoolJob() = default;
+    ~ObjectPoolJob() override = default;
   };
 
   class ObjectPoolBatchWriteJob : public BatchWriteJob{
@@ -295,7 +292,7 @@ namespace token{
     PutTransaction(const Hash& hash, const TransactionPtr& val){
       ObjectPool::PoolKey key(Type::kTransaction, val->GetBufferSize(), hash);
       BufferPtr value = val->ToBuffer();
-      batch_.Put(key, value->AsSlice());
+      batch_.Put((leveldb::Slice&)key, value->AsSlice());
       return true;
     }
 
@@ -303,7 +300,7 @@ namespace token{
     PutBlock(const Hash& hash, const BlockPtr& val){
       ObjectPool::PoolKey key(Type::kBlock, val->GetBufferSize(), hash);
       BufferPtr value = val->ToBuffer();
-      batch_.Put(key, value->AsSlice());
+      batch_.Put((leveldb::Slice&)key, value->AsSlice());
       return true;
     }
 
@@ -311,13 +308,13 @@ namespace token{
     PutUnclaimedTransaction(const Hash& hash, const UnclaimedTransactionPtr& val){
       ObjectPool::PoolKey key(Type::kUnclaimedTransaction, val->GetBufferSize(), hash);
       BufferPtr value = val->ToBuffer();
-      batch_.Put(key, value->AsSlice());
+      batch_.Put((leveldb::Slice&)key, value->AsSlice());
       return true;
     }
    public:
-    virtual ~ObjectPoolBatchWriteJob() = default;
+    ~ObjectPoolBatchWriteJob() override = default;
 
-    bool Commit() const;
+    bool Commit() const override;
   };
 
 #define JOB_LOG(LevelName, Job) \

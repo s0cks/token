@@ -2,6 +2,7 @@
 #define TOKEN_INCLUDE_HTTP_RESPONSE_H
 
 #include <memory>
+#include <utility>
 #include <http_parser.h>
 
 
@@ -38,7 +39,7 @@ namespace token{
       return ss.str();
     }
    protected:
-    virtual bool Write(const BufferPtr& buff) const{
+    bool Write(const BufferPtr& buff) const override{
       if(!buff->PutString(GetHttpStatusLine(GetStatusCode())))
         return false;
       for(auto& hdr : headers_)
@@ -51,7 +52,7 @@ namespace token{
 
     static int
     OnParseBody(http_parser* parser, const char* data, size_t len){
-      HttpResponse* response = (HttpResponse*)parser->data;
+      auto response = (HttpResponse*)parser->data;
       if(!response->body_->PutBytes((uint8_t*)data, len)){
         LOG(WARNING) << "cannot put body bytes.";
         return -1;
@@ -59,11 +60,14 @@ namespace token{
       return 0;
     }
    public:
-    HttpResponse(HttpSession* session, const HttpHeadersMap& headers, const HttpStatusCode& status_code, const BufferPtr& body):
+    HttpResponse(HttpSession* session,
+                 const HttpHeadersMap& headers,
+                 const HttpStatusCode& status_code,
+                 BufferPtr body):
       HttpMessage(session, headers),
       status_code_(status_code),
-      body_(body){}
-    virtual ~HttpResponse() = default;
+      body_(std::move(body)){}
+    ~HttpResponse() override = default;
 
     DEFINE_HTTP_MESSAGE(Response);
 
@@ -75,7 +79,7 @@ namespace token{
       return body_->GetWrittenBytes();
     }
 
-    int64_t GetBufferSize() const{
+    int64_t GetBufferSize() const override{
       int64_t size = 0;
       size += GetHttpStatusLine(GetStatusCode()).length();
       for(auto& it : headers_)
@@ -96,7 +100,7 @@ namespace token{
       return std::string(body_->data(), body_->GetWrittenBytes());
     }
 
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream ss;
       ss << "HttpResponse(";
         ss << "status_code=" << status_code_ << ", ";
@@ -112,16 +116,16 @@ namespace token{
     HttpStatusCode status_code_;
     BufferPtr body_;
    public:
-    HttpResponseBuilder(HttpSession* session):
+    explicit HttpResponseBuilder(HttpSession* session):
       HttpMessageBuilder(session),
       status_code_(HttpStatusCode::kHttpOk),
       body_(Buffer::NewInstance(HttpMessage::kDefaultBodySize)){
       InitHttpResponseHeaders(headers_);
     }
-    HttpResponseBuilder(HttpSession* session, const BufferPtr& body):
+    HttpResponseBuilder(HttpSession* session, BufferPtr body):
       HttpMessageBuilder(session),
       status_code_(HttpStatusCode::kHttpOk),
-      body_(body){
+      body_(std::move(body)){
       InitHttpResponseHeaders(headers_);
     }
     HttpResponseBuilder(const HttpResponseBuilder& other):
@@ -130,7 +134,7 @@ namespace token{
       body_(other.body_){
       InitHttpResponseHeaders(headers_);
     }
-    ~HttpResponseBuilder() = default;
+    ~HttpResponseBuilder() override = default;
 
     void SetStatusCode(const HttpStatusCode& status_code){
       status_code_ = status_code;
@@ -148,15 +152,11 @@ namespace token{
       body_ = Buffer::CopyFrom(body);
     }
 
-    HttpResponsePtr Build() const{
+    HttpResponsePtr Build() const override{
       return std::make_shared<HttpResponse>(session_, headers_, status_code_, body_);
     }
 
-    void operator=(const HttpResponseBuilder& other){
-      HttpMessageBuilder::operator=(other);
-      status_code_ = other.status_code_;
-      body_ = other.body_;
-    }
+    HttpResponseBuilder& operator=(const HttpResponseBuilder& other) = default;
   };
 
   class HttpResponseParser : public HttpResponseBuilder{
@@ -176,21 +176,21 @@ namespace token{
 
     static int
     OnParseBody(http_parser* p, const char* data, size_t len){
-      HttpResponseParser* parser = (HttpResponseParser*)p->data;
+      auto parser = (HttpResponseParser*)p->data;
       parser->SetBody(Buffer::CopyFrom(data, len));
       return 0;
     }
 
     static int
     OnHeaderField(http_parser* p, const char* data, size_t len){
-      HttpResponseParser* parser = (HttpResponseParser*)p->data;
+      auto parser = (HttpResponseParser*)p->data;
       parser->SetNextHeader(std::string(data, len));
       return 0;
     }
 
     static int
     OnHeaderValue(http_parser* p, const char* data, size_t len){
-      HttpResponseParser* parser = (HttpResponseParser*)p->data;
+      auto parser = (HttpResponseParser*)p->data;
       parser->CreateNextHeader(std::string(data, len));
       return 0;
     }
@@ -201,7 +201,7 @@ namespace token{
       return 0;
     }
    public:
-    HttpResponseParser(HttpSession* session):
+    explicit HttpResponseParser(HttpSession* session):
       HttpResponseBuilder(session),
       parser_(),
       settings_(){
@@ -212,7 +212,7 @@ namespace token{
       settings_.on_header_value = &OnHeaderValue;
       http_parser_init(&parser_, HTTP_RESPONSE);
     }
-    ~HttpResponseParser() = default;
+    ~HttpResponseParser() override = default;
 
     bool Parse(const char* data, size_t len){
       size_t parsed;

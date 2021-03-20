@@ -2,6 +2,7 @@
 #define TOKEN_PROPOSAL_H
 
 #include <memory>
+#include <utility>
 #include "block.h"
 #include "configuration.h"
 
@@ -95,14 +96,14 @@ namespace token{
       on_rejected_.data = this;
       CHECK_UVRESULT(uv_async_init(loop, &on_rejected_, &OnRejected), LOG(ERROR), "cannot initialize the on_rejected callback");
     }
-    ~Proposal() = default;
+    ~Proposal() override = default;
 
     uv_loop_t* GetLoop() const{
       return loop_;
     }
 
     ProposalPhase GetPhase() const{
-      return phase_;
+      return (ProposalPhase)phase_;
     }
 
     RawProposal& raw(){
@@ -157,7 +158,7 @@ namespace token{
       return true;
     }
 
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream ss;
       ss << "Proposal(";
       ss << ")";
@@ -165,7 +166,7 @@ namespace token{
     }
 
 #define DEFINE_PHASE_CHECK(Name) \
-    inline bool In##Name##Phase() const{ return phase_ == ProposalPhase::k##Name##Phase; }
+    inline bool In##Name##Phase() const{ return GetPhase() == ProposalPhase::k##Name##Phase; }
     FOR_EACH_PROPOSAL_PHASE(DEFINE_PHASE_CHECK)
 #undef DEFINE_PHASE_CHECK
 
@@ -209,10 +210,10 @@ namespace token{
 
     JobResult DoWork() override;
    public:
-    ProposalJob(Job* parent, BlockMiner* miner, const ProposalPtr& proposal):
+    ProposalJob(Job* parent, BlockMiner* miner, ProposalPtr proposal):
       Job(parent, ProposalJob::kName),
       miner_(miner),
-      proposal_(proposal){}
+      proposal_(std::move(proposal)){}
     ProposalJob(BlockMiner* miner, const ProposalPtr& proposal):
       ProposalJob(nullptr, miner, proposal){}
   };

@@ -19,8 +19,8 @@ namespace token{
    protected:
     Message() = default;
    public:
-    virtual ~Message() = default;
+    ~Message() override = default;
   };
-};
+}
 
 #endif //TOKEN_MESSAGE_H

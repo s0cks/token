@@ -9,6 +9,7 @@
 namespace token{
 #define SESSION_LOG(LevelName, Session) \
   LOG(LevelName) << "[session-" << (Session)->GetUUID().ToStringAbbreviated() << "] "
+
 #define DLOG_SESSION(LevelName, Session) \
   DLOG(LevelName) << "[session-" << (Session)->GetUUID().ToStringAbbreviated() << "] "
 
@@ -91,42 +92,36 @@ namespace token{
     }
 
     void CloseConnection(){
-      uv_walk(loop_, &OnWalk, NULL);
+      uv_walk(loop_, &OnWalk, nullptr);
     }
 
     static void
     OnMessageSent(uv_write_t* req, int status){
-      SessionWriteData* data = (SessionWriteData*)req->data;
+      auto data = (SessionWriteData*)req->data;
       if(status != 0)
         SESSION_LOG(WARNING, data->session) << "failed to send message: " << uv_strerror(status); //TODO: use SESSION_LOG
       delete data;
     }
    public:
-    Session():
-      uuid_(),
-      loop_(nullptr),
-      handle_(),
-      state_(Session::kDisconnectedState){}
-    Session(uv_loop_t* loop, const UUID& uuid):
+    Session(uv_loop_t* loop, const UUID& uuid, const int32_t& keep_alive=0):
       uuid_(uuid),
       loop_(loop),
       handle_(),
       state_(Session::kDisconnectedState){
       handle_.data = this;
-
-      int err;
-      if((err = uv_tcp_init(loop_, &handle_)) != 0){
-        SESSION_LOG(ERROR, this) << "couldn't initialize the channel handle: " << uv_strerror(err);
-        return;
-      }
-
-      if((err = uv_tcp_keepalive(&handle_, 1, 60)) != 0){
-        SESSION_LOG(WARNING, this) << "couldn't configure channel keep-alive: " << uv_strerror(err);
-        return;
+      if(loop){
+        CHECK_UVRESULT(uv_tcp_init(loop_, &handle_), SESSION_LOG(ERROR, this), "couldn't initialize the session handle");
+        if(keep_alive > 0)
+          CHECK_UVRESULT(uv_tcp_keepalive(&handle_, true, keep_alive), SESSION_LOG(ERROR, this), "couldn't enable session keep-alive");
       }
     }
-    Session(uv_loop_t* loop):
-      Session(loop, UUID()){}
+    Session():
+      uuid_(),
+      loop_(nullptr),
+      handle_(),
+      state_(Session::kDisconnectedState){
+      handle_.data = this;
+    }
     virtual ~Session() = default;
 
     UUID GetUUID() const{
@@ -134,7 +129,7 @@ namespace token{
     }
 
     State GetState() const{
-      return state_;
+      return (State)state_;
     }
 
     uv_loop_t* GetLoop() const{
@@ -163,7 +158,7 @@ namespace token{
 
       DLOG_SESSION(INFO, this) << "sending " << total_messages << " messages....";
 
-      SessionWriteData* data = new SessionWriteData(this, total_size);
+      auto data = new SessionWriteData(this, total_size);
       uv_buf_t buffers[total_messages];
 
       int64_t offset = 0;

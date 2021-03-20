@@ -12,22 +12,23 @@ namespace token{
       Base(){}
     User(const uint8_t* bytes, int64_t size):
       Base(bytes, size){}
-    User(const char* value):
+    explicit User(const char* value):
       Base(){
       memcpy(data(), value, std::min((int64_t)strlen(value), Base::GetSize()));
     }
-    User(const std::string& value):
+    explicit User(const std::string& value):
       Base(){
       memcpy(data(), value.data(), std::min((int64_t) value.length(), Base::GetSize()));
     }
     User(const User& user):
-      Base(){
+      Base(user){
       memcpy(data(), user.data(), Base::GetSize());
     }
-    ~User() = default;
+    ~User() override = default;
 
-    void operator=(const User& user){
+    User& operator=(const User& user){
       memcpy(data(), user.data(), Base::GetSize());
+      return (*this);
     }
 
     friend bool operator==(const User& a, const User& b){

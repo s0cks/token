@@ -9,14 +9,14 @@ namespace token{
    protected:
     std::shared_ptr<HealthController> health_;
    public:
-    HttpHealthService(uv_loop_t* loop=uv_loop_new());
-    ~HttpHealthService() = default;
+    explicit HttpHealthService(uv_loop_t* loop=uv_loop_new());
+    ~HttpHealthService() override = default;
 
     std::shared_ptr<HealthController> GetHealthController() const{
       return health_;
     }
 
-    ServerPort GetPort() const{
+    ServerPort GetPort() const override{
       return FLAGS_healthcheck_port;
     }
 

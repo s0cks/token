@@ -2,9 +2,8 @@
 #define TOKEN_TRIE_H
 
 #include <string>
-#include <cstdint>
-
 #include <hash.h>
+#include <cstdint>
 
 namespace token{
   template<class K, class V, int64_t kAlphabetSize>
@@ -103,7 +102,7 @@ namespace token{
     void Insert(TrieNode<K, V, kAlphabetSize>* node, const K& key, const V& value){
       TrieNode<K, V, kAlphabetSize>* curr = node;
       for(int idx = 0; idx < key.size(); idx++){
-        char next = tolower(key[idx]);
+        unsigned char next = tolower(key[idx]);
 
         TrieNode<K, V, kAlphabetSize>* child = curr->children_[next];
         if(!child)

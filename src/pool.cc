@@ -83,7 +83,7 @@ namespace token{
   }
 
 #define DEFINE_PRINT_TYPE(Name) \
-  bool ObjectPool::Print##Name##s(const google::LogSeverity severity) const{ \
+  bool ObjectPool::Print##Name##s(const google::LogSeverity& severity) const{ \
     LOG_AT_LEVEL(severity) << "object pool " << #Name << "s:";         \
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions()); \
     for(it->SeekToFirst(); it->Valid(); it->Next()){                   \
@@ -111,7 +111,7 @@ namespace token{
     PoolKey key(val->GetType(), val->GetBufferSize(), hash);          \
     BufferPtr buffer = val->ToBuffer();                               \
     leveldb::Status status;   \
-    if(!(status = GetIndex()->Put(options, key, buffer->operator leveldb::Slice())).ok()){ \
+    if(!(status = GetIndex()->Put(options, (const leveldb::Slice&)key, buffer->operator leveldb::Slice())).ok()){ \
       LOG(WARNING) << "cannot index object " << hash << ": " << status.ToString();\
       return false;           \
     }                         \
@@ -126,7 +126,7 @@ namespace token{
     PoolKey key(Type::k##Name, 0, hash);             \
     std::string data;         \
     leveldb::Status status;   \
-    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), key, &data)).ok()){ \
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &data)).ok()){ \
       LOG(WARNING) << "cannot get " << hash << ": " << status.ToString(); \
       return Name##Ptr(nullptr);                     \
     }                         \
@@ -140,7 +140,7 @@ namespace token{
   bool ObjectPool::Has##Name(const Hash& hash) const{ \
     std::string data;                          \
     PoolKey key(Type::k##Name, 0, hash);        \
-    return GetIndex()->Get(leveldb::ReadOptions(), key, &data).ok(); \
+    return GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &data).ok(); \
   }
   FOR_EACH_POOL_TYPE(DEFINE_HAS_TYPE);
 #undef DEFINE_HAS_TYPE
@@ -167,7 +167,7 @@ namespace token{
     leveldb::WriteOptions options;                 \
     options.sync = true;         \
     leveldb::Status status;      \
-    if(!(status = GetIndex()->Delete(options, key)).ok()){ \
+    if(!(status = GetIndex()->Delete(options, (const leveldb::Slice&)key)).ok()){ \
       LOG(WARNING) << "cannot remove " << hash << " from pool: " << status.ToString(); \
       return false;              \
     }                            \

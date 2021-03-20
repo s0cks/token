@@ -11,7 +11,7 @@ namespace token{
    private:
     NodeAddress address_;
    public:
-    HttpClient(const NodeAddress& address):
+    explicit HttpClient(const NodeAddress& address):
       address_(address){}
     ~HttpClient() = default;
 

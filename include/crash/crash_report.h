@@ -3,6 +3,7 @@
 
 #include <cstdio>
 #include <cstdarg>
+#include <utility>
 
 #include "common.h"
 #include "timestamp.h"
@@ -31,17 +32,17 @@ namespace token{
       va_end(args);
     }
    public:
-    CrashReport(FILE* file, const std::string& cause):
+    CrashReport(FILE* file, std::string cause):
       filename_(),
       file_(file),
       timestamp_(Clock::now()),
-      cause_(cause){}
-    CrashReport(const std::string& filename, const std::string& cause):
+      cause_(std::move(cause)){}
+    CrashReport(const std::string& filename, std::string cause):
       filename_(filename),
-      file_(NULL),
+      file_(nullptr),
       timestamp_(Clock::now()),
-      cause_(cause){
-      if((file_ = fopen(filename.c_str(), "w")) == NULL)
+      cause_(std::move(cause)){
+      if((file_ = fopen(filename.c_str(), "w")) == nullptr)
         LOG(WARNING) << "couldn't create text file " << filename << ": " << strerror(errno);
     }
     ~CrashReport(){

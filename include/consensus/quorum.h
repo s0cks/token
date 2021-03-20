@@ -144,15 +144,15 @@ namespace token{
     ~Phase1Quorum() override = default;
 
     int16_t GetPromised() const{
-      return promised_;
+      return (int16_t)promised_;
     }
 
     int16_t GetRejected() const{
-      return rejected_;
+      return (int16_t)rejected_;
     }
 
     int16_t GetNumberOfVotes() const override{
-      return promised_ + rejected_;
+      return GetPromised() + GetRejected();
     }
 
     bool StartTimer(){
@@ -168,9 +168,9 @@ namespace token{
     }
 
     QuorumResult GetResult() override{
-      int16_t total_votes = promised_ + rejected_;
+      int16_t total_votes = GetNumberOfVotes();
       int16_t required = (required_votes_ / 2) + 1;
-      return QuorumResult(this, total_votes, required, promised_, rejected_);
+      return QuorumResult(this, total_votes, required, GetPromised(), GetRejected());
     }
   };
 
@@ -208,15 +208,15 @@ namespace token{
     ~Phase2Quorum() override = default;
 
     int16_t GetAccepted() const{
-      return accepted_;
+      return (int16_t)accepted_;
     }
 
     int16_t GetRejected() const{
-      return rejected_;
+      return (int16_t)rejected_;
     }
 
     int16_t GetNumberOfVotes() const override{
-      return accepted_ + rejected_;
+      return GetAccepted() + GetRejected();
     }
 
     bool StartTimer(){
@@ -232,9 +232,9 @@ namespace token{
     }
 
     QuorumResult GetResult() override{
-      int16_t total_votes = accepted_ + rejected_;
+      int16_t total_votes = GetNumberOfVotes();
       int16_t required = (required_votes_ / 2) + 1;
-      return QuorumResult(this, total_votes, required, accepted_, rejected_);
+      return QuorumResult(this, total_votes, required, GetAccepted(), GetRejected());
     }
   };
 

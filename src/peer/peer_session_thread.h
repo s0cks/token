@@ -77,7 +77,7 @@ namespace token{
     }
 
     PeerSession* CreateNewSession(const NodeAddress& address){
-      PeerSession* session = new PeerSession(address);
+      auto session = new PeerSession(address);
       SetSession(session);
       return session;
     }
@@ -85,7 +85,7 @@ namespace token{
     ConnectionRequest* GetNextRequest();
     static void HandleThread(uword param);
    public:
-    PeerSessionThread(const WorkerId& worker_id):
+    explicit PeerSessionThread(const WorkerId& worker_id):
       thread_(),
       queue_(TOKEN_CONNECTION_QUEUE_SIZE),
       state_(State::kStoppedState),
@@ -99,7 +99,7 @@ namespace token{
     }
 
     State GetState() const{
-      return state_;
+      return (State)state_;
     }
 
     WorkerId GetWorkerId() const{

@@ -34,9 +34,9 @@ namespace token{
       reference_(hash, index),
       user_(user),
       product_(product){}
-    ~UnclaimedTransaction(){}
+    ~UnclaimedTransaction() override = default;
 
-    Type GetType() const{
+    Type GetType() const override{
       return Type::kUnclaimedTransaction;
     }
 
@@ -56,19 +56,19 @@ namespace token{
       return product_;
     }
 
-    int64_t GetBufferSize() const{
+    int64_t GetBufferSize() const override{
       return TransactionReference::kSize
            + User::GetSize()
            + Product::GetSize();
     }
 
-    bool Write(const BufferPtr& buff) const{
+    bool Write(const BufferPtr& buff) const override{
       return buff->PutReference(reference_)
           && buff->PutUser(user_)
           && buff->PutProduct(product_);
     }
 
-    bool Write(Json::Writer& writer) const{
+    bool Write(Json::Writer& writer) const override{
       return writer.StartObject()
           && reference_.Write(writer)
           && user_.Write(writer)
@@ -82,7 +82,7 @@ namespace token{
           && product_ == val->product_;
     }
 
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream ss;
       ss << "UnclaimedTransaction(";
         ss << "hash=" << GetHash() << ", ";

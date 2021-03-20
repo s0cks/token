@@ -9,7 +9,7 @@
 #include <string>
 #include <sstream>
 #include <uv.h>
-#include <signal.h>
+#include <csignal>
 #include <sys/stat.h>
 #include <uuid/uuid.h>
 #include <fstream>
@@ -86,7 +86,7 @@ namespace token{
   }
 
   static bool
-  BeginsWith(const std::string& str, const std::string prefix){
+  BeginsWith(const std::string& str, const std::string& prefix){
     return str.size() >= prefix.size() &&
            str.compare(0, prefix.size(), prefix) == 0;
   }
@@ -160,9 +160,8 @@ namespace token{
    private:
     static void HandleInterrupt(int signum);
     static void HandleSegfault(int signum);
-
-    SignalHandlers() = delete;
    public:
+    SignalHandlers() = delete;
     ~SignalHandlers() = delete;
 
     static void Initialize(){
@@ -170,12 +169,6 @@ namespace token{
       signal(SIGSEGV, &HandleSegfault);
     }
   };
-
-#define LOG_NAMED(LevelName) \
-  LOG(LevelName) << "[" << GetName() << "] "
-
-#define LOG_UUID(LevelName) \
-  LOG(LevelName) << "[" << GetUUID() << "] "
 }
 
 DECLARE_string(path);

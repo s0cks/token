@@ -8,9 +8,8 @@ namespace token{
   class Keychain{
    public:
     static const size_t kKeypairSize = 4096;
-   private:
-    Keychain() = delete;
    public:
+    Keychain() = delete;
     ~Keychain() = delete;
 
     static bool Initialize();

@@ -5,6 +5,7 @@
 #include <string>
 #include <sstream>
 #include <unordered_map>
+#include <utility>
 #include <http_parser.h>
 
 #include "http/http_method.h"
@@ -29,7 +30,7 @@ namespace token{
     ParameterMap path_params_;
     ParameterMap query_params_;
    protected:
-    bool Write(const BufferPtr& buffer) const{
+    bool Write(const BufferPtr& buffer) const override{
       if(!buffer->PutString(GetHttpStatusLine(method_, path_)))
         return false;
       for(auto& hdr : headers_){
@@ -54,21 +55,27 @@ namespace token{
       return ss.str();
     }
    public:
-    HttpRequest(HttpSession* session):
+    explicit HttpRequest(HttpSession* session):
       HttpMessage(session),
       method_(),
       path_(),
       body_(),
       path_params_(),
       query_params_(){}
-    HttpRequest(HttpSession* session, const HttpHeadersMap& headers, const HttpMethod& method, const std::string& path, const ParameterMap& path_params, const ParameterMap& query_params, const std::string& body):
+    HttpRequest(HttpSession* session,
+                const HttpHeadersMap& headers,
+                const HttpMethod& method,
+                std::string path,
+                ParameterMap  path_params,
+                ParameterMap  query_params,
+                std::string  body):
       HttpMessage(session, headers),
       method_(method),
-      path_(path),
-      body_(body),
-      path_params_(path_params),
-      query_params_(query_params){}
-    ~HttpRequest(){}
+      path_(std::move(path)),
+      body_(std::move(body)),
+      path_params_(std::move(path_params)),
+      query_params_(std::move(query_params)){}
+    ~HttpRequest() override = default;
 
     DEFINE_HTTP_MESSAGE(Request);
 
@@ -146,7 +153,7 @@ namespace token{
       return Hash::FromHexString(GetPathParameterValue(name));
     }
 
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream ss;
       ss << "HttpRequest(";
       ss << "path=" << path_ << ", ";
@@ -155,7 +162,7 @@ namespace token{
       return ss.str();
     }
 
-    int64_t GetBufferSize() const{
+    int64_t GetBufferSize() const override{
       int64_t size = 0;
       size += GetHttpStatusLine(method_, path_).length();
       for(auto& it : headers_)
@@ -180,14 +187,14 @@ namespace token{
     ParameterMap path_params_;
     ParameterMap query_params_;
    public:
-    HttpRequestBuilder(HttpSession* session):
+    explicit HttpRequestBuilder(HttpSession* session):
       HttpMessageBuilder(session),
       method_(HttpMethod::kGet),
       path_(),
       body_(),
       path_params_(),
       query_params_(){}
-    ~HttpRequestBuilder() = default;
+    ~HttpRequestBuilder() override = default;
 
     void SetMethod(const HttpMethod& method){
       method_ = method;
@@ -214,7 +221,7 @@ namespace token{
       return path_params_.insert({ name, value }).second;
     }
 
-    HttpRequestPtr Build() const{
+    HttpRequestPtr Build() const override{
       return std::make_shared<HttpRequest>(session_, headers_, method_, path_, path_params_, query_params_, body_);
     }
   };
@@ -226,14 +233,14 @@ namespace token{
 
     static int
     OnParseURL(http_parser* parser, const char* data, size_t len){
-      HttpRequestParser* p = (HttpRequestParser*)parser->data;
+      auto p = (HttpRequestParser*)parser->data;
       p->SetPath(std::string(data, len));
       return 0;
     }
 
     static int
     OnParseBody(http_parser* parser, const char* data, size_t len){
-      HttpRequestParser* p = (HttpRequestParser*)parser->data;
+      auto p = (HttpRequestParser*)parser->data;
       p->SetBody(std::string(data, len));
       return 0;
     }
@@ -245,7 +252,7 @@ namespace token{
       return 0;
     }
    public:
-    HttpRequestParser(HttpSession* session):
+    explicit HttpRequestParser(HttpSession* session):
       HttpRequestBuilder(session),
       parser_(),
       settings_(){
@@ -260,7 +267,7 @@ namespace token{
     bool Parse(const char* data, size_t len){
       size_t parsed;
       if((parsed = http_parser_execute(&parser_, &settings_, data, len)) != len){
-        http_errno err = (http_errno)parser_.http_errno;
+        auto err = (http_errno)parser_.http_errno;
         LOG(WARNING) << "http parser parsed " << parsed << "/" << len << " bytes (" << http_errno_name(err) << "): " << http_errno_description(err);
         return false;
       }

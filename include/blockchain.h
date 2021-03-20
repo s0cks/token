@@ -16,6 +16,7 @@
 namespace token{
 #define LOG_CHAIN(LevelName) \
   LOG(LevelName) << "[chain] "
+
 #define DLOG_CHAIN(LevelName) \
   DLOG(LevelName) << "[chain] "
 
@@ -124,36 +125,36 @@ namespace token{
         SetTag(ObjectTag(Type::kBlock, size));
         SetHash(hash);
       }
-      BlockKey(const BlockPtr& blk):
+      explicit BlockKey(const BlockPtr& blk):
         KeyType(),
         data_(){
         SetTag(blk->GetTag());
         SetHash(blk->GetHash());
       }
-      BlockKey(const leveldb::Slice& slice):
+      explicit BlockKey(const leveldb::Slice& slice):
         KeyType(),
         data_(){
-        memcpy(data(), slice.data(), std::min(slice.size(), (std::size_t)kTotalSize));
+        memcpy(data_, slice.data(), std::min(slice.size(), (std::size_t)kTotalSize));
       }
-      ~BlockKey() = default;
+      ~BlockKey() override = default;
 
       Hash GetHash() const{
         return Hash(hash_ptr(), kBytesForHash);
       }
 
-      ObjectTag tag() const{
+      ObjectTag tag() const override{
         return ObjectTag(*tag_ptr());
       }
 
-      size_t size() const{
+      size_t size() const override{
         return kTotalSize;
       }
 
-      char* data() const{
+      char* data() const override{
         return (char*)data_;
       }
 
-      std::string ToString() const{
+      std::string ToString() const override{
         std::stringstream ss;
         ss << "BlockKey(";
         ss << "tag=" << tag() << ", ";
@@ -227,22 +228,22 @@ namespace token{
         memcpy(&data_[kReferencePosition], ref.data(), kBytesForReference);
       }
      public:
-      ReferenceKey(const Reference& ref):
-          KeyType(),
-          data_(){
+      explicit ReferenceKey(const Reference& ref):
+        KeyType(),
+        data_(){
         SetTag(ObjectTag(Type::kReference, ref.size()));
         SetReference(ref);
       }
-      ReferenceKey(const std::string& name):
-          ReferenceKey(Reference(name)){}
-      ReferenceKey(const leveldb::Slice& slice):
-          KeyType(),
-          data_(){
-        memcpy(data(), slice.data(), kTotalSize);
+      explicit ReferenceKey(const std::string& name):
+        ReferenceKey(Reference(name)){}
+      explicit ReferenceKey(const leveldb::Slice& slice):
+        KeyType(),
+        data_(){
+        memcpy(data_, slice.data(), kTotalSize);
       }
-      ~ReferenceKey() = default;
+      ~ReferenceKey() override = default;
 
-      ObjectTag tag() const{
+      ObjectTag tag() const override{
         return ObjectTag(*tag_ptr());
       }
 
@@ -250,15 +251,15 @@ namespace token{
         return Reference(ref_ptr(), kBytesForReference);
       }
 
-      size_t size() const{
+      size_t size() const override{
         return kTotalSize;
       }
 
-      char* data() const{
+      char* data() const override{
         return (char*)data_;
       }
 
-      std::string ToString() const{
+      std::string ToString() const override{
         std::stringstream ss;
         ss << "ReferenceKey(";
         ss << "tag=" << tag() << ", ";
@@ -279,9 +280,9 @@ namespace token{
       }
      public:
       Comparator() = default;
-      ~Comparator() = default;
+      ~Comparator() override = default;
 
-      int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const{
+      int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const override{
         ObjectTag t1 = GetTag(a);
         ObjectTag t2 = GetTag(b);
 
@@ -314,12 +315,12 @@ namespace token{
         return 0;
       }
 
-      const char* Name() const{
+      const char* Name() const override{
         return "BlockComparator";
       }
 
-      void FindShortestSeparator(std::string* str, const leveldb::Slice& slice) const{}
-      void FindShortSuccessor(std::string* str) const {}
+      void FindShortestSeparator(std::string* str, const leveldb::Slice& slice) const override{}
+      void FindShortSuccessor(std::string* str) const override{}
     };
    protected:
     RelaxedAtomic<State> state_;
@@ -339,7 +340,7 @@ namespace token{
     }
 
     leveldb::Status InitializeIndex(const std::string& filename);
-    bool PutBlock(const Hash& hash, BlockPtr blk) const;
+    bool PutBlock(const Hash& hash, const BlockPtr& blk) const;
     bool RemoveReference(const std::string& name) const;
     bool RemoveBlock(const Hash& hash, const BlockPtr& blk) const;
     bool Append(const BlockPtr& blk);
@@ -355,8 +356,8 @@ namespace token{
      * TODO
      * @return
      */
-    State GetState() const{
-      return state_;
+    BlockChain::State GetState() const{
+      return (BlockChain::State)state_;
     }
 
     /**
@@ -417,11 +418,18 @@ namespace token{
      * TODO
      * @return
      */
-    int64_t GetNumberOfReferences() const;
+    int64_t GetNumberOfReferences() const{
+      NOT_IMPLEMENTED(WARNING);//TODO: implement
+      return 0;
+    }
 
     //TODO: guard
     bool GetBlocks(Json::Writer& writer) const;
-    bool GetReferences(Json::Writer& writer) const;
+
+    bool GetReferences(Json::Writer& writer) const{
+      NOT_IMPLEMENTED(WARNING);//TODO: implement
+      return false;
+    }
 
     /**
      * TODO

@@ -15,33 +15,28 @@ namespace token{
     size_t num_hashes_;
     std::bitset<kStorageSize> bits_;
    public:
-    BloomFilter(size_t num_hashes = 4):
+    explicit BloomFilter(size_t num_hashes = 4):
       num_hashes_(num_hashes),
       bits_(){}
-    BloomFilter(const BloomFilter& filter):
-      num_hashes_(filter.num_hashes_),
-      bits_(filter.bits_){}
-    ~BloomFilter(){}
+    BloomFilter(const BloomFilter& filter) = default;
+    ~BloomFilter() = default;
 
     void Put(const Hash& hash){
-      uint16_t* hashes = (uint16_t*) hash.data();
+      auto hashes = (uint16_t*)hash.data();
       for(size_t idx = 0; idx < num_hashes_; idx++){
         bits_[hashes[idx]] = true;
       }
     }
 
     bool Contains(const Hash& hash) const{
-      uint16_t* hashes = (uint16_t*) hash.data();
+      auto hashes = (uint16_t*) hash.data();
       for(size_t idx = 0; idx < num_hashes_; idx++){
         if(!bits_[hashes[idx]]) return false;
       }
       return true;
     }
 
-    void operator=(const BloomFilter& filter){
-      num_hashes_ = filter.num_hashes_;
-      bits_ = filter.bits_;
-    }
+    BloomFilter& operator=(const BloomFilter& filter) = default;
   };
 }
 

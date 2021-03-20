@@ -82,7 +82,7 @@ namespace token{
     ~BlockMiner() = default;
 
     State GetState() const{
-      return state_;
+      return (State)state_;
     }
 
     uv_loop_t* GetLoop() const{
@@ -141,7 +141,7 @@ namespace token{
     }
 
 #define DEFINE_CHECK(Name) \
-    inline bool Is##Name() const{ return state_ == State::k##Name##State; }
+    inline bool Is##Name() const{ return ((State)state_)== State::k##Name##State; }
     FOR_EACH_MINER_STATE(DEFINE_CHECK)
 #undef DEFINE_CHECK
 
@@ -161,5 +161,4 @@ namespace token{
   };
 }
 
-#undef MINER_LOG
 #endif//TOKEN_MINER_H

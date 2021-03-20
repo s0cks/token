@@ -19,7 +19,7 @@ namespace token{
       return tag().IsValid();
     }
 
-    operator leveldb::Slice(){
+    explicit operator leveldb::Slice() const{
       return leveldb::Slice(data(), size());
     }
 
@@ -76,20 +76,20 @@ namespace token{
       memcpy(&data_[kUserPosition], user.data(), kBytesForUser);
     }
    public:
-    UserKey(const User& user):
-        KeyType(),
-        data_(){
+    explicit UserKey(const User& user):
+      KeyType(),
+      data_(){
       SetTag(ObjectTag(Type::kUser, user.size()));
       SetUser(user);
     }
-    UserKey(const leveldb::Slice& slice):
-        KeyType(),
-        data_(){
-      memcpy(data(), slice.data(), std::min(slice.size(), (size_t)kTotalSize));
+    explicit UserKey(const leveldb::Slice& slice):
+      KeyType(),
+      data_(){
+      memcpy(data_, slice.data(), std::min(slice.size(), (size_t)kTotalSize));
     }
-    ~UserKey() = default;
+    ~UserKey() override = default;
 
-    ObjectTag tag() const{
+    ObjectTag tag() const override{
       return ObjectTag(*tag_ptr());
     }
 
@@ -97,15 +97,15 @@ namespace token{
       return User(user_ptr(), kBytesForUser);
     }
 
-    size_t size() const{
+    size_t size() const override{
       return kTotalSize;
     }
 
-    char* data() const{
+    char* data() const override{
       return (char*)data_;
     }
 
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream ss;
       ss << "UserKey(";
       ss << "tag=" << tag() << ", ";

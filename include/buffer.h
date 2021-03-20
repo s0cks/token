@@ -81,7 +81,7 @@ namespace token{
       return val;
     }
    public:
-    Buffer(int64_t size):
+    explicit Buffer(int64_t size):
       bsize_(size),
       wpos_(0),
       rpos_(0),
@@ -102,7 +102,7 @@ namespace token{
       rpos_(0),
       data_((uint8_t*)data),
       owned_(false){}
-    Buffer(const std::string& data):
+    explicit Buffer(const std::string& data):
       bsize_(data.size()),
       wpos_(data.size()),
       rpos_(0),
@@ -157,7 +157,7 @@ namespace token{
       return GetBufferSize() - GetWrittenBytes();
     }
 
-    bool HasBytesRemaining(){
+    bool HasBytesRemaining() const{
       return GetBufferSize() > 0 && rpos_ < GetBufferSize();
     }
 
@@ -388,7 +388,7 @@ namespace token{
       return true;
     }
 
-    operator leveldb::Slice() const{
+    explicit operator leveldb::Slice() const{
       return AsSlice();
     }
 
