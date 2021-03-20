@@ -1,5 +1,3 @@
-#ifdef TOKEN_ENABLE_SERVER
-
 #include "configuration.h"
 #include "peer/peer.h"
 #include "peer/peer_session_thread.h"
@@ -202,5 +200,3 @@ namespace token{
     return true;
   }
 }
-
-#endif//TOKEN_ENABLE_SERVER

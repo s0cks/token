@@ -1,5 +1,3 @@
-#ifdef TOKEN_ENABLE_SERVER
-
 #include "miner.h"
 #include "configuration.h"
 #include "job/scheduler.h"
@@ -374,5 +372,3 @@ namespace token{
     NOT_IMPLEMENTED(WARNING);
   }
 }
-
-#endif//TOKEN_ENABLE_SERVER

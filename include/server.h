@@ -1,8 +1,6 @@
 #ifndef TOKEN_SERVER_H
 #define TOKEN_SERVER_H
 
-#ifdef TOKEN_ENABLE_SERVER
-
 #include <uv.h>
 #include <sstream>
 #include "session.h"
@@ -80,7 +78,7 @@ namespace token{
 
     static void
     HandleServerThread(uword parameter){
-      ServerType* server = (ServerType*)parameter;
+      auto server = (ServerType*)parameter;
       server->SetState(Server::kStartingState);
 
       int32_t port = server->GetPort();
@@ -254,5 +252,4 @@ namespace token{
   };
 }
 
-#endif//TOKEN_ENABLE_SERVER
 #endif //TOKEN_SERVER_H

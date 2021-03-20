@@ -1,8 +1,6 @@
 #ifndef TOKEN_PEER_SESSION_THREAD_H
 #define TOKEN_PEER_SESSION_THREAD_H
 
-#ifdef TOKEN_ENABLE_SERVER
-
 #include <mutex>
 #include <queue>
 #include <memory>
@@ -143,5 +141,4 @@ namespace token{
   };
 }
 
-#endif//TOKEN_ENABLE_SERVER
 #endif //TOKEN_PEER_SESSION_THREAD_H

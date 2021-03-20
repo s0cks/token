@@ -10,8 +10,11 @@
 #include "peer/peer_session_manager.h"
 
 namespace token{
-#define MINER_LOG(LevelName) \
+#define LOG_MINER(LevelName) \
   LOG(LevelName) << "[miner] "
+
+#define DLOG_MINER(LevelName) \
+  DLOG(LevelName) << "[miner] "
 
 #define FOR_EACH_MINER_STATE(V) \
   V(Starting)                   \
@@ -46,8 +49,6 @@ namespace token{
     std::mutex proposal_mtx_;
     ProposalPtr proposal_;
 
-    uv_async_t on_promise_;
-
     void SetState(const State& state){
       state_ = state;
     }
@@ -67,19 +68,16 @@ namespace token{
     static void OnMine(uv_timer_t* handle);
 
     static void OnPromise(uv_async_t* handle){
-      MINER_LOG(INFO) << "OnPromise called.";
+      DLOG_MINER(INFO) << "OnPromise called.";
     }
    public:
-    BlockMiner(uv_loop_t* loop=uv_loop_new()):
+    explicit BlockMiner(uv_loop_t* loop=uv_loop_new()):
       loop_(loop),
       timer_(),
       state_(State::kStoppedState),
       proposal_mtx_(),
       proposal_(){
       timer_.data = this;
-
-      on_promise_.data = this;
-      CHECK_UVRESULT(uv_async_init(loop, &on_promise_, &OnPromise), MINER_LOG(ERROR), "cannot initialize OnPromise");
     }
     ~BlockMiner() = default;
 
@@ -147,20 +145,19 @@ namespace token{
     FOR_EACH_MINER_STATE(DEFINE_CHECK)
 #undef DEFINE_CHECK
 
+    static bool Initialize();
     static BlockMiner* GetInstance();
   };
 
   class BlockMinerThread{
    private:
-    BlockMinerThread() = delete;
-
     static void HandleThread(uword param);
    public:
+    BlockMinerThread() = delete;
     ~BlockMinerThread() = delete;
 
     static bool Stop();
     static bool Start();
-    static void Initialize();
   };
 }
 

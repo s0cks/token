@@ -1,8 +1,6 @@
 #ifndef TOKEN_HTTP_CONTROLLER_WALLET_H
 #define TOKEN_HTTP_CONTROLLER_WALLET_H
 
-#ifdef TOKEN_ENABLE_REST_SERVICE
-
 #include "wallet.h"
 #include "http/http_controller.h"
 
@@ -42,5 +40,4 @@ namespace token{
   };
 }
 
-#endif//TOKEN_ENABLE_REST_SERVICE
 #endif//TOKEN_HTTP_CONTROLLER_WALLET_H

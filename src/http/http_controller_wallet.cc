@@ -1,5 +1,3 @@
-#ifdef TOKEN_ENABLE_REST_SERVICE
-
 #include "pool.h"
 #include "wallet.h"
 #include "deeplink.h"
@@ -214,5 +212,3 @@ namespace token{
     return session->Send(NewOkResponse(session, tx));
   }
 }
-
-#endif//TOKEN_ENABLE_REST_SERVICE

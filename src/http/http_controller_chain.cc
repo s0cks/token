@@ -1,5 +1,3 @@
-#ifdef TOKEN_ENABLE_REST_SERVICE
-
 #include "blockchain.h"
 #include "http/http_service.h"
 #include "http/http_controller_chain.h"
@@ -39,5 +37,3 @@ namespace token{
     return session->Send(NewOkResponse(session, blk));
   }
 }
-
-#endif//TOKEN_ENABLE_REST_SERVICE

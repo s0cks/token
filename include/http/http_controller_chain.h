@@ -1,17 +1,15 @@
 #ifndef TOKEN_HTTP_CONTROLLER_CHAIN_H
 #define TOKEN_HTTP_CONTROLLER_CHAIN_H
 
-#ifdef TOKEN_ENABLE_REST_SERVICE
-
+#include "blockchain.h"
 #include "http/http_controller.h"
 
 namespace token{
 #define FOR_EACH_CHAIN_CONTROLLER_ENDPOINT(V) \
-  V(GET, "/chain", GetBlockChain)                            \
-  V(GET, "/chain/head", GetBlockChainHead)                        \
+  V(GET, "/chain", GetBlockChain)             \
+  V(GET, "/chain/head", GetBlockChainHead)    \
   V(GET, "/chain/data/:hash", GetBlockChainBlock)
 
-  class BlockChain;
   class ChainController : HttpController{
    protected:
     BlockChainPtr chain_;
@@ -42,5 +40,4 @@ namespace token{
   };
 }
 
-#endif//TOKEN_ENABLE_REST_SERVICE
 #endif//TOKEN_HTTP_CONTROLLER_CHAIN_H

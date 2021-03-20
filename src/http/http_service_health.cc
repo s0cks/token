@@ -1,5 +1,3 @@
-#ifdef TOKEN_ENABLE_HEALTH_SERVICE
-
 #include "http/http_service_health.h"
 
 namespace token{
@@ -30,5 +28,3 @@ namespace token{
   FOR_EACH_SERVER_STATE(DEFINE_STATE_CHECK)
 #undef DEFINE_STATE_CHECK
 }
-
-#endif//TOKEN_ENABLE_HEALTH_SERVICE

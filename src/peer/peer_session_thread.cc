@@ -1,5 +1,3 @@
-#ifdef TOKEN_ENABLE_SERVER
-
 #include <chrono>
 #include <thread>
 #include "peer/peer_session_thread.h"
@@ -111,5 +109,3 @@ namespace token{
     return ThreadJoin(thread_);
   }
 }
-
-#endif//TOKEN_ENABLE_SERVER

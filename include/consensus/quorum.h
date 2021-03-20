@@ -10,28 +10,19 @@ namespace token{
   class QuorumResult{
     friend class Phase1Quorum;
     friend class Phase2Quorum;
-   public:
-    enum Status{
-      kUnknown = 0,
-      kAccepted,
-      kRejected,
-    };
    private:
     Quorum* quorum_;
-    Status status_;
     int16_t total_;
     int16_t required_;
     int16_t accepted_;
     int16_t rejected_;
 
     QuorumResult(Quorum* quorum,
-                 const Status& status,
                  const int16_t& total,
                  const int16_t& required,
                  const int16_t& accepted,
                  const int16_t& rejected):
       quorum_(quorum),
-      status_(status),
       total_(total),
       required_(required),
       accepted_(accepted),
@@ -39,7 +30,6 @@ namespace token{
    public:
     QuorumResult(const QuorumResult& result):
       quorum_(result.quorum_),
-      status_(result.status_),
       total_(result.total_),
       required_(result.required_),
       accepted_(result.accepted_),
@@ -48,10 +38,6 @@ namespace token{
 
     Quorum* GetQuorum() const{
       return quorum_;
-    }
-
-    Status GetStatus() const{
-      return status_;
     }
 
     int16_t GetRequiredVotes() const{
@@ -71,21 +57,18 @@ namespace token{
     }
 
     double GetPercentageAccepted() const{
-      return (GetAcceptedVotes() / GetTotalVotes()) * 100.0;
+      return ((double)GetAcceptedVotes() / GetTotalVotes()) * 100.0;
     }
 
     double GetPercentageRejected() const{
-      return (GetRejectedVotes() / GetTotalVotes()) * 100.0;
+      return ((double)GetRejectedVotes() / GetTotalVotes()) * 100.0;
     }
 
-    void operator=(const QuorumResult& result){
-      quorum_ = result.quorum_;
-      status_ = result.status_;
-      total_ = result.total_;
-      required_ = result.required_;
-      accepted_ = result.accepted_;
-      rejected_ = result.rejected_;
+    bool WasAccepted() const{
+      return GetAcceptedVotes() > GetRejectedVotes();
     }
+
+    QuorumResult& operator=(const QuorumResult& result) = default;
   };
 
   class Quorum{
@@ -158,7 +141,7 @@ namespace token{
       timeout_.data = this;
       CHECK_UVRESULT(uv_timer_init(loop, &timeout_), LOG(ERROR), "cannot initialize phase 1 quorum timer");
     }
-    ~Phase1Quorum() = default;
+    ~Phase1Quorum() override = default;
 
     int16_t GetPromised() const{
       return promised_;
@@ -168,7 +151,7 @@ namespace token{
       return rejected_;
     }
 
-    int16_t GetNumberOfVotes() const{
+    int16_t GetNumberOfVotes() const override{
       return promised_ + rejected_;
     }
 
@@ -184,15 +167,10 @@ namespace token{
       return true;
     }
 
-    QuorumResult GetResult(){
+    QuorumResult GetResult() override{
       int16_t total_votes = promised_ + rejected_;
       int16_t required = (required_votes_ / 2) + 1;
-      if(GetPromised() >= required){
-        return QuorumResult(this, QuorumResult::kAccepted, total_votes, required, promised_, rejected_);
-      } else if(GetRejected() >= required){
-        return QuorumResult(this, QuorumResult::kRejected, total_votes, required, promised_, rejected_);
-      }
-      return QuorumResult(this, QuorumResult::kUnknown, total_votes, required, promised_, rejected_);
+      return QuorumResult(this, total_votes, required, promised_, rejected_);
     }
   };
 
@@ -227,7 +205,7 @@ namespace token{
       timeout_.data = this;
       CHECK_UVRESULT(uv_timer_init(loop, &timeout_), LOG(ERROR), "cannot initialize phase 2 timer");
     }
-    ~Phase2Quorum() = default;
+    ~Phase2Quorum() override = default;
 
     int16_t GetAccepted() const{
       return accepted_;
@@ -237,7 +215,7 @@ namespace token{
       return rejected_;
     }
 
-    int16_t GetNumberOfVotes() const{
+    int16_t GetNumberOfVotes() const override{
       return accepted_ + rejected_;
     }
 
@@ -253,28 +231,16 @@ namespace token{
       return true;
     }
 
-    QuorumResult GetResult(){
+    QuorumResult GetResult() override{
       int16_t total_votes = accepted_ + rejected_;
       int16_t required = (required_votes_ / 2) + 1;
-      if(GetAccepted() >= required){
-        return QuorumResult(this, QuorumResult::kAccepted, total_votes, required, accepted_, rejected_);
-      } else if(GetRejected() >= required){
-        return QuorumResult(this, QuorumResult::kRejected, total_votes, required, accepted_, rejected_);
-      }
-      return QuorumResult(this, QuorumResult::kUnknown, total_votes, required, accepted_, rejected_);
+      return QuorumResult(this, total_votes, required, accepted_, rejected_);
     }
   };
 
   static std::ostream& operator<<(std::ostream& stream, const QuorumResult& result){
     RawProposal& proposal = result.GetQuorum()->GetProposal();
-    switch(result.GetStatus()){
-      case QuorumResult::kAccepted:
-        return stream << "proposal " << proposal << " was accepted by " << result.GetAcceptedVotes() << " peers (" << result.GetPercentageAccepted() << "%)";
-      case QuorumResult::kRejected:
-        return stream << "proposal " << proposal << " was rejected by " << result.GetRejectedVotes() << " peers (" << result.GetPercentageRejected() << "%)";
-      default:
-        return stream << "proposal " << proposal << " reached an unknown consensus: " << result.GetStatus();
-    }
+    return stream << "proposal " << proposal << " was " << (result.WasAccepted() ? "accepted" : "rejected") << " by " << result.GetAcceptedVotes() << " peers (" << result.GetPercentageAccepted() << "%)";
   }
 }
 

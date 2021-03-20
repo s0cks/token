@@ -178,44 +178,22 @@ namespace token{
   LOG(LevelName) << "[" << GetUUID() << "] "
 }
 
-// --path "/usr/share/ledger"
 DECLARE_string(path);
-// --enable-snapshots
 DECLARE_bool(enable_snapshots);
-// --num-worker-threads
 DECLARE_int32(num_workers);
-// --miner-interval 3600
-DECLARE_int64(miner_interval);
+DECLARE_int64(mining_interval);
+DECLARE_string(remote);
+DECLARE_int32(server_port);
+DECLARE_int32(num_peers);
+DECLARE_int32(healthcheck_port);
+DECLARE_int32(service_port);
 
 #ifdef TOKEN_DEBUG
-  // --fresh
   DECLARE_bool(fresh);
-  // --append-test
   DECLARE_bool(append_test);
-  // --verbose
   DECLARE_bool(verbose);
-  // --no-mining
   DECLARE_bool(no_mining);
 #endif//TOKEN_DEBUG
-
-#ifdef TOKEN_ENABLE_SERVER
-  // --remote "localhost:8080"
-  DECLARE_string(remote);
-  // --rpc-port 8080
-  DECLARE_int32(server_port);
-  // --num-peer-threads
-  DECLARE_int32(num_peers);
-#endif//TOKEN_ENABLE_SERVER
-
-#ifdef TOKEN_ENABLE_HEALTH_SERVICE
-  // --healthcheck-port 8081
-  DECLARE_int32(healthcheck_port);
-#endif//TOKEN_ENABLE_HEALTH_SERVICE
-
-#ifdef TOKEN_ENABLE_REST_SERVICE
-  // --service-port 8082
-  DECLARE_int32(service_port);
-#endif//TOKEN_ENABLE_REST_SERVICE
 
 static inline bool
 IsValidPort(int32_t port){
@@ -294,8 +272,7 @@ namespace token{
 })
 
 #define NOT_IMPLEMENTED(LevelName) \
-  LOG(LevelName) << __TKN_FUNCTION_NAME__ << " is not implemented yet!"
-
+  DLOG(LevelName) << __TKN_FUNCTION_NAME__ << " is not implemented yet!"
 
   static inline std::ostream&
   operator<<(std::ostream& stream, const leveldb::Status& status){

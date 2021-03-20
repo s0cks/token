@@ -1,8 +1,6 @@
 #ifndef TOKEN_HTTP_SERVICE_REST_H
 #define TOKEN_HTTP_SERVICE_REST_H
 
-#ifdef TOKEN_ENABLE_REST_SERVICE
-
 #include "http/http_service.h"
 
 #include "http/http_controller_pool.h"
@@ -46,5 +44,4 @@ namespace token{
   };
 }
 
-#endif//TOKEN_ENABLE_REST_SERVICE
 #endif//TOKEN_HTTP_SERVICE_REST_H

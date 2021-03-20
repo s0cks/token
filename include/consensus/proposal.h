@@ -4,8 +4,12 @@
 #include <memory>
 #include "block.h"
 #include "configuration.h"
-#include "consensus/quorum.h"
+
+#include "job/job.h"
+
 #include "atomic/relaxed_atomic.h"
+
+#include "consensus/quorum.h"
 #include "consensus/raw_proposal.h"
 #include "consensus/proposal_phase.h"
 
@@ -184,6 +188,33 @@ namespace token{
       UUID proposer = ConfigurationManager::GetNodeID();
       return NewInstance(loop, timestamp, id, proposer, value->GetHeader(), required_votes);
     }
+  };
+
+  class BlockMiner;
+  class ProposalJob : public Job{
+   public:
+    static const char* kName;
+   protected:
+    BlockMiner* miner_;
+    ProposalPtr proposal_;
+
+    inline BlockMiner*
+    GetMiner() const{
+      return miner_;
+    }
+
+    bool ExecutePhase1();
+    bool ExecutePhase2();
+    bool CancelProposal();
+
+    JobResult DoWork() override;
+   public:
+    ProposalJob(Job* parent, BlockMiner* miner, const ProposalPtr& proposal):
+      Job(parent, ProposalJob::kName),
+      miner_(miner),
+      proposal_(proposal){}
+    ProposalJob(BlockMiner* miner, const ProposalPtr& proposal):
+      ProposalJob(nullptr, miner, proposal){}
   };
 }
 

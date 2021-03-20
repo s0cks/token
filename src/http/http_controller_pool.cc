@@ -1,5 +1,3 @@
-#ifdef TOKEN_ENABLE_REST_SERVICE
-
 #include "pool.h"
 #include "http/http_service.h"
 #include "http/http_controller_pool.h"
@@ -56,5 +54,3 @@ namespace token{
     return session->Send(NewOkResponse(session, body));
   }
 }
-
-#endif//TOKEN_ENABLE_REST_SERVICE

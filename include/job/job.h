@@ -322,6 +322,10 @@ namespace token{
 
 #define JOB_LOG(LevelName, Job) \
   LOG(LevelName) << "[" << (Job)->GetName() << "] "
+
+#define DLOG_JOB(LevelName, Job) \
+  DLOG(LevelName) << "[" << (Job)->GetName() << "] "
+
 }
 
 #endif //TOKEN_JOB_H

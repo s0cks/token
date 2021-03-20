@@ -1,8 +1,6 @@
 #ifndef TOKEN_PEER_SESSION_H
 #define TOKEN_PEER_SESSION_H
 
-#ifdef TOKEN_ENABLE_SERVER
-
 #include "rpc/rpc_message.h"
 #include "rpc/rpc_session.h"
 
@@ -218,7 +216,5 @@ namespace token{
     }
   };
 }
-
-#endif//TOKEN_ENABLE_SERVER
 
 #endif //TOKEN_PEER_SESSION_H

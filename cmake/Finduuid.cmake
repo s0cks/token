@@ -2,13 +2,13 @@
 include(FindPackageHandleStandardArgs)
 find_path(
    UUID_INCLUDE_DIR
-   NAMES uuid.h
-   PATHS /usr/include;/usr/local/include
+   NAMES uuid
+   PATHS /usr/include /usr/local/include
 )
 find_library(
    UUID_LIBRARY
    NAMES uuid libuuid
-   PATHS /usr/lib;/usr/local/lib
+   PATHS /usr/lib /usr/local/lib
 )
 
 find_package_handle_standard_args(uuid DEFAULT_MSG UUID_INCLUDE_DIR UUID_LIBRARY)

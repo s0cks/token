@@ -9,9 +9,6 @@ set(PROTO_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protos")
 file(GLOB_RECURSE TOKEN_CMAKE_MODULES ${CMAKE_MODULE_PATH}/*.cmake)
 
 option(ENABLE_EXPERIMENTAL "Enables experimental features." ON)
-option(ENABLE_SERVER "Enables the block chain server." ON)
-option(ENABLE_HEALTH_SERVICE "Enable the health http service." ON)
-option(ENABLE_REST_SERVICE "Enable the rest http service." ON)
 
 # Monkey Patching for Debug Mode
 if(CMAKE_BUILD_TYPE MATCHES Debug)
@@ -25,24 +22,6 @@ endif()
 if(ENABLE_EXPERIMENTAL)
   message(STATUS "Compiling w/ Experimental Features.")
   add_compile_definitions(TOKEN_ENABLE_EXPERIMENTAL)
-endif()
-
-# Compile w/ the rpc if enabled
-if(ENABLE_SERVER)
-  message(STATUS "Compiling w/ the server enabled.")
-  add_compile_definitions(TOKEN_ENABLE_SERVER)
-endif()
-
-# Compile w/ the controller service if enabled
-if(ENABLE_REST_SERVICE)
-  message(STATUS "Compiling w/ the rest http service enabled.")
-  add_compile_definitions(TOKEN_ENABLE_REST_SERVICE)
-endif()
-
-# Compile w/ the health check service if enabled
-if(ENABLE_HEALTH_SERVICE)
-  message(STATUS "Compiling w/ the health-check http service enabled.")
-  add_compile_definitions(TOKEN_ENABLE_HEALTH_SERVICE)
 endif()
 
 # Packages

@@ -1,4 +1,3 @@
-#include "json.h"
 #include "pool.h"
 #include "miner.h"
 #include "wallet.h"
@@ -11,55 +10,31 @@
 
 #include "crash/crash_report.h"
 
+#include "rpc/rpc_server.h"
+#include "peer/peer_session_manager.h"
+#include "http/http_service_health.h"
+#include "http/http_service_rest.h"
+
 #ifdef TOKEN_ENABLE_ELASTICSEARCH
   #include "elastic/elastic_client.h"
 #endif//TOKEN_ENABLE_ELASTICSEARCH
 
-// --path "/usr/share/ledger"
 DEFINE_string(path, "", "The path for the local ledger to be stored in.");
-// --enable-snapshots
 DEFINE_bool(enable_snapshots, false, "Enable snapshots of the block chain");
-// --num-workers 10
 DEFINE_int32(num_workers, 4, "Define the number of worker pool threads");
-// --miner-interval 3600
-DEFINE_int64(miner_interval, 1000 * 60 * 1, "The amount of time between mining blocks in milliseconds.");
+DEFINE_int64(mining_interval, 1000 * 60 * 1, "The amount of time between mining blocks in milliseconds.");
+DEFINE_string(remote, "", "The hostname for the remote ledger to join.");
+DEFINE_int32(server_port, 0, "The port to use for the RPC serer.");
+DEFINE_int32(num_peers, 2, "The max number of peers to connect to.");
+DEFINE_int32(healthcheck_port, 0, "The port to use for the health check service.");
+DEFINE_int32(service_port, 0, "The port for the ledger controller service.");
 
 #ifdef TOKEN_DEBUG
-  // --fresh
   DEFINE_bool(fresh, false, "Initialize the BlockChain w/ a fresh chain [Debug]");
-  // --append-test
   DEFINE_bool(append_test, false, "Append a test block upon startup [Debug]");
-  // --verbose
   DEFINE_bool(verbose, false, "Turn on verbose logging [Debug]");
-  // --no-mining
   DEFINE_bool(no_mining, false, "Turn off block mining [Debug]");
 #endif//TOKEN_DEBUG
-
-#ifdef TOKEN_ENABLE_SERVER
-  #include "rpc/rpc_server.h"
-  #include "peer/peer_session_manager.h"
-
-  // --remote localhost:8080
-  DEFINE_string(remote, "", "The hostname for the remote ledger to synchronize with.");
-  // --rpc-port 8080
-  DEFINE_int32(server_port, 0, "The port for the ledger RPC service.");
-  // --num-peers 12
-  DEFINE_int32(num_peers, 4, "The max number of peers to connect to.");
-#endif//TOKEN_ENABLE_SERVER
-
-#ifdef TOKEN_ENABLE_HEALTH_SERVICE
-  #include "http/http_service_health.h"
-
-  // --healthcheck-port 8081
-  DEFINE_int32(healthcheck_port, 0, "The port for the ledger health check service.");
-#endif//TOKEN_ENABLE_HEALTHCHECK
-
-#ifdef TOKEN_ENABLE_REST_SERVICE
-  #include "http/http_service_rest.h"
-
-  // --service-port 8082
-  DEFINE_int32(service_port, 0, "The port for the ledger controller service.");
-#endif//TOKEN_ENABLE_REST_SERVICE
 
 static inline void
 InitializeLogging(char *arg0){
@@ -157,13 +132,11 @@ main(int argc, char **argv){
     //TODO: BannerPrinter::PrintBanner();
   #endif//TOKEN_DEBUG
 
-  // Start the health service if enabled
-  #ifdef TOKEN_ENABLE_HEALTH_SERVICE
-    if(IsValidPort(FLAGS_healthcheck_port) && !HttpHealthService::Start()){
-      CrashReport::PrintNewCrashReport("Failed to start the health check service.");
-      return EXIT_FAILURE;
-    }
-  #endif//TOKEN_ENABLE_HEALTH_SERVICE
+  // Start the Health Check Service
+  if(IsValidPort(FLAGS_healthcheck_port) && !HttpHealthService::Start()){
+    CrashReport::PrintNewCrashReport("Failed to start the health check service.");
+    return EXIT_FAILURE;
+  }
 
   // Initialize the job scheduler
   if(!JobScheduler::Initialize()){
@@ -195,26 +168,22 @@ main(int argc, char **argv){
     return EXIT_FAILURE;
   }
 
-  // Start the rpc if enabled
-  #ifdef TOKEN_ENABLE_SERVER
-    if(IsValidPort(FLAGS_server_port) && !LedgerServer::Start()){
-      CrashReport::PrintNewCrashReport("Failed to start the rpc.");
-      return EXIT_FAILURE;
-    }
+  // Start the rpc server & connect to peers.
+  if(IsValidPort(FLAGS_server_port) && !LedgerServer::Start()){
+    CrashReport::PrintNewCrashReport("Failed to start the rpc.");
+    return EXIT_FAILURE;
+  }
 
-    if(!PeerSessionManager::Initialize()){
-      CrashReport::PrintNewCrashReport("Failed to initialize the peer session manager.");
-      return EXIT_FAILURE;
-    }
-  #endif//TOKEN_ENABLE_SERVER
+  if(!PeerSessionManager::Initialize()){
+    CrashReport::PrintNewCrashReport("Failed to initialize the peer session manager.");
+    return EXIT_FAILURE;
+  }
 
   // Start the controller service if enabled
-  #ifdef TOKEN_ENABLE_REST_SERVICE
-    if(IsValidPort(FLAGS_service_port) && !HttpRestService::Start()){
-      CrashReport::PrintNewCrashReport("Failed to start the controller service.");
-      return EXIT_FAILURE;
-    }
-  #endif//TOKEN_ENABLE_REST_SERVICE
+  if(IsValidPort(FLAGS_service_port) && !HttpRestService::Start()){
+    CrashReport::PrintNewCrashReport("Failed to start the controller service.");
+    return EXIT_FAILURE;
+  }
 
 #ifdef TOKEN_DEBUG
   sleep(3);
@@ -225,7 +194,6 @@ main(int argc, char **argv){
   PeerList peers;
   ConfigurationManager::GetInstance()->GetPeerList(TOKEN_CONFIGURATION_NODE_PEERS, peers);
   LOG(INFO) << "peers: " << peers;
-
   LOG(INFO) << "number of blocks in the chain: " << BlockChain::GetInstance()->GetNumberOfBlocks();
 
   ObjectPoolPtr pool = ObjectPool::GetInstance();
@@ -250,12 +218,15 @@ main(int argc, char **argv){
 //    return EXIT_FAILURE;
 //  }
 
-  if(!FLAGS_no_mining && !BlockMiner::GetInstance()->Run()){
-    CrashReport::PrintNewCrashReport("Cannot start the block miner.");
-    return EXIT_FAILURE;
+  if(!FLAGS_no_mining){
+    if(!BlockMiner::Initialize())
+      CrashReport::PrintNewCrashReport("Cannot initialize the block miner.");
+
+    if(!BlockMiner::GetInstance()->Run()){
+      CrashReport::PrintNewCrashReport("Cannot run the block miner.");
+    }
   }
 
-#ifdef TOKEN_ENABLE_SERVER
   if(!PeerSessionManager::WaitForShutdown()){
     CrashReport::PrintNewCrashReport("Cannot shutdown the peer session manager.");
     return EXIT_FAILURE;
@@ -265,20 +236,15 @@ main(int argc, char **argv){
     CrashReport::PrintNewCrashReport("Cannot join the rpc thread.");
     return EXIT_FAILURE;
   }
-#endif//TOKEN_ENABLE_SERVER
 
-#ifdef TOKEN_ENABLE_REST_SERVICE
   if(IsValidPort(FLAGS_service_port) && HttpRestService::IsServiceRunning() && !HttpRestService::WaitForShutdown()){
     CrashReport::PrintNewCrashReport("Cannot join the controller service thread.");
     return EXIT_FAILURE;
   }
-#endif//TOKEN_ENABLE_REST_SERVICE
 
-#ifdef TOKEN_ENABLE_HEALTH_SERVICE
   if(IsValidPort(FLAGS_healthcheck_port) && HttpHealthService::IsServiceRunning() && !HttpHealthService::WaitForShutdown()){
     CrashReport::PrintNewCrashReport("Cannot join the health check service thread.");
     return EXIT_FAILURE;
   }
-#endif//TOKEN_ENABLE_HEALTH_SERVICE
   return EXIT_SUCCESS;
 }

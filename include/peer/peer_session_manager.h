@@ -1,14 +1,10 @@
 #ifndef TOKEN_PEER_SESSION_MANAGER_H
 #define TOKEN_PEER_SESSION_MANAGER_H
 
-#ifdef TOKEN_ENABLE_SERVER
-
 #include "peer/peer_queue.h"
 #include "peer/peer_session.h"
 
 namespace token{
-
-
 #define FOR_EACH_PEER_SESSION_MANAGER_STATE(V) \
   V(Uninitialized)                             \
   V(Initializing)                              \
@@ -80,9 +76,7 @@ namespace token{
       return GetNumberOfConnectedPeers() > 0;
     }
 
-#ifdef TOKEN_ENABLE_REST_SERVICE
     static bool GetConnectedPeers(Json::Writer& writer);
-#endif//TOKEN_ENABLE_REST_SERVICE
 
 #define DEFINE_CHECK(Name) \
     static inline bool Is##Name##State(){ return GetState() == State::k##Name##State; }
@@ -91,5 +85,4 @@ namespace token{
   };
 }
 
-#endif//TOKEN_ENABLE_SERVER
 #endif //TOKEN_PEER_SESSION_MANAGER_H
