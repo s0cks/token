@@ -15,9 +15,7 @@ namespace token{
     Json::String body;
     Json::Writer writer(body);
     if(!event.Write(writer)){
-#ifdef TOKEN_DEBUG
-      LOG(WARNING) << "cannot write event " << event.ToString() << " to json.";
-#endif//TOKEN_DEBUG
+      DLOG(WARNING) << "cannot write event " << event.ToString() << " to json.";
       return false;
     }
 
@@ -31,15 +29,11 @@ namespace token{
 
     HttpResponsePtr response = client.Send(builder.Build());
     if(!response){
-#ifdef TOKEN_DEBUG
-      LOG(WARNING) << "empty response from ES service.";
-#endif//TOKEN_DEBUG
+      DLOG(WARNING) << "empty response from ES.";
       return false;
     }
 
-#ifdef TOKEN_DEBUG
-    LOG(INFO) << "response from ES: " << response->ToString();
-#endif//TOKEN_DEBUG
+    DLOG(INFO) << "response from ES: " << response->ToString();
     return true;//TODO: check status code
   }
 }

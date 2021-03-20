@@ -25,32 +25,24 @@ namespace token{
   class ServerSession : public RpcSession{
    protected:
     bool ItemExists(const InventoryItem& item) const{
-#ifdef TOKEN_DEBUG
-      SESSION_LOG(INFO, this) << "searching for " << item << "....";
-#endif//TOKEN_DEBUG
+      DLOG_SESSION(INFO, this) << "searching for " << item << "....";
       Hash hash = item.GetHash();
       switch(item.GetType()){
         case Type::kBlock:{
           if(GetChain()->HasBlock(hash)){
-#ifdef TOKEN_DEBUG
-            SESSION_LOG(INFO, this) << item << " was found in the chain.";
-#endif//TOKEN_DEBUG
+            DLOG_SESSION(INFO, this) << item << " was found in the chain.";
             return true;
           }
 
           if(GetPool()->HasBlock(hash)){
-#ifdef TOKEN_DEBUG
-            SESSION_LOG(INFO, this) << item << " was found in the pool.";
-#endif//TOKEN_DEBUG
+            DLOG_SESSION(INFO, this) << item << " was found in the pool.";
             return true;
           }
           return false;
         }
         case Type::kTransaction:{
           if(GetPool()->HasTransaction(hash)){
-#ifdef TOKEN_DEBUG
-            SESSION_LOG(INFO, this) << item << " was found in the pool.";
-#endif//TOKEN_DEBUG
+            DLOG_SESSION(INFO, this) << item << " was found in the pool.";
             return true;
           }
           return false;

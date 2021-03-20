@@ -453,9 +453,7 @@ namespace token{
     CopyFrom(const char* data, size_t len){
       BufferPtr buffer = Buffer::NewInstance(len);
       if(!buffer->PutBytes((uint8_t*)data, len)){
-#ifdef TOKEN_DEBUG
-        LOG(WARNING) << "couldn't copy " << len << " bytes to new buffer.";
-#endif//TOKEN_DEBUG
+        DLOG(WARNING) << "couldn't copy " << len << " bytes to new buffer.";
         return nullptr;
       }
       return buffer;

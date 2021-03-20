@@ -133,9 +133,7 @@ namespace token{
     }
 
     bool OnPromise(){
-#ifdef TOKEN_DEBUG
-      LOG(INFO) << "OnPromise";
-#endif//TOKEN_DEBUG
+      DLOG(INFO) << "OnPromise";
       VERIFY_UVRESULT(uv_async_send(&on_promise_), LOG(ERROR), "cannot invoke the on_promise callback");
       return true;
     }

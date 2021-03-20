@@ -197,9 +197,7 @@ namespace token{
 
     static int
     OnStatus(http_parser* parser, const char* data, size_t len){
-#ifdef TOKEN_DEBUG
-      LOG(INFO) << "status code: " << std::string(data, len);
-#endif//TOKEN_DEBUG
+      DLOG(INFO) << "status code: " << std::string(data, len);
       return 0;
     }
    public:

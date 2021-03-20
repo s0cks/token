@@ -57,9 +57,6 @@ namespace token{
     }
 
     bool Visit(const TransactionPtr& tx){
-      #ifdef TOKEN_DEBUG
-      LOG(INFO) << "visiting transaction " << tx->GetHash() << "....";
-      #endif//TOKEN_DEBUG
       transactions_.push_back(tx);
       return true;
     }

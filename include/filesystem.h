@@ -8,56 +8,41 @@ namespace token{
   static inline bool
   Flush(FILE* file){
     //TODO: better logging
-    if(file == NULL){
-#ifdef TOKEN_DEBUG
-      LOG(WARNING) << "cannot flush file, file is not open.";
-#endif//TOKEN_DEBUG
+    if(!file){
+      DLOG(WARNING) << "cannot flush file, file is null.";
       return false;
     }
 
     if(fflush(file) != 0){
-      LOG(ERROR) << "cannot flush file: " << strerror(errno);
+      DLOG(ERROR) << "cannot flush file: " << strerror(errno);
       return false;
     }
-
-#ifdef TOKEN_DEBUG
-    LOG(INFO) << "file flushed.";
-#endif//TOKEN_DEBUG
     return true;
   }
 
   static inline bool
   Close(FILE* file){
-    if(file == NULL){
-      //TODO: better logging
-#ifdef TOKEN_DEBUG
-      LOG(WARNING) << "cannot close file, file is not open.";
-#endif//TOKEN_DEBUG
-      return false; //TODO: should we return true for this case?
+    if(!file){
+      DLOG(WARNING) << "cannot close file, file is null.";
+      return false; //should we return true for this case?
     }
 
     if(fclose(file) != 0){
-      LOG(ERROR) << "cannot close file: " << strerror(errno);
+      DLOG(ERROR) << "cannot close file: " << strerror(errno);
       return false;
     }
-
-#ifdef TOKEN_DEBUG
-    LOG(INFO) << "file closed.";
-#endif//TOKEN_DEBUG
     return true;
   }
 
   static inline bool
   Seek(FILE* file, const int64_t pos, int whence=SEEK_SET){
-    if(file == NULL){
-#ifdef TOKEN_DEBUG
-      LOG(WARNING) << "cannot seek file, file is not open.";
-#endif//TOKEN_DEBUG
+    if(!file){
+      DLOG(WARNING) << "cannot seek file, file is not open.";
       return false;
     }
 
     if(fseek(file, pos, whence) != 0){
-      LOG(ERROR) << "cannot seek to position " << pos << " in file.";
+      DLOG(ERROR) << "cannot seek to " << pos << " in file: " << strerror(errno);
       return false;
     }
     return true;

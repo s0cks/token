@@ -9,6 +9,8 @@
 namespace token{
 #define SESSION_LOG(LevelName, Session) \
   LOG(LevelName) << "[session-" << (Session)->GetUUID().ToStringAbbreviated() << "] "
+#define DLOG_SESSION(LevelName, Session) \
+  DLOG(LevelName) << "[session-" << (Session)->GetUUID().ToStringAbbreviated() << "] "
 
 #define FOR_EACH_SESSION_STATE(V) \
     V(Connecting)                 \
@@ -81,9 +83,7 @@ namespace token{
     virtual void OnMessageRead(const SessionMessageTypePtr& message) = 0;
 
     static void OnClose(uv_handle_t* handle){
-#ifdef TOKEN_DEBUG
-      THREAD_LOG(INFO) << "closing handle....";
-#endif//TOKEN_DEBUG
+      DLOG(INFO) << "on-close.";
     }
 
     static void OnWalk(uv_handle_t* handle, void* arg){
@@ -161,9 +161,7 @@ namespace token{
         total_size += msg->GetBufferSize();
       });
 
-#ifdef TOKEN_DEBUG
-      SESSION_LOG(INFO, this) << "sending " << total_messages << " messages....";
-#endif//TOKEN_DEBUG
+      DLOG_SESSION(INFO, this) << "sending " << total_messages << " messages....";
 
       SessionWriteData* data = new SessionWriteData(this, total_size);
       uv_buf_t buffers[total_messages];
@@ -177,9 +175,7 @@ namespace token{
           return;
         }
 
-#ifdef TOKEN_DEBUG
-        SESSION_LOG(INFO, this) << "sending message #" << idx << " " << msg->ToString() << "(" << msize << ")";
-#endif//TOKEN_DEBUG
+        DLOG_SESSION(INFO, this) << "sending message #" << idx << " " << msg->ToString() << " (" << msize << "b)";
 
         int64_t msg_size = msg->GetBufferSize();
         buffers[idx].base = &data->buffer->data()[offset];

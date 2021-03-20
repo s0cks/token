@@ -23,6 +23,8 @@ namespace token{
 
 #define SERVER_LOG(LevelName) \
   LOG(LevelName) << "[server] "
+#define DLOG_SERVER(LevelName) \
+  DLOG(LevelName) << "[server] "
 
   template<class M>
   class Server{
@@ -152,25 +154,15 @@ namespace token{
 
       BufferPtr buffer = Buffer::From(buff->base, nread);
       do{
-#ifdef TOKEN_DEBUG
-        SERVER_LOG(INFO) << (buffer->GetWrittenBytes() - buffer->GetReadBytes()) << " bytes remaining";
-#endif//TOKEN_DEBUG
-
         ServerMessagePtr message = M::From(session, buffer);
-
-#ifdef TOKEN_DEBUG
-        SERVER_LOG(INFO) << "received " << message->ToString() << " from " << session->GetUUID();
-#endif//TOKEN_DEBUG
-
+        DLOG(INFO) << "received " << message->ToString() << " from " << session->GetUUID();
         session->OnMessageRead(message);
       } while(buffer->GetReadBytes() < buffer->GetBufferSize());
       free(buff->base);
     }
 
     static void OnClose(uv_handle_t* handle){
-#ifdef TOKEN_DEBUG
-      THREAD_LOG(INFO) << "on-close.";
-#endif//TOKEN_DEBUG
+      DLOG(INFO) << "on-close.";
     }
 
     static void OnWalk(uv_handle_t* handle, void* arg){

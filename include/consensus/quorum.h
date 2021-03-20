@@ -121,9 +121,7 @@ namespace token{
     virtual QuorumResult GetResult() = 0;
 
     void WaitForRequiredVotes() const{
-#ifdef TOKEN_DEBUG
-      LOG(INFO) << "waiting for " << GetRequiredVotes() << " votes....";
-#endif//TOKEN_DEBUG
+      DLOG(INFO) << "waiting for " << GetRequiredVotes() << " votes....";
       while(GetNumberOfVotes() < GetRequiredVotes()); // spin
     }
   };
@@ -139,21 +137,17 @@ namespace token{
     RelaxedAtomic<int16_t> rejected_;
 
     void PromiseProposal(const UUID& uuid){
-#ifdef TOKEN_DEBUG
-      LOG(INFO) << uuid << " promised proposal: " << GetProposal();
-#endif//TOKEN_DEBUG
+      DLOG(INFO) << uuid << " promised proposal: " << GetProposal();
       promised_ += 1;
     }
 
     void RejectProposal(const UUID& uuid){
-#ifdef TOKEN_DEBUG
-      LOG(INFO) << uuid << " rejected proposal: " << GetProposal();
-#endif//TOKEN_DEBUG
+      DLOG(INFO) << uuid << " rejected proposal: " << GetProposal();
       rejected_ += 1;
     }
 
     static void OnTimeout(uv_timer_t* handle){
-      LOG(ERROR) << "proposal phase 1 timeout.";
+      DLOG(ERROR) << "proposal phase 1 timeout.";
     }
    public:
     Phase1Quorum(uv_loop_t* loop, const RawProposal& proposal, const int16_t& required_votes):
@@ -179,17 +173,13 @@ namespace token{
     }
 
     bool StartTimer(){
-#ifdef TOKEN_DEBUG
-      LOG(INFO) << "stopping phase 1 timer....";
-#endif//TOKEN_DEBUG
+      DLOG(INFO) << "stopping phase 1 timer....";
       VERIFY_UVRESULT(uv_timer_start(&timeout_, &OnTimeout, kPhase1TimeoutMilliseconds, 0), LOG(ERROR), "cannot start phase 1 quorum timer");
       return true;
     }
 
     bool StopTimer(){
-#ifdef TOKEN_DEBUG
-      LOG(INFO) << "stopping phase 1 timer....";
-#endif//TOKEN_DEBUG
+      DLOG(INFO) << "stopping phase 1 timer....";
       VERIFY_UVRESULT(uv_timer_stop(&timeout_), LOG(ERROR), "cannot stop phase 1 quorum timer");
       return true;
     }
@@ -216,16 +206,12 @@ namespace token{
     RelaxedAtomic<int16_t> rejected_;
 
     void AcceptProposal(const UUID& uuid){
-#ifdef TOKEN_DEBUG
-      LOG(INFO) << uuid.ToStringAbbreviated() << " accepted proposal: " << GetProposal();
-#endif//TOKEN_DEBUG
+      DLOG(INFO) << uuid.ToStringAbbreviated() << " accepted proposal: " << GetProposal();
       accepted_ += 1;
     }
 
     void RejectProposal(const UUID& uuid){
-#ifdef TOKEN_DEBUG
-      LOG(INFO) << uuid << " rejected proposal: " << GetProposal();
-#endif//TOKEN_DEBUG
+      DLOG(INFO) << uuid << " rejected proposal: " << GetProposal();
       rejected_ += 1;
     }
 
@@ -256,17 +242,13 @@ namespace token{
     }
 
     bool StartTimer(){
-#ifdef TOKEN_DEBUG
-      LOG(INFO) << "starting phase 2 timer....";
-#endif//TOKEN_DEBUG
+      DLOG(INFO) << "starting phase 2 timer....";
       VERIFY_UVRESULT(uv_timer_start(&timeout_, &OnTimeout, kPhase2TimeoutMilliseconds, 0), LOG(ERROR), "cannot start phase 2 timer");
       return true;
     }
 
     bool StopTimer(){
-#ifdef TOKEN_DEBUG
-      LOG(INFO) << "stopping phase 1 timer....";
-#endif//TOKEN_DEBUG
+      DLOG(INFO) << "stopping phase 1 timer....";
       VERIFY_UVRESULT(uv_timer_stop(&timeout_), LOG(ERROR), "cannot stop phase 2 timer");
       return true;
     }
