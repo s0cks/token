@@ -7,15 +7,9 @@
 
 #include "peer/peer_session_manager.h"
 
-#include "consensus/proposal.h"
-#include "consensus/proposal_manager.h"
-
 // The server session receives packets sent from peers
 // this is for inbound packets
 namespace token{
-#define NOT_IMPLEMENTED \
-  SESSION_LOG(ERROR, this) << "not implemented!"
-
   //TODO:
   // - state check
   // - version check
@@ -23,8 +17,13 @@ namespace token{
   void ServerSession::OnVersionMessage(const VersionMessagePtr& msg){
     // upon receiving a VersionMessage from a new client, respond w/ a VersionMessage
     // to initiate the connection handshake
-    UUID id = ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID);
-    Send(VersionMessage::NewInstance(id));
+    Timestamp timestamp = Clock::now();
+    ClientType client_type = ClientType::kNode;
+    Version version = Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
+    Hash nonce = msg->GetNonce();
+    UUID node_id = ConfigurationManager::GetNodeID();
+    BlockPtr head = GetChain()->GetHead();
+    Send(VersionMessage::NewInstance(timestamp, client_type, version, nonce, node_id, head->GetHeader()));
   }
 
   //TODO:
@@ -33,10 +32,10 @@ namespace token{
     // upon receiving a VerackMessage from a new client, respond w/ a VerackMessage
     // to finish the connection handshake
     ClientType type = ClientType::kNode;
-    UUID node_id = ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID);
+    UUID node_id = ConfigurationManager::GetNodeID();
     NodeAddress callback = LedgerServer::GetCallbackAddress();
     Version version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
-    BlockPtr head = BlockChain::GetHead(); //TODO: optimize
+    BlockPtr head = BlockChain::GetInstance()->GetHead(); //TODO: optimize
     Hash nonce = Hash::GenerateNonce();
     Send(VerackMessage::NewInstance(type, node_id, callback, version, head->GetHeader(), nonce));
 
@@ -53,179 +52,223 @@ namespace token{
   }
 
   void ServerSession::OnGetDataMessage(const GetDataMessagePtr& msg){
-    std::vector<InventoryItem> items;
-    if(!msg->GetItems(items)){
-      SESSION_LOG(WARNING, this) << "cannot get items from message";
-      return;
-    }
+    BlockChainPtr chain = GetChain();
+    ObjectPoolPtr pool = GetPool();
 
-    std::vector<RpcMessagePtr> response;
-    for(auto& item : items){
+    RpcMessageList responses;
+    for(auto& item : msg->items()){
       Hash hash = item.GetHash();
-      SESSION_LOG(INFO, this) << "searching for: " << hash;
-      if(item.ItemExists()){
+#ifdef TOKEN_DEBUG
+      SESSION_LOG(INFO, this) << "searching for " << item << "....";
+#endif//TOKEN_DEBUG
+      if(ItemExists(item)){
         if(item.IsBlock()){
           BlockPtr block;
-          if(BlockChain::HasBlock(hash)){
-            block = BlockChain::GetBlock(hash);
-          } else if(ObjectPool::HasBlock(hash)){
-            block = ObjectPool::GetBlock(hash);
+          if(chain->HasBlock(hash)){
+            block = chain->GetBlock(hash);
+          } else if(pool->HasBlock(hash)){
+            block = pool->GetBlock(hash);
           } else{
-            SESSION_LOG(WARNING, this) << "cannot find block: " << hash;
-            response.push_back(NotFoundMessage::NewInstance());
-            break;
-          }
-          response.push_back(BlockMessage::NewInstance(block));
-        } else if(item.IsTransaction()){
-          if(!ObjectPool::HasTransaction(hash)){
-            SESSION_LOG(WARNING, this) << "cannot find transaction: " << hash;
-            response.push_back(NotFoundMessage::NewInstance());
+            SESSION_LOG(WARNING, this) << "couldn't find: " << item;
+
+            responses << NotFoundMessage::NewInstance("cannot find");
             break;
           }
 
-          TransactionPtr tx = ObjectPool::GetTransaction(hash);
-          response.push_back(TransactionMessage::NewInstance(tx));//TODO: fix
+          responses << BlockMessage::NewInstance(block);
+        } else if(item.IsTransaction()){
+          if(!pool->HasTransaction(hash)){
+            SESSION_LOG(WARNING, this) << "couldn't find: " << item;
+
+            responses << NotFoundMessage::NewInstance("cannot find");
+            break;
+          }
+
+          TransactionPtr tx = pool->GetTransaction(hash);
+          responses << TransactionMessage::NewInstance(tx);
         }
       } else{
-        Send(NotFoundMessage::NewInstance());
-        return;
+        responses << NotFoundMessage::NewInstance("cannot find");
       }
     }
 
-    Send(response);
+    return Send(responses);
   }
 
+#ifdef TOKEN_DEBUG
+  #define REJECT_PROPOSAL(Proposal, LevelName, Message)({ \
+    SESSION_LOG(LevelName, this) << "rejecting proposal " << (Proposal) << ": " << (Message); \
+    responses << RejectedMessage::NewInstance((Proposal));\
+    return Send(responses);                               \
+  })
+#else
+  #define REJECT_PROPOSAL(Proposal, LevelName, Message)({ \
+    responses << RejectedMessage::NewInstance((Proposal));\
+    return Send(responses);                               \
+  })
+#endif//TOKEN_DEBUG
+
+#define ACCEPT_PROPOSAL(Proposal, LevelName)({ \
+  SESSION_LOG(LevelName, this) << "accepting proposal: " << (Proposal); \
+  responses << AcceptedMessage::NewInstance(proposal);                  \
+  return Send(responses);                      \
+})
+
+#define PROMISE_PROPOSAL(Proposal, LevelName)({ \
+  SESSION_LOG(LevelName, this) << "promising proposal: " << (Proposal); \
+  responses << PromiseMessage::NewInstance((Proposal));                   \
+  return Send(responses);                       \
+})
+
   void ServerSession::OnPrepareMessage(const PrepareMessagePtr& msg){
-    // upon receiving a PrepareMessage from a Peer:
-    // - if a proposal is active AND the doesn't match the requested proposal, send a rejection.
-    //  - pause local BlockMiner
-    //  - set the current proposal
-    //  - send an acceptance
-    ProposalPtr proposal = msg->GetProposal();
-    if(!BlockMiner::Pause())
-      return Send(RejectedMessage::NewInstance(proposal));
-    if(!ProposalManager::SetProposal(proposal))
-      return Send(RejectedMessage::NewInstance(proposal));
-    return Send(AcceptedMessage::NewInstance(proposal));
+    BlockMiner* miner = BlockMiner::GetInstance();
+    RpcMessageList responses;
+
+    // check that the miner has an active proposal
+    if(miner->HasActiveProposal())
+      REJECT_PROPOSAL(msg->GetProposal(), ERROR, "there is already an active proposal.");
+    // set the current proposal to the requested proposal
+    if(!miner->RegisterNewProposal(msg->GetProposal()))
+      REJECT_PROPOSAL(msg->GetProposal(), ERROR, "cannot set active proposal.");
+
+    // pause the block miner
+    if(!miner->Pause())
+      REJECT_PROPOSAL(msg->GetProposal(), ERROR, "cannot pause the block miner.");
+
+    // request block if it doesn't exist
+    ObjectPoolPtr pool = ObjectPool::GetInstance();//TODO: refactor
+    Hash hash = msg->GetProposal().GetValue().GetHash();
+    if(!pool->HasBlock(hash)){
+#ifdef TOKEN_DEBUG
+      SESSION_LOG(INFO, this) << "cannot find proposed block in pool, requesting block: " << hash;
+#endif//TOKEN_DEBUG
+      responses << GetDataMessage::ForBlock(hash);
+    }
+
+    if(!miner->GetActiveProposal()->OnPrepare())
+      REJECT_PROPOSAL(msg->GetProposal(), ERROR, "cannot invoke on-prepare");
+
+    PROMISE_PROPOSAL(msg->GetProposal(), INFO);
   }
 
   void ServerSession::OnPromiseMessage(const PromiseMessagePtr& msg){
-    // upon receiving a PromiseMessage from a Peer:
-    //  - if a proposal isn't active, send a rejection.
-    //  - if the current proposal doesn't match the requested proposal, send a rejection.
-    //  - transition the current proposal to kPromisePhase, send a rejection if this fails.
-    //  - send an acceptance
-    if(!ProposalManager::IsProposalFor(msg->GetProposal()))
-      return Send(RejectedMessage::NewInstance(msg->GetProposal()));
-    ProposalPtr proposal = ProposalManager::GetProposal();
-    if(!proposal->TransitionToPhase(Proposal::kVotingPhase))
-      return Send(RejectedMessage::NewInstance(proposal));
-    return Send(AcceptedMessage::NewInstance(proposal));
+    NOT_IMPLEMENTED(WARNING);
   }
 
   void ServerSession::OnCommitMessage(const CommitMessagePtr& msg){
-    // upon receiving a CommitMessage from a peer:
-    //  - if a proposal isn't active, send a rejection.
-    //  - if the current proposal doesn't match the requested proposal, send a rejection.
-    //  - transition the current proposal to kCommitPhase, send a rejection if this fails.
-    //  - commit the proposal - send a rejection if this fails.
-    //  - send an acceptance.
-    if(!ProposalManager::IsProposalFor(msg->GetProposal()))
-      return Send(RejectedMessage::NewInstance(msg->GetProposal()));
-    ProposalPtr proposal = ProposalManager::GetProposal();
-    if(!proposal->TransitionToPhase(Proposal::kCommitPhase))
-      return Send(RejectedMessage::NewInstance(proposal));
-    if(!BlockMiner::Commit(proposal))
-      return Send(RejectedMessage::NewInstance(proposal));
-    return Send(AcceptedMessage::NewInstance(proposal));
+    BlockMiner* miner = BlockMiner::GetInstance();
+    RpcMessageList responses;
+
+    // check that the miner has a proposal active.
+    if(!miner->HasActiveProposal())
+      REJECT_PROPOSAL(msg->GetProposal(), ERROR, "no active proposal.");
+    // check that the requested proposal matches the active proposal
+    if(!miner->IsActiveProposal(msg->GetProposal()))
+      REJECT_PROPOSAL(msg->GetProposal(), ERROR, "not the current proposal.");
+
+    ProposalPtr proposal = miner->GetActiveProposal();
+    if(!proposal->OnCommit())
+      REJECT_PROPOSAL(msg->GetProposal(), ERROR, "cannot invoke on-commit");
   }
 
   void ServerSession::OnAcceptedMessage(const AcceptedMessagePtr& msg){
-    // upon receiving an AcceptedMessage from a peer:
-    //  - if a proposal isn't active, send a rejection.
-    //  - if the current proposal doesn't match the requested proposal, send a rejection.
-    //  - register sender in the accepted list for the current proposal
-    if(!ProposalManager::IsProposalFor(msg->GetProposal()))
-      return Send(RejectedMessage::NewInstance(msg->GetProposal()));
-    ProposalPtr proposal = ProposalManager::GetProposal();
-    proposal->AcceptProposal(GetUUID().ToString());
+    NOT_IMPLEMENTED(WARNING);
   }
 
   void ServerSession::OnRejectedMessage(const RejectedMessagePtr& msg){
-    // upon receiving an AcceptedMessage from a peer:
-    //  - if a proposal isn't active, send a rejection.
-    //  - if the current proposal doesn't match the requested proposal, send a rejection.
-    //  - register sender in the rejected list for the current proposal
-    if(!ProposalManager::IsProposalFor(msg->GetProposal()))
-      return Send(RejectedMessage::NewInstance(msg->GetProposal()));
-    ProposalPtr proposal = ProposalManager::GetProposal();
-    proposal->AcceptProposal(GetUUID().ToString());
+    NOT_IMPLEMENTED(WARNING);
   }
 
   void ServerSession::OnBlockMessage(const BlockMessagePtr& msg){
+    ObjectPoolPtr pool = GetPool();
+
     BlockPtr blk = msg->GetValue();
     Hash hash = blk->GetHash();
-    if(!ObjectPool::HasBlock(hash)){
-      ObjectPool::PutBlock(hash, blk);
+
+#ifdef TOKEN_DEBUG
+    SESSION_LOG(INFO, this) << "received block: " << blk->ToString();
+#else
+    SESSION_LOG(INFO, this) << "received block: " << hash;
+#endif//TOKEN_DEBUG
+    if(!pool->HasBlock(hash)){
+      pool->PutBlock(hash, blk);
       //TODO: Server::Broadcast(InventoryMessage::FromParent(blk));
     }
   }
 
   void ServerSession::OnTransactionMessage(const TransactionMessagePtr& msg){
+    ObjectPoolPtr pool = GetPool();
+
     TransactionPtr tx = msg->GetValue();
     Hash hash = tx->GetHash();
 
+#ifdef TOKEN_DEBUG
+    SESSION_LOG(INFO, this) << "received transaction: " << tx->ToString();
+#else
     SESSION_LOG(INFO, this) << "received transaction: " << hash;
-    if(!ObjectPool::HasTransaction(hash)){
-      ObjectPool::PutTransaction(hash, tx);
+#endif//TOKEN_DEBUG
+    if(!pool->HasTransaction(hash)){
+      pool->PutTransaction(hash, tx);
     }
   }
 
-  void ServerSession::OnInventoryMessage(const InventoryMessagePtr& msg){
-    std::vector<InventoryItem> items;
-    if(!msg->GetItems(items)){
-      SESSION_LOG(WARNING, this) << "couldn't get items from inventory message";
-      return;
-    }
+  void ServerSession::OnInventoryListMessage(const InventoryListMessagePtr& msg){
+    InventoryItems& items = msg->items();
+#ifdef TOKEN_DEBUG
+    SESSION_LOG(INFO, this) << "received an inventory of " << items.size() << " items, resolving....";
+#endif//TOKEN_DEBUG
 
-    std::vector<InventoryItem> needed;
+    InventoryItems needed;
     for(auto& item : items){
-      SESSION_LOG(INFO, this) << "checking for " << item;
-      if(!item.ItemExists()){
-        SESSION_LOG(INFO, this) << "not found, requesting....";
-        needed.push_back(item);
+      if(!ItemExists(item)){
+#ifdef TOKEN_DEBUG
+        SESSION_LOG(INFO, this) << item << " wasn't found, requesting....";
+#endif//TOKEN_DEBUG
+        needed << item;
       }
     }
 
-    SESSION_LOG(INFO, this) << "downloading " << needed.size() << "/" << items.size() << " items from inventory....";
-    if(!needed.empty()) Send(GetDataMessage::NewInstance(needed));
+#ifdef TOKEN_DEBUG
+    SESSION_LOG(INFO, this) << "resolving " << needed.size() << "/" << items.size() << " items from peer....";
+#endif//TOKEN_DEBUG
+    if(!needed.empty())
+      Send(GetDataMessage::NewInstance(needed));
   }
 
+  //TODO: optimize
   void ServerSession::OnGetBlocksMessage(const GetBlocksMessagePtr& msg){
+    BlockChainPtr chain = GetChain();
+
     Hash start = msg->GetHeadHash();
     Hash stop = msg->GetStopHash();
 
-    std::vector<InventoryItem> items;
+    InventoryItems items;
     if(stop.IsNull()){
-      intptr_t amt = std::min(GetBlocksMessage::kMaxNumberOfBlocks, BlockChain::GetHead()->GetHeight());
+      intptr_t amt = std::min(GetBlocksMessage::kMaxNumberOfBlocks, chain->GetHead()->GetHeight());
       SESSION_LOG(INFO, this) << "sending " << (amt + 1) << " blocks...";
 
-      BlockPtr start_block = BlockChain::GetBlock(start);
-      BlockPtr stop_block = BlockChain::GetBlock(start_block->GetHeight() > amt ? start_block->GetHeight() + amt : amt);
+      BlockPtr start_block = chain->GetBlock(start);
+      BlockPtr stop_block = chain->GetBlock(start_block->GetHeight() > amt ? start_block->GetHeight() + amt : amt);
 
       for(int64_t idx = start_block->GetHeight() + 1;
         idx <= stop_block->GetHeight();
         idx++){
-        BlockPtr block = BlockChain::GetBlock(idx);
+        BlockPtr block = chain->GetBlock(idx);
+
         SESSION_LOG(INFO, this) << "adding " << block;
-        items.push_back(InventoryItem(block));
+
+        items << InventoryItem::Of(block);
       }
     }
 
-    Send(InventoryMessage::NewInstance(items));
+    Send(InventoryListMessage::NewInstance(items));
   }
 
   void ServerSession::OnNotFoundMessage(const NotFoundMessagePtr& msg){
-    NOT_IMPLEMENTED; //TODO: implement ServerSession::OnNotFoundMessage
+    NOT_IMPLEMENTED(WARNING);
+  }
+
+  void ServerSession::OnNotSupportedMessage(const NotSupportedMessagePtr& msg){
+    NOT_IMPLEMENTED(WARNING);
   }
 }

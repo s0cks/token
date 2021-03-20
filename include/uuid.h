@@ -45,9 +45,8 @@ namespace token{
       return std::string(uuid_str, 37);
     }
 
-    UUID& operator=(const UUID& other){
+    void operator=(const UUID& other){
       memcpy(data(), other.data(), kRawUUIDSize);
-      return (*this);
     }
 
     friend bool operator==(const UUID& a, const UUID& b){

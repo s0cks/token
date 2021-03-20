@@ -92,9 +92,11 @@ namespace token{
     return Success("done.");
   }
 
+  //TODO: refactor
   JobResult VerifyInputListJob::DoWork(){
+    ObjectPoolPtr pool = ObjectPool::GetInstance();
     for(auto& it : inputs_){
-      UnclaimedTransactionPtr utxo = ObjectPool::FindUnclaimedTransaction(it);
+      UnclaimedTransactionPtr utxo = pool->FindUnclaimedTransaction(it);
       if(!utxo){
         LOG(WARNING) << "no unclaimed transaction found for: " << it;
         invalid_.push_back(it);

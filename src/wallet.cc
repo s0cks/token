@@ -39,6 +39,21 @@ namespace token{
     return true;
   }
 
+  Wallet WalletManager::GetUserWallet(const User& user) const{
+    std::string data;
+    leveldb::Status status;
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), UserKey(user), &data)).ok()){
+      LOG(WARNING) << "cannot get wallet for user " << user << ": " << status.ToString();
+      return Wallet();
+    }
+    Wallet wallet;
+    if(!Decode(data, wallet)){
+      LOG(WARNING) << "cannot decode wallet for " << user;
+      return Wallet();
+    }
+    return wallet;
+  }
+
   //TODO: refactor
   bool WalletManager::GetWallet(const User& user, Wallet& wallet) const{
     UserKey key(user);

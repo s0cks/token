@@ -151,6 +151,10 @@ namespace token{
       stream << address.ToString();
       return stream;
     }
+
+    operator leveldb::Slice() const{
+      return leveldb::Slice();//TODO: implement
+    }
   };
 }
 

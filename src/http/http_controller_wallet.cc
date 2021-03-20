@@ -7,6 +7,12 @@
 #include "http/http_controller_wallet.h"
 
 namespace token{
+#define DEFINE_HTTP_ROUTE_HANDLER(Method, Path, Name) \
+  HTTP_CONTROLLER_ROUTE_HANDLER(WalletController, Name);
+
+  FOR_EACH_WALLET_CONTROLLER_ENDPOINT(DEFINE_HTTP_ROUTE_HANDLER)
+#undef DEFINE_HTTP_ROUTE_HANDLER
+
   static inline bool
   ParseInt(const std::string& val, int* result){
     for(auto c : val){
@@ -20,11 +26,13 @@ namespace token{
     return true;
   }
 
-  void WalletController::HandleGetUserWalletTokenCode(HttpSession* session, const HttpRequestPtr& request){
+  HTTP_CONTROLLER_ENDPOINT_HANDLER(WalletController, GetUserWalletTokenCode){
     User user = request->GetUserParameterValue();
     Hash hash = request->GetHashParameterValue();
 
-    if(!ObjectPool::HasUnclaimedTransaction(hash))
+    //TODO: refactor
+    ObjectPoolPtr pool = ObjectPool::GetInstance();
+    if(!pool->HasUnclaimedTransaction(hash))
       return session->Send(NewNoContentResponse(session, hash));
 
     int width = DEEPLINK_DEFAULT_WIDTH;
@@ -83,8 +91,16 @@ namespace token{
     return session->Send(builder.Build());
   }
 
-  void WalletController::HandleGetUserWallet(HttpSession* session, const HttpRequestPtr& request){
+  HTTP_CONTROLLER_ENDPOINT_HANDLER(WalletController, GetUserWallet){
     User user = request->GetUserParameterValue();
+    if(!GetWalletManager()->HasWallet(user)){
+      std::stringstream ss;
+      ss << "cannot find wallet for: " << user;
+      return session->Send(NewNoContentResponse(session, ss));
+    }
+
+    Wallet wallet = GetWalletManager()->GetUserWallet(user);
+
     Json::String body;
     Json::Writer writer(body);
     writer.StartObject();
@@ -92,15 +108,8 @@ namespace token{
       writer.Key("data");
       writer.StartObject();
       {
-        writer.Key("user");
-        user.Write(writer);
-
-        writer.Key("wallet");
-        if(!WalletManager::GetInstance()->GetWallet(user, writer)){
-          std::stringstream ss;
-          ss << "Cannot find wallet for: " << user;
-          return session->Send(NewNoContentResponse(session, ss));
-        }
+        Json::SetField(writer, "user", user);
+        Json::SetField(writer, "wallet", wallet);
       }
       writer.EndObject();
     }
@@ -124,16 +133,17 @@ namespace token{
       return false;
     }
 
+    ObjectPoolPtr pool = ObjectPool::GetInstance();
     for(auto& it : doc[name].GetArray()){
       Hash in_hash = Hash::FromHexString(it.GetString());
       LOG(INFO) << "using input: " << in_hash;
-      if(!ObjectPool::HasUnclaimedTransaction(in_hash)){
+      if(!pool->HasUnclaimedTransaction(in_hash)){
         std::stringstream ss;
         ss << "Cannot find token: " << in_hash;
         session->Send(NewNotFoundResponse(session, ss));
         return false;
       }
-      UnclaimedTransactionPtr in_val = ObjectPool::GetUnclaimedTransaction(in_hash);
+      UnclaimedTransactionPtr in_val = pool->GetUnclaimedTransaction(in_hash);
       inputs.push_back(Input(in_val->GetReference(), in_val->GetUser()));
     }
     return true;
@@ -174,7 +184,7 @@ namespace token{
     return true;
   }
 
-  void WalletController::HandlePostUserWalletSpend(HttpSession* session, const HttpRequestPtr& request){
+  HTTP_CONTROLLER_ENDPOINT_HANDLER(WalletController, PostUserWalletSpend){
     User user = request->GetUserParameterValue();
 
     Json::Document doc;
@@ -190,10 +200,13 @@ namespace token{
     if(!ParseOutputList(session, doc, outputs))
       return;
 
+    //TODO: refactor
+    ObjectPoolPtr pool = ObjectPool::GetInstance();
+
     LOG(INFO) << "generating new transaction....";
     TransactionPtr tx = Transaction::NewInstance(inputs, outputs);
     Hash hash = tx->GetHash();
-    if(!ObjectPool::PutTransaction(hash, tx)){
+    if(!pool->PutTransaction(hash, tx)){
       std::stringstream ss;
       ss << "Cannot insert newly created transaction into object pool: " << hash;
       return session->Send(NewInternalServerErrorResponse(session, ss));

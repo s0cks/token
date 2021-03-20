@@ -10,6 +10,7 @@
 #include "block.h"
 #include "transaction.h"
 #include "merkle/tree.h"
+#include "atomic/relaxed_atomic.h"
 #include "unclaimed_transaction.h"
 
 namespace token{
@@ -22,14 +23,21 @@ namespace token{
     V(Initialized)                   \
     V(Synchronizing)
 
+  class BlockChain;
+  typedef std::shared_ptr<BlockChain> BlockChainPtr;
+
+  static inline std::string
+  GetBlockChainDirectory(){
+    std::stringstream ss;
+    ss << TOKEN_BLOCKCHAIN_HOME << "/data";
+    return ss.str();
+  }
+
   class BlockChainBlockVisitor;
-  class BlockChainHeaderVisitor;
   class BlockChain{
-    friend class BlockChainInitializer;
-    friend class BlockChainTest;
     friend class BlockMiner;
-    friend class ProposalHandler;
     friend class SynchronizeJob; //TODO: revoke access
+    friend class BlockChainInitializer;
    public:
     enum State{
 #define DEFINE_STATE(Name) k##Name,
@@ -308,65 +316,158 @@ namespace token{
       void FindShortestSeparator(std::string* str, const leveldb::Slice& slice) const{}
       void FindShortSuccessor(std::string* str) const {}
     };
-   private:
-    BlockChain() = delete;
+   protected:
+    RelaxedAtomic<State> state_;
+    leveldb::DB* index_;
 
-    static inline bool
-    ShouldInstallFresh(){ //TODO: rename function/action
-#ifdef TOKEN_DEBUG
-      return !BlockChain::HasReference(BLOCKCHAIN_REFERENCE_GENESIS) || FLAGS_fresh;
-#else
-      return !BlockChain::HasReference(BLOCKCHAIN_REFERENCE_GENESIS);
-#endif//TOKEN_DEBUG
+    inline leveldb::DB*
+    GetIndex() const{
+      return index_;
     }
 
-    static leveldb::DB* GetIndex();
-    static void SetState(const State& state);
-    static bool PutBlock(const Hash& hash, BlockPtr blk);
-    static bool RemoveReference(const std::string& name);
-    static bool RemoveBlock(const Hash& hash, const BlockPtr& blk);
-    static bool Append(const BlockPtr& blk);
+    /**
+     * TODO
+     * @param state
+     */
+    void SetState(const State& state){
+      state_ = state;
+    }
+
+    leveldb::Status InitializeIndex(const std::string& filename);
+    bool PutBlock(const Hash& hash, BlockPtr blk) const;
+    bool RemoveReference(const std::string& name) const;
+    bool RemoveBlock(const Hash& hash, const BlockPtr& blk) const;
+    bool Append(const BlockPtr& blk);
    public:
-    ~BlockChain() = delete;
+    BlockChain():
+      state_(State::kUninitialized),
+      index_(nullptr){}
+    ~BlockChain(){
+      delete index_;
+    }
 
-    static State GetState();
-    static bool Initialize();
-    static bool VisitHeaders(BlockChainHeaderVisitor* vis);
-    static bool VisitBlocks(BlockChainBlockVisitor* vis);
-    static bool HasBlock(const Hash& hash);
-    static bool HasReference(const std::string& name);
-    static bool PutReference(const std::string& name, const Hash& hash);
-    static Hash GetReference(const std::string& name);
-    static BlockPtr GetBlock(const Hash& hash);
-    static BlockPtr GetBlock(int64_t height);
-    static BlockPtr GetHead();
-    static BlockPtr GetGenesis();
-    static int64_t GetNumberOfBlocks();
+    /**
+     * TODO
+     * @return
+     */
+    State GetState() const{
+      return state_;
+    }
 
-    static bool GetBlocks(Json::Writer& writer);
+    /**
+     * TODO
+     * @param hash
+     * @return
+     */
+    virtual bool HasBlock(const Hash& hash) const;
 
-#ifdef TOKEN_DEBUG
-    static bool GetStats(Json::Writer& writer);
-#endif//TOKEN_DEBUG
+    /**
+     * TODO
+     * @param name
+     * @return
+     */
+    bool HasReference(const std::string& name) const;
 
-    static inline bool HasBlocks(){
+    /**
+     * TODO
+     * @param name
+     * @param hash
+     * @return
+     */
+    bool PutReference(const std::string& name, const Hash& hash) const;
+
+    /**
+     * TODO
+     */
+    bool VisitBlocks(BlockChainBlockVisitor* vis) const;
+
+    /**
+     * TODO
+     * @param name
+     * @return
+     */
+    Hash GetReference(const std::string& name) const;
+
+    /**
+     * TODO
+     * @param hash
+     * @return
+     */
+    virtual BlockPtr GetBlock(const Hash& hash) const;
+
+    /**
+     * TODO
+     * @param height
+     * @return
+     */
+    BlockPtr GetBlock(const int64_t& height) const;
+
+    /**
+     * TODO
+     * @return
+     */
+    int64_t GetNumberOfBlocks() const;
+
+    /**
+     * TODO
+     * @return
+     */
+    int64_t GetNumberOfReferences() const;
+
+    //TODO: guard
+    bool GetBlocks(Json::Writer& writer) const;
+    bool GetReferences(Json::Writer& writer) const;
+
+    /**
+     * TODO
+     * @return
+     */
+    inline bool
+    HasBlocks() const{
       return GetNumberOfBlocks() > 0;
     }
 
-    static inline bool
-    HasHead(){
-      return !GetReference(BLOCKCHAIN_REFERENCE_HEAD).IsNull();
+    inline bool
+    HasReferences() const{
+      return GetNumberOfReferences() > 0;
     }
 
-    static inline bool
-    HasGenesis(){
-      return !GetReference(BLOCKCHAIN_REFERENCE_GENESIS).IsNull();
+    inline bool
+    HasGenesis() const{
+      return HasReference(BLOCKCHAIN_REFERENCE_GENESIS);
+    }
+
+    inline bool
+    HasHead() const{
+      return HasReference(BLOCKCHAIN_REFERENCE_HEAD);
+    }
+
+    inline Hash
+    GetGenesisHash() const{
+      return GetReference(BLOCKCHAIN_REFERENCE_GENESIS);
+    }
+
+    inline Hash
+    GetHeadHash() const{
+      return GetReference(BLOCKCHAIN_REFERENCE_HEAD);
+    }
+
+    virtual BlockPtr GetHead() const{
+      return GetBlock(GetHeadHash());
+    }
+
+    inline BlockPtr
+    GetGenesis() const{
+      return GetBlock(GetGenesisHash());
     }
 
 #define DEFINE_STATE_CHECK(Name) \
-        static inline bool Is##Name(){ return GetState() == State::k##Name; }
+    inline bool Is##Name() const{ return GetState() == State::k##Name; }
     FOR_EACH_BLOCKCHAIN_STATE(DEFINE_STATE_CHECK)
 #undef DEFINE_STATE_CHECK
+
+    static BlockChainPtr GetInstance();
+    static bool Initialize(const std::string& filename=GetBlockChainDirectory());
   };
 
   class BlockChainBlockVisitor{
@@ -375,14 +476,6 @@ namespace token{
    public:
     virtual ~BlockChainBlockVisitor() = default;
     virtual bool Visit(const BlockPtr& blk) = 0;
-  };
-
-  class BlockChainHeaderVisitor{
-   protected:
-    BlockChainHeaderVisitor() = delete;
-   public:
-    virtual ~BlockChainHeaderVisitor() = default;
-    virtual bool Visit(const BlockHeader& blk) = 0;
   };
 }
 

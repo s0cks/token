@@ -21,20 +21,24 @@ namespace token{
   V(Int, int32_t)            \
   V(Long, int64_t)
 
+#define FOR_EACH_PAXOS_MESSAGE_TYPE(V) \
+  V(Prepare)                           \
+  V(Promise)                           \
+  V(Commit)                            \
+  V(Accepted)                          \
+  V(Rejected)
+
 #define FOR_EACH_MESSAGE_TYPE(V) \
-  V(Version) \
-  V(Verack) \
-  V(Prepare) \
-  V(Promise) \
-  V(Commit) \
-  V(Accepted) \
-  V(Rejected) \
-  V(GetData) \
-  V(GetBlocks) \
-  V(Block) \
-  V(Transaction) \
-  V(Inventory) \
-  V(NotFound)
+  V(Version)                     \
+  V(Verack)                      \
+  V(GetData)                     \
+  V(GetBlocks)                   \
+  V(Block)                       \
+  V(Transaction)                 \
+  V(InventoryList)               \
+  V(NotFound)                    \
+  V(NotSupported)                \
+  FOR_EACH_PAXOS_MESSAGE_TYPE(V)
 
 #define FOR_EACH_SERIALIZABLE_TYPE(V) \
   V(Hash)                             \

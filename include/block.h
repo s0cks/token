@@ -161,7 +161,7 @@ namespace token{
           && buff->PutVersion(version_)
           && buff->PutLong(height_)
           && buff->PutHash(previous_hash_)
-          && buff->PutSet(transactions_);
+          && buff->PutSetOf(transactions_);
     }
 
     bool Write(Json::Writer& writer) const{

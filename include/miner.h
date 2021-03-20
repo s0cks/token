@@ -1,21 +1,23 @@
 #ifndef TOKEN_MINER_H
 #define TOKEN_MINER_H
 
+#include <mutex>
 #include <ostream>
+#include <condition_variable>
+
 #include "vthread.h"
 #include "consensus/proposal.h"
+#include "peer/peer_session_manager.h"
 
 namespace token{
+#define MINER_LOG(LevelName) \
+  LOG(LevelName) << "[miner] "
+
 #define FOR_EACH_MINER_STATE(V) \
   V(Starting)                   \
   V(Running)                    \
   V(Stopping)                   \
   V(Stopped)
-
-#define FOR_EACH_MINER_STATUS(V) \
-  V(Ok)                          \
-  V(Warning)                     \
-  V(Error)
 
   class BlockMiner{
    public:
@@ -36,86 +38,131 @@ namespace token{
           return stream << "Unknown";
       }
     }
+   protected:
+    uv_loop_t* loop_;
+    uv_timer_t timer_;
+    RelaxedAtomic<State> state_;
 
-    enum Status{
-#define DEFINE_STATUS(Name) k##Name##Status,
-      FOR_EACH_MINER_STATUS(DEFINE_STATUS)
-#undef DEFINE_STATUS
-    };
+    std::mutex proposal_mtx_;
+    ProposalPtr proposal_;
 
-    friend std::ostream& operator<<(std::ostream& stream, const Status& status){
-      switch(status){
-#define DEFINE_TOSTRING(Name) \
-        case Status::k##Name##Status: \
-          return stream << #Name;
-        FOR_EACH_MINER_STATUS(DEFINE_TOSTRING)
-#undef DEFINE_TOSTRING
-        default:
-          return stream << "Unknown";
-      }
+    uv_async_t on_promise_;
+
+    void SetState(const State& state){
+      state_ = state;
     }
-   private:
-    BlockMiner() = delete;
 
-    static void SetState(const State& state);
-    static void SetStatus(const Status& status);
-    static void HandleMine(uv_timer_t* handle);
-    static void OnPromiseCallback(uv_async_t* handle);
-    static void OnCommitCallback(uv_async_t* handle);
-    static void OnAcceptedCallback(uv_async_t* handle);
-    static void OnRejectedCallback(uv_async_t* handle);
-    static void OnQuorumCallback(uv_async_t* handle);
+    bool StopMiningTimer();
+    bool StartMiningTimer();
 
-    static int StartMinerTimer();
-    static int StopMinerTimer();
+    static inline int16_t
+    GetRequiredVotes(){
+#ifdef TOKEN_ENABLE_SERVER
+      return PeerSessionManager::GetNumberOfConnectedPeers();
+#else
+      return 0;
+#endif//TOKEN_ENABLE_SERVER
+    }
 
-    static bool ScheduleSnapshot();
+    static void OnMine(uv_timer_t* handle);
+
+    static void OnPromise(uv_async_t* handle){
+      MINER_LOG(INFO) << "OnPromise called.";
+    }
    public:
-    ~BlockMiner() = delete;
+    BlockMiner(uv_loop_t* loop=uv_loop_new()):
+      loop_(loop),
+      timer_(),
+      state_(State::kStoppedState),
+      proposal_mtx_(),
+      proposal_(){
+      timer_.data = this;
 
-    static State GetState();
-    static Status GetStatus();
-    static bool Stop();
-    static bool Start();
+      on_promise_.data = this;
+      CHECK_UVRESULT(uv_async_init(loop, &on_promise_, &OnPromise), MINER_LOG(ERROR), "cannot initialize OnPromise");
+    }
+    ~BlockMiner() = default;
 
-    static bool Commit(const ProposalPtr& proposal);
+    State GetState() const{
+      return state_;
+    }
 
-    static void OnPromise();
-    static void OnCommit();
-    static void OnAccepted();
-    static void OnRejected();
-    static void OnQuorum();
+    uv_loop_t* GetLoop() const{
+      return loop_;
+    }
 
-    static inline bool Pause(){
-      int err;
-      if((err = StopMinerTimer()) != 0){
-        LOG(ERROR) << "cannot pause the block miner: " << uv_strerror(err);
+    ProposalPtr GetActiveProposal(){
+      std::lock_guard<std::mutex> guard(proposal_mtx_);
+      return proposal_;
+    }
+
+    bool HasActiveProposal(){
+      std::lock_guard<std::mutex> guard(proposal_mtx_);
+      return proposal_ != nullptr;
+    }
+
+    bool IsActiveProposal(const RawProposal& proposal){
+      std::lock_guard<std::mutex> guard(proposal_mtx_);
+      if(!proposal_)
         return false;
-      }
-      LOG(INFO) << "pausing the block miner.";
+      return proposal_->raw() == proposal;
+    }
+
+    bool SetActiveProposal(const ProposalPtr& proposal){
+      std::lock_guard<std::mutex> guard(proposal_mtx_);
+      if(proposal_)
+        return false;
+      proposal_ = proposal;
       return true;
     }
 
-    static inline bool Resume(){
-      int err;
-      if((err = StartMinerTimer()) != 0){
-        LOG(ERROR) << "cannot resume the block miner: " << uv_strerror(err);
+    bool RegisterNewProposal(const RawProposal& proposal){
+      std::lock_guard<std::mutex> guard(proposal_mtx_);
+      if(proposal_)
         return false;
-      }
-      LOG(INFO) << "resuming the block miner.";
+      proposal_ = Proposal::NewInstance(loop_, proposal, GetRequiredVotes());
       return true;
+    }
+
+    bool ClearActiveProposal(){
+      std::lock_guard<std::mutex> guard(proposal_mtx_);
+      if(!proposal_)
+        return false;
+      proposal_ = nullptr;
+      return true;
+    }
+
+    bool Run();
+
+    inline bool Pause(){
+      return StopMiningTimer();
+    }
+
+    inline bool Resume(){
+      return StartMiningTimer();
     }
 
 #define DEFINE_CHECK(Name) \
-    static inline bool Is##Name##State(){ return GetState() == State::k##Name##State; }
+    inline bool Is##Name() const{ return state_ == State::k##Name##State; }
     FOR_EACH_MINER_STATE(DEFINE_CHECK)
 #undef DEFINE_CHECK
 
-#define DEFINE_CHECK(Name) \
-    static inline bool Is##Name##Status(){ return GetStatus() == Status::k##Name##Status; }
-    FOR_EACH_MINER_STATUS(DEFINE_CHECK)
-#undef DEFINE_CHECK
+    static BlockMiner* GetInstance();
+  };
+
+  class BlockMinerThread{
+   private:
+    BlockMinerThread() = delete;
+
+    static void HandleThread(uword param);
+   public:
+    ~BlockMinerThread() = delete;
+
+    static bool Stop();
+    static bool Start();
+    static void Initialize();
   };
 }
 
+#undef MINER_LOG
 #endif//TOKEN_MINER_H

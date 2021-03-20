@@ -7,18 +7,31 @@
 #include "http/http_controller.h"
 
 namespace token{
+#define FOR_EACH_HEALTH_CONTROLLER_ENDPOINT(V) \
+  V(GET, "/ready", GetReadyStatus)             \
+  V(GET, "/live", GetLiveStatus)
+
   class HealthController : HttpController{
-   private:
-    HealthController() = delete;
+   protected:
 
-    HTTP_CONTROLLER_ENDPOINT(GetReadyStatus);
-    HTTP_CONTROLLER_ENDPOINT(GetLiveStatus);
    public:
-    ~HealthController() = delete;
+    HealthController():
+      HttpController(){}
+    ~HealthController() = default;
 
-    HTTP_CONTROLLER_INIT(){
-      HTTP_CONTROLLER_GET("/ready", GetReadyStatus);
-      HTTP_CONTROLLER_GET("/live", GetLiveStatus);
+#define DECLARE_ENDPOINT(Method, Path, Name) \
+    HTTP_CONTROLLER_ENDPOINT(Name);
+
+    FOR_EACH_HEALTH_CONTROLLER_ENDPOINT(DECLARE_ENDPOINT)
+#undef DECLARE_ENDPOINT
+
+    bool Initialize(HttpRouter* router){
+#define REGISTER_ENDPOINT(Method, Path, Name) \
+      HTTP_CONTROLLER_##Method(Path, Name);
+
+      FOR_EACH_HEALTH_CONTROLLER_ENDPOINT(REGISTER_ENDPOINT)
+#undef REGISTER_ENDPOINT
+      return true;
     }
   };
 }

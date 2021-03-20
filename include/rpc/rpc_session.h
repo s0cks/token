@@ -11,6 +11,8 @@ namespace token{
   class RpcSession : public Session<RpcMessage>{
     friend class LedgerServer;
    protected:
+    RpcSession():
+      Session<RpcMessage>(){}
     RpcSession(uv_loop_t* loop):
       Session<RpcMessage>(loop){}
 
@@ -34,14 +36,20 @@ namespace token{
    public:
     virtual ~RpcSession() = default;
 
-    inline void Send(const RpcMessageList& messages){
+    virtual void Send(const SessionMessageTypeList& messages){
       return SendMessages(messages);
     }
 
-    inline void Send(const RpcMessagePtr& msg){
-      RpcMessageList messages = { msg };
+    virtual void Send(const SessionMessageTypePtr& msg){
+      SessionMessageTypeList messages = { msg };
       return SendMessages(messages);
     }
+
+    virtual bool SendPrepare() = 0;
+    virtual bool SendPromise() = 0;
+    virtual bool SendCommit() = 0;
+    virtual bool SendAccepted() = 0;
+    virtual bool SendRejected() = 0;
   };
 }
 

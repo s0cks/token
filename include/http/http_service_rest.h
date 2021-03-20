@@ -5,11 +5,31 @@
 
 #include "http/http_service.h"
 
+#include "http/http_controller_pool.h"
+#include "http/http_controller_chain.h"
+#include "http/http_controller_wallet.h"
+
 namespace token{
   class HttpRestService : HttpService{
+   private:
+    std::shared_ptr<PoolController> pool_;
+    std::shared_ptr<ChainController> chain_;
+    std::shared_ptr<WalletController> wallet_;
    public:
     HttpRestService(uv_loop_t* loop=uv_loop_new());
     ~HttpRestService() = default;
+
+    std::shared_ptr<PoolController> GetPoolController() const{
+      return pool_;
+    }
+
+    std::shared_ptr<ChainController> GetChainController() const{
+      return chain_;
+    }
+
+    std::shared_ptr<WalletController> GetWalletController() const{
+      return wallet_;
+    }
 
     ServerPort GetPort() const{
       return FLAGS_service_port;

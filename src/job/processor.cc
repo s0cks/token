@@ -3,9 +3,6 @@
 #include "job/processor.h"
 
 namespace token{
-#define JOB_LOG(LevelName) \
-  LOG(LevelName) << "[" << GetName() << "] "
-
   JobResult ProcessBlockJob::DoWork(){
     if(!GetBlock()->Accept(this))
       return Failed("Cannot visit the block transactions.");
@@ -88,7 +85,7 @@ namespace token{
 
     if(!Commit()){
 #ifdef TOKEN_DEBUG
-      JOB_LOG(ERROR) << "cannot commit ~" << GetCurrentBatchSize() << "b of changes to object pool.";
+      JOB_LOG(ERROR, this) << "cannot commit ~" << GetCurrentBatchSize() << "b of changes to object pool.";
 #endif//TOKEN_DEBUG
       return Failed("Cannot Commit Changes.");
     }

@@ -137,8 +137,9 @@ namespace token{
     InputList inputs_;
    protected:
     JobResult DoWork(){
+      ObjectPoolPtr pool = ObjectPool::GetInstance();
       for(auto& it : inputs_){
-        UnclaimedTransactionPtr utxo = ObjectPool::FindUnclaimedTransaction(it);
+        UnclaimedTransactionPtr utxo = pool->FindUnclaimedTransaction(it);
         Hash hash = utxo->GetHash();
         //TODO: remove input
       }

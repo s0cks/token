@@ -7,6 +7,9 @@
 #include "job/worker.h"
 
 namespace token{
+#define SCHEDULER_LOG(LevelName) \
+  LOG(LevelName) << "[scheduler] "
+
   const int32_t JobScheduler::kMaxNumberOfJobs = 1024;
 
   static std::default_random_engine engine;
@@ -37,6 +40,9 @@ namespace token{
   }
 
   bool JobScheduler::Schedule(Job* job){
+#ifdef TOKEN_DEBUG
+    SCHEDULER_LOG(INFO) << "scheduling " << job->GetName();
+#endif//TOKEN_DEBUG
     return GetRandomQueue()->Push(job);
   }
 

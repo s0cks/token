@@ -85,9 +85,11 @@ InitializeLogging(char *arg0){
       return false;
     }
 
+    ObjectPoolPtr pool = ObjectPool::GetInstance();
+
     int64_t idx = 0;
     for(auto& it : wallet){
-      UnclaimedTransactionPtr utxo = ObjectPool::GetUnclaimedTransaction(it);
+      UnclaimedTransactionPtr utxo = pool->GetUnclaimedTransaction(it);
 
       LOG(INFO) << "spending: " << utxo->GetReference();
 
@@ -98,7 +100,7 @@ InitializeLogging(char *arg0){
       TransactionPtr tx = Transaction::NewInstance(inputs, outputs);
 
       Hash hash = tx->GetHash();
-      if(!ObjectPool::PutTransaction(hash, tx)){
+      if(!pool->PutTransaction(hash, tx)){
         LOG(WARNING) << "cannot add new transaction " << hash << " to object pool.";
         return false;
       }
@@ -215,23 +217,26 @@ main(int argc, char **argv){
   #endif//TOKEN_ENABLE_REST_SERVICE
 
 #ifdef TOKEN_DEBUG
+  sleep(3);
   LOG(INFO) << "current time: " << FormatTimestampReadable(Clock::now());
-  LOG(INFO) << "home: " << ConfigurationManager::GetString(TOKEN_CONFIGURATION_BLOCKCHAIN_HOME);
-  LOG(INFO) << "node: " << ConfigurationManager::GetID(TOKEN_CONFIGURATION_NODE_ID);
+  LOG(INFO) << "home: " << TOKEN_BLOCKCHAIN_HOME;
+  LOG(INFO) << "node: " << ConfigurationManager::GetNodeID();
 
   PeerList peers;
-  ConfigurationManager::GetPeerList(TOKEN_CONFIGURATION_NODE_PEERS, peers);
+  ConfigurationManager::GetInstance()->GetPeerList(TOKEN_CONFIGURATION_NODE_PEERS, peers);
   LOG(INFO) << "peers: " << peers;
 
-  LOG(INFO) << "number of blocks in the chain: " << BlockChain::GetNumberOfBlocks();
+  LOG(INFO) << "number of blocks in the chain: " << BlockChain::GetInstance()->GetNumberOfBlocks();
+
+  ObjectPoolPtr pool = ObjectPool::GetInstance();
   if(TOKEN_VERBOSE){
-    ObjectPool::PrintBlocks();
-    ObjectPool::PrintTransactions();
-    ObjectPool::PrintUnclaimedTransactions();
+    pool->PrintBlocks();
+    pool->PrintTransactions();
+    pool->PrintUnclaimedTransactions();
   } else{
-    LOG(INFO) << "number of blocks in the pool: " << ObjectPool::GetNumberOfBlocks();
-    LOG(INFO) << "number of transactions in the pool: " << ObjectPool::GetNumberOfTransactions();
-    LOG(INFO) << "number of unclaimed transactions in the pool: " << ObjectPool::GetNumberOfUnclaimedTransactions();
+    LOG(INFO) << "number of blocks in the pool: " << pool->GetNumberOfBlocks();
+    LOG(INFO) << "number of transactions in the pool: " << pool->GetNumberOfTransactions();
+    LOG(INFO) << "number of unclaimed transactions in the pool: " << pool->GetNumberOfUnclaimedTransactions();
   }
 
   if(FLAGS_append_test && !AppendDummy("VenueA", 2)){
@@ -245,7 +250,7 @@ main(int argc, char **argv){
 //    return EXIT_FAILURE;
 //  }
 
-  if(!FLAGS_no_mining && !BlockMiner::Start()){
+  if(!FLAGS_no_mining && !BlockMiner::GetInstance()->Run()){
     CrashReport::PrintNewCrashReport("Cannot start the block miner.");
     return EXIT_FAILURE;
   }

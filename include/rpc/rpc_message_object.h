@@ -1,7 +1,6 @@
 #ifndef TOKEN_RPC_MESSAGE_OBJECT_H
 #define TOKEN_RPC_MESSAGE_OBJECT_H
 
-#include "rpc/rpc_message.h"
 #include "buffer.h"
 
 namespace token{

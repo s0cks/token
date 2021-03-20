@@ -13,6 +13,8 @@
 #include "transaction.h"
 #include "unclaimed_transaction.h"
 
+#include "atomic/relaxed_atomic.h"
+
 namespace token{
   class ObjectPoolVisitor{
    protected:
@@ -37,6 +39,16 @@ namespace token{
     V(Uninitialized)           \
     V(Initializing)            \
     V(Initialized)
+
+  class ObjectPool;
+  typedef std::shared_ptr<ObjectPool> ObjectPoolPtr;
+
+  static inline std::string
+  GetObjectPoolDirectory(){
+    std::stringstream ss;
+    ss << TOKEN_BLOCKCHAIN_HOME << "/pool";
+    return ss.str();
+  }
 
   class ObjectPool{
    public:
@@ -188,30 +200,34 @@ namespace token{
       void FindShortestSeparator(std::string* str, const leveldb::Slice& slice) const{}
       void FindShortSuccessor(std::string* str) const {}
     };
-   private:
-    ObjectPool() = delete;
+   protected:
+    RelaxedAtomic<State> state_;
+    leveldb::DB* index_;
 
-    /**
-     * Sets the ObjectPool's state
-     * @see State
-     * @param state - The desired state of the ObjectPool
-     */
-    static void SetState(const State& state);
+    void SetState(const State& state){
+      state_ = state;
+    }
+
+    inline leveldb::DB*
+    GetIndex() const{
+      return index_;
+    }
+
+    leveldb::Status InitializeIndex(const std::string& filename);
    public:
-    ~ObjectPool() = delete;
+    ObjectPool():
+      state_(State::kUninitialized),
+      index_(nullptr){}
+    virtual ~ObjectPool() = default;
 
     /**
      * Returns the State of the ObjectPool.
      * @see State
      * @return The State of the ObjectPool
      */
-    static State GetState();
-
-    /**
-     * Initializes the ObjectPool.
-     * @return true if successful, false otherwise
-     */
-    static bool Initialize();
+    State GetState() const{
+      return state_;
+    }
 
     /**
      * Creates the following pool functions for each pool type:
@@ -225,31 +241,31 @@ namespace token{
      *  - int64_t GetNumberOf<Type>s();
      */
 #define DEFINE_TYPE_METHODS(Name) \
-    static bool Print##Name##s(const google::LogSeverity severity=google::INFO); \
-    static bool WaitFor##Name(const Hash& hash, const int64_t timeout_ms=1000*5); \
-    static bool Put##Name(const Hash& hash, const Name##Ptr& val);                \
-    static bool Get##Name##s(Json::Writer& json);                                   \
-    static bool Has##Name(const Hash& hash);                                      \
-    static bool Remove##Name(const Hash& hash);                                   \
-    static bool Visit##Name##s(ObjectPool##Name##Visitor* vis);                   \
-    static Name##Ptr Get##Name(const Hash& hash);                                 \
-    static int64_t GetNumberOf##Name##s();
+    virtual bool Print##Name##s(const google::LogSeverity severity=google::INFO) const; \
+    virtual bool Put##Name(const Hash& hash, const Name##Ptr& val) const;               \
+    virtual bool Get##Name##s(Json::Writer& json) const;                                \
+    virtual bool Get##Name##s(HashList& hashes) const;                                  \
+    virtual bool Has##Name(const Hash& hash) const;                                     \
+    virtual bool Has##Name##s() const;    \
+    virtual bool Remove##Name(const Hash& hash) const;                                  \
+    virtual bool Visit##Name##s(ObjectPool##Name##Visitor* vis) const;                  \
+    virtual Name##Ptr Get##Name(const Hash& hash) const;                                \
+    virtual int64_t GetNumberOf##Name##s() const;
     FOR_EACH_POOL_TYPE(DEFINE_TYPE_METHODS)
 #undef DEFINE_TYPE_METHODS
 
     //TODO: refactor
-    static int64_t GetNumberOfObjects();
-    static UnclaimedTransactionPtr FindUnclaimedTransaction(const Input& input);
-    static leveldb::Status Write(const leveldb::WriteBatch& update);
-
-#ifdef TOKEN_DEBUG
-      static bool GetStats(Json::Writer& json);
-#endif//TOKEN_DEBUG
+    int64_t GetNumberOfObjects() const;
+    UnclaimedTransactionPtr FindUnclaimedTransaction(const Input& input) const;
+    leveldb::Status Write(const leveldb::WriteBatch& update) const;
 
 #define DEFINE_CHECK(Name) \
-    static inline bool Is##Name(){ return GetState() == ObjectPool::k##Name; }
+    inline bool Is##Name() const{ return GetState() == ObjectPool::k##Name; }
     FOR_EACH_POOL_STATE(DEFINE_CHECK)
 #undef DEFINE_CHECK
+
+    static ObjectPoolPtr GetInstance();
+    static bool Initialize(const std::string& filename=GetObjectPoolDirectory());
   };
 }
 

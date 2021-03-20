@@ -17,13 +17,12 @@ namespace token{
     static const int32_t kMaxNumberOfJobs;
    private:
     JobScheduler() = delete;
-
-    static bool RegisterQueue(const ThreadId& thread, JobQueue* queue);
    public:
     ~JobScheduler() = delete;
 
     static bool Initialize();
     static bool Schedule(Job* job);
+    static bool RegisterQueue(const ThreadId& thread, JobQueue* queue);
     static JobQueue* GetWorker(const ThreadId& thread);
     static JobQueue* GetThreadQueue();
     static JobQueue* GetRandomQueue();

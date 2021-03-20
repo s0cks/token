@@ -13,6 +13,8 @@ namespace token{
 
     void OnMessageRead(const HttpMessagePtr& msg);
    public:
+    HttpSession():
+      Session<HttpMessage>(){}
     HttpSession(uv_loop_t* loop):
       Session<HttpMessage>(loop),
       router_(nullptr){}
@@ -21,7 +23,7 @@ namespace token{
       router_(router){}
     ~HttpSession() = default;
 
-    void Send(const HttpMessagePtr& msg){
+    virtual void Send(const HttpMessagePtr& msg){
       return SendMessages({ msg });
     }
   };

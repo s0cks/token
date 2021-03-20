@@ -5,45 +5,51 @@
 #include "http/http_controller_pool.h"
 
 namespace token{
-  void PoolController::HandleGetBlock(HttpSession* session, const HttpRequestPtr& request){
+#define DEFINE_HTTP_ENDPOINT_ROUTE_HANDLER(Method, Path, Name) \
+  HTTP_CONTROLLER_ROUTE_HANDLER(PoolController, Name)
+
+  FOR_EACH_POOL_CONTROLLER_ENDPOINT(DEFINE_HTTP_ENDPOINT_ROUTE_HANDLER)
+#undef DEFINE_HTTP_ENDPOINT_ROUTE_HANDLER
+
+  HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetBlock){
     Hash hash = request->GetHashParameterValue();
-    if(!ObjectPool::HasBlock(hash))
+    if(!GetPool()->HasBlock(hash))
       return session->Send(NewNoContentResponse(session, hash));
-    BlockPtr blk = ObjectPool::GetBlock(hash);
+    BlockPtr blk = GetPool()->GetBlock(hash);
     return session->Send(NewOkResponse(session, blk));
   }
 
-  void PoolController::HandleGetBlocks(HttpSession* session, const HttpRequestPtr& request){
+  HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetBlocks){
 
   }
 
-  void PoolController::HandleGetTransaction(HttpSession* session, const HttpRequestPtr& request){
+  HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetTransaction){
     Hash hash = request->GetHashParameterValue();
-    if(!ObjectPool::HasTransaction(hash))
+    if(!GetPool()->HasTransaction(hash))
       return session->Send(NewNoContentResponse(session, hash));
-    TransactionPtr tx = ObjectPool::GetTransaction(hash);
+    TransactionPtr tx = GetPool()->GetTransaction(hash);
     return session->Send(NewOkResponse(session, tx));
   }
 
-  void PoolController::HandleGetTransactions(HttpSession* session, const HttpRequestPtr& request){
+  HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetTransactions){
     return session->Send(NewNotImplementedResponse(session, "Not Implemented."));
   }
 
-  void PoolController::HandleGetUnclaimedTransaction(HttpSession* session, const HttpRequestPtr& request){
+  HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetUnclaimedTransaction){
     Hash hash = request->GetHashParameterValue();
-    if(!ObjectPool::HasUnclaimedTransaction(hash))
+    if(!GetPool()->HasUnclaimedTransaction(hash))
       return session->Send(NewNoContentResponse(session, hash));
-    UnclaimedTransactionPtr utxo = ObjectPool::GetUnclaimedTransaction(hash);
+    UnclaimedTransactionPtr utxo = GetPool()->GetUnclaimedTransaction(hash);
     return session->Send(NewOkResponse(session, utxo));
   }
 
-  void PoolController::HandleGetUnclaimedTransactions(HttpSession* session, const HttpRequestPtr& request){
+  HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetUnclaimedTransactions){
     Json::String body;
     Json::Writer writer(body);
     writer.StartObject();
     {
       writer.Key("data");
-      if(!ObjectPool::GetUnclaimedTransactions(writer))
+      if(!GetPool()->GetUnclaimedTransactions(writer))
         return session->Send(NewInternalServerErrorResponse(session, "Cannot get the list of unclaimed transactions in the object pool."));
     }
     writer.EndObject();

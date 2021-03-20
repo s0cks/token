@@ -8,15 +8,24 @@
 namespace token{
   class BlockBuilder : ObjectPoolTransactionVisitor{
    private:
+    BlockPtr parent_;
     TransactionList transactions_;
    public:
-    BlockBuilder():
+    BlockBuilder(const BlockChainPtr& chain):
       ObjectPoolTransactionVisitor(),
+      parent_(chain->GetHead()),
       transactions_(){}
     ~BlockBuilder() = default;
 
+    BlockPtr GetParent() const{
+      return parent_;
+    }
+
+    //TODO: refactor
     BlockPtr Build(){
-      if(!ObjectPool::VisitTransactions(this)){
+      ObjectPoolPtr pool = ObjectPool::GetInstance();
+
+      if(!pool->VisitTransactions(this)){
         LOG(WARNING) << "couldn't visit object pool transactions.";
         return BlockPtr(nullptr);
       }
@@ -38,12 +47,9 @@ namespace token{
         }
       }
 
-      BlockPtr head = BlockChain::GetHead();
-      LOG(INFO) << "creating block from parent: ";
-
-      BlockPtr blk = Block::FromParent(head, transactions);
+      BlockPtr blk = Block::FromParent(GetParent(), transactions);
       Hash hash = blk->GetHash();
-      if(!ObjectPool::PutBlock(hash, blk)){
+      if(!pool->PutBlock(hash, blk)){
         LOG(WARNING) << "couldn't put new block " << hash << " into the object pool.";
         return BlockPtr(nullptr);
       }
@@ -59,7 +65,7 @@ namespace token{
     }
 
     static BlockPtr BuildNewBlock(){
-      BlockBuilder builder;
+      BlockBuilder builder(BlockChain::GetInstance());
       return builder.Build();
     }
   };

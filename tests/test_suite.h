@@ -5,6 +5,8 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
+#include "transaction.h"
+
 namespace token{
   template<class T>
   class BinaryObjectTest : public ::testing::Test{
@@ -36,6 +38,57 @@ namespace token{
     ASSERT_TRUE(a->Write(buff));     \
     Name##Ptr b = Name::FromBytes(buff);                    \
     ASSERT_TRUE(a->Equals(b));         \
+  }
+
+  static inline TransactionPtr
+  CreateRandomTransaction(const int64_t& ninputs, const int64_t& noutputs){
+    int64_t idx;
+
+    InputList inputs;
+    for(idx = 0; idx < ninputs; idx++)
+      inputs.push_back(Input(Hash::GenerateNonce(), idx, User("TestUser")));
+
+    OutputList outputs;
+    for(idx = 0; idx < noutputs; idx++)
+      outputs.push_back(Output("TestUser", "TestToken"));
+
+    return Transaction::NewInstance(inputs, outputs);
+  }
+
+  class IntegrationTest : public ::testing::Test{
+   protected:
+    IntegrationTest():
+      ::testing::Test(){}
+
+    static inline std::string
+    GenerateRandomTestDirectory(const char* prefix){
+      size_t length = 13 + strlen(prefix);
+      char tmp_filename[length];
+      snprintf(tmp_filename, length, "/tmp/%s.XXXXXX", prefix);
+      return std::string(mkdtemp(tmp_filename));
+    }
+   public:
+    virtual ~IntegrationTest() = default;
+  };
+
+  MATCHER(AnyTransaction, "Is not a transaction"){
+    return arg->GetType() == Type::kTransaction;
+  }
+
+  MATCHER_P(IsHash, hash, "Hashes don't match"){
+    return arg == hash;
+  }
+
+  MATCHER_P(IsBlock, hash, "Blocks don't match"){
+    return arg->GetHash() == hash;
+  }
+
+  MATCHER_P(IsTransaction, tx, "Transactions don't match"){
+    return arg->Equals(tx);
+  }
+
+  MATCHER_P(IsUser, name, "The user doesn't match"){
+    return arg == User(name);
   }
 }
 

@@ -1,4 +1,4 @@
-#include "rpc/rpc_message_getblocks.h"
+#include "rpc/rpc_message.h"
 
 namespace token{
   const int64_t GetBlocksMessage::kMaxNumberOfBlocks = 32;

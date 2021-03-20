@@ -143,12 +143,14 @@ namespace token{
       return state_;
     }
 
-    bool HasWallet(const User& user) const;
-    bool RemoveWallet(const User& user) const;
-    bool PutWallet(const User& user, const Wallet& wallet) const;
-    bool GetWallet(const User& user, Wallet& wallet) const;
-    bool GetWallet(const User& user, Json::Writer& writer) const;
-    int64_t GetNumberOfWallets() const;
+    virtual bool HasWallet(const User& user) const;
+    virtual bool RemoveWallet(const User& user) const;
+    virtual bool PutWallet(const User& user, const Wallet& wallet) const;
+    virtual Wallet GetUserWallet(const User& user) const;
+
+    virtual bool GetWallet(const User& user, Wallet& wallet) const;
+    virtual bool GetWallet(const User& user, Json::Writer& writer) const;
+    virtual int64_t GetNumberOfWallets() const;
 
     inline bool
     GetWallet(const std::string& user, Wallet& wallet) const{

@@ -61,13 +61,13 @@ namespace token{
       body_(),
       path_params_(),
       query_params_(){}
-    HttpRequest(HttpSession* session, const HttpHeadersMap& headers, const HttpMethod& method, const std::string& path, const std::string& body):
+    HttpRequest(HttpSession* session, const HttpHeadersMap& headers, const HttpMethod& method, const std::string& path, const ParameterMap& path_params, const ParameterMap& query_params, const std::string& body):
       HttpMessage(session, headers),
       method_(method),
       path_(path),
       body_(body),
-      path_params_(),
-      query_params_(){}
+      path_params_(path_params),
+      query_params_(query_params){}
     ~HttpRequest(){}
 
     DEFINE_HTTP_MESSAGE(Request);
@@ -167,8 +167,8 @@ namespace token{
     }
 
     static inline HttpRequestPtr
-    FromJson(HttpSession* session, const HttpHeadersMap& headers, const HttpMethod& method, const std::string& path, const Json::String& body){
-      return std::make_shared<HttpRequest>(session, headers, method, path, std::string(body.GetString(), body.GetSize()));
+    FromJson(HttpSession* session, const HttpHeadersMap& headers, const HttpMethod& method, const std::string& path, const ParameterMap& path_params, const ParameterMap& query_params, const Json::String& body){
+      return std::make_shared<HttpRequest>(session, headers, method, path, path_params, query_params, std::string(body.GetString(), body.GetSize()));
     }
   };
 
@@ -205,8 +205,17 @@ namespace token{
       body_ = std::string(val.GetString(), val.GetSize());
     }
 
+    void SetPathParameters(const ParameterMap& params){
+      path_params_.clear();
+      path_params_.insert(params.begin(), params.end());
+    }
+
+    bool SetPathParameter(const std::string& name, const std::string& value){
+      return path_params_.insert({ name, value }).second;
+    }
+
     HttpRequestPtr Build() const{
-      return std::make_shared<HttpRequest>(session_, headers_, method_, path_, body_);
+      return std::make_shared<HttpRequest>(session_, headers_, method_, path_, path_params_, query_params_, body_);
     }
   };
 

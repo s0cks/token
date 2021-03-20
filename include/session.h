@@ -8,7 +8,7 @@
 
 namespace token{
 #define SESSION_LOG(LevelName, Session) \
-  LOG(LevelName) << "[" << (Session)->GetUUID().ToStringAbbreviated() << "] "
+  LOG(LevelName) << "[session-" << (Session)->GetUUID().ToStringAbbreviated() << "] "
 
 #define FOR_EACH_SESSION_STATE(V) \
     V(Connecting)                 \
@@ -21,18 +21,25 @@ namespace token{
   template<class M>
   class Session{
     friend class Server<M>;
-   private:
-    typedef Session<M> SessionType;
-    typedef Server<M> ServerType;
-    typedef std::shared_ptr<M> SessionMessagePtr;
-    typedef std::vector<SessionMessagePtr> SessionMessageList;
+   protected:
+    typedef M SessionMessageType;
+    typedef std::shared_ptr<SessionMessageType> SessionMessageTypePtr;
+    typedef std::vector<SessionMessageTypePtr> SessionMessageTypeList;
 
+    typedef Session<M> BaseType;
+    typedef Server<M> ServerType;
+
+    friend SessionMessageTypeList& operator<<(SessionMessageTypeList& messages, const SessionMessageTypePtr& msg){
+      messages.push_back(msg);
+      return messages;
+    }
+   private:
     struct SessionWriteData{
       uv_write_t request;
-      SessionType* session;
+      BaseType* session;
       BufferPtr buffer;
 
-      SessionWriteData(SessionType* s, int64_t size):
+      SessionWriteData(BaseType* s, int64_t size):
         request(),
         session(s),
         buffer(Buffer::NewInstance(size)){
@@ -71,7 +78,7 @@ namespace token{
       uuid_ = uuid;
     }
 
-    virtual void OnMessageRead(const SessionMessagePtr& message) = 0;
+    virtual void OnMessageRead(const SessionMessageTypePtr& message) = 0;
 
     static void OnClose(uv_handle_t* handle){
 #ifdef TOKEN_DEBUG
@@ -87,46 +94,6 @@ namespace token{
       uv_walk(loop_, &OnWalk, NULL);
     }
 
-    void SendMessages(const SessionMessageList& messages){
-      size_t total_messages = messages.size();
-      if(total_messages <= 0){
-        SESSION_LOG(WARNING, this) << "not sending any messages!";
-        return;
-      }
-
-      int64_t total_size = 0;
-      std::for_each(messages.begin(), messages.end(), [&total_size](const SessionMessagePtr& msg){
-        total_size += msg->GetBufferSize();
-      });
-
-#ifdef TOKEN_DEBUG
-      SESSION_LOG(INFO, this) << "sending " << total_messages << " messages....";
-#endif//TOKEN_DEBUG
-
-      SessionWriteData* data = new SessionWriteData(this, total_size);
-      uv_buf_t buffers[total_messages];
-
-      int64_t offset = 0;
-      for(size_t idx = 0; idx < total_messages; idx++){
-        const SessionMessagePtr& msg = messages[idx];
-        if(!msg->Write(data->buffer)){
-          SESSION_LOG(ERROR, this) << "couldn't serialize message #" << idx;
-          return;
-        }
-
-
-#ifdef TOKEN_DEBUG
-        SESSION_LOG(INFO, this) << "sending message #" << idx << ": " << msg->ToString();
-#endif//TOKEN_DEBUG
-
-        int64_t msg_size = msg->GetBufferSize();
-        buffers[idx].base = &data->buffer->data()[offset];
-        buffers[idx].len = msg_size;
-        offset += msg_size;
-      }
-      uv_write(&data->request, GetStream(), buffers, total_messages, &OnMessageSent);
-    }
-
     static void
     OnMessageSent(uv_write_t* req, int status){
       SessionWriteData* data = (SessionWriteData*)req->data;
@@ -135,6 +102,11 @@ namespace token{
       delete data;
     }
    public:
+    Session():
+      uuid_(),
+      loop_(nullptr),
+      handle_(),
+      state_(Session::kDisconnectedState){}
     Session(uv_loop_t* loop, const UUID& uuid):
       uuid_(uuid),
       loop_(loop),
@@ -175,6 +147,46 @@ namespace token{
 
     uv_stream_t* GetStream(){
       return (uv_stream_t*)&handle_;
+    }
+
+    virtual void SendMessages(const SessionMessageTypeList& messages){
+      size_t total_messages = messages.size();
+      if(total_messages <= 0){
+        SESSION_LOG(WARNING, this) << "not sending any messages!";
+        return;
+      }
+
+      int64_t total_size = 0;
+      std::for_each(messages.begin(), messages.end(), [&total_size](const SessionMessageTypePtr& msg){
+        total_size += msg->GetBufferSize();
+      });
+
+#ifdef TOKEN_DEBUG
+      SESSION_LOG(INFO, this) << "sending " << total_messages << " messages....";
+#endif//TOKEN_DEBUG
+
+      SessionWriteData* data = new SessionWriteData(this, total_size);
+      uv_buf_t buffers[total_messages];
+
+      int64_t offset = 0;
+      for(size_t idx = 0; idx < total_messages; idx++){
+        const SessionMessageTypePtr& msg = messages[idx];
+        int64_t msize = msg->GetBufferSize();
+        if(!msg->Write(data->buffer)){
+          SESSION_LOG(ERROR, this) << "couldn't serialize message #" << idx << " " << msg->ToString() << " (" << msize << ")";
+          return;
+        }
+
+#ifdef TOKEN_DEBUG
+        SESSION_LOG(INFO, this) << "sending message #" << idx << " " << msg->ToString() << "(" << msize << ")";
+#endif//TOKEN_DEBUG
+
+        int64_t msg_size = msg->GetBufferSize();
+        buffers[idx].base = &data->buffer->data()[offset];
+        buffers[idx].len = msg_size;
+        offset += msg_size;
+      }
+      uv_write(&data->request, GetStream(), buffers, total_messages, &OnMessageSent);
     }
 
 #define DEFINE_STATE_CHECK(Name) \

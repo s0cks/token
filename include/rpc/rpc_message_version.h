@@ -1,3 +1,7 @@
+#ifndef TOKEN_RPC_MESSAGE_H
+#error "Please include rpc/rpc_message.h directly"
+#endif//TOKEN_RPC_MESSAGE_H
+
 #ifndef TOKEN_RPC_MESSAGE_VERSION_H
 #define TOKEN_RPC_MESSAGE_VERSION_H
 
@@ -5,7 +9,6 @@
 #include "block.h"
 #include "version.h"
 #include "address.h"
-#include "rpc/rpc_message.h"
 
 namespace token{
 //TODO:
@@ -34,6 +37,20 @@ namespace token{
     UUID node_id_;
     BlockHeader head_;
    public:
+    VersionMessage(const Timestamp& timestamp,
+                   const ClientType& client_type,
+                   const Version& version,
+                   const Hash& nonce,
+                   const UUID& node_id,
+                   const BlockHeader& head):
+       RpcMessage(),
+       timestamp_(timestamp),
+       client_type_(client_type),
+       version_(version),
+       nonce_(nonce),
+       node_id_(node_id),
+       head_(head){}
+    //TODO: remove
     VersionMessage(ClientType type,
                    const Version& version,
                    const UUID& node_id,
@@ -90,16 +107,14 @@ namespace token{
     }
 
     bool Equals(const RpcMessagePtr& obj) const{
-      if (!obj->IsVersionMessage()){
-        LOG(WARNING) << "not a version message.";
+      if(!obj->IsVersionMessage())
         return false;
-      }
-      VersionMessagePtr msg = std::static_pointer_cast<VersionMessage>(obj);
-      return client_type_ == msg->client_type_
-          && version_ == msg->version_
-          && nonce_ == msg->nonce_
-          && node_id_ == msg->node_id_
-          && head_ == msg->head_;
+      VersionMessagePtr other = std::static_pointer_cast<VersionMessage>(obj);
+      return GetClientType() == other->GetClientType()
+          && GetVersion() == other->GetVersion()
+          && GetNonce() == other->GetNonce()
+          && GetID() == other->GetID()
+          && GetHead() == other->GetHead();
     }
 
     std::string ToString() const{
@@ -120,6 +135,16 @@ namespace token{
     static inline VersionMessagePtr
     NewInstance(const BufferPtr& buff){
       return std::make_shared<VersionMessage>(buff);
+    }
+
+    static inline VersionMessagePtr
+    NewInstance(const Timestamp& timestamp,
+                const ClientType& client_type,
+                const Version& version,
+                const Hash& nonce,
+                const UUID& node_id,
+                const BlockHeader& head){
+      return std::make_shared<VersionMessage>(timestamp, client_type, version, nonce, node_id, head);
     }
 
     static inline VersionMessagePtr

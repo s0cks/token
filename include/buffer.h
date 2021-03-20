@@ -307,11 +307,24 @@ namespace token{
     }
 
     template<class T, class C>
+    bool PutSetOf(const std::set<T, C>& items){
+      //TODO: better naming
+      if(!PutLong(items.size()))
+        return false;
+
+      for(auto& item : items){
+        if(!item->Write(shared_from_this()))
+          return false;
+      }
+      return true;
+    }
+
+    template<class T, class C>
     bool PutSet(const std::set<T, C>& items){
       if(!PutLong(items.size()))
         return false;
       for(auto& item : items){
-        if(!item->Write(shared_from_this()))
+        if(!item.Write(shared_from_this()))
           return false;
       }
       return true;
@@ -358,6 +371,19 @@ namespace token{
       for(int64_t idx = 0; idx < length; idx++){
         T value = T(shared_from_this());
         results.push_back(value);
+      }
+      return true;
+    }
+
+    template<class T, class C>
+    bool GetSet(std::set<T, C>& results){
+      int64_t length = GetLong();
+      for(int64_t idx = 0; idx < length; idx++){
+        T value = T(shared_from_this());
+        if(!results.insert(value).second){
+          LOG(WARNING) << "couldn't decode item " << idx << "/" << length << " from buffer.";
+          return false;
+        }
       }
       return true;
     }
@@ -446,5 +472,23 @@ namespace token{
     }
   };
 }
+
+#define SERIALIZE_BASIC_FIELD(Field, Type) \
+  if(!buff->Put##Type(Field)){                 \
+    LOG(WARNING) << "cannot serialize field " << #Field << " (" << #Type << ")"; \
+    return false;                                \
+  }
+
+#define SERIALIZE_FIELD(Name, Type, Field) \
+  if(!(Field).Write(buff)){                \
+    LOG(WARNING) << "cannot serialize field " << #Name << " (" << #Type << ")"; \
+    return false;                          \
+  }
+
+#define SERIALIZE_POINTER_FIELD(Name, Type, Field) \
+  if(!(Field)->Write(buff)){   \
+    LOG(WARNING) << "cannot serialize field " << #Name << " (" << #Type << ")"; \
+    return false;              \
+  }
 
 #endif //TOKEN_BUFFER_H

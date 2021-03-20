@@ -17,6 +17,11 @@
 #include <glog/logging.h>
 #include <gflags/gflags.h>
 
+#include <cmath>
+
+#include <leveldb/status.h>
+
+
 #include <rapidjson/writer.h>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
@@ -72,7 +77,7 @@ namespace token{
     return x + 1;
   }
 
-#define TOKEN_MAGIC 0xFEE
+#define TOKEN_MAGIC 0xFEFE
 
   static bool
   EndsWith(const std::string& str, const std::string& suffix){
@@ -104,8 +109,7 @@ namespace token{
 
   static inline bool
   FileExists(const std::string& name){
-    std::ifstream f(name.c_str());
-    return f.good();
+    return access(name.data(), F_OK) == 0;
   }
 
   static inline bool
@@ -258,6 +262,57 @@ namespace token{
     static const int64_t kWeeks = 7 * kDays;
     static const int64_t kYears = 52 * kWeeks;
   }
+
+  static inline std::string
+  PrettySize(int64_t size){
+    //TODO: optimize using log
+    static const char* units[] = { "b", "kb", "mb", "gb", "tb", "pb" };
+
+    std::stringstream ss;
+    if(size == 0)
+      return "0b";
+
+    int i = 0;
+    while (size > 1024){
+      size /= 1024;
+      i++;
+    }
+
+    ss << i << "." << size << units[i];
+    return ss.str();
+  }
 }
+
+#ifndef __TKN_FUNCTION_NAME__
+  #if OS_IS_WINDOWS
+    #define __TKN_FUNCTION_NAME__ __FUNCTION__
+  #elif OS_IS_LINUX || OS_IS_OSX
+    #define __TKN_FUNCTION_NAME__ __func__
+  #endif
+#endif//__TKN_FUNCTION_NAME__
+
+#define CHECK_UVRESULT(Result, Log, Message)({ \
+  int err;                                           \
+  if((err = Result) != 0){                         \
+    Log << Message << ": " << uv_strerror(err);\
+    return;                                    \
+  }                                            \
+})
+#define VERIFY_UVRESULT(Result, Log, Message)({ \
+  int err;                                      \
+  if((err = (Result)) != 0){                    \
+    Log << Message << ": " << uv_strerror(err); \
+    return false;                               \
+  }                                             \
+})
+
+#define NOT_IMPLEMENTED(LevelName) \
+  LOG(LevelName) << __TKN_FUNCTION_NAME__ << " is not implemented yet!"
+
+
+  static inline std::ostream&
+  operator<<(std::ostream& stream, const leveldb::Status& status){
+    return stream << status.ToString();
+  }
 
 #endif //TOKEN_COMMON_H

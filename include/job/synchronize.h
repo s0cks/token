@@ -11,7 +11,13 @@ namespace token{
   class SynchronizeJob : public Job{
    private:
     RpcSession* session_;
+    BlockChainPtr chain_;
     BlockHeader head_;
+
+    inline BlockChainPtr
+    GetChain() const{
+      return chain_;
+    }
 
     bool ProcessBlock(const BlockPtr& blk){
       JobQueue* queue = JobScheduler::GetThreadQueue();
@@ -21,8 +27,9 @@ namespace token{
       queue->Push(job);
       while(!job->IsFinished()); //spin
 
-      ObjectPool::RemoveBlock(hash);
-      BlockChain::Append(blk);
+      ObjectPoolPtr pool = ObjectPool::GetInstance();
+      pool->RemoveBlock(hash);
+      GetChain()->Append(blk);
       return true;
     }
    protected:
@@ -33,14 +40,15 @@ namespace token{
         Hash hash = work.front();
         work.pop_front();
 
-        if(!ObjectPool::HasBlock(hash)){
+        ObjectPoolPtr pool = ObjectPool::GetInstance();
+        if(!pool->HasBlock(hash)){
           LOG(WARNING) << "waiting for: " << hash;
-          ObjectPool::WaitForBlock(hash);
+          //TODO: pool->WaitForBlock(hash);
         }
 
-        BlockPtr blk = ObjectPool::GetBlock(hash);
+        BlockPtr blk = pool->GetBlock(hash);
         Hash phash = blk->GetPreviousHash();
-        if(!BlockChain::HasBlock(phash)){
+        if(!GetChain()->HasBlock(phash)){
           LOG(WARNING) << "parent block " << phash << " not found, resolving...";
           work.push_front(hash);
           work.push_front(phash);
@@ -56,14 +64,13 @@ namespace token{
       return Success("done.");
     }
    public:
-    SynchronizeJob(Job* parent, RpcSession* session, const BlockHeader& head):
-      Job(parent, "Synchronize"),
+    SynchronizeJob(Job* parent, RpcSession* session, const BlockChainPtr& chain, const BlockHeader& head):
+      Job(parent, "SynchronizeJob"),
       session_(session),
+      chain_(chain),
       head_(head){}
-    SynchronizeJob(RpcSession* session, const BlockHeader& head):
-      Job(nullptr, "Synchronize"),
-      session_(session),
-      head_(head){}
+    SynchronizeJob(RpcSession* session, const BlockChainPtr& chain, const BlockHeader& head):
+      SynchronizeJob(nullptr, session, chain, head){}
     ~SynchronizeJob() = default;
   };
 }

@@ -1,14 +1,15 @@
 #ifdef TOKEN_ENABLE_HEALTH_SERVICE
 
 #include "http/http_service_health.h"
-#include "http/http_controller_health.h"
 
 namespace token{
   static HttpHealthService instance;
 
   HttpHealthService::HttpHealthService(uv_loop_t* loop):
-    HttpService(loop){
-    HealthController::Initialize(&router_);
+    HttpService(loop),
+    health_(std::make_shared<HealthController>()){
+    if(!GetHealthController()->Initialize(&router_))
+      LOG(WARNING) << "cannot initialize HealthController";
   }
 
   bool HttpHealthService::Start(){

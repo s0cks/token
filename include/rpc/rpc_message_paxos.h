@@ -1,24 +1,42 @@
 #ifndef TOKEN_RPC_MESSAGE_PAXOS_H
 #define TOKEN_RPC_MESSAGE_PAXOS_H
 
-#include "rpc/rpc_message.h"
 #include "consensus/proposal.h"
 
 namespace token{
+#define DEFINE_PAXOS_MESSAGE_CONSTRUCTORS(Name) \
+  DEFINE_RPC_MESSAGE_CONSTRUCTORS(Name)         \
+  static inline Name##MessagePtr NewInstance(const RawProposal& proposal){ return std::make_shared<Name##Message>(proposal); } \
+  static inline Name##MessagePtr NewInstance(const ProposalPtr& proposal){ return NewInstance(proposal->raw()); }
+
+#define DEFINE_PAXOS_MESSAGE(Name) \
+  DEFINE_RPC_MESSAGE(Name)         \
+  DEFINE_PAXOS_MESSAGE_CONSTRUCTORS(Name)
+
   class Proposal;
   class PaxosMessage : public RpcMessage{
+   public:
+    static inline int
+    CompareProposal(const std::shared_ptr<PaxosMessage>& a, const std::shared_ptr<PaxosMessage>& b){
+      if(a->GetProposal() < b->GetProposal()){
+        return -1;
+      } else if(a->GetProposal() > b->GetProposal()){
+        return +1;
+      }
+      return 0;
+    }
    protected:
     RawProposal raw_;
 
-    PaxosMessage(ProposalPtr proposal):
+    PaxosMessage(const RawProposal& proposal):
       RpcMessage(),
-      raw_(proposal->GetRaw()){}
+      raw_(proposal){}
     PaxosMessage(const BufferPtr& buff):
       RpcMessage(),
-      raw_(buff){}
+      raw_(buff->GetTimestamp(), buff->GetUUID(), buff->GetUUID(), BlockHeader(buff)){}
 
     int64_t GetMessageSize() const{
-      return RawProposal::GetSize();
+      return raw_.GetBufferSize();
     }
 
     bool WriteMessage(const BufferPtr& buff) const{
@@ -27,20 +45,18 @@ namespace token{
    public:
     virtual ~PaxosMessage() = default;
 
-    RawProposal GetRaw() const{
+    RawProposal& GetProposal(){
       return raw_;
     }
 
-    ProposalPtr GetProposal() const;
-
-    bool ProposalEquals(const std::shared_ptr<PaxosMessage>& msg) const{
-      return raw_ == msg->raw_;
+    RawProposal GetProposal() const{
+      return raw_;
     }
   };
 
   class PrepareMessage : public PaxosMessage{
    public:
-    PrepareMessage(const ProposalPtr& proposal):
+    PrepareMessage(const RawProposal& proposal):
       PaxosMessage(proposal){}
     PrepareMessage(const BufferPtr& buff):
       PaxosMessage(buff){}
@@ -49,31 +65,21 @@ namespace token{
     bool Equals(const RpcMessagePtr& obj) const{
       if(!obj->IsPrepareMessage())
         return false;
-      return PaxosMessage::ProposalEquals(std::static_pointer_cast<PaxosMessage>(obj));
+      return true;//TODO: fix
     }
 
     std::string ToString() const{
       std::stringstream ss;
-      ss << "PrepareMessage(" << GetProposal()->ToString() << ")";
+      ss << "PrepareMessage(" << GetProposal() << ")";
       return ss.str();
     }
 
-    DEFINE_RPC_MESSAGE(Prepare);
-
-    static inline PrepareMessagePtr
-    NewInstance(const ProposalPtr& proposal){
-      return std::make_shared<PrepareMessage>(proposal);
-    }
-
-    static inline PrepareMessagePtr
-    NewInstance(const BufferPtr& buff){
-      return std::make_shared<PrepareMessage>(buff);
-    }
+    DEFINE_PAXOS_MESSAGE(Prepare);
   };
 
   class PromiseMessage : public PaxosMessage{
    public:
-    PromiseMessage(ProposalPtr proposal):
+    PromiseMessage(const RawProposal& proposal):
       PaxosMessage(proposal){}
     PromiseMessage(const BufferPtr& buff):
       PaxosMessage(buff){}
@@ -83,31 +89,21 @@ namespace token{
       if(!obj->IsPromiseMessage()){
         return false;
       }
-      return PaxosMessage::ProposalEquals(std::static_pointer_cast<PaxosMessage>(obj));
+      return true; //TODO: fix
     }
 
     std::string ToString() const{
       std::stringstream ss;
-      ss << "ProposalMessage(" << GetProposal()->ToString() << ")";
+      ss << "PromiseMessage(" << GetProposal() << ")";
       return ss.str();
     }
 
-    DEFINE_RPC_MESSAGE(Promise);
-
-    static inline PromiseMessagePtr
-    NewInstance(const ProposalPtr& proposal){
-      return std::make_shared<PromiseMessage>(proposal);
-    }
-
-    static inline PromiseMessagePtr
-    NewInstance(const BufferPtr& buff){
-      return std::make_shared<PromiseMessage>(buff);
-    }
+    DEFINE_PAXOS_MESSAGE(Promise);
   };
 
   class CommitMessage : public PaxosMessage{
    public:
-    CommitMessage(ProposalPtr proposal):
+    CommitMessage(const RawProposal& proposal):
       PaxosMessage(proposal){}
     CommitMessage(const BufferPtr& buff):
       PaxosMessage(buff){}
@@ -116,31 +112,21 @@ namespace token{
     bool Equals(const RpcMessagePtr& obj) const{
       if(!obj->IsCommitMessage())
         return false;
-      return PaxosMessage::ProposalEquals(std::static_pointer_cast<PaxosMessage>(obj));
+      return true; //TODO: fix
     }
 
     std::string ToString() const{
       std::stringstream ss;
-      ss << "CommitMessage(" << GetProposal()->ToString() << ")";
+      ss << "CommitMessage(" << GetProposal() << ")";
       return ss.str();
     }
 
-    DEFINE_RPC_MESSAGE(Commit);
-
-    static inline CommitMessagePtr
-    NewInstance(const ProposalPtr& proposal){
-      return std::make_shared<CommitMessage>(proposal);
-    }
-
-    static inline CommitMessagePtr
-    NewInstance(const BufferPtr& buff){
-      return std::make_shared<CommitMessage>(buff);
-    }
+    DEFINE_PAXOS_MESSAGE(Commit);
   };
 
   class AcceptedMessage : public PaxosMessage{
    public:
-    AcceptedMessage(ProposalPtr proposal):
+    AcceptedMessage(const RawProposal& proposal):
       PaxosMessage(proposal){}
     AcceptedMessage(const BufferPtr& buff):
       PaxosMessage(buff){}
@@ -150,31 +136,21 @@ namespace token{
       if(!obj->IsAcceptedMessage()){
         return false;
       }
-      return PaxosMessage::ProposalEquals(std::static_pointer_cast<PaxosMessage>(obj));
+      return true; //TODO: fix
     }
 
     std::string ToString() const{
       std::stringstream ss;
-      ss << "AcceptedMessage(" << GetProposal()->ToString() << ")";
+      ss << "AcceptedMessage(" << GetProposal() << ")";
       return ss.str();
     }
 
-    DEFINE_RPC_MESSAGE(Accepted);
-
-    static inline AcceptedMessagePtr
-    NewInstance(const ProposalPtr& proposal){
-      return std::make_shared<AcceptedMessage>(proposal);
-    }
-
-    static inline AcceptedMessagePtr
-    NewInstance(const BufferPtr& buff){
-      return std::make_shared<AcceptedMessage>(buff);
-    }
+    DEFINE_PAXOS_MESSAGE(Accepted);
   };
 
   class RejectedMessage : public PaxosMessage{
    public:
-    RejectedMessage(ProposalPtr proposal):
+    RejectedMessage(const RawProposal& proposal):
       PaxosMessage(proposal){}
     RejectedMessage(const BufferPtr& buff):
       PaxosMessage(buff){}
@@ -183,27 +159,20 @@ namespace token{
     bool Equals(const RpcMessagePtr& obj) const{
       if(!obj->IsRejectedMessage())
         return false;
-      return PaxosMessage::ProposalEquals(std::static_pointer_cast<PaxosMessage>(obj));
+      return true; //TODO: fix
     }
 
     std::string ToString() const{
       std::stringstream ss;
-      ss << "RejectedMessage(" << GetProposal()->ToString() << ")";
+      ss << "RejectedMessage(" << GetProposal() << ")";
       return ss.str();
     }
 
-    DEFINE_RPC_MESSAGE(Rejected);
-
-    static inline RejectedMessagePtr
-    NewInstance(const ProposalPtr& proposal){
-      return std::make_shared<RejectedMessage>(proposal);
-    }
-
-    static inline RejectedMessagePtr
-    NewInstance(const BufferPtr& buff){
-      return std::make_shared<RejectedMessage>(buff);
-    }
+    DEFINE_PAXOS_MESSAGE(Rejected);
   };
 }
+
+#undef DEFINE_PAXOS_MESSAGE
+#undef DEFINE_PAXOS_MESSAGE_CONSTRUCTORS
 
 #endif//TOKEN_RPC_MESSAGE_PAXOS_H
