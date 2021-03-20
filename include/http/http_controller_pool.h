@@ -3,6 +3,7 @@
 
 #ifdef TOKEN_ENABLE_REST_SERVICE
 
+#include "pool.h"
 #include "http/http_controller.h"
 
 namespace token{
@@ -16,15 +17,22 @@ namespace token{
 
   class PoolController : HttpController{
    protected:
+    ObjectPoolPtr pool_;
+
 #define DECLARE_ENDPOINT(Method, Path, Name) \
     HTTP_CONTROLLER_ENDPOINT(Name)
 
     FOR_EACH_POOL_CONTROLLER_ENDPOINT(DECLARE_ENDPOINT)
 #undef DECLARE_ENDPOINT
    public:
-    PoolController():
-      HttpController(){}
+    PoolController(const ObjectPoolPtr& pool):
+      HttpController(),
+      pool_(pool){}
     ~PoolController() = default;
+
+    ObjectPoolPtr GetPool() const{
+      return pool_;
+    }
 
     bool Initialize(HttpRouter* router){
 #define REGISTER_ENDPOINT(Method, Path, Name) \

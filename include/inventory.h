@@ -35,6 +35,8 @@ namespace token{
 
     struct Comparator{
       bool operator()(const InventoryItem& a, const InventoryItem& b) const{
+        if(a.GetType() == b.GetType())
+          return a.GetHash() < b.GetHash();
         return a.GetType() < b.GetType();
       }
     };
@@ -69,18 +71,6 @@ namespace token{
 
     bool IsTransaction() const{
       return type_ == Type::kTransaction;
-    }
-
-    bool Exists() const{
-      switch(type_){
-        case Type::kBlock:
-          return BlockChain::GetInstance()->HasBlock(hash_)
-              || ObjectPool::HasBlock(hash_);
-        case Type::kTransaction:
-          return ObjectPool::HasTransaction(hash_);
-        default:// should never happen
-          return false;
-      }
     }
 
     int64_t GetBufferSize() const{

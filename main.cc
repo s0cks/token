@@ -82,9 +82,11 @@ InitializeLogging(char *arg0){
       return false;
     }
 
+    ObjectPoolPtr pool = ObjectPool::GetInstance();
+
     int64_t idx = 0;
     for(auto& it : wallet){
-      UnclaimedTransactionPtr utxo = ObjectPool::GetUnclaimedTransaction(it);
+      UnclaimedTransactionPtr utxo = pool->GetUnclaimedTransaction(it);
 
       LOG(INFO) << "spending: " << utxo->GetReference();
 
@@ -95,7 +97,7 @@ InitializeLogging(char *arg0){
       TransactionPtr tx = Transaction::NewInstance(inputs, outputs);
 
       Hash hash = tx->GetHash();
-      if(!ObjectPool::PutTransaction(hash, tx)){
+      if(!pool->PutTransaction(hash, tx)){
         LOG(WARNING) << "cannot add new transaction " << hash << " to object pool.";
         return false;
       }
@@ -222,14 +224,16 @@ main(int argc, char **argv){
   LOG(INFO) << "peers: " << peers;
 
   LOG(INFO) << "number of blocks in the chain: " << BlockChain::GetInstance()->GetNumberOfBlocks();
+
+  ObjectPoolPtr pool = ObjectPool::GetInstance();
   if(TOKEN_VERBOSE){
-    ObjectPool::PrintBlocks();
-    ObjectPool::PrintTransactions();
-    ObjectPool::PrintUnclaimedTransactions();
+    pool->PrintBlocks();
+    pool->PrintTransactions();
+    pool->PrintUnclaimedTransactions();
   } else{
-    LOG(INFO) << "number of blocks in the pool: " << ObjectPool::GetNumberOfBlocks();
-    LOG(INFO) << "number of transactions in the pool: " << ObjectPool::GetNumberOfTransactions();
-    LOG(INFO) << "number of unclaimed transactions in the pool: " << ObjectPool::GetNumberOfUnclaimedTransactions();
+    LOG(INFO) << "number of blocks in the pool: " << pool->GetNumberOfBlocks();
+    LOG(INFO) << "number of transactions in the pool: " << pool->GetNumberOfTransactions();
+    LOG(INFO) << "number of unclaimed transactions in the pool: " << pool->GetNumberOfUnclaimedTransactions();
   }
 
   if(FLAGS_append_test && !AppendDummy("VenueA", 2)){

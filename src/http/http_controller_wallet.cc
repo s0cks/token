@@ -30,7 +30,9 @@ namespace token{
     User user = request->GetUserParameterValue();
     Hash hash = request->GetHashParameterValue();
 
-    if(!ObjectPool::HasUnclaimedTransaction(hash))
+    //TODO: refactor
+    ObjectPoolPtr pool = ObjectPool::GetInstance();
+    if(!pool->HasUnclaimedTransaction(hash))
       return session->Send(NewNoContentResponse(session, hash));
 
     int width = DEEPLINK_DEFAULT_WIDTH;
@@ -131,16 +133,17 @@ namespace token{
       return false;
     }
 
+    ObjectPoolPtr pool = ObjectPool::GetInstance();
     for(auto& it : doc[name].GetArray()){
       Hash in_hash = Hash::FromHexString(it.GetString());
       LOG(INFO) << "using input: " << in_hash;
-      if(!ObjectPool::HasUnclaimedTransaction(in_hash)){
+      if(!pool->HasUnclaimedTransaction(in_hash)){
         std::stringstream ss;
         ss << "Cannot find token: " << in_hash;
         session->Send(NewNotFoundResponse(session, ss));
         return false;
       }
-      UnclaimedTransactionPtr in_val = ObjectPool::GetUnclaimedTransaction(in_hash);
+      UnclaimedTransactionPtr in_val = pool->GetUnclaimedTransaction(in_hash);
       inputs.push_back(Input(in_val->GetReference(), in_val->GetUser()));
     }
     return true;
@@ -197,10 +200,13 @@ namespace token{
     if(!ParseOutputList(session, doc, outputs))
       return;
 
+    //TODO: refactor
+    ObjectPoolPtr pool = ObjectPool::GetInstance();
+
     LOG(INFO) << "generating new transaction....";
     TransactionPtr tx = Transaction::NewInstance(inputs, outputs);
     Hash hash = tx->GetHash();
-    if(!ObjectPool::PutTransaction(hash, tx)){
+    if(!pool->PutTransaction(hash, tx)){
       std::stringstream ss;
       ss << "Cannot insert newly created transaction into object pool: " << hash;
       return session->Send(NewInternalServerErrorResponse(session, ss));

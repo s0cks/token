@@ -27,7 +27,10 @@ namespace token{
     return true;
   }
 
+  //TODO: refactor
   bool ObjectPoolBatchWriteJob::Commit() const{
+    ObjectPoolPtr pool = ObjectPool::GetInstance();
+
     int64_t size = GetCurrentBatchSize();
     CHECK_BATCH_SIZE(size)
 
@@ -36,7 +39,7 @@ namespace token{
 #endif//TOKEN_DEBUG
 
     leveldb::Status status;
-    if(!(status = ObjectPool::Write(batch_)).ok()){
+    if(!(status = pool->Write(batch_)).ok()){
       JOB_LOG(ERROR, this) << "cannot commit batch of ~" << size << "b to pool: " << status.ToString();
       return false;
     }

@@ -12,9 +12,11 @@ namespace token{
 
     InventoryMessage(const InventoryItems& items):
       RpcMessage(),
-      items_(items){
+      items_(items.begin(), items.end()){
       if(items_.empty())
         LOG(WARNING) << "inventory create w/ zero size";
+      if(items_.size() != items.size())
+        LOG(WARNING) << "inventory wasn't fully created.";
     }
     InventoryMessage(const BufferPtr& buff):
       RpcMessage(),

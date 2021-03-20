@@ -43,7 +43,8 @@ namespace token{
       return; // skip
     }
 
-    if(ObjectPool::GetNumberOfTransactions() == 0){
+    ObjectPoolPtr pool = ObjectPool::GetInstance();
+    if(pool->GetNumberOfTransactions() == 0){
       MINER_LOG(WARNING) << "no transactions in object pool, skipping mining cycle.";
       return; // skip
     }

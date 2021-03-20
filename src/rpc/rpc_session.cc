@@ -52,6 +52,8 @@ namespace token{
   }
 
   void ServerSession::OnGetDataMessage(const GetDataMessagePtr& msg){
+    BlockChainPtr chain = GetChain();
+    ObjectPoolPtr pool = GetPool();
 
     RpcMessageList responses;
     for(auto& item : msg->items()){
@@ -59,15 +61,13 @@ namespace token{
 #ifdef TOKEN_DEBUG
       SESSION_LOG(INFO, this) << "searching for " << item << "....";
 #endif//TOKEN_DEBUG
-      if(item.Exists()){
+      if(ItemExists(item)){
         if(item.IsBlock()){
-          BlockChainPtr chain = GetChain();
-
           BlockPtr block;
           if(chain->HasBlock(hash)){
             block = chain->GetBlock(hash);
-          } else if(ObjectPool::HasBlock(hash)){
-            block = ObjectPool::GetBlock(hash);
+          } else if(pool->HasBlock(hash)){
+            block = pool->GetBlock(hash);
           } else{
             SESSION_LOG(WARNING, this) << "couldn't find: " << item;
 
@@ -77,14 +77,14 @@ namespace token{
 
           responses << BlockMessage::NewInstance(block);
         } else if(item.IsTransaction()){
-          if(!ObjectPool::HasTransaction(hash)){
+          if(!pool->HasTransaction(hash)){
             SESSION_LOG(WARNING, this) << "couldn't find: " << item;
 
             responses << NotFoundMessage::NewInstance("cannot find");
             break;
           }
 
-          TransactionPtr tx = ObjectPool::GetTransaction(hash);
+          TransactionPtr tx = pool->GetTransaction(hash);
           responses << TransactionMessage::NewInstance(tx);
         }
       } else{
@@ -136,8 +136,9 @@ namespace token{
       REJECT_PROPOSAL(msg->GetProposal(), ERROR, "cannot pause the block miner.");
 
     // request block if it doesn't exist
+    ObjectPoolPtr pool = ObjectPool::GetInstance();//TODO: refactor
     Hash hash = msg->GetProposal().GetValue().GetHash();
-    if(!ObjectPool::HasBlock(hash)){
+    if(!pool->HasBlock(hash)){
 #ifdef TOKEN_DEBUG
       SESSION_LOG(INFO, this) << "cannot find proposed block in pool, requesting block: " << hash;
 #endif//TOKEN_DEBUG
@@ -179,21 +180,35 @@ namespace token{
   }
 
   void ServerSession::OnBlockMessage(const BlockMessagePtr& msg){
+    ObjectPoolPtr pool = GetPool();
+
     BlockPtr blk = msg->GetValue();
     Hash hash = blk->GetHash();
-    if(!ObjectPool::HasBlock(hash)){
-      ObjectPool::PutBlock(hash, blk);
+
+#ifdef TOKEN_DEBUG
+    SESSION_LOG(INFO, this) << "received block: " << blk->ToString();
+#else
+    SESSION_LOG(INFO, this) << "received block: " << hash;
+#endif//TOKEN_DEBUG
+    if(!pool->HasBlock(hash)){
+      pool->PutBlock(hash, blk);
       //TODO: Server::Broadcast(InventoryMessage::FromParent(blk));
     }
   }
 
   void ServerSession::OnTransactionMessage(const TransactionMessagePtr& msg){
+    ObjectPoolPtr pool = GetPool();
+
     TransactionPtr tx = msg->GetValue();
     Hash hash = tx->GetHash();
 
+#ifdef TOKEN_DEBUG
+    SESSION_LOG(INFO, this) << "received transaction: " << tx->ToString();
+#else
     SESSION_LOG(INFO, this) << "received transaction: " << hash;
-    if(!ObjectPool::HasTransaction(hash)){
-      ObjectPool::PutTransaction(hash, tx);
+#endif//TOKEN_DEBUG
+    if(!pool->HasTransaction(hash)){
+      pool->PutTransaction(hash, tx);
     }
   }
 
@@ -205,7 +220,7 @@ namespace token{
 
     InventoryItems needed;
     for(auto& item : items){
-      if(!item.Exists()){
+      if(!ItemExists(item)){
 #ifdef TOKEN_DEBUG
         SESSION_LOG(INFO, this) << item << " wasn't found, requesting....";
 #endif//TOKEN_DEBUG

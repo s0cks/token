@@ -8,7 +8,7 @@ namespace token{
 
   HttpRestService::HttpRestService(uv_loop_t* loop):
     HttpService(loop),
-    pool_(std::make_shared<PoolController>()),
+    pool_(std::make_shared<PoolController>(ObjectPool::GetInstance())),
     chain_(std::make_shared<ChainController>(BlockChain::GetInstance())),
     wallet_(std::make_shared<WalletController>(WalletManager::GetInstance())){
 

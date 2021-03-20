@@ -8,8 +8,8 @@
 namespace token{
   class MockServerSession : public ServerSession{
    public:
-    MockServerSession(const BlockChainPtr& chain):
-      ServerSession(chain){}
+    MockServerSession(const ObjectPoolPtr& pool, const BlockChainPtr& chain):
+      ServerSession(pool, chain){}
     ~MockServerSession() = default;
 
     MOCK_METHOD(void, Send, (const RpcMessagePtr&), ());

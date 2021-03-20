@@ -296,6 +296,7 @@ namespace token{
       SESSION_LOG(INFO, this) << "resolving " << item << "....";
 #endif//TOKEN_DEBUG
 
+      ObjectPoolPtr pool = ObjectPool::GetInstance();
       Hash hash = item.GetHash();
       if(item.IsBlock()){
         BlockPtr block;
@@ -305,12 +306,12 @@ namespace token{
 #endif//TOKEN_DEBUG
 
           block = chain->GetBlock(hash);
-        } else if(ObjectPool::HasBlock(hash)){
+        } else if(pool->HasBlock(hash)){
 #ifdef TOKEN_DEBUG
           SESSION_LOG(INFO, this) << item << " was found in the pool.";
 #endif//TOKEN_DEBUG
 
-          block = ObjectPool::GetBlock(hash);
+          block = pool->GetBlock(hash);
         } else{
           SESSION_LOG(WARNING, this) << "cannot find " << item << "!";
 
@@ -320,14 +321,14 @@ namespace token{
 
         responses << BlockMessage::NewInstance(block);
       } else if(item.IsTransaction()){
-        if(!ObjectPool::HasTransaction(hash)){
+        if(!pool->HasTransaction(hash)){
           SESSION_LOG(WARNING, this) << "cannot find " << item << "!";
 
           responses << NotFoundMessage::NewInstance();
           break;
         }
 
-        TransactionPtr tx = ObjectPool::GetTransaction(hash);
+        TransactionPtr tx = pool->GetTransaction(hash);
         responses << TransactionMessage::NewInstance(tx);
       }
     }
@@ -336,9 +337,10 @@ namespace token{
   }
 
   void PeerSession::OnBlockMessage(const BlockMessagePtr& msg){
+    ObjectPoolPtr pool = ObjectPool::GetInstance();//TODO: refactor
     BlockPtr blk = msg->GetValue();
     Hash hash = blk->GetHash();
-    ObjectPool::PutBlock(hash, blk);
+    pool->PutBlock(hash, blk);
     LOG(INFO) << "received block: " << hash;
   }
 
@@ -355,7 +357,7 @@ namespace token{
 
     InventoryItems needed;
     for(auto& item : items){
-      if(!item.Exists()){
+      if(!ItemExists(item)){
         needed << item;
       }
     }

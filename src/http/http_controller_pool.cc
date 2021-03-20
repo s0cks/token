@@ -13,9 +13,9 @@ namespace token{
 
   HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetBlock){
     Hash hash = request->GetHashParameterValue();
-    if(!ObjectPool::HasBlock(hash))
+    if(!GetPool()->HasBlock(hash))
       return session->Send(NewNoContentResponse(session, hash));
-    BlockPtr blk = ObjectPool::GetBlock(hash);
+    BlockPtr blk = GetPool()->GetBlock(hash);
     return session->Send(NewOkResponse(session, blk));
   }
 
@@ -25,9 +25,9 @@ namespace token{
 
   HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetTransaction){
     Hash hash = request->GetHashParameterValue();
-    if(!ObjectPool::HasTransaction(hash))
+    if(!GetPool()->HasTransaction(hash))
       return session->Send(NewNoContentResponse(session, hash));
-    TransactionPtr tx = ObjectPool::GetTransaction(hash);
+    TransactionPtr tx = GetPool()->GetTransaction(hash);
     return session->Send(NewOkResponse(session, tx));
   }
 
@@ -37,9 +37,9 @@ namespace token{
 
   HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetUnclaimedTransaction){
     Hash hash = request->GetHashParameterValue();
-    if(!ObjectPool::HasUnclaimedTransaction(hash))
+    if(!GetPool()->HasUnclaimedTransaction(hash))
       return session->Send(NewNoContentResponse(session, hash));
-    UnclaimedTransactionPtr utxo = ObjectPool::GetUnclaimedTransaction(hash);
+    UnclaimedTransactionPtr utxo = GetPool()->GetUnclaimedTransaction(hash);
     return session->Send(NewOkResponse(session, utxo));
   }
 
@@ -49,7 +49,7 @@ namespace token{
     writer.StartObject();
     {
       writer.Key("data");
-      if(!ObjectPool::GetUnclaimedTransactions(writer))
+      if(!GetPool()->GetUnclaimedTransactions(writer))
         return session->Send(NewInternalServerErrorResponse(session, "Cannot get the list of unclaimed transactions in the object pool."));
     }
     writer.EndObject();

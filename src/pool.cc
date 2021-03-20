@@ -5,46 +5,22 @@
 #include "atomic/relaxed_atomic.h"
 
 namespace token{
-  static RelaxedAtomic<ObjectPool::State> state_ = { ObjectPool::kUninitialized };
-  static leveldb::DB* index_ = nullptr;
 
   static inline std::string
   GetBlockChainHome(){
     return TOKEN_BLOCKCHAIN_HOME;
   }
 
-  static inline leveldb::DB*
-  GetIndex(){
-    return index_;
-  }
-
-  static inline std::string
-  GetIndexFilename(){
-    return GetBlockChainHome() + "/pool";
-  }
-
-  ObjectPool::State ObjectPool::GetState(){
-    return state_;
-  }
-
-  void ObjectPool::SetState(const State& state){
-    state_ = state;
-  }
 
 #define POOL_LOG(LevelName) \
   LOG(LevelName) << "[ObjectPool] "
 
-  bool ObjectPool::Initialize(){
-    if(IsInitialized()){
-#ifdef TOKEN_DEBUG
-      POOL_LOG(WARNING) << "cannot re-initialize the object pool.";
-#endif//TOKEN_DEBUG
-      return false;
-    }
+  leveldb::Status ObjectPool::InitializeIndex(const std::string& filename){
+    if(IsInitialized())
+      return leveldb::Status::NotSupported("Cannot re-initialize the object pool.");
 
-    std::string pool_directory = GetIndexFilename();
 #ifdef TOKEN_DEBUG
-    POOL_LOG(INFO) << "initializing in " << pool_directory << "....";
+    POOL_LOG(INFO) << "initializing in " << filename << "....";
 #endif//TOKEN_DEBUG
     SetState(ObjectPool::kInitializing);
 
@@ -53,35 +29,25 @@ namespace token{
     options.create_if_missing = true;
 
     leveldb::Status status;
-    if(!(status = leveldb::DB::Open(options, GetIndexFilename(), &index_)).ok()){
+    if(!(status = leveldb::DB::Open(options, filename, &index_)).ok()){
       POOL_LOG(WARNING) << "couldn't initialize the index: " << status.ToString();
-      return false;
+      return status;
     }
 
     SetState(ObjectPool::kInitialized);
 #ifdef TOKEN_DEBUG
     POOL_LOG(INFO) << "initialized.";
 #endif//TOKEN_DEBUG
-    return true;
+    return leveldb::Status::OK();
   }
 
-  bool ObjectPool::WaitForBlock(const Hash& hash, const int64_t timeout_ms){
-    LOG(INFO) << "waiting " << timeout_ms << "ms for: " << hash;
-    //TODO: add wait logic
-    if(!HasBlock(hash)){
-      LOG(WARNING) << hash << " wasn't resolved before timeout.";
-      return false;
-    }
-    return true;
-  }
-
-  leveldb::Status ObjectPool::Write(const leveldb::WriteBatch& update){
+  leveldb::Status ObjectPool::Write(const leveldb::WriteBatch& update) const{
     leveldb::WriteOptions opts;
     opts.sync = true;
     return GetIndex()->Write(opts, (leveldb::WriteBatch*)&update);
   }
 
-  int64_t ObjectPool::GetNumberOfObjects(){
+  int64_t ObjectPool::GetNumberOfObjects() const{
     int64_t count = 0;
 
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
@@ -95,41 +61,7 @@ namespace token{
     return count;
   }
 
-#ifdef TOKEN_DEBUG
-  bool ObjectPool::GetStats(Json::Writer& writer){
-    int64_t num_blocks = 0;
-    int64_t num_transactions = 0;
-    int64_t num_unclaimed_transactions = 0;
-
-    leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
-    for(it->SeekToFirst(); it->Valid(); it->Next()){
-      PoolKey key(it->key());
-      ObjectTag tag = key.tag();
-      if(!tag.IsValid())
-        continue;
-
-      if(tag.IsBlockType()){
-        num_blocks++;
-      } else if(tag.IsTransactionType()){
-        num_transactions++;
-      } else if(tag.IsUnclaimedTransactionType()){
-        num_unclaimed_transactions++;
-      }
-    }
-    delete it;
-
-    writer.StartObject();
-    {
-      Json::SetField(writer, "NumberOfBlocks", num_blocks);
-      Json::SetField(writer, "NumberOfTransactions", num_transactions);
-      Json::SetField(writer, "NumberOfUnclaimedTransactions", num_unclaimed_transactions);
-    }
-    writer.EndObject();
-    return true;
-  }
-#endif//TOKEN_DEBUG
-
-  UnclaimedTransactionPtr ObjectPool::FindUnclaimedTransaction(const Input& input){
+  UnclaimedTransactionPtr ObjectPool::FindUnclaimedTransaction(const Input& input) const{
     LOG(INFO) << "searching for: " << input;
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
@@ -151,7 +83,7 @@ namespace token{
   }
 
 #define DEFINE_PRINT_TYPE(Name) \
-  bool ObjectPool::Print##Name##s(const google::LogSeverity severity){ \
+  bool ObjectPool::Print##Name##s(const google::LogSeverity severity) const{ \
     LOG_AT_LEVEL(severity) << "object pool " << #Name << "s:";         \
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions()); \
     for(it->SeekToFirst(); it->Valid(); it->Next()){                   \
@@ -169,7 +101,7 @@ namespace token{
 #undef DEFINE_PRINT_TYPE
 
 #define DEFINE_PUT_TYPE(Name) \
-  bool ObjectPool::Put##Name(const Hash& hash, const Name##Ptr& val){ \
+  bool ObjectPool::Put##Name(const Hash& hash, const Name##Ptr& val) const{ \
     if(Has##Name(hash)){      \
       LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash; \
       return false;           \
@@ -190,7 +122,7 @@ namespace token{
 #undef DEFINE_PUT_TYPE
 
 #define DEFINE_GET_TYPE(Name) \
-  Name##Ptr ObjectPool::Get##Name(const Hash& hash){ \
+  Name##Ptr ObjectPool::Get##Name(const Hash& hash) const{ \
     PoolKey key(Type::k##Name, 0, hash);             \
     std::string data;         \
     leveldb::Status status;   \
@@ -205,7 +137,7 @@ namespace token{
 #undef DEFINE_GET_TYPE
 
 #define DEFINE_HAS_TYPE(Name) \
-  bool ObjectPool::Has##Name(const Hash& hash){ \
+  bool ObjectPool::Has##Name(const Hash& hash) const{ \
     std::string data;                          \
     PoolKey key(Type::k##Name, 0, hash);        \
     return GetIndex()->Get(leveldb::ReadOptions(), key, &data).ok(); \
@@ -214,7 +146,7 @@ namespace token{
 #undef DEFINE_HAS_TYPE
 
 #define DEFINE_GET_TYPE_COUNT(Name) \
-  int64_t ObjectPool::GetNumberOf##Name##s(){ \
+  int64_t ObjectPool::GetNumberOf##Name##s() const{ \
     int64_t count = 0;              \
     leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
     for(iter->SeekToFirst(); iter->Valid(); iter->Next()){                     \
@@ -230,7 +162,7 @@ namespace token{
 #undef DEFINE_GET_TYPE_COUNT
 
 #define DEFINE_REMOVE_TYPE(Name) \
-  bool ObjectPool::Remove##Name(const Hash& hash){ \
+  bool ObjectPool::Remove##Name(const Hash& hash) const{ \
     PoolKey key(Type::k##Name, 0, hash); \
     leveldb::WriteOptions options;                 \
     options.sync = true;         \
@@ -245,7 +177,7 @@ namespace token{
 #undef DEFINE_REMOVE_TYPE
 
 #define DEFINE_VISIT_TYPE(Name) \
-  bool ObjectPool::Visit##Name##s(ObjectPool##Name##Visitor* vis){ \
+  bool ObjectPool::Visit##Name##s(ObjectPool##Name##Visitor* vis) const{ \
     leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
     for(iter->SeekToFirst(); iter->Valid(); iter->Next()){         \
       PoolKey key(iter->key()); \
@@ -264,7 +196,7 @@ namespace token{
 #undef DEFINE_VISIT_TYPE
 
 #define DEFINE_GET_TYPE_HASHES(Name) \
-  bool ObjectPool::Get##Name##s(Json::Writer& writer){ \
+  bool ObjectPool::Get##Name##s(Json::Writer& writer) const{ \
     leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
     writer.StartArray();             \
     for(iter->SeekToFirst(); iter->Valid(); iter->Next()){                     \
@@ -284,7 +216,7 @@ namespace token{
 #undef DEFINE_GET_TYPE_HASHES
 
 #define DEFINE_GET_TYPE_HASHES(Name) \
-  bool ObjectPool::Get##Name##s(HashList& hashes){ \
+  bool ObjectPool::Get##Name##s(HashList& hashes) const{ \
     leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
     for(iter->SeekToFirst(); iter->Valid(); iter->Next()){                     \
       PoolKey key(iter->key());      \
@@ -300,7 +232,7 @@ namespace token{
 #undef DEFINE_GET_TYPE_HASHES
 
 #define DEFINE_HAS_TYPE(Name) \
-  bool ObjectPool::Has##Name##s(){ \
+  bool ObjectPool::Has##Name##s() const{ \
     leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
     for(iter->SeekToFirst(); iter->Valid(); iter->Next()){                     \
       PoolKey key(iter->key());    \
@@ -315,4 +247,18 @@ namespace token{
   }
   FOR_EACH_POOL_TYPE(DEFINE_HAS_TYPE)
 #undef DEFINE_HAS_TYPE
+
+  ObjectPoolPtr ObjectPool::GetInstance(){
+    static ObjectPoolPtr instance = std::make_shared<ObjectPool>();
+    return instance;
+  }
+
+  bool ObjectPool::Initialize(const std::string& filename){
+    leveldb::Status status;
+    if(!(status = GetInstance()->InitializeIndex(filename)).ok()){
+      LOG(ERROR) << "couldn't initialize the object pool in " << filename << ": " << status.ToString();
+      return false;
+    }
+    return true;
+  }
 }

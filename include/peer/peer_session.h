@@ -82,6 +82,7 @@ namespace token{
     }
   };
 
+  //TODO: refactor
   class PeerSession : public RpcSession{
     friend class PeerSessionThread;
     friend class PeerSessionManager;
@@ -133,6 +134,10 @@ namespace token{
     void On##Name##Message(const std::shared_ptr<Name##Message>& msg);
     FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
+
+    bool ItemExists(const InventoryItem& item) const{
+      return true;//TODO: refactor
+    }
    public:
     PeerSession(const NodeAddress& address):
       RpcSession(uv_loop_new()),

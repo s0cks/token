@@ -27,7 +27,8 @@ namespace token{
       queue->Push(job);
       while(!job->IsFinished()); //spin
 
-      ObjectPool::RemoveBlock(hash);
+      ObjectPoolPtr pool = ObjectPool::GetInstance();
+      pool->RemoveBlock(hash);
       GetChain()->Append(blk);
       return true;
     }
@@ -39,12 +40,13 @@ namespace token{
         Hash hash = work.front();
         work.pop_front();
 
-        if(!ObjectPool::HasBlock(hash)){
+        ObjectPoolPtr pool = ObjectPool::GetInstance();
+        if(!pool->HasBlock(hash)){
           LOG(WARNING) << "waiting for: " << hash;
-          ObjectPool::WaitForBlock(hash);
+          //TODO: pool->WaitForBlock(hash);
         }
 
-        BlockPtr blk = ObjectPool::GetBlock(hash);
+        BlockPtr blk = pool->GetBlock(hash);
         Hash phash = blk->GetPreviousHash();
         if(!GetChain()->HasBlock(phash)){
           LOG(WARNING) << "parent block " << phash << " not found, resolving...";

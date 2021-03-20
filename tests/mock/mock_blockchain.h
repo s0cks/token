@@ -5,6 +5,9 @@
 #include "blockchain.h"
 
 namespace token{
+  class MockBlockChain;
+  typedef std::shared_ptr<MockBlockChain> MockBlockChainPtr;
+
   class MockBlockChain : public BlockChain{
    public:
     MockBlockChain():
@@ -14,6 +17,11 @@ namespace token{
     MOCK_METHOD(bool, HasBlock, (const Hash&), (const));
     MOCK_METHOD(BlockPtr, GetHead, (), (const));
     MOCK_METHOD(BlockPtr, GetBlock, (const Hash&), (const));
+
+    static inline MockBlockChainPtr
+    NewInstance(){
+      return std::make_shared<MockBlockChain>();
+    }
   };
 }
 

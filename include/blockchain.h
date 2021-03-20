@@ -36,7 +36,6 @@ namespace token{
   class BlockChainBlockVisitor;
   class BlockChain{
     friend class BlockMiner;
-    friend class BlockChainTest;
     friend class SynchronizeJob; //TODO: revoke access
     friend class BlockChainInitializer;
    public:

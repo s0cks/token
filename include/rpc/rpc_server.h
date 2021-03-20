@@ -8,16 +8,60 @@ namespace token{
 #define ENVIRONMENT_TOKEN_CALLBACK_ADDRESS "TOKEN_CALLBACK_ADDRESS"
 
   class ServerSession : public RpcSession{
+   protected:
+    bool ItemExists(const InventoryItem& item) const{
+#ifdef TOKEN_DEBUG
+      SESSION_LOG(INFO, this) << "searching for " << item << "....";
+#endif//TOKEN_DEBUG
+      Hash hash = item.GetHash();
+      switch(item.GetType()){
+        case Type::kBlock:{
+          if(GetChain()->HasBlock(hash)){
+#ifdef TOKEN_DEBUG
+            SESSION_LOG(INFO, this) << item << " was found in the chain.";
+#endif//TOKEN_DEBUG
+            return true;
+          }
+
+          if(GetPool()->HasBlock(hash)){
+#ifdef TOKEN_DEBUG
+            SESSION_LOG(INFO, this) << item << " was found in the pool.";
+#endif//TOKEN_DEBUG
+            return true;
+          }
+          return false;
+        }
+        case Type::kTransaction:{
+          if(GetPool()->HasTransaction(hash)){
+#ifdef TOKEN_DEBUG
+            SESSION_LOG(INFO, this) << item << " was found in the pool.";
+#endif//TOKEN_DEBUG
+            return true;
+          }
+          return false;
+        }
+        default:// should never happen
+          return false;
+      }
+    }
    public:
+    ObjectPoolPtr pool_;
     BlockChainPtr chain_;
 
-    ServerSession(const BlockChainPtr& chain):
+    ServerSession(const ObjectPoolPtr& pool,
+                  const BlockChainPtr& chain):
       RpcSession(),
+      pool_(pool),
       chain_(chain){}
-    ServerSession(uv_loop_t* loop, const BlockChainPtr& chain):
+    ServerSession(uv_loop_t* loop, const ObjectPoolPtr& pool, const BlockChainPtr& chain):
       RpcSession(loop),
+      pool_(pool),
       chain_(chain){}
     ~ServerSession() = default;
+
+    ObjectPoolPtr GetPool() const{
+      return pool_;
+    }
 
     BlockChainPtr GetChain() const{
       return chain_;
@@ -56,10 +100,11 @@ namespace token{
 
   class LedgerServer : public Server<RpcMessage>{
    protected:
+    ObjectPoolPtr pool_;
     BlockChainPtr chain_;
 
     ServerSession* CreateSession() const{
-      return new ServerSession(GetLoop(), GetChain());
+      return new ServerSession(GetLoop(), GetPool(), GetChain());
     }
    public:
     LedgerServer(uv_loop_t* loop=uv_loop_new(), const BlockChainPtr& chain=BlockChain::GetInstance()):
@@ -69,6 +114,10 @@ namespace token{
 
     BlockChainPtr GetChain() const{
       return chain_;
+    }
+
+    ObjectPoolPtr GetPool() const{
+      return pool_;
     }
 
     ServerPort GetPort() const{

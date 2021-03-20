@@ -21,8 +21,11 @@ namespace token{
       return parent_;
     }
 
+    //TODO: refactor
     BlockPtr Build(){
-      if(!ObjectPool::VisitTransactions(this)){
+      ObjectPoolPtr pool = ObjectPool::GetInstance();
+
+      if(!pool->VisitTransactions(this)){
         LOG(WARNING) << "couldn't visit object pool transactions.";
         return BlockPtr(nullptr);
       }
@@ -46,7 +49,7 @@ namespace token{
 
       BlockPtr blk = Block::FromParent(GetParent(), transactions);
       Hash hash = blk->GetHash();
-      if(!ObjectPool::PutBlock(hash, blk)){
+      if(!pool->PutBlock(hash, blk)){
         LOG(WARNING) << "couldn't put new block " << hash << " into the object pool.";
         return BlockPtr(nullptr);
       }
