@@ -190,33 +190,6 @@ namespace token{
       return NewInstance(loop, timestamp, id, proposer, value->GetHeader(), required_votes);
     }
   };
-
-  class BlockMiner;
-  class ProposalJob : public Job{
-   public:
-    static const char* kName;
-   protected:
-    BlockMiner* miner_;
-    ProposalPtr proposal_;
-
-    inline BlockMiner*
-    GetMiner() const{
-      return miner_;
-    }
-
-    bool ExecutePhase1();
-    bool ExecutePhase2();
-    bool CancelProposal();
-
-    JobResult DoWork() override;
-   public:
-    ProposalJob(Job* parent, BlockMiner* miner, ProposalPtr proposal):
-      Job(parent, ProposalJob::kName),
-      miner_(miner),
-      proposal_(std::move(proposal)){}
-    ProposalJob(BlockMiner* miner, const ProposalPtr& proposal):
-      ProposalJob(nullptr, miner, proposal){}
-  };
 }
 
 #endif//TOKEN_PROPOSAL_H

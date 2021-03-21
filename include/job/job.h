@@ -317,12 +317,17 @@ namespace token{
     bool Commit() const override;
   };
 
-#define JOB_LOG(LevelName, Job) \
+#define LOG_JOB(LevelName, Job) \
   LOG(LevelName) << "[" << (Job)->GetName() << "] "
+
+#define LOG_JOB_IF(LevelName, Condition, Job) \
+  LOG_IF(LevelName, Condition) << "[" << (Job)->GetName() << "] "
 
 #define DLOG_JOB(LevelName, Job) \
   DLOG(LevelName) << "[" << (Job)->GetName() << "] "
 
+#define DLOG_JOB_IF(LevelName, Condition, Job) \
+  DLOG_IF(LevelName, Condition) << "[" << (Job)->GetName() << "] "
 }
 
 #endif //TOKEN_JOB_H

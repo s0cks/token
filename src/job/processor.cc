@@ -84,9 +84,7 @@ namespace token{
     }
 
     if(!Commit()){
-#ifdef TOKEN_DEBUG
-      JOB_LOG(ERROR, this) << "cannot commit ~" << GetCurrentBatchSize() << "b of changes to object pool.";
-#endif//TOKEN_DEBUG
+      LOG_JOB(ERROR, this) << "cannot commit ~" << GetCurrentBatchSize() << "b of changes to object pool.";
       return Failed("Cannot Commit Changes.");
     }
 
