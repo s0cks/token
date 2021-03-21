@@ -20,7 +20,7 @@ namespace token{
     static const int64_t kMaxBlockSize = 128 * token::internal::kMegabytes;
     static const int64_t kNumberOfGenesisOutputs = 128;
 #else
-    static const int64_t kMaxBlockSize = 1 * kGB;
+    static const int64_t kMaxBlockSize = 1 * token::internal::kGigabytes;
     static const int64_t kNumberOfGenesisOutputs = 10000;
 #endif//TOKEN_DEBUG
 

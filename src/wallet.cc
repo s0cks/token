@@ -15,9 +15,6 @@ namespace token{
     writer.EndArray();
   }
 
-#define WMGR_LOG(LevelName) \
-  LOG(LevelName) << "[WalletManager] "
-
   //TODO: cleanup
   bool WalletManager::PutWallet(const User& user, const Wallet& wallet) const{
     UserKey key(user);
@@ -30,7 +27,7 @@ namespace token{
     options.sync = true;
 
     leveldb::Status status;
-    if(!(status = GetIndex()->Put(options, (const leveldb::Slice&)key, buffer->operator leveldb::Slice())).ok()){
+    if(!(status = GetIndex()->Put(options, KEY(key), buffer->operator leveldb::Slice())).ok()){
       LOG(WARNING) << "couldn't index wallet for user " << user << ": " << status.ToString();
       return false;
     }
@@ -113,7 +110,7 @@ namespace token{
   bool WalletManager::HasWallet(const User& user) const{
     std::string data;
     UserKey key(user);
-    return GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &data).ok();
+    return GetIndex()->Get(leveldb::ReadOptions(), KEY(key), &data).ok();
   }
 
   leveldb::Status WalletManager::Commit(const leveldb::WriteBatch& batch){
@@ -131,15 +128,11 @@ namespace token{
     return count;
   }
 
-  bool WalletManager::LoadIndex(const std::string& filename){
-    if(IsInitialized()){
-#ifdef TOKEN_DEBUG
-      WMGR_LOG(WARNING) << "cannot re-initialize the wallet manager.";
-#endif//TOKEN_DEBUG
-      return false;
-    }
+  leveldb::Status WalletManager::LoadIndex(const std::string& filename){
+    if(IsInitialized())
+      return leveldb::Status::NotSupported("cannot re-initialize the wallet manager.");
 
-    WMGR_LOG(INFO) << "initializing....";
+    DLOG_WALLETS(INFO) << "initializing....";
     SetState(WalletManager::kInitializingState);
 
     leveldb::Options options;
@@ -147,21 +140,23 @@ namespace token{
     options.comparator = new WalletManager::Comparator();
     leveldb::Status status;
     if(!((status = leveldb::DB::Open(options, filename, &index_)).ok())){
-      WMGR_LOG(ERROR) << "couldn't initialize the index: " << status.ToString();
-      return false;
+      return status;
     }
 
-#ifdef TOKEN_DEBUG
-    WMGR_LOG(INFO) << "initialized.";
-#endif//TOKEN_DEBUG
     SetState(WalletManager::kInitializedState);
-    return true;
+    DLOG_WALLETS(INFO) << "initialized.";
+    return leveldb::Status::OK();
   }
 
   static WalletManager instance;
 
   bool WalletManager::Initialize(const std::string& filename){
-    return instance.LoadIndex(filename);
+    leveldb::Status status;
+    if(!(status = instance.LoadIndex(filename)).ok()){
+      DLOG_WALLETS(ERROR) << "cannot initialize the wallet manager: " << status.ToString();
+      return false;
+    }
+    return true;
   }
 
   WalletManager* WalletManager::GetInstance(){

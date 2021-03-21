@@ -85,6 +85,30 @@ InitializeLogging(char *arg0){
     }
     return false;
   }
+
+  static inline void
+  PrintStats(){
+    using namespace token;
+    LOG(INFO) << "current time: " << FormatTimestampReadable(Clock::now());
+    LOG(INFO) << "home: " << TOKEN_BLOCKCHAIN_HOME;
+    LOG(INFO) << "node: " << ConfigurationManager::GetNodeID();
+
+    PeerList peers;
+    ConfigurationManager::GetInstance()->GetPeerList(TOKEN_CONFIGURATION_NODE_PEERS, peers);
+    LOG(INFO) << "peers: " << peers;
+    LOG(INFO) << "number of blocks in the chain: " << BlockChain::GetInstance()->GetNumberOfBlocks();
+
+    ObjectPoolPtr pool = ObjectPool::GetInstance();
+    if(TOKEN_VERBOSE){
+      pool->PrintBlocks();
+      pool->PrintTransactions();
+      pool->PrintUnclaimedTransactions();
+    } else{
+      LOG(INFO) << "number of blocks in the pool: " << pool->GetNumberOfBlocks();
+      LOG(INFO) << "number of transactions in the pool: " << pool->GetNumberOfTransactions();
+      LOG(INFO) << "number of unclaimed transactions in the pool: " << pool->GetNumberOfUnclaimedTransactions();
+    }
+  }
 #endif//TOKEN_DEBUG
 
 static inline token::User
@@ -92,6 +116,71 @@ RandomUser(const std::vector<token::User>& users){
   static std::default_random_engine engine;
   static std::uniform_int_distribution<int> distribution(0, users.size());
   return users[distribution(engine)];
+}
+
+template<class C, bool fatal=false>
+static inline void
+SilentlyStartThread(const char* name){
+  if(!C::Start()){
+    DLOG(ERROR) << "cannot start the " << name << " thread.";
+    if(fatal){
+      std::stringstream cause;
+      cause << "Cannot start the " << name << " thread.";
+      token::CrashReport::PrintNewCrashReportAndExit(cause);
+      return;
+    }
+  }
+
+  DLOG(INFO) << "the " << name << " thread has been started.";
+}
+
+template<class C, bool fatal=false>
+static inline void
+SilentlyStartService(const char* name, const token::ServerPort& port){
+  if(!IsValidPort(port))
+    DLOG(INFO) << "not starting the " << name << " service.";
+
+  if(!C::Start()){
+    DLOG(ERROR) << "cannot start the " << name << " service on port: " << port;
+    if(fatal){
+      std::stringstream cause;
+      cause << "Cannot start the " << name << " service on port: " << port;
+      token::CrashReport::PrintNewCrashReportAndExit(cause);
+    }
+  }
+
+  DLOG(INFO) << "the " << name << "service has been started on port: " << port;
+}
+
+template<class C, bool fatal=false>
+static inline void
+SilentlyInitialize(const char* name){
+  if(!C::Initialize()){
+    DLOG(ERROR) << "cannot initialize the " << name;
+    if(fatal){
+      std::stringstream cause;
+      cause << "Failed to initialize the " << name;
+      token::CrashReport::PrintNewCrashReportAndExit(cause);
+    }
+  }
+
+  DLOG(INFO) << name << " initialized.";
+}
+
+
+template<class C, bool fatal=false>
+static inline void
+SilentlyWaitForShutdown(const char* name){
+  if(!C::WaitForShutdown()){
+    DLOG(ERROR) << "failed to wait for the " << name << " service to shutdown.";
+    if(fatal){
+      std::stringstream cause;
+      cause << "Failed to wait for the " << name << " service to shutdown.";
+      token::CrashReport::PrintNewCrashReportAndExit(cause);
+    }
+  }
+
+  DLOG(INFO) << "the " << name << " service has shutdown.";
 }
 
 //TODO:
@@ -121,91 +210,29 @@ main(int argc, char **argv){
   }
 
   // Load the configuration
-  if(!ConfigurationManager::Initialize(TOKEN_BLOCKCHAIN_HOME)){
-    CrashReport::PrintNewCrashReport("Failed to initialize the configuration manager.");
-    return EXIT_FAILURE;
-  }
-
-  // ~16.07s on boot for 30k Tokens (not initialized)
-  // ~2s on boot for 30k tokens (initialized)
-  #ifdef TOKEN_DEBUG
-    //TODO: BannerPrinter::PrintBanner();
-  #endif//TOKEN_DEBUG
-
-  // Start the Health Check Service
-  if(IsValidPort(FLAGS_healthcheck_port) && !HttpHealthService::Start()){
-    CrashReport::PrintNewCrashReport("Failed to start the health check service.");
-    return EXIT_FAILURE;
-  }
-
-  // Initialize the job scheduler
-  if(!JobScheduler::Initialize()){
-    CrashReport::PrintNewCrashReport("Failed to initialize the job scheduler.");
-    return EXIT_FAILURE;
-  }
-
-  // Initialize the keychain
-  if(!Keychain::Initialize()){
-    CrashReport::PrintNewCrashReport("Failed to initialize the blockchain keychain.");
-    return EXIT_FAILURE;
-  }
-
-  // Initialize the object pool
-  if(!ObjectPool::Initialize()){
-    CrashReport::PrintNewCrashReport("Failed to load the object pool.");
-    return EXIT_FAILURE;
-  }
-
-  // Initialize the wallet manager
-  if(!WalletManager::Initialize()){
-    CrashReport::PrintNewCrashReport("Failed to initialize the wallet manager.");
-    return EXIT_FAILURE;
-  }
-
-  // Initialize the block chain
-  if(!BlockChain::Initialize()){
-    CrashReport::PrintNewCrashReport("Failed to initialize the block chain.");
-    return EXIT_FAILURE;
-  }
-
-  // Start the rpc server & connect to peers.
-  if(IsValidPort(FLAGS_server_port) && !LedgerServer::Start()){
-    CrashReport::PrintNewCrashReport("Failed to start the rpc.");
-    return EXIT_FAILURE;
-  }
-
-  if(!PeerSessionManager::Initialize()){
-    CrashReport::PrintNewCrashReport("Failed to initialize the peer session manager.");
-    return EXIT_FAILURE;
-  }
-
-  // Start the controller service if enabled
-  if(IsValidPort(FLAGS_service_port) && !HttpRestService::Start()){
-    CrashReport::PrintNewCrashReport("Failed to start the controller service.");
-    return EXIT_FAILURE;
-  }
+  SilentlyInitialize<ConfigurationManager>("configuration");
+  // start the health check service
+  SilentlyStartService<HttpHealthService>("healthcheck", FLAGS_healthcheck_port);
+  // initialize the job scheduler
+  SilentlyInitialize<JobScheduler>("job scheduler");
+  // initialize the keychain
+  SilentlyInitialize<Keychain>("keychain");
+  // initialize the object pool
+  SilentlyInitialize<ObjectPool>("object pool");
+  // initialize the wallet manager
+  SilentlyInitialize<WalletManager>("wallet manager");
+  // initialize the block chain
+  SilentlyInitialize<BlockChain>("block chain");
+  // start the rpc server
+  SilentlyStartService<LedgerServer>("server", FLAGS_server_port);
+  // start the peer threads & connect to any known peers
+  SilentlyInitialize<PeerSessionManager>("peer session manager");
+  // start the miner thread
+  SilentlyStartThread<BlockMinerThread>("miner");
 
 #ifdef TOKEN_DEBUG
-  sleep(3);
-  LOG(INFO) << "current time: " << FormatTimestampReadable(Clock::now());
-  LOG(INFO) << "home: " << TOKEN_BLOCKCHAIN_HOME;
-  LOG(INFO) << "node: " << ConfigurationManager::GetNodeID();
-
-  PeerList peers;
-  ConfigurationManager::GetInstance()->GetPeerList(TOKEN_CONFIGURATION_NODE_PEERS, peers);
-  LOG(INFO) << "peers: " << peers;
-  LOG(INFO) << "number of blocks in the chain: " << BlockChain::GetInstance()->GetNumberOfBlocks();
-
-  ObjectPoolPtr pool = ObjectPool::GetInstance();
-  if(TOKEN_VERBOSE){
-    pool->PrintBlocks();
-    pool->PrintTransactions();
-    pool->PrintUnclaimedTransactions();
-  } else{
-    LOG(INFO) << "number of blocks in the pool: " << pool->GetNumberOfBlocks();
-    LOG(INFO) << "number of transactions in the pool: " << pool->GetNumberOfTransactions();
-    LOG(INFO) << "number of unclaimed transactions in the pool: " << pool->GetNumberOfUnclaimedTransactions();
-  }
+  sleep(5);
+  PrintStats();
 
   if(FLAGS_append_test && !AppendDummy("VenueA", 2)){
     CrashReport::PrintNewCrashReport("Cannot append dummy transactions.");
@@ -213,38 +240,9 @@ main(int argc, char **argv){
   }
 #endif//TOKEN_DEBUG
 
-//  if(!PeerSessionManager::Shutdown()){
-//    CrashReport::PrintNewCrashReport("Cannot shutdown peers.");
-//    return EXIT_FAILURE;
-//  }
-
-  if(!FLAGS_no_mining){
-    if(!BlockMiner::Initialize())
-      CrashReport::PrintNewCrashReport("Cannot initialize the block miner.");
-
-    if(!BlockMiner::GetInstance()->Run()){
-      CrashReport::PrintNewCrashReport("Cannot run the block miner.");
-    }
-  }
-
-  if(!PeerSessionManager::WaitForShutdown()){
-    CrashReport::PrintNewCrashReport("Cannot shutdown the peer session manager.");
-    return EXIT_FAILURE;
-  }
-
-  if(IsValidPort(FLAGS_server_port) && LedgerServer::IsServerRunning() && !LedgerServer::WaitForShutdown()){
-    CrashReport::PrintNewCrashReport("Cannot join the rpc thread.");
-    return EXIT_FAILURE;
-  }
-
-  if(IsValidPort(FLAGS_service_port) && HttpRestService::IsServiceRunning() && !HttpRestService::WaitForShutdown()){
-    CrashReport::PrintNewCrashReport("Cannot join the controller service thread.");
-    return EXIT_FAILURE;
-  }
-
-  if(IsValidPort(FLAGS_healthcheck_port) && HttpHealthService::IsServiceRunning() && !HttpHealthService::WaitForShutdown()){
-    CrashReport::PrintNewCrashReport("Cannot join the health check service thread.");
-    return EXIT_FAILURE;
-  }
+  SilentlyWaitForShutdown<PeerSessionManager>("peer session manager");
+  SilentlyWaitForShutdown<LedgerServer>("server");
+  SilentlyWaitForShutdown<HttpRestService>("rest");
+  SilentlyWaitForShutdown<HttpHealthService>("healthcheck");
   return EXIT_SUCCESS;
 }

@@ -52,7 +52,7 @@ namespace token{
    public:
     explicit ProcessBlockJob(BlockPtr blk, bool clean = false):
       WalletManagerBatchWriteJob(nullptr, "ProcessBlock"),
-      block_(std::move(blk)),
+      block_(blk),
       wallets_(),
       clean_(clean){}
     ~ProcessBlockJob() override = default;

@@ -68,6 +68,15 @@ namespace token{
     return stream << "]";
   }
 
+#define LOG_WALLETS(LevelName) \
+  LOG(LevelName) << "[wallets] "
+
+#define DLOG_WALLETS(LevelName) \
+  DLOG(LevelName) << "[wallets] "
+
+#define DLOG_WALLETS_IF(LevelName, Condition) \
+  DLOG_IF(LevelName, Condition) << "[wallets] "
+
 #define FOR_EACH_WALLET_MANAGER_STATE(V) \
   V(Uninitialized)                       \
   V(Initializing)                        \
@@ -98,12 +107,10 @@ namespace token{
      public:
       int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const override{
         UserKey k1(a);
-        if(!k1.valid())
-          LOG(WARNING) << "k1 doesn't have a IsValid tag.";
+        DLOG_WALLETS_IF(WARNING, !k1.valid()) << k1 << " doesn't have a valid tag.";
 
         UserKey k2(b);
-        if(!k2.valid())
-          LOG(WARNING) << "k2 doesn't have a IsValid tag.";
+        DLOG_WALLETS_IF(WARNING, !k2.valid()) << k2 << " doesn't have a valid tag.";
         return UserKey::Compare(k1, k2);
       }
 
@@ -127,7 +134,7 @@ namespace token{
       return index_;
     }
 
-    bool LoadIndex(const std::string& filename);
+    leveldb::Status LoadIndex(const std::string& filename);
     leveldb::Status Commit(const leveldb::WriteBatch& batch);
    public:
     WalletManager():

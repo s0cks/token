@@ -1,5 +1,5 @@
-#include <mutex>
 #include <glog/logging.h>
+
 #include "pool.h"
 #include "configuration.h"
 #include "atomic/relaxed_atomic.h"
@@ -11,17 +11,11 @@ namespace token{
     return TOKEN_BLOCKCHAIN_HOME;
   }
 
-
-#define POOL_LOG(LevelName) \
-  LOG(LevelName) << "[ObjectPool] "
-
   leveldb::Status ObjectPool::InitializeIndex(const std::string& filename){
     if(IsInitialized())
       return leveldb::Status::NotSupported("Cannot re-initialize the object pool.");
 
-#ifdef TOKEN_DEBUG
-    POOL_LOG(INFO) << "initializing in " << filename << "....";
-#endif//TOKEN_DEBUG
+    DLOG_POOL(INFO) << "initializing in: " << filename;
     SetState(ObjectPool::kInitializing);
 
     leveldb::Options options;
@@ -29,15 +23,11 @@ namespace token{
     options.create_if_missing = true;
 
     leveldb::Status status;
-    if(!(status = leveldb::DB::Open(options, filename, &index_)).ok()){
-      POOL_LOG(WARNING) << "couldn't initialize the index: " << status.ToString();
+    if(!(status = leveldb::DB::Open(options, filename, &index_)).ok())
       return status;
-    }
 
     SetState(ObjectPool::kInitialized);
-#ifdef TOKEN_DEBUG
-    POOL_LOG(INFO) << "initialized.";
-#endif//TOKEN_DEBUG
+    DLOG_POOL(INFO) << "initialized.";
     return leveldb::Status::OK();
   }
 
@@ -62,7 +52,6 @@ namespace token{
   }
 
   UnclaimedTransactionPtr ObjectPool::FindUnclaimedTransaction(const Input& input) const{
-    LOG(INFO) << "searching for: " << input;
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
       PoolKey key(it->key());
@@ -103,19 +92,19 @@ namespace token{
 #define DEFINE_PUT_TYPE(Name) \
   bool ObjectPool::Put##Name(const Hash& hash, const Name##Ptr& val) const{ \
     if(Has##Name(hash)){      \
-      LOG(WARNING) << "cannot overwrite existing object pool data for: " << hash; \
+      DLOG_POOL(WARNING) << "cannot overwrite existing object pool data for: " << hash; \
       return false;           \
     }                         \
-    leveldb::WriteOptions options;                                    \
+    leveldb::WriteOptions options;                                          \
     options.sync = true;      \
     PoolKey key(val->GetType(), val->GetBufferSize(), hash);          \
     BufferPtr buffer = val->ToBuffer();                               \
     leveldb::Status status;   \
     if(!(status = GetIndex()->Put(options, (const leveldb::Slice&)key, buffer->operator leveldb::Slice())).ok()){ \
-      LOG(WARNING) << "cannot index object " << hash << ": " << status.ToString();\
+      LOG_POOL(ERROR) << "cannot index " << hash << ": " << status.ToString();          \
       return false;           \
     }                         \
-    LOG(INFO) << "indexed object " << hash;                           \
+    DLOG_POOL(INFO) << "indexed object " << hash;                           \
     return true;              \
   }
   FOR_EACH_POOL_TYPE(DEFINE_PUT_TYPE)

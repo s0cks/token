@@ -235,7 +235,11 @@ namespace token{
         SetReference(ref);
       }
       explicit ReferenceKey(const std::string& name):
-        ReferenceKey(Reference(name)){}
+        KeyType(),
+        data_(){
+        SetTag(ObjectTag(Type::kReference, Reference::GetSize()));
+        SetReference(Reference(name));
+      }
       explicit ReferenceKey(const leveldb::Slice& slice):
         KeyType(),
         data_(){
@@ -447,7 +451,7 @@ namespace token{
 
     inline bool
     HasGenesis() const{
-      return HasReference(BLOCKCHAIN_REFERENCE_GENESIS);
+      return HasReference("GENESIS");
     }
 
     inline bool

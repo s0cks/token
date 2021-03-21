@@ -13,8 +13,14 @@ namespace token{
 #define LOG_MINER(LevelName) \
   LOG(LevelName) << "[miner] "
 
+#define LOG_MINER_IF(LevelName, Condition) \
+  LOG_IF(LevelName, Condition) << "[miner] "
+
 #define DLOG_MINER(LevelName) \
   DLOG(LevelName) << "[miner] "
+
+#define DLOG_MINER_IF(LevelName, Condition) \
+  DLOG_IF(LevelName, Condition) << "[miner] "
 
 #define FOR_EACH_MINER_STATE(V) \
   V(Starting)                   \
@@ -58,11 +64,7 @@ namespace token{
 
     static inline int16_t
     GetRequiredVotes(){
-#ifdef TOKEN_ENABLE_SERVER
       return PeerSessionManager::GetNumberOfConnectedPeers();
-#else
-      return 0;
-#endif//TOKEN_ENABLE_SERVER
     }
 
     static void OnMine(uv_timer_t* handle);
@@ -145,7 +147,6 @@ namespace token{
     FOR_EACH_MINER_STATE(DEFINE_CHECK)
 #undef DEFINE_CHECK
 
-    static bool Initialize();
     static BlockMiner* GetInstance();
   };
 

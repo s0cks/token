@@ -50,6 +50,13 @@ namespace token{
     return ss.str();
   }
 
+#define LOG_POOL(LevelName) \
+  LOG(LevelName) << "[pool] "
+#define DLOG_POOL(LevelName) \
+  DLOG(LevelName) << "[pool] "
+#define DLOG_POOL_IF(LevelName, Condition) \
+  DLOG_IF(LevelName, Condition) << "[pool] "
+
   class ObjectPool{
    public:
     enum State{

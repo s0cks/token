@@ -14,6 +14,15 @@
 #include "atomic/relaxed_atomic.h"
 
 namespace token{
+#define LOG_CONFIG(LevelName) \
+  LOG(LevelName) << "[config] "
+
+#define DLOG_CONFIG(LevelName) \
+  DLOG(LevelName) << "[config] "
+
+#define DLOG_CONFIG_IF(LevelName, Condition) \
+  DLOG_IF(LevelName, Condition)
+
 #define TOKEN_CONFIGURATION_NODE_ID "Node.Id"
 #define TOKEN_CONFIGURATION_NODE_PEERS "Node.Peers"
 #define TOKEN_CONFIGURATION_BLOCKCHAIN_HOME "BlockChain.Home"

@@ -4,35 +4,20 @@
 #include "configuration.h"
 
 namespace token{
-#define CONFIG_LOG(LevelName) \
-  LOG(LevelName) << "[ConfigManager] "
-
-#ifdef TOKEN_DEBUG
-  #define CANNOT_GET_PROPERTY(LevelName, PropertyName) \
-    CONFIG_LOG(LevelName) << "cannot get property '" << (PropertyName) << "'"
-
-  #define CANNOT_SET_PROPERTY(LevelName, PropertyName, PropertyValue) \
-    CONFIG_LOG(LevelName) << "cannot set property " << (PropertyName) << " to: " << (PropertyValue)
-
-  #define SET_PROPERTY(LevelName, PropertyName, PropertyValue) \
-    CONFIG_LOG(LevelName) << "set property " << (PropertyName) << " to: " << (PropertyValue)
-#else
-  #define CANNOT_GET_PROPERTY(LevelName, PropertyName){}
-
-  #define CNANOT_SET_PROPERTY(LevelName, PropertyName, PropertyValue){}
-
-  #define SET_PROPERTY(LevelName, PropertyName, PropertyValue) {}
-#endif//TOKEN_DEBUG
-
-#define ERROR_SETTING_PROPERTY(LevelName, PropertyName, Status) \
-  CONFIG_LOG(LevelName) << "error setting property " << (PropertyName) << ": " << status.ToString()
-
-#define ERROR_GETTING_PROPERTY(LevelName, PropertyName, Status) \
-  CONFIG_LOG(LevelName) << "error getting property " << (PropertyName) << ": " << status.ToString()
+#define CANNOT_GET_PROPERTY(PropertyName) \
+  DLOG_CONFIG(WARNING) << "cannot get property: " << (PropertyName)
+#define CANNOT_SET_PROPERTY(PropertyName, PropertyValue) \
+  DLOG_CONFIG(WARNING) << "cannot set property " << (PropertyName) << " to " << (PropertyValue)
+#define SET_PROPERTY(PropertyName, PropertyValue) \
+  DLOG_CONFIG(INFO) << "set property " << (PropertyName) << " to " << (PropertyValue)
+#define ERROR_SETTING_PROPERTY(PropertyName, Status) \
+  LOG_CONFIG(ERROR) << "error setting property " << (PropertyName) << ": " << status.ToString()
+#define ERROR_GETTING_PROPERTY(PropertyName, Status) \
+  LOG_CONFIG(ERROR) << "error getting property " << (PropertyName) << ": " << status.ToString()
 
   static inline void
   PutDefaultProperty(leveldb::WriteBatch& batch, const std::string& name, const UUID& val){
-    batch.Put(name, (const leveldb::Slice&)val);
+    batch.Put(name, leveldb::Slice(val.data(), val.size()));
   }
 
   static inline void
@@ -57,8 +42,7 @@ namespace token{
 
     PeerList peers;
     if(!FLAGS_remote.empty()){
-      if(!NodeAddress::ResolveAddresses(FLAGS_remote, peers))
-        CONFIG_LOG(WARNING) << "cannot resolve remote address: " << FLAGS_remote;
+      DLOG_CONFIG_IF(WARNING, !NodeAddress::ResolveAddresses(FLAGS_remote, peers)) << "couldn't resolve remote address: " << FLAGS_remote;
     }
     PutDefaultProperty(batch, TOKEN_CONFIGURATION_NODE_PEERS, peers);
 
@@ -67,18 +51,11 @@ namespace token{
     return GetIndex()->Write(options, &batch);
   }
 
-  leveldb::Status ConfigurationManager::InitializeIndex(const std::string& parent){
-    if(!IsUninitializedState()){
-#ifdef TOKEN_DEBUG
-      CONFIG_LOG(WARNING) << "cannot re-initialize the configuration manager.";
-#endif//TOKEN_DEBUG
+  leveldb::Status ConfigurationManager::InitializeIndex(const std::string& filename){
+    if(!IsUninitializedState())
       return leveldb::Status::NotSupported("Cannot re-initialize the ConfigurationManager.");
-    }
 
-    std::string filename = parent + "/config";
-#ifdef TOKEN_DEBUG
-    CONFIG_LOG(INFO) << "initializing the ConfigurationManager in " << filename << "....";
-#endif//TOKEN_DEBUG
+    DLOG_CONFIG(INFO) << "initializing in " << filename << "....";
     SetState(ConfigurationManager::kInitializingState);
     bool first_initialization = !FileExists(filename);
 
@@ -87,21 +64,19 @@ namespace token{
 
     leveldb::Status status;
     if(!(status = leveldb::DB::Open(options, filename, &index_)).ok()){
-      CONFIG_LOG(ERROR) << "couldn't initialize the index: " << status.ToString();
+      LOG_CONFIG(ERROR) << "couldn't initialize the index: " << status.ToString();
       return status;
     }
 
     if(first_initialization){
       if(!(status = SetDefaults(filename)).ok()){
-        CONFIG_LOG(ERROR) << "cannot set defaults: " << status.ToString();
+        LOG_CONFIG(ERROR) << "cannot set defaults: " << status.ToString();
         return status;
       }
     }
 
     SetState(ConfigurationManager::kInitializedState);
-#ifdef TOKEN_DEBUG
-    CONFIG_LOG(INFO) << "initialized.";
-#endif//TOKEN_DEBUG
+    DLOG_CONFIG(INFO) << "initialized.";
     return leveldb::Status::OK();
   }
 
@@ -111,11 +86,11 @@ namespace token{
     leveldb::Status status;
     if(!(status = GetIndex()->Get(leveldb::ReadOptions(), name, &value)).ok()){
       if(status.IsNotFound()){
-        CANNOT_GET_PROPERTY(WARNING, name);
+        CANNOT_GET_PROPERTY(name);
         return false;
       }
 
-      ERROR_GETTING_PROPERTY(ERROR, name, status);
+      ERROR_GETTING_PROPERTY(name, status);
       return false;
     }
     return true;
@@ -135,11 +110,11 @@ namespace token{
     leveldb::Slice value = buffer->operator leveldb::Slice();
     leveldb::Status status;
     if(!(status = GetIndex()->Put(options, name, value)).ok()){
-      ERROR_SETTING_PROPERTY(ERROR, name, status);
+      ERROR_SETTING_PROPERTY(name, status);
       return false;
     }
 
-    SET_PROPERTY(INFO, name, val);
+    SET_PROPERTY(name, val);
     return true;
   }
 
@@ -149,11 +124,11 @@ namespace token{
 
     leveldb::Status status;
     if(!(status = GetIndex()->Put(options, name, (const leveldb::Slice&)value)).ok()){
-      ERROR_SETTING_PROPERTY(ERROR, name, status);
+      ERROR_SETTING_PROPERTY(name, status);
       return false;
     }
 
-    SET_PROPERTY(INFO, name, value);
+    SET_PROPERTY(name, value);
     return true;
   }
 
@@ -163,11 +138,11 @@ namespace token{
 
     leveldb::Status status;
     if(!(status = GetIndex()->Put(options, name, val)).ok()){
-      ERROR_SETTING_PROPERTY(ERROR, name, val);
+      ERROR_SETTING_PROPERTY(name, val);
       return false;
     }
 
-    SET_PROPERTY(INFO, name, val);
+    SET_PROPERTY(name, val);
     return true;
   }
 
@@ -177,11 +152,11 @@ namespace token{
 
     leveldb::Status status;
     if(!(status = GetIndex()->Put(options, name, (const leveldb::Slice&)val)).ok()){
-      ERROR_SETTING_PROPERTY(ERROR, name, val);
+      ERROR_SETTING_PROPERTY(name, val);
       return false;
     }
 
-    SET_PROPERTY(INFO, name, val);
+    SET_PROPERTY(name, val);
     return true;
   }
 
@@ -189,11 +164,11 @@ namespace token{
     leveldb::Status status;
     if(!(status = GetIndex()->Get(leveldb::ReadOptions(), name, &value)).ok()){
       if(status.IsNotFound()){
-        CANNOT_GET_PROPERTY(WARNING, name);
+        CANNOT_GET_PROPERTY(name);
         return false;
       }
 
-      ERROR_GETTING_PROPERTY(ERROR, name, status);
+      ERROR_GETTING_PROPERTY(name, status);
       return false;
     }
     return true;
@@ -211,11 +186,11 @@ namespace token{
     leveldb::Status status;
     if(!(status = GetIndex()->Get(leveldb::ReadOptions(), name, &value)).ok()){
       if(status.IsNotFound()){
-        CANNOT_GET_PROPERTY(WARNING, name);
+        CANNOT_GET_PROPERTY(name);
         return false;
       }
 
-      ERROR_SETTING_PROPERTY(ERROR, name, status);
+      ERROR_SETTING_PROPERTY(name, status);
       return false;
     }
 
@@ -229,11 +204,11 @@ namespace token{
     leveldb::Status status;
     if(!(status = GetIndex()->Get(leveldb::ReadOptions(), name, &value)).ok()){
       if(status.IsNotFound()){
-        CANNOT_GET_PROPERTY(WARNING, name);
+        CANNOT_GET_PROPERTY(name);
         return false;
       }
 
-      ERROR_GETTING_PROPERTY(ERROR, name, status);
+      ERROR_GETTING_PROPERTY(name, status);
       return false;
     }
 
@@ -244,13 +219,9 @@ namespace token{
   static ConfigurationManager instance;
 
   bool ConfigurationManager::Initialize(const std::string& filename){
-#ifdef TOKEN_DEBUG
-    CONFIG_LOG(INFO) << "initializing the ConfigurationManager in " << filename << "....";
-#endif//TOKEN_DEBUG
-
     leveldb::Status status;
     if(!(status = instance.InitializeIndex(filename)).ok()){
-      CONFIG_LOG(ERROR) << "couldn't initialize the ConfigurationManager in " << filename << ": " << status.ToString();
+      LOG_CONFIG(ERROR) << "couldn't initialize the configuration in " << filename << ": " << status.ToString();
       return false;
     }
     return true;

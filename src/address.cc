@@ -4,9 +4,10 @@ namespace token{
   static inline uint32_t
   GetAddressFrom(const std::string& address){
     int a, b, c, d;
-    uint32_t addr = 0;
+    uint32_t addr;
 
-    if(sscanf(address.c_str(), "%d.%d.%d.%d", &a, &b, &c, &d) != 4) return 0;
+    if(sscanf(address.c_str(), "%d.%d.%d.%d", &a, &b, &c, &d) != 4)
+      return 0;
 
     addr = a << 24;
     addr |= b << 16;
@@ -33,7 +34,8 @@ namespace token{
   GetAddressFromHandle(const uv_tcp_t* handle){
     struct sockaddr_in name;
     int nlen = sizeof(name);
-    if(uv_tcp_getpeername(handle, (struct sockaddr*) &name, &nlen)) return 0;
+    if(uv_tcp_getpeername(handle, (struct sockaddr*) &name, &nlen))
+      return 0;
     char addr[16];
     uv_inet_ntop(AF_INET, &name.sin_addr, addr, sizeof(addr));
     return GetAddressFrom(std::string(addr));
@@ -43,7 +45,8 @@ namespace token{
   GetPortFromHandle(const uv_tcp_t* handle){
     struct sockaddr_in name;
     int nlen = sizeof(name);
-    if(uv_tcp_getpeername(handle, (struct sockaddr*) &name, &nlen)) return 0;
+    if(uv_tcp_getpeername(handle, (struct sockaddr*) &name, &nlen))
+      return 0;
     return ntohs(name.sin_port);
   }
 

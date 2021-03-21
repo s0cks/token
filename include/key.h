@@ -5,6 +5,9 @@
 #include "block.h"
 
 namespace token{
+#define KEY(Key) \
+  leveldb::Slice((Key).data(), (Key).size())
+
   class KeyType{
    protected:
     KeyType() = default;
@@ -17,10 +20,6 @@ namespace token{
 
     bool valid() const{
       return tag().IsValid();
-    }
-
-    explicit operator leveldb::Slice() const{
-      return leveldb::Slice(data(), size());
     }
 
     friend std::ostream& operator<<(std::ostream& stream, const KeyType& key){

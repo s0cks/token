@@ -88,6 +88,19 @@ namespace token{
       CrashReport report(file, cause.str());
       return report.Print();
     }
+
+    static inline bool
+    PrintNewCrashReportAndExit(const std::string& cause, const int& code=EXIT_FAILURE, FILE* file=stderr){
+      CrashReport report(file, cause);
+      if(!report.Print())
+        fprintf(file, "cannot print crash report for: %s", cause.data());
+      exit(code);
+    }
+
+    static inline bool
+    PrintNewCrashReportAndExit(const std::stringstream& ss, const int& code=EXIT_FAILURE, FILE* file=stderr){
+      return PrintNewCrashReportAndExit(ss.str(), code, file);
+    }
   };
 }
 

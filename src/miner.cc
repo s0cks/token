@@ -13,12 +13,9 @@ namespace token{
     return queue_.Push(job);
   }
 
-  bool BlockMiner::Initialize(){
-    if(!JobScheduler::RegisterQueue(pthread_self(), &queue_)){
-      LOG_MINER(ERROR) << "cannot register job queue.";
-      return false;
-    }
-    return true;
+  static inline bool
+  RegisterQueue(){
+    return JobScheduler::RegisterQueue(pthread_self(), &queue_);
   }
 
   BlockMiner* BlockMiner::GetInstance(){
@@ -28,13 +25,13 @@ namespace token{
 
   bool BlockMiner::StartMiningTimer(){
     DLOG_MINER(INFO) << "starting timer.";
-    VERIFY_UVRESULT(uv_timer_start(&timer_, &OnMine, FLAGS_mining_interval, FLAGS_mining_interval), LOG_MINER(ERROR), "cannot start timer");
+    VERIFY_UVRESULT(uv_timer_start(&timer_, &OnMine, FLAGS_mining_interval, FLAGS_mining_interval), DLOG_MINER(ERROR), "cannot start timer");
     return true;
   }
 
   bool BlockMiner::StopMiningTimer(){
     DLOG_MINER(INFO) << "stopping timer.";
-    VERIFY_UVRESULT(uv_timer_stop(&timer_), LOG_MINER(ERROR), "cannot stop timer");
+    VERIFY_UVRESULT(uv_timer_stop(&timer_), DLOG_MINER(ERROR), "cannot stop timer");
     return true;
   }
 
@@ -105,12 +102,16 @@ namespace token{
   }
 
   bool BlockMinerThread::Start(){
-    return ThreadStart(&thread_, "miner", &HandleThread, 0);
+    return ThreadStart(&thread_, "miner", &HandleThread, (uword)BlockMiner::GetInstance());
   }
 
   void BlockMinerThread::HandleThread(uword param){
-    BlockMiner miner;
-    if(!miner.Run())
-      LOG(WARNING) << "cannot run block miner.";
+    if(!RegisterQueue()){
+      LOG_MINER(ERROR) << "cannot register job queue.";
+      return;
+    }
+
+    BlockMiner* miner = (BlockMiner*)param;
+    LOG_MINER_IF(ERROR, !miner->Run()) << "cannot run miner loop.";
   }
 }
