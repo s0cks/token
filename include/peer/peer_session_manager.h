@@ -82,6 +82,11 @@ namespace token{
     static inline bool Is##Name##State(){ return GetState() == State::k##Name##State; }
     FOR_EACH_PEER_SESSION_MANAGER_STATE(DEFINE_CHECK)
 #undef DEFINE_CHECK
+
+    static inline const char*
+    GetName(){
+      return "PeerSessionManager";
+    }
   };
 }
 

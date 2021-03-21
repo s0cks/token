@@ -189,6 +189,11 @@ namespace token{
       return filename.str();
     }
 
+    static inline const char*
+    GetName(){
+      return "WalletManager";
+    }
+
     static bool Initialize(const std::string& filename=GetWalletManagerFilename());
     static WalletManager* GetInstance();
   };

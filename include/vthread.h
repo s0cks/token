@@ -18,8 +18,17 @@ namespace token{
   bool ThreadStart(ThreadId* thread, const char* name, ThreadHandlerFunction func, uword parameter);
   bool ThreadJoin(const ThreadId& thread);
 
-#define THREAD_LOG(LevelName) \
+#define LOG_THREAD(LevelName) \
   LOG(LevelName) << "[" << GetThreadName(GetCurrentThread()) << "] "
+
+#define LOG_THREAD_IF(LevelName, Condition) \
+  LOG(LevelName) << "[" << GetThreadName(GetCurrentThread()) << "] "
+
+#define DLOG_THREAD(LevelName) \
+  DLOG(LevelName) << "[" << GetThreadName(GetCurrentThread()) << "] "
+
+#define DLOG_THREAD_IF(LevelName, Condition) \
+  DLOG_IF(LevelName, Condition) << "[" << GetThreadName(GetCurrentThread()) << "] "
 }
 
 #endif //TOKEN_VTHREAD_H

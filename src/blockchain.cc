@@ -31,9 +31,9 @@ namespace token{
   static inline bool
   ShouldCreateFreshInstall(BlockChain* chain){
 #ifdef TOKEN_DEBUG
-    return chain->HasHead() || FLAGS_fresh;
+    return !chain->HasHead() || FLAGS_fresh;
 #else
-    return chain->HasHead();
+    return !chain->HasHead();
 #endif//TOKEN_DEBUG
   }
 

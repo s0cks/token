@@ -102,7 +102,7 @@ namespace token{
   }
 
   bool BlockMinerThread::Start(){
-    return ThreadStart(&thread_, "miner", &HandleThread, (uword)BlockMiner::GetInstance());
+    return ThreadStart(&thread_, BlockMiner::GetThreadName(), &HandleThread, (uword)BlockMiner::GetInstance());
   }
 
   void BlockMinerThread::HandleThread(uword param){

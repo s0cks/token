@@ -271,6 +271,11 @@ namespace token{
     FOR_EACH_POOL_STATE(DEFINE_CHECK)
 #undef DEFINE_CHECK
 
+    static inline const char*
+    GetName(){
+      return "ObjectPool";
+    }
+
     static ObjectPoolPtr GetInstance();
     static bool Initialize(const std::string& filename=GetObjectPoolDirectory());
   };

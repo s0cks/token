@@ -32,9 +32,7 @@ namespace token{
 
   void JobWorker::HandleThread(uword parameter){
     JobWorker* instance = ((JobWorker*) parameter);
-#ifdef TOKEN_DEBUG
-    THREAD_LOG(INFO) << "starting....";
-#endif//TOKEN_DEBUG
+    DLOG_THREAD(INFO) << "starting....";
     instance->SetState(JobWorker::kRunning);
 
     sleep(2);//TODO: remove this?
@@ -43,16 +41,11 @@ namespace token{
       if(next){
         std::string job_name = next->GetName();
 
-#ifdef TOKEN_DEBUG
-        THREAD_LOG(INFO) << "running " << job_name << "....";
-#endif//TOKEN_DEBUG
-        //-----
-        //TODO: refactor
+        DLOG_THREAD(INFO) << "running " << job_name << "....";
         Timestamp start = Clock::now();
-        //-----
 
         if(!next->Run()){
-          THREAD_LOG(WARNING) << "couldn't run the " << job_name << " job.";
+          DLOG_THREAD(WARNING) << "couldn't run the " << job_name << " job.";
           continue;
         }
 
@@ -61,17 +54,15 @@ namespace token{
         auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start);
         //---------
 
-#ifdef TOKEN_DEBUG
-        THREAD_LOG(INFO) << job_name << " has finished (" << duration_ms.count() << "ms).";
-#endif//TOKEN_DEBUG
+        DLOG_THREAD(INFO) << job_name << " has finished (" << duration_ms.count() << "ms).";
       }
     }
 
     instance->SetState(JobWorker::kStopping);
-#ifdef TOKEN_DEBUG
-    THREAD_LOG(INFO) << " stopped.";
-#endif//TOKEN_DEBUG
+    // do we need to perform some shutdown logic?
+
     instance->SetState(JobWorker::kStopped);
+    DLOG_THREAD(INFO) << "stopped.";
     pthread_exit(nullptr);
   }
 }

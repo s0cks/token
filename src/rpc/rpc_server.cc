@@ -1,22 +1,24 @@
 #include "rpc/rpc_server.h"
 
 namespace token{
-  static LedgerServer instance;
-
-  bool LedgerServer::Start(){
-    return instance.StartThread();
+  LedgerServer* LedgerServer::GetInstance(){
+    static LedgerServer instance;
+    return &instance;
   }
 
-  bool LedgerServer::Shutdown(){
-    return false; //TODO: implement
+  static ThreadId thread_;
+
+  bool ServerThread::Start(){
+    return ThreadStart(&thread_, LedgerServer::GetThreadName(), &HandleThread, (uword)LedgerServer::GetInstance());
   }
 
-  bool LedgerServer::WaitForShutdown(){
-    return instance.JoinThread();
+  bool ServerThread::Join(){
+    return ThreadJoin(thread_);
   }
 
-#define DEFINE_CHECK(Name) \
-  bool LedgerServer::IsServer##Name(){ return instance.GetState() == Server::k##Name##State; }
-  FOR_EACH_SERVER_STATE(DEFINE_CHECK)
-#undef DEFINE_CHECK
+  void ServerThread::HandleThread(uword param){
+    auto instance = (LedgerServer*)param;
+    DLOG_SERVER_IF(WARNING, !instance->Run()) << "failed to run the server";
+    pthread_exit(nullptr);
+  }
 }

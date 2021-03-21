@@ -265,7 +265,7 @@ namespace token{
         LOG(WARNING) << "cannot encode wallet.";
         return;
       }
-      batch_.Put((leveldb::Slice&)key, buffer->operator leveldb::Slice());
+      batch_.Put(KEY(key), buffer->operator leveldb::Slice());
     }
    public:
     ~WalletManagerBatchWriteJob() override = default;
@@ -308,7 +308,7 @@ namespace token{
     PutUnclaimedTransaction(const Hash& hash, const UnclaimedTransactionPtr& val){
       ObjectPool::PoolKey key(Type::kUnclaimedTransaction, val->GetBufferSize(), hash);
       BufferPtr value = val->ToBuffer();
-      batch_.Put((leveldb::Slice&)key, value->AsSlice());
+      batch_.Put(KEY(key), value->AsSlice());
       return true;
     }
    public:

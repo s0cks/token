@@ -483,6 +483,11 @@ namespace token{
     FOR_EACH_BLOCKCHAIN_STATE(DEFINE_STATE_CHECK)
 #undef DEFINE_STATE_CHECK
 
+    static inline const char*
+    GetName(){
+      return "BlockChain";
+    }
+
     static BlockChainPtr GetInstance();
     static bool Initialize(const std::string& filename=GetBlockChainDirectory());
   };

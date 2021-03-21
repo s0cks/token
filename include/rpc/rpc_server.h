@@ -115,7 +115,7 @@ namespace token{
     }
    public:
     LedgerServer(uv_loop_t* loop=uv_loop_new(), const BlockChainPtr& chain=BlockChain::GetInstance()):
-      Server(loop, "rpc-server"),
+      Server(loop, GetThreadName()),
       chain_(chain){}
     ~LedgerServer() = default;
 
@@ -128,17 +128,31 @@ namespace token{
     }
 
     ServerPort GetPort() const{
+      return GetServerPort();
+    }
+
+    static inline ServerPort
+    GetServerPort(){
       return FLAGS_server_port;
     }
 
-    static bool Start();
-    static bool Shutdown();
-    static bool WaitForShutdown();
+    static const char*
+    GetThreadName(){
+      return "server";
+    }
 
-#define DECLARE_CHECK(Name) \
-    static bool IsServer##Name();
-    FOR_EACH_SERVER_STATE(DECLARE_CHECK)
-#undef DECLARE_CHECK
+    static LedgerServer* GetInstance();
+  };
+
+  class ServerThread{
+   private:
+    static void HandleThread(uword param);
+   public:
+    ServerThread() = delete;
+    ~ServerThread() = delete;
+
+    static bool Join();
+    static bool Start();
   };
 }
 

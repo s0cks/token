@@ -20,7 +20,6 @@ namespace token{
 
   bool PeerSession::Connect(){
     //TODO: StartHeartbeatTimer();
-    int err;
     NodeAddress paddr = GetAddress();
 
     struct sockaddr_in addr;
@@ -28,21 +27,11 @@ namespace token{
     uv_connect_t conn;
     conn.data = this;
 
-#ifdef TOKEN_DEBUG
-    THREAD_LOG(INFO) << "creating connection to peer " << paddr << "....";
-#endif//TOKEN_DEBUG
-    if((err = uv_tcp_connect(&conn, &handle_, (const struct sockaddr*) &addr, &PeerSession::OnConnect)) != 0){
-      THREAD_LOG(ERROR) << "couldn't connect to peer " << paddr << ": " << uv_strerror(err);
-      return false;
-    }
+    DLOG_THREAD(INFO) << "creating connection to peer " << paddr << "....";
+    VERIFY_UVRESULT(uv_tcp_connect(&conn, &handle_, (const struct sockaddr*)&addr, &PeerSession::OnConnect), LOG_THREAD(ERROR), "couldn't connect to peer");
 
-#ifdef TOKEN_DEBUG
-    THREAD_LOG(INFO) << "starting session loop....";
-#endif//TOKEN_DEBUG
-    if((err = uv_run(GetLoop(), UV_RUN_DEFAULT)) != 0){
-      THREAD_LOG(ERROR) << "couldn't run loop: " << uv_strerror(err);
-      return false;
-    }
+    DLOG_THREAD(INFO) << "starting session loop....";
+    VERIFY_UVRESULT(uv_run(GetLoop(), UV_RUN_DEFAULT), LOG_THREAD(ERROR), "couldn't run loop");
     return true;
   }
 
@@ -114,7 +103,7 @@ namespace token{
   }
 
   void PeerSession::OnClose(uv_handle_t* handle){
-    THREAD_LOG(INFO) << "on-close.";
+    DLOG_THREAD(INFO) << "OnClose.";
   }
 
   void PeerSession::OnDiscovery(uv_async_t* handle){

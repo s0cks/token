@@ -11,8 +11,8 @@ namespace token{
    protected:
     HttpRouter router_;
 
-    explicit HttpService(uv_loop_t* loop):
-      Server(loop, "http/service"),
+    HttpService(uv_loop_t* loop, const char* name):
+      Server(loop, name),
       router_(){}
 
     Session<HttpMessage>* CreateSession() const override{

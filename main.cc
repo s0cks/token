@@ -118,69 +118,64 @@ RandomUser(const std::vector<token::User>& users){
   return users[distribution(engine)];
 }
 
-template<class C, bool fatal=false>
+template<class C, class T, bool fatal=false>
 static inline void
-SilentlyStartThread(const char* name){
-  if(!C::Start()){
-    DLOG(ERROR) << "cannot start the " << name << " thread.";
+SilentlyStartThread(){
+  if(!T::Start()){
+    DLOG(ERROR) << "cannot start the " << C::GetThreadName() << " thread.";
     if(fatal){
       std::stringstream cause;
-      cause << "Cannot start the " << name << " thread.";
+      cause << "Cannot start the " << C::GetThreadName() << " thread.";
       token::CrashReport::PrintNewCrashReportAndExit(cause);
       return;
     }
   }
-
-  DLOG(INFO) << "the " << name << " thread has been started.";
 }
 
-template<class C, bool fatal=false>
+template<class C, class T, bool fatal=false>
 static inline void
-SilentlyStartService(const char* name, const token::ServerPort& port){
-  if(!IsValidPort(port))
-    DLOG(INFO) << "not starting the " << name << " service.";
-
-  if(!C::Start()){
-    DLOG(ERROR) << "cannot start the " << name << " service on port: " << port;
+SilentlyStartService(){
+  if(!IsValidPort(C::GetServerPort())){
+    DLOG(INFO) << "not starting the " << C::GetThreadName() << " service.";
+    return;
+  }
+  if(!T::Start()){
+    DLOG(ERROR) << "cannot start the " << C::GetThreadName() << " service on port: " << C::GetServerPort();
     if(fatal){
       std::stringstream cause;
-      cause << "Cannot start the " << name << " service on port: " << port;
+      cause << "Cannot start the " << C::GetThreadName() << " service on port: " << C::GetServerPort();
       token::CrashReport::PrintNewCrashReportAndExit(cause);
     }
   }
-
-  DLOG(INFO) << "the " << name << "service has been started on port: " << port;
 }
 
 template<class C, bool fatal=false>
 static inline void
-SilentlyInitialize(const char* name){
+SilentlyInitialize(){
   if(!C::Initialize()){
-    DLOG(ERROR) << "cannot initialize the " << name;
+    DLOG(ERROR) << "cannot initialize the " << C::GetName();
     if(fatal){
       std::stringstream cause;
-      cause << "Failed to initialize the " << name;
+      cause << "Failed to initialize the " << C::GetName();
       token::CrashReport::PrintNewCrashReportAndExit(cause);
     }
   }
-
-  DLOG(INFO) << name << " initialized.";
 }
 
 
-template<class C, bool fatal=false>
+template<class C, class T, bool fatal=false>
 static inline void
-SilentlyWaitForShutdown(const char* name){
-  if(!C::WaitForShutdown()){
-    DLOG(ERROR) << "failed to wait for the " << name << " service to shutdown.";
+SilentlyWaitForShutdown(){
+  if(!T::Join()){
+    DLOG(ERROR) << "failed to wait for the " << C::GetThreadName() << " service to shutdown.";
     if(fatal){
       std::stringstream cause;
-      cause << "Failed to wait for the " << name << " service to shutdown.";
+      cause << "Failed to wait for the " << C::GetThreadName() << " service to shutdown.";
       token::CrashReport::PrintNewCrashReportAndExit(cause);
     }
   }
 
-  DLOG(INFO) << "the " << name << " service has shutdown.";
+  DLOG(INFO) << "the " << C::GetThreadName() << " service has shutdown.";
 }
 
 //TODO:
@@ -210,25 +205,27 @@ main(int argc, char **argv){
   }
 
   // Load the configuration
-  SilentlyInitialize<ConfigurationManager>("configuration");
+  SilentlyInitialize<ConfigurationManager>();
   // start the health check service
-  SilentlyStartService<HttpHealthService>("healthcheck", FLAGS_healthcheck_port);
+  SilentlyStartService<HttpHealthService, HttpHealthServiceThread>();
   // initialize the job scheduler
-  SilentlyInitialize<JobScheduler>("job scheduler");
+  SilentlyInitialize<JobScheduler>();
   // initialize the keychain
-  SilentlyInitialize<Keychain>("keychain");
+  SilentlyInitialize<Keychain>();
   // initialize the object pool
-  SilentlyInitialize<ObjectPool>("object pool");
+  SilentlyInitialize<ObjectPool>();
   // initialize the wallet manager
-  SilentlyInitialize<WalletManager>("wallet manager");
+  SilentlyInitialize<WalletManager>();
   // initialize the block chain
-  SilentlyInitialize<BlockChain>("block chain");
+  SilentlyInitialize<BlockChain>();
   // start the rpc server
-  SilentlyStartService<LedgerServer>("server", FLAGS_server_port);
+  SilentlyStartService<LedgerServer, ServerThread>();
   // start the peer threads & connect to any known peers
-  SilentlyInitialize<PeerSessionManager>("peer session manager");
+  SilentlyInitialize<PeerSessionManager>();
   // start the miner thread
-  SilentlyStartThread<BlockMinerThread>("miner");
+  SilentlyStartThread<BlockMiner, BlockMinerThread>();
+  // start the rest service
+  SilentlyStartService<HttpRestService, HttpRestServiceThread>();
 
 #ifdef TOKEN_DEBUG
   sleep(5);
@@ -240,9 +237,9 @@ main(int argc, char **argv){
   }
 #endif//TOKEN_DEBUG
 
-  SilentlyWaitForShutdown<PeerSessionManager>("peer session manager");
-  SilentlyWaitForShutdown<LedgerServer>("server");
-  SilentlyWaitForShutdown<HttpRestService>("rest");
-  SilentlyWaitForShutdown<HttpHealthService>("healthcheck");
+  //TODO: SilentlyWaitForShutdown<PeerSessionManager
+  SilentlyWaitForShutdown<LedgerServer, ServerThread>();
+  SilentlyWaitForShutdown<HttpRestService, HttpRestServiceThread>();
+  SilentlyWaitForShutdown<HttpHealthService, HttpHealthServiceThread>();
   return EXIT_SUCCESS;
 }

@@ -25,6 +25,9 @@ namespace token{
 #define DLOG_SERVER(LevelName) \
   DLOG(LevelName) << "[server] "
 
+#define DLOG_SERVER_IF(LevelName, Condition) \
+  DLOG_IF(LevelName, Condition) << "[server] "
+
   template<class M>
   class Server{
    private:
@@ -65,44 +68,11 @@ namespace token{
       state_(Server::kStoppedState){
       shutdown_.data = this;
       handle_.data = this;
-
-      int err;
-      if((err = uv_tcp_init(loop_, &handle_)) != 0){
-        THREAD_LOG(ERROR) << "cannot initialize server handle: " << uv_strerror(err);
-        return;
-      }
+      CHECK_UVRESULT(uv_tcp_init(GetLoop(), &handle_), LOG_SERVER(ERROR), "cannot initialize the server handle");
     }
 
     void SetState(const State& state){
       state_ = state;
-    }
-
-    static void
-    HandleServerThread(uword parameter){
-      auto server = (ServerType*)parameter;
-      server->SetState(Server::kStartingState);
-
-      int32_t port = server->GetPort();
-
-      int err;
-      if((err = Bind(server->GetHandle(), port)) != 0){
-        LOG_SERVER(WARNING) << "bind failure: " << uv_strerror(err);
-        server->SetState(Server::kStoppingState);
-        goto exit;
-      }
-
-      if((err = Listen(server->GetStream(), &OnNewConnection)) != 0){
-        LOG_SERVER(WARNING) "listen failure: " << uv_strerror(err);
-        server->SetState(Server::kStoppingState);
-        goto exit;
-      }
-
-      LOG_SERVER(INFO) << "server listening @" << port;
-      server->SetState(State::kRunningState);
-      uv_run(server->GetLoop(), UV_RUN_DEFAULT);
-    exit:
-      server->SetState(State::kStoppedState);
-      pthread_exit(nullptr);
     }
 
     static void
@@ -114,24 +84,12 @@ namespace token{
     static void
     OnNewConnection(uv_stream_t* stream, int status){
       auto server = (ServerType*)stream->data;
-      if(status != 0){
-        LOG_SERVER(ERROR) << "connection error: " << uv_strerror(status);
-        return;
-      }
+      CHECK_UVRESULT(status, LOG_SERVER(ERROR), "connect failure");
 
       Session<M>* session = server->CreateSession();
       session->SetState(Session<M>::kConnectingState);
-
-      int err;
-      if((err = Accept(stream, session)) != 0){
-        LOG_SERVER(ERROR) << "accept failure: " << uv_strerror(err);
-        return; //TODO: session->Disconnect();
-      }
-
-      if((err = ReadStart(session, &AllocBuffer, &OnMessageReceived)) != 0){
-        LOG_SERVER(ERROR) << "read failure: " << uv_strerror(err);
-        return; //TODO: session->Disconnect();
-      }
+      CHECK_UVRESULT(Accept(stream, session), LOG_SERVER(ERROR), "accept failure");
+      CHECK_UVRESULT(ReadStart(session, &AllocBuffer, &OnMessageReceived), LOG_SERVER(ERROR), "read failure");
     }
 
     static void
@@ -194,23 +152,6 @@ namespace token{
       return uv_read_start(session->GetStream(), on_alloc, on_read);
     }
 
-    bool StartThread(){
-      return ThreadStart(&thread_, name_, &HandleServerThread, (uword)this);
-    }
-
-    bool JoinThread(){
-      return ThreadJoin(thread_);
-    }
-
-    bool SendShutdown(){
-      int err;
-      if((err = uv_async_send(&shutdown_)) != 0){
-        THREAD_LOG(ERROR) << "cannot send shutdown: " << uv_strerror(err);
-        return false;
-      }
-      return true;
-    }
-
     virtual Session<M>* CreateSession() const = 0;
    public:
     virtual ~Server(){
@@ -244,6 +185,17 @@ namespace token{
 
     State GetState() const{
       return (State)state_;
+    }
+
+    bool Run(){
+      SetState(Server::State::kStartingState);
+      VERIFY_UVRESULT(Bind(GetHandle(), GetPort()), LOG_SERVER(ERROR), "cannot bind server");
+      VERIFY_UVRESULT(Listen(GetStream(), &OnNewConnection), LOG_SERVER(ERROR), "listen failure");
+
+      DLOG_THREAD(INFO) << "server listening on port: " << GetPort();
+      SetState(Server::State::kRunningState);
+      VERIFY_UVRESULT(uv_run(GetLoop(), UV_RUN_DEFAULT), LOG_SERVER(ERROR), "failed to run loop");
+      return true;
     }
 
 #define DEFINE_STATE_CHECK(Name) \

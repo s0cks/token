@@ -14,6 +14,11 @@ namespace token{
 
     static bool Initialize();
     static bool LoadKeys(CryptoPP::RSA::PrivateKey* privKey, CryptoPP::RSA::PublicKey* pubKey);
+
+    static inline const char*
+    GetName(){
+      return "Keychain";
+    }
   };
 }
 

@@ -5,7 +5,7 @@
 #include "http/http_controller_health.h"
 
 namespace token{
-  class HttpHealthService : HttpService{
+  class HttpHealthService : public HttpService{
    protected:
     std::shared_ptr<HealthController> health_;
    public:
@@ -17,17 +17,31 @@ namespace token{
     }
 
     ServerPort GetPort() const override{
+      return GetServerPort();
+    }
+
+    static inline const char*
+    GetThreadName(){
+      return "http/health";
+    }
+
+    static inline ServerPort
+    GetServerPort(){
       return FLAGS_healthcheck_port;
     }
 
-    static bool Start();
-    static bool Shutdown();
-    static bool WaitForShutdown();
+    static HttpHealthService* GetInstance();
+  };
 
-#define DECLARE_STATE_CHECK(Name) \
-    static bool IsService##Name();
-    FOR_EACH_SERVER_STATE(DECLARE_STATE_CHECK)
-#undef DECLARE_STATE_CHECK
+  class HttpHealthServiceThread{
+   private:
+    static void HandleThread(uword param);
+   public:
+    HttpHealthServiceThread() = delete;
+    ~HttpHealthServiceThread() = delete;
+
+    static bool Join();
+    static bool Start();
   };
 }
 

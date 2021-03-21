@@ -8,7 +8,7 @@
 #include "http/http_controller_wallet.h"
 
 namespace token{
-  class HttpRestService : HttpService{
+  class HttpRestService : public HttpService{
    private:
     std::shared_ptr<PoolController> pool_;
     std::shared_ptr<ChainController> chain_;
@@ -30,17 +30,30 @@ namespace token{
     }
 
     ServerPort GetPort() const override{
+      return GetServerPort();
+    }
+
+    static inline ServerPort
+    GetServerPort(){
       return FLAGS_service_port;
     }
 
-    static bool Start();
-    static bool Shutdown();
-    static bool WaitForShutdown();
+    static inline const char*
+    GetThreadName(){
+      return "http/rest";
+    }
 
-#define DECLARE_STATE_CHECK(Name) \
-    static bool IsService##Name();
-    FOR_EACH_SERVER_STATE(DECLARE_STATE_CHECK)
-#undef DEFINE_STATE_CHECK
+    static HttpRestService* GetInstance();
+  };
+
+  class HttpRestServiceThread{
+   protected:
+    static void HandleThread(uword param);
+   public:
+    HttpRestServiceThread() = delete;
+    ~HttpRestServiceThread() = delete;
+    static bool Join();
+    static bool Start();
   };
 }
 

@@ -147,6 +147,11 @@ namespace token{
     FOR_EACH_MINER_STATE(DEFINE_CHECK)
 #undef DEFINE_CHECK
 
+    static inline const char*
+    GetThreadName(){
+      return "miner";
+    }
+
     static BlockMiner* GetInstance();
   };
 

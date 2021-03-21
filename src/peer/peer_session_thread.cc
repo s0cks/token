@@ -55,30 +55,20 @@ namespace token{
 
       PeerSession* session = thread->CreateNewSession(request->GetAddress());
       if(!session->Connect())
-        THREAD_LOG(WARNING) << "couldn't connect to " << paddress << " " << GetAttemptStatus(counter) << ".";
+        LOG_THREAD(WARNING) << "couldn't connect to " << paddress << " " << GetAttemptStatus(counter) << ".";
 
-#ifdef TOKEN_DEBUG
-      THREAD_LOG(INFO) << "session disconnected.";
-#endif//TOKEN_DEBUG
+      DLOG_THREAD(INFO) << "session disconnected.";
       thread->ClearSession();
       if(request->CanReschedule()){
         Duration backoff = GetAttemptBackoffMilliseconds(counter);
-#ifdef TOKEN_DEBUG
-        THREAD_LOG(INFO) << "waiting for " << std::chrono::duration_cast<std::chrono::milliseconds>(backoff).count() << "ns (back-off)....";
-#endif//TOKEN_DEBUG
-
+        DLOG_THREAD(INFO) << "waiting for " << std::chrono::duration_cast<std::chrono::milliseconds>(backoff).count() << "ns (back-off)....";
         std::this_thread::sleep_for(backoff);
-
-#ifdef TOKEN_DEBUG
-        THREAD_LOG(INFO) << "rescheduling connection to " << paddress << " " << GetAttemptStatus(counter) << "....";
-#endif//TOKEN_DEBUG
+        DLOG_THREAD(INFO) << "rescheduling connection to " << paddress << " " << GetAttemptStatus(counter) << "....";
         if(!thread->Schedule(paddress, counter - 1))
-          THREAD_LOG(ERROR) << "couldn't schedule new connection to " << paddress << ".";
+          LOG_THREAD(ERROR) << "couldn't schedule new connection to " << paddress << ".";
         continue;
       } else{
-#ifdef TOKEN_DEBUG
-        THREAD_LOG(INFO) << "not rescheduling connection to " << paddress << ".";
-#endif//TOKEN_DEBUG
+        DLOG_THREAD(INFO) << "not rescheduling connection to " << paddress << ".";
         continue;
       }
     }
@@ -99,7 +89,7 @@ namespace token{
   bool PeerSessionThread::Shutdown(){
     SetState(PeerSessionThread::kStoppingState);
     if(IsConnected() && !DisconnectSession()){
-      THREAD_LOG(ERROR) << "cannot disconnect from peer.";
+      LOG_THREAD(ERROR) << "cannot disconnect from peer.";
       return false;
     }
     return true;

@@ -26,6 +26,11 @@ namespace token{
     static JobQueue* GetWorker(const ThreadId& thread);
     static JobQueue* GetThreadQueue();
     static JobQueue* GetRandomQueue();
+
+    static inline const char*
+    GetName(){
+      return "JobScheduler";
+    }
   };
 }
 

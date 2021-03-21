@@ -191,6 +191,11 @@ namespace token{
     FOR_EACH_CONFIGURATION_MANAGER_STATE(DEFINE_CHECK)
 #undef DEFINE_CHECK
 
+    static inline const char*
+    GetName(){
+      return "ConfigurationManager";
+    }
+
     static bool Initialize(const std::string& filename=GetConfigurationManagerFilename());//TODO: document
     static ConfigurationManager* GetInstance();//TODO: document
 
