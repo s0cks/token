@@ -15,12 +15,10 @@
 #include <fstream>
 #include <iomanip>
 #include <glog/logging.h>
-#include <gflags/gflags.h>
 
 #include <cmath>
 
 #include <leveldb/status.h>
-
 
 #include <rapidjson/writer.h>
 #include <rapidjson/document.h>
@@ -171,30 +169,10 @@ namespace token{
   };
 }
 
-DECLARE_string(path);
-DECLARE_bool(enable_snapshots);
-DECLARE_int32(num_workers);
-DECLARE_int64(mining_interval);
-DECLARE_string(remote);
-DECLARE_int32(server_port);
-DECLARE_int32(num_peers);
-DECLARE_int32(healthcheck_port);
-DECLARE_int32(service_port);
-
-#ifdef TOKEN_DEBUG
-  DECLARE_bool(fresh);
-  DECLARE_bool(append_test);
-  DECLARE_bool(verbose);
-  DECLARE_bool(no_mining);
-#endif//TOKEN_DEBUG
-
 static inline bool
 IsValidPort(int32_t port){
   return port > 0;
 }
-
-#define TOKEN_BLOCKCHAIN_HOME (FLAGS_path)
-#define TOKEN_VERBOSE (FLAGS_verbose)
 
 namespace token{
   namespace Json{

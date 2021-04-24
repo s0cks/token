@@ -30,11 +30,7 @@ namespace token{
 
   static inline bool
   ShouldCreateFreshInstall(BlockChain* chain){
-#ifdef TOKEN_DEBUG
-    return !chain->HasHead() || FLAGS_fresh;
-#else
-    return !chain->HasHead();
-#endif//TOKEN_DEBUG
+    return !chain->HasHead() || FLAGS_reinitialize;
   }
 
   //TODO: cleanup
@@ -237,10 +233,8 @@ namespace token{
     std::string filename;
     leveldb::Status status;
     if(!(status = GetIndex()->Get(leveldb::ReadOptions(), KEY(key), &filename)).ok()){
-      if(status.IsNotFound()){
-        DLOG_CHAIN(WARNING) << "couldn't find block: " << hash;
+      if(status.IsNotFound())
         return false;
-      }
 
       LOG_CHAIN(ERROR) << "couldn't get block " << hash << ": " << status.ToString();
       return false;

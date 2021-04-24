@@ -83,12 +83,13 @@ namespace token{
 
   std::string GetThreadName(const ThreadId& thread){
     char name[kMaxThreadNameSize];
+
     int err;
     if((err = pthread_getname_np(thread, name, kMaxThreadNameSize)) != 0){
       LOG(WARNING) << "cannot get name for " << thread << " thread: " << strerror(err);
       return "unknown";
     }
-    return std::string(name, kMaxThreadNameSize);
+    return std::string(name);
   }
 
   bool ThreadJoin(const ThreadId& thread){

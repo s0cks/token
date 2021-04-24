@@ -1,65 +1,136 @@
-#include "pool.h"
 #include "miner.h"
+#include "proposal.h"
 #include "job/scheduler.h"
-#include "consensus/proposal.h"
 #include "peer/peer_session_manager.h"
 
 namespace token{
+  int16_t Proposal::GetNumberOfRequiredVotes() {
+    return PeerSessionManager::GetNumberOfConnectedPeers();
+  }
+
 #define CANNOT_TRANSITION_TO(To) \
   LOG(ERROR) << "cannot transition " << raw() << " from " << GetPhase() << " phase to: " << (To) << " phase.";
 
-#define FOR_EACH_PROPOSAL_PHASE_TRANSITIONS(V) \
-  V(Queued, Prepare)                          \
-  V(Prepare, Commit)
-
-  bool Proposal::TransitionToPhase(const ProposalPhase& phase){
-    LOG(INFO) << "transitioning " << raw() << " to phase: " << phase;
-    switch(phase){
-#define DEFINE_TRANSITION(From, To) \
-      case ProposalPhase::k##To##Phase:{ \
-        if(!In##From##Phase()){     \
-          CANNOT_TRANSITION_TO(phase);     \
-          return false;             \
-        } \
-        break;                      \
-      }
-      FOR_EACH_PROPOSAL_PHASE_TRANSITIONS(DEFINE_TRANSITION)
-#undef DEFINE_TRANSITION
-      default:{
-        CANNOT_TRANSITION_TO(phase);
-        return false;
-      }
-    }
-
-    SetPhase(phase);
+  bool ProposalJob::AcceptProposal(){
+    PeerSessionManager::BroadcastAccepted();//TODO: check result
     return true;
   }
-#undef FOR_EACH_PROPOSAL_PHASE_TRANSITIONS
 
-  void Proposal::OnPrepare(uv_async_t* handle){
-#ifdef TOKEN_DEBUG
-    LOG(INFO) << "received OnPrepare";
-#endif//TOKEN_DEBUG
-
-    Proposal* proposal = (Proposal*)handle->data;
-    proposal->SetPhase(ProposalPhase::kPreparePhase);
+  bool ProposalJob::RejectProposal(){
+    PeerSessionManager::BroadcastRejected();//TODO: check result
+    return false;
   }
 
-  void Proposal::OnPromise(uv_async_t* handle){
-    Proposal* proposal = (Proposal*)handle->data;
-    Phase1Quorum& p1quorum = proposal->GetPhase1Quorum();
-    p1quorum.PromiseProposal(UUID()); //TODO: fix UUID()
- }
-
-  void Proposal::OnCommit(uv_async_t* handle){
-    NOT_IMPLEMENTED(WARNING);
+  bool ProposalJob::CommitProposal(){
+    NOT_IMPLEMENTED(ERROR);
+    return true;
   }
 
-  void Proposal::OnAccepted(uv_async_t* handle){
-    NOT_IMPLEMENTED(WARNING);
+  bool ProposalJob::PauseMiner(){
+    return BlockMiner::GetInstance()->Pause();
   }
 
-  void Proposal::OnRejected(uv_async_t* handle){
-    NOT_IMPLEMENTED(WARNING);
+  bool ProposalJob::ResumeMiner(){
+    return BlockMiner::GetInstance()->Resume();
+  }
+
+  bool ProposalJob::SendAcceptedToMiner(){
+    return BlockMiner::GetInstance()->SendAccepted();
+  }
+
+  bool ProposalJob::SendRejectedToMiner(){
+    return BlockMiner::GetInstance()->SendRejected();
+  }
+
+  // block is already validated, need to share w/ peers and wait for confirmation
+  bool ProposalJob::ExecutePhase1(){
+    ProposalPtr proposal = GetProposal();
+    DLOG(INFO) << "executing phase 1 for proposal " << proposal->GetID();
+    PeerSessionManager::BroadcastPrepare();
+    if(!proposal->StartTimer()) {
+      DLOG(ERROR) << "cancelling proposal " << proposal->GetID() << ", cannot start timer.";
+      return RejectProposal();
+    }
+
+    DLOG(INFO) << "waiting for " << proposal->GetRequired() << " votes....";
+    while(proposal->GetCurrentVotes() < proposal->GetRequired());//spin
+
+    if(proposal->GetPercentageRejects() > proposal->GetPercentagePromises()){
+      DLOG(WARNING) << "proposal " << proposal->GetID() << " was rejected by " << proposal->GetPercentageRejects() << "% of peers.";
+      return RejectProposal();
+    }
+    DLOG(INFO) << "proposal " << proposal->GetID() << " was promised by " << proposal->GetPercentagePromises() << "% of peers.";
+
+    if(!proposal->StopTimer()){
+      DLOG(ERROR) << "cancelling proposal " << proposal->GetID() << ", cannot stop timer.";
+      return RejectProposal();
+    }
+
+    proposal->ResetCurrentVotes();
+    return true;
+  }
+
+  bool ProposalJob::ExecutePhase2(){
+    ProposalPtr proposal = GetProposal();
+    DLOG(INFO) << "executing phase 2 for proposal " << proposal->raw();
+    PeerSessionManager::BroadcastCommit();
+    if(!proposal->StartTimer()){
+      DLOG(ERROR) << "cancelling proposal " << proposal->raw() << ", cannot start timer.";
+      return RejectProposal();
+    }
+
+    DLOG(INFO) << "waiting for " << proposal->GetRequired() << " votes....";
+    while(proposal->GetCurrentVotes() < proposal->GetRequired());//spin
+
+    if(proposal->GetPercentageRejects() > proposal->GetPercentageAccepts()){
+      DLOG(WARNING) << "proposal " << proposal->GetID() << " was rejected by " << proposal->GetPercentageRejects() << "% of peers.";
+      return RejectProposal();
+    }
+    DLOG(INFO) << "proposal " << proposal->GetID() << " was accepted by " << proposal->GetPercentageAccepts() << "% of peers.";
+
+    if(!proposal->StopTimer()){
+      DLOG(ERROR) << "cancelling proposal " << proposal->GetID() << ", cannot stop timer.";
+      return RejectProposal();
+    }
+
+    proposal->ResetCurrentVotes();
+    return true;
+  }
+
+  JobResult ProposalJob::DoWork(){
+    if(!PauseMiner())
+      return Failed("Cannot pause the block miner.");
+
+    if(!ExecutePhase1())
+      return Failed("Cannot execute phase 1");
+
+    if(!ExecutePhase2())
+      return Failed("Cannot execute phase 2");
+
+    ProposalPtr proposal = GetProposal();
+    if(proposal->GetTotalPercentageRejected() > proposal->GetTotalPercentageAccepted()){
+      if(!RejectProposal())
+        return Failed("Cannot broadcast Rejected");
+
+      if(!SendRejectedToMiner())
+        return Failed("Cannot send rejected to miner");
+
+      std::stringstream ss;
+      ss << "proposal " << proposal->GetID() << " was rejected (" << proposal->GetTotalPercentageRejected() << "%)";
+      return Failed(ss);
+    }
+
+    if(!AcceptProposal())
+      return Failed("Cannot broadcast Accepted");
+
+    if(!CommitProposal())
+      return Failed("Cannot commit the proposal");
+
+    if(!SendAcceptedToMiner())
+      return Failed("Cannot send accepted to miner");
+
+    std::stringstream ss;
+    ss << "proposal " << proposal->GetID() << " was accepted (" << proposal->GetTotalPercentageAccepted() << "%)";
+    return Success(ss);
   }
 }

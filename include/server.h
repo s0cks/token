@@ -112,7 +112,7 @@ namespace token{
       BufferPtr buffer = Buffer::From(buff->base, nread);
       do{
         ServerMessagePtr message = M::From(session, buffer);
-        DLOG(INFO) << "received " << message->ToString() << " from " << session->GetUUID();
+        DLOG_SESSION(INFO, session) << "received " << message->ToString() << " from " << session->GetUUID();
         session->OnMessageRead(message);
       } while(buffer->GetReadBytes() < buffer->GetBufferSize());
       free(buff->base);

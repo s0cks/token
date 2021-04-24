@@ -70,6 +70,8 @@ namespace token{
     static void BroadcastPromise();
     static void BroadcastCommit();
     static void BroadcastDiscoveredBlock();
+    static void BroadcastAccepted();
+    static void BroadcastRejected();
 
     static inline bool
     HasConnectedPeers(){

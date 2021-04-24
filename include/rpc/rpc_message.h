@@ -18,12 +18,6 @@ namespace token{
   typedef std::shared_ptr<RpcMessage> RpcMessagePtr;
   typedef std::vector<RpcMessagePtr> RpcMessageList;
 
-#define DEFINE_MESSAGE(Name) \
-  class Name##Message;       \
-  typedef std::shared_ptr<Name##Message> Name##MessagePtr;
-  FOR_EACH_MESSAGE_TYPE(DEFINE_MESSAGE)
-#undef DEFINE_MESSAGE
-
   class RpcMessage : public Message{
     friend class RpcSession;
    protected:
@@ -48,23 +42,22 @@ namespace token{
   };
 
 #define DEFINE_RPC_MESSAGE_TYPE(Name) \
-  Type GetType() const{ return Type::k##Name##Message; }
+  Type GetType() const override{ return Type::k##Name##Message; }
 
 #define DEFINE_RPC_MESSAGE(Name) \
   DEFINE_RPC_MESSAGE_TYPE(Name) \
-  virtual int64_t GetMessageSize() const; \
-  virtual bool WriteMessage(const BufferPtr& buff) const;
+  int64_t GetMessageSize() const override; \
+  bool WriteMessage(const BufferPtr& buff) const override;
 
 #define DEFINE_RPC_MESSAGE_CONSTRUCTORS(Name) \
   static inline Name##MessagePtr NewInstance(const BufferPtr& buffer){ return std::make_shared<Name##Message>(buffer); }
 }
 
-#include "rpc/rpc_message_version.h"
-#include "rpc/rpc_message_paxos.h"
+#include "rpc/rpc_message_getblocks.h"
 #include "rpc/rpc_message_inventory.h"
 #include "rpc/rpc_message_object.h"
-#include "rpc/rpc_message_getblocks.h"
-#include "rpc/rpc_message_notsupported.h"
+#include "rpc/rpc_message_paxos.h"
+#include "rpc/rpc_message_version.h"
 
 namespace token{
 #define DEFINE_RPC_MESSAGE_LIST_APPEND(Name) \

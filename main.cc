@@ -1,47 +1,20 @@
+#include "libunwind.h"
+
 #include "pool.h"
+#include "units.h"
+#include "flags.h"
 #include "miner.h"
 #include "wallet.h"
 #include "keychain.h"
+#include "filesystem.h"
 #include "blockchain.h"
 #include "configuration.h"
 #include "job/scheduler.h"
-
-#include "filesystem.h"
-
-#include "crash/crash_report.h"
 
 #include "rpc/rpc_server.h"
 #include "peer/peer_session_manager.h"
 #include "http/http_service_health.h"
 #include "http/http_service_rest.h"
-
-#ifdef TOKEN_ENABLE_ELASTICSEARCH
-  #include "elastic/elastic_client.h"
-#endif//TOKEN_ENABLE_ELASTICSEARCH
-
-DEFINE_string(path, "", "The path for the local ledger to be stored in.");
-DEFINE_bool(enable_snapshots, false, "Enable snapshots of the block chain");
-DEFINE_int32(num_workers, 4, "Define the number of worker pool threads");
-DEFINE_int64(mining_interval, 1000 * 60 * 1, "The amount of time between mining blocks in milliseconds.");
-DEFINE_string(remote, "", "The hostname for the remote ledger to join.");
-DEFINE_int32(server_port, 0, "The port to use for the RPC serer.");
-DEFINE_int32(num_peers, 2, "The max number of peers to connect to.");
-DEFINE_int32(healthcheck_port, 0, "The port to use for the health check service.");
-DEFINE_int32(service_port, 0, "The port for the ledger controller service.");
-
-#ifdef TOKEN_DEBUG
-  DEFINE_bool(fresh, false, "Initialize the BlockChain w/ a fresh chain [Debug]");
-  DEFINE_bool(append_test, false, "Append a test block upon startup [Debug]");
-  DEFINE_bool(verbose, false, "Turn on verbose logging [Debug]");
-  DEFINE_bool(no_mining, false, "Turn off block mining [Debug]");
-#endif//TOKEN_DEBUG
-
-static inline void
-InitializeLogging(char *arg0){
-  using namespace token;
-  google::LogToStderr();
-  google::InitGoogleLogging(arg0);
-}
 
 #ifdef TOKEN_DEBUG
   static inline bool
@@ -85,30 +58,6 @@ InitializeLogging(char *arg0){
     }
     return false;
   }
-
-  static inline void
-  PrintStats(){
-    using namespace token;
-    LOG(INFO) << "current time: " << FormatTimestampReadable(Clock::now());
-    LOG(INFO) << "home: " << TOKEN_BLOCKCHAIN_HOME;
-    LOG(INFO) << "node: " << ConfigurationManager::GetNodeID();
-
-    PeerList peers;
-    ConfigurationManager::GetInstance()->GetPeerList(TOKEN_CONFIGURATION_NODE_PEERS, peers);
-    LOG(INFO) << "peers: " << peers;
-    LOG(INFO) << "number of blocks in the chain: " << BlockChain::GetInstance()->GetNumberOfBlocks();
-
-    ObjectPoolPtr pool = ObjectPool::GetInstance();
-    if(TOKEN_VERBOSE){
-      pool->PrintBlocks();
-      pool->PrintTransactions();
-      pool->PrintUnclaimedTransactions();
-    } else{
-      LOG(INFO) << "number of blocks in the pool: " << pool->GetNumberOfBlocks();
-      LOG(INFO) << "number of transactions in the pool: " << pool->GetNumberOfTransactions();
-      LOG(INFO) << "number of unclaimed transactions in the pool: " << pool->GetNumberOfUnclaimedTransactions();
-    }
-  }
 #endif//TOKEN_DEBUG
 
 static inline token::User
@@ -121,14 +70,9 @@ RandomUser(const std::vector<token::User>& users){
 template<class C, class T, bool fatal=false>
 static inline void
 SilentlyStartThread(){
-  if(!T::Start()){
-    DLOG(ERROR) << "cannot start the " << C::GetThreadName() << " thread.";
-    if(fatal){
-      std::stringstream cause;
-      cause << "Cannot start the " << C::GetThreadName() << " thread.";
-      token::CrashReport::PrintNewCrashReportAndExit(cause);
-      return;
-    }
+  if(!T::Start() && fatal){
+    LOG(FATAL) << "cannot start the " << C::GetThreadName() << " thread.";
+    return;
   }
 }
 
@@ -139,43 +83,67 @@ SilentlyStartService(){
     DLOG(INFO) << "not starting the " << C::GetThreadName() << " service.";
     return;
   }
-  if(!T::Start()){
-    DLOG(ERROR) << "cannot start the " << C::GetThreadName() << " service on port: " << C::GetServerPort();
-    if(fatal){
-      std::stringstream cause;
-      cause << "Cannot start the " << C::GetThreadName() << " service on port: " << C::GetServerPort();
-      token::CrashReport::PrintNewCrashReportAndExit(cause);
-    }
+
+  if(!T::Start() && fatal){
+    LOG(FATAL) << "cannot start the " << C::GetThreadName() << " service on port: " << C::GetServerPort();
+    return;
   }
 }
 
 template<class C, bool fatal=false>
 static inline void
 SilentlyInitialize(){
-  if(!C::Initialize()){
-    DLOG(ERROR) << "cannot initialize the " << C::GetName();
-    if(fatal){
-      std::stringstream cause;
-      cause << "Failed to initialize the " << C::GetName();
-      token::CrashReport::PrintNewCrashReportAndExit(cause);
-    }
+  if(!C::Initialize() && fatal){
+    LOG(FATAL) << "failed to initialize the " << C::GetName();
+    return;
   }
 }
-
 
 template<class C, class T, bool fatal=false>
 static inline void
 SilentlyWaitForShutdown(){
-  if(!T::Join()){
-    DLOG(ERROR) << "failed to wait for the " << C::GetThreadName() << " service to shutdown.";
-    if(fatal){
-      std::stringstream cause;
-      cause << "Failed to wait for the " << C::GetThreadName() << " service to shutdown.";
-      token::CrashReport::PrintNewCrashReportAndExit(cause);
-    }
+  if(!T::Join() && fatal){
+    LOG(FATAL) << "failed to join the " << C::GetThreadName() << " thread.";
+    return;
+  }
+}
+
+static inline void
+PrintRuntimeInformation(){
+  using namespace token;
+  // print basic information
+  VLOG(0) << "home: " << TOKEN_BLOCKCHAIN_HOME;
+  VLOG(0) << "node-id: " << ConfigurationManager::GetNodeID();
+  VLOG(0) << "current time: " << FormatTimestampReadable(Clock::now());
+
+  // print block chain information
+  BlockChainPtr chain = BlockChain::GetInstance();
+  VLOG(0) << "number of blocks in chain: " << chain->GetNumberOfBlocks();
+  VLOG(0) << "number of references in chain: " << chain->GetNumberOfReferences();
+  if(VLOG_IS_ON(2)){
+    VLOG(2) << "head: " << chain->GetHead()->ToString();
+    VLOG(2) << "genesis: " << chain->GetGenesis()->ToString();
+  } else if(VLOG_IS_ON(1)){
+    VLOG(1) << "head: " << chain->GetHeadHash();
+    VLOG(1) << "genesis: " << chain->GetGenesisHash();
   }
 
-  DLOG(INFO) << "the " << C::GetThreadName() << " service has shutdown.";
+  // print object pool information
+  ObjectPoolPtr pool = ObjectPool::GetInstance();
+  VLOG(0) << "number of objects in pool: " << pool->GetNumberOfObjects();
+  VLOG(1) << "number of blocks in pool: " << pool->GetNumberOfBlocks();
+  VLOG(1) << "number of transactions in pool: " << pool->GetNumberOfTransactions();
+  VLOG(1) << "number of unclaimed transactions in pool: " << pool->GetNumberOfUnclaimedTransactions();
+
+  // print peer information
+  PeerList peers;
+  DLOG_IF(WARNING, !ConfigurationManager::GetInstance()->GetPeerList(TOKEN_CONFIGURATION_NODE_PEERS, peers)) << "cannot get peer list.";
+  VLOG(0) << "number of peers: " << peers.size();
+  if(VLOG_IS_ON(1) && !peers.empty()){
+    VLOG(1) << "peers: ";
+    for(auto& it : peers)
+      VLOG(1) << " - " << it;
+  }
 }
 
 //TODO:
@@ -185,21 +153,26 @@ SilentlyWaitForShutdown(){
 int
 main(int argc, char **argv){
   using namespace token;
-  // Install Signal Handlers
-  SignalHandlers::Initialize();
 
   // Parse Command Line Arguments
+  gflags::RegisterFlagValidator(&FLAGS_path, &ValidateFlagPath);
+  gflags::RegisterFlagValidator(&FLAGS_num_workers, &ValidateFlagNumberOfWorkers);
+  gflags::RegisterFlagValidator(&FLAGS_mining_interval, &ValidateFlagMiningInterval);
+  gflags::RegisterFlagValidator(&FLAGS_remote, &ValidateFlagRemote);
+  gflags::RegisterFlagValidator(&FLAGS_server_port, &ValidateFlagPort);
+  gflags::RegisterFlagValidator(&FLAGS_num_peers, &ValidateFlagNumberOfPeers);
+  gflags::RegisterFlagValidator(&FLAGS_healthcheck_port, &ValidateFlagPort);
+  gflags::RegisterFlagValidator(&FLAGS_service_port, &ValidateFlagPort);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
 
   // Initialize the Logging Framework
-  InitializeLogging(argv[0]);
+  google::LogToStderr();
+  google::InitGoogleLogging(argv[0]);
 
   // Create the home directory if it doesn't exist
   if(!FileExists(TOKEN_BLOCKCHAIN_HOME)){
     if(!CreateDirectory(TOKEN_BLOCKCHAIN_HOME)){
-      std::stringstream ss;
-      ss << "Cannot create block chain home directory: " << TOKEN_BLOCKCHAIN_HOME;
-      CrashReport::PrintNewCrashReport(ss);
+      LOG(FATAL) << "cannot create ledger in: " << TOKEN_BLOCKCHAIN_HOME;
       return EXIT_FAILURE;
     }
   }
@@ -222,17 +195,19 @@ main(int argc, char **argv){
   SilentlyStartService<LedgerServer, ServerThread>();
   // start the peer threads & connect to any known peers
   SilentlyInitialize<PeerSessionManager>();
-  // start the miner thread
-  SilentlyStartThread<BlockMiner, BlockMinerThread>();
   // start the rest service
   SilentlyStartService<HttpRestService, HttpRestServiceThread>();
 
+  if(FLAGS_mining_interval > 0)
+    SilentlyStartThread<BlockMiner, BlockMinerThread>();
+
+  sleep(5);
+  PrintRuntimeInformation();
+
 #ifdef TOKEN_DEBUG
   sleep(5);
-  PrintStats();
-
   if(FLAGS_append_test && !AppendDummy("VenueA", 2)){
-    CrashReport::PrintNewCrashReport("Cannot append dummy transactions.");
+    LOG(FATAL) << "cannot append the dummy transactions.";
     return EXIT_FAILURE;
   }
 #endif//TOKEN_DEBUG

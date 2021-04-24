@@ -126,7 +126,7 @@ namespace token{
     RpcMessageList messages;
     messages << BlockMessage::NewInstance(blk1);
     messages << BlockMessage::NewInstance(blk2);
-    messages << NotFoundMessage::NewInstance("cannot find");
+    messages << NotFoundMessage::NewInstance(InventoryItem(Type::kBlock, blk1_hash), "cannot find");
 
     MockServerSession session(pool, chain);
     EXPECT_CALL(session, SendMessages(IsMessageListOf(messages)))

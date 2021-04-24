@@ -3,6 +3,8 @@
 
 #include "inventory.h"
 
+#include <utility>
+
 namespace token{
   class InventoryMessage : public RpcMessage{
    public:
@@ -10,7 +12,7 @@ namespace token{
    protected:
     InventoryItems items_;
 
-    InventoryMessage(const InventoryItems& items):
+    explicit InventoryMessage(const InventoryItems& items):
       RpcMessage(),
       items_(items.begin(), items.end()){
       if(items_.empty())
@@ -18,17 +20,31 @@ namespace token{
       if(items_.size() != items.size())
         LOG(WARNING) << "inventory wasn't fully created.";
     }
-    InventoryMessage(const BufferPtr& buff):
+    explicit InventoryMessage(const BufferPtr& buff):
       RpcMessage(),
       items_(){
       if(!Decode(buff, items_))
         LOG(WARNING) << "couldn't decode items from buffer.";
     }
+
+    static inline bool
+    CompareInventories(const InventoryItems& a, const InventoryItems& b) {
+      return std::equal(a.begin(), a.end(),
+                        b.begin(),
+                        [](const InventoryItem &a, const InventoryItem &b) {
+                          return InventoryItem::Compare(a, b) == 0;
+                        });
+    }
    public:
     virtual ~InventoryMessage() = default;
 
-    int64_t GetMessageSize() const;
-    bool WriteMessage(const BufferPtr& buffer) const;
+    int64_t GetMessageSize() const{
+      return Buffer::CalculateSizeOf(items_);
+    }
+
+    bool WriteMessage(const BufferPtr& buffer) const{
+      return buffer->PutSet(items_);
+    }
 
     int64_t GetNumberOfItems() const{
       return items_.size();
@@ -61,27 +77,26 @@ namespace token{
 
   class InventoryListMessage : public InventoryMessage{
    public:
-    InventoryListMessage(const InventoryItems& items):
+    explicit InventoryListMessage(const InventoryItems& items):
       InventoryMessage(items){}
-    InventoryListMessage(const BufferPtr& buffer):
+    explicit InventoryListMessage(const BufferPtr& buffer):
       InventoryMessage(buffer){}
-    ~InventoryListMessage() = default;
+    ~InventoryListMessage() override = default;
 
-    bool Equals(const RpcMessagePtr& other) const{
-      InventoryItems items;
-      InventoryListMessage m(items);
+    DEFINE_RPC_MESSAGE_TYPE(InventoryList);
+
+    bool Equals(const RpcMessagePtr& other) const override{
+      NOT_IMPLEMENTED(ERROR);
       return false;
     }
 
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream ss;
       ss << "InventoryListMessage(";
-      ss << "items=" << items();
+      ss << "items=" << items_;
       ss << ")";
       return ss.str();
     }
-
-    DEFINE_RPC_MESSAGE_TYPE(InventoryList);
 
     static inline InventoryListMessagePtr
     NewInstance(const InventoryItems& items){
@@ -123,29 +138,30 @@ namespace token{
 
   class GetDataMessage : public InventoryMessage{
    public:
-    GetDataMessage(const InventoryItems& items):
+    explicit GetDataMessage(const InventoryItems& items):
       InventoryMessage(items){}
-    GetDataMessage(const BufferPtr& buffer):
+    explicit GetDataMessage(const BufferPtr& buffer):
       InventoryMessage(buffer){}
-    ~GetDataMessage() = default;
+    ~GetDataMessage() override = default;
 
-    bool Equals(const RpcMessagePtr& obj) const{
-      //TODO: refactor
+    DEFINE_RPC_MESSAGE_TYPE(GetData);
+
+    bool Equals(const RpcMessagePtr& obj) const override{
       if(!obj->IsGetDataMessage())
         return false;
       GetDataMessagePtr msg = std::static_pointer_cast<GetDataMessage>(obj);
-      return items_ == msg->items_;
+      return std::equal(items_begin(), items_end(), msg->items_begin(), [](const InventoryItem& a, const InventoryItem& b){
+        return a == b;
+      });
     }
 
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream ss;
       ss << "GetDataMessage(";
-      ss << "items=" << items();
+      ss << "items=" << items_;
       ss << ")";
       return ss.str();
     }
-
-    DEFINE_RPC_MESSAGE_TYPE(GetData);
 
     static inline GetDataMessagePtr
     NewInstance(const InventoryItems& items){
@@ -153,16 +169,10 @@ namespace token{
     }
 
     static inline GetDataMessagePtr
-    NewInstance(const std::vector<InventoryItem>& items){
-      return NewInstance(InventoryItems(items.begin(), items.end()));
-    }
-
-    static inline GetDataMessagePtr
     NewInstance(const BufferPtr& buff){
-      int64_t num_items = buff->GetLong();
       InventoryItems items;
-      for(int64_t idx = 0; idx < num_items; idx++)
-        items.insert(InventoryItem(buff));
+      if(!buff->GetSet(items))
+        return nullptr;
       return std::make_shared<GetDataMessage>(items);
     }
 
@@ -184,39 +194,57 @@ namespace token{
     InventoryItem item_;
     std::string message_;
    public:
-    NotFoundMessage(const std::string& message):
+    explicit NotFoundMessage(const InventoryItem& item, std::string message):
         RpcMessage(),
-        message_(message){}
-    ~NotFoundMessage() = default;
+        item_(item),
+        message_(std::move(message)){}
+    ~NotFoundMessage() override = default;
+
+    DEFINE_RPC_MESSAGE_TYPE(NotFound);
 
     std::string GetMessage() const{
       return message_;
     }
 
-    bool Equals(const RpcMessagePtr& obj) const{
+    int64_t GetMessageSize() const override{
+      int64_t size = 0;
+      size += InventoryItem::GetSize();
+      size += Buffer::CalculateSizeOf(message_);
+      return size;
+    }
+
+    bool WriteMessage(const BufferPtr& buff) const override{
+      return item_.Write(buff)
+          && buff->PutLong(message_.size())
+          && buff->PutString(message_);
+    }
+
+    bool Equals(const RpcMessagePtr& obj) const override{
       if(!obj->IsNotFoundMessage())
         return false;
       NotFoundMessagePtr msg = std::static_pointer_cast<NotFoundMessage>(obj);
       return item_ == msg->item_;
     }
 
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream ss;
-      ss << "NotFoundMessage()"; //TODO: implement
+      ss << "NotFoundMessage(";
+      ss << "message=" << message_;
+      ss << ")";
       return ss.str();
     }
 
-    DEFINE_RPC_MESSAGE(NotFound);
-
     static inline NotFoundMessagePtr
     NewInstance(const BufferPtr& buff){
-      std::string message = ""; //TODO: buff->GetString();
-      return std::make_shared<NotFoundMessage>(message);
+      InventoryItem item = InventoryItem(buff);
+      int64_t length = buff->GetLong();
+      std::string message = buff->GetString(length);
+      return std::make_shared<NotFoundMessage>(item, message);
     }
 
     static inline NotFoundMessagePtr
-    NewInstance(const std::string& message = "Not Found"){
-      return std::make_shared<NotFoundMessage>(message);
+    NewInstance(const InventoryItem& item, const std::string& message = "Not Found"){
+      return std::make_shared<NotFoundMessage>(item, message);
     }
   };
 }

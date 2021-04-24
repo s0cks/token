@@ -106,7 +106,7 @@ namespace token{
       return GetClientType() == ClientType::kClient;
     }
 
-    bool Equals(const RpcMessagePtr& obj) const{
+    bool Equals(const RpcMessagePtr& obj) const override{
       if(!obj->IsVersionMessage())
         return false;
       VersionMessagePtr other = std::static_pointer_cast<VersionMessage>(obj);
@@ -117,7 +117,7 @@ namespace token{
           && GetHead() == other->GetHead();
     }
 
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream ss;
       ss << "VersionMessage(";
       ss << "timestamp=" << FormatTimestampReadable(timestamp_) << ", ";
@@ -167,25 +167,12 @@ namespace token{
 
   class VerackMessage : public RpcMessage{
    private:
-    // The timestamp for the client connecting (UTC)
     Timestamp timestamp_; //TODO: make timestamp_ comparable
-
-    // The type of client that is connecting
     ClientType client_type_; //TODO: refactor this field
-
-    // The version of the client that is connecting
     Version version_;
-
-    // The randomly generated nonce
     Hash nonce_;
-
-    // The UUID of the node that is connecting
     UUID node_id_;
-
-    // The callback address for the client
     NodeAddress callback_;
-
-    // The header of <HEAD> for the client
     BlockHeader head_;
    public:
     VerackMessage(ClientType type,

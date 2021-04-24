@@ -468,6 +468,20 @@ namespace token{
     CopyFrom(const Json::String& data){
       return CopyFrom(data.GetString(), data.GetSize());
     }
+
+    template<class T, class C>
+    static inline int64_t
+    CalculateSizeOf(const std::set<T, C>& items){
+      int64_t size = 0;
+      size += sizeof(int64_t); // length
+      size += (items.size() * T::GetSize());
+      return size;
+    }
+
+    static inline int64_t
+    CalculateSizeOf(const std::string& str){
+      return (str.length() * sizeof(uint8_t));
+    }
   };
 }
 

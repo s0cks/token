@@ -100,7 +100,7 @@ namespace token{
     PoolKey key(val->GetType(), val->GetBufferSize(), hash);          \
     BufferPtr buffer = val->ToBuffer();                               \
     leveldb::Status status;   \
-    if(!(status = GetIndex()->Put(options, (const leveldb::Slice&)key, buffer->operator leveldb::Slice())).ok()){ \
+    if(!(status = GetIndex()->Put(options, KEY(key), buffer->operator leveldb::Slice())).ok()){ \
       LOG_POOL(ERROR) << "cannot index " << hash << ": " << status.ToString();          \
       return false;           \
     }                         \
@@ -115,7 +115,7 @@ namespace token{
     PoolKey key(Type::k##Name, 0, hash);             \
     std::string data;         \
     leveldb::Status status;   \
-    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &data)).ok()){ \
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), KEY(key), &data)).ok()){ \
       LOG(WARNING) << "cannot get " << hash << ": " << status.ToString(); \
       return Name##Ptr(nullptr);                     \
     }                         \
@@ -129,7 +129,7 @@ namespace token{
   bool ObjectPool::Has##Name(const Hash& hash) const{ \
     std::string data;                          \
     PoolKey key(Type::k##Name, 0, hash);        \
-    return GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &data).ok(); \
+    return GetIndex()->Get(leveldb::ReadOptions(), KEY(key), &data).ok(); \
   }
   FOR_EACH_POOL_TYPE(DEFINE_HAS_TYPE);
 #undef DEFINE_HAS_TYPE

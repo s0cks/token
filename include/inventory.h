@@ -9,8 +9,6 @@
 #include "blockchain.h"
 
 namespace token{
-  static const int64_t kBytesForInventoryItem = sizeof(uint16_t)
-                                              + Hash::kSize;
   class InventoryItem{
    public:
     static inline int
@@ -33,11 +31,17 @@ namespace token{
       return 0;
     }
 
+    static inline int
+    Compare(const InventoryItem& a, const InventoryItem& b){
+      int result;
+      if((result = CompareType(a, b)) != 0)
+        return result;
+      return CompareHash(a, b);
+    }
+
     struct Comparator{
       bool operator()(const InventoryItem& a, const InventoryItem& b) const{
-        if(a.GetType() == b.GetType())
-          return a.GetHash() < b.GetHash();
-        return a.GetType() < b.GetType();
+        return Compare(a, b) == 0;// ?
       }
     };
    private:
@@ -51,7 +55,8 @@ namespace token{
       type_(type),
       hash_(hash){}
     explicit InventoryItem(const BufferPtr& buffer):
-      InventoryItem(static_cast<Type>(buffer->GetUnsignedInt()), buffer->GetHash()){}
+      type_(static_cast<Type>(buffer->GetInt())),
+      hash_(buffer->GetHash()){}
     InventoryItem(const InventoryItem& item) = default;
     ~InventoryItem() = default;
 
@@ -72,14 +77,11 @@ namespace token{
     }
 
     int64_t GetBufferSize() const{
-      int64_t size = 0;
-      size += sizeof(uint32_t);
-      size += Hash::GetSize();
-      return size;
+      return GetSize();
     }
 
     bool Write(const BufferPtr& buffer) const{
-      return buffer->PutUnsignedInt(static_cast<uint32_t>(type_))
+      return buffer->PutInt(static_cast<int32_t>(type_))
           && buffer->PutHash(hash_);
     }
 
@@ -125,7 +127,7 @@ namespace token{
     static inline int64_t
     GetSize(){
       int64_t size = 0;
-      size += sizeof(uint32_t);
+      size += sizeof(int32_t);
       size += Hash::GetSize();
       return size;
     }

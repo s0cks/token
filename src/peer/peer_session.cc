@@ -10,19 +10,13 @@
 // this is for outbound packets
 namespace token{
 #define PEER_LOG(LevelName, Session) \
-  LOG(LevelName) << "[peer-" << Session->GetID().ToStringAbbreviated() << "] "
-
-#define CHECK_FOR_ACTIVE_PROPOSAL(Miner, Session, LevelName) \
-  if(!(Miner)->HasActiveProposal()){     \
-    SESSION_LOG(LevelName, Session) << "there is no active proposal."; \
-    return;                                       \
-  }
+  LOG(LevelName) << "[peer-" << (Session)->GetID().ToStringAbbreviated() << "] "
 
   bool PeerSession::Connect(){
     //TODO: StartHeartbeatTimer();
     NodeAddress paddr = GetAddress();
 
-    struct sockaddr_in addr;
+    struct sockaddr_in addr{};
     uv_ip4_addr(paddr.GetAddress().c_str(), paddr.GetPort(), &addr);
     uv_connect_t conn;
     conn.data = this;
@@ -45,7 +39,7 @@ namespace token{
   }
 
   void PeerSession::OnConnect(uv_connect_t* conn, int status){
-    PeerSession* session = (PeerSession*)conn->data;
+    auto session = (PeerSession*)conn->data;
     if(status != 0){
       PEER_LOG(ERROR, session) << "connect failure: " << uv_strerror(status);
       session->CloseConnection();
@@ -67,34 +61,32 @@ namespace token{
   }
 
   void PeerSession::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
-    PeerSession* session = (PeerSession*)stream->data;
+    auto session = (PeerSession*)stream->data;
     if(nread == UV_EOF){
-      LOG(ERROR) << "client disconnected!";
+      DLOG_SESSION(ERROR, session) << "end of stream";
       return;
     } else if(nread < 0){
-      LOG(ERROR) << "[" << nread << "] client read error: " << std::string(uv_strerror(nread));
+      DLOG_SESSION(ERROR, session) << "[" << nread << "] client read error: " << uv_strerror(nread);
       return;
     } else if(nread == 0){
-      LOG(WARNING) << "zero message size received";
+      DLOG_SESSION(WARNING, session) << "zero message size received";
       return;
     } else if(nread > 65536){
-      LOG(ERROR) << "too large of a buffer: " << nread;
+      DLOG_SESSION(ERROR, session) << "received too large of a buffer (" << nread <<  " bytes)";
       return;
     }
 
     BufferPtr buffer = Buffer::From(buff->base, nread);
     do{
       RpcMessagePtr message = RpcMessage::From(session, buffer);
-#ifdef TOKEN_DEBUG
-      PEER_LOG(INFO, session) << "received: " << message->ToString() << " (" << message->GetBufferSize() << "b)";
-#endif//TOKEN_DEBUG
+      DLOG_SESSION(INFO, session) << "received " << message->ToString() << " (" << message->GetBufferSize() << "b)";
       session->OnMessageRead(message);
     } while(buffer->GetReadBytes() < buffer->GetBufferSize());
     free(buff->base);
   }
 
   void PeerSession::OnDisconnect(uv_async_t* handle){
-    PeerSession* session = (PeerSession*)handle->data;
+    auto session = (PeerSession*)handle->data;
     session->CloseConnection();
   }
 
@@ -108,20 +100,18 @@ namespace token{
 
   void PeerSession::OnDiscovery(uv_async_t* handle){
     BlockMiner* miner = BlockMiner::GetInstance();
-    PeerSession* session = (PeerSession*) handle->data;
-    CHECK_FOR_ACTIVE_PROPOSAL(miner, session, WARNING);
+    auto session = (PeerSession*) handle->data;
+    //TODO: check for active proposal
 
     ProposalPtr proposal = miner->GetActiveProposal();
     BlockHeader& blk = proposal->raw().GetValue();
-
-    LOG(INFO) << "broadcasting newly discovered block hash: " << blk;
     session->Send(InventoryListMessage::Of(blk));
   }
 
   void PeerSession::OnPrepare(uv_async_t* handle){
     BlockMiner* miner = BlockMiner::GetInstance();
-    PeerSession* session = (PeerSession*) handle->data;
-    CHECK_FOR_ACTIVE_PROPOSAL(miner, session, WARNING);
+    auto session = (PeerSession*) handle->data;
+    //TODO: check for active proposal
 
     ProposalPtr proposal = miner->GetActiveProposal();
     RpcMessageList responses;
@@ -131,8 +121,8 @@ namespace token{
 
   void PeerSession::OnPromise(uv_async_t* handle){
     BlockMiner* miner = BlockMiner::GetInstance();
-    PeerSession* session = (PeerSession*) handle->data;
-    CHECK_FOR_ACTIVE_PROPOSAL(miner, session, WARNING);
+    auto session = (PeerSession*) handle->data;
+    //TODO: check for active proposal
     ProposalPtr proposal = miner->GetActiveProposal();
 
     RpcMessageList responses;
@@ -142,9 +132,8 @@ namespace token{
 
   void PeerSession::OnCommit(uv_async_t* handle){
     BlockMiner* miner = BlockMiner::GetInstance();
-    PeerSession* session = (PeerSession*) handle->data;
-    CHECK_FOR_ACTIVE_PROPOSAL(miner, session, WARNING);
-
+    auto session = (PeerSession*) handle->data;
+    //TODO: check for active proposal
     ProposalPtr proposal = miner->GetActiveProposal();
 
     RpcMessageList responses;
@@ -154,8 +143,8 @@ namespace token{
 
   void PeerSession::OnAccepted(uv_async_t* handle){
     BlockMiner* miner = BlockMiner::GetInstance();
-    PeerSession* session = (PeerSession*) handle->data;
-    CHECK_FOR_ACTIVE_PROPOSAL(miner, session, WARNING);
+    auto session = (PeerSession*) handle->data;
+    //TODO: check for active proposal
 
     ProposalPtr proposal = miner->GetActiveProposal();
     RpcMessageList responses;
@@ -165,8 +154,8 @@ namespace token{
 
   void PeerSession::OnRejected(uv_async_t* handle){
     BlockMiner* miner = BlockMiner::GetInstance();
-    PeerSession* session = (PeerSession*) handle->data;
-    CHECK_FOR_ACTIVE_PROPOSAL(miner, session, WARNING);
+    auto session = (PeerSession*) handle->data;
+    //TODO: check for active proposal
 
     ProposalPtr proposal = miner->GetActiveProposal();
     RpcMessageList responses;
@@ -189,38 +178,27 @@ namespace token{
   // - state transition
   // - set remote <HEAD>
   void PeerSession::OnVerackMessage(const VerackMessagePtr& msg){
-#ifdef TOKEN_DEBUG
-    SESSION_LOG(INFO, this) << "remote timestamp: " << FormatTimestampReadable(msg->GetTimestamp());
-    SESSION_LOG(INFO, this) << "remote <HEAD>: " << msg->GetHead();
-#endif//TOKEN_DEBUG
+    DLOG_SESSION(INFO, this) << "current time: " << FormatTimestampReadable(msg->GetTimestamp());
+    DLOG_SESSION(INFO, this) << "HEAD: " << msg->GetHead();
 
     BlockChainPtr chain = BlockChain::GetInstance();
     if(IsConnecting()){
       Peer info(msg->GetID(), msg->GetCallbackAddress());
-      SESSION_LOG(INFO, this) << "connected to peer: " << info;
+      DLOG_SESSION(INFO, this) << "connected to peer: " << info;
+
       SetInfo(info);
       SetState(Session::kConnectedState);
 
       BlockHeader local_head = chain->GetHead()->GetHeader();
       BlockHeader remote_head = msg->GetHead();
       if(local_head < remote_head){
-#ifdef TOKEN_DEBUG
-        SESSION_LOG(INFO, this) << "starting new SynchronizeJob to resolve remote/<HEAD> := " << remote_head;
-#endif//TOKEN_DEBUG
-
-        SynchronizeJob* job = new SynchronizeJob(this, chain, remote_head);
-        if(!JobScheduler::Schedule(job)){
-          SESSION_LOG(WARNING, this) << "couldn't schedule new SynchronizeJob";
-          return;
-        }
-
-        //TODO: Send(GetBlocksMessage::NewInstance());
+        DLOG_SESSION(INFO, this) << "starting new synchronization job to resolve remote/HEAD: " << remote_head;
+        //auto job = new SynchronizeJob(this, chain, remote_head);
+        //TODO: schedule new job
         return;
       }
 
-#ifdef TOKEN_DEBUG
-      SESSION_LOG(INFO, this) << info << "/<HEAD> == <HEAD>, skipping synchronization.";
-#endif//TOKEN_DEBUG
+      DLOG_SESSION(INFO, this) << "skipping synchronization, " << info << "/HEAD == HEAD";
     }
   }
 
@@ -229,58 +207,70 @@ namespace token{
   }
 
   void PeerSession::OnPromiseMessage(const PromiseMessagePtr& msg){
-    BlockMiner* miner = BlockMiner::GetInstance();
+    BlockMiner* miner = BlockMiner::GetInstance();//TODO: fix usage?
+    if(!miner->HasActiveProposal()){
+      DLOG_SESSION(ERROR, this) << "there isn't an active proposal";
+      return;
+    }
 
-#ifdef TOKEN_DEBUG
-    PEER_LOG(INFO, this) << "checking for active proposal....";
-#endif//TOKEN_DEBUG
-    CHECK_FOR_ACTIVE_PROPOSAL(miner, this, WARNING);
-
+    //TODO:
+    // - sanity check proposals for equivalency
+    // - sanity check proposal state
     ProposalPtr proposal = miner->GetActiveProposal();
-    proposal->OnPromise();
+    proposal->CastVote(GetID(), msg);
   }
 
   void PeerSession::OnCommitMessage(const CommitMessagePtr& msg){
-    NOT_IMPLEMENTED(WARNING);
+    NOT_IMPLEMENTED(ERROR);// should never happen
   }
 
-  void PeerSession::OnRejectedMessage(const RejectedMessagePtr& msg){
-    BlockMiner* miner = BlockMiner::GetInstance();
-    CHECK_FOR_ACTIVE_PROPOSAL(miner, this, WARNING);
-
-    ProposalPtr proposal = miner->GetActiveProposal();
-    switch(proposal->GetPhase()){
-      case ProposalPhase::kPreparePhase:
-        proposal->GetPhase1Quorum().RejectProposal(GetUUID());
-        break;
-      case ProposalPhase::kCommitPhase:
-        proposal->GetPhase2Quorum().RejectProposal(GetUUID());
-        break;
-      default:
-        SESSION_LOG(WARNING, this) << "invalid proposal state: " << proposal->GetPhase();
+  void PeerSession::OnAcceptsMessage(const AcceptsMessagePtr& msg){
+    BlockMiner* miner = BlockMiner::GetInstance();//TODO: fix usage?
+    if(!miner->HasActiveProposal()){
+      DLOG_SESSION(ERROR, this) << "there isn't an active proposal";
+      return;
     }
+
+    //TODO:
+    // - sanity check proposals for equivalency
+    // - sanity check proposal state
+    ProposalPtr proposal = miner->GetActiveProposal();
+    proposal->CastVote(GetID(), msg);
   }
 
   void PeerSession::OnAcceptedMessage(const AcceptedMessagePtr& msg){
-    BlockMiner* miner = BlockMiner::GetInstance();
-    CHECK_FOR_ACTIVE_PROPOSAL(miner, this, WARNING);
+    NOT_IMPLEMENTED(ERROR);// should never happen
+  }
 
+  void PeerSession::OnRejectsMessage(const RejectsMessagePtr& msg){
+    BlockMiner* miner = BlockMiner::GetInstance();
+    if(!miner->HasActiveProposal()){
+      DLOG_SESSION(ERROR, this) << "there isn't an active proposal";
+      return;
+    }
+
+    //TODO:
+    // - sanity check proposals for equivalency
+    // - sanity check proposal state
     ProposalPtr proposal = miner->GetActiveProposal();
-    Phase2Quorum& quorum = proposal->GetPhase2Quorum();
-    quorum.AcceptProposal(GetUUID());
+    proposal->CastVote(GetID(), msg);
+  }
+
+  void PeerSession::OnRejectedMessage(const RejectedMessagePtr& msg){
+    NOT_IMPLEMENTED(ERROR);// should never happen
   }
 
   void PeerSession::OnGetDataMessage(const GetDataMessagePtr& msg){
     BlockChainPtr chain = BlockChain::GetInstance();
 
 #ifdef TOKEN_DEBUG
-    SESSION_LOG(INFO, this) << "getting " << msg->GetNumberOfItems() << " items....";
+    LOG_SESSION(INFO, this) << "getting " << msg->GetNumberOfItems() << " items....";
 #endif//TOKEN_DEBUG
 
     RpcMessageList responses;
     for(auto& item : msg->items()){
 #ifdef TOKEN_DEBUG
-      SESSION_LOG(INFO, this) << "resolving " << item << "....";
+      LOG_SESSION(INFO, this) << "resolving " << item << "....";
 #endif//TOKEN_DEBUG
 
       ObjectPoolPtr pool = ObjectPool::GetInstance();
@@ -289,29 +279,29 @@ namespace token{
         BlockPtr block;
         if(chain->HasBlock(hash)){
 #ifdef TOKEN_DEBUG
-          SESSION_LOG(INFO, this) << item << " was found in the block chain.";
+          LOG_SESSION(INFO, this) << item << " was found in the block chain.";
 #endif//TOKEN_DEBUG
 
           block = chain->GetBlock(hash);
         } else if(pool->HasBlock(hash)){
 #ifdef TOKEN_DEBUG
-          SESSION_LOG(INFO, this) << item << " was found in the pool.";
+          LOG_SESSION(INFO, this) << item << " was found in the pool.";
 #endif//TOKEN_DEBUG
 
           block = pool->GetBlock(hash);
         } else{
-          SESSION_LOG(WARNING, this) << "cannot find " << item << "!";
+          LOG_SESSION(WARNING, this) << "cannot find " << item << "!";
 
-          responses << NotFoundMessage::NewInstance("cannot find item");
+          responses << NotFoundMessage::NewInstance(item, "cannot find item");
           break;
         }
 
         responses << BlockMessage::NewInstance(block);
       } else if(item.IsTransaction()){
         if(!pool->HasTransaction(hash)){
-          SESSION_LOG(WARNING, this) << "cannot find " << item << "!";
+          LOG_SESSION(WARNING, this) << "cannot find " << item << "!";
 
-          responses << NotFoundMessage::NewInstance();
+          responses << NotFoundMessage::NewInstance(item, "cannot find item");
           break;
         }
 
@@ -350,14 +340,10 @@ namespace token{
     }
 
 #ifdef TOKEN_DEBUG
-    SESSION_LOG(INFO, this) << "requesting " << needed.size() << "/" << items.size() << " items from peer....";
+    LOG_SESSION(INFO, this) << "requesting " << needed.size() << "/" << items.size() << " items from peer....";
 #endif//TOKEN_DEBUG
     Send(GetDataMessage::NewInstance(needed));
   }
 
   void PeerSession::OnGetBlocksMessage(const GetBlocksMessagePtr& msg){}
-
-  void PeerSession::OnNotSupportedMessage(const std::shared_ptr<NotSupportedMessage>& msg){
-    NOT_IMPLEMENTED(WARNING);
-  }
 }

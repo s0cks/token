@@ -1,7 +1,7 @@
 #ifndef TOKEN_RPC_MESSAGE_PAXOS_H
 #define TOKEN_RPC_MESSAGE_PAXOS_H
 
-#include "consensus/proposal.h"
+#include "proposal.h"
 
 namespace token{
 #define DEFINE_PAXOS_MESSAGE_CONSTRUCTORS(Name) \
@@ -9,8 +9,8 @@ namespace token{
   static inline Name##MessagePtr NewInstance(const RawProposal& proposal){ return std::make_shared<Name##Message>(proposal); } \
   static inline Name##MessagePtr NewInstance(const ProposalPtr& proposal){ return NewInstance(proposal->raw()); }
 
-#define DEFINE_PAXOS_MESSAGE(Name) \
-  DEFINE_RPC_MESSAGE(Name)         \
+#define DEFINE_PAXOS_MESSAGE_TYPE(Name) \
+  DEFINE_RPC_MESSAGE_TYPE(Name)         \
   DEFINE_PAXOS_MESSAGE_CONSTRUCTORS(Name)
 
   class Proposal;
@@ -28,22 +28,22 @@ namespace token{
    protected:
     RawProposal raw_;
 
-    PaxosMessage(const RawProposal& proposal):
+    explicit PaxosMessage(const RawProposal& proposal):
       RpcMessage(),
       raw_(proposal){}
-    PaxosMessage(const BufferPtr& buff):
+    explicit PaxosMessage(const BufferPtr& buff):
       RpcMessage(),
-      raw_(buff->GetTimestamp(), buff->GetUUID(), buff->GetUUID(), BlockHeader(buff)){}
+      raw_(buff){}
+   public:
+    ~PaxosMessage() override = default;
 
-    int64_t GetMessageSize() const{
+    int64_t GetMessageSize() const override{
       return raw_.GetBufferSize();
     }
 
-    bool WriteMessage(const BufferPtr& buff) const{
-      return raw_.Encode(buff);
+    bool WriteMessage(const BufferPtr& buff) const override{
+      return raw_.Write(buff);
     }
-   public:
-    virtual ~PaxosMessage() = default;
 
     RawProposal& GetProposal(){
       return raw_;
@@ -56,123 +56,171 @@ namespace token{
 
   class PrepareMessage : public PaxosMessage{
    public:
-    PrepareMessage(const RawProposal& proposal):
+    explicit PrepareMessage(const RawProposal& proposal):
       PaxosMessage(proposal){}
-    PrepareMessage(const BufferPtr& buff):
+    explicit PrepareMessage(const BufferPtr& buff):
       PaxosMessage(buff){}
-    ~PrepareMessage(){}
+    ~PrepareMessage() override = default;
 
-    bool Equals(const RpcMessagePtr& obj) const{
+    DEFINE_PAXOS_MESSAGE_TYPE(Prepare);
+
+    bool Equals(const RpcMessagePtr& obj) const override{
       if(!obj->IsPrepareMessage())
         return false;
-      return true;//TODO: fix
+      return GetProposal() == std::static_pointer_cast<PrepareMessage>(obj)->GetProposal();
     }
 
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream ss;
       ss << "PrepareMessage(" << GetProposal() << ")";
       return ss.str();
     }
-
-    DEFINE_PAXOS_MESSAGE(Prepare);
   };
 
   class PromiseMessage : public PaxosMessage{
    public:
-    PromiseMessage(const RawProposal& proposal):
+    explicit PromiseMessage(const RawProposal& proposal):
       PaxosMessage(proposal){}
-    PromiseMessage(const BufferPtr& buff):
+    explicit PromiseMessage(const BufferPtr& buff):
       PaxosMessage(buff){}
-    ~PromiseMessage(){}
+    ~PromiseMessage() override = default;
 
-    bool Equals(const RpcMessagePtr& obj) const{
-      if(!obj->IsPromiseMessage()){
+    DEFINE_PAXOS_MESSAGE_TYPE(Promise);
+
+    bool Equals(const RpcMessagePtr& obj) const override{
+      if(!obj->IsPromiseMessage())
         return false;
-      }
-      return true; //TODO: fix
+      return GetProposal() == std::static_pointer_cast<PromiseMessage>(obj)->GetProposal();
     }
 
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream ss;
       ss << "PromiseMessage(" << GetProposal() << ")";
       return ss.str();
     }
-
-    DEFINE_PAXOS_MESSAGE(Promise);
   };
 
   class CommitMessage : public PaxosMessage{
    public:
-    CommitMessage(const RawProposal& proposal):
+    explicit CommitMessage(const RawProposal& proposal):
       PaxosMessage(proposal){}
-    CommitMessage(const BufferPtr& buff):
+    explicit CommitMessage(const BufferPtr& buff):
       PaxosMessage(buff){}
-    ~CommitMessage(){}
+    ~CommitMessage() override = default;
 
-    bool Equals(const RpcMessagePtr& obj) const{
+    DEFINE_PAXOS_MESSAGE_TYPE(Commit);
+
+    bool Equals(const RpcMessagePtr& obj) const override{
       if(!obj->IsCommitMessage())
         return false;
-      return true; //TODO: fix
+      return GetProposal() == std::static_pointer_cast<CommitMessage>(obj)->GetProposal();
     }
 
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream ss;
       ss << "CommitMessage(" << GetProposal() << ")";
       return ss.str();
     }
+  };
 
-    DEFINE_PAXOS_MESSAGE(Commit);
+  class AcceptsMessage : public PaxosMessage{
+   public:
+    explicit AcceptsMessage(const RawProposal& proposal):
+      PaxosMessage(proposal){}
+    explicit AcceptsMessage(const BufferPtr& buff):
+      PaxosMessage(buff){}
+    ~AcceptsMessage() override = default;
+
+    DEFINE_PAXOS_MESSAGE_TYPE(Accepts);
+
+    bool Equals(const RpcMessagePtr& obj) const override{
+      if(!obj->IsAcceptsMessage())
+        return false;
+      return GetProposal() == std::static_pointer_cast<AcceptsMessage>(obj)->GetProposal();
+    }
+
+    std::string ToString() const override{
+      std::stringstream ss;
+      ss << "AcceptsMessage(";
+      ss << "proposal=" << raw_;
+      ss << ")";
+      return ss.str();
+    }
   };
 
   class AcceptedMessage : public PaxosMessage{
    public:
-    AcceptedMessage(const RawProposal& proposal):
+    explicit AcceptedMessage(const RawProposal& proposal):
       PaxosMessage(proposal){}
-    AcceptedMessage(const BufferPtr& buff):
+    explicit AcceptedMessage(const BufferPtr& buff):
       PaxosMessage(buff){}
-    ~AcceptedMessage(){}
+    ~AcceptedMessage() override = default;
 
-    bool Equals(const RpcMessagePtr& obj) const{
-      if(!obj->IsAcceptedMessage()){
+    DEFINE_PAXOS_MESSAGE_TYPE(Accepted);
+
+    bool Equals(const RpcMessagePtr& obj) const override{
+      if(!obj->IsAcceptedMessage())
         return false;
-      }
-      return true; //TODO: fix
+      return GetProposal() == std::static_pointer_cast<AcceptedMessage>(obj)->GetProposal();
     }
 
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream ss;
       ss << "AcceptedMessage(" << GetProposal() << ")";
       return ss.str();
     }
+  };
 
-    DEFINE_PAXOS_MESSAGE(Accepted);
+  class RejectsMessage : public PaxosMessage{
+   public:
+    explicit RejectsMessage(const RawProposal& proposal):
+      PaxosMessage(proposal){}
+    explicit RejectsMessage(const BufferPtr& buff):
+      PaxosMessage(buff){}
+    ~RejectsMessage() override = default;
+
+    DEFINE_PAXOS_MESSAGE_TYPE(Rejects);
+
+    bool Equals(const RpcMessagePtr& obj) const override{
+      if(!obj->IsRejectsMessage())
+        return false;
+      return GetProposal() == std::static_pointer_cast<RejectsMessage>(obj)->GetProposal();
+    }
+
+    std::string ToString() const override{
+      std::stringstream ss;
+      ss << "RejectsMessage(";
+      ss << "proposal=" << raw_;
+      ss << ")";
+      return ss.str();
+    }
   };
 
   class RejectedMessage : public PaxosMessage{
    public:
-    RejectedMessage(const RawProposal& proposal):
+    explicit RejectedMessage(const RawProposal& proposal):
       PaxosMessage(proposal){}
-    RejectedMessage(const BufferPtr& buff):
+    explicit RejectedMessage(const BufferPtr& buff):
       PaxosMessage(buff){}
-    ~RejectedMessage(){}
+    ~RejectedMessage() override = default;
 
-    bool Equals(const RpcMessagePtr& obj) const{
+    DEFINE_PAXOS_MESSAGE_TYPE(Rejected);
+
+    bool Equals(const RpcMessagePtr& obj) const override{
       if(!obj->IsRejectedMessage())
         return false;
-      return true; //TODO: fix
+      return GetProposal() == std::static_pointer_cast<RejectedMessage>(obj)->GetProposal();
     }
 
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream ss;
       ss << "RejectedMessage(" << GetProposal() << ")";
       return ss.str();
     }
-
-    DEFINE_PAXOS_MESSAGE(Rejected);
   };
 }
 
-#undef DEFINE_PAXOS_MESSAGE
+#undef DEFINE_PAXOS_MESSAGE_TYPE
 #undef DEFINE_PAXOS_MESSAGE_CONSTRUCTORS
 
 #endif//TOKEN_RPC_MESSAGE_PAXOS_H

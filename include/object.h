@@ -25,6 +25,8 @@ namespace token{
   V(Prepare)                           \
   V(Promise)                           \
   V(Commit)                            \
+  V(Accepts)                           \
+  V(Rejects)                           \
   V(Accepted)                          \
   V(Rejected)
 
@@ -37,7 +39,6 @@ namespace token{
   V(Transaction)                 \
   V(InventoryList)               \
   V(NotFound)                    \
-  V(NotSupported)                \
   FOR_EACH_PAXOS_MESSAGE_TYPE(V)
 
 #define FOR_EACH_SERIALIZABLE_TYPE(V) \
@@ -68,6 +69,12 @@ namespace token{
   FOR_EACH_POOL_TYPE(FORWARD_DECLARE_TYPE)
 #undef FORWARD_DECLARE_TYPE
 
+#define FORWARD_DECLARE_MESSAGE_TYPE(Name) \
+  class Name##Message;                     \
+  typedef std::shared_ptr<Name##Message> Name##MessagePtr;
+  FOR_EACH_MESSAGE_TYPE(FORWARD_DECLARE_MESSAGE_TYPE)
+#undef FORWARD_DECLARE_MESSAGE_TYPE
+
   class IndexedTransaction;
   typedef std::shared_ptr<IndexedTransaction> IndexedTransactionPtr;
 
@@ -81,6 +88,7 @@ namespace token{
 #undef DEFINE_TYPE
     kBlockHeader,
     kIndexedTransaction,
+    kProposal,
 
 #define DEFINE_MESSAGE_TYPE(Name) k##Name##Message,
     FOR_EACH_MESSAGE_TYPE(DEFINE_MESSAGE_TYPE)

@@ -6,7 +6,7 @@
 #include <condition_variable>
 
 #include "vthread.h"
-#include "consensus/proposal.h"
+#include "proposal.h"
 #include "peer/peer_session_manager.h"
 
 namespace token{
@@ -50,6 +50,8 @@ namespace token{
    protected:
     uv_loop_t* loop_;
     uv_timer_t timer_;
+    uv_async_t on_accepted_;
+    uv_async_t on_rejected_;
     RelaxedAtomic<State> state_;
 
     std::mutex proposal_mtx_;
@@ -68,18 +70,23 @@ namespace token{
     }
 
     static void OnMine(uv_timer_t* handle);
-
-    static void OnPromise(uv_async_t* handle){
-      DLOG_MINER(INFO) << "OnPromise called.";
-    }
+    static void OnAccepted(uv_async_t* handle);
+    static void OnRejected(uv_async_t* handle);
    public:
     explicit BlockMiner(uv_loop_t* loop=uv_loop_new()):
       loop_(loop),
       timer_(),
+      on_accepted_(),
+      on_rejected_(),
       state_(State::kStoppedState),
       proposal_mtx_(),
       proposal_(){
       timer_.data = this;
+      on_accepted_.data = this;
+      on_rejected_.data = this;
+
+      CHECK_UVRESULT(uv_async_init(loop_, &on_accepted_, &OnAccepted), DLOG_MINER(ERROR), "cannot register on_accepted");
+      CHECK_UVRESULT(uv_async_init(loop_, &on_rejected_, &OnRejected), DLOG_MINER(ERROR), "cannot register on_rejected");
     }
     ~BlockMiner() = default;
 
@@ -120,7 +127,7 @@ namespace token{
       std::lock_guard<std::mutex> guard(proposal_mtx_);
       if(proposal_)
         return false;
-      proposal_ = Proposal::NewInstance(loop_, proposal, GetRequiredVotes());
+      proposal_ = Proposal::NewInstance(loop_, proposal);
       return true;
     }
 
@@ -142,8 +149,11 @@ namespace token{
       return StartMiningTimer();
     }
 
+    bool SendAccepted();//TODO: rename
+    bool SendRejected();//TODO: rename
+
 #define DEFINE_CHECK(Name) \
-    inline bool Is##Name() const{ return ((State)state_)== State::k##Name##State; }
+    inline bool Is##Name() const{ return (State)state_ == State::k##Name##State; }
     FOR_EACH_MINER_STATE(DEFINE_CHECK)
 #undef DEFINE_CHECK
 

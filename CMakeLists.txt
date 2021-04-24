@@ -35,8 +35,11 @@ find_package(httpparser REQUIRED)
 find_package(leveldb REQUIRED)
 find_package(zxing REQUIRED)
 find_package(uuid REQUIRED)
-find_package(gmock REQUIRED)
 find_package(gtest REQUIRED)
+find_package(gmock REQUIRED)
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+  find_package(unwind REQUIRED)
+endif()
 
 # Include Directories
 include_directories(include)
@@ -61,6 +64,9 @@ set(TOKEN_LIBRARIES
    ${ZXING_LIBRARIES} # zxing
    ${UUID_LIBRARIES} # libuuid
 )
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+  list(APPEND TOKEN_LIBRARIES ${UNWIND_LIBRARIES})
+endif()
 
 # token Ledger Library
 add_library("token-ledger" STATIC ${TOKEN_HEADERS} ${TOKEN_SOURCES})
@@ -77,13 +83,11 @@ target_compile_options(token-node PRIVATE -Werror -Wall)
 if(CMAKE_BUILD_TYPE MATCHES Debug)
   # token Unit Tests
   add_executable("token-tests" tests.cc ${TOKEN_TEST_SOURCES})
-  target_link_libraries("token-tests" "token-ledger" ${GTEST_LIBRARIES} ${GMOCK_LIBRARIES} ${TOKEN_LIBRARIES})
-  add_test("token-tests" "token-tests")
+  target_link_libraries("token-tests" "token-ledger" ${TOKEN_LIBRARIES} ${GTEST_LIBRARIES} ${GMOCK_LIBRARIES})
 endif()
 
 # should we remove this?
 # Install token Node
-
 install(
   DIRECTORY "include/" # source directory
   DESTINATION "include/token" # target directory

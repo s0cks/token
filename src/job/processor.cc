@@ -11,7 +11,7 @@ namespace token{
 
   bool ProcessBlockJob::Visit(const TransactionPtr& tx){
     JobQueue* queue = JobScheduler::GetThreadQueue();
-    ProcessTransactionJob* job = new ProcessTransactionJob(this, tx);
+    auto job = new ProcessTransactionJob(this, tx);
     queue->Push(job);
     //TODO: RemoveObject(batch_, tx->GetHash(), Type::kTransaction);
     return true;
@@ -19,10 +19,10 @@ namespace token{
 
   JobResult ProcessTransactionJob::DoWork(){
     JobQueue* queue = JobScheduler::GetThreadQueue();
-    ProcessTransactionInputsJob* process_inputs = new ProcessTransactionInputsJob(this);
+    auto process_inputs = new ProcessTransactionInputsJob(this);
     queue->Push(process_inputs);
 
-    ProcessTransactionOutputsJob* process_outputs = new ProcessTransactionOutputsJob(this);
+    auto process_outputs = new ProcessTransactionOutputsJob(this);
     queue->Push(process_outputs);
     return Success("done.");
   }
@@ -40,7 +40,7 @@ namespace token{
                   : end;
 
       InputList chunk(start, next);
-      ProcessInputListJob* job = new ProcessInputListJob(this, chunk);
+      auto job = new ProcessInputListJob(this, chunk);
       if(!queue->Push(job)){
         return Failed("Cannot schedule ProcessInputListJob()");
       }
@@ -64,7 +64,7 @@ namespace token{
                   : end;
 
       OutputList chunk(start, next);
-      ProcessOutputListJob* job = new ProcessOutputListJob(this, nworker++, chunk);
+      auto job = new ProcessOutputListJob(this, nworker++, chunk);
       if(!queue->Push(job)){
         return Failed("Cannot schedule ProcessOutputListJob()");
       }

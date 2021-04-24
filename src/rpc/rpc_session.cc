@@ -45,7 +45,7 @@ namespace token{
       SetState(Session::kConnectedState);
       if(msg->IsNode()){
         NodeAddress paddr = msg->GetCallbackAddress();
-        SESSION_LOG(INFO, this) << "peer " << id << " connected from: " << paddr;
+        DLOG_SESSION(INFO, this) << "peer " << id << " connected from " << paddr;
         PeerSessionManager::ConnectTo(paddr);
       }
     }
@@ -58,9 +58,7 @@ namespace token{
     RpcMessageList responses;
     for(auto& item : msg->items()){
       Hash hash = item.GetHash();
-#ifdef TOKEN_DEBUG
-      SESSION_LOG(INFO, this) << "searching for " << item << "....";
-#endif//TOKEN_DEBUG
+      DLOG_SESSION(INFO, this) << "searching for " << item << "....";
       if(ItemExists(item)){
         if(item.IsBlock()){
           BlockPtr block;
@@ -69,18 +67,16 @@ namespace token{
           } else if(pool->HasBlock(hash)){
             block = pool->GetBlock(hash);
           } else{
-            SESSION_LOG(WARNING, this) << "couldn't find: " << item;
-
-            responses << NotFoundMessage::NewInstance("cannot find");
+            DLOG_SESSION(WARNING, this) << "couldn't find: " << item;
+            responses << NotFoundMessage::NewInstance(item);
             break;
           }
 
           responses << BlockMessage::NewInstance(block);
         } else if(item.IsTransaction()){
           if(!pool->HasTransaction(hash)){
-            SESSION_LOG(WARNING, this) << "couldn't find: " << item;
-
-            responses << NotFoundMessage::NewInstance("cannot find");
+            DLOG_SESSION(WARNING, this) << "couldn't find: " << item;
+            responses << NotFoundMessage::NewInstance(item);
             break;
           }
 
@@ -88,34 +84,27 @@ namespace token{
           responses << TransactionMessage::NewInstance(tx);
         }
       } else{
-        responses << NotFoundMessage::NewInstance("cannot find");
+        responses << NotFoundMessage::NewInstance(item);
       }
     }
 
     return Send(responses);
   }
 
-#ifdef TOKEN_DEBUG
-  #define REJECT_PROPOSAL(Proposal, LevelName, Message)({ \
-    SESSION_LOG(LevelName, this) << "rejecting proposal " << (Proposal) << ": " << (Message); \
-    responses << RejectedMessage::NewInstance((Proposal));\
-    return Send(responses);                               \
-  })
-#else
-  #define REJECT_PROPOSAL(Proposal, LevelName, Message)({ \
-    responses << RejectedMessage::NewInstance((Proposal));\
-    return Send(responses);                               \
-  })
-#endif//TOKEN_DEBUG
+#define REJECT_PROPOSAL(Proposal, LevelName, Message)({ \
+  DLOG_SESSION(LevelName, this) << "rejecting proposal " << (Proposal) << ": " << (Message); \
+  responses << RejectedMessage::NewInstance((Proposal));\
+  return Send(responses);                               \
+})
 
 #define ACCEPT_PROPOSAL(Proposal, LevelName)({ \
-  SESSION_LOG(LevelName, this) << "accepting proposal: " << (Proposal); \
+  DLOG_SESSION(LevelName, this) << "accepting proposal: " << (Proposal); \
   responses << AcceptedMessage::NewInstance(proposal);                  \
   return Send(responses);                      \
 })
 
 #define PROMISE_PROPOSAL(Proposal, LevelName)({ \
-  SESSION_LOG(LevelName, this) << "promising proposal: " << (Proposal); \
+  DLOG_SESSION(LevelName, this) << "promising proposal: " << (Proposal); \
   responses << PromiseMessage::NewInstance((Proposal));                   \
   return Send(responses);                       \
 })
@@ -139,14 +128,9 @@ namespace token{
     ObjectPoolPtr pool = ObjectPool::GetInstance();//TODO: refactor
     Hash hash = msg->GetProposal().GetValue().GetHash();
     if(!pool->HasBlock(hash)){
-#ifdef TOKEN_DEBUG
-      SESSION_LOG(INFO, this) << "cannot find proposed block in pool, requesting block: " << hash;
-#endif//TOKEN_DEBUG
+      DLOG_SESSION(INFO, this) << "couldn't find proposed block in pool, requesting: " << hash;
       responses << GetDataMessage::ForBlock(hash);
     }
-
-    if(!miner->GetActiveProposal()->OnPrepare())
-      REJECT_PROPOSAL(msg->GetProposal(), ERROR, "cannot invoke on-prepare");
 
     PROMISE_PROPOSAL(msg->GetProposal(), INFO);
   }
@@ -157,26 +141,50 @@ namespace token{
 
   void ServerSession::OnCommitMessage(const CommitMessagePtr& msg){
     BlockMiner* miner = BlockMiner::GetInstance();
-    RpcMessageList responses;
+    if(!miner->HasActiveProposal()){
+      DLOG_SESSION(ERROR, this) << "there is no active proposal";
+      return;
+    }
 
-    // check that the miner has a proposal active.
-    if(!miner->HasActiveProposal())
-      REJECT_PROPOSAL(msg->GetProposal(), ERROR, "no active proposal.");
-    // check that the requested proposal matches the active proposal
-    if(!miner->IsActiveProposal(msg->GetProposal()))
-      REJECT_PROPOSAL(msg->GetProposal(), ERROR, "not the current proposal.");
-
+    //TODO:
+    // - sanity check the proposals for equivalency
+    // - sanity check the proposal state
     ProposalPtr proposal = miner->GetActiveProposal();
-    if(!proposal->OnCommit())
-      REJECT_PROPOSAL(msg->GetProposal(), ERROR, "cannot invoke on-commit");
+    Send(AcceptsMessage::NewInstance(proposal));
+  }
+
+  void ServerSession::OnAcceptsMessage(const AcceptsMessagePtr& msg){
+    NOT_IMPLEMENTED(ERROR); // should never happen
   }
 
   void ServerSession::OnAcceptedMessage(const AcceptedMessagePtr& msg){
-    NOT_IMPLEMENTED(WARNING);
+    BlockMiner* miner = BlockMiner::GetInstance();
+    if(!miner->HasActiveProposal()){
+      DLOG_SESSION(ERROR, this) << "there is no active proposal";
+      return;
+    }
+
+    //TODO:
+    // - sanity check the proposals for equivalency
+    // - sanity check the proposal state
+    miner->SendAccepted();
+  }
+
+  void ServerSession::OnRejectsMessage(const RejectsMessagePtr& msg){
+    NOT_IMPLEMENTED(ERROR); // should never happen
   }
 
   void ServerSession::OnRejectedMessage(const RejectedMessagePtr& msg){
-    NOT_IMPLEMENTED(WARNING);
+    BlockMiner* miner = BlockMiner::GetInstance();
+    if(!miner->HasActiveProposal()){
+      DLOG_SESSION(ERROR, this) << "there is no active proposal";
+      return;
+    }
+
+    //TODO:
+    // - sanity check the proposals for equivalency
+    // - sanity check the proposal state
+    miner->SendRejected();
   }
 
   void ServerSession::OnBlockMessage(const BlockMessagePtr& msg){
@@ -185,11 +193,7 @@ namespace token{
     BlockPtr blk = msg->GetValue();
     Hash hash = blk->GetHash();
 
-#ifdef TOKEN_DEBUG
-    SESSION_LOG(INFO, this) << "received block: " << blk->ToString();
-#else
-    SESSION_LOG(INFO, this) << "received block: " << hash;
-#endif//TOKEN_DEBUG
+    DLOG_SESSION(INFO, this) << "received: " << blk->ToString();
     if(!pool->HasBlock(hash)){
       pool->PutBlock(hash, blk);
       //TODO: Server::Broadcast(InventoryMessage::FromParent(blk));
@@ -202,11 +206,7 @@ namespace token{
     TransactionPtr tx = msg->GetValue();
     Hash hash = tx->GetHash();
 
-#ifdef TOKEN_DEBUG
-    SESSION_LOG(INFO, this) << "received transaction: " << tx->ToString();
-#else
-    SESSION_LOG(INFO, this) << "received transaction: " << hash;
-#endif//TOKEN_DEBUG
+    DLOG_SESSION(INFO, this) << "received: " << tx->ToString();
     if(!pool->HasTransaction(hash)){
       pool->PutTransaction(hash, tx);
     }
@@ -214,23 +214,17 @@ namespace token{
 
   void ServerSession::OnInventoryListMessage(const InventoryListMessagePtr& msg){
     InventoryItems& items = msg->items();
-#ifdef TOKEN_DEBUG
-    SESSION_LOG(INFO, this) << "received an inventory of " << items.size() << " items, resolving....";
-#endif//TOKEN_DEBUG
+    DLOG_SESSION(INFO, this) << "received an inventory of " << items.size() << " items, resolving....";
 
     InventoryItems needed;
     for(auto& item : items){
       if(!ItemExists(item)){
-#ifdef TOKEN_DEBUG
-        SESSION_LOG(INFO, this) << item << " wasn't found, requesting....";
-#endif//TOKEN_DEBUG
+        DLOG_SESSION(INFO, this) << item << " wasn't found, requesting....";
         needed << item;
       }
     }
 
-#ifdef TOKEN_DEBUG
-    SESSION_LOG(INFO, this) << "resolving " << needed.size() << "/" << items.size() << " items from peer....";
-#endif//TOKEN_DEBUG
+    DLOG_SESSION(INFO, this) << "resolving " << needed.size() << "/" << items.size() << " items from peer....";
     if(!needed.empty())
       Send(GetDataMessage::NewInstance(needed));
   }
@@ -244,8 +238,8 @@ namespace token{
 
     InventoryItems items;
     if(stop.IsNull()){
-      intptr_t amt = std::min(GetBlocksMessage::kMaxNumberOfBlocks, chain->GetHead()->GetHeight());
-      SESSION_LOG(INFO, this) << "sending " << (amt + 1) << " blocks...";
+      intptr_t amt = std::min(kMaxNumberOfBlocksForGetBlocksMessage, chain->GetHead()->GetHeight());
+      DLOG_SESSION(INFO, this) << "sending " << (amt + 1) << " blocks...";
 
       BlockPtr start_block = chain->GetBlock(start);
       BlockPtr stop_block = chain->GetBlock(start_block->GetHeight() > amt ? start_block->GetHeight() + amt : amt);
@@ -254,9 +248,6 @@ namespace token{
         idx <= stop_block->GetHeight();
         idx++){
         BlockPtr block = chain->GetBlock(idx);
-
-        SESSION_LOG(INFO, this) << "adding " << block;
-
         items << InventoryItem::Of(block);
       }
     }
@@ -265,10 +256,6 @@ namespace token{
   }
 
   void ServerSession::OnNotFoundMessage(const NotFoundMessagePtr& msg){
-    NOT_IMPLEMENTED(WARNING);
-  }
-
-  void ServerSession::OnNotSupportedMessage(const NotSupportedMessagePtr& msg){
     NOT_IMPLEMENTED(WARNING);
   }
 }

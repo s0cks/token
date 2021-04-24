@@ -1,5 +1,6 @@
 #include <glog/logging.h>
-#include "common.h"
+
+#include "flags.h"
 #include "keychain.h"
 
 namespace token{

@@ -4,6 +4,7 @@
 #include "miner.h"
 #include "block_builder.h"
 #include "job/scheduler.h"
+#include "job/processor.h"
 
 namespace token{
   static JobQueue queue_(JobScheduler::kMaxNumberOfJobs);
@@ -35,9 +36,72 @@ namespace token{
     return true;
   }
 
+  bool BlockMiner::SendAccepted(){
+    DLOG_MINER(INFO) << "sending accepted....";
+    VERIFY_UVRESULT(uv_async_send(&on_accepted_), DLOG_MINER(ERROR), "cannot send accepted");
+    return true;
+  }
+
+  bool BlockMiner::SendRejected(){
+    DLOG_MINER(INFO) << "sending rejected....";
+    VERIFY_UVRESULT(uv_async_send(&on_rejected_), DLOG_MINER(ERROR), "cannot send rejected");
+    return true;
+  }
+
   static inline void
   CancelProposal(const ProposalPtr& proposal){
     DLOG_MINER(INFO) << "cancelling proposal: " << proposal->raw();
+  }
+
+  void BlockMiner::OnAccepted(uv_async_t *handle){
+    DLOG_MINER(INFO) << "OnAccepted Received";
+
+    auto miner = (BlockMiner*)handle->data;
+    auto chain = BlockChain::GetInstance();
+    auto pool = ObjectPool::GetInstance();
+    if(!miner->HasActiveProposal()){
+      DLOG_MINER(ERROR) << "there is no active proposal";
+      return;
+    }
+
+    //TODO:
+    // - sanity check proposals for equivalency
+    // - sanity check proposal state
+    ProposalPtr proposal = miner->GetActiveProposal();
+    DLOG_MINER(INFO) << "proposal " << proposal->raw() << " was accepted by peers.";
+
+    BlockHeader& header = proposal->raw().GetValue();
+    Hash hash = header.GetHash();
+    DLOG_MINER(INFO) << "appending block: " << header;
+
+    BlockPtr blk = pool->GetBlock(hash);
+    auto job = new ProcessBlockJob(blk, true);
+    DLOG_MINER_IF(ERROR, !Schedule(job)) << "cannot schedule process block job.";
+    while(!job->IsFinished()); //spin
+
+    DLOG_MINER_IF(ERROR, !chain->Append(blk)) << "cannot append the new block.";
+    DLOG_MINER_IF(ERROR, !miner->ClearActiveProposal()) << "cannot clear active proposal";
+    DLOG_MINER_IF(ERROR, !miner->StartMiningTimer()) << "cannot start the mining timer.";
+  }
+
+  void BlockMiner::OnRejected(uv_async_t *handle){
+    DLOG_MINER(INFO) << "OnRejected received";
+
+    auto miner = (BlockMiner*)handle->data;
+    if(!miner->HasActiveProposal()){
+      DLOG_MINER(ERROR) << "there is no active proposal";
+      return;
+    }
+
+    //TODO:
+    // - sanity check proposals for equivalency
+    // - sanity check proposal state
+    ProposalPtr proposal = miner->GetActiveProposal();
+    DLOG_MINER(INFO) << "proposal " << proposal->raw() << " was rejected by peers.";
+
+
+    DLOG_MINER_IF(ERROR, !miner->ClearActiveProposal()) << "cannot clear active proposal";
+    DLOG_MINER_IF(ERROR, !miner->StartMiningTimer()) << "cannot start mining timer.";
   }
 
   void BlockMiner::OnMine(uv_timer_t* handle){
@@ -59,17 +123,14 @@ namespace token{
     DLOG_MINER(INFO) << "discovered new block: " << blk->GetHash();
 
     // create a new proposal
-    ProposalPtr proposal = Proposal::NewInstance(miner->GetLoop(), blk, GetRequiredVotes());
+    ProposalPtr proposal = Proposal::NewInstance(uv_loop_new(), blk);//TODO: can we leverage the block miner loop since it's in-active during proposals?
     if(!miner->SetActiveProposal(proposal)){
       LOG_MINER(ERROR) << "cannot set active proposal.";
       return;
     }
 
-    auto job = new ProposalJob(miner, proposal);//TODO: memory-leak
-    if(!Schedule(job)){
-      LOG_MINER(ERROR) << "cannot schedule new job.";
-      return;
-    }
+    auto job = new ProposalJob(proposal);
+    DLOG_MINER_IF(ERROR, !Schedule(job)) << "cannot schedule new proposal job";
   }
 
   bool BlockMiner::Run(){
@@ -111,7 +172,7 @@ namespace token{
       return;
     }
 
-    BlockMiner* miner = (BlockMiner*)param;
+    auto miner = (BlockMiner*)param;
     LOG_MINER_IF(ERROR, !miner->Run()) << "cannot run miner loop.";
   }
 }
