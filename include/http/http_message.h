@@ -11,7 +11,7 @@
 
 namespace token{
   template<class M>
-  class Session;
+  class SessionBase;
 
   class HttpSession;
 
@@ -22,7 +22,7 @@ namespace token{
   const char* GetName() const override{ return #Name; } \
   Type GetType() const override{ return Type::kHttp##Name; }
 
-  class HttpMessage : public Message{
+  class HttpMessage : public MessageBase{
    public:
     static const int64_t kDefaultBodySize = 65536;
    protected:
@@ -30,11 +30,11 @@ namespace token{
     HttpHeadersMap headers_;
 
     explicit HttpMessage(HttpSession* session):
-      Message(),
+      MessageBase(),
       session_(session),
       headers_(){}
     HttpMessage(HttpSession* session, HttpHeadersMap headers):
-      Message(),
+      MessageBase(),
       session_(session),
       headers_(std::move(headers)){}
    public:
@@ -72,7 +72,7 @@ namespace token{
 
     virtual const char* GetName() const = 0;
 
-    static HttpMessagePtr From(Session<HttpMessage>* session, const BufferPtr& buffer);
+    static HttpMessagePtr From(SessionBase<HttpMessage>* session, const BufferPtr& buffer);
   };
 
   template<class M>

@@ -2,7 +2,7 @@
 #include "http/http_request.h"
 
 namespace token{
-  HttpMessagePtr HttpMessage::From(Session<HttpMessage>* session, const BufferPtr& buffer){
+  HttpMessagePtr HttpMessage::From(SessionBase<HttpMessage>* session, const BufferPtr& buffer){
     HttpRequestPtr message = HttpRequestParser::ParseRequest((HttpSession*)session, buffer);
     buffer->SetReadPosition(buffer->GetBufferSize());
     return message;

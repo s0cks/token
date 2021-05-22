@@ -3,6 +3,7 @@
 
 #include "rpc/rpc_message.h"
 #include "rpc/rpc_session.h"
+#include "inventory.h"
 
 namespace token{
   class PeerSession;
@@ -80,8 +81,23 @@ namespace token{
     }
   };
 
+  class PeerMessageHandler : public rpc::MessageHandler{
+    friend class PeerSession;
+   private:
+    explicit PeerMessageHandler(PeerSession* session):
+      rpc::MessageHandler((rpc::Session*)session){}
+   public:
+    ~PeerMessageHandler() override = default;
+
+  #define DECLARE_HANDLE(Name) \
+    void On##Name##Message(const rpc::Name##MessagePtr& msg) override;
+
+    FOR_EACH_MESSAGE_TYPE(DECLARE_HANDLE)
+  #undef DECLARE_HANDLE
+  };
+
   //TODO: refactor
-  class PeerSession : public RpcSession{
+  class PeerSession : public rpc::Session{
     friend class PeerSessionThread;
     friend class PeerSessionManager;
    private:
@@ -96,6 +112,9 @@ namespace token{
     uv_async_t commit_;
     uv_async_t accepted_;
     uv_async_t rejected_;
+
+    // Messages
+    PeerMessageHandler handler_;
 
     void SetInfo(const Peer& info){
       info_ = info;
@@ -128,17 +147,17 @@ namespace token{
       buf->len = suggested_size;
     }
 
-#define DECLARE_MESSAGE_HANDLER(Name) \
-    void On##Name##Message(const std::shared_ptr<Name##Message>& msg);
-    FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
-#undef DECLARE_MESSAGE_HANDLER
+   protected:
+    PeerMessageHandler& GetMessageHandler() override{
+      return handler_;
+    }
 
     bool ItemExists(const InventoryItem& item) const{
       return true;//TODO: refactor
     }
    public:
-    PeerSession(const NodeAddress& address):
-      RpcSession(uv_loop_new()),
+    explicit PeerSession(const NodeAddress& address):
+      rpc::Session(uv_loop_new()),
       info_(UUID(), address),
       head_(),
       disconnect_(),
@@ -147,7 +166,8 @@ namespace token{
       promise_(),
       commit_(),
       accepted_(),
-      rejected_(){
+      rejected_(),
+      handler_(this){
       // core
       disconnect_.data = this;
       CHECK_UVRESULT(uv_async_init(loop_, &disconnect_, &OnDisconnect), LOG(ERROR), "cannot initialize the OnDisconnect callback");
@@ -165,7 +185,7 @@ namespace token{
       rejected_.data = this;
       CHECK_UVRESULT(uv_async_init(loop_, &rejected_, &OnRejected), LOG(ERROR), "cannot initialize the OnRejected callback");
     }
-    ~PeerSession() = default;
+    ~PeerSession() override = default;
 
     Peer GetInfo() const{
       return info_;
@@ -180,27 +200,27 @@ namespace token{
       return info_.GetAddress();
     }
 
-    bool SendPrepare(){
+    bool SendPrepare() override{
       VERIFY_UVRESULT(uv_async_send(&prepare_), LOG(ERROR), "cannot send OnPrepare");
       return true;
     }
 
-    bool SendPromise(){
+    bool SendPromise() override{
       VERIFY_UVRESULT(uv_async_send(&promise_), LOG(ERROR), "cannot send OnPromise");
       return true;
     }
 
-    bool SendAccepted(){
+    bool SendAccepted() override{
       VERIFY_UVRESULT(uv_async_send(&accepted_), LOG(ERROR), "cannot send OnAccepted");
       return true;
     }
 
-    bool SendRejected(){
+    bool SendRejected() override{
       VERIFY_UVRESULT(uv_async_send(&rejected_), LOG(ERROR), "cannot send OnRejected");
       return true;
     }
 
-    bool SendCommit(){
+    bool SendCommit() override{
       VERIFY_UVRESULT(uv_async_send(&commit_), LOG(ERROR), "cannot send OnCommit");
       return true;
     }

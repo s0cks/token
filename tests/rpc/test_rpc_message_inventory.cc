@@ -19,20 +19,20 @@ namespace token{
   }
 
   TEST_F(GetDataMessageTest, EqualsTest){
-    GetDataMessagePtr a = CreateMessage();
+    rpc::GetDataMessagePtr a = CreateMessage();
     DLOG(INFO) << "a: " << a->ToString();
-    GetDataMessagePtr b = CreateMessage();
+    rpc::GetDataMessagePtr b = CreateMessage();
     DLOG(INFO) << "b: " << b->ToString();
     ASSERT_TRUE(MessagesAreEqual(a, b));
   }
 
   TEST_F(GetDataMessageTest, WriteMessageTest){
-    GetDataMessagePtr a = CreateMessage();
+    rpc::GetDataMessagePtr a = CreateMessage();
     DLOG(INFO) << "a: " << a->ToString();
     BufferPtr tmp = Buffer::NewInstance(a->GetMessageSize());
     ASSERT_TRUE(a->WriteMessage(tmp));
     ASSERT_EQ(tmp->GetWrittenBytes(), a->GetMessageSize());
-    GetDataMessagePtr b = GetDataMessage::NewInstance(tmp);
+    rpc::GetDataMessagePtr b = rpc::GetDataMessage::NewInstance(tmp);
     DLOG(INFO) << "b: " << b->ToString();
     ASSERT_TRUE(MessagesAreEqual(a, b));
   }

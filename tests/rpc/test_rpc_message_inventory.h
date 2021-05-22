@@ -2,7 +2,7 @@
 #define TOKEN_TEST_RPC_MESSAGE_INVENTORY_H
 
 #include "test_suite.h"
-#include "rpc/rpc_message.h"
+#include "rpc/messages/rpc_message_inventory.h"
 
 namespace token{
   class InventoryItemTest : public ::testing::Test{
@@ -20,19 +20,19 @@ namespace token{
     ~InventoryMessageTest() override = default;
   };
 
-  class GetDataMessageTest : public InventoryMessageTest<GetDataMessage>{
+  class GetDataMessageTest : public InventoryMessageTest<rpc::GetDataMessage>{
    protected:
     Type type_;
     Hash hash_;
 
     GetDataMessageTest():
-      InventoryMessageTest<GetDataMessage>(),
+      InventoryMessageTest<rpc::GetDataMessage>(),
       type_(Type::kBlock),
       hash_(Hash::GenerateNonce()){}
 
-    GetDataMessagePtr CreateMessage() const override{
+    rpc::GetDataMessagePtr CreateMessage() const override{
       InventoryItems items = { InventoryItem(type_, hash_) };
-      return GetDataMessage::NewInstance(items);
+      return rpc::GetDataMessage::NewInstance(items);
     }
    public:
     ~GetDataMessageTest() override = default;

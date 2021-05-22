@@ -5,8 +5,8 @@
 #include "object.h"
 
 namespace token{
-  class Message;
-  typedef std::shared_ptr<Message> MessagePtr;
+  class MessageBase;
+  typedef std::shared_ptr<MessageBase> MessagePtr;
   typedef std::vector<MessagePtr> MessageList;
 
   static inline MessageList&
@@ -15,11 +15,11 @@ namespace token{
     return messages;
   }
 
-  class Message : public SerializableObject{
+  class MessageBase : public SerializableObject{
    protected:
-    Message() = default;
+    MessageBase() = default;
    public:
-    ~Message() override = default;
+    ~MessageBase() override = default;
   };
 }
 

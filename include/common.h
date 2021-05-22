@@ -24,9 +24,11 @@
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 
+//TODO: remove
 #pragma GCC diagnostic ignored "-Wunused-function"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wformat-truncation"
+#pragma GCC diagnostic ignored "-Wunused-variable"
 
 //TODO: cleanup
 namespace token{

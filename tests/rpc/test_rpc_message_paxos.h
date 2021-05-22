@@ -2,7 +2,7 @@
 #define TOKEN_TEST_RPC_MESSAGE_PAXOS_H
 
 #include "test_suite.h"
-#include "rpc/rpc_message.h"
+#include "rpc/messages/rpc_message_paxos.h"
 
 namespace token{
   class PaxosMessageTest : public ::testing::Test{

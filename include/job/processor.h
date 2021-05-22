@@ -1,12 +1,11 @@
 #ifndef TOKEN_PROCESS_BLOCK_H
 #define TOKEN_PROCESS_BLOCK_H
 
-#include <utility>
-
 #include "pool.h"
 #include "block.h"
 #include "job/job.h"
 #include "job/scheduler.h"
+#include "job/batch_writing.h"
 
 namespace token{
   class ProcessInputListJob;
@@ -23,6 +22,7 @@ namespace token{
   class ProcessBlockJob : public WalletManagerBatchWriteJob, BlockVisitor{
     friend class ProcessTransactionJob;
    protected:
+    BatchCommitWriter writer_;
     BlockPtr block_;
     std::mutex mutex_; //TODO: remove mutex
     UserWallets wallets_;
@@ -52,6 +52,7 @@ namespace token{
    public:
     explicit ProcessBlockJob(BlockPtr blk, bool clean = false):
       WalletManagerBatchWriteJob(nullptr, "ProcessBlock"),
+      writer_(),
       block_(std::move(blk)),
       wallets_(),
       clean_(clean){}

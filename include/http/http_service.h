@@ -7,15 +7,15 @@
 #include "http/http_session.h"
 
 namespace token{
-  class HttpService : public Server<HttpMessage>{
+  class HttpService : public ServerBase<HttpMessage>{
    protected:
     HttpRouter router_;
 
     HttpService(uv_loop_t* loop, const char* name):
-      Server(loop, name),
+      ServerBase(loop, name),
       router_(){}
 
-    Session<HttpMessage>* CreateSession() const override{
+    SessionBase<HttpMessage>* CreateSession() const override{
       return new HttpSession(GetLoop(), (HttpRouter*)&router_);
     }
    public:

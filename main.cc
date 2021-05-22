@@ -192,7 +192,7 @@ main(int argc, char **argv){
   // initialize the block chain
   SilentlyInitialize<BlockChain>();
   // start the rpc server
-  SilentlyStartService<LedgerServer, ServerThread>();
+  SilentlyStartService<rpc::LedgerServer, ServerThread>();
   // start the peer threads & connect to any known peers
   SilentlyInitialize<PeerSessionManager>();
   // start the rest service
@@ -213,7 +213,7 @@ main(int argc, char **argv){
 #endif//TOKEN_DEBUG
 
   //TODO: SilentlyWaitForShutdown<PeerSessionManager
-  SilentlyWaitForShutdown<LedgerServer, ServerThread>();
+  SilentlyWaitForShutdown<rpc::LedgerServer, ServerThread>();
   SilentlyWaitForShutdown<HttpRestService, HttpRestServiceThread>();
   SilentlyWaitForShutdown<HttpHealthService, HttpHealthServiceThread>();
   return EXIT_SUCCESS;

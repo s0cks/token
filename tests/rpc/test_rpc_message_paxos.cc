@@ -3,146 +3,146 @@
 namespace token{
   TEST_F(PrepareMessageTest, EqualsTest){
     RawProposal proposal = CreateRandomProposal();
-    PrepareMessagePtr a = PrepareMessage::NewInstance(proposal);
+    rpc::PrepareMessagePtr a = rpc::PrepareMessage::NewInstance(proposal);
     DLOG(INFO) << "a: " << a->ToString();
-    PrepareMessagePtr b = PrepareMessage::NewInstance(proposal);
+    rpc::PrepareMessagePtr b = rpc::PrepareMessage::NewInstance(proposal);
     DLOG(INFO) << "b: " << b->ToString();
     ASSERT_TRUE(MessagesAreEqual(a, b));
   }
 
   TEST_F(PrepareMessageTest, WriteMessageTest){
     RawProposal proposal = CreateRandomProposal();
-    PrepareMessagePtr a = PrepareMessage::NewInstance(proposal);
+    rpc::PrepareMessagePtr a = rpc::PrepareMessage::NewInstance(proposal);
     DLOG(INFO) << "a: " << a->ToString();
     BufferPtr tmp = Buffer::NewInstance(a->GetMessageSize());
     ASSERT_TRUE(a->WriteMessage(tmp));
     ASSERT_EQ(tmp->GetWrittenBytes(), a->GetMessageSize());
-    PrepareMessagePtr b = PrepareMessage::NewInstance(tmp);
+    rpc::PrepareMessagePtr b = rpc::PrepareMessage::NewInstance(tmp);
     DLOG(INFO) << "b: " << b->ToString();
     ASSERT_TRUE(MessagesAreEqual(a, b));
   }
 
   TEST_F(PromiseMessageTest, EqualsTest){
     RawProposal proposal = CreateRandomProposal();
-    PromiseMessagePtr a = PromiseMessage::NewInstance(proposal);
+    rpc::PromiseMessagePtr a = rpc::PromiseMessage::NewInstance(proposal);
     DLOG(INFO) << "a: " << a->ToString();
-    PromiseMessagePtr b = PromiseMessage::NewInstance(proposal);
+    rpc::PromiseMessagePtr b = rpc::PromiseMessage::NewInstance(proposal);
     DLOG(INFO) << "b: " << b->ToString();
     ASSERT_TRUE(MessagesAreEqual(a, b));
   }
 
   TEST_F(PromiseMessageTest, WriteMessageTest){
     RawProposal proposal = CreateRandomProposal();
-    PromiseMessagePtr a = PromiseMessage::NewInstance(proposal);
+    rpc::PromiseMessagePtr a = rpc::PromiseMessage::NewInstance(proposal);
     DLOG(INFO) << "a: " << a->ToString();
     BufferPtr tmp = Buffer::NewInstance(a->GetMessageSize());
     ASSERT_TRUE(a->WriteMessage(tmp));
     ASSERT_EQ(tmp->GetWrittenBytes(), a->GetMessageSize());
-    PromiseMessagePtr b = PromiseMessage::NewInstance(tmp);
+    rpc::PromiseMessagePtr b = rpc::PromiseMessage::NewInstance(tmp);
     DLOG(INFO) << "b: " << b->ToString();
     ASSERT_TRUE(MessagesAreEqual(a, b));
   }
 
   TEST_F(CommitMessageTest, EqualsTest){
     RawProposal proposal = CreateRandomProposal();
-    CommitMessagePtr a = CommitMessage::NewInstance(proposal);
+    rpc::CommitMessagePtr a = rpc::CommitMessage::NewInstance(proposal);
     DLOG(INFO) << "a: " << a->ToString();
-    CommitMessagePtr b = CommitMessage::NewInstance(proposal);
+    rpc::CommitMessagePtr b = rpc::CommitMessage::NewInstance(proposal);
     DLOG(INFO) << "b: " << b->ToString();
     ASSERT_TRUE(MessagesAreEqual(a, b));
   }
 
   TEST_F(CommitMessageTest, WriteMessageTest){
     RawProposal proposal = CreateRandomProposal();
-    CommitMessagePtr a = CommitMessage::NewInstance(proposal);
+    rpc::CommitMessagePtr a = rpc::CommitMessage::NewInstance(proposal);
     DLOG(INFO) << "a: " << a->ToString();
     BufferPtr tmp = Buffer::NewInstance(a->GetMessageSize());
     ASSERT_TRUE(a->WriteMessage(tmp));
     ASSERT_EQ(tmp->GetWrittenBytes(), a->GetMessageSize());
-    CommitMessagePtr b = CommitMessage::NewInstance(tmp);
+    rpc::CommitMessagePtr b = rpc::CommitMessage::NewInstance(tmp);
     DLOG(INFO) << "b: " << b->ToString();
     ASSERT_TRUE(MessagesAreEqual(a, b));
   }
 
   TEST_F(AcceptsMessageTest, EqualsTest){
     RawProposal proposal = CreateRandomProposal();
-    AcceptsMessagePtr a = AcceptsMessage::NewInstance(proposal);
+    rpc::AcceptsMessagePtr a = rpc::AcceptsMessage::NewInstance(proposal);
     DLOG(INFO) << "a: " << a->ToString();
-    AcceptsMessagePtr b = AcceptsMessage::NewInstance(proposal);
+    rpc::AcceptsMessagePtr b = rpc::AcceptsMessage::NewInstance(proposal);
     DLOG(INFO) << "b: " << b->ToString();
     ASSERT_TRUE(MessagesAreEqual(a, b));
   }
 
   TEST_F(AcceptsMessageTest, WriteMessageTest){
     RawProposal proposal = CreateRandomProposal();
-    AcceptsMessagePtr a = AcceptsMessage::NewInstance(proposal);
+    rpc::AcceptsMessagePtr a = rpc::AcceptsMessage::NewInstance(proposal);
     DLOG(INFO) << "a: " << a->ToString();
     BufferPtr tmp = Buffer::NewInstance(a->GetMessageSize());
     ASSERT_TRUE(a->WriteMessage(tmp));
     ASSERT_EQ(tmp->GetWrittenBytes(), a->GetMessageSize());
-    AcceptsMessagePtr b = AcceptsMessage::NewInstance(tmp);
+    rpc::AcceptsMessagePtr b = rpc::AcceptsMessage::NewInstance(tmp);
     DLOG(INFO) << "b: " << b->ToString();
     ASSERT_TRUE(MessagesAreEqual(a, b));
   }
 
   TEST_F(AcceptedMessageTest, EqualsTest){
     RawProposal proposal = CreateRandomProposal();
-    AcceptedMessagePtr a = AcceptedMessage::NewInstance(proposal);
+    rpc::AcceptedMessagePtr a = rpc::AcceptedMessage::NewInstance(proposal);
     DLOG(INFO) << "a: " << a->ToString();
-    AcceptedMessagePtr b = AcceptedMessage::NewInstance(proposal);
+    rpc::AcceptedMessagePtr b = rpc::AcceptedMessage::NewInstance(proposal);
     DLOG(INFO) << "b: " << b->ToString();
     ASSERT_TRUE(MessagesAreEqual(a, b));
   }
 
   TEST_F(AcceptedMessageTest, WriteMessageTest){
     RawProposal proposal = CreateRandomProposal();
-    AcceptedMessagePtr a = AcceptedMessage::NewInstance(proposal);
+    rpc::AcceptedMessagePtr a = rpc::AcceptedMessage::NewInstance(proposal);
     DLOG(INFO) << "a: " << a->ToString();
     BufferPtr tmp = Buffer::NewInstance(a->GetMessageSize());
     ASSERT_TRUE(a->WriteMessage(tmp));
     ASSERT_EQ(tmp->GetWrittenBytes(), a->GetMessageSize());
-    AcceptedMessagePtr b = AcceptedMessage::NewInstance(tmp);
+    rpc::AcceptedMessagePtr b = rpc::AcceptedMessage::NewInstance(tmp);
     DLOG(INFO) << "b: " << b->ToString();
     ASSERT_TRUE(MessagesAreEqual(a, b));
   }
 
   TEST_F(RejectsMessageTest, EqualsTest){
     RawProposal proposal = CreateRandomProposal();
-    RejectsMessagePtr a = RejectsMessage::NewInstance(proposal);
+    rpc::RejectsMessagePtr a = rpc::RejectsMessage::NewInstance(proposal);
     DLOG(INFO) << "a: " << a->ToString();
-    RejectsMessagePtr b = RejectsMessage::NewInstance(proposal);
+    rpc::RejectsMessagePtr b = rpc::RejectsMessage::NewInstance(proposal);
     DLOG(INFO) << "b: " << b->ToString();
     ASSERT_TRUE(MessagesAreEqual(a, b));
   }
 
   TEST_F(RejectsMessageTest, WriteMessageTest){
     RawProposal proposal = CreateRandomProposal();
-    RejectsMessagePtr a = RejectsMessage::NewInstance(proposal);
+    rpc::RejectsMessagePtr a = rpc::RejectsMessage::NewInstance(proposal);
     DLOG(INFO) << "a: " << a->ToString();
     BufferPtr tmp = Buffer::NewInstance(a->GetMessageSize());
     ASSERT_TRUE(a->WriteMessage(tmp));
     ASSERT_EQ(tmp->GetWrittenBytes(), a->GetMessageSize());
-    RejectsMessagePtr b = RejectsMessage::NewInstance(tmp);
+    rpc::RejectsMessagePtr b = rpc::RejectsMessage::NewInstance(tmp);
     ASSERT_TRUE(MessagesAreEqual(a, b));
   }
 
   TEST_F(RejectedMessageTest, EqualsTest){
     RawProposal proposal = CreateRandomProposal();
-    RejectedMessagePtr a = RejectedMessage::NewInstance(proposal);
+    rpc::RejectedMessagePtr a = rpc::RejectedMessage::NewInstance(proposal);
     DLOG(INFO) << "a: " << a->ToString();
-    RejectedMessagePtr b = RejectedMessage::NewInstance(proposal);
+    rpc::RejectedMessagePtr b = rpc::RejectedMessage::NewInstance(proposal);
     DLOG(INFO) << "b: " << b->ToString();
     ASSERT_TRUE(MessagesAreEqual(a, b));
   }
 
   TEST_F(RejectedMessageTest, WriteMessageTest){
     RawProposal proposal = CreateRandomProposal();
-    RejectedMessagePtr a = RejectedMessage::NewInstance(proposal);
+    rpc::RejectedMessagePtr a = rpc::RejectedMessage::NewInstance(proposal);
     DLOG(INFO) << "a: " << a->ToString();
     BufferPtr tmp = Buffer::NewInstance(a->GetMessageSize());
     ASSERT_TRUE(a->WriteMessage(tmp));
     ASSERT_EQ(tmp->GetWrittenBytes(), a->GetMessageSize());
-    RejectedMessagePtr b = RejectedMessage::NewInstance(tmp);
+    rpc::RejectedMessagePtr b = rpc::RejectedMessage::NewInstance(tmp);
     ASSERT_TRUE(MessagesAreEqual(a, b));
   }
 }

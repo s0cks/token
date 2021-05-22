@@ -323,7 +323,7 @@ namespace token{
       current_votes_ = 0;
     }
 
-    void CastVote(const UUID& id, const PromiseMessagePtr& msg){
+    void CastVote(const UUID& id, const rpc::PromiseMessagePtr& msg){
       DLOG(INFO) << id << " promised proposal";
       total_votes_ += 1;
       total_accepted_ += 1;
@@ -331,7 +331,7 @@ namespace token{
       promises_ += 1;
     }
 
-    void CastVote(const UUID& id, const AcceptsMessagePtr& msg){
+    void CastVote(const UUID& id, const rpc::AcceptsMessagePtr& msg){
       DLOG(INFO) << id << " accepted proposal";
       total_votes_ += 1;
       total_accepted_ += 1;
@@ -339,7 +339,7 @@ namespace token{
       accepts_ += 1;
     }
 
-    void CastVote(const UUID& id, const RejectsMessagePtr& msg){
+    void CastVote(const UUID& id, const rpc::RejectsMessagePtr& msg){
       DLOG(INFO) << id << " rejected proposal";
       total_votes_ += 1;
       total_rejected_ += 1;

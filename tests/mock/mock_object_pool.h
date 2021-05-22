@@ -12,7 +12,7 @@ namespace token{
    public:
     MockObjectPool():
       ObjectPool(){}
-    ~MockObjectPool() = default;
+    ~MockObjectPool() override = default;
 
 #define DEFINE_MOCK_TYPE_METHODS(Name) \
     MOCK_METHOD(bool, Has##Name, (const Hash&), (const)); \

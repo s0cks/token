@@ -124,6 +124,11 @@ namespace token{
     friend std::ostream& operator<<(std::ostream& stream, const Version& version){
       return stream << version.ToString();
     }
+
+    static inline Version
+    CurrentVersion(){
+      return Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
+    }
   };
 }
 

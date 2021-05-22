@@ -109,6 +109,14 @@ namespace token{
       return ::testing::AssertionSuccess() << "messages are equal";
     return ::testing::AssertionFailure() << "messages aren't equal";
   }
+
+  MATCHER(IsVersionMessage, "Message is not a VersionMessage"){
+    return arg->GetType() == Type::kVersionMessage;
+  }
+
+  MATCHER(IsVerackMessage, "Message is not a VerackMessage"){
+    return arg->GetType() == Type::kVerackMessage;
+  }
 }
 
 #endif //TOKEN_TEST_SUITE_H

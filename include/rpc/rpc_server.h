@@ -2,9 +2,10 @@
 #define TOKEN_RPC_SERVER_H
 
 #include "env.h"
+#include "pool.h"
 #include "server.h"
-
-#include <utility>
+#include "inventory.h"
+#include "blockchain.h"
 #include "rpc/rpc_session.h"
 
 namespace token{
@@ -24,7 +25,29 @@ namespace token{
     return NodeAddress::ResolveAddress(env::GetString(TOKEN_ENVIRONMENT_VARIABLE_SERVER_CALLBACK_ADDRESS));
   }
 
-  class ServerSession : public RpcSession{
+  namespace rpc{
+  class ServerSession;
+  class ServerMessageHandler : public rpc::MessageHandler{
+    friend class ServerSession;
+   public:
+    explicit ServerMessageHandler(ServerSession* session):
+       rpc::MessageHandler((rpc::Session*)session){}
+    ~ServerMessageHandler() override = default;
+
+    ObjectPoolPtr GetPool() const;
+    BlockChainPtr GetChain() const;
+
+#define DECLARE_HANDLE(Name) \
+    void On##Name##Message(const Name##MessagePtr& msg) override;
+    FOR_EACH_MESSAGE_TYPE(DECLARE_HANDLE)
+#undef DECLARE_HANDLE
+  };
+
+  class ServerSession : public rpc::Session{
+   private:
+    ObjectPoolPtr pool_;
+    BlockChainPtr chain_;
+    ServerMessageHandler handler_;
    protected:
     bool ItemExists(const InventoryItem& item) const{
       DLOG_SESSION(INFO, this) << "searching for " << item << "....";
@@ -54,21 +77,24 @@ namespace token{
       }
     }
    public:
-    ObjectPoolPtr pool_;
-    BlockChainPtr chain_;
-
     ServerSession(ObjectPoolPtr  pool,
                   BlockChainPtr  chain):
-      RpcSession(),
-      pool_(std::move(pool)),
-      chain_(std::move(chain)){}
+       rpc::Session(),
+       pool_(std::move(pool)),
+       chain_(std::move(chain)),
+       handler_(this){}
     ServerSession(uv_loop_t* loop,
                   ObjectPoolPtr pool,
                   const BlockChainPtr& chain):
-      RpcSession(loop),
-      pool_(std::move(pool)),
-      chain_(chain){}
+       rpc::Session(loop),
+       pool_(std::move(pool)),
+       chain_(chain),
+       handler_(this){}
     ~ServerSession() override = default;
+
+    rpc::MessageHandler& GetMessageHandler() override{
+      return handler_;
+    }
 
     ObjectPoolPtr GetPool() const{
       return pool_;
@@ -77,11 +103,6 @@ namespace token{
     BlockChainPtr GetChain() const{
       return chain_;
     }
-
-#define DECLARE_HANDLER(Name) \
-    virtual void On##Name##Message(const Name##MessagePtr& msg) override;
-    FOR_EACH_MESSAGE_TYPE(DECLARE_HANDLER)
-#undef DECLARE_HANDLER
 
     bool SendPrepare() override{
       NOT_IMPLEMENTED(WARNING);
@@ -109,7 +130,7 @@ namespace token{
     }
   };
 
-  class LedgerServer : public Server<RpcMessage>{
+  class LedgerServer : public ServerBase<rpc::Message>{
    protected:
     ObjectPoolPtr pool_;
     BlockChainPtr chain_;
@@ -121,9 +142,9 @@ namespace token{
     LedgerServer(uv_loop_t* loop=uv_loop_new(),
                  const ObjectPoolPtr& pool=ObjectPool::GetInstance(),
                  const BlockChainPtr& chain=BlockChain::GetInstance()):
-      Server(loop, GetThreadName()),
-      pool_(pool),
-      chain_(chain){}
+       ServerBase<rpc::Message>(loop, GetThreadName()),
+       pool_(pool),
+       chain_(chain){}
     ~LedgerServer() override = default;
 
     BlockChainPtr GetChain() const{
@@ -150,6 +171,7 @@ namespace token{
 
     static LedgerServer* GetInstance();
   };
+  }
 
   class ServerThread{
    private:

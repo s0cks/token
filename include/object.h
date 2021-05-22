@@ -69,11 +69,14 @@ namespace token{
   FOR_EACH_POOL_TYPE(FORWARD_DECLARE_TYPE)
 #undef FORWARD_DECLARE_TYPE
 
-#define FORWARD_DECLARE_MESSAGE_TYPE(Name) \
-  class Name##Message;                     \
+  namespace rpc{
+#define FORWARD_DECLARE(Name) \
+  class Name##Message;        \
   typedef std::shared_ptr<Name##Message> Name##MessagePtr;
-  FOR_EACH_MESSAGE_TYPE(FORWARD_DECLARE_MESSAGE_TYPE)
-#undef FORWARD_DECLARE_MESSAGE_TYPE
+
+  FOR_EACH_MESSAGE_TYPE(FORWARD_DECLARE)
+#undef FORWARD_DECLARE
+  }
 
   class IndexedTransaction;
   typedef std::shared_ptr<IndexedTransaction> IndexedTransactionPtr;

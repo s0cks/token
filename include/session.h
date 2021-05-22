@@ -22,18 +22,18 @@ namespace token{
     V(Disconnected)
 
   template<class M>
-  class Server;
+  class ServerBase;
 
   template<class M>
-  class Session{
-    friend class Server<M>;
+  class SessionBase{
+    friend class ServerBase<M>;
    protected:
     typedef M SessionMessageType;
     typedef std::shared_ptr<SessionMessageType> SessionMessageTypePtr;
     typedef std::vector<SessionMessageTypePtr> SessionMessageTypeList;
 
-    typedef Session<M> BaseType;
-    typedef Server<M> ServerType;
+    typedef SessionBase<M> BaseType;
+    typedef ServerBase<M> ServerType;
 
     friend SessionMessageTypeList& operator<<(SessionMessageTypeList& messages, const SessionMessageTypePtr& msg){
       messages.push_back(msg);
@@ -106,11 +106,11 @@ namespace token{
       delete data;
     }
    public:
-    Session(uv_loop_t* loop, const UUID& uuid, const int32_t& keep_alive=0):
+    SessionBase(uv_loop_t* loop, const UUID& uuid, const int32_t& keep_alive=0):
       uuid_(uuid),
       loop_(loop),
       handle_(),
-      state_(Session::kDisconnectedState){
+      state_(SessionBase::kDisconnectedState){
       handle_.data = this;
       if(loop){
         CHECK_UVRESULT(uv_tcp_init(loop_, &handle_), LOG_SESSION(ERROR, this), "couldn't initialize the session handle");
@@ -118,14 +118,14 @@ namespace token{
           CHECK_UVRESULT(uv_tcp_keepalive(&handle_, true, keep_alive), LOG_SESSION(ERROR, this), "couldn't enable session keep-alive");
       }
     }
-    Session():
+    SessionBase():
       uuid_(),
       loop_(nullptr),
       handle_(),
-      state_(Session::kDisconnectedState){
+      state_(SessionBase::kDisconnectedState){
       handle_.data = this;
     }
-    virtual ~Session() = default;
+    virtual ~SessionBase() = default;
 
     UUID GetUUID() const{
       return uuid_;
@@ -184,7 +184,7 @@ namespace token{
     }
 
 #define DEFINE_STATE_CHECK(Name) \
-    inline bool Is##Name(){ return GetState() == Session::k##Name##State; }
+    inline bool Is##Name(){ return GetState() == SessionBase::k##Name##State; }
     FOR_EACH_SESSION_STATE(DEFINE_STATE_CHECK)
 #undef DEFINE_STATE_CHECK
   };
