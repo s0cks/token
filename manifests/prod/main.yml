@@ -2,37 +2,35 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: main
-  namespace: ledger-prod
+  namespace: ledger
   labels:
     app: token
-    tier: ledger
-    component: main
-    environment: prod
+    tier: backend
+    component: nodes-main
 spec:
   serviceName: main
   replicas: 1
   selector:
     matchLabels:
-      tier: ledger
-      component: main
-      environment: prod
+      component: nodes-main
   template:
     metadata:
-      namespace: ledger-prod
+      namespace: ledger
       labels:
         app: token
-        tier: ledger
-        component: main
-        environment: prod
+        tier: backend
+        component: nodes-main
     spec:
       dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        node_pool: pool-default
       containers:
-        - name: main-node
+        - name: node
           imagePullPolicy: IfNotPresent
           image: gcr.io/tkn-events/token-ledger:1.8.1
           env:
             - name: TOKEN_CALLBACK_ADDRESS
-              value: main.ledger-prod:8081
+              value: main.ledger.svc.cluster.local:8081
           ports:
             - name: http
               containerPort: 8080
@@ -45,7 +43,7 @@ spec:
               mountPath: /usr/share/ledger
           readinessProbe:
             httpGet:
-              port: 8082
+              port: health
               path: /ready
               scheme: HTTP
             initialDelaySeconds: 30
@@ -55,7 +53,7 @@ spec:
             timeoutSeconds: 5
           livenessProbe:
             httpGet:
-              port: 8082
+              port: health
               path: /live
               scheme: HTTP
             initialDelaySeconds: 30
@@ -65,13 +63,12 @@ spec:
             timeoutSeconds: 5
   volumeClaimTemplates:
     - metadata:
-        name: ledger
-        namespace: ledger-prod
+        name: main
+        namespace: ledger
         labels:
           app: token
-          tier: ledger
-          component: main
-          environment: prod
+          tier: backend
+          component: nodes-main
       spec:
         accessModes: [ "ReadWriteOnce" ]
         resources:

@@ -7,24 +7,24 @@ jobs:
     name: Build Image
     runs-on: ubuntu-latest
     steps:
-      # Setup build environment
+        # Setup build environment
       - name: Setup Build Environment
         id: vars
         run: echo ::set-output name=version::${GITHUB_REF#refs/*/}
-      # Setup gcloud CLI
+        # Setup gcloud CLI
       - name: Setup gcloud sdk
         uses: google-github-actions/setup-gcloud@master
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
           service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
           export_default_credentials: true
-      # Configure Docker to use the gcloud command-line tool
+        # Configure Docker to use the gcloud command-line tool
       - run: gcloud auth configure-docker -q
-      # Checkout Source
+        # Checkout Source
       - name: Checkout
         uses: actions/checkout@v2
-      # Build Docker image
+        # Build Docker image
       - name: Build Image
-        run: docker build . --build-arg "GITHUB_TOKEN=${{ secrets.GHCR_TOKEN }}" -t "gcr.io/tkn-events/token-ledger:${{ steps.vars.outputs.version }}"
+        run: docker build . --build-arg "GITHUB_TOKEN=${{ secrets.GHCR_TOKEN }}" -t "gcr.io/tkn-events/ledger:${{ steps.vars.outputs.version }}"
       - name: Publish Image
-        run: docker push gcr.io/tkn-events/token-ledger-base:${{ steps.vars.outputs.version }}
+        run: docker push gcr.io/tkn-events/ledger:${{ steps.vars.outputs.version }}
