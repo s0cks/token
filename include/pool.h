@@ -87,7 +87,8 @@ namespace token{
           return result; // not equal
 
         // if the objects are the same type & size, compare the hash.
-        return Hash::Compare(a.GetHash(), b.GetHash());
+        result = Hash::Compare(a.GetHash(), b.GetHash());
+        return result;
       }
      private:
       enum Layout{

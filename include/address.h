@@ -2,7 +2,8 @@
 #define TOKEN_ADDRESS_H
 
 #include <set>
-#include "common.h"
+
+#include "flags.h"
 #include "buffer.h"
 
 namespace token{

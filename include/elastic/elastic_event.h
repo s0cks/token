@@ -13,19 +13,45 @@ namespace token{
       Timestamp timestamp_;
       std::string kind_;
       std::string dataset_;
-      std::string category_;
       std::string action_;
+
+      inline bool
+      WriteTimestamp(Json::Writer& writer) const{
+        return Json::SetField(writer, "@timestamp", timestamp_);
+      }
+
+      inline bool
+      WriteEventFields(Json::Writer& writer) const{
+        if(!writer.Key("event")){
+          LOG(ERROR) << "couldn't write json key";
+          return false;
+        }
+
+        if(!writer.StartObject()){
+          LOG(ERROR) << "couldn't start json object";
+          return false;
+        }
+
+        LOG_IF(ERROR, !Json::SetField(writer, "kind", kind_));
+        LOG_IF(ERROR, !Json::SetField(writer, "dataset", dataset_));
+
+        if(!writer.EndObject()){
+          LOG(ERROR) << "couldn't end json object";
+          return false;
+        }
+        return true;
+      }
      public:
       Event(const Timestamp& timestamp,
-            const std::string& kind,
-            const std::string& dataset,
-            const std::string& category,
-            const std::string& action):
+            std::string kind,
+            std::string dataset):
             timestamp_(timestamp),
-            kind_(kind),
-            dataset_(dataset),
-            category_(category),
-            action_(action){}
+            kind_(std::move(kind)),
+            dataset_(std::move(dataset)){}
+      explicit Event(const Event& other):
+        timestamp_(other.timestamp_),
+        kind_(other.kind_),
+        dataset_(other.dataset_){}
       virtual ~Event() = default;
 
       Timestamp GetTimestamp() const{
@@ -34,10 +60,6 @@ namespace token{
 
       std::string GetKind() const{
         return kind_;
-      }
-
-      std::string GetCategory() const{
-        return category_;
       }
 
       std::string GetDataset() const{
@@ -50,81 +72,18 @@ namespace token{
 
       virtual bool Write(Json::Writer& writer) const = 0;
 
-      virtual std::string ToString() const{
-        std::stringstream ss;
-        ss << "Event(";
-          ss << "@timestamp=" << FormatTimestampReadable(timestamp_) << ", ";
-          ss << "kind=" << kind_ << ", ";
-          ss << "category=" << category_ << ", ";
-          ss << "dataset=" << dataset_ << ", ";
-          ss << "action=" << action_;
-        ss << ")";
-        return ss.str();
-      }
-    };
-
-    class SpendEvent : public Event{
-     private:
-      User owner_;
-      User recipient_;
-      Hash token_;
-     public:
-      SpendEvent(const Timestamp& timestamp,
-                 const User& owner,
-                 const User& recipient,
-                 const Hash& token):
-                 Event(timestamp, "event", "tokens", "ledger", "spend"),
-                 owner_(owner),
-                 recipient_(recipient),
-                 token_(token){}
-      ~SpendEvent() = default;
-
-      User GetOwner() const{
-        return owner_;
-      }
-
-      User GetRecipient() const{
-        return recipient_;
-      }
-
-      Hash GetToken() const{
-        return token_;
-      }
-
-      bool Write(Json::Writer& writer) const{
-        writer.StartObject();
-        {
-
-          Json::SetField(writer, "@timestamp", timestamp_);
-
-          writer.Key("event");
-          writer.StartObject();
-          {
-            Json::SetField(writer, "kind", kind_);
-            Json::SetField(writer, "dataset", dataset_);
-            Json::SetField(writer, "category", category_);
-            Json::SetField(writer, "action", action_);
-          }
-          writer.EndObject();
-
-          writer.Key("owner");
-          writer.StartObject();
-          {
-            Json::SetField(writer, "id", owner_);
-          }
-          writer.EndObject();
-
-          writer.Key("recipient");
-          writer.StartObject();
-          {
-            Json::SetField(writer, "id", recipient_);
-          }
-          writer.EndObject();
-
-          Json::SetField(writer, "token", token_);
+      std::string ToString() const{
+        Json::String val;
+        Json::Writer writer(val);
+        if(!Write(writer)){
+          LOG(ERROR) << "cannot serialize event to json";
+          return "";
         }
-        writer.EndObject();
-        return true;
+        return std::string(val.GetString(), val.GetSize());
+      }
+
+      friend std::ostream& operator<<(std::ostream& stream, const Event& event){
+        return stream << event.ToString();
       }
     };
   }

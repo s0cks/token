@@ -1,12 +1,11 @@
 #ifndef TOKEN_PROCESS_BLOCK_H
 #define TOKEN_PROCESS_BLOCK_H
 
-#include <utility>
-
 #include "pool.h"
 #include "block.h"
 #include "job/job.h"
 #include "job/scheduler.h"
+#include "job/batch_writing.h"
 
 namespace token{
   class ProcessInputListJob;
@@ -23,6 +22,7 @@ namespace token{
   class ProcessBlockJob : public WalletManagerBatchWriteJob, BlockVisitor{
     friend class ProcessTransactionJob;
    protected:
+    BatchCommitWriter writer_;
     BlockPtr block_;
     std::mutex mutex_; //TODO: remove mutex
     UserWallets wallets_;
@@ -52,7 +52,8 @@ namespace token{
    public:
     explicit ProcessBlockJob(BlockPtr blk, bool clean = false):
       WalletManagerBatchWriteJob(nullptr, "ProcessBlock"),
-      block_(blk),
+      writer_(),
+      block_(std::move(blk)),
       wallets_(),
       clean_(clean){}
     ~ProcessBlockJob() override = default;
@@ -127,6 +128,10 @@ namespace token{
       return ((ProcessTransactionJob*)GetParent())->GetTransaction();
     }
 
+    bool ShouldClean() const{
+      return ((ProcessTransactionJob*)GetParent())->ShouldClean();
+    }
+
     void Append(const UserWallets& wallets){
       return ((ProcessTransactionJob*)GetParent())->Append(wallets);
     }
@@ -138,12 +143,20 @@ namespace token{
    private:
     InputList inputs_;
    protected:
+    inline void
+    CleanupInput(const Hash& hash){
+      DLOG_JOB(INFO, this) << "cleaning input";
+      ObjectPool::PoolKey key(Type::kUnclaimedTransaction, 0, hash);//TODO: fix size parameter
+      batch_.Delete((const leveldb::Slice&)key);
+    }
+
     JobResult DoWork() override{
       ObjectPoolPtr pool = ObjectPool::GetInstance();
       for(auto& it : inputs_){
         UnclaimedTransactionPtr utxo = pool->FindUnclaimedTransaction(it);
-        ///Hash hash = utxo->GetHash();
-        //TODO: remove input
+        Hash hash = utxo->GetHash();
+        if(ShouldClean())
+          CleanupInput(hash);
       }
 
       if(!Commit())
@@ -155,6 +168,10 @@ namespace token{
       ObjectPoolBatchWriteJob(parent, "ProcessInputList"),
       inputs_(std::move(inputs)){}
     ~ProcessInputListJob() override = default;
+
+    bool ShouldClean() const{
+      return ((ProcessTransactionInputsJob*)GetParent())->ShouldClean();
+    }
   };
 
   class ProcessTransactionOutputsJob : public Job{

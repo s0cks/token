@@ -50,7 +50,7 @@ namespace token{
 
 #define FOR_EACH_WORKER(Name) \
   for(int32_t idx = 0; idx < FLAGS_num_peers; idx++){ \
-    PeerSessionThread* Name = threads_[idx];
+    auto Name = threads_[idx];
 #define END_FOR_EACH_WORKER \
   }
 
@@ -140,6 +140,9 @@ namespace token{
   DEFINE_PAXOS_BROADCAST(Promise);
   DEFINE_PAXOS_BROADCAST(Commit);
   DEFINE_PAXOS_BROADCAST(DiscoveredBlock);
+  DEFINE_PAXOS_BROADCAST(Accepted);
+  DEFINE_PAXOS_BROADCAST(Rejected);
+#undef DEFINE_PAXOS_BROADCAST
 
   void PeerSessionManager::RegisterQueue(const ThreadId& thread, ConnectionRequestQueue* queue){
     auto pos = queues_.find(thread);
@@ -179,7 +182,7 @@ namespace token{
     LOG(INFO) << "scheduling connection request for " << address << " (" << attempts << " attempts)....";
 #endif//TOKEN_DEBUG
 
-    ConnectionRequest* request = new ConnectionRequest(address, attempts); //TODO: memory-leak
+    auto request = new ConnectionRequest(address, attempts); //TODO: memory-leak
     if(!queue_.Push(request))
       LOG(WARNING) << "cannot schedule connection request for " << address;
   }

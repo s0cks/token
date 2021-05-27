@@ -6,21 +6,21 @@
 
 namespace token{
   class HttpRouter;
-  class HttpSession : public Session<HttpMessage>{
+  class HttpSession : public SessionBase<HttpMessage>{
     friend class HttpService;
    private:
     HttpRouter* router_;
 
-    void OnMessageRead(const HttpMessagePtr& msg) override;
+    void OnMessageRead(const HttpMessagePtr& msg);
    public:
     HttpSession():
-      Session<HttpMessage>(),
+      SessionBase<HttpMessage>(),
       router_(nullptr){}
     explicit HttpSession(uv_loop_t* loop):
-      Session<HttpMessage>(loop, UUID()),
+      SessionBase<HttpMessage>(loop, UUID()),
       router_(nullptr){}
     HttpSession(uv_loop_t* loop, HttpRouter* router):
-      Session<HttpMessage>(loop, UUID()),
+      SessionBase<HttpMessage>(loop, UUID()),
       router_(router){}
     ~HttpSession() override = default;
 

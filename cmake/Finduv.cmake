@@ -19,7 +19,7 @@ if(WIN32)
     list(APPEND UV_LIBRARY ws2_32)
 endif()
 
-find_package_handle_standard_args(uv QUIET UV_INCLUDE_DIR UV_LIBRARY)
+find_package_handle_standard_args(uv DEFAULT_MSG UV_INCLUDE_DIR UV_LIBRARY)
 
 if(UV_FOUND)
     set(UV_INCLUDE_DIRS ${UV_INCLUDE_DIR})

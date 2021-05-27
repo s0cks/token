@@ -2,7 +2,10 @@
 #define TOKEN_RPC_SERVER_H
 
 #include "env.h"
+#include "pool.h"
 #include "server.h"
+#include "inventory.h"
+#include "blockchain.h"
 #include "rpc/rpc_session.h"
 
 namespace token{
@@ -22,7 +25,29 @@ namespace token{
     return NodeAddress::ResolveAddress(env::GetString(TOKEN_ENVIRONMENT_VARIABLE_SERVER_CALLBACK_ADDRESS));
   }
 
-  class ServerSession : public RpcSession{
+  namespace rpc{
+  class ServerSession;
+  class ServerMessageHandler : public rpc::MessageHandler{
+    friend class ServerSession;
+   public:
+    explicit ServerMessageHandler(ServerSession* session):
+       rpc::MessageHandler((rpc::Session*)session){}
+    ~ServerMessageHandler() override = default;
+
+    ObjectPoolPtr GetPool() const;
+    BlockChainPtr GetChain() const;
+
+#define DECLARE_HANDLE(Name) \
+    void On##Name##Message(const Name##MessagePtr& msg) override;
+    FOR_EACH_MESSAGE_TYPE(DECLARE_HANDLE)
+#undef DECLARE_HANDLE
+  };
+
+  class ServerSession : public rpc::Session{
+   private:
+    ObjectPoolPtr pool_;
+    BlockChainPtr chain_;
+    ServerMessageHandler handler_;
    protected:
     bool ItemExists(const InventoryItem& item) const{
       DLOG_SESSION(INFO, this) << "searching for " << item << "....";
@@ -52,19 +77,24 @@ namespace token{
       }
     }
    public:
-    ObjectPoolPtr pool_;
-    BlockChainPtr chain_;
-
-    ServerSession(const ObjectPoolPtr& pool,
+    ServerSession(ObjectPoolPtr  pool,
+                  BlockChainPtr  chain):
+       rpc::Session(),
+       pool_(std::move(pool)),
+       chain_(std::move(chain)),
+       handler_(this){}
+    ServerSession(uv_loop_t* loop,
+                  ObjectPoolPtr pool,
                   const BlockChainPtr& chain):
-      RpcSession(),
-      pool_(pool),
-      chain_(chain){}
-    ServerSession(uv_loop_t* loop, const ObjectPoolPtr& pool, const BlockChainPtr& chain):
-      RpcSession(loop),
-      pool_(pool),
-      chain_(chain){}
-    ~ServerSession() = default;
+       rpc::Session(loop),
+       pool_(std::move(pool)),
+       chain_(chain),
+       handler_(this){}
+    ~ServerSession() override = default;
+
+    rpc::MessageHandler& GetMessageHandler() override{
+      return handler_;
+    }
 
     ObjectPoolPtr GetPool() const{
       return pool_;
@@ -74,50 +104,48 @@ namespace token{
       return chain_;
     }
 
-#define DECLARE_HANDLER(Name) \
-    virtual void On##Name##Message(const std::shared_ptr<Name##Message>& msg);
-    FOR_EACH_MESSAGE_TYPE(DECLARE_HANDLER)
-#undef DECLARE_HANDLER
-
-    bool SendPrepare(){
+    bool SendPrepare() override{
       NOT_IMPLEMENTED(WARNING);
       return false;//TODO: implement
     }
 
-    bool SendPromise(){
+    bool SendPromise() override{
       NOT_IMPLEMENTED(WARNING);
       return false;//TODO: implement
     }
 
-    bool SendCommit(){
+    bool SendCommit() override{
       NOT_IMPLEMENTED(WARNING);
       return false;//TODO: implement
     }
 
-    bool SendAccepted(){
+    bool SendAccepted() override{
       NOT_IMPLEMENTED(WARNING);
       return false;//TODO: implement
     }
 
-    bool SendRejected(){
+    bool SendRejected() override{
       NOT_IMPLEMENTED(WARNING);
       return false;//TODO: implement
     }
   };
 
-  class LedgerServer : public Server<RpcMessage>{
+  class LedgerServer : public ServerBase<rpc::Message>{
    protected:
     ObjectPoolPtr pool_;
     BlockChainPtr chain_;
 
-    ServerSession* CreateSession() const{
+    ServerSession* CreateSession() const override{
       return new ServerSession(GetLoop(), GetPool(), GetChain());
     }
    public:
-    LedgerServer(uv_loop_t* loop=uv_loop_new(), const BlockChainPtr& chain=BlockChain::GetInstance()):
-      Server(loop, GetThreadName()),
-      chain_(chain){}
-    ~LedgerServer() = default;
+    LedgerServer(uv_loop_t* loop=uv_loop_new(),
+                 const ObjectPoolPtr& pool=ObjectPool::GetInstance(),
+                 const BlockChainPtr& chain=BlockChain::GetInstance()):
+       ServerBase<rpc::Message>(loop, GetThreadName()),
+       pool_(pool),
+       chain_(chain){}
+    ~LedgerServer() override = default;
 
     BlockChainPtr GetChain() const{
       return chain_;
@@ -127,7 +155,7 @@ namespace token{
       return pool_;
     }
 
-    ServerPort GetPort() const{
+    ServerPort GetPort() const override{
       return GetServerPort();
     }
 
@@ -143,6 +171,7 @@ namespace token{
 
     static LedgerServer* GetInstance();
   };
+  }
 
   class ServerThread{
    private:

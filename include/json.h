@@ -95,6 +95,8 @@ namespace token{
       }
       return writer.EndArray();
     }
+
+    static bool SetField(Writer& writer, const std::string& name, const UnclaimedTransactionPtr& val);
   }
 }
 

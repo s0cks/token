@@ -29,9 +29,9 @@ namespace token{
   DLOG_IF(LevelName, Condition) << "[server] "
 
   template<class M>
-  class Server{
+  class ServerBase{
    private:
-    typedef Server<M> ServerType;
+    typedef ServerBase<M> ServerType;
     typedef std::shared_ptr<M> ServerMessagePtr;
    public:
     enum State{
@@ -43,7 +43,7 @@ namespace token{
     friend std::ostream& operator<<(std::ostream& stream, const State& state){
       switch (state){
 #define DEFINE_TOSTRING(Name) \
-        case Server::k##Name##State: \
+        case ServerBase::k##Name##State: \
             return stream << #Name;
         FOR_EACH_SERVER_STATE(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
@@ -59,13 +59,13 @@ namespace token{
     uv_async_t shutdown_;
     RelaxedAtomic<State> state_;
 
-    Server(uv_loop_t* loop, const char* name):
+    ServerBase(uv_loop_t* loop, const char* name):
       name_(strdup(name)),
       thread_(),
       loop_(loop),
       handle_(),
       shutdown_(),
-      state_(Server::kStoppedState){
+      state_(ServerBase::kStoppedState){
       shutdown_.data = this;
       handle_.data = this;
       CHECK_UVRESULT(uv_tcp_init(GetLoop(), &handle_), LOG_SERVER(ERROR), "cannot initialize the server handle");
@@ -86,15 +86,15 @@ namespace token{
       auto server = (ServerType*)stream->data;
       CHECK_UVRESULT(status, LOG_SERVER(ERROR), "connect failure");
 
-      Session<M>* session = server->CreateSession();
-      session->SetState(Session<M>::kConnectingState);
+      SessionBase<M>* session = server->CreateSession();
+      session->SetState(SessionBase<M>::kConnectingState);
       CHECK_UVRESULT(Accept(stream, session), LOG_SERVER(ERROR), "accept failure");
       CHECK_UVRESULT(ReadStart(session, &AllocBuffer, &OnMessageReceived), LOG_SERVER(ERROR), "read failure");
     }
 
     static void
     OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
-      auto session = (Session<M>*)stream->data;
+      auto session = (SessionBase<M>*)stream->data;
       if(nread == UV_EOF){
         LOG(WARNING) << "client disconnected!";
         return;
@@ -112,7 +112,7 @@ namespace token{
       BufferPtr buffer = Buffer::From(buff->base, nread);
       do{
         ServerMessagePtr message = M::From(session, buffer);
-        DLOG(INFO) << "received " << message->ToString() << " from " << session->GetUUID();
+        DLOG_SESSION(INFO, session) << "received " << message->ToString() << " from " << session->GetUUID();
         session->OnMessageRead(message);
       } while(buffer->GetReadBytes() < buffer->GetBufferSize());
       free(buff->base);
@@ -143,18 +143,18 @@ namespace token{
     }
 
     static inline int
-    Accept(uv_stream_t* server, Session<M>* session){
+    Accept(uv_stream_t* server, SessionBase<M>* session){
       return uv_accept(server, session->GetStream());
     }
 
     static inline int
-    ReadStart(Session<M>* session, uv_alloc_cb on_alloc, uv_read_cb on_read){
+    ReadStart(SessionBase<M>* session, uv_alloc_cb on_alloc, uv_read_cb on_read){
       return uv_read_start(session->GetStream(), on_alloc, on_read);
     }
 
-    virtual Session<M>* CreateSession() const = 0;
+    virtual SessionBase<M>* CreateSession() const = 0;
    public:
-    virtual ~Server(){
+    virtual ~ServerBase(){
       if(name_)
         free((void*)name_);
     }
@@ -188,18 +188,18 @@ namespace token{
     }
 
     bool Run(){
-      SetState(Server::State::kStartingState);
+      SetState(ServerBase::State::kStartingState);
       VERIFY_UVRESULT(Bind(GetHandle(), GetPort()), LOG_SERVER(ERROR), "cannot bind server");
       VERIFY_UVRESULT(Listen(GetStream(), &OnNewConnection), LOG_SERVER(ERROR), "listen failure");
 
       DLOG_THREAD(INFO) << "server listening on port: " << GetPort();
-      SetState(Server::State::kRunningState);
+      SetState(ServerBase::State::kRunningState);
       VERIFY_UVRESULT(uv_run(GetLoop(), UV_RUN_DEFAULT), LOG_SERVER(ERROR), "failed to run loop");
       return true;
     }
 
 #define DEFINE_STATE_CHECK(Name) \
-    inline bool Is##Name(){ return GetState() == Server::State::k##Name##State; }
+    inline bool Is##Name(){ return GetState() == ServerBase::State::k##Name##State; }
     FOR_EACH_SERVER_STATE(DEFINE_STATE_CHECK)
 #undef DEFINE_STATE_CHECK
   };

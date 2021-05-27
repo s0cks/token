@@ -90,6 +90,33 @@ namespace token{
   MATCHER_P(IsUser, name, "The user doesn't match"){
     return arg == User(name);
   }
+
+  template<class M>
+  class MessageTest : public ::testing::Test{
+   protected:
+    typedef std::shared_ptr<M> MessageTypePtr;
+
+    MessageTest() = default;
+    virtual MessageTypePtr CreateMessage() const = 0;
+   public:
+    virtual ~MessageTest() = default;
+  };
+
+  template<class M>
+  static inline ::testing::AssertionResult
+  MessagesAreEqual(const std::shared_ptr<M>& a, const std::shared_ptr<M>& b){
+    if(a->Equals(b))
+      return ::testing::AssertionSuccess() << "messages are equal";
+    return ::testing::AssertionFailure() << "messages aren't equal";
+  }
+
+  MATCHER(IsVersionMessage, "Message is not a VersionMessage"){
+    return arg->GetType() == Type::kVersionMessage;
+  }
+
+  MATCHER(IsVerackMessage, "Message is not a VerackMessage"){
+    return arg->GetType() == Type::kVerackMessage;
+  }
 }
 
 #endif //TOKEN_TEST_SUITE_H

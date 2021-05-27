@@ -2,55 +2,52 @@
 #define TOKEN_RPC_SESSION_H
 
 #include "session.h"
-#include "rpc/rpc_message.h"
+#include "rpc/rpc_messages.h"
+#include "rpc/rpc_message_handler.h"
 
 namespace token{
-  template<class M>
-  class Server;
+  namespace rpc{
+    class Message;
 
-  class RpcSession : public Session<RpcMessage>{
-    friend class LedgerServer;
-   protected:
-    RpcSession():
-      Session<RpcMessage>(){}
-    explicit RpcSession(uv_loop_t* loop):
-      Session<RpcMessage>(loop, UUID()){}
+    class Session : public SessionBase<rpc::Message>{
+      friend class LedgerServer;
+     protected:
+      Session() = default;
+      explicit Session(uv_loop_t* loop):
+         SessionBase<rpc::Message>(loop, UUID()){}
 
-#define DECLARE_MESSAGE_HANDLER(Name) \
-    virtual void On##Name##Message(const Name##MessagePtr& message) = 0;
-    FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
-#undef DECLARE_MESSAGE_HANDLER
+      virtual rpc::MessageHandler& GetMessageHandler() = 0;
 
-    void OnMessageRead(const RpcMessagePtr& message) override{
-      switch(message->GetType()){
+      void OnMessageRead(const rpc::MessagePtr& msg) override{
+        switch(msg->GetType()) {
 #define DEFINE_HANDLE(Name) \
         case Type::k##Name##Message: \
-          On##Name##Message(std::static_pointer_cast<Name##Message>(message)); \
-          break;
-        FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLE)
+          return GetMessageHandler().On##Name##Message(std::static_pointer_cast<rpc::Name##Message>(msg));
+
+          FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLE)
 #undef DEFINE_HANDLE
-        default:
-          break;
+          default: return;
+        }
       }
-    }
-   public:
-    ~RpcSession() override = default;
+     public:
+      ~Session() override = default;
 
-    virtual void Send(const SessionMessageTypeList& messages){
-      return SendMessages(messages);
-    }
+      virtual void Send(const SessionMessageTypeList& messages){
+        return SendMessages(messages);
+      }
 
-    virtual void Send(const SessionMessageTypePtr& msg){
-      SessionMessageTypeList messages = { msg };
-      return SendMessages(messages);
-    }
+      virtual void Send(const SessionMessageTypePtr& msg){
+        SessionMessageTypeList messages = { msg };
+        return SendMessages(messages);
+      }
 
-    virtual bool SendPrepare() = 0;
-    virtual bool SendPromise() = 0;
-    virtual bool SendCommit() = 0;
-    virtual bool SendAccepted() = 0;
-    virtual bool SendRejected() = 0;
-  };
+      virtual bool SendPrepare() = 0;
+      virtual bool SendPromise() = 0;
+      virtual bool SendCommit() = 0;
+      virtual bool SendAccepted() = 0;
+      virtual bool SendRejected() = 0;
+    };
+  }
 }
 
 #endif//TOKEN_RPC_SESSION_H

@@ -7,11 +7,14 @@
 #include "atomic/relaxed_atomic.h"
 
 namespace token{
-#define SESSION_LOG(LevelName, Session) \
+#define LOG_SESSION(LevelName, Session) \
   LOG(LevelName) << "[session-" << (Session)->GetUUID().ToStringAbbreviated() << "] "
 
 #define DLOG_SESSION(LevelName, Session) \
   DLOG(LevelName) << "[session-" << (Session)->GetUUID().ToStringAbbreviated() << "] "
+
+#define DLOG_SESSION_IF(LevelName, Condition, Session) \
+  DLOG_IF(LevelName, Condition) << "[session-" << (Session)->GetUUID().ToStringAbbreviated() << "] "
 
 #define FOR_EACH_SESSION_STATE(V) \
     V(Connecting)                 \
@@ -19,18 +22,18 @@ namespace token{
     V(Disconnected)
 
   template<class M>
-  class Server;
+  class ServerBase;
 
   template<class M>
-  class Session{
-    friend class Server<M>;
+  class SessionBase{
+    friend class ServerBase<M>;
    protected:
     typedef M SessionMessageType;
     typedef std::shared_ptr<SessionMessageType> SessionMessageTypePtr;
     typedef std::vector<SessionMessageTypePtr> SessionMessageTypeList;
 
-    typedef Session<M> BaseType;
-    typedef Server<M> ServerType;
+    typedef SessionBase<M> BaseType;
+    typedef ServerBase<M> ServerType;
 
     friend SessionMessageTypeList& operator<<(SessionMessageTypeList& messages, const SessionMessageTypePtr& msg){
       messages.push_back(msg);
@@ -99,30 +102,30 @@ namespace token{
     OnMessageSent(uv_write_t* req, int status){
       auto data = (SessionWriteData*)req->data;
       if(status != 0)
-        SESSION_LOG(WARNING, data->session) << "failed to send message: " << uv_strerror(status); //TODO: use SESSION_LOG
+        LOG_SESSION(WARNING, data->session) << "failed to send message: " << uv_strerror(status); //TODO: use SESSION_LOG
       delete data;
     }
    public:
-    Session(uv_loop_t* loop, const UUID& uuid, const int32_t& keep_alive=0):
+    SessionBase(uv_loop_t* loop, const UUID& uuid, const int32_t& keep_alive=0):
       uuid_(uuid),
       loop_(loop),
       handle_(),
-      state_(Session::kDisconnectedState){
+      state_(SessionBase::kDisconnectedState){
       handle_.data = this;
       if(loop){
-        CHECK_UVRESULT(uv_tcp_init(loop_, &handle_), SESSION_LOG(ERROR, this), "couldn't initialize the session handle");
+        CHECK_UVRESULT(uv_tcp_init(loop_, &handle_), LOG_SESSION(ERROR, this), "couldn't initialize the session handle");
         if(keep_alive > 0)
-          CHECK_UVRESULT(uv_tcp_keepalive(&handle_, true, keep_alive), SESSION_LOG(ERROR, this), "couldn't enable session keep-alive");
+          CHECK_UVRESULT(uv_tcp_keepalive(&handle_, true, keep_alive), LOG_SESSION(ERROR, this), "couldn't enable session keep-alive");
       }
     }
-    Session():
+    SessionBase():
       uuid_(),
       loop_(nullptr),
       handle_(),
-      state_(Session::kDisconnectedState){
+      state_(SessionBase::kDisconnectedState){
       handle_.data = this;
     }
-    virtual ~Session() = default;
+    virtual ~SessionBase() = default;
 
     UUID GetUUID() const{
       return uuid_;
@@ -147,7 +150,7 @@ namespace token{
     virtual void SendMessages(const SessionMessageTypeList& messages){
       size_t total_messages = messages.size();
       if(total_messages <= 0){
-        SESSION_LOG(WARNING, this) << "not sending any messages!";
+        LOG_SESSION(WARNING, this) << "not sending any messages!";
         return;
       }
 
@@ -166,7 +169,7 @@ namespace token{
         const SessionMessageTypePtr& msg = messages[idx];
         int64_t msize = msg->GetBufferSize();
         if(!msg->Write(data->buffer)){
-          SESSION_LOG(ERROR, this) << "couldn't serialize message #" << idx << " " << msg->ToString() << " (" << msize << ")";
+          LOG_SESSION(ERROR, this) << "couldn't serialize message #" << idx << " " << msg->ToString() << " (" << msize << ")";
           return;
         }
 
@@ -181,7 +184,7 @@ namespace token{
     }
 
 #define DEFINE_STATE_CHECK(Name) \
-    inline bool Is##Name(){ return GetState() == Session::k##Name##State; }
+    inline bool Is##Name(){ return GetState() == SessionBase::k##Name##State; }
     FOR_EACH_SESSION_STATE(DEFINE_STATE_CHECK)
 #undef DEFINE_STATE_CHECK
   };

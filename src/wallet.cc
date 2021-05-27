@@ -40,7 +40,7 @@ namespace token{
     UserKey key(user);
     std::string data;
     leveldb::Status status;
-    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &data)).ok()){
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), KEY(key), &data)).ok()){
       LOG(WARNING) << "cannot get wallet for user " << user << ": " << status.ToString();
       return Wallet();
     }
@@ -58,7 +58,7 @@ namespace token{
 
     std::string data;
     leveldb::Status status;
-    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &data)).ok()){
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), KEY(key), &data)).ok()){
       LOG(WARNING) << "cannot get wallet for user " << user << ": " << status.ToString();
       return false;
     }
@@ -70,7 +70,7 @@ namespace token{
     UserKey key(user);
     std::string data;
     leveldb::Status status;
-    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &data)).ok()){
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), KEY(key), &data)).ok()){
       LOG(WARNING) << "cannot get wallet for user " << user << ": " << status.ToString();
       return false;
     }
@@ -98,7 +98,7 @@ namespace token{
     UserKey key(user);
 
     leveldb::Status status;
-    if(!(status = GetIndex()->Delete(options, (const leveldb::Slice&)key)).ok()){
+    if(!(status = GetIndex()->Delete(options, KEY(key))).ok()){
       LOG(WARNING) << "couldn't remove wallet for user " << user << ": " << status.ToString();
       return false;
     }
@@ -148,18 +148,17 @@ namespace token{
     return leveldb::Status::OK();
   }
 
-  static WalletManager instance;
+  WalletManager* WalletManager::GetInstance(){
+    static WalletManager instance;
+    return &instance;
+  }
 
   bool WalletManager::Initialize(const std::string& filename){
     leveldb::Status status;
-    if(!(status = instance.LoadIndex(filename)).ok()){
+    if(!(status = GetInstance()->LoadIndex(filename)).ok()){
       DLOG_WALLETS(ERROR) << "cannot initialize the wallet manager: " << status.ToString();
       return false;
     }
     return true;
-  }
-
-  WalletManager* WalletManager::GetInstance(){
-    return &instance;
   }
 }

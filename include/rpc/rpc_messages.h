@@ -1,0 +1,5 @@
+#include "rpc/messages/rpc_message_paxos.h"
+#include "rpc/messages/rpc_message_object.h"
+#include "rpc/messages/rpc_message_version.h"
+#include "rpc/messages/rpc_message_getblocks.h"
+#include "rpc/messages/rpc_message_inventory.h"
