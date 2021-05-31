@@ -1,12 +1,12 @@
 #include "http/http_client.h"
 
 namespace token{
-  class HttpClientSession : public HttpSession{
+  class HttpClientSession : public http::Session{
    private:
     NodeAddress address_;
     uv_connect_t connect_;
-    HttpRequestPtr request_;
-    HttpResponsePtr response_;
+    http::RequestPtr request_;
+    http::ResponsePtr response_;
 
     static void AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buff){
       buff->base = (char*)malloc(suggested_size);
@@ -30,7 +30,7 @@ namespace token{
     }
 
     static void OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
-      HttpClientSession* session = (HttpClientSession*)stream->data;
+      std::shared_ptr<HttpClientSession> session = std::shared_ptr<HttpClientSession>((HttpClientSession*)stream->data);
       if(nread == UV_EOF){
         LOG(ERROR) << "client disconnected!";
         return;
@@ -46,22 +46,22 @@ namespace token{
       }
 
       BufferPtr buffer = Buffer::From(buff->base, nread);
-      HttpResponsePtr response = HttpResponseParser::ParseResponse(session, buffer);
+      http::ResponsePtr response = http::ResponseParser::ParseResponse(session, buffer);
       session->SetResponse(response);
       free(buff->base);
       return session->CloseConnection();
     }
 
-    void SetRequest(const HttpRequestPtr& request){
+    void SetRequest(const http::RequestPtr& request){
       request_ = request;
     }
 
-    void SetResponse(const HttpResponsePtr& response){
+    void SetResponse(const http::ResponsePtr& response){
       response_ = response;
     }
    public:
-    HttpClientSession(const NodeAddress& address, const HttpRequestPtr& request):
-      HttpSession(uv_loop_new()),
+    HttpClientSession(const NodeAddress& address, const http::RequestPtr& request):
+      http::Session(uv_loop_new()),
       address_(address),
       connect_(),
       request_(request),
@@ -73,11 +73,11 @@ namespace token{
       free(loop_);
     }
 
-    HttpRequestPtr GetRequest() const{
+    http::RequestPtr GetRequest() const{
       return request_;
     }
 
-    HttpResponsePtr GetResponse() const{
+    http::ResponsePtr GetResponse() const{
       return response_;
     }
 
@@ -106,7 +106,7 @@ namespace token{
     }
   };
 
-  HttpResponsePtr HttpClient::Send(const HttpRequestPtr& request){
+  http::ResponsePtr HttpClient::Send(const http::RequestPtr& request){
     HttpClientSession session(address_, request);
     if(!session.Connect()){
 #ifdef TOKEN_DEBUG

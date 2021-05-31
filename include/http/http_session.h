@@ -1,33 +1,37 @@
 #ifndef TOKEN_HTTP_SESSION_H
 #define TOKEN_HTTP_SESSION_H
 
-#include "http/http_message.h"
 #include "session.h"
+#include "http/http_common.h"
+#include "http/http_router.h"
+#include "http/http_message.h"
 
 namespace token{
-  class HttpRouter;
-  class HttpSession : public SessionBase<HttpMessage>{
-    friend class HttpService;
-   private:
-    HttpRouter* router_;
+  namespace http{
+    class Router;
+    class Session : public SessionBase<Message>,
+                    public std::enable_shared_from_this<Session>{
+     private:
+      RouterPtr router_;
 
-    void OnMessageRead(const HttpMessagePtr& msg);
-   public:
-    HttpSession():
-      SessionBase<HttpMessage>(),
-      router_(nullptr){}
-    explicit HttpSession(uv_loop_t* loop):
-      SessionBase<HttpMessage>(loop, UUID()),
-      router_(nullptr){}
-    HttpSession(uv_loop_t* loop, HttpRouter* router):
-      SessionBase<HttpMessage>(loop, UUID()),
-      router_(router){}
-    ~HttpSession() override = default;
+      void OnMessageRead(const MessagePtr& msg) override;
+     public:
+      Session():
+        SessionBase<Message>(),
+        router_(Router::NewInstance()){}
+      explicit Session(uv_loop_t* loop):
+        SessionBase<Message>(loop, UUID()),
+        router_(Router::NewInstance()){}
+      Session(uv_loop_t* loop, const RouterPtr& router):
+        SessionBase<Message>(loop, UUID()),
+        router_(router){}
+      ~Session() override = default;
 
-    virtual void Send(const HttpMessagePtr& msg){
-      return SendMessages({ msg });
-    }
-  };
+      virtual void Send(const http::HttpMessagePtr& msg){
+        return SendMessages({msg});
+      }
+    };
+  }
 }
 
 #endif//TOKEN_HTTP_SESSION_H

@@ -2,11 +2,13 @@
 #define TOKEN_HTTP_CONTROLLER_POOL_H
 
 #include "pool.h"
-
-#include <utility>
 #include "http/http_controller.h"
 
 namespace token{
+  namespace http{
+    class PoolController;
+    typedef std::shared_ptr<PoolController> PoolControllerPtr;
+
 #define FOR_EACH_POOL_CONTROLLER_ENDPOINT(V) \
   V(GET, "/pool/blocks/:hash", GetBlock)      \
   V(GET, "/pool/blocks", GetBlocks)          \
@@ -15,34 +17,41 @@ namespace token{
   V(GET, "/pool/utxos/:hash", GetUnclaimedTransaction)     \
   V(GET, "/pool/utxos", GetUnclaimedTransactions)
 
-  class PoolController : HttpController{
-   protected:
-    ObjectPoolPtr pool_;
+    class PoolController : public Controller,
+                           public std::enable_shared_from_this<PoolController>{
+     protected:
+      ObjectPoolPtr pool_;
 
 #define DECLARE_ENDPOINT(Method, Path, Name) \
     HTTP_CONTROLLER_ENDPOINT(Name)
 
-    FOR_EACH_POOL_CONTROLLER_ENDPOINT(DECLARE_ENDPOINT)
+      FOR_EACH_POOL_CONTROLLER_ENDPOINT(DECLARE_ENDPOINT)
 #undef DECLARE_ENDPOINT
-   public:
-    explicit PoolController(ObjectPoolPtr pool):
-      HttpController(),
-      pool_(std::move(pool)){}
-    ~PoolController() override = default;
+     public:
+      explicit PoolController(const ObjectPoolPtr& pool):
+          Controller(),
+          pool_(std::move(pool)){}
+      ~PoolController() override = default;
 
-    ObjectPoolPtr GetPool() const{
-      return pool_;
-    }
+      ObjectPoolPtr GetPool() const{
+        return pool_;
+      }
 
-    bool Initialize(HttpRouter* router) override{
+      bool Initialize(const RouterPtr& router) override{
 #define REGISTER_ENDPOINT(Method, Path, Name) \
       HTTP_CONTROLLER_##Method(Path, Name);
 
-      FOR_EACH_POOL_CONTROLLER_ENDPOINT(REGISTER_ENDPOINT)
+        FOR_EACH_POOL_CONTROLLER_ENDPOINT(REGISTER_ENDPOINT)
 #undef REGISTER_ENDPOINT
-      return true;
+        return true;
+      }
+    };
+
+    static inline PoolControllerPtr
+    NewInstance(const ObjectPoolPtr& pool=ObjectPool::GetInstance()){
+      return std::make_shared<PoolController>(pool);
     }
-  };
+  }
 }
 
 #endif//TOKEN_HTTP_CONTROLLER_POOL_H

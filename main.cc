@@ -1,5 +1,3 @@
-#include "libunwind.h"
-
 #include "pool.h"
 #include "units.h"
 #include "flags.h"
@@ -11,61 +9,86 @@
 #include "configuration.h"
 #include "job/scheduler.h"
 
+#ifdef TOKEN_ENABLE_EXPERIMENTAL
+#include "elastic/elastic_client.h"
+#include "elastic/events/elastic_spend_event.h"
+#endif//TOKEN_ENABLE_EXPERIMENTAL
+
 #include "rpc/rpc_server.h"
 #include "peer/peer_session_manager.h"
 #include "http/http_service_health.h"
 #include "http/http_service_rest.h"
 
 #ifdef TOKEN_DEBUG
+  static const std::vector<token::User> kOwners = {
+    token::User("VenueA"),
+    token::User("VenueB"),
+    token::User("VenueC"),
+  };
+  static const std::vector<token::User> kRecipients = {
+    token::User("TestUser1"),
+    token::User("TestUser2"),
+    token::User("TestUser3"),
+    token::User("tazz"),
+    token::User("chris"),
+    token::User("adam"),
+    token::User("george")
+  };
+
+  static inline token::User
+  RandomUser(const std::vector<token::User>& users){
+    static std::default_random_engine engine;
+    static std::uniform_int_distribution<int> distribution(0, users.size()-1);
+    return users[distribution(engine)];
+  }
+
+  static inline uint64_t
+  RandomTotal(const uint64_t min, const uint64_t max){
+    static std::default_random_engine engine;
+    static std::uniform_int_distribution<uint64_t> distribution(min, max);
+    return distribution(engine);
+  }
+
   static inline bool
-  AppendDummy(const std::string& user, int total_spends){
-    using namespace token;
+  SellTokens(const token::User& owner, uint64_t total){
+    DLOG(INFO) << owner << " spending " << total << " tokens....";
+    token::WalletManager* wallets = token::WalletManager::GetInstance();
+    token::ObjectPoolPtr pool = token::ObjectPool::GetInstance();
 
-    WalletManager* wallets = WalletManager::GetInstance();
-
-    sleep(10);
-
-    LOG(INFO) << "spending " << total_spends << " unclaimed transactions";
-
-    Wallet wallet;
-    if(!wallets->GetWallet(user, wallet)){
-      LOG(WARNING) << "couldn't get the wallet for VenueA";
+    token::Wallet wallet;
+    if(!wallets->GetWallet(owner, wallet)){
+      LOG(WARNING) << "couldn't get the wallet for: " << owner;
       return false;
     }
 
-    ObjectPoolPtr pool = ObjectPool::GetInstance();
-
-    int64_t idx = 0;
     for(auto& it : wallet){
-      UnclaimedTransactionPtr utxo = pool->GetUnclaimedTransaction(it);
+      token::UnclaimedTransactionPtr token = pool->GetUnclaimedTransaction(it);
+      token::User recipient = RandomUser(kRecipients);
 
-      LOG(INFO) << "spending: " << utxo->GetReference();
+      DLOG(INFO) << owner << " spending " << it << ".....";
 
-      InputList inputs = {};
-      OutputList outputs = {
-        Output("TestUser2", "TestToken2")
+
+      token::InputList inputs = {
+          token::Input(token->GetReference(), owner),
       };
-      TransactionPtr tx = Transaction::NewInstance(inputs, outputs);
-
-      Hash hash = tx->GetHash();
-      if(!pool->PutTransaction(hash, tx)){
-        LOG(WARNING) << "cannot add new transaction " << hash << " to object pool.";
+      token::OutputList outputs = {
+        token::Output(recipient, token->GetProduct()),
+      };
+      token::TransactionPtr tx = token::Transaction::NewInstance(inputs, outputs);
+      if(!pool->PutTransaction(tx->GetHash(), tx)){
+        LOG(WARNING) << "cannot add new transaction " << tx->ToString() << " to pool!";
         return false;
       }
 
-      if(++idx == total_spends)
-        return true;
+      token::NodeAddress elastic = token::NodeAddress::ResolveAddress(FLAGS_elasticsearch_hostname);
+      token::SendEvent(elastic, token::SpendEvent(token::Clock::now(), owner, recipient, token));
+
+      if(--total <= 0)
+        break;
     }
-    return false;
+    return true;
   }
 #endif//TOKEN_DEBUG
-
-static inline token::User
-RandomUser(const std::vector<token::User>& users){
-  static std::default_random_engine engine;
-  static std::uniform_int_distribution<int> distribution(0, users.size());
-  return users[distribution(engine)];
-}
 
 template<class C, class T, bool fatal=false>
 static inline void
@@ -205,10 +228,11 @@ main(int argc, char **argv){
   PrintRuntimeInformation();
 
 #ifdef TOKEN_DEBUG
-  sleep(5);
-  if(FLAGS_append_test && !AppendDummy("VenueA", 2)){
-    LOG(FATAL) << "cannot append the dummy transactions.";
-    return EXIT_FAILURE;
+  sleep(2);
+  if(FLAGS_spend_test_min >= 0 && FLAGS_spend_test_max > 0){
+    for(auto& owner : kOwners){
+      SellTokens(owner, RandomTotal(FLAGS_spend_test_min, FLAGS_spend_test_max));
+    }
   }
 #endif//TOKEN_DEBUG
 

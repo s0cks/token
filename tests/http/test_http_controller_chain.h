@@ -6,26 +6,15 @@
 #include "http/http_controller_chain.h"
 
 namespace token{
-  class ChainControllerTest : public HttpControllerTest{
-   protected:
-    std::shared_ptr<MockBlockChain> chain_;
-    std::shared_ptr<ChainController> controller_;
-
-    inline std::shared_ptr<MockBlockChain>
-    GetChain() const{
-      return chain_;
-    }
-
-    inline std::shared_ptr<ChainController>
-    GetController() const{
-      return controller_;
-    }
+  class ChainControllerTest : public http::ControllerTest<http::ChainController>{
    public:
     ChainControllerTest():
-      HttpControllerTest(),
-      chain_(std::make_shared<MockBlockChain>()),
-      controller_(std::make_shared<ChainController>(chain_)){}
-    ~ChainControllerTest() = default;
+      http::ControllerTest<http::ChainController>(http::ChainController::NewInstance(MockBlockChain::NewInstance())){}
+    ~ChainControllerTest() override = default;
+
+    BlockChainPtr GetChain() const{
+      return GetController()->GetChain();
+    }
   };
 }
 

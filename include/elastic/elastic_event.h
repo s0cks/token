@@ -70,7 +70,17 @@ namespace token{
         return action_;
       }
 
-      virtual bool Write(Json::Writer& writer) const = 0;
+      virtual bool Write(Json::Writer& writer) const{
+        if(!writer.StartObject())
+          return false;
+        if(!WriteTimestamp(writer))
+          return false;
+        if(!WriteEventFields(writer))
+          return false;
+        if(!writer.EndObject())
+          return false;
+        return true;
+      }
 
       std::string ToString() const{
         Json::String val;

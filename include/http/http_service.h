@@ -7,28 +7,54 @@
 #include "http/http_session.h"
 
 namespace token{
-  class HttpService : public ServerBase<HttpMessage>{
-   protected:
-    HttpRouter router_;
+  namespace http{
+    class ServiceBase : public ServerBase<Message>{
+     protected:
+      RouterPtr router_;
 
-    HttpService(uv_loop_t* loop, const char* name):
-      ServerBase(loop, name),
-      router_(){}
+      ServiceBase(uv_loop_t* loop, const char* name):
+        ServerBase<Message>(loop, name),
+        router_(Router::NewInstance()){}
 
-    SessionBase<HttpMessage>* CreateSession() const override{
-      return new HttpSession(GetLoop(), (HttpRouter*)&router_);
-    }
-   public:
-    ~HttpService() override = default;
+      Session* CreateSession() const override{
+        return new Session(GetLoop(), GetRouter());
+      }
+     public:
+      ~ServiceBase() override = default;
 
-    ServerPort GetPort() const override{
-      return FLAGS_service_port;
-    }
+      ServerPort GetPort() const override{
+        return FLAGS_service_port;
+      }
 
-    HttpRouter* GetRouter(){
-      return &router_;
-    }
-  };
+      RouterPtr GetRouter() const{
+        return router_;
+      }
+    };
+
+    template<class Service>
+    class ServiceThread{
+     protected:
+      ThreadId thread_;
+
+      static void
+      HandleThread(uword param){
+        auto instance = Service::NewInstance();
+        DLOG_THREAD_IF(ERROR, !instance->Run()) << "Failed to run service loop.";
+        pthread_exit(nullptr);
+      }
+     public:
+      ServiceThread() = default;
+      ~ServiceThread() = default;
+
+      bool Start(){
+        return ThreadStart(&thread_, Service::GetThreadName(), &HandleThread, (uword)0);
+      }
+
+      bool Join(){
+        return ThreadJoin(thread_);
+      }
+    };
+  }
 }
 
 #endif//TOKEN_HTTP_SERVICE_H

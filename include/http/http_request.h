@@ -4,291 +4,283 @@
 #include <uv.h>
 #include <string>
 #include <sstream>
-#include <unordered_map>
 #include <utility>
 #include <http_parser.h>
 
-#include "http/http_method.h"
-#include "http/http_header.h"
-#include "http/http_message.h"
-#include "http/http_service.h"
 #include "buffer.h"
+#include "http/http_message.h"
 
 namespace token{
-  class HttpRequest;
-  typedef std::shared_ptr<HttpRequest> HttpRequestPtr;
-
-  typedef std::unordered_map<std::string, std::string> ParameterMap;
-
-  class HttpSession;
-  class HttpRequest : public HttpMessage{
-    friend class HttpSession;
-   private:
-    HttpMethod method_;
-    std::string path_;
-    std::string body_;
-    ParameterMap path_params_;
-    ParameterMap query_params_;
-   protected:
-    bool Write(const BufferPtr& buffer) const override{
-      if(!buffer->PutString(GetHttpStatusLine(method_, path_)))
-        return false;
-      for(auto& hdr : headers_){
-        if(!buffer->PutString(GetHttpHeaderLine(hdr.first, hdr.second)))
+  namespace http{
+    class Request : public Message{
+      friend class HttpSession;
+     private:
+      Method method_;
+      std::string path_;
+      std::string body_;
+      ParameterMap path_params_;
+      ParameterMap query_params_;
+     protected:
+      bool Write(const BufferPtr& buffer) const override{
+        if(!buffer->PutString(GetHttpStatusLine(method_, path_)))
           return false;
+        for(auto& hdr : headers_){
+          if(!buffer->PutString(GetHttpHeaderLine(hdr.first, hdr.second)))
+            return false;
+        }
+        return buffer->PutString("\r\n")
+            && buffer->PutString(body_);
       }
-      return buffer->PutString("\r\n")
-          && buffer->PutString(body_);
-    }
 
-    static inline std::string
-    GetHttpStatusLine(const HttpMethod& method, const std::string& path){
-      std::stringstream ss;
-      ss << method << " " << path << " HTTP/1.1\r\n";
-      return ss.str();
-    }
-
-    static inline std::string
-    GetHttpHeaderLine(const std::string& name, const std::string& value){
-      std::stringstream ss;
-      ss << name << ": " << value << "\r\n";
-      return ss.str();
-    }
-   public:
-    explicit HttpRequest(HttpSession* session):
-      HttpMessage(session),
-      method_(),
-      path_(),
-      body_(),
-      path_params_(),
-      query_params_(){}
-    HttpRequest(HttpSession* session,
-                const HttpHeadersMap& headers,
-                const HttpMethod& method,
-                std::string path,
-                ParameterMap  path_params,
-                ParameterMap  query_params,
-                std::string  body):
-      HttpMessage(session, headers),
-      method_(method),
-      path_(std::move(path)),
-      body_(std::move(body)),
-      path_params_(std::move(path_params)),
-      query_params_(std::move(query_params)){}
-    ~HttpRequest() override = default;
-
-    DEFINE_HTTP_MESSAGE(Request);
-
-    void SetPathParameters(const ParameterMap& params){
-      path_params_.clear();
-      path_params_.insert(params.begin(), params.end());
-    }
-
-    void SetQueryParameters(const ParameterMap& params){
-      query_params_.clear();
-      query_params_.insert(params.begin(), params.end());
-    }
-
-    std::string GetBody() const{
-      return body_;
-    }
-
-    void GetBody(Json::Document& doc) const{
-      doc.Parse(body_.data(), body_.length());
-    }
-
-    std::string GetPath() const{
-      return path_;
-    }
-
-    HttpMethod GetMethod() const{
-      return method_;
-    }
-
-    bool IsGet() const{
-      return method_ == HttpMethod::kGet;
-    }
-
-    bool IsPost() const{
-      return method_ == HttpMethod::kPost;
-    }
-
-    bool IsPut() const{
-      return method_ == HttpMethod::kPut;
-    }
-
-    bool IsDelete() const{
-      return method_ == HttpMethod::kDelete;
-    }
-
-    bool HasPathParameter(const std::string& name) const{
-      auto pos = path_params_.find(name);
-      return pos != path_params_.end();
-    }
-
-    bool HasQueryParameter(const std::string& name) const{
-      auto pos = query_params_.find(name);
-      return pos != query_params_.end();
-    }
-
-    std::string GetPathParameterValue(const std::string& name) const{
-      auto pos = path_params_.find(name);
-      return pos != path_params_.end() ? pos->second : "";
-    }
-
-    std::string GetQueryParameterValue(const std::string& name) const{
-      auto pos = query_params_.find(name);
-      return pos != query_params_.end() ? pos->second : "";
-    }
-
-    User GetUserParameterValue(const std::string& name="user") const{
-      return User(GetPathParameterValue(name));
-    }
-
-    Product GetProductParameterValue(const std::string& name="product") const{
-      return Product(GetPathParameterValue(name));
-    }
-
-    Hash GetHashParameterValue(const std::string& name="hash") const{
-      return Hash::FromHexString(GetPathParameterValue(name));
-    }
-
-    std::string ToString() const override{
-      std::stringstream ss;
-      ss << "HttpRequest(";
-      ss << "path=" << path_ << ", ";
-      ss << "body=" << body_;
-      ss << ")";
-      return ss.str();
-    }
-
-    int64_t GetBufferSize() const override{
-      int64_t size = 0;
-      size += GetHttpStatusLine(method_, path_).length();
-      for(auto& it : headers_)
-        size += GetHttpHeaderLine(it.first, it.second).length();
-      size += sizeof('\r');
-      size += sizeof('\n');
-      size += body_.length();
-      return size;
-    }
-
-    static inline HttpRequestPtr
-    FromJson(HttpSession* session, const HttpHeadersMap& headers, const HttpMethod& method, const std::string& path, const ParameterMap& path_params, const ParameterMap& query_params, const Json::String& body){
-      return std::make_shared<HttpRequest>(session, headers, method, path, path_params, query_params, std::string(body.GetString(), body.GetSize()));
-    }
-  };
-
-  class HttpRequestBuilder : public HttpMessageBuilder<HttpRequest>{
-   private:
-    HttpMethod method_;
-    std::string path_;
-    std::string body_;
-    ParameterMap path_params_;
-    ParameterMap query_params_;
-   public:
-    explicit HttpRequestBuilder(HttpSession* session):
-      HttpMessageBuilder(session),
-      method_(HttpMethod::kGet),
-      path_(),
-      body_(),
-      path_params_(),
-      query_params_(){}
-    ~HttpRequestBuilder() override = default;
-
-    void SetMethod(const HttpMethod& method){
-      method_ = method;
-    }
-
-    void SetPath(const std::string& path){
-      path_ = path;
-    }
-
-    void SetBody(const std::string& val){
-      body_ = val;
-    }
-
-    void SetBody(const Json::String& val){
-      body_ = std::string(val.GetString(), val.GetSize());
-    }
-
-    void SetPathParameters(const ParameterMap& params){
-      path_params_.clear();
-      path_params_.insert(params.begin(), params.end());
-    }
-
-    bool SetPathParameter(const std::string& name, const std::string& value){
-      return path_params_.insert({ name, value }).second;
-    }
-
-    HttpRequestPtr Build() const override{
-      return std::make_shared<HttpRequest>(session_, headers_, method_, path_, path_params_, query_params_, body_);
-    }
-  };
-
-  class HttpRequestParser : public HttpRequestBuilder{
-   private:
-    http_parser parser_;
-    http_parser_settings settings_;
-
-    static int
-    OnParseURL(http_parser* parser, const char* data, size_t len){
-      auto p = (HttpRequestParser*)parser->data;
-      p->SetPath(std::string(data, len));
-      return 0;
-    }
-
-    static int
-    OnParseBody(http_parser* parser, const char* data, size_t len){
-      auto p = (HttpRequestParser*)parser->data;
-      p->SetBody(std::string(data, len));
-      return 0;
-    }
-
-    static int
-    OnParseStatus(http_parser* parser, const char* data, size_t len){
-      //HttpRequestParser* p = (HttpRequestParser*)parser->data;
-      LOG(INFO) << "parsed status: " << std::string(data, len);
-      return 0;
-    }
-   public:
-    explicit HttpRequestParser(HttpSession* session):
-      HttpRequestBuilder(session),
-      parser_(),
-      settings_(){
-      settings_.on_status = &OnParseStatus;
-      settings_.on_body = &OnParseBody;
-      settings_.on_url = &OnParseURL;
-
-      parser_.data = this;
-      http_parser_init(&parser_, HTTP_REQUEST);
-    }
-
-    bool Parse(const char* data, size_t len){
-      size_t parsed;
-      if((parsed = http_parser_execute(&parser_, &settings_, data, len)) != len){
-        auto err = (http_errno)parser_.http_errno;
-        LOG(WARNING) << "http parser parsed " << parsed << "/" << len << " bytes (" << http_errno_name(err) << "): " << http_errno_description(err);
-        return false;
+      static inline std::string
+      GetHttpStatusLine(const Method& method, const std::string& path){
+        std::stringstream ss;
+        ss << method << " " << path << " HTTP/1.1\r\n";
+        return ss.str();
       }
-      return true;
-    }
 
-    inline bool
-    Parse(const BufferPtr& buffer){
-      return Parse(buffer->data(), buffer->GetWrittenBytes());
-    }
-
-    static inline HttpRequestPtr
-    ParseRequest(HttpSession* session, const BufferPtr& buffer){
-      HttpRequestParser parser(session);
-      if(!parser.Parse(buffer)){
-        LOG(ERROR) << "cannot parse http request.";
-        return nullptr;
+      static inline std::string
+      GetHttpHeaderLine(const std::string& name, const std::string& value){
+        std::stringstream ss;
+        ss << name << ": " << value << "\r\n";
+        return ss.str();
       }
-      return parser.Build();
-    }
-  };
+     public:
+      explicit  Request(const SessionPtr& session):
+        Message(session),
+        method_(),
+        path_(),
+        body_(),
+        path_params_(),
+        query_params_(){}
+      Request(const SessionPtr& session,
+              const HttpHeadersMap& headers,
+              const Method& method,
+              std::string path,
+              ParameterMap  path_params,
+              ParameterMap  query_params,
+              std::string  body):
+        Message(session, headers),
+        method_(method),
+        path_(std::move(path)),
+        body_(std::move(body)),
+        path_params_(std::move(path_params)),
+        query_params_(std::move(query_params)){}
+      ~Request() override = default;
+
+      DEFINE_HTTP_MESSAGE(Request);
+
+      void SetPathParameters(const ParameterMap& params){
+        path_params_.clear();
+        path_params_.insert(params.begin(), params.end());
+      }
+
+      void SetQueryParameters(const ParameterMap& params){
+        query_params_.clear();
+        query_params_.insert(params.begin(), params.end());
+      }
+
+      std::string GetBody() const{
+        return body_;
+      }
+
+      void GetBody(Json::Document& doc) const{
+        doc.Parse(body_.data(), body_.length());
+      }
+
+      std::string GetPath() const{
+        return path_;
+      }
+
+      Method GetMethod() const{
+        return method_;
+      }
+
+      bool IsGet() const{
+        return method_ == Method::kGet;
+      }
+
+      bool IsPost() const{
+        return method_ == Method::kPost;
+      }
+
+      bool IsPut() const{
+        return method_ == Method::kPut;
+      }
+
+      bool IsDelete() const{
+        return method_ == Method::kDelete;
+      }
+
+      bool HasPathParameter(const std::string& name) const{
+        auto pos = path_params_.find(name);
+        return pos != path_params_.end();
+      }
+
+      bool HasQueryParameter(const std::string& name) const{
+        auto pos = query_params_.find(name);
+        return pos != query_params_.end();
+      }
+
+      std::string GetPathParameterValue(const std::string& name) const{
+        auto pos = path_params_.find(name);
+        return pos != path_params_.end() ? pos->second : "";
+      }
+
+      std::string GetQueryParameterValue(const std::string& name) const{
+        auto pos = query_params_.find(name);
+        return pos != query_params_.end() ? pos->second : "";
+      }
+
+      User GetUserParameterValue(const std::string& name="user") const{
+        return User(GetPathParameterValue(name));
+      }
+
+      Product GetProductParameterValue(const std::string& name="product") const{
+        return Product(GetPathParameterValue(name));
+      }
+
+      Hash GetHashParameterValue(const std::string& name="hash") const{
+        return Hash::FromHexString(GetPathParameterValue(name));
+      }
+
+      std::string ToString() const override{
+        std::stringstream ss;
+        ss << "HttpRequest(";
+        ss << "path=" << path_ << ", ";
+        ss << "body=" << body_;
+        ss << ")";
+        return ss.str();
+      }
+
+      int64_t GetBufferSize() const override{
+        int64_t size = 0;
+        size += GetHttpStatusLine(method_, path_).length();
+        for(auto& it : headers_)
+          size += GetHttpHeaderLine(it.first, it.second).length();
+        size += sizeof('\r');
+        size += sizeof('\n');
+        size += body_.length();
+        return size;
+      }
+
+      static inline RequestPtr
+      FromJson(const SessionPtr& session, const HttpHeadersMap& headers, const Method& method, const std::string& path, const ParameterMap& path_params, const ParameterMap& query_params, const Json::String& body){
+        return std::make_shared<Request>(session, headers, method, path, path_params, query_params, std::string(body.GetString(), body.GetSize()));
+      }
+    };
+
+    class RequestBuilder : public MessageBuilderBase{
+     private:
+      Method method_;
+      std::string path_;
+      std::string body_;
+      ParameterMap path_params_;
+      ParameterMap query_params_;
+     public:
+      explicit RequestBuilder(const SessionPtr& session):
+        MessageBuilderBase(session),
+        method_(Method::kGet),
+        path_(),
+        body_(),
+        path_params_(),
+        query_params_(){}
+      ~RequestBuilder() override = default;
+
+      void SetMethod(const Method& method){
+        method_ = method;
+      }
+
+      void SetPath(const std::string& path){
+        path_ = path;
+      }
+
+      void SetBody(const std::string& val){
+        body_ = val;
+      }
+
+      void SetBody(const Json::String& val){
+        body_ = std::string(val.GetString(), val.GetSize());
+      }
+
+      void SetPathParameters(const ParameterMap& params){
+        path_params_.clear();
+        path_params_.insert(params.begin(), params.end());
+      }
+
+      bool SetPathParameter(const std::string& name, const std::string& value){
+        return path_params_.insert({ name, value }).second;
+      }
+
+      RequestPtr Build() const{
+        return std::make_shared<Request>(session_, headers_, method_, path_, path_params_, query_params_, body_);
+      }
+    };
+
+    class RequestParser : public RequestBuilder{
+     private:
+      http_parser parser_;
+      http_parser_settings settings_;
+
+      static int
+      OnParseURL(http_parser* parser, const char* data, size_t len){
+        auto p = (RequestParser*)parser->data;
+        p->SetPath(std::string(data, len));
+        return 0;
+      }
+
+      static int
+      OnParseBody(http_parser* parser, const char* data, size_t len){
+        auto p = (RequestParser*)parser->data;
+        p->SetBody(std::string(data, len));
+        return 0;
+      }
+
+      static int
+      OnParseStatus(http_parser* parser, const char* data, size_t len){
+        //HttpRequestParser* p = (HttpRequestParser*)parser->data;
+        LOG(INFO) << "parsed status: " << std::string(data, len);
+        return 0;
+      }
+     public:
+      explicit RequestParser(const SessionPtr& session):
+        RequestBuilder(session),
+        parser_(),
+        settings_(){
+        settings_.on_status = &OnParseStatus;
+        settings_.on_body = &OnParseBody;
+        settings_.on_url = &OnParseURL;
+
+        parser_.data = this;
+        http_parser_init(&parser_, HTTP_REQUEST);
+      }
+
+      bool Parse(const char* data, size_t len){
+        size_t parsed;
+        if((parsed = http_parser_execute(&parser_, &settings_, data, len)) != len){
+          auto err = (http_errno)parser_.http_errno;
+          LOG(WARNING) << "http parser parsed " << parsed << "/" << len << " bytes (" << http_errno_name(err) << "): " << http_errno_description(err);
+          return false;
+        }
+        return true;
+      }
+
+      inline bool
+      Parse(const BufferPtr& buffer){
+        return Parse(buffer->data(), buffer->GetWrittenBytes());
+      }
+
+      static inline RequestPtr
+      ParseRequest(const SessionPtr& session, const BufferPtr& buffer){
+        RequestParser parser(session);
+        if(!parser.Parse(buffer)){
+          LOG(ERROR) << "cannot parse http request.";
+          return nullptr;
+        }
+        return parser.Build();
+      }
+    };
+  }
 }
 
 #endif //TOKEN_REQUEST_H

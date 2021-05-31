@@ -22,10 +22,12 @@ DECLARE_int32(service_port);
 // experimental
 #ifdef TOKEN_ENABLE_EXPERIMENTAL
 DECLARE_bool(enable_snapshots);
+DECLARE_string(elasticsearch_hostname);
 #endif//TOKEN_ENABLE_EXPERIMENTAL
 
 #ifdef TOKEN_DEBUG
-DECLARE_bool(append_test);
+DECLARE_uint64(spend_test_min);
+DECLARE_uint64(spend_test_max);
 #endif//TOKEN_DEBUG
 
 namespace token{

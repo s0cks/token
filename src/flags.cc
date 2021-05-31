@@ -23,5 +23,7 @@ DEFINE_bool(enable_snapshots, false, "Enable snapshots of the block chain");
 #endif//TOKEN_ENABLE_EXPERIMENTAL
 
 #ifdef TOKEN_DEBUG
-DEFINE_bool(append_test, false, "Append a test block upon startup [Debug]");
+DEFINE_uint64(spend_test_min, 0, "[Test] The minimum amount of tokens to be spent");
+DEFINE_uint64(spend_test_max, 0, "[Test] The maximum amount of tokens to be spent");
+DEFINE_string(elasticsearch_hostname, "localhost:8080", "The elasticsearch hostname.");
 #endif//TOKEN_DEBUG

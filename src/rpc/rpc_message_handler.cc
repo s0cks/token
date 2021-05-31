@@ -31,7 +31,7 @@ namespace token{
       UUID node_id = ConfigurationManager::GetNodeID();
       NodeAddress callback = GetServerCallbackAddress();
       Version version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
-      BlockPtr head = BlockChain::GetInstance()->GetHead(); //TODO: optimize
+      BlockPtr head = GetChain()->GetHead();
       Hash nonce = Hash::GenerateNonce();
       Send(VerackMessage::NewInstance(type, node_id, callback, version, head->GetHeader(), nonce));
 

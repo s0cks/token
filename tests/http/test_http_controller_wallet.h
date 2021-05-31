@@ -6,17 +6,19 @@
 #include "http/http_controller_wallet.h"
 
 namespace token{
-  class WalletControllerTest : public HttpControllerTest{
-   protected:
-    WalletController controller_;
-    MockWalletManager wallets_;
-   public:
-    WalletControllerTest():
-      HttpControllerTest(),
-      controller_(&wallets_),
-      wallets_(){}
-    ~WalletControllerTest() = default;
-  };
+   class WalletControllerTest : public http::ControllerTest<http::WalletController>{
+    protected:
+     std::shared_ptr<WalletManager> wallets_;
+    public:
+     WalletControllerTest():
+      http::ControllerTest<http::WalletController>(),
+      wallets_(std::make_shared<MockWalletManager>()){}
+    ~WalletControllerTest() override = default;
+
+     std::shared_ptr<WalletManager> GetWalletManager() const{
+       return wallets_;
+     }
+   };
 }
 
 #endif//TOKEN_TEST_HTTP_CONTROLLER_WALLET_H

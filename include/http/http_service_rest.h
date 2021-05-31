@@ -2,59 +2,58 @@
 #define TOKEN_HTTP_SERVICE_REST_H
 
 #include "http/http_service.h"
-
 #include "http/http_controller_pool.h"
 #include "http/http_controller_chain.h"
 #include "http/http_controller_wallet.h"
 
 namespace token{
-  class HttpRestService : public HttpService{
-   private:
-    std::shared_ptr<PoolController> pool_;
-    std::shared_ptr<ChainController> chain_;
-    std::shared_ptr<WalletController> wallet_;
-   public:
-    explicit HttpRestService(uv_loop_t* loop=uv_loop_new());
-    ~HttpRestService() override = default;
+  namespace http{
+    class RestService;
+    typedef std::shared_ptr<RestService> RestServicePtr;
 
-    std::shared_ptr<PoolController> GetPoolController() const{
-      return pool_;
-    }
+    class RestService : public ServiceBase{
+     private:
+      PoolControllerPtr pool_;
+      ChainControllerPtr chain_;
+      WalletControllerPtr wallets_;
+     public:
+      explicit RestService(uv_loop_t* loop=uv_loop_new());
+      ~RestService() override = default;
 
-    std::shared_ptr<ChainController> GetChainController() const{
-      return chain_;
-    }
+      PoolControllerPtr GetPoolController() const{
+        return pool_;
+      }
 
-    std::shared_ptr<WalletController> GetWalletController() const{
-      return wallet_;
-    }
+      ChainControllerPtr GetChainController() const{
+        return chain_;
+      }
 
-    ServerPort GetPort() const override{
-      return GetServerPort();
-    }
+      WalletControllerPtr GetWalletController() const{
+        return wallets_;
+      }
 
-    static inline ServerPort
-    GetServerPort(){
-      return FLAGS_service_port;
-    }
+      ServerPort GetPort() const override{
+        return GetServerPort();
+      }
 
-    static inline const char*
-    GetThreadName(){
-      return "http/rest";
-    }
+      static inline ServerPort
+      GetServerPort(){
+        return FLAGS_service_port;
+      }
 
-    static HttpRestService* GetInstance();
-  };
+      static inline const char*
+      GetThreadName(){
+        return "http/rest";
+      }
 
-  class HttpRestServiceThread{
-   protected:
-    static void HandleThread(uword param);
-   public:
-    HttpRestServiceThread() = delete;
-    ~HttpRestServiceThread() = delete;
-    static bool Join();
-    static bool Start();
-  };
+      static inline RestServicePtr
+      NewInstance(){
+        return std::make_shared<RestService>();
+      }
+    };
+
+    class RestServiceThread : public ServiceThread<RestService>{};
+  }
 }
 
 #endif//TOKEN_HTTP_SERVICE_REST_H

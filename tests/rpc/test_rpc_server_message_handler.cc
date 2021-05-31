@@ -59,15 +59,22 @@ namespace token{
       MockServerSessionPtr session = MockServerSession::NewInstance(chain, pool);
       rpc::MessageHandler& handler = session->GetMessageHandler();
 
+      BlockPtr genesis = Block::Genesis();
+
       rpc::VerackMessagePtr msg = VerackMessage::NewInstance(
          ClientType::kNode,
          UUID(),
          NodeAddress(),
          Version::CurrentVersion(),
-         Block::Genesis()->GetHeader(),
+         genesis->GetHeader(),
          Hash::GenerateNonce(),
          Clock::now()
       );
+
+
+      EXPECT_CALL(*chain, GetHead)
+        .Times(testing::AtLeast(1))
+        .WillRepeatedly(testing::Return(genesis));
 
       handler.OnVerackMessage(msg);
     }

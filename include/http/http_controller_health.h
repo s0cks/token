@@ -1,37 +1,49 @@
 #ifndef TOKEN_HTTP_CONTROLLER_HEALTH_H
 #define TOKEN_HTTP_CONTROLLER_HEALTH_H
 
-#include "http/http_service.h"
 #include "http/http_controller.h"
 
 namespace token{
+  namespace http{
+    class HealthController;
+    typedef std::shared_ptr<HealthController> HealthControllerPtr;
+
 #define FOR_EACH_HEALTH_CONTROLLER_ENDPOINT(V) \
-  V(GET, "/ready", GetReadyStatus)             \
-  V(GET, "/live", GetLiveStatus)
+    V(GET, "/ready", GetReadyStatus)           \
+    V(GET, "/live", GetLiveStatus)
 
-  class HealthController : HttpController{
-   protected:
-
-   public:
-    HealthController():
-      HttpController(){}
-    ~HealthController() override = default;
+    class HealthController : public Controller,
+                             public std::enable_shared_from_this<HealthController>{
+     public:
+      HealthController() = default;
+      ~HealthController() override = default;
 
 #define DECLARE_ENDPOINT(Method, Path, Name) \
     HTTP_CONTROLLER_ENDPOINT(Name);
 
-    FOR_EACH_HEALTH_CONTROLLER_ENDPOINT(DECLARE_ENDPOINT)
+      FOR_EACH_HEALTH_CONTROLLER_ENDPOINT(DECLARE_ENDPOINT)
 #undef DECLARE_ENDPOINT
 
-    bool Initialize(HttpRouter* router) override{
+      bool Initialize(const RouterPtr& router) override{
 #define REGISTER_ENDPOINT(Method, Path, Name) \
-      HTTP_CONTROLLER_##Method(Path, Name);
+        HTTP_CONTROLLER_##Method(Path, Name);
 
-      FOR_EACH_HEALTH_CONTROLLER_ENDPOINT(REGISTER_ENDPOINT)
+        FOR_EACH_HEALTH_CONTROLLER_ENDPOINT(REGISTER_ENDPOINT)
 #undef REGISTER_ENDPOINT
-      return true;
+        return true;
+      }
+
+      static inline HealthControllerPtr
+      NewInstance(){
+        return std::make_shared<HealthController>();
+      }
+    };
+
+    static inline HealthControllerPtr
+    NewHealthController(){
+      return std::make_shared<HealthController>();
     }
-  };
+  }
 }
 
 #endif//TOKEN_HTTP_CONTROLLER_HEALTH_H

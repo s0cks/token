@@ -5,28 +5,43 @@
 #include "mock/mock_http_session.h"
 
 namespace token{
-  static inline HttpRequestPtr
-  CreateRequestFor(MockHttpSession* session, const HttpMethod& method, const std::string& path, const ParameterMap& path_params){
-    HttpRequestBuilder builder(session);
+  MATCHER(ResponseIsOk, "The http response status code is 200 (Ok)"){
+    return std::static_pointer_cast<http::Response>(arg)->GetStatusCode() == http::StatusCode::kHttpOk;
+  }
+
+  MATCHER_P(ResponseBodyEqualsString, expected, "The http response body doesn't match"){
+    return std::static_pointer_cast<http::Response>(arg)->GetBodyAsString() == expected;
+  }
+
+  static inline http::RequestPtr
+  CreateRequestFor(const http::SessionPtr& session, const http::Method& method, const std::string& path, const http::ParameterMap& path_params){
+    http::RequestBuilder builder(session);
     builder.SetMethod(method);
     builder.SetPath(path);
     builder.SetPathParameters(path_params);
     return builder.Build();
   }
 
-  MATCHER_P2(ResponseIs, status_code, body, "response doesn't match"){
-    HttpResponsePtr a = std::static_pointer_cast<HttpResponse>(arg);
-    return a->GetStatusCode() == status_code
-        && a->GetBodyAsString() == body;
-  }
+  namespace http{
+    template<class Controller>
+    class ControllerTest : public ::testing::Test{
+     protected:
+      std::shared_ptr<Controller> controller_;
 
-  class HttpControllerTest : public ::testing::Test{
-   protected:
-    HttpControllerTest():
-      ::testing::Test(){}
-   public:
-    virtual ~HttpControllerTest() = default;
-  };
+      ControllerTest():
+        ::testing::Test(),
+        controller_(Controller::NewInstance()){}
+      ControllerTest(const std::shared_ptr<Controller>& controller):
+        ::testing::Test(),
+        controller_(controller){}
+     public:
+      virtual ~ControllerTest() override = default;
+
+      std::shared_ptr<Controller> GetController() const{
+        return controller_;
+      }
+    };
+  }
 }
 
 #endif//TOKEN_TEST_HTTP_CONTROLLER_H

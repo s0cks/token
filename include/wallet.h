@@ -68,6 +68,9 @@ namespace token{
     return stream << "]";
   }
 
+  class WalletManager;
+  typedef std::shared_ptr<WalletManager> WalletManagerPtr;
+
 #define LOG_WALLETS(LevelName) \
   LOG(LevelName) << "[wallets] "
 
@@ -194,8 +197,13 @@ namespace token{
       return "WalletManager";
     }
 
+    static inline WalletManagerPtr
+    NewInstance(){
+      return std::make_shared<WalletManager>();
+    }
+
+    static WalletManagerPtr GetInstance();
     static bool Initialize(const std::string& filename=GetWalletManagerFilename());
-    static WalletManager* GetInstance();
   };
 }
 

@@ -11,7 +11,7 @@ namespace token{
 
   template<class T>
   static inline bool
-  SendEvent(const NodeAddress& address, const std::string& index, const T& event){
+  SendEvent(const NodeAddress& address, const T& event){
     Json::String body;
     Json::Writer writer(body);
     if(!event.Write(writer)){
@@ -20,14 +20,14 @@ namespace token{
     }
 
     HttpClient client(address);
-    HttpRequestBuilder builder(nullptr);
-    builder.SetMethod(HttpMethod::kPost);
-    builder.SetPath("/" + index + "/_doc?pretty");
+    http::RequestBuilder builder(nullptr);
+    builder.SetMethod(http::Method::kPost);
+    builder.SetPath("/");
     builder.SetHeader(HTTP_HEADER_CONTENT_TYPE, HTTP_CONTENT_TYPE_APPLICATION_JSON);
     builder.SetHeader(HTTP_HEADER_CONTENT_LENGTH, body.GetSize());
     builder.SetBody(body);
 
-    HttpResponsePtr response = client.Send(builder.Build());
+    http::ResponsePtr response = client.Send(builder.Build());
     if(!response){
       DLOG(WARNING) << "empty response from ES.";
       return false;

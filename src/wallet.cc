@@ -148,9 +148,9 @@ namespace token{
     return leveldb::Status::OK();
   }
 
-  WalletManager* WalletManager::GetInstance(){
-    static WalletManager instance;
-    return &instance;
+  WalletManagerPtr WalletManager::GetInstance(){
+    static WalletManagerPtr instance = WalletManager::NewInstance();
+    return instance;
   }
 
   bool WalletManager::Initialize(const std::string& filename){

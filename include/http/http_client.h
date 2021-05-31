@@ -15,7 +15,7 @@ namespace token{
       address_(address){}
     ~HttpClient() = default;
 
-    HttpResponsePtr Send(const HttpRequestPtr& request);
+    http::ResponsePtr Send(const http::RequestPtr& request);
   };
 }
 

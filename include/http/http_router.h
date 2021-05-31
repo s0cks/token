@@ -1,188 +1,188 @@
 #ifndef TOKEN_ROUTER_H
 #define TOKEN_ROUTER_H
 
-#include <unordered_map>
-#include <utility>
 #include <glog/logging.h>
-#include "http_method.h"
+
 #include "trie.h"
+#include "http/http_common.h"
 
 namespace token{
-  typedef std::unordered_map<std::string, std::string> ParameterMap;
+  namespace http{
+    typedef std::unordered_map<std::string, std::string> ParameterMap;
 
-  class HttpController;
-  class HttpSession;
-  class HttpRequest;
-  typedef std::shared_ptr<HttpRequest> HttpRequestPtr;
+    typedef void (*RouteHandlerFunction)(const ControllerPtr&, const SessionPtr&, const RequestPtr&);
 
-  typedef void (*HttpRouteHandler)(HttpController*, HttpSession*, const HttpRequestPtr&);
+    class Route{
+      friend class Router;
+     private:
+      ControllerPtr controller_;
 
-  class HttpRoute{
-    friend class HttpRouter;
-   private:
-    HttpController* owner_;
-    std::string path_;
-    HttpMethod method_;
-    HttpRouteHandler handler_;
-   public:
-    HttpRoute():
-      owner_(nullptr),
-      path_(),
-      method_(),
-      handler_(){}
-    HttpRoute(HttpController* owner, std::string path, const HttpMethod& method, HttpRouteHandler handler):
-      owner_(owner),
-      path_(std::move(path)),
-      method_(method),
-      handler_(handler){}
-    HttpRoute(const HttpRoute& route) = default;
-    ~HttpRoute() = default;
+      std::string path_;
+      Method method_;
+      RouteHandlerFunction handler_;
+     public:
+      Route():
+        controller_(),
+        path_(),
+        method_(),
+        handler_(){}
+      Route(const ControllerPtr& controller, std::string path, const Method& method, RouteHandlerFunction handler):
+        controller_(controller),
+        path_(std::move(path)),
+        method_(method),
+        handler_(handler){}
+      Route(const Route& route) = default;
+      ~Route() = default;
 
-    HttpController* GetOwner() const{
-      return owner_;
-    }
+      ControllerPtr GetController() const{
+        return controller_;
+      }
 
-    std::string GetPath() const{
-      return path_;
-    }
+      std::string GetPath() const{
+        return path_;
+      }
 
-    HttpMethod GetMethod() const{
-      return method_;
-    }
+      Method GetMethod() const{
+        return method_;
+      }
 
-    HttpRouteHandler GetHandler() const{
-      return handler_;
-    }
+      RouteHandlerFunction GetHandler() const{
+        return handler_;
+      }
 
-    HttpRoute& operator=(const HttpRoute& route) = default;
-  };
+      RouteHandlerFunction& GetHandler(){
+        return handler_;
+      }
+
+      Route& operator=(const Route& route) = default;
+    };
 
 #define FOR_EACH_HTTP_ROUTER_MATCH_STATUS(V) \
     V(Ok)                                    \
     V(NotFound)                              \
     V(NotSupported)
 
-  class HttpRouterMatch{
-    friend class HttpRouter;
-   public:
-    enum Status{
+    class RouterMatch{
+      friend class Router;
+     public:
+      enum Status{
 #define DEFINE_STATUS(Name) k##Name,
-      FOR_EACH_HTTP_ROUTER_MATCH_STATUS(DEFINE_STATUS)
+        FOR_EACH_HTTP_ROUTER_MATCH_STATUS(DEFINE_STATUS)
 #undef DEFINE_STATUS
-    };
+      };
 
-    friend std::ostream& operator<<(std::ostream& stream, const Status& status){
-      switch(status){
+      friend std::ostream& operator<<(std::ostream& stream, const Status& status){
+        switch (status){
 #define DEFINE_TOSTRING(Name) \
         case Status::k##Name: \
             stream << #Name; \
             return stream;
-        FOR_EACH_HTTP_ROUTER_MATCH_STATUS(DEFINE_TOSTRING)
+          FOR_EACH_HTTP_ROUTER_MATCH_STATUS(DEFINE_TOSTRING)
 #undef DEFINE_TOSTRING
-        default:stream << "Unknown";
-          return stream;
+          default:stream << "Unknown";
+            return stream;
+        }
       }
-    }
-   private:
-    std::string path_;
-    Status status_;
+     private:
+      std::string path_;
+      Status status_;
 
-    ParameterMap params_path_;
-    ParameterMap params_query_;
+      ParameterMap params_path_;
+      ParameterMap params_query_;
 
-    HttpRoute route_;
+      Route route_;
 
-    HttpRouterMatch(std::string path,
-                    const Status& status,
-                    ParameterMap params_path,
-                    ParameterMap params_query,
-                    const HttpRoute& route):
-      path_(std::move(path)),
-      status_(status),
-      params_path_(std::move(params_path)),
-      params_query_(std::move(params_query)),
-      route_(route){}
-    HttpRouterMatch(std::string path, const Status& status):
-      path_(std::move(path)),
-      status_(status),
-      params_path_(),
-      params_query_(),
-      route_(){}
-   public:
-    HttpRouterMatch(const HttpRouterMatch& match):
-      path_(match.path_),
-      status_(match.status_),
-      params_path_(),
-      params_query_(),
-      route_(match.route_){}
-    ~HttpRouterMatch() = default;
+      RouterMatch(std::string path,
+                      const Status& status,
+                      ParameterMap params_path,
+                      ParameterMap params_query,
+                      const Route& route):
+          path_(std::move(path)),
+          status_(status),
+          params_path_(std::move(params_path)),
+          params_query_(std::move(params_query)),
+          route_(route){}
+      RouterMatch(std::string path, const Status& status):
+          path_(std::move(path)),
+          status_(status),
+          params_path_(),
+          params_query_(),
+          route_(){}
+     public:
+      RouterMatch(const RouterMatch& match):
+          path_(match.path_),
+          status_(match.status_),
+          params_path_(),
+          params_query_(),
+          route_(match.route_){}
+      ~RouterMatch() = default;
 
-    std::string GetPath() const{
-      return path_;
-    }
+      std::string GetPath() const{
+        return path_;
+      }
 
-    Status GetStatus() const{
-      return status_;
-    }
+      Status GetStatus() const{
+        return status_;
+      }
 
-    HttpRoute& GetRoute(){
-      return route_;
-    }
+      Route& GetRoute(){
+        return route_;
+      }
 
-    HttpRoute GetRoute() const{
-      return route_;
-    }
+      Route GetRoute() const{
+        return route_;
+      }
 
-    ParameterMap& GetPathParameters(){
-      return params_path_;
-    }
+      ParameterMap& GetPathParameters(){
+        return params_path_;
+      }
 
-    ParameterMap GetPathParameters() const{
-      return params_path_;
-    }
+      ParameterMap GetPathParameters() const{
+        return params_path_;
+      }
 
-    bool HasPathParameter(const std::string& name){
-      auto pos = params_path_.find(name);
-      return pos != params_path_.end();
-    }
+      bool HasPathParameter(const std::string& name){
+        auto pos = params_path_.find(name);
+        return pos != params_path_.end();
+      }
 
-    std::string GetPathParameterValue(const std::string& name){
-      return params_path_[name];
-    }
+      std::string GetPathParameterValue(const std::string& name){
+        return params_path_[name];
+      }
 
-    ParameterMap& GetQueryParameters(){
-      return params_query_;
-    }
+      ParameterMap& GetQueryParameters(){
+        return params_query_;
+      }
 
-    ParameterMap GetQueryParameters() const{
-      return params_query_;
-    }
+      ParameterMap GetQueryParameters() const{
+        return params_query_;
+      }
 
-    bool HasQueryParameter(const std::string& name) const{
-      auto pos = params_query_.find(name);
-      return pos != params_query_.end();
-    }
+      bool HasQueryParameter(const std::string& name) const{
+        auto pos = params_query_.find(name);
+        return pos != params_query_.end();
+      }
 
-    std::string GetQueryParameterValue(const std::string& name){
-      return params_query_[name];
-    }
+      std::string GetQueryParameterValue(const std::string& name){
+        return params_query_[name];
+      }
 
 #define DEFINE_CHECK(Name) \
         bool Is##Name() const{ return GetStatus() == Status::k##Name; }
-    FOR_EACH_HTTP_ROUTER_MATCH_STATUS(DEFINE_CHECK)
+      FOR_EACH_HTTP_ROUTER_MATCH_STATUS(DEFINE_CHECK)
 #undef DEFINE_CHECK
 
-    HttpRouterMatch& operator=(const HttpRouterMatch& match) = default;
+      RouterMatch& operator=(const RouterMatch& match) = default;
 
-    friend std::ostream& operator<<(std::ostream& stream, const HttpRouterMatch& match){
-      return stream << "HttpRouterMatch(" << match.GetPath() << ", " << match.GetStatus() << ")";
-    }
-  };
+      friend std::ostream& operator<<(std::ostream& stream, const RouterMatch& match){
+        return stream << "HttpRouterMatch(" << match.GetPath() << ", " << match.GetStatus() << ")";
+      }
+    };
 
 #define FOR_EACH_URL_ENCODED_CHARACTER(V) \
-  V(0, '\0', "%00")                     \
+  V(0, '\0', "%00")                       \
   V(1, ' ', "%20")                        \
-  V(2, '!', "%21") \
+  V(2, '!', "%21")                        \
   V(3, '"', "%22") \
   V(4, '#', "%23") \
   V(5, '$', "%24") \
@@ -277,145 +277,158 @@ namespace token{
   V(94, '}', "%7D") \
   V(95, '~', "%7E")
 
-  static const int64_t kHttpPathParameter = 96;
-  static const int64_t kHttpQueryParameter = 97;
-  static const int64_t kHttpAlphabetSize = 98;
+    static const int64_t kHttpPathParameter = 96;
+    static const int64_t kHttpQueryParameter = 97;
+    static const int64_t kHttpAlphabetSize = 98;
 
-  class HttpRouter : Trie<char, HttpRoute, kHttpAlphabetSize>{
-   private:
-    using Base = Trie<char, HttpRoute, kHttpAlphabetSize>;
-    using Node = TrieNode<char, HttpRoute, kHttpAlphabetSize>;
+    class Router : Trie<char, Route, kHttpAlphabetSize>{
+     private:
+      using Base = Trie<char, Route, kHttpAlphabetSize>;
+      using Node = TrieNode<char, Route, kHttpAlphabetSize>;
 
-    static inline int
-    GetPosition(char c) {
-      switch(c){
+      static inline int
+      GetPosition(char c){
+        switch (c){
 #define DEFINE_CHECK(Decimal, Char, Encoding) \
         case (Char):                          \
           return (Decimal);
-        FOR_EACH_URL_ENCODED_CHARACTER(DEFINE_CHECK)
+          FOR_EACH_URL_ENCODED_CHARACTER(DEFINE_CHECK)
 #undef DEFINE_CHECK
-        default:
-          return (int)c;
-      }
-      return 0;
-    }
-
-    static inline bool
-    Insert(Node* node, HttpController* owner, const HttpMethod& method, const std::string& path, const HttpRouteHandler& handler){
-      Node* curr = node;
-      for(auto i = path.begin(); i < path.end();){
-        char c = *(i++);
-        if(c == ':'){
-          std::string name;
-          do{
-            name += (*i);
-          } while((++i) != path.cend() && (*i) != '/');
-
-          if(!curr->HasChild(kHttpPathParameter)){
-            if(!curr->SetChild(kHttpPathParameter, new Node(':', HttpRoute(owner, name, method, handler)))){
-              LOG(WARNING) << "couldn't create child @" << kHttpPathParameter << " for " <<  name;
-              return false;
-            }
-          }
-
-          curr = (Node*)curr->GetChild(kHttpPathParameter);
-        } else{
-          int pos = GetPosition(c);
-          if(pos < 0){
-            LOG(WARNING) << "invalid url character " << c << "(" << pos << ")";
-            return false;
-          }
-
-          if(!curr->HasChild(pos)){
-            if(!curr->SetChild(pos, new Node(c, HttpRoute(owner, std::string(1, c), method, handler)))){
-              LOG(WARNING) << "couldn't create child @" << pos << " for " << c;
-              return false;
-            }
-          }
-          curr = (Node*)curr->GetChild(pos);
+          default:return (int) c;
         }
+        return 0;
       }
-      return true;
-    }
 
-    static inline HttpRouterMatch
-    Search(Node* node, const HttpMethod& method, const std::string& path){
-      ParameterMap path_params;
-      ParameterMap query_params;
-
-      Node* curr = node;
-      for(auto i = path.begin(); i < path.end();){
-        char c = *(i++);
-        if(curr->HasChild(kHttpPathParameter)){
-          curr = (Node*)curr->GetChild(kHttpPathParameter);
-
-          std::string value(1, c);
-          do{
-            value += (*i);
-          } while((++i) != path.end() && (*i) != '/' && (*i) != '?');
-
-          HttpRoute& route = curr->GetValue();
-          path_params.insert({ route.GetPath(), value});
-        } else if(c == '?'){
-          do{
-            if((*i) == '&')
-              i++;
-
-            std::string key;
+      static inline bool
+      Insert(Node* node,
+             const ControllerPtr& owner,
+             const Method& method,
+             const std::string& path,
+             const RouteHandlerFunction& handler){
+        Node* curr = node;
+        for (auto i = path.begin(); i < path.end();){
+          char c = *(i++);
+          if (c == ':'){
+            std::string name;
             do{
-              key += (*i);
-            } while((++i) != path.end() && (*i) != '=' && (*i) != '/');
+              name += (*i);
+            } while ((++i) != path.cend() && (*i) != '/');
 
-            i++;
+            if (!curr->HasChild(kHttpPathParameter)){
+              if (!curr->SetChild(kHttpPathParameter, new Node(':', Route(owner, name, method, handler)))){
+                LOG(WARNING) << "couldn't create child @" << kHttpPathParameter << " for " << name;
+                return false;
+              }
+            }
 
-            std::string value;
+            curr = (Node*) curr->GetChild(kHttpPathParameter);
+          } else{
+            int pos = GetPosition(c);
+            if (pos < 0){
+              LOG(WARNING) << "invalid url character " << c << "(" << pos << ")";
+              return false;
+            }
+
+            if (!curr->HasChild(pos)){
+              if (!curr->SetChild(pos, new Node(c, Route(owner, std::string(1, c), method, handler)))){
+                LOG(WARNING) << "couldn't create child @" << pos << " for " << c;
+                return false;
+              }
+            }
+            curr = (Node*) curr->GetChild(pos);
+          }
+        }
+        return true;
+      }
+
+      static inline RouterMatch
+      Search(Node* node, const Method& method, const std::string& path){
+        ParameterMap path_params;
+        ParameterMap query_params;
+
+        Node* curr = node;
+        for (auto i = path.begin(); i < path.end();){
+          char c = *(i++);
+          if (curr->HasChild(kHttpPathParameter)){
+            curr = (Node*) curr->GetChild(kHttpPathParameter);
+
+            std::string value(1, c);
             do{
               value += (*i);
-            } while((++i) != path.end() && (*i) != '&' && (*i) != '/');
+            } while ((++i) != path.end() && (*i) != '/' && (*i) != '?');
 
-            query_params.insert({ key, value });
-          } while(i != path.end() && (*i) == '&' && (*i) != '/');
-          break;
-        } else{
-          int pos = GetPosition(c);
-          if(!curr->HasChild(pos)){
-            LOG(WARNING) << "cannot find child " << c << "@" << pos << " (parent: " << curr->GetKey() << ")";
-            return HttpRouterMatch(path, HttpRouterMatch::kNotFound);
+            Route& route = curr->GetValue();
+            path_params.insert({route.GetPath(), value});
+          } else if (c == '?'){
+            do{
+              if ((*i) == '&')
+                i++;
+
+              std::string key;
+              do{
+                key += (*i);
+              } while ((++i) != path.end() && (*i) != '=' && (*i) != '/');
+
+              i++;
+
+              std::string value;
+              do{
+                value += (*i);
+              } while ((++i) != path.end() && (*i) != '&' && (*i) != '/');
+
+              query_params.insert({key, value});
+            } while (i != path.end() && (*i) == '&' && (*i) != '/');
+            break;
+          } else{
+            int pos = GetPosition(c);
+            if (!curr->HasChild(pos)){
+              LOG(WARNING) << "cannot find child " << c << "@" << pos << " (parent: " << curr->GetKey() << ")";
+              return RouterMatch(path, RouterMatch::kNotFound);
+            }
+            curr = (Node*) curr->GetChild(pos);
           }
-          curr = (Node*)curr->GetChild(pos);
         }
+
+        Route& route = curr->GetValue();
+        if (route.GetMethod() != method)
+          return RouterMatch(path, RouterMatch::kNotSupported);
+        return RouterMatch(path, RouterMatch::kOk, path_params, query_params, route);
+      }
+     public:
+      Router(): Base(){}
+      explicit Router(const RouteHandlerFunction& default_handler):
+        Base(){}
+      ~Router() = default;
+
+      void Get(const ControllerPtr& owner, const std::string& path, const RouteHandlerFunction& handler){
+        Insert(GetRoot(), owner, Method::kGet, path, handler);
       }
 
-      HttpRoute& route = curr->GetValue();
-      if(route.GetMethod() != method)
-        return HttpRouterMatch(path, HttpRouterMatch::kNotSupported);
-      return HttpRouterMatch(path, HttpRouterMatch::kOk, path_params, query_params, route);
-    }
-   public:
-    HttpRouter():
-      Base(){}
-    explicit HttpRouter(const HttpRouteHandler& default_handler):
-      Base(){}
-    ~HttpRouter() = default;
+      void Put(const ControllerPtr& owner, const std::string& path, const RouteHandlerFunction& handler){
+        Insert(GetRoot(), owner, Method::kPut, path, handler);
+      }
 
-    void Get(HttpController* owner, const std::string& path, HttpRouteHandler handler){
-      Insert(GetRoot(), owner, HttpMethod::kGet, path, handler);
-    }
+      void Post(const ControllerPtr& owner, const std::string& path, const RouteHandlerFunction& handler){
+        Insert(GetRoot(), owner, Method::kPost, path, handler);
+      }
 
-    void Put(HttpController* owner, const std::string& path, HttpRouteHandler handler){
-      Insert(GetRoot(), owner, HttpMethod::kPut, path, handler);
-    }
+      void Delete(const ControllerPtr& owner, const std::string& path, const RouteHandlerFunction& handler){
+        Insert(GetRoot(), owner, Method::kDelete, path, handler);
+      }
 
-    void Post(HttpController* owner, const std::string& path, HttpRouteHandler handler){
-      Insert(GetRoot(), owner, HttpMethod::kPost, path, handler);
-    }
+      RouterMatch Find(const RequestPtr& request);
 
-    void Delete(HttpController* owner, const std::string& path, HttpRouteHandler handler){
-      Insert(GetRoot(), owner, HttpMethod::kDelete, path, handler);
-    }
+      static inline RouterPtr
+      NewInstance(){
+        return std::make_shared<Router>();
+      }
 
-    HttpRouterMatch Find(const HttpRequestPtr& request);
-  };
+      static inline RouterPtr
+      NewInstance(const RouteHandlerFunction& default_handler){
+        return std::make_shared<Router>(default_handler);
+      }
+    };
+  }
 }
 
 #endif //TOKEN_ROUTER_H

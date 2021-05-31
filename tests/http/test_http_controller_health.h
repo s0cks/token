@@ -5,16 +5,7 @@
 #include "http/http_controller_health.h"
 
 namespace token{
-  class HealthControllerTest : public HttpControllerTest{
-   protected:
-    HealthController controller_;
-
-   public:
-    HealthControllerTest():
-      HttpControllerTest(),
-      controller_(){}
-    ~HealthControllerTest() = default;
-  };
+  class HealthControllerTest : public http::ControllerTest<http::HealthController>{};
 }
 
 #endif//TOKEN_TEST_HTTP_CONTROLLER_HEALTH_H

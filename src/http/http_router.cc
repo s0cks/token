@@ -2,7 +2,9 @@
 #include "http/http_request.h"
 
 namespace token{
-  HttpRouterMatch HttpRouter::Find(const HttpRequestPtr& request){
-    return Search(GetRoot(), request->GetMethod(), request->GetPath());
+  namespace http{
+    RouterMatch Router::Find(const RequestPtr& request){
+      return Search(GetRoot(), request->GetMethod(), request->GetPath());
+    }
   }
 }

@@ -352,7 +352,7 @@ namespace token{
     BlockChain():
       state_(State::kUninitialized),
       index_(nullptr){}
-    ~BlockChain(){
+    virtual ~BlockChain(){
       delete index_;
     }
 

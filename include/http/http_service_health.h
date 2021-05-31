@@ -5,44 +5,43 @@
 #include "http/http_controller_health.h"
 
 namespace token{
-  class HttpHealthService : public HttpService{
-   protected:
-    std::shared_ptr<HealthController> health_;
-   public:
-    explicit HttpHealthService(uv_loop_t* loop=uv_loop_new());
-    ~HttpHealthService() override = default;
+  namespace http{
+    class HealthService;
+    typedef std::shared_ptr<HealthService> HealthServicePtr;
 
-    std::shared_ptr<HealthController> GetHealthController() const{
-      return health_;
-    }
+    class HealthService : public ServiceBase{
+     protected:
+      HealthControllerPtr controller_;
+     public:
+      explicit HealthService(uv_loop_t* loop=uv_loop_new());
+      ~HealthService() override = default;
 
-    ServerPort GetPort() const override{
-      return GetServerPort();
-    }
+      HealthControllerPtr GetHealthController() const{
+        return controller_;
+      }
 
-    static inline const char*
-    GetThreadName(){
-      return "http/health";
-    }
+      ServerPort GetPort() const override{
+        return GetServerPort();
+      }
 
-    static inline ServerPort
-    GetServerPort(){
-      return FLAGS_healthcheck_port;
-    }
+      static inline const char*
+      GetThreadName(){
+        return "http/health";
+      }
 
-    static HttpHealthService* GetInstance();
-  };
+      static inline ServerPort
+      GetServerPort(){
+        return FLAGS_healthcheck_port;
+      }
 
-  class HttpHealthServiceThread{
-   private:
-    static void HandleThread(uword param);
-   public:
-    HttpHealthServiceThread() = delete;
-    ~HttpHealthServiceThread() = delete;
+      static inline HealthServicePtr
+      NewInstance(){
+        return std::make_shared<HealthService>();
+      }
+    };
 
-    static bool Join();
-    static bool Start();
-  };
+    class HealthServiceThread : public ServiceThread<HealthService>{};
+  }
 }
 
 #endif//TOKEN_HTTP_SERVICE_HEALTH_H

@@ -37,9 +37,6 @@ find_package(zxing REQUIRED)
 find_package(uuid REQUIRED)
 find_package(gtest REQUIRED)
 find_package(gmock REQUIRED)
-if(CMAKE_BUILD_TYPE MATCHES Debug)
-  find_package(unwind REQUIRED)
-endif()
 
 # Include Directories
 include_directories(include)

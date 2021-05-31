@@ -1,34 +1,34 @@
 #include "http/test_http_controller_health.h"
 
 namespace token{
-  static inline HttpRequestPtr
-  CreateHealthStatusRequest(MockHttpSession* session, const std::string& status){
-    std::string path = "/status/" + status;
-    ParameterMap params;
-    return CreateRequestFor(session, HttpMethod::kGet, path, params);
+  static inline http::RequestPtr
+  CreateHealthStatusRequest(const http::SessionPtr& session, const std::string& path){
+    return CreateRequestFor(session, http::Method::kGet, "/status/" + path, http::ParameterMap());
   }
 
-  static inline HttpRequestPtr
-  CreateGetLiveStatusRequest(MockHttpSession* session){
+  static inline http::RequestPtr
+  CreateGetLiveStatusRequest(const http::SessionPtr& session){
     return CreateHealthStatusRequest(session, "live");
   }
 
-  static inline HttpRequestPtr
-  CreateGetReadyStatusRequest(MockHttpSession* session){
+  static inline http::RequestPtr
+  CreateGetReadyStatusRequest(const http::SessionPtr& session){
     return CreateHealthStatusRequest(session, "ready");
   }
 
   TEST_F(HealthControllerTest, TestGetLiveStatus){
-    MockHttpSession session;
-    EXPECT_CALL(session, Send(ResponseIs(HttpStatusCode::kHttpOk, "{\"data\":\"Ok\"}")))
+    http::SessionPtr session = NewMockHttpSession();
+
+    EXPECT_CALL((MockHttpSession&)*session, Send(::testing::AllOf(ResponseIsOk(), ResponseBodyEqualsString("{\"data\":\"Ok\"}"))))
       .Times(testing::AtLeast(1));
-    controller_.OnGetLiveStatus(&session, CreateGetLiveStatusRequest(&session));
+    GetController()->OnGetLiveStatus(session, CreateGetLiveStatusRequest(session));
   }
 
   TEST_F(HealthControllerTest, TestGetReadyStatus){
-    MockHttpSession session;
-    EXPECT_CALL(session, Send(ResponseIs(HttpStatusCode::kHttpOk, "{\"data\":\"Ok\"}")))
+    http::SessionPtr session = NewMockHttpSession();
+
+    EXPECT_CALL((MockHttpSession&)*session, Send(::testing::AllOf(ResponseIsOk(), ResponseBodyEqualsString("{\"data\":\"Ok\"}"))))
       .Times(testing::AtLeast(1));
-    controller_.OnGetReadyStatus(&session, CreateGetReadyStatusRequest(&session));
+    GetController()->OnGetReadyStatus(session, CreateGetReadyStatusRequest(session));
   }
 }
