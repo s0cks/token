@@ -87,8 +87,8 @@ namespace token{
     return arg->Equals(tx);
   }
 
-  MATCHER_P(IsUser, name, "The user doesn't match"){
-    return arg == User(name);
+  MATCHER_P(IsUser, expected, "The user doesn't match"){
+    return arg == expected;
   }
 
   template<class M>

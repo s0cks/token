@@ -4,8 +4,8 @@
 #include <gmock/gmock.h>
 
 #include "rpc/rpc_server.h"
-#include "mock/mock_blockchain.h"
-#include "mock/mock_object_pool.h"
+#include "mock_blockchain.h"
+#include "mock_object_pool.h"
 
 namespace token{
   class MockServerSession;
@@ -19,17 +19,12 @@ namespace token{
 
     MOCK_METHOD(void, Send, (const rpc::MessagePtr&), ());
     MOCK_METHOD(void, SendMessages, (const rpc::MessageList&), ());
-
-    static inline MockServerSessionPtr
-    NewInstance(const MockBlockChainPtr& chain, const MockObjectPoolPtr& pool){
-      return std::make_shared<MockServerSession>(pool, chain);
-    }
-
-    static inline MockServerSessionPtr
-    NewInstance(){
-      return NewInstance(MockBlockChain::NewInstance(), MockObjectPool::NewInstance());
-    }
   };
+
+  static inline MockServerSessionPtr
+  NewMockServerSession(const BlockChainPtr& chain=NewMockBlockChain(), const ObjectPoolPtr& pool=NewMockObjectPool()){
+    return std::make_shared<MockServerSession>(pool, chain);
+  }
 }
 
 #endif//TOKEN_MOCK_RPC_SERVER_SESSION_H

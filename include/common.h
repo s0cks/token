@@ -177,6 +177,13 @@ IsValidPort(int32_t port){
 }
 
 namespace token{
+  namespace json{
+    typedef rapidjson::Document Document;
+    typedef rapidjson::StringBuffer String;
+    typedef rapidjson::Writer<String> Writer;
+    typedef rapidjson::Document::Array Array;
+  }
+
   namespace Json{
     typedef rapidjson::Document Document;
     typedef rapidjson::StringBuffer String;

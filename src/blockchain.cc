@@ -315,7 +315,8 @@ namespace token{
     {
       BlockPtr current = GetHead();
       do{
-        Json::Append(writer, current->GetHash());
+        std::string hex = current->GetHash().HexString();
+        writer.String(hex.data(), hex.length());
         current = GetBlock(current->GetPreviousHash());
       } while(current);
     }

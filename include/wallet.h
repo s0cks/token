@@ -17,8 +17,6 @@
 #include "atomic/relaxed_atomic.h"
 
 namespace token{
-  typedef std::unordered_set<Hash, Hash::Hasher, Hash::Equal> Wallet;
-
   static inline int64_t
   GetBufferSize(const Wallet& wallet){
     int64_t size = 0;
@@ -54,8 +52,6 @@ namespace token{
         return false;
     return true;
   }
-
-  void ToJson(const Wallet& hashes, Json::String& json);
 
   static std::ostream& operator<<(std::ostream& stream, const Wallet& wallet){
     size_t idx = 0;

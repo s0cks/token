@@ -15,8 +15,12 @@ namespace token{
 
       Json::String body;
       Json::Writer writer(body);
+
+      LOG_IF(ERROR, !writer.StartObject()) << "cannot start json object.";
+      LOG_IF(ERROR, !writer.Key("data", 4)) << "cannot write 'data' field name in json object.";
       if(!chain->GetBlocks(writer))
         return session->Send(NewInternalServerErrorResponse(session, "Cannot list block chain blocks."));
+      LOG_IF(ERROR, !writer.EndObject()) << "cannot end json object.";
       return session->Send(NewOkResponse(session, body));
     }
 

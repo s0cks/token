@@ -166,12 +166,12 @@ namespace token{
 
     bool Write(Json::Writer& writer) const override{
       return writer.StartObject()
-            && Json::SetField(writer, "timestamp", timestamp_)
-            && Json::SetField(writer, "version", version_.ToString())
-            && Json::SetField(writer, "height", height_)
-            && Json::SetField(writer, "previous_hash", previous_hash_)
-            && Json::SetField(writer, "hash", GetHash())
-            && Json::SetField(writer, "transactions", GetNumberOfTransactions())
+            && json::SetField(writer, "timestamp", timestamp_)
+            && json::SetField(writer, "version", version_.ToString())
+            && json::SetField(writer, "height", height_)
+            && json::SetField(writer, "previous_hash", previous_hash_)
+            && json::SetField(writer, "hash", GetHash())
+            && json::SetField(writer, "transactions", GetNumberOfTransactions())
           && writer.EndObject();
     }
 

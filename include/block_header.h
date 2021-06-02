@@ -119,12 +119,12 @@ namespace token{
 
     bool Write(Json::Writer& writer) const override{
       return writer.StartObject()
-              && Json::SetField(writer, "timestamp", timestamp_)
-              && Json::SetField(writer, "version", version_)
-              && Json::SetField(writer, "height", height_)
-              && Json::SetField(writer, "previous_hash", previous_hash_)
-              && Json::SetField(writer, "merkle_root", merkle_root_)
-              && Json::SetField(writer, "hash", hash_)
+              && json::SetField(writer, "timestamp", timestamp_)
+              && json::SetField(writer, "version", version_)
+              && json::SetField(writer, "height", height_)
+              && json::SetField(writer, "previous_hash", previous_hash_)
+              && json::SetField(writer, "merkle_root", merkle_root_)
+              && json::SetField(writer, "hash", hash_)
            && writer.EndObject();
     }
 

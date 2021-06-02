@@ -5,7 +5,13 @@
 #include "http/http_controller_health.h"
 
 namespace token{
-  class HealthControllerTest : public http::ControllerTest<http::HealthController>{};
+  namespace http{
+   class HealthControllerTest : public ::testing::Test{
+    public:
+     HealthControllerTest() = default;
+     ~HealthControllerTest() override = default;
+   };
+  }
 }
 
 #endif//TOKEN_TEST_HTTP_CONTROLLER_HEALTH_H

@@ -107,8 +107,8 @@ namespace token{
         writer.Key("data");
         writer.StartObject();
         {
-          Json::SetField(writer, "user", user);
-          Json::SetField(writer, "wallet", wallet);
+          json::SetField(writer, "user", user);
+          json::SetField(writer, "wallet", wallet);
         }
         writer.EndObject();
       }

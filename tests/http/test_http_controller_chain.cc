@@ -2,97 +2,75 @@
 #include "http/test_http_controller_chain.h"
 
 namespace token{
-  static inline std::string
-  GetRequestPathForBlock(const Hash& hash){
-    std::stringstream ss;
-    ss << "/chain/data/";
-    ss << hash;
-    return ss.str();
-  }
+  namespace http{
+    TEST_F(ChainControllerTest, TestGetBlockChainHead){
+      SessionPtr session = NewMockHttpSession();
+      ::testing::Mock::AllowLeak(session.get()); // not a leak, this is a shared ptr
 
-  static inline std::string
-  GetResponseBodyForBlock(const BlockPtr& blk){
-    Json::String body;
-    Json::Writer writer(body);
-    if(!writer.StartObject()){
-      LOG(ERROR) << "cannot convert Block to Json";
-      return "{}";
+      BlockChainPtr chain = NewMockBlockChain();
+      ::testing::Mock::AllowLeak(session.get()); // not a leak, this is a shared ptr
+
+      ChainController controller(chain);
+
+      BlockPtr head = Block::Genesis();
+
+      RequestPtr request = NewGetRequest(session, "/chain/head");
+      ResponsePtr response = NewOkResponse(session, head);
+
+      EXPECT_CALL((MockBlockChain&)*chain, GetHead())
+          .Times(::testing::AtLeast(1))
+          .WillRepeatedly(::testing::Return(head));
+      EXPECT_CALL((MockHttpSession&)*session, Send(ResponseEquals(response)))
+          .Times(::testing::AtLeast(1));
+      controller.OnGetBlockChainHead(session, request);
     }
 
-    if(!Json::SetField(writer, "data", blk)){
-      LOG(ERROR) << "cannot convert Block to Json";
-      return "{}";
+    TEST_F(ChainControllerTest, TestGetBlockChain){
+      SessionPtr session = NewMockHttpSession();
+      ::testing::Mock::AllowLeak(session.get()); // not a leak, this is a shared ptr
+
+      BlockChainPtr chain = NewMockBlockChain();
+      ::testing::Mock::AllowLeak(session.get()); // not a leak, this is a shared ptr
+
+      ChainController controller(chain);
+
+      BlockPtr head = Block::Genesis();
+
+      RequestPtr request = NewGetRequest(session, "/chain");
+      ResponsePtr response = NewOkResponse(session, HashList{ head->GetHash() });
+
+      EXPECT_CALL((MockBlockChain&)*chain, GetHead())
+          .Times(::testing::AtLeast(1))
+          .WillRepeatedly(::testing::Return(head));
+      EXPECT_CALL((MockHttpSession&)*session, Send(ResponseEquals(response)))
+          .Times(::testing::AtLeast(1));
+      controller.OnGetBlockChain(session, request);
     }
 
-    return std::string(body.GetString(), body.GetSize());
-  }
+    TEST_F(ChainControllerTest, TestGetBlockChainBlock){
+      SessionPtr session = NewMockHttpSession();
+      ::testing::Mock::AllowLeak(session.get()); // not a leak, this is a shared ptr
 
-  static inline std::string
-  GetResponseBodyForHashList(const HashList& hashes){
-    Json::String body;
-    Json::Writer writer(body);
-    if(!writer.StartArray()){
-      LOG(ERROR) << "cannot convert HashList to json";
-      return "{}";
+      BlockChainPtr chain = NewMockBlockChain();
+      ChainController controller(chain);
+
+      BlockPtr head = Block::Genesis();
+      Hash head_hash = head->GetHash();
+
+      ParameterMap params;
+      params["hash"] = head_hash.HexString();
+      RequestPtr request = NewGetRequest(session, "/chain/data/" + head_hash.HexString(), params);
+      ResponsePtr response = NewOkResponse(session, head);
+
+      EXPECT_CALL((MockBlockChain&)*chain, GetBlock(IsHash(head_hash)))
+          .Times(::testing::AtLeast(1))
+          .WillRepeatedly(::testing::Return(head));
+      EXPECT_CALL((MockBlockChain&)*chain, HasBlock(IsHash(head_hash)))
+          .Times(::testing::AtLeast(1))
+          .WillRepeatedly(::testing::Return(true));
+      EXPECT_CALL((MockHttpSession&)*session, Send(ResponseEquals(response)))
+          .Times(::testing::AtLeast(1));
+      controller.OnGetBlockChainBlock(session, request);
     }
-
-    if(!Json::SetField(writer, "data", hashes)){
-      LOG(ERROR) << "cannot convert HashList to Json";
-      return "{}";
-    }
-
-    return std::string(body.GetString(), body.GetSize());
-  }
-
-  TEST_F(ChainControllerTest, TestGetBlockChainHead){
-    http::SessionPtr session = NewMockHttpSession();
-
-    BlockPtr head = Block::Genesis();
-    EXPECT_CALL((MockBlockChain&)*GetChain(), GetHead())
-      .Times(::testing::AtLeast(1))
-      .WillRepeatedly(::testing::Return(head));
-
-    // Expected
-    EXPECT_CALL((MockHttpSession&)*session, Send(::testing::AllOf(ResponseIsOk())))
-      .Times(::testing::AtLeast(1));
-    GetController()->OnGetBlockChainHead(session, nullptr);
-  }
-
-  TEST_F(ChainControllerTest, TestGetBlockChain){
-    http::SessionPtr session = NewMockHttpSession();
-
-    BlockPtr head = Block::Genesis();
-    EXPECT_CALL((MockBlockChain&)*GetChain(), GetHead())
-      .Times(::testing::AtLeast(1))
-      .WillRepeatedly(::testing::Return(head));
-
-    HashList expected;
-    expected << head;
-    EXPECT_CALL((MockHttpSession&)*session, Send(::testing::AllOf(ResponseIsOk(), ResponseBodyEqualsString(GetResponseBodyForHashList(expected)))))
-        .Times(::testing::AtLeast(1));
-    GetController()->OnGetBlockChain(session, nullptr);
-  }
-
-  TEST_F(ChainControllerTest, TestGetBlockChainBlock){
-    http::SessionPtr session = NewMockHttpSession();
-
-    BlockPtr blk = Block::Genesis();
-
-    Hash hash = blk->GetHash();
-    EXPECT_CALL((MockBlockChain&)*GetChain(), GetBlock(IsHash(hash)))
-      .Times(::testing::AtLeast(1))
-      .WillRepeatedly(::testing::Return(blk));
-    EXPECT_CALL((MockBlockChain&)*GetChain(), HasBlock(IsHash(hash)))
-      .Times(::testing::AtLeast(1))
-      .WillRepeatedly(::testing::Return(true));
-    
-    http::RequestBuilder builder(session);
-    builder.SetMethod(http::Method::kGet);
-    builder.SetPath(GetRequestPathForBlock(hash));
-    builder.SetPathParameter("hash", hash.HexString());
-
-    EXPECT_CALL((MockHttpSession&)*session, Send(::testing::AllOf(ResponseIsOk(), ResponseBodyEqualsString(GetResponseBodyForBlock(blk)))))
-      .Times(::testing::AtLeast(1));
-    GetController()->OnGetBlockChainBlock(session, builder.Build());
   }
 }

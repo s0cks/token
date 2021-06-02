@@ -190,8 +190,8 @@ namespace token{
   static inline bool
   WritePeerInfo(Json::Writer& writer, PeerSession* session){
     return writer.StartObject()
-        && Json::SetField(writer, "id", session->GetID())
-        && Json::SetField(writer, "address", session->GetAddress())
+        && json::SetField(writer, "id", session->GetID())
+        && json::SetField(writer, "address", session->GetAddress())
         && writer.EndObject();
   }
 

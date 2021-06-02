@@ -62,6 +62,30 @@ namespace token{
 #undef DEFINE_CODE
     };
 
+    class ErrorMessage{
+     private:
+      int64_t code_;
+      std::string message_;
+     public:
+      ErrorMessage(const int64_t& code, const std::string& message):
+        code_(code),
+        message_(message){}
+      ErrorMessage(const ErrorMessage& other) = default;
+      virtual ~ErrorMessage() = default;
+
+      int64_t GetCode() const{
+        return code_;
+      }
+
+      std::string GetMessage() const{
+        return message_;
+      }
+
+      bool ToJson(Json::Writer& writer) const;
+
+      ErrorMessage& operator=(const ErrorMessage& other) = default;
+    };
+
     typedef std::unordered_map<std::string, std::string> ParameterMap;
 
 #define HTTP_HEADER_DATE "Date"

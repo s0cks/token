@@ -21,12 +21,12 @@ namespace token{
     MOCK_METHOD(bool, Put##Name, (const Hash&, const Name##Ptr&), (const));
     FOR_EACH_POOL_TYPE(DEFINE_MOCK_TYPE_METHODS)
 #undef DEFINE_MOCK_TYPE_METHODS
-
-    static inline MockObjectPoolPtr
-    NewInstance(){
-      return std::make_shared<MockObjectPool>();
-    }
   };
+
+  static inline ObjectPoolPtr
+  NewMockObjectPool(){
+    return std::make_shared<MockObjectPool>();
+  }
 }
 
 #endif//TOKEN_MOCK_OBJECT_POOL_H

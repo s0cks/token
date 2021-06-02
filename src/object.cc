@@ -53,8 +53,8 @@ namespace token{
 
   bool TransactionReference::Write(Json::Writer& writer) const{
     return writer.StartObject()
-        && Json::SetField(writer, "hash", transaction_)
-        && Json::SetField(writer, "index", index_)
+        && json::SetField(writer, "hash", transaction_)
+        && json::SetField(writer, "index", index_)
         && writer.EndObject();
   }
 }

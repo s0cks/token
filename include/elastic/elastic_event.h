@@ -17,7 +17,7 @@ namespace token{
 
       inline bool
       WriteTimestamp(Json::Writer& writer) const{
-        return Json::SetField(writer, "@timestamp", timestamp_);
+        return json::SetField(writer, "@timestamp", timestamp_);
       }
 
       inline bool
@@ -32,8 +32,8 @@ namespace token{
           return false;
         }
 
-        LOG_IF(ERROR, !Json::SetField(writer, "kind", kind_));
-        LOG_IF(ERROR, !Json::SetField(writer, "dataset", dataset_));
+        LOG_IF(ERROR, !json::SetField(writer, "kind", kind_));
+        LOG_IF(ERROR, !json::SetField(writer, "dataset", dataset_));
 
         if(!writer.EndObject()){
           LOG(ERROR) << "couldn't end json object";

@@ -78,6 +78,8 @@ namespace token{
 #undef FORWARD_DECLARE
   }
 
+  typedef std::unordered_set<Hash, Hash::Hasher, Hash::Equal> Wallet;
+
   class IndexedTransaction;
   typedef std::shared_ptr<IndexedTransaction> IndexedTransactionPtr;
 

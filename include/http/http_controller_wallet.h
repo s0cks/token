@@ -18,15 +18,15 @@ namespace token{
                              public std::enable_shared_from_this<WalletController>{
      protected:
       WalletManagerPtr wallets_;
-
-      WalletManagerPtr GetWalletManager() const{
-        return wallets_;
-      }
      public:
       WalletController(const WalletManagerPtr& wallets):
           Controller(),
           wallets_(wallets){}
       virtual ~WalletController() = default;
+
+      WalletManagerPtr GetWalletManager() const{
+        return wallets_;
+      }
 
 #define DECLARE_ENDPOINT(Method, Path, Name) \
     HTTP_CONTROLLER_ENDPOINT(Name);

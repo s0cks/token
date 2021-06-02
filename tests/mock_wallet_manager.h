@@ -15,6 +15,11 @@ namespace token{
     MOCK_METHOD(bool, GetWallet, (const User&, const Json::Writer&), (const));
     MOCK_METHOD(int64_t, GetNumberOfWallets, (), (const));
   };
+
+  static inline WalletManagerPtr
+  NewMockWalletManager(){
+    return std::make_shared<MockWalletManager>();
+  }
 }
 
 #endif//TOKEN_MOCK_WALLET_H

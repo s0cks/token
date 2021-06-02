@@ -178,13 +178,19 @@ namespace token{
       ParameterMap path_params_;
       ParameterMap query_params_;
      public:
-      explicit RequestBuilder(const SessionPtr& session):
+      RequestBuilder(const SessionPtr& session, const Method& method, const std::string& path, const ParameterMap& path_params, const ParameterMap& query_params):
         MessageBuilderBase(session),
-        method_(Method::kGet),
-        path_(),
+        method_(method),
+        path_(path),
         body_(),
-        path_params_(),
-        query_params_(){}
+        path_params_(path_params),
+        query_params_(query_params){}
+      RequestBuilder(const SessionPtr& session,  const Method& method, const std::string& path, const ParameterMap& path_params):
+        RequestBuilder(session, method, path, path_params, ParameterMap()){}
+      RequestBuilder(const SessionPtr& session, const Method& method, const std::string& path):
+        RequestBuilder(session, method, path, ParameterMap()){}
+      explicit RequestBuilder(const SessionPtr& session):
+        RequestBuilder(session, Method::kGet, std::string()){}
       ~RequestBuilder() override = default;
 
       void SetMethod(const Method& method){
@@ -280,6 +286,22 @@ namespace token{
         return parser.Build();
       }
     };
+
+    static inline RequestPtr
+    NewRequest(const SessionPtr& session, const Method& method, const std::string& path, const ParameterMap& path_params, const ParameterMap& query_params){
+      RequestBuilder builder(session, method, path, path_params, query_params);
+      return builder.Build();
+    }
+
+    static inline RequestPtr
+    NewGetRequest(const SessionPtr& session, const std::string& path, const ParameterMap& path_params={}, const ParameterMap& query_params={}){
+      return NewRequest(session, Method::kGet, path, path_params, query_params);
+    }
+
+    static inline RequestPtr
+    NewPostRequest(const SessionPtr& session, const std::string& path, const ParameterMap& path_params={}, const ParameterMap& query_params={}){
+      return NewRequest(session, Method::kPost, path, path_params, query_params);
+    }
   }
 }
 

@@ -2,14 +2,21 @@
 #define TOKEN_TEST_HTTP_CONTROLLER_H
 
 #include "test_suite.h"
-#include "mock/mock_http_session.h"
+#include "mock_http_session.h"
 
 namespace token{
+  MATCHER_P(ResponseEquals, expected, ""){
+    http::ResponsePtr actual = std::static_pointer_cast<http::Response>(arg);
+    return actual->GetStatusCode() == expected->GetStatusCode()
+        && actual->GetBodyAsString() == expected->GetBodyAsString();
+  }
+
   MATCHER(ResponseIsOk, "The http response status code is 200 (Ok)"){
     return std::static_pointer_cast<http::Response>(arg)->GetStatusCode() == http::StatusCode::kHttpOk;
   }
 
   MATCHER_P(ResponseBodyEqualsString, expected, "The http response body doesn't match"){
+    DLOG(INFO) << "asserting that " << std::static_pointer_cast<http::Response>(arg)->GetBodyAsString() << " equals: " << expected;
     return std::static_pointer_cast<http::Response>(arg)->GetBodyAsString() == expected;
   }
 
@@ -20,27 +27,6 @@ namespace token{
     builder.SetPath(path);
     builder.SetPathParameters(path_params);
     return builder.Build();
-  }
-
-  namespace http{
-    template<class Controller>
-    class ControllerTest : public ::testing::Test{
-     protected:
-      std::shared_ptr<Controller> controller_;
-
-      ControllerTest():
-        ::testing::Test(),
-        controller_(Controller::NewInstance()){}
-      ControllerTest(const std::shared_ptr<Controller>& controller):
-        ::testing::Test(),
-        controller_(controller){}
-     public:
-      virtual ~ControllerTest() override = default;
-
-      std::shared_ptr<Controller> GetController() const{
-        return controller_;
-      }
-    };
   }
 }
 

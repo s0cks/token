@@ -17,12 +17,12 @@ namespace token{
     MOCK_METHOD(bool, HasBlock, (const Hash&), (const));
     MOCK_METHOD(BlockPtr, GetHead, (), (const));
     MOCK_METHOD(BlockPtr, GetBlock, (const Hash&), (const));
-
-    static inline MockBlockChainPtr
-    NewInstance(){
-      return std::make_shared<MockBlockChain>();
-    }
   };
+
+  static inline BlockChainPtr
+  NewMockBlockChain(){
+    return std::make_shared<MockBlockChain>();
+  }
 }
 
 #endif//TOKEN_MOCK_BLOCKCHAIN_H

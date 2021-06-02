@@ -255,40 +255,53 @@ namespace token{
     NewOkResponse(const SessionPtr& session, const std::string& msg="Ok"){
       Json::String body;
       Json::Writer writer(body);
-      writer.StartObject();
-      Json::SetField(writer, "data", msg);
-      writer.EndObject();
+
+      LOG_IF(WARNING, !writer.StartObject()) << "cannot start json object.";
+      LOG_IF(WARNING, !json::SetField(writer, "data", ErrorMessage(200, msg)));
+      LOG_IF(WARNING, !writer.EndObject()) << "cannot end json object.";
       return NewOkResponse(session, body);
     }
 
     template<class T>
-      static inline ResponsePtr
-      NewOkResponse(const SessionPtr& session, const std::shared_ptr<T>& val){
-        Json::String body;
-        Json::Writer writer(body);
-        writer.StartObject();
-        writer.Key("data");
-        val->Write(writer);
-        writer.EndObject();
-        return NewOkResponse(session, body);
-      }
-
     static inline ResponsePtr
-    NewErrorResponse(const SessionPtr& session, const StatusCode& status_code, const std::string& msg){
-      ResponseBuilder builder(session);
-
+    NewOkResponse(const SessionPtr& session, const std::shared_ptr<T>& val){
       Json::String body;
       Json::Writer writer(body);
-      writer.StartObject();
-      Json::SetField(writer, "code", status_code);
-      Json::SetField(writer, "message", msg);
-      writer.EndObject();
 
+      LOG_IF(WARNING, !writer.StartObject()) << "cannot start json object.";
+      LOG_IF(WARNING, !json::SetField(writer, "data", val)) << "cannot set 'data' field.";
+      LOG_IF(WARNING, !writer.EndObject()) << "cannot end json object.";
+      return NewOkResponse(session, body);
+    }
+
+    static inline ResponsePtr
+    NewOkResponse(const SessionPtr& session, const HashList& val){
+      Json::String body;
+      Json::Writer writer(body);
+      LOG_IF(WARNING, !writer.StartObject()) << "cannot start json object.";
+      LOG_IF(WARNING, !json::SetField(writer, "data", val)) << "cannot set 'data' field.";
+      LOG_IF(WARNING, !writer.EndObject()) << "cannot end json object.";
+      return NewOkResponse(session, body);
+    }
+
+    static inline ResponsePtr
+    NewErrorResponse(const SessionPtr& session, const StatusCode& status_code, const Json::String& body){
+      ResponseBuilder builder(session);
       builder.SetStatusCode(status_code);
       builder.SetHeader(HTTP_HEADER_CONTENT_TYPE, HTTP_CONTENT_TYPE_APPLICATION_JSON);
       builder.SetHeader(HTTP_HEADER_CONTENT_LENGTH, body.GetSize());
       builder.SetBody(body);
       return builder.Build();
+    }
+
+    static inline ResponsePtr
+    NewErrorResponse(const SessionPtr& session, const StatusCode& status_code=StatusCode::kHttpInternalServerError, const std::string& msg="Not Ok"){
+      Json::String body;
+      Json::Writer writer(body);
+      LOG_IF(ERROR, !writer.StartObject()) << "cannot start json object.";
+      LOG_IF(ERROR, !json::SetField(writer, "data", ErrorMessage(static_cast<int64_t>(status_code), msg)));
+      LOG_IF(ERROR, !writer.EndObject()) << "cannot end json object.";
+      return NewErrorResponse(session, status_code, body);
     }
 
     static inline ResponsePtr

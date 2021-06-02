@@ -3,7 +3,9 @@
 
 namespace token{
   class MockConfigurationManager : public ConfigurationManager{
-
+   public:
+    MockConfigurationManager() = default;
+    ~MockConfigurationManager() override = default;
   };
 }
 

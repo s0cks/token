@@ -406,7 +406,7 @@ namespace token{
      */
     bool Write(Json::Writer& writer) const override{
       return writer.StartObject()
-             && Json::SetField(writer, "timestamp", ToUnixTimestamp(timestamp_))
+             && json::SetField(writer, "timestamp", ToUnixTimestamp(timestamp_))
              && Json::SetField(writer, "inputs", inputs_)
              && Json::SetField(writer, "outputs", outputs_)
              && writer.EndObject();

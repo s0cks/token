@@ -85,9 +85,9 @@ namespace token{
 
     bool Write(Json::Writer& writer) const override{
       return writer.StartObject()
-          && Json::SetField(writer, "timestamp", timestamp_)
-          && Json::SetField(writer, "id", id_)
-          && Json::SetField(writer, "proposer", proposer_)
+          && json::SetField(writer, "timestamp", timestamp_)
+          && json::SetField(writer, "id", id_)
+          && json::SetField(writer, "proposer", proposer_)
           && writer.Key("value")
           && value_.Write(writer) //TODO: clean
           && writer.EndObject();

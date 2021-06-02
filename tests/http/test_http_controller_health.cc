@@ -1,34 +1,33 @@
 #include "http/test_http_controller_health.h"
 
 namespace token{
-  static inline http::RequestPtr
-  CreateHealthStatusRequest(const http::SessionPtr& session, const std::string& path){
-    return CreateRequestFor(session, http::Method::kGet, "/status/" + path, http::ParameterMap());
-  }
+  namespace http{
+    TEST_F(HealthControllerTest, TestGetLiveStatus){
+      SessionPtr session = NewMockHttpSession();
+      ::testing::Mock::AllowLeak(session.get()); // not a leak, this is a shared ptr
 
-  static inline http::RequestPtr
-  CreateGetLiveStatusRequest(const http::SessionPtr& session){
-    return CreateHealthStatusRequest(session, "live");
-  }
+      HealthController controller;
 
-  static inline http::RequestPtr
-  CreateGetReadyStatusRequest(const http::SessionPtr& session){
-    return CreateHealthStatusRequest(session, "ready");
-  }
+      RequestPtr request = NewGetRequest(session, "/status/live");
+      ResponsePtr response = NewOkResponse(session, "Ok");
 
-  TEST_F(HealthControllerTest, TestGetLiveStatus){
-    http::SessionPtr session = NewMockHttpSession();
+      EXPECT_CALL((MockHttpSession&)*session, Send(ResponseEquals(response)))
+        .Times(testing::AtLeast(1));
+      controller.OnGetLiveStatus(session, request);
+    }
 
-    EXPECT_CALL((MockHttpSession&)*session, Send(::testing::AllOf(ResponseIsOk(), ResponseBodyEqualsString("{\"data\":\"Ok\"}"))))
-      .Times(testing::AtLeast(1));
-    GetController()->OnGetLiveStatus(session, CreateGetLiveStatusRequest(session));
-  }
+    TEST_F(HealthControllerTest, TestGetReadyStatus){
+      SessionPtr session = NewMockHttpSession();
+      ::testing::Mock::AllowLeak(session.get()); // not a leak, this is a shared ptr
 
-  TEST_F(HealthControllerTest, TestGetReadyStatus){
-    http::SessionPtr session = NewMockHttpSession();
+      HealthController controller;
 
-    EXPECT_CALL((MockHttpSession&)*session, Send(::testing::AllOf(ResponseIsOk(), ResponseBodyEqualsString("{\"data\":\"Ok\"}"))))
-      .Times(testing::AtLeast(1));
-    GetController()->OnGetReadyStatus(session, CreateGetReadyStatusRequest(session));
+      RequestPtr request = NewGetRequest(session, "/status/ready");
+      ResponsePtr response = NewOkResponse(session, "Ok");
+
+      EXPECT_CALL((MockHttpSession&)*session, Send(ResponseEquals(response)))
+          .Times(testing::AtLeast(1));
+      controller.OnGetReadyStatus(session, request);
+    }
   }
 }
