@@ -117,17 +117,6 @@ namespace token{
           && buffer->PutHash(hash_);
     }
 
-    bool Write(Json::Writer& writer) const override{
-      return writer.StartObject()
-              && json::SetField(writer, "timestamp", timestamp_)
-              && json::SetField(writer, "version", version_)
-              && json::SetField(writer, "height", height_)
-              && json::SetField(writer, "previous_hash", previous_hash_)
-              && json::SetField(writer, "merkle_root", merkle_root_)
-              && json::SetField(writer, "hash", hash_)
-           && writer.EndObject();
-    }
-
     std::string ToString() const override{
       std::stringstream ss;
       ss << "BlockHeader(";

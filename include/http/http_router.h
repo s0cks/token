@@ -97,24 +97,24 @@ namespace token{
                       ParameterMap params_path,
                       ParameterMap params_query,
                       const Route& route):
-          path_(std::move(path)),
-          status_(status),
-          params_path_(std::move(params_path)),
-          params_query_(std::move(params_query)),
-          route_(route){}
+        path_(std::move(path)),
+        status_(status),
+        params_path_(std::move(params_path)),
+        params_query_(std::move(params_query)),
+        route_(route){}
       RouterMatch(std::string path, const Status& status):
-          path_(std::move(path)),
-          status_(status),
-          params_path_(),
-          params_query_(),
-          route_(){}
+        path_(std::move(path)),
+        status_(status),
+        params_path_(),
+        params_query_(),
+        route_(){}
      public:
       RouterMatch(const RouterMatch& match):
-          path_(match.path_),
-          status_(match.status_),
-          params_path_(),
-          params_query_(),
-          route_(match.route_){}
+        path_(match.path_),
+        status_(match.status_),
+        params_path_(),
+        params_query_(),
+        route_(match.route_){}
       ~RouterMatch() = default;
 
       std::string GetPath() const{

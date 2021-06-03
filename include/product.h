@@ -1,51 +1,44 @@
 #ifndef TOKEN_PRODUCT_H
 #define TOKEN_PRODUCT_H
 
-#include "object.h"
+#include <string>
+#include "binary_type.h"
 
 namespace token{
-  static const int64_t kBytesForProduct = 64;
-  class Product : public RawType<kBytesForProduct>{
-    using Base = RawType<kBytesForProduct>;
+  static const uint64_t kProductSize = 64;
+  class Product : public BinaryType<kProductSize>{
    public:
-    Product():
-      Base(){}
-    Product(const uint8_t* bytes, int64_t size):
-      Base(bytes, size){}
-    explicit Product(const char* value):
-      Base(){
-      memcpy(data(), value, std::min((int64_t)strlen(value), kBytesForProduct));
-    }
-    explicit Product(const std::string& value):
-      Base(){
-      memcpy(data(), value.data(), std::min((int64_t) value.length(), Base::GetSize()));
-    }
-    Product(const Product& product):
-      Base(product){
-      memcpy(data(), product.data(), Base::GetSize());
-    }
+    Product(): BinaryType<kProductSize>(){}
+    Product(const uint8_t* data, const uint64_t& size): BinaryType<kProductSize>(data, size){}
+    explicit Product(const char* data): BinaryType<kProductSize>((const uint8_t*)data, std::min((uint64_t)strlen(data), kProductSize)){}
+    explicit Product(const std::string& data): BinaryType<kProductSize>((const uint8_t*)data.data(), std::min((uint64_t)data.length(), kProductSize)){}
+    Product(const Product& other) = default;
     ~Product() override = default;
 
-    Product& operator=(const Product& product){
-      memcpy(data(), product.data(), Base::GetSize());
-      return (*this);
-    }
+    Product& operator=(const Product& other) = default;
 
     friend bool operator==(const Product& a, const Product& b){
-      return Base::Compare(a, b) == 0;
+      return Compare(a, b) == 0;
     }
 
     friend bool operator!=(const Product& a, const Product& b){
-      return Base::Compare(a, b) != 0;
+      return Compare(a, b) != 0;
     }
 
-    friend int operator<(const Product& a, const Product& b){
-      return Base::Compare(a, b);
+    friend bool operator<(const Product& a, const Product& b){
+      return Compare(a, b) < 0;
+    }
+
+    friend bool operator>(const Product& a, const Product& b){
+      return Compare(a, b) > 0;
     }
 
     friend std::ostream& operator<<(std::ostream& stream, const Product& product){
-      stream << product.str();
-      return stream;
+      return stream << product.ToString();
+    }
+
+    static inline int Compare(const Product& a, const Product& b){
+      return BinaryType<kProductSize>::Compare(a, b);
     }
   };
 }

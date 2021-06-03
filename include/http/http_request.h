@@ -13,7 +13,6 @@
 namespace token{
   namespace http{
     class Request : public Message{
-      friend class HttpSession;
      private:
       Method method_;
       std::string path_;
@@ -46,21 +45,20 @@ namespace token{
         return ss.str();
       }
      public:
-      explicit  Request(const SessionPtr& session):
-        Message(session),
+      explicit  Request():
+        Message(),
         method_(),
         path_(),
         body_(),
         path_params_(),
         query_params_(){}
-      Request(const SessionPtr& session,
-              const HttpHeadersMap& headers,
+      Request(const HttpHeadersMap& headers,
               const Method& method,
               std::string path,
               ParameterMap  path_params,
               ParameterMap  query_params,
               std::string  body):
-        Message(session, headers),
+        Message(headers),
         method_(method),
         path_(std::move(path)),
         body_(std::move(body)),
@@ -163,11 +161,6 @@ namespace token{
         size += body_.length();
         return size;
       }
-
-      static inline RequestPtr
-      FromJson(const SessionPtr& session, const HttpHeadersMap& headers, const Method& method, const std::string& path, const ParameterMap& path_params, const ParameterMap& query_params, const Json::String& body){
-        return std::make_shared<Request>(session, headers, method, path, path_params, query_params, std::string(body.GetString(), body.GetSize()));
-      }
     };
 
     class RequestBuilder : public MessageBuilderBase{
@@ -178,19 +171,19 @@ namespace token{
       ParameterMap path_params_;
       ParameterMap query_params_;
      public:
-      RequestBuilder(const SessionPtr& session, const Method& method, const std::string& path, const ParameterMap& path_params, const ParameterMap& query_params):
-        MessageBuilderBase(session),
+      RequestBuilder(const Method& method, const std::string& path, const ParameterMap& path_params, const ParameterMap& query_params):
+        MessageBuilderBase(),
         method_(method),
         path_(path),
         body_(),
         path_params_(path_params),
         query_params_(query_params){}
-      RequestBuilder(const SessionPtr& session,  const Method& method, const std::string& path, const ParameterMap& path_params):
-        RequestBuilder(session, method, path, path_params, ParameterMap()){}
-      RequestBuilder(const SessionPtr& session, const Method& method, const std::string& path):
-        RequestBuilder(session, method, path, ParameterMap()){}
-      explicit RequestBuilder(const SessionPtr& session):
-        RequestBuilder(session, Method::kGet, std::string()){}
+      RequestBuilder(const Method& method, const std::string& path, const ParameterMap& path_params):
+        RequestBuilder(method, path, path_params, ParameterMap()){}
+      RequestBuilder(const Method& method, const std::string& path):
+        RequestBuilder(method, path, ParameterMap()){}
+      explicit RequestBuilder():
+        RequestBuilder(Method::kGet, std::string()){}
       ~RequestBuilder() override = default;
 
       void SetMethod(const Method& method){
@@ -219,7 +212,7 @@ namespace token{
       }
 
       RequestPtr Build() const{
-        return std::make_shared<Request>(session_, headers_, method_, path_, path_params_, query_params_, body_);
+        return std::make_shared<Request>(headers_, method_, path_, path_params_, query_params_, body_);
       }
     };
 
@@ -249,8 +242,8 @@ namespace token{
         return 0;
       }
      public:
-      explicit RequestParser(const SessionPtr& session):
-        RequestBuilder(session),
+      RequestParser():
+        RequestBuilder(),
         parser_(),
         settings_(){
         settings_.on_status = &OnParseStatus;
@@ -277,8 +270,8 @@ namespace token{
       }
 
       static inline RequestPtr
-      ParseRequest(const SessionPtr& session, const BufferPtr& buffer){
-        RequestParser parser(session);
+      ParseRequest(const BufferPtr& buffer){
+        RequestParser parser;
         if(!parser.Parse(buffer)){
           LOG(ERROR) << "cannot parse http request.";
           return nullptr;
@@ -288,19 +281,19 @@ namespace token{
     };
 
     static inline RequestPtr
-    NewRequest(const SessionPtr& session, const Method& method, const std::string& path, const ParameterMap& path_params, const ParameterMap& query_params){
-      RequestBuilder builder(session, method, path, path_params, query_params);
+    NewRequest(const Method& method, const std::string& path, const ParameterMap& path_params, const ParameterMap& query_params){
+      RequestBuilder builder(method, path, path_params, query_params);
       return builder.Build();
     }
 
     static inline RequestPtr
-    NewGetRequest(const SessionPtr& session, const std::string& path, const ParameterMap& path_params={}, const ParameterMap& query_params={}){
-      return NewRequest(session, Method::kGet, path, path_params, query_params);
+    NewGetRequest(const std::string& path, const ParameterMap& path_params={}, const ParameterMap& query_params={}){
+      return NewRequest(Method::kGet, path, path_params, query_params);
     }
 
     static inline RequestPtr
-    NewPostRequest(const SessionPtr& session, const std::string& path, const ParameterMap& path_params={}, const ParameterMap& query_params={}){
-      return NewRequest(session, Method::kPost, path, path_params, query_params);
+    NewPostRequest(const std::string& path, const ParameterMap& path_params={}, const ParameterMap& query_params={}){
+      return NewRequest(Method::kPost, path, path_params, query_params);
     }
   }
 }

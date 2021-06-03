@@ -6,6 +6,7 @@
 #include "server.h"
 #include "inventory.h"
 #include "blockchain.h"
+#include "rpc/rpc_common.h"
 #include "rpc/rpc_session.h"
 
 namespace token{
@@ -27,6 +28,8 @@ namespace token{
 
   namespace rpc{
   class ServerSession;
+  typedef std::shared_ptr<ServerSession> ServerSessionPtr;
+
   class ServerMessageHandler : public rpc::MessageHandler{
     friend class ServerSession;
    public:
@@ -74,6 +77,19 @@ namespace token{
         }
         default:// should never happen
           return false;
+      }
+    }
+
+    void OnMessageRead(const BufferPtr& buff) override{
+      rpc::MessagePtr msg = rpc::Message::From(buff);
+      switch(msg->GetType()) {
+#define DEFINE_HANDLE(Name) \
+        case Type::k##Name##Message: \
+          return GetMessageHandler().On##Name##Message(std::static_pointer_cast<rpc::Name##Message>(msg));
+
+        FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLE)
+#undef DEFINE_HANDLE
+        default: return;
       }
     }
    public:
@@ -130,21 +146,21 @@ namespace token{
     }
   };
 
-  class LedgerServer : public ServerBase<rpc::Message>{
+  class LedgerServer : public ServerBase{
    protected:
     ObjectPoolPtr pool_;
     BlockChainPtr chain_;
 
-    ServerSession* CreateSession() const override{
-      return new ServerSession(GetLoop(), GetPool(), GetChain());
+    std::shared_ptr<SessionBase> CreateSession() const override{
+      return std::make_shared<ServerSession>(GetLoop(), GetPool(), GetChain());
     }
    public:
     LedgerServer(uv_loop_t* loop=uv_loop_new(),
                  const ObjectPoolPtr& pool=ObjectPool::GetInstance(),
                  const BlockChainPtr& chain=BlockChain::GetInstance()):
-       ServerBase<rpc::Message>(loop, GetThreadName()),
-       pool_(pool),
-       chain_(chain){}
+      ServerBase(loop),
+      pool_(pool),
+      chain_(chain){}
     ~LedgerServer() override = default;
 
     BlockChainPtr GetChain() const{
@@ -155,34 +171,53 @@ namespace token{
       return pool_;
     }
 
-    ServerPort GetPort() const override{
-      return GetServerPort();
+    static inline bool
+    IsEnabled(){
+      return IsValidPort(LedgerServer::GetPort());
     }
 
     static inline ServerPort
-    GetServerPort(){
+    GetPort(){
       return FLAGS_server_port;
     }
 
-    static const char*
-    GetThreadName(){
-      return "server";
+    static inline const char*
+    GetName(){
+      return "rpc/server";
+    }
+
+    static inline LedgerServer* NewInstance(){
+      return new LedgerServer();
     }
 
     static LedgerServer* GetInstance();
   };
-  }
 
+  template<class Server>
   class ServerThread{
-   private:
-    static void HandleThread(uword param);
-   public:
-    ServerThread() = delete;
-    ~ServerThread() = delete;
+   protected:
+    ThreadId thread_;
 
-    static bool Join();
-    static bool Start();
+    static void HandleThread(uword param){
+      auto instance = Server::NewInstance();
+      LOG_THREAD_IF(ERROR, !instance->Run(Server::GetPort())) << "Failed to run the " << Server::GetName() << " server loop.";
+      pthread_exit(nullptr);
+    }
+   public:
+    ServerThread() = default;
+    ~ServerThread() = default;
+
+    bool Start(){
+      return ThreadStart(&thread_, Server::GetName(), &HandleThread, (uword)0);
+    }
+
+    bool Join(){
+      return ThreadJoin(thread_);
+    }
   };
+
+  class LedgerServerThread : public ServerThread<LedgerServer>{};
+  }
 }
 
 #endif//TOKEN_RPC_SERVER_H

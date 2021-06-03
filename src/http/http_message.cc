@@ -3,8 +3,8 @@
 
 namespace token{
   namespace http{
-    MessagePtr Message::From(const SessionPtr& session, const BufferPtr& buffer){
-      RequestPtr request = RequestParser::ParseRequest(session, buffer);
+    MessagePtr Message::From(const BufferPtr& buffer){
+      RequestPtr request = RequestParser::ParseRequest(buffer);
       buffer->SetReadPosition(buffer->GetBufferSize());
       return request;
     }

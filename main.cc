@@ -52,7 +52,7 @@
   static inline bool
   SellTokens(const token::User& owner, uint64_t total){
     DLOG(INFO) << owner << " spending " << total << " tokens....";
-    token::WalletManager* wallets = token::WalletManager::GetInstance();
+    token::WalletManagerPtr wallets = token::WalletManager::GetInstance();
     token::ObjectPoolPtr pool = token::ObjectPool::GetInstance();
 
     token::Wallet wallet;
@@ -81,7 +81,7 @@
       }
 
       token::NodeAddress elastic = token::NodeAddress::ResolveAddress(FLAGS_elasticsearch_hostname);
-      token::SendEvent(elastic, token::SpendEvent(token::Clock::now(), owner, recipient, token));
+      token::SendEvent(elastic, token::elastic::SpendEvent(token::Clock::now(), owner, recipient, token));
 
       if(--total <= 0)
         break;
@@ -99,18 +99,30 @@ SilentlyStartThread(){
   }
 }
 
-template<class C, class T, bool fatal=false>
+template<class Service, class ServiceThread, google::LogSeverity Severity=google::INFO>
 static inline void
-SilentlyStartService(){
-  if(!IsValidPort(C::GetServerPort())){
-    DLOG(INFO) << "not starting the " << C::GetThreadName() << " service.";
+SilentlyStartService(ServiceThread& thread){
+  if(!Service::IsEnabled()){
+    DLOG(INFO) << "the " << Service::GetName() << " service is disabled, not starting.";
     return;
   }
 
-  if(!T::Start() && fatal){
-    LOG(FATAL) << "cannot start the " << C::GetThreadName() << " service on port: " << C::GetServerPort();
+  if(!thread.Start()){
+    LOG_AT_LEVEL(Severity) << "couldn't start the " << Service::GetName() << " service on port: " << Service::GetPort();
     return;
   }
+  DLOG(INFO) << "the " << Service::GetName() << " service has been started.";
+}
+
+template<class Component, const google::LogSeverity& Severity=google::INFO>
+static inline void
+SilentlyInitialize(){
+  DLOG(INFO) << "initializing the " << Component::GetName() << "....";
+  if(!Component::Initialize()){
+    LOG_AT_LEVEL(Severity) << "couldn't initialize the " << Component::GetName();
+    return;
+  }
+  DLOG(INFO) << "the " << Component::GetName() << " has been initialized.";
 }
 
 template<class C, bool fatal=false>
@@ -122,13 +134,19 @@ SilentlyInitialize(){
   }
 }
 
-template<class C, class T, bool fatal=false>
+template<class Service, class ServiceThread, google::LogSeverity Severity=google::INFO>
 static inline void
-SilentlyWaitForShutdown(){
-  if(!T::Join() && fatal){
-    LOG(FATAL) << "failed to join the " << C::GetThreadName() << " thread.";
+SilentlyWaitForShutdown(ServiceThread& thread){
+  if(!Service::IsEnabled()){
+    DLOG(INFO) << "the " << Service::GetName() << " service is disabled, not waiting for shutdown.";
     return;
   }
+
+  if(!thread.Join()){
+    LOG_AT_LEVEL(Severity) << "couldn't join the " << Service::GetName() << " service on port: " << Service::GetPort();
+    return;
+  }
+  DLOG(INFO) << "the " << Service::GetName() << " service has been stopped.";
 }
 
 static inline void
@@ -200,26 +218,30 @@ main(int argc, char **argv){
     }
   }
 
+  rpc::LedgerServerThread ledger_server_thread;
+  http::HealthServiceThread health_service_thread;
+  http::RestServiceThread rest_service_thread;
+
   // Load the configuration
-  SilentlyInitialize<ConfigurationManager>();
+  SilentlyInitialize<ConfigurationManager, google::FATAL>();
   // start the health check service
-  SilentlyStartService<HttpHealthService, HttpHealthServiceThread>();
+  SilentlyStartService<http::HealthService, http::HealthServiceThread, google::FATAL>(health_service_thread);
   // initialize the job scheduler
-  SilentlyInitialize<JobScheduler>();
+  SilentlyInitialize<JobScheduler, google::FATAL>();
   // initialize the keychain
-  SilentlyInitialize<Keychain>();
+  SilentlyInitialize<Keychain, google::FATAL>();//TODO: refactor & parallelize
   // initialize the object pool
-  SilentlyInitialize<ObjectPool>();
+  SilentlyInitialize<ObjectPool, google::FATAL>();
   // initialize the wallet manager
-  SilentlyInitialize<WalletManager>();
+  SilentlyInitialize<WalletManager, google::FATAL>();
   // initialize the block chain
-  SilentlyInitialize<BlockChain>();
+  SilentlyInitialize<BlockChain, google::FATAL>();
   // start the rpc server
-  SilentlyStartService<rpc::LedgerServer, ServerThread>();
+  SilentlyStartService<rpc::LedgerServer, rpc::LedgerServerThread, google::FATAL>(ledger_server_thread);
   // start the peer threads & connect to any known peers
-  SilentlyInitialize<PeerSessionManager>();
+  SilentlyInitialize<PeerSessionManager, google::FATAL>();
   // start the rest service
-  SilentlyStartService<HttpRestService, HttpRestServiceThread>();
+  SilentlyStartService<http::RestService, http::RestServiceThread, google::FATAL>(rest_service_thread);
 
   if(FLAGS_mining_interval > 0)
     SilentlyStartThread<BlockMiner, BlockMinerThread>();
@@ -237,8 +259,8 @@ main(int argc, char **argv){
 #endif//TOKEN_DEBUG
 
   //TODO: SilentlyWaitForShutdown<PeerSessionManager
-  SilentlyWaitForShutdown<rpc::LedgerServer, ServerThread>();
-  SilentlyWaitForShutdown<HttpRestService, HttpRestServiceThread>();
-  SilentlyWaitForShutdown<HttpHealthService, HttpHealthServiceThread>();
+  SilentlyWaitForShutdown<rpc::LedgerServer, rpc::LedgerServerThread, google::FATAL>(ledger_server_thread);
+  SilentlyWaitForShutdown<http::RestService, http::RestServiceThread, google::FATAL>(rest_service_thread);
+  SilentlyWaitForShutdown<http::HealthService, http::HealthServiceThread, google::FATAL>(health_service_thread);
   return EXIT_SUCCESS;
 }

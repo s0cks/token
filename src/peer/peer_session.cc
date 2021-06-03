@@ -73,7 +73,7 @@ namespace token{
   }
 
   void PeerSession::OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
-    auto session = (PeerSession*)stream->data;
+    PeerSessionPtr session = std::static_pointer_cast<PeerSession>(((PeerSession*)stream->data)->shared_from_this());
     if(nread == UV_EOF){
       DLOG_SESSION(ERROR, session) << "end of stream";
       return;
@@ -90,9 +90,7 @@ namespace token{
 
     BufferPtr buffer = Buffer::From(buff->base, nread);
     do{
-      rpc::MessagePtr message = rpc::Message::From(session, buffer);
-      DLOG_SESSION(INFO, session) << "received " << message->ToString() << " (" << message->GetBufferSize() << "b)";
-      session->OnMessageRead(message);
+      session->OnMessageRead(buffer);
     } while(buffer->GetReadBytes() < buffer->GetBufferSize());
     free(buff->base);
   }

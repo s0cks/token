@@ -69,6 +69,9 @@ namespace token{
   FOR_EACH_POOL_TYPE(FORWARD_DECLARE_TYPE)
 #undef FORWARD_DECLARE_TYPE
 
+  class IndexedTransaction;
+  typedef std::shared_ptr<IndexedTransaction> IndexedTransactionPtr;
+
   namespace rpc{
 #define FORWARD_DECLARE(Name) \
   class Name##Message;        \
@@ -246,7 +249,6 @@ namespace token{
 
     virtual int64_t GetBufferSize() const = 0;
     virtual bool Write(const BufferPtr& buff) const = 0;
-    virtual bool Write(Json::Writer& writer) const{ return false; }
   };
 
   class BinaryObject : public SerializableObject{
@@ -393,6 +395,12 @@ namespace token{
       if(a.transaction_ == b.transaction_)
         return a.index_ < b.index_;
       return a.transaction_ < b.transaction_;
+    }
+
+    friend bool operator>(const TransactionReference& a, const TransactionReference& b){
+      if(a.transaction_ == b.transaction_)
+        return a.index_ > b.index_;
+      return a.transaction_ > b.transaction_;
     }
 
     friend std::ostream& operator<<(std::ostream& stream, const TransactionReference& ref){

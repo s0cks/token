@@ -4,17 +4,17 @@
 
 namespace token{
   namespace http{
-    void Session::OnMessageRead(const MessagePtr& msg){
-      RequestPtr request = std::static_pointer_cast<Request>(msg);
+    void Session::OnMessageRead(const BufferPtr& buff){
+      RequestPtr request = RequestParser::ParseRequest(buff);
       RouterMatch match = router_->Find(request);
       if(match.IsNotFound()){
         std::stringstream ss;
         ss << "Cannot find: " << request->GetPath();
-        return Send(NewNotFoundResponse(shared_from_this(), ss));
+        return Send(NewNotFoundResponse(ss));
       } else if(match.IsNotSupported()){
         std::stringstream ss;
         ss << "Method Not Supported for: " << request->GetPath();
-        return Send(NewNotSupportedResponse(shared_from_this(), ss));
+        return Send(NewNotSupportedResponse(ss));
       } else{
         assert(match.IsOk());
 
@@ -24,7 +24,7 @@ namespace token{
 
         Route& route = match.GetRoute();
         RouteHandlerFunction& handler = route.GetHandler();
-        handler(route.GetController(), shared_from_this(), request);
+        handler(route.GetController(), std::static_pointer_cast<Session>(shared_from_this()), request);
       }
     }
   }

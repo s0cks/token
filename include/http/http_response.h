@@ -12,7 +12,6 @@
 namespace token{
   namespace http{
     class Response : public Message{
-      friend class HttpSession;
      protected:
       StatusCode status_;
       BufferPtr body_;
@@ -52,11 +51,10 @@ namespace token{
         return 0;
       }
      public:
-      Response(const SessionPtr& session,
-               const HttpHeadersMap& headers,
+      Response(const HttpHeadersMap& headers,
                const StatusCode& status,
                const BufferPtr& body):
-         Message(session, headers),
+         Message(headers),
          status_(status),
          body_(std::move(body)){}
       ~Response() override = default;
@@ -118,15 +116,15 @@ namespace token{
       StatusCode status_;
       BufferPtr body_;
      public:
-      explicit ResponseBuilder(const SessionPtr& session):
-        MessageBuilderBase(session),
-        status_(StatusCode::kHttpOk),
+      ResponseBuilder():
+        MessageBuilderBase(),
+        status_(StatusCode::kOk),
         body_(Buffer::NewInstance(Message::kDefaultBodySize)){
         InitHttpResponseHeaders(headers_);
       }
-      ResponseBuilder(const SessionPtr& session, const BufferPtr& body):
-        MessageBuilderBase(session),
-        status_(StatusCode::kHttpOk),
+      explicit ResponseBuilder(const BufferPtr& body):
+        MessageBuilderBase(),
+        status_(StatusCode::kOk),
         body_(std::move(body)){
         InitHttpResponseHeaders(headers_);
       }
@@ -155,7 +153,7 @@ namespace token{
       }
 
       ResponsePtr Build() const{
-        return std::make_shared<Response>(session_, headers_, status_, body_);
+        return std::make_shared<Response>(headers_, status_, body_);
       }
 
       ResponseBuilder& operator=(ResponseBuilder& other) = default;
@@ -203,8 +201,8 @@ namespace token{
         return 0;
       }
      public:
-      explicit ResponseParser(const SessionPtr& session):
-        ResponseBuilder(session),
+      ResponseParser():
+        ResponseBuilder(),
         parser_(),
         settings_(){
         parser_.data = this;
@@ -231,8 +229,8 @@ namespace token{
       }
 
       static inline ResponsePtr
-      ParseResponse(const SessionPtr& session, const BufferPtr& body){
-        ResponseParser parser(session);
+      ParseResponse(const BufferPtr& body){
+        ResponseParser parser;
         if(!parser.Parse(body)){
           LOG(WARNING) << "cannot parse http response.";
           return nullptr;
@@ -242,9 +240,9 @@ namespace token{
     };
 
     static inline ResponsePtr
-    NewOkResponse(const SessionPtr& session, const Json::String& body){
-      ResponseBuilder builder(session);
-      builder.SetStatusCode(StatusCode::kHttpOk);
+    NewOkResponse(const Json::String& body){
+      ResponseBuilder builder;
+      builder.SetStatusCode(StatusCode::kOk);
       builder.SetHeader(HTTP_HEADER_CONTENT_TYPE, HTTP_CONTENT_TYPE_APPLICATION_JSON);
       builder.SetHeader(HTTP_HEADER_CONTENT_LENGTH, body.GetSize());
       builder.SetBody(body);
@@ -252,41 +250,41 @@ namespace token{
     }
 
     static inline ResponsePtr
-    NewOkResponse(const SessionPtr& session, const std::string& msg="Ok"){
+    NewOkResponse(const std::string& msg="Ok"){
       Json::String body;
       Json::Writer writer(body);
 
       LOG_IF(WARNING, !writer.StartObject()) << "cannot start json object.";
       LOG_IF(WARNING, !json::SetField(writer, "data", ErrorMessage(200, msg)));
       LOG_IF(WARNING, !writer.EndObject()) << "cannot end json object.";
-      return NewOkResponse(session, body);
+      return NewOkResponse(body);
     }
 
     template<class T>
     static inline ResponsePtr
-    NewOkResponse(const SessionPtr& session, const std::shared_ptr<T>& val){
+    NewOkResponse(const std::shared_ptr<T>& val){
       Json::String body;
       Json::Writer writer(body);
 
       LOG_IF(WARNING, !writer.StartObject()) << "cannot start json object.";
       LOG_IF(WARNING, !json::SetField(writer, "data", val)) << "cannot set 'data' field.";
       LOG_IF(WARNING, !writer.EndObject()) << "cannot end json object.";
-      return NewOkResponse(session, body);
+      return NewOkResponse(body);
     }
 
     static inline ResponsePtr
-    NewOkResponse(const SessionPtr& session, const HashList& val){
+    NewOkResponse(const HashList& val){
       Json::String body;
       Json::Writer writer(body);
       LOG_IF(WARNING, !writer.StartObject()) << "cannot start json object.";
       LOG_IF(WARNING, !json::SetField(writer, "data", val)) << "cannot set 'data' field.";
       LOG_IF(WARNING, !writer.EndObject()) << "cannot end json object.";
-      return NewOkResponse(session, body);
+      return NewOkResponse(body);
     }
 
     static inline ResponsePtr
-    NewErrorResponse(const SessionPtr& session, const StatusCode& status_code, const Json::String& body){
-      ResponseBuilder builder(session);
+    NewErrorResponse(const StatusCode& status_code, const Json::String& body){
+      ResponseBuilder builder;
       builder.SetStatusCode(status_code);
       builder.SetHeader(HTTP_HEADER_CONTENT_TYPE, HTTP_CONTENT_TYPE_APPLICATION_JSON);
       builder.SetHeader(HTTP_HEADER_CONTENT_LENGTH, body.GetSize());
@@ -295,77 +293,77 @@ namespace token{
     }
 
     static inline ResponsePtr
-    NewErrorResponse(const SessionPtr& session, const StatusCode& status_code=StatusCode::kHttpInternalServerError, const std::string& msg="Not Ok"){
+    NewErrorResponse(const StatusCode& status_code=StatusCode::kInternalServerError, const std::string& msg="Not Ok"){
       Json::String body;
       Json::Writer writer(body);
       LOG_IF(ERROR, !writer.StartObject()) << "cannot start json object.";
       LOG_IF(ERROR, !json::SetField(writer, "data", ErrorMessage(static_cast<int64_t>(status_code), msg)));
       LOG_IF(ERROR, !writer.EndObject()) << "cannot end json object.";
-      return NewErrorResponse(session, status_code, body);
+      return NewErrorResponse(status_code, body);
     }
 
     static inline ResponsePtr
-    NewInternalServerErrorResponse(const SessionPtr& session, const std::string& message){
-      return NewErrorResponse(session, StatusCode::kHttpInternalServerError, message);
+    NewInternalServerErrorResponse(const std::string& message){
+      return NewErrorResponse(StatusCode::kInternalServerError, message);
     }
 
     static inline ResponsePtr
-    NewInternalServerErrorResponse(const SessionPtr& session, const std::stringstream& message){
-      return NewErrorResponse(session, StatusCode::kHttpInternalServerError, message.str());
+    NewInternalServerErrorResponse(const std::stringstream& message){
+      return NewErrorResponse( StatusCode::kInternalServerError, message.str());
     }
 
     static inline ResponsePtr
-    NewNotImplementedResponse(const SessionPtr& session, const std::string& msg){
-      return NewErrorResponse(session, StatusCode::kHttpNotImplemented, msg);
+    NewNotImplementedResponse(const std::string& msg){
+      return NewErrorResponse(StatusCode::kNotImplemented, msg);
     }
 
     static inline ResponsePtr
-    NewNotImplementedResponse(const SessionPtr&session, const std::stringstream& msg){
-      return NewErrorResponse(session, StatusCode::kHttpNotImplemented, msg.str());
+    NewNotImplementedResponse(const std::stringstream& msg){
+      return NewErrorResponse(StatusCode::kNotImplemented, msg.str());
     }
 
     static inline ResponsePtr
-    NewNoContentResponse(const SessionPtr& session, const std::string& msg){
-      return NewErrorResponse(session, StatusCode::kHttpNoContent, msg);
+    NewNoContentResponse(const std::string& msg){
+      return NewErrorResponse(StatusCode::kNoContent, msg);
     }
 
     static inline ResponsePtr
-    NewNoContentResponse(const SessionPtr& session, const std::stringstream& msg){
-      return NewErrorResponse(session, StatusCode::kHttpNoContent, msg.str());
+    NewNoContentResponse(const std::stringstream& msg){
+      return NewErrorResponse(StatusCode::kNoContent, msg.str());
     }
 
     static inline ResponsePtr
-    NewNoContentResponse(const SessionPtr& session, const Hash& hash){
+    NewNoContentResponse(const Hash& hash){
       std::stringstream ss;
       ss << "Cannot find: " << hash;
-      return NewNoContentResponse(session, ss);
+      return NewNoContentResponse(ss);
     }
 
     static inline ResponsePtr
-    NewNotFoundResponse(const SessionPtr& session, const std::string& msg){
-      return NewErrorResponse(session, StatusCode::kHttpNotFound, msg);
+    NewNotFoundResponse(const std::string& msg){
+      return NewErrorResponse(StatusCode::kNotFound, msg);
     }
 
     static inline ResponsePtr
-    NewNotFoundResponse(const SessionPtr& session, const std::stringstream& msg){
-      return NewErrorResponse(session, StatusCode::kHttpNotFound, msg.str());
+    NewNotFoundResponse(const std::stringstream& msg){
+      return NewErrorResponse(StatusCode::kNotFound, msg.str());
     }
 
     static inline ResponsePtr
-    NewNotFoundResponse(const SessionPtr& session, const Hash& hash){
+    NewNotFoundResponse(const Hash& hash){
       std::stringstream ss;
       ss << "Not Found: " << hash;
-      return NewNotFoundResponse(session, ss);
+      return NewNotFoundResponse(ss);
     }
 
     static inline ResponsePtr
-    NewNotSupportedResponse(const SessionPtr& session, const std::string& msg){
-      return NewErrorResponse(session, StatusCode::kHttpNotImplemented, msg);
+    NewNotSupportedResponse(const std::string& msg){
+      return NewErrorResponse(StatusCode::kNotImplemented, msg);
     }
 
     static inline ResponsePtr
-    NewNotSupportedResponse(const SessionPtr& session, const std::stringstream& msg){
-      return NewErrorResponse(session, StatusCode::kHttpNotImplemented, msg.str());
+    NewNotSupportedResponse(const std::stringstream& msg){
+      return NewErrorResponse(StatusCode::kNotImplemented, msg.str());
     }
   }
 }

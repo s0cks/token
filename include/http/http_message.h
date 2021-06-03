@@ -17,23 +17,16 @@ namespace token{
      public:
       static const int64_t kDefaultBodySize = 65536;
      protected:
-      SessionPtr session_;
       HttpHeadersMap headers_;
 
-      explicit Message(const SessionPtr& session):
+      Message():
         MessageBase(),
-        session_(session),
         headers_(){}
-      Message(const SessionPtr& session, HttpHeadersMap headers):
+      explicit Message(const HttpHeadersMap& headers):
         MessageBase(),
-        session_(session),
-        headers_(std::move(headers)){}
+        headers_(headers){}
     public:
       ~Message() override = default;
-
-      SessionPtr GetSession() const{
-        return session_;
-      }
 
       bool SetHeader(const std::string& name, const std::string& val){
         return SetHttpHeader(headers_, name, val);
@@ -63,16 +56,14 @@ namespace token{
 
       virtual const char* GetName() const = 0;
 
-      static MessagePtr From(const SessionPtr& session, const BufferPtr& buffer);
+      static MessagePtr From(const BufferPtr& buffer);
     };
 
     class MessageBuilderBase{
      protected:
-      SessionPtr session_;
       HttpHeadersMap headers_;
 
-      explicit MessageBuilderBase(const SessionPtr& session):
-        session_(session),
+      explicit MessageBuilderBase():
         headers_(){}
       explicit MessageBuilderBase(const MessageBuilderBase& other) = default;
      public:

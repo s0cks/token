@@ -31,12 +31,12 @@ namespace token{
    public:
     static inline int
     Compare(const UserKey& a, const UserKey& b){
-      return strncmp(a.data(), b.data(), kRawUserSize);
+      return strncmp(a.data(), b.data(), kUserSize);
     }
 
     static inline int
     CompareCaseInsensitive(const UserKey& a, const UserKey& b){
-      return strncasecmp(a.data(), b.data(), kRawUserSize);
+      return strncasecmp(a.data(), b.data(), kUserSize);
     }
    private:
     enum Layout{
@@ -44,7 +44,7 @@ namespace token{
       kBytesForTag = sizeof(RawObjectTag),
 
       kUserPosition = kTagPosition+kBytesForTag,
-      kBytesForUser = kRawUserSize,
+      kBytesForUser = kUserSize,
 
       kTotalSize = kUserPosition+kBytesForUser,
     };

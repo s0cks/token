@@ -4,7 +4,7 @@
 namespace token{
   namespace http{
     RestService::RestService(uv_loop_t* loop):
-      ServiceBase(loop, GetThreadName()),
+      ServiceBase(loop),
       pool_(std::make_shared<PoolController>(ObjectPool::GetInstance())),
       chain_(std::make_shared<ChainController>(BlockChain::GetInstance())),
       wallets_(std::make_shared<WalletController>(WalletManager::GetInstance())){

@@ -3,7 +3,6 @@
 
 #ifdef TOKEN_ENABLE_EXPERIMENTAL
 
-#include "json.h"
 #include "timestamp.h"
 
 namespace token{
@@ -13,45 +12,14 @@ namespace token{
       Timestamp timestamp_;
       std::string kind_;
       std::string dataset_;
-      std::string action_;
-
-      inline bool
-      WriteTimestamp(Json::Writer& writer) const{
-        return json::SetField(writer, "@timestamp", timestamp_);
-      }
-
-      inline bool
-      WriteEventFields(Json::Writer& writer) const{
-        if(!writer.Key("event")){
-          LOG(ERROR) << "couldn't write json key";
-          return false;
-        }
-
-        if(!writer.StartObject()){
-          LOG(ERROR) << "couldn't start json object";
-          return false;
-        }
-
-        LOG_IF(ERROR, !json::SetField(writer, "kind", kind_));
-        LOG_IF(ERROR, !json::SetField(writer, "dataset", dataset_));
-
-        if(!writer.EndObject()){
-          LOG(ERROR) << "couldn't end json object";
-          return false;
-        }
-        return true;
-      }
      public:
       Event(const Timestamp& timestamp,
             std::string kind,
             std::string dataset):
-            timestamp_(timestamp),
-            kind_(std::move(kind)),
-            dataset_(std::move(dataset)){}
-      explicit Event(const Event& other):
-        timestamp_(other.timestamp_),
-        kind_(other.kind_),
-        dataset_(other.dataset_){}
+        timestamp_(timestamp),
+        kind_(kind),
+        dataset_(dataset){}
+      explicit Event(const Event& other) = default;
       virtual ~Event() = default;
 
       Timestamp GetTimestamp() const{
@@ -66,31 +34,15 @@ namespace token{
         return dataset_;
       }
 
-      std::string GetAction() const{
-        return action_;
-      }
-
-      virtual bool Write(Json::Writer& writer) const{
-        if(!writer.StartObject())
-          return false;
-        if(!WriteTimestamp(writer))
-          return false;
-        if(!WriteEventFields(writer))
-          return false;
-        if(!writer.EndObject())
-          return false;
-        return true;
-      }
-
       std::string ToString() const{
-        Json::String val;
-        Json::Writer writer(val);
-        if(!Write(writer)){
-          LOG(ERROR) << "cannot serialize event to json";
-          return "";
-        }
-        return std::string(val.GetString(), val.GetSize());
+        json::String doc;
+        json::Writer writer(doc);
+        if(!json::ToJson(doc, (*this)))
+          return "{}";
+        return std::string(doc.GetString(), doc.GetSize());
       }
+
+      Event& operator=(const Event& other) = default;
 
       friend std::ostream& operator<<(std::ostream& stream, const Event& event){
         return stream << event.ToString();

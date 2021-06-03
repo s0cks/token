@@ -32,17 +32,18 @@ namespace token{
         return wallets_;
       }
 
-      ServerPort GetPort() const override{
-        return GetServerPort();
+      static inline bool
+      IsEnabled(){
+        return IsValidPort(RestService::GetPort());
       }
 
       static inline ServerPort
-      GetServerPort(){
+      GetPort(){
         return FLAGS_service_port;
       }
 
       static inline const char*
-      GetThreadName(){
+      GetName(){
         return "http/rest";
       }
 

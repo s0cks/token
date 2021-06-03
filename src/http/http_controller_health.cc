@@ -10,11 +10,11 @@ namespace token{
 #undef DEFINE_ENDPOINT_HANDLER
 
     HTTP_CONTROLLER_ENDPOINT_HANDLER(HealthController, GetReadyStatus){
-      return session->Send(NewOkResponse(session));
+      return session->Send(NewOkResponse());
     }
 
     HTTP_CONTROLLER_ENDPOINT_HANDLER(HealthController, GetLiveStatus){
-      return session->Send(NewOkResponse(session));
+      return session->Send(NewOkResponse());
     }
   }
 }

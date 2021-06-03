@@ -1,11 +1,11 @@
 #ifndef TOKEN_BLOCK_H
 #define TOKEN_BLOCK_H
 
-#include "hash.h"
 #include "bloom.h"
-#include "transaction.h"
+#include "version.h"
+#include "timestamp.h"
 #include "block_header.h"
-#include "buffer.h"
+#include "indexed_transaction.h"
 
 namespace token{
   class BlockVisitor;
@@ -162,17 +162,6 @@ namespace token{
           && buff->PutLong(height_)
           && buff->PutHash(previous_hash_)
           && buff->PutSetOf(transactions_);
-    }
-
-    bool Write(Json::Writer& writer) const override{
-      return writer.StartObject()
-            && json::SetField(writer, "timestamp", timestamp_)
-            && json::SetField(writer, "version", version_.ToString())
-            && json::SetField(writer, "height", height_)
-            && json::SetField(writer, "previous_hash", previous_hash_)
-            && json::SetField(writer, "hash", GetHash())
-            && json::SetField(writer, "transactions", GetNumberOfTransactions())
-          && writer.EndObject();
     }
 
     bool Equals(const BlockPtr& blk) const{

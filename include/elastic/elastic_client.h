@@ -12,20 +12,17 @@ namespace token{
   template<class T>
   static inline bool
   SendEvent(const NodeAddress& address, const T& event){
-    Json::String body;
-    Json::Writer writer(body);
-    if(!event.Write(writer)){
-      DLOG(WARNING) << "cannot write event " << event.ToString() << " to json.";
+    Json::String doc;
+    if(!json::ToJson(doc, event))
       return false;
-    }
 
     HttpClient client(address);
-    http::RequestBuilder builder(nullptr);
+    http::RequestBuilder builder;
     builder.SetMethod(http::Method::kPost);
     builder.SetPath("/");
     builder.SetHeader(HTTP_HEADER_CONTENT_TYPE, HTTP_CONTENT_TYPE_APPLICATION_JSON);
-    builder.SetHeader(HTTP_HEADER_CONTENT_LENGTH, body.GetSize());
-    builder.SetBody(body);
+    builder.SetHeader(HTTP_HEADER_CONTENT_LENGTH, doc.GetSize());
+    builder.SetBody(doc);
 
     http::ResponsePtr response = client.Send(builder.Build());
     if(!response){

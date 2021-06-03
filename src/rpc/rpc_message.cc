@@ -19,7 +19,7 @@ namespace token{
         && WriteMessage(buff);
   }
 
-  rpc::MessagePtr rpc::Message::From(SessionBase<rpc::Message>* session, const BufferPtr& buffer){
+  rpc::MessagePtr rpc::Message::From(const BufferPtr& buffer){
     ObjectTag tag = buffer->GetObjectTag();
     switch(tag.GetType()){
 #define DEFINE_DECODE(Name) \

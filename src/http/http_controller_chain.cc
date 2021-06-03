@@ -19,15 +19,15 @@ namespace token{
       LOG_IF(ERROR, !writer.StartObject()) << "cannot start json object.";
       LOG_IF(ERROR, !writer.Key("data", 4)) << "cannot write 'data' field name in json object.";
       if(!chain->GetBlocks(writer))
-        return session->Send(NewInternalServerErrorResponse(session, "Cannot list block chain blocks."));
+        return session->Send(NewInternalServerErrorResponse("Cannot list block chain blocks."));
       LOG_IF(ERROR, !writer.EndObject()) << "cannot end json object.";
-      return session->Send(NewOkResponse(session, body));
+      return session->Send(NewOkResponse(body));
     }
 
     HTTP_CONTROLLER_ENDPOINT_HANDLER(ChainController, GetBlockChainHead){
       BlockChainPtr chain = GetChain();
       BlockPtr head = chain->GetHead();
-      ResponsePtr response = NewOkResponse(session, head);
+      ResponsePtr response = NewOkResponse(head);
       return session->Send(response);
     }
 
@@ -36,10 +36,10 @@ namespace token{
 
       Hash hash = request->GetHashParameterValue();
       if(!chain->HasBlock(hash))
-        return session->Send(NewNoContentResponse(session, hash));
+        return session->Send(NewNoContentResponse(hash));
 
       BlockPtr blk = chain->GetBlock(hash);
-      return session->Send(NewOkResponse(session, blk));
+      return session->Send(NewOkResponse(blk));
     }
   }
 }

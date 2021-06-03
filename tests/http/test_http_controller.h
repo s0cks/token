@@ -12,7 +12,7 @@ namespace token{
   }
 
   MATCHER(ResponseIsOk, "The http response status code is 200 (Ok)"){
-    return std::static_pointer_cast<http::Response>(arg)->GetStatusCode() == http::StatusCode::kHttpOk;
+    return std::static_pointer_cast<http::Response>(arg)->GetStatusCode() == http::StatusCode::kOk;
   }
 
   MATCHER_P(ResponseBodyEqualsString, expected, "The http response body doesn't match"){

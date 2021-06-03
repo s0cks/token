@@ -32,7 +32,7 @@ namespace token{
       //TODO: refactor
       ObjectPoolPtr pool = ObjectPool::GetInstance();
       if(!pool->HasUnclaimedTransaction(hash))
-        return session->Send(NewNoContentResponse(session, hash));
+        return session->Send(NewNoContentResponse(hash));
 
       int width = DEEPLINK_DEFAULT_WIDTH;
       int height = DEEPLINK_DEFAULT_HEIGHT;
@@ -41,36 +41,36 @@ namespace token{
         if(!ParseInt(request->GetQueryParameterValue("scale"), &scale)){
           std::stringstream ss;
           ss << "scale factor of " << request->GetQueryParameterValue("scale") << " is not a IsValid number";
-          return session->Send(NewInternalServerErrorResponse(session, ss));
+          return session->Send(NewInternalServerErrorResponse(ss));
         }
         width = scale;
         height = scale;
       } else if(request->HasQueryParameter("width")){
         if(!request->HasQueryParameter("height"))
-          return session->Send(NewInternalServerErrorResponse(session, "Please specify a height"));
+          return session->Send(NewInternalServerErrorResponse("Please specify a height"));
         if(!ParseInt(request->GetQueryParameterValue("width"), &width)){
           std::stringstream ss;
           ss << "width of " << request->GetQueryParameterValue("width") << " is not a IsValid number.";
-          return session->Send(NewInternalServerErrorResponse(session, ss));
+          return session->Send(NewInternalServerErrorResponse(ss));
         }
 
         if(!ParseInt(request->GetQueryParameterValue("height"), &height)){
           std::stringstream ss;
           ss << "height of " << request->GetQueryParameterValue("height") << " is not a IsValid number.";
-          return session->Send(NewInternalServerErrorResponse(session, ss));
+          return session->Send(NewInternalServerErrorResponse(ss));
         }
       }
 
       if(width < DEEPLINK_MIN_WIDTH || width > DEEPLINK_MAX_WIDTH){
         std::stringstream ss;
         ss << "Width of " << width << " is invalid. Width constraints: [" << DEEPLINK_MIN_WIDTH << "-" << DEEPLINK_MAX_WIDTH << "]";
-        return session->Send(NewInternalServerErrorResponse(session, ss));
+        return session->Send(NewInternalServerErrorResponse(ss));
       }
 
       if(height < DEEPLINK_MIN_HEIGHT || height > DEEPLINK_MAX_HEIGHT){
         std::stringstream ss;
         ss << "Height of " << height << " is invalid. Height constraints: [" << DEEPLINK_MIN_HEIGHT << "-" << DEEPLINK_MAX_HEIGHT << "]";
-        return session->Send(NewInternalServerErrorResponse(session, ss));
+        return session->Send(NewInternalServerErrorResponse(ss));
       }
 
       DeeplinkGenerator generator(width, height);
@@ -80,11 +80,11 @@ namespace token{
       if(!WritePNG(data, bitmap)){
         std::stringstream ss;
         ss << "Couldn't generate deeplink for: " << hash;
-        return session->Send(NewInternalServerErrorResponse(session, ss));
+        return session->Send(NewInternalServerErrorResponse(ss));
       }
 
-      http::ResponseBuilder builder(session, data);
-      builder.SetStatusCode(StatusCode::kHttpOk);
+      http::ResponseBuilder builder(data);
+      builder.SetStatusCode(StatusCode::kOk);
       builder.SetHeader(HTTP_HEADER_CONTENT_TYPE, HTTP_CONTENT_TYPE_IMAGE_PNG);
       builder.SetHeader(HTTP_HEADER_CONTENT_LENGTH, data->GetWrittenBytes());
       return session->Send(builder.Build());
@@ -95,7 +95,7 @@ namespace token{
       if(!GetWalletManager()->HasWallet(user)){
         std::stringstream ss;
         ss << "cannot find wallet for: " << user;
-        return session->Send(NewNoContentResponse(session, ss));
+        return session->Send(NewNoContentResponse(ss));
       }
 
       Wallet wallet = GetWalletManager()->GetUserWallet(user);
@@ -113,7 +113,7 @@ namespace token{
         writer.EndObject();
       }
       writer.EndObject();
-      return session->Send(NewOkResponse(session, body));
+      return session->Send(NewOkResponse(body));
     }
 
     static inline bool
@@ -121,14 +121,14 @@ namespace token{
       if(!doc.HasMember(name)){
         std::stringstream ss;
         ss << "request is missing the '" << name << "' field.";
-        session->Send(NewInternalServerErrorResponse(session, ss));
+        session->Send(NewInternalServerErrorResponse(ss));
         return false;
       }
 
       if(!doc[name].IsArray()){
         std::stringstream ss;
         ss << "'" << name << "' field is not an array.";
-        session->Send(NewInternalServerErrorResponse(session, ss));
+        session->Send(NewInternalServerErrorResponse(ss));
         return false;
       }
 
@@ -139,7 +139,7 @@ namespace token{
         if(!pool->HasUnclaimedTransaction(in_hash)){
           std::stringstream ss;
           ss << "Cannot find token: " << in_hash;
-          session->Send(NewNotFoundResponse(session, ss));
+          session->Send(NewNotFoundResponse(ss));
           return false;
         }
         UnclaimedTransactionPtr in_val = pool->GetUnclaimedTransaction(in_hash);
@@ -152,14 +152,14 @@ namespace token{
   if(!(Object).Is##Type()){        \
     std::stringstream ss; \
     ss << '\'' << (Name) << '\'' << " is not of type: " << #Type; \
-    session->Send(NewInternalServerErrorResponse(session, ss));   \
+    session->Send(NewInternalServerErrorResponse(ss));   \
     return false;                      \
   }
 #define HAS_FIELD(Object, Name, Type) \
   if(!(Object).HasMember((Name))){\
     std::stringstream ss; \
     ss << "missing the '" << (Name) << "' field."; \
-    session->Send(NewInternalServerErrorResponse(session, ss)); \
+    session->Send(NewInternalServerErrorResponse(ss)); \
     return false;                  \
   } \
   CHECK_TYPE((Object)[(Name)], Name, Type)
@@ -208,9 +208,9 @@ namespace token{
       if(!pool->PutTransaction(hash, tx)){
         std::stringstream ss;
         ss << "Cannot insert newly created transaction into object pool: " << hash;
-        return session->Send(NewInternalServerErrorResponse(session, ss));
+        return session->Send(NewInternalServerErrorResponse(ss));
       }
-      return session->Send(NewOkResponse(session, tx));
+      return session->Send(NewOkResponse(tx));
     }
   }
 }

@@ -9,60 +9,70 @@
 
 namespace token{
   namespace http{
-    class Controller;
-    typedef std::shared_ptr<Controller> ControllerPtr;
+#define FOR_EACH_HTTP_TYPE(V) \
+    V(Session)                \
+    V(Message)                \
+    V(Request)                \
+    V(Response)               \
+    V(Controller)             \
+    V(Router)
 
-    class Message;
-    typedef std::shared_ptr<Message> MessagePtr;
+#define FORWARD_DECLARE_HTTP_TYPE(Name) \
+    class Name;                         \
+    typedef std::shared_ptr<Name> Name##Ptr;
+    FOR_EACH_HTTP_TYPE(FORWARD_DECLARE_HTTP_TYPE)
+#undef FORWARD_DECLARE_HTTP_TYPE
 
-    class Session;
-    typedef std::shared_ptr<Session> SessionPtr;
-
-    class Request;
-    typedef std::shared_ptr<Request> RequestPtr;
-
-    class Response;
-    typedef std::shared_ptr<Response> ResponsePtr;
-
-    class Router;
-    typedef std::shared_ptr<Router> RouterPtr;
+#define FOR_EACH_HTTP_METHOD(V) \
+  V(Get, "GET")                 \
+  V(Put, "PUT")                 \
+  V(Post, "POST")               \
+  V(Delete, "DELETE")
 
     enum class Method{
-      kGet,
-      kPut,
-      kPost,
-      kDelete,
+#define DEFINE_HTTP_METHOD(Name, ToString) k##Name,
+      FOR_EACH_HTTP_METHOD(DEFINE_HTTP_METHOD)
+#undef DEFINE_HTTP_METHOD
     };
 
-    static std::ostream& operator<<(std::ostream& stream, const Method& method){
+    static inline std::ostream&
+    operator<<(std::ostream& stream, const Method& method){
       switch(method){
-        case Method::kGet:
-          return stream << "GET";
-        case Method::kPut:
-          return stream << "PUT";
-        case Method::kPost:
-          return stream << "POST";
-        case Method::kDelete:
-          return stream << "DELETE";
+#define DEFINE_TOSTRING(Name, ToString) \
+        case Method::k##Name: return stream << ToString;
+        FOR_EACH_HTTP_METHOD(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
         default:
-          return stream << "Unknown";
+          return stream << "UNKNOWN";
       }
     }
 
-#define FOR_EACH_HTTP_RESPONSE(V) \
+#define FOR_EACH_HTTP_STATUS_CODE(V) \
     V(Ok, 200)                      \
     V(NoContent, 204)               \
     V(NotFound, 404)                \
     V(InternalServerError, 500)     \
     V(NotImplemented, 501)
 
-    enum StatusCode{
-#define DEFINE_CODE(Name, Val) kHttp##Name = Val,
-      FOR_EACH_HTTP_RESPONSE(DEFINE_CODE)
+    enum class StatusCode{
+#define DEFINE_CODE(Name, Val) k##Name = Val,
+      FOR_EACH_HTTP_STATUS_CODE(DEFINE_CODE)
 #undef DEFINE_CODE
     };
 
-    class ErrorMessage{
+    static inline std::ostream&
+    operator<<(std::ostream& stream, const StatusCode& status){
+      switch(status){
+#define DEFINE_TOSTRING(Name, ToInt) \
+        case StatusCode::k##Name: return stream << #Name;
+        FOR_EACH_HTTP_STATUS_CODE(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
+        default:
+          return stream << "Unknown";
+      }
+    }
+
+    class ErrorMessage{ //TODO: refactor
      private:
       int64_t code_;
       std::string message_;

@@ -6,18 +6,11 @@
 #include <vector>
 #include "buffer.h"
 #include "message.h"
+#include "rpc/rpc_common.h"
 
 namespace token{
-  template<class M>
-  class SessionBase;
-
   namespace rpc{
-    class Message;
-    typedef std::shared_ptr<rpc::Message> MessagePtr;
-    typedef std::vector<rpc::MessagePtr> MessageList;
-
     class Message: public MessageBase{
-      friend class SessionBase;
     protected:
       Message() = default;
       virtual int64_t GetMessageSize() const = 0;
@@ -35,7 +28,7 @@ namespace token{
       bool Write(const BufferPtr& buff) const override;
       virtual bool Equals(const rpc::MessagePtr& msg) const = 0;
 
-      static rpc::MessagePtr From(SessionBase<rpc::Message>* session, const BufferPtr& buffer);
+      static MessagePtr From(const BufferPtr& buffer);
     };
 
 #define DEFINE_RPC_MESSAGE_TYPE(Name) \

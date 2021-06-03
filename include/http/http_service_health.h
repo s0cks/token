@@ -20,18 +20,19 @@ namespace token{
         return controller_;
       }
 
-      ServerPort GetPort() const override{
-        return GetServerPort();
-      }
-
-      static inline const char*
-      GetThreadName(){
-        return "http/health";
+      static inline bool
+      IsEnabled(){
+        return IsValidPort(HealthService::GetPort());
       }
 
       static inline ServerPort
-      GetServerPort(){
+      GetPort(){
         return FLAGS_healthcheck_port;
+      }
+
+      static inline const char*
+      GetName(){
+        return "http/health";
       }
 
       static inline HealthServicePtr
@@ -40,7 +41,15 @@ namespace token{
       }
     };
 
-    class HealthServiceThread : public ServiceThread<HealthService>{};
+    class HealthServiceThread : public ServiceThread<HealthService>{
+     public:
+      HealthServiceThread():
+        ServiceThread<HealthService>(){}
+      HealthServiceThread(const HealthServiceThread& other) = default;
+      ~HealthServiceThread() = default;
+
+      HealthServiceThread& operator=(const HealthServiceThread& other) = default;
+    };
   }
 }
 

@@ -68,14 +68,6 @@ namespace token{
           && buff->PutProduct(product_);
     }
 
-    bool Write(Json::Writer& writer) const override{
-      return writer.StartObject()
-          && reference_.Write(writer)
-          && user_.Write(writer)
-          && product_.Write(writer)
-          && writer.EndObject();
-    }
-
     bool Equals(const UnclaimedTransactionPtr& val) const{
       return reference_ == val->reference_
           && user_ == val->user_

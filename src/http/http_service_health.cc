@@ -3,7 +3,7 @@
 namespace token{
   namespace http{
     HealthService::HealthService(uv_loop_t* loop):
-      ServiceBase(loop, GetThreadName()),
+      ServiceBase(loop),
       controller_(NewHealthController()){
       if(!GetHealthController()->Initialize(GetRouter()))
         LOG(WARNING) << "cannot initialize HealthController";

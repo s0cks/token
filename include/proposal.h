@@ -83,16 +83,6 @@ namespace token{
       return true;
     }
 
-    bool Write(Json::Writer& writer) const override{
-      return writer.StartObject()
-          && json::SetField(writer, "timestamp", timestamp_)
-          && json::SetField(writer, "id", id_)
-          && json::SetField(writer, "proposer", proposer_)
-          && writer.Key("value")
-          && value_.Write(writer) //TODO: clean
-          && writer.EndObject();
-    }
-
     int64_t GetBufferSize() const override{
       return GetSize();
     }

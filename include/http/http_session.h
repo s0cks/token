@@ -8,22 +8,20 @@
 
 namespace token{
   namespace http{
-    class Router;
-    class Session : public SessionBase<Message>,
-                    public std::enable_shared_from_this<Session>{
+    class Session : public SessionBase{
      private:
       RouterPtr router_;
 
-      void OnMessageRead(const MessagePtr& msg) override;
+      void OnMessageRead(const BufferPtr& buff) override;
      public:
       Session():
-        SessionBase<Message>(),
+        SessionBase(),
         router_(Router::NewInstance()){}
       explicit Session(uv_loop_t* loop):
-        SessionBase<Message>(loop, UUID()),
+        SessionBase(loop, UUID()),
         router_(Router::NewInstance()){}
       Session(uv_loop_t* loop, const RouterPtr& router):
-        SessionBase<Message>(loop, UUID()),
+        SessionBase(loop, UUID()),
         router_(router){}
       ~Session() override = default;
 

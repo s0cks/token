@@ -46,7 +46,7 @@ namespace token{
       }
 
       BufferPtr buffer = Buffer::From(buff->base, nread);
-      http::ResponsePtr response = http::ResponseParser::ParseResponse(session, buffer);
+      http::ResponsePtr response = http::ResponseParser::ParseResponse(buffer);
       session->SetResponse(response);
       free(buff->base);
       return session->CloseConnection();

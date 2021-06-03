@@ -28,11 +28,7 @@ namespace token{
 #define DLOG_SERVER_IF(LevelName, Condition) \
   DLOG_IF(LevelName, Condition) << "[server] "
 
-  template<class M>
   class ServerBase{
-   private:
-    typedef ServerBase<M> ServerType;
-    typedef std::shared_ptr<M> ServerMessagePtr;
    public:
     enum State{
 #define DEFINE_STATE(Name) k##Name##State,
@@ -52,16 +48,12 @@ namespace token{
       }
     }
    protected:
-    const char* name_;
-    ThreadId thread_;
     uv_loop_t* loop_;
     uv_tcp_t handle_;
     uv_async_t shutdown_;
     RelaxedAtomic<State> state_;
 
-    ServerBase(uv_loop_t* loop, const char* name):
-      name_(strdup(name)),
-      thread_(),
+    ServerBase(uv_loop_t* loop):
       loop_(loop),
       handle_(),
       shutdown_(),
@@ -83,18 +75,17 @@ namespace token{
 
     static void
     OnNewConnection(uv_stream_t* stream, int status){
-      auto server = (ServerType*)stream->data;
+      auto server = (ServerBase*)stream->data;
       CHECK_UVRESULT(status, LOG_SERVER(ERROR), "connect failure");
 
-      SessionBase<M>* session = server->CreateSession();
-      session->SetState(SessionBase<M>::kConnectingState);
+      auto session = server->CreateSession();
       CHECK_UVRESULT(Accept(stream, session), LOG_SERVER(ERROR), "accept failure");
       CHECK_UVRESULT(ReadStart(session, &AllocBuffer, &OnMessageReceived), LOG_SERVER(ERROR), "read failure");
     }
 
     static void
     OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
-      auto session = (SessionBase<M>*)stream->data;
+      auto session = ((SessionBase*)stream->data)->shared_from_this(); //TODO: Clean this cast up?
       if(nread == UV_EOF){
         LOG(WARNING) << "client disconnected!";
         return;
@@ -111,9 +102,7 @@ namespace token{
 
       BufferPtr buffer = Buffer::From(buff->base, nread);
       do{
-        ServerMessagePtr message = M::From(session, buffer);
-        DLOG_SESSION(INFO, session) << "received " << message->ToString() << " from " << session->GetUUID();
-        session->OnMessageRead(message);
+        session->OnMessageRead(buffer);
       } while(buffer->GetReadBytes() < buffer->GetBufferSize());
       free(buff->base);
     }
@@ -143,33 +132,19 @@ namespace token{
     }
 
     static inline int
-    Accept(uv_stream_t* server, SessionBase<M>* session){
+    Accept(uv_stream_t* server, const std::shared_ptr<SessionBase>& session){
       return uv_accept(server, session->GetStream());
     }
 
     static inline int
-    ReadStart(SessionBase<M>* session, uv_alloc_cb on_alloc, uv_read_cb on_read){
+    ReadStart(const std::shared_ptr<SessionBase>& session, uv_alloc_cb on_alloc, uv_read_cb on_read){
       return uv_read_start(session->GetStream(), on_alloc, on_read);
     }
 
-    virtual SessionBase<M>* CreateSession() const = 0;
+   public://??????????
+    virtual std::shared_ptr<SessionBase> CreateSession() const = 0;
    public:
-    virtual ~ServerBase(){
-      if(name_)
-        free((void*)name_);
-    }
-
-    const char* GetName() const{
-      return name_;
-    }
-
-    virtual ServerPort GetPort() const{
-      return 0;
-    }
-
-    pthread_t GetThread() const{
-      return thread_;
-    }
+    virtual ~ServerBase() = default;
 
     uv_loop_t* GetLoop() const{
       return loop_;
@@ -187,12 +162,12 @@ namespace token{
       return (State)state_;
     }
 
-    bool Run(){
+    bool Run(const ServerPort& port){
       SetState(ServerBase::State::kStartingState);
-      VERIFY_UVRESULT(Bind(GetHandle(), GetPort()), LOG_SERVER(ERROR), "cannot bind server");
+      VERIFY_UVRESULT(Bind(GetHandle(), port), LOG_SERVER(ERROR), "cannot bind server");
       VERIFY_UVRESULT(Listen(GetStream(), &OnNewConnection), LOG_SERVER(ERROR), "listen failure");
 
-      DLOG_THREAD(INFO) << "server listening on port: " << GetPort();
+      DLOG_THREAD(INFO) << "server listening on port: " << port;
       SetState(ServerBase::State::kRunningState);
       VERIFY_UVRESULT(uv_run(GetLoop(), UV_RUN_DEFAULT), LOG_SERVER(ERROR), "failed to run loop");
       return true;

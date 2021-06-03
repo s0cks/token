@@ -8,23 +8,19 @@
 
 namespace token{
   namespace http{
-    class ServiceBase : public ServerBase<Message>{
+    class ServiceBase : public ServerBase{
      protected:
       RouterPtr router_;
 
-      ServiceBase(uv_loop_t* loop, const char* name):
-        ServerBase<Message>(loop, name),
+      ServiceBase(uv_loop_t* loop):
+        ServerBase(loop),
         router_(Router::NewInstance()){}
 
-      Session* CreateSession() const override{
-        return new Session(GetLoop(), GetRouter());
+      std::shared_ptr<SessionBase> CreateSession() const override{
+        return std::make_shared<Session>(GetLoop(), GetRouter());
       }
      public:
       ~ServiceBase() override = default;
-
-      ServerPort GetPort() const override{
-        return FLAGS_service_port;
-      }
 
       RouterPtr GetRouter() const{
         return router_;
@@ -39,7 +35,7 @@ namespace token{
       static void
       HandleThread(uword param){
         auto instance = Service::NewInstance();
-        DLOG_THREAD_IF(ERROR, !instance->Run()) << "Failed to run service loop.";
+        DLOG_THREAD_IF(ERROR, !instance->Run(Service::GetPort())) << "Failed to run the " << Service::GetName() << " service loop.";
         pthread_exit(nullptr);
       }
      public:
@@ -47,7 +43,7 @@ namespace token{
       ~ServiceThread() = default;
 
       bool Start(){
-        return ThreadStart(&thread_, Service::GetThreadName(), &HandleThread, (uword)0);
+        return ThreadStart(&thread_, Service::GetName(), &HandleThread, (uword)0);
       }
 
       bool Join(){

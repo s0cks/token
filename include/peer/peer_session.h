@@ -155,6 +155,19 @@ namespace token{
     bool ItemExists(const InventoryItem& item) const{
       return true;//TODO: refactor
     }
+
+    void OnMessageRead(const BufferPtr& buff) override{
+      rpc::MessagePtr msg = rpc::Message::From(buff);
+      switch(msg->GetType()) {
+#define DEFINE_HANDLE(Name) \
+        case Type::k##Name##Message: \
+          return GetMessageHandler().On##Name##Message(std::static_pointer_cast<rpc::Name##Message>(msg));
+
+        FOR_EACH_MESSAGE_TYPE(DEFINE_HANDLE)
+#undef DEFINE_HANDLE
+        default: return;
+      }
+    }
    public:
     explicit PeerSession(const NodeAddress& address):
       rpc::Session(uv_loop_new()),
