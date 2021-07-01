@@ -1,6 +1,7 @@
 #include <leveldb/db.h>
 #include <leveldb/status.h>
 
+#include "buffer.h"
 #include "configuration.h"
 
 namespace token{
@@ -28,7 +29,7 @@ namespace token{
   static inline void
   PutDefaultProperty(leveldb::WriteBatch& batch, const std::string& name, const PeerList& val){
     BufferPtr buffer = Buffer::NewInstance(GetBufferSize(val));
-    if(!Encode(buffer, val)){
+    if(!buffer->PutPeerList(val)){
       LOG(WARNING) << "cannot serialize peer list to buffer of size " << buffer->GetBufferSize();
       return;
     }
@@ -102,7 +103,7 @@ namespace token{
     options.sync = true;
 
     BufferPtr buffer = Buffer::NewInstance(GetBufferSize(val));
-    if(!Encode(buffer, val)){
+    if(!buffer->PutPeerList(val)){
       LOG(WARNING) << "cannot encode peer list to buffer of size " << buffer->GetBufferSize();
       return false;
     }
@@ -160,6 +161,19 @@ namespace token{
     return true;
   }
 
+  bool ConfigurationManager::PutProperty(const std::string& name, const Hash& val) const{
+    leveldb::WriteOptions options;
+    options.sync = true;
+
+    leveldb::Status status;
+    if(!(status = GetIndex()->Put(options, name, (const leveldb::Slice&)val)).ok()){
+      ERROR_SETTING_PROPERTY(name, val);
+      return false;
+    }
+    SET_PROPERTY(name, val);
+    return true;
+  }
+
   bool ConfigurationManager::GetString(const std::string& name, std::string& value) const{
     leveldb::Status status;
     if(!(status = GetIndex()->Get(leveldb::ReadOptions(), name, &value)).ok()){
@@ -171,6 +185,24 @@ namespace token{
       ERROR_GETTING_PROPERTY(name, status);
       return false;
     }
+    return true;
+  }
+
+  bool ConfigurationManager::GetHash(const std::string& name, Hash& result) const{
+    std::string value;
+
+    leveldb::Status status;
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), name, &value)).ok()){
+      if(status.IsNotFound()){
+        CANNOT_GET_PROPERTY(name);
+        return false;
+      }
+
+      ERROR_GETTING_PROPERTY(name, status);
+      return false;
+    }
+
+    result = Hash::FromHexString(value);
     return true;
   }
 
@@ -213,7 +245,7 @@ namespace token{
     }
 
     BufferPtr buffer = Buffer::From(value);
-    return Decode(buffer, peers);
+    return buffer->GetPeerList(peers);
   }
 
   static ConfigurationManager instance;

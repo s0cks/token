@@ -1,10 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
-enable_testing()
 project("token" CXX)
 set(TOKEN_VERSION "1.0.0")
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
-set(PROTO_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protos")
 
 file(GLOB_RECURSE TOKEN_CMAKE_MODULES ${CMAKE_MODULE_PATH}/*.cmake)
 
@@ -38,18 +36,8 @@ find_package(uuid REQUIRED)
 find_package(gtest REQUIRED)
 find_package(gmock REQUIRED)
 
-# Include Directories
-include_directories(include)
-include_directories(src)
-include_directories(tests)
-
-# Source Sets
-file(GLOB_RECURSE TOKEN_HEADERS include/*.h)
-file(GLOB_RECURSE TOKEN_SOURCES src/*.h src/*.cc)
-file(GLOB_RECURSE TOKEN_TEST_SOURCES tests/*.h tests/*.cc)
-
 # Define Libraries
-set(TOKEN_LIBRARIES
+set(TKN_LIBRARIES
    ${CMAKE_THREAD_LIBS_INIT} # pthreads
    ${GLOG_LIBRARIES} # glog
    ${GFLAGS_LIBRARIES} # gflags
@@ -61,41 +49,20 @@ set(TOKEN_LIBRARIES
    ${ZXING_LIBRARIES} # zxing
    ${UUID_LIBRARIES} # libuuid
 )
-if(CMAKE_BUILD_TYPE MATCHES Debug)
-  list(APPEND TOKEN_LIBRARIES ${UNWIND_LIBRARIES})
-endif()
 
-# token Ledger Library
-add_library("token-ledger" STATIC ${TOKEN_HEADERS} ${TOKEN_SOURCES})
-set_target_properties("token-ledger" PROPERTIES VERSION ${TOKEN_VERSION})
-set_target_properties("token-ledger" PROPERTIES PUBLIC_HEADER "${TOKEN_HEADERS}")
-target_link_libraries("${PROJECT_NAME}-ledger" ${TOKEN_LIBRARIES})
-target_compile_options(token-ledger PRIVATE -Werror -Wall)
+include_directories(include)
+include_directories(tests)
 
-# token Server Executable
-add_executable("token-node" main.cc)
-target_link_libraries("token-node" "token-ledger" ${TOKEN_LIBRARIES})
-target_compile_options(token-node PRIVATE -Werror -Wall)
+file(GLOB_RECURSE TKN_HEADERS include/*.h)
+file(GLOB_RECURSE TKN_SOURCES src/*.h src/*.cc)
+file(GLOB_RECURSE TKN_TEST_SOURCES tests/*.h tests/*.cc)
 
-if(CMAKE_BUILD_TYPE MATCHES Debug)
-  # token Unit Tests
-  add_executable("token-tests" tests.cc ${TOKEN_TEST_SOURCES})
-  target_link_libraries("token-tests" "token-ledger" ${TOKEN_LIBRARIES} ${GTEST_LIBRARIES} ${GMOCK_LIBRARIES})
-endif()
+add_library(tkn-ledger STATIC ${TKN_HEADERS} ${TKN_SOURCES})
+target_include_directories(tkn-ledger PUBLIC include)
+target_link_libraries(tkn-ledger ${TKN_LIBRARIES})
 
-# should we remove this?
-# Install token Node
-install(
-  DIRECTORY "include/" # source directory
-  DESTINATION "include/token" # target directory
-  FILES_MATCHING # install only matched files
-  PATTERN "*.h" # select header files
-)
-install(
-  TARGETS token-ledger
-  LIBRARY DESTINATION lib
-)
-install(
-  TARGETS token-node
-  RUNTIME DESTINATION bin
-)
+add_executable(tkn-node main.cc)
+target_link_libraries(tkn-node tkn-ledger ${TKN_LIBRARIES})
+
+add_executable(tkn-tests tests.cc ${TKN_TEST_SOURCES})
+target_link_libraries(tkn-tests tkn-ledger ${TKN_LIBRARIES} ${GMOCK_LIBRARIES} ${GTEST_LIBRARIES})

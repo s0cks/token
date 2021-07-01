@@ -3,13 +3,9 @@
 
 #include <leveldb/write_batch.h>
 
-#include <utility>
-
-#include "pool.h"
-#include "block.h"
+#include "user.h"
+#include "common.h"
 #include "wallet.h"
-#include "transaction.h"
-#include "unclaimed_transaction.h"
 
 namespace token{
 #define FOR_EACH_JOB_RESULT_STATUS(V) \
@@ -85,7 +81,7 @@ namespace token{
     }
   };
 
-  class Job : public Object{
+  class Job{
    public:
     static inline JobResult
     Success(const std::string& message){
@@ -157,7 +153,7 @@ namespace token{
       return true;
     }
    public:
-    ~Job() override = default;
+    virtual ~Job() = default;
 
     Job* GetParent() const{
       return parent_;
@@ -183,7 +179,7 @@ namespace token{
       return result_;
     }
 
-    std::string ToString() const override{
+    std::string ToString() const{
       std::stringstream ss;
       ss << GetName() << "Job()";
       return ss.str();
@@ -257,16 +253,7 @@ namespace token{
     WalletManagerBatchWriteJob(Job* parent, const std::string& name):
       BatchWriteJob(parent, name){}
 
-    //TODO: refactor?
-    void PutWallet(const User& user, const Wallet& wallet){
-      UserKey key(user);
-      BufferPtr buffer = Buffer::NewInstance(GetBufferSize(wallet));
-      if(!Encode(wallet, buffer)){
-        LOG(WARNING) << "cannot encode wallet.";
-        return;
-      }
-      batch_.Put(KEY(key), buffer->operator leveldb::Slice());
-    }
+    void PutWallet(const User& user, const Wallet& wallet);
    public:
     ~WalletManagerBatchWriteJob() override = default;
 
@@ -288,29 +275,9 @@ namespace token{
     ObjectPoolBatchWriteJob(Job* parent, const std::string& name):
       BatchWriteJob(parent, name){}
 
-    inline bool
-    PutTransaction(const Hash& hash, const TransactionPtr& val){
-      ObjectPool::PoolKey key(Type::kTransaction, val->GetBufferSize(), hash);
-      BufferPtr value = val->ToBuffer();
-      batch_.Put((leveldb::Slice&)key, value->AsSlice());
-      return true;
-    }
-
-    inline bool
-    PutBlock(const Hash& hash, const BlockPtr& val){
-      ObjectPool::PoolKey key(Type::kBlock, val->GetBufferSize(), hash);
-      BufferPtr value = val->ToBuffer();
-      batch_.Put((leveldb::Slice&)key, value->AsSlice());
-      return true;
-    }
-
-    inline bool
-    PutUnclaimedTransaction(const Hash& hash, const UnclaimedTransactionPtr& val){
-      ObjectPool::PoolKey key(Type::kUnclaimedTransaction, val->GetBufferSize(), hash);
-      BufferPtr value = val->ToBuffer();
-      batch_.Put(KEY(key), value->AsSlice());
-      return true;
-    }
+    bool PutBlock(const Hash& hash, const BlockPtr& val);
+    bool PutTransaction(const Hash& hash, const TransactionPtr& val);
+    bool PutUnclaimedTransaction(const Hash& hash, const UnclaimedTransactionPtr& val);
    public:
     ~ObjectPoolBatchWriteJob() override = default;
 

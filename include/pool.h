@@ -9,11 +9,16 @@
 
 #include "key.h"
 #include "hash.h"
+#include "flags.h"
 #include "block.h"
 #include "transaction.h"
 #include "unclaimed_transaction.h"
-
 #include "atomic/relaxed_atomic.h"
+
+#define FOR_EACH_POOL_TYPE(V) \
+  V(Block)                    \
+  V(Transaction)              \
+  V(UnclaimedTransaction)
 
 namespace token{
   class ObjectPoolVisitor{
@@ -77,128 +82,14 @@ namespace token{
       }
     }
 
-    class PoolKey : public KeyType{
-     public:
-      static inline int
-      Compare(const PoolKey& a, const PoolKey& b){
-        int result;
-        // compare the objects type first
-        if((result = ObjectTag::CompareType(a.tag(), b.tag())) != 0)
-          return result; // not equal
-
-        // if the objects are the same type & size, compare the hash.
-        result = Hash::Compare(a.GetHash(), b.GetHash());
-        return result;
-      }
-     private:
-      enum Layout{
-        kTagPosition = 0,
-        kBytesForTag = sizeof(RawObjectTag),
-
-        kHashPosition = kTagPosition+kBytesForTag,
-        kBytesForHash = Hash::kSize,
-
-        kTotalSize = kHashPosition+kBytesForHash,
-      };
-
-      uint8_t data_[kTotalSize];
-
-      inline RawObjectTag*
-      tag_ptr() const{
-        return (RawObjectTag*)&data_[kTagPosition];
-      }
-
-      inline void
-      SetTag(const RawObjectTag& tag){
-        memcpy(&data_[kTagPosition], &tag, kBytesForTag);
-      }
-
-      inline void
-      SetTag(const ObjectTag& tag){
-        return SetTag(tag.raw());
-      }
-
-      inline uint8_t*
-      hash_ptr() const{
-        return (uint8_t*)&data_[kHashPosition];
-      }
-
-      inline void
-      SetHash(const Hash& hash){
-        memcpy(&data_[kHashPosition], hash.data(), kBytesForHash);
-      }
-     public:
-      PoolKey(const ObjectTag& tag, const Hash& hash):
-        KeyType(),
-        data_(){
-        SetTag(tag);
-        SetHash(hash);
-      }
-      PoolKey(const Type& type, const int16_t& size, const Hash& hash):
-        PoolKey(ObjectTag(type, size), hash){}
-      explicit PoolKey(const leveldb::Slice& slice):
-        KeyType(),
-        data_(){
-        memcpy(data_, slice.data(), std::min(slice.size(), (size_t)kTotalSize));
-      }
-      ~PoolKey() override = default;
-
-      ObjectTag tag() const override{
-        return ObjectTag(*tag_ptr());
-      }
-
-      Hash GetHash() const{
-        return Hash(hash_ptr(), kBytesForHash);
-      }
-
-      size_t size() const override{
-        return kTotalSize;
-      }
-
-      char* data() const override{
-        return (char*)data_;
-      }
-
-      std::string ToString() const override{
-        std::stringstream ss;
-        ss << "PoolKey(";
-        ss << "tag=" << tag() << ", ";
-        ss << "hash=" << GetHash();
-        ss << ")";
-        return ss.str();
-      }
-
-      friend bool operator==(const PoolKey& a, const PoolKey& b){
-        return PoolKey::Compare(a, b) == 0;
-      }
-
-      friend bool operator!=(const PoolKey& a, const PoolKey& b){
-        return PoolKey::Compare(a, b) != 0;
-      }
-
-      friend bool operator<(const PoolKey& a, const PoolKey& b){
-        return PoolKey::Compare(a, b) < 0;
-      }
-
-      friend bool operator>(const PoolKey& a, const PoolKey& b){
-        return PoolKey::Compare(a, b) > 0;
-      }
-    };
-
     class Comparator : public leveldb::Comparator{
      public:
       Comparator() = default;
       ~Comparator() override = default;
 
       int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const override{
-        PoolKey k1(a);
-        if(!k1.valid())
-          LOG(WARNING) << "k1 doesn't have a IsValid tag";
-
-        PoolKey k2(b);
-        if(!k2.valid())
-          LOG(WARNING) << "k2 doesn't have a IsValid tag.";
-        return PoolKey::Compare(k1, k2);
+        ObjectKey k1(a), k2(b);
+        return ObjectKey::Compare(k1, k2);
       }
 
       const char* Name() const override{

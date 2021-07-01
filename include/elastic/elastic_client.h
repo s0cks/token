@@ -12,9 +12,9 @@ namespace token{
   template<class T>
   static inline bool
   SendEvent(const NodeAddress& address, const T& event){
-    Json::String doc;
-    if(!json::ToJson(doc, event))
-      return false;
+    json::String doc;
+    json::Writer writer(doc);
+    writer << event;
 
     HttpClient client(address);
     http::RequestBuilder builder;

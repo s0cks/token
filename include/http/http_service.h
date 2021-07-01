@@ -8,7 +8,7 @@
 
 namespace token{
   namespace http{
-    class ServiceBase : public ServerBase{
+    class ServiceBase : public ServerBase<http::Session>{
      protected:
       RouterPtr router_;
 
@@ -16,7 +16,7 @@ namespace token{
         ServerBase(loop),
         router_(Router::NewInstance()){}
 
-      std::shared_ptr<SessionBase> CreateSession() const override{
+      std::shared_ptr<http::Session> CreateSession() const override{
         return std::make_shared<Session>(GetLoop(), GetRouter());
       }
      public:

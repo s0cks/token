@@ -88,7 +88,7 @@ namespace token{
   }
 
   MATCHER_P(IsUser, expected, "The user doesn't match"){
-    return arg == expected;
+    return arg == User(expected);
   }
 
   template<class M>
@@ -111,7 +111,7 @@ namespace token{
   }
 
   MATCHER(IsVersionMessage, "Message is not a VersionMessage"){
-    return arg->GetType() == Type::kVersionMessage;
+    return arg->type() == Type::kVersionMessage;
   }
 
   MATCHER(IsVerackMessage, "Message is not a VerackMessage"){

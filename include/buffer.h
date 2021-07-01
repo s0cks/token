@@ -3,18 +3,24 @@
 
 #include <set>
 #include <vector>
+#include <fstream>
+#include <memory>
+#include <uv.h>
 #include <leveldb/slice.h>
 
+#include "hash.h"
 #include "uuid.h"
 #include "user.h"
-#include "product.h"
+#include "network/peer.h"
 #include "version.h"
+#include "product.h"
+#include "address.h"
+#include "proposal.h"
 #include "timestamp.h"
+#include "block_header.h"
+#include "transaction_reference.h"
 
 namespace token{
-  class Buffer;
-  typedef std::shared_ptr<Buffer> BufferPtr;
-
   class Buffer : public std::enable_shared_from_this<Buffer>{
    private:
     int64_t bsize_;
@@ -67,8 +73,10 @@ namespace token{
 
     template<class T>
     bool PutType(const T& val){
-      if((wpos_ + T::GetSize()) > GetBufferSize())
+      if((wpos_ + T::GetSize()) > GetBufferSize()){
+        DLOG(ERROR) << "cannot put Type, not enough room for " << T::GetSize() << " bytes in buffer of size: " << GetBufferSize();
         return false;
+      }
       memcpy(&raw()[wpos_], val.data(), T::GetSize());
       wpos_ += T::GetSize();
       return true;
@@ -189,43 +197,78 @@ namespace token{
     }
 
 #define DEFINE_PUT_SIGNED(Name, Type) \
-    bool Put##Name(const Type& val){ return Append<Type>(val); } \
-    bool Put##Name(const Type& val, int64_t pos){ return Insert<Type>(val, pos); }
+    bool Put##Name(const Type##_t& val){ return Append<Type##_t>(val); } \
+    bool Put##Name(const Type##_t& val, int64_t pos){ return Insert<Type##_t>(val, pos); }
 #define DEFINE_PUT_UNSIGNED(Name, Type) \
-    bool PutUnsigned##Name(const u##Type& val){ return Append<u##Type>(val); } \
-    bool PutUnsigned##Name(const u##Type& val, int64_t pos){ return Insert<u##Type>(val, pos); }
+    bool PutUnsigned##Name(const u##Type##_t& val){ return Append<u##Type##_t>(val); } \
+    bool PutUnsigned##Name(const u##Type##_t& val, int64_t pos){ return Insert<u##Type##_t>(val, pos); }
 #define DEFINE_PUT(Name, Type) \
     DEFINE_PUT_SIGNED(Name, Type) \
     DEFINE_PUT_UNSIGNED(Name, Type)
 
-    FOR_EACH_RAW_TYPE(DEFINE_PUT);
+    FOR_EACH_NATIVE_TYPE(DEFINE_PUT);
 #undef DEFINE_PUT
 #undef DEFINE_PUT_SIGNED
 #undef DEFINE_PUT_UNSIGNED
 
 #define DEFINE_GET_SIGNED(Name, Type) \
-    Type Get##Name(){ return Read<Type>(); } \
-    Type Get##Name(int64_t pos){ return Read<Type>(pos); }
+    Type##_t Get##Name(){ return Read<Type##_t>(); } \
+    Type##_t Get##Name(int64_t pos){ return Read<Type##_t>(pos); }
 #define DEFINE_GET_UNSIGNED(Name, Type) \
-    Type GetUnsigned##Name(){ return Read<u##Type>(); } \
-    Type GetUnsigned##Name(int64_t pos){ return Read<u##Type>(pos); }
+    u##Type##_t GetUnsigned##Name(){ return Read<u##Type##_t>(); } \
+    u##Type##_t GetUnsigned##Name(int64_t pos){ return Read<u##Type##_t>(pos); }
 #define DEFINE_GET(Name, Type) \
     DEFINE_GET_SIGNED(Name, Type) \
     DEFINE_GET_UNSIGNED(Name, Type)
 
-    FOR_EACH_RAW_TYPE(DEFINE_GET);
+    FOR_EACH_NATIVE_TYPE(DEFINE_GET);
 #undef DEFINE_GET
 #undef DEFINE_GET_SIGNED
 #undef DEFINE_GET_UNSIGNED
 
-#define DEFINE_PUT_TYPE(Name) \
-    bool Put##Name(const Name& val){ return PutType<Name>(val); }
-#define DEFINE_GET_TYPE(Name) \
-    Name Get##Name(){ return GetType<Name>(); }
-    FOR_EACH_SERIALIZABLE_TYPE(DEFINE_PUT_TYPE);
-    FOR_EACH_SERIALIZABLE_TYPE(DEFINE_GET_TYPE);
-#undef DEFINE_GET_TYPE
-#undef DEFINE_PUT_TYPE
+    bool PutUUID(const UUID& val){ return PutType<UUID>(val); }
+    bool PutVersion(const Version& val){ return PutType<Version>(val); }
+    bool PutUser(const User& val){ return PutType<User>(val); }
+    bool PutProduct(const Product& val){ return PutType<Product>(val); }
+    bool PutHash(const Hash& val){ return PutType<Hash>(val); }
+
+    UUID GetUUID(){ return GetType<UUID>(); }
+    Version GetVersion(){ return GetType<Version>(); }
+    User GetUser(){ return GetType<User>(); }
+    Product GetProduct(){ return GetType<Product>(); }
+    Hash GetHash(){ return GetType<Hash>(); }
+
+    RawProposal GetProposal(){
+      Timestamp timestamp = GetTimestamp();
+      UUID proposal_id = GetUUID();
+      UUID proposer_id = GetUUID();
+      BlockHeader value = GetBlockHeader();
+      return RawProposal(timestamp, proposal_id, proposer_id, value);
+    }
+
+    bool PutProposal(const RawProposal& proposal){
+      return PutTimestamp(proposal.timestamp())
+          && PutUUID(proposal.proposal_id())
+          && PutUUID(proposal.proposer_id())
+          && PutBlockHeader(proposal.value());
+    }
+
+    BlockHeader GetBlockHeader(){
+      Timestamp timestamp = GetTimestamp();
+      int64_t height = GetLong();
+      Hash previous_hash = GetHash();
+      Hash merkle_root = GetHash();
+      Hash hash = GetHash();
+      return BlockHeader(timestamp, height, previous_hash, merkle_root, hash);
+    }
+
+    bool PutBlockHeader(const BlockHeader& val){
+      return PutTimestamp(val.timestamp())
+          && PutLong(val.height())
+          && PutHash(val.previous_hash())
+          && PutHash(val.merkle_root())
+          && PutHash(val.hash());
+    }
 
     bool PutBytes(uint8_t* bytes, int64_t size){
       if((wpos_ + size) > GetBufferSize())
@@ -237,6 +280,14 @@ namespace token{
 
     bool PutBytes(const BufferPtr& buff){
       return PutBytes(buff->data_, buff->wpos_);
+    }
+
+    bool WriteTo(FILE* file, int64_t size) const{
+      if((int64_t)fwrite(data(), sizeof(uint8_t), size, file) != size){
+        LOG(WARNING) << "cannot write " << size << " bytes to file";
+        return false;
+      }
+      return true;
     }
 
     bool WriteTo(std::fstream& stream, int64_t size) const{
@@ -254,6 +305,10 @@ namespace token{
 
     bool WriteTo(std::fstream& stream) const{
       return WriteTo(stream, GetWrittenBytes());
+    }
+
+    bool WriteTo(FILE* file) const{
+      return WriteTo(file, GetWrittenBytes());
     }
 
     bool ReadFrom(std::fstream& stream, int64_t size){
@@ -331,30 +386,23 @@ namespace token{
     }
 
     bool PutReference(const TransactionReference& ref){
-      return PutHash(ref.GetTransactionHash())
-          && PutLong(ref.GetIndex());
+      return PutHash(ref.transaction())
+          && PutLong(ref.index());
+    }
+
+    bool PutAddress(const NodeAddress& val){
+      return PutInt(val.address())
+          && PutInt(val.port());
+    }
+
+    NodeAddress GetAddress(){
+      return NodeAddress(GetInt(), GetInt());
     }
 
     TransactionReference GetReference(){
       Hash hash = GetHash();
       int64_t index = GetLong();
       return TransactionReference(hash, index);
-    }
-
-    bool PutObjectTag(const ObjectTag& tag){
-      return PutUnsignedLong(tag.raw());
-    }
-
-    ObjectTag GetObjectTag(){
-      return ObjectTag(GetUnsignedLong());
-    }
-
-    bool PutVersion(const Version& val){
-      return PutUnsignedLong(val.raw());
-    }
-
-    Version GetVersion(){
-      return Version(GetUnsignedLong());
     }
 
     bool PutTimestamp(const Timestamp& timestamp){
@@ -365,11 +413,40 @@ namespace token{
       return FromUnixTimestamp(GetUnsignedLong());
     }
 
-    template<class T>
-    bool GetList(std::vector<T>& results){
+    bool PutPeerList(const PeerList& peers){
+      if(!PutLong(peers.size())){
+        DLOG(ERROR) << "cannot encode PeerList size.";
+        return false;
+      }
+      for(auto& it : peers){
+        if(!PutAddress(it)){
+          DLOG(ERROR) << "cannot encode PeerList address: " << it;
+          return false;
+        }
+      }
+      return true;
+    }
+
+    bool GetPeerList(PeerList& peers){
+      int64_t size = GetLong();
+      for(int64_t idx = 0; idx < size; idx++){
+        if(!peers.insert(GetAddress()).second){
+          DLOG(ERROR) << "cannot decode PeerList element #" << idx;
+          return false;
+        }
+      }
+      return true;
+    }
+
+    template<class T, class D>
+    bool GetList(std::vector<T>& results, const D& decoder){
       int64_t length = GetLong();
       for(int64_t idx = 0; idx < length; idx++){
-        T value = T(shared_from_this());
+        T value;
+        if(!decoder.Decode(shared_from_this(), value)){
+          DLOG(FATAL) << "cannot decode list element #" << idx;
+          return false;
+        }
         results.push_back(value);
       }
       return true;
@@ -407,6 +484,12 @@ namespace token{
       return std::make_shared<Buffer>(size);
     }
 
+    template<class E>
+    static inline BufferPtr
+    AllocateFor(const E& encoder){
+      return NewInstance(encoder.GetBufferSize());
+    }
+
     static inline BufferPtr
     From(uint8_t* data, int64_t size){
       return std::make_shared<Buffer>(data, size);
@@ -438,18 +521,6 @@ namespace token{
     }
 
     static inline BufferPtr
-    FromFile(const std::string& filename){
-      std::fstream fd(filename, std::ios::in | std::ios::binary);
-      size_t size = GetFilesize(fd);
-      BufferPtr buff = NewInstance(size);
-      if(!buff->ReadFrom(fd, static_cast<int64_t>(size))){
-        LOG(WARNING) << "couldn't read " << size << " bytes from: " << filename;
-        return BufferPtr(nullptr);
-      }
-      return buff;
-    }
-
-    static inline BufferPtr
     CopyFrom(const char* data, size_t len){
       BufferPtr buffer = Buffer::NewInstance(len);
       if(!buffer->PutBytes((uint8_t*)data, len)){
@@ -465,7 +536,7 @@ namespace token{
     }
 
     static inline BufferPtr
-    CopyFrom(const Json::String& data){
+    CopyFrom(const json::String& data){
       return CopyFrom(data.GetString(), data.GetSize());
     }
 

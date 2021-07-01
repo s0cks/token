@@ -2,6 +2,9 @@
 #define TOKEN_PRODUCT_H
 
 #include <string>
+#include <cstring>
+#include <sstream>
+
 #include "binary_type.h"
 
 namespace token{
@@ -14,6 +17,12 @@ namespace token{
     explicit Product(const std::string& data): BinaryType<kProductSize>((const uint8_t*)data.data(), std::min((uint64_t)data.length(), kProductSize)){}
     Product(const Product& other) = default;
     ~Product() override = default;
+
+    std::string ToString() const override{
+      std::stringstream ss;
+      ss << "Product(" << data() << ")";
+      return ss.str();
+    }
 
     Product& operator=(const Product& other) = default;
 

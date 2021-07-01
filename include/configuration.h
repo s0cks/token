@@ -7,10 +7,9 @@
 #include <leveldb/status.h>
 #include <leveldb/write_batch.h>
 
-#include "common.h"
+#include "uuid.h"
+#include "network/peer.h"
 #include "address.h"
-#include "peer/peer.h"
-
 #include "atomic/relaxed_atomic.h"
 
 namespace token{
@@ -142,6 +141,8 @@ namespace token{
      */
      bool PutProperty(const std::string& name, const UUID& val) const;
 
+     bool PutProperty(const std::string& name, const Hash& val) const;
+
     /**
      * Sets a property to a NodeAddress value.
      *
@@ -184,6 +185,8 @@ namespace token{
      * @return True if the property was able to be resolved, false otherwise.
      */
     bool GetString(const std::string& name, std::string& value) const;
+
+    bool GetHash(const std::string& name, Hash& result) const;
 
     // define ConfigurationManager state checks using macros
 #define DEFINE_CHECK(Name) \

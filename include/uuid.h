@@ -1,34 +1,38 @@
 #ifndef TOKEN_UUID_H
 #define TOKEN_UUID_H
 
+#include <cassert>
 #include <uuid/uuid.h>
-#include "object.h"
+#include "binary_type.h"
 
 namespace token{
-  static const int16_t kRawUUIDSize = 16;
-  class UUID : public RawType<kRawUUIDSize>{
+  static const int64_t kUUIDSize = 16;
+  class UUID : public BinaryType<kUUIDSize>{
    public:
     UUID():
-      RawType(){
+      BinaryType<kUUIDSize>(){
       uuid_generate_time_safe(data_);
     }
-    UUID(uint8_t* bytes, int64_t size):
-      RawType(bytes, size){}
-    explicit UUID(const char* uuid):
-      RawType(){
-      uuid_parse(uuid, data_);
+    UUID(const uint8_t* data, const int64_t& size):
+      BinaryType<kUUIDSize>(){
+      memset(data_, 0, GetSize());
+      assert(size == GetSize());
+      memcpy(data_, data, GetSize());
     }
-    explicit UUID(const std::string& uuid):
-      RawType(){
-      memcpy(data(), uuid.data(), kRawUUIDSize);
+    UUID(const char* data):
+      BinaryType<kUUIDSize>(){
+      uuid_parse(data, data_);
     }
-    explicit UUID(const leveldb::Slice& slice):
-      RawType(){
-      memcpy(data(), slice.data(), kRawUUIDSize);
+    UUID(const std::string& data):
+      BinaryType<kUUIDSize>(){
+      memset(data_, 0, GetSize());
+      assert(((int64_t)data.length()) == GetSize());
+      memcpy(data_, data.data(), GetSize());
     }
     UUID(const UUID& other):
-      RawType(other){
-      memcpy(data(), other.data(), kRawUUIDSize);
+      BinaryType<kUUIDSize>(){
+      memset(data_, 0, GetSize());
+      memcpy(data_, other.data_, GetSize());
     }
     ~UUID() override = default;
 
@@ -38,14 +42,15 @@ namespace token{
       return std::string(uuid_str, 8);
     }
 
-    std::string ToString() const{
+    std::string ToString() const override{
       char uuid_str[37];
       uuid_unparse(data_, uuid_str);
       return std::string(uuid_str, 37);
     }
 
     UUID& operator=(const UUID& other){
-      memcpy(data(), other.data(), kRawUUIDSize);
+      memset(data_, 0, GetSize());
+      memcpy(data_, other.data_, GetSize());
       return (*this);
     }
 
@@ -63,10 +68,6 @@ namespace token{
 
     friend std::ostream& operator<<(std::ostream& stream, const UUID& uuid){
       return stream << uuid.ToString();
-    }
-
-    explicit operator leveldb::Slice() const{
-      return leveldb::Slice(data(), size());
     }
   };
 }

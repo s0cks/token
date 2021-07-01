@@ -2,7 +2,6 @@
 #define TOKEN_INCLUDE_HTTP_RESPONSE_H
 
 #include <memory>
-#include <utility>
 #include <http_parser.h>
 
 #include "block.h"
@@ -255,8 +254,10 @@ namespace token{
       Json::Writer writer(body);
 
       LOG_IF(WARNING, !writer.StartObject()) << "cannot start json object.";
-      LOG_IF(WARNING, !json::SetField(writer, "data", ErrorMessage(200, msg)));
+      //TODO: LOG_IF(WARNING, !json::SetField(writer, "data", ErrorMessage(200, msg)));
       LOG_IF(WARNING, !writer.EndObject()) << "cannot end json object.";
+
+      DLOG(INFO) << "response body: " << body.GetString();
       return NewOkResponse(body);
     }
 
@@ -283,6 +284,17 @@ namespace token{
     }
 
     static inline ResponsePtr
+    NewOkResponse(const User& user, const Wallet& wallet){
+      json::String body;
+      json::Writer writer(body);
+
+      DLOG_IF(ERROR, !writer.StartObject()) << "cannot start json object.";
+      DLOG_IF(ERROR, !json::SetField(writer, "data", wallet));
+      DLOG_IF(ERROR, !writer.EndObject()) << "cannot end json object.";
+      return NewOkResponse(body);
+    }
+
+    static inline ResponsePtr
     NewErrorResponse(const StatusCode& status_code, const Json::String& body){
       ResponseBuilder builder;
       builder.SetStatusCode(status_code);
@@ -297,7 +309,7 @@ namespace token{
       Json::String body;
       Json::Writer writer(body);
       LOG_IF(ERROR, !writer.StartObject()) << "cannot start json object.";
-      LOG_IF(ERROR, !json::SetField(writer, "data", ErrorMessage(static_cast<int64_t>(status_code), msg)));
+      //TODO: LOG_IF(ERROR, !json::SetField(writer, "data", ErrorMessage(static_cast<int64_t>(status_code), msg)));
       LOG_IF(ERROR, !writer.EndObject()) << "cannot end json object.";
       return NewErrorResponse(status_code, body);
     }

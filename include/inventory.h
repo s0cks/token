@@ -111,17 +111,17 @@ namespace token{
 
     static inline InventoryItem
     Of(const BlockHeader& val){
-      return InventoryItem(Type::kBlock, val.GetHash());
+      return InventoryItem(Type::kBlock, val.hash());
     }
 
     static inline InventoryItem
     Of(const BlockPtr& val){
-      return InventoryItem(Type::kBlock, val->GetHash());
+      return InventoryItem(Type::kBlock, val->hash());
     }
 
     static inline InventoryItem
     Of(const TransactionPtr& val){
-      return InventoryItem(Type::kTransaction, val->GetHash());
+      return InventoryItem(Type::kTransaction, val->hash());
     }
 
     static inline int64_t

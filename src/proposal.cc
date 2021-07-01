@@ -1,23 +1,21 @@
 #include "miner.h"
 #include "proposal.h"
-#include "job/scheduler.h"
-#include "peer/peer_session_manager.h"
 
 namespace token{
   int16_t Proposal::GetNumberOfRequiredVotes() {
-    return PeerSessionManager::GetNumberOfConnectedPeers();
+    return FLAGS_num_peers;//TODO: convert to number of connected peers
   }
 
 #define CANNOT_TRANSITION_TO(To) \
   LOG(ERROR) << "cannot transition " << raw() << " from " << GetPhase() << " phase to: " << (To) << " phase.";
 
   bool ProposalJob::AcceptProposal(){
-    PeerSessionManager::BroadcastAccepted();//TODO: check result
+    //TODO: PeerSessionManager::BroadcastAccepted();//TODO: check result
     return true;
   }
 
   bool ProposalJob::RejectProposal(){
-    PeerSessionManager::BroadcastRejected();//TODO: check result
+    //TODO: PeerSessionManager::BroadcastRejected();//TODO: check result
     return false;
   }
 
@@ -46,7 +44,7 @@ namespace token{
   bool ProposalJob::ExecutePhase1(){
     ProposalPtr proposal = GetProposal();
     DLOG(INFO) << "executing phase 1 for proposal " << proposal->GetID();
-    PeerSessionManager::BroadcastPrepare();
+    //TODO: PeerSessionManager::BroadcastPrepare();
     if(!proposal->StartTimer()) {
       DLOG(ERROR) << "cancelling proposal " << proposal->GetID() << ", cannot start timer.";
       return RejectProposal();
@@ -73,7 +71,7 @@ namespace token{
   bool ProposalJob::ExecutePhase2(){
     ProposalPtr proposal = GetProposal();
     DLOG(INFO) << "executing phase 2 for proposal " << proposal->raw();
-    PeerSessionManager::BroadcastCommit();
+    //TODO: PeerSessionManager::BroadcastCommit();
     if(!proposal->StartTimer()){
       DLOG(ERROR) << "cancelling proposal " << proposal->raw() << ", cannot start timer.";
       return RejectProposal();

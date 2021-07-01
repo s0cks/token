@@ -5,6 +5,9 @@
 #include <ostream>
 #include <unordered_map>
 
+#include "json.h"
+#include "version.h"
+#include "timestamp.h"
 #include "configuration.h"
 
 namespace token{

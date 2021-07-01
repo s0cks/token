@@ -11,8 +11,6 @@ namespace token{
     class Session : public SessionBase{
      private:
       RouterPtr router_;
-
-      void OnMessageRead(const BufferPtr& buff) override;
      public:
       Session():
         SessionBase(),
@@ -25,7 +23,10 @@ namespace token{
         router_(router){}
       ~Session() override = default;
 
+      void OnMessageRead(const BufferPtr& buff);
+
       virtual void Send(const http::HttpMessagePtr& msg){
+        DLOG(INFO) << "sending: " << msg->ToString();
         return SendMessages({msg});
       }
     };

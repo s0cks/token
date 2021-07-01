@@ -70,8 +70,8 @@ namespace token{
     ProposalPtr proposal = miner->GetActiveProposal();
     DLOG_MINER(INFO) << "proposal " << proposal->raw() << " was accepted by peers.";
 
-    BlockHeader& header = proposal->raw().GetValue();
-    Hash hash = header.GetHash();
+    BlockHeader& header = proposal->raw().value();
+    Hash hash = header.hash();
     DLOG_MINER(INFO) << "appending block: " << header;
 
     BlockPtr blk = pool->GetBlock(hash);
@@ -120,10 +120,12 @@ namespace token{
     // create a new block
     DLOG_MINER(INFO) << "creating new block....";
     BlockPtr blk = BlockBuilder::BuildNewBlock();
-    DLOG_MINER(INFO) << "discovered new block: " << blk->GetHash();
+    DLOG_MINER(INFO) << "discovered new block: " << blk->hash();
 
     // create a new proposal
-    ProposalPtr proposal = Proposal::NewInstance(uv_loop_new(), blk);//TODO: can we leverage the block miner loop since it's in-active during proposals?
+    Timestamp timestamp = Clock::now();
+    UUID node_id = ConfigurationManager::GetNodeID();
+    ProposalPtr proposal = Proposal::NewInstance(uv_loop_new(), RawProposal(timestamp, UUID(), node_id, blk->GetHeader()));//TODO: can we leverage the block miner loop since it's in-active during proposals?
     if(!miner->SetActiveProposal(proposal)){
       LOG_MINER(ERROR) << "cannot set active proposal.";
       return;

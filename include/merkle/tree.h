@@ -3,10 +3,10 @@
 
 #include <map>
 #include <vector>
-#include "block.h"
-#include "merkle/node.h"
-#include "transaction.h"
-#include "merkle/proof.h"
+#include "../block.h"
+#include "node.h"
+#include "../transaction.h"
+#include "proof.h"
 
 namespace token{
   class MerkleTreeVisitor;
@@ -119,8 +119,8 @@ namespace token{
       return std::unique_ptr<MerkleTree>(new MerkleTree(leaves_));
     }
 
-    bool Visit(const TransactionPtr& tx){
-      leaves_.push_back(tx->GetHash());
+    bool Visit(const IndexedTransactionPtr& tx){
+      leaves_.push_back(tx->hash());
       return true;
     }
 

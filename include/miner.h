@@ -5,9 +5,9 @@
 #include <ostream>
 #include <condition_variable>
 
+#include "flags.h"
 #include "vthread.h"
 #include "proposal.h"
-#include "peer/peer_session_manager.h"
 
 namespace token{
 #define LOG_MINER(LevelName) \
@@ -66,7 +66,7 @@ namespace token{
 
     static inline int16_t
     GetRequiredVotes(){
-      return PeerSessionManager::GetNumberOfConnectedPeers();
+      return FLAGS_num_peers; //TODO: convert to current active peers.
     }
 
     static void OnMine(uv_timer_t* handle);

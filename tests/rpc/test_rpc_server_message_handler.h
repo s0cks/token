@@ -2,7 +2,7 @@
 #define TOKEN_TEST_RPC_SERVER_MESSAGE_HANDLER_H
 
 #include "test_suite.h"
-#include "rpc/rpc_server.h"
+#include "network/rpc_server_session.h"
 #include "rpc/mock_rpc_server_session.h"
 
 namespace token{

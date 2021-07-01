@@ -21,8 +21,8 @@ namespace token{
   }
 
   static inline http::RequestPtr
-  CreateRequestFor(const http::SessionPtr& session, const http::Method& method, const std::string& path, const http::ParameterMap& path_params){
-    http::RequestBuilder builder(session);
+  CreateRequestFor(const http::Method& method, const std::string& path, const http::ParameterMap& path_params){
+    http::RequestBuilder builder;
     builder.SetMethod(method);
     builder.SetPath(path);
     builder.SetPathParameters(path_params);

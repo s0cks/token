@@ -2,7 +2,10 @@
 #define TOKEN_USER_H
 
 #include <string>
+#include <sstream>
 #include <cstring>
+#include <leveldb/slice.h>
+
 #include "binary_type.h"
 
 namespace token{
@@ -16,8 +19,16 @@ namespace token{
       BinaryType<kUserSize>((const uint8_t*)value, std::min((uint64_t)strlen(value), kUserSize)){}
     explicit User(const std::string& value):
       BinaryType<kUserSize>((const uint8_t*)value.data(), std::min((uint64_t)value.length(), kUserSize)){}
+    explicit User(const leveldb::Slice& value):
+      BinaryType<kUserSize>((const uint8_t*)value.data(), std::min((uint64_t)value.size(), kUserSize)){}
     User(const User& user) = default;
     ~User() override = default;
+
+    std::string ToString() const override{
+      std::stringstream ss;
+      ss << "User(" << data() << ")";
+      return ss.str();
+    }
 
     User& operator=(const User& other) = default;
 
@@ -41,7 +52,12 @@ namespace token{
       return stream << user.ToString();
     }
 
-    static inline int Compare(const User& a, const User& b){
+    operator leveldb::Slice() const{
+      return leveldb::Slice(data(), size());
+    }
+
+    static inline int
+    Compare(const User& a, const User& b){
       return BinaryType<kUserSize>::Compare(a, b);
     }
   };

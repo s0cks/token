@@ -9,7 +9,7 @@ namespace token{
     return Success("Finished.");
   }
 
-  bool ProcessBlockJob::Visit(const TransactionPtr& tx){
+  bool ProcessBlockJob::Visit(const IndexedTransactionPtr& tx){
     JobQueue* queue = JobScheduler::GetThreadQueue();
     auto job = new ProcessTransactionJob(this, tx);
     queue->Push(job);
@@ -30,7 +30,7 @@ namespace token{
   JobResult ProcessTransactionInputsJob::DoWork(){
     JobQueue* queue = JobScheduler::GetThreadQueue();
 
-    TransactionPtr tx = GetTransaction();
+    IndexedTransactionPtr tx = GetTransaction();
     InputList& inputs = tx->inputs();
     auto start = inputs.begin();
     auto end = inputs.end();
@@ -52,7 +52,7 @@ namespace token{
 
   JobResult ProcessTransactionOutputsJob::DoWork(){
     JobQueue* queue = JobScheduler::GetThreadQueue();
-    TransactionPtr tx = GetTransaction();
+    IndexedTransactionPtr tx = GetTransaction();
 
     int64_t nworker = 0;
     OutputList& outputs = tx->outputs();
@@ -78,7 +78,7 @@ namespace token{
   JobResult ProcessOutputListJob::DoWork(){
     for(auto& it : outputs_){
       UnclaimedTransactionPtr val = CreateUnclaimedTransaction(it);
-      Hash hash = val->GetHash();
+      Hash hash = val->hash();
       PutUnclaimedTransaction(hash, val);
       Track(val->GetUser(), hash);
     }

@@ -37,7 +37,7 @@ namespace token{
       int64_t index = 0;
       IndexedTransactionSet transactions;
       for(auto& it : transactions_){
-        IndexedTransactionPtr ntx = IndexedTransaction::NewInstance(index++, it->inputs(), it->outputs(), it->GetTimestamp());
+        IndexedTransactionPtr ntx = IndexedTransaction::NewInstance(index++, it->inputs(), it->outputs(), it->timestamp());
         if((blk_size + ntx->GetBufferSize()) >= Block::kMaxBlockSize)
           break;
 
@@ -48,7 +48,7 @@ namespace token{
       }
 
       BlockPtr blk = Block::FromParent(GetParent(), transactions);
-      Hash hash = blk->GetHash();
+      Hash hash = blk->hash();
       if(!pool->PutBlock(hash, blk)){
         LOG(WARNING) << "couldn't put new block " << hash << " into the object pool.";
         return BlockPtr(nullptr);

@@ -1,14 +1,25 @@
 #include <glog/logging.h>
 
 #include "pool.h"
-#include "wallet.h"
+#include "buffer.h"
 #include "job/job.h"
+#include "wallet_manager.h"
 
 namespace token{
 #define CHECK_BATCH_SIZE(Size) \
   if((Size) <= GetMinimumBatchSize() || (Size) >= GetMaximumBatchSize()){\
     LOG_JOB(ERROR, this) << "cannot write batch of ~" << (Size) << "b, batch size should be ~" << GetMinimumBatchSize() << "-" << GetMaximumBatchSize() << "b"; \
     return false;                   \
+  }
+
+  //TODO: refactor?
+  void WalletManagerBatchWriteJob::PutWallet(const User& user, const Wallet& wallet){
+    BufferPtr buffer = Buffer::NewInstance(GetBufferSize(wallet));
+    if(!Encode(buffer, wallet)){
+      LOG(WARNING) << "cannot encode wallet.";
+      return;
+    }
+    batch_.Put(user, buffer->operator leveldb::Slice());
   }
 
   bool WalletManagerBatchWriteJob::Commit() const{
@@ -22,6 +33,29 @@ namespace token{
       LOG_JOB(ERROR, this) << "cannot commit ~" << size << "b of changes to wallet db: " << status.ToString();
       return false;
     }
+    return true;
+  }
+
+  template<class T>
+  static inline void
+  PutObject(leveldb::WriteBatch& batch, const Hash& hash, const std::shared_ptr<T>& val){
+    ObjectKey key(val->type(), hash);
+    BufferPtr value = val->ToBuffer();
+    batch.Put((const leveldb::Slice&)key, value->AsSlice());
+  }
+
+  bool ObjectPoolBatchWriteJob::PutBlock(const Hash& hash, const BlockPtr& val){
+    PutObject(batch_, hash, val);
+    return true;
+  }
+
+  bool ObjectPoolBatchWriteJob::PutTransaction(const Hash& hash, const TransactionPtr& val){
+    PutObject(batch_, hash, val);
+    return true;
+  }
+
+  bool ObjectPoolBatchWriteJob::PutUnclaimedTransaction(const Hash& hash, const UnclaimedTransactionPtr& val){
+    PutObject(batch_, hash, val);
     return true;
   }
 

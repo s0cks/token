@@ -1,99 +1,86 @@
 #ifndef TOKEN_KEY_H
 #define TOKEN_KEY_H
 
+#include "hash.h"
 #include "object.h"
-#include "block.h"
 
 namespace token{
-#define KEY(Key) \
-  leveldb::Slice((Key).data(), (Key).size())
-
-  class KeyType{
+  class KeyBase{
    protected:
-    KeyType() = default;
+    KeyBase() = default;
    public:
-    virtual ~KeyType() = default;
-    virtual ObjectTag tag() const = 0;
+    KeyBase(const KeyBase& other) = default;
+    virtual ~KeyBase() = default;
+    virtual Type type() const = 0;
     virtual size_t size() const = 0;
     virtual char* data() const = 0;
     virtual std::string ToString() const = 0;
+    KeyBase& operator=(const KeyBase& other) = default;
 
-    bool valid() const{
-      return tag().IsValid();
-    }
-
-    friend std::ostream& operator<<(std::ostream& stream, const KeyType& key){
-      return stream << key.ToString();
+    operator leveldb::Slice() const{
+      return leveldb::Slice(data(), size());
     }
   };
 
-  class UserKey : public KeyType{
-   public:
-    static inline int
-    Compare(const UserKey& a, const UserKey& b){
-      return strncmp(a.data(), b.data(), kUserSize);
-    }
-
-    static inline int
-    CompareCaseInsensitive(const UserKey& a, const UserKey& b){
-      return strncasecmp(a.data(), b.data(), kUserSize);
-    }
-   private:
-    enum Layout{
-      kTagPosition = 0,
-      kBytesForTag = sizeof(RawObjectTag),
-
-      kUserPosition = kTagPosition+kBytesForTag,
-      kBytesForUser = kUserSize,
-
-      kTotalSize = kUserPosition+kBytesForUser,
+  class ObjectKey : public KeyBase{
+   protected:
+    enum KeyLayout{
+      // type
+      kTypePosition = 0,
+      kBytesForType = sizeof(uint32_t),
+      // hash
+      kHashPosition = kTypePosition + kBytesForType,
+      kBytesForHash = Hash::kSize,
+      // total
+      kTotalSize = kHashPosition + kBytesForHash,
     };
 
     uint8_t data_[kTotalSize];
 
-    RawObjectTag* tag_ptr() const{
-      return (RawObjectTag*)&data_[kTagPosition];
+    inline void
+    ClearData(){
+      memset(data_, 0, kTotalSize);
     }
 
     inline void
-    SetTag(const RawObjectTag& tag){
-      memcpy(&data_[kTagPosition], &tag, kBytesForTag);
+    SetType(const Type& type){
+      uint32_t value = static_cast<uint32_t>(type);
+      memcpy(&data_[kTypePosition], &value, kBytesForType);
     }
 
     inline void
-    SetTag(const ObjectTag& tag){
-      return SetTag(tag.raw());
-    }
-
-    inline uint8_t*
-    user_ptr() const{
-      return (uint8_t*)&data_[kUserPosition];
-    }
-
-    inline void
-    SetUser(const User& user){
-      memcpy(&data_[kUserPosition], user.data(), kBytesForUser);
+    SetHash(const Hash& hash){
+      memcpy(&data_[kHashPosition], hash.data(), kBytesForHash);
     }
    public:
-    explicit UserKey(const User& user):
-      KeyType(),
+    ObjectKey(const Type& type, const Hash& hash):
+      KeyBase(),
       data_(){
-      SetTag(ObjectTag(Type::kUser, user.size()));
-      SetUser(user);
+      ClearData();
+      SetType(type);
+      SetHash(hash);
     }
-    explicit UserKey(const leveldb::Slice& slice):
-      KeyType(),
+    ObjectKey(const leveldb::Slice& slice):
+      KeyBase(),
       data_(){
-      memcpy(data_, slice.data(), std::min(slice.size(), (size_t)kTotalSize));
+      ClearData();
+      assert(slice.size() == kTotalSize);
+      memcpy(data_, slice.data(), slice.size());
     }
-    ~UserKey() override = default;
+    ObjectKey(const ObjectKey& other):
+      KeyBase(),
+      data_(){
+      ClearData();
+      memcpy(data_, other.data_, kTotalSize);
+    }
+    virtual ~ObjectKey() override = default;
 
-    ObjectTag tag() const override{
-      return ObjectTag(*tag_ptr());
+    Type type() const override{
+      return *(Type*) &data_[kTypePosition];
     }
 
-    User GetUser() const{
-      return User(user_ptr(), kBytesForUser);
+    Hash hash() const{
+      return Hash(&data_[kHashPosition], kBytesForHash);
     }
 
     size_t size() const override{
@@ -101,16 +88,58 @@ namespace token{
     }
 
     char* data() const override{
-      return (char*)data_;
+      return (char*) data_;
     }
 
     std::string ToString() const override{
       std::stringstream ss;
-      ss << "UserKey(";
-      ss << "tag=" << tag() << ", ";
-      ss << "user=" << GetUser();
+      ss << type() << "Key(";
       ss << ")";
       return ss.str();
+    }
+
+    ObjectKey& operator=(const ObjectKey& other) = default;
+
+    friend std::ostream& operator<<(std::ostream& stream, const ObjectKey& key){
+      return stream << key.ToString();
+    }
+
+    friend bool operator==(const ObjectKey& a, const ObjectKey& b){
+      return memcmp(a.data_, b.data_, kTotalSize) == 0;
+    }
+
+    friend bool operator!=(const ObjectKey& a, const ObjectKey& b){
+      return memcmp(a.data_, b.data_, kTotalSize) != 0;
+    }
+
+    friend bool operator<(const ObjectKey& a, const ObjectKey& b){
+      if (a.type() == b.type())
+        return a.hash() < b.hash();
+      return a.type() < b.type();
+    }
+
+    friend bool operator>(const ObjectKey& a, const ObjectKey& b){
+      if (a.type() == b.type())
+        return a.hash() > b.hash();
+      return a.type() > b.type();
+    }
+
+    static inline int
+    Compare(const ObjectKey& a, const ObjectKey& b){
+      Type t1 = a.type(), t2 = b.type();
+      if (t1 < t2){
+        return -1;
+      } else if (t1 > t2){
+        return +1;
+      }
+
+      Hash h1 = a.hash(), h2 = b.hash();
+      if (h1 < h2){
+        return -1;
+      } else if (h1 > h2){
+        return +1;
+      }
+      return 0;
     }
   };
 }

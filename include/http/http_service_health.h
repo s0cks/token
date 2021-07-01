@@ -7,7 +7,7 @@
 namespace token{
   namespace http{
     class HealthService;
-    typedef std::shared_ptr<HealthService> HealthServicePtr;
+    typedef std::unique_ptr<HealthService> HealthServicePtr;
 
     class HealthService : public ServiceBase{
      protected:
@@ -35,21 +35,10 @@ namespace token{
         return "http/health";
       }
 
-      static inline HealthServicePtr
-      NewInstance(){
-        return std::make_shared<HealthService>();
-      }
+      static HealthServicePtr NewInstance();
     };
 
-    class HealthServiceThread : public ServiceThread<HealthService>{
-     public:
-      HealthServiceThread():
-        ServiceThread<HealthService>(){}
-      HealthServiceThread(const HealthServiceThread& other) = default;
-      ~HealthServiceThread() = default;
-
-      HealthServiceThread& operator=(const HealthServiceThread& other) = default;
-    };
+    class HealthServiceThread : public ServiceThread<HealthService>{};
   }
 }
 

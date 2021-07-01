@@ -37,7 +37,7 @@ namespace token{
 
         auto& existing = pos->second;
         auto& new_entries = it.second;
-        existing.insert(new_entries.begin(), new_entries.end());
+        //TODO: FIXME: existing.insert(new_entries.begin(), new_entries.end());
       }
     }
 
@@ -63,7 +63,7 @@ namespace token{
       return clean_;
     }
 
-    bool Visit(const TransactionPtr& tx) override;
+    bool Visit(const IndexedTransactionPtr& tx) override;
 
     static inline bool
     SubmitAndWait(const BlockPtr& blk){
@@ -82,13 +82,13 @@ namespace token{
   class ProcessTransactionJob : public Job{
    protected:
     Hash hash_;
-    TransactionPtr transaction_;
+    IndexedTransactionPtr transaction_;
 
     JobResult DoWork() override;
    public:
-    ProcessTransactionJob(ProcessBlockJob* parent, const TransactionPtr& tx):
+    ProcessTransactionJob(ProcessBlockJob* parent, const IndexedTransactionPtr& tx):
       Job(parent, "ProcessTransaction"),
-      hash_(tx->GetHash()),
+      hash_(tx->hash()),
       transaction_(tx){}
     ~ProcessTransactionJob() override = default;
 
@@ -104,7 +104,7 @@ namespace token{
       return ((ProcessBlockJob*)GetParent())->ShouldClean();
     }
 
-    TransactionPtr GetTransaction() const{
+    IndexedTransactionPtr GetTransaction() const{
       return transaction_;
     }
 
@@ -121,7 +121,7 @@ namespace token{
       Job(parent, "ProcessTransactionInputsJob"){}
     ~ProcessTransactionInputsJob() override = default;
 
-    TransactionPtr GetTransaction() const{
+    IndexedTransactionPtr GetTransaction() const{
       return ((ProcessTransactionJob*)GetParent())->GetTransaction();
     }
 
@@ -143,7 +143,7 @@ namespace token{
     inline void
     CleanupInput(const Hash& hash){
       DLOG_JOB(INFO, this) << "cleaning input";
-      ObjectPool::PoolKey key(Type::kUnclaimedTransaction, 0, hash);//TODO: fix size parameter
+      ObjectKey key(Type::kUnclaimedTransaction, hash);
       batch_.Delete((const leveldb::Slice&)key);
     }
 
@@ -151,7 +151,7 @@ namespace token{
       ObjectPoolPtr pool = ObjectPool::GetInstance();
       for(auto& it : inputs_){
         UnclaimedTransactionPtr utxo = pool->FindUnclaimedTransaction(it);
-        Hash hash = utxo->GetHash();
+        Hash hash = utxo->hash();
         if(ShouldClean())
           CleanupInput(hash);
       }
@@ -179,7 +179,7 @@ namespace token{
       Job(parent, "ProcessTransactionInputsJob"){}
     ~ProcessTransactionOutputsJob() override = default;
 
-    TransactionPtr GetTransaction() const{
+    IndexedTransactionPtr GetTransaction() const{
       return ((ProcessTransactionJob*) GetParent())->GetTransaction();
     }
 
@@ -199,9 +199,9 @@ namespace token{
 
     inline UnclaimedTransactionPtr
     CreateUnclaimedTransaction(const Output& output){
-      TransactionPtr tx = GetTransaction();
+      IndexedTransactionPtr tx = GetTransaction();
       int64_t index = GetNextOutputIndex();
-      return std::make_shared<UnclaimedTransaction>(tx->GetHash(), index, output.GetUser(), output.GetProduct());
+      return std::make_shared<UnclaimedTransaction>(tx->hash(), index, output.GetUser(), output.GetProduct());
     }
 
     int64_t GetNextOutputIndex(){
@@ -224,7 +224,7 @@ namespace token{
       offset_(wid * ProcessOutputListJob::kMaxNumberOfOutputs){}
     ~ProcessOutputListJob() override = default;
 
-    TransactionPtr GetTransaction() const{
+    IndexedTransactionPtr GetTransaction() const{
       return ((ProcessTransactionOutputsJob*)GetParent())->GetTransaction();
     }
   };

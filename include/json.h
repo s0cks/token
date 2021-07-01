@@ -15,16 +15,35 @@
 #include "transaction_input.h"
 #include "transaction_output.h"
 
+#define START_OBJECT(LevelName, Writer) \
+    if(!(Writer).StartObject()){       \
+      LOG(LevelName) << "cannot start json object."; \
+      return false;                     \
+    }
+#define END_OBJECT(LevelName, Writer) \
+    if(!(Writer).EndObject()){       \
+      LOG(LevelName) << "cannot end json object."; \
+      return false;                   \
+    }
+
+#define START_ARRAY(LevelName, Writer) \
+    if(!(Writer).StartArray()){       \
+      LOG(LevelName) << "cannot start json array."; \
+      return false;                    \
+    }
+#define END_ARRAY(LevelName, Writer) \
+    if(!(Writer).EndArray()){       \
+      LOG(LevelName) << "cannot end json array."; \
+      return false;                  \
+    }
+
+#define KEY(LevelName, Writer, Name) \
+    if(!(Writer).Key((Name), strlen((Name)))){ \
+      LOG(LevelName) << "cannot set field name '" << (Name) << "'."; \
+      return false;                  \
+    }
+
 namespace token{
-  namespace http{
-    class ErrorMessage;
-  }
-
-  namespace elastic{
-    class Event;
-    class SpendEvent;
-  }
-
   namespace json{
     static inline bool
     SetFieldNull(Writer& writer, const char*  name){
@@ -113,7 +132,7 @@ namespace token{
 
     static inline bool
     SetField(Writer& writer, const char* name, const UUID& val){
-      return SetField(writer, name, val.str());
+      return SetField(writer, name, val.ToString());
     }
 
     static inline bool
@@ -122,32 +141,12 @@ namespace token{
     }
 
     bool SetField(Writer& writer, const char* name, const TransactionReference& val);
-    bool SetField(Writer& writer, const char* name, const Wallet& val);
     bool SetField(Writer& writer, const char* name, const HashList& val);
     bool SetField(Writer& writer, const char* name, const BlockPtr& val);
     bool SetField(Writer& writer, const char* name, const TransactionPtr& val);
     bool SetField(Writer& writer, const char* name, const UnclaimedTransactionPtr& val);
-    bool SetField(Writer& writer, const char* name, const http::ErrorMessage& val);
     bool SetField(Writer& writer, const char* name, const InputList& val);
     bool SetField(Writer& writer, const char* name, const OutputList& val);
-
-    bool ToJson(String& doc, const elastic::Event& val);
-    bool ToJson(String& doc, const elastic::SpendEvent& val);
-  }
-
-  namespace Json{
-    template<typename T>
-    static inline bool
-    SetField(Writer& writer, const char* name, const std::vector<T>& cont){
-      if(!writer.Key(name, strlen(name)))
-        return false;
-      if(!writer.StartArray())
-        return false;
-      for(auto& it : cont)
-        if(!it.Write(writer))
-          return false;
-      return writer.EndArray();
-    }
   }
 }
 

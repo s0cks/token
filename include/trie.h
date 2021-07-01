@@ -2,7 +2,7 @@
 #define TOKEN_TRIE_H
 
 #include <string>
-#include <hash.h>
+#include "hash.h"
 #include <cstdint>
 
 namespace token{

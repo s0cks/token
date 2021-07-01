@@ -5,7 +5,9 @@
 namespace token{
   namespace http{
     void Session::OnMessageRead(const BufferPtr& buff){
+      DLOG(INFO) << "parsing http request.";
       RequestPtr request = RequestParser::ParseRequest(buff);
+      DLOG(INFO) << "received request " << request->ToString() << " from " << GetUUID();
       RouterMatch match = router_->Find(request);
       if(match.IsNotFound()){
         std::stringstream ss;
@@ -24,7 +26,7 @@ namespace token{
 
         Route& route = match.GetRoute();
         RouteHandlerFunction& handler = route.GetHandler();
-        handler(route.GetController(), std::static_pointer_cast<Session>(shared_from_this()), request);
+        handler(route.GetController(), this, request);
       }
     }
   }

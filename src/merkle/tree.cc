@@ -1,4 +1,4 @@
-#include "merkle/tree.h"
+#include "../../include/merkle/tree.h"
 
 namespace token{
   MerkleNode* MerkleTree::BuildTree(std::vector<MerkleNode*>& nodes){

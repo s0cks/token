@@ -7,6 +7,7 @@
 #include <leveldb/comparator.h>
 
 #include "key.h"
+#include "flags.h"
 #include "block.h"
 #include "transaction.h"
 #include "merkle/tree.h"
@@ -29,9 +30,6 @@ namespace token{
     V(Initialized)                   \
     V(Synchronizing)
 
-  class BlockChain;
-  typedef std::shared_ptr<BlockChain> BlockChainPtr;
-
   static inline std::string
   GetBlockChainDirectory(){
     std::stringstream ss;
@@ -40,7 +38,7 @@ namespace token{
   }
 
   class BlockChainBlockVisitor;
-  class BlockChain{
+  class BlockChain : public std::enable_shared_from_this<BlockChain>{
     friend class BlockMiner;
     friend class SynchronizeJob; //TODO: revoke access
     friend class BlockChainInitializer;
@@ -63,260 +61,14 @@ namespace token{
       }
     }
 
-    class BlockKey : public KeyType{
-     public:
-      static inline int
-      CompareSize(const BlockKey& a, const BlockKey& b){
-        return ObjectTag::CompareSize(a.tag(), b.tag());
-      }
-
-      static inline int
-      CompareHash(const BlockKey& a, const BlockKey& b){
-        Hash h1 = a.GetHash();
-        Hash h2 = b.GetHash();
-        if(h1 < h2){
-          return -1;
-        } else if(h1 > h2){
-          return +1;
-        }
-        return 0;
-      }
-     private:
-      enum Layout{
-        kTagPosition = 0,
-        kBytesForTag = sizeof(RawObjectTag),
-
-        kHashPosition = kTagPosition+kBytesForTag,
-        kBytesForHash = Hash::kSize,
-
-        kTotalSize = kHashPosition+kBytesForHash,
-      };
-
-      uint8_t data_[kTotalSize];
-
-      inline RawObjectTag*
-      tag_ptr() const{
-        return (RawObjectTag*)&data_[kTagPosition];
-      }
-
-      inline void
-      SetTag(const RawObjectTag& tag){
-        memcpy(&data_[kTagPosition], &tag, kBytesForTag);
-      }
-
-      inline void
-      SetTag(const ObjectTag& tag){
-        return SetTag(tag.raw());
-      }
-
-      inline uint8_t*
-      hash_ptr() const{
-        return (uint8_t*)&data_[kHashPosition];
-      }
-
-      inline void
-      SetHash(const Hash& hash){
-        memcpy(&data_[kHashPosition], hash.data(), kBytesForHash);
-      }
-     public:
-      BlockKey(const int64_t size, const Hash& hash):
-        KeyType(),
-        data_(){
-        SetTag(ObjectTag(Type::kBlock, size));
-        SetHash(hash);
-      }
-      explicit BlockKey(const BlockPtr& blk):
-        KeyType(),
-        data_(){
-        SetTag(blk->GetTag());
-        SetHash(blk->GetHash());
-      }
-      explicit BlockKey(const leveldb::Slice& slice):
-        KeyType(),
-        data_(){
-        memcpy(data_, slice.data(), std::min(slice.size(), (std::size_t)kTotalSize));
-      }
-      ~BlockKey() override = default;
-
-      Hash GetHash() const{
-        return Hash(hash_ptr(), kBytesForHash);
-      }
-
-      ObjectTag tag() const override{
-        return ObjectTag(*tag_ptr());
-      }
-
-      size_t size() const override{
-        return kTotalSize;
-      }
-
-      char* data() const override{
-        return (char*)data_;
-      }
-
-      std::string ToString() const override{
-        std::stringstream ss;
-        ss << "BlockKey(";
-        ss << "tag=" << tag() << ", ";
-        ss << "hash=" << GetHash();
-        ss << ")";
-        return ss.str();
-      }
-
-      friend bool operator==(const BlockKey& a, const BlockKey& b){
-        return CompareHash(a, b) == 0;
-      }
-
-      friend bool operator!=(const BlockKey& a, const BlockKey& b){
-        return CompareHash(a, b) != 0;
-      }
-
-      friend bool operator<(const BlockKey& a, const BlockKey& b){
-        return CompareHash(a, b) < 0;
-      }
-
-      friend bool operator>(const BlockKey& a, const BlockKey& b){
-        return CompareHash(a, b) > 0;
-      }
-    };
-
-    class ReferenceKey : public KeyType{
-     public:
-      static inline int
-      Compare(const ReferenceKey& a, const ReferenceKey& b){
-        return strncmp(a.data(), b.data(), kRawReferenceSize);
-      }
-
-      static inline int
-      CompareCaseInsensitive(const ReferenceKey& a, const ReferenceKey& b){
-        return strncasecmp(a.data(), b.data(), kRawReferenceSize);
-      }
-     private:
-      enum Layout{
-        kTagPosition = 0,
-        kBytesForTag = sizeof(RawObjectTag),
-
-        kReferencePosition = kTagPosition+kBytesForTag,
-        kBytesForReference = kRawReferenceSize,
-
-        kTotalSize = kReferencePosition+kBytesForReference,
-      };
-
-      uint8_t data_[kTotalSize];
-
-      RawObjectTag* tag_ptr() const{
-        return (RawObjectTag*)&data_[kTagPosition];
-      }
-
-      inline void
-      SetTag(const RawObjectTag& tag){
-        memcpy(&data_[kTagPosition], &tag, kBytesForTag);
-      }
-
-      inline void
-      SetTag(const ObjectTag& tag){
-        return SetTag(tag.raw());
-      }
-
-      inline uint8_t*
-      ref_ptr() const{
-        return (uint8_t*)&data_[kReferencePosition];
-      }
-
-      inline void
-      SetReference(const Reference& ref){
-        memcpy(&data_[kReferencePosition], ref.data(), kBytesForReference);
-      }
-     public:
-      explicit ReferenceKey(const Reference& ref):
-        KeyType(),
-        data_(){
-        SetTag(ObjectTag(Type::kReference, ref.size()));
-        SetReference(ref);
-      }
-      explicit ReferenceKey(const std::string& name):
-        KeyType(),
-        data_(){
-        SetTag(ObjectTag(Type::kReference, Reference::GetSize()));
-        SetReference(Reference(name));
-      }
-      explicit ReferenceKey(const leveldb::Slice& slice):
-        KeyType(),
-        data_(){
-        memcpy(data_, slice.data(), kTotalSize);
-      }
-      ~ReferenceKey() override = default;
-
-      ObjectTag tag() const override{
-        return ObjectTag(*tag_ptr());
-      }
-
-      Reference GetReference() const{
-        return Reference(ref_ptr(), kBytesForReference);
-      }
-
-      size_t size() const override{
-        return kTotalSize;
-      }
-
-      char* data() const override{
-        return (char*)data_;
-      }
-
-      std::string ToString() const override{
-        std::stringstream ss;
-        ss << "ReferenceKey(";
-        ss << "tag=" << tag() << ", ";
-        ss << "ref=" << GetReference();
-        ss << ")";
-        return ss.str();
-      }
-    };
-
     class Comparator : public leveldb::Comparator{
-     private:
-      static inline ObjectTag
-      GetTag(const leveldb::Slice& slice){
-        ObjectTag tag(*((RawObjectTag*)slice.data()));
-        if(!tag.IsValid())
-          LOG(WARNING) << "tag " << tag << " is invalid.";
-        return tag;
-      }
      public:
       Comparator() = default;
       ~Comparator() override = default;
 
       int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const override{
-        ObjectTag t1 = GetTag(a);
-        ObjectTag t2 = GetTag(b);
-
-        int result;
-        if((result = ObjectTag::CompareType(t1, t2)) != 0)
-          return result; // not equal
-
-        assert(t1.GetType() == t2.GetType());
-        if(t1.IsBlockType()){
-          BlockKey k1(a);
-          if(!k1.valid())
-            LOG(WARNING) << "k1 doesn't have a IsValid tag.";
-
-          BlockKey k2(b);
-          if(!k2.valid())
-            LOG(WARNING) << "k2 doesn't have a IsValid tag.";
-          return BlockKey::CompareHash(k1, k2);
-        } else if(t1.IsReferenceType()){
-          ReferenceKey k1(a);
-          if(!k1.valid())
-            LOG(WARNING) << "k1 doesn't have a IsValid tag.";
-
-          ReferenceKey k2(b);
-          if(!k2.valid())
-            LOG(WARNING) << "k2 doesn't have a IsValid tag.";
-          return ReferenceKey::CompareCaseInsensitive(k1, k2);
-        }
-
-        LOG(ERROR) << "cannot compare keys w/ tag: " << t1 << " <=> " << t2;
-        return 0;
+        ObjectKey k1(a), k2(b);
+        return ObjectKey::Compare(k1, k2);
       }
 
       const char* Name() const override{
@@ -345,7 +97,6 @@ namespace token{
 
     leveldb::Status InitializeIndex(const std::string& filename);
     bool PutBlock(const Hash& hash, const BlockPtr& blk) const;
-    bool RemoveReference(const std::string& name) const;
     bool RemoveBlock(const Hash& hash, const BlockPtr& blk) const;
     bool Append(const BlockPtr& blk);
    public:
@@ -364,6 +115,9 @@ namespace token{
       return (BlockChain::State)state_;
     }
 
+    virtual BlockPtr GetHead() const;
+    virtual BlockPtr GetGenesis() const;
+
     /**
      * TODO
      * @param hash
@@ -373,30 +127,8 @@ namespace token{
 
     /**
      * TODO
-     * @param name
-     * @return
-     */
-    bool HasReference(const std::string& name) const;
-
-    /**
-     * TODO
-     * @param name
-     * @param hash
-     * @return
-     */
-    bool PutReference(const std::string& name, const Hash& hash) const;
-
-    /**
-     * TODO
      */
     bool VisitBlocks(BlockChainBlockVisitor* vis) const;
-
-    /**
-     * TODO
-     * @param name
-     * @return
-     */
-    Hash GetReference(const std::string& name) const;
 
     /**
      * TODO
@@ -430,11 +162,6 @@ namespace token{
     //TODO: guard
     bool GetBlocks(Json::Writer& writer) const;
 
-    bool GetReferences(Json::Writer& writer) const{
-      NOT_IMPLEMENTED(WARNING);//TODO: implement
-      return false;
-    }
-
     /**
      * TODO
      * @return
@@ -442,40 +169,6 @@ namespace token{
     inline bool
     HasBlocks() const{
       return GetNumberOfBlocks() > 0;
-    }
-
-    inline bool
-    HasReferences() const{
-      return GetNumberOfReferences() > 0;
-    }
-
-    inline bool
-    HasGenesis() const{
-      return HasReference("GENESIS");
-    }
-
-    inline bool
-    HasHead() const{
-      return HasReference(BLOCKCHAIN_REFERENCE_HEAD);
-    }
-
-    inline Hash
-    GetGenesisHash() const{
-      return GetReference(BLOCKCHAIN_REFERENCE_GENESIS);
-    }
-
-    inline Hash
-    GetHeadHash() const{
-      return GetReference(BLOCKCHAIN_REFERENCE_HEAD);
-    }
-
-    virtual BlockPtr GetHead() const{
-      return GetBlock(GetHeadHash());
-    }
-
-    inline BlockPtr
-    GetGenesis() const{
-      return GetBlock(GetGenesisHash());
     }
 
 #define DEFINE_STATE_CHECK(Name) \

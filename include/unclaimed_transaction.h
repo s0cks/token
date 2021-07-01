@@ -1,19 +1,44 @@
 #ifndef TOKEN_UNCLAIMED_TRANSACTION_H
 #define TOKEN_UNCLAIMED_TRANSACTION_H
 
-#include "object.h"
-#include "buffer.h"
+#include "codec.h"
+#include "encoder.h"
+#include "decoder.h"
+#include "binary_object.h"
+#include "transaction_reference.h"
 
 namespace token{
   class UnclaimedTransaction;
   typedef std::shared_ptr<UnclaimedTransaction> UnclaimedTransactionPtr;
 
   class UnclaimedTransaction : public BinaryObject{
+   public:
+    class Encoder : public codec::EncoderBase<UnclaimedTransaction>{
+     public:
+      Encoder(const UnclaimedTransaction& value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags):
+        codec::EncoderBase<UnclaimedTransaction>(value, flags){}
+      Encoder(const Encoder& other) = default;
+      ~Encoder() override = default;
+      int64_t GetBufferSize() const override;
+      bool Encode(const BufferPtr& buff) const override;
+      Encoder& operator=(const Encoder& other) = default;
+    };
+
+    class Decoder : public codec::DecoderBase<UnclaimedTransaction>{
+     public:
+      Decoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
+        codec::DecoderBase<UnclaimedTransaction>(hints){}
+      Decoder(const Decoder& other) = default;
+      ~Decoder() override = default;
+      bool Decode(const BufferPtr& buff, UnclaimedTransaction& result) const override;
+      Decoder& operator=(const Decoder& other) = default;
+    };
    private:
     TransactionReference reference_;
     User user_;
     Product product_;
    public:
+    UnclaimedTransaction() = default;
     UnclaimedTransaction(const TransactionReference& ref, const User& user, const Product& product):
       BinaryObject(),
       reference_(ref),
@@ -34,9 +59,10 @@ namespace token{
       reference_(hash, index),
       user_(user),
       product_(product){}
+    UnclaimedTransaction(const UnclaimedTransaction& other) = default;
     ~UnclaimedTransaction() override = default;
 
-    Type GetType() const override{
+    Type type() const override{
       return Type::kUnclaimedTransaction;
     }
 
@@ -56,34 +82,24 @@ namespace token{
       return product_;
     }
 
-    int64_t GetBufferSize() const override{
-      return TransactionReference::kSize
-           + User::GetSize()
-           + Product::GetSize();
+    BufferPtr ToBuffer() const override;
+    std::string ToString() const override;
+
+    UnclaimedTransaction& operator=(const UnclaimedTransaction& other) = default;
+
+    friend bool operator==(const UnclaimedTransaction& a, const UnclaimedTransaction& b){
+      return a.reference_ == b.reference_
+          && a.user_ == b.user_
+          && a.product_ == b.product_;
     }
 
-    bool Write(const BufferPtr& buff) const override{
-      return buff->PutReference(reference_)
-          && buff->PutUser(user_)
-          && buff->PutProduct(product_);
+    friend bool operator!=(const UnclaimedTransaction& a, const UnclaimedTransaction& b){
+      return !operator==(a, b);
     }
 
-    bool Equals(const UnclaimedTransactionPtr& val) const{
-      return reference_ == val->reference_
-          && user_ == val->user_
-          && product_ == val->product_;
-    }
-
-    std::string ToString() const override{
-      std::stringstream ss;
-      ss << "UnclaimedTransaction(";
-        ss << "hash=" << GetHash() << ", ";
-        ss << "reference=" << reference_ << ", ";
-        ss << "user=" << user_ << ", ";
-        ss << "product=" << product_;
-      ss << ")";
-      return ss.str();
-    }
+    //TODO:
+    // - implement: <
+    // - implement: >
 
     static inline UnclaimedTransactionPtr
     NewInstance(const TransactionReference& ref, const User& user, const Product& product){
@@ -105,12 +121,20 @@ namespace token{
       return std::make_shared<UnclaimedTransaction>(hash, index, user, product);
     }
 
+    static inline bool
+    Decode(const BufferPtr& buff, UnclaimedTransaction& result, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      Decoder decoder(hints);
+      return decoder.Decode(buff, result);
+    }
+
     static inline UnclaimedTransactionPtr
-    FromBytes(const BufferPtr& buff){
-      TransactionReference ref = buff->GetReference();
-      User user = buff->GetUser();
-      Product product = buff->GetProduct();
-      return std::make_shared<UnclaimedTransaction>(ref, user, product);
+    DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      UnclaimedTransaction result;
+      if(!Decode(buff, result, hints)){
+        DLOG(ERROR) << "cannot decode UnclaimedTransaction.";
+        return nullptr;
+      }
+      return std::make_shared<UnclaimedTransaction>(result);
     }
   };
 }

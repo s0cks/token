@@ -2,39 +2,65 @@
 #define TOKEN_TRANSACTION_INPUT_H
 
 #include <vector>
+
 #include "user.h"
-#include "object.h"
+#include "codec.h"
+#include "encoder.h"
+#include "decoder.h"
+#include "binary_object.h"
+#include "transaction_reference.h"
 
 namespace token{
-  class Input : public SerializableObject{
+  class Input : public BinaryObject{
     friend class Transaction;
    public:
-    static inline int64_t
-    GetSize(){
-      return TransactionReference::kSize
-          + kUserSize;
-    }
+    class Encoder : public codec::EncoderBase<Input>{
+     public:
+      Encoder(const Input& value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags):
+        codec::EncoderBase<Input>(value, flags){}
+      Encoder(const Encoder& other) = default;
+      ~Encoder() override = default;
+
+      int64_t GetBufferSize() const override;
+      bool Encode(const BufferPtr& buff) const override;
+
+      Encoder& operator=(const Encoder& other) = default;
+    };
+
+    class Decoder : public codec::DecoderBase<Input>{
+     public:
+      Decoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
+        codec::DecoderBase<Input>(hints){}
+      Decoder(const Decoder& other) = default;
+      ~Decoder() override = default;
+
+      bool Decode(const BufferPtr& buff, Input& result) const override;
+
+      Decoder& operator=(const Decoder& other) = default;
+    };
    private:
     TransactionReference reference_;
     User user_;//TODO: remove field
    public:
+    Input():
+      reference_(),
+      user_(){}
     Input(const TransactionReference& ref, const User& user):
-      SerializableObject(),
+      BinaryObject(),
       reference_(ref),
       user_(user){}
     Input(const Hash& tx, int64_t index, const User& user):
-      SerializableObject(),
+      BinaryObject(),
       reference_(tx, index),
       user_(user){}
     Input(const Hash& tx, int64_t index, const std::string& user):
-      SerializableObject(),
+      BinaryObject(),
       reference_(tx, index),
       user_(user){}
-    explicit Input(const BufferPtr& buff);
     Input(const Input& other) = default;
     ~Input() override = default;
 
-    Type GetType() const override{
+    Type type() const override{
       return Type::kInput;
     }
 
@@ -80,23 +106,7 @@ namespace token{
       return user_;
     }
 
-    /**
-     * Returns the size of this object (in bytes).
-     *
-     * @return The size of this encoded object in bytes
-     */
-    int64_t GetBufferSize() const override{
-      return GetSize();
-    }
-
-    /**
-     * Serializes this object to a Buffer.
-     *
-     * @param buffer - The Buffer to write to
-     * @see Buffer
-     * @return True when successful otherwise, false
-     */
-    bool Write(const BufferPtr& buffer) const override;
+    BufferPtr ToBuffer() const override;
 
     /**
      * Returns the description of this object.
@@ -129,7 +139,22 @@ namespace token{
       return stream << input.ToString();
     }
 
-    static Input ParseFrom(const BufferPtr& buff);
+    static inline bool
+    Decode(const BufferPtr& buff, Input& result, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      Input::Decoder decoder(hints);
+      return decoder.Decode(buff, result);
+    }
+
+    static inline std::shared_ptr<Input>
+    DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      Input result;
+      if(!Decode(buff, result, hints)){
+        DLOG(WARNING) << "couldn't decode Input.";
+        return nullptr;
+      }
+
+      return std::make_shared<Input>(result);
+    }
   };
 
   typedef std::vector<Input> InputList;

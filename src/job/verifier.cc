@@ -9,7 +9,7 @@ namespace token{
 
     LOG(INFO) << "verifying " << block_->GetNumberOfTransactions() << " transactions....";
     for(auto& it : block_->transactions()){
-      Hash hash = it->GetHash();
+      Hash hash = it->hash();
       LOG(INFO) << "visiting transaction " << hash;
       VerifyTransactionJob* verify_tx = new VerifyTransactionJob(this, it);
       queue->Push(verify_tx);
@@ -50,8 +50,8 @@ namespace token{
     JobQueue* queue = JobScheduler::GetThreadQueue();
     std::vector<VerifyInputListJob*> jobs;
 
-    TransactionPtr tx = GetTransaction();
-    Hash hash = tx->GetHash();
+    IndexedTransactionPtr tx = GetTransaction();
+    Hash hash = tx->hash();
 
     InputList& inputs = tx->inputs();
     auto start = inputs.begin();
@@ -113,7 +113,7 @@ namespace token{
   JobResult VerifyTransactionOutputsJob::DoWork(){
     JobQueue* queue = JobScheduler::GetThreadQueue();
 
-    TransactionPtr tx = GetTransaction();
+    IndexedTransactionPtr tx = GetTransaction();
     OutputList& outputs = tx->outputs();
     auto start = outputs.begin();
     auto end = outputs.end();

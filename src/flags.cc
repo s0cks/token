@@ -1,7 +1,4 @@
 #include "flags.h"
-#ifdef TOKEN_ENABLE_EXPERIMENTAL
-  #include "elastic/elastic_client.h"
-#endif//TOKEN_ENABLE_EXPERIMENTAL
 
 // core
 DEFINE_string(path, "", "The path for the local ledger to be stored in.");

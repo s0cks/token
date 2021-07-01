@@ -2,13 +2,17 @@
 #define TOKEN_TRANSACTION_H
 
 #include <set>
-#include "object.h"
+
+#include "codec.h"
+#include "encoder.h"
+#include "decoder.h"
 #include "timestamp.h"
+#include "binary_object.h"
 #include "transaction_input.h"
 #include "transaction_output.h"
 
 namespace token{
-  class Transaction : public BinaryObject{
+  class Transaction : public BinaryObject, public std::enable_shared_from_this<Transaction>{
     friend class Block;
     friend class TransactionMessage;
    public:
@@ -33,12 +37,35 @@ namespace token{
       virtual ~OutputVisitor() = default;
       virtual bool Visit(const Output& val) = 0;
     };
+
+    class Encoder : public codec::EncoderBase<Transaction>{
+     public:
+      Encoder(const Transaction& value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags):
+        codec::EncoderBase<Transaction>(value, flags){}
+      Encoder(const Encoder& other) = default;
+      ~Encoder() override = default;
+
+      int64_t GetBufferSize() const override;
+      bool Encode(const BufferPtr& buff) const override;
+      Encoder& operator=(const Encoder& other) = default;
+    };
+
+    class Decoder : public codec::DecoderBase<Transaction>{
+     public:
+      Decoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
+        codec::DecoderBase<Transaction>(hints){}
+      Decoder(const Decoder& other) = default;
+      ~Decoder() override = default;
+      bool Decode(const BufferPtr& buff, Transaction& result) const override;
+      Decoder& operator=(const Decoder& other) = default;
+    };
    protected:
     Timestamp timestamp_;
     InputList inputs_;
     OutputList outputs_;
     std::string signature_;
    public:
+    Transaction() = default;
     Transaction(const Timestamp& timestamp,
       InputList inputs,
       OutputList  outputs):
@@ -47,19 +74,18 @@ namespace token{
       inputs_(std::move(inputs)),
       outputs_(std::move(outputs)),
       signature_(){}
+    Transaction(const Transaction& other) = default;
     ~Transaction() override = default;
 
-    Type GetType() const override{
+    Type type() const override{
       return Type::kTransaction;
     }
 
-    /**
-     * Returns the Timestamp for when this transaction occurred (UTC).
-     *
-     * @see Timestamp
-     * @return The Timestamp for when this transaction occurred (UTC)
-     */
-    Timestamp GetTimestamp() const{
+    Timestamp& timestamp(){
+      return timestamp_;
+    }
+
+    Timestamp timestamp() const{
       return timestamp_;
     }
 
@@ -91,58 +117,6 @@ namespace token{
      */
     bool IsSigned() const{
       return !signature_.empty();
-    }
-
-    /**
-     * Returns the size of this object (in bytes).
-     *
-     * @return The size of this encoded object in bytes
-     */
-    int64_t GetBufferSize() const override{
-      int64_t size = 0;
-      size += sizeof(RawTimestamp); // timestamp_
-      size += GetVectorSize(inputs_); // inputs_
-      size += GetVectorSize(outputs_); // outputs_
-      return size;
-    }
-
-    /**
-     * Serializes this object to a Buffer.
-     *
-     * @param buffer - The Buffer to write to
-     * @see Buffer
-     * @return True when successful otherwise, false
-     */
-    bool Write(const BufferPtr& buff) const override;
-
-    /**
-     * Compares 2 transactions for equality.
-     *
-     * @deprecated
-     * @param tx - The other transaction
-     * @return True if the 2 transactions are equal.
-     */
-    bool Equals(const TransactionPtr& tx) const{ // convert to Compare(tx1, tx2);
-      if(timestamp_ != tx->timestamp_){
-        return false;
-      }
-      if(!std::equal(
-        inputs_.begin(),
-        inputs_.end(),
-        tx->inputs_.begin(),
-        [](const Input& a, const Input& b){ return a == b; }
-      )){
-        return false;
-      }
-      if(!std::equal(
-        outputs_.begin(),
-        outputs_.end(),
-        tx->outputs_.begin(),
-        [](const Output& a, const Output& b){ return a == b; }
-      )){
-        return false;
-      }
-      return true;
     }
 
     /**
@@ -180,20 +154,34 @@ namespace token{
       return true;
     }
 
+    BufferPtr ToBuffer() const override;
+
     /**
      * Returns the description of this object.
      *
      * @see Object::ToString()
      * @return The ToString() description of this object
      */
-    std::string ToString() const override{
-      std::stringstream ss;
-      ss << "Transaction(";
-      ss << "timestamp=" << FormatTimestampReadable(timestamp_) << ", ";
-      ss << "inputs=[]" << ", "; //TODO: implement
-      ss << "outputs=[]" << ","; //TODO: implement
-      ss << ")";
-      return ss.str();
+    std::string ToString() const override;
+
+    Transaction& operator=(const Transaction& other) = default;
+
+    friend bool operator==(const Transaction& a, const Transaction& b){
+      return a.timestamp_ == b.timestamp_
+          && a.inputs_ == b.inputs_
+          && a.outputs_ == b.outputs_;
+    }
+
+    friend bool operator!=(const Transaction& a, const Transaction& b){
+      return !operator==(a, b);
+    }
+
+    friend bool operator<(const Transaction& a, const Transaction& b){
+      return a.timestamp_ < b.timestamp_;
+    }
+
+    friend bool operator>(const Transaction& a, const Transaction& b){
+      return a.timestamp_ > b.timestamp_;
     }
 
     static inline TransactionPtr
@@ -201,7 +189,21 @@ namespace token{
       return std::make_shared<Transaction>(timestamp, inputs, outputs);
     }
 
-    static TransactionPtr FromBytes(const BufferPtr& buff);
+    static inline bool
+    Decode(const BufferPtr& buff, Transaction& result, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      Decoder decoder(hints);
+      return decoder.Decode(buff, result);
+    }
+
+    static inline TransactionPtr
+    DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      Transaction result;
+      if(!Decode(buff, result, hints)){
+        DLOG(WARNING) << "cannot decode Transaction.";
+        return nullptr;
+      }
+      return std::make_shared<Transaction>(result);
+    }
   };
 
   typedef std::vector<TransactionPtr> TransactionList;

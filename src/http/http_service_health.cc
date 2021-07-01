@@ -8,5 +8,9 @@ namespace token{
       if(!GetHealthController()->Initialize(GetRouter()))
         LOG(WARNING) << "cannot initialize HealthController";
     }
+
+    HealthServicePtr HealthService::NewInstance(){
+      return std::unique_ptr<HealthService>(new HealthService());
+    }
   }
 }

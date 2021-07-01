@@ -4,18 +4,20 @@
 #include "miner.h"
 #include "wallet.h"
 #include "keychain.h"
+#include "reference.h"
 #include "filesystem.h"
 #include "blockchain.h"
 #include "configuration.h"
 #include "job/scheduler.h"
+
 
 #ifdef TOKEN_ENABLE_EXPERIMENTAL
 #include "elastic/elastic_client.h"
 #include "elastic/events/elastic_spend_event.h"
 #endif//TOKEN_ENABLE_EXPERIMENTAL
 
-#include "rpc/rpc_server.h"
-#include "peer/peer_session_manager.h"
+#include "network/rpc_server.h"
+#include "network/peer_session_manager.h"
 #include "http/http_service_health.h"
 #include "http/http_service_rest.h"
 
@@ -75,7 +77,7 @@
         token::Output(recipient, token->GetProduct()),
       };
       token::TransactionPtr tx = token::Transaction::NewInstance(inputs, outputs);
-      if(!pool->PutTransaction(tx->GetHash(), tx)){
+      if(!pool->PutTransaction(tx->hash(), tx)){
         LOG(WARNING) << "cannot add new transaction " << tx->ToString() << " to pool!";
         return false;
       }
@@ -165,8 +167,8 @@ PrintRuntimeInformation(){
     VLOG(2) << "head: " << chain->GetHead()->ToString();
     VLOG(2) << "genesis: " << chain->GetGenesis()->ToString();
   } else if(VLOG_IS_ON(1)){
-    VLOG(1) << "head: " << chain->GetHeadHash();
-    VLOG(1) << "genesis: " << chain->GetGenesisHash();
+    VLOG(1) << "head: " << chain->GetHead()->ToString();
+    VLOG(1) << "genesis: " << chain->GetGenesis()->ToString();
   }
 
   // print object pool information
@@ -186,6 +188,10 @@ PrintRuntimeInformation(){
       VLOG(1) << " - " << it;
   }
 }
+
+static token::rpc::LedgerServerThread server_thread;
+static token::http::HealthServiceThread health_service_thread;
+static token::http::RestServiceThread rest_service_thread;
 
 //TODO:
 // - create global environment teardown and deconstruct routines
@@ -218,36 +224,37 @@ main(int argc, char **argv){
     }
   }
 
-  rpc::LedgerServerThread ledger_server_thread;
-  http::HealthServiceThread health_service_thread;
-  http::RestServiceThread rest_service_thread;
+  http::HealthService service;
+  service.Run(FLAGS_service_port);
 
-  // Load the configuration
-  SilentlyInitialize<ConfigurationManager, google::FATAL>();
-  // start the health check service
-  SilentlyStartService<http::HealthService, http::HealthServiceThread, google::FATAL>(health_service_thread);
-  // initialize the job scheduler
-  SilentlyInitialize<JobScheduler, google::FATAL>();
-  // initialize the keychain
-  SilentlyInitialize<Keychain, google::FATAL>();//TODO: refactor & parallelize
-  // initialize the object pool
-  SilentlyInitialize<ObjectPool, google::FATAL>();
-  // initialize the wallet manager
-  SilentlyInitialize<WalletManager, google::FATAL>();
-  // initialize the block chain
-  SilentlyInitialize<BlockChain, google::FATAL>();
-  // start the rpc server
-  SilentlyStartService<rpc::LedgerServer, rpc::LedgerServerThread, google::FATAL>(ledger_server_thread);
-  // start the peer threads & connect to any known peers
-  SilentlyInitialize<PeerSessionManager, google::FATAL>();
-  // start the rest service
-  SilentlyStartService<http::RestService, http::RestServiceThread, google::FATAL>(rest_service_thread);
-
-  if(FLAGS_mining_interval > 0)
-    SilentlyStartThread<BlockMiner, BlockMinerThread>();
-
-  sleep(5);
-  PrintRuntimeInformation();
+//  // Load the configuration
+//  SilentlyInitialize<ConfigurationManager, google::FATAL>();
+//  // start the health check service
+//  SilentlyStartService<http::HealthService, http::HealthServiceThread, google::FATAL>(health_service_thread);
+//  // initialize the job scheduler
+//  SilentlyInitialize<JobScheduler, google::FATAL>();
+//  // initialize the keychain
+//  SilentlyInitialize<Keychain, google::FATAL>();//TODO: refactor & parallelize
+//  // initialize the ReferenceDatabase
+//  SilentlyInitialize<ReferenceDatabase, google::FATAL>();
+//  // initialize the object pool
+//  SilentlyInitialize<ObjectPool, google::FATAL>();
+//  // initialize the wallet manager
+//  SilentlyInitialize<WalletManager, google::FATAL>();
+//  // initialize the block chain
+//  SilentlyInitialize<BlockChain, google::FATAL>();
+//  // start the rpc server
+//  SilentlyStartService<rpc::LedgerServer, rpc::LedgerServerThread, google::FATAL>(server_thread);
+//  // start the peer threads & connect to any known peers
+//  SilentlyInitialize<PeerSessionManager, google::FATAL>();
+//  // start the rest service
+//  SilentlyStartService<http::RestService, http::RestServiceThread, google::FATAL>(rest_service_thread);
+//
+//  if(FLAGS_mining_interval > 0)
+//    SilentlyStartThread<BlockMiner, BlockMinerThread>();
+//
+//  sleep(5);
+//  PrintRuntimeInformation();
 
 #ifdef TOKEN_DEBUG
   sleep(2);
@@ -259,7 +266,7 @@ main(int argc, char **argv){
 #endif//TOKEN_DEBUG
 
   //TODO: SilentlyWaitForShutdown<PeerSessionManager
-  SilentlyWaitForShutdown<rpc::LedgerServer, rpc::LedgerServerThread, google::FATAL>(ledger_server_thread);
+  SilentlyWaitForShutdown<rpc::LedgerServer, rpc::LedgerServerThread, google::FATAL>(server_thread);
   SilentlyWaitForShutdown<http::RestService, http::RestServiceThread, google::FATAL>(rest_service_thread);
   SilentlyWaitForShutdown<http::HealthService, http::HealthServiceThread, google::FATAL>(health_service_thread);
   return EXIT_SUCCESS;

@@ -5,7 +5,12 @@
 #include "version.h"
 #include "timestamp.h"
 #include "block_header.h"
+#include "binary_object.h"
 #include "indexed_transaction.h"
+
+#include "codec.h"
+#include "encoder.h"
+#include "decoder.h"
 
 namespace token{
   class BlockVisitor;
@@ -24,6 +29,27 @@ namespace token{
     static const int64_t kNumberOfGenesisOutputs = 10000;
 #endif//TOKEN_DEBUG
 
+    class Encoder : public codec::EncoderBase<Block>{
+     public:
+      Encoder(const Block& value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags):
+        codec::EncoderBase<Block>(value, flags){}
+      Encoder(const Encoder& other) = default;
+      ~Encoder() override = default;
+
+      int64_t GetBufferSize() const override;
+      bool Encode(const BufferPtr& buff) const override;
+      Encoder& operator=(const Encoder& other) = default;
+    };
+
+    class Decoder : public codec::DecoderBase<Block>{
+     public:
+      Decoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
+        codec::DecoderBase<Block>(hints){}
+      Decoder(const Decoder& other) = default;
+      ~Decoder() override = default;
+      bool Decode(const BufferPtr& buff, Block& result) const override;
+      Decoder& operator=(const Decoder& other) = default;
+    };
    private:
     Timestamp timestamp_;
     Version version_;
@@ -40,6 +66,18 @@ namespace token{
       previous_hash_(),
       transactions_(),
       tx_bloom_(){}
+    Block(const Timestamp& timestamp,
+          const int64_t& height,
+          const Hash& previous_hash,
+          const IndexedTransactionSet& transactions,
+          const Version& version):
+      BinaryObject(),
+      timestamp_(timestamp),
+      version_(version),
+      height_(height),
+      previous_hash_(previous_hash),
+      transactions_(transactions),
+      tx_bloom_(){}
     Block(int64_t height,
       const Version& version,
       const Hash& phash,
@@ -54,18 +92,23 @@ namespace token{
       tx_bloom_(){
       if(!transactions.empty()){
         for(auto& it : transactions)
-          tx_bloom_.Put(it->GetHash());
+          tx_bloom_.Put(it->hash());
       }
     }
     Block(const BlockPtr& parent, const IndexedTransactionSet& transactions, Timestamp timestamp = Clock::now()):
-      Block(parent->GetHeight() + 1, Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION), parent->GetHash(), transactions, timestamp){}
+      Block(parent->height() + 1, Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION), parent->hash(), transactions, timestamp){}
+    Block(const Block& other) = default;
     ~Block() override = default;
 
-    Type GetType() const override{
+    Type type() const override{
       return Type::kBlock;
     }
 
-    Timestamp GetTimestamp() const{
+    Timestamp& timestamp(){
+      return timestamp_;
+    }
+
+    Timestamp timestamp() const{
       return timestamp_;
     }
 
@@ -73,7 +116,11 @@ namespace token{
       return version_;
     }
 
-    int64_t GetHeight() const{
+    int64_t& height(){
+      return height_;
+    }
+
+    int64_t height() const{
       return height_;
     }
 
@@ -83,12 +130,11 @@ namespace token{
 
     BlockHeader GetHeader() const{
       return BlockHeader(
-        timestamp_,
-        version_,
-        height_,
-        previous_hash_,
-        GetMerkleRoot(),
-        GetHash()
+          timestamp(),
+          height(),
+          GetPreviousHash(),
+          GetMerkleRoot(),
+          hash()
       );
     }
 
@@ -129,63 +175,12 @@ namespace token{
     }
 
     bool IsGenesis() const{
-      return GetHeight() == 0;
+      return height() == 0;
     }
 
-    std::string ToString() const override{
-      std::stringstream stream;
-      stream << "Block(#" << GetHeight() << ", " << GetNumberOfTransactions() << " Transactions)";
-      return stream.str();
-    }
+    BufferPtr ToBuffer() const override;
 
-    int64_t GetTransactionDataBufferSize() const{
-      int64_t size = 0;
-      size += sizeof(int64_t); // num_transactions
-      for(auto& it : transactions_)
-        size += it->GetBufferSize();
-      return size;
-    }
-
-    int64_t GetBufferSize() const override{
-      int64_t size = 0;
-      size += sizeof(uint64_t); // timestamp_
-      size += sizeof(RawVersion); // version_
-      size += sizeof(int64_t); // height_
-      size += Hash::GetSize(); // previous_hash_
-      size += GetTransactionDataBufferSize();
-      return size;
-    }
-
-    bool Write(const BufferPtr& buff) const override{
-      return buff->PutTimestamp(timestamp_)
-          && buff->PutVersion(version_)
-          && buff->PutLong(height_)
-          && buff->PutHash(previous_hash_)
-          && buff->PutSetOf(transactions_);
-    }
-
-    bool Equals(const BlockPtr& blk) const{
-      if(timestamp_ != blk->timestamp_){
-        return false;
-      }
-      if(height_ != blk->height_){
-        return false;
-      }
-      if(previous_hash_ != blk->previous_hash_){
-        return false;
-      }
-      if(transactions_.size() != blk->transactions_.size()){
-        return false;
-      }
-      return std::equal(
-        transactions_.begin(),
-        transactions_.end(),
-        blk->transactions_.begin(),
-        [](const TransactionPtr& a, const TransactionPtr& b){
-          return a->Equals(b);
-        }
-      );
-    }
+    std::string ToString() const override;
 
     Hash GetMerkleRoot() const;
     bool Accept(BlockVisitor* vis) const;
@@ -203,46 +198,24 @@ namespace token{
     }
 
     static inline BlockPtr
-    NewInstance(const BlockHeader& header, const IndexedTransactionSet& txs){
-      return std::make_shared<Block>(
-        header.GetHeight(),
-        header.GetVersion(),
-        header.GetPreviousHash(),
-        txs,
-        header.GetTimestamp()
-      );
-    }
-
-    static inline BlockPtr
     FromParent(const BlockPtr& parent, const IndexedTransactionSet& txs, const Timestamp& timestamp = Clock::now()){
       return std::make_shared<Block>(parent, txs, timestamp);
     }
 
-    static inline BlockPtr
-    FromBytes(const BufferPtr& buff){
-      Timestamp timestamp = FromUnixTimestamp(buff->GetLong());
-      Version version = buff->GetVersion();
-      int64_t height = buff->GetLong();
-      Hash previous_hash = buff->GetHash();
-
-      int64_t idx;
-      int64_t num_transactions = buff->GetLong();
-      IndexedTransactionSet transactions;
-      for(idx = 0; idx < num_transactions; idx++)
-        transactions.insert(IndexedTransaction::FromBytes(buff));
-
-      return std::make_shared<Block>(height, version, previous_hash, transactions, timestamp);
+    static inline bool
+    Decode(const BufferPtr& buff, Block& result, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      Decoder decoder(hints);
+      return decoder.Decode(buff, result);
     }
 
     static inline BlockPtr
-    FromFile(const std::string& filename){
-      BufferPtr buffer = Buffer::FromFile(filename);
-      ObjectTag tag = buffer->GetObjectTag();
-      if(!tag.IsBlockType()){
-        LOG(WARNING) << "unexpected tag of " << tag << ", cannot read Block from: " << filename;
-        return BlockPtr(nullptr);
+    DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      Block result;
+      if(!Decode(buff, result, hints)){
+        DLOG(WARNING) << "cannot decode Block";
+        return nullptr;
       }
-      return FromBytes(buffer);
+      return std::make_shared<Block>(result);
     }
   };
 
@@ -252,7 +225,7 @@ namespace token{
    public:
     virtual ~BlockVisitor() = default;
     virtual bool VisitStart(){ return true; }
-    virtual bool Visit(const TransactionPtr& tx) = 0;
+    virtual bool Visit(const IndexedTransactionPtr& tx) = 0;
     virtual bool VisitEnd(){ return true; }
   };
 }

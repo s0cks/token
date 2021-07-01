@@ -45,16 +45,16 @@ namespace token{
 
   class VerifyTransactionJob : public Job{
    private:
-    TransactionPtr transaction_;
+    IndexedTransactionPtr transaction_;
    protected:
     JobResult DoWork();
    public:
-    VerifyTransactionJob(VerifyBlockJob* parent, const TransactionPtr& tx):
+    VerifyTransactionJob(VerifyBlockJob* parent, const IndexedTransactionPtr& tx):
       Job(parent, "VerifyTransactionJob"),
       transaction_(tx){}
     ~VerifyTransactionJob() = default;
 
-    TransactionPtr GetTransaction() const{
+    IndexedTransactionPtr GetTransaction() const{
       return transaction_;
     }
   };
@@ -70,7 +70,7 @@ namespace token{
       inputs_(inputs){}
     ~VerifyTransactionInputsJob() = default;
 
-    TransactionPtr GetTransaction() const{
+    IndexedTransactionPtr GetTransaction() const{
       return ((VerifyTransactionJob*) GetParent())->GetTransaction();
     }
   };
@@ -120,7 +120,7 @@ namespace token{
       outputs_(outputs){}
     ~VerifyTransactionOutputsJob() = default;
 
-    TransactionPtr GetTransaction() const{
+    IndexedTransactionPtr GetTransaction() const{
       return ((VerifyTransactionJob*) GetParent())->GetTransaction();
     }
   };

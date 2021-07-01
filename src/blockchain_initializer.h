@@ -1,8 +1,8 @@
 #ifndef TOKEN_BLOCKCHAIN_INITIALIZER_H
 #define TOKEN_BLOCKCHAIN_INITIALIZER_H
 
+#include "reference.h"
 #include "blockchain.h"
-
 #include "job/processor.h"
 #include "job/scheduler.h"
 
@@ -12,24 +12,31 @@ namespace token{
 
   class BlockChainInitializer{
    protected:
-    BlockChain* chain_;
+    BlockChainPtr chain_;
+    ReferenceDatabasePtr references_;
 
-    BlockChainInitializer(BlockChain* chain):
-      chain_(chain){}
+    BlockChainInitializer(const BlockChainPtr& chain, const ReferenceDatabasePtr& references):
+      chain_(chain),
+      references_(references){}
 
-    inline BlockChain*
+    inline BlockChainPtr
     GetChain() const{
       return chain_;
     }
 
+    inline ReferenceDatabasePtr
+    GetReferences() const{
+      return references_;
+    }
+
     inline Hash
     GetGenesisHash() const{
-      return GetChain()->GetGenesisHash();
+      return GetReferences()->GetReference(BLOCKCHAIN_REFERENCE_GENESIS);
     }
 
     inline Hash
     GetHeadHash() const{
-      return GetChain()->GetHeadHash();
+      return GetReferences()->GetReference(BLOCKCHAIN_REFERENCE_HEAD);
     }
 
     inline BlockPtr
@@ -49,12 +56,12 @@ namespace token{
 
     inline bool
     SetGenesisReference(const Hash& hash) const{
-      return GetChain()->PutReference(BLOCKCHAIN_REFERENCE_GENESIS, hash);
+      return GetReferences()->PutReference(BLOCKCHAIN_REFERENCE_GENESIS, hash);
     }
 
     inline bool
     SetHeadReference(const Hash& hash) const{
-      return GetChain()->PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
+      return GetReferences()->PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
     }
 
     inline bool
@@ -76,8 +83,8 @@ namespace token{
 
   class FreshBlockChainInitializer : public BlockChainInitializer{
    public:
-    FreshBlockChainInitializer(BlockChain* chain):
-      BlockChainInitializer(chain){}
+    FreshBlockChainInitializer(const BlockChainPtr& chain, const ReferenceDatabasePtr& references):
+      BlockChainInitializer(chain, references){}
     ~FreshBlockChainInitializer() = default;
 
     DEFINE_INITIALIZER(FreshBlockChain);
@@ -91,8 +98,8 @@ namespace token{
         //TODO: refactor
         INITIALIZER_LOG(WARNING) << "pruning local block chain.....";
         BlockPtr current = GetHead();
-        while(current->GetHeight() > 0){
-          Hash hash = current->GetHash();
+        while(current->height() > 0){
+          Hash hash = current->hash();
           if(!PruneBlock(hash, current))
             return false;
           current = GetBlock(current->GetPreviousHash());
@@ -104,7 +111,7 @@ namespace token{
       }
 
       BlockPtr blk = Block::Genesis();
-      Hash hash = blk->GetHash();
+      Hash hash = blk->hash();
 #ifdef TOKEN_DEBUG
       INITIALIZER_LOG(INFO) << "using genesis block: " << blk->ToString();
 #else
@@ -130,8 +137,8 @@ namespace token{
 
   class DefaultBlockChainInitializer : public BlockChainInitializer{
    public:
-    DefaultBlockChainInitializer(BlockChain* chain):
-      BlockChainInitializer(chain){}
+    DefaultBlockChainInitializer(const BlockChainPtr& chain, const ReferenceDatabasePtr& references):
+      BlockChainInitializer(chain, references){}
     ~DefaultBlockChainInitializer() = default;
 
     DEFINE_INITIALIZER(DefaultBlockChain);

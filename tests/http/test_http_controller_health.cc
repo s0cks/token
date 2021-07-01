@@ -8,8 +8,8 @@ namespace token{
 
       HealthController controller;
 
-      RequestPtr request = NewGetRequest(session, "/status/live");
-      ResponsePtr response = NewOkResponse(session, "Ok");
+      RequestPtr request = NewGetRequest("/status/live");
+      ResponsePtr response = NewOkResponse( "Ok");
 
       EXPECT_CALL((MockHttpSession&)*session, Send(ResponseEquals(response)))
         .Times(testing::AtLeast(1));
@@ -22,8 +22,8 @@ namespace token{
 
       HealthController controller;
 
-      RequestPtr request = NewGetRequest(session, "/status/ready");
-      ResponsePtr response = NewOkResponse(session, "Ok");
+      RequestPtr request = NewGetRequest("/status/ready");
+      ResponsePtr response = NewOkResponse( "Ok");
 
       EXPECT_CALL((MockHttpSession&)*session, Send(ResponseEquals(response)))
           .Times(testing::AtLeast(1));

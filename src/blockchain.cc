@@ -2,8 +2,9 @@
 #include <leveldb/db.h>
 #include <glog/logging.h>
 
+#include "buffer.h"
+#include "reference.h"
 #include "blockchain.h"
-#include "block_file.h"
 #include "unclaimed_transaction.h"
 #include "atomic/relaxed_atomic.h"
 #include "blockchain_initializer.h"
@@ -17,7 +18,7 @@ namespace token{
   static inline std::string
   GetNewBlockFilename(const BlockPtr& blk){
     std::stringstream ss;
-    ss << GetBlockChainDirectory() << "/blk" << blk->GetHeight() << ".dat";
+    ss << GetBlockChainDirectory() << "/blk" << blk->height() << ".dat";
     return ss.str();
   }
 
@@ -29,8 +30,9 @@ namespace token{
   }
 
   static inline bool
-  ShouldCreateFreshInstall(BlockChain* chain){
-    return !chain->HasHead() || FLAGS_reinitialize;
+  ShouldCreateFreshInstall(){
+    ReferenceDatabasePtr references = ReferenceDatabase::GetInstance();
+    return !references->HasReference(BLOCKCHAIN_REFERENCE_HEAD) || FLAGS_reinitialize;
   }
 
   //TODO: cleanup
@@ -58,12 +60,12 @@ namespace token{
       return status;
     }
 
-    if(ShouldCreateFreshInstall(this)){
-      FreshBlockChainInitializer initializer(this);
+    if(ShouldCreateFreshInstall()){
+      FreshBlockChainInitializer initializer(shared_from_this(), ReferenceDatabase::GetInstance());
       if(!initializer.InitializeBlockChain())
         return leveldb::Status::IOError("Cannot create a fresh block chain");
     } else{
-      DefaultBlockChainInitializer initializer(this);
+      DefaultBlockChainInitializer initializer(shared_from_this(), ReferenceDatabase::GetInstance());
       if(!initializer.InitializeBlockChain())
         return leveldb::Status::IOError("Cannot initialize the block chain");
     }
@@ -79,22 +81,31 @@ namespace token{
       return false;
     }
 
-    if(!WriteBlock(file, blk)){
-      LOG(WARNING) << "cannot write block " << hash << " to file: " << filename;
+    Block::Encoder encoder(*blk, codec::EncodeVersionFlag::Encode(true));
+    BufferPtr buffer = Buffer::AllocateFor(encoder);
+    if(!encoder.Encode(buffer)){
+      LOG(ERROR) << "cannot encode Block " << blk->hash() << ".";
       return false;
     }
-    return Flush(file) && Close(file);
+
+    if(!buffer->WriteTo(file)){
+      LOG(ERROR) << "couldn't write Block to file: " << filename;
+      return false;
+    }
+
+    return fflush(file) != 0
+        && fclose(file) != 0;
   }
 
   bool BlockChain::PutBlock(const Hash& hash, const BlockPtr& blk) const{
-    BlockKey key(blk);
+    ObjectKey key(Type::kBlock, hash);
     std::string filename = GetNewBlockFilename(blk);
 
     leveldb::WriteOptions opts;
     opts.sync = true;
 
     leveldb::Status status;
-    if(!(status = GetIndex()->Put(opts, KEY(key), filename)).ok()){
+    if(!(status = GetIndex()->Put(opts, (const leveldb::Slice&)key, filename)).ok()){
       LOG_CHAIN(WARNING) << "cannot index object " << hash << ": " << status.ToString();
       return false;
     }
@@ -111,28 +122,16 @@ namespace token{
   //TODO: refactor
   static inline BlockPtr
   ReadBlockFile(const std::string& filename, const Hash& hash){
-    FILE* file;
-    if(!(file = fopen(filename.data(), "rb"))){
-      LOG(ERROR) << "cannot open file " << filename << ": " << strerror(errno);
-      return BlockPtr(nullptr);
-    }
-
-    BlockPtr blk = ReadBlock(file);
-    if(!blk){
-      LOG(ERROR) << "cannot read block " << hash << " from file: " << filename;
-      if(!Close(file))
-        LOG(ERROR) << "cannot close block file: " << filename;
-      return BlockPtr(nullptr);
-    }
-    return blk;
+    NOT_IMPLEMENTED(FATAL);
+    return nullptr;
   }
 
   BlockPtr BlockChain::GetBlock(const Hash& hash) const{
-    BlockKey key(0, hash);
+    ObjectKey key(Type::kBlock, hash);
 
     std::string filename;
     leveldb::Status status;
-    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), KEY(key), &filename)).ok()){
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &filename)).ok()){
       if(status.IsNotFound()){
         DLOG_CHAIN(WARNING) << "couldn't find block: " << hash;
         return nullptr;
@@ -149,25 +148,14 @@ namespace token{
     return BlockPtr(nullptr);
   }
 
-  bool BlockChain::HasReference(const std::string& name) const{
-    ReferenceKey key(name);
-    std::string value;
-    leveldb::Status status;
-    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), KEY(key), &value)).ok()){
-      DLOG_CHAIN(WARNING) << "cannot find reference " << name << ": " << status.ToString();
-      return false;
-    }
-    return true;
-  }
-
   bool BlockChain::RemoveBlock(const Hash& hash, const BlockPtr& blk) const{
     leveldb::WriteOptions options;
     options.sync = true;
 
-    BlockKey key(blk);
+    ObjectKey key(Type::kBlock, hash);
 
     leveldb::Status status;
-    if(!(status = GetIndex()->Delete(options, KEY(key))).ok()){
+    if(!(status = GetIndex()->Delete(options, (const leveldb::Slice&)key)).ok()){
       LOG_CHAIN(ERROR) << "couldn't remove block " << hash << ": " << status.ToString();
       return false;
     }
@@ -176,63 +164,12 @@ namespace token{
     return true;
   }
 
-  bool BlockChain::RemoveReference(const std::string& name) const{
-    leveldb::WriteOptions options;
-    options.sync = true;
-
-    ReferenceKey key(name);
-    std::string value;
-
-    leveldb::Status status;
-    if(!(status = GetIndex()->Delete(options, KEY(key))).ok()){
-      LOG_CHAIN(ERROR) << "couldn't remove reference " << name << ": " << status.ToString();
-      return false;
-    }
-
-    DLOG_CHAIN(INFO) << "removed reference: " << name;
-    return true;
-  }
-
-  bool BlockChain::PutReference(const std::string& name, const Hash& hash) const{
-    leveldb::WriteOptions options;
-    options.sync = true;
-
-    ReferenceKey key(name);
-    std::string value = hash.HexString();
-
-    leveldb::Status status;
-    if(!(status = GetIndex()->Put(options, KEY(key), value)).ok()){
-      LOG_CHAIN(ERROR) << "cannot set reference " << name << ": " << status.ToString();
-      return false;
-    }
-
-    DLOG_CHAIN(INFO) << "set reference " << name << " to " << hash;
-    return true;
-  }
-
-  Hash BlockChain::GetReference(const std::string& name) const{
-    ReferenceKey key(name);
-    std::string value;
-
-    leveldb::Status status;
-    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), KEY(key), &value)).ok()){
-      if(status.IsNotFound()){
-        DLOG_CHAIN(WARNING) << "couldn't find reference: " << name;
-        return Hash();
-      }
-
-      LOG_CHAIN(ERROR) << "couldn't get reference " << name << ": " << status.ToString();
-      return Hash();
-    }
-    return Hash::FromHexString(value);
-  }
-
   bool BlockChain::HasBlock(const Hash& hash) const{
-    BlockKey key(0, hash);
+    ObjectKey key(Type::kBlock, hash);
 
     std::string filename;
     leveldb::Status status;
-    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), KEY(key), &filename)).ok()){
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &filename)).ok()){
       if(status.IsNotFound())
         return false;
 
@@ -245,7 +182,7 @@ namespace token{
   //TODO: cleanup logging
   bool BlockChain::Append(const BlockPtr& block){
     BlockPtr head = GetHead();
-    Hash hash = block->GetHash();
+    Hash hash = block->hash();
     Hash phash = block->GetPreviousHash();
 
     LOG(INFO) << "appending new block:";
@@ -265,13 +202,16 @@ namespace token{
     }
 
     PutBlock(hash, block);
-    if(head->GetHeight() < block->GetHeight())
-      PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
+    if(head->height() < block->height()){
+      ReferenceDatabasePtr references = ReferenceDatabase::GetInstance();
+      references->PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
+    }
     return true;
   }
 
   bool BlockChain::VisitBlocks(BlockChainBlockVisitor* vis) const{
-    Hash current = GetReference(BLOCKCHAIN_REFERENCE_HEAD);
+    ReferenceDatabasePtr references = ReferenceDatabase::GetInstance();
+    Hash current = references->GetReference(BLOCKCHAIN_REFERENCE_HEAD);
     do{
       BlockPtr blk = GetBlock(current);
       if(!vis->Visit(blk))
@@ -315,13 +255,23 @@ namespace token{
     {
       BlockPtr current = GetHead();
       do{
-        std::string hex = current->GetHash().HexString();
+        std::string hex = current->hash().HexString();
         writer.String(hex.data(), hex.length());
         current = GetBlock(current->GetPreviousHash());
       } while(current);
     }
     writer.EndArray();
     return true;
+  }
+
+  BlockPtr BlockChain::GetHead() const{
+    ReferenceDatabasePtr references = ReferenceDatabase::GetInstance();
+    return GetBlock(references->GetReference(BLOCKCHAIN_REFERENCE_HEAD));
+  }
+
+  BlockPtr BlockChain::GetGenesis() const{
+    ReferenceDatabasePtr references = ReferenceDatabase::GetInstance();
+    return GetBlock(references->GetReference(BLOCKCHAIN_REFERENCE_GENESIS));
   }
 
   static JobQueue queue_(JobScheduler::kMaxNumberOfJobs);

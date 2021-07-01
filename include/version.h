@@ -1,109 +1,97 @@
 #ifndef TOKEN_VERSION_H
 #define TOKEN_VERSION_H
 
-#include "bitfield.h"
+#include <cstring>
+#include <sstream>
+#include "binary_type.h"
 
 namespace token{
-  typedef uint64_t RawVersion;
+#define TOKEN_VERSION_MAJOR 0
+#define TOKEN_VERSION_MINOR 0
+#define TOKEN_VERSION_REVISION 1
 
-  class Version{
+  static const int64_t kVersionSize = sizeof(int16_t) + sizeof(int16_t) + sizeof(int16_t);
+  class Version : public BinaryType<kVersionSize>{
    public:
     static inline int
     Compare(const Version& a, const Version& b){
-      if(!a.IsValid())
-        LOG(WARNING) << "a is not IsValid. (GetMagic=" << std::hex << MagicField::Decode(a.raw()) << ")";
-
-      if(!b.IsValid())
-        LOG(WARNING) << "b is not IsValid. (GetMagic=" << std::hex << MagicField::Decode(b.raw()) << ")";
-
-      if(a.GetMajor() < b.GetMajor()){
+      if(a.major() < b.major()){
         return -1;
-      } else if(a.GetMajor() > b.GetMajor()){
+      } else if(a.major() > b.major()){
         return +1;
       }
 
-      if(a.GetMinor() < b.GetMinor()){
+      if(a.minor() < b.minor()){
         return -1;
-      } else if(a.GetMinor() > b.GetMinor()){
+      } else if(a.minor() > b.minor()){
         return +1;
       }
 
-      if(a.GetRevision() < b.GetRevision()){
+      if(a.revision() < b.revision()){
         return -1;
-      } else if(a.GetRevision() > b.GetRevision()){
+      } else if(a.revision() > b.revision()){
         return +1;
       }
       return 0;
     }
    private:
     enum Layout{
-      kMagicPosition = 0,
-      kBitsForMagic = 16,
+      kMajorPosition = 0,
+      kBytesForMajor = sizeof(int16_t),
 
-      kMajorPosition = kMagicPosition+kBitsForMagic,
-      kBitsForMajor = 16,
+      kMinorPosition = kMajorPosition+kBytesForMajor,
+      kBytesForMinor = sizeof(int16_t),
 
-      kMinorPosition = kMajorPosition+kBitsForMajor,
-      kBitsForMinor = 16,
-
-      kRevisionPosition = kMinorPosition+kBitsForMinor,
-      kBitsForRevision = 16,
-
-      kTotalSize = kRevisionPosition+kBitsForRevision,
+      kRevisionPosition = kMinorPosition+kBytesForMinor,
+      kBytesForRevision = sizeof(int16_t),
     };
 
-    RawVersion raw_;
+    inline void
+    SetMajor(const int16_t& val){
+      memcpy(&data_[kMajorPosition], &val, kBytesForMajor);
+    }
 
-    class MagicField : public BitField<RawVersion, uint16_t, kMagicPosition, kBitsForMagic>{};
-    class MajorField : public BitField<RawVersion, uint16_t, kMajorPosition, kBitsForMajor>{};
-    class MinorField : public BitField<RawVersion, uint16_t, kMinorPosition, kBitsForMinor>{};
-    class RevisionField : public BitField<RawVersion, uint16_t, kRevisionPosition, kBitsForRevision>{};
+    inline void
+    SetMinor(const int16_t& val){
+      memcpy(&data_[kMinorPosition], &val, kBytesForMinor);
+    }
+
+    inline void
+    SetRevision(const int16_t& val){
+      memcpy(&data_[kRevisionPosition], &val, kBytesForRevision);
+    }
    public:
-    explicit Version(const RawVersion& raw):
-      raw_(raw){}
-    Version(const uint16_t major, const uint16_t minor, const uint16_t revision):
-      raw_(MagicField::Encode(TOKEN_MAGIC)
-          |MajorField::Encode(major)
-          |MinorField::Encode(minor)
-          |RevisionField::Encode(revision)){}
+    Version() = default;
+    Version(const int16_t& major, const int16_t& minor, const int16_t& revision):
+      BinaryType<kVersionSize>(){
+      SetMajor(major);
+      SetMinor(minor);
+      SetRevision(revision);
+    }
+    Version(const uint8_t* data, const int64_t& size):
+      BinaryType<kVersionSize>(data, size){}
     Version(const Version& version) = default;
-    ~Version() = default;
+    ~Version() override = default;
 
-    RawVersion raw() const{
-      return raw_;
+    int16_t major() const{
+      return *((int16_t*)&data_[kMajorPosition]);
     }
 
-    uint16_t GetMagic() const{
-      return MagicField::Decode(raw_);
+    int16_t minor() const{
+      return *((int16_t*)&data_[kMinorPosition]);
     }
 
-    uint16_t GetMajor() const{
-      return MajorField::Decode(raw_);
+    int16_t revision() const{
+      return *((int16_t*)&data_[kRevisionPosition]);
     }
 
-    uint16_t GetMinor() const{
-      return MinorField::Decode(raw_);
-    }
-
-    uint16_t GetRevision() const{
-      return RevisionField::Decode(raw_);
-    }
-
-    bool IsValid() const{
-      return GetMagic() == TOKEN_MAGIC;
-    }
-
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream ss;
-      ss << GetMajor() << '.' << GetMinor() << '.' << GetRevision();
+      ss << major() << "." << minor() << "." << revision();
       return ss.str();
     }
 
-    Version& operator=(const Version& rhs){
-      if(&rhs != this)
-        raw_ = rhs.raw_;
-      return (*this);
-    }
+    Version& operator=(const Version& other) = default;
 
     friend bool operator==(const Version& a, const Version& b){
       return Compare(a, b) == 0;
@@ -113,8 +101,16 @@ namespace token{
       return Compare(a, b) != 0;
     }
 
+    friend bool operator<=(const Version& a, const Version& b){
+      return Compare(a, b) <= 0;
+    }
+
     friend bool operator<(const Version& a, const Version& b){
       return Compare(a, b) < 0;
+    }
+
+    friend bool operator>=(const Version& a, const Version& b){
+      return Compare(a, b) >= 0;
     }
 
     friend bool operator>(const Version& a, const Version& b){
@@ -127,7 +123,12 @@ namespace token{
 
     static inline Version
     CurrentVersion(){
-      return Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
+      return Version(TOKEN_VERSION_MAJOR, TOKEN_VERSION_MINOR, TOKEN_VERSION_REVISION);
+    }
+
+    static inline int64_t
+    GetSize(){
+      return kVersionSize;
     }
   };
 }

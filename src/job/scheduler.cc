@@ -2,6 +2,7 @@
 #include <vector>
 #include <glog/logging.h>
 
+#include "flags.h"
 #include "job/job.h"
 #include "job/scheduler.h"
 #include "job/worker.h"

@@ -1,5 +1,5 @@
-#include "common.h"
-#include "command.h"
+#include "core/include/common.h"
+#include "core/include/command.h"
 #include "snapshot/snapshot_inspector.h"
 
 static inline void

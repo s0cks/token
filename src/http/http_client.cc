@@ -85,7 +85,7 @@ namespace token{
       int err;
 
       struct sockaddr_in address;
-      if((err = uv_ip4_addr(address_.GetAddress().c_str(), address_.GetPort(), &address)) != 0){
+      if((err = uv_ip4_addr(address_.GetAddress().c_str(), address_.port(), &address)) != 0){
         LOG(ERROR) << "uv_ip4_addr failure: " << uv_strerror(err);
         return false;
       }

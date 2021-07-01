@@ -21,15 +21,14 @@ namespace token{
     V(Connected)                  \
     V(Disconnected)
 
-  class SessionBase : public std::enable_shared_from_this<SessionBase>{
-    friend class ServerBase;
+  class SessionBase{
    protected:
     struct SessionWriteData{
       uv_write_t request;
-      std::shared_ptr<SessionBase> session;
+      SessionBase* session;
       BufferPtr buffer;
 
-      SessionWriteData(const std::shared_ptr<SessionBase>& s, int64_t size):
+      SessionWriteData(SessionBase* s, int64_t size):
         request(),
         session(s),
         buffer(Buffer::NewInstance(size)){
@@ -68,8 +67,6 @@ namespace token{
       uuid_ = uuid;
     }
 
-    virtual void OnMessageRead(const BufferPtr& buff) = 0;
-
     static void OnClose(uv_handle_t* handle){
       DLOG(INFO) << "on-close.";
     }
@@ -79,6 +76,7 @@ namespace token{
     }
 
     void CloseConnection(){
+      DLOG(INFO) << "closing session.";
       uv_walk(loop_, &OnWalk, nullptr);
     }
 
@@ -144,7 +142,7 @@ namespace token{
       });
 
       DLOG_SESSION(INFO, this) << "sending " << total_messages << " messages....";
-      auto data = new SessionWriteData(this->shared_from_this(), total_size);
+      auto data = new SessionWriteData(this, total_size);
       uv_buf_t buffers[total_messages];
 
       int64_t offset = 0;

@@ -17,7 +17,10 @@ namespace token{
       ChainControllerPtr chain_;
       WalletControllerPtr wallets_;
      public:
-      explicit RestService(uv_loop_t* loop=uv_loop_new());
+      RestService(uv_loop_t* loop,
+                  const ObjectPoolPtr& pool,
+                  const BlockChainPtr& chain,
+                  const WalletManagerPtr& wallets);
       ~RestService() override = default;
 
       PoolControllerPtr GetPoolController() const{
@@ -47,9 +50,12 @@ namespace token{
         return "http/rest";
       }
 
+      static RestServicePtr NewInstance();
+      static RestServicePtr NewInstance(uv_loop_t* loop, const ObjectPoolPtr& pool, const BlockChainPtr& chain, const WalletManagerPtr& wallets);
+
       static inline RestServicePtr
-      NewInstance(){
-        return std::make_shared<RestService>();
+      NewInstance(const BlockChainPtr& chain, const ObjectPoolPtr& pool, const WalletManagerPtr& wallets){
+        return NewInstance(uv_loop_new(), pool, chain, wallets);
       }
     };
 

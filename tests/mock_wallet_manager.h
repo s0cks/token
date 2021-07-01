@@ -2,7 +2,7 @@
 #define TOKEN_MOCK_WALLET_H
 
 #include <gmock/gmock.h>
-#include "wallet.h"
+#include "wallet_manager.h"
 
 namespace token{
   class MockWalletManager : public WalletManager{
@@ -12,7 +12,6 @@ namespace token{
     MOCK_METHOD(bool, PutWallet, (const User&, const Wallet&), (const));
     MOCK_METHOD(Wallet, GetUserWallet, (const User&), (const));
     MOCK_METHOD(bool, GetWallet, (const User&, const Wallet&), (const));
-    MOCK_METHOD(bool, GetWallet, (const User&, const Json::Writer&), (const));
     MOCK_METHOD(int64_t, GetNumberOfWallets, (), (const));
   };
 

@@ -4,10 +4,8 @@
 
 # Except These
 !/cmake/
-!/include/
 !/manifests/
 !/scripts/
-!/src/
 !/tests/
 !/.gitignore
 !/CMakeLists.txt
@@ -17,3 +15,5 @@
 !/*.sh
 !/swagger.json
 !/.github/
+!/include/
+!/src/

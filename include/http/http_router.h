@@ -10,7 +10,7 @@ namespace token{
   namespace http{
     typedef std::unordered_map<std::string, std::string> ParameterMap;
 
-    typedef void (*RouteHandlerFunction)(const ControllerPtr&, const SessionPtr&, const RequestPtr&);
+    typedef void (*RouteHandlerFunction)(const ControllerPtr&, http::Session*, const RequestPtr&);
 
     class Route{
       friend class Router;

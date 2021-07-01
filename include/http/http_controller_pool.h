@@ -45,12 +45,12 @@ namespace token{
 #undef REGISTER_ENDPOINT
         return true;
       }
-    };
 
-    static inline PoolControllerPtr
-    NewInstance(const ObjectPoolPtr& pool=ObjectPool::GetInstance()){
-      return std::make_shared<PoolController>(pool);
-    }
+      static inline PoolControllerPtr
+      NewInstance(const ObjectPoolPtr& pool){
+        return std::make_shared<PoolController>(pool);
+      }
+    };
   }
 }
 

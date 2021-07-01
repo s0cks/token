@@ -4,8 +4,9 @@
 #include <memory>
 #include <utility>
 
-#include "block.h"
 #include "job/job.h"
+#include "timestamp.h"
+#include "block_header.h"
 #include "configuration.h"
 #include "atomic/relaxed_atomic.h"
 
@@ -15,76 +16,64 @@ namespace token{
 
   typedef RelaxedAtomic<int16_t> ProposalCounter;
 
-  class RawProposal : public SerializableObject{
+  class RawProposal : public Object{
    private:
     Timestamp timestamp_;
     UUID id_;
     UUID proposer_;
-    BlockHeader value_;
+    BlockHeader value_;//TODO: serialize
    public:
+    RawProposal():
+      Object(),
+      timestamp_(Clock::now()),
+      id_(),
+      proposer_(),
+      value_(){}
     RawProposal(const Timestamp& timestamp,
                 const UUID& id,
                 const UUID& proposer,
                 const BlockHeader& value):
-       SerializableObject(),
+       Object(),
        timestamp_(timestamp),
        id_(id),
        proposer_(proposer),
        value_(value){}
-    explicit RawProposal(const BufferPtr& buff):
-      SerializableObject(),
-      timestamp_(buff->GetTimestamp()),
-      id_(buff->GetUUID()),
-      proposer_(buff->GetUUID()),
-      value_(buff){}
     ~RawProposal() override = default;
 
-    Type GetType() const override{
+    Type type() const override{
       return Type::kProposal;
     }
 
-    Timestamp& GetTimestamp(){
+    Timestamp& timestamp(){
       return timestamp_;
     }
 
-    Timestamp GetTimestamp() const{
+    Timestamp timestamp() const{
       return timestamp_;
     }
 
-    UUID& GetID(){
+    UUID& proposal_id(){
       return id_;
     }
 
-    UUID GetID() const{
+    UUID proposal_id() const{
       return id_;
     }
 
-    UUID& GetProposer(){
+    UUID& proposer_id(){
       return proposer_;
     }
 
-    UUID GetProposer() const{
+    UUID proposer_id() const{
       return proposer_;
     }
 
-    BlockHeader& GetValue(){
+    BlockHeader& value(){
       return value_;
     }
 
-    BlockHeader GetValue() const{
+    BlockHeader value() const{
       return value_;
-    }
-
-    bool Write(const BufferPtr& buff) const override{
-      SERIALIZE_BASIC_FIELD(timestamp_, Timestamp);
-      SERIALIZE_BASIC_FIELD(id_, UUID);
-      SERIALIZE_BASIC_FIELD(proposer_, UUID);
-      SERIALIZE_FIELD(value, BlockHeader, value_);
-      return true;
-    }
-
-    int64_t GetBufferSize() const override{
-      return GetSize();
     }
 
     std::string ToString() const override{
@@ -93,7 +82,6 @@ namespace token{
       ss << "timestamp=" << ToUnixTimestamp(timestamp_) << ", ";
       ss << "id=" << id_  << ", ";
       ss << "proposer=" << proposer_ << ", ";
-      ss << "value=" << value_;
       ss << ")";
       return ss.str();
     }
@@ -103,8 +91,7 @@ namespace token{
     friend bool operator==(const RawProposal& a, const RawProposal& b){
       return ToUnixTimestamp(a.timestamp_) == ToUnixTimestamp(b.timestamp_)
           && a.id_ == b.id_
-          && a.proposer_ == b.proposer_
-          && a.value_ == b.value_;
+          && a.proposer_ == b.proposer_;
     }
 
     friend bool operator!=(const RawProposal& a, const RawProposal& b){
@@ -129,7 +116,6 @@ namespace token{
       size += sizeof(RawTimestamp);
       size += UUID::GetSize();
       size += UUID::GetSize();
-      size += BlockHeader::GetSize();
       return size;
     }
   };
@@ -289,19 +275,19 @@ namespace token{
     }
 
     Timestamp& GetTimestamp() const{
-      return raw().GetTimestamp();
+      return raw().timestamp();
     }
 
     UUID& GetID() const{
-      return raw().GetID();
+      return raw().proposal_id();
     }
 
     UUID& GetProposer() const{
-      return raw().GetProposer();
+      return raw().proposer_id();
     }
 
     BlockHeader& GetValue() const{
-      return raw().GetValue();
+      return raw().value();
     }
 
     bool IsProposedBy(const UUID& id) const{
@@ -321,7 +307,7 @@ namespace token{
       promises_ += 1;
     }
 
-    void CastVote(const UUID& id, const rpc::AcceptsMessagePtr& msg){
+    void CastVote(const UUID& id, const rpc::AcceptedMessagePtr& msg){
       DLOG(INFO) << id << " accepted proposal";
       total_votes_ += 1;
       total_accepted_ += 1;
@@ -329,7 +315,7 @@ namespace token{
       accepts_ += 1;
     }
 
-    void CastVote(const UUID& id, const rpc::RejectsMessagePtr& msg){
+    void CastVote(const UUID& id, const rpc::RejectedMessagePtr& msg){
       DLOG(INFO) << id << " rejected proposal";
       total_votes_ += 1;
       total_rejected_ += 1;
@@ -345,14 +331,6 @@ namespace token{
     static inline ProposalPtr
     NewInstance(uv_loop_t* loop, const Timestamp& timestamp, const UUID& id, const UUID& proposer, const BlockHeader& value){
       return NewInstance(loop, RawProposal(timestamp, id, proposer, value));
-    }
-
-    static inline ProposalPtr
-    NewInstance(uv_loop_t* loop, const BlockPtr& value){
-      Timestamp timestamp = Clock::now();
-      UUID id = UUID();
-      UUID proposer = ConfigurationManager::GetNodeID();
-      return NewInstance(loop, timestamp, id, proposer, value->GetHeader());
     }
   };
 

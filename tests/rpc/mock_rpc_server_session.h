@@ -3,7 +3,7 @@
 
 #include <gmock/gmock.h>
 
-#include "rpc/rpc_server.h"
+#include "network/rpc_server_session.h"
 #include "mock_blockchain.h"
 #include "mock_object_pool.h"
 

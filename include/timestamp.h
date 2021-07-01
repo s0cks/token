@@ -2,6 +2,8 @@
 #define TOKEN_TIMESTAMP_H
 
 #include <chrono>
+#include <sstream>
+#include <iomanip>
 
 namespace token{
   typedef uint64_t RawTimestamp;

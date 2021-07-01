@@ -1,6 +1,8 @@
 #ifndef TOKEN_WORK_STEALING_QUEUE_H
 #define TOKEN_WORK_STEALING_QUEUE_H
 
+#include <atomic>
+
 namespace token{
   template<typename T>
   class WorkStealingQueue{

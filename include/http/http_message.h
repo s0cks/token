@@ -95,7 +95,7 @@ namespace token{
 
 #define DEFINE_HTTP_MESSAGE(Name) \
   const char* GetName() const override{ return #Name; } \
-  Type GetType() const override{ return Type::kHttp##Name; }
+  Type type() const override{ return Type::kHttp##Name; }
 }
 
 #endif//TOKEN_HTTP_MESSAGE_H

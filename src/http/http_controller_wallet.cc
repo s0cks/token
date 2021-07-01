@@ -99,25 +99,11 @@ namespace token{
       }
 
       Wallet wallet = GetWalletManager()->GetUserWallet(user);
-
-      Json::String body;
-      Json::Writer writer(body);
-      writer.StartObject();
-      {
-        writer.Key("data");
-        writer.StartObject();
-        {
-          json::SetField(writer, "user", user);
-          json::SetField(writer, "wallet", wallet);
-        }
-        writer.EndObject();
-      }
-      writer.EndObject();
-      return session->Send(NewOkResponse(body));
+      return session->Send(NewOkResponse(user, wallet));
     }
 
     static inline bool
-    ParseInputList(const SessionPtr& session, Json::Document& doc, InputList& inputs, const char* name="inputs"){
+    ParseInputList(http::Session* session, Json::Document& doc, InputList& inputs, const char* name="inputs"){
       if(!doc.HasMember(name)){
         std::stringstream ss;
         ss << "request is missing the '" << name << "' field.";
@@ -165,7 +151,7 @@ namespace token{
   CHECK_TYPE((Object)[(Name)], Name, Type)
 
     static inline bool
-    ParseOutputList(const SessionPtr& session, const Json::Document& doc, OutputList& outputs, const char* name="outputs"){
+    ParseOutputList(http::Session* session, const Json::Document& doc, OutputList& outputs, const char* name="outputs"){
       HAS_FIELD(doc, name, Array);
 
       for(auto& it : doc[name].GetArray()){
@@ -204,7 +190,7 @@ namespace token{
 
       LOG(INFO) << "generating new transaction....";
       TransactionPtr tx = Transaction::NewInstance(inputs, outputs);
-      Hash hash = tx->GetHash();
+      Hash hash = tx->hash();
       if(!pool->PutTransaction(hash, tx)){
         std::stringstream ss;
         ss << "Cannot insert newly created transaction into object pool: " << hash;

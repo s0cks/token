@@ -78,17 +78,13 @@ namespace token{
     address_(GetAddressFromHandle(handle)),
     port_(GetPortFromHandle(handle)){}
 
-  NodeAddress::NodeAddress(const NodeAddress& other):
-    address_(other.address_),
-    port_(other.port_){}
-
   std::string NodeAddress::GetAddress() const{
     return GetAddressAsString(address_);
   }
 
   std::string NodeAddress::ToString() const{
     std::stringstream ss;
-    ss << GetAddress() << ":" << GetPort();
+    ss << GetAddress() << ":" << port();
     return ss.str();
   }
 

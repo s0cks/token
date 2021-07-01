@@ -4,7 +4,7 @@
 #include "pool.h"
 #include "job/job.h"
 #include "blockchain.h"
-#include "rpc/rpc_session.h"
+#include "network/rpc_session.h"
 #include "job/processor.h"
 
 namespace token{
@@ -21,7 +21,7 @@ namespace token{
 
     bool ProcessBlock(const BlockPtr& blk){
       JobQueue* queue = JobScheduler::GetThreadQueue();
-      Hash hash = blk->GetHash();
+      Hash hash = blk->hash();
 
       ProcessBlockJob* job = new ProcessBlockJob(blk);
       queue->Push(job);
@@ -35,7 +35,7 @@ namespace token{
    protected:
     JobResult DoWork(){
       std::deque<Hash> work; // we are queuing the blocks just in-case there is an unresolved previous Hash
-      work.push_back(head_.GetHash());
+      work.push_back(head_.hash());
       do{
         Hash hash = work.front();
         work.pop_front();

@@ -1,6 +1,7 @@
 #include <glog/logging.h>
 
 #include "pool.h"
+#include "buffer.h"
 #include "configuration.h"
 #include "atomic/relaxed_atomic.h"
 
@@ -42,9 +43,8 @@ namespace token{
 
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      PoolKey key(it->key());
-      if(key.tag().IsValid())
-        count++;
+      ObjectKey key(it->key());
+      count++;
     }
 
     delete it;
@@ -54,13 +54,12 @@ namespace token{
   UnclaimedTransactionPtr ObjectPool::FindUnclaimedTransaction(const Input& input) const{
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
-      PoolKey key(it->key());
-      ObjectTag tag = key.tag();
-      if(!tag.IsValid() || !tag.IsUnclaimedTransactionType())
+      ObjectKey key(it->key());
+      if(key.type() != Type::kUnclaimedTransaction)
         continue;
 
       BufferPtr val = Buffer::From(it->value());
-      UnclaimedTransactionPtr value = UnclaimedTransaction::FromBytes(val);
+      UnclaimedTransactionPtr value = UnclaimedTransaction::DecodeNew(val);
 
       TransactionReference& r1 = value->GetReference();
       const TransactionReference& r2 = input.GetReference();
@@ -75,12 +74,12 @@ namespace token{
   bool ObjectPool::Print##Name##s(const google::LogSeverity& severity) const{ \
     LOG_AT_LEVEL(severity) << "object pool " << #Name << "s:";         \
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions()); \
-    for(it->SeekToFirst(); it->Valid(); it->Next()){                   \
-      PoolKey key(it->key());   \
-      ObjectTag tag = key.tag();\
-      if(!tag.IsValid() || !tag.Is##Name##Type())                      \
+    for(it->SeekToFirst(); it->Valid(); it->Next()){                          \
+      ObjectKey key(it->key()); \
+      if(key.type() != Type::k##Name)                                      \
         continue;               \
-      Name##Ptr value = Name::FromBytes(Buffer::From(it->value()));    \
+      BufferPtr val = Buffer::From(it->value()); \
+      Name##Ptr value = Name::DecodeNew(val);                                 \
       LOG_AT_LEVEL(severity) << " - " << value->ToString();            \
     }                           \
     delete it;                  \
@@ -97,10 +96,10 @@ namespace token{
     }                         \
     leveldb::WriteOptions options;                                          \
     options.sync = true;      \
-    PoolKey key(val->GetType(), val->GetBufferSize(), hash);          \
-    BufferPtr buffer = val->ToBuffer();                               \
+    ObjectKey key(val->type(), hash);                                       \
+    BufferPtr buffer = val->ToBuffer();                                     \
     leveldb::Status status;   \
-    if(!(status = GetIndex()->Put(options, KEY(key), buffer->operator leveldb::Slice())).ok()){ \
+    if(!(status = GetIndex()->Put(options, (const leveldb::Slice&)key, buffer->operator leveldb::Slice())).ok()){ \
       LOG_POOL(ERROR) << "cannot index " << hash << ": " << status.ToString();          \
       return false;           \
     }                         \
@@ -112,24 +111,24 @@ namespace token{
 
 #define DEFINE_GET_TYPE(Name) \
   Name##Ptr ObjectPool::Get##Name(const Hash& hash) const{ \
-    PoolKey key(Type::k##Name, 0, hash);             \
+    ObjectKey key(Type::k##Name, hash); \
     std::string data;         \
     leveldb::Status status;   \
-    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), KEY(key), &data)).ok()){ \
+    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &data)).ok()){ \
       LOG(WARNING) << "cannot get " << hash << ": " << status.ToString(); \
-      return Name##Ptr(nullptr);                     \
+      return Name##Ptr(nullptr);                           \
     }                         \
-    BufferPtr buff = Buffer::From(data);             \
-    return Name::FromBytes(buff);                    \
+    BufferPtr buff = Buffer::From(data);                   \
+    return Name::DecodeNew(buff);                          \
   }
   FOR_EACH_POOL_TYPE(DEFINE_GET_TYPE)
 #undef DEFINE_GET_TYPE
 
 #define DEFINE_HAS_TYPE(Name) \
   bool ObjectPool::Has##Name(const Hash& hash) const{ \
-    std::string data;                          \
-    PoolKey key(Type::k##Name, 0, hash);        \
-    return GetIndex()->Get(leveldb::ReadOptions(), KEY(key), &data).ok(); \
+    std::string data;         \
+    ObjectKey key(Type::k##Name, hash);                \
+    return GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &data).ok(); \
   }
   FOR_EACH_POOL_TYPE(DEFINE_HAS_TYPE);
 #undef DEFINE_HAS_TYPE
@@ -139,10 +138,10 @@ namespace token{
     int64_t count = 0;              \
     leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
     for(iter->SeekToFirst(); iter->Valid(); iter->Next()){                     \
-      PoolKey key(iter->key());     \
-      ObjectTag tag = key.tag();    \
-      if(tag.IsValid() && tag.Is##Name##Type())            \
-        count++;                    \
+      ObjectKey key(iter->key()); \
+      if(key.type() != Type::k##Name)               \
+        continue;                   \
+      count++;                      \
     }                               \
     delete iter;                    \
     return count;                   \
@@ -152,7 +151,7 @@ namespace token{
 
 #define DEFINE_REMOVE_TYPE(Name) \
   bool ObjectPool::Remove##Name(const Hash& hash) const{ \
-    PoolKey key(Type::k##Name, 0, hash); \
+    ObjectKey key(Type::k##Name, hash);                  \
     leveldb::WriteOptions options;                 \
     options.sync = true;         \
     leveldb::Status status;      \
@@ -169,12 +168,9 @@ namespace token{
   bool ObjectPool::Visit##Name##s(ObjectPool##Name##Visitor* vis) const{ \
     leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
     for(iter->SeekToFirst(); iter->Valid(); iter->Next()){         \
-      PoolKey key(iter->key()); \
-      ObjectTag tag = key.tag();\
-      if(!tag.IsValid() || !tag.Is##Name##Type())       \
-        continue;               \
+      ObjectKey key(iter->key()); \
       BufferPtr buffer = Buffer::From(iter->value());              \
-      Name##Ptr val = Name::FromBytes(buffer);                     \
+      Name##Ptr val = Name::DecodeNew(buffer); \
       if(!vis->Visit(val))     \
         return false;           \
     }                           \
@@ -189,10 +185,9 @@ namespace token{
     leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
     writer.StartArray();             \
     for(iter->SeekToFirst(); iter->Valid(); iter->Next()){                     \
-      PoolKey key(iter->key());    \
-      ObjectTag tag = key.tag();     \
-      if(tag.IsValid() && tag.Is##Name##Type()){            \
-        Hash hash = key.GetHash();   \
+      ObjectKey key(iter->key());    \
+      if(key.type() == Type::k##Name){\
+        Hash hash = key.hash();   \
         std::string hex = hash.HexString();          \
         writer.String(hex.data(), 64);               \
       }                              \
@@ -208,11 +203,9 @@ namespace token{
   bool ObjectPool::Get##Name##s(HashList& hashes) const{ \
     leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
     for(iter->SeekToFirst(); iter->Valid(); iter->Next()){                     \
-      PoolKey key(iter->key());      \
-      ObjectTag tag = key.tag();     \
-      if(tag.IsValid() && tag.Is##Name##Type()){   \
-        hashes.push_back(key.GetHash());           \
-      }                              \
+      ObjectKey key(iter->key());    \
+      if(key.type() == Type::k##Name)\
+        hashes.push_back(key.hash());                 \
     }                                \
     delete iter;                     \
     return true;                     \
@@ -224,9 +217,8 @@ namespace token{
   bool ObjectPool::Has##Name##s() const{ \
     leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
     for(iter->SeekToFirst(); iter->Valid(); iter->Next()){                     \
-      PoolKey key(iter->key());    \
-      ObjectTag tag = key.tag();   \
-      if(tag.IsValid() && tag.Is##Name##Type()){                               \
+      ObjectKey key(iter->key());        \
+      if(key.type() == Type::k##Name) {  \
         delete iter;          \
         return true;          \
       }                       \

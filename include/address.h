@@ -4,7 +4,7 @@
 #include <set>
 
 #include "flags.h"
-#include "buffer.h"
+#include "common.h"
 
 namespace token{
   class NodeAddress{
@@ -103,31 +103,37 @@ namespace token{
     uint32_t address_;
     uint32_t port_;
    public:
-    explicit NodeAddress(const std::string& address);
-    NodeAddress(const std::string& address, uint32_t port);
-    explicit NodeAddress(const uv_tcp_t* stream);
-    NodeAddress(const NodeAddress& other);
-    explicit NodeAddress(const BufferPtr& buff):
-      address_(buff->GetUnsignedInt()),
-      port_(buff->GetUnsignedInt()){}
     NodeAddress():
       address_(0),
       port_(0){}
+    NodeAddress(const uint32_t& addr, const uint32_t& port):
+      address_(addr),
+      port_(port){}
+    explicit NodeAddress(const std::string& address);
+    NodeAddress(const std::string& address, uint32_t port);
+    explicit NodeAddress(const uv_tcp_t* stream);
+    NodeAddress(const NodeAddress& other) = default;
     ~NodeAddress() = default;
 
-    uint32_t GetPort() const{
+    uint32_t& port(){
       return port_;
+    }
+
+    uint32_t port() const{
+      return port_;
+    }
+
+    uint32_t& address(){
+      return address_;
+    }
+
+    uint32_t address() const{
+      return address_;
     }
 
     std::string GetAddress() const;
     std::string ToString() const;
     bool Get(struct sockaddr_in* addr) const;
-
-    bool Write(const BufferPtr& buff) const{
-      buff->PutUnsignedInt(address_);
-      buff->PutUnsignedInt(port_);
-      return true;
-    }
 
     NodeAddress& operator=(const NodeAddress& other) = default;
 

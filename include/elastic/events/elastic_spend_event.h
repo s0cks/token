@@ -40,19 +40,55 @@ namespace token{
         return token_;
       }
 
-      std::string ToString() const{
-        json::String doc;
-        json::Writer writer(doc);
-        if(!json::ToJson(doc, (*this)))
-          return "{}";
-        return std::string(doc.GetString(), doc.GetSize());
-      }
-
       SpendEvent& operator=(const SpendEvent& other) = default;
 
       friend std::ostream&
       operator<<(std::ostream& stream, const SpendEvent& event){
-        return stream << event.ToString();
+        stream << "SpendEvent(";
+        stream << "event=" << event.event_class() << ", ";
+        stream << "timestamp=" << ToUnixTimestamp(event.timestamp()) << ", ";
+        stream << "owner=" << event.owner() << ", ";
+        stream << "recipient=" << event.recipient() << ", ";
+        stream << "token=" << event.token()->hash();//TODO: refactor?
+        stream << ")";
+        return stream;
+      }
+
+      friend json::Writer&
+      operator<<(json::Writer& writer, const SpendEvent& val){
+        if(!writer.StartObject()){
+          DLOG(ERROR) << "cannot start SpendEvent json object.";
+          return writer;
+        }
+
+        if(!writer.Key("event")){
+          DLOG(ERROR) << "cannot set SpendEvent event json object field.";
+          return writer;
+        }
+        writer << val.event_class();
+
+        if(!json::SetField(writer, "timestamp", val.timestamp())){
+          DLOG(ERROR) << "cannot set SpendEvent timestamp json object field.";
+          return writer;
+        }
+
+        if(!json::SetField(writer, "owner", val.owner())){
+          DLOG(ERROR) << "cannot set SpendEvent owner json object field.";
+          return writer;
+        }
+
+        if(!json::SetField(writer, "recipient", val.recipient())){
+          DLOG(ERROR) << "cannot set SpendEvent owner json object field.";
+          return writer;
+        }
+
+        if(!json::SetField(writer, "token", val.token())){
+          DLOG(ERROR) << "cannot set SpendEvent token json object field.";
+          return writer;
+        }
+
+        DLOG_IF(ERROR, !writer.EndObject()) << "cannot end SpendEvent json object.";
+        return writer;
       }
     };
   }
