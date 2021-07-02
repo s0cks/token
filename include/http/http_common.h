@@ -12,6 +12,8 @@
 
 namespace token{
   namespace http{
+#define TOKEN_HTTP_VERSION "1.1"
+
 #define FOR_EACH_HTTP_TYPE(V) \
     V(Session)                \
     V(Message)                \
@@ -75,29 +77,18 @@ namespace token{
       }
     }
 
-    class ErrorMessage{ //TODO: refactor
-     private:
-      int64_t code_;
-      std::string message_;
-     public:
-      ErrorMessage(const int64_t& code, const std::string& message):
-        code_(code),
-        message_(message){}
-      ErrorMessage(const ErrorMessage& other) = default;
-      virtual ~ErrorMessage() = default;
+    static inline std::string
+    GetStatusCodeReason(const StatusCode& status){
+      switch(status){
+#define DEFINE_TOSTRING(Name, Code) \
+        case StatusCode::k##Name: return #Name;
 
-      int64_t GetCode() const{
-        return code_;
+        FOR_EACH_HTTP_STATUS_CODE(DEFINE_TOSTRING)
+#undef DEFINE_TOSTRING
+        default:
+          return "Unknown";
       }
-
-      std::string GetMessage() const{
-        return message_;
-      }
-
-      bool ToJson(Json::Writer& writer) const;
-
-      ErrorMessage& operator=(const ErrorMessage& other) = default;
-    };
+    }
 
     typedef std::unordered_map<std::string, std::string> ParameterMap;
 
@@ -174,6 +165,42 @@ namespace token{
       SetHttpHeader(headers, HTTP_HEADER_SERVER, GetServerHeaderValue());
       SetHttpHeader(headers, HTTP_HEADER_X_NODE_ID, GetXNodeIDHeaderValue());
       SetHttpHeader(headers, HTTP_HEADER_X_NODE_VERSION, GetXNodeVersionHeaderValue());
+    }
+
+    struct Error{
+      int64_t code;
+      std::string message;
+    };
+  }
+
+  namespace json{
+    static inline bool
+    SetField(Writer& writer, const char* name, const http::Error& error){
+      if(!writer.Key(name)){
+        DLOG(ERROR) << "cannot set key '" << name << "' for http::Error type.";
+        return false;
+      }
+
+      if(!writer.StartObject()){
+        DLOG(ERROR) << "cannot start json object for http::Error type.";
+        return false;
+      }
+
+      if(!json::SetField(writer, "code", error.code)){
+        DLOG(ERROR) << "cannot set code field for http::Error type.";
+        return false;
+      }
+
+      if(!json::SetField(writer, "message", error.message)){
+        DLOG(ERROR) << "cannot set message field for http::Error type.";
+        return false;
+      }
+
+      if(!writer.EndObject()){
+        DLOG(ERROR) << "cannot end json object for http::Error type.";
+        return false;
+      }
+      return true;
     }
   }
 }

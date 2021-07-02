@@ -18,7 +18,8 @@ namespace token{
       static inline std::string
       GetHttpStatusLine(const StatusCode& status_code){
         std::stringstream ss;
-        ss << "HTTP/1.1 " << status_code << " OK\r\n";
+        ss << "HTTP/" << TOKEN_HTTP_VERSION << " ";
+        ss << static_cast<int64_t>(status_code) << " " << GetStatusCodeReason(status_code) << "\r\n";
         return ss.str();
       }
 
@@ -81,6 +82,12 @@ namespace token{
         return size;
       }
 
+      BufferPtr ToBuffer() const{
+        BufferPtr buffer = Buffer::NewInstance(GetBufferSize());
+        LOG_IF(ERROR, !Write(buffer)) << "couldn't write response to buffer.";
+        return buffer;
+      }
+
       BufferPtr GetBody() const{
         return body_;
       }
@@ -95,13 +102,16 @@ namespace token{
       }
 
       std::string ToString() const override{
-        std::stringstream ss;
-        ss << "HttpResponse(";
-        ss << "status_code=" << GetStatusCode() << ", ";
-        ss << "headers=[], ";
-        ss << "body=" << GetBodyAsString();
-        ss << ")";
-        return ss.str();
+//        std::stringstream ss;
+//        ss << "HttpResponse(";
+//        ss << "status_code=" << GetStatusCode() << ", ";
+//        ss << "headers=[], ";
+//        ss << "body=" << GetBodyAsString();
+//        ss << ")";
+//        return ss.str();
+        BufferPtr body = Buffer::NewInstance(GetBufferSize());
+        Write(body);
+        return std::string(body->data(), body->GetWrittenBytes());
       }
 
       static inline ResponsePtr
@@ -254,7 +264,7 @@ namespace token{
       Json::Writer writer(body);
 
       LOG_IF(WARNING, !writer.StartObject()) << "cannot start json object.";
-      //TODO: LOG_IF(WARNING, !json::SetField(writer, "data", ErrorMessage(200, msg)));
+      LOG_IF(WARNING, !json::SetField(writer, "data", http::Error{ 200, msg }));
       LOG_IF(WARNING, !writer.EndObject()) << "cannot end json object.";
 
       DLOG(INFO) << "response body: " << body.GetString();
@@ -309,7 +319,7 @@ namespace token{
       Json::String body;
       Json::Writer writer(body);
       LOG_IF(ERROR, !writer.StartObject()) << "cannot start json object.";
-      //TODO: LOG_IF(ERROR, !json::SetField(writer, "data", ErrorMessage(static_cast<int64_t>(status_code), msg)));
+      LOG_IF(ERROR, !json::SetField(writer, "data", Error{ static_cast<int64_t>(status_code), msg }));
       LOG_IF(ERROR, !writer.EndObject()) << "cannot end json object.";
       return NewErrorResponse(status_code, body);
     }

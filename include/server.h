@@ -54,7 +54,7 @@ namespace token{
     uv_async_t shutdown_;
     RelaxedAtomic<State> state_;
 
-    ServerBase(uv_loop_t* loop):
+    explicit ServerBase(uv_loop_t* loop):
       loop_(loop),
       handle_(),
       shutdown_(),
@@ -70,27 +70,30 @@ namespace token{
 
     static void
     AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf){
-      DLOG(INFO) << "allocating buffer of size: " << suggested_size;
+      auto session = (SessionBase*)handle->data;
+      LOG(INFO) << "allocating buffer of size " << suggested_size << "b for session: " << session->GetUUID();
+
       buf->base = (char*)malloc(suggested_size);
       buf->len = suggested_size;
     }
 
     static void
     OnNewConnection(uv_stream_t* stream, int status){
-      auto server = (ServerBase*)stream->data;
-      DLOG(INFO) << "accepting new connection.";
-      CHECK_UVRESULT(status, LOG_SERVER(ERROR), "connect failure");
+      CHECK_UVRESULT2(ERROR, status, "connect failure");
+      DLOG(INFO) << "(" << status << ") accepting new connection....";
 
+      auto server = (ServerBase*)stream->data;
       auto session = server->CreateSession();
-      DLOG(INFO) << "creating new session (" << session->GetUUID() << ")";
-      CHECK_UVRESULT(Accept(stream, session), LOG_SERVER(ERROR), "accept failure");
-      DLOG(INFO) << "reading from new session (" << session->GetUUID() << ")";
-      CHECK_UVRESULT(uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived), LOG_SERVER(ERROR), "read failure");
+      DLOG(INFO) << "creating new session (" << session->GetUUID() << ")....";
+      CHECK_UVRESULT2(ERROR, Accept(stream, session), "accept failure");
+      DLOG(INFO) << "reading from new session (" << session->GetUUID() << ")....";
+      CHECK_UVRESULT2(ERROR, ReadStart(session, &AllocBuffer, &OnMessageReceived), "read failure");
+      DLOG(INFO) << "closing connection.";
     }
 
     static void
     OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
-      DLOG(INFO) << "received " << nread << " bytes.";
+      LOG(INFO) << "received " << nread << " bytes.";
       auto session = ((SessionType*)stream->data); //TODO: Clean this cast up?
       if(nread == UV_EOF){
         LOG(WARNING) << "client disconnected!";
@@ -107,10 +110,7 @@ namespace token{
       }
 
       BufferPtr buffer = Buffer::From(buff->base, nread);
-      do{
-        session->OnMessageRead(buffer);
-      } while(buffer->GetReadBytes() < buffer->GetBufferSize());
-      free(buff->base);
+      session->OnMessageRead(buffer);
     }
 
     static void OnClose(uv_handle_t* handle){
@@ -138,17 +138,16 @@ namespace token{
     }
 
     static inline int
-    Accept(uv_stream_t* server, const std::shared_ptr<SessionBase>& session){
+    Accept(uv_stream_t* server, SessionBase* session){
       return uv_accept(server, session->GetStream());
     }
 
     static inline int
-    ReadStart(const std::shared_ptr<SessionBase>& session, uv_alloc_cb on_alloc, uv_read_cb on_read){
+    ReadStart(SessionBase* session, uv_alloc_cb on_alloc, uv_read_cb on_read){
       return uv_read_start(session->GetStream(), on_alloc, on_read);
     }
-
    public://??????????
-    virtual std::shared_ptr<SessionType> CreateSession() const = 0;
+    virtual SessionType* CreateSession() const = 0;
    public:
     virtual ~ServerBase<SessionType>() = default;
 

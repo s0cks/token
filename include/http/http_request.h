@@ -266,7 +266,9 @@ namespace token{
 
       inline bool
       Parse(const BufferPtr& buffer){
-        return Parse(buffer->data(), buffer->GetWrittenBytes());
+        LOG_IF(WARNING, !Parse(buffer->data(), buffer->GetWrittenBytes())) << "couldn't parse request of size: " << buffer->GetWrittenBytes();
+        buffer->SetReadPosition(buffer->GetReadBytes() + buffer->GetWrittenBytes());
+        return true;
       }
 
       static inline RequestPtr

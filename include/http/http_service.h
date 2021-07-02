@@ -12,12 +12,12 @@ namespace token{
      protected:
       RouterPtr router_;
 
-      ServiceBase(uv_loop_t* loop):
+      explicit ServiceBase(uv_loop_t* loop):
         ServerBase(loop),
         router_(Router::NewInstance()){}
 
-      std::shared_ptr<http::Session> CreateSession() const override{
-        return std::make_shared<Session>(GetLoop(), GetRouter());
+      http::Session* CreateSession() const override{
+        return new Session(GetLoop(), GetRouter());
       }
      public:
       ~ServiceBase() override = default;

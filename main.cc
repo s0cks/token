@@ -193,6 +193,51 @@ static token::rpc::LedgerServerThread server_thread;
 static token::http::HealthServiceThread health_service_thread;
 static token::http::RestServiceThread rest_service_thread;
 
+static void
+AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf){
+  LOG(INFO) << "allocating buffer of size " << suggested_size << "b for session";
+  buf->base = (char*)malloc(suggested_size);
+  buf->len = suggested_size;
+}
+
+static void
+OnMessageSent(uv_write_t* req, int status){
+  LOG(INFO) << "status: " << status;
+}
+
+static void
+OnClose(uv_handle_t* handle){
+  LOG(INFO) << "session closed.";
+}
+
+static void
+OnRead(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
+  token::http::ResponsePtr response = token::http::NewOkResponse("Hello World");
+  token::BufferPtr buffer = response->ToBuffer();
+
+  LOG(INFO) << "response: " << std::string(buffer->data(), buffer->GetWrittenBytes());
+
+  uv_buf_t buffers[1];
+  buffers[0].base = buffer->data();
+  buffers[0].len = buffer->GetWrittenBytes();
+
+  uv_write_t* request = new uv_write_t();
+  uv_write(request, stream, buffers, 1, &OnMessageSent);
+
+  uv_read_stop(stream);
+  uv_close((uv_handle_t*)stream, &OnClose);
+}
+
+static void
+OnNewConnection(uv_stream_t* stream, int status){
+  assert(status == 0);
+
+  uv_tcp_t* session = new uv_tcp_t();
+  uv_tcp_init(stream->loop, session);
+  uv_accept(stream, (uv_stream_t*)session);
+  uv_read_start((uv_stream_t*)session, &AllocBuffer, &OnRead);
+}
+
 //TODO:
 // - create global environment teardown and deconstruct routines
 // - validity/consistency checks on block chain data
@@ -217,12 +262,23 @@ main(int argc, char **argv){
   google::InitGoogleLogging(argv[0]);
 
   // Create the home directory if it doesn't exist
-  if(!FileExists(TOKEN_BLOCKCHAIN_HOME)){
-    if(!CreateDirectory(TOKEN_BLOCKCHAIN_HOME)){
-      LOG(FATAL) << "cannot create ledger in: " << TOKEN_BLOCKCHAIN_HOME;
-      return EXIT_FAILURE;
-    }
-  }
+//  if(!FileExists(TOKEN_BLOCKCHAIN_HOME)){
+//    if(!CreateDirectory(TOKEN_BLOCKCHAIN_HOME)){
+//      LOG(FATAL) << "cannot create ledger in: " << TOKEN_BLOCKCHAIN_HOME;
+//      return EXIT_FAILURE;
+//    }
+//  }
+
+/*uv_loop_t* loop = uv_loop_new();
+  uv_tcp_t server;
+  uv_tcp_init(loop, &server);
+
+  sockaddr_in bind_address{};
+  uv_ip4_addr("0.0.0.0", FLAGS_service_port, &bind_address);
+  uv_tcp_bind(&server, (struct sockaddr*)&bind_address, 0);
+  uv_listen((uv_stream_t*)&server, 100, &OnNewConnection);
+
+  uv_run(loop, UV_RUN_DEFAULT);*/
 
   http::HealthService service;
   service.Run(FLAGS_service_port);
@@ -265,9 +321,9 @@ main(int argc, char **argv){
   }
 #endif//TOKEN_DEBUG
 
-  //TODO: SilentlyWaitForShutdown<PeerSessionManager
-  SilentlyWaitForShutdown<rpc::LedgerServer, rpc::LedgerServerThread, google::FATAL>(server_thread);
-  SilentlyWaitForShutdown<http::RestService, http::RestServiceThread, google::FATAL>(rest_service_thread);
-  SilentlyWaitForShutdown<http::HealthService, http::HealthServiceThread, google::FATAL>(health_service_thread);
+//  //TODO: SilentlyWaitForShutdown<PeerSessionManager
+//  SilentlyWaitForShutdown<rpc::LedgerServer, rpc::LedgerServerThread, google::FATAL>(server_thread);
+//  SilentlyWaitForShutdown<http::RestService, http::RestServiceThread, google::FATAL>(rest_service_thread);
+//  SilentlyWaitForShutdown<http::HealthService, http::HealthServiceThread, google::FATAL>(health_service_thread);
   return EXIT_SUCCESS;
 }

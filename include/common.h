@@ -237,12 +237,27 @@ namespace token{
   #endif
 #endif//__TKN_FUNCTION_NAME__
 
+#define CHECK_UVRESULT2(Level, Result, Message)({ \
+    int err;                                      \
+    if((err = (Result)) != 0){                    \
+        LOG(Level) << (Message) << ": " << uv_strerror(err); \
+        return;                                   \
+    }                                             \
+})
 #define CHECK_UVRESULT(Result, Log, Message)({ \
   int err;                                           \
-  if((err = Result) != 0){                         \
+  if((err = (Result)) != 0){                         \
     Log << Message << ": " << uv_strerror(err);\
     return;                                    \
   }                                            \
+})
+
+#define VERIFY_UVRESULT2(Level, Result, Message)({ \
+  int err;                                      \
+  if((err = (Result)) != 0){                    \
+    LOG(Level) << (Message) << ": " << uv_strerror(err); \
+    return false;                               \
+  }                                             \
 })
 #define VERIFY_UVRESULT(Result, Log, Message)({ \
   int err;                                      \

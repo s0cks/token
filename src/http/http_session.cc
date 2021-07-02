@@ -5,28 +5,42 @@
 namespace token{
   namespace http{
     void Session::OnMessageRead(const BufferPtr& buff){
-      DLOG(INFO) << "parsing http request.";
-      RequestPtr request = RequestParser::ParseRequest(buff);
-      DLOG(INFO) << "received request " << request->ToString() << " from " << GetUUID();
-      RouterMatch match = router_->Find(request);
+      auto handler = new AsyncRequestHandler(GetLoop(), this, router_, buff);
+      handler->Execute();
+    }
+
+    RequestPtr AsyncRequestHandler::ParseRequest(){
+      DLOG(INFO) << "parsing http request....";
+      return RequestParser::ParseRequest(buffer_);
+    }
+
+    RouterMatch AsyncRequestHandler::FindMatch(const RequestPtr& request){
+      return router_->Find(request);
+    }
+
+    void AsyncRequestHandler::DoWork(uv_async_t* work){
+      auto handler = (AsyncRequestHandler*)work->data;
+      auto session = (http::Session*)handler->session_;
+      auto request = handler->ParseRequest();
+      auto match = handler->FindMatch(request);
+
       if(match.IsNotFound()){
         std::stringstream ss;
         ss << "Cannot find: " << request->GetPath();
-        return Send(NewNotFoundResponse(ss));
+        return session->Send(NewNotFoundResponse(ss));
       } else if(match.IsNotSupported()){
         std::stringstream ss;
         ss << "Method Not Supported for: " << request->GetPath();
-        return Send(NewNotSupportedResponse(ss));
-      } else{
+        return session->Send(NewNotSupportedResponse(ss));
+      } else {
         assert(match.IsOk());
 
         // weirdness :(
         request->SetPathParameters(match.GetPathParameters());
         request->SetQueryParameters(match.GetQueryParameters());
 
-        Route& route = match.GetRoute();
-        RouteHandlerFunction& handler = route.GetHandler();
-        handler(route.GetController(), this, request);
+        Route &route = match.GetRoute();
+        route.GetHandler()(route.GetController(), session, request);
       }
     }
   }

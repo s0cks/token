@@ -32,8 +32,8 @@ namespace token{
     ObjectPoolPtr pool_;
     BlockChainPtr chain_;
 
-    std::shared_ptr<rpc::ServerSession> CreateSession() const override{
-      return std::make_shared<ServerSession>(GetLoop(), GetPool(), GetChain());
+    ServerSession* CreateSession() const override{
+      return new ServerSession(GetLoop(), GetPool(), GetChain());
     }
    public:
     LedgerServer(uv_loop_t* loop,
