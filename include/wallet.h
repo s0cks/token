@@ -30,18 +30,15 @@ namespace token{
 
   namespace json{
     static inline bool
-    SetField(Writer& writer, const char* name, const Wallet& val){
-      KEY(ERROR, writer, name);
-      START_ARRAY(ERROR, writer);
-      for (auto& it : val){
-        std::string hex = it.HexString();
-        if (!writer.String(hex.data(), hex.length())){
-          LOG(ERROR) << "cannot append " << it << " to json array.";
-          return false;
-        }
-      }
-      END_ARRAY(ERROR, writer);
+    Write(Writer& writer, const Wallet& val){
+      NOT_IMPLEMENTED(FATAL);
       return true;
+    }
+
+    static inline bool
+    SetField(Writer& writer, const char* name, const Wallet& val){
+      JSON_KEY(writer, name);
+      return Write(writer, val);
     }
   }
 

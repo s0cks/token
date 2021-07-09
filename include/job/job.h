@@ -276,7 +276,7 @@ namespace token{
       BatchWriteJob(parent, name){}
 
     bool PutBlock(const Hash& hash, const BlockPtr& val);
-    bool PutTransaction(const Hash& hash, const TransactionPtr& val);
+    bool PutTransaction(const Hash& hash, const UnsignedTransactionPtr& val);
     bool PutUnclaimedTransaction(const Hash& hash, const UnclaimedTransactionPtr& val);
    public:
     ~ObjectPoolBatchWriteJob() override = default;

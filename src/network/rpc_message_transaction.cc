@@ -1,4 +1,4 @@
-#include "transaction.h"
+#include "unsigned_transaction.h"
 #include "network/rpc_message_transaction.h"
 
 namespace token{
@@ -10,17 +10,18 @@ namespace token{
     }
 
     int64_t TransactionMessage::Encoder::GetBufferSize() const{
-      int64_t size = ObjectMessageEncoder<TransactionMessage>::GetBufferSize();
-
-      return size;
+      NOT_IMPLEMENTED(ERROR);
+      return 0;
     }
 
     bool TransactionMessage::Encoder::Encode(const BufferPtr& buff) const{
-      return true;//TODO: encode value
+      NOT_IMPLEMENTED(ERROR);
+      return false;
     }
 
     bool TransactionMessage::Decoder::Decode(const BufferPtr& buff, TransactionMessage& val) const{
-      return true;//TODO: decode value
+      NOT_IMPLEMENTED(ERROR);
+      return false;
     }
   }
 }

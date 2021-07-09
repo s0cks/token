@@ -148,6 +148,67 @@ namespace token{
   };
 
   typedef std::vector<Output> OutputList;
+
+  class OutputListEncoder : public codec::ListEncoder<Output, Output::Encoder>{
+  private:
+   typedef codec::ListEncoder<Output, Output::Encoder> BaseType;
+  public:
+   OutputListEncoder(const OutputList& items, const codec::EncoderFlags& flags):
+    BaseType(items, flags){}
+    OutputListEncoder(const OutputListEncoder& other) = default;
+   ~OutputListEncoder() override = default;
+   OutputListEncoder& operator=(const OutputListEncoder& other) = default;
+  };
+
+  class OutputListDecoder : public codec::ListDecoder<Output, Output::Decoder>{
+  private:
+   typedef codec::ListDecoder<Output, Output::Decoder> BaseType;
+  public:
+   explicit OutputListDecoder(const codec::DecoderHints& hints):
+    BaseType(hints){}
+  OutputListDecoder(const OutputListDecoder& other) = default;
+   ~OutputListDecoder() override = default;
+   OutputListDecoder& operator=(const OutputListDecoder& other) = default;
+  };
+
+  namespace json{
+    static inline bool
+    Write(Writer& writer, const Output& val){
+      JSON_START_OBJECT(writer);
+      {
+        if(!json::SetField(writer, "user", val.GetUser()))
+          return false;
+        if(!json::SetField(writer, "product", val.GetProduct()))
+          return false;
+      }
+      JSON_END_OBJECT(writer);
+      return true;
+    }
+
+    static inline bool
+    SetField(Writer& writer, const char* name, const Output& val){
+      JSON_KEY(writer, name);
+      return Write(writer, val);
+    }
+
+    static inline bool
+    Write(Writer& writer, const OutputList& val){
+      JSON_START_ARRAY(writer);
+      {
+        for(auto& it : val)
+          if(!Write(writer, it))
+            return false;
+      }
+      JSON_END_ARRAY(writer);
+      return true;
+    }
+
+    static inline bool
+    SetField(Writer& writer, const char* name, const OutputList& val){
+      JSON_KEY(writer, name);
+      return Write(writer, val);
+    }
+  }
 }
 
 #endif//TOKEN_TRANSACTION_OUTPUT_H

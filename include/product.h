@@ -5,6 +5,7 @@
 #include <cstring>
 #include <sstream>
 
+#include "json.h"
 #include "binary_type.h"
 
 namespace token{
@@ -50,6 +51,20 @@ namespace token{
       return BinaryType<kProductSize>::Compare(a, b);
     }
   };
+
+  namespace json{
+    static inline bool
+    Write(Writer& writer, const Product& val){
+      JSON_STRING(writer, val.ToString());
+      return true;
+    }
+
+    static inline bool
+    SetField(Writer& writer, const char* name, const Product& val){
+      JSON_KEY(writer, name);
+      return Write(writer, val);
+    }
+  }
 }
 
 #endif//TOKEN_PRODUCT_H

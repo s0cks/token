@@ -41,10 +41,10 @@ namespace token{
     }
 
     IndexedTransactionSet transactions;
-    transactions.insert(IndexedTransaction::NewInstance(1, inputs, outputs_a, FromUnixTimestamp(0)));
-    transactions.insert(IndexedTransaction::NewInstance(2, inputs, outputs_b, FromUnixTimestamp(0)));
-    transactions.insert(IndexedTransaction::NewInstance(3, inputs, outputs_c, FromUnixTimestamp(0)));
-    return std::make_shared<Block>(0, version, Hash(), transactions, FromUnixTimestamp(0));
+    transactions.insert(IndexedTransaction::NewInstance(1, FromUnixTimestamp(0), inputs, outputs_a));
+    transactions.insert(IndexedTransaction::NewInstance(2, FromUnixTimestamp(0), inputs, outputs_b));
+    transactions.insert(IndexedTransaction::NewInstance(3, FromUnixTimestamp(0), inputs, outputs_c));
+    return std::make_shared<Block>(0, version, Hash(), transactions);
   }
 
   bool Block::Accept(BlockVisitor* vis) const{
@@ -109,11 +109,25 @@ namespace token{
       return false;
     }
 
-    //TODO: encode Transactions
+    const IndexedTransactionSet& transactions = value().transactions();
+    if(!buff->PutLong(static_cast<int64_t>(transactions.size()))){
+      CANNOT_ENCODE_VALUE(FATAL, transactions, transactions.size());
+      return false;
+    }
+
+    for(auto& it : transactions){
+      IndexedTransaction::Encoder encoder(*it, flags());
+      if(!encoder.Encode(buff)){
+        LOG(FATAL) << "cannot encode transactions (IndexedTransactionSet)";
+        return false;
+      }
+    }
+
     return true;
   }
 
   bool Block::Decoder::Decode(const BufferPtr& buff, Block& result) const{
+    DLOG(INFO) << "decoding block....";
     CHECK_CODEC_VERSION(FATAL, buff);
 
     Timestamp timestamp = buff->GetTimestamp();
@@ -125,9 +139,18 @@ namespace token{
     Hash previous_hash = buff->GetHash();
     DLOG(INFO) << "decoded Block previous_hash: " << previous_hash;
 
-    //TODO: finish
-    Version version = codec::GetCurrentVersion();
+    Version version = codec::GetCurrentVersion();//TODO: fixme
+
     IndexedTransactionSet transactions = {};
+
+    int64_t ntransactions = buff->GetLong();
+    DLOG(INFO) << "decoding " << ntransactions << " transactions....";
+    for(auto idx = 0; idx < ntransactions; idx++){
+      auto itx = IndexedTransaction::DecodeNew(buff, hints());
+      DLOG(INFO) << "decoded IndexedTransaction #" << idx << ": " << itx->ToString();
+      transactions.insert(itx);
+    }
+
     result = Block(timestamp, height, previous_hash, transactions, version);
     return true;
   }

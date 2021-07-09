@@ -9,6 +9,8 @@
 #include <sstream>
 #include <unordered_set>
 #include <leveldb/slice.h>
+
+#include "json.h"
 #include "crypto.h"
 
 namespace token{
@@ -53,31 +55,30 @@ namespace token{
    private:
     uint8_t data_[kSize];
 
-    explicit Hash(const unsigned char* data):
-      data_(){
-      memcpy(data_, data, sizeof(data_));
-    }
-
-    explicit Hash(const std::string& hex):
-      data_(){
-      CryptoPP::StringSource source(hex, true, new CryptoPP::HexDecoder(new CryptoPP::ArraySink(data_, GetSize())));
-    }
-
     Hash(const Hash& first, const Hash& second):
-      data_(){
+        data_(){
       size_t size = first.size() + second.size();
       uint8_t bytes[size];
       memcpy(&bytes[0], first.data(), first.size());
       memcpy(&bytes[first.size()], second.data(), second.size());
       CryptoPP::SHA256 func;
       CryptoPP::ArraySource
-        source(bytes, size, true, new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(data_, GetSize())));
+          source(bytes, size, true, new CryptoPP::HashFilter(func, new CryptoPP::ArraySink(data_, GetSize())));
     }
    public:
     Hash():
       data_(){
       SetNull();
     }
+    explicit Hash(const unsigned char* data):
+        data_(){
+      memcpy(data_, data, sizeof(data_));
+    }
+    explicit Hash(const std::string& slice):
+      data_(){
+      memcpy(data(), slice.data(), std::min(static_cast<int64_t>(slice.size()), GetSize()));
+    }
+
     explicit Hash(uint8_t* data, int64_t size = Hash::GetSize()):
       data_(){
       memcpy(data_, data, size);
@@ -183,6 +184,10 @@ namespace token{
       return (*this);
     }
 
+    explicit operator leveldb::Slice() const{
+      return leveldb::Slice((const char*)data(), size()+1);
+    }
+
     friend std::ostream& operator<<(std::ostream& stream, const Hash& hash){
       stream << hash.HexString();
       return stream;
@@ -195,7 +200,10 @@ namespace token{
 
     static inline Hash
     FromHexString(const std::string& hex){
-      return Hash(hex);
+      int64_t size = GetSize();
+      uint8_t data[size];
+      CryptoPP::StringSource source(hex, true, new CryptoPP::HexDecoder(new CryptoPP::ArraySink(data, size)));
+      return Hash(data, size);
     }
 
     static inline Hash
@@ -213,6 +221,11 @@ namespace token{
         source(nonce, nonce.size(), true, new CryptoPP::HexEncoder(new CryptoPP::ArraySink(data, GetSize())));
       return Hash(data);
     }
+
+    static inline Hash
+    FromSlice(const std::string& slice){
+      return Hash(slice.data(), std::min((int64_t)slice.size(), GetSize()));
+    }
   };
 
   typedef std::vector<Hash> HashList;
@@ -223,6 +236,27 @@ namespace token{
   operator<<(HashList& list, const std::shared_ptr<T>& val){
     list.push_back(val->GetHash());
     return list;
+  }
+
+  namespace json{
+    static inline bool
+    SetField(Writer& writer, const char* name, const Hash& val){
+      JSON_KEY(writer, name);
+      JSON_STRING(writer, val.HexString());
+      return true;
+    }
+
+    static inline bool
+    SetField(Writer& writer, const char* name, const HashList& val){
+      JSON_KEY(writer, name);
+      JSON_START_ARRAY(writer);
+      {
+        for(auto& it : val)
+          JSON_STRING(writer, it.HexString());
+      }
+      JSON_END_ARRAY(writer);
+      return true;
+    }
   }
 }
 

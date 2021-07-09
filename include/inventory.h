@@ -73,7 +73,7 @@ namespace token{
     }
 
     bool IsTransaction() const{
-      return type_ == Type::kTransaction;
+      return type_ == Type::kUnsignedTransaction;
     }
 
     int64_t GetBufferSize() const{
@@ -120,8 +120,8 @@ namespace token{
     }
 
     static inline InventoryItem
-    Of(const TransactionPtr& val){
-      return InventoryItem(Type::kTransaction, val->hash());
+    Of(const UnsignedTransactionPtr& val){
+      return InventoryItem(Type::kUnsignedTransaction, val->hash());
     }
 
     static inline int64_t

@@ -44,6 +44,7 @@ namespace token{
       chain_(chain){}
     LedgerServer(const ObjectPoolPtr& pool, const BlockChainPtr& chain):
       LedgerServer(uv_loop_new(), pool, chain){}
+    LedgerServer();
     ~LedgerServer() override = default;
 
     BlockChainPtr GetChain() const{
@@ -68,8 +69,6 @@ namespace token{
     GetName(){
       return "rpc/server";
     }
-
-    static std::unique_ptr<LedgerServer> NewInstance();
   };
 
   class LedgerServerThread : public ServerThread<LedgerServer>{};

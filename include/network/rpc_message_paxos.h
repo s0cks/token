@@ -28,23 +28,15 @@ namespace token{
           MessageEncoder<M>(value, flags){}
        public:
         PaxosMessageEncoder(const PaxosMessageEncoder<M>& other) = default;
-        virtual ~PaxosMessageEncoder() override = default;
+        ~PaxosMessageEncoder() override = default;
 
-        virtual int64_t GetBufferSize() const override{
+        int64_t GetBufferSize() const override{
           int64_t size = codec::EncoderBase<M>::GetBufferSize();
           size += RawProposal::GetSize();
           return size;
         }
 
-        virtual bool Encode(const BufferPtr& buff) const override{
-          if(MessageEncoder<M>::ShouldEncodeVersion()){
-            if(!buff->PutVersion(codec::GetCurrentVersion())){
-              CANNOT_ENCODE_CODEC_VERSION(FATAL);
-              return false;
-            }
-            DLOG(INFO) << "encoded Version: " << codec::GetCurrentVersion();
-          }
-
+        bool Encode(const BufferPtr& buff) const override{
           //TODO: encode proposal_
           return true;
         }
@@ -55,11 +47,11 @@ namespace token{
       template<class M>
       class PaxosMessageDecoder : public codec::DecoderBase<M>{
        protected:
-        PaxosMessageDecoder(const codec::DecoderHints& hints):
+        explicit PaxosMessageDecoder(const codec::DecoderHints& hints):
             codec::DecoderBase<M>(hints){}
        public:
         PaxosMessageDecoder(const PaxosMessageDecoder<M>& other) = default;
-        virtual ~PaxosMessageDecoder<M>() override = default;
+        ~PaxosMessageDecoder<M>() override = default;
         virtual bool Decode(const BufferPtr& buff, M& result) const = 0;
         PaxosMessageDecoder<M>& operator=(const PaxosMessageDecoder<M>& other) = default;
       };
@@ -67,14 +59,14 @@ namespace token{
       RawProposal proposal_;
 
       PaxosMessage():
-          rpc::Message(),
-          proposal_(){}
+        rpc::Message(),
+        proposal_(){}
       explicit PaxosMessage(const RawProposal& proposal):
-          rpc::Message(),
-          proposal_(proposal){}
+        rpc::Message(),
+        proposal_(proposal){}
      public:
       PaxosMessage(const PaxosMessage& other) = default;
-      virtual ~PaxosMessage() override = default;
+      ~PaxosMessage() override = default;
 
       RawProposal& proposal(){
         return proposal_;

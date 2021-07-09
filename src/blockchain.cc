@@ -4,6 +4,7 @@
 
 #include "buffer.h"
 #include "reference.h"
+#include "filesystem.h"
 #include "blockchain.h"
 #include "unclaimed_transaction.h"
 #include "atomic/relaxed_atomic.h"
@@ -31,8 +32,7 @@ namespace token{
 
   static inline bool
   ShouldCreateFreshInstall(){
-    ReferenceDatabasePtr references = ReferenceDatabase::GetInstance();
-    return !references->HasReference(BLOCKCHAIN_REFERENCE_HEAD) || FLAGS_reinitialize;
+    return FLAGS_reinitialize || !config::HasProperty(BLOCKCHAIN_REFERENCE_HEAD);
   }
 
   //TODO: cleanup
@@ -61,11 +61,11 @@ namespace token{
     }
 
     if(ShouldCreateFreshInstall()){
-      FreshBlockChainInitializer initializer(shared_from_this(), ReferenceDatabase::GetInstance());
+      FreshBlockChainInitializer initializer(shared_from_this());
       if(!initializer.InitializeBlockChain())
         return leveldb::Status::IOError("Cannot create a fresh block chain");
     } else{
-      DefaultBlockChainInitializer initializer(shared_from_this(), ReferenceDatabase::GetInstance());
+      DefaultBlockChainInitializer initializer(shared_from_this());
       if(!initializer.InitializeBlockChain())
         return leveldb::Status::IOError("Cannot initialize the block chain");
     }
@@ -93,8 +93,8 @@ namespace token{
       return false;
     }
 
-    return fflush(file) != 0
-        && fclose(file) != 0;
+    return internal::Flush(file)
+        && internal::Close(file);
   }
 
   bool BlockChain::PutBlock(const Hash& hash, const BlockPtr& blk) const{
@@ -119,11 +119,12 @@ namespace token{
     return true;
   }
 
-  //TODO: refactor
   static inline BlockPtr
   ReadBlockFile(const std::string& filename, const Hash& hash){
-    NOT_IMPLEMENTED(FATAL);
-    return nullptr;
+    BufferPtr buffer = Buffer::FromFile(filename);
+    BlockPtr block = Block::DecodeNew(buffer, codec::ExpectTypeHint::Encode(true)|codec::ExpectVersionHint::Encode(true));
+    LOG_IF(FATAL, block->hash() != hash) << "expected block hash of " << hash << ", but parsed block was: " << block->ToString();
+    return block;
   }
 
   BlockPtr BlockChain::GetBlock(const Hash& hash) const{
@@ -203,15 +204,14 @@ namespace token{
 
     PutBlock(hash, block);
     if(head->height() < block->height()){
-      ReferenceDatabasePtr references = ReferenceDatabase::GetInstance();
-      references->PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
+      if(!config::PutProperty(BLOCKCHAIN_REFERENCE_HEAD, hash))
+        return false;
     }
     return true;
   }
 
   bool BlockChain::VisitBlocks(BlockChainBlockVisitor* vis) const{
-    ReferenceDatabasePtr references = ReferenceDatabase::GetInstance();
-    Hash current = references->GetReference(BLOCKCHAIN_REFERENCE_HEAD);
+    Hash current = config::GetHash(BLOCKCHAIN_REFERENCE_HEAD);
     do{
       BlockPtr blk = GetBlock(current);
       if(!vis->Visit(blk))
@@ -250,7 +250,7 @@ namespace token{
     return count;
   }
 
-  bool BlockChain::GetBlocks(Json::Writer& writer) const{
+  bool BlockChain::GetBlocks(json::Writer& writer) const{
     writer.StartArray();
     {
       BlockPtr current = GetHead();
@@ -264,19 +264,10 @@ namespace token{
     return true;
   }
 
-  BlockPtr BlockChain::GetHead() const{
-    ReferenceDatabasePtr references = ReferenceDatabase::GetInstance();
-    return GetBlock(references->GetReference(BLOCKCHAIN_REFERENCE_HEAD));
-  }
-
-  BlockPtr BlockChain::GetGenesis() const{
-    ReferenceDatabasePtr references = ReferenceDatabase::GetInstance();
-    return GetBlock(references->GetReference(BLOCKCHAIN_REFERENCE_GENESIS));
-  }
-
   static JobQueue queue_(JobScheduler::kMaxNumberOfJobs);
 
   BlockChainPtr BlockChain::GetInstance(){
+    //TODO: fix instantiation
     static std::shared_ptr<BlockChain> instance = std::make_shared<BlockChain>();
     return instance;
   }

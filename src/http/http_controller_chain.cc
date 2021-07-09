@@ -13,8 +13,8 @@ namespace token{
     HTTP_CONTROLLER_ENDPOINT_HANDLER(ChainController, GetBlockChain){
       BlockChainPtr chain = GetChain();
 
-      Json::String body;
-      Json::Writer writer(body);
+      json::String body;
+      json::Writer writer(body);
 
       LOG_IF(ERROR, !writer.StartObject()) << "cannot start json object.";
       LOG_IF(ERROR, !writer.Key("data", 4)) << "cannot write 'data' field name in json object.";

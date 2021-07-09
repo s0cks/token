@@ -3,9 +3,20 @@
 
 namespace token{
   namespace rpc{
-    bool VersionMessage::Decoder::Decode(const BufferPtr& buff, VersionMessage& result) const{
-      CHECK_CODEC_VERSION(FATAL, buff);
+    bool VersionMessage::Encoder::Encode(const BufferPtr &buffer) const{
+      if(ShouldEncodeType() && !buffer->PutUnsignedLong(static_cast<uint64_t>(value().type()))){
+        DLOG(ERROR) << "couldn't encode type.";
+        return false;
+      }
 
+      if(ShouldEncodeVersion() && !buffer->PutVersion(value().version())){
+        DLOG(ERROR) << "couldn't encode version.";
+        return false;
+      }
+      return HandshakeMessageEncoder::Encode(buffer);
+    }
+
+    bool VersionMessage::Decoder::Decode(const BufferPtr& buff, VersionMessage& result) const{
       Timestamp timestamp = buff->GetTimestamp();
       DLOG(INFO) << "decoded Timestamp: " << ToUnixTimestamp(timestamp);
 

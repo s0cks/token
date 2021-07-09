@@ -181,7 +181,7 @@ namespace token{
 #undef DEFINE_VISIT_TYPE
 
 #define DEFINE_GET_TYPE_HASHES(Name) \
-  bool ObjectPool::Get##Name##s(Json::Writer& writer) const{ \
+  bool ObjectPool::Get##Name##s(json::Writer& writer) const{ \
     leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
     writer.StartArray();             \
     for(iter->SeekToFirst(); iter->Valid(); iter->Next()){                     \

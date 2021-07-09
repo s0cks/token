@@ -96,7 +96,7 @@ namespace token{
         return std::string(body_->data(), body_->GetWrittenBytes());
       }
 
-      bool GetBodyAsDocument(Json::Document& document) const{
+      bool GetBodyAsDocument(json::Document& document) const{
         document.Parse(body_->data(), body_->GetWrittenBytes()).Empty();
         return true;//TODO: fix
       }
@@ -157,7 +157,7 @@ namespace token{
         body_ = Buffer::CopyFrom(body);
       }
 
-      void SetBody(const Json::String& body){
+      void SetBody(const json::String& body){
         body_ = Buffer::CopyFrom(body);
       }
 
@@ -249,7 +249,7 @@ namespace token{
     };
 
     static inline ResponsePtr
-    NewOkResponse(const Json::String& body){
+    NewOkResponse(const json::String& body){
       ResponseBuilder builder;
       builder.SetStatusCode(StatusCode::kOk);
       builder.SetHeader(HTTP_HEADER_CONTENT_TYPE, HTTP_CONTENT_TYPE_APPLICATION_JSON);
@@ -260,8 +260,8 @@ namespace token{
 
     static inline ResponsePtr
     NewOkResponse(const std::string& msg="Ok"){
-      Json::String body;
-      Json::Writer writer(body);
+      json::String body;
+      json::Writer writer(body);
 
       LOG_IF(WARNING, !writer.StartObject()) << "cannot start json object.";
       LOG_IF(WARNING, !json::SetField(writer, "data", http::Error{ 200, msg }));
@@ -274,8 +274,8 @@ namespace token{
     template<class T>
     static inline ResponsePtr
     NewOkResponse(const std::shared_ptr<T>& val){
-      Json::String body;
-      Json::Writer writer(body);
+      json::String body;
+      json::Writer writer(body);
 
       LOG_IF(WARNING, !writer.StartObject()) << "cannot start json object.";
       LOG_IF(WARNING, !json::SetField(writer, "data", val)) << "cannot set 'data' field.";
@@ -285,8 +285,8 @@ namespace token{
 
     static inline ResponsePtr
     NewOkResponse(const HashList& val){
-      Json::String body;
-      Json::Writer writer(body);
+      json::String body;
+      json::Writer writer(body);
       LOG_IF(WARNING, !writer.StartObject()) << "cannot start json object.";
       LOG_IF(WARNING, !json::SetField(writer, "data", val)) << "cannot set 'data' field.";
       LOG_IF(WARNING, !writer.EndObject()) << "cannot end json object.";
@@ -305,7 +305,7 @@ namespace token{
     }
 
     static inline ResponsePtr
-    NewErrorResponse(const StatusCode& status_code, const Json::String& body){
+    NewErrorResponse(const StatusCode& status_code, const json::String& body){
       ResponseBuilder builder;
       builder.SetStatusCode(status_code);
       builder.SetHeader(HTTP_HEADER_CONTENT_TYPE, HTTP_CONTENT_TYPE_APPLICATION_JSON);
@@ -316,8 +316,8 @@ namespace token{
 
     static inline ResponsePtr
     NewErrorResponse(const StatusCode& status_code=StatusCode::kInternalServerError, const std::string& msg="Not Ok"){
-      Json::String body;
-      Json::Writer writer(body);
+      json::String body;
+      json::Writer writer(body);
       LOG_IF(ERROR, !writer.StartObject()) << "cannot start json object.";
       LOG_IF(ERROR, !json::SetField(writer, "data", Error{ static_cast<int64_t>(status_code), msg }));
       LOG_IF(ERROR, !writer.EndObject()) << "cannot end json object.";

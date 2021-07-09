@@ -8,6 +8,7 @@
 #include <condition_variable>
 
 #include "vthread.h"
+#include "blockchain.h"
 #include "network/peer_queue.h"
 #include "network/peer_session.h"
 
@@ -77,7 +78,7 @@ namespace token{
     }
 
     PeerSession* CreateNewSession(const NodeAddress& address){
-      auto session = new PeerSession(address);
+      auto session = new PeerSession(address, BlockChain::GetInstance());
       SetSession(session);
       return session;
     }

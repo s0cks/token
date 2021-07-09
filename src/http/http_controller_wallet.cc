@@ -103,7 +103,7 @@ namespace token{
     }
 
     static inline bool
-    ParseInputList(http::Session* session, Json::Document& doc, InputList& inputs, const char* name="inputs"){
+    ParseInputList(http::Session* session, json::Document& doc, InputList& inputs, const char* name="inputs"){
       if(!doc.HasMember(name)){
         std::stringstream ss;
         ss << "request is missing the '" << name << "' field.";
@@ -151,7 +151,7 @@ namespace token{
   CHECK_TYPE((Object)[(Name)], Name, Type)
 
     static inline bool
-    ParseOutputList(http::Session* session, const Json::Document& doc, OutputList& outputs, const char* name="outputs"){
+    ParseOutputList(http::Session* session, const json::Document& doc, OutputList& outputs, const char* name="outputs"){
       HAS_FIELD(doc, name, Array);
 
       for(auto& it : doc[name].GetArray()){
@@ -172,7 +172,7 @@ namespace token{
     HTTP_CONTROLLER_ENDPOINT_HANDLER(WalletController, PostUserWalletSpend){
       User user = request->GetUserParameterValue();
 
-      Json::Document doc;
+      json::Document doc;
       request->GetBody(doc);
 
       InputList inputs = {};
@@ -189,9 +189,9 @@ namespace token{
       ObjectPoolPtr pool = ObjectPool::GetInstance();
 
       LOG(INFO) << "generating new transaction....";
-      TransactionPtr tx = Transaction::NewInstance(inputs, outputs);
+      UnsignedTransactionPtr tx = UnsignedTransaction::NewInstance(Clock::now(), inputs, outputs);
       Hash hash = tx->hash();
-      if(!pool->PutTransaction(hash, tx)){
+      if(!pool->PutUnsignedTransaction(hash, tx)){
         std::stringstream ss;
         ss << "Cannot insert newly created transaction into object pool: " << hash;
         return session->Send(NewInternalServerErrorResponse(ss));

@@ -10,7 +10,7 @@ namespace token{
      public:
       class Encoder : public HandshakeMessage::HandshakeMessageEncoder<VersionMessage>{
        public:
-        Encoder(const VersionMessage& value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags):
+        explicit Encoder(const VersionMessage& value, const codec::EncoderFlags& flags=GetDefaultMessageEncoderFlags()):
           HandshakeMessageEncoder<VersionMessage>(value, flags){}
         Encoder(const Encoder& other) = default;
         ~Encoder() override = default;
@@ -19,16 +19,14 @@ namespace token{
           return HandshakeMessageEncoder::GetBufferSize();
         }
 
-        bool Encode(const BufferPtr& buffer) const override{
-          return HandshakeMessageEncoder::Encode(buffer);
-        }
+        bool Encode(const BufferPtr& buffer) const override;
 
         Encoder& operator=(const Encoder& other) = default;
       };
 
       class Decoder : public HandshakeMessageDecoder<VersionMessage>{
        public:
-        Decoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
+        explicit Decoder(const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()):
           HandshakeMessageDecoder<VersionMessage>(hints){}
         Decoder(const Decoder& other) = default;
         ~Decoder() override = default;
@@ -50,7 +48,7 @@ namespace token{
         HandshakeMessage(timestamp, client_type, version, nonce, node_id),
         head_(head){}
       VersionMessage(const VersionMessage& other) = default;
-      ~VersionMessage() = default;
+      ~VersionMessage() override = default;
 
       Type type() const override{
         return Type::kVersionMessage;
@@ -99,13 +97,13 @@ namespace token{
       }
 
       static inline bool
-      Decode(const BufferPtr& buff, VersionMessage& result, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      Decode(const BufferPtr& buff, VersionMessage& result, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
         Decoder decoder(hints);
         return decoder.Decode(buff, result);
       }
 
       static inline VersionMessagePtr
-      DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
         VersionMessage msg;
         if(!Decode(buff, msg, hints)){
           DLOG(ERROR) << "cannot decode VersionMessage.";

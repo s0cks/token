@@ -9,7 +9,7 @@ namespace token{
      public:
       class Encoder : public PaxosMessageEncoder<CommitMessage>{
        public:
-        Encoder(const CommitMessage& value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags):
+        explicit Encoder(const CommitMessage& value, const codec::EncoderFlags& flags=GetDefaultMessageDecoderHints()):
             PaxosMessageEncoder<CommitMessage>(value, flags){}
         Encoder(const Encoder& other) = default;
         ~Encoder() override = default;
@@ -27,17 +27,21 @@ namespace token{
 
       class Decoder : public PaxosMessageDecoder<CommitMessage>{
        public:
-        Decoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
+        explicit Decoder(const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()):
             PaxosMessageDecoder<CommitMessage>(hints){}
             Decoder(const Decoder& other) = default;
         ~Decoder() override = default;
-        bool Decode(const BufferPtr& buff, CommitMessage& result) const override;
+
+        bool Decode(const BufferPtr& buff, CommitMessage& result) const override{
+          NOT_IMPLEMENTED(ERROR);
+          return false;
+        }
         Decoder& operator=(const Decoder& other) = default;
       };
      public:
       CommitMessage():
         PaxosMessage(){}
-      CommitMessage(const RawProposal& proposal):
+      explicit CommitMessage(const RawProposal& proposal):
         PaxosMessage(proposal){}
       ~CommitMessage() override = default;
 
@@ -73,13 +77,13 @@ namespace token{
       }
 
       static inline bool
-      Decode(const BufferPtr& buff, CommitMessage& result, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      Decode(const BufferPtr& buff, CommitMessage& result, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
         Decoder decoder(hints);
         return decoder.Decode(buff, result);
       }
 
       static inline CommitMessagePtr
-      DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
         CommitMessage instance;
         if(!Decode(buff, instance, hints)){
           DLOG(ERROR) << "cannot decode CommitMessage.";

@@ -24,9 +24,9 @@ namespace token{
 
     HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetTransaction){
       Hash hash = request->GetHashParameterValue();
-      if(!GetPool()->HasTransaction(hash))
+      if(!GetPool()->HasUnsignedTransaction(hash))
         return session->Send(NewNoContentResponse(hash));
-      TransactionPtr tx = GetPool()->GetTransaction(hash);
+      UnsignedTransactionPtr tx = GetPool()->GetUnsignedTransaction(hash);
       return session->Send(NewOkResponse(tx));
     }
 
@@ -43,8 +43,8 @@ namespace token{
     }
 
     HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetUnclaimedTransactions){
-      Json::String body;
-      Json::Writer writer(body);
+      json::String body;
+      json::Writer writer(body);
       writer.StartObject();
       {
         writer.Key("data");

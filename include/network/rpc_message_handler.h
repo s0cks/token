@@ -20,6 +20,7 @@ namespace token{
         return session_;
       }
 
+      BlockChainPtr GetChain() const;
       void Send(const rpc::MessagePtr& msg) const;
       void Send(const rpc::MessageList& msgs) const;
 

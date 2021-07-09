@@ -1,6 +1,7 @@
 #ifndef TOKEN_TRANSACTION_REFERENCE_H
 #define TOKEN_TRANSACTION_REFERENCE_H
 
+#include "json.h"
 #include "binary_object.h"
 
 namespace token{
@@ -87,6 +88,27 @@ namespace token{
       return 0;
     }
   };
+
+  namespace json{
+    static inline bool
+    Write(Writer& writer, const TransactionReference& val){
+      JSON_START_OBJECT(writer);
+      {
+        if(!json::SetField(writer, "hash", val.transaction()))
+          return false;
+        if(!json::SetField(writer, "index", val.index()))
+          return false;
+      }
+      JSON_END_OBJECT(writer);
+      return true;
+    }
+
+    static inline bool
+    SetField(Writer& writer, const char* name, const TransactionReference& val){
+      JSON_KEY(writer, name);
+      return Write(writer, val);
+    }
+  }
 }
 
 #endif//TOKEN_TRANSACTION_REFERENCE_H

@@ -1,9 +1,12 @@
 #ifndef TOKEN_UNCLAIMED_TRANSACTION_H
 #define TOKEN_UNCLAIMED_TRANSACTION_H
 
+#include "json.h"
+
 #include "codec.h"
 #include "encoder.h"
 #include "decoder.h"
+
 #include "binary_object.h"
 #include "transaction_reference.h"
 
@@ -15,7 +18,7 @@ namespace token{
    public:
     class Encoder : public codec::EncoderBase<UnclaimedTransaction>{
      public:
-      Encoder(const UnclaimedTransaction& value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags):
+      explicit Encoder(const UnclaimedTransaction& value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags):
         codec::EncoderBase<UnclaimedTransaction>(value, flags){}
       Encoder(const Encoder& other) = default;
       ~Encoder() override = default;
@@ -26,7 +29,7 @@ namespace token{
 
     class Decoder : public codec::DecoderBase<UnclaimedTransaction>{
      public:
-      Decoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
+      explicit Decoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
         codec::DecoderBase<UnclaimedTransaction>(hints){}
       Decoder(const Decoder& other) = default;
       ~Decoder() override = default;
@@ -137,6 +140,20 @@ namespace token{
       return std::make_shared<UnclaimedTransaction>(result);
     }
   };
+
+  namespace json{
+    static inline bool
+    Write(Writer& writer, const UnclaimedTransactionPtr& val){
+      NOT_IMPLEMENTED(FATAL);
+      return true;
+    }
+
+    static inline bool
+    SetField(Writer& writer, const char* name, const UnclaimedTransactionPtr& val){
+      JSON_KEY(writer, name);
+      return Write(writer, val);
+    }
+  }
 }
 
 #endif //TOKEN_UNCLAIMED_TRANSACTION_H

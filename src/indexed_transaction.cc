@@ -24,7 +24,7 @@ namespace token{
   }
 
   int64_t IndexedTransaction::Encoder::GetBufferSize() const{
-    int64_t size = codec::EncoderBase<IndexedTransaction>::GetBufferSize();
+    int64_t size = TransactionEncoder<IndexedTransaction>::GetBufferSize();
     size += sizeof(RawTimestamp);
     size += codec::EncoderBase<IndexedTransaction>::GetBufferSize<Input, Input::Encoder>(value().inputs());
     size += codec::EncoderBase<IndexedTransaction>::GetBufferSize<Output, Output::Encoder>(value().outputs());
@@ -39,6 +39,7 @@ namespace token{
       DLOG(ERROR) << "cannot encode list size.";
       return false;
     }
+
     for(auto& it : list){
       E encoder(it, flags);
       if(!encoder.Encode(buff)){
@@ -63,14 +64,14 @@ namespace token{
       CANNOT_ENCODE_VALUE(FATAL, Timestamp, ToUnixTimestamp(timestamp));
       return false;
     }
-    DVLOG(3) << "encoded IndexedTransaction timestamp: " << FormatTimestampReadable(timestamp);
+    DLOG(INFO) << "encoded IndexedTransaction timestamp: " << FormatTimestampReadable(timestamp);
 
     const InputList& inputs = value().inputs();
     if(!EncodeList<Input, Input::Encoder>(buff, inputs)){
       DLOG(ERROR) << "cannot encode IndexedTransaction inputs: " << inputs.size();
       return false;
     }
-    DVLOG(3) << "encoded IndexedTransaction inputs: " << inputs.size();
+    DLOG(INFO) << "encoded IndexedTransaction inputs: " << inputs.size();
 
     const OutputList& outputs = value().outputs();
     if(!EncodeList<Output, Output::Encoder>(buff, outputs)){
@@ -79,7 +80,7 @@ namespace token{
     }
     DVLOG(3) << "encoded IndexedTransaction outputs: " << outputs.size();
 
-    const int64_t index = value().GetIndex();
+    const int64_t index = value().index();
     if(!buff->PutLong(index)){
       CANNOT_ENCODE_VALUE(FATAL, int64_t, index);
       return false;
@@ -118,7 +119,7 @@ namespace token{
     int64_t index = buff->GetLong();
     DLOG(INFO) << "decoded IndexedTransaction index: " << index;
 
-    result = IndexedTransaction(timestamp, index, inputs, outputs);
+    result = IndexedTransaction(index, timestamp, inputs, outputs);
     return true;
   }
 }

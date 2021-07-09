@@ -2,22 +2,18 @@
 #define TOKEN_BUFFER_H
 
 #include <set>
+#include <memory>
 #include <vector>
 #include <fstream>
-#include <memory>
-#include <uv.h>
 #include <leveldb/slice.h>
 
-#include "hash.h"
 #include "uuid.h"
 #include "user.h"
-#include "network/peer.h"
+#include "hash.h"
 #include "version.h"
 #include "product.h"
-#include "address.h"
 #include "proposal.h"
 #include "timestamp.h"
-#include "block_header.h"
 #include "transaction_reference.h"
 
 namespace token{
@@ -89,6 +85,11 @@ namespace token{
       return val;
     }
    public:
+    Buffer():
+      bsize_(0),
+      wpos_(0),
+      rpos_(0),
+      data_(nullptr){}
     explicit Buffer(int64_t size):
       bsize_(size),
       wpos_(0),
@@ -552,6 +553,16 @@ namespace token{
     static inline int64_t
     CalculateSizeOf(const std::string& str){
       return (str.length() * sizeof(uint8_t));
+    }
+
+    static inline BufferPtr
+    FromFile(const std::string& filename){
+      std::fstream stream(filename, std::ios::binary|std::ios::in);
+      int64_t size = GetFilesize(stream);
+      BufferPtr buffer = Buffer::NewInstance(size);
+      if(!buffer->ReadFrom(stream, size))
+        return nullptr;
+      return buffer;
     }
   };
 }

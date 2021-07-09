@@ -1,6 +1,8 @@
 #ifndef TOKEN_PEER_SESSION_H
 #define TOKEN_PEER_SESSION_H
 
+#include <utility>
+
 #include "network/rpc_message.h"
 #include "network/rpc_session.h"
 #include "inventory.h"
@@ -92,6 +94,8 @@ namespace token{
     friend class PeerSessionThread;
     friend class PeerSessionManager;
    private:
+    BlockChainPtr chain_;
+
     Peer info_;
     BlockHeader head_;
     // Disconnect
@@ -143,6 +147,10 @@ namespace token{
       return handler_;
     }
 
+    BlockChainPtr GetChain() const{
+      return chain_;
+    }
+
     bool ItemExists(const InventoryItem& item) const{
       return true;//TODO: refactor
     }
@@ -160,8 +168,9 @@ namespace token{
       }
     }
    public:
-    explicit PeerSession(const NodeAddress& address):
+    explicit PeerSession(const NodeAddress& address, BlockChainPtr chain):
       rpc::Session(uv_loop_new()),
+      chain_(std::move(chain)),
       info_(UUID(), address),
       head_(),
       disconnect_(),

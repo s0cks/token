@@ -9,7 +9,7 @@ namespace token{
      public:
       class Encoder : public PaxosMessageEncoder<PromiseMessage>{
        public:
-        Encoder(const PromiseMessage& value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags):
+        explicit Encoder(const PromiseMessage& value, const codec::EncoderFlags& flags=GetDefaultMessageEncoderFlags()):
           PaxosMessageEncoder<PromiseMessage>(value, flags){}
         Encoder(const Encoder& other) = default;
         ~Encoder() override = default;
@@ -19,6 +19,16 @@ namespace token{
         }
 
         bool Encode(const BufferPtr& buff) const override{
+          if(ShouldEncodeType() && !buff->PutUnsignedLong(static_cast<uint64_t>(value().type()))){
+            DLOG(ERROR) << "cannot encode message type.";
+            return false;
+          }
+
+          Version version = Version::CurrentVersion(); //TODO use appropriate version
+          if(ShouldEncodeVersion() && !buff->PutVersion(version)){
+            DLOG(ERROR) << "cannot encode message version.";
+            return false;
+          }
           return PaxosMessageEncoder::Encode(buff);
         }
 
@@ -27,17 +37,22 @@ namespace token{
 
       class Decoder : public PaxosMessageDecoder<PromiseMessage>{
        public:
-        Decoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
+        explicit Decoder(const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()):
           PaxosMessageDecoder<PromiseMessage>(hints){}
         Decoder(const Decoder& other) = default;
         ~Decoder() override = default;
-        bool Decode(const BufferPtr& buff, PromiseMessage& result) const;
+
+        bool Decode(const BufferPtr& buff, PromiseMessage& result) const override{
+          NOT_IMPLEMENTED(ERROR);
+          return false;
+        }
+
         Decoder& operator=(const Decoder& other) = default;
       };
      public:
       PromiseMessage():
         PaxosMessage(){}
-      PromiseMessage(const RawProposal& proposal):
+      explicit PromiseMessage(const RawProposal& proposal):
         PaxosMessage(proposal){}
       PromiseMessage(const PromiseMessage& other) = default;
       ~PromiseMessage() override = default;
@@ -74,13 +89,13 @@ namespace token{
       }
 
       static inline bool
-      Decode(const BufferPtr& buff, PromiseMessage& result, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      Decode(const BufferPtr& buff, PromiseMessage& result, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
         Decoder decoder(hints);
         return decoder.Decode(buff, result);
       }
 
       static inline PromiseMessagePtr
-      DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
         PromiseMessage msg;
         if(!Decode(buff, msg, hints)){
           DLOG(ERROR) << "cannot decode PromiseMessage.";

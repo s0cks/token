@@ -3,6 +3,9 @@
 
 #include <cassert>
 #include <uuid/uuid.h>
+#include <leveldb/slice.h>
+
+#include "json.h"
 #include "binary_type.h"
 
 namespace token{
@@ -69,7 +72,25 @@ namespace token{
     friend std::ostream& operator<<(std::ostream& stream, const UUID& uuid){
       return stream << uuid.ToString();
     }
+
+    explicit operator leveldb::Slice() const{
+      return leveldb::Slice(data(), size());
+    }
   };
+
+  namespace json{
+    static inline bool
+    Write(Writer& writer, const UUID& val){
+      JSON_STRING(writer, val.ToString());
+      return true;
+    }
+
+    static inline bool
+    SetField(Writer& writer, const char* name, const UUID& val){
+      JSON_KEY(writer, name);
+      return Write(writer, val);
+    }
+  }
 }
 
 #endif//TOKEN_UUID_H

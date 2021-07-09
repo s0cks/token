@@ -29,7 +29,7 @@ namespace token{
       ClientType client_type = ClientType::kNode;
       Version version = Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
       Hash nonce = msg->nonce();
-      UUID node_id = ConfigurationManager::GetNodeID();
+      UUID node_id = config::GetServerNodeID();
       BlockPtr head = GetChain()->GetHead();
       Send(VersionMessage::NewInstance(timestamp, client_type, version, nonce, node_id, head->GetHeader()));
     }
@@ -40,7 +40,7 @@ namespace token{
       // upon receiving a VerackMessage from a new client, respond w/ a VerackMessage
       // to finish the connection handshake
       ClientType type = ClientType::kNode;
-      UUID node_id = ConfigurationManager::GetNodeID();
+      UUID node_id = config::GetServerNodeID();
       NodeAddress callback = env::GetServerCallbackAddress();
       Version version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
       BlockPtr head = GetChain()->GetHead();
@@ -167,11 +167,11 @@ namespace token{
     void ServerSessionMessageHandler::OnTransactionMessage(const TransactionMessagePtr &msg) {
       ObjectPoolPtr pool = GetPool();
 
-      TransactionPtr& value = msg->value();
+      UnsignedTransactionPtr& value = msg->value();
       Hash hash = value->hash();
       DLOG_HANDLER(INFO) << "received: " << value->ToString();
-      if (!pool->HasTransaction(hash)) {
-        pool->PutTransaction(hash, value);
+      if (!pool->HasUnsignedTransaction(hash)) {
+        pool->PutUnsignedTransaction(hash, value);
       }
     }
   }

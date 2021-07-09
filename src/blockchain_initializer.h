@@ -1,8 +1,10 @@
 #ifndef TOKEN_BLOCKCHAIN_INITIALIZER_H
 #define TOKEN_BLOCKCHAIN_INITIALIZER_H
 
-#include "reference.h"
+#include <utility>
+
 #include "blockchain.h"
+#include "configuration.h"
 #include "job/processor.h"
 #include "job/scheduler.h"
 
@@ -13,30 +15,23 @@ namespace token{
   class BlockChainInitializer{
    protected:
     BlockChainPtr chain_;
-    ReferenceDatabasePtr references_;
 
-    BlockChainInitializer(const BlockChainPtr& chain, const ReferenceDatabasePtr& references):
-      chain_(chain),
-      references_(references){}
+    explicit BlockChainInitializer(BlockChainPtr chain):
+      chain_(std::move(chain)){}
 
     inline BlockChainPtr
     GetChain() const{
       return chain_;
     }
 
-    inline ReferenceDatabasePtr
-    GetReferences() const{
-      return references_;
-    }
-
     inline Hash
     GetGenesisHash() const{
-      return GetReferences()->GetReference(BLOCKCHAIN_REFERENCE_GENESIS);
+      return config::GetHash(BLOCKCHAIN_REFERENCE_GENESIS);
     }
 
     inline Hash
     GetHeadHash() const{
-      return GetReferences()->GetReference(BLOCKCHAIN_REFERENCE_HEAD);
+      return config::GetHash(BLOCKCHAIN_REFERENCE_HEAD);
     }
 
     inline BlockPtr
@@ -54,14 +49,14 @@ namespace token{
       return GetChain()->GetBlock(hash);
     }
 
-    inline bool
-    SetGenesisReference(const Hash& hash) const{
-      return GetReferences()->PutReference(BLOCKCHAIN_REFERENCE_GENESIS, hash);
+    static inline bool
+    SetGenesisReference(const Hash& hash) {
+      return config::PutProperty(BLOCKCHAIN_REFERENCE_GENESIS, hash);
     }
 
-    inline bool
-    SetHeadReference(const Hash& hash) const{
-      return GetReferences()->PutReference(BLOCKCHAIN_REFERENCE_HEAD, hash);
+    static inline bool
+    SetHeadReference(const Hash& hash) {
+      return config::PutProperty(BLOCKCHAIN_REFERENCE_HEAD, hash);
     }
 
     inline bool
@@ -79,17 +74,17 @@ namespace token{
   };
 
 #define DEFINE_INITIALIZER(Name) \
-  const char* GetName() const{ return #Name; }
+  const char* GetName() const override{ return #Name; }
 
   class FreshBlockChainInitializer : public BlockChainInitializer{
    public:
-    FreshBlockChainInitializer(const BlockChainPtr& chain, const ReferenceDatabasePtr& references):
-      BlockChainInitializer(chain, references){}
-    ~FreshBlockChainInitializer() = default;
+    explicit FreshBlockChainInitializer(BlockChainPtr chain):
+      BlockChainInitializer(std::move(chain)){}
+    ~FreshBlockChainInitializer() override = default;
 
     DEFINE_INITIALIZER(FreshBlockChain);
 
-    bool InitializeBlockChain() const{
+    bool InitializeBlockChain() const override{
       INITIALIZER_LOG(INFO) << "initializing block chain....";
       if(!TransitionToState(BlockChain::kInitializing))
         return TransitionToState(BlockChain::kUninitialized);
@@ -137,13 +132,13 @@ namespace token{
 
   class DefaultBlockChainInitializer : public BlockChainInitializer{
    public:
-    DefaultBlockChainInitializer(const BlockChainPtr& chain, const ReferenceDatabasePtr& references):
-      BlockChainInitializer(chain, references){}
-    ~DefaultBlockChainInitializer() = default;
+    explicit DefaultBlockChainInitializer(BlockChainPtr chain):
+      BlockChainInitializer(std::move(chain)){}
+    ~DefaultBlockChainInitializer() override = default;
 
     DEFINE_INITIALIZER(DefaultBlockChain);
 
-    bool InitializeBlockChain() const{
+    bool InitializeBlockChain() const override{
       INITIALIZER_LOG(INFO) << "initializing block chain....";
       if(!TransitionToState(BlockChain::kInitializing))
         return TransitionToState(BlockChain::kUninitialized);

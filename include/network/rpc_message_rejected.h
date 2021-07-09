@@ -9,7 +9,7 @@ namespace token{
      public:
       class Encoder : public PaxosMessageEncoder<RejectedMessage>{
        public:
-        Encoder(const RejectedMessage& value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags):
+        explicit Encoder(const RejectedMessage& value, const codec::EncoderFlags& flags=GetDefaultMessageEncoderFlags()):
           PaxosMessageEncoder<RejectedMessage>(value, flags){}
         Encoder(const Encoder& other) = default;
         ~Encoder() override = default;
@@ -27,16 +27,21 @@ namespace token{
 
       class Decoder : public PaxosMessageDecoder<RejectedMessage>{
        public:
-        Decoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
+        explicit Decoder(const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()):
           PaxosMessageDecoder<RejectedMessage>(hints){}
         Decoder(const Decoder& other) = default;
         ~Decoder() override = default;
-        bool Decode(const BufferPtr& buff, RejectedMessage& result) const;
+
+        bool Decode(const BufferPtr& buff, RejectedMessage& result) const{
+          NOT_IMPLEMENTED(ERROR);
+          return false;
+        }
+
         Decoder& operator=(const Decoder& other) = default;
       };
      public:
       RejectedMessage() = default;
-      RejectedMessage(const RawProposal& proposal):
+      explicit RejectedMessage(const RawProposal& proposal):
         PaxosMessage(proposal){}
       ~RejectedMessage() override = default;
 
@@ -68,13 +73,13 @@ namespace token{
       }
 
       static inline bool
-      Decode(const BufferPtr& buff, RejectedMessage& result, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      Decode(const BufferPtr& buff, RejectedMessage& result, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
         Decoder decoder(hints);
         return decoder.Decode(buff, result);
       }
 
       static inline RejectedMessagePtr
-      DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
         RejectedMessage instance;
         if(!Decode(buff, instance, hints)){
           DLOG(ERROR) << "cannot decode RejectedMessage.";

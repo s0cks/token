@@ -2,20 +2,21 @@
 #define TOKEN_BLOCK_BUILDER_H
 
 #include <unordered_set>
+
 #include "pool.h"
 #include "blockchain.h"
 
 namespace token{
-  class BlockBuilder : ObjectPoolTransactionVisitor{
+  class BlockBuilder : ObjectPoolUnsignedTransactionVisitor{
    private:
     BlockPtr parent_;
-    TransactionList transactions_;
+    UnsignedTransactionList transactions_;
    public:
-    BlockBuilder(const BlockChainPtr& chain):
-      ObjectPoolTransactionVisitor(),
+    explicit BlockBuilder(const BlockChainPtr& chain):
+      ObjectPoolUnsignedTransactionVisitor(),
       parent_(chain->GetHead()),
       transactions_(){}
-    ~BlockBuilder() = default;
+    ~BlockBuilder() override = default;
 
     BlockPtr GetParent() const{
       return parent_;
@@ -25,20 +26,21 @@ namespace token{
     BlockPtr Build(){
       ObjectPoolPtr pool = ObjectPool::GetInstance();
 
-      if(!pool->VisitTransactions(this)){
+      if(!pool->VisitUnsignedTransactions(this)){
         LOG(WARNING) << "couldn't visit object pool transactions.";
         return BlockPtr(nullptr);
       }
 
-      std::sort(transactions_.begin(), transactions_.end(), Transaction::TimestampComparator());
+      std::sort(transactions_.begin(), transactions_.end(), UnsignedTransaction::TimestampComparator());
 
       int64_t blk_size = 0;
 
       int64_t index = 0;
       IndexedTransactionSet transactions;
       for(auto& it : transactions_){
-        IndexedTransactionPtr ntx = IndexedTransaction::NewInstance(index++, it->inputs(), it->outputs(), it->timestamp());
-        if((blk_size + ntx->GetBufferSize()) >= Block::kMaxBlockSize)
+        IndexedTransactionPtr ntx = IndexedTransaction::NewInstance(index++, it->timestamp(), it->inputs(), it->outputs());
+        int64_t ntx_size = 1024; //TODO: use ntx->GetBufferSize()
+        if((blk_size + ntx_size) >= Block::kMaxBlockSize)
           break;
 
         if(!transactions.insert(ntx).second){
@@ -56,7 +58,7 @@ namespace token{
       return blk;
     }
 
-    bool Visit(const TransactionPtr& tx){
+    bool Visit(const UnsignedTransactionPtr& tx) override{
       transactions_.push_back(tx);
       return true;
     }

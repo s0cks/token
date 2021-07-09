@@ -82,7 +82,7 @@ namespace token{
         return body_;
       }
 
-      void GetBody(Json::Document& doc) const{
+      void GetBody(json::Document& doc) const{
         doc.Parse(body_.data(), body_.length());
       }
 
@@ -198,7 +198,7 @@ namespace token{
         body_ = val;
       }
 
-      void SetBody(const Json::String& val){
+      void SetBody(const json::String& val){
         body_ = std::string(val.GetString(), val.GetSize());
       }
 

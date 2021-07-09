@@ -2,46 +2,70 @@
 #define TOKEN_JSON_H
 
 #include <vector>
+#include <string>
+#include <cstdint>
 #include <unordered_set>
+
 #include <rapidjson/writer.h>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 
-#include "uuid.h"
-#include "hash.h"
-#include "address.h"
-#include "version.h"
-#include "timestamp.h"
-#include "transaction_input.h"
-#include "transaction_output.h"
+#include "common.h"
 
-#define START_OBJECT(LevelName, Writer) \
-    if(!(Writer).StartObject()){       \
-      LOG(LevelName) << "cannot start json object."; \
-      return false;                     \
-    }
-#define END_OBJECT(LevelName, Writer) \
-    if(!(Writer).EndObject()){       \
-      LOG(LevelName) << "cannot end json object."; \
-      return false;                   \
-    }
+#define JSON_START_OBJECT_AT_LEVEL(LevelName, Writer) \
+  if(!(Writer).StartObject()){                        \
+    LOG(LevelName) << "cannot write start of json object.";    \
+    return false;                                     \
+  }
+#define JSON_START_OBJECT(Writer) \
+  JSON_START_OBJECT_AT_LEVEL(FATAL, Writer)
 
-#define START_ARRAY(LevelName, Writer) \
-    if(!(Writer).StartArray()){       \
-      LOG(LevelName) << "cannot start json array."; \
-      return false;                    \
-    }
-#define END_ARRAY(LevelName, Writer) \
-    if(!(Writer).EndArray()){       \
-      LOG(LevelName) << "cannot end json array."; \
-      return false;                  \
-    }
+#define JSON_END_OBJECT_AT_LEVEL(LevelName, Writer) \
+  if(!(Writer).EndObject()){                        \
+    LOG(LevelName) << "cannot write end of json object.";    \
+    return false;                                   \
+  }
+#define JSON_END_OBJECT(Writer) \
+  JSON_END_OBJECT_AT_LEVEL(FATAL, Writer)
 
-#define KEY(LevelName, Writer, Name) \
-    if(!(Writer).Key((Name), strlen((Name)))){ \
-      LOG(LevelName) << "cannot set field name '" << (Name) << "'."; \
-      return false;                  \
-    }
+#define JSON_START_ARRAY_AT_LEVEL(LevelName, Writer) \
+  if(!(Writer).StartArray()){                        \
+    LOG(LevelName) << "cannot write start of json array.";    \
+    return false;                                    \
+  }
+#define JSON_START_ARRAY(Writer) \
+  JSON_START_ARRAY_AT_LEVEL(FATAL, Writer)
+
+#define JSON_END_ARRAY_AT_LEVEL(LevelName, Writer) \
+  if(!(Writer).EndArray()){                        \
+    LOG(LevelName) << "cannot write end of json array.";    \
+    return false;                                  \
+  }
+#define JSON_END_ARRAY(Writer) \
+  JSON_END_ARRAY_AT_LEVEL(FATAL, Writer)
+
+#define JSON_KEY_AT_LEVEL(LevelName, Writer, Name) \
+  if(!(Writer).Key((Name), strlen((Name)))){      \
+    LOG(LevelName) << "cannot write json field key: " << (Name); \
+    return false;                                  \
+  }
+#define JSON_KEY(Writer, Name) JSON_KEY_AT_LEVEL(FATAL, Writer, Name)
+
+#define JSON_STRING_AT_LEVEL(LevelName, Writer, Value) \
+  if(!(Writer).String((Value).data(), (Value).size())){       \
+    LOG(LevelName) << "cannot write json string '" << (Value); \
+    return false;                                      \
+  }
+#define JSON_STRING(Writer, Value) \
+  JSON_STRING_AT_LEVEL(FATAL, Writer, Value)
+
+#define JSON_LONG_AT_LEVEL(LevelName, Writer, Value) \
+  if(!(Writer).Int64((Value))){ \
+    LOG(LevelName) << "cannot write json long '" << (Value) << "'"; \
+    return false;                                    \
+  }
+#define JSON_LONG(Writer, Value) \
+  JSON_LONG_AT_LEVEL(FATAL, Writer, Value)
 
 namespace token{
   namespace json{
@@ -100,53 +124,10 @@ namespace token{
     }
 
     static inline bool
-    SetField(Writer& writer, const char* name, const Timestamp& val){
-      return SetField(writer, name, ToUnixTimestamp(val));
-    }
-
-    static inline bool
     SetField(Writer& writer, const char* name, const std::string& val){
       return writer.Key(name, strlen(name))
           && writer.String(val.data(), val.length());
     }
-
-    static inline bool
-    SetField(Writer& writer, const char* name, const Hash& val){
-      return SetField(writer, name, val.HexString());
-    }
-
-    static inline bool
-    SetField(Writer& writer, const char* name, const User& val){
-      return SetField(writer, name, val.ToString());
-    }
-
-    static inline bool
-    SetField(Writer& writer, const char* name, const Product& val){
-      return SetField(writer, name, val.ToString());
-    }
-
-    static inline bool
-    SetField(Writer& writer, const char* name, const Version& val){
-      return SetField(writer, name, val.ToString());
-    }
-
-    static inline bool
-    SetField(Writer& writer, const char* name, const UUID& val){
-      return SetField(writer, name, val.ToString());
-    }
-
-    static inline bool
-    SetField(Writer& writer, const char* name, const NodeAddress& val){
-      return SetField(writer, name, val.ToString());
-    }
-
-    bool SetField(Writer& writer, const char* name, const TransactionReference& val);
-    bool SetField(Writer& writer, const char* name, const HashList& val);
-    bool SetField(Writer& writer, const char* name, const BlockPtr& val);
-    bool SetField(Writer& writer, const char* name, const TransactionPtr& val);
-    bool SetField(Writer& writer, const char* name, const UnclaimedTransactionPtr& val);
-    bool SetField(Writer& writer, const char* name, const InputList& val);
-    bool SetField(Writer& writer, const char* name, const OutputList& val);
   }
 }
 

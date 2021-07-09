@@ -6,11 +6,11 @@
 #include "timestamp.h"
 #include "block_header.h"
 #include "binary_object.h"
-#include "indexed_transaction.h"
 
 #include "codec.h"
 #include "encoder.h"
 #include "decoder.h"
+#include "indexed_transaction.h"
 
 namespace token{
   class BlockVisitor;
@@ -23,7 +23,7 @@ namespace token{
    public:
 #ifdef TOKEN_DEBUG
     static const int64_t kMaxBlockSize = 128 * token::internal::kMegabytes;
-    static const int64_t kNumberOfGenesisOutputs = 10000;
+    static const int64_t kNumberOfGenesisOutputs = 10;
 #else
     static const int64_t kMaxBlockSize = 1 * token::internal::kGigabytes;
     static const int64_t kNumberOfGenesisOutputs = 10000;
@@ -228,6 +228,20 @@ namespace token{
     virtual bool Visit(const IndexedTransactionPtr& tx) = 0;
     virtual bool VisitEnd(){ return true; }
   };
+
+  namespace json{
+    static inline bool
+    Write(Writer& writer, const BlockPtr& val){
+      NOT_IMPLEMENTED(FATAL);
+      return true;
+    }
+
+    static inline bool
+    SetField(Writer& writer, const char* name, const BlockPtr& val){
+      JSON_KEY(writer, name);
+      return Write(writer, val);
+    }
+  }
 }
 
 #endif //TOKEN_BLOCK_H

@@ -11,6 +11,7 @@
 #include "block.h"
 #include "transaction.h"
 #include "merkle/tree.h"
+#include "configuration.h"
 #include "atomic/relaxed_atomic.h"
 #include "unclaimed_transaction.h"
 
@@ -100,7 +101,7 @@ namespace token{
     bool RemoveBlock(const Hash& hash, const BlockPtr& blk) const;
     bool Append(const BlockPtr& blk);
    public:
-    BlockChain():
+    explicit BlockChain():
       state_(State::kUninitialized),
       index_(nullptr){}
     virtual ~BlockChain(){
@@ -114,9 +115,6 @@ namespace token{
     BlockChain::State GetState() const{
       return (BlockChain::State)state_;
     }
-
-    virtual BlockPtr GetHead() const;
-    virtual BlockPtr GetGenesis() const;
 
     /**
      * TODO
@@ -160,7 +158,7 @@ namespace token{
     }
 
     //TODO: guard
-    bool GetBlocks(Json::Writer& writer) const;
+    bool GetBlocks(json::Writer& writer) const;
 
     /**
      * TODO
@@ -169,6 +167,26 @@ namespace token{
     inline bool
     HasBlocks() const{
       return GetNumberOfBlocks() > 0;
+    }
+
+    virtual inline Hash
+    GetHeadHash() const{
+      return config::GetHash(BLOCKCHAIN_REFERENCE_HEAD);
+    }
+
+    virtual inline BlockPtr
+    GetHead() const{
+      return GetBlock(GetHeadHash());
+    }
+
+    virtual inline Hash
+    GetGenesisHash() const{
+      return config::GetHash(BLOCKCHAIN_REFERENCE_GENESIS);
+    }
+
+    virtual inline BlockPtr
+    GetGenesis() const{
+      return GetBlock(GetGenesisHash());
     }
 
 #define DEFINE_STATE_CHECK(Name) \

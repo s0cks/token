@@ -5,6 +5,8 @@
 #include <sstream>
 #include <iomanip>
 
+#include "json.h"
+
 namespace token{
   typedef uint64_t RawTimestamp;
 
@@ -46,6 +48,15 @@ namespace token{
   static inline std::string
   FormatTimestampFileSafe(const Timestamp& ts, const std::string& format="%Y%m%d-%H%M%S"){
     return FormatTimestamp(ts, format);
+  }
+
+  namespace json{
+    static inline bool
+    SetField(Writer& writer, const char* name, const Timestamp& val){
+      JSON_KEY(writer, name);
+      JSON_LONG(writer, ToUnixTimestamp(val));
+      return true;
+    }
   }
 }
 

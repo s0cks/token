@@ -26,27 +26,27 @@ namespace token{
     class MessageEncoder : public codec::EncoderBase<M>{
      protected:
       MessageEncoder(const M& value, const codec::EncoderFlags& flags):
-          codec::EncoderBase<M>(value, flags){}
+        codec::EncoderBase<M>(value, flags){}
      public:
       MessageEncoder(const MessageEncoder<M>& other) = default;
-      virtual ~MessageEncoder<M>() override = default;
+      ~MessageEncoder<M>() override = default;
       MessageEncoder<M>& operator=(const MessageEncoder<M>& other) = default;
     };
 
     template<class M>
     class MessageDecoder : public codec::DecoderBase<M>{
      protected:
-      MessageDecoder(const codec::DecoderHints& hints):
+      explicit MessageDecoder(const codec::DecoderHints& hints):
         codec::DecoderBase<M>(hints){}
      public:
       MessageDecoder(const MessageDecoder<M>& other) = default;
-      virtual ~MessageDecoder() override = default;
+      ~MessageDecoder() override = default;
       MessageDecoder<M>& operator=(const MessageDecoder<M>& other) = default;
     };
    protected:
     MessageBase() = default;
    public:
-    virtual ~MessageBase() override = default;
+    ~MessageBase() override = default;
     virtual int64_t GetBufferSize() const = 0;
     virtual bool Write(const BufferPtr& buff) const = 0;
   };

@@ -28,7 +28,7 @@ namespace token{
   V(Block)               \
   V(Input)               \
   V(Output)              \
-  V(Transaction)         \
+  V(UnsignedTransaction)         \
   V(SignedTransaction)   \
   V(IndexedTransaction)  \
   V(UnclaimedTransaction)\

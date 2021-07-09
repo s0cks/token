@@ -1,3 +1,4 @@
+/*
 #include "pool.h"
 #include "keychain.h"
 #include "blockchain.h"
@@ -29,13 +30,15 @@ namespace token{
 
   bool Transaction::Sign(){
     CryptoPP::SecByteBlock bytes;
-    /*
+    */
+/*
       TODO:
         if(!WriteMessage(bytes)){
             LOG(WARNING) << "couldn't serialize transaction to bytes";
             return false;
         }
-     */
+     *//*
+
 
     CryptoPP::RSA::PrivateKey privateKey;
     CryptoPP::RSA::PublicKey publicKey;
@@ -150,4 +153,4 @@ namespace token{
     result = Transaction(timestamp, inputs, outputs);
     return true;
   }
-}
+}*/

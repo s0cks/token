@@ -16,7 +16,7 @@ namespace token{
    public:
     class Encoder : public codec::EncoderBase<Input>{
      public:
-      Encoder(const Input& value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags):
+      explicit Encoder(const Input& value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags):
         codec::EncoderBase<Input>(value, flags){}
       Encoder(const Encoder& other) = default;
       ~Encoder() override = default;
@@ -157,7 +157,68 @@ namespace token{
     }
   };
 
-  typedef std::vector<Input> InputList;
+typedef std::vector<Input> InputList;
+
+ class InputListEncoder : public codec::ListEncoder<Input, Input::Encoder>{
+  private:
+   typedef codec::ListEncoder<Input, Input::Encoder> BaseType;
+  public:
+    InputListEncoder(const InputList& items, const codec::EncoderFlags& flags):
+      BaseType(items, flags){}
+    InputListEncoder(const InputListEncoder& other) = default;
+    ~InputListEncoder() override = default;
+    InputListEncoder& operator=(const InputListEncoder& other) = default;
+ };
+
+  class InputListDecoder : public codec::ListDecoder<Input, Input::Decoder> {
+   private:
+    typedef codec::ListDecoder<Input, Input::Decoder> BaseType;
+   public:
+    explicit InputListDecoder(const codec::DecoderHints &hints) :
+      BaseType(hints) {}
+    InputListDecoder(const InputListDecoder &other) = default;
+    ~InputListDecoder() override = default;
+    InputListDecoder& operator=(const InputListDecoder& other) = default;
+  };
+
+namespace json{
+    static inline bool
+    Write(Writer& writer, const Input& val){
+      JSON_START_OBJECT(writer);
+      {
+        if(!json::SetField(writer, "transaction", val.GetReference()))
+          return false;
+        if(!json::SetField(writer, "user", val.GetUser()))
+          return false;
+      }
+      JSON_END_OBJECT(writer);
+      return true;
+    }
+
+    static inline bool
+    SetField(Writer& writer, const char* name, const Input& val){
+      JSON_KEY(writer, name);
+      return Write(writer, val);
+    }
+
+    static inline bool
+    Write(Writer& writer, const InputList& val){
+      JSON_START_ARRAY(writer);
+      {
+        for(auto& it : val)
+          if(!Write(writer, it))
+            return false;
+      }
+      JSON_END_ARRAY(writer);
+      return true;
+    }
+
+    static inline bool
+    SetField(Writer& writer, const char* name, const InputList& val){
+      JSON_KEY(writer, name);
+      return Write(writer, val);
+    }
+  }
 }
 
 #endif//TOKEN_TRANSACTION_INPUT_H

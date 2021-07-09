@@ -168,13 +168,14 @@ namespace token{
     }
 
     bool Run(const ServerPort& port){
+      DLOG_THREAD(INFO) << "starting the server....";
       SetState(ServerBase::State::kStartingState);
-      VERIFY_UVRESULT(Bind(GetHandle(), port), LOG_SERVER(ERROR), "cannot bind server");
-      VERIFY_UVRESULT(Listen(GetStream(), &OnNewConnection), LOG_SERVER(ERROR), "listen failure");
+      VERIFY_UVRESULT2(FATAL, Bind(GetHandle(), port), "cannot bind server");
+      VERIFY_UVRESULT2(FATAL, Listen(GetStream(), &OnNewConnection), "listen failure");
 
       SetState(ServerBase::State::kRunningState);
       DLOG_THREAD(INFO) << "server listening on port: " << port;
-      VERIFY_UVRESULT(uv_run(GetLoop(), UV_RUN_DEFAULT), LOG_SERVER(ERROR), "failed to run loop");
+      VERIFY_UVRESULT2(FATAL, uv_run(GetLoop(), UV_RUN_DEFAULT), "failed to run server loop");
       return true;
     }
 
@@ -190,8 +191,10 @@ namespace token{
     ThreadId thread_;
 
     static void HandleThread(uword param){
-      std::shared_ptr<Server> instance = Server::NewInstance();
-      LOG_THREAD_IF(ERROR, !instance->Run(Server::GetPort())) << "Failed to run the " << Server::GetName() << " server loop.";
+      auto instance = new Server();
+      if(!instance->Run(Server::GetPort())){
+        LOG_THREAD(FATAL) << "cannot run the " << Server::GetName() << " loop on port: " << Server::GetPort();
+      }
       pthread_exit(nullptr);
     }
    public:

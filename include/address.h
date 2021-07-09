@@ -3,8 +3,8 @@
 
 #include <set>
 
+#include "json.h"
 #include "flags.h"
-#include "common.h"
 
 namespace token{
   class NodeAddress{
@@ -159,6 +159,15 @@ namespace token{
       return leveldb::Slice();//TODO: implement
     }
   };
+
+  namespace json{
+    static inline bool
+    SetField(Writer& writer, const char* name, const NodeAddress& val){
+      JSON_KEY(writer, name);
+      JSON_STRING(writer, val.ToString());
+      return true;
+    }
+  }
 }
 
 #endif //TOKEN_ADDRESS_H

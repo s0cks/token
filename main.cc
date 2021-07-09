@@ -76,8 +76,8 @@
       token::OutputList outputs = {
         token::Output(recipient, token->GetProduct()),
       };
-      token::TransactionPtr tx = token::Transaction::NewInstance(inputs, outputs);
-      if(!pool->PutTransaction(tx->hash(), tx)){
+      token::UnsignedTransactionPtr tx = token::UnsignedTransaction::NewInstance(token::Clock::now(), inputs, outputs);
+      if(!pool->PutUnsignedTransaction(tx->hash(), tx)){
         LOG(WARNING) << "cannot add new transaction " << tx->ToString() << " to pool!";
         return false;
       }
@@ -144,6 +144,7 @@ SilentlyWaitForShutdown(ServiceThread& thread){
     return;
   }
 
+  DLOG(INFO) << "joining the " << Service::GetName() << " service....";
   if(!thread.Join()){
     LOG_AT_LEVEL(Severity) << "couldn't join the " << Service::GetName() << " service on port: " << Service::GetPort();
     return;
@@ -156,7 +157,7 @@ PrintRuntimeInformation(){
   using namespace token;
   // print basic information
   VLOG(0) << "home: " << TOKEN_BLOCKCHAIN_HOME;
-  VLOG(0) << "node-id: " << ConfigurationManager::GetNodeID();
+  VLOG(0) << "node-id: " << config::GetServerNodeID();
   VLOG(0) << "current time: " << FormatTimestampReadable(Clock::now());
 
   // print block chain information
@@ -167,75 +168,26 @@ PrintRuntimeInformation(){
     VLOG(2) << "head: " << chain->GetHead()->ToString();
     VLOG(2) << "genesis: " << chain->GetGenesis()->ToString();
   } else if(VLOG_IS_ON(1)){
-    VLOG(1) << "head: " << chain->GetHead()->ToString();
-    VLOG(1) << "genesis: " << chain->GetGenesis()->ToString();
+    VLOG(1) << "head: " << chain->GetHeadHash();
+    VLOG(1) << "genesis: " << chain->GetGenesisHash();
   }
 
   // print object pool information
   ObjectPoolPtr pool = ObjectPool::GetInstance();
   VLOG(0) << "number of objects in pool: " << pool->GetNumberOfObjects();
   VLOG(1) << "number of blocks in pool: " << pool->GetNumberOfBlocks();
-  VLOG(1) << "number of transactions in pool: " << pool->GetNumberOfTransactions();
+  VLOG(1) << "number of transactions in pool: " << pool->GetNumberOfUnsignedTransactions();
   VLOG(1) << "number of unclaimed transactions in pool: " << pool->GetNumberOfUnclaimedTransactions();
 
   // print peer information
   PeerList peers;
-  DLOG_IF(WARNING, !ConfigurationManager::GetInstance()->GetPeerList(TOKEN_CONFIGURATION_NODE_PEERS, peers)) << "cannot get peer list.";
+  DLOG_IF(WARNING, !config::GetPeerList(TOKEN_CONFIGURATION_NODE_PEERS, peers)) << "cannot get peer list.";
   VLOG(0) << "number of peers: " << peers.size();
   if(VLOG_IS_ON(1) && !peers.empty()){
     VLOG(1) << "peers: ";
     for(auto& it : peers)
       VLOG(1) << " - " << it;
   }
-}
-
-static token::rpc::LedgerServerThread server_thread;
-static token::http::HealthServiceThread health_service_thread;
-static token::http::RestServiceThread rest_service_thread;
-
-static void
-AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf){
-  LOG(INFO) << "allocating buffer of size " << suggested_size << "b for session";
-  buf->base = (char*)malloc(suggested_size);
-  buf->len = suggested_size;
-}
-
-static void
-OnMessageSent(uv_write_t* req, int status){
-  LOG(INFO) << "status: " << status;
-}
-
-static void
-OnClose(uv_handle_t* handle){
-  LOG(INFO) << "session closed.";
-}
-
-static void
-OnRead(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
-  token::http::ResponsePtr response = token::http::NewOkResponse("Hello World");
-  token::BufferPtr buffer = response->ToBuffer();
-
-  LOG(INFO) << "response: " << std::string(buffer->data(), buffer->GetWrittenBytes());
-
-  uv_buf_t buffers[1];
-  buffers[0].base = buffer->data();
-  buffers[0].len = buffer->GetWrittenBytes();
-
-  uv_write_t* request = new uv_write_t();
-  uv_write(request, stream, buffers, 1, &OnMessageSent);
-
-  uv_read_stop(stream);
-  uv_close((uv_handle_t*)stream, &OnClose);
-}
-
-static void
-OnNewConnection(uv_stream_t* stream, int status){
-  assert(status == 0);
-
-  uv_tcp_t* session = new uv_tcp_t();
-  uv_tcp_init(stream->loop, session);
-  uv_accept(stream, (uv_stream_t*)session);
-  uv_read_start((uv_stream_t*)session, &AllocBuffer, &OnRead);
 }
 
 //TODO:
@@ -262,55 +214,43 @@ main(int argc, char **argv){
   google::InitGoogleLogging(argv[0]);
 
   // Create the home directory if it doesn't exist
-//  if(!FileExists(TOKEN_BLOCKCHAIN_HOME)){
-//    if(!CreateDirectory(TOKEN_BLOCKCHAIN_HOME)){
-//      LOG(FATAL) << "cannot create ledger in: " << TOKEN_BLOCKCHAIN_HOME;
-//      return EXIT_FAILURE;
-//    }
-//  }
+  if(!FileExists(TOKEN_BLOCKCHAIN_HOME)){
+    if(!CreateDirectory(TOKEN_BLOCKCHAIN_HOME)){
+      LOG(FATAL) << "cannot create ledger in: " << TOKEN_BLOCKCHAIN_HOME;
+      return EXIT_FAILURE;
+    }
+  }
 
-/*uv_loop_t* loop = uv_loop_new();
-  uv_tcp_t server;
-  uv_tcp_init(loop, &server);
+  token::rpc::LedgerServerThread th_server;
+  token::http::HealthServiceThread th_svc_health;
+  token::http::RestServiceThread th_svc_rest;
 
-  sockaddr_in bind_address{};
-  uv_ip4_addr("0.0.0.0", FLAGS_service_port, &bind_address);
-  uv_tcp_bind(&server, (struct sockaddr*)&bind_address, 0);
-  uv_listen((uv_stream_t*)&server, 100, &OnNewConnection);
+  // Load the configuration
+  config::Initialize();
+  // start the health check service
+  SilentlyStartService<http::HealthService, http::HealthServiceThread, google::FATAL>(th_svc_health);
+  // initialize the job scheduler
+  SilentlyInitialize<JobScheduler, google::FATAL>();
+  // initialize the keychain
+  SilentlyInitialize<Keychain, google::FATAL>();//TODO: refactor & parallelize
+  // initialize the object pool
+  SilentlyInitialize<ObjectPool, google::FATAL>();
+  // initialize the wallet manager
+  SilentlyInitialize<WalletManager, google::FATAL>();
+  // initialize the block chain
+  SilentlyInitialize<BlockChain, google::FATAL>();
+  // start the rpc server
+  SilentlyStartService<rpc::LedgerServer, rpc::LedgerServerThread, google::FATAL>(th_server);
+  // start the peer threads & connect to any known peers
+  SilentlyInitialize<PeerSessionManager, google::FATAL>();
+  // start the rest service
+  SilentlyStartService<http::RestService, http::RestServiceThread, google::FATAL>(th_svc_rest);
 
-  uv_run(loop, UV_RUN_DEFAULT);*/
+  if(FLAGS_mining_interval > 0)
+    SilentlyStartThread<BlockMiner, BlockMinerThread>();
 
-  http::HealthService service;
-  service.Run(FLAGS_service_port);
-
-//  // Load the configuration
-//  SilentlyInitialize<ConfigurationManager, google::FATAL>();
-//  // start the health check service
-//  SilentlyStartService<http::HealthService, http::HealthServiceThread, google::FATAL>(health_service_thread);
-//  // initialize the job scheduler
-//  SilentlyInitialize<JobScheduler, google::FATAL>();
-//  // initialize the keychain
-//  SilentlyInitialize<Keychain, google::FATAL>();//TODO: refactor & parallelize
-//  // initialize the ReferenceDatabase
-//  SilentlyInitialize<ReferenceDatabase, google::FATAL>();
-//  // initialize the object pool
-//  SilentlyInitialize<ObjectPool, google::FATAL>();
-//  // initialize the wallet manager
-//  SilentlyInitialize<WalletManager, google::FATAL>();
-//  // initialize the block chain
-//  SilentlyInitialize<BlockChain, google::FATAL>();
-//  // start the rpc server
-//  SilentlyStartService<rpc::LedgerServer, rpc::LedgerServerThread, google::FATAL>(server_thread);
-//  // start the peer threads & connect to any known peers
-//  SilentlyInitialize<PeerSessionManager, google::FATAL>();
-//  // start the rest service
-//  SilentlyStartService<http::RestService, http::RestServiceThread, google::FATAL>(rest_service_thread);
-//
-//  if(FLAGS_mining_interval > 0)
-//    SilentlyStartThread<BlockMiner, BlockMinerThread>();
-//
-//  sleep(5);
-//  PrintRuntimeInformation();
+  sleep(5);
+  PrintRuntimeInformation();
 
 #ifdef TOKEN_DEBUG
   sleep(2);
@@ -322,8 +262,8 @@ main(int argc, char **argv){
 #endif//TOKEN_DEBUG
 
 //  //TODO: SilentlyWaitForShutdown<PeerSessionManager
-//  SilentlyWaitForShutdown<rpc::LedgerServer, rpc::LedgerServerThread, google::FATAL>(server_thread);
-//  SilentlyWaitForShutdown<http::RestService, http::RestServiceThread, google::FATAL>(rest_service_thread);
-//  SilentlyWaitForShutdown<http::HealthService, http::HealthServiceThread, google::FATAL>(health_service_thread);
+  SilentlyWaitForShutdown<rpc::LedgerServer, rpc::LedgerServerThread, google::FATAL>(th_server);
+  SilentlyWaitForShutdown<http::RestService, http::RestServiceThread, google::FATAL>(th_svc_rest);
+  SilentlyWaitForShutdown<http::HealthService, http::HealthServiceThread, google::FATAL>(th_svc_health);
   return EXIT_SUCCESS;
 }

@@ -21,19 +21,31 @@ namespace token{
     state_ = state;
   }
 
+  static inline bool
+  GetPeerList(PeerList& peers){
+    //TODO: better error handling
+    if(!config::GetPeerList(TOKEN_CONFIGURATION_NODE_PEERS, peers))
+      DLOG(WARNING) << "couldn't get list of peers from the ConfigurationManager.";
+
+    if(!FLAGS_remote.empty()){
+      if(!peers.insert(NodeAddress::ResolveAddress(FLAGS_remote)).second)
+        DLOG(WARNING) << "couldn't resolve peer: " << FLAGS_remote;
+    }
+    return true;
+  }
+
   bool PeerSessionManager::Initialize(){
     if (!IsUninitializedState()){
-#ifdef TOKEN_DEBUG
-      LOG(WARNING) << "cannot re-initialize the peer session manager.";
-#endif//TOKEN_DEBUG
+      DLOG(WARNING) << "cannot re-initialize the PeerSessionManager.";
       return false;
     }
 
     RegisterQueue(pthread_self(), &queue_);//TODO: cross-platform fix
     threads_ = (PeerSessionThread**) malloc(sizeof(PeerSessionThread*) * FLAGS_num_peers);
-    for (int32_t idx = 0; idx < FLAGS_num_peers; idx++){
+    for(auto idx = 0; idx < FLAGS_num_peers; idx++){
       PeerSessionThread* thread = threads_[idx] = new PeerSessionThread(idx);
-      if (!threads_[idx]->Start()){
+      DLOG(INFO) << "starting PeerSessionThread #" << idx << "....";
+      if(!threads_[idx]->Start()){
         LOG(WARNING) << "couldn't start peer session #" << idx;
         return false;
       }
@@ -41,11 +53,9 @@ namespace token{
     }
 
     PeerList peers;
-    if (!ConfigurationManager::GetInstance()->GetPeerList(TOKEN_CONFIGURATION_NODE_PEERS, peers)){
-      LOG(WARNING) << "couldn't get list of peers from the configuration.";
-      return true;
-    }
+    GetPeerList(peers);//TODO: error handling
 
+    DLOG(INFO) << "connecting to " << peers.size() << " peers.....";
     for (auto& it : peers)
       ScheduleRequest(it);
     return true;
@@ -180,7 +190,7 @@ namespace token{
     return pos->second;
   }
 
-  void PeerSessionManager::ScheduleRequest(const NodeAddress& address, const ConnectionAttemptCounter attempts){
+  void PeerSessionManager::ScheduleRequest(const NodeAddress& address, const ConnectionAttemptCounter& attempts){
 #ifdef TOKEN_DEBUG
     LOG(INFO) << "scheduling connection request for " << address << " (" << attempts << " attempts)....";
 #endif//TOKEN_DEBUG
@@ -191,14 +201,14 @@ namespace token{
   }
 
   static inline bool
-  WritePeerInfo(Json::Writer& writer, PeerSession* session){
+  WritePeerInfo(json::Writer& writer, PeerSession* session){
     return writer.StartObject()
         && json::SetField(writer, "id", session->GetID())
         && json::SetField(writer, "address", session->GetAddress())
         && writer.EndObject();
   }
 
-  bool PeerSessionManager::GetConnectedPeers(Json::Writer& writer){
+  bool PeerSessionManager::GetConnectedPeers(json::Writer& writer){
     FOR_EACH_WORKER(thread)
       if(thread->IsConnected() && !WritePeerInfo(writer, thread->GetPeerSession()))
         return false;

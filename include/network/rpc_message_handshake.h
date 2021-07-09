@@ -15,9 +15,9 @@ namespace token{
             MessageEncoder<M>(value, flags){}
        public:
         HandshakeMessageEncoder(const HandshakeMessageEncoder<M>& other) = default;
-        virtual ~HandshakeMessageEncoder<M>() override = default;
+        ~HandshakeMessageEncoder<M>() override = default;
 
-        virtual int64_t GetBufferSize() const override{
+        int64_t GetBufferSize() const override{
           int64_t size = codec::EncoderBase<M>::GetBufferSize();
           size += sizeof(RawTimestamp); // timestamp_
           size += sizeof(uint32_t); // client_type_
@@ -27,15 +27,7 @@ namespace token{
           return size;
         }
 
-        virtual bool Encode(const BufferPtr& buff) const override{
-          if(MessageEncoder<M>::ShouldEncodeVersion()){
-            if(!buff->PutVersion(codec::GetCurrentVersion())){
-              CANNOT_ENCODE_CODEC_VERSION(FATAL);
-              return false;
-            }
-            DLOG(INFO) << "encoded Version: " << codec::GetCurrentVersion();
-          }
-
+        bool Encode(const BufferPtr& buff) const override{
           const Timestamp& timestamp = MessageEncoder<M>::value().timestamp();
           if(!buff->PutTimestamp(timestamp)){
             CANNOT_ENCODE_VALUE(FATAL, Timestamp, ToUnixTimestamp(timestamp));
@@ -67,11 +59,11 @@ namespace token{
       template<class M>
       class HandshakeMessageDecoder : public MessageDecoder<M>{
        protected:
-        HandshakeMessageDecoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
+        explicit HandshakeMessageDecoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
             MessageDecoder<M>(hints){}
        public:
         HandshakeMessageDecoder(const HandshakeMessageDecoder<M>& other) = default;
-        virtual ~HandshakeMessageDecoder<M>() override = default;
+        ~HandshakeMessageDecoder<M>() override = default;
         virtual bool Decode(const BufferPtr& buff, M& result) const = 0;
         HandshakeMessageDecoder<M>& operator=(const HandshakeMessageDecoder<M>& other) = default;
       };

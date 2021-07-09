@@ -10,19 +10,18 @@ namespace token{
     }
 
     int64_t BlockMessage::Encoder::GetBufferSize() const{
-      int64_t size = ObjectMessageEncoder<BlockMessage>::GetBufferSize();
-      //TODO: compute size
-      return size;
+      NOT_IMPLEMENTED(ERROR);
+      return 0;
     }
 
     bool BlockMessage::Encoder::Encode(const BufferPtr& buff) const{
-      //TODO: encode value
-      return true;
+      NOT_IMPLEMENTED(ERROR);
+      return false;
     }
 
     bool BlockMessage::Decoder::Decode(const BufferPtr& buff, BlockMessage& result) const{
-      //TODO: decode value
-      return true;
+      NOT_IMPLEMENTED(ERROR);
+      return false;
     }
   }
 }

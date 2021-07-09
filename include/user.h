@@ -6,6 +6,7 @@
 #include <cstring>
 #include <leveldb/slice.h>
 
+#include "json.h"
 #include "binary_type.h"
 
 namespace token{
@@ -61,6 +62,20 @@ namespace token{
       return BinaryType<kUserSize>::Compare(a, b);
     }
   };
+
+  namespace json{
+    static inline bool
+    Write(Writer& writer, const User& val){
+      JSON_STRING(writer, val.ToString());
+      return true;
+    }
+
+    static inline bool
+    SetField(Writer& writer, const char* name, const User& val){
+      JSON_KEY(writer, name);
+      return Write(writer, val);
+    }
+  }
 }
 
 #endif//TOKEN_USER_H

@@ -1,6 +1,8 @@
 #ifndef TOKEN_CODEC_H
 #define TOKEN_CODEC_H
 
+#include "buffer.h"
+
 #define TOKEN_CODEC_VERSION_MAJOR 0
 #define TOKEN_CODEC_VERSION_MINOR 0
 #define TOKEN_CODEC_VERSION_REVISION 1

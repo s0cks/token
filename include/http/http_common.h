@@ -140,10 +140,7 @@ namespace token{
 
     static inline std::string
     GetXNodeIDHeaderValue(){
-      UUID node_id;
-      if(!ConfigurationManager::GetInstance()->GetUUID(TOKEN_CONFIGURATION_NODE_ID, node_id)){
-        return DEFAULT_NODE_ID;
-      }
+      UUID node_id = config::GetServerNodeID();
 
       std::stringstream ss;
       ss << "Node/" << node_id.ToStringAbbreviated();

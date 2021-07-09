@@ -49,7 +49,7 @@ namespace token{
     return true;
   }
 
-  bool ObjectPoolBatchWriteJob::PutTransaction(const Hash& hash, const TransactionPtr& val){
+  bool ObjectPoolBatchWriteJob::PutTransaction(const Hash& hash, const UnsignedTransactionPtr& val){
     PutObject(batch_, hash, val);
     return true;
   }

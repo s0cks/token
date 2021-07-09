@@ -112,7 +112,7 @@ namespace token{
     }
 
     ObjectPoolPtr pool = ObjectPool::GetInstance();
-    if(pool->GetNumberOfTransactions() == 0){
+    if(pool->GetNumberOfUnsignedTransactions() == 0){
       DLOG_MINER(WARNING) << "skipping mining cycle, no transactions in pool.";
       return; // skip
     }
@@ -124,7 +124,7 @@ namespace token{
 
     // create a new proposal
     Timestamp timestamp = Clock::now();
-    UUID node_id = ConfigurationManager::GetNodeID();
+    UUID node_id = config::GetServerNodeID();
     ProposalPtr proposal = Proposal::NewInstance(uv_loop_new(), RawProposal(timestamp, UUID(), node_id, blk->GetHeader()));//TODO: can we leverage the block miner loop since it's in-active during proposals?
     if(!miner->SetActiveProposal(proposal)){
       LOG_MINER(ERROR) << "cannot set active proposal.";

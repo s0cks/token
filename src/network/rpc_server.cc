@@ -4,8 +4,7 @@
 
 namespace token{
   namespace rpc{
-    std::unique_ptr<LedgerServer> LedgerServer::NewInstance(){
-      return std::unique_ptr<LedgerServer>(new LedgerServer(ObjectPool::GetInstance(), BlockChain::GetInstance()));
-    }
+    LedgerServer::LedgerServer():
+      LedgerServer(uv_loop_new(), ObjectPool::GetInstance(), BlockChain::GetInstance()){}
   }
 }

@@ -38,11 +38,9 @@ namespace token{
       }
     }
    private:
-    PeerSessionManager() = delete;
-
     static void SetState(const State& state);
     static void RegisterQueue(const ThreadId& thread, ConnectionRequestQueue* queue);
-    static void ScheduleRequest(const NodeAddress& address, const ConnectionAttemptCounter attempts=TOKEN_MAX_CONNECTION_ATTEMPTS);
+    static void ScheduleRequest(const NodeAddress& address, const ConnectionAttemptCounter& attempts=TOKEN_MAX_CONNECTION_ATTEMPTS);
     static ConnectionRequestQueue* GetRandomQueue();
     static ConnectionRequestQueue* GetQueue(const ThreadId& thread);
 
@@ -51,6 +49,7 @@ namespace token{
       return GetQueue(pthread_self());
     }
    public:
+    PeerSessionManager() = delete;
     ~PeerSessionManager() = delete;
 
     static State GetState();
@@ -78,7 +77,7 @@ namespace token{
       return GetNumberOfConnectedPeers() > 0;
     }
 
-    static bool GetConnectedPeers(Json::Writer& writer);
+    static bool GetConnectedPeers(json::Writer& writer);
 
 #define DEFINE_CHECK(Name) \
     static inline bool Is##Name##State(){ return GetState() == State::k##Name##State; }

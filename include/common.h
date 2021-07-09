@@ -185,12 +185,6 @@ namespace token{
     typedef rapidjson::Document::Array Array;
   }
 
-  namespace Json{
-    typedef rapidjson::Document Document;
-    typedef rapidjson::StringBuffer String;
-    typedef rapidjson::Writer<String> Writer;
-  }
-
   namespace internal{
     // memory sizes
     static const int64_t kBytes = 1;

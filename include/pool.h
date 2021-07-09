@@ -11,13 +11,13 @@
 #include "hash.h"
 #include "flags.h"
 #include "block.h"
-#include "transaction.h"
+#include "unsigned_transaction.h"
 #include "unclaimed_transaction.h"
 #include "atomic/relaxed_atomic.h"
 
 #define FOR_EACH_POOL_TYPE(V) \
   V(Block)                    \
-  V(Transaction)              \
+  V(UnsignedTransaction)      \
   V(UnclaimedTransaction)
 
 namespace token{
@@ -142,7 +142,7 @@ namespace token{
 #define DEFINE_TYPE_METHODS(Name) \
     bool Print##Name##s(const google::LogSeverity& severity=google::INFO) const; \
     virtual bool Put##Name(const Hash& hash, const Name##Ptr& val) const;               \
-    virtual bool Get##Name##s(Json::Writer& json) const;                                \
+    virtual bool Get##Name##s(json::Writer& json) const;                                \
     virtual bool Get##Name##s(HashList& hashes) const;                                  \
     virtual bool Has##Name(const Hash& hash) const;                                     \
     virtual bool Has##Name##s() const;    \

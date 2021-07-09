@@ -17,6 +17,16 @@ namespace token{
     class Message: public MessageBase{
     protected:
       Message() = default;
+
+      static inline codec::EncoderFlags
+      GetDefaultMessageEncoderFlags(){
+        return codec::EncodeTypeFlag::Encode(true)|codec::EncodeVersionFlag::Encode(true);
+      }
+
+      static inline codec::DecoderHints
+      GetDefaultMessageDecoderHints(){
+        return codec::ExpectTypeHint::Encode(true)|codec::ExpectVersionHint::Encode(true);
+      }
     public:
       ~Message() override = default;
       static MessagePtr From(const BufferPtr& buffer);

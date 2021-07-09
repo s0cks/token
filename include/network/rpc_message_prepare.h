@@ -9,7 +9,7 @@ namespace token{
      public:
       class Encoder : public PaxosMessageEncoder<PrepareMessage>{
        public:
-        Encoder(const PrepareMessage& value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags):
+        explicit Encoder(const PrepareMessage& value, const codec::EncoderFlags& flags=GetDefaultMessageEncoderFlags()):
           PaxosMessageEncoder<PrepareMessage>(value, flags){}
         Encoder(const Encoder& other) = default;
         ~Encoder() override = default;
@@ -19,7 +19,7 @@ namespace token{
 
       class Decoder : public PaxosMessageDecoder<PrepareMessage>{
        public:
-        Decoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
+        explicit Decoder(const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()):
           PaxosMessageDecoder<PrepareMessage>(hints){}
         Decoder(const Decoder& other) = default;
         ~Decoder() override = default;
@@ -66,13 +66,13 @@ namespace token{
       }
 
       static inline bool
-      Decode(const BufferPtr& buff, PrepareMessage& result, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      Decode(const BufferPtr& buff, PrepareMessage& result, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
         Decoder decoder(hints);
         return decoder.Decode(buff, result);
       }
 
       static inline PrepareMessagePtr
-      DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
         PrepareMessage msg;
         if(!Decode(buff, msg, hints)){
           DLOG(ERROR) << "cannot decode PrepareMessage.";

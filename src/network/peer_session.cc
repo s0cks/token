@@ -54,12 +54,7 @@ namespace token{
     }
 
     session->SetState(Session::kConnectingState);
-
-
-    BlockPtr head = BlockChain::GetInstance()->GetHead();
-    Hash nonce = Hash::GenerateNonce();
-    UUID node_id = ConfigurationManager::GetNodeID();
-    session->Send(rpc::VersionMessage::NewInstance(Clock::now(), rpc::ClientType::kNode, Version::CurrentVersion(), nonce, node_id, head->GetHeader()));
+    session->SendVersion();
 
     int err;
     if((err = uv_read_start(session->GetStream(), &AllocBuffer, &OnMessageReceived)) != 0){
@@ -172,10 +167,10 @@ namespace token{
 
   void PeerMessageHandler::OnVersionMessage(const rpc::VersionMessagePtr& msg){
     rpc::ClientType type = rpc::ClientType::kNode;
-    UUID node_id = ConfigurationManager::GetNodeID();
+    UUID node_id = config::GetServerNodeID();
     NodeAddress callback = env::GetServerCallbackAddress();
     Version version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
-    BlockPtr head = BlockChain::GetInstance()->GetHead();//TODO: optimize
+    BlockPtr head = GetChain()->GetHead();
     Hash nonce = Hash::GenerateNonce();
     Send(rpc::VerackMessage::NewInstance(Clock::now(), type, version, nonce, node_id, head->GetHeader(), callback));
   }

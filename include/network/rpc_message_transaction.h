@@ -5,7 +5,7 @@
 
 namespace token{
   namespace rpc{
-    class TransactionMessage : public ObjectMessage<Transaction>{
+    class TransactionMessage : public ObjectMessage<UnsignedTransaction>{
      public:
       class Encoder : public ObjectMessageEncoder<TransactionMessage>{
        public:
@@ -29,8 +29,8 @@ namespace token{
       };
      public:
       TransactionMessage() = default;
-      TransactionMessage(const TransactionPtr& val):
-        ObjectMessage<Transaction>(val){}
+      explicit TransactionMessage(const UnsignedTransactionPtr& val):
+        ObjectMessage<UnsignedTransaction>(val){}
       TransactionMessage(const TransactionMessage& other) = default;
       ~TransactionMessage() override = default;
 
@@ -52,7 +52,7 @@ namespace token{
       TransactionMessage& operator=(const TransactionMessage& other) = default;
 
       static inline TransactionMessagePtr
-      NewInstance(const TransactionPtr& value){
+      NewInstance(const UnsignedTransactionPtr& value){
         return std::make_shared<TransactionMessage>(value);
       }
 

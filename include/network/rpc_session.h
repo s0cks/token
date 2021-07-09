@@ -11,18 +11,29 @@ namespace token{
     class Session : public SessionBase{
       friend class PeerSession;
      protected:
-#define DECLARE_ASYNC_HANDLE(Name) \
-      uv_async_t send_##Name##_;
-      FOR_EACH_MESSAGE_TYPE(DECLARE_ASYNC_HANDLE)
-#undef DECLARE_ASYNC_HANDLE
+      uv_async_t send_version_;
+      uv_async_t send_verack_;
+      uv_async_t send_prepare_;
+      uv_async_t send_promise_;
+      uv_async_t send_commit_;
+      uv_async_t send_accepted_;
+      uv_async_t send_rejected_;
 
-      Session() = default;
-      explicit Session(uv_loop_t* loop, const UUID& uuid=UUID()):
-        SessionBase(loop, uuid){}
+      Session();
+      explicit Session(uv_loop_t* loop, const UUID& uuid=UUID());
+
+      static void OnSendVersion(uv_async_t* handle);
+      static void OnSendVerack(uv_async_t* handle);
+      static void OnSendPrepare(uv_async_t* handle);
+      static void OnSendPromise(uv_async_t* handle);
+      static void OnSendCommit(uv_async_t* handle);
+      static void OnSendAccepted(uv_async_t* handle);
+      static void OnSendRejected(uv_async_t* handle);
      public:
       ~Session() override = default;
 
       virtual rpc::MessageHandler& GetMessageHandler() = 0;
+      virtual BlockChainPtr GetChain() const = 0;
 
       virtual void Send(const rpc::MessageList& messages){
         return SendMessages((const std::vector<std::shared_ptr<MessageBase>>&)messages);
@@ -33,10 +44,41 @@ namespace token{
         return SendMessages(messages);
       }
 
-#define DEFINE_ASYNC_SEND(Name) \
-      inline void Send##Name(){ uv_async_send(&send_##Name##_); }
-      FOR_EACH_MESSAGE_TYPE(DEFINE_ASYNC_SEND)
-#undef DEFINE_ASYNC_SEND
+      inline bool SendVersion(){
+        VERIFY_UVRESULT2(WARNING, uv_async_send(&send_version_), "cannot send Version");
+        return true;
+      }
+
+      inline bool SendVerack(){
+        VERIFY_UVRESULT2(WARNING, uv_async_send(&send_verack_), "cannot send Verack");
+        return true;
+      }
+
+      inline bool SendPrepare(){
+        VERIFY_UVRESULT2(WARNING, uv_async_send(&send_prepare_), "cannot send Prepare");
+        return true;
+      }
+
+      inline bool SendPromise(){
+        VERIFY_UVRESULT2(WARNING, uv_async_send(&send_promise_), "cannot send Promise");
+        return true;
+      }
+
+      inline bool SendCommit(){
+        VERIFY_UVRESULT2(WARNING, uv_async_send(&send_commit_), "cannot send Commit");
+        return true;
+      }
+
+      inline bool SendAccepted(){
+        VERIFY_UVRESULT2(WARNING, uv_async_send(&send_accepted_), "cannot send Accepted");
+        return true;
+      }
+
+      inline bool SendRejected(){
+        VERIFY_UVRESULT2(WARNING, uv_async_send(&send_rejected_), "cannot send Rejected");
+        return true;
+      }
+
     };
   }
 }

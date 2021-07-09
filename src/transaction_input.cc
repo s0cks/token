@@ -30,12 +30,22 @@ namespace token{
   }
 
   bool Input::Encoder::Encode(const BufferPtr& buff) const{
-    if(ShouldEncodeVersion()){
-      if(!buff->PutVersion(codec::GetCurrentVersion())){
-        CANNOT_ENCODE_CODEC_VERSION(FATAL);
+    if(ShouldEncodeType()){
+      auto type = static_cast<int64_t>(value().type());
+      if(!buff->PutLong(type)){
+        LOG(FATAL) << "couldn't encode object type.";
         return false;
       }
-      DLOG(INFO) << "encoded version: " << codec::GetCurrentVersion();
+      DLOG(INFO) << "encoded object type: " << type;
+    }
+
+    if(ShouldEncodeVersion()){
+      auto version = codec::GetCurrentVersion();
+      if(!buff->PutVersion(version)){
+        LOG(FATAL) << "couldn't encode object version.";
+        return false;
+      }
+      DLOG(INFO) << "encoded object version: " << version;
     }
 
     // Encode reference_
@@ -57,8 +67,6 @@ namespace token{
   }
 
   bool Input::Decoder::Decode(const BufferPtr& buff, Input& result) const{
-    CHECK_CODEC_VERSION(FATAL, buff);
-
     // Decode reference_
     TransactionReference reference = buff->GetReference();
     DLOG(INFO) << "decoded reference: " << reference;

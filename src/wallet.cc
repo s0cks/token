@@ -33,14 +33,4 @@ namespace token{
         return false;
     return true;
   }
-
-  void ToJson(const Wallet& hashes, Json::String& sb){
-    Json::Writer writer(sb);
-    writer.StartArray();
-    for(auto& it : hashes){
-      std::string hash = it.HexString();
-      writer.String(hash.data(), Hash::GetSize());
-    }
-    writer.EndArray();
-  }
 }
