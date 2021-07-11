@@ -59,7 +59,7 @@ namespace token{
 
     static inline void
     SetDefaultProperty(leveldb::WriteBatch& batch, const std::string& name, const PeerList& val){
-      internal::BufferPtr buffer = internal::NewInstance(GetBufferSize(val));
+      internal::BufferPtr buffer = internal::NewBuffer(GetBufferSize(val));
       if(!buffer->PutPeerList(val)){
         LOG(WARNING) << "cannot serialize peer list to buffer of size " << buffer->ToString();
         return;
@@ -170,7 +170,7 @@ namespace token{
 #undef DEFINE_PUT_PROPERTY
 
     bool PutProperty(const std::string& name, const PeerList& val){
-      auto slice = internal::NewInstance(GetBufferSize(val));
+      auto slice = internal::NewBuffer(GetBufferSize(val));
       if(!slice->PutPeerList(val)){
         DLOG(WARNING) << "cannot serialize peer list to buffer.";
         return false;
@@ -198,7 +198,7 @@ namespace token{
         return false;
       }
 
-      BufferPtr data = internal::CopyFrom(slice);
+      BufferPtr data = internal::CopyBufferFrom(slice);
       return data->GetPeerList(results);
     }
 

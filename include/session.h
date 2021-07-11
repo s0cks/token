@@ -31,7 +31,7 @@ namespace token{
       SessionWriteData(SessionBase* s, int64_t size):
         request(),
         session(s),
-        buffer(internal::NewInstance(size)){
+        buffer(internal::NewBuffer(size)){
         request.data = this;
       }
     };

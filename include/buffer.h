@@ -335,63 +335,63 @@ namespace token{
     };
 
     static inline BufferPtr
-    NewInstance(const int64_t& length){
+    NewBuffer(const int64_t& length){
       return std::make_shared<AllocatedBuffer>(length);
     }
 
     template<class Encoder>
     static inline BufferPtr
-    For(const Encoder& val){
-      return NewInstance(val.GetBufferSize());
+    NewBufferFor(const Encoder& val){
+      return NewBuffer(val.GetBufferSize());
     }
 
     static inline BufferPtr
-    CopyFrom(uint8_t* data, const int64_t& length){
-      auto buffer = NewInstance(length);
+    CopyBufferFrom(uint8_t* data, const int64_t& length){
+      auto buffer = NewBuffer(length);
       if(!buffer->PutBytes(data, length))
         return nullptr;
       return buffer;
     }
 
     static inline BufferPtr
-    CopyFrom(const std::string& slice){
-      return CopyFrom((uint8_t*)slice.data(), static_cast<int64_t>(slice.length()));
+    CopyBufferFrom(const std::string& slice){
+      return CopyBufferFrom((uint8_t *) slice.data(), static_cast<int64_t>(slice.length()));
     }
 
     static inline BufferPtr
-    CopyFrom(const json::String& body){
-      return CopyFrom((uint8_t*)body.GetString(), static_cast<int64_t>(body.GetSize()));
+    CopyBufferFrom(const json::String& body){
+      return CopyBufferFrom((uint8_t *) body.GetString(), static_cast<int64_t>(body.GetSize()));
     }
 
     static inline BufferPtr
-    CopyFrom(const leveldb::Slice& slice){
-      return CopyFrom((uint8_t*)slice.data(), slice.size());
+    CopyBufferFrom(const leveldb::Slice& slice){
+      return CopyBufferFrom((uint8_t *) slice.data(), slice.size());
     }
 
     template<const int64_t& Length>
     static inline BufferPtr
-    CopyFrom(const StackBuffer<Length>& buffer){
-      return CopyFrom(buffer.data(), buffer.length());
+    CopyBufferFrom(const StackBuffer<Length>& buffer){
+      return CopyBufferFrom(buffer.data(), buffer.length());
     }
 
     static inline BufferPtr
-    FromFile(FILE* file, const int64_t& length){
+    NewBufferFromFile(FILE* file, const int64_t& length){
       uint8_t data[length];
       if(fread(data, sizeof(uint8_t), length, file) != length){
         LOG(ERROR) << "cannot read " << length << " bytes from file into buffer.";
         return nullptr;
       }
-      return CopyFrom(data, length);
+      return CopyBufferFrom(data, length);
     }
 
     static inline BufferPtr
-    FromFile(const std::string& filename){
+    NewBufferFromFile(const std::string& filename){
       FILE* file = nullptr;
       if(!(file = fopen(filename.data(), "rb"))){
         LOG(ERROR) << "cannot open file " << filename;
         return nullptr;
       }
-      return FromFile(file, static_cast<int64_t>(GetFilesize(filename)));//TODO: fix
+      return NewBufferFromFile(file, static_cast<int64_t>(GetFilesize(filename)));//TODO: fix
     }
   }
 }
@@ -640,7 +640,7 @@ namespace token{
     }
 
     static inline BufferPtr
-    CopyFrom(const char* data, size_t len){
+    CopyBufferFrom(const char* data, size_t len){
       BufferPtr buffer = Buffer::NewInstance(len);
       if(!buffer->PutBytes((uint8_t*)data, len)){
         DLOG(WARNING) << "couldn't copy " << len << " bytes to new buffer.";
@@ -650,13 +650,13 @@ namespace token{
     }
 
     static inline BufferPtr
-    CopyFrom(const std::string& data){
-      return CopyFrom(data.data(), data.length());
+    CopyBufferFrom(const std::string& data){
+      return CopyBufferFrom(data.data(), data.length());
     }
 
     static inline BufferPtr
-    CopyFrom(const json::String& data){
-      return CopyFrom(data.GetString(), data.GetSize());
+    CopyBufferFrom(const json::String& data){
+      return CopyBufferFrom(data.GetString(), data.GetSize());
     }
 
     template<class T, class C>
@@ -674,10 +674,10 @@ namespace token{
     }
 
     static inline BufferPtr
-    FromFile(const std::string& filename){
+    NewBufferFromFile(const std::string& filename){
       std::fstream stream(filename, std::ios::binary|std::ios::in);
       int64_t size = GetFilesize(stream);
-      BufferPtr buffer = Buffer::NewInstance(size);
+      BufferPtr buffer = Buffer::NewBuffer(size);
       if(!buffer->ReadFrom(stream, size))
         return nullptr;
       return buffer;

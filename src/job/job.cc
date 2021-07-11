@@ -14,7 +14,7 @@ namespace token{
 
   //TODO: refactor?
   void WalletManagerBatchWriteJob::PutWallet(const User& user, const Wallet& wallet){
-    BufferPtr buffer = internal::NewInstance(GetBufferSize(wallet));
+    BufferPtr buffer = internal::NewBuffer(GetBufferSize(wallet));
     if(!Encode(buffer, wallet)){
       LOG(WARNING) << "cannot encode wallet.";
       return;

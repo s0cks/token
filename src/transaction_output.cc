@@ -13,7 +13,7 @@ namespace token{
 
   BufferPtr Output::ToBuffer() const{
     Encoder encoder((*this), codec::kDefaultEncoderFlags);
-    BufferPtr buffer = internal::For(encoder);
+    BufferPtr buffer = internal::NewBufferFor(encoder);
     if(!encoder.Encode(buffer)){
       DLOG(ERROR) << "cannot encode Output.";
       //TODO: Clear the buffer?

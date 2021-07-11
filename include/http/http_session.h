@@ -24,7 +24,7 @@ namespace token{
         router_(Router::NewInstance()){}
       Session(uv_loop_t* loop, const RouterPtr& router):
         SessionBase(loop, UUID()),
-        rbuffer_(internal::NewInstance(65536)),
+        rbuffer_(internal::NewBuffer(65536)),
         router_(router){}
       ~Session() override = default;
 

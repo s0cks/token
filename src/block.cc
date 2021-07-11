@@ -5,7 +5,7 @@
 namespace token{
   BufferPtr Block::ToBuffer() const{
     Encoder encoder((*this));
-    BufferPtr buffer = internal::For(encoder);
+    BufferPtr buffer = internal::NewBufferFor(encoder);
     if(!encoder.Encode(buffer)){
       DLOG(ERROR) << "cannot encode Block.";
       //TODO: clear buffer

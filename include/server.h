@@ -109,7 +109,7 @@ namespace token{
         return;
       }
 
-      BufferPtr buffer = internal::CopyFrom((uint8_t*)buff->base, nread);
+      BufferPtr buffer = internal::CopyBufferFrom((uint8_t *) buff->base, nread);
       session->OnMessageRead(buffer);
     }
 

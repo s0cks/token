@@ -84,7 +84,7 @@ namespace token{
       }
 
       BufferPtr ToBuffer() const{
-        BufferPtr buffer = internal::NewInstance(GetBufferSize());
+        BufferPtr buffer = internal::NewBuffer(GetBufferSize());
         LOG_IF(ERROR, !Write(buffer)) << "couldn't write response to buffer.";
         return buffer;
       }
@@ -104,7 +104,7 @@ namespace token{
 
       std::string ToString() const override{
         if(VLOG_IS_ON(1)){
-          BufferPtr body = internal::NewInstance(GetBufferSize());
+          BufferPtr body = internal::NewBuffer(GetBufferSize());
           if(!Write(body))
             VLOG(1) << "cannot write body to buffer.";
           return std::string((char*)body->data(), body->GetWritePosition());
@@ -133,7 +133,7 @@ namespace token{
       ResponseBuilder():
         MessageBuilderBase(),
         status_(StatusCode::kOk),
-        body_(internal::NewInstance(kMessageDefaultBodySize)){
+        body_(internal::NewBuffer(kMessageDefaultBodySize)){
         InitHttpResponseHeaders(headers_);
       }
       explicit ResponseBuilder(const BufferPtr& body):
@@ -159,11 +159,11 @@ namespace token{
       }
 
       void SetBody(const std::string& body){
-        body_ = internal::CopyFrom(body);
+        body_ = internal::CopyBufferFrom(body);
       }
 
       void SetBody(const json::String& body){
-        body_ = internal::CopyFrom(body);
+        body_ = internal::CopyBufferFrom(body);
       }
 
       ResponsePtr Build() const{
@@ -191,7 +191,7 @@ namespace token{
       static int
       OnParseBody(http_parser* p, const char* data, size_t len){
         auto parser = (ResponseParser*)p->data;
-        parser->SetBody(internal::CopyFrom((uint8_t*)data, static_cast<int64_t>(len)));
+        parser->SetBody(internal::CopyBufferFrom((uint8_t *) data, static_cast<int64_t>(len)));
         return 0;
       }
 

@@ -18,7 +18,7 @@ namespace token{
   }
 
   bool Decode(const std::string& data, Wallet& wallet){
-    internal::BufferPtr buff = internal::NewInstance(GetBufferSize(wallet));
+    internal::BufferPtr buff = internal::NewBuffer(GetBufferSize(wallet));
     int64_t len = buff->GetLong();
     for(int64_t idx = 0; idx < len; idx++)
       if(!wallet.insert(buff->GetHash()).second)
