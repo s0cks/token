@@ -12,9 +12,9 @@ namespace token{
   typedef std::unordered_set<Hash, Hash::Hasher, Hash::Equal> Wallet;
 
   int64_t GetBufferSize(const Wallet&);
-  bool Encode(const BufferPtr&, const Wallet&);
+  bool Encode(const internal::BufferPtr&, const Wallet&);
   bool Decode(const std::string&, Wallet&);
-  bool Decode(const BufferPtr&, Wallet&);
+  bool Decode(const internal::BufferPtr&, Wallet&);
 
   static inline std::ostream&
   operator<<(std::ostream& stream, const Wallet& wallet){

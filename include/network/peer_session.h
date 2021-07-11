@@ -15,7 +15,7 @@ namespace token{
    public:
     static inline int64_t
     GetSize(){
-      return UUID::GetSize()
+      return 16
            + NodeAddress::kSize;
     }
 

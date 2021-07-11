@@ -45,7 +45,7 @@ namespace token{
         return;
       }
 
-      BufferPtr buffer = Buffer::From(buff->base, nread);
+      BufferPtr buffer = internal::CopyFrom((uint8_t*)buff->base, nread);
       http::ResponsePtr response = http::ResponseParser::ParseResponse(buffer);
       session->SetResponse(response);
       free(buff->base);

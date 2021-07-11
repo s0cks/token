@@ -11,19 +11,24 @@ namespace token{
       template<class M>
       class HandshakeMessageEncoder : public MessageEncoder<M>{
        protected:
+        UUID::Encoder node_id_encoder_;
+
         HandshakeMessageEncoder(const M& value, const codec::EncoderFlags& flags):
-            MessageEncoder<M>(value, flags){}
+            MessageEncoder<M>(value, flags),
+            node_id_encoder_(value.node_id(), flags){}
        public:
         HandshakeMessageEncoder(const HandshakeMessageEncoder<M>& other) = default;
         ~HandshakeMessageEncoder<M>() override = default;
 
         int64_t GetBufferSize() const override{
+          //TODO: use UUID encoder
+
           int64_t size = codec::EncoderBase<M>::GetBufferSize();
           size += sizeof(RawTimestamp); // timestamp_
           size += sizeof(uint32_t); // client_type_
           size += kVersionSize; // version_
           size += Hash::GetSize(); // nonce_
-          size += UUID::GetSize(); // node_id_
+          size += node_id_encoder_.GetBufferSize(); // node_id
           return size;
         }
 
@@ -43,9 +48,8 @@ namespace token{
             return false;
           }
 
-          const UUID& node_id = MessageEncoder<M>::value().node_id();
-          if(!buff->PutUUID(node_id)){
-            CANNOT_ENCODE_VALUE(FATAL, UUID, node_id);
+          if(!node_id_encoder_.Encode(buff)){
+            LOG(FATAL) << "couldn't encode node_id to buffer.";
             return false;
           }
 
@@ -59,8 +63,11 @@ namespace token{
       template<class M>
       class HandshakeMessageDecoder : public MessageDecoder<M>{
        protected:
+        UUID::Decoder node_id_decoder_;
+
         explicit HandshakeMessageDecoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
-            MessageDecoder<M>(hints){}
+            MessageDecoder<M>(hints),
+            node_id_decoder_(hints){}
        public:
         HandshakeMessageDecoder(const HandshakeMessageDecoder<M>& other) = default;
         ~HandshakeMessageDecoder<M>() override = default;

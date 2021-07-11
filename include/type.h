@@ -33,8 +33,21 @@ namespace token{
   V(IndexedTransaction)  \
   V(UnclaimedTransaction)\
   V(Proposal)            \
-  V(Buffer)              \
   V(Reference)
+
+namespace internal{
+  class Buffer;
+  typedef std::shared_ptr<Buffer> BufferPtr;
+
+  class AllocatedBuffer;
+  typedef std::shared_ptr<AllocatedBuffer> AllocatedBufferPtr;
+
+  template<const int64_t& Size>
+  class StackBuffer;
+}
+
+//TODO: move to internal{}
+typedef internal::BufferPtr BufferPtr;
 
 //TODO: remove FORWARD_DECLARE
 #define FORWARD_DECLARE(Name) \
@@ -79,6 +92,19 @@ namespace token{
     kBlockHeader,
     kHttpRequest,
     kHttpResponse,
+
+    kUUID,
+    kUser,
+    kProduct,
+    kTransactionReference,
+
+    kInputList,
+    kOutputList,
+
+    kSlice,
+    kBuffer,
+    kHeapBuffer,
+    kStackBuffer,
   };
 
   static inline std::ostream&

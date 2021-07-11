@@ -76,7 +76,7 @@ namespace token{
       DeeplinkGenerator generator(width, height);
 
       Bitmap bitmap = generator.Generate(hash);
-      BufferPtr data = Buffer::NewInstance(bitmap.width()*bitmap.height());
+      BufferPtr data = internal::NewInstance(bitmap.width()*bitmap.height());
       if(!WritePNG(data, bitmap)){
         std::stringstream ss;
         ss << "Couldn't generate deeplink for: " << hash;
@@ -86,7 +86,7 @@ namespace token{
       http::ResponseBuilder builder(data);
       builder.SetStatusCode(StatusCode::kOk);
       builder.SetHeader(HTTP_HEADER_CONTENT_TYPE, HTTP_CONTENT_TYPE_IMAGE_PNG);
-      builder.SetHeader(HTTP_HEADER_CONTENT_LENGTH, data->GetWrittenBytes());
+      builder.SetHeader(HTTP_HEADER_CONTENT_LENGTH, data->GetWritePosition());
       return session->Send(builder.Build());
     }
 

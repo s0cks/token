@@ -3,6 +3,7 @@
 
 #include <set>
 #include "object.h"
+#include "version.h"
 #include "bitfield.h"
 
 namespace token{
@@ -25,12 +26,18 @@ namespace token{
     template<class T>
     class EncoderBase{
      protected:
+      typedef EncoderBase<T> BaseType;
+
+      Type type_;
       const T& value_;
       EncoderFlags flags_;
 
+      EncoderBase(const Type& type, const T& value, const codec::EncoderFlags& flags):
+        type_(type),
+        value_(value),
+        flags_(flags){}
       EncoderBase(const T& value, const EncoderFlags& flags):
-          value_(value),
-          flags_(flags){}
+        EncoderBase(value.type(), value, flags){}
       EncoderBase(const EncoderBase<T>& other) = default;
 
       template<class V, class E>
@@ -55,8 +62,25 @@ namespace token{
         }
         return size;
       }
+
+      inline Type GetObjectType() const{
+        return value().type();
+      }
+
+      static inline bool
+      EncodeType(const BufferPtr& buff, const Type& type){
+        return buff->PutUnsignedLong(static_cast<uint64_t>(type));
+      }
      public:
       virtual ~EncoderBase<T>() = default;
+
+      Type& type(){
+        return type_;
+      }
+
+      Type type() const{
+        return type_;
+      }
 
       const T& value() const{
         return value_;
@@ -87,7 +111,24 @@ namespace token{
         return size;
       }
 
-      virtual bool Encode(const BufferPtr& buff) const = 0;
+      virtual bool Encode(const internal::BufferPtr& buff) const{
+        if(ShouldEncodeType()){
+          auto& type = type_;
+          if(!buff->PutUnsignedLong(static_cast<uint64_t>(type))){
+            LOG(FATAL) << "couldn't encode type to buffer.";
+            return false;
+          }
+        }
+
+        if(ShouldEncodeVersion()){
+          const auto& version = Version::CurrentVersion();
+          if(!(buff->PutShort(version.major()) && buff->PutShort(version.minor() && buff->PutShort(version.revision())))){
+            LOG(FATAL) << "couldn't encode version to buffer.";
+            return false;
+          }
+        }
+        return true;
+      }
 
       EncoderBase& operator=(const EncoderBase& other) = default;
     };
@@ -97,6 +138,8 @@ namespace token{
      private:
       typedef EncoderBase<std::vector<T>> BaseType;
      protected:
+      ListEncoder(const Type& type, const std::vector<T>& items, const codec::EncoderFlags& flags):
+        BaseType(type, items, flags){}
       ListEncoder(const std::vector<T>& items, const codec::EncoderFlags& flags):
         BaseType(items, flags){}
      public:
@@ -111,7 +154,7 @@ namespace token{
         return size;
       }
 
-      bool Encode(const BufferPtr& buff) const override{
+      bool Encode(const internal::BufferPtr& buff) const override{
         auto length = static_cast<int64_t>(BaseType::value().size());
         if(!buff->PutLong(length)){
           LOG(FATAL) << "couldn't serialize list length to buffer.";

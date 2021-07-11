@@ -4,8 +4,6 @@
 namespace token{
   namespace rpc{
     bool VerackMessage::Decoder::Decode(const BufferPtr& buff, VerackMessage& result) const{
-      CHECK_CODEC_VERSION(FATAL, buff);
-
       Timestamp timestamp = buff->GetTimestamp();
       DLOG(INFO) << "decoded Timestamp: " << ToUnixTimestamp(timestamp);
 
@@ -18,7 +16,12 @@ namespace token{
       Hash nonce = buff->GetHash();
       DLOG(INFO) << "decoded Hash: " << nonce;
 
-      UUID node_id = buff->GetUUID();
+      UUID node_id;
+      if(!node_id_decoder_.Decode(buff, node_id)){
+        LOG(FATAL) << "cannot decode node_id from buffer.";
+        return false;
+      }
+
       DLOG(INFO) << "decoded UUID: " << node_id;
 
       BlockHeader head; //TODO: decode head_

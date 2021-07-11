@@ -5,6 +5,7 @@
 #include <http_parser.h>
 
 #include "block.h"
+#include "wallet.h"
 #include "http/http_common.h"
 #include "http/http_message.h"
 
@@ -66,7 +67,7 @@ namespace token{
       }
 
       int64_t GetContentLength() const{
-        return body_->GetWrittenBytes();
+        return body_->GetWritePosition();
       }
 
       int64_t GetBufferSize() const override{
@@ -83,7 +84,7 @@ namespace token{
       }
 
       BufferPtr ToBuffer() const{
-        BufferPtr buffer = Buffer::NewInstance(GetBufferSize());
+        BufferPtr buffer = internal::NewInstance(GetBufferSize());
         LOG_IF(ERROR, !Write(buffer)) << "couldn't write response to buffer.";
         return buffer;
       }
@@ -93,25 +94,29 @@ namespace token{
       }
 
       std::string GetBodyAsString() const{
-        return std::string(body_->data(), body_->GetWrittenBytes());
+        return std::string((char*)body_->data(), body_->GetWritePosition());
       }
 
       bool GetBodyAsDocument(json::Document& document) const{
-        document.Parse(body_->data(), body_->GetWrittenBytes()).Empty();
+        document.Parse((char*)body_->data(), body_->GetWritePosition()).Empty();
         return true;//TODO: fix
       }
 
       std::string ToString() const override{
-//        std::stringstream ss;
-//        ss << "HttpResponse(";
-//        ss << "status_code=" << GetStatusCode() << ", ";
-//        ss << "headers=[], ";
-//        ss << "body=" << GetBodyAsString();
-//        ss << ")";
-//        return ss.str();
-        BufferPtr body = Buffer::NewInstance(GetBufferSize());
-        Write(body);
-        return std::string(body->data(), body->GetWrittenBytes());
+        if(VLOG_IS_ON(1)){
+          BufferPtr body = internal::NewInstance(GetBufferSize());
+          if(!Write(body))
+            VLOG(1) << "cannot write body to buffer.";
+          return std::string((char*)body->data(), body->GetWritePosition());
+        }
+
+        std::stringstream ss;
+        ss << "HttpResponse(";
+        ss << "status_code=" << GetStatusCode() << ", ";
+        ss << "headers=[], ";
+        ss << "body=" << GetBodyAsString();
+        ss << ")";
+        return ss.str();
       }
 
       static inline ResponsePtr
@@ -128,7 +133,7 @@ namespace token{
       ResponseBuilder():
         MessageBuilderBase(),
         status_(StatusCode::kOk),
-        body_(Buffer::NewInstance(Message::kDefaultBodySize)){
+        body_(internal::NewInstance(kMessageDefaultBodySize)){
         InitHttpResponseHeaders(headers_);
       }
       explicit ResponseBuilder(const BufferPtr& body):
@@ -154,11 +159,11 @@ namespace token{
       }
 
       void SetBody(const std::string& body){
-        body_ = Buffer::CopyFrom(body);
+        body_ = internal::CopyFrom(body);
       }
 
       void SetBody(const json::String& body){
-        body_ = Buffer::CopyFrom(body);
+        body_ = internal::CopyFrom(body);
       }
 
       ResponsePtr Build() const{
@@ -186,7 +191,7 @@ namespace token{
       static int
       OnParseBody(http_parser* p, const char* data, size_t len){
         auto parser = (ResponseParser*)p->data;
-        parser->SetBody(Buffer::CopyFrom(data, len));
+        parser->SetBody(internal::CopyFrom((uint8_t*)data, static_cast<int64_t>(len)));
         return 0;
       }
 
@@ -234,7 +239,7 @@ namespace token{
 
       inline bool
       Parse(const BufferPtr& buffer){
-        return Parse(buffer->data(), buffer->GetWrittenBytes());
+        return Parse((char*)buffer->data(), buffer->GetWritePosition());
       }
 
       static inline ResponsePtr

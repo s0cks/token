@@ -4,7 +4,7 @@
 namespace token{
   //TODO: cleanup
   bool WalletManager::PutWallet(const User& user, const Wallet& wallet) const{
-    BufferPtr buffer = Buffer::NewInstance(GetBufferSize(wallet));
+    BufferPtr buffer = internal::NewInstance(GetBufferSize(wallet));
     if(!Encode(buffer, wallet))
       return false;
 

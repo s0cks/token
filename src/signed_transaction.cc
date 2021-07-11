@@ -14,10 +14,10 @@ namespace token{
 
   BufferPtr SignedTransaction::ToBuffer() const{
     Encoder encoder((*this));
-    BufferPtr buffer = Buffer::AllocateFor(encoder);
+    BufferPtr buffer = internal::For(encoder);
     if(!encoder.Encode(buffer)){
       DLOG(ERROR) << "cannot encode IndexedTransaction";
-      buffer->clear();
+      //TODO: clear buffer
     }
     return buffer;
   }

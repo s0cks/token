@@ -7,23 +7,97 @@
 #include <leveldb/slice.h>
 
 #include "json.h"
-#include "binary_type.h"
+#include "codec.h"
+#include "encoder.h"
+#include "decoder.h"
 
 namespace token{
-  static const uint64_t kUserSize = 64;
-  class User : public BinaryType<kUserSize>{
+  namespace internal{
+    static const size_t kMaxUserLength = 64;
+  }
+
+  class User : public Object{
    public:
-    User(): BinaryType<kUserSize>(){}
-    User(const uint8_t* data, const uint64_t& size):
-      BinaryType<kUserSize>(data, size){}
-    explicit User(const char* value):
-      BinaryType<kUserSize>((const uint8_t*)value, std::min((uint64_t)strlen(value), kUserSize)){}
-    explicit User(const std::string& value):
-      BinaryType<kUserSize>((const uint8_t*)value.data(), std::min((uint64_t)value.length(), kUserSize)){}
-    explicit User(const leveldb::Slice& value):
-      BinaryType<kUserSize>((const uint8_t*)value.data(), std::min((uint64_t)value.size(), kUserSize)){}
-    User(const User& user) = default;
+    static inline int
+    Compare(const User& a, const User& b){
+      return strncmp(a.data(), b.data(), internal::kMaxUserLength);
+    }
+
+   class Encoder : public codec::EncoderBase<User>{
+     public:
+      Encoder(const User& value, const codec::EncoderFlags& flags):
+        codec::EncoderBase<User>(value, flags){}
+      Encoder(const Encoder& other) = default;
+      ~Encoder() override = default;
+
+      int64_t GetBufferSize() const override{
+        int64_t size = BaseType::GetBufferSize();
+        size += internal::kMaxUserLength;
+        return size;
+      }
+
+      bool Encode(const BufferPtr& buff) const override{
+        if(!BaseType::Encode(buff))
+          return false;
+        const auto& data = value().data();
+        return buff->PutBytes((uint8_t*)data, static_cast<int64_t>(internal::kMaxUserLength));
+      }
+
+      Encoder& operator=(const Encoder& other) = default;
+  };
+
+   class Decoder : public codec::DecoderBase<User>{
+    public:
+     explicit Decoder(const codec::DecoderHints& hints):
+      codec::DecoderBase<User>(hints){}
+      Decoder(const Decoder& other) = default;
+     ~Decoder() override = default;
+
+     bool Decode(const BufferPtr& buff, User& result) const override{
+       //TODO: decode type
+       //TODO: decode version
+       uint8_t bytes[internal::kMaxUserLength];
+       if(!buff->GetBytes(bytes, internal::kMaxUserLength)){
+         LOG(FATAL) << "couldn't decode user bytes from buffer.";
+         return false;
+       }
+
+       result = User(bytes, internal::kMaxUserLength);
+       return true;
+     }
+
+     Decoder& operator=(const Decoder& other) = default;
+   };
+   private:
+    char data_[internal::kMaxUserLength];
+   public:
+    User():
+      data_(){
+      memset(data_, 0, internal::kMaxUserLength);
+    }
+    User(uint8_t* data, const size_t& size):
+      User(){
+      memcpy(data_, data, std::min(internal::kMaxUserLength, size));
+    }
+    explicit User(const char* data):
+      User((uint8_t*)data, strlen(data)){}
+    explicit User(const std::string& data):
+      User((uint8_t*)data.data(), static_cast<int64_t>(data.length())){}
+    explicit User(const leveldb::Slice& data):
+      User((uint8_t*)data.data(), static_cast<int64_t>(data.size())){}
     ~User() override = default;
+
+    Type type() const override{
+      return Type::kUser;
+    }
+
+    const char* data() const{
+      return data_;
+    }
+
+    size_t size() const{
+      return internal::kMaxUserLength;
+    }
 
     std::string ToString() const override{
       std::stringstream ss;
@@ -53,13 +127,8 @@ namespace token{
       return stream << user.ToString();
     }
 
-    operator leveldb::Slice() const{
+    explicit operator leveldb::Slice() const{
       return leveldb::Slice(data(), size());
-    }
-
-    static inline int
-    Compare(const User& a, const User& b){
-      return BinaryType<kUserSize>::Compare(a, b);
     }
   };
 

@@ -13,25 +13,6 @@ namespace token{
           PaxosMessageEncoder<PromiseMessage>(value, flags){}
         Encoder(const Encoder& other) = default;
         ~Encoder() override = default;
-
-        int64_t GetBufferSize() const override{
-          return PaxosMessageEncoder::GetBufferSize();
-        }
-
-        bool Encode(const BufferPtr& buff) const override{
-          if(ShouldEncodeType() && !buff->PutUnsignedLong(static_cast<uint64_t>(value().type()))){
-            DLOG(ERROR) << "cannot encode message type.";
-            return false;
-          }
-
-          Version version = Version::CurrentVersion(); //TODO use appropriate version
-          if(ShouldEncodeVersion() && !buff->PutVersion(version)){
-            DLOG(ERROR) << "cannot encode message version.";
-            return false;
-          }
-          return PaxosMessageEncoder::Encode(buff);
-        }
-
         Encoder& operator=(const Encoder& other) = default;
       };
 
@@ -41,12 +22,7 @@ namespace token{
           PaxosMessageDecoder<PromiseMessage>(hints){}
         Decoder(const Decoder& other) = default;
         ~Decoder() override = default;
-
-        bool Decode(const BufferPtr& buff, PromiseMessage& result) const override{
-          NOT_IMPLEMENTED(ERROR);
-          return false;
-        }
-
+        bool Decode(const BufferPtr& buff, PromiseMessage& result) const override;
         Decoder& operator=(const Decoder& other) = default;
       };
      public:

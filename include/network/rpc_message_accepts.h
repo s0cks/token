@@ -13,15 +13,6 @@ namespace token{
           PaxosMessageEncoder<PaxosMessage>(value, flags){}
         Encoder(const Encoder& other) = default;
         ~Encoder() override = default;
-
-        int64_t GetBufferSize() const override{
-          return PaxosMessageEncoder::GetBufferSize();
-        }
-
-        bool Encode(const BufferPtr& buff) const override{
-          return PaxosMessageEncoder::Encode(buff);
-        }
-
         Encoder& operator=(const Encoder& other) = default;
       };
 
@@ -31,12 +22,7 @@ namespace token{
           PaxosMessageDecoder<AcceptsMessage>(hints){}
           Decoder(const Decoder& other) = default;
         ~Decoder() override = default;
-
-        bool Decode(const BufferPtr& buff, AcceptsMessage& result) const override{
-          NOT_IMPLEMENTED(ERROR);
-          return false;
-        }
-
+        bool Decode(const BufferPtr& buff, AcceptsMessage& result) const override;
         Decoder& operator=(const Decoder& other) = default;
       };
      public:

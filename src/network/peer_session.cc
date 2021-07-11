@@ -12,7 +12,7 @@
 // this is for outbound packets
 namespace token{
 #define PEER_LOG(LevelName, Session) \
-  LOG(LevelName) << "[peer-" << (Session)->GetID().ToStringAbbreviated() << "] "
+  LOG(LevelName) << "[peer-" << (Session)->GetID().ToString() << "] "
 
 #define LOG_HANDLER(LevelName) \
   LOG_SESSION(LevelName, GetSession())
@@ -80,10 +80,10 @@ namespace token{
       return;
     }
 
-    BufferPtr buffer = Buffer::From(buff->base, nread);
-    do{
+    BufferPtr buffer = internal::CopyFrom((uint8_t*)buff->base, nread);
+    do {
       session->OnMessageRead(buffer);
-    } while(buffer->GetReadBytes() < buffer->GetBufferSize());
+    } while(buffer->GetReadPosition() < buffer->length());
     free(buff->base);
   }
 

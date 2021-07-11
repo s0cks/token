@@ -13,9 +13,8 @@ namespace token{
     class Message;
     typedef std::shared_ptr<Message> HttpMessagePtr;
 
+    static const int64_t kMessageDefaultBodySize = 65536;
     class Message : public MessageBase{
-     public:
-      static const int64_t kDefaultBodySize = 65536;
      protected:
       HttpHeadersMap headers_;
 

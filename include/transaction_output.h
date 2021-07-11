@@ -8,42 +8,72 @@
 #include "encoder.h"
 #include "decoder.h"
 #include "product.h"
+#include "binary_object.h"
 
 namespace token{
   class Output : public BinaryObject{
     friend class Transaction;
    public:
-    static inline int64_t
-    GetSize(){
-      return User::GetSize()
-          + Product::GetSize();
-    }
-
     class Encoder : public codec::EncoderBase<Output>{
+     private:
+      User::Encoder user_encoder_;
+      Product::Encoder product_encoder_;
      public:
-      Encoder(const Output& value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags):
-        codec::EncoderBase<Output>(value, flags){}
+      Encoder(const Output& value, const codec::EncoderFlags& flags):
+        codec::EncoderBase<Output>(value, flags),
+        user_encoder_(value.GetUser(), flags),
+        product_encoder_(value.GetProduct(), flags){}
       Encoder(const Encoder& other) = default;
       ~Encoder() override = default;
 
       int64_t GetBufferSize() const override{
         int64_t size = codec::EncoderBase<Output>::GetBufferSize();
-        size += kUserSize;
-        size += kProductSize;
+        size += user_encoder_.GetBufferSize();
+        size += product_encoder_.GetBufferSize();
         return size;
       }
 
-      bool Encode(const BufferPtr& buff) const override;
+      bool Encode(const BufferPtr& buff) const override{
+        if(!BaseType::Encode(buff))
+          return false;
+        if(!user_encoder_.Encode(buff))
+          return false;
+        if(!product_encoder_.Encode(buff))
+          return false;
+        return true;
+      }
+
       Encoder& operator=(const Encoder& other) = default;
     };
 
     class Decoder : public codec::DecoderBase<Output>{
+     private:
+      User::Decoder user_decoder_;
+      Product::Decoder product_decoder_;
      public:
-      Decoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
-        codec::DecoderBase<Output>(hints){}
+      explicit Decoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
+        codec::DecoderBase<Output>(hints),
+        user_decoder_(hints),
+        product_decoder_(hints){}
       Decoder(const Decoder& other) = default;
       ~Decoder() override = default;
-      bool Decode(const BufferPtr& buff, Output& result) const;
+
+      bool Decode(const BufferPtr& buff, Output& result) const override{
+        //TODO: decode type
+        //TODO: decode version
+
+        User user;
+        if(!user_decoder_.Decode(buff, user))
+          return false;
+
+        Product product;
+        if(!product_decoder_.Decode(buff, product))
+          return false;
+
+        result = Output(user, product);
+        return true;
+      }
+
       Decoder& operator=(const Decoder& other) = default;
     };
    private:
@@ -154,7 +184,7 @@ namespace token{
    typedef codec::ListEncoder<Output, Output::Encoder> BaseType;
   public:
    OutputListEncoder(const OutputList& items, const codec::EncoderFlags& flags):
-    BaseType(items, flags){}
+    BaseType(Type::kOutputList, items, flags){}
     OutputListEncoder(const OutputListEncoder& other) = default;
    ~OutputListEncoder() override = default;
    OutputListEncoder& operator=(const OutputListEncoder& other) = default;

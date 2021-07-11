@@ -82,7 +82,7 @@ namespace token{
     }
 
     Block::Encoder encoder(*blk, codec::EncodeVersionFlag::Encode(true));
-    BufferPtr buffer = Buffer::AllocateFor(encoder);
+    BufferPtr buffer = internal::NewInstance(encoder.GetBufferSize());
     if(!encoder.Encode(buffer)){
       LOG(ERROR) << "cannot encode Block " << blk->hash() << ".";
       return false;
@@ -121,7 +121,7 @@ namespace token{
 
   static inline BlockPtr
   ReadBlockFile(const std::string& filename, const Hash& hash){
-    BufferPtr buffer = Buffer::FromFile(filename);
+    BufferPtr buffer = internal::FromFile(filename);
     BlockPtr block = Block::DecodeNew(buffer, codec::ExpectTypeHint::Encode(true)|codec::ExpectVersionHint::Encode(true));
     LOG_IF(FATAL, block->hash() != hash) << "expected block hash of " << hash << ", but parsed block was: " << block->ToString();
     return block;

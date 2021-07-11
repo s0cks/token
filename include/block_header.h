@@ -5,8 +5,33 @@
 #include "object.h"
 #include "timestamp.h"
 
+#include "codec.h"
+#include "encoder.h"
+#include "decoder.h"
+
 namespace token{
   class BlockHeader : public Object{
+   public:
+    class Encoder : public codec::EncoderBase<BlockHeader>{
+     public:
+      Encoder(const BlockHeader& value, const codec::EncoderFlags& flags):
+        codec::EncoderBase<BlockHeader>(value, flags){}
+      Encoder(const Encoder& other) = default;
+      ~Encoder() override = default;
+      int64_t GetBufferSize() const override;
+      bool Encode(const BufferPtr& buff) const override;
+      Encoder& operator=(const Encoder& other) = default;
+    };
+
+    class Decoder : public codec::DecoderBase<BlockHeader>{
+     public:
+      explicit Decoder(const codec::DecoderHints& hints):
+        codec::DecoderBase<BlockHeader>(hints){}
+      Decoder(const Decoder& other) = default;
+      ~Decoder() override = default;
+      bool Decode(const BufferPtr& buff, BlockHeader& result) const override;
+      Decoder& operator=(const Decoder& other) = default;
+    };
    protected:
     Timestamp timestamp_;
     int64_t height_;

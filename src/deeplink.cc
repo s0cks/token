@@ -12,8 +12,6 @@ namespace token{
   WritePNGData(png_structp png, png_bytep data, size_t length){
     WriteData* write_data = (WriteData*)png_get_io_ptr(png);
     BufferPtr& buffer = write_data->buffer;
-    if(!buffer->Resize(length))
-      return;
     if(!buffer->PutBytes(data, length)){
       png_error(png, "WriteError");
     }

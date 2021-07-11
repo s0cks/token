@@ -13,15 +13,6 @@ namespace token{
             PaxosMessageEncoder<CommitMessage>(value, flags){}
         Encoder(const Encoder& other) = default;
         ~Encoder() override = default;
-
-        int64_t GetBufferSize() const override{
-          return PaxosMessageEncoder<CommitMessage>::GetBufferSize();
-        }
-
-        bool Encode(const BufferPtr& buff) const override{
-          return PaxosMessageEncoder<CommitMessage>::Encode(buff);
-        }
-
         Encoder& operator=(const Encoder& other) = default;
       };
 
@@ -31,11 +22,7 @@ namespace token{
             PaxosMessageDecoder<CommitMessage>(hints){}
             Decoder(const Decoder& other) = default;
         ~Decoder() override = default;
-
-        bool Decode(const BufferPtr& buff, CommitMessage& result) const override{
-          NOT_IMPLEMENTED(ERROR);
-          return false;
-        }
+        bool Decode(const BufferPtr& buff, CommitMessage& result) const override;
         Decoder& operator=(const Decoder& other) = default;
       };
      public:

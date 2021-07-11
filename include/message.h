@@ -6,8 +6,8 @@
 
 #include "codec.h"
 #include "object.h"
-#include "decoder.h"
 #include "encoder.h"
+#include "decoder.h"
 
 namespace token{
   class MessageBase;
@@ -29,8 +29,8 @@ namespace token{
         codec::EncoderBase<M>(value, flags){}
      public:
       MessageEncoder(const MessageEncoder<M>& other) = default;
-      ~MessageEncoder<M>() override = default;
-      MessageEncoder<M>& operator=(const MessageEncoder<M>& other) = default;
+      ~MessageEncoder() override = default;
+      MessageEncoder& operator=(const MessageEncoder& other) = default;
     };
 
     template<class M>

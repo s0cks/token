@@ -7,195 +7,90 @@
 #include <fstream>
 #include <leveldb/slice.h>
 
-#include "uuid.h"
-#include "user.h"
 #include "hash.h"
-#include "version.h"
-#include "product.h"
-#include "proposal.h"
+#include "object.h"
+#include "address.h"
 #include "timestamp.h"
-#include "transaction_reference.h"
+#include "network/peer.h"
 
 namespace token{
-  class Buffer : public std::enable_shared_from_this<Buffer>{
-   private:
-    int64_t bsize_;
-    int64_t wpos_;
-    int64_t rpos_;
-    uint8_t* data_;
-    bool owned_;
+  namespace internal{
+    class Buffer : public Object{
+     protected:
+      int64_t wpos_;
+      int64_t rpos_;
 
-    uint8_t* raw(){
-      return data_;
-    }
+      Buffer():
+        wpos_(0),
+        rpos_(0){}
 
-    const uint8_t* raw() const{
-      return data_;
-    }
-
-    template<typename T>
-    bool Append(T value){
-      if((wpos_ + (int64_t)sizeof(T)) > GetBufferSize())
-        return false;
-      memcpy(&raw()[wpos_], &value, sizeof(T));
-      wpos_ += sizeof(T);
-      return true;
-    }
-
-    template<typename T>
-    bool Insert(T value, int64_t idx){
-      if((idx + (int64_t)sizeof(T)) > GetBufferSize())
-        return false;
-      memcpy(&raw()[idx], (uint8_t*)&value, sizeof(T));
-      wpos_ = idx + (int64_t)sizeof(T);
-      return true;
-    }
-
-    template<typename T>
-    T Read(int64_t idx){
-      if((idx + (int64_t)sizeof(T)) > GetBufferSize()){
-        LOG(INFO) << "cannot read " << sizeof(T) << " bytes from pos: " << idx;
-        return 0;
-      }
-      return *(T*)(raw() + idx);
-    }
-
-    template<typename T>
-    T Read(){
-      T data = Read<T>(rpos_);
-      rpos_ += sizeof(T);
-      return data;
-    }
-
-    template<class T>
-    bool PutType(const T& val){
-      if((wpos_ + T::GetSize()) > GetBufferSize()){
-        DLOG(ERROR) << "cannot put Type, not enough room for " << T::GetSize() << " bytes in buffer of size: " << GetBufferSize();
-        return false;
-      }
-      memcpy(&raw()[wpos_], val.data(), T::GetSize());
-      wpos_ += T::GetSize();
-      return true;
-    }
-
-    template<class T>
-    T GetType(){
-      T val(&raw()[rpos_], T::GetSize());
-      rpos_ += T::GetSize();
-      return val;
-    }
-   public:
-    Buffer():
-      bsize_(0),
-      wpos_(0),
-      rpos_(0),
-      data_(nullptr){}
-    explicit Buffer(int64_t size):
-      bsize_(size),
-      wpos_(0),
-      rpos_(0),
-      data_(nullptr),
-      owned_(true){
-      data_ = (uint8_t*) malloc(sizeof(uint8_t) * size);
-      memset(data(), 0, GetBufferSize());
-    }
-    Buffer(uint8_t* data, int64_t size):
-      bsize_(size),
-      wpos_(size),
-      rpos_(0),
-      data_(data),
-      owned_(false){}
-    Buffer(const char* data, size_t size):
-      bsize_(size),
-      wpos_(size),
-      rpos_(0),
-      data_((uint8_t*)data),
-      owned_(false){}
-    explicit Buffer(const std::string& data):
-      bsize_(data.size()),
-      wpos_(data.size()),
-      rpos_(0),
-      data_(nullptr),
-      owned_(false){
-      data_ = (uint8_t*)data.data();
-    }
-    ~Buffer(){
-      if(owned_ && data_)
-        free(data_);
-    }
-
-    int64_t GetBufferSize() const{
-      return bsize_;
-    }
-
-    int64_t GetWrittenBytes() const{
-      return wpos_;
-    }
-
-    int64_t GetReadBytes() const{
-      return rpos_;
-    }
-
-    uint8_t operator[](intptr_t idx){
-      return (raw()[idx]);
-    }
-
-    char* data() const{
-      return (char*)raw();
-    }
-
-    uint8_t* begin() const{
-      return (uint8_t*)raw();
-    }
-
-    uint8_t* end() const{
-      return (uint8_t*)raw() + GetBufferSize();
-    }
-
-    bool empty() const{
-      return bsize_ == 0;
-    }
-
-    void clear(){
-      memset(data(), 0, GetBufferSize());
-      rpos_ = 0;
-      wpos_ = 0;
-    }
-
-    int64_t GetBytesRemaining() const{
-      return GetBufferSize() - GetWrittenBytes();
-    }
-
-    bool HasBytesRemaining() const{
-      return GetBufferSize() > 0 && rpos_ < GetBufferSize();
-    }
-
-    void SetWritePosition(int64_t pos){
-      if(pos > GetBufferSize()){
-        return;
-      }
-      wpos_ = pos;
-    }
-
-    void SetReadPosition(int64_t pos){
-      if(pos > GetBufferSize()){
-        return;
-      }
-      rpos_ = pos;
-    }
-
-    bool Resize(int64_t nsize){
-      if(nsize <= GetBufferSize())
+      template<typename T>
+      bool Append(T value){
+        if((wpos_ + (int64_t)sizeof(T)) > length())
+          return false;
+        memcpy(&data()[wpos_], &value, sizeof(T));
+        wpos_ += sizeof(T);
         return true;
-      uint8_t* ndata;
-      if(!(ndata = (uint8_t*)realloc(data_, nsize))){
-        LOG(WARNING) << "couldn't reallocate buffer of size " << GetBufferSize() << " to: " << nsize;
-        return false;
       }
-      data_ = ndata;
-      bsize_ = nsize;
-      return true;
-    }
+
+      template<typename T>
+      bool Insert(T value, int64_t idx){
+        if((idx + (int64_t)sizeof(T)) > length())
+          return false;
+        memcpy(&data()[idx], (uint8_t*)&value, sizeof(T));
+        wpos_ = idx + (int64_t)sizeof(T);
+        return true;
+      }
+
+      template<typename T>
+      T Read(int64_t idx){
+        if((idx + (int64_t)sizeof(T)) > length()){
+          LOG(ERROR) << "cannot read " << sizeof(T) << " bytes @" << idx << " from buffer.";
+          return T();//TODO: investigate proper result
+        }
+        return *(T*)(data() + idx);
+      }
+
+      template<typename T>
+      T Read(){
+        T data = Read<T>(rpos_);
+        rpos_ += sizeof(T);
+        return data;
+      }
+     public:
+      Buffer(const Buffer& other) = default;
+      ~Buffer() override = default;
+
+      Type type() const override{
+        return Type::kBuffer;
+      }
+
+      virtual uint8_t* data() const = 0;
+      virtual int64_t length() const = 0;
+
+      int64_t GetWritePosition() const{
+        return wpos_;
+      }
+
+      void SetWritePosition(const int64_t& pos){
+        wpos_ = pos;
+      }
+
+      int64_t GetReadPosition() const{
+        return rpos_;
+      }
+
+      void SetReadPosition(const int64_t& pos){
+        rpos_ = pos;
+      }
+
+      bool empty() const{
+        return IsUnallocated() || GetWritePosition() == 0;
+      }
+
+      bool IsUnallocated() const{
+        return length() == 0;
+      }
 
 #define DEFINE_PUT_SIGNED(Name, Type) \
     bool Put##Name(const Type##_t& val){ return Append<Type##_t>(val); } \
@@ -226,6 +121,284 @@ namespace token{
 #undef DEFINE_GET
 #undef DEFINE_GET_SIGNED
 #undef DEFINE_GET_UNSIGNED
+
+      bool PutHash(const Hash& val){
+        return PutBytes(val.data(), val.size());
+      }
+
+      Hash GetHash(){
+        uint8_t data[Hash::GetSize()];
+        if(!GetBytes(data, Hash::GetSize()))
+          return Hash();
+        return Hash(data, Hash::GetSize());
+      }
+
+      bool GetBytes(uint8_t* bytes, const int64_t& size){
+        if((rpos_ + size) > length())
+          return false;
+        memcpy(bytes, &data()[rpos_], size);
+        rpos_ += size;
+        return true;
+      }
+
+      bool PutBytes(const uint8_t* bytes, int64_t size){
+        if((wpos_ + size) > length())
+          return false;
+        memcpy(&data()[wpos_], bytes, size);
+        wpos_ += size;
+        return true;
+      }
+
+      bool PutBytes(const std::string& val){
+        return PutBytes((uint8_t*)val.data(), static_cast<int64_t>(val.length()));
+      }
+
+      bool PutBytes(const BufferPtr& buff){
+        return PutBytes(buff->data(), buff->length());
+      }
+
+      bool PutString(const std::string& val){
+        if(!PutUnsignedLong(val.length()))
+          return false;
+        return PutBytes(val);
+      }
+
+      std::string GetString(){
+        NOT_IMPLEMENTED(FATAL);
+        return "";
+      }
+
+      bool PutAddress(const NodeAddress& val){
+        const auto& address = val.address();
+        if(!PutUnsignedInt(address)){
+          LOG(FATAL) << "cannot serialize address of " << address << " from NodeAddress to buffer.";
+          return false;
+        }
+        DVLOG(1) << "serialized NodePort address: " << address;
+
+        const auto& port = val.port();
+        if(!PutUnsignedInt(val.port())){
+          LOG(FATAL) << "cannot serialize port of " << val.port() << " from NodeAddress to buffer.";
+          return false;
+        }
+        DVLOG(1) << "serialized NodePort port: " << port;
+        return true;
+      }
+
+      NodeAddress GetAddress(){
+        const auto address = GetUnsignedInt();
+        DVLOG(1) << "deserialized NodePort address: " << address;
+
+        const auto port = GetUnsignedInt();
+        DVLOG(1) << "deserialized NodePort port: " << port;
+        return NodeAddress(address, port);
+      }
+
+      bool PutPeerList(const PeerList& peers){
+        auto length = static_cast<int64_t>(peers.size());
+        if(!PutLong(length)){
+          DLOG(ERROR) << "cannot encode PeerList size.";
+          return false;
+        }
+
+        for(auto& it : peers){
+          if(!PutAddress(it)){
+            DLOG(ERROR) << "cannot encode PeerList address: " << it;
+            return false;
+          }
+        }
+        return true;
+      }
+
+      bool GetPeerList(PeerList& peers){
+        int64_t size = GetLong();
+        for(int64_t idx = 0; idx < size; idx++){
+          if(!peers.insert(GetAddress()).second){
+            DLOG(ERROR) << "cannot decode PeerList element #" << idx;
+            return false;
+          }
+        }
+        return true;
+      }
+
+      template<class T, class C>
+      bool PutSet(const std::set<T, C>& val);
+
+      template<class T, class C>
+      bool GetSet(std::set<T, C>& results);
+
+      bool PutTimestamp(const Timestamp& val){
+        return PutUnsignedLong(ToUnixTimestamp(val));
+      }
+
+      Timestamp GetTimestamp(){
+        return FromUnixTimestamp(GetUnsignedLong());
+      }
+
+      leveldb::Slice AsSlice() const{
+        return leveldb::Slice((const char*)data(), length());
+      }
+
+      bool WriteTo(FILE* file) const{
+        if(!file)
+          return false;
+        if(fwrite(data(), sizeof(uint8_t), GetWritePosition(), file) != 0){
+          LOG(FATAL) << "couldn't write buffer of size " << (sizeof(uint8_t)*GetWritePosition()) << "b to file: " << strerror(errno);
+          return false;
+        }
+        return true;
+      }
+
+      explicit operator leveldb::Slice() const{
+        return AsSlice();
+      }
+
+      Buffer& operator=(const Buffer& other) = default;
+    };
+
+    template<const long& Size>
+    class StackBuffer : public Buffer{
+     protected:
+      uint8_t data_[Size];
+     public:
+      StackBuffer():
+        Buffer(),
+        data_(){}
+      StackBuffer(const StackBuffer& other) = default;
+      ~StackBuffer() override = default;
+
+      uint8_t* data() const override{
+        return data_;
+      }
+
+      int64_t length() const override{
+        return Size;
+      }
+
+      std::string ToString() const override{
+        std::stringstream ss;
+        ss << "StackBuffer(";
+        ss << "data=" << std::hex << data() << ",";
+        ss << "length=" << length();
+        ss << ")";
+        return ss.str();
+      }
+
+      StackBuffer& operator=(const StackBuffer& other) = default;
+    };
+
+    class AllocatedBuffer : public Buffer{
+     private:
+      uint8_t* data_;
+      int64_t length_;
+     public:
+      AllocatedBuffer():
+        AllocatedBuffer(0){}
+      explicit AllocatedBuffer(const int64_t& length):
+        Buffer(),
+        data_(nullptr),
+        length_(length){
+        if(length > 0){
+          auto size = sizeof(uint8_t)*length;
+          auto data = (uint8_t*)malloc(size);
+          if(!data){
+            DLOG(WARNING) << "cannot allocate internal buffer of size: " << size;
+            return;
+          }
+
+          DLOG(INFO) << "allocated new internal buffer of size: " << size;
+          data_ = data;
+          length_ = size;
+        }
+      }
+      AllocatedBuffer(const AllocatedBuffer& other) = default;
+      ~AllocatedBuffer() override = default;
+
+      uint8_t* data() const override{
+        return data_;
+      }
+
+      int64_t length() const override{
+        return length_;
+      }
+
+      std::string ToString() const override{
+        std::stringstream ss;
+        ss << "AllocatedBuffer(";
+        ss << "data=" << std::hex << data() << ",";
+        ss << "length=" << length();
+        ss << ")";
+        return ss.str();
+      }
+
+      AllocatedBuffer& operator=(const AllocatedBuffer& other) = default;
+    };
+
+    static inline BufferPtr
+    NewInstance(const int64_t& length){
+      return std::make_shared<AllocatedBuffer>(length);
+    }
+
+    template<class Encoder>
+    static inline BufferPtr
+    For(const Encoder& val){
+      return NewInstance(val.GetBufferSize());
+    }
+
+    static inline BufferPtr
+    CopyFrom(uint8_t* data, const int64_t& length){
+      auto buffer = NewInstance(length);
+      if(!buffer->PutBytes(data, length))
+        return nullptr;
+      return buffer;
+    }
+
+    static inline BufferPtr
+    CopyFrom(const std::string& slice){
+      return CopyFrom((uint8_t*)slice.data(), static_cast<int64_t>(slice.length()));
+    }
+
+    static inline BufferPtr
+    CopyFrom(const json::String& body){
+      return CopyFrom((uint8_t*)body.GetString(), static_cast<int64_t>(body.GetSize()));
+    }
+
+    static inline BufferPtr
+    CopyFrom(const leveldb::Slice& slice){
+      return CopyFrom((uint8_t*)slice.data(), slice.size());
+    }
+
+    template<const int64_t& Length>
+    static inline BufferPtr
+    CopyFrom(const StackBuffer<Length>& buffer){
+      return CopyFrom(buffer.data(), buffer.length());
+    }
+
+    static inline BufferPtr
+    FromFile(FILE* file, const int64_t& length){
+      uint8_t data[length];
+      if(fread(data, sizeof(uint8_t), length, file) != length){
+        LOG(ERROR) << "cannot read " << length << " bytes from file into buffer.";
+        return nullptr;
+      }
+      return CopyFrom(data, length);
+    }
+
+    static inline BufferPtr
+    FromFile(const std::string& filename){
+      FILE* file = nullptr;
+      if(!(file = fopen(filename.data(), "rb"))){
+        LOG(ERROR) << "cannot open file " << filename;
+        return nullptr;
+      }
+      return FromFile(file, static_cast<int64_t>(GetFilesize(filename)));//TODO: fix
+    }
+  }
+}
+
+/* bool empty() const{
+      return bsize_ == 0;
+    }
 
     bool PutUUID(const UUID& val){ return PutType<UUID>(val); }
     bool PutVersion(const Version& val){ return PutType<Version>(val); }
@@ -375,30 +548,12 @@ namespace token{
       return true;
     }
 
-    template<class T, class C>
-    bool PutSet(const std::set<T, C>& items){
-      if(!PutLong(items.size()))
-        return false;
-      for(auto& item : items){
-        if(!item.Write(shared_from_this()))
-          return false;
-      }
-      return true;
-    }
-
     bool PutReference(const TransactionReference& ref){
       return PutHash(ref.transaction())
           && PutLong(ref.index());
     }
 
-    bool PutAddress(const NodeAddress& val){
-      return PutInt(val.address())
-          && PutInt(val.port());
-    }
 
-    NodeAddress GetAddress(){
-      return NodeAddress(GetInt(), GetInt());
-    }
 
     TransactionReference GetReference(){
       Hash hash = GetHash();
@@ -414,44 +569,7 @@ namespace token{
       return FromUnixTimestamp(GetUnsignedLong());
     }
 
-    bool PutPeerList(const PeerList& peers){
-      if(!PutLong(peers.size())){
-        DLOG(ERROR) << "cannot encode PeerList size.";
-        return false;
-      }
-      for(auto& it : peers){
-        if(!PutAddress(it)){
-          DLOG(ERROR) << "cannot encode PeerList address: " << it;
-          return false;
-        }
-      }
-      return true;
-    }
 
-    bool GetPeerList(PeerList& peers){
-      int64_t size = GetLong();
-      for(int64_t idx = 0; idx < size; idx++){
-        if(!peers.insert(GetAddress()).second){
-          DLOG(ERROR) << "cannot decode PeerList element #" << idx;
-          return false;
-        }
-      }
-      return true;
-    }
-
-    template<class T, class D>
-    bool GetList(std::vector<T>& results, const D& decoder){
-      int64_t length = GetLong();
-      for(int64_t idx = 0; idx < length; idx++){
-        T value;
-        if(!decoder.Decode(shared_from_this(), value)){
-          DLOG(FATAL) << "cannot decode list element #" << idx;
-          return false;
-        }
-        results.push_back(value);
-      }
-      return true;
-    }
 
     template<class T, class C>
     bool GetSet(std::set<T, C>& results){
@@ -564,25 +682,6 @@ namespace token{
         return nullptr;
       return buffer;
     }
-  };
-}
-
-#define SERIALIZE_BASIC_FIELD(Field, Type) \
-  if(!buff->Put##Type(Field)){                 \
-    LOG(WARNING) << "cannot serialize field " << #Field << " (" << #Type << ")"; \
-    return false;                                \
-  }
-
-#define SERIALIZE_FIELD(Name, Type, Field) \
-  if(!(Field).Write(buff)){                \
-    LOG(WARNING) << "cannot serialize field " << #Name << " (" << #Type << ")"; \
-    return false;                          \
-  }
-
-#define SERIALIZE_POINTER_FIELD(Name, Type, Field) \
-  if(!(Field)->Write(buff)){   \
-    LOG(WARNING) << "cannot serialize field " << #Name << " (" << #Type << ")"; \
-    return false;              \
-  }
+  };*/
 
 #endif //TOKEN_BUFFER_H

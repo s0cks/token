@@ -15,10 +15,10 @@ namespace token{
 
   BufferPtr IndexedTransaction::ToBuffer() const{
     Encoder encoder((*this));
-    BufferPtr buffer = Buffer::AllocateFor(encoder);
+    BufferPtr buffer = internal::For(encoder);
     if(!encoder.Encode(buffer)){
       DLOG(ERROR) << "cannot encode IndexedTransaction";
-      buffer->clear();
+      //TODO: clear buffer
     }
     return buffer;
   }
@@ -51,34 +51,8 @@ namespace token{
   }
 
   bool IndexedTransaction::Encoder::Encode(const BufferPtr& buff) const{
-    if(ShouldEncodeVersion()){
-      if(!buff->PutVersion(codec::GetCurrentVersion())){
-        CANNOT_ENCODE_CODEC_VERSION(FATAL);
-        return false;
-      }
-      DLOG(INFO) << "encoded codec version: " << codec::GetCurrentVersion();
-    }
-
-    const Timestamp& timestamp = value().timestamp();
-    if(!buff->PutTimestamp(timestamp)){
-      CANNOT_ENCODE_VALUE(FATAL, Timestamp, ToUnixTimestamp(timestamp));
+    if(!TransactionEncoder<IndexedTransaction>::Encode(buff))
       return false;
-    }
-    DLOG(INFO) << "encoded IndexedTransaction timestamp: " << FormatTimestampReadable(timestamp);
-
-    const InputList& inputs = value().inputs();
-    if(!EncodeList<Input, Input::Encoder>(buff, inputs)){
-      DLOG(ERROR) << "cannot encode IndexedTransaction inputs: " << inputs.size();
-      return false;
-    }
-    DLOG(INFO) << "encoded IndexedTransaction inputs: " << inputs.size();
-
-    const OutputList& outputs = value().outputs();
-    if(!EncodeList<Output, Output::Encoder>(buff, outputs)){
-      DLOG(ERROR) << "cannot encode IndexedTransaction outputs: " << outputs.size();
-      return false;
-    }
-    DVLOG(3) << "encoded IndexedTransaction outputs: " << outputs.size();
 
     const int64_t index = value().index();
     if(!buff->PutLong(index)){
@@ -93,25 +67,36 @@ namespace token{
   static inline bool
   DecodeList(const BufferPtr& buff, std::vector<V>& list, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
     D decoder(hints);
-    return buff->GetList<V, D>(list, hints);
+
+    auto length = buff->GetLong();
+    DLOG(INFO) << "decoded list length: " << length;
+
+    for(auto idx = 0; idx < length; idx++){
+      V item;
+      if(!decoder.Decode(buff, item)){
+        DLOG(ERROR) << "couldn't decode list item #" << idx;
+        return false;
+      }
+      DLOG(INFO) << "decoded list item #" << idx << ": " << item;
+      list.push_back(item);
+    }
+    return true;
   }
 
   bool IndexedTransaction::Decoder::Decode(const BufferPtr& buff, IndexedTransaction& result) const{
-    CHECK_CODEC_VERSION(FATAL, buff);
-
     Timestamp timestamp = buff->GetTimestamp();
     DLOG(INFO) << "decoded IndexedTransaction timestamp: " << FormatTimestampReadable(timestamp);
 
     InputList inputs;
     if(!DecodeList<Input, Input::Decoder>(buff, inputs)){
-      CANNOT_DECODE_VALUE(FATAL, inputs, InputList);
+      LOG(FATAL) << "cannot decode InputList from buffer.";
       return false;
     }
     DLOG(INFO) << "decoded inputs (InputList), " << inputs.size() << " items.";
 
     OutputList outputs;
     if(!DecodeList<Output, Output::Decoder>(buff, outputs)){
-      CANNOT_DECODE_VALUE(FATAL, outputs, OutputList);
+      LOG(FATAL) << "cannot decode OutputList from buffer.";
       return false;
     }
     DLOG(INFO) << "decoded outputs (OutputList), " << outputs.size() << " items.";

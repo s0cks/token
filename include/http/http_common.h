@@ -143,7 +143,7 @@ namespace token{
       UUID node_id = config::GetServerNodeID();
 
       std::stringstream ss;
-      ss << "Node/" << node_id.ToStringAbbreviated();
+      ss << "Node/" << node_id.ToString();//TODO: use to string abbreviated?
       return ss.str();
     }
 

@@ -2,51 +2,107 @@
 #define TOKEN_TRANSACTION_REFERENCE_H
 
 #include "json.h"
-#include "binary_object.h"
+#include "object.h"
+
+#include "codec.h"
+#include "encoder.h"
+#include "decoder.h"
 
 namespace token{
-  static const int64_t kTransactionReferenceSize = Hash::kSize + sizeof(int64_t);
-  class TransactionReference : public BinaryType<kTransactionReferenceSize>{
-   private:
-    enum Layout{
-      kHashPosition = 0,
-      kBytesForHash = Hash::kSize,
+  class TransactionReference : public Object{
+   public:
+    class Encoder : public codec::EncoderBase<TransactionReference>{
+     public:
+      Encoder(const TransactionReference& value, const codec::EncoderFlags& flags):
+          codec::EncoderBase<TransactionReference>(value, flags){}
+      Encoder(const Encoder& other) = default;
+      ~Encoder() override = default;
 
-      kIndexPosition = kHashPosition+kBytesForHash,
-      kBytesForIndex = sizeof(int64_t),
+      int64_t GetBufferSize() const override{
+        int64_t size = BaseType::GetBufferSize();
+        size += Hash::GetSize();
+        size += sizeof(int64_t);
+        return size;
+      }
+
+      bool Encode(const BufferPtr& buff) const override{
+        if(!BaseType::Encode(buff))
+          return false;
+        const auto& transaction = value().transaction();
+        if(!buff->PutHash(transaction)){
+          LOG(FATAL) << "cannot encode hash to buffer.";
+          return false;
+        }
+        const auto& index = value().index();
+        if(!buff->PutLong(index)){
+          LOG(FATAL) << "cannot encode index to buffer.";
+          return false;
+        }
+        return true;
+      }
+
+      Encoder& operator=(const Encoder& other) = default;
     };
 
-    inline void
-    SetHash(const Hash& val){
-      memcpy(&data_[kHashPosition], val.data(), kBytesForHash);
-    }
+    class Decoder : public codec::DecoderBase<TransactionReference>{
+     public:
+      explicit Decoder(const codec::DecoderHints& hints):
+          codec::DecoderBase<TransactionReference>(hints){}
+      Decoder(const Decoder& other) = default;
+      ~Decoder() override = default;
 
-    inline void
-    SetIndex(const int64_t& val){
-      memcpy(&data_[kIndexPosition], &val, kBytesForIndex);
-    }
+      bool Decode(const BufferPtr& buff, TransactionReference& result) const override{
+        auto transaction = buff->GetHash();
+        DLOG(INFO) << "decoded hash: " << transaction;
+
+        auto index = buff->GetLong();
+        DLOG(INFO) << "decoded index: " << index;
+
+        result = TransactionReference(transaction, index);
+        return true;
+      }
+
+      Decoder& operator=(const Decoder& other) = default;
+    };
+   private:
+    Hash transaction_;
+    int64_t index_;
    public:
     TransactionReference():
-      BinaryType<kTransactionReferenceSize>(){}
-    TransactionReference(const Hash& hash, const int64_t& index):
-      BinaryType<kTransactionReferenceSize>(){
-      SetHash(hash);
-      SetIndex(index);
-    }
+      transaction_(),
+      index_(){}
+    TransactionReference(const Hash& tx, const int64_t& index):
+      transaction_(tx),
+      index_(index){}
     TransactionReference(const TransactionReference& other) = default;
     ~TransactionReference() override = default;
 
+    Type type() const override{
+      return Type::kTransactionReference;
+    }
+
+    Hash& transaction(){
+      return transaction_;
+    }
+
     Hash transaction() const{
-      return Hash(&data_[kHashPosition], kBytesForHash);
+      return transaction_;
+    }
+
+    int64_t& index(){
+      return index_;
     }
 
     int64_t index() const{
-      return *((int64_t*)&data_[kIndexPosition]);
+      return index_;
     }
 
-    std::string ToString() const override{
+    std::string ToString() const{
       std::stringstream ss;
-      ss << "TransactionReference(" << data() << ")";
+      ss << "TransactionReference(";
+      ss << "transaction=" << transaction() << ", ";
+      ss << "index=" << index();
+      ss << ")";
       return ss.str();
     }
 

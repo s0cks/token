@@ -24,21 +24,25 @@ namespace token{
       template<class M>
       class PaxosMessageEncoder : public MessageEncoder<M>{
        protected:
+        RawProposal::Encoder proposal_encoder_;
+
         PaxosMessageEncoder(const M& value, const codec::EncoderFlags& flags):
-          MessageEncoder<M>(value, flags){}
+          MessageEncoder<M>(value, flags),
+          proposal_encoder_(value.proposal(), flags){}
        public:
         PaxosMessageEncoder(const PaxosMessageEncoder<M>& other) = default;
         ~PaxosMessageEncoder() override = default;
 
         int64_t GetBufferSize() const override{
-          int64_t size = codec::EncoderBase<M>::GetBufferSize();
-          size += RawProposal::GetSize();
+          int64_t size = MessageEncoder<M>::GetBufferSize();
+          size += proposal_encoder_.GetBufferSize();
           return size;
         }
 
         bool Encode(const BufferPtr& buff) const override{
-          //TODO: encode proposal_
-          return true;
+          if(!MessageEncoder<M>::Encode(buff))
+            return false;
+          return proposal_encoder_.GetBufferSize();
         }
 
         PaxosMessageEncoder<M>& operator=(const PaxosMessageEncoder<M>& other) = default;
@@ -47,8 +51,11 @@ namespace token{
       template<class M>
       class PaxosMessageDecoder : public codec::DecoderBase<M>{
        protected:
+        RawProposal::Decoder proposal_decoder_;
+
         explicit PaxosMessageDecoder(const codec::DecoderHints& hints):
-            codec::DecoderBase<M>(hints){}
+            codec::DecoderBase<M>(hints),
+            proposal_decoder_(hints){}
        public:
         PaxosMessageDecoder(const PaxosMessageDecoder<M>& other) = default;
         ~PaxosMessageDecoder<M>() override = default;

@@ -2,10 +2,51 @@
 #define TOKEN_RAW_PROPOSAL_H
 
 #include "uuid.h"
+
+#include "codec.h"
+#include "encoder.h"
+#include "decoder.h"
+
 #include "block_header.h"
 
 namespace token{
 class RawProposal : public Object{
+ public:
+    class Encoder : public codec::EncoderBase<RawProposal>{
+     private:
+      typedef codec::EncoderBase<RawProposal> BaseType;
+     public:
+      Encoder(const RawProposal& value, const codec::EncoderFlags& flags):
+        BaseType(value, flags){}
+      Encoder(const Encoder& other) = default;
+      ~Encoder() override = default;
+
+      int64_t GetBufferSize() const override{
+        return 0;
+      }
+
+      bool Encode(const BufferPtr& buff) const override{
+        return false;
+      }
+
+      Encoder& operator=(const Encoder& other) = default;
+    };
+
+    class Decoder : public codec::DecoderBase<RawProposal>{
+     private:
+      typedef codec::DecoderBase<RawProposal> BaseType;
+     public:
+      explicit Decoder(const codec::EncoderFlags& flags):
+        BaseType(flags){}
+      Decoder(const Decoder& other) = default;
+      ~Decoder() override = default;
+
+      bool Decode(const BufferPtr& buff, RawProposal& result) const override{
+        return false;
+      }
+
+      Decoder& operator=(const Decoder& other) = default;
+    };
  private:
   Timestamp timestamp_;
   UUID id_;
@@ -101,10 +142,11 @@ class RawProposal : public Object{
 
   static inline int64_t
   GetSize(){
+    //TODO: use UUID encoder sizing
     int64_t size = 0;
     size += sizeof(RawTimestamp);
-    size += UUID::GetSize();
-    size += UUID::GetSize();
+    size += 16;
+    size += 16;
     return size;
   }
 };

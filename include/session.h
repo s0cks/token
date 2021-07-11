@@ -1,20 +1,20 @@
 #ifndef TOKEN_SESSION_H
 #define TOKEN_SESSION_H
 
+#include "uuid.h"
 #include "message.h"
 #include "vthread.h"
-#include "buffer.h"
 #include "atomic/relaxed_atomic.h"
 
 namespace token{
 #define LOG_SESSION(LevelName, Session) \
-  LOG(LevelName) << "[session-" << (Session)->GetUUID().ToStringAbbreviated() << "] "
+  LOG(LevelName) << "[session-" << (Session)->GetUUID().ToString() << "] "
 
 #define DLOG_SESSION(LevelName, Session) \
-  DLOG(LevelName) << "[session-" << (Session)->GetUUID().ToStringAbbreviated() << "] "
+  DLOG(LevelName) << "[session-" << (Session)->GetUUID().ToString() << "] "
 
 #define DLOG_SESSION_IF(LevelName, Condition, Session) \
-  DLOG_IF(LevelName, Condition) << "[session-" << (Session)->GetUUID().ToStringAbbreviated() << "] "
+  DLOG_IF(LevelName, Condition) << "[session-" << (Session)->GetUUID().ToString() << "] "
 
 #define FOR_EACH_SESSION_STATE(V) \
     V(Connecting)                 \
@@ -31,7 +31,7 @@ namespace token{
       SessionWriteData(SessionBase* s, int64_t size):
         request(),
         session(s),
-        buffer(Buffer::NewInstance(size)){
+        buffer(internal::NewInstance(size)){
         request.data = this;
       }
     };
@@ -157,7 +157,7 @@ namespace token{
         DLOG_SESSION(INFO, this) << "sending message #" << idx << " " << msg->ToString() << " (" << msize << "b)";
 
         int64_t msg_size = msg->GetBufferSize();
-        buffers[idx].base = &data->buffer->data()[offset];
+        buffers[idx].base = (char*)&data->buffer->data()[offset];
         buffers[idx].len = msg_size;
         offset += msg_size;
       }

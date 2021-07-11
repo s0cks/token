@@ -4,10 +4,10 @@
 namespace token{
   BufferPtr UnclaimedTransaction::ToBuffer() const{
     Encoder encoder((*this));
-    BufferPtr buffer = Buffer::AllocateFor(encoder);
+    BufferPtr buffer = internal::For(encoder);
     if (!encoder.Encode(buffer)){
       DLOG(ERROR) << "cannot encode UnclaimedTransaction.";
-      buffer->clear();
+      //TODO: clear buffer
     }
     return buffer;
   }
@@ -24,52 +24,51 @@ namespace token{
 
   int64_t UnclaimedTransaction::Encoder::GetBufferSize() const{
     int64_t size = codec::EncoderBase<UnclaimedTransaction>::GetBufferSize();
-    size += TransactionReference::GetSize();
-    size += kUserSize;
-    size += kProductSize;
+    size += txref_encoder_.GetBufferSize();
+    size += user_encoder_.GetBufferSize();
+    size += product_encoder_.GetBufferSize();
     return size;
   }
 
   bool UnclaimedTransaction::Encoder::Encode(const BufferPtr& buff) const{
-    if (ShouldEncodeVersion()){
-      if (!buff->PutVersion(codec::GetCurrentVersion())){
-        LOG(FATAL) << "cannot encode codec version.";
-        return false;
-      }
-      DLOG(INFO) << "encoded codec version: " << codec::GetCurrentVersion();
-    }
+    if(!BaseType::Encode(buff))
+      return false;
 
-    const TransactionReference& reference = value().GetReference();
-    if (!buff->PutReference(reference)){
-      CANNOT_ENCODE_VALUE(FATAL, TransactionReference, reference);
+    if(!txref_encoder_.Encode(buff)){
+      LOG(FATAL) << "cannot encode transaction reference to buffer.";
       return false;
     }
 
-    const User& user = value().GetUser();
-    if (!buff->PutUser(user)){
-      CANNOT_ENCODE_VALUE(FATAL, User, user);
+    if(!user_encoder_.Encode(buff)){
+      LOG(FATAL) << "cannot encode user to buffer.";
       return false;
     }
 
-    const Product& product = value().GetProduct();
-    if (!buff->PutProduct(product)){
-      CANNOT_ENCODE_VALUE(FATAL, Product, product);
+    if(!product_encoder_.Encode(buff)){
+      LOG(FATAL) << "cannot encode product to buffer.";
       return false;
     }
     return true;
   }
 
   bool UnclaimedTransaction::Decoder::Decode(const BufferPtr& buff, UnclaimedTransaction& result) const{
-    CHECK_CODEC_VERSION(FATAL, buff);
+    TransactionReference reference;
+    if(!txref_decoder_.Decode(buff, reference)){
+      LOG(FATAL) << "cannot decode transaction reference from buffer.";
+      return false;
+    }
 
-    TransactionReference reference = buff->GetReference();
-    DLOG(INFO) << "decoded UnclaimedTransaction TransactionReference: " << reference;
+    User user;
+    if(!user_decoder_.Decode(buff, user)){
+      LOG(FATAL) << "cannot decode User from buffer.";
+      return false;
+    }
 
-    User user = buff->GetUser();
-    DLOG(INFO) << "decoded UnclaimedTransaction User: " << user;
-
-    Product product = buff->GetProduct();
-    DLOG(INFO) << "decoded UnclaimedTransaction Product: " << product;
+    Product product;
+    if(!product_decoder_.Decode(buff, product)){
+      LOG(FATAL) << "cannot decode product from buffer.";
+      return false;
+    }
 
     result = UnclaimedTransaction(reference, user, product);
     return true;

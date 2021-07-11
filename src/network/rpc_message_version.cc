@@ -3,19 +3,6 @@
 
 namespace token{
   namespace rpc{
-    bool VersionMessage::Encoder::Encode(const BufferPtr &buffer) const{
-      if(ShouldEncodeType() && !buffer->PutUnsignedLong(static_cast<uint64_t>(value().type()))){
-        DLOG(ERROR) << "couldn't encode type.";
-        return false;
-      }
-
-      if(ShouldEncodeVersion() && !buffer->PutVersion(value().version())){
-        DLOG(ERROR) << "couldn't encode version.";
-        return false;
-      }
-      return HandshakeMessageEncoder::Encode(buffer);
-    }
-
     bool VersionMessage::Decoder::Decode(const BufferPtr& buff, VersionMessage& result) const{
       Timestamp timestamp = buff->GetTimestamp();
       DLOG(INFO) << "decoded Timestamp: " << ToUnixTimestamp(timestamp);
@@ -29,7 +16,11 @@ namespace token{
       Hash nonce = buff->GetHash();
       DLOG(INFO) << "decoded Hash: " << nonce;
 
-      UUID node_id = buff->GetUUID();
+      UUID node_id;
+      if(!node_id_decoder_.Decode(buff, node_id)){
+        LOG(FATAL) << "couldn't decode node_id from buffer.";
+        return false;
+      }
       DLOG(INFO) << "decoded UUID: " << node_id;
 
       BlockHeader head; //TODO: decode head_

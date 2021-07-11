@@ -19,8 +19,8 @@ namespace token{
       return Hash(digest.data(), HashFunction::DIGESTSIZE);
     }
    public:
-    virtual ~BinaryObject() override = default;
-    virtual BufferPtr ToBuffer() const = 0;
+    ~BinaryObject() override = default;
+    virtual internal::BufferPtr ToBuffer() const = 0;
 
     Hash hash() const;
   };

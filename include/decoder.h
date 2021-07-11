@@ -25,6 +25,8 @@ namespace token{
     template<class T>
     class DecoderBase{
      protected:
+      typedef DecoderBase<T> BaseType;
+
       DecoderHints hints_;
 
       explicit DecoderBase(const DecoderHints& hints):
@@ -54,7 +56,7 @@ namespace token{
         return version >= Version::CurrentVersion();
       }
 
-      virtual bool Decode(const BufferPtr& buff, T& result) const = 0;
+      virtual bool Decode(const internal::BufferPtr& buff, T& result) const = 0;
 
       DecoderBase& operator=(const DecoderBase& other) = default;
     };
@@ -70,7 +72,7 @@ namespace token{
      ListDecoder(const ListDecoder& other) = default;
      ~ListDecoder() override = default;
 
-     bool Decode(const BufferPtr& buff, std::vector<T>& results) const override{
+     bool Decode(const internal::BufferPtr& buff, std::vector<T>& results) const override{
        //TODO: better error handling
        //TODO: decode type
        //TODO: decode version
@@ -95,21 +97,5 @@ namespace token{
    };
   }
 }
-
-#define CANNOT_DECODE_CODEC_VERSION(LevelName, Version) \
-  LOG(LevelName) << "cannot decode codec version: " << (Version);
-
-#define CANNOT_DECODE_VALUE(LevelName, Name, Type) \
-  LOG(LevelName) << "cannot decode " << (#Name) << " (" << (#Type) << ")";
-
-#define CHECK_CODEC_VERSION(LevelName, Buffer) \
-  if(ShouldExpectVersion()){\
-    Version version = (Buffer)->GetVersion(); \
-    if(!IsSupportedVersion(version)){     \
-      CANNOT_DECODE_CODEC_VERSION(LevelName, version); \
-      return false;         \
-    }                       \
-    DLOG(INFO) << "decoded version: " << version;  \
-  }
 
 #endif//TOKEN_CODEC_DECODER_H

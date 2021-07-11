@@ -7,7 +7,9 @@
 #include <utility>
 #include <http_parser.h>
 
+#include "user.h"
 #include "buffer.h"
+#include "product.h"
 #include "http/http_message.h"
 
 namespace token{
@@ -21,14 +23,14 @@ namespace token{
       ParameterMap query_params_;
      protected:
       bool Write(const BufferPtr& buffer) const override{
-        if(!buffer->PutString(GetHttpStatusLine(method_, path_)))
+        if(!buffer->PutBytes(GetHttpStatusLine(method_, path_)))
           return false;
         for(auto& hdr : headers_){
-          if(!buffer->PutString(GetHttpHeaderLine(hdr.first, hdr.second)))
+          if(!buffer->PutBytes(GetHttpHeaderLine(hdr.first, hdr.second)))
             return false;
         }
-        return buffer->PutString("\r\n")
-            && buffer->PutString(body_);
+        return buffer->PutBytes("\r\n")
+            && buffer->PutBytes(body_);
       }
 
       static inline std::string
@@ -266,8 +268,8 @@ namespace token{
 
       inline bool
       Parse(const BufferPtr& buffer){
-        LOG_IF(WARNING, !Parse(buffer->data(), buffer->GetWrittenBytes())) << "couldn't parse request of size: " << buffer->GetWrittenBytes();
-        buffer->SetReadPosition(buffer->GetReadBytes() + buffer->GetWrittenBytes());
+        LOG_IF(WARNING, !Parse((const char*)buffer->data(), buffer->GetWritePosition())) << "couldn't parse request of size: " << buffer->GetWritePosition();
+        buffer->SetReadPosition(buffer->GetReadPosition() + buffer->GetWritePosition());
         return true;
       }
 

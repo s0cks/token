@@ -14,12 +14,12 @@ namespace token{
 
   //TODO: refactor?
   void WalletManagerBatchWriteJob::PutWallet(const User& user, const Wallet& wallet){
-    BufferPtr buffer = Buffer::NewInstance(GetBufferSize(wallet));
+    BufferPtr buffer = internal::NewInstance(GetBufferSize(wallet));
     if(!Encode(buffer, wallet)){
       LOG(WARNING) << "cannot encode wallet.";
       return;
     }
-    batch_.Put(user, buffer->operator leveldb::Slice());
+    batch_.Put((leveldb::Slice)user, buffer->operator leveldb::Slice());
   }
 
   bool WalletManagerBatchWriteJob::Commit() const{

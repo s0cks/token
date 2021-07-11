@@ -13,7 +13,6 @@ namespace token{
           PaxosMessageEncoder<PrepareMessage>(value, flags){}
         Encoder(const Encoder& other) = default;
         ~Encoder() override = default;
-        bool Encode(const BufferPtr& buff) const;
         Encoder& operator=(const Encoder& other) = default;
       };
 

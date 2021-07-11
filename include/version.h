@@ -12,6 +12,7 @@ namespace token{
 
   static const int64_t kVersionSize = sizeof(int16_t) + sizeof(int16_t) + sizeof(int16_t);
   class Version : public BinaryType<kVersionSize>{
+    //TODO: create Encoder & Decoder
    public:
     static inline int
     Compare(const Version& a, const Version& b){

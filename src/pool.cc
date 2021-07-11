@@ -58,7 +58,7 @@ namespace token{
       if(key.type() != Type::kUnclaimedTransaction)
         continue;
 
-      BufferPtr val = Buffer::From(it->value());
+      BufferPtr val = internal::CopyFrom(it->value());
       UnclaimedTransactionPtr value = UnclaimedTransaction::DecodeNew(val);
 
       TransactionReference& r1 = value->GetReference();
@@ -78,7 +78,7 @@ namespace token{
       ObjectKey key(it->key()); \
       if(key.type() != Type::k##Name)                                      \
         continue;               \
-      BufferPtr val = Buffer::From(it->value()); \
+      BufferPtr val = internal::CopyFrom(it->value()); \
       Name##Ptr value = Name::DecodeNew(val);                                 \
       LOG_AT_LEVEL(severity) << " - " << value->ToString();            \
     }                           \
@@ -118,7 +118,7 @@ namespace token{
       LOG(WARNING) << "cannot get " << hash << ": " << status.ToString(); \
       return Name##Ptr(nullptr);                           \
     }                         \
-    BufferPtr buff = Buffer::From(data);                   \
+    BufferPtr buff = internal::CopyFrom(data);                   \
     return Name::DecodeNew(buff);                          \
   }
   FOR_EACH_POOL_TYPE(DEFINE_GET_TYPE)
@@ -169,7 +169,7 @@ namespace token{
     leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
     for(iter->SeekToFirst(); iter->Valid(); iter->Next()){         \
       ObjectKey key(iter->key()); \
-      BufferPtr buffer = Buffer::From(iter->value());              \
+      BufferPtr buffer = internal::CopyFrom(iter->value());              \
       Name##Ptr val = Name::DecodeNew(buffer); \
       if(!vis->Visit(val))     \
         return false;           \

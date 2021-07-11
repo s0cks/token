@@ -7,6 +7,8 @@
 #include "encoder.h"
 #include "decoder.h"
 
+#include "user.h"
+#include "product.h"
 #include "binary_object.h"
 #include "transaction_reference.h"
 
@@ -17,9 +19,16 @@ namespace token{
   class UnclaimedTransaction : public BinaryObject{
    public:
     class Encoder : public codec::EncoderBase<UnclaimedTransaction>{
+     protected:
+      TransactionReference::Encoder txref_encoder_;
+      User::Encoder user_encoder_;
+      Product::Encoder product_encoder_;
      public:
       explicit Encoder(const UnclaimedTransaction& value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags):
-        codec::EncoderBase<UnclaimedTransaction>(value, flags){}
+        codec::EncoderBase<UnclaimedTransaction>(value, flags),
+        txref_encoder_(value.GetReference(), flags),
+        user_encoder_(value.GetUser(), flags),
+        product_encoder_(value.GetProduct(), flags){}
       Encoder(const Encoder& other) = default;
       ~Encoder() override = default;
       int64_t GetBufferSize() const override;
@@ -28,9 +37,16 @@ namespace token{
     };
 
     class Decoder : public codec::DecoderBase<UnclaimedTransaction>{
+     protected:
+      TransactionReference::Decoder txref_decoder_;
+      User::Decoder user_decoder_;
+      Product::Decoder product_decoder_;
      public:
       explicit Decoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
-        codec::DecoderBase<UnclaimedTransaction>(hints){}
+        codec::DecoderBase<UnclaimedTransaction>(hints),
+        txref_decoder_(hints),
+        user_decoder_(hints),
+        product_decoder_(hints){}
       Decoder(const Decoder& other) = default;
       ~Decoder() override = default;
       bool Decode(const BufferPtr& buff, UnclaimedTransaction& result) const override;

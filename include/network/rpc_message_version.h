@@ -14,13 +14,6 @@ namespace token{
           HandshakeMessageEncoder<VersionMessage>(value, flags){}
         Encoder(const Encoder& other) = default;
         ~Encoder() override = default;
-
-        int64_t GetBufferSize() const override{
-          return HandshakeMessageEncoder::GetBufferSize();
-        }
-
-        bool Encode(const BufferPtr& buffer) const override;
-
         Encoder& operator=(const Encoder& other) = default;
       };
 

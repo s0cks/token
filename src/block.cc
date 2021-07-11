@@ -5,10 +5,10 @@
 namespace token{
   BufferPtr Block::ToBuffer() const{
     Encoder encoder((*this));
-    BufferPtr buffer = Buffer::AllocateFor(encoder);
+    BufferPtr buffer = internal::For(encoder);
     if(!encoder.Encode(buffer)){
       DLOG(ERROR) << "cannot encode Block.";
-      buffer->clear();
+      //TODO: clear buffer
     }
     return buffer;
   }
@@ -83,13 +83,8 @@ namespace token{
   }
 
   bool Block::Encoder::Encode(const BufferPtr& buff) const{
-    if(ShouldEncodeVersion()){
-      if(!buff->PutVersion(codec::GetCurrentVersion())){
-        LOG(FATAL) << "cannot encode codec version.";
-        return false;
-      }
-      DLOG(INFO) << "encoded codec version.";
-    }
+    if(!BaseType::Encode(buff))
+      return false;
 
     const Timestamp& timestamp = value().timestamp();
     if(!buff->PutTimestamp(timestamp)){
@@ -127,9 +122,6 @@ namespace token{
   }
 
   bool Block::Decoder::Decode(const BufferPtr& buff, Block& result) const{
-    DLOG(INFO) << "decoding block....";
-    CHECK_CODEC_VERSION(FATAL, buff);
-
     Timestamp timestamp = buff->GetTimestamp();
     DLOG(INFO) << "decoded Block timestamp: " << FormatTimestampReadable(timestamp);
 

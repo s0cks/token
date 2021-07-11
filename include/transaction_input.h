@@ -15,9 +15,14 @@ namespace token{
     friend class Transaction;
    public:
     class Encoder : public codec::EncoderBase<Input>{
+     protected:
+      TransactionReference::Encoder txref_encoder_;
+      User::Encoder user_encoder_;
      public:
       explicit Encoder(const Input& value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags):
-        codec::EncoderBase<Input>(value, flags){}
+        codec::EncoderBase<Input>(value, flags),
+        txref_encoder_(value.GetReference(), flags),
+        user_encoder_(value.GetUser(), flags){}
       Encoder(const Encoder& other) = default;
       ~Encoder() override = default;
 
@@ -28,9 +33,14 @@ namespace token{
     };
 
     class Decoder : public codec::DecoderBase<Input>{
+     protected:
+      TransactionReference::Decoder txref_decoder_;
+      User::Decoder user_decoder_;
      public:
-      Decoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
-        codec::DecoderBase<Input>(hints){}
+      explicit Decoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
+        codec::DecoderBase<Input>(hints),
+        txref_decoder_(hints),
+        user_decoder_(hints){}
       Decoder(const Decoder& other) = default;
       ~Decoder() override = default;
 
@@ -164,7 +174,7 @@ typedef std::vector<Input> InputList;
    typedef codec::ListEncoder<Input, Input::Encoder> BaseType;
   public:
     InputListEncoder(const InputList& items, const codec::EncoderFlags& flags):
-      BaseType(items, flags){}
+      BaseType(Type::kInputList, items, flags){}
     InputListEncoder(const InputListEncoder& other) = default;
     ~InputListEncoder() override = default;
     InputListEncoder& operator=(const InputListEncoder& other) = default;

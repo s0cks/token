@@ -59,9 +59,9 @@ namespace token{
 
     static inline void
     SetDefaultProperty(leveldb::WriteBatch& batch, const std::string& name, const PeerList& val){
-      BufferPtr buffer = Buffer::NewInstance(GetBufferSize(val));
+      internal::BufferPtr buffer = internal::NewInstance(GetBufferSize(val));
       if(!buffer->PutPeerList(val)){
-        LOG(WARNING) << "cannot serialize peer list to buffer of size " << buffer->GetBufferSize();
+        LOG(WARNING) << "cannot serialize peer list to buffer of size " << buffer->ToString();
         return;
       }
       batch.Put(name, buffer->AsSlice());
@@ -130,7 +130,7 @@ namespace token{
     }
 
     static inline bool
-    PutProperty(const std::string& name, const BufferPtr& val){
+    PutProperty(const std::string& name, const internal::BufferPtr& val){
       if(!IsInitializedState())
         return false;
 
@@ -170,7 +170,7 @@ namespace token{
 #undef DEFINE_PUT_PROPERTY
 
     bool PutProperty(const std::string& name, const PeerList& val){
-      BufferPtr slice = Buffer::NewInstance(GetBufferSize(val));
+      auto slice = internal::NewInstance(GetBufferSize(val));
       if(!slice->PutPeerList(val)){
         DLOG(WARNING) << "cannot serialize peer list to buffer.";
         return false;
@@ -198,7 +198,7 @@ namespace token{
         return false;
       }
 
-      BufferPtr data = Buffer::From(slice);
+      BufferPtr data = internal::CopyFrom(slice);
       return data->GetPeerList(results);
     }
 

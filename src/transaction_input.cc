@@ -13,10 +13,10 @@ namespace token{
 
   BufferPtr Input::ToBuffer() const{
     Encoder encoder((*this));
-    BufferPtr buffer = Buffer::AllocateFor(encoder);
+    BufferPtr buffer = internal::For(encoder);
     if(!encoder.Encode(buffer)){
       DLOG(ERROR) << "cannot encode Input.";
-      buffer->clear();
+      //TODO: clear buffer
       return buffer;
     }
     return buffer;
@@ -24,56 +24,42 @@ namespace token{
 
   int64_t Input::Encoder::GetBufferSize() const{
     int64_t size = codec::EncoderBase<Input>::GetBufferSize();
-    size += TransactionReference::GetSize();
-    size += User::GetSize();
+    size += txref_encoder_.GetBufferSize();
+    size += user_encoder_.GetBufferSize();
     return size;
   }
 
   bool Input::Encoder::Encode(const BufferPtr& buff) const{
-    if(ShouldEncodeType()){
-      auto type = static_cast<int64_t>(value().type());
-      if(!buff->PutLong(type)){
-        LOG(FATAL) << "couldn't encode object type.";
-        return false;
-      }
-      DLOG(INFO) << "encoded object type: " << type;
-    }
+    if(!BaseType::Encode(buff))
+      return false;
 
-    if(ShouldEncodeVersion()){
-      auto version = codec::GetCurrentVersion();
-      if(!buff->PutVersion(version)){
-        LOG(FATAL) << "couldn't encode object version.";
-        return false;
-      }
-      DLOG(INFO) << "encoded object version: " << version;
-    }
-
-    // Encode reference_
-    const TransactionReference& reference = value().GetReference();
-    if(!buff->PutReference(reference)){
-      CANNOT_ENCODE_VALUE(FATAL, TransactionReference, reference);
+    if(!txref_encoder_.Encode(buff)){
+      LOG(FATAL) << "couldn't encode transaction reference to buffer.";
       return false;
     }
-    DLOG(INFO) << "encoded reference: " << reference;
 
-    // Encode user_
-    const User& user = value().GetUser();
-    if(!buff->PutUser(user)){
-      CANNOT_ENCODE_VALUE(FATAL, User, user);
+    if(!user_encoder_.Encode(buff)){
+      LOG(FATAL) << "couldn't encode user to buffer.";
       return false;
     }
-    DLOG(INFO) << "encoded user: " << user;
     return true;
   }
 
   bool Input::Decoder::Decode(const BufferPtr& buff, Input& result) const{
     // Decode reference_
-    TransactionReference reference = buff->GetReference();
-    DLOG(INFO) << "decoded reference: " << reference;
+    TransactionReference reference;
+    if(!txref_decoder_.Decode(buff, reference)){
+      LOG(FATAL) << "couldn't decode transaction reference from buffer.";
+      return false;
+    }
 
     // Decode user_
-    User user = buff->GetUser();
-    DLOG(INFO) << "decoded user: " << user;
+    User user;
+    if(!user_decoder_.Decode(buff, user)){
+      LOG(FATAL) << "couldn't decode user from buffer.";
+      return false;
+    }
+
     result = Input(reference, user);
     return true;
   }

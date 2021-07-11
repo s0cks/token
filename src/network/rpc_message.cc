@@ -38,7 +38,7 @@ namespace token{
       Type type = static_cast<Type>(buffer->GetUnsignedLong());
       DLOG(INFO) << "decoded message type: " << type;
 
-      Version version = buffer->GetVersion();
+      Version version(buffer->GetShort(), buffer->GetShort(), buffer->GetShort());
       DLOG(INFO) << "decoded message version: " << version;
 
       codec::DecoderHints hints = codec::ExpectTypeHint::Encode(true)|codec::ExpectVersionHint::Encode(true);
