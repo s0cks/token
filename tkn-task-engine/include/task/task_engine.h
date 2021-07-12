@@ -30,6 +30,11 @@ namespace token{
     };
 
     class TaskEngine{
+     public:
+      static const int64_t kDefaultMaxQueueSize = 1024;
+      static const int64_t kDefaultNumberOfWorkers = 2;
+      static const int64_t kMaximumNumberOfWorkers = 128;//TODO: make platform specific
+      static const int64_t kMinimumNumberOfWorkers = 0;
      protected:
       std::random_device random_device_;
       std::default_random_engine random_engine_;
@@ -52,6 +57,8 @@ namespace token{
       }
      public:
       TaskEngine(const int64_t& num_workers, const int64_t& num_queues, const int64_t& max_queue_size);
+      TaskEngine(const int64_t& num_workers, const int64_t& num_queues):
+        TaskEngine(num_workers, num_queues, kDefaultMaxQueueSize){}
       TaskEngine(const TaskEngine& other) = delete;
       ~TaskEngine(){
         delete[] workers_;

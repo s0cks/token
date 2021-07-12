@@ -8,7 +8,6 @@
 #include "filesystem.h"
 #include "blockchain.h"
 #include "configuration.h"
-#include "job/scheduler.h"
 
 #include "task/task_debug.h"
 #include "task/task_queue.h"
@@ -195,11 +194,6 @@ PrintRuntimeInformation(){
   }
 }
 
-static inline void
-OnTick(){
-    LOG(INFO) << "tick.";
-}
-
 //TODO:
 // - create global environment teardown and deconstruct routines
 // - validity/consistency checks on block chain data
@@ -231,17 +225,10 @@ main(int argc, char **argv){
     }
   }
 
-  token::task::TaskQueue queue(1024);
-  token::task::TaskEngine engine(2, 1, 1024);
-  engine.RegisterQueue(&queue);
+  token::task::TaskQueue main_queue(token::task::TaskEngine::kDefaultMaxQueueSize);
 
-  for(auto idx = 0; idx < 1000; idx++){
-    auto task = new token::task::DebugTask(idx);
-    task->Submit(queue);
-  }
-
-
-  sleep(60 * 2);
+  token::task::TaskEngine task_engine(FLAGS_num_workers, 1);
+  task_engine.RegisterQueue(&main_queue);
 
   token::rpc::LedgerServerThread th_server;
   token::http::HealthServiceThread th_svc_health;
@@ -251,8 +238,6 @@ main(int argc, char **argv){
   config::Initialize();
   // start the health check service
   SilentlyStartService<http::HealthService, http::HealthServiceThread, google::FATAL>(th_svc_health);
-  // initialize the job scheduler
-  SilentlyInitialize<JobScheduler, google::FATAL>();
   // initialize the keychain
   SilentlyInitialize<Keychain, google::FATAL>();//TODO: refactor & parallelize
   // initialize the object pool
