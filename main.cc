@@ -21,6 +21,8 @@
 #include "http/http_service_health.h"
 #include "http/http_service_rest.h"
 
+#include "utils/timer.h"
+
 #ifdef TOKEN_DEBUG
   static const std::vector<token::User> kOwners = {
     token::User("VenueA"),
@@ -190,6 +192,11 @@ PrintRuntimeInformation(){
   }
 }
 
+static inline void
+OnTick(){
+    LOG(INFO) << "tick.";
+}
+
 //TODO:
 // - create global environment teardown and deconstruct routines
 // - validity/consistency checks on block chain data
@@ -220,6 +227,20 @@ main(int argc, char **argv){
       return EXIT_FAILURE;
     }
   }
+
+  uv_loop_t* loop = uv_loop_new();
+  token::utils::Timer timer(loop, &OnTick, 0, 0);
+  if(!timer.Start()){
+    LOG(FATAL) << "cannot start timer.";
+    return false;
+  }
+
+  int status;
+  if((status = uv_run(loop, UV_RUN_DEFAULT)) != 0){
+    LOG(FATAL) << "cannot run timer loop: " << uv_strerror(status);
+    return false;
+  }
+
 
   token::rpc::LedgerServerThread th_server;
   token::http::HealthServiceThread th_svc_health;
