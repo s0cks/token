@@ -1,3 +1,4 @@
+/*
 #include "wallet.h"
 #include "job/scheduler.h"
 #include "job/processor.h"
@@ -91,4 +92,4 @@ namespace token{
     ((ProcessTransactionOutputsJob*)GetParent())->Append(wallets_);
     return Success("done.");
   }
-}
+}*/

@@ -27,6 +27,10 @@ namespace token{
         LOG(INFO) << "task #" << GetTaskNumber() << ": Hello World!";
         SetState(Status::kSuccessful);
       }
+
+      void OnFinished() const override{
+        DLOG(INFO) << "task #" << GetTaskNumber() << " is finished.";
+      }
     };
   }
 }

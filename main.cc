@@ -225,10 +225,15 @@ main(int argc, char **argv){
     }
   }
 
-  token::task::TaskQueue main_queue(token::task::TaskEngine::kDefaultMaxQueueSize);
+  token::task::TaskQueue main_queue(token::task::kDefaultTaskEngineQueueSize);
 
   token::task::TaskEngine task_engine(FLAGS_num_workers, 1);
   task_engine.RegisterQueue(&main_queue);
+
+  for(auto idx = 0; idx < 1000; idx++){
+    auto task = new token::task::DebugTask(idx);
+    task->Submit(main_queue);
+  }
 
   token::rpc::LedgerServerThread th_server;
   token::http::HealthServiceThread th_svc_health;

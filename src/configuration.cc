@@ -7,7 +7,7 @@
 namespace token{
   namespace config{
     static leveldb::DB* index_ = nullptr;
-    static RelaxedAtomic<State> state_{ State::kUninitializedState };
+    static atomic::RelaxedAtomic<State> state_{ State::kUninitializedState };
 
     static inline State
     GetState(){

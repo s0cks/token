@@ -8,7 +8,7 @@
 
 namespace token{
   static std::default_random_engine engine;
-  static RelaxedAtomic<PeerSessionManager::State> state_(PeerSessionManager::State::kUninitializedState);
+  static atomic::RelaxedAtomic<PeerSessionManager::State> state_(PeerSessionManager::State::kUninitializedState);
   static PeerSessionThread** threads_;
   static ConnectionRequestQueue queue_(TOKEN_CONNECTION_QUEUE_SIZE);
   static std::map<ThreadId, ConnectionRequestQueue*> queues_;

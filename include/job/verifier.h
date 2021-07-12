@@ -1,7 +1,7 @@
 #ifndef TOKEN_VERIFIER_H
 #define TOKEN_VERIFIER_H
 
-#include "job.h"
+/*#include "job.h"
 #include "block.h"
 #include "transaction.h"
 
@@ -138,6 +138,6 @@ namespace token{
       outputs_(outputs){}
     ~VerifyOutputListJob() = default;
   };
-}
+}*/
 
 #endif //TOKEN_VERIFIER_H

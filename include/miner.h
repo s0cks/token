@@ -8,7 +8,7 @@
 #include "flags.h"
 #include "proposal.h"
 
-#include "os_thread.h"
+#include "../tkn-platform/include/os_thread.h"
 
 namespace token{
 #define LOG_MINER(LevelName) \
@@ -53,7 +53,7 @@ namespace token{
     uv_timer_t timer_;
     uv_async_t on_accepted_;
     uv_async_t on_rejected_;
-    RelaxedAtomic<State> state_;
+    atomic::RelaxedAtomic<State> state_;
 
     std::mutex proposal_mtx_;
     ProposalPtr proposal_;

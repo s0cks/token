@@ -3,22 +3,8 @@
 #include "pool.h"
 #include "miner.h"
 #include "block_builder.h"
-#include "job/scheduler.h"
-#include "job/processor.h"
 
 namespace token{
-  static JobQueue queue_(JobScheduler::kMaxNumberOfJobs);
-
-  static inline bool
-  Schedule(Job* job){
-    return queue_.Push(job);
-  }
-
-  static inline bool
-  RegisterQueue(){
-    return JobScheduler::RegisterQueue(pthread_self(), &queue_);
-  }
-
   BlockMiner* BlockMiner::GetInstance(){
     static BlockMiner instance;
     return &instance;
@@ -75,9 +61,9 @@ namespace token{
     DLOG_MINER(INFO) << "appending block: " << header;
 
     BlockPtr blk = pool->GetBlock(hash);
-    auto job = new ProcessBlockJob(blk, true);
+/*TODO:    auto job = new ProcessBlockJob(blk, true);
     DLOG_MINER_IF(ERROR, !Schedule(job)) << "cannot schedule process block job.";
-    while(!job->IsFinished()); //spin
+    while(!job->IsFinished()); //spin*/
 
     DLOG_MINER_IF(ERROR, !chain->Append(blk)) << "cannot append the new block.";
     DLOG_MINER_IF(ERROR, !miner->ClearActiveProposal()) << "cannot clear active proposal";
@@ -131,8 +117,8 @@ namespace token{
       return;
     }
 
-    auto job = new ProposalJob(proposal);
-    DLOG_MINER_IF(ERROR, !Schedule(job)) << "cannot schedule new proposal job";
+    //TODO: auto job = new ProposalJob(proposal);
+    //TODO: DLOG_MINER_IF(ERROR, !Schedule(job)) << "cannot schedule new proposal job";
   }
 
   bool BlockMiner::Run(){
@@ -169,11 +155,6 @@ namespace token{
   }
 
   void BlockMinerThread::HandleThread(uword param){
-    if(!RegisterQueue()){
-      LOG_MINER(ERROR) << "cannot register job queue.";
-      return;
-    }
-
     auto miner = (BlockMiner*)param;
     LOG_MINER_IF(ERROR, !miner->Run()) << "cannot run miner loop.";
   }

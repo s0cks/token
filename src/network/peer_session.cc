@@ -1,8 +1,6 @@
 #include "env.h"
 #include "miner.h"
 #include "configuration.h"
-#include "job/scheduler.h"
-#include "job/synchronize.h"
 #include "network/rpc_server.h"
 #include "network/rpc_messages.h"
 #include "network/peer_session.h"

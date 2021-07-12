@@ -4,18 +4,17 @@
 #include <memory>
 #include <utility>
 
-#include "job/job.h"
 #include "timestamp.h"
 #include "raw_proposal.h"
 #include "block_header.h"
 #include "configuration.h"
-#include "relaxed_atomic.h"
+#include "atomic/relaxed_atomic.h"
 
 namespace token{
   class Proposal;
   typedef std::shared_ptr<Proposal> ProposalPtr;
 
-  typedef RelaxedAtomic<int16_t> ProposalCounter;
+  typedef atomic::RelaxedAtomic<int16_t> ProposalCounter;
 
 #define FOR_EACH_PROPOSAL_STATE(V) \
   V(Queued)                        \
@@ -54,7 +53,7 @@ namespace token{
     RawProposal raw_;
     uv_loop_t* loop_;
     uv_timer_t timeout_;
-    RelaxedAtomic<State> state_;
+    atomic::RelaxedAtomic<State> state_;
     int16_t required_;
     // overall
     ProposalCounter total_votes_; // the total amount of votes received during this proposal
@@ -231,7 +230,7 @@ namespace token{
     }
   };
 
-  class ProposalJob : public Job{
+/*  class ProposalJob : public Job{
     //TODO: handle timeouts
    protected:
     ProposalPtr proposal_;
@@ -256,7 +255,7 @@ namespace token{
     ProposalPtr GetProposal() const{
       return proposal_;
     }
-  };
+  };*/
 }
 
 #endif//TOKEN_PROPOSAL_H

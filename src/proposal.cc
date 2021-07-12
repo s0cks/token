@@ -9,7 +9,7 @@ namespace token{
 #define CANNOT_TRANSITION_TO(To) \
   LOG(ERROR) << "cannot transition " << raw() << " from " << GetPhase() << " phase to: " << (To) << " phase.";
 
-  bool ProposalJob::AcceptProposal(){
+/*  bool ProposalJob::AcceptProposal(){
     //TODO: PeerSessionManager::BroadcastAccepted();//TODO: check result
     return true;
   }
@@ -130,5 +130,5 @@ namespace token{
     std::stringstream ss;
     ss << "proposal " << proposal->GetID() << " was accepted (" << proposal->GetTotalPercentageAccepted() << "%)";
     return Success(ss);
-  }
+  }*/
 }

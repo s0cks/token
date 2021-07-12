@@ -57,12 +57,13 @@ file(GLOB_RECURSE TKN_HEADERS include/*.h)
 file(GLOB_RECURSE TKN_SOURCES src/*.h src/*.cc)
 file(GLOB_RECURSE TKN_TEST_SOURCES tests/*.h tests/*.cc)
 
+add_subdirectory(tkn-platform)
 add_subdirectory(tkn-utils)
 add_subdirectory(tkn-task-engine)
 
 add_library(tkn-ledger STATIC ${TKN_HEADERS} ${TKN_SOURCES})
 target_include_directories(tkn-ledger PUBLIC include)
-target_link_libraries(tkn-ledger ${TKN_LIBRARIES} tkn-utils tkn-task-engine)
+target_link_libraries(tkn-ledger ${TKN_LIBRARIES} tkn-platform tkn-utils tkn-task-engine)
 
 add_executable(tkn-node main.cc)
 target_link_libraries(tkn-node tkn-ledger ${TKN_LIBRARIES})

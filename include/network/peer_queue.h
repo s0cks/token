@@ -2,7 +2,7 @@
 #define TOKEN_PEER_QUEUE_H
 
 #include "address.h"
-#include "work_stealing_queue.h"
+#include "atomic/work_stealing_queue.h"
 
 namespace token{
 #ifndef TOKEN_MAX_CONNECTION_ATTEMPTS
@@ -93,7 +93,7 @@ namespace token{
     }
   };
 
-  typedef WorkStealingQueue<ConnectionRequest*> ConnectionRequestQueue;
+  typedef atomic::WorkStealingQueue<ConnectionRequest*> ConnectionRequestQueue;
 }
 
 #endif//TOKEN_PEER_QUEUE_H

@@ -12,7 +12,7 @@
 #include "transaction.h"
 #include "merkle/tree.h"
 #include "configuration.h"
-#include "relaxed_atomic.h"
+#include "atomic/relaxed_atomic.h"
 #include "unclaimed_transaction.h"
 
 namespace token{
@@ -80,7 +80,7 @@ namespace token{
       void FindShortSuccessor(std::string* str) const override{}
     };
    protected:
-    RelaxedAtomic<State> state_;
+    atomic::RelaxedAtomic<State> state_;
     leveldb::DB* index_;
 
     inline leveldb::DB*

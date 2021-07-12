@@ -7,7 +7,7 @@
 #include "filesystem.h"
 #include "blockchain.h"
 #include "unclaimed_transaction.h"
-#include "relaxed_atomic.h"
+#include "atomic/relaxed_atomic.h"
 #include "blockchain_initializer.h"
 
 namespace token{
@@ -264,8 +264,6 @@ namespace token{
     return true;
   }
 
-  static JobQueue queue_(JobScheduler::kMaxNumberOfJobs);
-
   BlockChainPtr BlockChain::GetInstance(){
     //TODO: fix instantiation
     static std::shared_ptr<BlockChain> instance = std::make_shared<BlockChain>();
@@ -273,11 +271,6 @@ namespace token{
   }
 
   bool BlockChain::Initialize(const std::string& filename){
-    if(!JobScheduler::RegisterQueue(platform::GetCurrentThreadId(), &queue_)){
-      LOG(ERROR) << "couldn't register BlockChain job queue.";
-      return false;
-    }
-
     leveldb::Status status;
     if(!(status = GetInstance()->InitializeIndex(filename)).ok()){
       LOG(ERROR) << "couldn't initialize the BlockChain in " << filename << ": " << status.ToString();

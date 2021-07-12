@@ -3,8 +3,8 @@
 
 #include "uuid.h"
 #include "message.h"
-#include "os_thread.h"
-#include "relaxed_atomic.h"
+#include "../tkn-platform/include/os_thread.h"
+#include "atomic/relaxed_atomic.h"
 
 namespace token{
 #define LOG_SESSION(LevelName, Session) \
@@ -57,7 +57,7 @@ namespace token{
     UUID uuid_;
     uv_loop_t* loop_;
     uv_tcp_t handle_;
-    RelaxedAtomic<State> state_;
+    atomic::RelaxedAtomic<State> state_;
 
     void SetState(const State& state){
       state_ = state;

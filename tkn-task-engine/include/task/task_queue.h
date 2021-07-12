@@ -2,11 +2,11 @@
 #define TKN_TASK_QUEUE_H
 
 #include "os_thread.h"
-#include "work_stealing_queue.h"
+#include "atomic/work_stealing_queue.h"
 
 namespace token{
   namespace task{
-    typedef WorkStealingQueue<uword> TaskQueue;
+    typedef atomic::WorkStealingQueue<uword> TaskQueue;
   }
 }
 

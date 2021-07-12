@@ -5,8 +5,6 @@
 
 #include "blockchain.h"
 #include "configuration.h"
-#include "job/processor.h"
-#include "job/scheduler.h"
 
 namespace token{
 #define INITIALIZER_LOG(LevelName) \
@@ -118,10 +116,11 @@ namespace token{
       // [After - Work Stealing]
       //  - ProcessGenesisBlock Timeline (4s)
       INITIALIZER_LOG(INFO) << "processing genesis....";
-      if(!ProcessBlockJob::SubmitAndWait(blk)){
+      /*TODO:
+        if(!ProcessBlockJob::SubmitAndWait(blk)){
         INITIALIZER_LOG(ERROR) << "couldn't submit new ProcessBlockJob.";
         return TransitionToState(BlockChain::kUninitialized);
-      }
+      }*/
 
       SetGenesisReference(hash);
       SetNewHead(hash, blk);

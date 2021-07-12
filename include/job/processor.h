@@ -1,6 +1,7 @@
 #ifndef TOKEN_PROCESS_BLOCK_H
 #define TOKEN_PROCESS_BLOCK_H
 
+/*
 #include "pool.h"
 #include "block.h"
 #include "job/job.h"
@@ -229,5 +230,6 @@ namespace token{
     }
   };
 }
+*/
 
 #endif //TOKEN_PROCESS_BLOCK_H

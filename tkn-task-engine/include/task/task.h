@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-#include "relaxed_atomic.h"
+#include "atomic/relaxed_atomic.h"
 #include "task/task_queue.h"
 
 namespace token{
@@ -37,8 +37,8 @@ namespace token{
       }
      protected:
       Task* parent_;
-      RelaxedAtomic<Status> status_;
-      RelaxedAtomic<int64_t> unfinished_;
+      atomic::RelaxedAtomic<Status> status_;
+      atomic::RelaxedAtomic<int64_t> unfinished_;
 
       explicit Task(Task* parent):
         parent_(parent),
@@ -79,6 +79,7 @@ namespace token{
 #undef DEFINE_CHECK
 
       virtual void DoWork() = 0;//TODO: make const?
+      virtual void OnFinished() const{}
       virtual std::string GetName() const = 0;
 
       bool Submit(TaskQueue& queue){
@@ -93,6 +94,7 @@ namespace token{
         unfinished_ -= 1;
         if(HasParent())
           return GetParent()->Finish();
+        OnFinished();
         return true;
       }
 

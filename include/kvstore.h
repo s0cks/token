@@ -10,7 +10,7 @@
 #include <glog/logging.h>
 
 #include "common.h"
-#include "relaxed_atomic.h"
+#include "atomic/relaxed_atomic.h"
 
 namespace token{
   namespace internal{
@@ -39,7 +39,7 @@ namespace token{
         }
       }
      protected:
-      RelaxedAtomic<State> state_;
+      atomic::RelaxedAtomic<State> state_;
       leveldb::DB* index_;
 
       KeyValueStore():

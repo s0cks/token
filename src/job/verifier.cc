@@ -1,3 +1,4 @@
+/*
 #include "pool.h"
 #include "job/verifier.h"
 #include "job/scheduler.h"
@@ -137,4 +138,4 @@ namespace token{
     //TODO: implement VerifyOutputList::DoWork()
     return Success("done.");
   }
-}
+}*/

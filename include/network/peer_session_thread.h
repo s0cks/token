@@ -7,7 +7,7 @@
 #include <iostream>
 #include <condition_variable>
 
-#include "os_thread.h"
+#include "../../tkn-platform/include/os_thread.h"
 #include "blockchain.h"
 #include "network/peer_queue.h"
 #include "network/peer_session.h"
@@ -46,7 +46,7 @@ namespace token{
    private: // loop_ needs to be created on thread
     ThreadId thread_;
     ConnectionRequestQueue queue_;
-    RelaxedAtomic<State> state_;
+    atomic::RelaxedAtomic<State> state_;
     WorkerId id_;
 
     std::mutex session_mtx_;

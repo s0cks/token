@@ -43,7 +43,7 @@ namespace token{
       TaskEngine* engine_;
       ThreadId thread_;
       WorkerId worker_;
-      RelaxedAtomic<State> state_;
+      atomic::RelaxedAtomic<State> state_;
       TaskQueue queue_;
 
       TaskEngineWorker(TaskEngine* engine, const WorkerId& worker, const int64_t& max_queue_size):

@@ -6,8 +6,8 @@
 #include "session.h"
 #include "configuration.h"
 
-#include "os_thread.h"
-#include "relaxed_atomic.h"
+#include "../tkn-platform/include/os_thread.h"
+#include "atomic/relaxed_atomic.h"
 
 #define DEFAULT_SERVER_BACKLOG 100
 
@@ -53,7 +53,7 @@ namespace token{
     uv_loop_t* loop_;
     uv_tcp_t handle_;
     uv_async_t shutdown_;
-    RelaxedAtomic<State> state_;
+    atomic::RelaxedAtomic<State> state_;
 
     explicit ServerBase(uv_loop_t* loop):
       loop_(loop),
