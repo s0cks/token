@@ -7,7 +7,7 @@
 namespace token{
   class Job;
 
-  typedef WorkStealingQueue<Job*> JobQueue;
+  typedef atomic::WorkStealingQueue<Job*> JobQueue;
 
   class JobScheduler{
     friend class JobWorker;

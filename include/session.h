@@ -57,7 +57,7 @@ namespace token{
     UUID uuid_;
     uv_loop_t* loop_;
     uv_tcp_t handle_;
-    RelaxedAtomic<State> state_;
+    atomic::RelaxedAtomic<State> state_;
 
     void SetState(const State& state){
       state_ = state;

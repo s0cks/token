@@ -15,7 +15,7 @@ namespace token{
   class Proposal;
   typedef std::shared_ptr<Proposal> ProposalPtr;
 
-  typedef RelaxedAtomic<int16_t> ProposalCounter;
+  typedef atomic::RelaxedAtomic<int16_t> ProposalCounter;
 
 #define FOR_EACH_PROPOSAL_STATE(V) \
   V(Queued)                        \
@@ -54,7 +54,7 @@ namespace token{
     RawProposal raw_;
     uv_loop_t* loop_;
     uv_timer_t timeout_;
-    RelaxedAtomic<State> state_;
+    atomic::RelaxedAtomic<State> state_;
     int16_t required_;
     // overall
     ProposalCounter total_votes_; // the total amount of votes received during this proposal

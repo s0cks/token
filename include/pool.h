@@ -101,7 +101,7 @@ namespace token{
       void FindShortSuccessor(std::string* str) const override {}
     };
    protected:
-    RelaxedAtomic<State> state_;
+    atomic::RelaxedAtomic<State> state_;
     leveldb::DB* index_;
 
     void SetState(const State& state){

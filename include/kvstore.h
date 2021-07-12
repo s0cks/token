@@ -39,7 +39,7 @@ namespace token{
         }
       }
      protected:
-      RelaxedAtomic<State> state_;
+      atomic::RelaxedAtomic<State> state_;
       leveldb::DB* index_;
 
       KeyValueStore():

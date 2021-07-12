@@ -93,7 +93,7 @@ namespace token{
     }
   };
 
-  typedef WorkStealingQueue<ConnectionRequest*> ConnectionRequestQueue;
+  typedef atomic::WorkStealingQueue<ConnectionRequest*> ConnectionRequestQueue;
 }
 
 #endif//TOKEN_PEER_QUEUE_H

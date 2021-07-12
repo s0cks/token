@@ -46,7 +46,7 @@ namespace token{
    private: // loop_ needs to be created on thread
     ThreadId thread_;
     ConnectionRequestQueue queue_;
-    RelaxedAtomic<State> state_;
+    atomic::RelaxedAtomic<State> state_;
     WorkerId id_;
 
     std::mutex session_mtx_;

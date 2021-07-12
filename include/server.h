@@ -53,7 +53,7 @@ namespace token{
     uv_loop_t* loop_;
     uv_tcp_t handle_;
     uv_async_t shutdown_;
-    RelaxedAtomic<State> state_;
+    atomic::RelaxedAtomic<State> state_;
 
     explicit ServerBase(uv_loop_t* loop):
       loop_(loop),
