@@ -1,7 +1,7 @@
 #include <cstring>
 #include <glog/logging.h>
 
-#include "os_thread.h"
+#include "../include/os_thread.h"
 
 namespace token{
   namespace platform{

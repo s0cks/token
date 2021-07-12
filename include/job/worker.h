@@ -2,7 +2,7 @@
 #define TOKEN_WORKER_H
 
 #include <atomic>
-#include "os_thread.h"
+#include "../../tkn-platform/include/os_thread.h"
 #include "job/job.h"
 #include "job/scheduler.h"
 

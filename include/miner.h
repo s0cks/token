@@ -8,7 +8,7 @@
 #include "flags.h"
 #include "proposal.h"
 
-#include "os_thread.h"
+#include "../tkn-platform/include/os_thread.h"
 
 namespace token{
 #define LOG_MINER(LevelName) \

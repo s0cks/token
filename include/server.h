@@ -6,8 +6,8 @@
 #include "session.h"
 #include "configuration.h"
 
-#include "os_thread.h"
-#include "relaxed_atomic.h"
+#include "../tkn-platform/include/os_thread.h"
+#include "atomic/relaxed_atomic.h"
 
 #define DEFAULT_SERVER_BACKLOG 100
 

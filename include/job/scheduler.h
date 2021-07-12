@@ -1,8 +1,8 @@
 #ifndef TOKEN_SCHEDULER_H
 #define TOKEN_SCHEDULER_H
 
-#include "os_thread.h"
-#include "work_stealing_queue.h"
+#include "../../tkn-platform/include/os_thread.h"
+#include "atomic/work_stealing_queue.h"
 
 namespace token{
   class Job;

@@ -11,7 +11,7 @@
 #include "hash.h"
 #include "address.h"
 #include "network/peer.h"
-#include "relaxed_atomic.h"
+#include "atomic/relaxed_atomic.h"
 
 namespace token{
 #define LOG_CONFIG(LevelName) \

@@ -14,7 +14,7 @@
 #include "unsigned_transaction.h"
 #include "unclaimed_transaction.h"
 
-#include "relaxed_atomic.h"
+#include "atomic/relaxed_atomic.h"
 
 #define FOR_EACH_POOL_TYPE(V) \
   V(Block)                    \

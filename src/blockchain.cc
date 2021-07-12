@@ -7,7 +7,7 @@
 #include "filesystem.h"
 #include "blockchain.h"
 #include "unclaimed_transaction.h"
-#include "relaxed_atomic.h"
+#include "atomic/relaxed_atomic.h"
 #include "blockchain_initializer.h"
 
 namespace token{
