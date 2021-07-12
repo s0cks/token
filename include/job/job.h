@@ -186,9 +186,9 @@ namespace token{
     }
 
     bool Run(){
-      if(IsFinished()){
+      if(IsFinished())
         return false;
-      }
+      DoWork();
 
       result_ = DoWork();
       Finish();

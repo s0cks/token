@@ -1,8 +1,10 @@
 #ifndef TKN_TASK_H
 #define TKN_TASK_H
 
-#include <atomic>
 #include <iostream>
+
+#include "relaxed_atomic.h"
+#include "task/task_queue.h"
 
 namespace token{
   namespace task{
@@ -35,46 +37,71 @@ namespace token{
       }
      protected:
       Task* parent_;
-      std::atomic<Status> status_; //TODO: use RelaxedAtomic
-      std::atomic<int64_t> unfinished_; //TODO: use RelaxedAtomic
+      RelaxedAtomic<Status> status_;
+      RelaxedAtomic<int64_t> unfinished_;
 
       explicit Task(Task* parent):
         parent_(parent),
         status_(Status::kUnqueued),
-        unfinished_(){
-        unfinished_.store(1, std::memory_order_relaxed);
+        unfinished_(1){
         if(parent != nullptr){
-
+          parent->unfinished_ += 1;
         }
       }
-
-      void IncrementUnfinished(){
-
-      }
-
-      void DecrementUnfinished(){
-
-      }
+      Task():
+        Task(nullptr){}
 
       void SetParent(Task* parent){
         parent_ = parent;
       }
 
-      void SetStatus(const Status& status){
-        status_.store(status, std::memory_order_relaxed);
+      void SetState(const Status& status){
+        status_ = status;
       }
      public:
       virtual ~Task() = default;
+
+      bool HasParent() const{
+        return parent_ != nullptr;
+      }
 
       Task* GetParent() const{
         return parent_;
       }
 
       Status GetStatus() const{
-        return status_.load(std::memory_order_relaxed);
+        return (Status)status_;
       }
 
+#define DEFINE_CHECK(Name) \
+      bool Is##Name() const{ return GetStatus() == Status::k##Name; }
+      FOR_EACH_TASK_STATUS(DEFINE_CHECK)
+#undef DEFINE_CHECK
+
+      virtual void DoWork() = 0;//TODO: make const?
       virtual std::string GetName() const = 0;
+
+      bool Submit(TaskQueue& queue){
+        return queue.Push(reinterpret_cast<uword>(this));
+      }
+
+      bool IsFinished() const{
+        return unfinished_ == 0;
+      }
+
+      bool Finish(){
+        unfinished_ -= 1;
+        if(HasParent())
+          return GetParent()->Finish();
+        return true;
+      }
+
+      bool Run(){
+        if(IsFinished())
+          return false;
+        DoWork();
+        return Finish();
+      }
     };
   }
 }

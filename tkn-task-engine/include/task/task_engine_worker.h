@@ -1,8 +1,10 @@
 #ifndef TKN_TASK_ENGINE_WORKER_H
 #define TKN_TASK_ENGINE_WORKER_H
 
+#include "platform.h"
 #include "os_thread.h"
 #include "task/task.h"
+#include "task/task_queue.h"
 
 namespace token{
   namespace task{
@@ -15,7 +17,10 @@ namespace token{
     V(Stopping)                              \
     V(Stopped)
 
+    class TaskEngine;
+
     class TaskEngineWorker{
+      friend class TaskEngine;
      public:
       enum State{
 #define DEFINE_STATE(Name) k##Name,
@@ -35,26 +40,43 @@ namespace token{
         }
       }
      protected:
+      TaskEngine* engine_;
       ThreadId thread_;
       WorkerId worker_;
       RelaxedAtomic<State> state_;
-      int64_t max_queue_size_;
+      TaskQueue queue_;
+
+      TaskEngineWorker(TaskEngine* engine, const WorkerId& worker, const int64_t& max_queue_size):
+        engine_(engine),
+        thread_(),
+        worker_(worker),
+        state_(State::kStopped),
+        queue_(max_queue_size){}
 
       void SetState(const State& state){
         state_ = state;
       }
 
+      TaskQueue* GetTaskQueue(){
+        return &queue_;
+      }
+
+      Task* GetNextTask();
       static void HandleThread(uword parameter);
      public:
-      TaskEngineWorker(const WorkerId& worker, const int64_t& max_queue_size):
-        thread_(),
-        worker_(worker),
-        state_(State::kStopped),
-        max_queue_size_(max_queue_size){}
+      TaskEngineWorker(const TaskEngineWorker& other) = delete;
       ~TaskEngineWorker() = default;
+
+      TaskEngine* GetEngine() const{
+        return engine_;
+      }
 
       ThreadId GetThreadId() const{
         return thread_;
+      }
+
+      WorkerId& GetWorkerId(){
+        return worker_;
       }
 
       WorkerId GetWorkerId() const{
@@ -70,12 +92,17 @@ namespace token{
       FOR_EACH_TASK_ENGINE_WORKER_STATE(DEFINE_CHECK)
 #undef DEFINE_CHECK
 
-      int64_t GetMaxQueueSize() const{
-        return max_queue_size_;
+      bool Start(){
+        char thread_name[kThreadNameMaxLength];
+        snprintf(thread_name, kThreadNameMaxLength, "worker-%" PRId16, GetWorkerId());
+        return platform::ThreadStart(&thread_, thread_name, &HandleThread, reinterpret_cast<uword>(this));
       }
 
-      bool Start();
-      bool Shutdown();
+      bool Shutdown() const{
+        return platform::ThreadJoin(thread_);
+      }
+
+      TaskEngineWorker& operator=(const TaskEngineWorker& rhs) = delete;
     };
   }
 }

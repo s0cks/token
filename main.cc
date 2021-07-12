@@ -10,7 +10,9 @@
 #include "configuration.h"
 #include "job/scheduler.h"
 
-#include "tasks/task_debug.h"
+#include "task/task_debug.h"
+#include "task/task_queue.h"
+#include "task/task_engine.h"
 
 #ifdef TOKEN_ENABLE_EXPERIMENTAL
 #include "elastic/elastic_client.h"
@@ -229,19 +231,17 @@ main(int argc, char **argv){
     }
   }
 
-  uv_loop_t* loop = uv_loop_new();
-  token::utils::Timer timer(loop, &OnTick, 0, 0);
-  if(!timer.Start()){
-    LOG(FATAL) << "cannot start timer.";
-    return false;
+  token::task::TaskQueue queue(1024);
+  token::task::TaskEngine engine(2, 1, 1024);
+  engine.RegisterQueue(&queue);
+
+  for(auto idx = 0; idx < 1000; idx++){
+    auto task = new token::task::DebugTask(idx);
+    task->Submit(queue);
   }
 
-  int status;
-  if((status = uv_run(loop, UV_RUN_DEFAULT)) != 0){
-    LOG(FATAL) << "cannot run timer loop: " << uv_strerror(status);
-    return false;
-  }
 
+  sleep(60 * 2);
 
   token::rpc::LedgerServerThread th_server;
   token::http::HealthServiceThread th_svc_health;
