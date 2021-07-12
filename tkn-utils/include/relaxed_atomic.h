@@ -1,5 +1,5 @@
-#ifndef TOKEN_RELAXED_ATOMIC_H
-#define TOKEN_RELAXED_ATOMIC_H
+#ifndef TKN_RELAXED_ATOMIC_H
+#define TKN_RELAXED_ATOMIC_H
 
 #include <atomic>
 
@@ -10,7 +10,7 @@ namespace token{
     std::atomic<T> val_;
    public:
     explicit RelaxedAtomic(const T& init):
-      val_(init){}
+        val_(init){}
     ~RelaxedAtomic() = default;
 
     T fetch_add(T arg, std::memory_order order=std::memory_order_relaxed){
@@ -59,7 +59,11 @@ namespace token{
     T operator-=(T arg){
       return fetch_sub(arg) - arg;
     }
+
+    friend bool operator==(const RelaxedAtomic<T>& lhs, const T& value){
+      return ((T)lhs) == value;
+    }
   };
 }
 
-#endif//TOKEN_RELAXED_ATOMIC_H
+#endif//TKN_RELAXED_ATOMIC_H

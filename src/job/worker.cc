@@ -34,7 +34,7 @@ namespace token{
 
   void JobWorker::HandleThread(uword parameter){
     JobWorker* instance = ((JobWorker*) parameter);
-    DLOG_THREAD(INFO) << "starting....";
+    DLOG(INFO) << "starting....";
     instance->SetState(JobWorker::kRunning);
 
     sleep(2);//TODO: remove this?
@@ -43,11 +43,11 @@ namespace token{
       if(next){
         std::string job_name = next->GetName();
 
-        DLOG_THREAD(INFO) << "running " << job_name << "....";
+        DLOG(INFO) << "running " << job_name << "....";
         Timestamp start = Clock::now();
 
         if(!next->Run()){
-          DLOG_THREAD(WARNING) << "couldn't run the " << job_name << " job.";
+          DLOG(WARNING) << "couldn't run the " << job_name << " job.";
           continue;
         }
 
@@ -56,7 +56,7 @@ namespace token{
         auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - start);
         //---------
 
-        DLOG_THREAD(INFO) << job_name << " has finished (" << duration_ms.count() << "ms).";
+        DLOG(INFO) << job_name << " has finished (" << duration_ms.count() << "ms).";
       }
     }
 
@@ -64,7 +64,7 @@ namespace token{
     // do we need to perform some shutdown logic?
 
     instance->SetState(JobWorker::kStopped);
-    DLOG_THREAD(INFO) << "stopped.";
+    DLOG(INFO) << "stopped.";
     pthread_exit(nullptr);
   }
 }

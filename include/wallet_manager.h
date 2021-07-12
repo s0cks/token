@@ -5,7 +5,7 @@
 #include "flags.h"
 #include "wallet.h"
 #include "kvstore.h"
-#include "atomic/relaxed_atomic.h"
+#include "relaxed_atomic.h"
 
 namespace token{
 #define LOG_WALLETS(LevelName) \

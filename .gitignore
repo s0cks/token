@@ -18,4 +18,5 @@
 !/include/
 !/src/
 
-!/task-engine/
+!/tkn-task-engine/
+!/tkn-utils/

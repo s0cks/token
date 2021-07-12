@@ -7,7 +7,7 @@
 #include <iostream>
 #include <condition_variable>
 
-#include "vthread.h"
+#include "os_thread.h"
 #include "blockchain.h"
 #include "network/peer_queue.h"
 #include "network/peer_session.h"

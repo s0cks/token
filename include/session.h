@@ -3,8 +3,8 @@
 
 #include "uuid.h"
 #include "message.h"
-#include "vthread.h"
-#include "atomic/relaxed_atomic.h"
+#include "os_thread.h"
+#include "relaxed_atomic.h"
 
 namespace token{
 #define LOG_SESSION(LevelName, Session) \

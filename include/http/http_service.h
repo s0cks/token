@@ -35,7 +35,7 @@ namespace token{
       static void
       HandleThread(uword param){
         auto instance = Service::NewInstance();
-        DLOG_THREAD_IF(ERROR, !instance->Run(Service::GetPort())) << "Failed to run the " << Service::GetName() << " service loop.";
+        DLOG_IF(ERROR, !instance->Run(Service::GetPort())) << "Failed to run the " << Service::GetName() << " service loop.";
         pthread_exit(nullptr);
       }
      public:
@@ -43,11 +43,11 @@ namespace token{
       ~ServiceThread() = default;
 
       bool Start(){
-        return ThreadStart(&thread_, Service::GetName(), &HandleThread, (uword)0);
+        return platform::ThreadStart(&thread_, Service::GetName(), &HandleThread, (uword)0);
       }
 
       bool Join(){
-        return ThreadJoin(thread_);
+        return platform::ThreadJoin(thread_);
       }
     };
   }

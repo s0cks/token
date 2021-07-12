@@ -7,7 +7,7 @@
 #include "filesystem.h"
 #include "blockchain.h"
 #include "unclaimed_transaction.h"
-#include "atomic/relaxed_atomic.h"
+#include "relaxed_atomic.h"
 #include "blockchain_initializer.h"
 
 namespace token{
@@ -273,7 +273,7 @@ namespace token{
   }
 
   bool BlockChain::Initialize(const std::string& filename){
-    if(!JobScheduler::RegisterQueue(GetCurrentThread(), &queue_)){
+    if(!JobScheduler::RegisterQueue(platform::GetCurrentThreadId(), &queue_)){
       LOG(ERROR) << "couldn't register BlockChain job queue.";
       return false;
     }

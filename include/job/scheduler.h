@@ -1,8 +1,8 @@
 #ifndef TOKEN_SCHEDULER_H
 #define TOKEN_SCHEDULER_H
 
-#include "vthread.h"
-#include "atomic/wsq.h"
+#include "os_thread.h"
+#include "work_stealing_queue.h"
 
 namespace token{
   class Job;

@@ -10,7 +10,7 @@
 #include <glog/logging.h>
 
 #include "common.h"
-#include "atomic/relaxed_atomic.h"
+#include "relaxed_atomic.h"
 
 namespace token{
   namespace internal{

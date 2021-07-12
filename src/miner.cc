@@ -161,11 +161,11 @@ namespace token{
   static ThreadId thread_;
 
   bool BlockMinerThread::Stop(){
-    return ThreadJoin(thread_);
+    return platform::ThreadJoin(thread_);
   }
 
   bool BlockMinerThread::Start(){
-    return ThreadStart(&thread_, BlockMiner::GetThreadName(), &HandleThread, (uword)BlockMiner::GetInstance());
+    return platform::ThreadStart(&thread_, BlockMiner::GetThreadName(), &HandleThread, (uword)BlockMiner::GetInstance());
   }
 
   void BlockMinerThread::HandleThread(uword param){

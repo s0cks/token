@@ -28,11 +28,11 @@ namespace token{
     uv_connect_t conn;
     conn.data = this;
 
-    DLOG_THREAD(INFO) << "creating connection to peer " << paddr << "....";
-    VERIFY_UVRESULT(uv_tcp_connect(&conn, &handle_, (const struct sockaddr*)&addr, &PeerSession::OnConnect), LOG_THREAD(ERROR), "couldn't connect to peer");
+    DLOG(INFO) << "creating connection to peer " << paddr << "....";
+    VERIFY_UVRESULT(uv_tcp_connect(&conn, &handle_, (const struct sockaddr*)&addr, &PeerSession::OnConnect), LOG(ERROR), "couldn't connect to peer");
 
-    DLOG_THREAD(INFO) << "starting session loop....";
-    VERIFY_UVRESULT(uv_run(GetLoop(), UV_RUN_DEFAULT), LOG_THREAD(ERROR), "couldn't run loop");
+    DLOG(INFO) << "starting session loop....";
+    VERIFY_UVRESULT(uv_run(GetLoop(), UV_RUN_DEFAULT), LOG(ERROR), "couldn't run loop");
     return true;
   }
 
@@ -97,7 +97,7 @@ namespace token{
   }
 
   void PeerSession::OnClose(uv_handle_t* handle){
-    DLOG_THREAD(INFO) << "OnClose.";
+    DLOG(INFO) << "OnClose.";
   }
 
   void PeerSession::OnDiscovery(uv_async_t* handle){
