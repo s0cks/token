@@ -12,7 +12,7 @@
 #include "transaction.h"
 #include "merkle/tree.h"
 #include "configuration.h"
-#include "atomic/relaxed_atomic.h"
+#include "relaxed_atomic.h"
 #include "unclaimed_transaction.h"
 
 namespace token{

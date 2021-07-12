@@ -4,9 +4,10 @@
 #include <uv.h>
 #include <sstream>
 #include "session.h"
-#include "vthread.h"
 #include "configuration.h"
-#include "atomic/relaxed_atomic.h"
+
+#include "os_thread.h"
+#include "relaxed_atomic.h"
 
 #define DEFAULT_SERVER_BACKLOG 100
 
@@ -168,13 +169,13 @@ namespace token{
     }
 
     bool Run(const ServerPort& port){
-      DLOG_THREAD(INFO) << "starting the server....";
+      DLOG(INFO) << "starting the server....";
       SetState(ServerBase::State::kStartingState);
       VERIFY_UVRESULT2(FATAL, Bind(GetHandle(), port), "cannot bind server");
       VERIFY_UVRESULT2(FATAL, Listen(GetStream(), &OnNewConnection), "listen failure");
 
       SetState(ServerBase::State::kRunningState);
-      DLOG_THREAD(INFO) << "server listening on port: " << port;
+      DLOG(INFO) << "server listening on port: " << port;
       VERIFY_UVRESULT2(FATAL, uv_run(GetLoop(), UV_RUN_DEFAULT), "failed to run server loop");
       return true;
     }
@@ -193,7 +194,7 @@ namespace token{
     static void HandleThread(uword param){
       auto instance = new Server();
       if(!instance->Run(Server::GetPort())){
-        LOG_THREAD(FATAL) << "cannot run the " << Server::GetName() << " loop on port: " << Server::GetPort();
+        LOG(FATAL) << "cannot run the " << Server::GetName() << " loop on port: " << Server::GetPort();
       }
       pthread_exit(nullptr);
     }
@@ -202,11 +203,11 @@ namespace token{
     ~ServerThread() = default;
 
     bool Start(){
-      return ThreadStart(&thread_, Server::GetName(), &HandleThread, (uword)0);
+      return platform::ThreadStart(&thread_, Server::GetName(), &HandleThread, (uword)0);
     }
 
     bool Join(){
-      return ThreadJoin(thread_);
+      return platform::ThreadJoin(thread_);
     }
   };
 }

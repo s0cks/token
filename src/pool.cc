@@ -3,7 +3,7 @@
 #include "pool.h"
 #include "buffer.h"
 #include "configuration.h"
-#include "atomic/relaxed_atomic.h"
+#include "relaxed_atomic.h"
 
 namespace token{
 

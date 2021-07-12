@@ -2,7 +2,7 @@
 #define TOKEN_WORKER_H
 
 #include <atomic>
-#include "vthread.h"
+#include "os_thread.h"
 #include "job/job.h"
 #include "job/scheduler.h"
 
@@ -151,12 +151,12 @@ namespace token{
     bool Start(){
       char name[16];
       snprintf(name, 16, "worker-%" PRId16, GetWorkerID());
-      return ThreadStart(&thread_, name, &HandleThread, (uword) this);
+      return platform::ThreadStart(&thread_, name, &HandleThread, (uword) this);
     }
 
     bool Stop(){
       SetState(JobWorker::kStopping);
-      return ThreadJoin(thread_);
+      return platform::ThreadJoin(thread_);
     }
 
     bool Submit(Job* job){

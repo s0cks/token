@@ -55,20 +55,20 @@ namespace token{
 
       PeerSession* session = thread->CreateNewSession(request->GetAddress());
       if(!session->Connect())
-        LOG_THREAD(WARNING) << "couldn't connect to " << paddress << " " << GetAttemptStatus(counter) << ".";
+        LOG(WARNING) << "couldn't connect to " << paddress << " " << GetAttemptStatus(counter) << ".";
 
-      DLOG_THREAD(INFO) << "session disconnected.";
+      DLOG(INFO) << "session disconnected.";
       thread->ClearSession();
       if(request->CanReschedule()){
         Duration backoff = GetAttemptBackoffMilliseconds(counter);
-        DLOG_THREAD(INFO) << "waiting for " << std::chrono::duration_cast<std::chrono::milliseconds>(backoff).count() << "ns (back-off)....";
+        DLOG(INFO) << "waiting for " << std::chrono::duration_cast<std::chrono::milliseconds>(backoff).count() << "ns (back-off)....";
         std::this_thread::sleep_for(backoff);
-        DLOG_THREAD(INFO) << "rescheduling connection to " << paddress << " " << GetAttemptStatus(counter) << "....";
+        DLOG(INFO) << "rescheduling connection to " << paddress << " " << GetAttemptStatus(counter) << "....";
         if(!thread->Schedule(paddress, counter - 1))
-          LOG_THREAD(ERROR) << "couldn't schedule new connection to " << paddress << ".";
+          LOG(ERROR) << "couldn't schedule new connection to " << paddress << ".";
         continue;
       } else{
-        DLOG_THREAD(INFO) << "not rescheduling connection to " << paddress << ".";
+        DLOG(INFO) << "not rescheduling connection to " << paddress << ".";
         continue;
       }
     }
@@ -78,7 +78,7 @@ namespace token{
   bool PeerSessionThread::Start(){
     char name[16];
     snprintf(name, 15, "peer-%" PRId8, id_);
-    return ThreadStart(
+    return platform::ThreadStart(
       &thread_,
       name,
       &HandleThread,
@@ -89,13 +89,13 @@ namespace token{
   bool PeerSessionThread::Shutdown(){
     SetState(PeerSessionThread::kStoppingState);
     if(IsConnected() && !DisconnectSession()){
-      LOG_THREAD(ERROR) << "cannot disconnect from peer.";
+      LOG(ERROR) << "cannot disconnect from peer.";
       return false;
     }
     return true;
   }
 
   bool PeerSessionThread::WaitForShutdown(){
-    return ThreadJoin(thread_);
+    return platform::ThreadJoin(thread_);
   }
 }

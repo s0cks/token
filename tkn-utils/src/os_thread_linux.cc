@@ -64,7 +64,7 @@ namespace token{
       pthread_exit(nullptr);
     }
 
-    ThreadId GetCurrentThread(){
+    ThreadId GetCurrentThreadId(){
       return pthread_self();
     }
 

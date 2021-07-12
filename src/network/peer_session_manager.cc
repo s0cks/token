@@ -160,11 +160,11 @@ namespace token{
   void PeerSessionManager::RegisterQueue(const ThreadId& thread, ConnectionRequestQueue* queue){
     auto pos = queues_.find(thread);
     if(pos != queues_.end()){
-      LOG(WARNING) << "cannot re-register queue for " << GetThreadName(thread) << " thread.";
+      LOG(WARNING) << "cannot re-register queue for " << platform::GetThreadName(thread) << " thread.";
       return;
     }
     if(!queues_.insert({ thread, queue }).second)
-      LOG(WARNING) << "cannot register queue for " << GetThreadName(thread) << " thread.";
+      LOG(WARNING) << "cannot register queue for " << platform::GetThreadName(thread) << " thread.";
   }
 
   ConnectionRequestQueue* PeerSessionManager::GetQueue(const ThreadId& thread){

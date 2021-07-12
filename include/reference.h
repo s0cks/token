@@ -4,7 +4,7 @@
 #include "flags.h"
 #include "kvstore.h"
 #include "binary_type.h"
-#include "atomic/relaxed_atomic.h"
+#include "relaxed_atomic.h"
 
 namespace token{
   static const int64_t kReferenceSize = 64;

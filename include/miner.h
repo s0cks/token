@@ -6,8 +6,9 @@
 #include <condition_variable>
 
 #include "flags.h"
-#include "vthread.h"
 #include "proposal.h"
+
+#include "os_thread.h"
 
 namespace token{
 #define LOG_MINER(LevelName) \
