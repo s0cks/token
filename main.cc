@@ -10,6 +10,7 @@
 #include "configuration.h"
 #include "job/scheduler.h"
 
+#include "tasks/task_debug.h"
 
 #ifdef TOKEN_ENABLE_EXPERIMENTAL
 #include "elastic/elastic_client.h"

@@ -53,13 +53,15 @@ set(TKN_LIBRARIES
 include_directories(include)
 include_directories(tests)
 
+add_subdirectory(task-engine)
+
 file(GLOB_RECURSE TKN_HEADERS include/*.h)
 file(GLOB_RECURSE TKN_SOURCES src/*.h src/*.cc)
 file(GLOB_RECURSE TKN_TEST_SOURCES tests/*.h tests/*.cc)
 
 add_library(tkn-ledger STATIC ${TKN_HEADERS} ${TKN_SOURCES})
 target_include_directories(tkn-ledger PUBLIC include)
-target_link_libraries(tkn-ledger ${TKN_LIBRARIES})
+target_link_libraries(tkn-ledger ${TKN_LIBRARIES} task-engine)
 
 add_executable(tkn-node main.cc)
 target_link_libraries(tkn-node tkn-ledger ${TKN_LIBRARIES})
