@@ -3,9 +3,7 @@
 
 #include <map>
 #include <vector>
-#include "../block.h"
 #include "node.h"
-#include "../transaction.h"
 #include "proof.h"
 
 namespace token{
@@ -109,30 +107,6 @@ namespace token{
     virtual bool VisitStart() const{ return true; }
     virtual bool Visit(MerkleNode* node) const = 0;
     virtual bool VisitEnd() const{ return true; }
-  };
-
-  class MerkleTreeBuilder : public BlockVisitor{
-   private:
-    std::vector<Hash> leaves_;
-   public:
-    MerkleTreePtr Build(){
-      return std::unique_ptr<MerkleTree>(new MerkleTree(leaves_));
-    }
-
-    bool Visit(const IndexedTransactionPtr& tx){
-      leaves_.push_back(tx->hash());
-      return true;
-    }
-
-    static inline MerkleTreePtr
-    Build(const BlockPtr& blk){
-      MerkleTreeBuilder builder;
-      if(!blk->Accept(&builder)){
-        LOG(ERROR) << "couldn't build merkle tree for block";
-        return nullptr;
-      }
-      return builder.Build();
-    }
   };
 }
 

@@ -1,11 +1,10 @@
 #ifndef TOKEN_INCLUDE_MERKLE_NODE_H
 #define TOKEN_INCLUDE_MERKLE_NODE_H
 
-#include "../hash.h"
-#include "../object.h"
+#include "hash.h"
 
 namespace token{
-  class MerkleNode : public Object{
+  class MerkleNode{
    protected:
     MerkleNode* parent_;
     MerkleNode* lchild_;
@@ -51,10 +50,6 @@ namespace token{
       SetRight(rchild);
     }
     ~MerkleNode() = default;
-
-    Type type() const{
-      return Type::kMerkleNode;
-    }
 
     MerkleNode* GetParent() const{
       return parent_;

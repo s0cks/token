@@ -60,6 +60,7 @@ file(GLOB_RECURSE TKN_TEST_SOURCES tests/*.h tests/*.cc)
 add_subdirectory(tkn-platform)
 add_subdirectory(tkn-utils)
 add_subdirectory(tkn-task-engine)
+add_subdirectory(tkn-merkle)
 add_subdirectory(tkn-http)
 
 add_library(tkn-ledger STATIC ${TKN_HEADERS} ${TKN_SOURCES})
