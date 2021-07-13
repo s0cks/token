@@ -1,6 +1,6 @@
-#include "../../include/http/http_session.h"
-#include "../../include/http/http_request.h"
-#include "../../include/http/http_response.h"
+#include "http/http_session.h"
+#include "http/http_request.h"
+#include "http/http_response.h"
 
 namespace token{
   namespace http{

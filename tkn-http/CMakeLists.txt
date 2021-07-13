@@ -6,7 +6,7 @@ add_library(tkn-http STATIC
         include/http/http_client.h src/http/http_client.cc
         include/http/http_controller.h
         include/http/http_message.h src/http/http_message.cc
-        include/http/http_request.h src/http/http_request.cc
+        include/http/http_request.h
         include/http/http_response.h
         include/http/http_router.h src/http/http_router.cc
         include/http/http_service.h

@@ -8,14 +8,21 @@
 #include <leveldb/slice.h>
 
 #include "hash.h"
-#include "object.h"
 #include "address.h"
 #include "timestamp.h"
-#include "network/peer.h"
 
 namespace token{
   namespace internal{
-    class Buffer : public Object{
+#define FOR_EACH_BUFFER_TYPE(V) \
+    V(Byte, int8)                 \
+    V(Short, int16)               \
+    V(Int, int32)                 \
+    V(Long, int64)
+
+    class Buffer;
+    typedef std::shared_ptr<Buffer> BufferPtr;
+
+    class Buffer{
      protected:
       int64_t wpos_;
       int64_t rpos_;
@@ -59,11 +66,7 @@ namespace token{
       }
      public:
       Buffer(const Buffer& other) = default;
-      ~Buffer() override = default;
-
-      Type type() const override{
-        return Type::kBuffer;
-      }
+      virtual ~Buffer() = default;
 
       virtual uint8_t* data() const = 0;
       virtual int64_t length() const = 0;
@@ -102,7 +105,7 @@ namespace token{
     DEFINE_PUT_SIGNED(Name, Type) \
     DEFINE_PUT_UNSIGNED(Name, Type)
 
-    FOR_EACH_NATIVE_TYPE(DEFINE_PUT);
+    FOR_EACH_BUFFER_TYPE(DEFINE_PUT);
 #undef DEFINE_PUT
 #undef DEFINE_PUT_SIGNED
 #undef DEFINE_PUT_UNSIGNED
@@ -117,7 +120,7 @@ namespace token{
     DEFINE_GET_SIGNED(Name, Type) \
     DEFINE_GET_UNSIGNED(Name, Type)
 
-    FOR_EACH_NATIVE_TYPE(DEFINE_GET);
+    FOR_EACH_BUFFER_TYPE(DEFINE_GET);
 #undef DEFINE_GET
 #undef DEFINE_GET_SIGNED
 #undef DEFINE_GET_UNSIGNED
@@ -164,68 +167,8 @@ namespace token{
       }
 
       std::string GetString(){
-        NOT_IMPLEMENTED(FATAL);
         return "";
       }
-
-      bool PutAddress(const NodeAddress& val){
-        const auto& address = val.address();
-        if(!PutUnsignedInt(address)){
-          LOG(FATAL) << "cannot serialize address of " << address << " from NodeAddress to buffer.";
-          return false;
-        }
-        DVLOG(1) << "serialized NodePort address: " << address;
-
-        const auto& port = val.port();
-        if(!PutUnsignedInt(val.port())){
-          LOG(FATAL) << "cannot serialize port of " << val.port() << " from NodeAddress to buffer.";
-          return false;
-        }
-        DVLOG(1) << "serialized NodePort port: " << port;
-        return true;
-      }
-
-      NodeAddress GetAddress(){
-        const auto address = GetUnsignedInt();
-        DVLOG(1) << "deserialized NodePort address: " << address;
-
-        const auto port = GetUnsignedInt();
-        DVLOG(1) << "deserialized NodePort port: " << port;
-        return NodeAddress(address, port);
-      }
-
-      bool PutPeerList(const PeerList& peers){
-        auto length = static_cast<int64_t>(peers.size());
-        if(!PutLong(length)){
-          DLOG(ERROR) << "cannot encode PeerList size.";
-          return false;
-        }
-
-        for(auto& it : peers){
-          if(!PutAddress(it)){
-            DLOG(ERROR) << "cannot encode PeerList address: " << it;
-            return false;
-          }
-        }
-        return true;
-      }
-
-      bool GetPeerList(PeerList& peers){
-        int64_t size = GetLong();
-        for(int64_t idx = 0; idx < size; idx++){
-          if(!peers.insert(GetAddress()).second){
-            DLOG(ERROR) << "cannot decode PeerList element #" << idx;
-            return false;
-          }
-        }
-        return true;
-      }
-
-      template<class T, class C>
-      bool PutSet(const std::set<T, C>& val);
-
-      template<class T, class C>
-      bool GetSet(std::set<T, C>& results);
 
       bool PutTimestamp(const Timestamp& val){
         return PutUnsignedLong(ToUnixTimestamp(val));
@@ -275,7 +218,7 @@ namespace token{
         return Size;
       }
 
-      std::string ToString() const override{
+      std::string ToString() const{
         std::stringstream ss;
         ss << "StackBuffer(";
         ss << "data=" << std::hex << data() << ",";
@@ -322,7 +265,7 @@ namespace token{
         return length_;
       }
 
-      std::string ToString() const override{
+      std::string ToString() const{
         std::stringstream ss;
         ss << "AllocatedBuffer(";
         ss << "data=" << std::hex << data() << ",";
@@ -382,16 +325,6 @@ namespace token{
         return nullptr;
       }
       return CopyBufferFrom(data, length);
-    }
-
-    static inline BufferPtr
-    NewBufferFromFile(const std::string& filename){
-      FILE* file = nullptr;
-      if(!(file = fopen(filename.data(), "rb"))){
-        LOG(ERROR) << "cannot open file " << filename;
-        return nullptr;
-      }
-      return NewBufferFromFile(file, static_cast<int64_t>(GetFilesize(filename)));//TODO: fix
     }
   }
 }

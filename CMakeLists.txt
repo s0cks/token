@@ -50,25 +50,13 @@ set(TKN_LIBRARIES
    ${UUID_LIBRARIES} # libuuid
 )
 
-include_directories(include)
-include_directories(tests)
-
-file(GLOB_RECURSE TKN_HEADERS include/*.h)
-file(GLOB_RECURSE TKN_SOURCES src/*.h src/*.cc)
-file(GLOB_RECURSE TKN_TEST_SOURCES tests/*.h tests/*.cc)
-
 add_subdirectory(tkn-platform)
 add_subdirectory(tkn-utils)
 add_subdirectory(tkn-task-engine)
 add_subdirectory(tkn-merkle)
+add_subdirectory(tkn-codec)
+add_subdirectory(tkn-core)
 add_subdirectory(tkn-http)
 
-add_library(tkn-ledger STATIC ${TKN_HEADERS} ${TKN_SOURCES})
-target_include_directories(tkn-ledger PUBLIC include)
-target_link_libraries(tkn-ledger ${TKN_LIBRARIES} tkn-platform tkn-utils tkn-task-engine tkn-http)
-
 add_executable(tkn-node main.cc)
-target_link_libraries(tkn-node tkn-ledger ${TKN_LIBRARIES})
-
-add_executable(tkn-tests tests.cc ${TKN_TEST_SOURCES})
-target_link_libraries(tkn-tests tkn-ledger ${TKN_LIBRARIES} ${GMOCK_LIBRARIES} ${GTEST_LIBRARIES})
+target_link_libraries(tkn-node tkn-ledger ${TKN_LIBRARIES} tkn-codec tkn-platform tkn-utils tkn-task-engine tkn-http)

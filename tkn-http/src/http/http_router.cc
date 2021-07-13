@@ -1,5 +1,5 @@
-#include "../../include/http/http_router.h"
-#include "../../include/http/http_request.h"
+#include "http/http_router.h"
+#include "http/http_request.h"
 
 namespace token{
   namespace http{
