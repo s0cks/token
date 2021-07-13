@@ -1,8 +1,8 @@
 #include "pool.h"
 #include "wallet.h"
 #include "deeplink.h"
-#include "http/http_service.h"
-#include "http/http_controller_wallet.h"
+#include "../../include/http/http_service.h"
+#include "../../include/http/http_controller_wallet.h"
 
 namespace token{
   namespace http{

@@ -6,8 +6,8 @@
 
 #include "block.h"
 #include "wallet.h"
-#include "http/http_common.h"
-#include "http/http_message.h"
+#include "http_common.h"
+#include "http_message.h"
 
 namespace token{
   namespace http{

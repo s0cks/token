@@ -1,7 +1,7 @@
 #ifndef TOKEN_HTTP_CONTROLLER_HEALTH_H
 #define TOKEN_HTTP_CONTROLLER_HEALTH_H
 
-#include "http/http_controller.h"
+#include "http_controller.h"
 
 namespace token{
   namespace http{

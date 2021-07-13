@@ -2,7 +2,7 @@
 #define TOKEN_HTTP_CONTROLLER_WALLET_H
 
 #include "wallet_manager.h"
-#include "http/http_controller.h"
+#include "http_controller.h"
 
 namespace token{
   namespace http{

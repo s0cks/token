@@ -2,7 +2,7 @@
 #define TOKEN_HTTP_CONTROLLER_POOL_H
 
 #include "pool.h"
-#include "http/http_controller.h"
+#include "http_controller.h"
 
 namespace token{
   namespace http{

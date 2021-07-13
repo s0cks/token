@@ -1,10 +1,10 @@
 #ifndef TOKEN_HTTP_SERVICE_REST_H
 #define TOKEN_HTTP_SERVICE_REST_H
 
-#include "http/http_service.h"
-#include "http/http_controller_pool.h"
-#include "http/http_controller_chain.h"
-#include "http/http_controller_wallet.h"
+#include "http_service.h"
+#include "http_controller_pool.h"
+#include "http_controller_chain.h"
+#include "http_controller_wallet.h"
 
 namespace token{
   namespace http{

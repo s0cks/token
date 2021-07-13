@@ -4,7 +4,7 @@
 #include <glog/logging.h>
 
 #include "trie.h"
-#include "http/http_common.h"
+#include "http_common.h"
 
 namespace token{
   namespace http{

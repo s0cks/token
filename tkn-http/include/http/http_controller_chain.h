@@ -2,7 +2,7 @@
 #define TOKEN_HTTP_CONTROLLER_CHAIN_H
 
 #include "blockchain.h"
-#include "http/http_controller.h"
+#include "http_controller.h"
 
 namespace token{
   namespace http{

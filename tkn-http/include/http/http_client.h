@@ -2,9 +2,9 @@
 #define TOKEN_HTTP_CLIENT_H
 
 #include <uv.h>
-#include "http/http_session.h"
-#include "http/http_request.h"
-#include "http/http_response.h"
+#include "http_session.h"
+#include "http_request.h"
+#include "http_response.h"
 
 namespace token{
   class HttpClient{

@@ -10,7 +10,7 @@
 #include "user.h"
 #include "buffer.h"
 #include "product.h"
-#include "http/http_message.h"
+#include "http_message.h"
 
 namespace token{
   namespace http{

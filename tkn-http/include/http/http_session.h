@@ -2,9 +2,9 @@
 #define TOKEN_HTTP_SESSION_H
 
 #include "session.h"
-#include "http/http_common.h"
-#include "http/http_router.h"
-#include "http/http_message.h"
+#include "http_common.h"
+#include "http_router.h"
+#include "http_message.h"
 
 namespace token{
   namespace http{

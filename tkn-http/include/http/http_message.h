@@ -6,7 +6,7 @@
 
 #include "buffer.h"
 #include "message.h"
-#include "http/http_common.h"
+#include "http_common.h"
 
 namespace token{
   namespace http{
