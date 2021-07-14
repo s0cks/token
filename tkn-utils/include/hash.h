@@ -226,6 +226,15 @@ namespace token{
     FromSlice(const std::string& slice){
       return Hash(slice.data(), std::min((int64_t)slice.size(), GetSize()));
     }
+
+    template<typename HashFunction>
+    static inline Hash
+    ComputeHash(const uint8_t* data, const size_t& size){
+      HashFunction function;
+      CryptoPP::SecByteBlock digest(HashFunction::DIGESTSIZE);
+      CryptoPP::ArraySource source(data, size, true, new CryptoPP::HashFilter(function, new CryptoPP::ArraySink(digest.data(), digest.size())));
+      return Hash(digest.data(), HashFunction::DIGESTSIZE);
+    }
   };
 
   typedef std::vector<Hash> HashList;

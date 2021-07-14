@@ -4,7 +4,6 @@
 #include <uv.h>
 #include <sstream>
 #include "session.h"
-#include "configuration.h"
 
 #include "os_thread.h"
 #include "atomic/relaxed_atomic.h"

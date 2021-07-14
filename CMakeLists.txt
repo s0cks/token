@@ -50,13 +50,14 @@ set(TKN_LIBRARIES
    ${UUID_LIBRARIES} # libuuid
 )
 
-add_subdirectory(tkn-platform)
-add_subdirectory(tkn-utils)
-add_subdirectory(tkn-task-engine)
-add_subdirectory(tkn-merkle)
-add_subdirectory(tkn-codec)
 add_subdirectory(tkn-core)
+add_subdirectory(tkn-deeplink)
 add_subdirectory(tkn-http)
+add_subdirectory(tkn-merkle)
+add_subdirectory(tkn-platform)
+add_subdirectory(tkn-runtime)
+add_subdirectory(tkn-task-engine)
+add_subdirectory(tkn-utils)
 
 add_executable(tkn-node main.cc)
 target_link_libraries(tkn-node tkn-ledger ${TKN_LIBRARIES} tkn-codec tkn-platform tkn-utils tkn-task-engine tkn-http)

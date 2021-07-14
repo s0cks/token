@@ -19,7 +19,6 @@ add_library(tkn-utils STATIC
         include/kvstore.h
         include/message.h
         include/raw_proposal.h
-        include/reference.h
         include/server.h
         include/session.h
         include/string_utils.h
@@ -28,4 +27,5 @@ add_library(tkn-utils STATIC
         include/units.h
         include/uuid.h
         include/version.h)
+target_link_libraries(tkn-utils tkn-platform)
 target_include_directories(tkn-utils PUBLIC ${PROJECT_SOURCE_DIR}/include)

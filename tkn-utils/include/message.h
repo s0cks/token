@@ -4,10 +4,7 @@
 #include <memory>
 #include <vector>
 
-#include "codec.h"
 #include "object.h"
-#include "encoder.h"
-#include "decoder.h"
 
 namespace token{
   class MessageBase;
@@ -21,28 +18,6 @@ namespace token{
   }
 
   class MessageBase : public Object{
-   public:
-    template<class M>
-    class MessageEncoder : public codec::EncoderBase<M>{
-     protected:
-      MessageEncoder(const M& value, const codec::EncoderFlags& flags):
-        codec::EncoderBase<M>(value, flags){}
-     public:
-      MessageEncoder(const MessageEncoder<M>& other) = default;
-      ~MessageEncoder() override = default;
-      MessageEncoder& operator=(const MessageEncoder& other) = default;
-    };
-
-    template<class M>
-    class MessageDecoder : public codec::DecoderBase<M>{
-     protected:
-      explicit MessageDecoder(const codec::DecoderHints& hints):
-        codec::DecoderBase<M>(hints){}
-     public:
-      MessageDecoder(const MessageDecoder<M>& other) = default;
-      ~MessageDecoder() override = default;
-      MessageDecoder<M>& operator=(const MessageDecoder<M>& other) = default;
-    };
    protected:
     MessageBase() = default;
    public:

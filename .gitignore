@@ -18,8 +18,11 @@
 !/include/
 !/src/
 
-!/tkn-platform/
-!/tkn-utils/
-!/tkn-task-engine/
+!/tkn-core/
+!/tkn-deeplink/
 !/tkn-http/
 !/tkn-merkle/
+!/tkn-platform/
+!/tkn-runtime/
+!/tkn-task-engine/
+!/tkn-utils/

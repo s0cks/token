@@ -5,7 +5,7 @@
 #include <string>
 #include <cstdint>
 #include <unordered_set>
-
+#include <glog/logging.h>
 #include <rapidjson/writer.h>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
