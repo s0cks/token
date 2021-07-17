@@ -1,9 +1,9 @@
 #ifndef TOKEN_WALLET_MANAGER_H
 #define TOKEN_WALLET_MANAGER_H
 
-#include "user.h"
+#include "type/user.h"
+#include "type/wallet.h"
 #include "flags.h"
-#include "wallet.h"
 #include "kvstore.h"
 #include "atomic/relaxed_atomic.h"
 

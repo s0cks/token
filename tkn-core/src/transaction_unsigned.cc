@@ -12,6 +12,16 @@ namespace token{
     return ss.str();
   }
 
+  BufferPtr UnsignedTransaction::ToBuffer() const{
+    codec::UnsignedTransactionEncoder encoder((*this), codec::kDefaultEncoderFlags);
+    BufferPtr buffer = internal::NewBufferFor(encoder);
+    if(!encoder.Encode(buffer)){
+      LOG(FATAL) << "cannot encode UnsignedTransaction to buffer.";
+      return nullptr;
+    }
+    return buffer;
+  }
+
   namespace codec{
     int64_t UnsignedTransactionEncoder::GetBufferSize() const{
       return TransactionEncoder<UnsignedTransaction>::GetBufferSize();

@@ -6,7 +6,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
 file(GLOB_RECURSE TOKEN_CMAKE_MODULES ${CMAKE_MODULE_PATH}/*.cmake)
 
-option(ENABLE_EXPERIMENTAL "Enables experimental features." ON)
+option(ENABLE_EXPERIMENTAL "Enables experimental features." OFF)
 
 # Monkey Patching for Debug Mode
 if(CMAKE_BUILD_TYPE MATCHES Debug)
@@ -59,6 +59,3 @@ add_subdirectory(tkn-rpc)
 add_subdirectory(tkn-runtime)
 add_subdirectory(tkn-task-engine)
 add_subdirectory(tkn-utils)
-
-add_executable(tkn-node main.cc)
-target_link_libraries(tkn-node tkn-ledger ${TKN_LIBRARIES} tkn-codec tkn-platform tkn-utils tkn-task-engine tkn-http)

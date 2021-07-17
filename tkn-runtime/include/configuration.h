@@ -10,7 +10,6 @@
 #include "uuid.h"
 #include "hash.h"
 #include "address.h"
-#include "network/peer.h"
 #include "atomic/relaxed_atomic.h"
 
 namespace token{
@@ -59,8 +58,9 @@ namespace token{
 
     static inline std::string
     GetPath(){
+      //TODO: fixme
       std::stringstream filename;
-      filename << TOKEN_BLOCKCHAIN_HOME << "/config";
+      filename << "" << "/config";
       return filename.str();
     }
 
@@ -68,13 +68,11 @@ namespace token{
     void Initialize(const std::string& filename=GetPath());
     bool HasProperty(const std::string& name);
 
-    bool PutProperty(const std::string& name, const PeerList& val);
 #define DECLARE_PUT_PROPERTY(Name, Type) \
     bool PutProperty(const std::string& name, const Type& val);
     FOR_EACH_CONFIG_PROPERTY_TYPE(DECLARE_PUT_PROPERTY)
 #undef DECLARE_PUT_PROPERTY
 
-    bool GetPeerList(const std::string& name, PeerList& results);
 #define DECLARE_GET_PROPERTY(Name, Type) \
     Type Get##Name(const std::string& name);
     FOR_EACH_CONFIG_PROPERTY_TYPE(DECLARE_GET_PROPERTY)

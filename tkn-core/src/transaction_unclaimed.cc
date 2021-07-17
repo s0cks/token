@@ -2,6 +2,16 @@
 #include "transaction_unclaimed.h"
 
 namespace token{
+  BufferPtr UnclaimedTransaction::ToBuffer() const{
+    codec::UnclaimedTransactionEncoder encoder((*this), codec::kDefaultEncoderFlags);
+    BufferPtr buffer = internal::NewBufferFor(encoder);
+    if(!encoder.Encode(buffer)){
+      LOG(FATAL) << "cannot encode unclaimed transaction to buffer.";
+      return nullptr;
+    }
+    return buffer;
+  }
+
   std::string UnclaimedTransaction::ToString() const{
     std::stringstream ss;
     ss << "UnclaimedTransaction(";

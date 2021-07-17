@@ -10,9 +10,10 @@
 #include "key.h"
 #include "hash.h"
 #include "flags.h"
+
 #include "block.h"
-#include "unsigned_transaction.h"
-#include "unclaimed_transaction.h"
+#include "transaction_unsigned.h"
+#include "transaction_unclaimed.h"
 
 #include "atomic/relaxed_atomic.h"
 

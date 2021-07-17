@@ -1,29 +1,15 @@
-#include "pool.h"
-#include "units.h"
-#include "flags.h"
-#include "miner.h"
-#include "wallet.h"
-#include "keychain.h"
-#include "reference.h"
-#include "filesystem.h"
-#include "blockchain.h"
-#include "configuration.h"
-
-#include "task/task_debug.h"
-#include "task/task_queue.h"
-#include "task/task_engine.h"
-
 #ifdef TOKEN_ENABLE_EXPERIMENTAL
-#include "elastic/elastic_client.h"
-#include "elastic/events/elastic_spend_event.h"
+//#include "elastic/elastic_client.h"
+//#include "elastic/events/elastic_spend_event.h"
 #endif//TOKEN_ENABLE_EXPERIMENTAL
 
-#include "network/rpc_server.h"
-#include "network/peer_session_manager.h"
-#include "http/http_service_health.h"
-#include "http/http_service_rest.h"
+#ifdef TOKEN_DEBUG
+#include "transaction_unsigned.h"
+#include "transaction_unclaimed.h"
+#endif//TOKEN_DEBUG
 
-#include "utils/timer.h"
+#include "pool.h"
+#include "wallet_manager.h"
 
 #ifdef TOKEN_DEBUG
   static const std::vector<token::User> kOwners = {
@@ -86,8 +72,10 @@
         return false;
       }
 
-      token::NodeAddress elastic = token::NodeAddress::ResolveAddress(FLAGS_elasticsearch_hostname);
-      token::SendEvent(elastic, token::elastic::SpendEvent(token::Clock::now(), owner, recipient, token));
+#ifdef TOKEN_ENABLE_EXPERIMENTAL
+//      token::NodeAddress elastic = token::NodeAddress::ResolveAddress(FLAGS_elasticsearch_hostname);
+//      token::SendEvent(elastic, token::elastic::SpendEvent(token::Clock::now(), owner, recipient, token));
+#endif//TOKEN_ENABLE_EXPERIMENTAL
 
       if(--total <= 0)
         break;

@@ -2,11 +2,7 @@
 #include <leveldb/db.h>
 #include <glog/logging.h>
 
-#include "buffer.h"
-#include "filesystem.h"
 #include "blockchain.h"
-#include "transaction_unclaimed.h"
-#include "atomic/relaxed_atomic.h"
 
 namespace token{
   static inline std::string

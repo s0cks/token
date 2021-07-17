@@ -57,26 +57,10 @@ namespace token{
     FOR_EACH_CONFIG_PROPERTY_TYPE(DEFINE_SET_DEFAULT)
 #undef DEFINE_SET_DEFAULT
 
-    static inline void
-    SetDefaultProperty(leveldb::WriteBatch& batch, const std::string& name, const PeerList& val){
-      internal::BufferPtr buffer = internal::NewBuffer(GetBufferSize(val));
-      if(!buffer->PutPeerList(val)){
-        LOG(WARNING) << "cannot serialize peer list to buffer of size " << buffer->ToString();
-        return;
-      }
-      batch.Put(name, buffer->AsSlice());
-    }
-
     void SetDefaults(){
       leveldb::WriteBatch batch;
       SetDefault(batch, TOKEN_CONFIGURATION_NODE_ID, UUID());
-      SetDefault(batch, TOKEN_BLOCKCHAIN_HOME, FLAGS_path);
-
-      PeerList peers;
-      if(!FLAGS_remote.empty()){
-        DLOG_CONFIG_IF(WARNING, !NodeAddress::ResolveAddresses(FLAGS_remote, peers)) << "couldn't resolve remote address: " << FLAGS_remote;
-      }
-      SetDefaultProperty(batch, TOKEN_CONFIGURATION_NODE_PEERS, peers);
+      //TODO: SetDefault(batch, TOKEN_BLOCKCHAIN_HOME, FLAGS_path);
 
       leveldb::WriteOptions options;
       options.sync = true;
@@ -169,38 +153,10 @@ namespace token{
     FOR_EACH_CONFIG_PROPERTY_TYPE(DEFINE_PUT_PROPERTY)
 #undef DEFINE_PUT_PROPERTY
 
-    bool PutProperty(const std::string& name, const PeerList& val){
-      auto slice = internal::NewBuffer(GetBufferSize(val));
-      if(!slice->PutPeerList(val)){
-        DLOG(WARNING) << "cannot serialize peer list to buffer.";
-        return false;
-      }
-      return PutProperty(name, slice);
-    }
-
 #define DEFINE_GET_PROPERTY(Name, Type) \
     Type Get##Name(const std::string& name){ return GetProperty<Type>(name); }
     FOR_EACH_CONFIG_PROPERTY_TYPE(DEFINE_GET_PROPERTY)
 #undef DEFINE_GET_PROPERTY
-
-    bool GetPeerList(const std::string& name, PeerList& results){
-      if(!IsInitializedState())
-        return false;
-      std::string slice;
-      leveldb::Status status;
-      if(!(status = GetIndex()->Get(leveldb::ReadOptions(), name, &slice)).ok()){
-        if(status.IsNotFound()){
-          DLOG(WARNING) << "couldn't find property '" << name << "'";
-          return false;
-        }
-
-        LOG(FATAL) << "couldn't get property '" << name << "': " << status.ToString();
-        return false;
-      }
-
-      BufferPtr data = internal::CopyBufferFrom(slice);
-      return data->GetPeerList(results);
-    }
 
 #define DEFINE_STATE_CHECK(Name) \
     bool Is##Name##State(){ return GetState() == State::k##Name##State; }

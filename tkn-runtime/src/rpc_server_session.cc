@@ -3,8 +3,7 @@
 #include "miner.h"
 #include "blockchain.h"
 
-#include "network/rpc_server.h"
-#include "network/rpc_server_session.h"
+
 
 namespace token{
   namespace rpc{

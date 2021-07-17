@@ -5,19 +5,18 @@
 #include "type/user.h"
 #include "type/product.h"
 #include "transaction_reference.h"
-
 #include "json.h"
 #include "codec/codec.h"
 
 namespace token{
   namespace codec{
     class UnclaimedTransactionEncoder: public codec::EncoderBase<UnclaimedTransaction>{
-     protected:
+    protected:
       TransactionReferenceEncoder encode_txref_;
       UserEncoder encode_user_;
       ProductEncoder encode_product_;
-     public:
-      explicit UnclaimedTransactionEncoder(const UnclaimedTransaction& value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags);
+    public:
+      explicit UnclaimedTransactionEncoder(const UnclaimedTransaction& value, const codec::EncoderFlags& flags = codec::kDefaultEncoderFlags);
       UnclaimedTransactionEncoder(const UnclaimedTransactionEncoder& other) = default;
       ~UnclaimedTransactionEncoder() override = default;
       int64_t GetBufferSize() const override;
@@ -25,26 +24,25 @@ namespace token{
       UnclaimedTransactionEncoder& operator=(const UnclaimedTransactionEncoder& other) = default;
     };
 
-    class UnclaimedTransactionDecoder : public codec::DecoderBase<UnclaimedTransaction>{
-     protected:
+    class UnclaimedTransactionDecoder: public codec::DecoderBase<UnclaimedTransaction>{
+    protected:
       TransactionReferenceDecoder decode_txref_;
       UserDecoder decode_user_;
       ProductDecoder decode_product_;
-     public:
-      explicit UnclaimedTransactionDecoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints);
+    public:
+      explicit UnclaimedTransactionDecoder(const codec::DecoderHints& hints = codec::kDefaultDecoderHints);
       UnclaimedTransactionDecoder(const UnclaimedTransactionDecoder& other) = default;
       ~UnclaimedTransactionDecoder() override = default;
       bool Decode(const BufferPtr& buff, UnclaimedTransaction& result) const override;
       UnclaimedTransactionDecoder& operator=(const UnclaimedTransactionDecoder& other) = default;
     };
   }
-
-  class UnclaimedTransaction : public Object{
-   private:
+  class UnclaimedTransaction: public Object{
+  private:
     TransactionReference reference_;
     User user_;
     Product product_;
-   public:
+  public:
     UnclaimedTransaction() = default;
     UnclaimedTransaction(const TransactionReference& ref, const User& user, const Product& product):
       Object(),
@@ -89,14 +87,14 @@ namespace token{
       return product_;
     }
 
+    BufferPtr ToBuffer() const;
     std::string ToString() const override;
-
     UnclaimedTransaction& operator=(const UnclaimedTransaction& other) = default;
 
     friend bool operator==(const UnclaimedTransaction& a, const UnclaimedTransaction& b){
       return a.reference_ == b.reference_
-          && a.user_ == b.user_
-          && a.product_ == b.product_;
+             && a.user_ == b.user_
+             && a.product_ == b.product_;
     }
 
     friend bool operator!=(const UnclaimedTransaction& a, const UnclaimedTransaction& b){
@@ -128,13 +126,13 @@ namespace token{
     }
 
     static inline bool
-    Decode(const BufferPtr& buff, UnclaimedTransaction& result, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+    Decode(const BufferPtr& buff, UnclaimedTransaction& result, const codec::DecoderHints& hints = codec::kDefaultDecoderHints){
       codec::UnclaimedTransactionDecoder decoder(hints);
       return decoder.Decode(buff, result);
     }
 
     static inline UnclaimedTransactionPtr
-    DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+    DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints = codec::kDefaultDecoderHints){
       UnclaimedTransaction result;
       if(!Decode(buff, result, hints)){
         DLOG(ERROR) << "cannot decode UnclaimedTransaction.";
@@ -143,7 +141,6 @@ namespace token{
       return std::make_shared<UnclaimedTransaction>(result);
     }
   };
-
   namespace json{
     static inline bool
     Write(Writer& writer, const UnclaimedTransactionPtr& val){
@@ -158,5 +155,4 @@ namespace token{
     }
   }
 }
-
 #endif //TOKEN_UNCLAIMED_TRANSACTION_H

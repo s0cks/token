@@ -52,13 +52,24 @@ namespace token{
   }
 
   Hash Block::GetMerkleRoot() const{
-    /*MerkleTreeBuilder builder;
+    /*
+     TODO:MerkleTreeBuilder builder;
     if(!Accept(&builder)){
       return Hash();
     }
     std::shared_ptr<MerkleTree> tree = builder.Build();
     return tree->GetRootHash();*/
     return Hash();
+  }
+
+  BufferPtr Block::ToBuffer() const{
+    codec::BlockEncoder encoder((*this), codec::kDefaultEncoderFlags);
+    BufferPtr buffer = internal::NewBufferFor(encoder);
+    if(!encoder.Encode(buffer)){
+      LOG(FATAL) << "cannot encode block to buffer.";
+      return nullptr;
+    }
+    return buffer;
   }
 
   namespace codec{

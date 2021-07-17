@@ -6,9 +6,7 @@
 #include <condition_variable>
 
 #include "flags.h"
-#include "proposal.h"
-
-#include "../tkn-platform/include/os_thread.h"
+#include "os_thread.h"
 
 namespace token{
 #define LOG_MINER(LevelName) \
@@ -55,9 +53,6 @@ namespace token{
     uv_async_t on_rejected_;
     atomic::RelaxedAtomic<State> state_;
 
-    std::mutex proposal_mtx_;
-    ProposalPtr proposal_;
-
     void SetState(const State& state){
       state_ = state;
     }
@@ -79,9 +74,7 @@ namespace token{
       timer_(),
       on_accepted_(),
       on_rejected_(),
-      state_(State::kStoppedState),
-      proposal_mtx_(),
-      proposal_(){
+      state_(State::kStoppedState){
       timer_.data = this;
       on_accepted_.data = this;
       on_rejected_.data = this;
@@ -97,47 +90,6 @@ namespace token{
 
     uv_loop_t* GetLoop() const{
       return loop_;
-    }
-
-    ProposalPtr GetActiveProposal(){
-      std::lock_guard<std::mutex> guard(proposal_mtx_);
-      return proposal_;
-    }
-
-    bool HasActiveProposal(){
-      std::lock_guard<std::mutex> guard(proposal_mtx_);
-      return proposal_ != nullptr;
-    }
-
-    bool IsActiveProposal(const RawProposal& proposal){
-      std::lock_guard<std::mutex> guard(proposal_mtx_);
-      if(!proposal_)
-        return false;
-      return proposal_->raw() == proposal;
-    }
-
-    bool SetActiveProposal(const ProposalPtr& proposal){
-      std::lock_guard<std::mutex> guard(proposal_mtx_);
-      if(proposal_)
-        return false;
-      proposal_ = proposal;
-      return true;
-    }
-
-    bool RegisterNewProposal(const RawProposal& proposal){
-      std::lock_guard<std::mutex> guard(proposal_mtx_);
-      if(proposal_)
-        return false;
-      proposal_ = Proposal::NewInstance(loop_, proposal);
-      return true;
-    }
-
-    bool ClearActiveProposal(){
-      std::lock_guard<std::mutex> guard(proposal_mtx_);
-      if(!proposal_)
-        return false;
-      proposal_ = nullptr;
-      return true;
     }
 
     bool Run();
