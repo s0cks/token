@@ -14,7 +14,6 @@ namespace token{
   V(Prepare)                     \
   V(Promise)                     \
   V(Commit)                      \
-  V(Accepts)                     \
   V(Accepted)                    \
   V(Rejected)
 

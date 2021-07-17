@@ -3,64 +3,73 @@
 
 #include <memory>
 #include <ostream>
-
-#include "object.h"
 #include "uuid.h"
+#include "object.h"
 #include "codec/codec.h"
 
 namespace token{
-  class Proposal : public Object{
-   private:
+  class Proposal: public Object{
+  private:
     static inline int
     Compare(const Proposal& lhs, const Proposal& rhs){
       NOT_IMPLEMENTED(FATAL);
       return 0;
     }
-   private:
+
+  private:
     Timestamp timestamp_;
     UUID proposal_id_;
     UUID proposer_id_;
     int64_t height_;
     Hash hash_;
-   public:
+  public:
+    Proposal():
+        Object(),
+        timestamp_(),
+        proposal_id_(),
+        proposer_id_(),
+        height_(),
+        hash_(){}
+
     Proposal(const Timestamp& timestamp,
-             const UUID& proposal_id,
-             const UUID& proposer_id,
-             const int64_t& height,
-             const Hash& hash):
-      Object(),
-      timestamp_(timestamp),
-      proposal_id_(proposal_id),
-      proposer_id_(proposer_id),
-      height_(height),
-      hash_(hash){}
+        const UUID& proposal_id,
+        const UUID& proposer_id,
+        const int64_t& height,
+        const Hash& hash):
+        Object(),
+        timestamp_(timestamp),
+        proposal_id_(proposal_id),
+        proposer_id_(proposer_id),
+        height_(height),
+        hash_(hash){}
+
     ~Proposal() override = default;
 
-    Type type() const override {
+    Type type() const override{
       return Type::kProposal;
     }
 
-    Timestamp &timestamp() {
+    Timestamp& timestamp(){
       return timestamp_;
     }
 
-    Timestamp timestamp() const {
+    Timestamp timestamp() const{
       return timestamp_;
     }
 
-    UUID &proposal_id() {
+    UUID& proposal_id(){
       return proposal_id_;
     }
 
-    UUID proposal_id() const {
+    UUID proposal_id() const{
       return proposal_id_;
     }
 
-    UUID &proposer_id() {
+    UUID& proposer_id(){
       return proposer_id_;
     }
 
-    UUID proposer_id() const {
+    UUID proposer_id() const{
       return proposer_id_;
     }
 
@@ -111,40 +120,26 @@ namespace token{
       return stream << val.ToString();
     }
   };
+  namespace codec{
+    class ProposalEncoder: public codec::EncoderBase<Proposal>{
+    public:
+      ProposalEncoder(const Proposal& value, const codec::EncoderFlags& flags);
+      ProposalEncoder(const ProposalEncoder& other) = default;
+      ~ProposalEncoder() override = default;
+      int64_t GetBufferSize() const override;
+      bool Encode(const BufferPtr& buff) const override;
+      ProposalEncoder& operator=(const ProposalEncoder& other) = default;
+    };
 
-namespace codec{
-class Encoder : public codec::EncoderBase<Proposal>{
- public:
-  Encoder(const Proposal& value, const codec::EncoderFlags& flags):
-    codec::EncoderBase<Proposal>(value, flags){}
-  Encoder(const Encoder& other) = default;
-  ~Encoder() override = default;
-
-  int64_t GetBufferSize() const override{
-    return 0;
+    class ProposalDecoder: public codec::DecoderBase<Proposal>{
+    public:
+      explicit ProposalDecoder(const codec::DecoderHints& hints);
+      ProposalDecoder(const ProposalDecoder& other) = default;
+      ~ProposalDecoder() override = default;
+      bool Decode(const BufferPtr& buff, Proposal& result) const override;
+      ProposalDecoder& operator=(const ProposalDecoder& other) = default;
+    };
   }
-
-  bool Encode(const BufferPtr& buff) const override{
-    return false;
-  }
-
-  Encoder& operator=(const Encoder& other) = default;
-};
-
-class Decoder : public codec::DecoderBase<Proposal>{
- public:
-  explicit Decoder(const codec::EncoderFlags& flags):
-    codec::DecoderBase<Proposal>(flags){}
-  Decoder(const Decoder& other) = default;
-  ~Decoder() override = default;
-
-  bool Decode(const BufferPtr& buff, Proposal& result) const override{
-    return false;
-  }
-
-  Decoder& operator=(const Decoder& other) = default;
-};
-}
 
 
 /*  class Proposal;
@@ -393,5 +388,4 @@ class Decoder : public codec::DecoderBase<Proposal>{
     }
   };*/
 }
-
 #endif//TOKEN_PROPOSAL_H

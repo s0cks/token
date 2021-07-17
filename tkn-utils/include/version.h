@@ -102,6 +102,11 @@ namespace token{
     CurrentVersion(){
       return Version(TOKEN_VERSION_MAJOR, TOKEN_VERSION_MINOR, TOKEN_VERSION_REVISION);
     }
+
+    static inline int64_t
+    GetSize(){
+      return sizeof(int16_t)*3;
+    }
   };
 }
 
