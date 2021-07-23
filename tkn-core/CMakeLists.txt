@@ -10,13 +10,14 @@ add_library(tkn-core STATIC
     include/type/user.h src/type/user.cc
     include/type/wallet.h
     include/block.h src/block.cc
+    include/block_chain.h src/block_chain.cc
     include/block_header.h src/block_header.cc
     include/object.h
     include/transaction.h
     include/transaction_indexed.h src/transaction_indexed.cc
     include/transaction_input.h src/transaction_input.cc
     include/transaction_output.h src/transaction_output.cc
-    include/transaction_reference.h
+    include/transaction_reference.h src/transaction_reference.cc
     include/transaction_signed.h src/transaction_signed.cc
     include/transaction_unclaimed.h src/transaction_unclaimed.cc
     include/transaction_unsigned.h src/transaction_unsigned.cc

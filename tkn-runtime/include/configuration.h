@@ -56,16 +56,8 @@ namespace token{
       }
     }
 
-    static inline std::string
-    GetPath(){
-      //TODO: fixme
-      std::stringstream filename;
-      filename << "" << "/config";
-      return filename.str();
-    }
-
     void SetDefaults();
-    void Initialize(const std::string& filename=GetPath());
+    void Initialize(const std::string& filename);
     bool HasProperty(const std::string& name);
 
 #define DECLARE_PUT_PROPERTY(Name, Type) \

@@ -1,10 +1,10 @@
 #ifndef TOKEN_HTTP_SERVICE_H
 #define TOKEN_HTTP_SERVICE_H
 
-#include "server.h"
-#include "http_router.h"
-#include "http_message.h"
-#include "http_session.h"
+#include "server/server.h"
+#include "http/http_router.h"
+#include "http/http_message.h"
+#include "http/http_session.h"
 
 namespace token{
   namespace http{

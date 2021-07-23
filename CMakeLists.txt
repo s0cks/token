@@ -22,34 +22,6 @@ if(ENABLE_EXPERIMENTAL)
   add_compile_definitions(TOKEN_ENABLE_EXPERIMENTAL)
 endif()
 
-# Packages
-find_package(Threads)
-find_package(uv REQUIRED)
-find_package(png REQUIRED)
-find_package(glog REQUIRED)
-find_package(gflags REQUIRED)
-find_package(cryptopp REQUIRED)
-find_package(httpparser REQUIRED)
-find_package(leveldb REQUIRED)
-find_package(zxing REQUIRED)
-find_package(uuid REQUIRED)
-find_package(gtest REQUIRED)
-find_package(gmock REQUIRED)
-
-# Define Libraries
-set(TKN_LIBRARIES
-   ${CMAKE_THREAD_LIBS_INIT} # pthreads
-   ${GLOG_LIBRARIES} # glog
-   ${GFLAGS_LIBRARIES} # gflags
-   ${CRYPTOPP_LIBRARIES} # cryptopp
-   ${UV_LIBRARIES} # libuv
-   ${PNG_LIBRARIES} # libpng
-   ${HTTPPARSER_LIBRARIES} # libhttp-parser
-   ${LEVELDB_LIBRARIES} # leveldb
-   ${ZXING_LIBRARIES} # zxing
-   ${UUID_LIBRARIES} # libuuid
-)
-
 add_subdirectory(tkn-core)
 add_subdirectory(tkn-deeplink)
 add_subdirectory(tkn-http)

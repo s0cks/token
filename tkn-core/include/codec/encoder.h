@@ -9,18 +9,11 @@
 
 namespace token{
   namespace codec{
-    typedef uint16_t EncoderFlags;
+    typedef uint8_t EncoderFlags;
 
-    enum EncoderFlagsLayout{
-      kEncodeTypeFlagPosition = 0,
-      kBitsForEncodeType = 1,
-
-      kEncodeVersionFlagPosition = kEncodeTypeFlagPosition+kBitsForEncodeType,
-      kBitsForEncodeVersion = 1,
-    };
-
-    class EncodeTypeFlag : public BitField<EncoderFlags, bool, kEncodeTypeFlagPosition, kBitsForEncodeType>{};
-    class EncodeVersionFlag : public BitField<EncoderFlags, bool, kEncodeVersionFlagPosition, kBitsForEncodeVersion>{};
+    class EncodeTypeFlag : public BitField<EncoderFlags, bool, 0, 1>{};
+    class EncodeVersionFlag : public BitField<EncoderFlags, bool, 1, 1>{};
+    class EncodeMagicFlag : public BitField<EncoderFlags, bool, 2, 1>{};
 
     static const EncoderFlags kDefaultEncoderFlags = 0;
 
@@ -103,12 +96,18 @@ namespace token{
         return EncodeVersionFlag::Decode(flags());
       }
 
+      bool ShouldEncodeMagic() const{
+        return EncodeMagicFlag::Decode(flags());
+      }
+
       virtual int64_t GetBufferSize() const{
         int64_t size = 0;
-        if (ShouldEncodeType())
-          size += sizeof(uint64_t);//TODO: check size?
-        if (ShouldEncodeVersion())
-          size += sizeof(uint64_t);//TODO: check size?
+        if(ShouldEncodeVersion())
+          size += (sizeof(uint16_t) * 3);
+        if(ShouldEncodeMagic())
+          size += sizeof(uint16_t);
+        if(ShouldEncodeType())
+          size += sizeof(uint64_t);
         return size;
       }
 
@@ -125,6 +124,14 @@ namespace token{
           const auto& version = Version::CurrentVersion();
           if(!(buff->PutShort(version.major()) && buff->PutShort(version.minor() && buff->PutShort(version.revision())))){
             LOG(FATAL) << "couldn't encoder version to buffer.";
+            return false;
+          }
+        }
+
+        if(ShouldEncodeMagic()){
+          const uint16_t magic = TOKEN_CODEC_MAGIC;
+          if(!buff->PutUnsignedShort(magic)){
+            LOG(FATAL) << "couldn't encode magic to buffer.";
             return false;
           }
         }

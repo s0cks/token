@@ -100,7 +100,7 @@ namespace token{
     class UserDecoder : public codec::DecoderBase<User>{
      public:
       explicit UserDecoder(const codec::DecoderHints& hints):
-          codec::DecoderBase<User>(hints){}
+        codec::DecoderBase<User>(hints){}
       UserDecoder(const UserDecoder& other) = default;
       ~UserDecoder() override = default;
       bool Decode(const BufferPtr& buff, User& result) const override;

@@ -152,7 +152,9 @@ namespace token{
       OutputListDecoder decode_outputs_;
 
       explicit TransactionDecoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
-        codec::DecoderBase<T>(hints){}
+        codec::DecoderBase<T>(hints),
+        decode_inputs_(hints),
+        decode_outputs_(hints){}
 
       bool DecodeTransactionData(const BufferPtr& buff, Timestamp& timestamp, InputList& inputs, OutputList& outputs) const{
         timestamp = buff->GetTimestamp();

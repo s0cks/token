@@ -5,8 +5,7 @@
 #include <http_parser.h>
 
 #include "block.h"
-#include "wallet.h"
-#include "http_common.h"
+#include "type/wallet.h"
 #include "http_message.h"
 
 namespace token{
@@ -32,14 +31,20 @@ namespace token{
       }
      protected:
       bool Write(const BufferPtr& buff) const override{
-        if(!buff->PutString(GetHttpStatusLine(GetStatusCode())))
+        if(!buff->PutBytes(GetHttpStatusLine(GetStatusCode()))){
+          LOG(ERROR) << "cannot write http status to buffer.";
           return false;
-        for(auto& hdr : headers_)
-          if(!buff->PutString(GetHttpHeaderLine(hdr.first, hdr.second)))
+        }
+
+        for(auto& hdr : headers_){
+          if(!buff->PutBytes(GetHttpHeaderLine(hdr.first, hdr.second))){
+            LOG(ERROR) << "cannot write http header: " << hdr.first;
             return false;
-        return buff->PutString("\r\n")
+          }
+        }
+        return buff->PutBytes("\r\n")
             && buff->PutBytes(body_)
-            && buff->PutString("\r\n");
+            && buff->PutBytes("\r\n");
       }
 
       static int
@@ -60,7 +65,9 @@ namespace token{
          body_(std::move(body)){}
       ~Response() override = default;
 
-      DEFINE_HTTP_MESSAGE(Response);
+      const char* GetName() const override{
+        return "Response";
+      }
 
       StatusCode GetStatusCode() const{
         return status_;

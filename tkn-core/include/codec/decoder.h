@@ -6,18 +6,12 @@
 
 namespace token{
   namespace codec{
-    typedef uint16_t DecoderHints;
+    typedef uint64_t DecoderHints;
 
-    enum DecoderHintsLayout{
-      kExpectTypeFlagPosition = 0,
-      kBitsForExpectTypeFlag = 1,
-
-      kExpectVersionFlagPosition = kExpectTypeFlagPosition+kBitsForExpectTypeFlag,
-      kBitsForExpectVersionFlag = 1,
-    };
-
-    class ExpectTypeHint : public BitField<DecoderHints, bool, kExpectTypeFlagPosition, kBitsForExpectTypeFlag>{};
-    class ExpectVersionHint : public BitField<DecoderHints, bool, kExpectVersionFlagPosition, kBitsForExpectVersionFlag>{};
+    class StrictHint : public BitField<DecoderHints, bool, 0, 1>{};
+    class ExpectTypeHint : public BitField<DecoderHints, bool, 1, 1>{};
+    class ExpectVersionHint : public BitField<DecoderHints, bool, 2, 1>{};
+    class ExpectMagicHint : public BitField<DecoderHints, bool, 3, 1>{};
 
     static const DecoderHints kDefaultDecoderHints = 0;
 
@@ -31,6 +25,46 @@ namespace token{
       explicit DecoderBase(const DecoderHints& hints):
         hints_(hints){}
       DecoderBase(const DecoderBase& other) = default;
+
+      static inline bool
+      IsValidType(const uint64_t& val){
+        NOT_IMPLEMENTED(ERROR);
+        return true;//TODO: implement
+      }
+
+      inline bool
+      DecodeHeader(const BufferPtr& buff, Version& version, Type& type){
+        if(ShouldExpectVersion()){
+          auto major = buff->GetShort();
+          auto minor = buff->GetShort();
+          auto revision = buff->GetShort();
+          version = Version(major, minor, revision);
+          DLOG(INFO) << "decoded version: " << version;
+        }
+
+        if(ShouldExpectMagic()){
+          auto magic = buff->GetUnsignedShort();
+          if(magic != TOKEN_CODEC_MAGIC){
+            if(IsStrict()){
+              LOG(FATAL) << "cannot decode header, magic is not valid.";
+              return false;
+            }
+            DLOG(WARNING) << "couldn't decode header, magic is not valid.";
+          }
+          DLOG(INFO) << "decoded magic: " << std::hex << magic;
+        }
+
+        if(ShouldExpectType()){
+          auto raw_type = buff->GetUnsignedLong();
+          if(IsStrict() && !IsValidType(raw_type)){
+            LOG(FATAL) << "cannot decode header, type is not valid: " << raw_type;
+            return false;
+          }
+          type = static_cast<Type>(raw_type);
+          DLOG(INFO) << "decoded type: " << type;
+        }
+        return true;
+      }
      public:
       virtual ~DecoderBase() = default;
 
@@ -40,6 +74,14 @@ namespace token{
 
       DecoderHints hints() const{
         return hints_;
+      }
+
+      bool IsStrict() const{
+        return StrictHint::Decode(hints());
+      }
+
+      bool ShouldExpectMagic() const{
+        return ExpectMagicHint::Decode(hints());
       }
 
       bool ShouldExpectVersion() const{

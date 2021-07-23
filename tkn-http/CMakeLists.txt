@@ -11,5 +11,5 @@ add_library(tkn-http STATIC
         include/http/http_router.h src/http/http_router.cc
         include/http/http_service.h
         include/http/http_session.h src/http/http_session.cc)
-target_link_libraries(tkn-http tkn-utils)
+target_link_libraries(tkn-http tkn-utils tkn-core)
 target_include_directories(tkn-http PUBLIC ${PROJECT_SOURCE_DIR}/include)

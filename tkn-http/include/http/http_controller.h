@@ -3,6 +3,7 @@
 
 #include "http_request.h"
 #include "http_response.h"
+#include "http/http_router.h"
 
 namespace token{
   namespace http{

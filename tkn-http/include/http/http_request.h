@@ -7,9 +7,8 @@
 #include <utility>
 #include <http_parser.h>
 
-#include "user.h"
-#include "buffer.h"
-#include "product.h"
+#include "type/user.h"
+#include "type/product.h"
 #include "http_message.h"
 
 namespace token{
@@ -22,7 +21,7 @@ namespace token{
       ParameterMap path_params_;
       ParameterMap query_params_;
      protected:
-      bool Write(const BufferPtr& buffer) const override{
+      bool Write(const internal::BufferPtr& buffer) const override{
         if(!buffer->PutBytes(GetHttpStatusLine(method_, path_)))
           return false;
         for(auto& hdr : headers_){
@@ -68,7 +67,9 @@ namespace token{
         query_params_(std::move(query_params)){}
       ~Request() override = default;
 
-      DEFINE_HTTP_MESSAGE(Request);
+      const char* GetName() const override{
+        return "Request";
+      }
 
       void SetPathParameters(const ParameterMap& params){
         path_params_.clear();
@@ -144,7 +145,7 @@ namespace token{
         return Hash::FromHexString(GetPathParameterValue(name));
       }
 
-      std::string ToString() const override{
+      std::string ToString() const{
         std::stringstream ss;
         ss << "HttpRequest(";
         ss << "path=" << path_ << ", ";

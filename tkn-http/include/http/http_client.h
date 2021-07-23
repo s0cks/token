@@ -2,6 +2,9 @@
 #define TOKEN_HTTP_CLIENT_H
 
 #include <uv.h>
+
+#include "address.h"
+
 #include "http_session.h"
 #include "http_request.h"
 #include "http_response.h"
@@ -9,9 +12,9 @@
 namespace token{
   class HttpClient{
    private:
-    NodeAddress address_;
+    utils::Address address_;
    public:
-    explicit HttpClient(const NodeAddress& address):
+    explicit HttpClient(const utils::Address& address):
       address_(address){}
     ~HttpClient() = default;
 

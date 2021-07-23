@@ -326,6 +326,16 @@ namespace token{
       }
       return CopyBufferFrom(data, length);
     }
+
+    static inline BufferPtr
+    NewBufferFromFile(const std::string& filename, const int64_t& length){
+      FILE* file;
+      if(!(file = fopen(filename.data(), "rb"))){
+        LOG(FATAL) << "cannot open file " << filename << ": " << strerror(errno);
+        return nullptr;
+      }
+      return NewBufferFromFile(file, length);
+    }
   }
 }
 

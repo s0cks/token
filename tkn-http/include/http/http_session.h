@@ -1,16 +1,16 @@
 #ifndef TOKEN_HTTP_SESSION_H
 #define TOKEN_HTTP_SESSION_H
 
-#include "session.h"
-#include "http_common.h"
-#include "http_router.h"
-#include "http_message.h"
+#include "server/session.h"
+#include "http/http_common.h"
+#include "http/http_router.h"
+#include "http/http_message.h"
 
 namespace token{
   namespace http{
     class Session : public SessionBase{
      private:
-      BufferPtr rbuffer_;
+      internal::BufferPtr rbuffer_;
 
       RouterPtr router_;
      public:
@@ -28,10 +28,10 @@ namespace token{
         router_(router){}
       ~Session() override = default;
 
-      void OnMessageRead(const BufferPtr& buff);
+      void OnMessageRead(const internal::BufferPtr& buff);
 
       void Send(const http::HttpMessagePtr& msg){
-        DLOG(INFO) << "sending: " << msg->ToString();
+        //TODO: log?
         return SendMessages({msg});
       }
     };
@@ -41,14 +41,14 @@ namespace token{
       uv_async_t request_;
       Session* session_;
       RouterPtr router_;
-      BufferPtr buffer_;
+      internal::BufferPtr buffer_;
 
       RequestPtr ParseRequest();
       RouterMatch FindMatch(const RequestPtr& request);
 
       static void DoWork(uv_async_t* request);
      public:
-      explicit AsyncRequestHandler(uv_loop_t* loop, Session* session, const RouterPtr& router, const BufferPtr& buff):
+      explicit AsyncRequestHandler(uv_loop_t* loop, Session* session, const RouterPtr& router, const internal::BufferPtr& buff):
         request_(),
         session_(session),
         router_(router),

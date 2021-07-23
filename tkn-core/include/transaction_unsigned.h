@@ -19,7 +19,8 @@ namespace token{
 
     class UnsignedTransactionDecoder: public TransactionDecoder<UnsignedTransaction>{
     public:
-      explicit UnsignedTransactionDecoder(const codec::DecoderHints& hints);
+      explicit UnsignedTransactionDecoder(const codec::DecoderHints& hints):
+        TransactionDecoder<UnsignedTransaction>(hints){}
       UnsignedTransactionDecoder(const UnsignedTransactionDecoder& other) = default;
       ~UnsignedTransactionDecoder() override = default;
       bool Decode(const BufferPtr& buff, UnsignedTransaction& result) const override;

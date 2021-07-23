@@ -19,7 +19,8 @@ namespace token{
 
     class IndexedTransactionDecoder : public TransactionDecoder<IndexedTransaction> {
      public:
-      explicit IndexedTransactionDecoder(const codec::DecoderHints& hints);
+      explicit IndexedTransactionDecoder(const codec::DecoderHints& hints):
+        TransactionDecoder<IndexedTransaction>(hints){}
       IndexedTransactionDecoder(const IndexedTransactionDecoder& other) = default;
       ~IndexedTransactionDecoder() override = default;
       bool Decode(const BufferPtr &buff, IndexedTransaction &result) const override;

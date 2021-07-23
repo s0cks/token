@@ -2,7 +2,6 @@
 
 #include "pool.h"
 #include "miner.h"
-#include "block_builder.h"
 
 namespace token{
   BlockMiner* BlockMiner::GetInstance(){

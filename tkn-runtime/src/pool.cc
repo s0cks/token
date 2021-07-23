@@ -229,6 +229,12 @@ namespace token{
   FOR_EACH_POOL_TYPE(DEFINE_HAS_TYPE)
 #undef DEFINE_HAS_TYPE
 
+  void ObjectPool::GetPoolStats(PoolStats& stats) const{
+    stats.num_blocks = GetNumberOfBlocks();
+    stats.num_transactions_unsigned = GetNumberOfUnsignedTransactions();
+    stats.num_transactions_unclaimed = GetNumberOfUnclaimedTransactions();
+  }
+
   ObjectPoolPtr ObjectPool::GetInstance(){
     static ObjectPoolPtr instance = std::make_shared<ObjectPool>();
     return instance;

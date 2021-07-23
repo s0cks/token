@@ -5,7 +5,7 @@ add_library(tkn-rpc STATIC
     include/rpc/rpc_common.h
     include/rpc/rpc_message.h src/rpc/rpc_message.cc
     include/rpc/rpc_message_accepted.h src/rpc/rpc_message_accepted.cc
-        include/rpc/rpc_message_block.h src/rpc/rpc_message_block.cc
+    include/rpc/rpc_message_block.h src/rpc/rpc_message_block.cc
     include/rpc/rpc_message_commit.h src/rpc/rpc_message_commit.cc
     include/rpc/rpc_message_handler.h
     include/rpc/rpc_message_handshake.h

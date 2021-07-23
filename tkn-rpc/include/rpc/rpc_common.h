@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <memory>
+#include <iostream>
 
 namespace token{
   namespace rpc{
@@ -16,8 +17,10 @@ namespace token{
 
     static std::ostream& operator<<(std::ostream& stream, const ClientType& type){
       switch (type){
-        case ClientType::kNode:return stream << "Node";
-        case ClientType::kClient:return stream << "Client";
+        case ClientType::kNode:
+          return stream << "Node";
+        case ClientType::kClient:
+          return stream << "Client";
         case ClientType::kUnknown:
         default:return stream << "Unknown";
       }

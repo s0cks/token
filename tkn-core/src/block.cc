@@ -119,7 +119,7 @@ namespace token{
       Hash previous_hash = buff->GetHash();
       DLOG(INFO) << "decoded Block previous_hash: " << previous_hash;
 
-      Version version = codec::GetCurrentVersion();//TODO: fixme
+      Version version = Version::CurrentVersion();
 
       IndexedTransactionSet transactions = {};
 

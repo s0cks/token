@@ -5,31 +5,40 @@ namespace token{
   namespace utils{
     static inline Address::RawAddress
     GetRawAddressFrom(const char* address){
-      uint16_t a, b, c, d;
-      if(scanf(address, "%d.%d.%d.%d", &a, &b, &c, &d) != 4)
+      //TODO: convert to uint16_t
+      int a, b, c, d;
+      if(sscanf(address, "%d.%d.%d.%d", &a, &b, &c, &d) != 4)
         return 0;
       return (a << 24) | (b << 16) | (c << 8) | (d);
     }
 
-    static inline std::string
-    GetAddressAsString(const Address::RawAddress& address){
+    static const size_t kAddressStringLength = 19;
+
+    static inline void
+    GetAddressAsString(const Address::RawAddress& address, char* data){
       uint16_t a = (address >> 24) & 0xFF;
       uint16_t b = (address >> 16) & 0xFF;
       uint16_t c = (address >> 8) & 0xFF;
       uint16_t d = (address) & 0xFF;
-
-      char data[19];
-      snprintf(data, 19, "%d.%d.%d.%d", a, b, c, d);
-      return std::string(data, 19);
+      snprintf(data, kAddressStringLength, "%d.%d.%d.%d", a, b, c, d);
     }
 
     Address::Address(const char *address, const Port& port):
       raw_(GetRawAddressFrom(address)),
       port_(port){}
 
+    const char* Address::address() const{
+      char* data = (char*)malloc(sizeof(char)*kAddressStringLength);
+      GetAddressAsString(raw(), data);
+      return data;//TODO: fix allocation?
+    }
+
     std::string Address::ToString() const{
+      char data[kAddressStringLength];
+      GetAddressAsString(raw(), data);
+
       std::stringstream ss;
-      ss << GetAddressAsString(raw()) << ":" << port();
+      ss << std::string(data) << ":" << port();
       return ss.str();
     }
 
@@ -80,7 +89,7 @@ namespace token{
           }
         }
         inet_ntop(res->ai_family, ptr, addrstr, 100);
-        results.insert(Address(addrstr, port));
+        results.insert(Address(std::string(addrstr), port));
         res = res->ai_next;
       }
       return true;

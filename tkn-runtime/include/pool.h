@@ -23,6 +23,51 @@
   V(UnclaimedTransaction)
 
 namespace token{
+  struct PoolStats{
+    uint64_t num_blocks;
+    uint64_t num_transactions_unsigned;
+    uint64_t num_transactions_unclaimed;
+
+    PoolStats():
+      num_blocks(0),
+      num_transactions_unsigned(0),
+      num_transactions_unclaimed(0){}
+    PoolStats(const PoolStats& rhs) = default;
+    ~PoolStats() = default;
+    PoolStats& operator=(const PoolStats& rhs) = default;
+  };
+
+  namespace json{
+    static inline
+    bool Write(Writer& writer, const PoolStats& val){
+      JSON_START_OBJECT(writer);
+      {
+        if(!SetField(writer, "blocks", val.num_blocks)){
+          LOG(ERROR) << "cannot set blocks json field.";
+          return false;
+        }
+
+        if(!SetField(writer, "unsigned_transactions", val.num_transactions_unsigned)){
+          LOG(ERROR) << "cannot set unsigned transactions json field.";
+          return false;
+        }
+
+        if(!SetField(writer, "unclaimed_transactions", val.num_transactions_unclaimed)){
+          LOG(ERROR) << "cannot set unclaimed transactions json field.";
+          return false;
+        }
+      }
+      JSON_END_OBJECT(writer);
+      return true;
+    }
+
+    static inline
+    bool SetField(Writer& writer, const char* name, const PoolStats& val){
+      JSON_KEY(writer, name);
+      return Write(writer, val);
+    }
+  }
+
   class ObjectPoolVisitor{
    protected:
     ObjectPoolVisitor() = default;
@@ -159,6 +204,8 @@ namespace token{
     int64_t GetNumberOfObjects() const;
     UnclaimedTransactionPtr FindUnclaimedTransaction(const Input& input) const;
     leveldb::Status Write(const leveldb::WriteBatch& update) const;
+
+    virtual void GetPoolStats(PoolStats& stats) const;
 
 #define DEFINE_CHECK(Name) \
     inline bool Is##Name() const{ return GetState() == ObjectPool::k##Name; }

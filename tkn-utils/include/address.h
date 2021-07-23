@@ -57,6 +57,8 @@ namespace token{
         return port_;
       }
 
+      const char* address() const;
+
       std::string ToString() const;
       Address& operator=(const Address& rhs) = default;
 
@@ -75,10 +77,32 @@ namespace token{
       friend bool operator>(const Address& lhs, const Address& rhs){
         return Compare(lhs, rhs) > 0;
       }
+
+      friend std::ostream& operator<<(std::ostream& stream, const Address& rhs){
+        return stream << rhs.ToString();
+      }
     };
+
+    static inline bool
+    GetAddress(const utils::Address& val, struct sockaddr_in& result){
+      VERIFY_UVRESULT2(ERROR, uv_ip4_addr(val.address(), val.port(), &result), "cannot get ipv4 address");
+      return true;
+    }
 
     typedef std::set<Address, Address::Comparator> AddressList;
     typedef std::string Hostname;
+
+    static inline std::ostream&
+    operator<<(std::ostream& stream, const AddressList& val){
+      stream << "[";
+      auto iter = val.begin();
+      do{
+        stream << (*iter++);
+        if(iter == val.end())
+          return stream << "]";
+        stream << ", ";
+      } while(true);
+    }
 
     class AddressResolver{
      public:
@@ -100,6 +124,8 @@ namespace token{
           LOG(ERROR) << "cannot resolve address list for hostname: " << hostname;
           return Address();
         }
+
+        DLOG(INFO) << "resolved " << hostname << " := " << results;
         return (*results.begin());
       }
     };

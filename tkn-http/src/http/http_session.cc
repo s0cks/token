@@ -11,7 +11,9 @@ namespace token{
 
     RequestPtr AsyncRequestHandler::ParseRequest(){
       DLOG(INFO) << "parsing http request....";
-      return RequestParser::ParseRequest(buffer_);
+      auto request = RequestParser::ParseRequest(buffer_);
+      DLOG(INFO) << "parsed http request: " << request->ToString();
+      return request;
     }
 
     RouterMatch AsyncRequestHandler::FindMatch(const RequestPtr& request){

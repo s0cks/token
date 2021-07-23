@@ -5,8 +5,8 @@
 #include <memory>
 #include <vector>
 
-#include "message.h"
 #include "codec/codec.h"
+#include "server/message.h"
 
 namespace token{
   namespace rpc{
@@ -32,19 +32,25 @@ namespace token{
       }
     public:
       ~Message() override = default;
-      static MessagePtr From(const BufferPtr& buffer);
+      virtual Type type() const = 0;
+      virtual std::string ToString() const = 0;
     };
 
     class MessageParser{
     protected:
       BufferPtr data_;
+
+      inline bool
+      HasMoreBytes() const{
+        return data_->GetReadPosition() < data_->GetWritePosition();
+      }
     public:
       explicit MessageParser(const BufferPtr& data):
         data_(data){}
       ~MessageParser() = default;
 
       bool HasNext() const{
-        return data_->GetReadPosition() < data_->GetWritePosition();
+        return HasMoreBytes();//TODO: check for message header & magic constant
       }
 
       MessagePtr Next() const;

@@ -5,10 +5,10 @@
 #include <ostream>
 #include <unordered_map>
 
+#include "uuid.h"
 #include "json.h"
 #include "version.h"
 #include "timestamp.h"
-#include "configuration.h"
 
 namespace token{
   namespace http{
@@ -131,8 +131,10 @@ namespace token{
 
     static inline std::string
     GetServerHeaderValue(){
+      Version version = Version::CurrentVersion();
+
       std::stringstream ss;
-      ss << "Node/" << Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
+      ss << "Node/v" << version.major() << "." << version.minor() << "." << version.revision();
       return ss.str();
     }
 
@@ -140,7 +142,7 @@ namespace token{
 
     static inline std::string
     GetXNodeIDHeaderValue(){
-      UUID node_id = config::GetServerNodeID();
+      UUID node_id; //TODO: get node server id
 
       std::stringstream ss;
       ss << "Node/" << node_id.ToString();//TODO: use to string abbreviated?
@@ -149,8 +151,10 @@ namespace token{
 
     static inline std::string
     GetXNodeVersionHeaderValue(){
+      Version version = Version::CurrentVersion();
+
       std::stringstream ss;
-      ss << Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
+      ss << "v" << version.major() << "." << version.minor() << "." << version.revision();
       return ss.str();
     }
 
@@ -160,7 +164,8 @@ namespace token{
       SetHttpHeader(headers, HTTP_HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, "*");
       SetHttpHeader(headers, HTTP_HEADER_DATE, Clock::now());
       SetHttpHeader(headers, HTTP_HEADER_SERVER, GetServerHeaderValue());
-      SetHttpHeader(headers, HTTP_HEADER_X_NODE_ID, GetXNodeIDHeaderValue());
+      //TODO: fix the UUID encoding for headers?
+      //SetHttpHeader(headers, HTTP_HEADER_X_NODE_ID, GetXNodeIDHeaderValue());
       SetHttpHeader(headers, HTTP_HEADER_X_NODE_VERSION, GetXNodeVersionHeaderValue());
     }
 

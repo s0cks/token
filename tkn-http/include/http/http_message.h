@@ -5,8 +5,8 @@
 #include <utility>
 
 #include "buffer.h"
-#include "message.h"
-#include "http_common.h"
+#include "server/message.h"
+#include "http/http_common.h"
 
 namespace token{
   namespace http{
@@ -55,7 +55,7 @@ namespace token{
 
       virtual const char* GetName() const = 0;
 
-      static MessagePtr From(const BufferPtr& buffer);
+      static MessagePtr From(const internal::BufferPtr& buffer);
     };
 
     class MessageBuilderBase{
@@ -91,10 +91,6 @@ namespace token{
       MessageBuilderBase& operator=(const MessageBuilderBase& other) = default;
     };
   }
-
-#define DEFINE_HTTP_MESSAGE(Name) \
-  const char* GetName() const override{ return #Name; } \
-  Type type() const override{ return Type::kHttp##Name; }
 }
 
 #endif//TOKEN_HTTP_MESSAGE_H

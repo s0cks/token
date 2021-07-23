@@ -30,9 +30,5 @@ namespace token{
           return nullptr;
       }
     }
-
-    MessagePtr Message::From(const BufferPtr& buffer){
-
-    }
   }
 }

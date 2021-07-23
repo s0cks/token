@@ -54,7 +54,10 @@ namespace token{
         return encoder.Encode(buff);
       }
 
-      std::string ToString() const override;
+      std::string ToString() const override{
+        return "BlockMessage()";
+      }
+
       BlockMessage& operator=(const BlockMessage& other) = default;
 
       static inline BlockMessagePtr

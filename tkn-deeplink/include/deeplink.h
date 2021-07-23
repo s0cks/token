@@ -73,7 +73,7 @@ namespace token{
     }
   };
 
-  bool WritePNG(const BufferPtr& buff, Bitmap& bitmap);
+  bool WritePNG(const internal::BufferPtr& buff, Bitmap& bitmap);
 }
 
 #endif//TOKEN_QRCODE_H

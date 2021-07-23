@@ -5,13 +5,13 @@
 
 namespace token{
   struct WriteData{
-    BufferPtr buffer;
+    internal::BufferPtr buffer;
   };
 
   static void
   WritePNGData(png_structp png, png_bytep data, size_t length){
-    WriteData* write_data = (WriteData*)png_get_io_ptr(png);
-    BufferPtr& buffer = write_data->buffer;
+    auto write_data = (WriteData*)png_get_io_ptr(png);
+    internal::BufferPtr& buffer = write_data->buffer;
     if(!buffer->PutBytes(data, length)){
       png_error(png, "WriteError");
     }
@@ -19,7 +19,7 @@ namespace token{
 
   void FlushPNGData(png_structp png){}
 
-  bool WritePNG(const BufferPtr& buff, Bitmap& bitmap){
+  bool WritePNG(const internal::BufferPtr& buff, Bitmap& bitmap){
     png_structp png;
     if(!(png = png_create_write_struct(PNG_LIBPNG_VER_STRING, (png_voidp)NULL,NULL,NULL))){
       LOG(WARNING) << "couldn't create png struct.";

@@ -3,7 +3,7 @@
 namespace token{
   class HttpClientSession : public http::Session{
    private:
-    NodeAddress address_;
+    utils::Address address_;
     uv_connect_t connect_;
     http::RequestPtr request_;
     http::ResponsePtr response_;
@@ -14,7 +14,7 @@ namespace token{
     }
 
     static void OnConnect(uv_connect_t* handle, int status){
-      HttpClientSession* session = (HttpClientSession*)handle->data;
+      auto session = (HttpClientSession*)handle->data;
       if(status != 0){
         LOG(ERROR) << "connect failure: " << uv_strerror(status);
         return session->CloseConnection();
@@ -60,7 +60,7 @@ namespace token{
       response_ = response;
     }
    public:
-    HttpClientSession(const NodeAddress& address, const http::RequestPtr& request):
+    HttpClientSession(const utils::Address& address, const http::RequestPtr& request):
       http::Session(uv_loop_new()),
       address_(address),
       connect_(),
@@ -68,7 +68,7 @@ namespace token{
       response_(nullptr){
       connect_.data = this;
     }
-    ~HttpClientSession(){
+    ~HttpClientSession() override{
       uv_loop_close(loop_);
       free(loop_);
     }
@@ -85,14 +85,12 @@ namespace token{
       int err;
 
       struct sockaddr_in address;
-      if((err = uv_ip4_addr(address_.GetAddress().c_str(), address_.port(), &address)) != 0){
+      if((err = uv_ip4_addr(address_.ToString().data(), address_.port(), &address)) != 0){
         LOG(ERROR) << "uv_ip4_addr failure: " << uv_strerror(err);
         return false;
       }
 
-#ifdef TOKEN_DEBUG
-      LOG(INFO) << "creating connection to " << address_ << ".....";
-#endif//TOKEN_DEBUG
+      DLOG(INFO) << "creating connection to " << address_ << "....";
       if((err = uv_tcp_connect(&connect_, &handle_, (const struct sockaddr*)&address, &OnConnect)) != 0){
         LOG(ERROR) << "couldn't connect to elasticsearch @ " << address_ << ": " << uv_strerror(err);
         return false;
