@@ -8,59 +8,22 @@
 
 namespace token{
   namespace http{
+    class ServiceBase;
     class Session : public SessionBase{
-     private:
-      internal::BufferPtr rbuffer_;
-
-      RouterPtr router_;
      public:
       Session():
-        SessionBase(),
-        rbuffer_(),
-        router_(Router::NewInstance()){}
+        SessionBase(){}
+      Session(uv_loop_t* loop, const UUID& session_id):
+        SessionBase(loop, session_id){}
       explicit Session(uv_loop_t* loop):
-        SessionBase(loop, UUID()),
-        rbuffer_(),
-        router_(Router::NewInstance()){}
-      Session(uv_loop_t* loop, const RouterPtr& router):
-        SessionBase(loop, UUID()),
-        rbuffer_(internal::NewBuffer(65536)),
-        router_(router){}
+        Session(loop, UUID()){}
       ~Session() override = default;
 
-      void OnMessageRead(const internal::BufferPtr& buff);
+      virtual void OnMessageRead(const internal::BufferPtr& buff) = 0;
 
       void Send(const http::HttpMessagePtr& msg){
         //TODO: log?
         return SendMessages({msg});
-      }
-    };
-
-    class AsyncRequestHandler{
-     private:
-      uv_async_t request_;
-      Session* session_;
-      RouterPtr router_;
-      internal::BufferPtr buffer_;
-
-      RequestPtr ParseRequest();
-      RouterMatch FindMatch(const RequestPtr& request);
-
-      static void DoWork(uv_async_t* request);
-     public:
-      explicit AsyncRequestHandler(uv_loop_t* loop, Session* session, const RouterPtr& router, const internal::BufferPtr& buff):
-        request_(),
-        session_(session),
-        router_(router),
-        buffer_(buff){
-        request_.data = this;
-        CHECK_UVRESULT2(ERROR, uv_async_init(loop, &request_, &DoWork), "couldn't initialize async handle.");
-      }
-      ~AsyncRequestHandler() = default;
-
-      bool Execute(){
-        VERIFY_UVRESULT2(ERROR, uv_async_send(&request_), "couldn't send async request.");
-        return true;
       }
     };
   }

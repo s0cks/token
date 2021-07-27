@@ -2,8 +2,7 @@
 
 namespace token{
   namespace http{
-    RestService::RestService(uv_loop_t* loop,
-                             const ObjectPoolPtr& pool):
+    RestService::RestService(uv_loop_t* loop, ObjectPool& pool):
      ServiceBase(loop),
      pool_(PoolController::NewInstance(pool)){
 
@@ -17,12 +16,7 @@ namespace token{
 //        LOG(WARNING) << "couldn't initialize the wallet controller.";
     }
 
-    RestServicePtr RestService::NewInstance(){
-      return std::make_shared<RestService>(uv_loop_new(), ObjectPool::GetInstance());
-    }
-
-    RestServicePtr RestService::NewInstance(uv_loop_t* loop,
-                                            const ObjectPoolPtr& pool){
+    RestServicePtr RestService::NewInstance(uv_loop_t* loop, ObjectPool& pool){
       return std::make_shared<RestService>(loop, pool);
     }
   }

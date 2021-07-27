@@ -4,7 +4,7 @@
 namespace token{
   namespace task{
     Task* TaskEngineWorker::GetNextTask(){
-      auto next = (Task*)GetTaskQueue()->Pop();
+      auto next = (Task*)GetTaskQueue().Pop();
       if(next)
         return next;
       auto queue = GetEngine()->GetRandomQueue();

@@ -13,7 +13,7 @@ namespace token{
   }
 
   BufferPtr UnsignedTransaction::ToBuffer() const{
-    codec::UnsignedTransactionEncoder encoder((*this), codec::kDefaultEncoderFlags);
+    UnsignedTransaction::Encoder encoder(this, codec::kDefaultEncoderFlags);
     BufferPtr buffer = internal::NewBufferFor(encoder);
     if(!encoder.Encode(buffer)){
       LOG(FATAL) << "cannot encode UnsignedTransaction to buffer.";
@@ -22,23 +22,21 @@ namespace token{
     return buffer;
   }
 
-  namespace codec{
-    int64_t UnsignedTransactionEncoder::GetBufferSize() const{
-      return TransactionEncoder<UnsignedTransaction>::GetBufferSize();
-    }
+  int64_t UnsignedTransaction::Encoder::GetBufferSize() const{
+    return TransactionEncoder<UnsignedTransaction>::GetBufferSize();
+  }
 
-    bool UnsignedTransactionEncoder::Encode(const BufferPtr& buff) const{
-      return TransactionEncoder<UnsignedTransaction>::Encode(buff);
-    }
+  bool UnsignedTransaction::Encoder::Encode(const BufferPtr& buff) const{
+    return TransactionEncoder<UnsignedTransaction>::Encode(buff);
+  }
 
-    bool UnsignedTransactionDecoder::Decode(const BufferPtr &buff, UnsignedTransaction& result) const{
-      Timestamp timestamp;
-      InputList inputs;
-      OutputList outputs;
-      if(!DecodeTransactionData(buff, timestamp, inputs, outputs))
-        return false;
-      result = UnsignedTransaction(timestamp, inputs, outputs);
-      return true;
-    }
+  bool UnsignedTransaction::Decoder::Decode(const BufferPtr &buff, UnsignedTransaction& result) const{
+    Timestamp timestamp;
+    InputList inputs;
+    OutputList outputs;
+    if(!DecodeTransactionData(buff, timestamp, inputs, outputs))
+      return false;
+    result = UnsignedTransaction(timestamp, inputs, outputs);
+    return true;
   }
 }

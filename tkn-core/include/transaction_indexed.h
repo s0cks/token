@@ -5,35 +5,33 @@
 #include "transaction.h"
 
 namespace token{
-  namespace codec{
-    class IndexedTransactionEncoder : public TransactionEncoder<IndexedTransaction> {
-     public:
-      explicit IndexedTransactionEncoder(const IndexedTransaction &value, const codec::EncoderFlags &flags = codec::kDefaultEncoderFlags) :
-        TransactionEncoder<IndexedTransaction>(value, flags) {}
-      IndexedTransactionEncoder(const IndexedTransactionEncoder &other) = default;
-      ~IndexedTransactionEncoder() override = default;
-      int64_t GetBufferSize() const override;
-      bool Encode(const BufferPtr &buff) const override;
-      IndexedTransactionEncoder &operator=(const IndexedTransactionEncoder &other) = default;
-    };
-
-    class IndexedTransactionDecoder : public TransactionDecoder<IndexedTransaction> {
-     public:
-      explicit IndexedTransactionDecoder(const codec::DecoderHints& hints):
-        TransactionDecoder<IndexedTransaction>(hints){}
-      IndexedTransactionDecoder(const IndexedTransactionDecoder& other) = default;
-      ~IndexedTransactionDecoder() override = default;
-      bool Decode(const BufferPtr &buff, IndexedTransaction &result) const override;
-      IndexedTransactionDecoder& operator=(const IndexedTransactionDecoder& other) = default;
-    };
-  }
-
 class IndexedTransaction : public internal::TransactionBase {
  public:
   struct IndexComparator {
     bool operator()(const IndexedTransactionPtr &a, const IndexedTransactionPtr &b) {
       return a->index() < b->index();
     }
+  };
+
+  class Encoder : public codec::TransactionEncoder<IndexedTransaction> {
+  public:
+    explicit Encoder(IndexedTransaction* value, const codec::EncoderFlags &flags = codec::kDefaultEncoderFlags) :
+      TransactionEncoder<IndexedTransaction>(value, flags) {}
+    Encoder(const Encoder &other) = default;
+    ~Encoder() override = default;
+    int64_t GetBufferSize() const override;
+    bool Encode(const BufferPtr &buff) const override;
+    Encoder &operator=(const Encoder &other) = default;
+  };
+
+  class Decoder : public codec::TransactionDecoder<IndexedTransaction> {
+  public:
+    explicit Decoder(const codec::DecoderHints& hints):
+      TransactionDecoder<IndexedTransaction>(hints){}
+    Decoder(const Decoder& other) = default;
+    ~Decoder() override = default;
+    bool Decode(const BufferPtr &buff, IndexedTransaction &result) const override;
+    Decoder& operator=(const Decoder& other) = default;
   };
  private:
   int64_t index_;
@@ -77,7 +75,7 @@ class IndexedTransaction : public internal::TransactionBase {
 
   static inline bool
   Decode(const BufferPtr& buff, IndexedTransaction& result, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
-    codec::IndexedTransactionDecoder decoder(hints);
+    Decoder decoder(hints);
     return decoder.Decode(buff, result);
   }
 

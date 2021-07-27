@@ -2,6 +2,8 @@
 #include "configuration.h"
 
 #include "pool.h"
+#include "runtime.h"
+
 #include "node/node_server.h"
 #include "task/task_engine.h"
 #include "http/http_service_rest.h"
@@ -198,14 +200,24 @@ main(int argc, char **argv){
     }
   }
 
-  // initialize the configuration
+  Proposal proposal(Clock::now(), UUID(), UUID(), 100, Hash::GenerateNonce());
+  DLOG(INFO) << "proposal: " << proposal;
+  auto request = rpc::PrepareMessage::NewInstance(proposal);
+  DLOG(INFO) << "request: " << request->ToString();
 
-  task::TaskQueue queue(task::kDefaultTaskEngineQueueSize);
-  task::TaskEngine engine(FLAGS_num_workers, 1);
-  engine.RegisterQueue(&queue);
+  rpc::PrepareMessage::Encoder encoder(request.get(), codec::kDefaultEncoderFlags);
+  auto data = internal::NewBufferFor(encoder);
+  if(!encoder.Encode(data)){
+    DLOG(FATAL) << "cannot encode PrepareMessage to buffer.";
+    return EXIT_FAILURE;
+  }
+  auto response = rpc::PrepareMessage::DecodeNew(data, codec::kDefaultDecoderHints);
+  DLOG(INFO) << "response: " << response->ToString();
 
   // initialize the configuration
   config::Initialize(FLAGS_path);
+
+  Runtime runtime;
 
   // start the health check service
   http::HealthServiceThread health_service_thread;
@@ -213,9 +225,6 @@ main(int argc, char **argv){
 
   // initialize the keychain
   //TODO: SilentlyInitialize<Keychain, google::FATAL>();//TODO: refactor & parallelize
-
-  // initialize the object pool
-  SilentlyInitialize<ObjectPool, google::FATAL>();
 
   // initialize the wallet manager
   //TODO: SilentlyInitialize<WalletManager, google::FATAL>();
@@ -225,22 +234,22 @@ main(int argc, char **argv){
 
   // start the rpc server
   node::Server server(uv_loop_new(), nullptr, nullptr);
-  ServerThread<node::Server> server_thread;
+  ServerThread<node::Server> server_thread(&server);
   SilentlyStartService<node::Server, ServerThread<node::Server>, google::FATAL>(server_thread);
 
   // start the peer threads & connect to any known peers
   SilentlyInitialize<PeerSessionManager, google::FATAL>();
 
   // start the rest service
-  http::RestServiceThread rest_service_thread;
-  SilentlyStartService<http::RestService, http::RestServiceThread, google::FATAL>(rest_service_thread);
+  http::RestService rest_service(uv_loop_new(), runtime.GetPool());
+  ServerThread<http::RestService> rest_service_thread(&rest_service);
+  SilentlyStartService<http::RestService, ServerThread<http::RestService>, google::FATAL>(rest_service_thread);
 
-  sleep(5);
-  PrintRuntimeInformation();
+  runtime.Run();
 
 //  //TODO: SilentlyWaitForShutdown<PeerSessionManager
   SilentlyWaitForShutdown<node::Server, ServerThread<node::Server>, google::FATAL>(server_thread);
-  SilentlyWaitForShutdown<http::RestService, http::RestServiceThread, google::FATAL>(rest_service_thread);
+//  SilentlyWaitForShutdown<http::RestService, http::RestServiceThread, google::FATAL>(rest_service_thread);
   SilentlyWaitForShutdown<http::HealthService, http::HealthServiceThread, google::FATAL>(health_service_thread);
   return EXIT_SUCCESS;
 }

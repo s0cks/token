@@ -6,32 +6,26 @@
 
 namespace token{
   namespace rpc{
-    class BlockMessage;
-  }
-
-  namespace codec{
-    class BlockMessageEncoder : public ObjectMessageEncoder<rpc::BlockMessage, BlockEncoder>{
-    public:
-      BlockMessageEncoder(const rpc::BlockMessage& value, const codec::EncoderFlags& flags):
-        ObjectMessageEncoder<rpc::BlockMessage, BlockEncoder>(value, flags){}
-      BlockMessageEncoder(const BlockMessageEncoder& other) = default;
-      ~BlockMessageEncoder() override = default;
-      BlockMessageEncoder& operator=(const BlockMessageEncoder& other) = delete;//TODO: don't delete this copy assignment operator
-    };
-
-    class BlockMessageDecoder : public ObjectMessageDecoder<rpc::BlockMessage, BlockDecoder>{
-    public:
-      explicit BlockMessageDecoder(const DecoderHints& hints):
-        ObjectMessageDecoder<rpc::BlockMessage, BlockDecoder>(hints){}
-      BlockMessageDecoder(const BlockMessageDecoder& rhs) = default;
-      ~BlockMessageDecoder() override = default;
-      bool Decode(const BufferPtr& buff, rpc::BlockMessage& result) const override;
-      BlockMessageDecoder& operator=(const BlockMessageDecoder& rhs) = default;
-    };
-  }
-
-  namespace rpc{
     class BlockMessage : public ObjectMessage<Block>{
+    public:
+      class Encoder : public ObjectMessageEncoder<rpc::BlockMessage, BlockEncoder>{
+      public:
+        Encoder(const rpc::BlockMessage& value, const codec::EncoderFlags& flags):
+          ObjectMessageEncoder<rpc::BlockMessage, >(value, flags){}
+        Encoder(const Encoder& other) = default;
+        ~Encoder() override = default;
+        Encoder& operator=(const Encoder& other) = delete;//TODO: don't delete this copy assignment operator
+      };
+
+      class Decoder : public ObjectMessageDecoder<rpc::BlockMessage, BlockDecoder>{
+      public:
+        explicit Decoder(const DecoderHints& hints):
+            ObjectMessageDecoder<rpc::BlockMessage, BlockDecoder>(hints){}
+        Decoder(const Decoder& rhs) = default;
+        ~Decoder() override = default;
+        bool Decode(const BufferPtr& buff, rpc::BlockMessage& result) const override;
+        Decoder& operator=(const Decoder& rhs) = default;
+      };
      public:
       BlockMessage():
         ObjectMessage<Block>(){}
@@ -45,12 +39,12 @@ namespace token{
       }
 
       int64_t GetBufferSize() const override{
-        codec::BlockMessageEncoder encoder((*this), GetDefaultMessageEncoderFlags());
+        codec::Encoder encoder((*this), GetDefaultMessageEncoderFlags());
         return encoder.GetBufferSize();
       }
 
       bool Write(const BufferPtr& buff) const override{
-        codec::BlockMessageEncoder encoder((*this), GetDefaultMessageEncoderFlags());
+        codec::Encoder encoder((*this), GetDefaultMessageEncoderFlags());
         return encoder.Encode(buff);
       }
 
@@ -67,7 +61,7 @@ namespace token{
 
       static inline bool
       Decode(const BufferPtr& buff, BlockMessage& result, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
-        codec::BlockMessageDecoder decoder(hints);
+        codec::Decoder decoder(hints);
         return decoder.Decode(buff, result);
       }
 

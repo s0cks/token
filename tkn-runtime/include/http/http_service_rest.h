@@ -14,8 +14,7 @@ namespace token{
      private:
       PoolControllerPtr pool_;
      public:
-      RestService(uv_loop_t* loop,
-                  const ObjectPoolPtr& pool);
+      RestService(uv_loop_t* loop, ObjectPool& pool);
       ~RestService() override = default;
 
       PoolControllerPtr GetPoolController() const{
@@ -37,13 +36,7 @@ namespace token{
         return "http/rest";
       }
 
-      static RestServicePtr NewInstance();
-      static RestServicePtr NewInstance(uv_loop_t* loop, const ObjectPoolPtr& pool);
-
-      static inline RestServicePtr
-      NewInstance(const BlockChainPtr& chain, const ObjectPoolPtr& pool){
-        return NewInstance(uv_loop_new(), pool);
-      }
+      static RestServicePtr NewInstance(uv_loop_t* loop, ObjectPool& pool);
     };
 
     class RestServiceThread : public ServiceThread<RestService>{};

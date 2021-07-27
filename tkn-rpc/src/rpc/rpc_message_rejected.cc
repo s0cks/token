@@ -1,8 +1,8 @@
 #include "rpc/rpc_message_rejected.h"
 
 namespace token{
-  namespace codec{
-    bool RejectedMessageDecoder::Decode(const BufferPtr& buff, rpc::RejectedMessage& result) const{
+  namespace rpc{
+    bool RejectedMessage::Decoder::Decode(const BufferPtr& buff, rpc::RejectedMessage& result) const{
       Proposal proposal;
       if(!DecodeProposalData(buff, proposal)){
         LOG(FATAL) << "cannot decode proposal from buffer.";

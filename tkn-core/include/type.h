@@ -9,8 +9,6 @@ namespace token{
 #define FOR_EACH_MESSAGE_TYPE(V) \
   V(Version)                     \
   V(Verack)                      \
-  V(Block)                       \
-  V(Transaction)                 \
   V(Prepare)                     \
   V(Promise)                     \
   V(Commit)                      \

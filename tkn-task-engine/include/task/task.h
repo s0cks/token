@@ -16,6 +16,7 @@ namespace token{
   V(Cancelled)                  \
   V(TimedOut)
 
+    class TaskEngine;
     class Task{
      public:
       enum class Status{
@@ -36,11 +37,13 @@ namespace token{
         }
       }
      protected:
+      TaskEngine* engine_;
       Task* parent_;
       atomic::RelaxedAtomic<Status> status_;
       atomic::RelaxedAtomic<int64_t> unfinished_;
 
-      explicit Task(Task* parent):
+      Task(TaskEngine* engine, Task* parent):
+        engine_(engine),
         parent_(parent),
         status_(Status::kUnqueued),
         unfinished_(1){
@@ -48,8 +51,10 @@ namespace token{
           parent->unfinished_ += 1;
         }
       }
-      Task():
-        Task(nullptr){}
+      explicit Task(Task* parent):
+        Task(parent->GetEngine(), parent){}
+      explicit Task(TaskEngine* engine):
+        Task(engine, nullptr){}
 
       void SetParent(Task* parent){
         parent_ = parent;
@@ -60,6 +65,10 @@ namespace token{
       }
      public:
       virtual ~Task() = default;
+
+      TaskEngine* GetEngine() const{
+        return engine_;
+      }
 
       bool HasParent() const{
         return parent_ != nullptr;

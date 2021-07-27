@@ -4,29 +4,6 @@
 #include "transaction.h"
 
 namespace token{
-  namespace codec{
-    class UnsignedTransactionEncoder: public TransactionEncoder<UnsignedTransaction>{
-    public:
-      explicit UnsignedTransactionEncoder(const UnsignedTransaction& value, const codec::EncoderFlags& flags = codec::kDefaultEncoderFlags):
-          TransactionEncoder<UnsignedTransaction>(value, flags){}
-
-      UnsignedTransactionEncoder(const UnsignedTransactionEncoder& other) = default;
-      ~UnsignedTransactionEncoder() override = default;
-      int64_t GetBufferSize() const override;
-      bool Encode(const BufferPtr& buff) const override;
-      UnsignedTransactionEncoder& operator=(const UnsignedTransactionEncoder& other) = default;
-    };
-
-    class UnsignedTransactionDecoder: public TransactionDecoder<UnsignedTransaction>{
-    public:
-      explicit UnsignedTransactionDecoder(const codec::DecoderHints& hints):
-        TransactionDecoder<UnsignedTransaction>(hints){}
-      UnsignedTransactionDecoder(const UnsignedTransactionDecoder& other) = default;
-      ~UnsignedTransactionDecoder() override = default;
-      bool Decode(const BufferPtr& buff, UnsignedTransaction& result) const override;
-      UnsignedTransactionDecoder& operator=(const UnsignedTransactionDecoder& other) = default;
-    };
-  }
   class UnsignedTransaction: public internal::TransactionBase{
   public:
     struct TimestampComparator{
@@ -35,6 +12,26 @@ namespace token{
       }
     };
 
+  class Encoder: public codec::TransactionEncoder<UnsignedTransaction>{
+    public:
+      explicit Encoder(const UnsignedTransaction* value, const codec::EncoderFlags& flags = codec::kDefaultEncoderFlags):
+        TransactionEncoder<UnsignedTransaction>(value, flags){}
+      Encoder(const Encoder& other) = default;
+      ~Encoder() override = default;
+      int64_t GetBufferSize() const override;
+      bool Encode(const BufferPtr& buff) const override;
+      Encoder& operator=(const Encoder& other) = default;
+    };
+
+  class Decoder: public codec::TransactionDecoder<UnsignedTransaction>{
+    public:
+      explicit Decoder(const codec::DecoderHints& hints):
+          TransactionDecoder<UnsignedTransaction>(hints){}
+      Decoder(const Decoder& other) = default;
+      ~Decoder() override = default;
+      bool Decode(const BufferPtr& buff, UnsignedTransaction& result) const override;
+      Decoder& operator=(const Decoder& other) = default;
+    };
   public:
     UnsignedTransaction():
       internal::TransactionBase(){}
@@ -62,7 +59,7 @@ namespace token{
 
     static inline bool
     Decode(const BufferPtr& buff, UnsignedTransaction& result, const codec::DecoderHints& hints = codec::kDefaultDecoderHints){
-      codec::UnsignedTransactionDecoder decoder(hints);
+      Decoder decoder(hints);
       return decoder.Decode(buff, result);
     }
 

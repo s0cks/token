@@ -50,7 +50,7 @@ namespace token{
       return;
     }
 
-    codec::BlockEncoder encoder(*blk, codec::kDefaultEncoderFlags); //TODO: change encoder flags
+    Block::Encoder encoder(blk.get(), codec::kDefaultEncoderFlags); //TODO: change encoder flags
     BufferPtr data = internal::NewBufferFor(encoder);
     if(!encoder.Encode(data)){
       LOG(FATAL) << "cannot encode write block " << blk->hash() << " to buffer.";

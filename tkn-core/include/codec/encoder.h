@@ -9,6 +9,9 @@
 
 namespace token{
   namespace codec{
+#define ENCODED_FIELD(Name, Type, Value) \
+    DVLOG(1) << "encoded " << #Name << " (" << #Type << "): " << (Value)
+
     typedef uint8_t EncoderFlags;
 
     class EncodeTypeFlag : public BitField<EncoderFlags, bool, 0, 1>{};
@@ -17,22 +20,13 @@ namespace token{
 
     static const EncoderFlags kDefaultEncoderFlags = 0;
 
-    template<class T>
     class EncoderBase{
      protected:
-      typedef EncoderBase<T> BaseType;
-
-      Type type_;
-      const T& value_;
       EncoderFlags flags_;
 
-      EncoderBase(const Type& type, const T& value, const codec::EncoderFlags& flags):
-        type_(type),
-        value_(value),
+      explicit EncoderBase(const EncoderFlags& flags):
         flags_(flags){}
-      EncoderBase(const T& value, const EncoderFlags& flags):
-        EncoderBase(value.type(), value, flags){}
-      EncoderBase(const EncoderBase<T>& other) = default;
+      EncoderBase(const EncoderBase& other) = default;
 
       template<class V, class E>
       static inline int64_t
@@ -56,29 +50,8 @@ namespace token{
         }
         return size;
       }
-
-      inline Type GetObjectType() const{
-        return value().type();
-      }
-
-      static inline bool
-      EncodeType(const BufferPtr& buff, const Type& type){
-        return buff->PutUnsignedLong(static_cast<uint64_t>(type));
-      }
      public:
-      virtual ~EncoderBase<T>() = default;
-
-      Type& type(){
-        return type_;
-      }
-
-      Type type() const{
-        return type_;
-      }
-
-      const T& value() const{
-        return value_;
-      }
+      virtual ~EncoderBase() = default;
 
       EncoderFlags& flags(){
         return flags_;
@@ -100,77 +73,105 @@ namespace token{
         return EncodeMagicFlag::Decode(flags());
       }
 
-      virtual int64_t GetBufferSize() const{
+      virtual int64_t GetBufferSize() const = 0;
+      virtual bool Encode(const internal::BufferPtr& buff) const = 0;
+
+      EncoderBase& operator=(const EncoderBase& other) = default;
+    };
+
+    template<class T>
+    class TypeEncoder : public EncoderBase{
+    protected:
+      const T* value_;
+
+      TypeEncoder(const T* value, const codec::EncoderFlags& flags):
+        codec::EncoderBase(flags),
+        value_(value){}
+
+      inline const T*
+      value() const{
+        return value_;
+      }
+    public:
+      ~TypeEncoder() override = default;
+
+      int64_t GetBufferSize() const override{
         int64_t size = 0;
-        if(ShouldEncodeVersion())
-          size += (sizeof(uint16_t) * 3);
-        if(ShouldEncodeMagic())
+        if(codec::EncoderBase::ShouldEncodeMagic())
           size += sizeof(uint16_t);
-        if(ShouldEncodeType())
+        if(codec::EncoderBase::ShouldEncodeType())
           size += sizeof(uint64_t);
+        if(codec::EncoderBase::ShouldEncodeVersion())
+          size += Version::GetSize();
         return size;
       }
 
-      virtual bool Encode(const internal::BufferPtr& buff) const{
-        if(ShouldEncodeType()){
-          auto& type = type_;
+      bool Encode(const BufferPtr& buff) const override{
+        if(codec::EncoderBase::ShouldEncodeType()){
+          const auto& type = value()->type();
           if(!buff->PutUnsignedLong(static_cast<uint64_t>(type))){
             LOG(FATAL) << "couldn't encoder type to buffer.";
             return false;
           }
+          ENCODED_FIELD(type_, Type, type);
         }
 
-        if(ShouldEncodeVersion()){
+        if(codec::EncoderBase::ShouldEncodeVersion()){
           const auto& version = Version::CurrentVersion();
           if(!(buff->PutShort(version.major()) && buff->PutShort(version.minor() && buff->PutShort(version.revision())))){
             LOG(FATAL) << "couldn't encoder version to buffer.";
             return false;
           }
+          ENCODED_FIELD(version_, Version, version);
         }
 
-        if(ShouldEncodeMagic()){
+        if(codec::EncoderBase::ShouldEncodeMagic()){
           const uint16_t magic = TOKEN_CODEC_MAGIC;
           if(!buff->PutUnsignedShort(magic)){
             LOG(FATAL) << "couldn't encode magic to buffer.";
             return false;
           }
+          ENCODED_FIELD(magic_, uint16_t, magic);
         }
         return true;
       }
-
-      EncoderBase& operator=(const EncoderBase& other) = default;
     };
 
-    template<class T, class E>
-    class ListEncoder : public EncoderBase<std::vector<T>>{
-     private:
-      typedef EncoderBase<std::vector<T>> BaseType;
-     protected:
-      ListEncoder(const Type& type, const std::vector<T>& items, const codec::EncoderFlags& flags):
-        BaseType(type, items, flags){}
+    template<typename T>
+    class ListEncoder : public EncoderBase{
+    protected:
+      const std::vector<T>& items_;
+
       ListEncoder(const std::vector<T>& items, const codec::EncoderFlags& flags):
-        BaseType(items, flags){}
-     public:
-      ListEncoder(const ListEncoder<T, E>& other) = default;
+        EncoderBase(flags),
+        items_(items){}
+
+      inline const std::vector<T>&
+      items() const{
+        return items_;
+      }
+    public:
+      ListEncoder(const ListEncoder<T>& rhs) = default;
       ~ListEncoder() override = default;
 
       int64_t GetBufferSize() const override{
-        auto size = BaseType::GetBufferSize();
+        int64_t size = 0;
         size += sizeof(int64_t); // length
-        E encoder(BaseType::value().front(), BaseType::flags());
-        size += (encoder.GetBufferSize() * BaseType::value().size());
+        auto first = items().front();
+        typename T::Encoder encoder(&first, flags());
+        size += (encoder.GetBufferSize() * items().size());
         return size;
       }
 
-      bool Encode(const internal::BufferPtr& buff) const override{
-        auto length = static_cast<int64_t>(BaseType::value().size());
+      bool Encode(const BufferPtr& buff) const override{
+        auto length = static_cast<int64_t>(items().size());
         if(!buff->PutLong(length)){
           LOG(FATAL) << "couldn't serialize list length to buffer.";
           return false;
         }
-        auto& items = BaseType::value();
-        for(auto& item : items){
-          E encoder(item, BaseType::flags());
+
+        for(auto& item : items()){
+          typename T::Encoder encoder(&item, flags());
           if(!encoder.Encode(buff)){
             LOG(FATAL) << "couldn't serialize list item #" << (length - length--) << ": " << item;
             return false;
@@ -179,7 +180,7 @@ namespace token{
         return true;
       }
 
-      ListEncoder& operator=(const ListEncoder& other) = default;
+      ListEncoder& operator=(const ListEncoder<T>& rhs) = default;
     };
   }
 }

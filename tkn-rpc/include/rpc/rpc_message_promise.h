@@ -5,32 +5,26 @@
 
 namespace token{
   namespace rpc{
-    class PromiseMessage;
-  }
-
-  namespace codec{
-    class PromiseMessageEncoder : public PaxosMessageEncoder<rpc::PromiseMessage>{
-    public:
-      explicit PromiseMessageEncoder(const rpc::PromiseMessage& value, const codec::EncoderFlags& flags):
-        PaxosMessageEncoder<rpc::PromiseMessage>(value, flags){}
-      PromiseMessageEncoder(const PromiseMessageEncoder& other) = default;
-      ~PromiseMessageEncoder() override = default;
-      PromiseMessageEncoder& operator=(const PromiseMessageEncoder& other) = default;
-    };
-
-    class PromiseMessageDecoder : public PaxosMessageDecoder<rpc::PromiseMessage>{
-    public:
-      explicit PromiseMessageDecoder(const codec::DecoderHints& hints):
-        PaxosMessageDecoder<rpc::PromiseMessage>(hints){}
-      PromiseMessageDecoder(const PromiseMessageDecoder& other) = default;
-      ~PromiseMessageDecoder() override = default;
-      bool Decode(const BufferPtr& buff, rpc::PromiseMessage& result) const override;
-      PromiseMessageDecoder& operator=(const PromiseMessageDecoder& other) = default;
-    };
-  }
-
-  namespace rpc{
     class PromiseMessage : public PaxosMessage{
+    public:
+    class Encoder : public codec::PaxosMessageEncoder<rpc::PromiseMessage>{
+      public:
+        explicit Encoder(const PromiseMessage* value, const codec::EncoderFlags& flags):
+          PaxosMessageEncoder<rpc::PromiseMessage>(value, flags){}
+        Encoder(const Encoder& other) = default;
+        ~Encoder() override = default;
+        Encoder& operator=(const Encoder& other) = default;
+      };
+
+    class Decoder : public codec::PaxosMessageDecoder<rpc::PromiseMessage>{
+      public:
+        explicit Decoder(const codec::DecoderHints& hints):
+          PaxosMessageDecoder<rpc::PromiseMessage>(hints){}
+        Decoder(const Decoder& other) = default;
+        ~Decoder() override = default;
+        bool Decode(const BufferPtr& buff, rpc::PromiseMessage& result) const override;
+        Decoder& operator=(const Decoder& other) = default;
+      };
      public:
       PromiseMessage():
         PaxosMessage(){}
@@ -40,12 +34,12 @@ namespace token{
       ~PromiseMessage() override = default;
 
       int64_t GetBufferSize() const override{
-        codec::PromiseMessageEncoder encoder((*this), GetDefaultMessageEncoderFlags());
+        Encoder encoder(this, GetDefaultMessageEncoderFlags());
         return encoder.GetBufferSize();
       }
 
       bool Write(const BufferPtr& buff) const override{
-        codec::PromiseMessageEncoder encoder((*this), GetDefaultMessageEncoderFlags());
+        Encoder encoder(this, GetDefaultMessageEncoderFlags());
         return encoder.Encode(buff);
       }
 
@@ -72,7 +66,7 @@ namespace token{
 
       static inline bool
       Decode(const BufferPtr& buff, PromiseMessage& result, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
-        codec::PromiseMessageDecoder decoder(hints);
+        Decoder decoder(hints);
         return decoder.Decode(buff, result);
       }
 

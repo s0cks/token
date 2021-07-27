@@ -4,8 +4,10 @@ set(CMAKE_CXX_STANDARD 11)
 find_package(glog REQUIRED)
 
 add_library(tkn-utils STATIC
+    include/atomic/linked_list.h
     include/atomic/relaxed_atomic.h
     include/atomic/work_stealing_queue.h
+
     include/server/message.h
     include/server/server.h
     include/server/session.h
@@ -23,8 +25,10 @@ add_library(tkn-utils STATIC
     include/key.h
     include/keychain.h src/keychain.cc
     include/kvstore.h
+    include/loop_thread.h
     include/raw_proposal.h
     include/string_utils.h
+    include/timer.h
     include/timestamp.h
     include/trie.h
     include/units.h

@@ -93,14 +93,14 @@ namespace token{
     template<class M>
     class HandshakeMessageEncoder : public MessageEncoder<M>{
     protected:
-      HandshakeMessageEncoder(const M& value, const codec::EncoderFlags& flags):
+      HandshakeMessageEncoder(const M* value, const codec::EncoderFlags& flags):
         MessageEncoder<M>(value, flags){}
     public:
       HandshakeMessageEncoder(const HandshakeMessageEncoder<M>& other) = default;
       ~HandshakeMessageEncoder<M>() override = default;
 
       int64_t GetBufferSize() const override{
-        int64_t size = codec::EncoderBase<M>::GetBufferSize();
+        int64_t size = MessageEncoder<M>::GetBufferSize();
         size += sizeof(RawTimestamp); // timestamp_
         size += Hash::GetSize(); // nonce_
         return size;
@@ -110,7 +110,7 @@ namespace token{
         if(!MessageEncoder<M>::Encode(buff))
           return false;
 
-        const auto& timestamp = MessageEncoder<M>::value().timestamp();
+        const auto& timestamp = MessageEncoder<M>::value()->timestamp();
         if(!buff->PutTimestamp(timestamp)){
           LOG(FATAL) << "cannot encode timestamp to buffer.";
           return false;
@@ -119,7 +119,7 @@ namespace token{
         //TODO: encoder client_type_
         //TODO: encoder version_
 
-        const auto& nonce = MessageEncoder<M>::value().nonce();
+        const auto& nonce = MessageEncoder<M>::value()->nonce();
         if(!buff->PutHash(nonce)){
           LOG(FATAL) << "cannot encode hash to buffer.";
           return false;

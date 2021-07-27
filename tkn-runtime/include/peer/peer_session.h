@@ -18,6 +18,8 @@ namespace token{
       uv_async_t disconnect_;
       uv_async_t send_version_;
       uv_async_t send_verack_;
+      uv_async_t send_prepare_;
+      uv_async_t send_commit_;
 
       SessionMessageHandler& handler(){
         return handler_;
@@ -39,6 +41,8 @@ namespace token{
 
       static void OnSendVersion(uv_async_t* handle);
       static void OnSendVerack(uv_async_t* handle);
+      static void OnSendPrepare(uv_async_t* handle);
+      static void OnSendCommit(uv_async_t* handle);
     public:
       Session():
         rpc::Session(),
@@ -47,13 +51,19 @@ namespace token{
         connection_(),
         disconnect_(),
         send_version_(),
-        send_verack_(){
+        send_verack_(),
+        send_prepare_(),
+        send_commit_(){
         connection_.data = this;
         disconnect_.data = this;
         send_version_.data = this;
         CHECK_UVRESULT2(FATAL, uv_async_init(GetLoop(), &send_version_, &OnSendVersion), "couldn't initialize send_version_ callback");
         send_verack_.data = this;
         CHECK_UVRESULT2(FATAL, uv_async_init(GetLoop(), &send_verack_, &OnSendVerack), "couldn't initialize send_verack_ callback");
+        send_prepare_.data = this;
+        CHECK_UVRESULT2(FATAL, uv_async_init(GetLoop(), &send_prepare_, &OnSendPrepare), "couldn't initialize send_prepare_ callback");
+        send_commit_.data = this;
+        CHECK_UVRESULT2(FATAL, uv_async_init(GetLoop(), &send_commit_, &OnSendCommit), "couldn't initialize send_commit_ callback");
       }
       Session(uv_loop_t* loop, utils::Address address):
         rpc::Session(loop),
@@ -62,13 +72,19 @@ namespace token{
         connection_(),
         disconnect_(),
         send_version_(),
-        send_verack_(){
+        send_verack_(),
+        send_prepare_(),
+        send_commit_(){
         connection_.data = this;
         disconnect_.data = this;
         send_version_.data = this;
         CHECK_UVRESULT2(FATAL, uv_async_init(GetLoop(), &send_version_, &OnSendVersion), "couldn't initialize send_version_ callback");
         send_verack_.data = this;
         CHECK_UVRESULT2(FATAL, uv_async_init(GetLoop(), &send_verack_, &OnSendVerack), "couldn't initialize send_verack_ callback");
+        send_prepare_.data = this;
+        CHECK_UVRESULT2(FATAL, uv_async_init(GetLoop(), &send_prepare_, &OnSendPrepare), "couldn't initialize send_prepare_ callback");
+        send_commit_.data = this;
+        CHECK_UVRESULT2(FATAL, uv_async_init(GetLoop(), &send_commit_, &OnSendCommit), "couldn't initialize send_commit_ callback");
       }
       explicit Session(utils::Address address):
         Session(uv_loop_new(), address){}
@@ -89,6 +105,16 @@ namespace token{
 
       bool SendVerack(){
         VERIFY_UVRESULT2(ERROR, uv_async_send(&send_verack_), "couldn't invoke send_verack_ callback");
+        return true;
+      }
+
+      bool SendPrepare(){
+        VERIFY_UVRESULT2(ERROR, uv_async_send(&send_prepare_), "couldn't invoke send_prepare_ callback");
+        return true;
+      }
+
+      bool SendCommit(){
+        VERIFY_UVRESULT2(ERROR, uv_async_send(&send_commit_), "couldn't invoke send_commit_ callback");
         return true;
       }
 

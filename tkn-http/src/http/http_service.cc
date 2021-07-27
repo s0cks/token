@@ -1,12 +1,16 @@
-#include "http/http_session.h"
+#include "http/http_service.h"
 #include "http/http_request.h"
 #include "http/http_response.h"
 
 namespace token{
   namespace http{
-    void Session::OnMessageRead(const BufferPtr& buff){
-      auto handler = new AsyncRequestHandler(GetLoop(), this, router_, buff);
-      handler->Execute();
+    ServiceSession::ServiceSession(ServiceBase* service):
+      ServiceSession(service->GetLoop(), service){}
+
+    void ServiceSession::OnMessageRead(const internal::BufferPtr& buff){
+      auto handler = new AsyncRequestHandler(GetLoop(), this, buff);//TODO: investigate allocation for this.
+      if(!handler->Execute())
+        DLOG(ERROR) << "cannot handle buffer.";//TODO: better error handling
     }
 
     RequestPtr AsyncRequestHandler::ParseRequest(){
@@ -17,15 +21,16 @@ namespace token{
     }
 
     RouterMatch AsyncRequestHandler::FindMatch(const RequestPtr& request){
-      return router_->Find(request);
+      return session()->GetService()->GetRouter().Find(request);
     }
 
     void AsyncRequestHandler::DoWork(uv_async_t* work){
       auto handler = (AsyncRequestHandler*)work->data;
-      auto session = (http::Session*)handler->session_;
+      auto session = handler->session();
       auto request = handler->ParseRequest();
       auto match = handler->FindMatch(request);
 
+      DLOG(INFO) << "found match for path " << request->GetPath() << ": " << match.GetPath();
       if(match.IsNotFound()){
         std::stringstream ss;
         ss << "Cannot find: " << request->GetPath();
@@ -42,7 +47,9 @@ namespace token{
         request->SetQueryParameters(match.GetQueryParameters());
 
         Route &route = match.GetRoute();
-        route.GetHandler()(route.GetController(), session, request);
+        auto& endpoint = route.GetHandler();
+        DLOG(INFO) << "invoking endpoint: " << route.GetPath();
+        endpoint(route.GetController(), session, request);
       }
     }
   }

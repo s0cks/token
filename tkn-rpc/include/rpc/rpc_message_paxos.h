@@ -1,7 +1,7 @@
 #ifndef TOKEN_RPC_MESSAGE_PAXOS_H
 #define TOKEN_RPC_MESSAGE_PAXOS_H
 
-#include "type/proposal.h"
+#include "proposal.h"
 #include "rpc/rpc_message.h"
 
 namespace token{
@@ -13,7 +13,7 @@ namespace token{
      public:
       static inline int
       CompareProposal(const PaxosMessagePtr& a, const PaxosMessagePtr& b){
-        Proposal& p1 = a->proposal(), p2 = b->proposal();
+        const Proposal& p1 = *a->proposal(), p2 = *b->proposal();
         if(p1 < p2){
           return -1;
         } else if(p1 > p2){
@@ -22,27 +22,31 @@ namespace token{
         return 0;
       }
      protected:
-      Proposal proposal_;
+      Proposal* proposal_;
 
       PaxosMessage():
         rpc::Message(),
-        proposal_(){}
+        proposal_(nullptr){}
       explicit PaxosMessage(const Proposal& proposal):
         rpc::Message(),
-        proposal_(proposal){}
+        proposal_(new Proposal(proposal)){}
      public:
       PaxosMessage(const PaxosMessage& other) = default;
-      ~PaxosMessage() override = default;
+      ~PaxosMessage() override{
+        delete proposal_;//TODO: fix allocation
+      }
 
-      Proposal& proposal(){
+      const Proposal* proposal() const{
         return proposal_;
       }
 
-      Proposal proposal() const{
-        return proposal_;
+      PaxosMessage& operator=(const PaxosMessage& other){
+        if(this == &other)
+          return *this;//dafuq is this???
+        delete proposal_;
+        proposal_ = new Proposal(*other.proposal_);
+        return *this;
       }
-
-      PaxosMessage& operator=(const PaxosMessage& other) = default;
     };
   }
 
@@ -50,11 +54,11 @@ namespace token{
     template<class M>
     class PaxosMessageEncoder : public MessageEncoder<M>{
     protected:
-      codec::ProposalEncoder encode_proposal_;
+      Proposal::Encoder encode_proposal_;
 
-      PaxosMessageEncoder(const M& value, const codec::EncoderFlags& flags):
+      PaxosMessageEncoder(const M* value, const codec::EncoderFlags& flags):
         MessageEncoder<M>(value, flags),
-        encode_proposal_(value.proposal(), flags){}
+        encode_proposal_(value->proposal(), flags){}//TODO: fix
     public:
         PaxosMessageEncoder(const PaxosMessageEncoder<M>& other) = default;
         ~PaxosMessageEncoder() override = default;
@@ -81,7 +85,7 @@ namespace token{
       template<class M>
       class PaxosMessageDecoder : public codec::DecoderBase<M>{
       protected:
-        ProposalDecoder decode_proposal_;
+        Proposal::Decoder decode_proposal_;
 
         explicit PaxosMessageDecoder(const codec::DecoderHints& hints):
           codec::DecoderBase<M>(hints),

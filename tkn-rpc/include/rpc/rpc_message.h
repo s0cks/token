@@ -82,10 +82,10 @@ namespace token{
 
   namespace codec{
     template<class M>
-    class MessageEncoder : public EncoderBase<M>{
+    class MessageEncoder : public TypeEncoder<M>{
     protected:
-      MessageEncoder(const M& value, const codec::EncoderFlags& flags):
-        EncoderBase<M>(value, flags){}
+      MessageEncoder(const M* value, const codec::EncoderFlags& flags):
+        TypeEncoder<M>(value, flags){}
     public:
       MessageEncoder(const MessageEncoder<M>& rhs) = default;
       ~MessageEncoder() override = default;

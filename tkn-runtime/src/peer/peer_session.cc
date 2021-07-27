@@ -1,5 +1,6 @@
 #include "env.h"
 #include "configuration.h"
+#include "proposal_scope.h"
 #include "rpc/rpc_messages.h"
 #include "peer/peer_session.h"
 
@@ -95,26 +96,17 @@ namespace token{
       auto node_id = UUID();//TODO: use server's node id
       session->Send(rpc::VerackMessage::NewInstance(timestamp, client_type, version, nonce, node_id));
     }
-  }
 
-//void PeerSession::OnDiscovery(uv_async_t* handle){
-//  BlockMiner* miner = BlockMiner::GetInstance();
-//  auto session = (PeerSession*) handle->data;
-//  //TODO: check for active proposal
-//
-//  ProposalPtr proposal = miner->GetActiveProposal();
-//  BlockHeader& blk = proposal->raw().value();
-//  //TODO: broadcast blk
-//}
-//
-//void PeerSession::OnPrepare(uv_async_t* handle){
-//  BlockMiner* miner = BlockMiner::GetInstance();
-//  auto session = (PeerSession*) handle->data;
-//  //TODO: check for active proposal
-//
-//  ProposalPtr proposal = miner->GetActiveProposal();
-//  rpc::MessageList responses;
-//  responses << rpc::PrepareMessage::NewInstance(proposal->raw());
-//  return session->Send(responses);
-//}
+    void Session::OnSendPrepare(uv_async_t* handle){
+      auto session = (peer::Session*)handle->data;
+      Proposal* proposal = ProposalScope::GetCurrentProposal();
+      session->Send(rpc::PrepareMessage::NewInstance(*proposal));
+    }
+
+    void Session::OnSendCommit(uv_async_t* handle){
+      auto session = (peer::Session*)handle->data;
+      Proposal* proposal = ProposalScope::GetCurrentProposal();
+      session->Send(rpc::CommitMessage::NewInstance(*proposal));
+    }
+  }
 }

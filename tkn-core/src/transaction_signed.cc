@@ -12,23 +12,21 @@ namespace token{
     return ss.str();
   }
 
-  namespace codec{
-    int64_t SignedTransactionEncoder::GetBufferSize() const{
-      return TransactionEncoder<SignedTransaction>::GetBufferSize();
-    }
+  int64_t SignedTransaction::Encoder::GetBufferSize() const{
+    return TransactionEncoder<SignedTransaction>::GetBufferSize();
+  }
 
-    bool SignedTransactionEncoder::Encode(const BufferPtr& buff) const{
-      return TransactionEncoder<SignedTransaction>::Encode(buff);
-    }
+  bool SignedTransaction::Encoder::Encode(const BufferPtr& buff) const{
+    return TransactionEncoder<SignedTransaction>::Encode(buff);
+  }
 
-    bool SignedTransactionDecoder::Decode(const BufferPtr &buff, SignedTransaction& result) const{
-      Timestamp timestamp;
-      InputList inputs;
-      OutputList outputs;
-      if(!DecodeTransactionData(buff, timestamp, inputs, outputs))
-        return false;
-      result = SignedTransaction(timestamp, inputs, outputs);
-      return true;
-    }
+  bool SignedTransaction::Decoder::Decode(const BufferPtr &buff, SignedTransaction& result) const{
+    Timestamp timestamp;
+    InputList inputs;
+    OutputList outputs;
+    if(!DecodeTransactionData(buff, timestamp, inputs, outputs))
+      return false;
+    result = SignedTransaction(timestamp, inputs, outputs);
+    return true;
   }
 }

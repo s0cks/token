@@ -5,14 +5,16 @@ add_library(tkn-core STATIC
     include/codec/codec.h src/codec/codec.cc
     include/codec/encoder.h
     include/codec/decoder.h
+
     include/type/product.h src/type/product.cc
-    include/type/proposal.h src/type/proposal.cc
     include/type/user.h src/type/user.cc
     include/type/wallet.h
+
     include/block.h src/block.cc
     include/block_chain.h src/block_chain.cc
     include/block_header.h src/block_header.cc
     include/object.h
+    include/proposal.h src/proposal.cc
     include/transaction.h
     include/transaction_indexed.h src/transaction_indexed.cc
     include/transaction_input.h src/transaction_input.cc

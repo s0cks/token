@@ -9,49 +9,44 @@
 #include "codec/codec.h"
 
 namespace token{
-  namespace codec{
-    class BlockEncoder: public codec::EncoderBase<Block>{
-    public:
-      BlockEncoder(const Block& value, const codec::EncoderFlags& flags = codec::kDefaultEncoderFlags):
-          codec::EncoderBase<Block>(value, flags){}
 
-      BlockEncoder(const BlockEncoder& other) = default;
-      ~BlockEncoder() override = default;
-      int64_t GetBufferSize() const override;
-      bool Encode(const BufferPtr& buff) const override;
-      BlockEncoder& operator=(const BlockEncoder& other) = default;
-    };
-
-    class BlockDecoder: public codec::DecoderBase<Block>{
-    public:
-      BlockDecoder(const codec::DecoderHints& hints = codec::kDefaultDecoderHints):
-          codec::DecoderBase<Block>(hints){}
-
-      BlockDecoder(const BlockDecoder& other) = default;
-      ~BlockDecoder() override = default;
-      bool Decode(const BufferPtr& buff, Block& result) const override;
-      BlockDecoder& operator=(const BlockDecoder& other) = default;
-    };
-  }
   class BlockVisitor;
 
   class Block: public BinaryObject, public std::enable_shared_from_this<Block>{
     //TODO:
     // - validation logic
     friend class BlockHeader;
-
     friend class BlockChain;
-
     friend class BlockMessage;
-
   public:
 #ifdef TOKEN_DEBUG
     static const int64_t kMaxBlockSize = 128 * token::internal::kMegabytes;
-    static const int64_t kNumberOfGenesisOutputs = 10;
+    static const int64_t kNumberOfGenesisOutputs = 10000;
 #else
     static const int64_t kMaxBlockSize = 1 * token::internal::kGigabytes;
     static const int64_t kNumberOfGenesisOutputs = 10000;
 #endif//TOKEN_DEBUG
+
+    class Encoder: public codec::TypeEncoder<Block>{
+    public:
+      Encoder(const Block* value, const codec::EncoderFlags& flags):
+        codec::TypeEncoder<Block>(value, flags){}
+      Encoder(const Encoder& other) = default;
+      ~Encoder() override = default;
+      int64_t GetBufferSize() const override;
+      bool Encode(const BufferPtr& buff) const override;
+      Encoder& operator=(const Encoder& other) = default;
+    };
+
+    class Decoder: public codec::DecoderBase<Block>{
+    public:
+      explicit Decoder(const codec::DecoderHints& hints):
+        codec::DecoderBase<Block>(hints){}
+      Decoder(const Decoder& other) = default;
+      ~Decoder() override = default;
+      bool Decode(const BufferPtr& buff, Block& result) const override;
+      Decoder& operator=(const Decoder& other) = default;
+    };
   private:
     Timestamp timestamp_;
     Version version_;
@@ -187,7 +182,7 @@ namespace token{
     std::string ToString() const override;
 
     Hash hash() const override{
-      codec::BlockEncoder encoder(*this, codec::kDefaultEncoderFlags);
+      Encoder encoder(this, codec::kDefaultEncoderFlags);
       internal::BufferPtr data = internal::NewBufferFor(encoder);
       if(!encoder.Encode(data)){
         LOG(ERROR) << "cannot encoder Block to buffer.";
@@ -218,7 +213,7 @@ namespace token{
 
     static inline bool
     Decode(const BufferPtr& buff, Block& result, const codec::DecoderHints& hints = codec::kDefaultDecoderHints){
-      codec::BlockDecoder decoder(hints);
+      Decoder decoder(hints);
       return decoder.Decode(buff, result);
     }
 

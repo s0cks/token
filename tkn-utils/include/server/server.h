@@ -147,7 +147,7 @@ namespace token{
       return uv_read_start(session->GetStream(), on_alloc, on_read);
     }
    public://??????????
-    virtual SessionType* CreateSession() const = 0;
+    virtual SessionType* CreateSession() = 0;
    public:
     virtual ~ServerBase<SessionType>() = default;
 
@@ -188,21 +188,24 @@ namespace token{
   template<class Server>
   class ServerThread{
    protected:
+    Server* instance_;
     ThreadId thread_;
 
     static void HandleThread(uword param){
-      auto instance = new Server();
+      auto instance = (Server*)param;
       if(!instance->Run(Server::GetPort())){
         LOG(FATAL) << "cannot run the " << Server::GetName() << " loop on port: " << Server::GetPort();
       }
       pthread_exit(nullptr);
     }
    public:
-    ServerThread() = default;
+    ServerThread(Server* instance):
+      instance_(instance),
+      thread_(){}
     ~ServerThread() = default;
 
     bool Start(){
-      return platform::ThreadStart(&thread_, Server::GetName(), &HandleThread, (uword)0);
+      return platform::ThreadStart(&thread_, Server::GetName(), &HandleThread, (uword)instance_);
     }
 
     bool Join(){

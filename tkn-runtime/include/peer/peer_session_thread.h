@@ -119,9 +119,20 @@ namespace token{
       return session_ != nullptr;
     }
 
-    peer::Session* GetPeerSession(){
-      std::lock_guard<std::mutex> guard(session_mtx_);
-      return session_;
+    bool SendVersion(){
+      return session_->SendVersion();
+    }
+
+    bool SendVerack(){
+      return session_->SendVerack();
+    }
+
+    bool SendPrepare(){
+      return session_->SendPrepare();
+    }
+
+    bool SendCommit(){
+      return session_->SendCommit();
     }
 
     utils::Address GetPeerAddress(){

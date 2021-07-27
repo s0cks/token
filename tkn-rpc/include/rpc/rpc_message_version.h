@@ -5,32 +5,26 @@
 
 namespace token{
   namespace rpc{
-    class VersionMessage;
-  }
-
-  namespace codec{
-    class VersionMessageEncoder : public HandshakeMessageEncoder<rpc::VersionMessage>{
-    public:
-      VersionMessageEncoder(const rpc::VersionMessage& value, const codec::EncoderFlags& flags):
-        HandshakeMessageEncoder<rpc::VersionMessage>(value, flags){}
-      VersionMessageEncoder(const VersionMessageEncoder& rhs) = default;
-      ~VersionMessageEncoder() override = default;
-      VersionMessageEncoder& operator=(const VersionMessageEncoder& rhs) = default;
-    };
-
-  class VersionMessageDecoder : public HandshakeMessageDecoder<rpc::VersionMessage>{
-    public:
-      explicit VersionMessageDecoder(const codec::DecoderHints& hints):
-        HandshakeMessageDecoder<rpc::VersionMessage>(hints){}
-      VersionMessageDecoder(const VersionMessageDecoder& rhs) = default;
-      ~VersionMessageDecoder() override = default;
-      bool Decode(const BufferPtr& buff, rpc::VersionMessage& result) const;
-      VersionMessageDecoder& operator=(const VersionMessageDecoder& rhs) = default;
-    };
-  }
-
-  namespace rpc{
     class VersionMessage : public HandshakeMessage{
+    public:
+    class Encoder : public codec::HandshakeMessageEncoder<rpc::VersionMessage>{
+      public:
+        Encoder(const VersionMessage* value, const codec::EncoderFlags& flags):
+          codec::HandshakeMessageEncoder<rpc::VersionMessage>(value, flags){}
+        Encoder(const Encoder& rhs) = default;
+        ~Encoder() override = default;
+        Encoder& operator=(const Encoder& rhs) = default;
+      };
+
+      class Decoder : public codec::HandshakeMessageDecoder<rpc::VersionMessage>{
+      public:
+        explicit Decoder(const codec::DecoderHints& hints):
+          codec::HandshakeMessageDecoder<rpc::VersionMessage>(hints){}
+        Decoder(const Decoder& rhs) = default;
+        ~Decoder() override = default;
+        bool Decode(const BufferPtr& buff, rpc::VersionMessage& result) const;
+        Decoder& operator=(const Decoder& rhs) = default;
+      };
      public:
       VersionMessage():
         HandshakeMessage(){}
@@ -48,12 +42,12 @@ namespace token{
       }
 
       int64_t GetBufferSize() const override{
-        codec::VersionMessageEncoder encoder((*this), GetDefaultMessageEncoderFlags());
+        Encoder encoder(this, GetDefaultMessageEncoderFlags());
         return encoder.GetBufferSize();
       }
 
       bool Write(const BufferPtr& buff) const override{
-        codec::VersionMessageEncoder encoder((*this), GetDefaultMessageEncoderFlags());
+        Encoder encoder(this, GetDefaultMessageEncoderFlags());
         return encoder.Encode(buff);
       }
 
@@ -82,7 +76,7 @@ namespace token{
 
       static inline bool
       Decode(const BufferPtr& buff, VersionMessage& result, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
-        codec::VersionMessageDecoder decoder(hints);
+        Decoder decoder(hints);
         return decoder.Decode(buff, result);
       }
 

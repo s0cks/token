@@ -110,7 +110,7 @@ namespace token{
     }
     virtual ~SessionBase() = default;
 
-    UUID GetUUID() const{
+    UUID GetUUID() const{//TODO: rename
       return uuid_;
     }
 

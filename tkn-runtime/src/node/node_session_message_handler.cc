@@ -1,4 +1,7 @@
+#include "block.h"
 #include "rpc/rpc_common.h"
+#include "rpc/rpc_session.h"
+#include "proposal_scope.h"
 #include "node/node_session_message_handler.h"
 
 namespace token{
@@ -35,31 +38,26 @@ namespace token{
     }
 
     void SessionMessageHandler::OnPrepareMessage(const rpc::PrepareMessagePtr& msg){
-      NOT_IMPLEMENTED(WARNING);
+      auto session = GetSession();
+      DLOG(INFO) << "received prepare message.";
+
+      NOT_IMPLEMENTED(ERROR);//TODO: implement
     }
 
-    void SessionMessageHandler::OnPromiseMessage(const rpc::PromiseMessagePtr &msg) {
-      NOT_IMPLEMENTED(WARNING);
+    void SessionMessageHandler::OnPromiseMessage(const rpc::PromiseMessagePtr &msg){
+      NOT_IMPLEMENTED(WARNING);//should never happen
     }
 
-    void SessionMessageHandler::OnCommitMessage(const rpc::CommitMessagePtr &msg) {
-      NOT_IMPLEMENTED(WARNING);
+    void SessionMessageHandler::OnCommitMessage(const rpc::CommitMessagePtr &msg){
+      NOT_IMPLEMENTED(ERROR);//TODO: implement
     }
 
     void SessionMessageHandler::OnAcceptedMessage(const rpc::AcceptedMessagePtr &msg) {
-      NOT_IMPLEMENTED(ERROR);
+      NOT_IMPLEMENTED(WARNING);//should never happen
     }
 
     void SessionMessageHandler::OnRejectedMessage(const rpc::RejectedMessagePtr &msg){
-      NOT_IMPLEMENTED(ERROR);
-    }
-
-    void SessionMessageHandler::OnBlockMessage(const rpc::BlockMessagePtr &msg){
-      NOT_IMPLEMENTED(ERROR);
-    }
-
-    void SessionMessageHandler::OnTransactionMessage(const rpc::TransactionMessagePtr &msg){
-      NOT_IMPLEMENTED(ERROR);
+      NOT_IMPLEMENTED(WARNING);//should never happen
     }
   }
 }

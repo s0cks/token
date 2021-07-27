@@ -6,32 +6,26 @@
 
 namespace token{
   namespace rpc{
-    class VerackMessage;
-  }
-
-  namespace codec{
-    class VerackMessageEncoder : public HandshakeMessageEncoder<rpc::VerackMessage>{
-    public:
-      VerackMessageEncoder(const rpc::VerackMessage& value, const codec::EncoderFlags& flags):
-        HandshakeMessageEncoder<rpc::VerackMessage>(value, flags){}
-      VerackMessageEncoder(const VerackMessageEncoder& other) = default;
-      ~VerackMessageEncoder() override = default;
-      VerackMessageEncoder& operator=(const VerackMessageEncoder& other) = default;
-    };
-
-  class VerackMessageDecoder : public HandshakeMessageDecoder<rpc::VerackMessage>{
-    public:
-      VerackMessageDecoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
-          HandshakeMessageDecoder<rpc::VerackMessage>(hints){}
-      VerackMessageDecoder(const VerackMessageDecoder& other) = default;
-      ~VerackMessageDecoder() override = default;
-      bool Decode(const BufferPtr& buff, rpc::VerackMessage& result) const override;
-      VerackMessageDecoder& operator=(const VerackMessageDecoder& other) = default;
-    };
-  }
-
-  namespace rpc{
     class VerackMessage : public rpc::HandshakeMessage{
+    public:
+    class Encoder : public codec::HandshakeMessageEncoder<rpc::VerackMessage>{
+      public:
+        Encoder(const VerackMessage* value, const codec::EncoderFlags& flags):
+            HandshakeMessageEncoder<rpc::VerackMessage>(value, flags){}
+        Encoder(const Encoder& other) = default;
+        ~Encoder() override = default;
+        Encoder& operator=(const Encoder& other) = default;
+      };
+
+    class Decoder : public codec::HandshakeMessageDecoder<rpc::VerackMessage>{
+      public:
+        Decoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
+            HandshakeMessageDecoder<rpc::VerackMessage>(hints){}
+        Decoder(const Decoder& other) = default;
+        ~Decoder() override = default;
+        bool Decode(const BufferPtr& buff, rpc::VerackMessage& result) const override;
+        Decoder& operator=(const Decoder& other) = default;
+      };
      private:
       //TODO: add head
       //TODO: add callback address
@@ -48,12 +42,12 @@ namespace token{
       }
 
       int64_t GetBufferSize() const override{
-        codec::VerackMessageEncoder encoder((*this), GetDefaultMessageEncoderFlags());
+        Encoder encoder(this, GetDefaultMessageEncoderFlags());
         return encoder.GetBufferSize();
       }
 
       bool Write(const BufferPtr& buff) const override{
-        codec::VerackMessageEncoder encoder((*this), GetDefaultMessageEncoderFlags());
+        Encoder encoder(this, GetDefaultMessageEncoderFlags());
         return encoder.Encode(buff);
       }
 
@@ -78,7 +72,7 @@ namespace token{
 
       static inline bool
       Decode(const BufferPtr& buffer, VerackMessage& result, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
-        codec::VerackMessageDecoder decoder(hints);
+        Decoder decoder(hints);
         return decoder.Decode(buffer, result);
       }
 

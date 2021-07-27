@@ -2,7 +2,7 @@
 
 namespace token{
   int64_t BlockHeader::Encoder::GetBufferSize() const{
-    int64_t size = BaseType::GetBufferSize();
+    int64_t size = TypeEncoder<BlockHeader>::GetBufferSize();
     size += sizeof(RawTimestamp); // timestamp
     size += sizeof(int64_t); // height
     size += Hash::GetSize(); // previous hash
@@ -12,29 +12,29 @@ namespace token{
   }
 
   bool BlockHeader::Encoder::Encode(const BufferPtr &buff) const{
-    if(!BaseType::Encode(buff))
+    if(!TypeEncoder<BlockHeader>::Encode(buff))
       return false;
-    const auto& timestamp = value().timestamp();
+    const auto& timestamp = value()->timestamp();
     if(!buff->PutTimestamp(timestamp)){
       LOG(FATAL) << "cannot serialize timestamp to buffer.";
       return false;
     }
-    const auto& height = value().height();
+    const auto& height = value()->height();
     if(!buff->PutLong(height)){
       LOG(FATAL) << "cannot serialize height to buffer.";
       return false;
     }
-    const auto& previous_hash = value().previous_hash();
+    const auto& previous_hash = value()->previous_hash();
     if(!buff->PutHash(previous_hash)){
       LOG(FATAL) << "cannot serialize hash to buffer.";
       return false;
     }
-    const auto& merkle_root = value().merkle_root();
+    const auto& merkle_root = value()->merkle_root();
     if(!buff->PutHash(merkle_root)){
       LOG(FATAL) << "cannot serialize merkle root to buffer.";
       return false;
     }
-    const auto& hash = value().hash();
+    const auto& hash = value()->hash();
     if(!buff->PutHash(hash)){
       LOG(FATAL) << "cannot serialize hash to buffer.";
       return false;

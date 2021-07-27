@@ -63,7 +63,7 @@ namespace token{
   }
 
   BufferPtr Block::ToBuffer() const{
-    codec::BlockEncoder encoder((*this), codec::kDefaultEncoderFlags);
+    Encoder encoder((Block*)this, codec::kDefaultEncoderFlags);
     BufferPtr buffer = internal::NewBufferFor(encoder);
     if(!encoder.Encode(buffer)){
       LOG(FATAL) << "cannot encode block to buffer.";
@@ -71,68 +71,66 @@ namespace token{
     }
     return buffer;
   }
+  
+  int64_t Block::Encoder::GetBufferSize() const{
+    auto size = codec::TypeEncoder<Block>::GetBufferSize();
+    size += sizeof(RawTimestamp); // timestamp_
+    size += sizeof(int64_t); // height_
+    size += Hash::GetSize(); // previous_hash_
+    size += Hash::GetSize(); // merkle_root_
+    //TODO: use IndexedTransactionListEncoder
+    return size;
+  }
 
-  namespace codec{
-    int64_t BlockEncoder::GetBufferSize() const{
-      auto size = codec::EncoderBase<Block>::GetBufferSize();
-      size += sizeof(RawTimestamp); // timestamp_
-      size += sizeof(int64_t); // height_
-      size += Hash::GetSize(); // previous_hash_
-      size += Hash::GetSize(); // merkle_root_
-      //TODO: use IndexedTransactionListEncoder
-      return size;
+  bool Block::Encoder::Encode(const BufferPtr& buff) const{
+    if(!TypeEncoder<Block>::Encode(buff))
+      return false;
+
+    const auto& timestamp = value()->timestamp();
+    if(!buff->PutTimestamp(timestamp)){
+      CANNOT_ENCODE_VALUE(FATAL, Timestamp, ToUnixTimestamp(timestamp));
+      return false;
     }
 
-    bool BlockEncoder::Encode(const BufferPtr& buff) const{
-      if(!BaseType::Encode(buff))
-        return false;
-
-      const auto& timestamp = value().timestamp();
-      if(!buff->PutTimestamp(timestamp)){
-        CANNOT_ENCODE_VALUE(FATAL, Timestamp, ToUnixTimestamp(timestamp));
-        return false;
-      }
-
-      const auto& height = value().height();
-      if(!buff->PutLong(height)){
-        CANNOT_ENCODE_VALUE(FATAL, int64_t, height);
-        return false;
-      }
-
-      const auto& previous_hash = value().GetPreviousHash();
-      if(!buff->PutHash(previous_hash)){
-        CANNOT_ENCODE_VALUE(FATAL, Hash, previous_hash);
-        return false;
-      }
-
-      //TODO: encode IndexedTransactionSet
-      return true;
+    const auto& height = value()->height();
+    if(!buff->PutLong(height)){
+      CANNOT_ENCODE_VALUE(FATAL, int64_t, height);
+      return false;
     }
 
-    bool BlockDecoder::Decode(const BufferPtr &buff, Block &result) const{
-      Timestamp timestamp = buff->GetTimestamp();
-      DLOG(INFO) << "decoded Block timestamp: " << FormatTimestampReadable(timestamp);
-
-      int64_t height = buff->GetLong();
-      DLOG(INFO) << "decoded Block height: " << height;
-
-      Hash previous_hash = buff->GetHash();
-      DLOG(INFO) << "decoded Block previous_hash: " << previous_hash;
-
-      Version version = Version::CurrentVersion();
-
-      IndexedTransactionSet transactions = {};
-
-      int64_t ntransactions = buff->GetLong();
-      DLOG(INFO) << "decoding " << ntransactions << " transactions....";
-      for(auto idx = 0; idx < ntransactions; idx++){
-        auto itx = IndexedTransaction::DecodeNew(buff, hints());
-        DLOG(INFO) << "decoded IndexedTransaction #" << idx << ": " << itx->ToString();
-        transactions.insert(itx);
-      }
-
-      result = Block(timestamp, height, previous_hash, transactions, version);
-      return true;
+    const auto& previous_hash = value()->GetPreviousHash();
+    if(!buff->PutHash(previous_hash)){
+      CANNOT_ENCODE_VALUE(FATAL, Hash, previous_hash);
+      return false;
     }
+
+    //TODO: encode IndexedTransactionSet
+    return true;
+  }
+
+  bool Block::Decoder::Decode(const BufferPtr &buff, Block &result) const{
+    Timestamp timestamp = buff->GetTimestamp();
+    DLOG(INFO) << "decoded Block timestamp: " << FormatTimestampReadable(timestamp);
+
+    int64_t height = buff->GetLong();
+    DLOG(INFO) << "decoded Block height: " << height;
+
+    Hash previous_hash = buff->GetHash();
+    DLOG(INFO) << "decoded Block previous_hash: " << previous_hash;
+
+    Version version = Version::CurrentVersion();
+
+    IndexedTransactionSet transactions = {};
+
+    int64_t ntransactions = buff->GetLong();
+    DLOG(INFO) << "decoding " << ntransactions << " transactions....";
+    for(auto idx = 0; idx < ntransactions; idx++){
+      auto itx = IndexedTransaction::DecodeNew(buff, hints());
+      DLOG(INFO) << "decoded IndexedTransaction #" << idx << ": " << itx->ToString();
+      transactions.insert(itx);
+    }
+
+    result = Block(timestamp, height, previous_hash, transactions, version);
+    return true;
   }
 }

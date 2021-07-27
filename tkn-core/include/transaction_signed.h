@@ -4,29 +4,27 @@
 #include "transaction.h"
 
 namespace token{
-  namespace codec{
-    class SignedTransactionEncoder : public TransactionEncoder<SignedTransaction> {
-     public:
-      explicit SignedTransactionEncoder(const SignedTransaction& value, const codec::EncoderFlags &flags = codec::kDefaultEncoderFlags):
-        TransactionEncoder<SignedTransaction>(value, flags) {}
-      SignedTransactionEncoder(const SignedTransactionEncoder &other) = default;
-      ~SignedTransactionEncoder() override = default;
+  class SignedTransaction : public internal::TransactionBase{
+  public:
+  class Encoder : public codec::TransactionEncoder<SignedTransaction> {
+    public:
+      explicit Encoder(const SignedTransaction* value, const codec::EncoderFlags &flags = codec::kDefaultEncoderFlags):
+        codec::TransactionEncoder<SignedTransaction>(value, flags) {}
+      Encoder(const Encoder &other) = default;
+      ~Encoder() override = default;
       int64_t GetBufferSize() const override;
       bool Encode(const BufferPtr &buff) const override;
-      SignedTransactionEncoder &operator=(const SignedTransactionEncoder &other) = default;
+      Encoder &operator=(const Encoder &other) = default;
     };
 
-    class SignedTransactionDecoder : public TransactionDecoder<SignedTransaction>{
-     public:
-      explicit SignedTransactionDecoder(const codec::DecoderHints& hints);
-      SignedTransactionDecoder(const SignedTransactionDecoder& other) = default;
-      ~SignedTransactionDecoder() override = default;
+  class Decoder : public codec::TransactionDecoder<SignedTransaction>{
+    public:
+      explicit Decoder(const codec::DecoderHints& hints);
+      Decoder(const Decoder& other) = default;
+      ~Decoder() override = default;
       bool Decode(const BufferPtr &buff, SignedTransaction& result) const override;
-      SignedTransactionDecoder& operator=(const SignedTransactionDecoder& other) = default;
+      Decoder& operator=(const Decoder& other) = default;
     };
-  }
-
-  class SignedTransaction : public internal::TransactionBase{
    public:
     SignedTransaction(const Timestamp& timestamp, const InputList& inputs, const OutputList& outputs):
       internal::TransactionBase(timestamp, inputs, outputs){}

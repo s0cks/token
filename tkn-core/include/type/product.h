@@ -12,10 +12,29 @@
 namespace token{
   static const int64_t kMaxProductLength = 64;
   class Product : public Object{
-   private:
+  public:
     static inline int Compare(const Product& a, const Product& b){
       return strncmp(a.data(), b.data(), kMaxProductLength);
     }
+
+    class Encoder : public codec::TypeEncoder<Product>{
+    public:
+      Encoder(const Product* value, const codec::EncoderFlags& flags);
+      Encoder(const Encoder& other) = default;
+      ~Encoder() override = default;
+      int64_t GetBufferSize() const override;
+      bool Encode(const BufferPtr& buff) const override;
+      Encoder& operator=(const Encoder& other) = default;
+    };
+
+    class Decoder : public codec::DecoderBase<Product> {
+    public:
+      explicit Decoder(const codec::DecoderHints &hints);
+      Decoder(const Decoder &other) = default;
+      ~Decoder() override = default;
+      bool Decode(const BufferPtr &buff, Product &result) const override;
+      Decoder &operator=(const Decoder& other) = default;
+    };
    private:
     char data_[kMaxProductLength];
    public:
@@ -71,27 +90,6 @@ namespace token{
       return stream << product.ToString();
     }
   };
-
-  namespace codec{
-    class ProductEncoder : public codec::EncoderBase<Product>{
-     public:
-      ProductEncoder(const Product& value, const codec::EncoderFlags& flags);
-      ProductEncoder(const ProductEncoder& other) = default;
-      ~ProductEncoder() override = default;
-      int64_t GetBufferSize() const override;
-      bool Encode(const BufferPtr& buff) const override;
-      ProductEncoder& operator=(const ProductEncoder& other) = default;
-    };
-
-    class ProductDecoder : public codec::DecoderBase<Product> {
-     public:
-      explicit ProductDecoder(const codec::DecoderHints &hints);
-      ProductDecoder(const ProductDecoder &other) = default;
-      ~ProductDecoder() override = default;
-      bool Decode(const BufferPtr &buff, Product &result) const override;
-      ProductDecoder &operator=(const ProductDecoder &other) = default;
-    };
-  }
 
   namespace json{
     static inline bool

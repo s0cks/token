@@ -102,6 +102,10 @@ namespace token{
       }
       return true;
     }
+
+    void OnMessageRead(const BufferPtr& buff) override{
+      NOT_IMPLEMENTED(ERROR); //TODO: implement
+    }
   };
 
   http::ResponsePtr HttpClient::Send(const http::RequestPtr& request){

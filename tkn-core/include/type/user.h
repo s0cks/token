@@ -21,6 +21,27 @@ namespace token{
     Compare(const User& a, const User& b){
       return strncmp(a.data(), b.data(), internal::kMaxUserLength);
     }
+
+    class Encoder : public codec::TypeEncoder<User>{
+    public:
+      Encoder(const User* value, const codec::EncoderFlags& flags):
+        codec::TypeEncoder<User>(value, flags){}
+      Encoder(const Encoder& other) = default;
+      ~Encoder() override = default;
+      int64_t GetBufferSize() const override;
+      bool Encode(const BufferPtr& buff) const override;
+      Encoder& operator=(const Encoder& other) = default;
+    };
+
+    class Decoder : public codec::DecoderBase<User>{
+    public:
+      explicit Decoder(const codec::DecoderHints& hints):
+        codec::DecoderBase<User>(hints){}
+      Decoder(const Decoder& other) = default;
+      ~Decoder() override = default;
+      bool Decode(const BufferPtr& buff, User& result) const override;
+      Decoder& operator=(const Decoder& other) = default;
+    };
    private:
     char data_[internal::kMaxUserLength];
    public:
@@ -84,29 +105,6 @@ namespace token{
       return leveldb::Slice(data(), size());
     }
   };
-
-  namespace codec{
-    class UserEncoder : public codec::EncoderBase<User>{
-     public:
-      UserEncoder(const User& value, const codec::EncoderFlags& flags):
-          codec::EncoderBase<User>(value, flags){}
-      UserEncoder(const UserEncoder& other) = default;
-      ~UserEncoder() override = default;
-      int64_t GetBufferSize() const override;
-      bool Encode(const BufferPtr& buff) const override;
-      UserEncoder& operator=(const UserEncoder& other) = default;
-    };
-
-    class UserDecoder : public codec::DecoderBase<User>{
-     public:
-      explicit UserDecoder(const codec::DecoderHints& hints):
-        codec::DecoderBase<User>(hints){}
-      UserDecoder(const UserDecoder& other) = default;
-      ~UserDecoder() override = default;
-      bool Decode(const BufferPtr& buff, User& result) const override;
-      UserDecoder& operator=(const UserDecoder& other) = default;
-    };
-  }
 
   namespace json{
     static inline bool

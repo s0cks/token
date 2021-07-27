@@ -8,39 +8,37 @@
 #include "transaction_reference.h"
 
 namespace token{
-  namespace codec{
-    class InputEncoder : public codec::EncoderBase<Input>{
-     protected:
-      TransactionReferenceEncoder encode_txref_;
-      UserEncoder encode_user_;
-     public:
-      explicit InputEncoder(const Input& value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags);
-      InputEncoder(const InputEncoder& other) = default;
-      ~InputEncoder() override = default;
+  class Input : public Object{
+    friend class Transaction;
+  public:
+    class Encoder : public codec::TypeEncoder<Input>{
+    protected:
+      TransactionReference::Encoder encode_txref_;
+      User::Encoder encode_user_;
+    public:
+      explicit Encoder(const Input* value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags);
+      Encoder(const Encoder& other) = default;
+      ~Encoder() override = default;
 
       int64_t GetBufferSize() const override;
       bool Encode(const BufferPtr& buff) const override;
-      InputEncoder& operator=(const InputEncoder& other) = default;
+      Encoder& operator=(const Encoder& other) = default;
     };
 
-    class InputDecoder : public codec::DecoderBase<Input>{
-     protected:
-      TransactionReferenceDecoder decode_txref_;
-      UserDecoder decode_user_;
-     public:
-      explicit InputDecoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
-        codec::DecoderBase<Input>(hints),
-        decode_txref_(hints),
-        decode_user_(hints){}
-      InputDecoder(const InputDecoder& other) = default;
-      ~InputDecoder() override = default;
+    class Decoder : public codec::DecoderBase<Input>{
+    protected:
+      TransactionReference::Decoder decode_txref_;
+      User::Decoder decode_user_;
+    public:
+      explicit Decoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
+          codec::DecoderBase<Input>(hints),
+          decode_txref_(hints),
+          decode_user_(hints){}
+      Decoder(const Decoder& other) = default;
+      ~Decoder() override = default;
       bool Decode(const BufferPtr& buff, Input& result) const override;
-      InputDecoder& operator=(const InputDecoder& other) = default;
+      Decoder& operator=(const Decoder& other) = default;
     };
-  }
-
-  class Input : public Object{
-    friend class Transaction;
    private:
     TransactionReference reference_;
     User user_;//TODO: remove field
@@ -142,7 +140,7 @@ namespace token{
 
     static inline bool
     Decode(const BufferPtr& buff, Input& result, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
-      codec::InputDecoder decoder(hints);
+      Decoder decoder(hints);
       return decoder.Decode(buff, result);
     }
 
@@ -161,19 +159,19 @@ namespace token{
 typedef std::vector<Input> InputList;
 
 namespace codec{
- class InputListEncoder : public codec::ListEncoder<Input, InputEncoder>{
+class InputListEncoder : public codec::ListEncoder<Input>{
    public:
     InputListEncoder(const InputList& items, const codec::EncoderFlags& flags):
-        codec::ListEncoder<Input, InputEncoder>(Type::kInputList, items, flags){}
+      codec::ListEncoder<Input>(items, flags){}
     InputListEncoder(const InputListEncoder& other) = default;
     ~InputListEncoder() override = default;
     InputListEncoder& operator=(const InputListEncoder& other) = default;
   };
 
-  class InputListDecoder : public codec::ListDecoder<Input, InputDecoder>{
+class InputListDecoder : public codec::ListDecoder<Input, Input::Decoder>{
    public:
     explicit InputListDecoder(const codec::DecoderHints &hints):
-      codec::ListDecoder<Input, InputDecoder>(hints){}
+      codec::ListDecoder<Input, Input::Decoder>(hints){}
     InputListDecoder(const InputListDecoder &other) = default;
     ~InputListDecoder() override = default;
     InputListDecoder& operator=(const InputListDecoder& other) = default;

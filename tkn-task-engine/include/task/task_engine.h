@@ -77,8 +77,8 @@ namespace token{
         return GetQueue(GetRandomQueueIndex());
       }
 
-      void RegisterQueue(TaskQueue* queue){
-        return RegisterQueue(platform::GetCurrentThreadId(), queue);
+      void RegisterQueue(TaskQueue& queue){
+        return RegisterQueue(platform::GetCurrentThreadId(), &queue);
       }
 
       TaskEngine& operator=(const TaskEngine& rhs) = delete;

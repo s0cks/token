@@ -9,35 +9,34 @@
 #include "codec/codec.h"
 
 namespace token{
-  namespace codec{
-    class UnclaimedTransactionEncoder: public codec::EncoderBase<UnclaimedTransaction>{
+  class UnclaimedTransaction: public Object{
+  public:
+    class Encoder: public codec::TypeEncoder<UnclaimedTransaction>{
     protected:
-      TransactionReferenceEncoder encode_txref_;
-      UserEncoder encode_user_;
-      ProductEncoder encode_product_;
+      TransactionReference::Encoder encode_txref_;
+      User::Encoder encode_user_;
+      Product::Encoder encode_product_;
     public:
-      explicit UnclaimedTransactionEncoder(const UnclaimedTransaction& value, const codec::EncoderFlags& flags = codec::kDefaultEncoderFlags);
-      UnclaimedTransactionEncoder(const UnclaimedTransactionEncoder& other) = default;
-      ~UnclaimedTransactionEncoder() override = default;
+      explicit Encoder(const UnclaimedTransaction* value, const codec::EncoderFlags& flags);
+      Encoder(const Encoder& other) = default;
+      ~Encoder() override = default;
       int64_t GetBufferSize() const override;
       bool Encode(const BufferPtr& buff) const override;
-      UnclaimedTransactionEncoder& operator=(const UnclaimedTransactionEncoder& other) = default;
+      Encoder& operator=(const Encoder& other) = default;
     };
 
-    class UnclaimedTransactionDecoder: public codec::DecoderBase<UnclaimedTransaction>{
+    class Decoder: public codec::DecoderBase<UnclaimedTransaction>{
     protected:
-      TransactionReferenceDecoder decode_txref_;
-      UserDecoder decode_user_;
-      ProductDecoder decode_product_;
+      TransactionReference::Decoder decode_txref_;
+      User::Decoder decode_user_;
+      Product::Decoder decode_product_;
     public:
-      explicit UnclaimedTransactionDecoder(const codec::DecoderHints& hints = codec::kDefaultDecoderHints);
-      UnclaimedTransactionDecoder(const UnclaimedTransactionDecoder& other) = default;
-      ~UnclaimedTransactionDecoder() override = default;
+      explicit Decoder(const codec::DecoderHints& hints = codec::kDefaultDecoderHints);
+      Decoder(const Decoder& other) = default;
+      ~Decoder() override = default;
       bool Decode(const BufferPtr& buff, UnclaimedTransaction& result) const override;
-      UnclaimedTransactionDecoder& operator=(const UnclaimedTransactionDecoder& other) = default;
+      Decoder& operator=(const Decoder& other) = default;
     };
-  }
-  class UnclaimedTransaction: public Object{
   private:
     TransactionReference reference_;
     User user_;
@@ -87,6 +86,16 @@ namespace token{
       return product_;
     }
 
+    Hash hash() const{
+      Encoder encoder((UnclaimedTransaction*)this, codec::kDefaultEncoderFlags);
+      internal::BufferPtr data = internal::NewBufferFor(encoder);
+      if(!encoder.Encode(data)){
+        LOG(ERROR) << "cannot encoder Block to buffer.";
+        return Hash();
+      }
+      return Hash::ComputeHash<CryptoPP::SHA256>(data->data(), data->GetWritePosition());
+    }
+
     BufferPtr ToBuffer() const;
     std::string ToString() const override;
     UnclaimedTransaction& operator=(const UnclaimedTransaction& other) = default;
@@ -127,7 +136,7 @@ namespace token{
 
     static inline bool
     Decode(const BufferPtr& buff, UnclaimedTransaction& result, const codec::DecoderHints& hints = codec::kDefaultDecoderHints){
-      codec::UnclaimedTransactionDecoder decoder(hints);
+      Decoder decoder(hints);
       return decoder.Decode(buff, result);
     }
 

@@ -1,8 +1,8 @@
 #include "rpc/rpc_message_version.h"
 
 namespace token{
-  namespace codec{
-    bool VersionMessageDecoder::Decode(const BufferPtr& buff, rpc::VersionMessage& result) const{
+  namespace rpc{
+    bool VersionMessage::Decoder::Decode(const BufferPtr& buff, rpc::VersionMessage& result) const{
       Timestamp timestamp;
       rpc::ClientType client_type = rpc::ClientType::kUnknown;
       Hash nonce;

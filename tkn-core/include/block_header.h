@@ -8,10 +8,10 @@
 namespace token{
   class BlockHeader : public Object{
    public:
-    class Encoder : public codec::EncoderBase<BlockHeader>{
+    class Encoder : public codec::TypeEncoder<BlockHeader>{
      public:
-      Encoder(const BlockHeader& value, const codec::EncoderFlags& flags):
-        codec::EncoderBase<BlockHeader>(value, flags){}
+      Encoder(const BlockHeader* value, const codec::EncoderFlags& flags):
+        codec::TypeEncoder<BlockHeader>(value, flags){}
       Encoder(const Encoder& other) = default;
       ~Encoder() override = default;
       int64_t GetBufferSize() const override;

@@ -13,10 +13,10 @@ namespace token{
 
     MessagePtr MessageParser::Next() const{
       Type type = static_cast<Type>(data_->GetUnsignedLong());
-      DLOG(INFO) << "decoded message type: " << type;
+      DVLOG(1) << "decoded message type: " << type;
 
       Version version(data_->GetShort(), data_->GetShort(), data_->GetShort());
-      DLOG(INFO) << "decoded message version: " << version;
+      DVLOG(1) << "decoded message version: " << version;
 
       codec::DecoderHints hints = codec::ExpectTypeHint::Encode(true)|codec::ExpectVersionHint::Encode(true);
       switch(type){

@@ -97,23 +97,21 @@ namespace token{
 
   namespace codec{
     template<class T>
-    class TransactionEncoder : public codec::EncoderBase<T>{
+    class TransactionEncoder : public codec::TypeEncoder<T>{
      private:
-      typedef codec::EncoderBase<T> EncoderBaseType;
-
       InputListEncoder encode_inputs_;
       OutputListEncoder encode_outputs_;
      protected:
-      explicit TransactionEncoder(const T& value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags):
-        codec::EncoderBase<T>(value, flags),
-        encode_inputs_(value.inputs(), flags),
-        encode_outputs_(value.outputs(), flags){}
+      explicit TransactionEncoder(const T* value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags):
+        codec::TypeEncoder<T>(value, flags),
+        encode_inputs_(value->inputs(), flags),
+        encode_outputs_(value->outputs(), flags){}
      public:
       TransactionEncoder(const TransactionEncoder& other) = default;
       ~TransactionEncoder() override = default;
 
       int64_t GetBufferSize() const override{
-        auto size = codec::EncoderBase<T>::GetBufferSize();
+        auto size = codec::TypeEncoder<T>::GetBufferSize();
         size += sizeof(RawTimestamp);
         size += encode_inputs_.GetBufferSize();
         size += encode_outputs_.GetBufferSize();
@@ -121,10 +119,10 @@ namespace token{
       }
 
       bool Encode(const BufferPtr& buff) const override{
-        if(!codec::EncoderBase<T>::Encode(buff))
+        if(!codec::TypeEncoder<T>::Encode(buff))
           return false;
 
-        const auto& timestamp = codec::EncoderBase<T>::value().timestamp();
+        const auto& timestamp = codec::TypeEncoder<T>::value()->timestamp();
         if(!buff->PutTimestamp(timestamp)){
           LOG(FATAL) << "cannot encode timestamp to buffer.";
           return false;

@@ -5,32 +5,26 @@
 
 namespace token{
   namespace rpc{
-    class RejectedMessage;
-  }
-
-  namespace codec{
-    class RejectedMessageEncoder : public PaxosMessageEncoder<rpc::RejectedMessage>{
-    public:
-      RejectedMessageEncoder(const rpc::RejectedMessage& value, const codec::EncoderFlags& flags):
-        PaxosMessageEncoder<rpc::RejectedMessage>(value, flags){}
-      RejectedMessageEncoder(const RejectedMessageEncoder& rhs) = default;
-      ~RejectedMessageEncoder() override = default;
-      RejectedMessageEncoder& operator=(const RejectedMessageEncoder& rhs) = default;
-    };
-
-    class RejectedMessageDecoder : public PaxosMessageDecoder<rpc::RejectedMessage>{
-    public:
-      RejectedMessageDecoder(const codec::DecoderHints& hints):
-        PaxosMessageDecoder<rpc::RejectedMessage>(hints){}
-      RejectedMessageDecoder(const RejectedMessageDecoder& rhs) = default;
-      ~RejectedMessageDecoder() override = default;
-      bool Decode(const BufferPtr& buff, rpc::RejectedMessage& result) const override;
-      RejectedMessageDecoder& operator=(const RejectedMessageDecoder& rhs) = default;
-    };
-  }
-
-  namespace rpc{
     class RejectedMessage : public PaxosMessage{
+    public:
+    class Encoder : public codec::PaxosMessageEncoder<RejectedMessage>{
+      public:
+        Encoder(const RejectedMessage* value, const codec::EncoderFlags& flags):
+          codec::PaxosMessageEncoder<RejectedMessage>(value, flags){}
+        Encoder(const Encoder& rhs) = default;
+        ~Encoder() override = default;
+        Encoder& operator=(const Encoder& rhs) = default;
+      };
+
+    class Decoder : public codec::PaxosMessageDecoder<RejectedMessage>{
+      public:
+        explicit Decoder(const codec::DecoderHints& hints):
+          codec::PaxosMessageDecoder<RejectedMessage>(hints){}
+        Decoder(const Decoder& rhs) = default;
+        ~Decoder() override = default;
+        bool Decode(const BufferPtr& buff, RejectedMessage& result) const override;
+        Decoder& operator=(const Decoder& rhs) = default;
+      };
      public:
       RejectedMessage() = default;
       explicit RejectedMessage(const Proposal& proposal):
@@ -42,12 +36,12 @@ namespace token{
       }
 
       int64_t GetBufferSize() const override{
-        codec::RejectedMessageEncoder encoder((*this), GetDefaultMessageEncoderFlags());
+        Encoder encoder(this, GetDefaultMessageEncoderFlags());
         return encoder.GetBufferSize();
       }
 
       bool Write(const BufferPtr& buff) const override{
-        codec::RejectedMessageEncoder encoder((*this), GetDefaultMessageEncoderFlags());
+        Encoder encoder(this, GetDefaultMessageEncoderFlags());
         return encoder.Encode(buff);
       }
 
@@ -65,13 +59,13 @@ namespace token{
       }
 
       static inline bool
-      Decode(const BufferPtr& buff, RejectedMessage& result, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
-        codec::RejectedMessageDecoder decoder(hints);
+      Decode(const BufferPtr& buff, RejectedMessage& result, const codec::DecoderHints& hints){
+        Decoder decoder(hints);
         return decoder.Decode(buff, result);
       }
 
       static inline RejectedMessagePtr
-      DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
+      DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints){
         RejectedMessage instance;
         if(!Decode(buff, instance, hints)){
           DLOG(ERROR) << "cannot decode RejectedMessage.";

@@ -8,21 +8,44 @@
 
 namespace token{
   namespace http{
-    class ServiceBase : public ServerBase<http::Session>{
+    class ServiceBase;
+    class ServiceSession : public Session{
+    private:
+      ServiceBase* service_;
+    public:
+      ServiceSession():
+        Session(),
+        service_(nullptr){}
+      ServiceSession(uv_loop_t* loop, const UUID& session_id, ServiceBase* service):
+        Session(loop, session_id),
+        service_(service){}
+      ServiceSession(uv_loop_t* loop, ServiceBase* service):
+        ServiceSession(loop, UUID(), service){}
+      explicit ServiceSession(ServiceBase* service);
+      ~ServiceSession() override = default;
+
+      ServiceBase* GetService() const{
+        return service_;
+      }
+
+      void OnMessageRead(const internal::BufferPtr& buff) override;
+    };
+
+    class ServiceBase : public ServerBase<ServiceSession>{
      protected:
-      RouterPtr router_;
+      Router router_;
 
       explicit ServiceBase(uv_loop_t* loop):
         ServerBase(loop),
-        router_(Router::NewInstance()){}
+        router_(){}
 
-      http::Session* CreateSession() const override{
-        return new Session(GetLoop(), GetRouter());
+      ServiceSession* CreateSession() override{
+        return new ServiceSession(this);
       }
      public:
       ~ServiceBase() override = default;
 
-      RouterPtr GetRouter() const{
+      Router& GetRouter(){
         return router_;
       }
     };
@@ -48,6 +71,37 @@ namespace token{
 
       bool Join(){
         return platform::ThreadJoin(thread_);
+      }
+    };
+
+    class AsyncRequestHandler{
+    private:
+      uv_async_t request_;
+      ServiceSession* session_;
+      internal::BufferPtr buffer_;//TODO: remove
+
+      inline ServiceSession*
+      session() const{
+        return session_;
+      }
+
+      RequestPtr ParseRequest();
+      RouterMatch FindMatch(const RequestPtr& request);
+
+      static void DoWork(uv_async_t* request);
+    public:
+      AsyncRequestHandler(uv_loop_t* loop, ServiceSession* session, const internal::BufferPtr& buff):
+          request_(),
+          session_(session),
+          buffer_(buff){
+        request_.data = this;
+        CHECK_UVRESULT2(ERROR, uv_async_init(loop, &request_, &DoWork), "couldn't initialize async handle.");
+      }
+      ~AsyncRequestHandler() = default;
+
+      bool Execute(){
+        VERIFY_UVRESULT2(ERROR, uv_async_send(&request_), "couldn't send async request.");
+        return true;
       }
     };
   }

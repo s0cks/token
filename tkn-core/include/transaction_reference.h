@@ -7,7 +7,29 @@
 
 namespace token{
   class TransactionReference : public Object{
-   private:
+  public:
+    class Encoder : public codec::TypeEncoder<TransactionReference>{
+    public:
+      Encoder(const TransactionReference* value, const codec::EncoderFlags& flags):
+        codec::TypeEncoder<TransactionReference>(value, flags){}
+      Encoder(const Encoder& other) = default;
+      ~Encoder() override = default;
+
+      int64_t GetBufferSize() const override;
+      bool Encode(const BufferPtr& buff) const override;
+      Encoder& operator=(const Encoder& other) = default;
+    };
+
+    class Decoder : public codec::DecoderBase<TransactionReference>{
+    public:
+      explicit Decoder(const codec::DecoderHints& hints):
+        codec::DecoderBase<TransactionReference>(hints){}
+      Decoder(const Decoder& other) = default;
+      ~Decoder() override = default;
+      bool Decode(const BufferPtr& buff, TransactionReference& result) const override;
+      Decoder& operator=(const Decoder& other) = default;
+    };
+  private:
     Hash transaction_;
     int64_t index_;
    public:
@@ -87,30 +109,6 @@ namespace token{
       return 0;
     }
   };
-
-  namespace codec{
-    class TransactionReferenceEncoder : public codec::EncoderBase<TransactionReference>{
-     public:
-      TransactionReferenceEncoder(const TransactionReference& value, const codec::EncoderFlags& flags):
-          codec::EncoderBase<TransactionReference>(value, flags){}
-      TransactionReferenceEncoder(const TransactionReferenceEncoder& other) = default;
-      ~TransactionReferenceEncoder() override = default;
-
-      int64_t GetBufferSize() const override;
-      bool Encode(const BufferPtr& buff) const override;
-      TransactionReferenceEncoder& operator=(const TransactionReferenceEncoder& other) = default;
-    };
-
-    class TransactionReferenceDecoder : public codec::DecoderBase<TransactionReference>{
-     public:
-      explicit TransactionReferenceDecoder(const codec::DecoderHints& hints):
-          codec::DecoderBase<TransactionReference>(hints){}
-      TransactionReferenceDecoder(const TransactionReferenceDecoder& other) = default;
-      ~TransactionReferenceDecoder() override = default;
-      bool Decode(const BufferPtr& buff, TransactionReference& result) const override;
-      TransactionReferenceDecoder& operator=(const TransactionReferenceDecoder& other) = default;
-    };
-  }
 
   namespace json{
     static inline bool

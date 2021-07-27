@@ -11,7 +11,7 @@ namespace token{
       ObjectPoolPtr pool_;
       BlockChainPtr chain_;
 
-      Session* CreateSession() const override{
+      Session* CreateSession() override{
         return new Session(GetLoop());
       }
     public:

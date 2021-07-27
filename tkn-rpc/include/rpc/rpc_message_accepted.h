@@ -5,32 +5,26 @@
 
 namespace token{
   namespace rpc{
-    class AcceptedMessage;
-  }
-
-  namespace codec{
-    class AcceptedMessageEncoder : public codec::PaxosMessageEncoder<rpc::AcceptedMessage>{
-    public:
-      explicit AcceptedMessageEncoder(const rpc::AcceptedMessage& value, const codec::EncoderFlags& flags):
-        PaxosMessageEncoder<rpc::AcceptedMessage>(value, flags){}
-      AcceptedMessageEncoder(const AcceptedMessageEncoder& other) = default;
-      ~AcceptedMessageEncoder() override = default;
-      AcceptedMessageEncoder& operator=(const AcceptedMessageEncoder& other) = default;
-    };
-
-    class AcceptedMessageDecoder : public PaxosMessageDecoder<rpc::AcceptedMessage>{
-    public:
-      explicit AcceptedMessageDecoder(const codec::DecoderHints& hints):
-        PaxosMessageDecoder<rpc::AcceptedMessage>(hints){}
-      AcceptedMessageDecoder(const AcceptedMessageDecoder& other) = default;
-      ~AcceptedMessageDecoder() override = default;
-      bool Decode(const BufferPtr& buff, rpc::AcceptedMessage& result) const override;
-      AcceptedMessageDecoder& operator=(const AcceptedMessageDecoder& other) = default;
-    };
-  }
-
-  namespace rpc{
     class AcceptedMessage : public PaxosMessage{
+    public:
+      class Encoder : public codec::PaxosMessageEncoder<rpc::AcceptedMessage>{
+      public:
+        explicit Encoder(const AcceptedMessage* value, const codec::EncoderFlags& flags):
+          codec::PaxosMessageEncoder<rpc::AcceptedMessage>(value, flags){}
+        Encoder(const Encoder& other) = default;
+        ~Encoder() override = default;
+        Encoder& operator=(const Encoder& other) = default;
+      };
+
+    class Decoder : public codec::PaxosMessageDecoder<rpc::AcceptedMessage>{
+      public:
+        explicit Decoder(const codec::DecoderHints& hints):
+          PaxosMessageDecoder<rpc::AcceptedMessage>(hints){}
+        Decoder(const Decoder& other) = default;
+        ~Decoder() override = default;
+        bool Decode(const BufferPtr& buff, rpc::AcceptedMessage& result) const override;
+        Decoder& operator=(const Decoder& other) = default;
+      };
      public:
       AcceptedMessage():
         PaxosMessage(){}
@@ -43,12 +37,12 @@ namespace token{
       }
 
       int64_t GetBufferSize() const override{
-        codec::AcceptedMessageEncoder encoder((*this), codec::kDefaultEncoderFlags);
+        Encoder encoder(this, codec::kDefaultEncoderFlags);
         return encoder.GetBufferSize();
       }
 
       bool Write(const BufferPtr& buff) const override{
-        codec::AcceptedMessageEncoder encoder((*this), codec::kDefaultEncoderFlags);
+        Encoder encoder(this, codec::kDefaultEncoderFlags);
         return encoder.Encode(buff);
       }
 
@@ -67,7 +61,7 @@ namespace token{
 
       static inline bool
       Decode(const BufferPtr& buff, AcceptedMessage& result, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
-        codec::AcceptedMessageDecoder decoder(hints);
+        Decoder decoder(hints);
         return decoder.Decode(buff, result);
       }
 

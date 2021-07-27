@@ -30,9 +30,21 @@ add_executable(tkn-runtime
     include/peer/peer_session_manager.h src/peer/peer_session_manager.cc
     include/peer/peer_session_thread.h src/peer/peer_session_thread.cc
 
+    include/acceptor.h src/acceptor.cc
     include/configuration.h src/configuration.cc
     include/flags.h src/flags.cc
+    include/miner.h src/miner.cc
     include/pool.h src/pool.cc
+    include/proposal_scope.h src/proposal_scope.cc
+    include/proposer.h src/proposer.cc
+    include/runtime.h src/runtime.cc
+
+    src/tasks/task_process_output_list.h src/tasks/task_process_input_list.cc
+    src/tasks/task_process_input_list.h src/tasks/task_process_output_list.cc
+    src/tasks/task_process_transaction.h src/tasks/task_process_transaction.cc
+
+    src/block_builder.h src/block_builder.cc
+
     main.cc)
 target_link_libraries(tkn-runtime
     tkn-platform

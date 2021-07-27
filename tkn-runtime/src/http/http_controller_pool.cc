@@ -12,19 +12,20 @@ namespace token{
 
     HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetBlock){
       Hash hash = request->GetHashParameterValue();
-      if(!GetPool()->HasBlock(hash))
+      if(!GetPool().HasBlock(hash))
         return session->Send(NewNoContentResponse(hash));
-      BlockPtr blk = GetPool()->GetBlock(hash);
+      BlockPtr blk = GetPool().GetBlock(hash);
       return session->Send(NewOkResponse(blk));
     }
 
     HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetBlocks){
+      DLOG(INFO) << "handling /pool/blocks...";
 
     }
 
     HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetPoolInfo){
       PoolStats stats;
-      GetPool()->GetPoolStats(stats);
+      GetPool().GetPoolStats(stats);
 
       json::String body;
       json::Writer writer(body);
@@ -44,9 +45,9 @@ namespace token{
 
     HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetTransaction){
       Hash hash = request->GetHashParameterValue();
-      if(!GetPool()->HasUnsignedTransaction(hash))
+      if(!GetPool().HasUnsignedTransaction(hash))
         return session->Send(NewNoContentResponse(hash));
-      UnsignedTransactionPtr tx = GetPool()->GetUnsignedTransaction(hash);
+      UnsignedTransactionPtr tx = GetPool().GetUnsignedTransaction(hash);
       return session->Send(NewOkResponse(tx));
     }
 
@@ -56,9 +57,9 @@ namespace token{
 
     HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetUnclaimedTransaction){
       Hash hash = request->GetHashParameterValue();
-      if(!GetPool()->HasUnclaimedTransaction(hash))
+      if(!GetPool().HasUnclaimedTransaction(hash))
         return session->Send(NewNoContentResponse(hash));
-      UnclaimedTransactionPtr utxo = GetPool()->GetUnclaimedTransaction(hash);
+      UnclaimedTransactionPtr utxo = GetPool().GetUnclaimedTransaction(hash);
       return session->Send(NewOkResponse(utxo));
     }
 
@@ -68,7 +69,7 @@ namespace token{
       writer.StartObject();
       {
         writer.Key("data");
-        if(!GetPool()->GetUnclaimedTransactions(writer))
+        if(!GetPool().GetUnclaimedTransactions(writer))
           return session->Send(NewInternalServerErrorResponse("Cannot get the list of unclaimed transactions in the object pool."));
       }
       writer.EndObject();

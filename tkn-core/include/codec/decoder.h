@@ -139,4 +139,7 @@ namespace token{
   }
 }
 
+#define DECODED_FIELD(Name, Type, Value) \
+  DVLOG(1) << "decoded " << #Name << " (" << #Type << "): " << (Value)
+
 #endif//TOKEN_CODEC_DECODER_H

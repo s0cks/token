@@ -87,22 +87,6 @@ namespace token{
     return true;
   }
 
-  peer::Session* PeerSessionManager::GetSession(const utils::Address& address){
-    FOR_EACH_WORKER(thread)
-      if (thread->IsConnected() && thread->GetPeerAddress() == address)
-        return thread->GetPeerSession();
-    END_FOR_EACH_WORKER
-    return nullptr;
-  }
-
-  peer::Session* PeerSessionManager::GetSession(const UUID& uuid){
-    FOR_EACH_WORKER(thread)
-      if (thread->IsConnected() && thread->GetPeerID() == uuid)
-        return thread->GetPeerSession();
-    END_FOR_EACH_WORKER
-    return nullptr;
-  }
-
   bool PeerSessionManager::GetConnectedPeers(std::set<UUID>& peers){
     FOR_EACH_WORKER(thread)
       if (thread->IsConnected() && !peers.insert(thread->GetPeerID()).second)
@@ -143,23 +127,23 @@ namespace token{
     return false;
   }
 
-/*#define DEFINE_PAXOS_BROADCAST(Name) \
+#define DEFINE_PAXOS_BROADCAST(Name) \
   void PeerSessionManager::Broadcast##Name(){ \
+    DLOG(INFO) << "broadcasting " << #Name << " to " << GetNumberOfConnectedPeers() << " peers...."; \
     FOR_EACH_WORKER(thread)          \
       if(thread->IsConnected()){     \
-        PeerSession* session = thread->GetPeerSession(); \
-        session->Send##Name();       \
+        thread->Send##Name();       \
       }                              \
     END_FOR_EACH_WORKER              \
   }
 
   DEFINE_PAXOS_BROADCAST(Prepare);
-  DEFINE_PAXOS_BROADCAST(Promise);
+//  DEFINE_PAXOS_BROADCAST(Promise);
   DEFINE_PAXOS_BROADCAST(Commit);
-  DEFINE_PAXOS_BROADCAST(DiscoveredBlock);
-  DEFINE_PAXOS_BROADCAST(Accepted);
-  DEFINE_PAXOS_BROADCAST(Rejected);
-#undef DEFINE_PAXOS_BROADCAST*/
+//  DEFINE_PAXOS_BROADCAST(DiscoveredBlock);
+//  DEFINE_PAXOS_BROADCAST(Accepted);
+//  DEFINE_PAXOS_BROADCAST(Rejected);
+#undef DEFINE_PAXOS_BROADCAST
 
   void PeerSessionManager::RegisterQueue(const ThreadId& thread, ConnectionRequestQueue* queue){
     auto pos = queues_.find(thread);

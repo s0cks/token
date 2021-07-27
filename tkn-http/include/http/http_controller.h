@@ -12,7 +12,7 @@ namespace token{
       Controller() = default;
      public:
       virtual ~Controller() = default;
-      virtual bool Initialize(const RouterPtr& router) = 0;
+      virtual bool Initialize(Router& router) = 0;
     };
   }
 
@@ -29,16 +29,16 @@ namespace token{
   void Controller::On##Name(http::Session* session, const RequestPtr& request)
 
 #define HTTP_CONTROLLER_GET(Path, Name) \
-    router->Get(shared_from_this(), Path, &Handle##Name)
+    router.Get(shared_from_this(), Path, &Handle##Name)
 
 #define HTTP_CONTROLLER_PUT(Path, Name) \
-    router->Put(shared_from_this(), Path, &Handle##Name)
+    router.Put(shared_from_this(), Path, &Handle##Name)
 
 #define HTTP_CONTROLLER_POST(Path, Name) \
-    router->Post(shared_from_this(), Path, &Handle##Name)
+    router.Post(shared_from_this(), Path, &Handle##Name)
 
 #define HTTP_CONTROLLER_DELETE(Path, Name) \
-    router->Delete(shared_from_this(), Path, &Handle##Name)
+    router.Delete(shared_from_this(), Path, &Handle##Name)
 }
 
 #endif //TOKEN_CONTROLLER_H

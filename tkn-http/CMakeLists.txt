@@ -9,7 +9,7 @@ add_library(tkn-http STATIC
         include/http/http_request.h
         include/http/http_response.h
         include/http/http_router.h src/http/http_router.cc
-        include/http/http_service.h
-        include/http/http_session.h src/http/http_session.cc)
+        include/http/http_service.h src/http/http_service.cc
+        include/http/http_session.h)
 target_link_libraries(tkn-http tkn-utils tkn-core)
 target_include_directories(tkn-http PUBLIC ${PROJECT_SOURCE_DIR}/include)

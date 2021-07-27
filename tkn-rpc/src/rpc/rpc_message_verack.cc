@@ -1,8 +1,8 @@
 #include "rpc/rpc_message_verack.h"
 
 namespace token{
-  namespace codec{
-    bool VerackMessageDecoder::Decode(const BufferPtr& buff, rpc::VerackMessage& result) const{
+  namespace rpc{
+    bool VerackMessage::Decoder::Decode(const BufferPtr& buff, rpc::VerackMessage& result) const{
       Timestamp timestamp;
       rpc::ClientType client_type = rpc::ClientType::kUnknown;
       Hash nonce;

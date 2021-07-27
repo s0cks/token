@@ -2,8 +2,8 @@
 #include "rpc/rpc_message_accepted.h"
 
 namespace token{
-  namespace codec{
-    bool AcceptedMessageDecoder::Decode(const BufferPtr& buff, rpc::AcceptedMessage& result) const{
+  namespace rpc{
+    bool AcceptedMessage::Decoder::Decode(const BufferPtr& buff, rpc::AcceptedMessage& result) const{
       //TODO: decode type
       //TODO: decode version
 

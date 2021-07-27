@@ -11,7 +11,7 @@ namespace token{
 
 #define FOR_EACH_POOL_CONTROLLER_ENDPOINT(V) \
   V(GET, "/pool/stats", GetPoolInfo)               \
-  V(GET, "/pool/blocks/:hash", GetBlock)     \
+  V(GET, "/pool/blocks/data/:hash", GetBlock)     \
   V(GET, "/pool/blocks", GetBlocks)          \
   V(GET, "/pool/transactions/:hash", GetTransaction) \
   V(GET, "/pool/transactions", GetTransactions)      \
@@ -21,7 +21,7 @@ namespace token{
     class PoolController : public Controller,
                            public std::enable_shared_from_this<PoolController>{
      protected:
-      ObjectPoolPtr pool_;
+      ObjectPool& pool_;
 
 #define DECLARE_ENDPOINT(Method, Path, Name) \
     HTTP_CONTROLLER_ENDPOINT(Name)
@@ -29,16 +29,16 @@ namespace token{
       FOR_EACH_POOL_CONTROLLER_ENDPOINT(DECLARE_ENDPOINT)
 #undef DECLARE_ENDPOINT
      public:
-      explicit PoolController(const ObjectPoolPtr& pool):
+      explicit PoolController(ObjectPool& pool):
           Controller(),
-          pool_(std::move(pool)){}
+          pool_(pool){}
       ~PoolController() override = default;
 
-      ObjectPoolPtr GetPool() const{
+      ObjectPool& GetPool(){
         return pool_;
       }
 
-      bool Initialize(const RouterPtr& router) override{
+      bool Initialize(Router& router) override{
 #define REGISTER_ENDPOINT(Method, Path, Name) \
       HTTP_CONTROLLER_##Method(Path, Name);
 
@@ -48,7 +48,7 @@ namespace token{
       }
 
       static inline PoolControllerPtr
-      NewInstance(const ObjectPoolPtr& pool){
+      NewInstance(ObjectPool& pool){
         return std::make_shared<PoolController>(pool);
       }
     };

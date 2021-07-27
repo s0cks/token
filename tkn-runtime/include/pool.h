@@ -102,12 +102,38 @@ namespace token{
     return ss.str();
   }
 
-#define LOG_POOL(LevelName) \
-  LOG(LevelName) << "[pool] "
-#define DLOG_POOL(LevelName) \
-  DLOG(LevelName) << "[pool] "
-#define DLOG_POOL_IF(LevelName, Condition) \
-  DLOG_IF(LevelName, Condition) << "[pool] "
+  class PoolVisitor{
+  protected:
+    PoolVisitor() = default;
+  public:
+    virtual ~PoolVisitor() = default;
+    virtual bool Visit(const BlockPtr& val) const = 0;
+    virtual bool Visit(const UnsignedTransactionPtr& val) const = 0;
+    virtual bool Visit(const UnclaimedTransactionPtr& val) const = 0;
+  };
+
+  template<const google::LogSeverity& Severity=google::INFO>
+  class PoolPrinter : public PoolVisitor{
+  public:
+    PoolPrinter():
+      PoolVisitor(){}
+    ~PoolPrinter() override = default;
+
+    bool Visit(const BlockPtr& val) const override{
+      LOG_AT_LEVEL(Severity) << val->hash() << " (Block)";
+      return true;
+    }
+
+    bool Visit(const UnsignedTransactionPtr& val) const override{
+      LOG_AT_LEVEL(Severity) << val->hash() << " (UnsignedTransaction)";
+      return true;
+    }
+
+    bool Visit(const UnclaimedTransactionPtr& val) const override{
+      LOG_AT_LEVEL(Severity) << val->hash() << " (UnclaimedTransaction)";
+      return true;
+    }
+  };
 
   class ObjectPool{
    public:
@@ -161,9 +187,7 @@ namespace token{
 
     leveldb::Status InitializeIndex(const std::string& filename);
    public:
-    ObjectPool():
-      state_(State::kUninitialized),
-      index_(nullptr){}
+    ObjectPool(const std::string& filename);
     virtual ~ObjectPool() = default;
 
     /**
@@ -194,11 +218,12 @@ namespace token{
     virtual bool Has##Name(const Hash& hash) const;                                     \
     virtual bool Has##Name##s() const;    \
     virtual bool Remove##Name(const Hash& hash) const;                                  \
-    virtual bool Visit##Name##s(ObjectPool##Name##Visitor* vis) const;                  \
     virtual Name##Ptr Get##Name(const Hash& hash) const;                                \
     virtual int64_t GetNumberOf##Name##s() const;
     FOR_EACH_POOL_TYPE(DEFINE_TYPE_METHODS)
 #undef DEFINE_TYPE_METHODS
+
+    virtual bool Accept(PoolVisitor* vis) const;
 
     //TODO: refactor
     int64_t GetNumberOfObjects() const;
@@ -216,9 +241,6 @@ namespace token{
     GetName(){
       return "ObjectPool";
     }
-
-    static ObjectPoolPtr GetInstance();
-    static bool Initialize(const std::string& filename=GetObjectPoolDirectory());
   };
 }
 

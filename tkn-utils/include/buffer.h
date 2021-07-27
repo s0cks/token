@@ -249,9 +249,11 @@ namespace token{
             return;
           }
 
-          DLOG(INFO) << "allocated new internal buffer of size: " << size;
+          DVLOG(2) << "allocated new internal buffer of size: " << size;
           data_ = data;
           length_ = size;
+        } else if(length <= 0){
+          DVLOG(2) << "cannot allocate an empty buffer.";
         }
       }
       AllocatedBuffer(const AllocatedBuffer& other) = default;

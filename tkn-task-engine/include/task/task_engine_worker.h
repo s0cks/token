@@ -57,10 +57,6 @@ namespace token{
         state_ = state;
       }
 
-      TaskQueue* GetTaskQueue(){
-        return &queue_;
-      }
-
       Task* GetNextTask();
       static void HandleThread(uword parameter);
      public:
@@ -81,6 +77,10 @@ namespace token{
 
       WorkerId GetWorkerId() const{
         return worker_;
+      }
+
+      TaskQueue& GetTaskQueue(){
+        return queue_;
       }
 
       State GetState() const{

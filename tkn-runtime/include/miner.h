@@ -1,32 +1,23 @@
 #ifndef TOKEN_MINER_H
 #define TOKEN_MINER_H
 
-#include <mutex>
+#include <uv.h>
 #include <ostream>
-#include <condition_variable>
+#include <glog/logging.h>
 
 #include "flags.h"
+#include "common.h" //TODO: remove this include
 #include "os_thread.h"
+#include "atomic/relaxed_atomic.h"
 
 namespace token{
-#define LOG_MINER(LevelName) \
-  LOG(LevelName) << "[miner] "
-
-#define LOG_MINER_IF(LevelName, Condition) \
-  LOG_IF(LevelName, Condition) << "[miner] "
-
-#define DLOG_MINER(LevelName) \
-  DLOG(LevelName) << "[miner] "
-
-#define DLOG_MINER_IF(LevelName, Condition) \
-  DLOG_IF(LevelName, Condition) << "[miner] "
-
 #define FOR_EACH_MINER_STATE(V) \
   V(Starting)                   \
   V(Running)                    \
   V(Stopping)                   \
   V(Stopped)
 
+  class Runtime;
   class BlockMiner{
    public:
     enum State{
@@ -47,63 +38,29 @@ namespace token{
       }
     }
    protected:
-    uv_loop_t* loop_;
+    Runtime* runtime_;
     uv_timer_t timer_;
-    uv_async_t on_accepted_;
-    uv_async_t on_rejected_;
     atomic::RelaxedAtomic<State> state_;
+    int64_t timeout_;
+    int64_t repeat_;
 
     void SetState(const State& state){
       state_ = state;
     }
-
-    bool StopMiningTimer();
-    bool StartMiningTimer();
-
-    static inline int16_t
-    GetRequiredVotes(){
-      return FLAGS_num_peers; //TODO: convert to current active peers.
-    }
-
-    static void OnMine(uv_timer_t* handle);
-    static void OnAccepted(uv_async_t* handle);
-    static void OnRejected(uv_async_t* handle);
    public:
-    explicit BlockMiner(uv_loop_t* loop=uv_loop_new()):
-      loop_(loop),
-      timer_(),
-      on_accepted_(),
-      on_rejected_(),
-      state_(State::kStoppedState){
-      timer_.data = this;
-      on_accepted_.data = this;
-      on_rejected_.data = this;
-
-      CHECK_UVRESULT(uv_async_init(loop_, &on_accepted_, &OnAccepted), DLOG_MINER(ERROR), "cannot register on_accepted");
-      CHECK_UVRESULT(uv_async_init(loop_, &on_rejected_, &OnRejected), DLOG_MINER(ERROR), "cannot register on_rejected");
-    }
+    explicit BlockMiner(Runtime* runtime);
     ~BlockMiner() = default;
 
     State GetState() const{
       return (State)state_;
     }
 
-    uv_loop_t* GetLoop() const{
-      return loop_;
+    Runtime* GetRuntime() const{
+      return runtime_;
     }
 
-    bool Run();
-
-    inline bool Pause(){
-      return StopMiningTimer();
-    }
-
-    inline bool Resume(){
-      return StartMiningTimer();
-    }
-
-    bool SendAccepted();//TODO: rename
-    bool SendRejected();//TODO: rename
+    bool StartTimer();
+    bool PauseTimer();
 
 #define DEFINE_CHECK(Name) \
     inline bool Is##Name() const{ return (State)state_ == State::k##Name##State; }
@@ -114,19 +71,6 @@ namespace token{
     GetThreadName(){
       return "miner";
     }
-
-    static BlockMiner* GetInstance();
-  };
-
-  class BlockMinerThread{
-   private:
-    static void HandleThread(uword param);
-   public:
-    BlockMinerThread() = delete;
-    ~BlockMinerThread() = delete;
-
-    static bool Stop();
-    static bool Start();
   };
 }
 

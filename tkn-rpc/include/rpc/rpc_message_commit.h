@@ -5,32 +5,26 @@
 
 namespace token{
   namespace rpc{
-    class CommitMessage;
-  }
-
-  namespace codec{
-  class CommitMessageEncoder : public PaxosMessageEncoder<rpc::CommitMessage>{
-    public:
-      CommitMessageEncoder(const rpc::CommitMessage& value, const codec::EncoderFlags& flags):
-        PaxosMessageEncoder<rpc::CommitMessage>(value, flags){}
-      CommitMessageEncoder(const CommitMessageEncoder& rhs) = default;
-      ~CommitMessageEncoder() override = default;
-      CommitMessageEncoder& operator=(const CommitMessageEncoder& rhs) = default;
-    };
-
-    class CommitMessageDecoder : public PaxosMessageDecoder<rpc::CommitMessage>{
-    public:
-      explicit CommitMessageDecoder(const codec::DecoderHints& hints):
-        PaxosMessageDecoder<rpc::CommitMessage>(hints){}
-      CommitMessageDecoder(const CommitMessageDecoder& rhs) = default;
-      ~CommitMessageDecoder() override = default;
-      bool Decode(const BufferPtr& buff, rpc::CommitMessage& result) const;
-      CommitMessageDecoder& operator=(const CommitMessageDecoder& rhs) = default;
-    };
-  }
-
-  namespace rpc{
     class CommitMessage : public PaxosMessage{
+    public:
+      class Encoder : public codec::PaxosMessageEncoder<rpc::CommitMessage>{
+      public:
+        Encoder(const CommitMessage* value, const codec::EncoderFlags& flags):
+          PaxosMessageEncoder<rpc::CommitMessage>(value, flags){}
+        Encoder(const Encoder& rhs) = default;
+        ~Encoder() override = default;
+        Encoder& operator=(const Encoder& rhs) = default;
+      };
+
+      class Decoder : public codec::PaxosMessageDecoder<rpc::CommitMessage>{
+      public:
+        explicit Decoder(const codec::DecoderHints& hints):
+          PaxosMessageDecoder<rpc::CommitMessage>(hints){}
+        Decoder(const Decoder& rhs) = default;
+        ~Decoder() override = default;
+        bool Decode(const BufferPtr& buff, rpc::CommitMessage& result) const;
+        Decoder& operator=(const Decoder& rhs) = default;
+      };
      public:
       CommitMessage() = default;
       explicit CommitMessage(const Proposal& proposal):
@@ -42,12 +36,12 @@ namespace token{
       }
 
       int64_t GetBufferSize() const override{
-        codec::CommitMessageEncoder encoder((*this), GetDefaultMessageEncoderFlags());
+        Encoder encoder(this, GetDefaultMessageEncoderFlags());
         return encoder.GetBufferSize();
       }
 
       bool Write(const BufferPtr& buff) const override{
-        codec::CommitMessageEncoder encoder((*this), GetDefaultMessageEncoderFlags());
+        Encoder encoder(this, GetDefaultMessageEncoderFlags());
         return encoder.Encode(buff);
       }
 
@@ -70,7 +64,7 @@ namespace token{
 
       static inline bool
       Decode(const BufferPtr& buff, CommitMessage& result, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
-        codec::CommitMessageDecoder decoder(hints);
+        Decoder decoder(hints);
         return decoder.Decode(buff, result);
       }
 

@@ -14,19 +14,21 @@ namespace token{
   namespace http{
 #define TOKEN_HTTP_VERSION "1.1"
 
-#define FOR_EACH_HTTP_TYPE(V) \
-    V(Session)                \
-    V(Message)                \
-    V(Request)                \
-    V(Response)               \
-    V(Controller)             \
-    V(Router)
+    class Session;
+    typedef std::shared_ptr<Session> SessionPtr;
+    class Message;
+    typedef std::shared_ptr<Message> MessagePtr;
 
-#define FORWARD_DECLARE_HTTP_TYPE(Name) \
-    class Name;                         \
-    typedef std::shared_ptr<Name> Name##Ptr;
-    FOR_EACH_HTTP_TYPE(FORWARD_DECLARE_HTTP_TYPE)
-#undef FORWARD_DECLARE_HTTP_TYPE
+    class Request;
+    typedef std::shared_ptr<Request> RequestPtr;
+
+    class Response;
+    typedef std::shared_ptr<Response> ResponsePtr;
+
+    class Controller;
+    typedef std::shared_ptr<Controller> ControllerPtr;
+
+    class Router;
 
 #define FOR_EACH_HTTP_METHOD(V) \
   V(Get, "GET")                 \

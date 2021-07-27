@@ -63,8 +63,6 @@ namespace token{
     static bool IsConnectedTo(const utils::Address& address);
     static bool GetConnectedPeers(std::set<UUID>& peers);
     static int32_t GetNumberOfConnectedPeers();
-    static peer::Session* GetSession(const UUID& uuid);
-    static peer::Session* GetSession(const utils::Address& address);
 
     static void BroadcastPrepare();
     static void BroadcastPromise();
