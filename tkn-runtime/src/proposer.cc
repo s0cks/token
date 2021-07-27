@@ -222,7 +222,7 @@ namespace token{
 
   void Proposer::HandleOnStart(uv_async_t* handle){ //TODO: better error handling & logging
     auto proposer = (Proposer*)handle->data;
-    auto height = 0;
+    auto height = 100;
     auto hash = Hash();
     auto proposal = ProposalScope::CreateNewProposal(height, hash);
     DLOG(INFO) << "starting proposal " << proposal->ToString() << "....";
