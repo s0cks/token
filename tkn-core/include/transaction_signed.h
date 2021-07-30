@@ -6,10 +6,10 @@
 namespace token{
   class SignedTransaction : public internal::TransactionBase{
   public:
-  class Encoder : public codec::TransactionEncoder<SignedTransaction> {
+  class Encoder : public TransactionEncoder<SignedTransaction> {
     public:
       explicit Encoder(const SignedTransaction* value, const codec::EncoderFlags &flags = codec::kDefaultEncoderFlags):
-        codec::TransactionEncoder<SignedTransaction>(value, flags) {}
+        TransactionEncoder<SignedTransaction>(value, flags) {}
       Encoder(const Encoder &other) = default;
       ~Encoder() override = default;
       int64_t GetBufferSize() const override;
@@ -17,13 +17,11 @@ namespace token{
       Encoder &operator=(const Encoder &other) = default;
     };
 
-  class Decoder : public codec::TransactionDecoder<SignedTransaction>{
+  class Decoder : public TransactionDecoder<SignedTransaction>{
     public:
       explicit Decoder(const codec::DecoderHints& hints);
-      Decoder(const Decoder& other) = default;
       ~Decoder() override = default;
-      bool Decode(const BufferPtr &buff, SignedTransaction& result) const override;
-      Decoder& operator=(const Decoder& other) = default;
+      SignedTransaction* Decode(const BufferPtr& data) const override;
     };
    public:
     SignedTransaction(const Timestamp& timestamp, const InputList& inputs, const OutputList& outputs):

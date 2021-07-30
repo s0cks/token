@@ -89,7 +89,7 @@ namespace token{
   ReadBlockFile(const std::string& filename, const Hash& hash){
     auto filesize = GetFilesize(filename);//TODO: cleanup code
     BufferPtr buffer = internal::NewBufferFromFile(filename, filesize);
-    BlockPtr block = Block::DecodeNew(buffer, codec::ExpectTypeHint::Encode(true)|codec::ExpectVersionHint::Encode(true));
+    BlockPtr block = Block::Decode(buffer, codec::ExpectTypeHint::Encode(true)|codec::ExpectVersionHint::Encode(true));
     LOG_IF(FATAL, block->hash() != hash) << "expected block hash of " << hash << ", but parsed block was: " << block->ToString();
     return block;
   }

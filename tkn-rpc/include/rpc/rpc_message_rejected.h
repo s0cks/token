@@ -20,10 +20,8 @@ namespace token{
       public:
         explicit Decoder(const codec::DecoderHints& hints):
           codec::PaxosMessageDecoder<RejectedMessage>(hints){}
-        Decoder(const Decoder& rhs) = default;
         ~Decoder() override = default;
-        bool Decode(const BufferPtr& buff, RejectedMessage& result) const override;
-        Decoder& operator=(const Decoder& rhs) = default;
+        RejectedMessage* Decode(const BufferPtr& data) const override;
       };
      public:
       RejectedMessage() = default;
@@ -58,20 +56,16 @@ namespace token{
         return std::make_shared<RejectedMessage>(proposal);
       }
 
-      static inline bool
-      Decode(const BufferPtr& buff, RejectedMessage& result, const codec::DecoderHints& hints){
-        Decoder decoder(hints);
-        return decoder.Decode(buff, result);
-      }
-
       static inline RejectedMessagePtr
-      DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints){
-        RejectedMessage instance;
-        if(!Decode(buff, instance, hints)){
-          DLOG(ERROR) << "cannot decode RejectedMessage.";
+      Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+        Decoder decoder(hints);
+
+        RejectedMessage* value = nullptr;
+        if(!(value = decoder.Decode(data))){
+          DLOG(FATAL) << "cannot decode RejectedMessage from buffer.";
           return nullptr;
         }
-        return std::make_shared<RejectedMessage>(instance);
+        return std::shared_ptr<RejectedMessage>(value);
       }
     };
 

@@ -2,15 +2,11 @@
 
 namespace token{
   namespace rpc{
-    bool PrepareMessage::Decoder::Decode(const BufferPtr& buff, rpc::PrepareMessage& result) const{
-      Proposal proposal;
-      if(!DecodeProposalData(buff, proposal)){
-        LOG(FATAL) << "cannot decode proposal data.";
-        return false;
-      }
-
-      result = rpc::PrepareMessage(proposal);
-      return true;
+    PrepareMessage* PrepareMessage::Decoder::Decode(const BufferPtr& data) const{
+      Proposal* proposal = nullptr;
+      if(!(proposal = DecodeProposal(data)))
+        CANNOT_DECODE_FIELD(proposal_, Proposal);
+      return new PrepareMessage(*proposal);//TODO: fix memory-leak
     }
   }
 }

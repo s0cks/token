@@ -25,17 +25,15 @@ namespace token{
       Encoder& operator=(const Encoder& other) = default;
     };
 
-    class Decoder: public codec::DecoderBase<UnclaimedTransaction>{
+    class Decoder: public codec::TypeDecoder<UnclaimedTransaction>{
     protected:
       TransactionReference::Decoder decode_txref_;
       User::Decoder decode_user_;
       Product::Decoder decode_product_;
     public:
       explicit Decoder(const codec::DecoderHints& hints = codec::kDefaultDecoderHints);
-      Decoder(const Decoder& other) = default;
       ~Decoder() override = default;
-      bool Decode(const BufferPtr& buff, UnclaimedTransaction& result) const override;
-      Decoder& operator=(const Decoder& other) = default;
+      UnclaimedTransaction* Decode(const BufferPtr& data) const override;
     };
   private:
     TransactionReference reference_;
@@ -134,20 +132,17 @@ namespace token{
       return std::make_shared<UnclaimedTransaction>(hash, index, user, product);
     }
 
-    static inline bool
-    Decode(const BufferPtr& buff, UnclaimedTransaction& result, const codec::DecoderHints& hints = codec::kDefaultDecoderHints){
-      Decoder decoder(hints);
-      return decoder.Decode(buff, result);
-    }
-
     static inline UnclaimedTransactionPtr
-    DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints = codec::kDefaultDecoderHints){
-      UnclaimedTransaction result;
-      if(!Decode(buff, result, hints)){
-        DLOG(ERROR) << "cannot decode UnclaimedTransaction.";
+    Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      Decoder decoder(hints);
+
+      UnclaimedTransaction* value = nullptr;
+      if(!(value = decoder.Decode(data))){
+        DLOG(FATAL) << "cannot decode UnclaimedTransaction from buffer.";
         return nullptr;
       }
-      return std::make_shared<UnclaimedTransaction>(result);
+
+      return std::shared_ptr<UnclaimedTransaction>(value);
     }
   };
   namespace json{

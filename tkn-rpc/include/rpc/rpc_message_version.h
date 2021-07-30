@@ -16,14 +16,12 @@ namespace token{
         Encoder& operator=(const Encoder& rhs) = default;
       };
 
-      class Decoder : public codec::HandshakeMessageDecoder<rpc::VersionMessage>{
+      class Decoder : public codec::HandshakeMessageDecoder<VersionMessage>{
       public:
         explicit Decoder(const codec::DecoderHints& hints):
-          codec::HandshakeMessageDecoder<rpc::VersionMessage>(hints){}
-        Decoder(const Decoder& rhs) = default;
+          codec::HandshakeMessageDecoder<VersionMessage>(hints){}
         ~Decoder() override = default;
-        bool Decode(const BufferPtr& buff, rpc::VersionMessage& result) const;
-        Decoder& operator=(const Decoder& rhs) = default;
+        VersionMessage* Decode(const BufferPtr& data) const override;
       };
      public:
       VersionMessage():
@@ -74,20 +72,16 @@ namespace token{
         return std::make_shared<VersionMessage>(timestamp, client_type, version, nonce, node_id);
       }
 
-      static inline bool
-      Decode(const BufferPtr& buff, VersionMessage& result, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
-        Decoder decoder(hints);
-        return decoder.Decode(buff, result);
-      }
-
       static inline VersionMessagePtr
-      DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
-        VersionMessage msg;
-        if(!Decode(buff, msg, hints)){
-          DLOG(ERROR) << "cannot decode VersionMessage.";
+      Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+        Decoder decoder(hints);
+
+        VersionMessage* value = nullptr;
+        if(!(value = decoder.Decode(data))){
+          DLOG(FATAL) << "cannot decode VersionMessage from buffer.";
           return nullptr;
         }
-        return std::make_shared<VersionMessage>(msg);
+        return std::shared_ptr<VersionMessage>(value);
       }
     };
   }

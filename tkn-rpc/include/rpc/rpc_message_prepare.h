@@ -16,21 +16,18 @@ namespace token{
         Encoder& operator=(const Encoder& rhs) = default;
       };
 
-    class Decoder : public codec::PaxosMessageDecoder<rpc::PrepareMessage>{
+    class Decoder : public codec::PaxosMessageDecoder<PrepareMessage>{
       public:
         explicit Decoder(const codec::DecoderHints& hints):
-          PaxosMessageDecoder<rpc::PrepareMessage>(hints){}
-        Decoder(const Decoder& rhs) = default;
+          PaxosMessageDecoder<PrepareMessage>(hints){}
         ~Decoder() override = default;
-        bool Decode(const BufferPtr& buff, rpc::PrepareMessage& result) const override;
-        Decoder& operator=(const Decoder& rhs) = default;
+        PrepareMessage* Decode(const BufferPtr& data) const override;
       };
      public:
       PrepareMessage():
         PaxosMessage(){}
       explicit PrepareMessage(const Proposal& proposal):
         PaxosMessage(proposal){}
-      PrepareMessage(const PrepareMessage& other) = default;
       ~PrepareMessage() override = default;
 
       Type type() const override{
@@ -55,14 +52,6 @@ namespace token{
         return ss.str();
       }
 
-      PrepareMessage& operator=(const PrepareMessage& rhs){
-        if(this == &rhs)
-          return *this;
-        delete proposal_;
-        proposal_ = new Proposal(*rhs.proposal_);
-        return *this;
-      }
-
       friend std::ostream& operator<<(std::ostream& stream, const PrepareMessage& msg){
         return stream << msg.ToString();
       }
@@ -72,20 +61,16 @@ namespace token{
         return std::make_shared<PrepareMessage>(proposal);
       }
 
-      static inline bool
-      Decode(const BufferPtr& buff, PrepareMessage& result, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
-        Decoder decoder(hints);
-        return decoder.Decode(buff, result);
-      }
-
       static inline PrepareMessagePtr
-      DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
-        PrepareMessage msg;
-        if(!Decode(buff, msg, hints)){
-          DLOG(ERROR) << "cannot decode PrepareMessage.";
+      Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+        Decoder decoder(hints);
+
+        PrepareMessage* value = nullptr;
+        if(!(value = decoder.Decode(data))){
+          DLOG(FATAL) << "cannot decode PrepareMessage from buffer.";
           return nullptr;
         }
-        return std::make_shared<PrepareMessage>(msg);
+        return std::shared_ptr<PrepareMessage>(value);
       }
     };
 

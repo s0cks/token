@@ -17,6 +17,7 @@ namespace token{
   bool Proposal::Encoder::Encode(const BufferPtr& buff) const{
     if(!codec::TypeEncoder<Proposal>::Encode(buff))
       return false;
+
     const auto& timestamp = value()->timestamp();
     if(!buff->PutTimestamp(timestamp)){
       DLOG(FATAL) << "cannot encode timestamp_";
@@ -55,37 +56,28 @@ namespace token{
   }
 
   Proposal::Decoder::Decoder(const codec::DecoderHints& hints):
-    codec::DecoderBase<Proposal>(hints){}
+    codec::TypeDecoder<Proposal>(hints){}
 
-  bool Proposal::Decoder::Decode(const BufferPtr& buff, Proposal& result) const{
-    buff->SetReadPosition(0);
-    buff->SetWritePosition(0);
-
+  Proposal* Proposal::Decoder::Decode(const BufferPtr& data) const{
     //TODO: fix UUID decoding
-    Timestamp timestamp = buff->GetTimestamp();
+    Timestamp timestamp = data->GetTimestamp();
     DECODED_FIELD(timestamp_, Timestamp, FormatTimestampReadable(timestamp));
 
     uint8_t proposal_id[internal::kMaxUUIDLength];
-    if(!buff->GetBytes(proposal_id, internal::kMaxUUIDLength)){
-      DLOG(FATAL) << "cannot decode UUID from buffer.";
-      return false;
-    }
+    if(!data->GetBytes(proposal_id, internal::kMaxUUIDLength))
+      CANNOT_DECODE_FIELD(proposal_id, UUID);
     DECODED_FIELD(proposal_id_, UUID, UUID(proposal_id, internal::kMaxUUIDLength));
 
     uint8_t proposer_id[internal::kMaxUUIDLength];
-    if(!buff->GetBytes(proposer_id, internal::kMaxUUIDLength)){
-      DLOG(FATAL) << "cannot decode UUID from buffer.";
-      return false;
-    }
+    if(!data->GetBytes(proposer_id, internal::kMaxUUIDLength))
+      CANNOT_DECODE_FIELD(proposer_id_, UUID);
     DECODED_FIELD(proposer_id_, UUID, UUID(proposer_id, internal::kMaxUUIDLength));
 
-    int64_t height = buff->GetLong();
+    int64_t height = data->GetLong();
     DECODED_FIELD(height_, int64_t, height);
 
-    Hash hash = buff->GetHash();
+    Hash hash = data->GetHash();
     DECODED_FIELD(hash_, Hash, hash);
-
-    result = Proposal(timestamp, UUID(proposal_id, internal::kMaxUUIDLength), UUID(proposer_id, internal::kMaxUUIDLength), height, hash);
-    return true;
+    return new Proposal(timestamp, UUID(proposal_id, internal::kMaxUUIDLength), UUID(proposer_id, internal::kMaxUUIDLength), height, hash);
   }
 }

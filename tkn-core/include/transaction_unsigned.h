@@ -12,7 +12,7 @@ namespace token{
       }
     };
 
-  class Encoder: public codec::TransactionEncoder<UnsignedTransaction>{
+  class Encoder: public TransactionEncoder<UnsignedTransaction>{
     public:
       explicit Encoder(const UnsignedTransaction* value, const codec::EncoderFlags& flags = codec::kDefaultEncoderFlags):
         TransactionEncoder<UnsignedTransaction>(value, flags){}
@@ -23,14 +23,12 @@ namespace token{
       Encoder& operator=(const Encoder& other) = default;
     };
 
-  class Decoder: public codec::TransactionDecoder<UnsignedTransaction>{
+  class Decoder: public TransactionDecoder<UnsignedTransaction>{
     public:
       explicit Decoder(const codec::DecoderHints& hints):
           TransactionDecoder<UnsignedTransaction>(hints){}
-      Decoder(const Decoder& other) = default;
       ~Decoder() override = default;
-      bool Decode(const BufferPtr& buff, UnsignedTransaction& result) const override;
-      Decoder& operator=(const Decoder& other) = default;
+      UnsignedTransaction* Decode(const BufferPtr& data) const override;
     };
   public:
     UnsignedTransaction():
@@ -57,18 +55,16 @@ namespace token{
       return std::make_shared<UnsignedTransaction>(timestamp, inputs, outputs);
     }
 
-    static inline bool
-    Decode(const BufferPtr& buff, UnsignedTransaction& result, const codec::DecoderHints& hints = codec::kDefaultDecoderHints){
-      Decoder decoder(hints);
-      return decoder.Decode(buff, result);
-    }
-
     static inline UnsignedTransactionPtr
-    DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints = codec::kDefaultDecoderHints){
-      UnsignedTransaction instance;
-      if(!Decode(buff, instance, hints))
+    Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      Decoder decoder(hints);
+
+      UnsignedTransaction* value = nullptr;
+      if(!(value = decoder.Decode(data))){
+        DLOG(FATAL) << "cannot decode UnsignedTransaction from buffer.";
         return nullptr;
-      return std::make_shared<UnsignedTransaction>(instance);
+      }
+      return std::shared_ptr<UnsignedTransaction>(value);
     }
   };
 

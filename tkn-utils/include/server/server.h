@@ -71,8 +71,7 @@ namespace token{
     static void
     AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf){
       auto session = (SessionBase*)handle->data;
-      LOG(INFO) << "allocating buffer of size " << suggested_size << "b for session: " << session->GetUUID();
-
+      DVLOG(1) << "allocating buffer of size " << suggested_size << "b for session: " << session->GetUUID();
       buf->base = (char*)malloc(suggested_size);
       buf->len = suggested_size;
     }
@@ -80,8 +79,6 @@ namespace token{
     static void
     OnNewConnection(uv_stream_t* stream, int status){
       CHECK_UVRESULT2(ERROR, status, "connect failure");
-      DLOG(INFO) << "(" << status << ") accepting new connection....";
-
       auto server = (ServerBase*)stream->data;
       auto session = server->CreateSession();
       DLOG(INFO) << "creating new session (" << session->GetUUID() << ")....";
@@ -93,7 +90,22 @@ namespace token{
 
     static void
     OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
-      LOG(INFO) << "received " << nread << " bytes.";
+      struct sockaddr_in addr;
+      int nlen = sizeof(addr);
+
+      int err;
+      if((err = uv_tcp_getpeername((uv_tcp_t*)stream, (struct sockaddr*)&addr, &nlen)) != 0){
+        DLOG(WARNING) << "cannot get peer name from client stream: " << uv_strerror(err);
+      } else{
+        char address[16];
+        if((err = uv_inet_ntop(AF_INET, &addr.sin_addr, address, sizeof(address))) != 0){
+          DLOG(WARNING) << "cannot get address from peer name: " << uv_strerror(err);
+        } else{
+          DLOG(INFO) << "reading message from peer: " << address << ":" << ntohs(addr.sin_port);
+        }
+      }
+
+
       auto session = ((SessionType*)stream->data); //TODO: Clean this cast up?
       if(nread == UV_EOF){
         LOG(WARNING) << "client disconnected!";
@@ -167,12 +179,11 @@ namespace token{
       return (State)state_;
     }
 
-    bool Run(const ServerPort& port){
+    bool Start(const ServerPort& port){
       DLOG(INFO) << "starting the server....";
       SetState(ServerBase::State::kStartingState);
       VERIFY_UVRESULT2(FATAL, Bind(GetHandle(), port), "cannot bind server");
       VERIFY_UVRESULT2(FATAL, Listen(GetStream(), &OnNewConnection), "listen failure");
-
       SetState(ServerBase::State::kRunningState);
       DLOG(INFO) << "server listening on port: " << port;
       VERIFY_UVRESULT2(FATAL, uv_run(GetLoop(), UV_RUN_DEFAULT), "failed to run server loop");
@@ -193,13 +204,13 @@ namespace token{
 
     static void HandleThread(uword param){
       auto instance = (Server*)param;
-      if(!instance->Run(Server::GetPort())){
+      if(!instance->Start(Server::GetPort())){
         LOG(FATAL) << "cannot run the " << Server::GetName() << " loop on port: " << Server::GetPort();
       }
       pthread_exit(nullptr);
     }
    public:
-    ServerThread(Server* instance):
+    explicit ServerThread(Server* instance):
       instance_(instance),
       thread_(){}
     ~ServerThread() = default;

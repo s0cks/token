@@ -25,14 +25,12 @@ namespace token{
     return true;
   }
 
-  bool TransactionReference::Decoder::Decode(const BufferPtr& buff, TransactionReference& result) const{
-    auto transaction = buff->GetHash();
+  TransactionReference* TransactionReference::Decoder::Decode(const BufferPtr& data) const{
+    auto transaction = data->GetHash();
     DECODED_FIELD(transaction_, Hash, transaction);
 
-    auto index = buff->GetLong();
+    auto index = data->GetLong();
     DECODED_FIELD(index_, int64_t, index);
-
-    result = TransactionReference(transaction, index);
-    return true;
+    return new TransactionReference(transaction, index);
   }
 }

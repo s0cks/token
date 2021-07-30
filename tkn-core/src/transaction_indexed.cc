@@ -14,13 +14,13 @@ namespace token{
   }
 
   int64_t IndexedTransaction::Encoder::GetBufferSize() const{
-    auto size = codec::TransactionEncoder<IndexedTransaction>::GetBufferSize();
+    auto size = TransactionEncoder<IndexedTransaction>::GetBufferSize();
     size += sizeof(int64_t); //index
     return size;
   }
 
   bool IndexedTransaction::Encoder::Encode(const BufferPtr &buff) const{
-    if(!codec::TransactionEncoder<IndexedTransaction>::Encode(buff))
+    if(!TransactionEncoder<IndexedTransaction>::Encode(buff))
       return false;
 
     const auto& index = value()->index();
@@ -31,17 +31,16 @@ namespace token{
     return true;
   }
 
-  bool IndexedTransaction::Decoder::Decode(const BufferPtr &buff, IndexedTransaction &result) const{
+  IndexedTransaction* IndexedTransaction::Decoder::Decode(const BufferPtr& data) const{
     Timestamp timestamp;
     InputList inputs;
     OutputList outputs;
-    if(!TransactionDecoder<IndexedTransaction>::DecodeTransactionData(buff, timestamp, inputs, outputs))
-      return false;
+    if(!TransactionDecoder<IndexedTransaction>::DecodeTransactionData(data, timestamp, inputs, outputs))
+      return nullptr;
 
-    auto index = buff->GetLong();
-    DLOG(INFO) << "decoded transaction index: " << index;
+    auto index = data->GetLong();
+    DECODED_FIELD(index_, Long, index);
 
-    result = IndexedTransaction(index, timestamp, inputs, outputs);
-    return true;
+    return new IndexedTransaction(index, timestamp, inputs, outputs);
   }
 }

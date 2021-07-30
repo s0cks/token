@@ -35,7 +35,6 @@ namespace token{
                       : end;
           std::vector<T> chunk(current, next);
           auto task = new Processor(this, hash(), index, chunk);
-          DLOG(INFO) << "processing " << chunk.size() << " items....";
           if(!queue.Push((reinterpret_cast<uword>(task)))){
             LOG(FATAL) << "cannot push new task to task queue.";
             return;//TODO: better error handling
@@ -46,13 +45,11 @@ namespace token{
 
       inline void
       ProcessInputs(const InputList& list, const size_t& chunk_size){
-        DLOG(INFO) << "processing " << list.size() << " inputs....";
         return ProcessParallel<Input, ProcessInputListTask>(list, chunk_size);
       }
 
       inline void
       ProcessOutputs(const OutputList& list, const size_t& chunk_size){
-        DLOG(INFO) << "processing " << list.size() << " outputs....";
         return ProcessParallel<Output, ProcessOutputListTask>(list, chunk_size);
       }
     public:

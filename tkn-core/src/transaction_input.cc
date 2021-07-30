@@ -38,22 +38,15 @@ namespace token{
     return true;
   }
 
-  bool Input::Decoder::Decode(const BufferPtr& buff, Input& result) const{
+  Input* Input::Decoder::Decode(const BufferPtr& data) const{
     // Decode reference_
-    TransactionReference reference;
-    if(!decode_txref_.Decode(buff, reference)){
-      LOG(FATAL) << "couldn't decode transaction reference from buffer.";
-      return false;
-    }
+    TransactionReference* reference = nullptr;
+    if(!(reference = decode_txref_.Decode(data)))
+      CANNOT_DECODE_FIELD(reference_, TransactionReference);
 
-    // Decode user_
-    User user;
-    if(!decode_user_.Decode(buff, user)){
-      LOG(FATAL) << "couldn't decode user from buffer.";
-      return false;
-    }
-
-    result = Input(reference, user);
-    return true;
+    User* user = nullptr;
+    if(!(user = decode_user_.Decode(data)))
+      CANNOT_DECODE_FIELD(user_, User);
+    return new Input(*reference, *user);//TODO: fix allocation
   }
 }

@@ -16,14 +16,12 @@ namespace token{
         Encoder& operator=(const Encoder& rhs) = default;
       };
 
-      class Decoder : public codec::PaxosMessageDecoder<rpc::CommitMessage>{
+      class Decoder : public codec::PaxosMessageDecoder<CommitMessage>{
       public:
         explicit Decoder(const codec::DecoderHints& hints):
-          PaxosMessageDecoder<rpc::CommitMessage>(hints){}
-        Decoder(const Decoder& rhs) = default;
+          PaxosMessageDecoder<CommitMessage>(hints){}
         ~Decoder() override = default;
-        bool Decode(const BufferPtr& buff, rpc::CommitMessage& result) const;
-        Decoder& operator=(const Decoder& rhs) = default;
+        CommitMessage* Decode(const BufferPtr& data) const override;
       };
      public:
       CommitMessage() = default;
@@ -62,20 +60,16 @@ namespace token{
         return std::make_shared<CommitMessage>(proposal);
       }
 
-      static inline bool
-      Decode(const BufferPtr& buff, CommitMessage& result, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
-        Decoder decoder(hints);
-        return decoder.Decode(buff, result);
-      }
-
       static inline CommitMessagePtr
-      DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
-        CommitMessage instance;
-        if(!Decode(buff, instance, hints)){
-          DLOG(ERROR) << "cannot decode CommitMessage.";
+      Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+        Decoder decoder(hints);
+
+        CommitMessage* value = nullptr;
+        if(!(value = decoder.Decode(data))){
+          DLOG(FATAL) << "cannot decode CommitMessage from buffer.";
           return nullptr;
         }
-        return std::make_shared<CommitMessage>(instance);
+        return std::shared_ptr<CommitMessage>(value);
       }
     };
 

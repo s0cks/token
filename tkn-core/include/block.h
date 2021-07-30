@@ -15,9 +15,6 @@ namespace token{
   class Block: public BinaryObject, public std::enable_shared_from_this<Block>{
     //TODO:
     // - validation logic
-    friend class BlockHeader;
-    friend class BlockChain;
-    friend class BlockMessage;
   public:
 #ifdef TOKEN_DEBUG
     static const int64_t kMaxBlockSize = 128 * token::internal::kMegabytes;
@@ -28,24 +25,26 @@ namespace token{
 #endif//TOKEN_DEBUG
 
     class Encoder: public codec::TypeEncoder<Block>{
+    private:
+      codec::SetEncoder<IndexedTransaction, IndexedTransaction::IndexComparator> encode_transactions_;
     public:
       Encoder(const Block* value, const codec::EncoderFlags& flags):
-        codec::TypeEncoder<Block>(value, flags){}
-      Encoder(const Encoder& other) = default;
+        codec::TypeEncoder<Block>(value, flags),
+        encode_transactions_(value->transactions_, codec::kDefaultEncoderFlags){}
       ~Encoder() override = default;
       int64_t GetBufferSize() const override;
       bool Encode(const BufferPtr& buff) const override;
-      Encoder& operator=(const Encoder& other) = default;
     };
 
-    class Decoder: public codec::DecoderBase<Block>{
+    class Decoder: public codec::TypeDecoder<Block>{
+    private:
+      codec::SetDecoder<IndexedTransaction, IndexedTransaction::IndexComparator> decode_transactions_;
     public:
       explicit Decoder(const codec::DecoderHints& hints):
-        codec::DecoderBase<Block>(hints){}
-      Decoder(const Decoder& other) = default;
+        codec::TypeDecoder<Block>(hints),
+        decode_transactions_(codec::kDefaultDecoderHints){}
       ~Decoder() override = default;
-      bool Decode(const BufferPtr& buff, Block& result) const override;
-      Decoder& operator=(const Decoder& other) = default;
+      Block* Decode(const BufferPtr& data) const override;
     };
   private:
     Timestamp timestamp_;
@@ -211,20 +210,16 @@ namespace token{
       return std::make_shared<Block>(parent, txs, timestamp);
     }
 
-    static inline bool
-    Decode(const BufferPtr& buff, Block& result, const codec::DecoderHints& hints = codec::kDefaultDecoderHints){
-      Decoder decoder(hints);
-      return decoder.Decode(buff, result);
-    }
-
     static inline BlockPtr
-    DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints = codec::kDefaultDecoderHints){
-      Block result;
-      if(!Decode(buff, result, hints)){
-        DLOG(WARNING) << "cannot decode Block";
+    Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      Decoder decoder(hints);
+
+      Block* value = nullptr;
+      if(!(value = decoder.Decode(data))){
+        DLOG(FATAL) << "cannot decode Block from buffer.";
         return nullptr;
       }
-      return std::make_shared<Block>(result);
+      return std::shared_ptr<Block>(value);
     }
   };
 

@@ -16,14 +16,12 @@ namespace token{
         Encoder& operator=(const Encoder& other) = default;
       };
 
-    class Decoder : public codec::PaxosMessageDecoder<rpc::AcceptedMessage>{
+    class Decoder : public codec::PaxosMessageDecoder<AcceptedMessage>{
       public:
         explicit Decoder(const codec::DecoderHints& hints):
-          PaxosMessageDecoder<rpc::AcceptedMessage>(hints){}
-        Decoder(const Decoder& other) = default;
+          PaxosMessageDecoder<AcceptedMessage>(hints){}
         ~Decoder() override = default;
-        bool Decode(const BufferPtr& buff, rpc::AcceptedMessage& result) const override;
-        Decoder& operator=(const Decoder& other) = default;
+        AcceptedMessage* Decode(const BufferPtr& data) const override;
       };
      public:
       AcceptedMessage():
@@ -59,20 +57,16 @@ namespace token{
         return std::make_shared<AcceptedMessage>(proposal);
       }
 
-      static inline bool
-      Decode(const BufferPtr& buff, AcceptedMessage& result, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
-        Decoder decoder(hints);
-        return decoder.Decode(buff, result);
-      }
-
       static inline AcceptedMessagePtr
-      DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
-        AcceptedMessage instance;
-        if(!Decode(buff, instance, hints)){
-          DLOG(ERROR) << "cannot decode AcceptedMessage.";
+      Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+        Decoder decoder(hints);
+
+        AcceptedMessage* value = nullptr;
+        if(!(value = decoder.Decode(data))){
+          DLOG(FATAL) << "cannot decode AcceptedMessage from buffer.";
           return nullptr;
         }
-        return std::make_shared<AcceptedMessage>(instance);
+        return std::shared_ptr<AcceptedMessage>(value);
       }
     };
 

@@ -27,13 +27,12 @@ namespace token{
       Encoder& operator=(const Encoder& other) = default;
     };
 
-    class Decoder : public codec::DecoderBase<Product> {
+    class Decoder : public codec::TypeDecoder<Product> {
     public:
-      explicit Decoder(const codec::DecoderHints &hints);
-      Decoder(const Decoder &other) = default;
+      explicit Decoder(const codec::DecoderHints& hints):
+        codec::TypeDecoder<Product>(hints){}
       ~Decoder() override = default;
-      bool Decode(const BufferPtr &buff, Product &result) const override;
-      Decoder &operator=(const Decoder& other) = default;
+      Product* Decode(const BufferPtr& data) const override;
     };
    private:
     char data_[kMaxProductLength];

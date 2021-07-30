@@ -200,19 +200,26 @@ main(int argc, char **argv){
     }
   }
 
-  Proposal proposal(Clock::now(), UUID(), UUID(), 100, Hash::GenerateNonce());
-  DLOG(INFO) << "proposal: " << proposal;
-  auto request = rpc::PrepareMessage::NewInstance(proposal);
-  DLOG(INFO) << "request: " << request->ToString();
+  auto blk = Block::Genesis();
+  DLOG(INFO) << "transactions: ";
+  for(auto& it : blk->transactions()){
+    DLOG(INFO) << " - " << it->inputs().size() << ":" << it->outputs().size();
+  }
 
-  rpc::PrepareMessage::Encoder encoder(request.get(), codec::kDefaultEncoderFlags);
+  Block::Encoder encoder(blk.get(), codec::kDefaultEncoderFlags);
   auto data = internal::NewBufferFor(encoder);
   if(!encoder.Encode(data)){
-    DLOG(FATAL) << "cannot encode PrepareMessage to buffer.";
+    DLOG(FATAL) << "cannot encode block to buffer.";
     return EXIT_FAILURE;
   }
-  auto response = rpc::PrepareMessage::DecodeNew(data, codec::kDefaultDecoderHints);
-  DLOG(INFO) << "response: " << response->ToString();
+
+  data->SetReadPosition(0);
+  data->SetWritePosition(0);
+  Block::Decoder decoder(codec::kDefaultDecoderHints);
+
+  auto result = decoder.Decode(data);
+  DLOG(INFO) << "decoded: " << result->ToString();
+
 
   // initialize the configuration
   config::Initialize(FLAGS_path);
@@ -231,14 +238,8 @@ main(int argc, char **argv){
 
   // initialize the block chain
   //TODO: SilentlyInitialize<BlockChain, google::FATAL>();
-
-  // start the rpc server
-  node::Server server(uv_loop_new(), nullptr, nullptr);
-  ServerThread<node::Server> server_thread(&server);
-  SilentlyStartService<node::Server, ServerThread<node::Server>, google::FATAL>(server_thread);
-
   // start the peer threads & connect to any known peers
-  SilentlyInitialize<PeerSessionManager, google::FATAL>();
+  PeerSessionManager::Initialize(&runtime);
 
   // start the rest service
   http::RestService rest_service(uv_loop_new(), runtime.GetPool());
@@ -248,7 +249,6 @@ main(int argc, char **argv){
   runtime.Run();
 
 //  //TODO: SilentlyWaitForShutdown<PeerSessionManager
-  SilentlyWaitForShutdown<node::Server, ServerThread<node::Server>, google::FATAL>(server_thread);
 //  SilentlyWaitForShutdown<http::RestService, http::RestServiceThread, google::FATAL>(rest_service_thread);
   SilentlyWaitForShutdown<http::HealthService, http::HealthServiceThread, google::FATAL>(health_service_thread);
   return EXIT_SUCCESS;

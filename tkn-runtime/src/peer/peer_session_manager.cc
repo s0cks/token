@@ -38,7 +38,7 @@ namespace token{
     }
   }
 
-  bool PeerSessionManager::Initialize(){
+  bool PeerSessionManager::Initialize(Runtime* runtime){
     if (!IsUninitializedState()){
       DLOG(WARNING) << "cannot re-initialize the PeerSessionManager.";
       return false;
@@ -47,7 +47,7 @@ namespace token{
     RegisterQueue(pthread_self(), &queue_);//TODO: cross-platform fix
     threads_ = (PeerSessionThread**) malloc(sizeof(PeerSessionThread*) * FLAGS_num_peers);
     for(auto idx = 0; idx < FLAGS_num_peers; idx++){
-      PeerSessionThread* thread = threads_[idx] = new PeerSessionThread(idx);
+      PeerSessionThread* thread = threads_[idx] = new PeerSessionThread(runtime, idx);
       DLOG(INFO) << "starting PeerSessionThread #" << idx << "....";
       if(!threads_[idx]->Start()){
         LOG(WARNING) << "couldn't start peer session #" << idx;
@@ -140,7 +140,7 @@ namespace token{
   DEFINE_PAXOS_BROADCAST(Prepare);
 //  DEFINE_PAXOS_BROADCAST(Promise);
   DEFINE_PAXOS_BROADCAST(Commit);
-//  DEFINE_PAXOS_BROADCAST(DiscoveredBlock);
+  DEFINE_PAXOS_BROADCAST(Discovered);
 //  DEFINE_PAXOS_BROADCAST(Accepted);
 //  DEFINE_PAXOS_BROADCAST(Rejected);
 #undef DEFINE_PAXOS_BROADCAST

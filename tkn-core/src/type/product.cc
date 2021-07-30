@@ -23,18 +23,11 @@ namespace token{
     return true;
   }
 
-  Product::Decoder::Decoder(const codec::DecoderHints &hints):
-    codec::DecoderBase<Product>(hints){}
-
-  bool Product::Decoder::Decode(const BufferPtr &buff, Product &result) const{
+  Product* Product::Decoder::Decode(const BufferPtr& data) const{
     auto length = kMaxProductLength;
-    uint8_t data[length];
-    if(!buff->GetBytes(data, length)){
-      DLOG(FATAL) << "cannot decode data (uint8_t[" << length << "]) from buffer.";
-      return false;
-    }
-
-    result = Product(data, length);
-    return true;
+    uint8_t bytes[length];
+    if(!data->GetBytes(bytes, length))
+      CANNOT_DECODE_FIELD(bytes, uint8_t[]);
+    return new Product(bytes, length);
   }
 }

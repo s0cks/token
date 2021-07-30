@@ -4,27 +4,38 @@
 #include "type.h"
 #include "bitfield.h"
 
+#define DECODED_FIELD_VERBOSITY 1
+#define DECODED_FIELD(Name, Type, Value) \
+  DVLOG(DECODED_FIELD_VERBOSITY) << "decoded " << #Name << " (" << #Type << "): " << (Value)
+
+#define CANNOT_DECODE_FIELD_SEVERITY FATAL
+#define CANNOT_DECODE_FIELD(Name, Type)({ \
+  DLOG(CANNOT_DECODE_FIELD_SEVERITY) << "cannot decode " << #Name << " (" << #Type << ")"; \
+  return nullptr; \
+})
+
 namespace token{
   namespace codec{
     typedef uint64_t DecoderHints;
 
-    class StrictHint : public BitField<DecoderHints, bool, 0, 1>{};
-    class ExpectTypeHint : public BitField<DecoderHints, bool, 1, 1>{};
-    class ExpectVersionHint : public BitField<DecoderHints, bool, 2, 1>{};
-    class ExpectMagicHint : public BitField<DecoderHints, bool, 3, 1>{};
+    class StrictHint: public BitField<DecoderHints, bool, 0, 1>{};
+    class ExpectTypeHint: public BitField<DecoderHints, bool, 1, 1>{};
+    class ExpectVersionHint: public BitField<DecoderHints, bool, 2, 1>{};
+    class ExpectMagicHint: public BitField<DecoderHints, bool, 3, 1>{};
 
     static const DecoderHints kDefaultDecoderHints = 0;
 
-    template<class T>
     class DecoderBase{
-     protected:
-      typedef DecoderBase<T> BaseType;
-
-      DecoderHints hints_;
+    protected:
+      const DecoderHints hints_;
 
       explicit DecoderBase(const DecoderHints& hints):
         hints_(hints){}
-      DecoderBase(const DecoderBase& other) = default;
+
+      inline const DecoderHints&
+      hints() const{
+        return hints_;
+      }
 
       static inline bool
       IsValidType(const uint64_t& val){
@@ -41,7 +52,6 @@ namespace token{
           version = Version(major, minor, revision);
           DLOG(INFO) << "decoded version: " << version;
         }
-
         if(ShouldExpectMagic()){
           auto magic = buff->GetUnsignedShort();
           if(magic != TOKEN_CODEC_MAGIC){
@@ -53,7 +63,6 @@ namespace token{
           }
           DLOG(INFO) << "decoded magic: " << std::hex << magic;
         }
-
         if(ShouldExpectType()){
           auto raw_type = buff->GetUnsignedLong();
           if(IsStrict() && !IsValidType(raw_type)){
@@ -65,16 +74,9 @@ namespace token{
         }
         return true;
       }
-     public:
+    public:
+      DecoderBase(const DecoderBase& rhs) = delete;
       virtual ~DecoderBase() = default;
-
-      DecoderHints& hints(){
-        return hints_;
-      }
-
-      DecoderHints hints() const{
-        return hints_;
-      }
 
       bool IsStrict() const{
         return StrictHint::Decode(hints());
@@ -96,50 +98,103 @@ namespace token{
         DLOG(INFO) << "checking version: " << version << " >= " << Version::CurrentVersion();
         return version >= Version::CurrentVersion();
       }
-
-      virtual bool Decode(const internal::BufferPtr& buff, T& result) const = 0;
-
-      DecoderBase& operator=(const DecoderBase& other) = default;
     };
 
-    template<class T, class E>
-   class ListDecoder : public DecoderBase<std::vector<T>>{
-    private:
-     typedef DecoderBase<std::vector<T>> BaseType;
+    template<class T>
+    class TypeDecoder : public DecoderBase{
     protected:
-     explicit ListDecoder(const codec::DecoderHints& hints):
-      BaseType(hints){}
+      explicit TypeDecoder(const DecoderHints& hints):
+        DecoderBase(hints){}
     public:
-     ListDecoder(const ListDecoder& other) = default;
-     ~ListDecoder() override = default;
+      ~TypeDecoder() override = default;
+      virtual T* Decode(const BufferPtr& data) const = 0;
+    };
 
-     bool Decode(const internal::BufferPtr& buff, std::vector<T>& results) const override{
-       //TODO: better error handling
-       //TODO: decode type
-       //TODO: decode version
+    template<class T, class C>
+    class SetDecoder : public DecoderBase{
+    public:
+      explicit SetDecoder(const DecoderHints& hints):
+        DecoderBase(hints){}
+      ~SetDecoder() override = default;
 
-       auto length = buff->GetLong();
-       DLOG(INFO) << "decoded InputList length: " << length;
+      virtual bool Decode(const internal::BufferPtr& data, std::set<std::shared_ptr<T>, C>& results) const{
+        auto length = data->GetLong();
+        DECODED_FIELD(length_, Long, length);
+        for(auto idx = 0; idx < length; idx++){
+          typename T::Decoder decoder(hints());
+          T* item = nullptr;
+          if(!(item = decoder.Decode(data))){
+            DLOG(FATAL) << "cannot decode list item #" << (idx+1) << " from buffer.";
+            return false;
+          }
+          auto value = std::shared_ptr<T>(item);//TODO: fix allocation
+          DLOG(INFO) << "decoded list item #" << (idx+1) << ": " << value->ToString();
+          results.insert(value);
+        }
+        return true;
+      }
+    };
 
-       T next;
-       for(auto idx = 0; idx < length; idx++){
-         E decoder(BaseType::hints());
-         if(!decoder.Decode(buff, next)){
-           LOG(FATAL) << "couldn't deserialize list item #" << (idx) << " from buffer.";
-           return false;
-         }
-         DLOG(INFO) << "decoded list item #" << (idx) << ": " << next;
-         results.push_back(next);
-       }
-       return true;
-     }
+    template<class T, class D>
+    class ArrayDecoder : public DecoderBase{
+    public:
+      typedef std::vector<std::shared_ptr<T>> ArrayType;
+    protected:
+      explicit ArrayDecoder(const DecoderHints& hints):
+        DecoderBase(hints){}
+    public:
+      ~ArrayDecoder() override = default;
 
-     ListDecoder& operator=(const ListDecoder& other) = default;
-   };
+      virtual bool Decode(const internal::BufferPtr& data, ArrayType& results) const{
+        //TODO:
+        // - better error handling
+        // - decode type
+        // - decode version
+        auto length = data->GetLong();
+        DECODED_FIELD(length_, Long, length);
+        for(auto idx = 0; idx < length; idx++){
+          D decoder(hints());
+          T* item = nullptr;
+          if(!(item = decoder.Decode(data))){
+            DLOG(FATAL) << "cannot decode list item #" << (idx+1) << " from buffer.";
+            return false;
+          }
+          results.push_back(*item);//TODO: use make_shared<T>
+        }
+        return true;
+      }
+    };
+
+    template<class T, class D>
+    class ListDecoder : public DecoderBase{
+    public:
+      typedef std::vector<std::shared_ptr<T>> ListType;
+    protected:
+      explicit ListDecoder(const DecoderHints& hints):
+        DecoderBase(hints){}
+    public:
+      ~ListDecoder() override = default;
+
+      virtual bool Decode(const internal::BufferPtr& data, ListType& results) const{
+        //TODO:
+        // - better error handling
+        // - decode type
+        // - decode version
+        auto length = data->GetLong();
+        DECODED_FIELD(length_, Long, length);
+        for(auto idx = 0; idx < length; idx++){
+          D decoder(hints());
+          T* item = nullptr;
+          if(!(item = decoder.Decode(data))){
+            DLOG(FATAL) << "cannot decode list item #" << (idx+1) << " from buffer.";
+            return false;
+          }
+          results.push_back(std::shared_ptr<T>(item));//TODO: use make_shared<T>
+        }
+        return true;
+      }
+    };
   }
 }
-
-#define DECODED_FIELD(Name, Type, Value) \
-  DVLOG(1) << "decoded " << #Name << " (" << #Type << "): " << (Value)
 
 #endif//TOKEN_CODEC_DECODER_H

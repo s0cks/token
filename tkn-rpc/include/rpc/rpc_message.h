@@ -23,7 +23,7 @@ namespace token{
 
       static inline codec::EncoderFlags
       GetDefaultMessageEncoderFlags(){
-        return codec::EncodeTypeFlag::Encode(true)|codec::EncodeVersionFlag::Encode(true);
+        return codec::EncodeTypeFlag::Encode(true);
       }
 
       static inline codec::DecoderHints
@@ -36,18 +36,21 @@ namespace token{
       virtual std::string ToString() const = 0;
     };
 
-    class MessageParser{
+    class MessageParser : codec::DecoderBase{
     protected:
       BufferPtr data_;
 
       inline bool
       HasMoreBytes() const{
-        return data_->GetReadPosition() < data_->GetWritePosition();
+        static int64_t kHeaderSize = sizeof(uint64_t) + Version::GetSize();
+
+        return (data_->GetReadPosition() + kHeaderSize) < data_->GetWritePosition();
       }
     public:
-      explicit MessageParser(const BufferPtr& data):
+      explicit MessageParser(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
+        codec::DecoderBase(hints),
         data_(data){}
-      ~MessageParser() = default;
+      ~MessageParser() override = default;
 
       bool HasNext() const{
         return HasMoreBytes();//TODO: check for message header & magic constant
@@ -93,14 +96,12 @@ namespace token{
     };
 
     template<class M>
-    class MessageDecoder : public DecoderBase<M>{
+    class MessageDecoder : public TypeDecoder<M>{
     protected:
       explicit MessageDecoder(const codec::DecoderHints& hints):
-        DecoderBase<M>(hints){}
+        TypeDecoder<M>(hints){}
     public:
-      MessageDecoder(const MessageDecoder<M>& rhs) = default;
       ~MessageDecoder() override = default;
-      MessageDecoder<M>& operator=(const MessageDecoder<M>& rhs) = default;
     };
   }
 }

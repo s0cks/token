@@ -17,6 +17,9 @@ namespace token{
 #define DLOG_SESSION_IF(LevelName, Condition, Session) \
   DLOG_IF(LevelName, Condition) << "[session-" << (Session)->GetUUID().ToString() << "] "
 
+#define DVLOG_SESSION(Level, Session) \
+  DVLOG(Level) << "[session-" << (Session)->GetUUID().ToString() << "] "
+
 #define FOR_EACH_SESSION_STATE(V) \
     V(Connecting)                 \
     V(Connected)                  \
@@ -142,7 +145,7 @@ namespace token{
         total_size += msg->GetBufferSize();
       });
 
-      DLOG_SESSION(INFO, this) << "sending " << total_messages << " messages....";
+      DVLOG_SESSION(2, this) << "sending " << total_messages << " messages....";
       auto data = new SessionWriteData(this, total_size);
       uv_buf_t buffers[total_messages];
 
@@ -154,7 +157,8 @@ namespace token{
           LOG_SESSION(ERROR, this) << "couldn't serialize message #" << idx << " " << msg->ToString() << " (" << msize << ")";
           return;
         }
-        DLOG_SESSION(INFO, this) << "sending message #" << idx << " " << msg->ToString() << " (" << msize << "b)";
+
+        DVLOG_SESSION(1, this) << "sending message #" << idx << " " << msg->ToString() << " (" << msize << "b)";
 
         int64_t msg_size = msg->GetBufferSize();
         buffers[idx].base = (char*)&data->buffer->data()[offset];

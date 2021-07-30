@@ -10,9 +10,9 @@ namespace token{
     protected:
       E encode_value_;
 
-      ObjectMessageEncoder(const M& value, const codec::EncoderFlags& flags):
+      ObjectMessageEncoder(const M* value, const codec::EncoderFlags& flags):
         MessageEncoder<M>(value, flags),
-        encode_value_(*value.value(), flags){}
+        encode_value_(value->value().get(), flags){}
     public:
       ObjectMessageEncoder(const ObjectMessageEncoder& other) = default;
       ~ObjectMessageEncoder() override = default;
@@ -45,10 +45,8 @@ namespace token{
         MessageDecoder<M>(hints),
         decode_value_(hints){}
     public:
-      ObjectMessageDecoder(const ObjectMessageDecoder& other) = default;
-      virtual ~ObjectMessageDecoder() override = default;
-      virtual bool Decode(const BufferPtr& buff, M& result) const override = 0;
-      ObjectMessageDecoder& operator=(const ObjectMessageDecoder& other) = default;
+      ~ObjectMessageDecoder() override = default;
+      M* Decode(const BufferPtr& data) const override = 0;
     };
   }
 

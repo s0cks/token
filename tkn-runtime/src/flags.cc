@@ -3,7 +3,7 @@
 // core
 DEFINE_string(path, "", "The path for the local ledger to be stored in.");
 DEFINE_int32(num_workers, 4, "Define the number of worker pool threads");
-DEFINE_int64(mining_interval, 1000 * 60 * 1, "The amount of time between mining blocks in milliseconds.");
+DEFINE_uint64(mining_interval, 1000 * 60 * 1, "The amount of time between mining blocks in milliseconds.");
 DEFINE_bool(reinitialize, false, "Reinitialize the block chain");
 
 // server

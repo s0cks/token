@@ -19,14 +19,12 @@ namespace token{
       Encoder& operator=(const Encoder& other) = default;
     };
 
-    class Decoder : public codec::DecoderBase<BlockHeader>{
+    class Decoder : public codec::TypeDecoder<BlockHeader>{
      public:
       explicit Decoder(const codec::DecoderHints& hints):
-        codec::DecoderBase<BlockHeader>(hints){}
-      Decoder(const Decoder& other) = default;
+        codec::TypeDecoder<BlockHeader>(hints){}
       ~Decoder() override = default;
-      bool Decode(const BufferPtr& buff, BlockHeader& result) const override;
-      Decoder& operator=(const Decoder& other) = default;
+      BlockHeader* Decode(const BufferPtr& data) const override;
     };
    protected:
     Timestamp timestamp_;

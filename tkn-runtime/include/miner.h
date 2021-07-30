@@ -2,10 +2,12 @@
 #define TOKEN_MINER_H
 
 #include <uv.h>
+#include <mutex>
 #include <ostream>
 #include <glog/logging.h>
 
 #include "flags.h"
+#include "hash.h"
 #include "common.h" //TODO: remove this include
 #include "os_thread.h"
 #include "atomic/relaxed_atomic.h"
@@ -37,16 +39,32 @@ namespace token{
           return stream << "Unknown";
       }
     }
+  private:
+#ifdef TOKEN_DEBUG
+    static const uint64_t kInitialDelayMilliseconds = 1000 * 5;
+#else
+    static const uint64_t kInitialDelayMilliseconds = 0;
+#endif//TOKEN_DEBUG
    protected:
     Runtime* runtime_;
     uv_timer_t timer_;
     atomic::RelaxedAtomic<State> state_;
-    int64_t timeout_;
-    int64_t repeat_;
+
+    std::mutex mtx_last_;
+    Hash last_;
 
     void SetState(const State& state){
       state_ = state;
     }
+
+    inline void
+    SetLastMined(const Hash& hash){
+      DVLOG(1) << "setting last mined: " << hash;
+      std::lock_guard<std::mutex> guard(mtx_last_);
+      last_ = hash;
+    }
+
+    static void OnTick(uv_timer_t* handle);
    public:
     explicit BlockMiner(Runtime* runtime);
     ~BlockMiner() = default;
@@ -57,6 +75,11 @@ namespace token{
 
     Runtime* GetRuntime() const{
       return runtime_;
+    }
+
+    Hash GetLastMined(){
+      std::lock_guard<std::mutex> guard(mtx_last_);
+      return last_;
     }
 
     bool StartTimer();

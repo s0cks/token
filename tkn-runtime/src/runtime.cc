@@ -9,13 +9,17 @@ namespace token{
     task_engine_(FLAGS_num_workers, 1),
     miner_(this),
     proposer_(this),
-    pool_(FLAGS_path + "/pool"){
+    acceptor_(this),
+    pool_(FLAGS_path + "/pool"),
+    server_(this){
     task_engine_.RegisterQueue(task_queue_);
   }
 
   bool Runtime::Run(){
     //TODO: check state
-    if(!StartBlockMiner())
+    if(IsMiningEnabled() && !GetBlockMiner().StartTimer())
+      return false;//TODO: better error handling
+    if(IsServerEnabled() && !GetServer().Start(FLAGS_server_port))
       return false;//TODO: better error handling
     VERIFY_UVRESULT2(FATAL, uv_run(loop(), UV_RUN_DEFAULT), "cannot run main loop");
     return true;

@@ -58,31 +58,21 @@ namespace token{
   }
 
   UnclaimedTransaction::Decoder::Decoder(const codec::DecoderHints &hints):
-    codec::DecoderBase<UnclaimedTransaction>(hints),
+    codec::TypeDecoder<UnclaimedTransaction>(hints),
     decode_txref_(hints),
     decode_user_(hints),
     decode_product_(hints){}
 
-  bool UnclaimedTransaction::Decoder::Decode(const BufferPtr& buff, UnclaimedTransaction& result) const{
-    TransactionReference reference;
-    if(!decode_txref_.Decode(buff, reference)){
-      LOG(FATAL) << "cannot decode transaction reference from buffer.";
-      return false;
-    }
-
-    User user;
-    if(!decode_user_.Decode(buff, user)){
-      LOG(FATAL) << "cannot decode User from buffer.";
-      return false;
-    }
-
-    Product product;
-    if(!decode_product_.Decode(buff, product)){
-      LOG(FATAL) << "cannot decode product from buffer.";
-      return false;
-    }
-
-    result = UnclaimedTransaction(reference, user, product);
-    return true;
+  UnclaimedTransaction* UnclaimedTransaction::Decoder::Decode(const BufferPtr& data) const{
+    TransactionReference* reference = nullptr;
+    if(!(reference = decode_txref_.Decode(data)))
+      CANNOT_DECODE_FIELD(reference_, TransactionReference);
+    User* user = nullptr;
+    if(!(user = decode_user_.Decode(data)))
+      CANNOT_DECODE_FIELD(user_, User);
+    Product* product = nullptr;
+    if(!(product = decode_product_.Decode(data)))
+      CANNOT_DECODE_FIELD(product_, Product);
+    return new UnclaimedTransaction(*reference, *user, *product);//TODO: fix allocation
   }
 }

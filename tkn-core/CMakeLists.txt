@@ -6,7 +6,7 @@ add_library(tkn-core STATIC
     include/codec/encoder.h
     include/codec/decoder.h
 
-    include/type/product.h src/type/product.cc
+        include/type/product.h src/type/product.cc
     include/type/user.h src/type/user.cc
     include/type/wallet.h
 

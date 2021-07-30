@@ -42,25 +42,24 @@ namespace token{
     return true;
   }
 
-  bool BlockHeader::Decoder::Decode(const BufferPtr &buff, BlockHeader &result) const{
+  BlockHeader* BlockHeader::Decoder::Decode(const BufferPtr& data) const{
     //TODO: decode type
     //TODO: decode version
+    auto timestamp = data->GetTimestamp();
+    DECODED_FIELD(timestamp_, Timestamp, FormatTimestampReadable(timestamp));
 
-    auto timestamp = buff->GetTimestamp();
-    DLOG(INFO) << "deserialized timestamp: " << FormatTimestampReadable(timestamp);
+    auto height = data->GetLong();
+    DECODED_FIELD(height_, Long, height);
 
-    auto height = buff->GetLong();
-    DLOG(INFO) << "deserialized height: " << height;
+    auto previous_hash = data->GetHash();
+    DECODED_FIELD(previous_hash_, Hash, previous_hash);
 
-    auto previous_hash = buff->GetHash();
-    DLOG(INFO) << "deserialized previous hash: " << previous_hash;
+    auto merkle_root = data->GetHash();
+    DECODED_FIELD(merkle_root_, Hash, merkle_root);
 
-    auto merkle_root = buff->GetHash();
-    DLOG(INFO) << "deserialized merkle root: " << merkle_root;
+    auto hash = data->GetHash();
+    DECODED_FIELD(hash_, Hash, hash);
 
-    auto hash = buff->GetHash();
-    DLOG(INFO) << "deserialized hash: " << hash;
-    result = BlockHeader(timestamp, height, previous_hash, merkle_root, hash);
-    return true;
+    return new BlockHeader(timestamp, height, previous_hash, merkle_root, hash);
   }
 }

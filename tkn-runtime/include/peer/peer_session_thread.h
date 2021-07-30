@@ -43,6 +43,7 @@ namespace token{
 
     static const int64_t kRequestTimeoutIntervalMilliseconds = 1000;
    private: // loop_ needs to be created on thread
+    Runtime* runtime_;
     ThreadId thread_;
     ConnectionRequestQueue queue_;
     atomic::RelaxedAtomic<State> state_;
@@ -77,7 +78,7 @@ namespace token{
     }
 
     peer::Session* CreateNewSession(const utils::Address& address){
-      auto session = new peer::Session(address);
+      auto session = new peer::Session(runtime_, address);
       SetSession(session);
       return session;
     }
@@ -85,7 +86,8 @@ namespace token{
     ConnectionRequest* GetNextRequest();
     static void HandleThread(uword param);
    public:
-    explicit PeerSessionThread(const WorkerId& worker_id):
+    explicit PeerSessionThread(Runtime* runtime, const WorkerId& worker_id):
+      runtime_(runtime),
       thread_(),
       queue_(TOKEN_CONNECTION_QUEUE_SIZE),
       state_(State::kStoppedState),
@@ -133,6 +135,10 @@ namespace token{
 
     bool SendCommit(){
       return session_->SendCommit();
+    }
+
+    bool SendDiscovered(){
+      return session_->SendDiscovered();
     }
 
     utils::Address GetPeerAddress(){

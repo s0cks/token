@@ -7,7 +7,7 @@
 // core
 DECLARE_string(path);
 DECLARE_int32(num_workers);
-DECLARE_int64(mining_interval);
+DECLARE_uint64(mining_interval);
 DECLARE_bool(reinitialize);
 
 // server
@@ -32,6 +32,16 @@ DECLARE_uint64(spend_test_max);
 
 namespace token{
   static inline bool
+  IsMiningEnabled(){
+    return FLAGS_mining_interval > 0;
+  }
+
+  static inline bool
+  IsServerEnabled(){
+    return FLAGS_server_port > 0;
+  }
+
+  static inline bool
   ValidateFlagPath(const char* ss, const std::string& val){
     return true;
   }
@@ -44,7 +54,7 @@ namespace token{
   }
 
   static inline bool
-  ValidateFlagMiningInterval(const char* ss, int64_t val){
+  ValidateFlagMiningInterval(const char* ss, uint64_t val){
     return true;
   }
 

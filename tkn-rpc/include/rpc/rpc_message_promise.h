@@ -20,10 +20,8 @@ namespace token{
       public:
         explicit Decoder(const codec::DecoderHints& hints):
           PaxosMessageDecoder<rpc::PromiseMessage>(hints){}
-        Decoder(const Decoder& other) = default;
         ~Decoder() override = default;
-        bool Decode(const BufferPtr& buff, rpc::PromiseMessage& result) const override;
-        Decoder& operator=(const Decoder& other) = default;
+        PromiseMessage* Decode(const BufferPtr& data) const override;
       };
      public:
       PromiseMessage():
@@ -64,20 +62,16 @@ namespace token{
         return std::make_shared<PromiseMessage>(proposal);
       }
 
-      static inline bool
-      Decode(const BufferPtr& buff, PromiseMessage& result, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
-        Decoder decoder(hints);
-        return decoder.Decode(buff, result);
-      }
-
       static inline PromiseMessagePtr
-      DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
-        PromiseMessage msg;
-        if(!Decode(buff, msg, hints)){
-          DLOG(ERROR) << "cannot decode PromiseMessage.";
+      Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+        Decoder decoder(hints);
+
+        PromiseMessage* value = nullptr;
+        if(!(value = decoder.Decode(data))){
+          DLOG(FATAL) << "cannot decode PromiseMessage from buffer.";
           return nullptr;
         }
-        return std::make_shared<PromiseMessage>(msg);
+        return std::shared_ptr<PromiseMessage>(value);
       }
     };
 

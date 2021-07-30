@@ -33,14 +33,12 @@ namespace token{
       Encoder& operator=(const Encoder& other) = default;
     };
 
-    class Decoder : public codec::DecoderBase<User>{
+    class Decoder : public codec::TypeDecoder<User>{
     public:
       explicit Decoder(const codec::DecoderHints& hints):
-        codec::DecoderBase<User>(hints){}
-      Decoder(const Decoder& other) = default;
+        codec::TypeDecoder<User>(hints){}
       ~Decoder() override = default;
-      bool Decode(const BufferPtr& buff, User& result) const override;
-      Decoder& operator=(const Decoder& other) = default;
+      User* Decode(const BufferPtr& data) const override;
     };
    private:
     char data_[internal::kMaxUserLength];
