@@ -69,7 +69,7 @@ namespace token{
         continue;
 
       BufferPtr val = internal::CopyBufferFrom(it->value());
-      UnclaimedTransactionPtr value = UnclaimedTransaction::DecodeNew(val);
+      UnclaimedTransactionPtr value = UnclaimedTransaction::Decode(val);
 
       TransactionReference& r1 = value->GetReference();
       const TransactionReference& r2 = input.GetReference();
@@ -89,7 +89,7 @@ namespace token{
       if(key.type() != Type::k##Name)                                      \
         continue;               \
       BufferPtr val = internal::CopyBufferFrom(it->value()); \
-      Name##Ptr value = Name::DecodeNew(val);                                 \
+      Name##Ptr value = Name::Decode(val);                                 \
       LOG_AT_LEVEL(severity) << " - " << value->ToString();            \
     }                           \
     delete it;                  \
@@ -129,7 +129,7 @@ namespace token{
       return Name##Ptr(nullptr);                           \
     }                         \
     BufferPtr buff = internal::CopyBufferFrom(data);                   \
-    return Name::DecodeNew(buff);                          \
+    return Name::Decode(buff);                          \
   }
   FOR_EACH_POOL_TYPE(DEFINE_GET_TYPE)
 #undef DEFINE_GET_TYPE
@@ -182,7 +182,7 @@ namespace token{
       codec::DecoderHints hints = codec::kDefaultDecoderHints;
       switch(key.type()){
         case Type::kUnclaimedTransaction:{
-          auto val = UnclaimedTransaction::DecodeNew(data, hints);
+          auto val = UnclaimedTransaction::Decode(data, hints);
           if(!vis->Visit(val)){
             delete iter;
             return false;
@@ -190,7 +190,7 @@ namespace token{
           continue;
         }
         case Type::kUnsignedTransaction:{
-          auto val = UnsignedTransaction::DecodeNew(data, hints);
+          auto val = UnsignedTransaction::Decode(data, hints);
           if(!vis->Visit(val)){
             delete iter;
             return false;
@@ -198,7 +198,7 @@ namespace token{
           continue;
         }
         case Type::kBlock:{
-          auto val = Block::DecodeNew(data, hints);
+          auto val = Block::Decode(data, hints);
           if(!vis->Visit(val)){
             delete iter;
             return false;

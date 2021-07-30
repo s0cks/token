@@ -17,14 +17,12 @@ namespace token{
         Encoder& operator=(const Encoder& other) = default;
       };
 
-    class Decoder : public codec::HandshakeMessageDecoder<rpc::VerackMessage>{
+    class Decoder : public codec::HandshakeMessageDecoder<VerackMessage>{
       public:
-        Decoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
-            HandshakeMessageDecoder<rpc::VerackMessage>(hints){}
-        Decoder(const Decoder& other) = default;
+        explicit Decoder(const codec::DecoderHints& hints):
+            HandshakeMessageDecoder<VerackMessage>(hints){}
         ~Decoder() override = default;
-        bool Decode(const BufferPtr& buff, rpc::VerackMessage& result) const override;
-        Decoder& operator=(const Decoder& other) = default;
+        VerackMessage* Decode(const BufferPtr& data) const override;
       };
      private:
       //TODO: add head
@@ -70,20 +68,16 @@ namespace token{
         return std::make_shared<VerackMessage>(timestamp, client_type, version, nonce, node_id);
       }
 
-      static inline bool
-      Decode(const BufferPtr& buffer, VerackMessage& result, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
-        Decoder decoder(hints);
-        return decoder.Decode(buffer, result);
-      }
-
       static inline VerackMessagePtr
-      DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=codec::kDefaultEncoderFlags){
-        VerackMessage instance;
-        if(!Decode(buff, instance)){
-          DLOG(ERROR) << "cannot decode VerackMessage.";
+      Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+        Decoder decoder(hints);
+
+        VerackMessage* value = nullptr;
+        if(!(value = decoder.Decode(data))){
+          DLOG(FATAL) << "cannot decode VerackMessage from buffer.";
           return nullptr;
         }
-        return std::make_shared<VerackMessage>(instance);
+        return std::shared_ptr<VerackMessage>(value);
       }
     };
   }

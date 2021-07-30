@@ -8,6 +8,8 @@ namespace token{
 
   static std::mutex mtx_current_;//TODO: remove
   static Proposal* current_ = nullptr;
+  static node::Session* proposer_ = nullptr;
+
   static AtomicCounter promises_(0);
   static AtomicCounter accepted_(0);
   static AtomicCounter rejected_(0);
@@ -24,6 +26,24 @@ namespace token{
   Proposal* ProposalScope::GetCurrentProposal(){//TODO: remove locking
     std::lock_guard<std::mutex> guard(mtx_current_);
     return current_;
+  }
+
+  void ProposalScope::SetProposer(node::Session* session){
+    std::lock_guard<std::mutex> guard(mtx_current_);
+    proposer_ = session;
+  }
+
+  node::Session* ProposalScope::GetProposer(){
+    std::lock_guard<std::mutex> guard(mtx_current_);
+    return proposer_;
+  }
+
+  bool ProposalScope::IsValidProposal(Proposal* proposal){
+    return HasActiveProposal();//TODO: check proposals
+  }
+
+  bool ProposalScope::IsValidNewProposal(Proposal* proposal){
+    return !HasActiveProposal();//TODO: check for block
   }
 
   bool ProposalScope::HasActiveProposal(){//TODO: remove locking
@@ -49,7 +69,7 @@ namespace token{
     switch(GetPhase()){
       case ProposalPhase::kPhase1:
       case ProposalPhase::kPhase2:
-        return ((PeerSessionManager::GetNumberOfConnectedPeers() / 2) + 1);//TODO: investigate fair calculation
+        return (PeerSessionManager::GetNumberOfConnectedPeers() + 1);//TODO: investigate fair calculation
       case ProposalPhase::kQuorum:
       default:
         return 0;

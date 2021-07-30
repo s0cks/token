@@ -1,7 +1,9 @@
 #include "block.h"
-#include "rpc/rpc_common.h"
-#include "rpc/rpc_session.h"
 #include "proposal_scope.h"
+
+#include "runtime.h"
+#include "node/node_server.h"
+#include "node/node_session.h"
 #include "node/node_session_message_handler.h"
 
 namespace token{
@@ -38,10 +40,23 @@ namespace token{
     }
 
     void SessionMessageHandler::OnPrepareMessage(const rpc::PrepareMessagePtr& msg){
-      auto session = GetSession();
-      DLOG(INFO) << "received prepare message.";
+      auto session = (node::Session*)GetSession();
+      auto proposal = msg->proposal();
+      if(!ProposalScope::IsValidNewProposal(proposal.get())){
+        DLOG(WARNING) << "proposal " << proposal->ToString() << " is invalid, rejecting....";
+        if(!session->SendRejected())
+          DLOG(FATAL) << "cannot reject proposal from session.";
+        return;
+      }
 
-      NOT_IMPLEMENTED(ERROR);//TODO: implement
+      //TODO: clean this up
+      ProposalScope::SetActiveProposal(*proposal);
+      ProposalScope::SetProposer(session);
+
+      DLOG(INFO) << "received prepare message.";
+      auto& acceptor = session->GetServer()->runtime()->GetAcceptor();
+      if(!acceptor.OnPrepare())
+        DLOG(FATAL) << "cannot start accepting proposal.";
     }
 
     void SessionMessageHandler::OnPromiseMessage(const rpc::PromiseMessagePtr &msg){
@@ -49,15 +64,37 @@ namespace token{
     }
 
     void SessionMessageHandler::OnCommitMessage(const rpc::CommitMessagePtr &msg){
-      NOT_IMPLEMENTED(ERROR);//TODO: implement
+      auto session = (node::Session*)GetSession();
+      auto proposal = msg->proposal();
+      if(!ProposalScope::IsValidProposal(proposal.get())){
+        DLOG(WARNING) << "proposal " << proposal->ToString() << " is invalid, rejecting....";
+        if(!session->SendRejected())
+          DLOG(FATAL) << "cannot reject proposal from session.";
+        return;
+      }
+
+      auto& acceptor = session->GetServer()->runtime()->GetAcceptor();
+      if(!acceptor.OnCommit())
+        DLOG(FATAL) << "cannot start committing proposal.";
     }
 
-    void SessionMessageHandler::OnAcceptedMessage(const rpc::AcceptedMessagePtr &msg) {
-      NOT_IMPLEMENTED(WARNING);//should never happen
+    void SessionMessageHandler::OnAcceptedMessage(const rpc::AcceptedMessagePtr &msg){
+      NOT_IMPLEMENTED(ERROR);//TODO: implement?
     }
 
     void SessionMessageHandler::OnRejectedMessage(const rpc::RejectedMessagePtr &msg){
-      NOT_IMPLEMENTED(WARNING);//should never happen
+      NOT_IMPLEMENTED(ERROR);//TODO: implement?
+    }
+
+    void SessionMessageHandler::OnBlockMessage(const rpc::BlockMessagePtr& msg){
+      auto session = (node::Session*)GetSession();
+      auto blk = Block::Genesis();//TODO: use message block
+      auto hash = blk->hash();
+      DLOG(INFO) << "received block: " << hash;
+
+      auto& pool = session->GetServer()->runtime()->GetPool();
+      if(!pool.PutBlock(hash, blk))
+        DLOG(FATAL) << "cannot put block in object pool.";
     }
   }
 }

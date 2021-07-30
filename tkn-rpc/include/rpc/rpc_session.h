@@ -13,11 +13,12 @@ namespace token{
       explicit Session(uv_loop_t* loop, const UUID& uuid=UUID()):
         SessionBase(loop, uuid){}
 
-      static inline void
-      HandleMessages(rpc::MessageParser& parser, rpc::MessageHandler& handler){
+      void HandleMessages(const BufferPtr& data, MessageHandler& handler){
+        rpc::MessageParser parser(data);
+        DVLOG(1) << "parsing message buffer of size: " << data->GetWritePosition();
         while(parser.HasNext()){
           auto next = parser.Next();
-          DLOG(INFO) << "received message " << next->ToString();
+          DVLOG(1) << "parsed message: " << next->ToString();
           switch(next->type()){
 #define HANDLE(Name) \
             case Type::k##Name##Message:{ \
@@ -32,12 +33,6 @@ namespace token{
             }
           }
         }
-      }
-
-      static inline void
-      HandleMessages(const BufferPtr& data, rpc::MessageHandler& handler){
-        rpc::MessageParser parser(data);
-        return HandleMessages(parser, handler);
       }
      public:
       ~Session() override = default;

@@ -22,30 +22,19 @@ namespace token{
         return 0;
       }
      protected:
-      Proposal* proposal_;
+      std::shared_ptr<Proposal> proposal_;
 
       PaxosMessage():
         rpc::Message(),
-        proposal_(nullptr){}
+        proposal_(){}
       explicit PaxosMessage(const Proposal& proposal):
         rpc::Message(),
-        proposal_(new Proposal(proposal)){}
+        proposal_(std::make_shared<Proposal>(proposal)){}
      public:
-      PaxosMessage(const PaxosMessage& other) = default;
-      ~PaxosMessage() override{
-        delete proposal_;//TODO: fix allocation
-      }
+      ~PaxosMessage() override = default;
 
-      const Proposal* proposal() const{
+      std::shared_ptr<Proposal> proposal() const{
         return proposal_;
-      }
-
-      PaxosMessage& operator=(const PaxosMessage& other){
-        if(this == &other)
-          return *this;//dafuq is this???
-        delete proposal_;
-        proposal_ = new Proposal(*other.proposal_);
-        return *this;
       }
     };
   }
@@ -58,7 +47,7 @@ namespace token{
 
       PaxosMessageEncoder(const M* value, const codec::EncoderFlags& flags):
         MessageEncoder<M>(value, flags),
-        encode_proposal_(value->proposal(), flags){}//TODO: fix
+        encode_proposal_(value->proposal().get(), codec::kDefaultEncoderFlags){}//TODO: fix
     public:
         PaxosMessageEncoder(const PaxosMessageEncoder<M>& other) = default;
         ~PaxosMessageEncoder() override = default;
@@ -72,6 +61,7 @@ namespace token{
         bool Encode(const BufferPtr& buff) const override{
           if(!MessageEncoder<M>::Encode(buff))
             return false;
+
           if(!encode_proposal_.Encode(buff)){
             LOG(FATAL) << "cannot encode proposal to buffer.";
             return false;
@@ -83,27 +73,20 @@ namespace token{
     };
 
       template<class M>
-      class PaxosMessageDecoder : public codec::DecoderBase<M>{
+      class PaxosMessageDecoder : public codec::MessageDecoder<M>{
       protected:
         Proposal::Decoder decode_proposal_;
 
         explicit PaxosMessageDecoder(const codec::DecoderHints& hints):
-          codec::DecoderBase<M>(hints),
+          codec::MessageDecoder<M>(hints),
           decode_proposal_(hints){}
 
-        inline bool
-        DecodeProposalData(const BufferPtr& buff, Proposal& proposal) const{
-          if(!decode_proposal_.Decode(buff, proposal)){
-            LOG(FATAL) << "cannot decode proposal from buffer.";
-            return false;
-          }
-          return true;
+        inline Proposal*
+        DecodeProposal(const BufferPtr& data) const{
+          return decode_proposal_.Decode(data);
         }
       public:
-          PaxosMessageDecoder(const PaxosMessageDecoder<M>& other) = default;
-          ~PaxosMessageDecoder<M>() override = default;
-          virtual bool Decode(const BufferPtr& buff, M& result) const = 0;
-          PaxosMessageDecoder<M>& operator=(const PaxosMessageDecoder<M>& other) = default;
+        ~PaxosMessageDecoder() override = default;
       };
   }
 }

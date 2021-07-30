@@ -179,8 +179,9 @@ namespace token{
     }
 
     Hash& operator=(const Hash& rhs){
-      if(&rhs != this)
-        std::copy_n(rhs.data_, kSize, data_);
+      if(&rhs == this)
+        return (*this);
+      memcpy(data_, rhs.data_, kSize);
       return (*this);
     }
 

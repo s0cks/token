@@ -13,16 +13,19 @@ namespace token{
 
     MessagePtr MessageParser::Next() const{
       Type type = static_cast<Type>(data_->GetUnsignedLong());
-      DVLOG(1) << "decoded message type: " << type;
+      DECODED_FIELD(type_, Type, type);
 
-      Version version(data_->GetShort(), data_->GetShort(), data_->GetShort());
-      DVLOG(1) << "decoded message version: " << version;
+      if(ShouldExpectVersion()){
+        Version version(data_->GetShort(), data_->GetShort(), data_->GetShort());
+        DECODED_FIELD(version_, Version, version);
+        //TODO: check version
+      }
 
       codec::DecoderHints hints = codec::ExpectTypeHint::Encode(true)|codec::ExpectVersionHint::Encode(true);
       switch(type){
 #define DEFINE_DECODE(Name) \
         case Type::k##Name##Message: \
-          return std::static_pointer_cast<Message>(Name##Message::DecodeNew(data_, hints));
+          return std::static_pointer_cast<Message>(Name##Message::Decode(data_, hints));
         FOR_EACH_MESSAGE_TYPE(DEFINE_DECODE)
 #undef DEFINE_DECODE
         default:

@@ -2,14 +2,11 @@
 
 namespace token{
   namespace rpc{
-    bool CommitMessage::Decoder::Decode(const BufferPtr& buff, rpc::CommitMessage& result) const{
-      Proposal proposal;
-      if(!DecodeProposalData(buff, proposal)){
-        LOG(FATAL) << "cannot decode proposal from buffer.";
-        return false;
-      }
-      result = rpc::CommitMessage(proposal);
-      return true;
+    CommitMessage* CommitMessage::Decoder::Decode(const BufferPtr& data) const{
+      Proposal* proposal = nullptr;
+      if(!(proposal = DecodeProposal(data)))
+        CANNOT_DECODE_FIELD(proposal_, Proposal);
+      return new CommitMessage(*proposal);//TODO: fix allocation
     }
   }
 }

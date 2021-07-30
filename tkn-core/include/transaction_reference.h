@@ -20,14 +20,12 @@ namespace token{
       Encoder& operator=(const Encoder& other) = default;
     };
 
-    class Decoder : public codec::DecoderBase<TransactionReference>{
+    class Decoder : public codec::TypeDecoder<TransactionReference>{
     public:
       explicit Decoder(const codec::DecoderHints& hints):
-        codec::DecoderBase<TransactionReference>(hints){}
-      Decoder(const Decoder& other) = default;
+        codec::TypeDecoder<TransactionReference>(hints){}
       ~Decoder() override = default;
-      bool Decode(const BufferPtr& buff, TransactionReference& result) const override;
-      Decoder& operator=(const Decoder& other) = default;
+      TransactionReference* Decode(const BufferPtr& data) const override;
     };
   private:
     Hash transaction_;

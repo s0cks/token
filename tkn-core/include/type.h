@@ -13,7 +13,8 @@ namespace token{
   V(Promise)                     \
   V(Commit)                      \
   V(Accepted)                    \
-  V(Rejected)
+  V(Rejected)                    \
+  V(Block)
 
 #define FOR_EACH_TYPE(V) \
   V(Block)               \
@@ -119,9 +120,6 @@ typedef internal::BufferPtr BufferPtr;
         return stream << "Unknown";
     }
   }
-
-  typedef std::vector<Input> InputList;
-  typedef std::vector<Output> OutputList;
 }
 
 #endif//TOKEN_TYPE_H

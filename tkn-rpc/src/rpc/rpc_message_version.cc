@@ -2,19 +2,17 @@
 
 namespace token{
   namespace rpc{
-    bool VersionMessage::Decoder::Decode(const BufferPtr& buff, rpc::VersionMessage& result) const{
+    VersionMessage* VersionMessage::Decoder::Decode(const BufferPtr& data) const{//TODO: finish implementation
       Timestamp timestamp;
       rpc::ClientType client_type = rpc::ClientType::kUnknown;
       Hash nonce;
       Version version(0, 0, 0);
       UUID node_id;
-      if(!DecodeHandshakeData(buff, timestamp, nonce)){
-        LOG(FATAL) << "cannot decode handshake data from buffer.";
-        return false;
+      if(!DecodeHandshakeData(data, timestamp, nonce)){
+        DLOG(FATAL) << "cannot decode handshake data.";
+        return nullptr;
       }
-
-      result = rpc::VersionMessage(timestamp, client_type, version, nonce, node_id);
-      return true;
+      return new VersionMessage(timestamp, client_type, version, nonce, node_id);
     }
   }
 }

@@ -1,4 +1,5 @@
 #include "env.h"
+#include "runtime.h"
 #include "configuration.h"
 #include "proposal_scope.h"
 #include "rpc/rpc_messages.h"
@@ -61,7 +62,7 @@ namespace token{
       }
 
       BufferPtr data= internal::CopyBufferFrom((uint8_t *) buff->base, nread);
-      HandleMessages(data, session->handler());
+      session->HandleMessages(data, session->handler());
     }
 
     void Session::OnDisconnect(uv_async_t* handle){
@@ -107,6 +108,15 @@ namespace token{
       auto session = (peer::Session*)handle->data;
       Proposal* proposal = ProposalScope::GetCurrentProposal();
       session->Send(rpc::CommitMessage::NewInstance(*proposal));
+    }
+
+    void Session::OnSendDiscovered(uv_async_t* handle){
+      auto session = (peer::Session*)handle->data;
+      Hash hash = session->GetRuntime()->GetBlockMiner().GetLastMined();
+      DLOG(INFO) << "sending discovered block: " << hash;
+
+      auto blk = Block::Genesis();//TODO: fetch from object pool
+      session->Send(rpc::BlockMessage::NewInstance(blk));
     }
   }
 }

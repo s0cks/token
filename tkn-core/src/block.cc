@@ -78,7 +78,7 @@ namespace token{
     size += sizeof(int64_t); // height_
     size += Hash::GetSize(); // previous_hash_
     size += Hash::GetSize(); // merkle_root_
-    //TODO: use IndexedTransactionListEncoder
+    size += encode_transactions_.GetBufferSize();
     return size;
   }
 
@@ -104,33 +104,31 @@ namespace token{
       return false;
     }
 
-    //TODO: encode IndexedTransactionSet
+    if(!encode_transactions_.Encode(buff)){
+      CANNOT_ENCODE_VALUE(FATAL, IndexedTransactionSet, value()->transactions().size());
+      return false;
+    }
     return true;
   }
 
-  bool Block::Decoder::Decode(const BufferPtr &buff, Block &result) const{
-    Timestamp timestamp = buff->GetTimestamp();
-    DLOG(INFO) << "decoded Block timestamp: " << FormatTimestampReadable(timestamp);
+  Block* Block::Decoder::Decode(const BufferPtr& data) const{
+    Timestamp timestamp = data->GetTimestamp();
+    DECODED_FIELD(timestamp_, Timestamp, FormatTimestampReadable(timestamp));
 
-    int64_t height = buff->GetLong();
-    DLOG(INFO) << "decoded Block height: " << height;
+    int64_t height = data->GetLong();
+    DECODED_FIELD(height_, Long, height);
 
-    Hash previous_hash = buff->GetHash();
-    DLOG(INFO) << "decoded Block previous_hash: " << previous_hash;
+    Hash previous_hash = data->GetHash();
+    DECODED_FIELD(previous_hash_, Hash, previous_hash);
 
     Version version = Version::CurrentVersion();
+    DECODED_FIELD(version_, Version, version);
 
     IndexedTransactionSet transactions = {};
-
-    int64_t ntransactions = buff->GetLong();
-    DLOG(INFO) << "decoding " << ntransactions << " transactions....";
-    for(auto idx = 0; idx < ntransactions; idx++){
-      auto itx = IndexedTransaction::DecodeNew(buff, hints());
-      DLOG(INFO) << "decoded IndexedTransaction #" << idx << ": " << itx->ToString();
-      transactions.insert(itx);
+    if(!decode_transactions_.Decode(data, transactions)){
+      DLOG(FATAL) << "cannot decode transaction data from buffer.";
+      return nullptr;
     }
-
-    result = Block(timestamp, height, previous_hash, transactions, version);
-    return true;
+    return new Block(timestamp, height, previous_hash, transactions, version);
   }
 }

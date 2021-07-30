@@ -17,14 +17,11 @@ namespace token{
     return true;
   }
 
-  bool User::Decoder::Decode(const BufferPtr& buff, User& result) const{
+  User* User::Decoder::Decode(const BufferPtr& buff) const{
     auto length = internal::kMaxUserLength;
-    uint8_t data[length];
-    if(!buff->GetBytes(data, length)){
-      DLOG(FATAL) << "cannot decode data (uint8_t[" << length << "]) from buffer.";
-      return false;
-    }
-    result = User(data, length);
-    return true;
+    uint8_t bytes[length];
+    if(!buff->GetBytes(bytes, static_cast<int64_t>(length)))
+      CANNOT_DECODE_FIELD(bytes_, uint8_t[]);
+    return new User(bytes, length);
   }
 }

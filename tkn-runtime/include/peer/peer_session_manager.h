@@ -53,7 +53,7 @@ namespace token{
     ~PeerSessionManager() = delete;
 
     static State GetState();
-    static bool Initialize();
+    static bool Initialize(Runtime* runtime);
 
     static bool Shutdown();
     static bool WaitForShutdown();
@@ -67,7 +67,7 @@ namespace token{
     static void BroadcastPrepare();
     static void BroadcastPromise();
     static void BroadcastCommit();
-    static void BroadcastDiscoveredBlock();
+    static void BroadcastDiscovered();
     static void BroadcastAccepted();
     static void BroadcastRejected();
 

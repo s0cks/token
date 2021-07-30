@@ -13,7 +13,7 @@ class IndexedTransaction : public internal::TransactionBase {
     }
   };
 
-  class Encoder : public codec::TransactionEncoder<IndexedTransaction> {
+  class Encoder : public TransactionEncoder<IndexedTransaction> {
   public:
     explicit Encoder(IndexedTransaction* value, const codec::EncoderFlags &flags = codec::kDefaultEncoderFlags) :
       TransactionEncoder<IndexedTransaction>(value, flags) {}
@@ -24,14 +24,12 @@ class IndexedTransaction : public internal::TransactionBase {
     Encoder &operator=(const Encoder &other) = default;
   };
 
-  class Decoder : public codec::TransactionDecoder<IndexedTransaction> {
+  class Decoder : public TransactionDecoder<IndexedTransaction> {
   public:
     explicit Decoder(const codec::DecoderHints& hints):
       TransactionDecoder<IndexedTransaction>(hints){}
-    Decoder(const Decoder& other) = default;
     ~Decoder() override = default;
-    bool Decode(const BufferPtr &buff, IndexedTransaction &result) const override;
-    Decoder& operator=(const Decoder& other) = default;
+    IndexedTransaction* Decode(const BufferPtr& data) const override;
   };
  private:
   int64_t index_;
@@ -73,18 +71,16 @@ class IndexedTransaction : public internal::TransactionBase {
     return std::make_shared<IndexedTransaction>(index, timestamp, inputs, outputs);
   }
 
-  static inline bool
-  Decode(const BufferPtr& buff, IndexedTransaction& result, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
-    Decoder decoder(hints);
-    return decoder.Decode(buff, result);
-  }
-
   static inline IndexedTransactionPtr
-  DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
-    IndexedTransaction instance;
-    if(!Decode(buff, instance, hints))
+  Decode(const BufferPtr& data, const codec::DecoderHints& hints){
+    Decoder decoder(hints);
+
+    IndexedTransaction* value = nullptr;
+    if(!(value = decoder.Decode(data))){
+      DLOG(FATAL) << "cannot decode IndexedTransaction from buffer.";
       return nullptr;
-    return std::make_shared<IndexedTransaction>(instance);
+    }
+    return std::shared_ptr<IndexedTransaction>(value);
   }
 };
 

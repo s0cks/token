@@ -42,24 +42,24 @@ namespace token{
   }
 
   Output::Decoder::Decoder(const codec::DecoderHints &hints):
-    codec::DecoderBase<Output>(hints),
+    codec::TypeDecoder<Output>(hints),
     decode_user_(hints),
     decode_product_(hints){}
 
-  bool Output::Decoder::Decode(const BufferPtr &buff, Output &result) const{
-    User user;
-    if(!decode_user_.Decode(buff, user)){
+  Output* Output::Decoder::Decode(const BufferPtr& data) const{
+    User* user = nullptr;
+    if(!(user = decode_user_.Decode(data))){
       LOG(FATAL) << "cannot decode user from buffer.";
-      return false;
+      return nullptr;
     }
 
-    Product product;
-    if(!decode_product_.Decode(buff, product)){
+    Product* product = nullptr;
+    if(!(product = decode_product_.Decode(data))){
       LOG(FATAL) << "cannot decode product from buffer.";
-      return false;
+      return nullptr;
     }
 
-    result = Output(user, product);
-    return true;
+    //TODO: fix memory leak
+    return new Output(*user, *product);
   }
 }

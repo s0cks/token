@@ -137,12 +137,55 @@ namespace token{
       }
     };
 
+    template<class T, class C>
+    class SetEncoder : public EncoderBase{
+    protected:
+      const std::set<std::shared_ptr<T>, C>& items_;
+
+      inline const std::vector<std::shared_ptr<T>, C>&
+      items() const{
+        return items_;
+      }
+    public:
+      SetEncoder(const std::set<std::shared_ptr<T>, C>& items, const codec::EncoderFlags& flags):
+        EncoderBase(flags),
+        items_(items){}
+      ~SetEncoder() override = default;
+
+      int64_t GetBufferSize() const override{
+        int64_t size = 0;
+        size += sizeof(int64_t);//length
+        for(const auto& item : items_){
+          typename T::Encoder encoder(item.get(), flags());
+          size += encoder.GetBufferSize();
+        }
+        return size;
+      }
+
+      bool Encode(const internal::BufferPtr& data) const override{
+        auto length = static_cast<int64_t>(items_.size());
+        if(!data->PutLong(length)){
+          LOG(FATAL) << "couldn't serialize list length to buffer.";
+          return false;
+        }
+
+        for(const auto& item : items_){
+          typename T::Encoder encoder(item.get(), flags());
+          if(!encoder.Encode(data)){
+            LOG(FATAL) << "couldn't serialize list item #" << (length - length--) << ": " << item;
+            return false;
+          }
+        }
+        return true;
+      }
+    };
+
     template<typename T>
     class ListEncoder : public EncoderBase{
     protected:
-      const std::vector<T>& items_;
+      const std::vector<std::shared_ptr<T>>& items_;
 
-      ListEncoder(const std::vector<T>& items, const codec::EncoderFlags& flags):
+      ListEncoder(const std::vector<std::shared_ptr<T>>& items, const codec::EncoderFlags& flags):
         EncoderBase(flags),
         items_(items){}
 
@@ -151,36 +194,33 @@ namespace token{
         return items_;
       }
     public:
-      ListEncoder(const ListEncoder<T>& rhs) = default;
       ~ListEncoder() override = default;
 
       int64_t GetBufferSize() const override{
         int64_t size = 0;
         size += sizeof(int64_t); // length
-        auto first = items().front();
-        typename T::Encoder encoder(&first, flags());
-        size += (encoder.GetBufferSize() * items().size());
+        auto first = items_.front();
+        typename T::Encoder encoder(first.get(), flags());
+        size += (encoder.GetBufferSize() * items_.size());
         return size;
       }
 
       bool Encode(const BufferPtr& buff) const override{
-        auto length = static_cast<int64_t>(items().size());
+        auto length = static_cast<int64_t>(items_.size());
         if(!buff->PutLong(length)){
           LOG(FATAL) << "couldn't serialize list length to buffer.";
           return false;
         }
 
-        for(auto& item : items()){
-          typename T::Encoder encoder(&item, flags());
+        for(auto& item : items_){
+          typename T::Encoder encoder(item.get(), flags());
           if(!encoder.Encode(buff)){
-            LOG(FATAL) << "couldn't serialize list item #" << (length - length--) << ": " << item;
+            LOG(FATAL) << "couldn't serialize list item #" << (length - length--) << ": " << item->ToString();
             return false;
           }
         }
         return true;
       }
-
-      ListEncoder& operator=(const ListEncoder<T>& rhs) = default;
     };
   }
 }

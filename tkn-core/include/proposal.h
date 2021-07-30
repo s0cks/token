@@ -27,13 +27,11 @@ namespace token{
       Encoder& operator=(const Encoder& other) = default;
     };
 
-    class Decoder: public codec::DecoderBase<Proposal>{
+    class Decoder: public codec::TypeDecoder<Proposal>{
     public:
       explicit Decoder(const codec::DecoderHints& hints);
-      Decoder(const Decoder& other) = default;
       ~Decoder() override = default;
-      bool Decode(const BufferPtr& buff, Proposal& result) const override;
-      Decoder& operator=(const Decoder& other) = default;
+      Proposal* Decode(const BufferPtr& data) const override;
     };
   private:
     Timestamp timestamp_;

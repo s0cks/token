@@ -36,5 +36,9 @@ namespace token{
       auto session = GetSession();
       ProposalScope::Rejected(session->GetUUID());
     }
+
+    void SessionMessageHandler::OnBlockMessage(const rpc::BlockMessagePtr& msg){
+      NOT_IMPLEMENTED(FATAL);//TODO: implement
+    }
   }
 }

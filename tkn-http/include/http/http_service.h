@@ -58,7 +58,7 @@ namespace token{
       static void
       HandleThread(uword param){
         auto instance = Service::NewInstance();
-        DLOG_IF(ERROR, !instance->Run(Service::GetPort())) << "Failed to run the " << Service::GetName() << " service loop.";
+        DLOG_IF(ERROR, !instance->Start(Service::GetPort())) << "Failed to run the " << Service::GetName() << " service loop.";
         pthread_exit(nullptr);
       }
      public:

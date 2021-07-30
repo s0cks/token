@@ -141,17 +141,14 @@ namespace token{
       static inline bool
       DecodeHandshakeData(const BufferPtr& buff, Timestamp& timestamp, Hash& nonce){
         timestamp = buff->GetTimestamp();
-        DLOG(INFO) << "decoded timestamp: " << FormatTimestampReadable(timestamp);
+        DECODED_FIELD(timestamp_, Timestamp, FormatTimestampReadable(timestamp));
 
         nonce = buff->GetHash();
-        DLOG(INFO) << "decoded nonce: " << nonce;
+        DECODED_FIELD(nonce_, Hash, nonce);
         return true;
       }
     public:
-      HandshakeMessageDecoder(const HandshakeMessageDecoder<M>& other) = default;
-      ~HandshakeMessageDecoder<M>() override = default;
-      virtual bool Decode(const BufferPtr& buff, M& result) const = 0;
-      HandshakeMessageDecoder<M>& operator=(const HandshakeMessageDecoder<M>& other) = default;
+      ~HandshakeMessageDecoder() override = default;
     };
   }
 }

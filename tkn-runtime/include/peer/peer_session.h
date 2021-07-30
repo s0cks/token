@@ -7,10 +7,12 @@
 #include "peer/peer_session_message_handler.h"
 
 namespace token{
+  class Runtime;
   namespace peer{
     class Session: public rpc::Session{
       friend class PeerSessionThread;
     private:
+      Runtime* runtime_;
       SessionMessageHandler handler_;
       utils::Address address_;
       // uv handles
@@ -20,6 +22,7 @@ namespace token{
       uv_async_t send_verack_;
       uv_async_t send_prepare_;
       uv_async_t send_commit_;
+      uv_async_t send_discovered_;
 
       SessionMessageHandler& handler(){
         return handler_;
@@ -43,9 +46,11 @@ namespace token{
       static void OnSendVerack(uv_async_t* handle);
       static void OnSendPrepare(uv_async_t* handle);
       static void OnSendCommit(uv_async_t* handle);
+      static void OnSendDiscovered(uv_async_t* handle);
     public:
       Session():
         rpc::Session(),
+        runtime_(nullptr),
         handler_(this),
         address_(),
         connection_(),
@@ -53,7 +58,8 @@ namespace token{
         send_version_(),
         send_verack_(),
         send_prepare_(),
-        send_commit_(){
+        send_commit_(),
+        send_discovered_(){
         connection_.data = this;
         disconnect_.data = this;
         send_version_.data = this;
@@ -64,9 +70,12 @@ namespace token{
         CHECK_UVRESULT2(FATAL, uv_async_init(GetLoop(), &send_prepare_, &OnSendPrepare), "couldn't initialize send_prepare_ callback");
         send_commit_.data = this;
         CHECK_UVRESULT2(FATAL, uv_async_init(GetLoop(), &send_commit_, &OnSendCommit), "couldn't initialize send_commit_ callback");
+        send_discovered_.data = this;
+        CHECK_UVRESULT2(FATAL, uv_async_init(GetLoop(), &send_discovered_, &OnSendDiscovered), "couldn't initialize send_discovered_ callback");
       }
-      Session(uv_loop_t* loop, utils::Address address):
+      Session(Runtime* runtime, uv_loop_t* loop, utils::Address address):
         rpc::Session(loop),
+        runtime_(runtime),
         handler_(this),
         address_(address),
         connection_(),
@@ -74,7 +83,8 @@ namespace token{
         send_version_(),
         send_verack_(),
         send_prepare_(),
-        send_commit_(){
+        send_commit_(),
+        send_discovered_(){
         connection_.data = this;
         disconnect_.data = this;
         send_version_.data = this;
@@ -85,10 +95,16 @@ namespace token{
         CHECK_UVRESULT2(FATAL, uv_async_init(GetLoop(), &send_prepare_, &OnSendPrepare), "couldn't initialize send_prepare_ callback");
         send_commit_.data = this;
         CHECK_UVRESULT2(FATAL, uv_async_init(GetLoop(), &send_commit_, &OnSendCommit), "couldn't initialize send_commit_ callback");
+        send_discovered_.data = this;
+        CHECK_UVRESULT2(FATAL, uv_async_init(GetLoop(), &send_discovered_, &OnSendDiscovered), "couldn't initialize send_discovered_ callback");
       }
-      explicit Session(utils::Address address):
-        Session(uv_loop_new(), address){}
+      explicit Session(Runtime* runtime, utils::Address address):
+        Session(runtime, uv_loop_new(), address){}
       ~Session() override = default;
+
+      Runtime* GetRuntime() const{
+        return runtime_;
+      }
 
       utils::Address& address(){
         return address_;
@@ -115,6 +131,11 @@ namespace token{
 
       bool SendCommit(){
         VERIFY_UVRESULT2(ERROR, uv_async_send(&send_commit_), "couldn't invoke send_commit_ callback");
+        return true;
+      }
+
+      bool SendDiscovered(){
+        VERIFY_UVRESULT2(ERROR, uv_async_send(&send_discovered_), "couldn't invoke send_discovered_ callback");
         return true;
       }
 

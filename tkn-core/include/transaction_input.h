@@ -8,6 +8,8 @@
 #include "transaction_reference.h"
 
 namespace token{
+  typedef std::shared_ptr<Input> InputPtr;
+
   class Input : public Object{
     friend class Transaction;
   public:
@@ -25,19 +27,17 @@ namespace token{
       Encoder& operator=(const Encoder& other) = default;
     };
 
-    class Decoder : public codec::DecoderBase<Input>{
+    class Decoder : public codec::TypeDecoder<Input>{
     protected:
       TransactionReference::Decoder decode_txref_;
       User::Decoder decode_user_;
     public:
-      explicit Decoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
-          codec::DecoderBase<Input>(hints),
+      explicit Decoder(const codec::DecoderHints& hints):
+          codec::TypeDecoder<Input>(hints),
           decode_txref_(hints),
           decode_user_(hints){}
-      Decoder(const Decoder& other) = default;
       ~Decoder() override = default;
-      bool Decode(const BufferPtr& buff, Input& result) const override;
-      Decoder& operator=(const Decoder& other) = default;
+      Input* Decode(const BufferPtr& data) const override;
     };
    private:
     TransactionReference reference_;
@@ -138,43 +138,34 @@ namespace token{
       return stream << input.ToString();
     }
 
-    static inline bool
-    Decode(const BufferPtr& buff, Input& result, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+    static inline InputPtr
+    Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
       Decoder decoder(hints);
-      return decoder.Decode(buff, result);
-    }
 
-    static inline std::shared_ptr<Input>
-    DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
-      Input result;
-      if(!Decode(buff, result, hints)){
-        DLOG(WARNING) << "couldn't decode Input.";
+      Input* value = nullptr;
+      if(!(value = decoder.Decode(data))){
+        DLOG(FATAL) << "cannot decode Input from buffer.";
         return nullptr;
       }
-
-      return std::make_shared<Input>(result);
+      return std::shared_ptr<Input>(value);
     }
   };
 
-typedef std::vector<Input> InputList;
+typedef std::vector<std::shared_ptr<Input>> InputList;
 
 namespace codec{
 class InputListEncoder : public codec::ListEncoder<Input>{
    public:
     InputListEncoder(const InputList& items, const codec::EncoderFlags& flags):
       codec::ListEncoder<Input>(items, flags){}
-    InputListEncoder(const InputListEncoder& other) = default;
     ~InputListEncoder() override = default;
-    InputListEncoder& operator=(const InputListEncoder& other) = default;
   };
 
-class InputListDecoder : public codec::ListDecoder<Input, Input::Decoder>{
+class InputListDecoder : public codec::ArrayDecoder<Input, Input::Decoder>{
    public:
     explicit InputListDecoder(const codec::DecoderHints &hints):
-      codec::ListDecoder<Input, Input::Decoder>(hints){}
-    InputListDecoder(const InputListDecoder &other) = default;
+      codec::ArrayDecoder<Input, Input::Decoder>(hints){}
     ~InputListDecoder() override = default;
-    InputListDecoder& operator=(const InputListDecoder& other) = default;
   };
 }
 

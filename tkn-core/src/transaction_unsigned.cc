@@ -30,13 +30,12 @@ namespace token{
     return TransactionEncoder<UnsignedTransaction>::Encode(buff);
   }
 
-  bool UnsignedTransaction::Decoder::Decode(const BufferPtr &buff, UnsignedTransaction& result) const{
+  UnsignedTransaction* UnsignedTransaction::Decoder::Decode(const BufferPtr& data) const{
     Timestamp timestamp;
     InputList inputs;
     OutputList outputs;
-    if(!DecodeTransactionData(buff, timestamp, inputs, outputs))
-      return false;
-    result = UnsignedTransaction(timestamp, inputs, outputs);
-    return true;
+    if(!DecodeTransactionData(data, timestamp, inputs, outputs))
+      return nullptr;
+    return new UnsignedTransaction(timestamp, inputs, outputs);//TODO: fix allocation
   }
 }

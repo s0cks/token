@@ -20,13 +20,12 @@ namespace token{
     return TransactionEncoder<SignedTransaction>::Encode(buff);
   }
 
-  bool SignedTransaction::Decoder::Decode(const BufferPtr &buff, SignedTransaction& result) const{
+  SignedTransaction* SignedTransaction::Decoder::Decode(const BufferPtr& data) const{
     Timestamp timestamp;
     InputList inputs;
     OutputList outputs;
-    if(!DecodeTransactionData(buff, timestamp, inputs, outputs))
-      return false;
-    result = SignedTransaction(timestamp, inputs, outputs);
-    return true;
+    if(!DecodeTransactionData(data, timestamp, inputs, outputs))
+      return nullptr;
+    return new SignedTransaction(timestamp, inputs, outputs);
   }
 }

@@ -5,7 +5,9 @@
 
 #include "pool.h"
 #include "miner.h"
+#include "acceptor.h"
 #include "proposer.h"
+#include "node/node_server.h"
 #include "task/task_engine.h"
 
 namespace token{
@@ -41,9 +43,14 @@ namespace token{
 
     task::TaskQueue task_queue_;
     task::TaskEngine task_engine_;
+
+    ObjectPool pool_;
+
+    node::Server server_;
+
     BlockMiner miner_;
     Proposer proposer_;
-    ObjectPool pool_;
+    Acceptor acceptor_;
 
     void SetState(const State& state){
       state_ = state;
@@ -69,8 +76,16 @@ namespace token{
       return proposer_;
     }
 
+    Acceptor& GetAcceptor(){
+      return acceptor_;
+    }
+
     BlockMiner& GetBlockMiner(){
       return miner_;
+    }
+
+    node::Server& GetServer(){
+      return server_;
     }
 
     task::TaskQueue& GetTaskQueue(){
@@ -83,14 +98,6 @@ namespace token{
 
     bool StartProposal(){
       return GetProposer().StartProposal();
-    }
-
-    inline bool StartBlockMiner(){
-      return GetBlockMiner().StartTimer();
-    }
-
-    inline bool PauseBlockMiner(){
-      return GetBlockMiner().PauseTimer();
     }
 
     bool Run();

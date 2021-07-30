@@ -3,18 +3,14 @@
 
 namespace token{
   namespace rpc{
-    bool AcceptedMessage::Decoder::Decode(const BufferPtr& buff, rpc::AcceptedMessage& result) const{
+    AcceptedMessage* AcceptedMessage::Decoder::Decode(const BufferPtr& data) const{
       //TODO: decode type
       //TODO: decode version
 
-      Proposal proposal;
-      if(!DecodeProposalData(buff, proposal)){
-        LOG(FATAL) << "cannot decode proposal from buffer.";
-        return false;
-      }
-
-      result = rpc::AcceptedMessage(proposal);
-      return true;
+      Proposal* proposal = nullptr;
+      if(!(proposal = DecodeProposal(data)))
+        CANNOT_DECODE_FIELD(proposal_, Proposal);
+      return new AcceptedMessage(*proposal);//TODO: fix memory-leak
     }
   }
 }

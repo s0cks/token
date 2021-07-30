@@ -26,16 +26,14 @@ namespace token{
       Encoder& operator=(const Encoder& other) = default;
     };
 
-    class Decoder : public codec::DecoderBase<Output>{
+    class Decoder : public codec::TypeDecoder<Output>{
     private:
       User::Decoder decode_user_;
       Product::Decoder decode_product_;
     public:
-      explicit Decoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints);
-      Decoder(const Decoder& other) = default;
+      explicit Decoder(const codec::DecoderHints& hints);
       ~Decoder() override = default;
-      bool Decode(const BufferPtr& buff, Output& result) const override;
-      Decoder& operator=(const Decoder& other) = default;
+      Output* Decode(const BufferPtr& data) const override;
     };
    private:
     User user_;
@@ -118,21 +116,15 @@ namespace token{
       return stream << output.ToString();
     }
 
-    static inline bool
-    Decode(const BufferPtr& buff, Output& result, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+    static inline Output*
+    Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
       Decoder decoder(hints);
-      return decoder.Decode(buff, result);
+      return decoder.Decode(data);
     }
 
     static inline std::shared_ptr<Output>
-    DecodeNew(const BufferPtr& buff, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
-      Output result;
-      if(!Decode(buff, result, hints)){
-        DLOG(WARNING) << "cannot decode Output.";
-        return nullptr;
-      }
-
-      return std::make_shared<Output>(result);
+    DecodeNew(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      return std::shared_ptr<Output>(Decode(data, hints));
     }
   };
 
@@ -148,13 +140,11 @@ namespace token{
       OutputListEncoder& operator=(const OutputListEncoder& other) = default;
     };
 
-    class OutputListDecoder : public codec::ListDecoder<Output, Output::Decoder>{
+    class OutputListDecoder : public codec::ArrayDecoder<Output, Output::Decoder>{
      public:
       explicit OutputListDecoder(const codec::DecoderHints& hints):
-        codec::ListDecoder<Output, Output::Decoder>(hints){}
-      OutputListDecoder(const OutputListDecoder& other) = default;
+        codec::ArrayDecoder<Output, Output::Decoder>(hints){}
       ~OutputListDecoder() override = default;
-      OutputListDecoder& operator=(const OutputListDecoder& other) = default;
     };
   }
 

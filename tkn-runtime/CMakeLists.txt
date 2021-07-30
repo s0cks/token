@@ -21,8 +21,8 @@ add_executable(tkn-runtime
     include/http/http_service_rest.h src/http/http_service_rest.cc
 
     include/node/node_session_message_handler.h src/node/node_session_message_handler.cc
-    include/node/node_session.h
-    include/node/node_server.h
+    include/node/node_session.h src/node/node_session.cc
+    include/node/node_server.h src/node/node_server.cc
 
     include/peer/peer_queue.h
     include/peer/peer_session.h src/peer/peer_session.cc
