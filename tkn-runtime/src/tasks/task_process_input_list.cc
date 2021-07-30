@@ -3,7 +3,7 @@
 
 namespace token{
   namespace task{
-    ProcessInputListTask::ProcessInputListTask(ProcessTransactionTask* parent, const Hash& transaction, const int64_t& index, InputList& inputs):
+    ProcessInputListTask::ProcessInputListTask(ProcessTransactionTask* parent, const Hash& transaction, const int64_t& index, std::vector<Input>& inputs):
       task::Task(parent),
       inputs_(inputs){}
 

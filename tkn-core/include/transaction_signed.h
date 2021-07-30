@@ -1,31 +1,19 @@
 #ifndef TOKEN_SIGNED_TRANSACTION_H
 #define TOKEN_SIGNED_TRANSACTION_H
 
+#include <utility>
+
 #include "transaction.h"
 
 namespace token{
-  class SignedTransaction : public internal::TransactionBase{
-  public:
-  class Encoder : public TransactionEncoder<SignedTransaction> {
-    public:
-      explicit Encoder(const SignedTransaction* value, const codec::EncoderFlags &flags = codec::kDefaultEncoderFlags):
-        TransactionEncoder<SignedTransaction>(value, flags) {}
-      Encoder(const Encoder &other) = default;
-      ~Encoder() override = default;
-      int64_t GetBufferSize() const override;
-      bool Encode(const BufferPtr &buff) const override;
-      Encoder &operator=(const Encoder &other) = default;
-    };
-
-  class Decoder : public TransactionDecoder<SignedTransaction>{
-    public:
-      explicit Decoder(const codec::DecoderHints& hints);
-      ~Decoder() override = default;
-      SignedTransaction* Decode(const BufferPtr& data) const override;
-    };
+  class SignedTransaction : public internal::TransactionBase<internal::proto::SignedTransaction>{
    public:
-    SignedTransaction(const Timestamp& timestamp, const InputList& inputs, const OutputList& outputs):
-      internal::TransactionBase(timestamp, inputs, outputs){}
+    SignedTransaction():
+      internal::TransactionBase<internal::proto::SignedTransaction>(){}
+    explicit SignedTransaction(internal::proto::SignedTransaction raw):
+      internal::TransactionBase<internal::proto::SignedTransaction>(std::move(raw)){}
+    SignedTransaction(const Timestamp& timestamp, const std::vector<Input>& inputs, const std::vector<Output>& outputs):
+      internal::TransactionBase<internal::proto::SignedTransaction>(timestamp, inputs, outputs){}
     SignedTransaction(const SignedTransaction& other) = default;
     ~SignedTransaction() override = default;
 

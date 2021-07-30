@@ -50,17 +50,17 @@ namespace token{
       return;
     }
 
-    Block::Encoder encoder(blk.get(), codec::kDefaultEncoderFlags); //TODO: change encoder flags
-    BufferPtr data = internal::NewBufferFor(encoder);
-    if(!encoder.Encode(data)){
-      LOG(FATAL) << "cannot encode write block " << blk->hash() << " to buffer.";
-      return;
-    }
-
-    if(!data->WriteTo(file)){
-      LOG(FATAL) << "cannot write buffer to file: " << filename;
-      return;
-    }
+//TODO:
+//    Block::Encoder encoder(blk.get(), codec::kDefaultEncoderFlags); //TODO: change encoder flags
+//    BufferPtr data = internal::NewBufferFor(encoder);
+//    if(!encoder.Encode(data)){
+//      LOG(FATAL) << "cannot encode write block " << blk->hash() << " to buffer.";
+//      return;
+//    }
+//    if(!data->WriteTo(file)){
+//      LOG(FATAL) << "cannot write buffer to file: " << filename;
+//      return;
+//    }
 
     platform::fs::Flush(file);
     platform::fs::Close(file);
@@ -89,7 +89,8 @@ namespace token{
   ReadBlockFile(const std::string& filename, const Hash& hash){
     auto filesize = GetFilesize(filename);//TODO: cleanup code
     BufferPtr buffer = internal::NewBufferFromFile(filename, filesize);
-    BlockPtr block = Block::Decode(buffer, codec::ExpectTypeHint::Encode(true)|codec::ExpectVersionHint::Encode(true));
+//TODO: BlockPtr block = Block::Decode(buffer, codec::ExpectTypeHint::Encode(true)|codec::ExpectVersionHint::Encode(true));
+    BlockPtr block = Block::Genesis();
     LOG_IF(FATAL, block->hash() != hash) << "expected block hash of " << hash << ", but parsed block was: " << block->ToString();
     return block;
   }
@@ -151,7 +152,7 @@ namespace token{
   bool BlockChain::Append(const BlockPtr& block){
     BlockPtr head = GetHead();
     Hash hash = block->hash();
-    Hash phash = block->GetPreviousHash();
+    Hash phash = block->previous_hash();
 
     LOG(INFO) << "appending new block:";
     if(HasBlock(hash)){
@@ -182,7 +183,7 @@ namespace token{
       BlockPtr blk = GetBlock(current);
       if(!vis->Visit(blk))
         return false;
-      current = blk->GetPreviousHash();
+      current = blk->previous_hash();
     } while(!current.IsNull());
     return true;
   }
@@ -223,7 +224,7 @@ namespace token{
       do{
         std::string hex = current->hash().HexString();
         writer.String(hex.data(), hex.length());
-        current = GetBlock(current->GetPreviousHash());
+        current = GetBlock(current->previous_hash());
       } while(current);
     }
     writer.EndArray();

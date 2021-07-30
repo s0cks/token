@@ -284,6 +284,11 @@ namespace token{
       return std::make_shared<AllocatedBuffer>(length);
     }
 
+    static inline BufferPtr
+    NewBuffer(const size_t& length){
+      return NewBuffer(static_cast<int64_t>(length));
+    }
+
     template<class Encoder>
     static inline BufferPtr
     NewBufferFor(const Encoder& val){

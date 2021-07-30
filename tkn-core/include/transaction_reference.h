@@ -1,41 +1,25 @@
 #ifndef TOKEN_TRANSACTION_REFERENCE_H
 #define TOKEN_TRANSACTION_REFERENCE_H
 
+#include <utility>
+
 #include "hash.h"
 #include "json.h"
 #include "object.h"
 
 namespace token{
   class TransactionReference : public Object{
-  public:
-    class Encoder : public codec::TypeEncoder<TransactionReference>{
-    public:
-      Encoder(const TransactionReference* value, const codec::EncoderFlags& flags):
-        codec::TypeEncoder<TransactionReference>(value, flags){}
-      Encoder(const Encoder& other) = default;
-      ~Encoder() override = default;
-
-      int64_t GetBufferSize() const override;
-      bool Encode(const BufferPtr& buff) const override;
-      Encoder& operator=(const Encoder& other) = default;
-    };
-
-    class Decoder : public codec::TypeDecoder<TransactionReference>{
-    public:
-      explicit Decoder(const codec::DecoderHints& hints):
-        codec::TypeDecoder<TransactionReference>(hints){}
-      ~Decoder() override = default;
-      TransactionReference* Decode(const BufferPtr& data) const override;
-    };
   private:
-    Hash transaction_;
-    int64_t index_;
+    Hash hash_;
+    uint64_t index_;
    public:
     TransactionReference():
-      transaction_(),
+      Object(),
+      hash_(),
       index_(){}
-    TransactionReference(const Hash& tx, const int64_t& index):
-      transaction_(tx),
+    TransactionReference(const Hash& tx, const uint64_t& index):
+      Object(),
+      hash_(tx),
       index_(index){}
     TransactionReference(const TransactionReference& other) = default;
     ~TransactionReference() override = default;
@@ -44,23 +28,15 @@ namespace token{
       return Type::kTransactionReference;
     }
 
-    Hash& transaction(){
-      return transaction_;
-    }
-
     Hash transaction() const{
-      return transaction_;
+      return hash_;
     }
 
-    int64_t& index(){
+    uint64_t index() const{
       return index_;
     }
 
-    int64_t index() const{
-      return index_;
-    }
-
-    std::string ToString() const{
+    std::string ToString() const override{
       std::stringstream ss;
       ss << "TransactionReference(";
       ss << "transaction=" << transaction() << ", ";

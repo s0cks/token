@@ -5,7 +5,7 @@
 #include "transaction.h"
 
 namespace token{
-class IndexedTransaction : public internal::TransactionBase {
+class IndexedTransaction : public internal::TransactionBase<internal::proto::IndexedTransaction>{
  public:
   struct IndexComparator {
     bool operator()(const IndexedTransactionPtr &a, const IndexedTransactionPtr &b) {
@@ -13,36 +13,34 @@ class IndexedTransaction : public internal::TransactionBase {
     }
   };
 
-  class Encoder : public TransactionEncoder<IndexedTransaction> {
+  class Builder : public TransactionBuilderBase<IndexedTransaction>{
   public:
-    explicit Encoder(IndexedTransaction* value, const codec::EncoderFlags &flags = codec::kDefaultEncoderFlags) :
-      TransactionEncoder<IndexedTransaction>(value, flags) {}
-    Encoder(const Encoder &other) = default;
-    ~Encoder() override = default;
-    int64_t GetBufferSize() const override;
-    bool Encode(const BufferPtr &buff) const override;
-    Encoder &operator=(const Encoder &other) = default;
-  };
+    explicit Builder(internal::proto::IndexedTransaction* raw):
+      TransactionBuilderBase<IndexedTransaction>(raw){}
+    Builder() = default;
+    Builder(const Builder& rhs) = default;
+    ~Builder() override = default;
 
-  class Decoder : public TransactionDecoder<IndexedTransaction> {
-  public:
-    explicit Decoder(const codec::DecoderHints& hints):
-      TransactionDecoder<IndexedTransaction>(hints){}
-    ~Decoder() override = default;
-    IndexedTransaction* Decode(const BufferPtr& data) const override;
+    void SetIndex(const uint64_t& val){
+      raw_->set_index(val);
+    }
+
+    IndexedTransactionPtr Build() const override{
+      return std::make_shared<IndexedTransaction>(*raw_);
+    }
+
+    Builder& operator=(const Builder& rhs) = default;
   };
- private:
-  int64_t index_;
  public:
   IndexedTransaction():
-    internal::TransactionBase(),
-    index_(){}
-  IndexedTransaction(const int64_t &index,
-                     const Timestamp &timestamp,
-                     const InputList &inputs,
-                     const OutputList &outputs) :
-    internal::TransactionBase(timestamp, inputs, outputs),
-    index_(index) {}
+    internal::TransactionBase<internal::proto::IndexedTransaction>(){}
+  explicit IndexedTransaction(internal::proto::IndexedTransaction raw):
+    internal::TransactionBase<internal::proto::IndexedTransaction>(std::move(raw)){}
+  explicit IndexedTransaction(const internal::BufferPtr& data):
+    IndexedTransaction(){
+    if(!raw_.ParseFromArray(data->data(), static_cast<int>(data->length())))
+      DLOG(FATAL) << "cannot parse IndexedTransaction from buffer";
+  }
   IndexedTransaction(const IndexedTransaction &other) = default;
   ~IndexedTransaction() override = default;
 
@@ -50,37 +48,26 @@ class IndexedTransaction : public internal::TransactionBase {
     return Type::kIndexedTransaction;
   }
 
-  int64_t &index() {
-    return index_;
-  }
-
-  int64_t index() const {
-    return index_;
+  uint64_t index() const{
+    return raw_.index();
   }
 
   Hash hash() const override{
-    return Hash();
+    auto data = ToBuffer();
+    return Hash::ComputeHash<CryptoPP::SHA256>(data->data(), data->length());
   }
 
+  internal::BufferPtr ToBuffer() const;
   std::string ToString() const override;
 
   IndexedTransaction &operator=(const IndexedTransaction &other) = default;
 
-  static inline IndexedTransactionPtr
-  NewInstance(const int64_t& index, const Timestamp& timestamp, const InputList& inputs, const OutputList& outputs){
-    return std::make_shared<IndexedTransaction>(index, timestamp, inputs, outputs);
+  friend bool operator==(const IndexedTransaction& lhs, const IndexedTransaction& rhs){
+    return lhs.hash() == rhs.hash();
   }
 
-  static inline IndexedTransactionPtr
-  Decode(const BufferPtr& data, const codec::DecoderHints& hints){
-    Decoder decoder(hints);
-
-    IndexedTransaction* value = nullptr;
-    if(!(value = decoder.Decode(data))){
-      DLOG(FATAL) << "cannot decode IndexedTransaction from buffer.";
-      return nullptr;
-    }
-    return std::shared_ptr<IndexedTransaction>(value);
+  friend bool operator!=(const IndexedTransaction& lhs, const IndexedTransaction& rhs){
+    return lhs.hash() != rhs.hash();
   }
 };
 
@@ -107,15 +94,15 @@ namespace json{
       return false;
     }
 
-    if(!json::SetField(writer, "inputs", val->inputs())){
-      LOG(WARNING) << "cannot set inputs field for json object.";
-      return false;
-    }
-
-    if(!json::SetField(writer, "outputs", val->outputs())){
-      LOG(WARNING) << "cannot set outputs field for json object.";
-      return false;
-    }
+//TODO:
+//    if(!json::SetField(writer, "inputs", val->inputs())){
+//      LOG(WARNING) << "cannot set inputs field for json object.";
+//      return false;
+//    }
+//    if(!json::SetField(writer, "outputs", val->outputs())){
+//      LOG(WARNING) << "cannot set outputs field for json object.";
+//      return false;
+//    }
 
     if(!writer.EndObject()){
       LOG(WARNING) << "cannot end json object.";

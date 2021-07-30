@@ -1,0 +1,7 @@
+syntax = "proto3";
+package token.internal.proto;
+
+message Output{
+    string user = 1;
+    string product = 2;
+}

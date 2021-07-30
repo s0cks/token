@@ -8,8 +8,9 @@ namespace token{
 
     void ProcessTransactionTask::DoWork(){
       DLOG(INFO) << "processing transaction " << hash() << "....";
-      ProcessInputs(inputs(), kDefaultChunkSize);
-      ProcessOutputs(outputs(), kDefaultChunkSize);
+//TODO:
+//      ProcessInputs(inputs(), kDefaultChunkSize);
+//      ProcessOutputs(outputs(), kDefaultChunkSize);
     }
   }
 }

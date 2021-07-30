@@ -4,166 +4,77 @@
 #include <set>
 #include <utility>
 
+#include "transaction.pb.h"
+
 #include "object.h"
+#include "builder.h"
 #include "timestamp.h"
 #include "transaction_input.h"
 #include "transaction_output.h"
 
 namespace token{
   namespace internal{
+    template<class M>
     class TransactionBase : public BinaryObject{
-     protected:
+    protected:
       template<class T>
-      class TransactionEncoder : public codec::TypeEncoder<T>{
-      private:
-        codec::InputListEncoder encode_inputs_;
-        codec::OutputListEncoder encode_outputs_;
-      protected:
-        explicit TransactionEncoder(const T* value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags):
-            codec::TypeEncoder<T>(value, flags),
-            encode_inputs_(value->inputs_, flags),
-            encode_outputs_(value->outputs_, flags){}
+      class TransactionBuilderBase : public internal::ProtoBuilder<T, M>{
       public:
-        TransactionEncoder(const TransactionEncoder& other) = default;
-        ~TransactionEncoder() override = default;
+        explicit TransactionBuilderBase(M* raw):
+          internal::ProtoBuilder<T, M>(raw){}
+        TransactionBuilderBase() = default;
+        ~TransactionBuilderBase() = default;
 
-        int64_t GetBufferSize() const override{
-          auto size = codec::TypeEncoder<T>::GetBufferSize();
-          size += sizeof(RawTimestamp);
-          size += encode_inputs_.GetBufferSize();
-          size += encode_outputs_.GetBufferSize();
-          return size;
+        void SetTimestamp(const Timestamp& val) const{
+          ProtoBuilder<T, M>::raw_.set_timestamp(val);
         }
 
-        bool Encode(const BufferPtr& buff) const override{
-          if(!codec::TypeEncoder<T>::Encode(buff))
-            return false;
-
-          const auto& timestamp = codec::TypeEncoder<T>::value()->timestamp();
-          if(!buff->PutTimestamp(timestamp)){
-            LOG(FATAL) << "cannot encode timestamp to buffer.";
-            return false;
-          }
-
-          if(!encode_inputs_.Encode(buff)){
-            LOG(FATAL) << "cannot encode input list to buffer.";
-            return false;
-          }
-
-          if(!encode_outputs_.Encode(buff)){
-            LOG(FATAL) << "cannot encode output list to buffer.";
-            return false;
-          }
-          return true;
+        void AddInput(const Hash& hash, const uint64_t& index, const std::string& user, const std::string& product){
+          auto new_input = ProtoBuilder<T, M>::raw_->add_inputs();
+          new_input->set_hash(hash);
+          new_input->set_index(index);
+          new_input->set_user(user);
+          new_input->set_product(product);
         }
 
-        TransactionEncoder& operator=(const TransactionEncoder& other) = default;
+        void AddOutput(const std::string& user, const std::string& product){
+          auto new_output = ProtoBuilder<T, M>::raw_->add_outputs();
+          new_output->set_user(user);
+          new_output->set_product(product);
+        }
       };
 
-      template<class T>
-      class TransactionDecoder : public codec::TypeDecoder<T>{
-      protected:
-        codec::InputListDecoder decode_inputs_;
-        codec::OutputListDecoder decode_outputs_;
-
-        explicit TransactionDecoder(const codec::DecoderHints& hints=codec::kDefaultDecoderHints):
-            codec::TypeDecoder<T>(hints),
-            decode_inputs_(hints),
-            decode_outputs_(hints){}
-
-        bool DecodeTransactionData(const BufferPtr& buff, Timestamp& timestamp, InputList& inputs, OutputList& outputs) const{
-          timestamp = buff->GetTimestamp();
-          DLOG(INFO) << "decoded transaction timestamp: " << FormatTimestampReadable(timestamp);
-
-          if(!decode_inputs_.Decode(buff, inputs)){
-            LOG(FATAL) << "cannot decode InputList from buffer.";
-            return false;
-          }
-
-          if(!decode_outputs_.Decode(buff, outputs)){
-            LOG(FATAL) << "cannot decode OutputList from buffer.";
-            return false;
-          }
-          return true;
-        }
-      public:
-        TransactionDecoder(const TransactionDecoder& other) = default;
-        ~TransactionDecoder() override = default;
-        TransactionDecoder& operator=(const TransactionDecoder& other) = default;
-      };
-
-      Timestamp timestamp_;
-      InputList inputs_;
-      OutputList outputs_;
+      M raw_;
 
       TransactionBase():
         BinaryObject(),
-        timestamp_(),
-        inputs_(),
-        outputs_(){}
-      TransactionBase(const Timestamp& timestamp, InputList inputs, OutputList outputs):
+        raw_(){}
+      explicit TransactionBase(M raw):
         BinaryObject(),
-        timestamp_(timestamp),
-        inputs_(std::move(inputs)),
-        outputs_(std::move(outputs)){}
-     public:
+        raw_(std::move(raw)){}
+      TransactionBase(const Timestamp& timestamp, const std::vector<Input>& inputs, const std::vector<Output>& outputs):
+        TransactionBase(){
+        raw_.set_timestamp(ToUnixTimestamp(timestamp));
+
+        std::for_each(inputs.begin(), inputs.end(), [&](const Input& input){
+          auto new_input = raw_.add_inputs();
+          new_input->set_user(input.ToString());
+          new_input->set_index(input.index());
+          new_input->set_hash(input.transaction().HexString());
+        });
+
+        std::for_each(outputs.begin(), outputs.end(), [&](const Output& val){
+          auto new_output = raw_.add_outputs();
+          new_output->set_user(val.user().ToString());
+          new_output->set_product(val.product().ToString());
+        });
+      }
+    public:
       TransactionBase(const TransactionBase& other) = default;
       ~TransactionBase() override = default;
 
-      Timestamp& timestamp(){
-        return timestamp_;
-      }
-
       Timestamp timestamp() const{
-        return timestamp_;
-      }
-
-      InputList& inputs(){
-        return inputs_;
-      }
-
-      InputList inputs() const{
-        return inputs_;
-      }
-
-      InputList::iterator inputs_begin(){
-        return inputs_.begin();
-      }
-
-      InputList::const_iterator inputs_begin() const{
-        return inputs_.begin();
-      }
-
-      InputList::iterator inputs_end(){
-        return inputs_.end();
-      }
-
-      InputList::const_iterator inputs_end() const{
-        return inputs_.end();
-      }
-
-      OutputList& outputs(){
-        return outputs_;
-      }
-
-      OutputList outputs() const{
-        return outputs_;
-      }
-
-      OutputList::iterator outputs_begin(){
-        return outputs_.begin();
-      }
-
-      OutputList::const_iterator outputs_begin() const{
-        return outputs_.begin();
-      }
-
-      OutputList::iterator outputs_end(){
-        return outputs_.end();
-      }
-
-      OutputList::const_iterator outputs_end() const{
-        return outputs_.end();
+        return FromUnixTimestamp(raw_.timestamp());
       }
 
       virtual bool IsSigned() const{

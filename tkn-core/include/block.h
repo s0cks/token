@@ -1,20 +1,22 @@
 #ifndef TOKEN_BLOCK_H
 #define TOKEN_BLOCK_H
 
+#include "block.pb.h"
+
 #include "bloom.h"
 #include "version.h"
+#include "builder.h"
 #include "timestamp.h"
 #include "transaction_indexed.h"
 #include "block_header.h"
 #include "codec/codec.h"
 
 namespace token{
-
   class BlockVisitor;
-
-  class Block: public BinaryObject, public std::enable_shared_from_this<Block>{
+  class Block: public BinaryObject{
     //TODO:
     // - validation logic
+    friend class rpc::BlockMessage;
   public:
 #ifdef TOKEN_DEBUG
     static const int64_t kMaxBlockSize = 128 * token::internal::kMegabytes;
@@ -24,79 +26,52 @@ namespace token{
     static const int64_t kNumberOfGenesisOutputs = 10000;
 #endif//TOKEN_DEBUG
 
-    class Encoder: public codec::TypeEncoder<Block>{
-    private:
-      codec::SetEncoder<IndexedTransaction, IndexedTransaction::IndexComparator> encode_transactions_;
+    class Builder : public internal::ProtoBuilder<Block, internal::proto::Block>{
     public:
-      Encoder(const Block* value, const codec::EncoderFlags& flags):
-        codec::TypeEncoder<Block>(value, flags),
-        encode_transactions_(value->transactions_, codec::kDefaultEncoderFlags){}
-      ~Encoder() override = default;
-      int64_t GetBufferSize() const override;
-      bool Encode(const BufferPtr& buff) const override;
-    };
+      Builder() = default;
+      ~Builder() override = default;
 
-    class Decoder: public codec::TypeDecoder<Block>{
-    private:
-      codec::SetDecoder<IndexedTransaction, IndexedTransaction::IndexComparator> decode_transactions_;
-    public:
-      explicit Decoder(const codec::DecoderHints& hints):
-        codec::TypeDecoder<Block>(hints),
-        decode_transactions_(codec::kDefaultDecoderHints){}
-      ~Decoder() override = default;
-      Block* Decode(const BufferPtr& data) const override;
+      void SetTimestamp(const Timestamp& val){
+        raw_->set_timestamp(ToUnixTimestamp(val));
+      }
+
+      void SetPreviousHash(const Hash& val){
+        raw_->set_previous_hash(val.HexString());
+      }
+
+      void SetHeight(const uint64_t& height){
+        raw_->set_height(height);
+      }
+
+      IndexedTransaction::Builder AddTransaction() const{
+        return IndexedTransaction::Builder(raw_->add_transactions());
+      }
+
+      BlockPtr Build() const{
+        return std::make_shared<Block>(*raw_);
+      }
     };
   private:
-    Timestamp timestamp_;
-    Version version_;
-    int64_t height_;
-    Hash previous_hash_;
-    IndexedTransactionSet transactions_;
+    internal::proto::Block raw_;
+
     BloomFilter tx_bloom_; // transient
+
+    inline internal::proto::Block&
+    raw(){
+      return raw_;
+    }
   public:
     Block():
-        BinaryObject(),
-        timestamp_(Clock::now()),
-        version_(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION),
-        height_(0),
-        previous_hash_(),
-        transactions_(),
-        tx_bloom_(){}
-
-    Block(const Timestamp& timestamp,
-        const int64_t& height,
-        const Hash& previous_hash,
-        const IndexedTransactionSet& transactions,
-        const Version& version):
-        BinaryObject(),
-        timestamp_(timestamp),
-        version_(version),
-        height_(height),
-        previous_hash_(previous_hash),
-        transactions_(transactions),
-        tx_bloom_(){}
-
-    Block(int64_t height,
-        const Version& version,
-        const Hash& phash,
-        const IndexedTransactionSet& transactions,
-        Timestamp timestamp = Clock::now()):
-        BinaryObject(),
-        timestamp_(timestamp),
-        version_(version),
-        height_(height),
-        previous_hash_(phash),
-        transactions_(transactions),
-        tx_bloom_(){
-      if(!transactions.empty()){
-        for(auto& it : transactions)
-          tx_bloom_.Put(it->hash());
-      }
+      BinaryObject(),
+      raw_(){}
+    explicit Block(internal::proto::Block raw):
+      BinaryObject(),
+      raw_(std::move(raw)){}
+    explicit Block(const internal::BufferPtr& data):
+      Block(){
+      if(!raw_.ParseFromArray(data->data(), static_cast<int>(data->length())))
+        DLOG(FATAL) << "cannot parse Block from buffer.";
     }
-
-    Block(const BlockPtr& parent, const IndexedTransactionSet& transactions, Timestamp timestamp = Clock::now()):
-        Block(parent->height() + 1, Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION), parent->hash(), transactions, timestamp){}
-
     Block(const Block& other) = default;
     ~Block() override = default;
 
@@ -104,35 +79,28 @@ namespace token{
       return Type::kBlock;
     }
 
-    Timestamp& timestamp(){
-      return timestamp_;
+    Hash hash() const override{
+      auto data = ToBuffer();
+      return Hash::ComputeHash<CryptoPP::SHA256>(data->data(), data->length());
     }
 
     Timestamp timestamp() const{
-      return timestamp_;
+      return FromUnixTimestamp(raw_.timestamp());
     }
 
-    Version GetVersion() const{
-      return version_;
+    uint64_t height() const{
+      return raw_.height();
     }
 
-    int64_t& height(){
-      return height_;
-    }
-
-    int64_t height() const{
-      return height_;
-    }
-
-    Hash GetPreviousHash() const{
-      return previous_hash_;
+    Hash previous_hash() const{
+      return Hash::FromHexString(raw_.previous_hash());
     }
 
     BlockHeader GetHeader() const{
       return BlockHeader(
           timestamp(),
           height(),
-          GetPreviousHash(),
+          previous_hash(),
           GetMerkleRoot(),
           hash()
       );
@@ -147,80 +115,45 @@ namespace token{
     }
 
     int64_t GetNumberOfTransactions() const{
-      return transactions_.size();
+      return raw_.transactions_size();
     }
 
-    IndexedTransactionSet& transactions(){
-      return transactions_;
-    }
-
-    IndexedTransactionSet transactions() const{
-      return transactions_;
-    }
-
-    IndexedTransactionSet::iterator transactions_begin(){
-      return transactions_.begin();
-    }
-
-    IndexedTransactionSet::const_iterator transactions_begin() const{
-      return transactions_.begin();
-    }
-
-    IndexedTransactionSet::iterator transactions_end(){
-      return transactions_.end();
-    }
-
-    IndexedTransactionSet::const_iterator transactions_end() const{
-      return transactions_.end();
+    IndexedTransactionSet transactions(){
+      return IndexedTransactionSet {};
     }
 
     bool IsGenesis() const{
       return height() == 0;
     }
 
+    BufferPtr ToBuffer() const;
     std::string ToString() const override;
 
-    Hash hash() const override{
-      Encoder encoder(this, codec::kDefaultEncoderFlags);
-      internal::BufferPtr data = internal::NewBufferFor(encoder);
-      if(!encoder.Encode(data)){
-        LOG(ERROR) << "cannot encoder Block to buffer.";
-        return Hash();
-      }
-      return Hash::ComputeHash<CryptoPP::SHA256>(data->data(), data->GetWritePosition());
-    }
-
-    BufferPtr ToBuffer() const;
     Hash GetMerkleRoot() const;
     bool Accept(BlockVisitor* vis) const;
     bool Contains(const Hash& hash) const;
+
+    template<typename Callback>
+    bool ForEachTransaction(Callback callback){//TODO: remove
+      std::for_each(raw_.transactions().begin(), raw_.transactions().end(), callback);
+      return true;
+    }
+
+    friend bool operator==(const Block& lhs, const Block& rhs){
+      return lhs.hash() == rhs.hash();
+    }
+
+    static inline BlockPtr
+    NewInstance(internal::proto::Block raw){
+      return std::make_shared<Block>(std::move(raw));
+    }
+
+    static inline BlockPtr
+    Decode(const internal::BufferPtr& data){
+      return std::make_shared<Block>(data);
+    }
+
     static BlockPtr Genesis();
-
-    static inline BlockPtr
-    NewInstance(int64_t height,
-        const Version& version,
-        const Hash& phash,
-        const IndexedTransactionSet& transactions,
-        Timestamp timestamp = Clock::now()){
-      return std::make_shared<Block>(height, version, phash, transactions, timestamp);
-    }
-
-    static inline BlockPtr
-    FromParent(const BlockPtr& parent, const IndexedTransactionSet& txs, const Timestamp& timestamp = Clock::now()){
-      return std::make_shared<Block>(parent, txs, timestamp);
-    }
-
-    static inline BlockPtr
-    Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
-      Decoder decoder(hints);
-
-      Block* value = nullptr;
-      if(!(value = decoder.Decode(data))){
-        DLOG(FATAL) << "cannot decode Block from buffer.";
-        return nullptr;
-      }
-      return std::shared_ptr<Block>(value);
-    }
   };
 
   class BlockVisitor{
@@ -228,17 +161,44 @@ namespace token{
     BlockVisitor() = default;
   public:
     virtual ~BlockVisitor() = default;
-
     virtual bool VisitStart(){ return true; }
-
     virtual bool Visit(const IndexedTransactionPtr& tx) = 0;
-
     virtual bool VisitEnd(){ return true; }
   };
+
   namespace json{
     static inline bool
     Write(Writer& writer, const BlockPtr& val){
-      NOT_IMPLEMENTED(FATAL);
+      JSON_START_OBJECT(writer);
+      {
+        if(!json::SetField(writer, "timestamp", val->timestamp()))
+          return false;
+        if(!json::SetField(writer, "height", val->height()))
+          return false;
+        if(!json::SetField(writer, "previous_hash", val->previous_hash()))
+          return false;
+        if(!json::SetField(writer, "merkle_root", val->GetMerkleRoot()))
+          return false;
+
+        auto printer = [&](const internal::proto::IndexedTransaction& raw){
+          IndexedTransaction val(raw);
+          DLOG(INFO) << "visiting transaction: " << val.hash();
+          JSON_STRING(writer, val.hash().HexString());
+          return true;
+        };
+
+        if(!json::SetField(writer, "num_transactions", val->GetNumberOfTransactions()))
+          return false;
+
+        JSON_KEY(writer, "transactions");
+        JSON_START_ARRAY(writer);
+        {
+          if(!val->ForEachTransaction(printer))
+            return false;
+        }
+        JSON_END_ARRAY(writer);
+      }
+      JSON_END_OBJECT(writer);
       return true;
     }
 

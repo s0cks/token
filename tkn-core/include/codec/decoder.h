@@ -159,7 +159,7 @@ namespace token{
             DLOG(FATAL) << "cannot decode list item #" << (idx+1) << " from buffer.";
             return false;
           }
-          results.push_back(*item);//TODO: use make_shared<T>
+          results.push_back(std::shared_ptr<T>(item));//TODO: use make_shared<T>
         }
         return true;
       }

@@ -9,9 +9,9 @@ namespace token{
     class ProcessTransactionTask;
     class ProcessInputListTask : public task::Task{
     private:
-      InputList inputs_;
+      std::vector<Input> inputs_;
     public:
-      explicit ProcessInputListTask(ProcessTransactionTask* parent, const Hash& transaction, const int64_t& index, InputList& inputs);
+      explicit ProcessInputListTask(ProcessTransactionTask* parent, const Hash& transaction, const int64_t& index, std::vector<Input>& inputs);
       ~ProcessInputListTask() override = default;
 
       std::string GetName() const override{

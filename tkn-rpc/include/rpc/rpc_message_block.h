@@ -6,28 +6,17 @@
 
 namespace token{
   namespace rpc{
-    class BlockMessage : public ObjectMessage<Block>{
+    class BlockMessage : public RawMessage<internal::proto::Block>{
     public:
-    class Encoder : public codec::ObjectMessageEncoder<BlockMessage, Block::Encoder>{
-      public:
-        Encoder(const BlockMessage* value, const codec::EncoderFlags& flags):
-          codec::ObjectMessageEncoder<BlockMessage, Block::Encoder>(value, flags){}
-        ~Encoder() override = default;
-      };
-
-      class Decoder : public codec::ObjectMessageDecoder<BlockMessage, Block::Decoder>{
-      public:
-        explicit Decoder(const codec::DecoderHints& hints):
-          codec::ObjectMessageDecoder<BlockMessage, Block::Decoder>(hints){}
-        ~Decoder() override = default;
-        BlockMessage* Decode(const BufferPtr& data) const override;
-      };
-     public:
       BlockMessage():
-        ObjectMessage<Block>(){}
-      explicit BlockMessage(const BlockPtr& val):
-        ObjectMessage<Block>(val){}
-      BlockMessage(const BlockMessage& other) = default;
+        RawMessage<internal::proto::Block>(){}
+      explicit BlockMessage(internal::proto::Block raw):
+        RawMessage<internal::proto::Block>(std::move(raw)){}
+      explicit BlockMessage(const internal::BufferPtr& data):
+        RawMessage<internal::proto::Block>(){
+        if(!raw_.ParseFromArray(data->data(), static_cast<int>(data->length())))
+          DLOG(FATAL) << "cannot parse BlockMessage from buffer.";
+      }
       ~BlockMessage() override = default;
 
       Type type() const override{
@@ -35,36 +24,29 @@ namespace token{
       }
 
       int64_t GetBufferSize() const override{
-        Encoder encoder(this, GetDefaultMessageEncoderFlags());
-        return encoder.GetBufferSize();
+        return static_cast<int64_t>(raw_.ByteSizeLong());
       }
 
-      bool Write(const BufferPtr& buff) const override{
-        Encoder encoder(this, GetDefaultMessageEncoderFlags());
-        return encoder.Encode(buff);
+      bool Write(const BufferPtr& data) const override{
+        return raw_.SerializeToArray(data->data(), static_cast<int>(data->length()));
       }
 
       std::string ToString() const override{
         return "BlockMessage()";
       }
 
-      BlockMessage& operator=(const BlockMessage& other) = default;
-
-      static inline BlockMessagePtr
-      NewInstance(const BlockPtr& val){
-        return std::make_shared<BlockMessage>(val);
+      BlockPtr value() const{
+        return Block::NewInstance(raw_);
       }
 
-      static BlockMessagePtr
-      Decode(const BufferPtr& data, const codec::DecoderHints& hints=GetDefaultMessageDecoderHints()){
-        Decoder decoder(hints);
+      static inline BlockMessagePtr
+      NewInstance(const BlockPtr& data){
+        return std::make_shared<BlockMessage>(data->raw_);
+      }
 
-        BlockMessage* value = nullptr;
-        if(!(value = decoder.Decode(data))){
-          DLOG(FATAL) << "cannot decode BlockMessage from buffer.";
-          return nullptr;
-        }
-        return std::shared_ptr<BlockMessage>(value);
+      static inline BlockMessagePtr
+      Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+        return std::make_shared<BlockMessage>(data);
       }
     };
   }

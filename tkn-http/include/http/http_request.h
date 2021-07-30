@@ -228,6 +228,7 @@ namespace token{
       OnParseURL(http_parser* parser, const char* data, size_t len){
         auto p = (RequestParser*)parser->data;
         p->SetPath(std::string(data, len));
+        DLOG(INFO) << "parsed url: " << std::string(data, len);
         return 0;
       }
 
@@ -235,13 +236,14 @@ namespace token{
       OnParseBody(http_parser* parser, const char* data, size_t len){
         auto p = (RequestParser*)parser->data;
         p->SetBody(std::string(data, len));
+        DLOG(INFO) << "parsed body: " << std::string(data, len);
         return 0;
       }
 
       static int
       OnParseStatus(http_parser* parser, const char* data, size_t len){
         //HttpRequestParser* p = (HttpRequestParser*)parser->data;
-        LOG(INFO) << "parsed status: " << std::string(data, len);
+        DLOG(INFO) << "parsed status: " << std::string(data, len);
         return 0;
       }
      public:

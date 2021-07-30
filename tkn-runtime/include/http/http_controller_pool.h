@@ -11,12 +11,12 @@ namespace token{
 
 #define FOR_EACH_POOL_CONTROLLER_ENDPOINT(V) \
   V(GET, "/pool/stats", GetPoolInfo)               \
-  V(GET, "/pool/blocks/data/:hash", GetBlock)     \
-  V(GET, "/pool/blocks", GetBlocks)          \
-  V(GET, "/pool/transactions/:hash", GetTransaction) \
+  V(GET, "/pool/data/blocks/:hash", GetBlock)     \
+  V(GET, "/pool/blocks", GetAllBlocks)          \
+  V(GET, "/pool/data/transactions/:hash", GetTransaction) \
   V(GET, "/pool/transactions", GetTransactions)      \
-  V(GET, "/pool/utxos/:hash", GetUnclaimedTransaction)     \
-  V(GET, "/pool/utxos", GetUnclaimedTransactions)
+  V(GET, "/pool/data/unclaimed_transactions/:hash", GetUnclaimedTransaction)     \
+  V(GET, "/pool/unclaimed_transactions", GetUnclaimedTransactions)
 
     class PoolController : public Controller,
                            public std::enable_shared_from_this<PoolController>{

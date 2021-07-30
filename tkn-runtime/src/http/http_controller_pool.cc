@@ -12,15 +12,21 @@ namespace token{
 
     HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetBlock){
       Hash hash = request->GetHashParameterValue();
+      DLOG(INFO) << "searching for " << hash << " (Block)....";
       if(!GetPool().HasBlock(hash))
         return session->Send(NewNoContentResponse(hash));
       BlockPtr blk = GetPool().GetBlock(hash);
       return session->Send(NewOkResponse(blk));
     }
 
-    HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetBlocks){
+    HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetAllBlocks){
       DLOG(INFO) << "handling /pool/blocks...";
 
+      json::String body;
+      json::Writer writer(body);
+      if(!GetPool().GetBlocks(writer))
+        return session->Send(NewInternalServerErrorResponse("cannot get list of blocks from pool."));
+      return session->Send(NewOkResponse(body));
     }
 
     HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetPoolInfo){

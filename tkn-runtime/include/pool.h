@@ -186,8 +186,44 @@ namespace token{
     }
 
     leveldb::Status InitializeIndex(const std::string& filename);
+
+    template<class T>
+    inline leveldb::Status
+    PutType(const Hash& hash, const std::shared_ptr<T>& val) const{
+      leveldb::WriteOptions options;
+      options.sync = true;
+
+      ObjectKey key(val->type(), hash);
+      auto data = val->ToBuffer();
+      return GetIndex()->Put(options, (const leveldb::Slice&)key, data->AsSlice());
+    }
+
+    inline leveldb::Status
+    GetType(const Type& type, const Hash& hash, std::string& value) const{
+      ObjectKey key(type, hash);
+      return GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &value);
+    }
+
+    template<class T>
+    inline std::shared_ptr<T>
+    GetTypeSafely(const Type& type, const Hash& hash) const{
+      std::string value;
+
+      leveldb::Status status;
+      if(!(status = GetType(type, hash, value)).ok()){
+        if(status.IsNotFound()){
+          DLOG(WARNING) << "cannot find " << hash << " (" << type << "): " << status.ToString();
+          return nullptr;
+        }
+
+        DLOG(FATAL) << "cannot get " << hash << " (" << type << "): " << status.ToString();
+        return nullptr;
+      }
+
+      return T::Decode(internal::CopyBufferFrom(value));
+    }
    public:
-    ObjectPool(const std::string& filename);
+    explicit ObjectPool(const std::string& filename);
     virtual ~ObjectPool() = default;
 
     /**

@@ -7,7 +7,7 @@
 
 namespace token{
   namespace task{
-    ProcessOutputListTask::ProcessOutputListTask(ProcessTransactionTask* parent, const Hash& hash, const int64_t& index, OutputList& outputs):
+    ProcessOutputListTask::ProcessOutputListTask(ProcessTransactionTask* parent, const Hash& hash, const int64_t& index, std::vector<Output>& outputs):
       task::Task(parent),
       outputs_(outputs),
       transaction_(hash),
@@ -16,7 +16,13 @@ namespace token{
     void ProcessOutputListTask::DoWork(){
       DVLOG(2) << "processing output list....";
       for(auto& it : outputs_){
-        auto val = UnclaimedTransaction::NewInstance(transaction_, index_++, it.GetUser(), it.GetProduct());
+        UnclaimedTransaction::Builder builder;
+        builder.SetTransactionHash(transaction_);
+        builder.SetTransactionIndex(index_++);
+        builder.SetUser(it.user().ToString());
+        builder.SetProduct(it.product().ToString());
+
+        auto val = builder.Build();
         auto hash = val->hash();
         DVLOG(2) << "indexing unclaimed transaction " << hash << "....";
         ObjectKey key(val->type(), hash);

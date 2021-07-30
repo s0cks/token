@@ -2,6 +2,9 @@
 #define TOKEN_TRANSACTION_INPUT_H
 
 #include <vector>
+
+#include "input.pb.h"
+
 #include "object.h"
 #include "type/user.h"
 #include "codec/codec.h"
@@ -11,53 +14,32 @@ namespace token{
   typedef std::shared_ptr<Input> InputPtr;
 
   class Input : public Object{
-    friend class Transaction;
-  public:
-    class Encoder : public codec::TypeEncoder<Input>{
-    protected:
-      TransactionReference::Encoder encode_txref_;
-      User::Encoder encode_user_;
-    public:
-      explicit Encoder(const Input* value, const codec::EncoderFlags& flags=codec::kDefaultEncoderFlags);
-      Encoder(const Encoder& other) = default;
-      ~Encoder() override = default;
-
-      int64_t GetBufferSize() const override;
-      bool Encode(const BufferPtr& buff) const override;
-      Encoder& operator=(const Encoder& other) = default;
-    };
-
-    class Decoder : public codec::TypeDecoder<Input>{
-    protected:
-      TransactionReference::Decoder decode_txref_;
-      User::Decoder decode_user_;
-    public:
-      explicit Decoder(const codec::DecoderHints& hints):
-          codec::TypeDecoder<Input>(hints),
-          decode_txref_(hints),
-          decode_user_(hints){}
-      ~Decoder() override = default;
-      Input* Decode(const BufferPtr& data) const override;
-    };
    private:
-    TransactionReference reference_;
-    User user_;//TODO: remove field
+    internal::proto::Input raw_;
    public:
     Input():
-      reference_(),
-      user_(){}
-    Input(const TransactionReference& ref, const User& user):
       Object(),
-      reference_(ref),
-      user_(user){}
-    Input(const Hash& tx, int64_t index, const User& user):
+      raw_(){}
+    explicit Input(internal::proto::Input raw):
       Object(),
-      reference_(tx, index),
-      user_(user){}
+      raw_(std::move(raw)){}
+    explicit Input(const internal::BufferPtr& data):
+      Input(){
+      if(!raw_.ParseFromArray(data->data(), static_cast<int>(data->length())))
+        DLOG(FATAL) << "cannot parse Input from buffer.";
+    }
     Input(const Hash& tx, int64_t index, const std::string& user):
-      Object(),
-      reference_(tx, index),
-      user_(user){}
+      Input(){
+      raw_.set_user(user);
+      raw_.set_hash(tx.HexString());
+      raw_.set_index(index);
+    }
+    Input(const Hash& tx, int64_t index, const User& user):
+      Input(){
+      raw_.set_user(user.ToString());
+      raw_.set_hash(tx.HexString());
+      raw_.set_index(index);
+    }
     Input(const Input& other) = default;
     ~Input() override = default;
 
@@ -65,47 +47,19 @@ namespace token{
       return Type::kInput;
     }
 
-    /**
-     * Returns the TransactionReference for this input.
-     *
-     * @see TransactionReference
-     * @return The TransactionReference
-     */
-    TransactionReference& GetReference(){
-      return reference_;
+    Hash transaction() const{
+      return Hash::FromHexString(raw_.hash());
     }
 
-    /**
-     * Returns a copy of the TransactionReference for this input.
-     *
-     * @see TransactionReference
-     * @return A copy of the TransactionReference
-     */
-    TransactionReference GetReference() const{
-      return reference_;
+    uint64_t index() const{
+      return raw_.index();
     }
 
-    /**
-     * Returns the User for this input.
-     *
-     * @see User
-     * @deprecated
-     * @return The User for this input
-     */
-    User& GetUser(){
-      return user_;
+    User user() const{//TODO: change to std::string?
+      return User(raw_.user());
     }
 
-    /**
-     * Returns a copy of the User for this input.
-     *
-     * @see User
-     * @deprecated
-     * @return A copy of the User for this input
-     */
-    User GetUser() const{
-      return user_;
-    }
+    internal::BufferPtr ToBuffer() const;
 
     /**
      * Returns the description of this object.
@@ -118,8 +72,9 @@ namespace token{
     Input& operator=(const Input& other) = default;
 
     friend bool operator==(const Input& a, const Input& b){
-      return a.reference_ == b.reference_
-          && a.user_ == b.user_;
+      return a.transaction() == b.transaction()
+          && a.index() == b.index()
+          && a.user() == b.user();
     }
 
     friend bool operator!=(const Input& a, const Input& b){
@@ -127,57 +82,28 @@ namespace token{
     }
 
     friend bool operator<(const Input& a, const Input& b){
-      return a.reference_ < b.reference_;
+      return a.transaction() < b.transaction();
     }
 
     friend bool operator>(const Input& a, const Input& b){
-      return a.reference_ > b.reference_;
+      return a.transaction() > b.transaction();
     }
 
     friend std::ostream& operator<<(std::ostream& stream, const Input& input){
       return stream << input.ToString();
     }
-
-    static inline InputPtr
-    Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
-      Decoder decoder(hints);
-
-      Input* value = nullptr;
-      if(!(value = decoder.Decode(data))){
-        DLOG(FATAL) << "cannot decode Input from buffer.";
-        return nullptr;
-      }
-      return std::shared_ptr<Input>(value);
-    }
   };
-
-typedef std::vector<std::shared_ptr<Input>> InputList;
-
-namespace codec{
-class InputListEncoder : public codec::ListEncoder<Input>{
-   public:
-    InputListEncoder(const InputList& items, const codec::EncoderFlags& flags):
-      codec::ListEncoder<Input>(items, flags){}
-    ~InputListEncoder() override = default;
-  };
-
-class InputListDecoder : public codec::ArrayDecoder<Input, Input::Decoder>{
-   public:
-    explicit InputListDecoder(const codec::DecoderHints &hints):
-      codec::ArrayDecoder<Input, Input::Decoder>(hints){}
-    ~InputListDecoder() override = default;
-  };
-}
 
 namespace json{
     static inline bool
     Write(Writer& writer, const Input& val){
       JSON_START_OBJECT(writer);
       {
-        if(!json::SetField(writer, "transaction", val.GetReference()))
-          return false;
-        if(!json::SetField(writer, "user", val.GetUser()))
-          return false;
+//TODO:
+//        if(!json::SetField(writer, "transaction", val.GetReference()))
+//          return false;
+//        if(!json::SetField(writer, "user", val.GetUser()))
+//          return false;
       }
       JSON_END_OBJECT(writer);
       return true;
@@ -185,24 +111,6 @@ namespace json{
 
     static inline bool
     SetField(Writer& writer, const char* name, const Input& val){
-      JSON_KEY(writer, name);
-      return Write(writer, val);
-    }
-
-    static inline bool
-    Write(Writer& writer, const InputList& val){
-      JSON_START_ARRAY(writer);
-      {
-        for(auto& it : val)
-          if(!Write(writer, it))
-            return false;
-      }
-      JSON_END_ARRAY(writer);
-      return true;
-    }
-
-    static inline bool
-    SetField(Writer& writer, const char* name, const InputList& val){
       JSON_KEY(writer, name);
       return Write(writer, val);
     }

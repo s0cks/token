@@ -1,10 +1,12 @@
 #ifndef TOKEN_UNSIGNED_TRANSACTION_H
 #define TOKEN_UNSIGNED_TRANSACTION_H
 
+#include <utility>
+
 #include "transaction.h"
 
 namespace token{
-  class UnsignedTransaction: public internal::TransactionBase{
+  class UnsignedTransaction: public internal::TransactionBase<internal::proto::UnsignedTransaction>{
   public:
     struct TimestampComparator{
       bool operator()(const UnsignedTransactionPtr& a, const UnsignedTransactionPtr& b){
@@ -12,29 +14,30 @@ namespace token{
       }
     };
 
-  class Encoder: public TransactionEncoder<UnsignedTransaction>{
+    class Builder : public TransactionBuilderBase<UnsignedTransaction>{
     public:
-      explicit Encoder(const UnsignedTransaction* value, const codec::EncoderFlags& flags = codec::kDefaultEncoderFlags):
-        TransactionEncoder<UnsignedTransaction>(value, flags){}
-      Encoder(const Encoder& other) = default;
-      ~Encoder() override = default;
-      int64_t GetBufferSize() const override;
-      bool Encode(const BufferPtr& buff) const override;
-      Encoder& operator=(const Encoder& other) = default;
-    };
+      explicit Builder(internal::proto::UnsignedTransaction* raw):
+        TransactionBuilderBase<UnsignedTransaction>(raw){}
+      Builder() = default;
+      Builder(const Builder& rhs) = default;
+      ~Builder() override = default;
 
-  class Decoder: public TransactionDecoder<UnsignedTransaction>{
-    public:
-      explicit Decoder(const codec::DecoderHints& hints):
-          TransactionDecoder<UnsignedTransaction>(hints){}
-      ~Decoder() override = default;
-      UnsignedTransaction* Decode(const BufferPtr& data) const override;
+      UnsignedTransactionPtr Build() const override{
+        return std::make_shared<UnsignedTransaction>(*raw_);
+      }
+
+      Builder& operator=(const Builder& rhs) = default;
     };
   public:
     UnsignedTransaction():
-      internal::TransactionBase(){}
-    UnsignedTransaction(const Timestamp& timestamp, const InputList& inputs, const OutputList& outputs):
-      internal::TransactionBase(timestamp, inputs, outputs){}
+      internal::TransactionBase<internal::proto::UnsignedTransaction>(){}
+    explicit UnsignedTransaction(internal::proto::UnsignedTransaction raw):
+      internal::TransactionBase<internal::proto::UnsignedTransaction>(std::move(raw)){}
+    explicit UnsignedTransaction(const internal::BufferPtr& data):
+      UnsignedTransaction(){
+      if(!raw_.ParseFromArray(data->data(), static_cast<int>(data->length())))
+        DLOG(FATAL) << "cannot parse UnsignedTransaction from buffer.";
+    }
     UnsignedTransaction(const UnsignedTransaction& other) = default;
     ~UnsignedTransaction() override = default;
 
@@ -43,32 +46,28 @@ namespace token{
     }
 
     Hash hash() const override{
-      return Hash();
+      auto data = ToBuffer();
+      return Hash::ComputeHash<CryptoPP::SHA256>(data->data(), data->length());
     }
 
     BufferPtr ToBuffer() const;
     std::string ToString() const override;
     UnsignedTransaction& operator=(const UnsignedTransaction& other) = default;
 
-    static inline UnsignedTransactionPtr
-    NewInstance(const Timestamp& timestamp, const InputList& inputs, const OutputList& outputs){
-      return std::make_shared<UnsignedTransaction>(timestamp, inputs, outputs);
+    friend bool operator==(const UnsignedTransaction& lhs, const UnsignedTransaction& rhs){
+      return lhs.hash() == rhs.hash();
+    }
+
+    friend bool operator!=(const UnsignedTransaction& lhs, const UnsignedTransaction& rhs){
+      return lhs.hash() != rhs.hash();
     }
 
     static inline UnsignedTransactionPtr
-    Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
-      Decoder decoder(hints);
-
-      UnsignedTransaction* value = nullptr;
-      if(!(value = decoder.Decode(data))){
-        DLOG(FATAL) << "cannot decode UnsignedTransaction from buffer.";
-        return nullptr;
-      }
-      return std::shared_ptr<UnsignedTransaction>(value);
+    Decode(const BufferPtr& data){
+      return std::make_shared<UnsignedTransaction>(data);
     }
   };
 
-  typedef std::vector<UnsignedTransactionPtr> UnsignedTransactionList;
   namespace json{
     static inline bool
     SetField(Writer& writer, const char* name, const UnsignedTransactionPtr& val){

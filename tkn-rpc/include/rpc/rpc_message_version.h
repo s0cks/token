@@ -1,38 +1,29 @@
 #ifndef TOKEN_RPC_MESSAGE_VERSION_H
 #define TOKEN_RPC_MESSAGE_VERSION_H
 
+#include "message_version.pb.h"
 #include "rpc/rpc_message_handshake.h"
 
 namespace token{
   namespace rpc{
-    class VersionMessage : public HandshakeMessage{
+  class VersionMessage : public HandshakeMessage<internal::proto::rpc::VersionMessage>{
     public:
-    class Encoder : public codec::HandshakeMessageEncoder<rpc::VersionMessage>{
+      class Builder : public HandshakeMessageBuilderBase<VersionMessage>{
       public:
-        Encoder(const VersionMessage* value, const codec::EncoderFlags& flags):
-          codec::HandshakeMessageEncoder<rpc::VersionMessage>(value, flags){}
-        Encoder(const Encoder& rhs) = default;
-        ~Encoder() override = default;
-        Encoder& operator=(const Encoder& rhs) = default;
-      };
+        explicit Builder(internal::proto::rpc::VersionMessage* raw):
+          HandshakeMessageBuilderBase<VersionMessage>(raw){}
+        Builder() = default;
+        ~Builder() override = default;
 
-      class Decoder : public codec::HandshakeMessageDecoder<VersionMessage>{
-      public:
-        explicit Decoder(const codec::DecoderHints& hints):
-          codec::HandshakeMessageDecoder<VersionMessage>(hints){}
-        ~Decoder() override = default;
-        VersionMessage* Decode(const BufferPtr& data) const override;
+        VersionMessagePtr Build() const override{
+          return std::make_shared<VersionMessage>(*raw_);
+        }
       };
      public:
       VersionMessage():
         HandshakeMessage(){}
-      VersionMessage(const Timestamp& timestamp,
-                     const ClientType& client_type,
-                     const Version& version,
-                     const Hash& nonce,
-                     const UUID& node_id):
-        HandshakeMessage(timestamp, client_type, version, nonce, node_id){}
-      VersionMessage(const VersionMessage& other) = default;
+      explicit VersionMessage(internal::proto::rpc::VersionMessage raw):
+        HandshakeMessage(std::move(raw)){}
       ~VersionMessage() override = default;
 
       Type type() const override{
@@ -40,25 +31,16 @@ namespace token{
       }
 
       int64_t GetBufferSize() const override{
-        Encoder encoder(this, GetDefaultMessageEncoderFlags());
-        return encoder.GetBufferSize();
+        return 0;
       }
 
       bool Write(const BufferPtr& buff) const override{
-        Encoder encoder(this, GetDefaultMessageEncoderFlags());
-        return encoder.Encode(buff);
+        return false;
       }
 
       std::string ToString() const override{
-        std::stringstream ss;
-        ss << "VersionMessage(";
-        ss << "timestamp=" << FormatTimestampReadable(timestamp_) << ", ";
-        ss << "client_type=" << client_type_ << ", ";
-        ss << "version=" << version_ << ", ";
-        ss << "nonce=" << nonce_ << ", ";
-        ss << "node_id=" << node_id_ << ", ";
-        ss << ")";
-        return ss.str();
+        NOT_IMPLEMENTED(ERROR);//TODO: implement
+        return "VersionMessage()";
       }
 
       VersionMessage& operator=(const VersionMessage& other) = default;
@@ -68,20 +50,8 @@ namespace token{
       }
 
       static inline VersionMessagePtr
-      NewInstance(const Timestamp& timestamp, const ClientType& client_type, const Version& version, const Hash& nonce, const UUID& node_id){
-        return std::make_shared<VersionMessage>(timestamp, client_type, version, nonce, node_id);
-      }
-
-      static inline VersionMessagePtr
       Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
-        Decoder decoder(hints);
-
-        VersionMessage* value = nullptr;
-        if(!(value = decoder.Decode(data))){
-          DLOG(FATAL) << "cannot decode VersionMessage from buffer.";
-          return nullptr;
-        }
-        return std::shared_ptr<VersionMessage>(value);
+        return nullptr;
       }
     };
   }

@@ -33,7 +33,21 @@ namespace token{
     public:
       ~Message() override = default;
       virtual Type type() const = 0;
-      virtual std::string ToString() const = 0;
+    };
+
+    template<class T>
+    class RawMessage : public Message{
+    protected:
+      T raw_;
+
+      RawMessage():
+        Message(),
+        raw_(){}
+      explicit RawMessage(T raw):
+        Message(),
+        raw_(raw){}
+    public:
+      ~RawMessage() override = default;
     };
 
     class MessageParser : codec::DecoderBase{

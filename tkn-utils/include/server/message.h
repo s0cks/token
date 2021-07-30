@@ -24,6 +24,11 @@ namespace token{
     virtual ~MessageBase() = default;
     virtual std::string ToString() const = 0;
     virtual int64_t GetBufferSize() const = 0;
+
+    virtual internal::BufferPtr ToBuffer() const{
+      return nullptr;
+    }
+
     virtual bool Write(const internal::BufferPtr& buff) const = 0;
   };
 }

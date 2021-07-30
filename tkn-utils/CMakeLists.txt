@@ -33,7 +33,8 @@ add_library(tkn-utils STATIC
     include/trie.h
     include/units.h
     include/uuid.h
-    include/version.h)
+    include/version.h
+    include/builder.h)
 target_link_libraries(tkn-utils
     tkn-platform
     ${GLOG_LIBRARIES} # glog

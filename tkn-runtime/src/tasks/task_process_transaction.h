@@ -20,38 +20,38 @@ namespace token{
     private:
       IndexedTransactionPtr value_;
       atomic::LinkedList<WriteOperation>& writes_;
-
-      template<class T, class Processor>
-      inline void
-      ProcessParallel(const std::vector<T>& list, const size_t& chunk_size){
-        auto& queue = GetEngine()->GetWorker(platform::GetCurrentThreadId())->GetTaskQueue();
-
-        int64_t index = 0;
-        auto current = list.begin();
-        auto end = list.end();
-        while(current != end){
-          auto next = std::distance(current, end) > chunk_size
-                      ? current + chunk_size //TODO: investigate clang tidy issue
-                      : end;
-          std::vector<T> chunk(current, next);
-          auto task = new Processor(this, hash(), index, chunk);
-          if(!queue.Push((reinterpret_cast<uword>(task)))){
-            LOG(FATAL) << "cannot push new task to task queue.";
-            return;//TODO: better error handling
-          }
-          current = next;
-        }
-      }
-
-      inline void
-      ProcessInputs(const InputList& list, const size_t& chunk_size){
-        return ProcessParallel<Input, ProcessInputListTask>(list, chunk_size);
-      }
-
-      inline void
-      ProcessOutputs(const OutputList& list, const size_t& chunk_size){
-        return ProcessParallel<Output, ProcessOutputListTask>(list, chunk_size);
-      }
+//TODO
+//      template<class T, class Processor>
+//      inline void
+//      ProcessParallel(const std::vector<T>& list, const size_t& chunk_size){
+//        auto& queue = GetEngine()->GetWorker(platform::GetCurrentThreadId())->GetTaskQueue();
+//
+//        int64_t index = 0;
+//        auto current = list.begin();
+//        auto end = list.end();
+//        while(current != end){
+//          auto next = std::distance(current, end) > chunk_size
+//                      ? current + chunk_size //TODO: investigate clang tidy issue
+//                      : end;
+//          std::vector<T> chunk(current, next);
+//          auto task = new Processor(this, hash(), index, chunk);
+//          if(!queue.Push((reinterpret_cast<uword>(task)))){
+//            LOG(FATAL) << "cannot push new task to task queue.";
+//            return;//TODO: better error handling
+//          }
+//          current = next;
+//        }
+//      }
+//
+//      inline void
+//      ProcessInputs(const std::vector<Input>& list, const size_t& chunk_size){
+//        return ProcessParallel<Input, Processstd::vector<Input>Task>(list, chunk_size);
+//      }
+//
+//      inline void
+//      ProcessOutputs(const std::vector<Output>& list, const size_t& chunk_size){
+//        return ProcessParallel<Output, Processstd::vector<Output>Task>(list, chunk_size);
+//      }
     public:
       explicit ProcessTransactionTask(TaskEngine* engine, atomic::LinkedList<WriteOperation>& writes, const IndexedTransactionPtr& val):
         task::Task(engine),
@@ -67,12 +67,12 @@ namespace token{
         return value_->hash();
       }
 
-      InputList& inputs(){
-        return value_->inputs();
+      std::vector<Input> inputs(){
+        return std::vector<Input>{};
       }
 
-      OutputList& outputs(){
-        return value_->outputs();
+      std::vector<Output> outputs(){
+        return std::vector<Output>{};
       }
 
       atomic::LinkedList<WriteOperation>&

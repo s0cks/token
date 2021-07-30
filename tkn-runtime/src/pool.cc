@@ -71,10 +71,11 @@ namespace token{
       BufferPtr val = internal::CopyBufferFrom(it->value());
       UnclaimedTransactionPtr value = UnclaimedTransaction::Decode(val);
 
-      TransactionReference& r1 = value->GetReference();
-      const TransactionReference& r2 = input.GetReference();
-      if(r1 == r2)
-        return value;
+//TODO:
+//      TransactionReference& r1 = value->GetReference();
+//      const TransactionReference& r2 = input.GetReference();
+//      if(r1 == r2)
+//        return value;
     }
     delete it;
     return UnclaimedTransactionPtr(nullptr);
@@ -99,37 +100,21 @@ namespace token{
 #undef DEFINE_PRINT_TYPE
 
 #define DEFINE_PUT_TYPE(Name) \
-  bool ObjectPool::Put##Name(const Hash& hash, const Name##Ptr& val) const{ \
-    if(Has##Name(hash)){      \
-      DLOG(WARNING) << "cannot overwrite existing object pool data for: " << hash; \
-      return false;           \
-    }                         \
-    leveldb::WriteOptions options;                                          \
-    options.sync = true;      \
-    ObjectKey key(val->type(), hash);                                       \
-    BufferPtr buffer = val->ToBuffer();                                     \
-    leveldb::Status status;   \
-    if(!(status = GetIndex()->Put(options, (const leveldb::Slice&)key, buffer->operator leveldb::Slice())).ok()){ \
-      LOG(ERROR) << "cannot index " << hash << ": " << status.ToString();          \
-      return false;           \
-    }                         \
-    DLOG(INFO) << "indexed object " << hash;                           \
-    return true;              \
-  }
-  FOR_EACH_POOL_TYPE(DEFINE_PUT_TYPE)
+    bool ObjectPool::Put##Name(const Hash& hash, const Name##Ptr& val) const{ \
+      leveldb::Status status;   \
+      if(!(status = PutType<Name>(hash, val)).ok()){                          \
+        DLOG(FATAL) << "cannot index " << hash << " (Block): " << status.ToString(); \
+        return false;           \
+      }                         \
+      DLOG(INFO) << "indexed " << hash << " (Block).";                         \
+      return true;            \
+    }
+    FOR_EACH_POOL_TYPE(DEFINE_PUT_TYPE)
 #undef DEFINE_PUT_TYPE
 
 #define DEFINE_GET_TYPE(Name) \
   Name##Ptr ObjectPool::Get##Name(const Hash& hash) const{ \
-    ObjectKey key(Type::k##Name, hash); \
-    std::string data;         \
-    leveldb::Status status;   \
-    if(!(status = GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &data)).ok()){ \
-      LOG(WARNING) << "cannot get " << hash << ": " << status.ToString(); \
-      return Name##Ptr(nullptr);                           \
-    }                         \
-    BufferPtr buff = internal::CopyBufferFrom(data);                   \
-    return Name::Decode(buff);                          \
+    return GetTypeSafely<Name>(Type::k##Name, hash);       \
   }
   FOR_EACH_POOL_TYPE(DEFINE_GET_TYPE)
 #undef DEFINE_GET_TYPE
@@ -179,10 +164,9 @@ namespace token{
     for(iter->SeekToFirst(); iter->Valid(); iter->Next()){
       ObjectKey key(iter->key());
       BufferPtr data = internal::CopyBufferFrom(iter->value());
-      codec::DecoderHints hints = codec::kDefaultDecoderHints;
       switch(key.type()){
         case Type::kUnclaimedTransaction:{
-          auto val = UnclaimedTransaction::Decode(data, hints);
+          auto val = UnclaimedTransaction::Decode(data);
           if(!vis->Visit(val)){
             delete iter;
             return false;
@@ -190,7 +174,7 @@ namespace token{
           continue;
         }
         case Type::kUnsignedTransaction:{
-          auto val = UnsignedTransaction::Decode(data, hints);
+          auto val = UnsignedTransaction::Decode(data);
           if(!vis->Visit(val)){
             delete iter;
             return false;
@@ -198,7 +182,7 @@ namespace token{
           continue;
         }
         case Type::kBlock:{
-          auto val = Block::Decode(data, hints);
+          auto val = Block::Decode(data);
           if(!vis->Visit(val)){
             delete iter;
             return false;

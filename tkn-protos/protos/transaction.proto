@@ -1,0 +1,24 @@
+syntax = "proto3";
+package token.internal.proto;
+import "input.proto";
+import "output.proto";
+
+message UnsignedTransaction{
+    uint64 timestamp = 1;
+    repeated Input inputs = 2;
+    repeated Output outputs = 3;
+}
+
+message SignedTransaction{
+    uint64 timestamp = 1;
+    repeated Input inputs = 2;
+    repeated Output outputs = 3;
+    string signature = 4;
+}
+
+message IndexedTransaction{
+    uint64 timestamp = 1;
+    repeated Input inputs = 2;
+    repeated Output outputs = 3;
+    uint64 index = 4;
+}

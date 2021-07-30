@@ -200,31 +200,12 @@ main(int argc, char **argv){
     }
   }
 
-  auto blk = Block::Genesis();
-  DLOG(INFO) << "transactions: ";
-  for(auto& it : blk->transactions()){
-    DLOG(INFO) << " - " << it->inputs().size() << ":" << it->outputs().size();
-  }
-
-  Block::Encoder encoder(blk.get(), codec::kDefaultEncoderFlags);
-  auto data = internal::NewBufferFor(encoder);
-  if(!encoder.Encode(data)){
-    DLOG(FATAL) << "cannot encode block to buffer.";
-    return EXIT_FAILURE;
-  }
-
-  data->SetReadPosition(0);
-  data->SetWritePosition(0);
-  Block::Decoder decoder(codec::kDefaultDecoderHints);
-
-  auto result = decoder.Decode(data);
-  DLOG(INFO) << "decoded: " << result->ToString();
-
-
   // initialize the configuration
   config::Initialize(FLAGS_path);
 
   Runtime runtime;
+  if(!runtime.GetPool().PutBlock(Hash::GenerateNonce(), Block::Genesis()))
+    DLOG(FATAL) << "cannot put genesis in pool.";
 
   // start the health check service
   http::HealthServiceThread health_service_thread;

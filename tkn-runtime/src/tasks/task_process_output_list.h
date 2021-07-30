@@ -12,9 +12,9 @@ namespace token{
       leveldb::WriteBatch batch_;
       Hash transaction_;
       int64_t index_;
-      OutputList outputs_;
+      std::vector<Output> outputs_;
     public:
-      explicit ProcessOutputListTask(ProcessTransactionTask* parent, const Hash& transaction, const int64_t& index, OutputList& outputs);
+      explicit ProcessOutputListTask(ProcessTransactionTask* parent, const Hash& transaction, const int64_t& index, std::vector<Output>& outputs);
       ~ProcessOutputListTask() override = default;
 
       std::string GetName() const override{
