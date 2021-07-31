@@ -1,7 +1,20 @@
 project(tkn-core CXX)
 set(CMAKE_CXX_STANDARD 11)
 
+find_package(Protobuf REQUIRED)
+include_directories(protos)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
+protobuf_generate_cpp(TKN_CORE_PROTO_SOURCES TKN_CORE_PROTO_HEADERS
+    protos/input.proto
+    protos/output.proto
+    protos/transaction.proto
+    protos/block.proto
+    protos/unclaimed_transaction.proto
+)
+
 add_library(tkn-core STATIC
+    ${TKN_CORE_PROTO_HEADERS} ${TKN_CORE_PROTO_SOURCES}
     include/codec/codec.h src/codec/codec.cc
     include/codec/encoder.h
     include/codec/decoder.h
@@ -27,7 +40,6 @@ add_library(tkn-core STATIC
 target_include_directories(tkn-core PUBLIC ${PROJECT_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(tkn-core tkn-utils
     tkn-merkle
-    tkn-protos
     ${CMAKE_THREAD_LIBS_INIT} # pthreads
     ${GFLAGS_LIBRARIES} # gflags
     ${CRYPTOPP_LIBRARIES} # cryptopp
@@ -37,6 +49,8 @@ target_link_libraries(tkn-core tkn-utils
     ${LEVELDB_LIBRARIES} # leveldb
     ${ZXING_LIBRARIES} # zxing
     ${UUID_LIBRARIES} # libuuid
+
+    protobuf::libprotobuf
 )
 
 if(BUILD_TESTING)
