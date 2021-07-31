@@ -4,11 +4,16 @@
 #include <memory>
 #include <ostream>
 
+#include "proposal.pb.h"
+
+#include "builder.h"
+
 #include "uuid.h"
 #include "object.h"
 #include "codec/codec.h"
 
 namespace token{
+  typedef internal::proto::Proposal RawProposal;
   class Proposal: public Object{
   public:
     static inline int
@@ -17,105 +22,67 @@ namespace token{
       return 0;
     }
 
-    class Encoder: public codec::TypeEncoder<Proposal>{
+    class Builder : public internal::ProtoBuilder<Proposal, RawProposal>{
     public:
-      Encoder(const Proposal* value, const codec::EncoderFlags& flags);
-      Encoder(const Encoder& other) = default;
-      ~Encoder() override = default;
-      int64_t GetBufferSize() const override;
-      bool Encode(const BufferPtr& buff) const override;
-      Encoder& operator=(const Encoder& other) = default;
-    };
+      Builder() = default;
+      explicit Builder(RawProposal* raw):
+        internal::ProtoBuilder<Proposal, RawProposal>(raw){}
+      ~Builder() override = default;
 
-    class Decoder: public codec::TypeDecoder<Proposal>{
-    public:
-      explicit Decoder(const codec::DecoderHints& hints);
-      ~Decoder() override = default;
-      Proposal* Decode(const BufferPtr& data) const override;
+      void SetTimestamp(const Timestamp& val){
+        raw_->set_timestamp(ToUnixTimestamp(val));
+      }
+
+      void SetHeight(const uint64_t& val){
+        raw_->set_height(val);
+      }
+
+      void SetHash(const Hash& val){
+        raw_->set_hash(val.HexString());
+      }
+
+      ProposalPtr Build() const override{
+        return std::make_shared<Proposal>(*raw_);
+      }
     };
   private:
-    Timestamp timestamp_;
-    UUID proposal_id_;
-    UUID proposer_id_;
-    int64_t height_;
-    Hash hash_;
+    internal::proto::Proposal raw_;
   public:
     Proposal():
-        Object(),
-        timestamp_(),
-        proposal_id_(),
-        proposer_id_(),
-        height_(),
-        hash_(){}
-
-    Proposal(const Timestamp& timestamp,
-        const UUID& proposal_id,
-        const UUID& proposer_id,
-        const int64_t& height,
-        const Hash& hash):
-        Object(),
-        timestamp_(timestamp),
-        proposal_id_(proposal_id),
-        proposer_id_(proposer_id),
-        height_(height),
-        hash_(hash){}
-
+      Object(),
+      raw_(){}
+    explicit Proposal(RawProposal raw):
+      Object(),
+      raw_(std::move(raw)){}
     ~Proposal() override = default;
 
     Type type() const override{
       return Type::kProposal;
     }
 
-    Timestamp& timestamp(){
-      return timestamp_;
-    }
-
     Timestamp timestamp() const{
-      return timestamp_;
-    }
-
-    UUID& proposal_id(){
-      return proposal_id_;
+      return FromUnixTimestamp(raw_.timestamp());
     }
 
     UUID proposal_id() const{
-      return proposal_id_;
-    }
-
-    UUID& proposer_id(){
-      return proposer_id_;
+      return UUID(raw_.proposal_id());
     }
 
     UUID proposer_id() const{
-      return proposer_id_;
+      return UUID(raw_.proposer_id());
     }
 
-    int64_t& height(){
-      return height_;
-    }
-
-    int64_t height() const{
-      return height_;
-    }
-
-    Hash& hash(){
-      return hash_;
+    uint64_t height() const{
+      return raw_.height();
     }
 
     Hash hash() const{
-      return hash_;
+      return Hash::FromHexString(raw_.hash());
     }
 
     std::string ToString() const override{
-      std::stringstream ss;
-      ss << "Proposal(";
-      ss << "timestamp=" << FormatTimestampReadable(timestamp_) << ", ";
-      ss << "proposal=" << proposal_id_ << ", ";
-      ss << "proposer" << proposer_id_ << ", ";
-      ss << "height=" << height_ << ", ";
-      ss << "hash=" << hash_;
-      ss << ")";
-      return ss.str();
+      NOT_IMPLEMENTED(ERROR);//TODO: implement
+      return "Proposal()";
     }
 
     Proposal& operator=(const Proposal& rhs) = default;
