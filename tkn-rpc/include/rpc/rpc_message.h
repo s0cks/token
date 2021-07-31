@@ -20,19 +20,8 @@ namespace token{
     class Message: public MessageBase{
     protected:
       Message() = default;
-
-      static inline codec::EncoderFlags
-      GetDefaultMessageEncoderFlags(){
-        return codec::EncodeTypeFlag::Encode(true);
-      }
-
-      static inline codec::DecoderHints
-      GetDefaultMessageDecoderHints(){
-        return codec::ExpectTypeHint::Encode(true)|codec::ExpectVersionHint::Encode(true);
-      }
     public:
       ~Message() override = default;
-      virtual Type type() const = 0;
     };
 
     template<class T>
@@ -94,28 +83,6 @@ namespace token{
 
       FOR_EACH_MESSAGE_TYPE(DECLARE_MESSAGE_HANDLER)
 #undef DECLARE_MESSAGE_HANDLER
-    };
-  }
-
-  namespace codec{
-    template<class M>
-    class MessageEncoder : public TypeEncoder<M>{
-    protected:
-      MessageEncoder(const M* value, const codec::EncoderFlags& flags):
-        TypeEncoder<M>(value, flags){}
-    public:
-      MessageEncoder(const MessageEncoder<M>& rhs) = default;
-      ~MessageEncoder() override = default;
-      MessageEncoder<M>& operator=(const MessageEncoder<M>& rhs) = default;
-    };
-
-    template<class M>
-    class MessageDecoder : public TypeDecoder<M>{
-    protected:
-      explicit MessageDecoder(const codec::DecoderHints& hints):
-        TypeDecoder<M>(hints){}
-    public:
-      ~MessageDecoder() override = default;
     };
   }
 }

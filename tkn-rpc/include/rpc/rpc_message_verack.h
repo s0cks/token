@@ -29,12 +29,9 @@ namespace token{
         return Type::kVerackMessage;
       }
 
-      int64_t GetBufferSize() const override{
-        return 0;
-      }
-
-      bool Write(const BufferPtr& data) const override{
-        return false;
+      internal::BufferPtr ToBuffer() const override{
+        NOT_IMPLEMENTED(ERROR);//TODO: implement
+        return nullptr;
       }
 
       std::string ToString() const override{

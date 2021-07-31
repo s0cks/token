@@ -30,12 +30,9 @@ namespace token{
         return Type::kVersionMessage;
       }
 
-      int64_t GetBufferSize() const override{
-        return 0;
-      }
-
-      bool Write(const BufferPtr& buff) const override{
-        return false;
+      internal::BufferPtr ToBuffer() const override{
+        NOT_IMPLEMENTED(ERROR);//TODO: implement
+        return nullptr;
       }
 
       std::string ToString() const override{

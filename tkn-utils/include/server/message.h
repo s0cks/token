@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 
+#include "type.h"
 #include "buffer.h"
 
 namespace token{
@@ -22,14 +23,9 @@ namespace token{
     MessageBase() = default;
    public:
     virtual ~MessageBase() = default;
+    virtual Type type() const = 0;
+    virtual internal::BufferPtr ToBuffer() const = 0;
     virtual std::string ToString() const = 0;
-    virtual int64_t GetBufferSize() const = 0;
-
-    virtual internal::BufferPtr ToBuffer() const{
-      return nullptr;
-    }
-
-    virtual bool Write(const internal::BufferPtr& buff) const = 0;
   };
 }
 
