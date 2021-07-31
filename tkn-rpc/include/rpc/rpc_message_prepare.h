@@ -1,53 +1,32 @@
 #ifndef TOKEN_RPC_MESSAGE_PREPARE_H
 #define TOKEN_RPC_MESSAGE_PREPARE_H
 
+#include <utility>
+
 #include "rpc/rpc_message_paxos.h"
 
 namespace token{
   namespace rpc{
     class PrepareMessage : public PaxosMessage{
     public:
-    class Encoder : public codec::PaxosMessageEncoder<rpc::PrepareMessage>{
-      public:
-        Encoder(const rpc::PrepareMessage* value, const codec::EncoderFlags& flags):
-          PaxosMessageEncoder<rpc::PrepareMessage>(value, flags){}
-        Encoder(const Encoder& rhs) = default;
-        ~Encoder() override = default;
-        Encoder& operator=(const Encoder& rhs) = default;
-      };
-
-    class Decoder : public codec::PaxosMessageDecoder<PrepareMessage>{
-      public:
-        explicit Decoder(const codec::DecoderHints& hints):
-          PaxosMessageDecoder<PrepareMessage>(hints){}
-        ~Decoder() override = default;
-        PrepareMessage* Decode(const BufferPtr& data) const override;
-      };
+      class Builder : public PaxosMessageBuilderBase<PrepareMessage>{};
      public:
       PrepareMessage():
         PaxosMessage(){}
-      explicit PrepareMessage(const Proposal& proposal):
-        PaxosMessage(proposal){}
+      explicit PrepareMessage(RawProposal raw):
+        PaxosMessage(std::move(raw)){}
+      explicit PrepareMessage(const internal::BufferPtr& data):
+        PaxosMessage(data){}
       ~PrepareMessage() override = default;
 
       Type type() const override{
         return Type::kPrepareMessage;
       }
 
-      int64_t GetBufferSize() const override{
-        Encoder encoder(this, GetDefaultMessageEncoderFlags());
-        return encoder.GetBufferSize();
-      }
-
-      bool Write(const BufferPtr& buffer) const override{
-        Encoder encoder(this, GetDefaultMessageEncoderFlags());
-        return encoder.Encode(buffer);
-      }
-
       std::string ToString() const override{
         std::stringstream ss;
         ss << "PrepareMessage(";
-        ss << "proposal=" << ( proposal_ ? proposal_->height() : 0);
+        ss << "proposal=" << height() << ", ";
         ss << ")";
         return ss.str();
       }
@@ -57,20 +36,13 @@ namespace token{
       }
 
       static inline PrepareMessagePtr
-      NewInstance(const Proposal& proposal){
-        return std::make_shared<PrepareMessage>(proposal);
+      NewInstance(const ProposalPtr& proposal){
+        return std::make_shared<PrepareMessage>(proposal->raw());
       }
 
       static inline PrepareMessagePtr
-      Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
-        Decoder decoder(hints);
-
-        PrepareMessage* value = nullptr;
-        if(!(value = decoder.Decode(data))){
-          DLOG(FATAL) << "cannot decode PrepareMessage from buffer.";
-          return nullptr;
-        }
-        return std::shared_ptr<PrepareMessage>(value);
+      Decode(const BufferPtr& data){
+        return std::make_shared<PrepareMessage>(data);
       }
     };
 

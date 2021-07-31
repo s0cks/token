@@ -32,7 +32,7 @@ namespace token{
       SessionBase* session;
       internal::BufferPtr buffer;
 
-      SessionWriteData(SessionBase* s, int64_t size):
+      SessionWriteData(SessionBase* s, uint64_t size):
         request(),
         session(s),
         buffer(internal::NewBuffer(size)){
@@ -140,7 +140,7 @@ namespace token{
         return;
       }
 
-      int64_t total_size = 0;
+      uint64_t total_size = 0;
       std::for_each(messages.begin(), messages.end(), [&total_size](const std::shared_ptr<MessageBase>& msg){
         total_size += msg->GetBufferSize();
       });
@@ -149,18 +149,15 @@ namespace token{
       auto data = new SessionWriteData(this, total_size);
       uv_buf_t buffers[total_messages];
 
-      int64_t offset = 0;
+      uint64_t offset = 0;
       for(size_t idx = 0; idx < total_messages; idx++){
         const std::shared_ptr<MessageBase>& msg = messages[idx];
-        int64_t msize = msg->GetBufferSize();
-        if(!msg->Write(data->buffer)){
-          LOG_SESSION(ERROR, this) << "couldn't serialize message #" << idx << " " << msg->ToString() << " (" << msize << ")";
-          return;
-        }
-
+        uint64_t msize = msg->GetBufferSize();
         DVLOG_SESSION(1, this) << "sending message #" << idx << " " << msg->ToString() << " (" << msize << "b)";
+        auto msg_buff = msg->ToBuffer();
+        data->buffer->PutBytes(msg_buff);
 
-        int64_t msg_size = msg->GetBufferSize();
+        uint64_t msg_size = msg->GetBufferSize();
         buffers[idx].base = (char*)&data->buffer->data()[offset];
         buffers[idx].len = msg_size;
         offset += msg_size;

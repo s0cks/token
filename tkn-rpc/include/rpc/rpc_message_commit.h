@@ -6,46 +6,23 @@
 namespace token{
   namespace rpc{
     class CommitMessage : public PaxosMessage{
-    public:
-      class Encoder : public codec::PaxosMessageEncoder<rpc::CommitMessage>{
-      public:
-        Encoder(const CommitMessage* value, const codec::EncoderFlags& flags):
-          PaxosMessageEncoder<rpc::CommitMessage>(value, flags){}
-        Encoder(const Encoder& rhs) = default;
-        ~Encoder() override = default;
-        Encoder& operator=(const Encoder& rhs) = default;
-      };
-
-      class Decoder : public codec::PaxosMessageDecoder<CommitMessage>{
-      public:
-        explicit Decoder(const codec::DecoderHints& hints):
-          PaxosMessageDecoder<CommitMessage>(hints){}
-        ~Decoder() override = default;
-        CommitMessage* Decode(const BufferPtr& data) const override;
-      };
      public:
       CommitMessage() = default;
-      explicit CommitMessage(const Proposal& proposal):
-        PaxosMessage(proposal){}
+      explicit CommitMessage(RawProposal raw):
+        PaxosMessage(std::move(raw)){}
+      explicit CommitMessage(const BufferPtr& data):
+        PaxosMessage(data){}
       ~CommitMessage() override = default;
 
       Type type() const override{
         return Type::kCommitMessage;
       }
 
-      int64_t GetBufferSize() const override{
-        Encoder encoder(this, GetDefaultMessageEncoderFlags());
-        return encoder.GetBufferSize();
-      }
-
-      bool Write(const BufferPtr& buff) const override{
-        Encoder encoder(this, GetDefaultMessageEncoderFlags());
-        return encoder.Encode(buff);
-      }
-
       std::string ToString() const override{
         std::stringstream ss;
-        ss << "CommitMessage(" << proposal() << ")";
+        ss << "CommitMessage(";
+        ss << "proposal=" << height();
+        ss << ")";
         return ss.str();
       }
 
@@ -56,20 +33,13 @@ namespace token{
       }
 
       static inline CommitMessagePtr
-      NewInstance(const Proposal& proposal){
-        return std::make_shared<CommitMessage>(proposal);
+      NewInstance(const ProposalPtr& proposal){
+        return std::make_shared<CommitMessage>(proposal->raw());
       }
 
       static inline CommitMessagePtr
-      Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
-        Decoder decoder(hints);
-
-        CommitMessage* value = nullptr;
-        if(!(value = decoder.Decode(data))){
-          DLOG(FATAL) << "cannot decode CommitMessage from buffer.";
-          return nullptr;
-        }
-        return std::shared_ptr<CommitMessage>(value);
+      Decode(const internal::BufferPtr& data){
+        return std::make_shared<CommitMessage>(data);
       }
     };
 

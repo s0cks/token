@@ -65,6 +65,10 @@ namespace token{
          body_(std::move(body)){}
       ~Response() override = default;
 
+      Type type() const override{
+        return Type::kHttpResponse;
+      }
+
       const char* GetName() const override{
         return "Response";
       }
@@ -77,7 +81,7 @@ namespace token{
         return body_->GetWritePosition();
       }
 
-      int64_t GetBufferSize() const override{
+      uint64_t GetBufferSize() const override{
         int64_t size = 0;
         size += GetHttpStatusLine(GetStatusCode()).length();
         for(auto& it : headers_)

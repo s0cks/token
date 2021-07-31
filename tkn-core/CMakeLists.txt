@@ -11,6 +11,8 @@ protobuf_generate_cpp(TKN_CORE_PROTO_SOURCES TKN_CORE_PROTO_HEADERS
     protos/transaction.proto
     protos/block.proto
     protos/unclaimed_transaction.proto
+
+    protos/proposal.proto
 )
 
 add_library(tkn-core STATIC
@@ -27,8 +29,8 @@ add_library(tkn-core STATIC
     include/block_chain.h src/block_chain.cc
     include/block_header.h src/block_header.cc
     include/object.h
-    include/proposal.h src/proposal.cc
-    include/transaction.h
+    include/proposal.h
+        include/transaction.h
     include/transaction_indexed.h src/transaction_indexed.cc
     include/transaction_input.h src/transaction_input.cc
     include/transaction_output.h src/transaction_output.cc

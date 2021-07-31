@@ -1,6 +1,8 @@
 #ifndef TOKEN_RPC_MESSAGE_PAXOS_H
 #define TOKEN_RPC_MESSAGE_PAXOS_H
 
+#include <utility>
+
 #include "proposal.h"
 #include "rpc/rpc_message.h"
 
@@ -9,7 +11,7 @@ namespace token{
     class PaxosMessage;
     typedef std::shared_ptr<PaxosMessage> PaxosMessagePtr;
 
-    class PaxosMessage : public rpc::Message{
+    class PaxosMessage : public RawMessage<RawProposal>{
      public:
       static inline int
       CompareProposal(const PaxosMessagePtr& a, const PaxosMessagePtr& b){
@@ -21,73 +23,52 @@ namespace token{
         }
         return 0;
       }
-     protected:
-      std::shared_ptr<Proposal> proposal_;
 
-      PaxosMessage():
-        rpc::Message(),
-        proposal_(){}
-      explicit PaxosMessage(const Proposal& proposal):
-        rpc::Message(),
-        proposal_(std::make_shared<Proposal>(proposal)){}
+      template<class T>
+      class PaxosMessageBuilderBase : public internal::ProtoBuilder<T, RawProposal>{
+      public:
+        explicit PaxosMessageBuilderBase(RawProposal* raw):
+          internal::ProtoBuilder<T, RawProposal>(raw){}
+        PaxosMessageBuilderBase() = default;
+        ~PaxosMessageBuilderBase() = default;
+
+        void SetTimestamp(const Timestamp& val){
+          internal::ProtoBuilder<T, RawProposal>::raw()->set_timestamp(ToUnixTimestamp(val));
+        }
+
+        void SetHeight(const uint64_t& val){
+          internal::ProtoBuilder<T, RawProposal>::raw()->set_height(val);
+        }
+
+        void SetHash(const Hash& val){
+          internal::ProtoBuilder<T, RawProposal>::raw()->set_hash(val.HexString());
+        }
+
+        std::shared_ptr<T> Build() const override{
+          return std::make_shared<T>(*internal::ProtoBuilder<T, RawProposal>::raw());
+        }
+      };
+     protected:
+      PaxosMessage() = default;
+      explicit PaxosMessage(RawProposal raw):
+        RawMessage<RawProposal>(std::move(raw)){}
+      explicit PaxosMessage(const BufferPtr& data):
+        RawMessage<RawProposal>(data){}
      public:
       ~PaxosMessage() override = default;
 
-      std::shared_ptr<Proposal> proposal() const{
-        return proposal_;
+      Timestamp timestamp() const{
+        return FromUnixTimestamp(RawMessage<RawProposal>::raw_.timestamp());
+      }
+
+      uint64_t height() const{
+        return RawMessage<RawProposal>::raw_.height();
+      }
+
+      ProposalPtr proposal() const{
+        return std::make_shared<Proposal>(raw_);
       }
     };
-  }
-
-  namespace codec{
-    template<class M>
-    class PaxosMessageEncoder : public MessageEncoder<M>{
-    protected:
-      Proposal::Encoder encode_proposal_;
-
-      PaxosMessageEncoder(const M* value, const codec::EncoderFlags& flags):
-        MessageEncoder<M>(value, flags),
-        encode_proposal_(value->proposal().get(), codec::kDefaultEncoderFlags){}//TODO: fix
-    public:
-        PaxosMessageEncoder(const PaxosMessageEncoder<M>& other) = default;
-        ~PaxosMessageEncoder() override = default;
-
-        int64_t GetBufferSize() const override{
-          auto size = MessageEncoder<M>::GetBufferSize();
-          size += encode_proposal_.GetBufferSize();
-          return size;
-        }
-
-        bool Encode(const BufferPtr& buff) const override{
-          if(!MessageEncoder<M>::Encode(buff))
-            return false;
-
-          if(!encode_proposal_.Encode(buff)){
-            LOG(FATAL) << "cannot encode proposal to buffer.";
-            return false;
-          }
-          return true;
-        }
-
-        PaxosMessageEncoder<M>& operator=(const PaxosMessageEncoder<M>& other) = default;
-    };
-
-      template<class M>
-      class PaxosMessageDecoder : public codec::MessageDecoder<M>{
-      protected:
-        Proposal::Decoder decode_proposal_;
-
-        explicit PaxosMessageDecoder(const codec::DecoderHints& hints):
-          codec::MessageDecoder<M>(hints),
-          decode_proposal_(hints){}
-
-        inline Proposal*
-        DecodeProposal(const BufferPtr& data) const{
-          return decode_proposal_.Decode(data);
-        }
-      public:
-        ~PaxosMessageDecoder() override = default;
-      };
   }
 }
 

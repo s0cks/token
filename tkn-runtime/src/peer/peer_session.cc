@@ -100,14 +100,14 @@ namespace token{
 
     void Session::OnSendPrepare(uv_async_t* handle){
       auto session = (peer::Session*)handle->data;
-      Proposal* proposal = ProposalScope::GetCurrentProposal();
-      session->Send(rpc::PrepareMessage::NewInstance(*proposal));
+      auto proposal = ProposalScope::GetCurrentProposal();
+      session->Send(rpc::PrepareMessage::NewInstance(proposal));
     }
 
     void Session::OnSendCommit(uv_async_t* handle){
       auto session = (peer::Session*)handle->data;
-      Proposal* proposal = ProposalScope::GetCurrentProposal();
-      session->Send(rpc::CommitMessage::NewInstance(*proposal));
+      auto proposal = ProposalScope::GetCurrentProposal();
+      session->Send(rpc::CommitMessage::NewInstance(proposal));
     }
 
     void Session::OnSendDiscovered(uv_async_t* handle){

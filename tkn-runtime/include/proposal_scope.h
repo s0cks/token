@@ -31,8 +31,8 @@ namespace token{
 
     static bool HasActiveProposal();
     static bool SetActiveProposal(const Proposal& proposal);
-    static Proposal* GetCurrentProposal();
-    static Proposal* CreateNewProposal(const int64_t& height, const Hash& hash);
+    static ProposalPtr GetCurrentProposal();
+    static ProposalPtr CreateNewProposal(const int64_t& height, const Hash& hash);
 
     static void SetPhase(const ProposalPhase& phase);
     static ProposalPhase GetPhase();

@@ -41,6 +41,14 @@ namespace token{
         raw_->set_hash(val.HexString());
       }
 
+      void SetProposalId(const UUID& val){
+        NOT_IMPLEMENTED(ERROR);//TODO: implement
+      }
+
+      void SetProposerId(const UUID& val){
+        NOT_IMPLEMENTED(ERROR);//TODO: implement
+      }
+
       ProposalPtr Build() const override{
         return std::make_shared<Proposal>(*raw_);
       }
@@ -54,7 +62,16 @@ namespace token{
     explicit Proposal(RawProposal raw):
       Object(),
       raw_(std::move(raw)){}
+    explicit Proposal(const internal::BufferPtr& data):
+      Proposal(){
+      if(!raw_.ParseFromArray(data->data(), static_cast<int>(data->length())))
+        DLOG(FATAL) << "cannot parse proposal from buffer.";
+    }
     ~Proposal() override = default;
+
+    RawProposal raw() const{
+      return raw_;
+    }
 
     Type type() const override{
       return Type::kProposal;
@@ -78,6 +95,16 @@ namespace token{
 
     Hash hash() const{
       return Hash::FromHexString(raw_.hash());
+    }
+
+    internal::BufferPtr ToBuffer() const{
+      auto length = raw_.ByteSizeLong();
+      auto data = internal::NewBuffer(length);
+      if(!raw_.SerializeToArray(data->data(), static_cast<int>(length))){
+        DLOG(FATAL) << "cannot serialize Proposal to buffer.";
+        return nullptr;
+      }
+      return data;
     }
 
     std::string ToString() const override{
@@ -105,6 +132,17 @@ namespace token{
 
     friend std::ostream& operator<<(std::ostream& stream, const Proposal& val){
       return stream << val.ToString();
+    }
+
+    static inline ProposalPtr
+    NewInstance(const Timestamp& timestamp, const UUID& proposal_id, const UUID& proposer_id, const uint64_t& height, const Hash& hash){
+      Builder builder;
+      builder.SetTimestamp(timestamp);
+      builder.SetProposalId(proposal_id);
+      builder.SetProposerId(proposer_id);
+      builder.SetHeight(height);
+      builder.SetHash(hash);
+      return builder.Build();
     }
   };
 }

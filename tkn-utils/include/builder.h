@@ -26,15 +26,15 @@ namespace token{
         BuilderBase<T>(),
         raw_(new P()),
         free_(true){}
-
-      inline const P*
-      raw() const{
-        return raw_;
-      }
     public:
       ~ProtoBuilder() override{
         if(free_ && raw_)
           delete raw_;
+      }
+
+      inline const P*
+      raw() const{
+        return raw_;
       }
 
       std::shared_ptr<T> Build() const override = 0;

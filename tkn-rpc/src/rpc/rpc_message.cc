@@ -20,12 +20,10 @@ namespace token{
         DECODED_FIELD(version_, Version, version);
         //TODO: check version
       }
-
-      codec::DecoderHints hints = codec::ExpectTypeHint::Encode(true)|codec::ExpectVersionHint::Encode(true);
       switch(type){
 #define DEFINE_DECODE(Name) \
         case Type::k##Name##Message: \
-          return std::static_pointer_cast<Message>(Name##Message::Decode(data_, hints));
+          return std::static_pointer_cast<Message>(Name##Message::Decode(data_));
         FOR_EACH_MESSAGE_TYPE(DEFINE_DECODE)
 #undef DEFINE_DECODE
         default:

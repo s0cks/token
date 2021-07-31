@@ -21,6 +21,7 @@ namespace token{
       Hash nonce = msg->nonce();
       UUID node_id; //TODO: get server node id
       BlockPtr head = Block::Genesis();//TODO: get head
+
       Send(rpc::VersionMessage::NewInstance(timestamp, client_type, version, nonce, node_id));
     }
 

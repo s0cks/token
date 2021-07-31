@@ -27,6 +27,8 @@ namespace token{
     public:
       ~Message() override = default;
 
+      virtual bool Write(const internal::BufferPtr& data) const = 0;
+
       bool SetHeader(const std::string& name, const std::string& val){
         return SetHttpHeader(headers_, name, val);
       }

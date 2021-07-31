@@ -46,6 +46,20 @@ namespace token{
       }
 
       static inline VerackMessagePtr
+      NewInstance(const Timestamp&  timestamp, const ClientType& client_type, const Version& version, const Hash& nonce, const UUID& node_id){
+        internal::proto::rpc::VerackMessage raw;
+
+        Builder builder(&raw);
+        builder.SetTimestamp(timestamp);
+        builder.SetClientType(client_type);
+        //TODO: builder.SetVersion(version);
+        //TODO: builder.SetNonce(nonce);
+        //TODO: builder.SetNodeId(node_id);
+
+        return builder.Build();
+      }
+
+      static inline VerackMessagePtr
       Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
         NOT_IMPLEMENTED(ERROR);//TODO: implement
         return nullptr;

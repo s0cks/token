@@ -7,39 +7,15 @@ namespace token{
   namespace rpc{
     class PromiseMessage : public PaxosMessage{
     public:
-    class Encoder : public codec::PaxosMessageEncoder<rpc::PromiseMessage>{
-      public:
-        explicit Encoder(const PromiseMessage* value, const codec::EncoderFlags& flags):
-          PaxosMessageEncoder<rpc::PromiseMessage>(value, flags){}
-        Encoder(const Encoder& other) = default;
-        ~Encoder() override = default;
-        Encoder& operator=(const Encoder& other) = default;
-      };
-
-    class Decoder : public codec::PaxosMessageDecoder<rpc::PromiseMessage>{
-      public:
-        explicit Decoder(const codec::DecoderHints& hints):
-          PaxosMessageDecoder<rpc::PromiseMessage>(hints){}
-        ~Decoder() override = default;
-        PromiseMessage* Decode(const BufferPtr& data) const override;
-      };
+      class Builder : public PaxosMessageBuilderBase<PromiseMessage>{};
      public:
       PromiseMessage():
         PaxosMessage(){}
-      explicit PromiseMessage(const Proposal& proposal):
-        PaxosMessage(proposal){}
-      PromiseMessage(const PromiseMessage& other) = default;
+      explicit PromiseMessage(RawProposal raw):
+        PaxosMessage(std::move(raw)){}
+      explicit PromiseMessage(const BufferPtr& data):
+        PaxosMessage(data){}
       ~PromiseMessage() override = default;
-
-      int64_t GetBufferSize() const override{
-        Encoder encoder(this, GetDefaultMessageEncoderFlags());
-        return encoder.GetBufferSize();
-      }
-
-      bool Write(const BufferPtr& buff) const override{
-        Encoder encoder(this, GetDefaultMessageEncoderFlags());
-        return encoder.Encode(buff);
-      }
 
       Type type() const override{
         return Type::kPromiseMessage;
@@ -47,7 +23,9 @@ namespace token{
 
       std::string ToString() const override{
         std::stringstream ss;
-        ss << "PromiseMessage(" << proposal() << ")";
+        ss << "PromiseMessage(";
+        ss << "proposal=" << height();
+        ss << ")";
         return ss.str();
       }
 
@@ -58,20 +36,13 @@ namespace token{
       }
 
       static inline PromiseMessagePtr
-      NewInstance(const Proposal& proposal){
-        return std::make_shared<PromiseMessage>(proposal);
+      NewInstance(const ProposalPtr& proposal){
+        return std::make_shared<PromiseMessage>(proposal->raw());
       }
 
       static inline PromiseMessagePtr
-      Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
-        Decoder decoder(hints);
-
-        PromiseMessage* value = nullptr;
-        if(!(value = decoder.Decode(data))){
-          DLOG(FATAL) << "cannot decode PromiseMessage from buffer.";
-          return nullptr;
-        }
-        return std::shared_ptr<PromiseMessage>(value);
+      Decode(const internal::BufferPtr& data){
+        return std::make_shared<PromiseMessage>(data);
       }
     };
 

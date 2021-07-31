@@ -7,7 +7,7 @@ namespace token{
   typedef atomic::RelaxedAtomic<uint64_t> AtomicCounter;
 
   static std::mutex mtx_current_;//TODO: remove
-  static Proposal* current_ = nullptr;
+  static ProposalPtr current_ = nullptr;
   static node::Session* proposer_ = nullptr;
 
   static AtomicCounter promises_(0);
@@ -15,15 +15,15 @@ namespace token{
   static AtomicCounter rejected_(0);
   static atomic::RelaxedAtomic<ProposalPhase> phase_(ProposalPhase::kQueued);
 
-  Proposal* ProposalScope::CreateNewProposal(const int64_t& height, const Hash& hash){//TODO: remove locking
+  ProposalPtr ProposalScope::CreateNewProposal(const int64_t& height, const Hash& hash){//TODO: remove locking
     std::lock_guard<std::mutex> guard(mtx_current_);
     Timestamp timestamp = Clock::now();
     UUID proposal_id = UUID();
     UUID proposer_id = UUID();//TODO: get node id
-    return current_ = new Proposal(timestamp, proposal_id, proposer_id, height, hash);
+    return current_ = Proposal::NewInstance(timestamp, proposal_id, proposer_id, height, hash);
   }
 
-  Proposal* ProposalScope::GetCurrentProposal(){//TODO: remove locking
+  ProposalPtr ProposalScope::GetCurrentProposal(){//TODO: remove locking
     std::lock_guard<std::mutex> guard(mtx_current_);
     return current_;
   }
@@ -53,7 +53,7 @@ namespace token{
 
   bool ProposalScope::SetActiveProposal(const Proposal& proposal){//TODO: remove locking
     std::lock_guard<std::mutex> guard(mtx_current_);
-    current_ = new Proposal(proposal);
+    current_ = std::make_shared<Proposal>(proposal.raw());
     return true;
   }
 

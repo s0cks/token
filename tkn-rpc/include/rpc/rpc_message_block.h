@@ -13,22 +13,11 @@ namespace token{
       explicit BlockMessage(internal::proto::Block raw):
         RawMessage<internal::proto::Block>(std::move(raw)){}
       explicit BlockMessage(const internal::BufferPtr& data):
-        RawMessage<internal::proto::Block>(){
-        if(!raw_.ParseFromArray(data->data(), static_cast<int>(data->length())))
-          DLOG(FATAL) << "cannot parse BlockMessage from buffer.";
-      }
+        RawMessage<internal::proto::Block>(data){}
       ~BlockMessage() override = default;
 
       Type type() const override{
         return Type::kBlockMessage;
-      }
-
-      int64_t GetBufferSize() const override{
-        return static_cast<int64_t>(raw_.ByteSizeLong());
-      }
-
-      bool Write(const BufferPtr& data) const override{
-        return raw_.SerializeToArray(data->data(), static_cast<int>(data->length()));
       }
 
       std::string ToString() const override{
@@ -45,7 +34,7 @@ namespace token{
       }
 
       static inline BlockMessagePtr
-      Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
+      Decode(const BufferPtr& data){
         return std::make_shared<BlockMessage>(data);
       }
     };

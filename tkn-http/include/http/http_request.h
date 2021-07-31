@@ -67,6 +67,15 @@ namespace token{
         query_params_(std::move(query_params)){}
       ~Request() override = default;
 
+      Type type() const override{
+        return Type::kHttpRequest;
+      }
+
+      internal::BufferPtr ToBuffer() const override{
+        NOT_IMPLEMENTED(ERROR);//TODO: implement
+        return nullptr;
+      }
+
       const char* GetName() const override{
         return "Request";
       }
@@ -154,7 +163,7 @@ namespace token{
         return ss.str();
       }
 
-      int64_t GetBufferSize() const override{
+      uint64_t GetBufferSize() const override{
         int64_t size = 0;
         size += GetHttpStatusLine(method_, path_).length();
         for(auto& it : headers_)
@@ -215,6 +224,7 @@ namespace token{
       }
 
       RequestPtr Build() const{
+        Request request;
         return std::make_shared<Request>(headers_, method_, path_, path_params_, query_params_, body_);
       }
     };

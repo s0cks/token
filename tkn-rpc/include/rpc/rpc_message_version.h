@@ -1,6 +1,8 @@
 #ifndef TOKEN_RPC_MESSAGE_VERSION_H
 #define TOKEN_RPC_MESSAGE_VERSION_H
 
+#include <utility>
+
 #include "message_version.pb.h"
 #include "rpc/rpc_message_handshake.h"
 
@@ -20,19 +22,13 @@ namespace token{
         }
       };
      public:
-      VersionMessage():
-        HandshakeMessage(){}
+      VersionMessage() = default;
       explicit VersionMessage(internal::proto::rpc::VersionMessage raw):
-        HandshakeMessage(std::move(raw)){}
+        HandshakeMessage<internal::proto::rpc::VersionMessage>(std::move(raw)){}
       ~VersionMessage() override = default;
 
       Type type() const override{
         return Type::kVersionMessage;
-      }
-
-      internal::BufferPtr ToBuffer() const override{
-        NOT_IMPLEMENTED(ERROR);//TODO: implement
-        return nullptr;
       }
 
       std::string ToString() const override{
@@ -44,6 +40,20 @@ namespace token{
 
       friend std::ostream& operator<<(std::ostream& stream, const VersionMessage& msg){
         return stream << msg.ToString();
+      }
+
+      static inline VersionMessagePtr
+      NewInstance(const Timestamp&  timestamp, const ClientType& client_type, const Version& version, const Hash& nonce, const UUID& node_id){
+        internal::proto::rpc::VersionMessage raw;
+
+        Builder builder(&raw);
+        builder.SetTimestamp(timestamp);
+        builder.SetClientType(client_type);
+        //TODO: builder.SetVersion(version);
+        //TODO: builder.SetNonce(nonce);
+        //TODO: builder.SetNodeId(node_id);
+
+        return builder.Build();
       }
 
       static inline VersionMessagePtr

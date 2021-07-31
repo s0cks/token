@@ -9,7 +9,7 @@
 namespace token{
   namespace rpc{
     template<class M>
-    class HandshakeMessage : public Message{
+    class HandshakeMessage : public RawMessage<M>{
     protected:
       template<class T>
       class HandshakeMessageBuilderBase : public internal::ProtoBuilder<T, M>{
@@ -20,43 +20,40 @@ namespace token{
         ~HandshakeMessageBuilderBase() = default;
 
         void SetTimestamp(const Timestamp& val){
-          return raw_->set_timestamp(ToUnixTimestamp(val));
+          return internal::ProtoBuilder<T, M>::raw_->set_timestamp(ToUnixTimestamp(val));
         }
 
         void SetClientType(const ClientType& val){
-          return raw_->set_client_type(static_cast<uint32_t>(val));
+          return internal::ProtoBuilder<T, M>::raw_->set_client_type(static_cast<uint32_t>(val));
         }
       };
 
-      M raw_;
-
-      HandshakeMessage():
-        Message(),
-        raw_(){}
+      HandshakeMessage() = default;
       explicit HandshakeMessage(M raw):
-        Message(),
-        raw_(std::move(raw)){}
+        RawMessage<M>(std::move(raw)){}
+      explicit HandshakeMessage(const BufferPtr& data):
+        RawMessage<M>(data){}
     public:
       ~HandshakeMessage() override = default;
 
       Timestamp timestamp() const{
-        return FromUnixTimestamp(raw_.timestamp());
+        return FromUnixTimestamp(RawMessage<M>::raw()->timestamp());
       }
 
       ClientType client_type() const{
-        return static_cast<ClientType>(raw_.client_type());
+        return static_cast<ClientType>(RawMessage<M>::raw()->client_type());
       }
 
       Version version() const{
         return Version();//TODO: implement
       }
 
-      Hash nonce() const{
-        return Hash::FromHexString(raw_.nonce());
+      Hash nonce(){
+        return Hash::FromHexString(RawMessage<M>::raw().nonce());
       }
 
       UUID node_id() const{
-        return UUID(raw_.node_id());
+        return UUID(RawMessage<M>::raw().node_id());
       }
     };
   }

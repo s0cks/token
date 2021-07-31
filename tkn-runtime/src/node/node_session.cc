@@ -22,19 +22,19 @@ namespace token{
     void Session::OnSendPromise(uv_async_t* handle){
       auto session = (Session*)handle->data;
       auto proposal = ProposalScope::GetCurrentProposal();
-      session->Send(rpc::PromiseMessage::NewInstance(*proposal));//TODO: memory-leak
+      session->Send(rpc::PromiseMessage::NewInstance(proposal));//TODO: memory-leak
     }
 
     void Session::OnSendAccepted(uv_async_t* handle){
       auto session = (Session*)handle->data;
       auto proposal = ProposalScope::GetCurrentProposal();
-      session->Send(rpc::AcceptedMessage::NewInstance(*proposal));//TODO: memory-leak
+      session->Send(rpc::AcceptedMessage::NewInstance(proposal));//TODO: memory-leak
     }
 
     void Session::OnSendRejected(uv_async_t* handle){
       auto session = (Session*)handle->data;
       auto proposal = ProposalScope::GetCurrentProposal();
-      session->Send(rpc::RejectedMessage::NewInstance(*proposal));//TODO: memory-leak
+      session->Send(rpc::RejectedMessage::NewInstance(proposal));//TODO: memory-leak
     }
   }
 }

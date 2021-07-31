@@ -35,8 +35,32 @@ namespace token{
       explicit RawMessage(T raw):
         Message(),
         raw_(raw){}
+      explicit RawMessage(const BufferPtr& data):
+        RawMessage(){
+        if(!raw_.ParseFromArray(data->data(), static_cast<int>(data->length())))
+          DLOG(FATAL) << "cannot parse from buffer.";
+      }
+
+      inline T&
+      raw(){
+        return raw_;
+      }
     public:
       ~RawMessage() override = default;
+
+      uint64_t GetBufferSize() const override{
+        return raw_.ByteSizeLong();
+      }
+
+      internal::BufferPtr ToBuffer() const override{
+        auto length = raw_.ByteSizeLong();
+        auto data = internal::NewBuffer(length);
+        if(!raw_.SerializeToArray(data->data(), static_cast<int>(length))){
+          DLOG(FATAL) << "cannot serialize type to buffer.";
+          return nullptr;
+        }
+        return data;
+      }
     };
 
     class MessageParser : codec::DecoderBase{
