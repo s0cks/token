@@ -131,6 +131,7 @@ namespace token{
         DLOG(WARNING) << "there is no active proposal currently.";
         return false;
       }
+
       //TODO: this is a terrible function
       std::lock_guard<std::mutex> guard(mutex_);
       active_ = true;
