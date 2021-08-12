@@ -5,6 +5,7 @@
 
 #include "pool.h"
 #include "miner.h"
+#include "eventbus.h"
 #include "miner_listener.h"
 #include "node/node_server.h"
 #include "task/task_engine.h"
@@ -22,7 +23,8 @@ namespace token{
 
   class Runtime : public ProposalEventListener,
                   public MinerEventListener,
-                  public ElectionEventListener{
+                  public ElectionEventListener,
+                  public TestEventListener{
   public:
     enum State{
 #define DEFINE_STATE(Name) k##Name,
@@ -52,6 +54,7 @@ namespace token{
     std::vector<ElectionEventListener*> election_listeners_;
     task::TaskQueue task_queue_;
     task::TaskEngine task_engine_;
+    EventBus events_;
 
     ObjectPool pool_;
 
@@ -76,6 +79,10 @@ namespace token{
     DEFINE_PROPOSAL_EVENT_LISTENER;
     DEFINE_ELECTION_EVENT_LISTENER;
     DEFINE_MINER_EVENT_LISTENER;
+
+    void HandleOnTestEvent() override{
+      DLOG(INFO) << "test.";
+    }
   public:
     explicit Runtime(uv_loop_t* loop=uv_loop_new());
     Runtime(const Runtime& rhs) = delete;

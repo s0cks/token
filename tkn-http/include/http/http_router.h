@@ -89,14 +89,13 @@ namespace token{
 
       ParameterMap params_path_;
       ParameterMap params_query_;
-
-      Route route_;
+      Route* route_;
 
       RouterMatch(std::string path,
                       const Status& status,
                       ParameterMap params_path,
                       ParameterMap params_query,
-                      const Route& route):
+                      Route* route):
         path_(std::move(path)),
         status_(status),
         params_path_(std::move(params_path)),
@@ -107,7 +106,7 @@ namespace token{
         status_(status),
         params_path_(),
         params_query_(),
-        route_(){}
+        route_(nullptr){}
      public:
       RouterMatch(const RouterMatch& match):
         path_(match.path_),
@@ -125,11 +124,7 @@ namespace token{
         return status_;
       }
 
-      Route& GetRoute(){
-        return route_;
-      }
-
-      Route GetRoute() const{
+      Route* GetRoute() const{
         return route_;
       }
 
@@ -192,7 +187,7 @@ namespace token{
           TrieNode<char, Route, kAlphabetSize>(),
           path_(){}
         Node(const char& key, const Route& route):
-          TrieNode<char, Route, kAlphabetSize>(key, route){}
+          TrieNode<char, Route, kAlphabetSize>(key, new Route(route)){}
         ~Node() override = default;
 
         std::string GetPath() const{
@@ -273,8 +268,8 @@ namespace token{
               value += (*i);
             } while ((++i) != path.end() && (*i) != '/' && (*i) != '?');
 
-            Route& route = curr->GetValue();
-            path_params.insert({route.GetPath(), value});
+            auto route = curr->GetValue();
+            path_params.insert({route->GetPath(), value});
           } else if (c == '?'){
             do{
               if ((*i) == '&')
@@ -308,8 +303,8 @@ namespace token{
         //TODO: investigate problems routing:
         // - /pool/blocks
 
-        Route& route = curr->GetValue();
-        if (route.GetMethod() != method)
+        auto route = curr->GetValue();
+        if (route->GetMethod() != method)
           return RouterMatch(path, RouterMatch::kNotSupported);
         return RouterMatch(path, RouterMatch::kOk, path_params, query_params, route);
       }

@@ -11,11 +11,12 @@ namespace token{
 
   template<class K, class V, int64_t kAlphabetSize>
   class TrieNode{
+    friend class Trie<K, V, kAlphabetSize>;
    private:
     TrieNode<K, V, kAlphabetSize>* parent_;
     TrieNode<K, V, kAlphabetSize>* children_[kAlphabetSize];
     K key_;
-    V value_;
+    V* value_;
     bool epsilon_;
 
     void ClearEpsilon(){
@@ -25,17 +26,21 @@ namespace token{
     void SetEpsilon(){
       epsilon_ = true;
     }
+
+    void SetValue(V* value){
+      value_ = value;
+    }
    public:
     TrieNode():
       parent_(nullptr),
       children_(),
       key_(),
-      value_(),
+      value_(nullptr),
       epsilon_(false){
       for(int idx = 0; idx < kAlphabetSize; idx++)
         children_[idx] = nullptr;
     }
-    TrieNode(const K& key, const V& value):
+    TrieNode(const K& key, V* value):
       parent_(nullptr),
       children_(),
       key_(key),
@@ -64,11 +69,7 @@ namespace token{
       return key_;
     }
 
-    V& GetValue(){
-      return value_;
-    }
-
-    V GetValue() const{
+    V* GetValue() const{
       return value_;
     }
 
@@ -99,7 +100,7 @@ namespace token{
    private:
     TrieNode<K, V, kAlphabetSize>* root_;
 
-    void Insert(TrieNode<K, V, kAlphabetSize>* node, const K& key, const V& value){
+    void InsertNode(TrieNode<K, V, kAlphabetSize>* node, const K& key, V* value){
       TrieNode<K, V, kAlphabetSize>* curr = node;
       for(int idx = 0; idx < key.size(); idx++){
         unsigned char next = tolower(key[idx]);
@@ -114,12 +115,12 @@ namespace token{
       curr->SetEpsilon();
     }
 
-    TrieNode<K, V, kAlphabetSize>* Search(TrieNode<K, V, kAlphabetSize> node, const K& key){
+    TrieNode<K, V, kAlphabetSize>* SearchNode(TrieNode<K, V, kAlphabetSize>* node, const K& key){
       TrieNode<K, V, kAlphabetSize>* n = node;
 
       const char* word = key.data();
       while((*word) != '\0'){
-        if(n->children_[tolower((*word))].get()){
+        if(n->children_[tolower((*word))]){
           n = n->children_[tolower((*word))];
           word++;
         } else{
@@ -128,7 +129,7 @@ namespace token{
       }
 
       return (*word) == '\0'
-             ? node
+             ? n
              : nullptr;
     }
    public:
@@ -143,17 +144,17 @@ namespace token{
       return root_;
     }
 
-    void Insert(const K& key, const V& value){
-      Insert(GetRoot(), key, value);
+    void Insert(const K& key, V* value){
+      InsertNode(GetRoot(), key, value);
     }
 
     bool Contains(const K& key){
-      std::shared_ptr<TrieNode<K, V, kAlphabetSize>> node = Search(GetRoot(), key);
-      return !node;
+      auto node = SearchNode(GetRoot(), key);
+      return node != nullptr;
     }
 
-    V Search(const K& key){
-      TrieNode<K, V, kAlphabetSize>* node = Search(GetRoot(), key);
+    V* Search(const K& key){
+      auto node = SearchNode(GetRoot(), key);
       return node != nullptr
              ? node->GetValue()
              : nullptr;

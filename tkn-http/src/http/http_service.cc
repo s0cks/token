@@ -46,10 +46,10 @@ namespace token{
         request->SetPathParameters(match.GetPathParameters());
         request->SetQueryParameters(match.GetQueryParameters());
 
-        Route &route = match.GetRoute();
-        auto& endpoint = route.GetHandler();
-        DLOG(INFO) << "invoking endpoint: " << route.GetPath();
-        endpoint(route.GetController(), session, request);
+        auto route = match.GetRoute();
+        auto& endpoint = route->GetHandler();
+        DLOG(INFO) << "invoking endpoint: " << route->GetPath();
+        endpoint(route->GetController(), session, request);
       }
     }
   }
