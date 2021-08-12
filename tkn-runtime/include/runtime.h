@@ -21,10 +21,7 @@ namespace token{
   V(Stopping)                     \
   V(Stopped)
 
-  class Runtime : public ProposalEventListener,
-                  public MinerEventListener,
-                  public ElectionEventListener,
-                  public TestEventListener{
+  class Runtime : public TestEventListener{
   public:
     enum State{
 #define DEFINE_STATE(Name) k##Name,
@@ -47,14 +44,14 @@ namespace token{
   private:
     uv_loop_t* loop_;
     atomic::RelaxedAtomic<State> state_;
+    EventBus events_;
+
     UUID node_id_;
+
+
     ProposalState proposal_state_;
-    std::vector<ProposalEventListener*> proposal_listeners_;
-    std::vector<MinerEventListener*> miner_listeners_;
-    std::vector<ElectionEventListener*> election_listeners_;
     task::TaskQueue task_queue_;
     task::TaskEngine task_engine_;
-    EventBus events_;
 
     ObjectPool pool_;
 
@@ -69,17 +66,6 @@ namespace token{
       state_ = state;
     }
   protected:
-    template<class L, typename C>
-    static inline void
-    Propagate(const std::vector<L>& listeners, const char* name, C callback){
-      DVLOG(2) << "invoking the " << name << " callback for " << listeners.size() << " listeners....";
-      std::for_each(listeners.begin(), listeners.end(), callback);
-    }
-
-    DEFINE_PROPOSAL_EVENT_LISTENER;
-    DEFINE_ELECTION_EVENT_LISTENER;
-    DEFINE_MINER_EVENT_LISTENER;
-
     void HandleOnTestEvent() override{
       DLOG(INFO) << "test.";
     }
@@ -92,16 +78,12 @@ namespace token{
       return node_id_;
     }
 
-    void AddProposalListener(ProposalEventListener* listener){
-      proposal_listeners_.push_back(listener);
+    EventBus& GetEventBus(){
+      return events_;
     }
 
-    void AddMinerListener(MinerEventListener* listener){
-      miner_listeners_.push_back(listener);
-    }
-
-    void AddElectionListener(ElectionEventListener* listener){
-      election_listeners_.push_back(listener);
+    void Publish(const std::string& event){
+      events_.Publish(event);
     }
 
     ProposalState& GetProposalState(){

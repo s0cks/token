@@ -17,11 +17,11 @@ namespace token{
   V(Quorum)
 
 #define FOR_EACH_ELECTION_EVENT(V) \
-  V(Start, on_start_)      \
-  V(Pass, on_pass_)                \
-  V(Fail, on_fail_)                \
-  V(Timeout, on_timeout_)          \
-  V(Finished, on_finished_)
+  V(Start, "election.start", on_start_)      \
+  V(Pass, "election.pass", on_pass_)                \
+  V(Fail, "election.fail", on_fail_)                \
+  V(Timeout, "election.timeout", on_timeout_)          \
+  V(Finished, "election.finished", on_finished_)
 
   class ElectionEventListener{
   protected:
@@ -31,37 +31,31 @@ namespace token{
     uv_async_t on_timeout_;
     uv_async_t on_finished_;
 
-    explicit ElectionEventListener(uv_loop_t* loop):
+    explicit ElectionEventListener(uv_loop_t* loop, EventBus& bus):
       on_start_(),
       on_pass_(),
       on_fail_(),
       on_timeout_(),
       on_finished_(){
-#define INITIALIZE_EVENT_HANDLE(Name, Handle) \
+#define INITIALIZE_EVENT_HANDLE(Name, Event, Handle) \
       (Handle).data = this;             \
       CHECK_UVRESULT2(FATAL, uv_async_init(loop, &(Handle), [](uv_async_t* handle){ \
         return ((ElectionEventListener*)handle->data)->HandleOnElection##Name();                    \
-      }), "cannot initialize the callback handle");
+      }), "cannot initialize the callback handle");                                 \
+      bus.Subscribe(Event, &(Handle));
       FOR_EACH_ELECTION_EVENT(INITIALIZE_EVENT_HANDLE)
 #undef INITIALIZE_EVENT_HANDLE
     }
 
-#define DECLARE_EVENT_HANDLER(Name, Handle) \
+#define DECLARE_EVENT_HANDLER(Name, Event, Handle) \
     virtual void HandleOnElection##Name() = 0;
     FOR_EACH_ELECTION_EVENT(DECLARE_EVENT_HANDLER)
 #undef DECLARE_EVENT_HANDLER
   public:
     virtual ~ElectionEventListener() = default;
-
-#define DEFINE_ON_EVENT(Name, Handle) \
-    void OnElection##Name(){          \
-      CHECK_UVRESULT2(FATAL, uv_async_send(&(Handle)), "cannot invoke the callback handle"); \
-    }
-    FOR_EACH_ELECTION_EVENT(DEFINE_ON_EVENT)
-#undef DEFINE_ON_EVENT
   };
 
-#define DECLARE_ELECTION_EVENT_HANDLER(Name, Handle) \
+#define DECLARE_ELECTION_EVENT_HANDLER(Name, Event, Handle) \
   void HandleOnElection##Name() override;            \
 
 #define DEFINE_ELECTION_EVENT_LISTENER \

@@ -24,7 +24,6 @@ namespace token{
 
     bool StartProposal();
     bool EndProposal();
-    bool ClearProposal();
 
     DEFINE_MINER_EVENT_LISTENER;
     DEFINE_ELECTION_EVENT_LISTENER;

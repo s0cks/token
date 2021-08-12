@@ -4,12 +4,9 @@
 
 namespace token{
   Acceptor::Acceptor(Runtime* runtime):
-    ProposalEventListener(runtime->loop()),
-    ElectionEventListener(runtime->loop()),
-    runtime_(runtime){
-    runtime_->AddProposalListener(this);
-    runtime_->AddElectionListener(this);
-  }
+    ProposalEventListener(runtime->loop(), runtime->GetEventBus()),
+    ElectionEventListener(runtime->loop(), runtime->GetEventBus()),
+    runtime_(runtime){}
 
   void Acceptor::HandleOnProposalStart(){
     auto& state = GetRuntime()->GetProposalState();

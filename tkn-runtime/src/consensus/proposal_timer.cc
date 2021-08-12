@@ -24,7 +24,6 @@ namespace token{
 
   void ProposalTimer::HandleOnTimeout(){
     DLOG(WARNING) << "the proposal has timed out.";
-    if(!runtime_->OnProposalTimeout())
-      DLOG(ERROR) << "cannot invoke the OnTimeout callback.";
+    runtime_->Publish("proposal.timeout");
   }
 }

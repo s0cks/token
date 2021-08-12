@@ -12,6 +12,7 @@ namespace token{
 
   class Runtime;
   class ProposalState : public ProposalEventListener{
+    friend class Runtime;
   public:
     enum Phase{
 #define DEFINE_PHASE(Name) k##Name##Phase,
@@ -43,6 +44,11 @@ namespace token{
     node::Session* proposer_;
 
     DEFINE_PROPOSAL_EVENT_LISTENER;
+
+    void SubscribeTo(EventBus& bus){
+      bus.Subscribe("proposal.prepare", &on_prepare_);
+      bus.Subscribe("proposal.commit", &on_commit_);
+    }
   public:
     explicit ProposalState(Runtime* runtime);
     ~ProposalState() override = default;

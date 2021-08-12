@@ -3,7 +3,7 @@
 
 namespace token{
   ProposalState::ProposalState(Runtime* runtime):
-    ProposalEventListener(runtime->loop()),
+    ProposalEventListener(runtime->loop(), runtime->GetEventBus()),
     runtime_(runtime),
     phase_(Phase::kQueuedPhase),
     active_(false),
@@ -12,9 +12,7 @@ namespace token{
     proposal_id_(),
     proposal_(nullptr),
     proposer_id_(),
-    proposer_(nullptr){
-    runtime->AddProposalListener(this);
-  }
+    proposer_(nullptr){}
 
   void ProposalState::HandleOnProposalStart(){
 

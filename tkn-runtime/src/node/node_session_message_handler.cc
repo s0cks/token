@@ -53,10 +53,13 @@ namespace token{
 
       DLOG(INFO) << "received prepare message.";
       auto& acceptor = session->GetServer()->runtime()->GetAcceptor();
-      if(!acceptor.OnProposalPrepare()){
-        DLOG(FATAL) << "cannot start accepting proposal.";
-        //TODO: reject proposal
-      }
+
+
+//TODO:
+//      if(!acceptor.OnProposalPrepare()){
+//        DLOG(FATAL) << "cannot start accepting proposal.";
+//        //TODO: reject proposal
+//      }
     }
 
     void SessionMessageHandler::OnPromiseMessage(const rpc::PromiseMessagePtr &msg){
@@ -71,8 +74,10 @@ namespace token{
       // - set proposer reference near proposal
 
       auto& acceptor = session->GetServer()->runtime()->GetAcceptor();
-      if(!acceptor.OnProposalCommit())
-        DLOG(FATAL) << "cannot start committing proposal.";
+
+//TODO:
+//      if(!acceptor.OnProposalCommit())
+//        DLOG(FATAL) << "cannot start committing proposal.";
     }
 
     void SessionMessageHandler::OnAcceptedMessage(const rpc::AcceptedMessagePtr &msg){

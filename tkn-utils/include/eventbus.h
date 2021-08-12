@@ -80,6 +80,11 @@ namespace token{
 
     bool Publish(const std::string& name){
       auto node = trie_.Search(name);
+      if(!node){
+        DLOG(WARNING) << "cannot find event handles for " << name << ".";
+        return false;
+      }
+
       for(auto& handler : node->handles_){
         if(!handler.Invoke()){
           DLOG(ERROR) << "cannot invoke callback handler for event '" << name << "'";

@@ -31,20 +31,20 @@ namespace token{
   }
 
   void Election::PassElection(){
-    runtime_->OnElectionPass();
+    runtime_->Publish("election.pass");
     if(!StopElection())
       DLOG(FATAL) << "cannot stop the election.";
   }
 
   void Election::FailElection(){
-    runtime_->OnElectionFail();
+    runtime_->Publish("election.fail");
     if(!StopElection())
       DLOG(FATAL) << "cannot stop the election.";
   }
 
   void Election::OnTimeout(){
     DLOG(ERROR) << "the election has timed out.";
-    runtime_->OnElectionTimeout();
+    runtime_->Publish("election.timeout");
     if(!StopElection())
       DLOG(FATAL) << "cannot stop the election.";
   }
@@ -65,7 +65,7 @@ namespace token{
     runtime_->GetProposalState().SetPhase(GetPhase());
     SetState(State::kInProgress);
     SetStartTime();
-    runtime_->OnElectionStart();
+    runtime_->Publish("election.start");
     DVLOG(1) << "the election has started. (timeout=" << GetElectionTimeoutMilliseconds() << "ms, required_votes=" << GetElectionRequiredVotes() << ", poll=" << GetElectionPollerIntervalMilliseconds() << "ms)";
     return true;
   }
@@ -86,7 +86,7 @@ namespace token{
     }
     SetState(State::kQuorum);
     SetFinishTime();
-    runtime_->OnElectionFinished();
+    runtime_->Publish("election.finished");
     return true;
   }
 }

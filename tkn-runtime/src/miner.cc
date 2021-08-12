@@ -6,13 +6,11 @@
 
 namespace token{
   BlockMiner::BlockMiner(Runtime* runtime):
-      ProposalEventListener(runtime->loop()),
-      runtime_(runtime),
-      timer_(),
-      last_(),
-      state_(State::kStoppedState){
-    runtime_->AddProposalListener(this);
-
+    ProposalEventListener(runtime->loop(), runtime->GetEventBus()),
+    runtime_(runtime),
+    timer_(),
+    last_(),
+    state_(State::kStoppedState){
     timer_.data = this;
     CHECK_UVRESULT2(FATAL, uv_timer_init(runtime->loop(), &timer_), "cannot initialize timer handle");
   }
@@ -29,11 +27,7 @@ namespace token{
       return;
     }
 
-    if(!GetRuntime()->OnMine()){
-      DLOG(FATAL) << "cannot invoke OnMine callback";
-      return;
-    }
-    //TODO: broadcast prepare
+    GetRuntime()->GetEventBus().Publish("mine");
   }
 
   bool BlockMiner::StartTimer(){

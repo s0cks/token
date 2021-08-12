@@ -126,14 +126,11 @@ namespace token{
 ////      }
 
   Proposer::Proposer(Runtime* runtime):
-    ElectionEventListener(runtime->loop()),
-    MinerEventListener(runtime->loop()),
+    ElectionEventListener(runtime->loop(), runtime->GetEventBus()),
+    MinerEventListener(runtime->loop(), runtime->GetEventBus()),
     runtime_(runtime),
     prepare_(runtime, ProposalState::Phase::kPreparePhase),
-    commit_(runtime, ProposalState::Phase::kCommitPhase){
-    runtime_->AddMinerListener(this);
-    runtime_->AddElectionListener(this);
-  }
+    commit_(runtime, ProposalState::Phase::kCommitPhase){}
 
   void Proposer::HandleOnMine(){
     auto last_mined = GetRuntime()->GetBlockMiner().GetLastMined();
@@ -187,10 +184,8 @@ namespace token{
   }
 
   bool Proposer::StartProposal(){
-    if(!GetRuntime()->OnProposalStart()){
-      DLOG(ERROR) << "cannot call the OnProposalStart callback";
-      return false;
-    }
+    auto& bus = GetRuntime()->GetEventBus();
+    bus.Publish("proposal.start");
     if(!prepare_.StartElection()){
       DLOG(ERROR) << "cannot start election #1.";
       return false;
@@ -199,10 +194,7 @@ namespace token{
   }
 
   bool Proposer::EndProposal(){
-    if(!GetRuntime()->OnProposalFinished()){
-      DLOG(ERROR) << "cannot call OnProposalFinished callback";
-      return false;
-    }
+    GetRuntime()->Publish("proposal.finished");
     if(!GetRuntime()->GetProposalState().Clear()){
       DLOG(ERROR) << "cannot clear the current proposal.";
       return false;
