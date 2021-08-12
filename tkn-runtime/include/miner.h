@@ -11,6 +11,7 @@
 #include "common.h" //TODO: remove this include
 #include "os_thread.h"
 #include "atomic/relaxed_atomic.h"
+#include "consensus/proposal_listener.h"
 
 namespace token{
 #define FOR_EACH_MINER_STATE(V) \
@@ -20,7 +21,7 @@ namespace token{
   V(Stopped)
 
   class Runtime;
-  class BlockMiner{
+  class BlockMiner : public ProposalEventListener{
    public:
     enum State{
 #define DEFINE_STATE(Name) k##Name##State,
@@ -59,15 +60,16 @@ namespace token{
 
     inline void
     SetLastMined(const Hash& hash){
-      DVLOG(1) << "setting last mined: " << hash;
       std::lock_guard<std::mutex> guard(mtx_last_);
       last_ = hash;
     }
 
-    static void OnTick(uv_timer_t* handle);
+    void HandleOnTick();
+
+    DEFINE_PROPOSAL_EVENT_LISTENER;
    public:
     explicit BlockMiner(Runtime* runtime);
-    ~BlockMiner() = default;
+    ~BlockMiner() override = default;
 
     State GetState() const{
       return (State)state_;

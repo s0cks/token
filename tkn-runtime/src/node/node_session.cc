@@ -1,4 +1,4 @@
-#include "proposal_scope.h"
+#include "runtime.h"
 #include "node/node_server.h"
 #include "node/node_session.h"
 
@@ -21,19 +21,22 @@ namespace token{
 
     void Session::OnSendPromise(uv_async_t* handle){
       auto session = (Session*)handle->data;
-      auto proposal = ProposalScope::GetCurrentProposal();
+      auto& state = session->GetServer()->runtime()->GetProposalState();
+      auto proposal = state.GetProposal();
       session->Send(rpc::PromiseMessage::NewInstance(proposal));//TODO: memory-leak
     }
 
     void Session::OnSendAccepted(uv_async_t* handle){
       auto session = (Session*)handle->data;
-      auto proposal = ProposalScope::GetCurrentProposal();
+      auto& state = session->GetServer()->runtime()->GetProposalState();
+      auto proposal = state.GetProposal();
       session->Send(rpc::AcceptedMessage::NewInstance(proposal));//TODO: memory-leak
     }
 
     void Session::OnSendRejected(uv_async_t* handle){
       auto session = (Session*)handle->data;
-      auto proposal = ProposalScope::GetCurrentProposal();
+      auto& state = session->GetServer()->runtime()->GetProposalState();
+      auto proposal = state.GetProposal();
       session->Send(rpc::RejectedMessage::NewInstance(proposal));//TODO: memory-leak
     }
   }

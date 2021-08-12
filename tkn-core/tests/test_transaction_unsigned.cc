@@ -11,7 +11,7 @@ namespace token{
       Output("TestUser", "TestToken3"),
     };
 
-    UnsignedTransaction a(timestamp, inputs, outputs);
+    UnsignedTransaction a;//TODO: fix
     LOG(INFO) << "timestamp: " << ToUnixTimestamp(timestamp);
     LOG(INFO) << "inputs: " << inputs.size();
     LOG(INFO) << "outputs: " << outputs.size();

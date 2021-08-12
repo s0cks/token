@@ -14,6 +14,13 @@ find_package(gtest REQUIRED)
 find_package(gmock REQUIRED)
 
 add_executable(tkn-runtime
+    include/consensus/proposal_state.h src/consensus/proposal_state.cc
+    include/consensus/acceptor.h src/consensus/acceptor.cc
+    include/consensus/election.h src/consensus/election.cc
+    include/consensus/proposal_listener.h
+    include/consensus/proposal_timer.h src/consensus/proposal_timer.cc
+    include/consensus/proposer.h src/consensus/proposer.cc
+
     include/http/http_controller_health.h src/http/http_controller_health.cc
     include/http/http_service_health.h src/http/http_service_health.cc
 
@@ -30,13 +37,11 @@ add_executable(tkn-runtime
     include/peer/peer_session_manager.h src/peer/peer_session_manager.cc
     include/peer/peer_session_thread.h src/peer/peer_session_thread.cc
 
-    include/acceptor.h src/acceptor.cc
     include/configuration.h src/configuration.cc
     include/flags.h src/flags.cc
     include/miner.h src/miner.cc
+    include/miner_listener.h
     include/pool.h src/pool.cc
-    include/proposal_scope.h src/proposal_scope.cc
-    include/proposer.h src/proposer.cc
     include/runtime.h src/runtime.cc
 
     src/tasks/task_process_output_list.h src/tasks/task_process_input_list.cc

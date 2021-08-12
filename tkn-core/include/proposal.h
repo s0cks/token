@@ -42,11 +42,11 @@ namespace token{
       }
 
       void SetProposalId(const UUID& val){
-        NOT_IMPLEMENTED(ERROR);//TODO: implement
+        raw_->set_proposal_id(val.ToString());
       }
 
       void SetProposerId(const UUID& val){
-        NOT_IMPLEMENTED(ERROR);//TODO: implement
+        raw_->set_proposer_id(val.ToString());
       }
 
       ProposalPtr Build() const override{
@@ -66,6 +66,12 @@ namespace token{
       Proposal(){
       if(!raw_.ParseFromArray(data->data(), static_cast<int>(data->length())))
         DLOG(FATAL) << "cannot parse proposal from buffer.";
+    }
+    Proposal(const Timestamp& timestamp, const uint64_t& height, const Hash& hash):
+      Proposal(){
+      raw_.set_timestamp(ToUnixTimestamp(timestamp));
+      raw_.set_height(height);
+      raw_.set_hash(hash.HexString());
     }
     ~Proposal() override = default;
 
@@ -95,6 +101,10 @@ namespace token{
 
     Hash hash() const{
       return Hash::FromHexString(raw_.hash());
+    }
+
+    bool WasCreatedBy(const UUID& val) const{
+      return proposer_id() == val;
     }
 
     internal::BufferPtr ToBuffer() const{

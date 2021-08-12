@@ -14,8 +14,8 @@ namespace token{
       RejectedMessage() = default;
       explicit RejectedMessage(RawProposal raw):
         PaxosMessage(std::move(raw)){}
-      explicit RejectedMessage(const BufferPtr& data):
-        PaxosMessage(data){}
+      explicit RejectedMessage(const BufferPtr& data, const uint64_t& msize):
+        PaxosMessage(data, msize){}
       ~RejectedMessage() override = default;
 
       Type type() const override{
@@ -38,8 +38,8 @@ namespace token{
       }
 
       static inline RejectedMessagePtr
-      Decode(const BufferPtr& data){
-        return std::make_shared<RejectedMessage>(data);
+      Decode(const BufferPtr& data, const uint64_t& msize){
+        return std::make_shared<RejectedMessage>(data, msize);
       }
     };
 

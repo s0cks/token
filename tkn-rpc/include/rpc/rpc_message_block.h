@@ -12,8 +12,8 @@ namespace token{
         RawMessage<internal::proto::Block>(){}
       explicit BlockMessage(internal::proto::Block raw):
         RawMessage<internal::proto::Block>(std::move(raw)){}
-      explicit BlockMessage(const internal::BufferPtr& data):
-        RawMessage<internal::proto::Block>(data){}
+      explicit BlockMessage(const internal::BufferPtr& data, const uint64_t& msize):
+        RawMessage<internal::proto::Block>(data, msize){}
       ~BlockMessage() override = default;
 
       Type type() const override{
@@ -34,8 +34,8 @@ namespace token{
       }
 
       static inline BlockMessagePtr
-      Decode(const BufferPtr& data){
-        return std::make_shared<BlockMessage>(data);
+      Decode(const BufferPtr& data, const uint64_t& msize){
+        return std::make_shared<BlockMessage>(data, msize);
       }
     };
   }

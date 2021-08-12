@@ -13,8 +13,8 @@ namespace token{
         PaxosMessage(){}
       explicit PromiseMessage(RawProposal raw):
         PaxosMessage(std::move(raw)){}
-      explicit PromiseMessage(const BufferPtr& data):
-        PaxosMessage(data){}
+      explicit PromiseMessage(const BufferPtr& data, const uint64_t& msize):
+        PaxosMessage(data, msize){}
       ~PromiseMessage() override = default;
 
       Type type() const override{
@@ -41,8 +41,8 @@ namespace token{
       }
 
       static inline PromiseMessagePtr
-      Decode(const internal::BufferPtr& data){
-        return std::make_shared<PromiseMessage>(data);
+      Decode(const internal::BufferPtr& data, const uint64_t& msize){
+        return std::make_shared<PromiseMessage>(data, msize);
       }
     };
 

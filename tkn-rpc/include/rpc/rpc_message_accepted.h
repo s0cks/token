@@ -13,8 +13,8 @@ namespace token{
         PaxosMessage(){}
       explicit AcceptedMessage(RawProposal raw):
         PaxosMessage(std::move(raw)){}
-      explicit AcceptedMessage(const BufferPtr& data):
-        PaxosMessage(data){}
+      explicit AcceptedMessage(const BufferPtr& data, const uint64_t& msize):
+        PaxosMessage(data, msize){}
       ~AcceptedMessage() override = default;
 
       Type type() const override{
@@ -37,8 +37,8 @@ namespace token{
       }
 
       static inline AcceptedMessagePtr
-      Decode(const internal::BufferPtr& data){
-        return std::make_shared<AcceptedMessage>(data);
+      Decode(const internal::BufferPtr& data, const uint64_t& msize){
+        return std::make_shared<AcceptedMessage>(data, msize);
       }
     };
 

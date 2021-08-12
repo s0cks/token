@@ -12,7 +12,7 @@ namespace token{
         Output("TestUser", "TestToken3"),
     };
 
-    IndexedTransaction a(timestamp, inputs, outputs, index);
+    IndexedTransaction a;
     LOG(INFO) << "timestamp: " << ToUnixTimestamp(timestamp);
     LOG(INFO) << "index: " << index;
     LOG(INFO) << "inputs: " << inputs.size();

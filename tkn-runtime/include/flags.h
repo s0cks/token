@@ -8,6 +8,7 @@
 DECLARE_string(path);
 DECLARE_int32(num_workers);
 DECLARE_uint64(mining_interval);
+DECLARE_uint64(proposal_timeout);
 DECLARE_bool(reinitialize);
 
 // server
@@ -70,6 +71,11 @@ namespace token{
 
   static inline bool
   ValidateFlagNumberOfPeers(const char* ss, int32_t val){
+    return true;
+  }
+
+  static inline bool
+  ValidateProposalTimeout(const char** ss, uint64_t val){
     return true;
   }
 }

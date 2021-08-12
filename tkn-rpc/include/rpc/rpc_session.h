@@ -13,7 +13,7 @@ namespace token{
       explicit Session(uv_loop_t* loop, const UUID& uuid=UUID()):
         SessionBase(loop, uuid){}
 
-      void HandleMessages(const BufferPtr& data, MessageHandler& handler){
+      void HandleMessages(BufferPtr& data, MessageHandler& handler){
         rpc::MessageParser parser(data);
         DVLOG(1) << "parsing message buffer of size: " << data->GetWritePosition();
         while(parser.HasNext()){

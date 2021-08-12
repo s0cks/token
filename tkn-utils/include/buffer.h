@@ -22,10 +22,13 @@ namespace token{
     class Buffer;
     typedef std::shared_ptr<Buffer> BufferPtr;
 
+#define BUFFER_READ_POSITION "(" << rpos_ << "/" << length() << ")"
+#define BUFFER_WRITE_POSITION "(" << wpos_ << "/" << length() << ")"
+
     class Buffer{
      protected:
-      int64_t wpos_;
-      int64_t rpos_;
+      uint64_t wpos_;
+      uint64_t rpos_;
 
       Buffer():
         wpos_(0),
@@ -33,7 +36,7 @@ namespace token{
 
       template<typename T>
       bool Append(T value){
-        if((wpos_ + (int64_t)sizeof(T)) > length())
+        if((wpos_ + (uint64_t)sizeof(T)) > length())
           return false;
         memcpy(&data()[wpos_], &value, sizeof(T));
         wpos_ += sizeof(T);
@@ -41,17 +44,17 @@ namespace token{
       }
 
       template<typename T>
-      bool Insert(T value, int64_t idx){
-        if((idx + (int64_t)sizeof(T)) > length())
+      bool Insert(T value, uint64_t idx){
+        if((idx + (uint64_t)sizeof(T)) > length())
           return false;
         memcpy(&data()[idx], (uint8_t*)&value, sizeof(T));
-        wpos_ = idx + (int64_t)sizeof(T);
+        wpos_ = idx+sizeof(T);
         return true;
       }
 
       template<typename T>
-      T Read(int64_t idx){
-        if((idx + (int64_t)sizeof(T)) > length()){
+      T Read(uint64_t idx){
+        if((idx + (uint64_t)sizeof(T)) > length()){
           LOG(ERROR) << "cannot read " << sizeof(T) << " bytes @" << idx << " from buffer.";
           return T();//TODO: investigate proper result
         }
@@ -69,21 +72,21 @@ namespace token{
       virtual ~Buffer() = default;
 
       virtual uint8_t* data() const = 0;
-      virtual int64_t length() const = 0;
+      virtual uint64_t length() const = 0;
 
-      int64_t GetWritePosition() const{
+      uint64_t GetWritePosition() const{
         return wpos_;
       }
 
-      void SetWritePosition(const int64_t& pos){
+      void SetWritePosition(const uint64_t& pos){
         wpos_ = pos;
       }
 
-      int64_t GetReadPosition() const{
+      uint64_t GetReadPosition() const{
         return rpos_;
       }
 
-      void SetReadPosition(const int64_t& pos){
+      void SetReadPosition(const uint64_t& pos){
         rpos_ = pos;
       }
 
@@ -97,10 +100,10 @@ namespace token{
 
 #define DEFINE_PUT_SIGNED(Name, Type) \
     bool Put##Name(const Type##_t& val){ return Append<Type##_t>(val); } \
-    bool Put##Name(const Type##_t& val, int64_t pos){ return Insert<Type##_t>(val, pos); }
+    bool Put##Name(const Type##_t& val, uint64_t pos){ return Insert<Type##_t>(val, pos); }
 #define DEFINE_PUT_UNSIGNED(Name, Type) \
     bool PutUnsigned##Name(const u##Type##_t& val){ return Append<u##Type##_t>(val); } \
-    bool PutUnsigned##Name(const u##Type##_t& val, int64_t pos){ return Insert<u##Type##_t>(val, pos); }
+    bool PutUnsigned##Name(const u##Type##_t& val, uint64_t pos){ return Insert<u##Type##_t>(val, pos); }
 #define DEFINE_PUT(Name, Type) \
     DEFINE_PUT_SIGNED(Name, Type) \
     DEFINE_PUT_UNSIGNED(Name, Type)
@@ -112,10 +115,10 @@ namespace token{
 
 #define DEFINE_GET_SIGNED(Name, Type) \
     Type##_t Get##Name(){ return Read<Type##_t>(); } \
-    Type##_t Get##Name(int64_t pos){ return Read<Type##_t>(pos); }
+    Type##_t Get##Name(uint64_t pos){ return Read<Type##_t>(pos); }
 #define DEFINE_GET_UNSIGNED(Name, Type) \
     u##Type##_t GetUnsigned##Name(){ return Read<u##Type##_t>(); } \
-    u##Type##_t GetUnsigned##Name(int64_t pos){ return Read<u##Type##_t>(pos); }
+    u##Type##_t GetUnsigned##Name(uint64_t pos){ return Read<u##Type##_t>(pos); }
 #define DEFINE_GET(Name, Type) \
     DEFINE_GET_SIGNED(Name, Type) \
     DEFINE_GET_UNSIGNED(Name, Type)
@@ -136,7 +139,7 @@ namespace token{
         return Hash(data, Hash::GetSize());
       }
 
-      bool GetBytes(uint8_t* bytes, const int64_t& size){
+      bool GetBytes(uint8_t* bytes, const uint64_t& size){
         if((rpos_ + size) > length())
           return false;
         memcpy(bytes, &data()[rpos_], size);
@@ -144,7 +147,7 @@ namespace token{
         return true;
       }
 
-      bool PutBytes(const uint8_t* bytes, int64_t size){
+      bool PutBytes(const uint8_t* bytes, uint64_t size){
         if((wpos_ + size) > length())
           return false;
         memcpy(&data()[wpos_], bytes, size);
@@ -153,10 +156,11 @@ namespace token{
       }
 
       bool PutBytes(const std::string& val){
-        return PutBytes((uint8_t*)val.data(), static_cast<int64_t>(val.length()));
+        return PutBytes((uint8_t*)val.data(), static_cast<uint64_t>(val.length()));
       }
 
       bool PutBytes(const BufferPtr& buff){
+        DLOG(INFO) << "put " << buff->length() << " bytes into buffer.";
         return PutBytes(buff->data(), buff->length());
       }
 
@@ -164,10 +168,6 @@ namespace token{
         if(!PutUnsignedLong(val.length()))
           return false;
         return PutBytes(val);
-      }
-
-      std::string GetString(){
-        return "";
       }
 
       bool PutTimestamp(const Timestamp& val){
@@ -189,6 +189,40 @@ namespace token{
           LOG(FATAL) << "couldn't write buffer of size " << (sizeof(uint8_t)*GetWritePosition()) << "b to file: " << strerror(errno);
           return false;
         }
+        return true;
+      }
+
+      template<class M>
+      bool PutMessage(const M& raw){
+        auto nbytes = raw.ByteSizeLong();
+        if((wpos_ + nbytes) > length()){
+          DLOG(ERROR) << "not enough bytes remaining in buffer to serialize message of size: " << nbytes << "b " << BUFFER_WRITE_POSITION;
+          return false;
+        }
+        if(!raw.SerializeToArray(&data()[wpos_], nbytes)){
+          DLOG(ERROR) << "cannot serialize message of size " << nbytes << "b to buffer " << BUFFER_WRITE_POSITION;
+          return false;
+        }
+
+        DVLOG(2) << "serialized message of size " << nbytes << "b to buffer " << BUFFER_WRITE_POSITION;
+        wpos_ += nbytes;
+        return true;
+      }
+
+      template<class M>
+      bool GetMessage(M& raw, const uint64_t& nbytes){
+        if((rpos_ + nbytes) > length()){
+          DLOG(ERROR) << "not enough bytes remaining in buffer to deserialize message of size: " << nbytes << "b " << BUFFER_READ_POSITION;
+          return false;
+        }
+
+        if(!raw.ParseFromArray(&data()[rpos_], nbytes)){
+          DLOG(ERROR) << "cannot deserialize message of size " << nbytes << "b from buffer " << BUFFER_READ_POSITION;
+          return false;
+        }
+
+        DVLOG(2) << "deserialized message of size " << nbytes << "b from buffer " << BUFFER_READ_POSITION;
+        rpos_ += nbytes;
         return true;
       }
 
@@ -214,7 +248,7 @@ namespace token{
         return data_;
       }
 
-      int64_t length() const override{
+      uint64_t length() const override{
         return Size;
       }
 
@@ -233,11 +267,11 @@ namespace token{
     class AllocatedBuffer : public Buffer{
      private:
       uint8_t* data_;
-      int64_t length_;
+      uint64_t length_;
      public:
       AllocatedBuffer():
         AllocatedBuffer(0){}
-      explicit AllocatedBuffer(const int64_t& length):
+      explicit AllocatedBuffer(const uint64_t& length)://TODO: RoundUpPow2(length)
         Buffer(),
         data_(nullptr),
         length_(length){
@@ -263,7 +297,7 @@ namespace token{
         return data_;
       }
 
-      int64_t length() const override{
+      uint64_t length() const override{
         return length_;
       }
 
@@ -280,13 +314,8 @@ namespace token{
     };
 
     static inline BufferPtr
-    NewBuffer(const int64_t& length){
+    NewBuffer(const uint64_t& length){
       return std::make_shared<AllocatedBuffer>(length);
-    }
-
-    static inline BufferPtr
-    NewBuffer(const size_t& length){
-      return NewBuffer(static_cast<int64_t>(length));
     }
 
     template<class Encoder>
@@ -296,7 +325,7 @@ namespace token{
     }
 
     static inline BufferPtr
-    CopyBufferFrom(uint8_t* data, const int64_t& length){
+    CopyBufferFrom(uint8_t* data, const uint64_t& length){
       auto buffer = NewBuffer(length);
       if(!buffer->PutBytes(data, length))
         return nullptr;
@@ -305,12 +334,12 @@ namespace token{
 
     static inline BufferPtr
     CopyBufferFrom(const std::string& slice){
-      return CopyBufferFrom((uint8_t *) slice.data(), static_cast<int64_t>(slice.length()));
+      return CopyBufferFrom((uint8_t *) slice.data(), static_cast<uint64_t>(slice.length()));
     }
 
     static inline BufferPtr
     CopyBufferFrom(const json::String& body){
-      return CopyBufferFrom((uint8_t *) body.GetString(), static_cast<int64_t>(body.GetSize()));
+      return CopyBufferFrom((uint8_t *) body.GetString(), static_cast<uint64_t>(body.GetSize()));
     }
 
     static inline BufferPtr
@@ -325,7 +354,7 @@ namespace token{
     }
 
     static inline BufferPtr
-    NewBufferFromFile(FILE* file, const int64_t& length){
+    NewBufferFromFile(FILE* file, const uint64_t& length){
       uint8_t data[length];
       if(fread(data, sizeof(uint8_t), length, file) != length){
         LOG(ERROR) << "cannot read " << length << " bytes from file into buffer.";
@@ -335,7 +364,7 @@ namespace token{
     }
 
     static inline BufferPtr
-    NewBufferFromFile(const std::string& filename, const int64_t& length){
+    NewBufferFromFile(const std::string& filename, const uint64_t& length){
       FILE* file;
       if(!(file = fopen(filename.data(), "rb"))){
         LOG(FATAL) << "cannot open file " << filename << ": " << strerror(errno);

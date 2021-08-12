@@ -4,7 +4,7 @@ package token.internal.proto.rpc;
 message VerackMessage{
     uint64 timestamp = 1;
     uint32 client_type = 2;//TODO: refactor
-    //TODO: version = 3;
+    string version = 3;
     string nonce = 4;
     string node_id = 5;
 }

@@ -1,7 +1,6 @@
 #include "env.h"
 #include "runtime.h"
 #include "configuration.h"
-#include "proposal_scope.h"
 #include "rpc/rpc_messages.h"
 #include "peer/peer_session.h"
 
@@ -100,13 +99,15 @@ namespace token{
 
     void Session::OnSendPrepare(uv_async_t* handle){
       auto session = (peer::Session*)handle->data;
-      auto proposal = ProposalScope::GetCurrentProposal();
+      auto& state = session->GetRuntime()->GetProposalState();
+      auto proposal = state.GetProposal();
       session->Send(rpc::PrepareMessage::NewInstance(proposal));
     }
 
     void Session::OnSendCommit(uv_async_t* handle){
       auto session = (peer::Session*)handle->data;
-      auto proposal = ProposalScope::GetCurrentProposal();
+      auto& state = session->GetRuntime()->GetProposalState();
+      auto proposal = state.GetProposal();
       session->Send(rpc::CommitMessage::NewInstance(proposal));
     }
 

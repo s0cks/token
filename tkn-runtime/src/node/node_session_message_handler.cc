@@ -1,5 +1,4 @@
 #include "block.h"
-#include "proposal_scope.h"
 
 #include "runtime.h"
 #include "node/node_server.h"
@@ -43,21 +42,21 @@ namespace token{
     void SessionMessageHandler::OnPrepareMessage(const rpc::PrepareMessagePtr& msg){
       auto session = (node::Session*)GetSession();
       auto proposal = msg->proposal();
-      if(!ProposalScope::IsValidNewProposal(proposal.get())){
-        DLOG(WARNING) << "proposal " << proposal->ToString() << " is invalid, rejecting....";
-        if(!session->SendRejected())
-          DLOG(FATAL) << "cannot reject proposal from session.";
-        return;
-      }
+      //TODO:
+      // - check if there is an active proposal
+      // - check if the proposal is valid
+      // - set proposer reference near proposal
 
-      //TODO: clean this up
-      ProposalScope::SetActiveProposal(*proposal);
-      ProposalScope::SetProposer(session);
+
+      auto& state = session->GetServer()->runtime()->GetProposalState();
+      state.SetCurrentProposal(proposal, session);//TODO: reject proposal if you cant set it
 
       DLOG(INFO) << "received prepare message.";
       auto& acceptor = session->GetServer()->runtime()->GetAcceptor();
-      if(!acceptor.OnPrepare())
+      if(!acceptor.OnProposalPrepare()){
         DLOG(FATAL) << "cannot start accepting proposal.";
+        //TODO: reject proposal
+      }
     }
 
     void SessionMessageHandler::OnPromiseMessage(const rpc::PromiseMessagePtr &msg){
@@ -66,16 +65,13 @@ namespace token{
 
     void SessionMessageHandler::OnCommitMessage(const rpc::CommitMessagePtr &msg){
       auto session = (node::Session*)GetSession();
-      auto proposal = msg->proposal();
-      if(!ProposalScope::IsValidProposal(proposal.get())){
-        DLOG(WARNING) << "proposal " << proposal->ToString() << " is invalid, rejecting....";
-        if(!session->SendRejected())
-          DLOG(FATAL) << "cannot reject proposal from session.";
-        return;
-      }
+      //TODO:
+      // - check if there is an active proposal
+      // - check if the proposal is valid
+      // - set proposer reference near proposal
 
       auto& acceptor = session->GetServer()->runtime()->GetAcceptor();
-      if(!acceptor.OnCommit())
+      if(!acceptor.OnProposalCommit())
         DLOG(FATAL) << "cannot start committing proposal.";
     }
 

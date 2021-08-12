@@ -15,8 +15,8 @@ namespace token{
         PaxosMessage(){}
       explicit PrepareMessage(RawProposal raw):
         PaxosMessage(std::move(raw)){}
-      explicit PrepareMessage(const internal::BufferPtr& data):
-        PaxosMessage(data){}
+      explicit PrepareMessage(const internal::BufferPtr& data, const uint64_t& msize):
+        PaxosMessage(data, msize){}
       ~PrepareMessage() override = default;
 
       Type type() const override{
@@ -41,8 +41,8 @@ namespace token{
       }
 
       static inline PrepareMessagePtr
-      Decode(const BufferPtr& data){
-        return std::make_shared<PrepareMessage>(data);
+      Decode(const BufferPtr& data, const uint64_t& msize){
+        return std::make_shared<PrepareMessage>(data, msize);
       }
     };
 

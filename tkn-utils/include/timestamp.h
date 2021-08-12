@@ -14,6 +14,11 @@ namespace token{
   typedef Clock::time_point Timestamp;
   typedef Clock::duration Duration;
 
+  static inline uint64_t
+  GetElapsedTimeMilliseconds(const Timestamp& start, const Timestamp& stop){
+    return (stop - start).count();
+  }
+
   static inline RawTimestamp
   ToUnixTimestamp(const Timestamp& ts=Clock::now()){
     using namespace std::chrono;

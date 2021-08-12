@@ -5,10 +5,13 @@
 
 #include "pool.h"
 #include "miner.h"
-#include "acceptor.h"
-#include "proposer.h"
+#include "miner_listener.h"
 #include "node/node_server.h"
 #include "task/task_engine.h"
+#include "consensus/acceptor.h"
+#include "consensus/proposer.h"
+#include "consensus/proposal_timer.h"
+#include "consensus/proposal_listener.h"
 
 namespace token{
 #define FOR_EACH_RUNTIME_STATE(V) \
@@ -17,7 +20,9 @@ namespace token{
   V(Stopping)                     \
   V(Stopped)
 
-  class Runtime{
+  class Runtime : public ProposalEventListener,
+                  public MinerEventListener,
+                  public ElectionEventListener{
   public:
     enum State{
 #define DEFINE_STATE(Name) k##Name,
@@ -40,7 +45,11 @@ namespace token{
   private:
     uv_loop_t* loop_;
     atomic::RelaxedAtomic<State> state_;
-
+    UUID node_id_;
+    ProposalState proposal_state_;
+    std::vector<ProposalEventListener*> proposal_listeners_;
+    std::vector<MinerEventListener*> miner_listeners_;
+    std::vector<ElectionEventListener*> election_listeners_;
     task::TaskQueue task_queue_;
     task::TaskEngine task_engine_;
 
@@ -49,16 +58,48 @@ namespace token{
     node::Server server_;
 
     BlockMiner miner_;
+    ProposalTimer timer_;
     Proposer proposer_;
     Acceptor acceptor_;
 
     void SetState(const State& state){
       state_ = state;
     }
+  protected:
+    template<class L, typename C>
+    static inline void
+    Propagate(const std::vector<L>& listeners, const char* name, C callback){
+      DVLOG(2) << "invoking the " << name << " callback for " << listeners.size() << " listeners....";
+      std::for_each(listeners.begin(), listeners.end(), callback);
+    }
+
+    DEFINE_PROPOSAL_EVENT_LISTENER;
+    DEFINE_ELECTION_EVENT_LISTENER;
+    DEFINE_MINER_EVENT_LISTENER;
   public:
     explicit Runtime(uv_loop_t* loop=uv_loop_new());
     Runtime(const Runtime& rhs) = delete;
-    ~Runtime() = default;
+    ~Runtime() override = default;
+
+    UUID GetNodeId() const{
+      return node_id_;
+    }
+
+    void AddProposalListener(ProposalEventListener* listener){
+      proposal_listeners_.push_back(listener);
+    }
+
+    void AddMinerListener(MinerEventListener* listener){
+      miner_listeners_.push_back(listener);
+    }
+
+    void AddElectionListener(ElectionEventListener* listener){
+      election_listeners_.push_back(listener);
+    }
+
+    ProposalState& GetProposalState(){
+      return proposal_state_;
+    }
 
     uv_loop_t* loop() const{
       return loop_;
@@ -84,6 +125,10 @@ namespace token{
       return miner_;
     }
 
+    ProposalTimer& GetProposalTimer(){
+      return timer_;
+    }
+
     node::Server& GetServer(){
       return server_;
     }
@@ -94,10 +139,6 @@ namespace token{
 
     task::TaskEngine& GetTaskEngine(){
       return task_engine_;
-    }
-
-    bool StartProposal(){
-      return GetProposer().StartProposal();
     }
 
     bool Run();

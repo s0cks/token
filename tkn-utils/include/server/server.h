@@ -30,7 +30,6 @@ namespace token{
 
   template<class SessionType>
   class ServerBase{
-   public:
     enum State{
 #define DEFINE_STATE(Name) k##Name##State,
       FOR_EACH_SERVER_STATE(DEFINE_STATE)
@@ -90,22 +89,6 @@ namespace token{
 
     static void
     OnMessageReceived(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buff){
-      struct sockaddr_in addr;
-      int nlen = sizeof(addr);
-
-      int err;
-      if((err = uv_tcp_getpeername((uv_tcp_t*)stream, (struct sockaddr*)&addr, &nlen)) != 0){
-        DLOG(WARNING) << "cannot get peer name from client stream: " << uv_strerror(err);
-      } else{
-        char address[16];
-        if((err = uv_inet_ntop(AF_INET, &addr.sin_addr, address, sizeof(address))) != 0){
-          DLOG(WARNING) << "cannot get address from peer name: " << uv_strerror(err);
-        } else{
-          DLOG(INFO) << "reading message from peer: " << address << ":" << ntohs(addr.sin_port);
-        }
-      }
-
-
       auto session = ((SessionType*)stream->data); //TODO: Clean this cast up?
       if(nread == UV_EOF){
         LOG(WARNING) << "client disconnected!";
@@ -121,6 +104,7 @@ namespace token{
         return;
       }
 
+      DLOG(INFO) << "nread: " << nread;
       internal::BufferPtr buffer = internal::CopyBufferFrom((uint8_t *) buff->base, nread);
       session->OnMessageRead(buffer);
     }
@@ -179,13 +163,19 @@ namespace token{
       return (State)state_;
     }
 
-    bool Start(const ServerPort& port){
+    bool Listen(const ServerPort& port){
       DLOG(INFO) << "starting the server....";
       SetState(ServerBase::State::kStartingState);
       VERIFY_UVRESULT2(FATAL, Bind(GetHandle(), port), "cannot bind server");
       VERIFY_UVRESULT2(FATAL, Listen(GetStream(), &OnNewConnection), "listen failure");
       SetState(ServerBase::State::kRunningState);
       DLOG(INFO) << "server listening on port: " << port;
+      return true;
+    }
+
+    bool Start(const ServerPort& port){
+      if(!Listen(port))
+        return false;
       VERIFY_UVRESULT2(FATAL, uv_run(GetLoop(), UV_RUN_DEFAULT), "failed to run server loop");
       return true;
     }

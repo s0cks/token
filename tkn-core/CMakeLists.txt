@@ -30,7 +30,7 @@ add_library(tkn-core STATIC
     include/block_header.h src/block_header.cc
     include/object.h
     include/proposal.h
-        include/transaction.h
+    include/transaction.h
     include/transaction_indexed.h src/transaction_indexed.cc
     include/transaction_input.h src/transaction_input.cc
     include/transaction_output.h src/transaction_output.cc

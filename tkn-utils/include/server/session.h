@@ -38,6 +38,12 @@ namespace token{
         buffer(internal::NewBuffer(size)){
         request.data = this;
       }
+      SessionWriteData(SessionBase* s, const internal::BufferPtr& data):
+        request(),
+        session(s),
+        buffer(data){
+        request.data = this;
+      }
     };
    public:
     enum State{
@@ -133,6 +139,15 @@ namespace token{
       return (uv_stream_t*)&handle_;
     }
 
+    void SendMessage(const std::shared_ptr<MessageBase>& msg){
+      auto data = msg->ToBuffer();
+      auto write = new SessionWriteData(this, data);
+      uv_buf_t buffer;
+      buffer.base = (char*)write->buffer->data();
+      buffer.len = static_cast<size_t>(write->buffer->GetWritePosition());
+      uv_write(&write->request, GetStream(), &buffer, 1, &OnMessageSent);
+    }
+
     virtual void SendMessages(const std::vector<std::shared_ptr<MessageBase>>& messages){
       size_t total_messages = messages.size();
       if(total_messages <= 0){
@@ -144,6 +159,7 @@ namespace token{
       std::for_each(messages.begin(), messages.end(), [&total_size](const std::shared_ptr<MessageBase>& msg){
         total_size += msg->GetBufferSize();
       });
+      DLOG(INFO) << "total write size: " << total_size;
 
       DVLOG_SESSION(2, this) << "sending " << total_messages << " messages....";
       auto data = new SessionWriteData(this, total_size);
@@ -157,10 +173,14 @@ namespace token{
         auto msg_buff = msg->ToBuffer();
         data->buffer->PutBytes(msg_buff);
 
-        uint64_t msg_size = msg->GetBufferSize();
+        DLOG(INFO) << "msize: " << msize;
+        DLOG(INFO) << "buffer length: " << msg_buff->length();
+        DLOG(INFO) << "buffer write pos: " << msg_buff->GetWritePosition();
+        DLOG(INFO) << "offset: " << offset;
+
         buffers[idx].base = (char*)&data->buffer->data()[offset];
-        buffers[idx].len = msg_size;
-        offset += msg_size;
+        buffers[idx].len = msize;
+        offset += msize;
       }
       uv_write(&data->request, GetStream(), buffers, total_messages, &OnMessageSent);
     }

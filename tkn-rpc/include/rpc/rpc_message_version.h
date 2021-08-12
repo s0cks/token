@@ -8,11 +8,13 @@
 
 namespace token{
   namespace rpc{
-  class VersionMessage : public HandshakeMessage<internal::proto::rpc::VersionMessage>{
+    typedef internal::proto::rpc::VersionMessage RawVersionMessage;
+
+  class VersionMessage : public HandshakeMessage<RawVersionMessage>{
     public:
       class Builder : public HandshakeMessageBuilderBase<VersionMessage>{
       public:
-        explicit Builder(internal::proto::rpc::VersionMessage* raw):
+        explicit Builder(RawVersionMessage* raw):
           HandshakeMessageBuilderBase<VersionMessage>(raw){}
         Builder() = default;
         ~Builder() override = default;
@@ -23,8 +25,12 @@ namespace token{
       };
      public:
       VersionMessage() = default;
-      explicit VersionMessage(internal::proto::rpc::VersionMessage raw):
-        HandshakeMessage<internal::proto::rpc::VersionMessage>(std::move(raw)){}
+      VersionMessage(const Timestamp& timestamp, const ClientType& type, const Version& version, const Hash& nonce, const UUID& node_id):
+        HandshakeMessage<RawVersionMessage>(timestamp, type, version, nonce, node_id){}
+      explicit VersionMessage(RawVersionMessage raw):
+        HandshakeMessage<RawVersionMessage>(std::move(raw)){}
+      explicit VersionMessage(const internal::BufferPtr& data, const uint64_t& msize):
+        HandshakeMessage<RawVersionMessage>(data, msize){}
       ~VersionMessage() override = default;
 
       Type type() const override{
@@ -32,8 +38,15 @@ namespace token{
       }
 
       std::string ToString() const override{
-        NOT_IMPLEMENTED(ERROR);//TODO: implement
-        return "VersionMessage()";
+        std::stringstream ss;
+        ss << "VersionMessage(";
+        ss << "timestamp=" << FormatTimestampReadable(timestamp()) << ", ";
+        ss << "client_type=" << client_type() << ", ";
+        ss << "version=" << version() << ", ";
+        ss << "nonce=" << nonce() << ", ";
+        ss << "node_id=" << node_id();
+        ss << ")";
+        return ss.str();
       }
 
       VersionMessage& operator=(const VersionMessage& other) = default;
@@ -44,21 +57,18 @@ namespace token{
 
       static inline VersionMessagePtr
       NewInstance(const Timestamp&  timestamp, const ClientType& client_type, const Version& version, const Hash& nonce, const UUID& node_id){
-        internal::proto::rpc::VersionMessage raw;
-
-        Builder builder(&raw);
+        Builder builder;
         builder.SetTimestamp(timestamp);
         builder.SetClientType(client_type);
-        //TODO: builder.SetVersion(version);
-        //TODO: builder.SetNonce(nonce);
-        //TODO: builder.SetNodeId(node_id);
-
+        builder.SetVersion(version);
+        builder.SetNonce(nonce);
+        builder.SetNodeId(node_id);
         return builder.Build();
       }
 
       static inline VersionMessagePtr
-      Decode(const BufferPtr& data, const codec::DecoderHints& hints=codec::kDefaultDecoderHints){
-        return nullptr;
+      Decode(const BufferPtr& data, const uint64_t& msize){
+        return std::make_shared<VersionMessage>(data, msize);
       }
     };
   }

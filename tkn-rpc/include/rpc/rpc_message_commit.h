@@ -10,8 +10,8 @@ namespace token{
       CommitMessage() = default;
       explicit CommitMessage(RawProposal raw):
         PaxosMessage(std::move(raw)){}
-      explicit CommitMessage(const BufferPtr& data):
-        PaxosMessage(data){}
+      explicit CommitMessage(const BufferPtr& data, const uint64_t& msize):
+        PaxosMessage(data, msize){}
       ~CommitMessage() override = default;
 
       Type type() const override{
@@ -38,8 +38,8 @@ namespace token{
       }
 
       static inline CommitMessagePtr
-      Decode(const internal::BufferPtr& data){
-        return std::make_shared<CommitMessage>(data);
+      Decode(const internal::BufferPtr& data, const uint64_t& msize){
+        return std::make_shared<CommitMessage>(data, msize);
       }
     };
 

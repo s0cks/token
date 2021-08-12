@@ -30,7 +30,7 @@ namespace token{
         return server_;
       }
 
-      void OnMessageRead(const internal::BufferPtr& data){
+      void OnMessageRead(internal::BufferPtr& data){
         HandleMessages(data, handler());
       }
 

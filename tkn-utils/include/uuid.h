@@ -25,12 +25,22 @@ namespace token{
       data_(){
       memset(data_, 0, internal::kMaxUUIDLength);
     }
+    explicit UUID(bool time_safe)://TODO: remove/refactor
+      UUID(){
+      if(time_safe){
+        uuid_generate_time_safe((unsigned char*)data_);
+      } else{
+        uuid_generate((unsigned char*)data_);
+      }
+    }
     UUID(const uint8_t* data, const size_t& size):
       UUID(){
       memcpy(data_, data, std::min(size, internal::kMaxUUIDLength));
     }
     explicit UUID(const std::string& data):
-      UUID((uint8_t*)data.data(), data.length()){}
+      UUID(){
+      uuid_parse(data.data(), (unsigned char*)data_);
+    }
     explicit UUID(const leveldb::Slice& data):
       UUID((uint8_t*)data.data(), data.size()){}
     UUID(const UUID& other) = default;

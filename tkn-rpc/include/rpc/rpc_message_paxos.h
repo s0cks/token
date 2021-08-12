@@ -52,8 +52,8 @@ namespace token{
       PaxosMessage() = default;
       explicit PaxosMessage(RawProposal raw):
         RawMessage<RawProposal>(std::move(raw)){}
-      explicit PaxosMessage(const BufferPtr& data):
-        RawMessage<RawProposal>(data){}
+      explicit PaxosMessage(const BufferPtr& data, const uint64_t& msize):
+        RawMessage<RawProposal>(data, msize){}
      public:
       ~PaxosMessage() override = default;
 
