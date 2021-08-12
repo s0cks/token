@@ -99,7 +99,7 @@ namespace token{
     }
   }
 
-  void Acceptor::HandleOnElectionStart(){
+  void Acceptor::HandleOnElectionStart(){//TODO: cleanup function
     auto& state = GetRuntime()->GetProposalState();
     auto node_id = GetRuntime()->GetNodeId();
     auto phase = state.GetPhase();

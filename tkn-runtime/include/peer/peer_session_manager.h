@@ -62,7 +62,7 @@ namespace token{
     static bool IsConnectedTo(const UUID& uuid);
     static bool IsConnectedTo(const utils::Address& address);
     static bool GetConnectedPeers(std::set<UUID>& peers);
-    static int32_t GetNumberOfConnectedPeers();
+    static uint32_t GetNumberOfConnectedPeers();
 
     static void BroadcastPrepare();
     static void BroadcastPromise();
@@ -70,6 +70,9 @@ namespace token{
     static void BroadcastDiscovered();
     static void BroadcastAccepted();
     static void BroadcastRejected();
+
+    static void OnPeerConnected(const UUID& node_id);//TODO: refactor
+    static void OnPeerDisconnected(const UUID& node_id);//TODO: refactor
 
     static inline bool
     HasConnectedPeers(){

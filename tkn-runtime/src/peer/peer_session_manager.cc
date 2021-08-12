@@ -12,6 +12,7 @@ namespace token{
   static PeerSessionThread** threads_;
   static ConnectionRequestQueue queue_(TOKEN_CONNECTION_QUEUE_SIZE);
   static std::map<ThreadId, ConnectionRequestQueue*> queues_;
+  static atomic::RelaxedAtomic<uint32_t> npeers_(0);
 
   PeerSessionManager::State PeerSessionManager::GetState(){
     return (State)state_;
@@ -95,13 +96,18 @@ namespace token{
     return true;
   }
 
-  int32_t PeerSessionManager::GetNumberOfConnectedPeers(){
-    int32_t count = 0;
-    FOR_EACH_WORKER(thread)
-      if (thread->IsConnected())
-        count++;
-    END_FOR_EACH_WORKER
-    return count;
+  uint32_t PeerSessionManager::GetNumberOfConnectedPeers(){
+    return (uint32_t)npeers_;
+  }
+
+  void PeerSessionManager::OnPeerConnected(const UUID& node_id){
+    DLOG(INFO) << "(" << node_id << ") peer connected!";
+    npeers_ += 1;
+  }
+
+  void PeerSessionManager::OnPeerDisconnected(const UUID& node_id){
+    DLOG(INFO) << "(" << node_id << ") peer disconnected!";
+    npeers_ -= 1;
   }
 
   bool PeerSessionManager::ConnectTo(const utils::Address& address){

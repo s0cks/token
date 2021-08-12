@@ -11,6 +11,7 @@ namespace token{
 
     void SessionMessageHandler::OnVerackMessage(const rpc::VerackMessagePtr& msg){
       DLOG(INFO) << "connected!";//TODO: fix logging
+      PeerSessionManager::OnPeerConnected(GetSession()->GetUUID());
     }
 
     void SessionMessageHandler::OnPrepareMessage(const rpc::PrepareMessagePtr& msg){

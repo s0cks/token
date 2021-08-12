@@ -66,6 +66,7 @@ namespace token{
 
     void Session::OnDisconnect(uv_async_t* handle){
       auto session = (Session*)handle->data;
+      PeerSessionManager::OnPeerDisconnected(session->GetUUID());
       session->CloseConnection();
     }
 
