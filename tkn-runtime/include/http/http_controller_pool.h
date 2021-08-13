@@ -6,9 +6,6 @@
 
 namespace token{
   namespace http{
-    class PoolController;
-    typedef std::shared_ptr<PoolController> PoolControllerPtr;
-
 #define FOR_EACH_POOL_CONTROLLER_ENDPOINT(V) \
   V(GET, "/pool/stats", GetPoolInfo)               \
   V(GET, "/pool/blocks/data/:hash", GetBlock)     \
@@ -18,8 +15,7 @@ namespace token{
   V(GET, "/pool/data/unclaimed_transactions/:hash", GetUnclaimedTransaction)     \
   V(GET, "/pool/unclaimed_transactions", GetUnclaimedTransactions)
 
-    class PoolController : public Controller,
-                           public std::enable_shared_from_this<PoolController>{
+    class PoolController : public Controller{
      protected:
       ObjectPool& pool_;
 
@@ -45,11 +41,6 @@ namespace token{
         FOR_EACH_POOL_CONTROLLER_ENDPOINT(REGISTER_ENDPOINT)
 #undef REGISTER_ENDPOINT
         return true;
-      }
-
-      static inline PoolControllerPtr
-      NewInstance(ObjectPool& pool){
-        return std::make_shared<PoolController>(pool);
       }
     };
   }

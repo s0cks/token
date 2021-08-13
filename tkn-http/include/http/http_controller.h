@@ -17,28 +17,28 @@ namespace token{
   }
 
 #define HTTP_CONTROLLER_ENDPOINT(Endpoint) \
-  static void Handle##Endpoint(const ControllerPtr&, http::Session*, const RequestPtr&); \
+  static void Handle##Endpoint(Controller*, http::Session*, const RequestPtr&); \
   virtual void On##Endpoint(http::Session*, const RequestPtr& request);
 
-#define HTTP_CONTROLLER_ROUTE_HANDLER(Controller, Name) \
-  void Controller::Handle##Name(const ControllerPtr& instance, http::Session* session, const RequestPtr& request){ \
-    return std::static_pointer_cast<Controller>(instance)->On##Name(session, request);                                \
+#define HTTP_CONTROLLER_ROUTE_HANDLER(Owner, Name) \
+  void Owner::Handle##Name(Controller* instance, http::Session* session, const RequestPtr& request){ \
+    return dynamic_cast<Owner*>(instance)->On##Name(session, request);                                      \
   }
 
-#define HTTP_CONTROLLER_ENDPOINT_HANDLER(Controller, Name) \
-  void Controller::On##Name(http::Session* session, const RequestPtr& request)
+#define HTTP_CONTROLLER_ENDPOINT_HANDLER(Owner, Name) \
+  void Owner::On##Name(http::Session* session, const RequestPtr& request)
 
 #define HTTP_CONTROLLER_GET(Path, Name) \
-    router.Get(shared_from_this(), Path, &Handle##Name)
+    router.Get(this, Path, &Handle##Name)
 
 #define HTTP_CONTROLLER_PUT(Path, Name) \
-    router.Put(shared_from_this(), Path, &Handle##Name)
+    router.Put(this, Path, &Handle##Name)
 
 #define HTTP_CONTROLLER_POST(Path, Name) \
-    router.Post(shared_from_this(), Path, &Handle##Name)
+    router.Post(this, Path, &Handle##Name)
 
 #define HTTP_CONTROLLER_DELETE(Path, Name) \
-    router.Delete(shared_from_this(), Path, &Handle##Name)
+    router.Delete(this, Path, &Handle##Name)
 }
 
 #endif //TOKEN_CONTROLLER_H

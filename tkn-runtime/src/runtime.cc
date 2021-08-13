@@ -17,7 +17,9 @@ namespace token{
     proposer_(this),
     acceptor_(this),
     pool_(FLAGS_path + "/pool"),
-    server_(this){
+    server_(this),
+    service_rest_(this),
+    service_health_(this){
     task_engine_.RegisterQueue(task_queue_);
     events_.Subscribe("on-test", &on_test_);
   }
@@ -27,6 +29,10 @@ namespace token{
     if(IsMiningEnabled() && !GetBlockMiner().StartTimer())
       return false;//TODO: better error handling
     if(IsServerEnabled() && !GetServer().Listen(FLAGS_server_port))
+      return false;//TODO: better error handling
+    if(IsRestServiceEnabled() && !GetRestService().Listen(FLAGS_service_port))
+      return false;//TODO: better error handling
+    if(IsHealthServiceEnabled() && !GetHealthService().Listen(FLAGS_healthcheck_port))
       return false;//TODO: better error handling
     proposal_state_.SubscribeTo(events_);
     VERIFY_UVRESULT2(FATAL, uv_run(loop(), UV_RUN_DEFAULT), "cannot run main loop");

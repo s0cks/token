@@ -12,8 +12,7 @@ namespace token{
     V(GET, "/ready", GetReadyStatus)           \
     V(GET, "/live", GetLiveStatus)
 
-    class HealthController : public Controller,
-                             public std::enable_shared_from_this<HealthController>{
+    class HealthController : public Controller{
      public:
       HealthController() = default;
       ~HealthController() override = default;

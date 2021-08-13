@@ -8,14 +8,14 @@
 
 namespace token{
   namespace http{
+    class Controller;
     typedef std::unordered_map<std::string, std::string> ParameterMap;
-
-    typedef void (*RouteHandlerFunction)(const ControllerPtr&, http::Session*, const RequestPtr&);
+    typedef void (*RouteHandlerFunction)(Controller*, http::Session*, const RequestPtr&);
 
     class Route{
       friend class Router;
      private:
-      ControllerPtr controller_;
+      Controller* controller_;
 
       std::string path_;
       Method method_;
@@ -26,7 +26,7 @@ namespace token{
         path_(),
         method_(),
         handler_(){}
-      Route(const ControllerPtr& controller, std::string path, const Method& method, RouteHandlerFunction handler):
+      Route(Controller* controller, std::string path, const Method& method, RouteHandlerFunction handler):
         controller_(controller),
         path_(std::move(path)),
         method_(method),
@@ -34,7 +34,7 @@ namespace token{
       Route(const Route& route) = default;
       ~Route() = default;
 
-      ControllerPtr GetController() const{
+      Controller* GetController() const{
         return controller_;
       }
 
@@ -203,7 +203,7 @@ namespace token{
       public:
         explicit PathParameterNode(const Route& route):
           Node(':', route){}
-        PathParameterNode(const ControllerPtr& controller, const std::string& path, const Method& method, const RouteHandlerFunction& handler):
+        PathParameterNode(Controller* controller, const std::string& path, const Method& method, const RouteHandlerFunction& handler):
           PathParameterNode(Route(controller, path, method, handler)){}
         ~PathParameterNode() override = default;
 
@@ -214,7 +214,7 @@ namespace token{
 
       static inline bool
       Insert(Node* node,
-          const ControllerPtr& owner,
+          Controller* owner,
           const Method& method,
           const std::string& path,
           const RouteHandlerFunction& handler){
@@ -312,19 +312,19 @@ namespace token{
       Router() = default;
       ~Router() = default;
 
-      void Get(const ControllerPtr& owner, const std::string& path, const RouteHandlerFunction& handler){
+      void Get(Controller* owner, const std::string& path, const RouteHandlerFunction& handler){
         Insert((Node*)GetRoot(), owner, Method::kGet, path, handler);
       }
 
-      void Put(const ControllerPtr& owner, const std::string& path, const RouteHandlerFunction& handler){
+      void Put(Controller* owner, const std::string& path, const RouteHandlerFunction& handler){
         Insert((Node*)GetRoot(), owner, Method::kPut, path, handler);
       }
 
-      void Post(const ControllerPtr& owner, const std::string& path, const RouteHandlerFunction& handler){
+      void Post(Controller* owner, const std::string& path, const RouteHandlerFunction& handler){
         Insert((Node*)GetRoot(), owner, Method::kPost, path, handler);
       }
 
-      void Delete(const ControllerPtr& owner, const std::string& path, const RouteHandlerFunction& handler){
+      void Delete(Controller* owner, const std::string& path, const RouteHandlerFunction& handler){
         Insert((Node*)GetRoot(), owner, Method::kDelete, path, handler);
       }
 
