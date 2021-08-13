@@ -11,7 +11,7 @@ namespace token{
 
 #define FOR_EACH_POOL_CONTROLLER_ENDPOINT(V) \
   V(GET, "/pool/stats", GetPoolInfo)               \
-  V(GET, "/pool/data/blocks/:hash", GetBlock)     \
+  V(GET, "/pool/blocks/data/:hash", GetBlock)     \
   V(GET, "/pool/blocks", GetAllBlocks)          \
   V(GET, "/pool/data/transactions/:hash", GetTransaction) \
   V(GET, "/pool/transactions", GetTransactions)      \
@@ -30,8 +30,8 @@ namespace token{
 #undef DECLARE_ENDPOINT
      public:
       explicit PoolController(ObjectPool& pool):
-          Controller(),
-          pool_(pool){}
+        Controller(),
+        pool_(pool){}
       ~PoolController() override = default;
 
       ObjectPool& GetPool(){

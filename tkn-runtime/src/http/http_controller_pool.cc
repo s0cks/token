@@ -12,7 +12,6 @@ namespace token{
 
     HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetBlock){
       Hash hash = request->GetHashParameterValue();
-      DLOG(INFO) << "searching for " << hash << " (Block)....";
       if(!GetPool().HasBlock(hash))
         return session->Send(NewNoContentResponse(hash));
       BlockPtr blk = GetPool().GetBlock(hash);
@@ -20,8 +19,6 @@ namespace token{
     }
 
     HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetAllBlocks){
-      DLOG(INFO) << "handling /pool/blocks...";
-
       json::String body;
       json::Writer writer(body);
       if(!GetPool().GetBlocks(writer))
