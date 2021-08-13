@@ -22,6 +22,31 @@ namespace token{
   V(Stopping)                     \
   V(Stopped)
 
+  class Runtime;
+  struct RuntimeInfo{
+    std::string filename;
+
+    explicit RuntimeInfo(Runtime* runtime);
+    ~RuntimeInfo() = default;
+  };
+
+  namespace json{
+    static inline bool
+    Write(Writer& writer, const RuntimeInfo& info){
+      JSON_START_OBJECT(writer);
+      if(!SetField(writer, "home", info.filename))
+        return false;
+      JSON_END_OBJECT(writer);
+      return true;
+    }
+
+    static inline bool
+    SetField(Writer& writer, const char* name, const RuntimeInfo& info){
+      JSON_KEY(writer, name);
+      return Write(writer, info);
+    }
+  }
+
   class Runtime : public TestEventListener{
   public:
     enum State{

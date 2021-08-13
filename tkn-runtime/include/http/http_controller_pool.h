@@ -22,12 +22,6 @@ namespace token{
                            public std::enable_shared_from_this<PoolController>{
      protected:
       ObjectPool& pool_;
-
-#define DECLARE_ENDPOINT(Method, Path, Name) \
-    HTTP_CONTROLLER_ENDPOINT(Name)
-
-      FOR_EACH_POOL_CONTROLLER_ENDPOINT(DECLARE_ENDPOINT)
-#undef DECLARE_ENDPOINT
      public:
       explicit PoolController(ObjectPool& pool):
         Controller(),
@@ -38,19 +32,12 @@ namespace token{
         return pool_;
       }
 
-      bool Initialize(Router& router) override{
-#define REGISTER_ENDPOINT(Method, Path, Name) \
-      HTTP_CONTROLLER_##Method(Path, Name);
-
-        FOR_EACH_POOL_CONTROLLER_ENDPOINT(REGISTER_ENDPOINT)
-#undef REGISTER_ENDPOINT
-        return true;
-      }
-
       static inline PoolControllerPtr
       NewInstance(ObjectPool& pool){
         return std::make_shared<PoolController>(pool);
       }
+
+      DECLARE_HTTP_CONTROLLER(PoolController, FOR_EACH_POOL_CONTROLLER_ENDPOINT);
     };
   }
 }

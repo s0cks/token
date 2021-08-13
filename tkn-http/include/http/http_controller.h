@@ -8,37 +8,43 @@
 namespace token{
   namespace http{
     class Controller{
-     protected:
+    protected:
       Controller() = default;
-     public:
+    public:
       virtual ~Controller() = default;
       virtual bool Initialize(Router& router) = 0;
     };
   }
-
 #define HTTP_CONTROLLER_ENDPOINT(Endpoint) \
   static void Handle##Endpoint(const ControllerPtr&, http::Session*, const RequestPtr&); \
   virtual void On##Endpoint(http::Session*, const RequestPtr& request);
-
 #define HTTP_CONTROLLER_ROUTE_HANDLER(Controller, Name) \
   void Controller::Handle##Name(const ControllerPtr& instance, http::Session* session, const RequestPtr& request){ \
     return std::static_pointer_cast<Controller>(instance)->On##Name(session, request);                                \
   }
-
 #define HTTP_CONTROLLER_ENDPOINT_HANDLER(Controller, Name) \
   void Controller::On##Name(http::Session* session, const RequestPtr& request)
-
 #define HTTP_CONTROLLER_GET(Path, Name) \
     router.Get(shared_from_this(), Path, &Handle##Name)
-
 #define HTTP_CONTROLLER_PUT(Path, Name) \
     router.Put(shared_from_this(), Path, &Handle##Name)
-
 #define HTTP_CONTROLLER_POST(Path, Name) \
     router.Post(shared_from_this(), Path, &Handle##Name)
-
 #define HTTP_CONTROLLER_DELETE(Path, Name) \
     router.Delete(shared_from_this(), Path, &Handle##Name)
+#define REGISTER_HTTP_ENDPOINT(Method, Path, Name) \
+    HTTP_CONTROLLER_##Method(Path, Name);
+#define DECLARE_HTTP_CONTROLLER_ENDPOINT(Method, Path, Name) \
+    HTTP_CONTROLLER_ENDPOINT(Name)
+
+#define DECLARE_HTTP_CONTROLLER(Name, V) \
+  public:                                \
+    bool Initialize(Router& router) override{     \
+      V(REGISTER_HTTP_ENDPOINT)          \
+      return true;                       \
+    }                                    \
+  protected:                             \
+    V(DECLARE_HTTP_CONTROLLER_ENDPOINT)
 }
 
 #endif //TOKEN_CONTROLLER_H

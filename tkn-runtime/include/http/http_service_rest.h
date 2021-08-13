@@ -6,19 +6,17 @@
 #include "http/http_controller_pool.h"
 
 namespace token{
+  class Runtime;
   namespace http{
-    class RestService;
-    typedef std::shared_ptr<RestService> RestServicePtr;
-
     class RestService : public ServiceBase{
      private:
-      PoolControllerPtr pool_;
+      PoolController controller_pool_;
      public:
-      RestService(uv_loop_t* loop, ObjectPool& pool);
+      RestService(Runtime* runtime);
       ~RestService() override = default;
 
-      PoolControllerPtr GetPoolController() const{
-        return pool_;
+      PoolController& GetPoolController(){
+        return controller_pool_;
       }
 
       static inline bool
@@ -35,8 +33,6 @@ namespace token{
       GetName(){
         return "http/rest";
       }
-
-      static RestServicePtr NewInstance(uv_loop_t* loop, ObjectPool& pool);
     };
 
     class RestServiceThread : public ServiceThread<RestService>{};

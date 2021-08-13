@@ -42,10 +42,9 @@ add_executable(tkn-runtime
 
   include/http/http_controller_health.h src/http/http_controller_health.cc
   include/http/http_service_health.h src/http/http_service_health.cc
-
+  include/http/http_controller_info.h src/http/http_controller_info.cc
   include/http/http_controller_pool.h src/http/http_controller_pool.cc
   include/http/http_service_rest.h src/http/http_service_rest.cc
-
   include/node/node_session_message_handler.h src/node/node_session_message_handler.cc
   include/node/node_session.h src/node/node_session.cc
   include/node/node_server.h src/node/node_server.cc

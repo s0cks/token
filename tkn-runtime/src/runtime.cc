@@ -2,6 +2,9 @@
 #include "runtime.h"
 
 namespace token{
+  RuntimeInfo::RuntimeInfo(Runtime* runtime):
+    filename(FLAGS_path){}
+
   Runtime::Runtime(uv_loop_t* loop):
     TestEventListener(loop),
     node_id_(true),
