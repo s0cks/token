@@ -58,7 +58,7 @@ add_executable(tkn-runtime
 
   include/tasks/task_batch_write.h
 
-  include/configuration.h src/configuration.cc
+  include/config.h src/config.cc
   include/flags.h src/flags.cc
   include/miner.h src/miner.cc
   include/miner_listener.h

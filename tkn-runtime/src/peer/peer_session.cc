@@ -1,6 +1,6 @@
 #include "env.h"
 #include "runtime.h"
-#include "configuration.h"
+#include "config.h"
 #include "rpc/rpc_messages.h"
 #include "peer/peer_session.h"
 

@@ -1,6 +1,6 @@
 #include "json.h"
 #include "flags.h"
-#include "configuration.h"
+#include "config.h"
 
 #include "peer/peer.h"
 #include "peer/peer_session_thread.h"

@@ -5,6 +5,7 @@
 
 #include "pool.h"
 #include "miner.h"
+#include "config.h"
 #include "eventbus.h"
 #include "miner_listener.h"
 #include "node/node_server.h"
@@ -44,6 +45,7 @@ namespace token{
   private:
     uv_loop_t* loop_;
     atomic::RelaxedAtomic<State> state_;
+    Configuration config_;
     EventBus events_;
     task::TaskQueue task_queue_;
     task::TaskEngine task_engine_;
@@ -67,6 +69,10 @@ namespace token{
     explicit Runtime(uv_loop_t* loop=uv_loop_new());
     Runtime(const Runtime& rhs) = delete;
     ~Runtime() override = default;
+
+    Configuration& GetConfig(){
+      return config_;
+    }
 
     UUID GetNodeId() const{
       return node_id_;

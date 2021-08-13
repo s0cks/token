@@ -1,5 +1,5 @@
 #include "flags.h"
-#include "configuration.h"
+#include "config.h"
 
 #include "pool.h"
 #include "runtime.h"
@@ -199,9 +199,6 @@ main(int argc, char **argv){
       return EXIT_FAILURE;
     }
   }
-
-  // initialize the configuration
-  config::Initialize(FLAGS_path);
 
   Runtime runtime;
 

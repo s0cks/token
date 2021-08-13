@@ -5,6 +5,7 @@ namespace token{
   Runtime::Runtime(uv_loop_t* loop):
     TestEventListener(loop),
     node_id_(true),
+    config_(FLAGS_path + "/config"),
     events_(),
     loop_(loop),
     state_(State::kStopped),
