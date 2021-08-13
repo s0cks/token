@@ -136,6 +136,58 @@ namespace token{
   };
 
   class ObjectPool{
+  private:
+    static inline leveldb::Status
+    DeleteObject(leveldb::DB* storage, const Type& type, const Hash& k){
+      leveldb::WriteOptions options;
+      options.sync = true;
+
+      ObjectKey key(type, k);
+      return storage->Delete(options, (const leveldb::Slice&)key);
+    }
+
+    static inline void
+    DeleteObject(leveldb::WriteBatch* batch, const Type& type, const Hash& k){
+      ObjectKey key(type, k);
+      return batch->Delete((const leveldb::Slice&)key);
+    }
+
+    template<class T>
+    static inline leveldb::Status
+    PutObject(leveldb::DB* storage, const Type& type, const Hash& key, const std::shared_ptr<T>& val){
+      leveldb::WriteOptions options;
+      options.sync = true;
+
+      ObjectKey k(type, key);
+      auto data = val->ToBuffer();
+      auto slice = data->AsSlice();
+      return storage->Put(options, (const leveldb::Slice&)k, slice);
+    }
+
+    template<class T>
+    static inline void
+    PutObject(leveldb::WriteBatch* batch, const Type& type, const Hash& k, const std::shared_ptr<T>& v){
+      ObjectKey key(type, k);
+      auto value = v->ToBuffer();
+      return batch->Put((const leveldb::Slice&)key, value->AsSlice());
+    }
+
+    static inline leveldb::Status
+    HasObject(leveldb::DB* storage, const Type& type, const Hash& k){
+      leveldb::ReadOptions options;
+
+      ObjectKey key(type, k);
+
+      std::string data;
+      return storage->Get(options, (const leveldb::Slice&)key, &data);
+    }
+
+    static inline leveldb::Status
+    GetObject(leveldb::DB* storage, const Type& type, const Hash& k, std::string* result){
+      leveldb::ReadOptions options;
+      ObjectKey key(type, k);
+      return storage->Get(options, (const leveldb::Slice&)key, result);
+    }
    public:
     enum State{
 #define DEFINE_STATE(Name) k##Name,
@@ -172,9 +224,52 @@ namespace token{
       void FindShortestSeparator(std::string* str, const leveldb::Slice& slice) const override{}
       void FindShortSuccessor(std::string* str) const override {}
     };
+
+#define DEFINE_PUT_OBJECT(Name) \
+    template<class T>           \
+    static inline leveldb::Status \
+    Put##Name##Object(leveldb::DB* storage, const Hash& k, const std::shared_ptr<T>& val){ \
+      return PutObject(storage, Type::k##Name, k, val); \
+    }                           \
+    template<class T>\
+    static inline void          \
+    Put##Name##Object(leveldb::WriteBatch* batch, const Hash& k, const std::shared_ptr<T>& val){ \
+      return PutObject(batch, Type::k##Name, k, val);                            \
+    }
+    FOR_EACH_POOL_TYPE(DEFINE_PUT_OBJECT)
+#undef DEFINE_PUT_OBJECT
+
+#define DEFINE_DELETE_OBJECT(Name) \
+    static inline leveldb::Status \
+    Delete##Name##Object(leveldb::DB* storage, const Hash& k){ \
+      return DeleteObject(storage, Type::k##Name, k);          \
+    }                       \
+    static inline void      \
+    Delete##Name##Object(leveldb::WriteBatch* batch, const Hash& k){                                                                           \
+      return DeleteObject(batch, Type::k##Name, k);                                                                                            \
+    }
+    FOR_EACH_POOL_TYPE(DEFINE_DELETE_OBJECT)
+#undef DEFINE_DELETE
+
+#define DEFINE_HAS_OBJECT(Name) \
+    static inline leveldb::Status \
+    Has##Name##Object(leveldb::DB* storage, const Hash& k){ \
+      return HasObject(storage, Type::k##Name, k);          \
+    }
+    FOR_EACH_POOL_TYPE(DEFINE_HAS_OBJECT)
+#undef DEFINE_HAS_OBJECT
+
+#define DEFINE_GET_OBJECT(Name) \
+    static inline leveldb::Status \
+    Get##Name##Object(leveldb::DB* storage, const Hash& k, std::string* result){ \
+      return GetObject(storage, Type::k##Name, k, result);          \
+    }
+    FOR_EACH_POOL_TYPE(DEFINE_GET_OBJECT)
+#undef DEFINE_GET_OBJECT
    protected:
     atomic::RelaxedAtomic<State> state_;
     leveldb::DB* index_;
+    std::string filename_;
 
     void SetState(const State& state){
       state_ = state;
@@ -188,29 +283,12 @@ namespace token{
     leveldb::Status InitializeIndex(const std::string& filename);
 
     template<class T>
-    inline leveldb::Status
-    PutType(const Hash& hash, const std::shared_ptr<T>& val) const{
-      leveldb::WriteOptions options;
-      options.sync = true;
-
-      ObjectKey key(val->type(), hash);
-      auto data = val->ToBuffer();
-      return GetIndex()->Put(options, (const leveldb::Slice&)key, data->AsSlice());
-    }
-
-    inline leveldb::Status
-    GetType(const Type& type, const Hash& hash, std::string& value) const{
-      ObjectKey key(type, hash);
-      return GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &value);
-    }
-
-    template<class T>
     inline std::shared_ptr<T>
     GetTypeSafely(const Type& type, const Hash& hash) const{
       std::string value;
 
       leveldb::Status status;
-      if(!(status = GetType(type, hash, value)).ok()){
+      if(!(status = GetObject(GetIndex(), type, hash, &value)).ok()){
         if(status.IsNotFound()){
           DLOG(WARNING) << "cannot find " << hash << " (" << type << "): " << status.ToString();
           return nullptr;
@@ -226,35 +304,41 @@ namespace token{
     explicit ObjectPool(const std::string& filename);
     virtual ~ObjectPool() = default;
 
-    /**
-     * Returns the State of the ObjectPool.
-     * @see State
-     * @return The State of the ObjectPool
-     */
+    std::string GetFilename() const{
+      return filename_;
+    }
+
     State GetState() const{
       return (State)state_;
     }
 
-    /**
-     * Creates the following pool functions for each pool type:
-     *  - WaitFor<Type>(const Hash& hash, const int64_t timeout_ms) *Deprecated*
-     *  - Put<Type>(const Hash& hash, const <Type>Ptr& val);
-     *  - Get<Type>(Json::Writer& writer);
-     *  - Has<Type>(const Hash& hash);
-     *  - Remove<Type>(const Hash& hash);
-     *  - Visit<Type>s(ObjectPoolVisitor* vis);
-     *  - <Type>Ptr Get<Type>(const Hash& hash);
-     *  - int64_t GetNumberOf<Type>s();
-     */
+#define DECLARE_GET_POOL_OBJECT(Name) \
+    virtual std::shared_ptr<Name> Get##Name(const Hash& k) const;
+#define DECLARE_PUT_POOL_OBJECT(Name) \
+    virtual bool Put##Name(const Hash& k, const std::shared_ptr<Name>& val) const;
+#define DECLARE_HAS_POOL_OBJECT(Name) \
+    virtual bool Has##Name(const Hash& k) const;
+#define DECLARE_REMOVE_POOL_OBJECT(Name) \
+    virtual bool Remove##Name(const Hash& k) const;
+
+#define DECLARE_POOL_TYPE_METHODS(Name) \
+    DECLARE_GET_POOL_OBJECT(Name)       \
+    DECLARE_PUT_POOL_OBJECT(Name)       \
+    DECLARE_HAS_POOL_OBJECT(Name)       \
+    DECLARE_REMOVE_POOL_OBJECT(Name)
+
+    FOR_EACH_POOL_TYPE(DECLARE_POOL_TYPE_METHODS)
+#undef DECLARE_POOL_TYPE_METHODS
+#undef DECLARE_REMOTE_POOL_OBJECT
+#undef DECLARE_HAS_POOL_OBJECT
+#undef DECLARE_GET_POOL_OBJECT
+#undef DECLARE_PUT_POOL_OBJECT
+
 #define DEFINE_TYPE_METHODS(Name) \
     bool Print##Name##s(const google::LogSeverity& severity=google::INFO) const; \
-    virtual bool Put##Name(const Hash& hash, const Name##Ptr& val) const;               \
     virtual bool Get##Name##s(json::Writer& json) const;                                \
     virtual bool Get##Name##s(HashList& hashes) const;                                  \
-    virtual bool Has##Name(const Hash& hash) const;                                     \
     virtual bool Has##Name##s() const;    \
-    virtual bool Remove##Name(const Hash& hash) const;                                  \
-    virtual Name##Ptr Get##Name(const Hash& hash) const;                                \
     virtual int64_t GetNumberOf##Name##s() const;
     FOR_EACH_POOL_TYPE(DEFINE_TYPE_METHODS)
 #undef DEFINE_TYPE_METHODS

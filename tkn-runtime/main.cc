@@ -204,8 +204,6 @@ main(int argc, char **argv){
   config::Initialize(FLAGS_path);
 
   Runtime runtime;
-  if(!runtime.GetPool().PutBlock(Hash::GenerateNonce(), Block::Genesis()))
-    DLOG(FATAL) << "cannot put genesis in pool.";
 
   // start the health check service
   http::HealthServiceThread health_service_thread;

@@ -25,8 +25,8 @@ namespace token{
         TransactionBuilderBase() = default;
         ~TransactionBuilderBase() = default;
 
-        void SetTimestamp(const Timestamp& val) const{
-          ProtoBuilder<T, M>::raw_.set_timestamp(val);
+        void SetTimestamp(const Timestamp& val){
+          ProtoBuilder<T, M>::raw_->set_timestamp(ToUnixTimestamp(val));
         }
 
         void AddInput(const Hash& hash, const uint64_t& index, const std::string& user, const std::string& product){

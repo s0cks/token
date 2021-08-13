@@ -6,27 +6,21 @@
 #include "atomic/relaxed_atomic.h"
 
 namespace token{
-
-  static inline std::string
-  GetBlockChainHome(){
-    return TOKEN_BLOCKCHAIN_HOME;
-  }
-
   ObjectPool::ObjectPool(const std::string& filename):
-      state_(State::kUninitialized),
-      index_(nullptr){
+    state_(State::kUninitialized),
+    index_(nullptr),
+    filename_(filename){
     leveldb::Status status;
     if(!(status = InitializeIndex(filename)).ok()){
       LOG(FATAL) << "cannot initialize object pool index: " << status.ToString();
       return;
     }
+    DLOG(INFO) << "initialized the ObjectPool in: " << filename;
   }
 
   leveldb::Status ObjectPool::InitializeIndex(const std::string& filename){
     if(IsInitialized())
       return leveldb::Status::NotSupported("Cannot re-initialize the object pool.");
-
-    DLOG(INFO) << "initializing in: " << filename;
     SetState(ObjectPool::kInitializing);
 
     leveldb::Options options;
@@ -38,7 +32,6 @@ namespace token{
       return status;
 
     SetState(ObjectPool::kInitialized);
-    DLOG(INFO) << "initialized.";
     return leveldb::Status::OK();
   }
 
@@ -99,34 +92,58 @@ namespace token{
   FOR_EACH_POOL_TYPE(DEFINE_PRINT_TYPE)
 #undef DEFINE_PRINT_TYPE
 
-#define DEFINE_PUT_TYPE(Name) \
-    bool ObjectPool::Put##Name(const Hash& hash, const Name##Ptr& val) const{ \
-      leveldb::Status status;   \
-      if(!(status = PutType<Name>(hash, val)).ok()){                          \
-        DLOG(FATAL) << "cannot index " << hash << " (Block): " << status.ToString(); \
-        return false;           \
-      }                         \
-      DLOG(INFO) << "indexed " << hash << " (Block).";                         \
-      return true;            \
-    }
-    FOR_EACH_POOL_TYPE(DEFINE_PUT_TYPE)
-#undef DEFINE_PUT_TYPE
-
-#define DEFINE_GET_TYPE(Name) \
-  Name##Ptr ObjectPool::Get##Name(const Hash& hash) const{ \
-    return GetTypeSafely<Name>(Type::k##Name, hash);       \
+#define DEFINE_PUT_POOL_OBJECT(Name) \
+  bool ObjectPool::Put##Name(const Hash& k, const std::shared_ptr<Name>& v) const{ \
+    leveldb::Status status;           \
+    if(!(status = PutObject(GetIndex(), Type::k##Name, k, v)).ok()){               \
+      LOG(ERROR) << "cannot index " << k << " (" << #Name << "): " << status.ToString();  \
+      return false;                   \
+    }                                 \
+    DLOG(INFO) << "indexed " << k << " (" << #Name << ").";                     \
+    return true;                      \
   }
-  FOR_EACH_POOL_TYPE(DEFINE_GET_TYPE)
-#undef DEFINE_GET_TYPE
-
-#define DEFINE_HAS_TYPE(Name) \
-  bool ObjectPool::Has##Name(const Hash& hash) const{ \
-    std::string data;         \
-    ObjectKey key(Type::k##Name, hash);                \
-    return GetIndex()->Get(leveldb::ReadOptions(), (const leveldb::Slice&)key, &data).ok(); \
+#define DEFINE_REMOVE_POOL_OBJECT(Name) \
+  bool ObjectPool::Remove##Name(const Hash& k) const{ \
+    leveldb::Status status;             \
+    if(!(status = DeleteObject(GetIndex(), Type::k##Name, k)).ok()){ \
+      if(status.IsNotFound()){ \
+        DLOG(WARNING) << "cannot remove " << k << "(" << #Name << "), object not found."; \
+        return false;                   \
+      }                                 \
+      LOG(ERROR) << "cannot remove " << k << " (" << #Name << "): " << status.ToString(); \
+      return false;                     \
+    }                                   \
+    DLOG(INFO) << "removed " << k << " (" << #Name << ").";          \
+    return true;                        \
   }
-  FOR_EACH_POOL_TYPE(DEFINE_HAS_TYPE);
-#undef DEFINE_HAS_TYPE
+#define DEFINE_HAS_POOL_OBJECT(Name) \
+  bool ObjectPool::Has##Name(const Hash& k) const{ \
+    leveldb::Status status;          \
+    if(!(status = HasObject(GetIndex(), Type::k##Name, k)).ok()){ \
+      if(status.IsNotFound()){       \
+        DLOG(WARNING) << "cannot find " << k << " (" << #Name << ")."; \
+        return false;                \
+      }                              \
+      LOG(ERROR) << "cannot find " << k << " (" << #Name << "): " << status.ToString(); \
+      return false;                  \
+    }                                \
+    return true;                     \
+  }
+#define DEFINE_GET_POOL_OBJECT(Name) \
+  std::shared_ptr<Name> ObjectPool::Get##Name(const Hash& k) const{ \
+    return GetTypeSafely<Name>(Type::k##Name, k);                         \
+  }
+
+#define DEFINE_POOL_TYPE_METHODS(Name) \
+  DEFINE_PUT_POOL_OBJECT(Name)         \
+  DEFINE_REMOVE_POOL_OBJECT(Name)      \
+  DEFINE_HAS_POOL_OBJECT(Name)         \
+  DEFINE_GET_POOL_OBJECT(Name) \
+
+  FOR_EACH_POOL_TYPE(DEFINE_POOL_TYPE_METHODS)
+#undef DEFINE_POOL_TYPE_METHODS
+#undef DEFINE_PUT_POOL_OBJECT
+#undef DEFINE_REMOVE_POOL_OBJECT
 
 #define DEFINE_GET_TYPE_COUNT(Name) \
   int64_t ObjectPool::GetNumberOf##Name##s() const{ \
@@ -143,21 +160,6 @@ namespace token{
   }
   FOR_EACH_POOL_TYPE(DEFINE_GET_TYPE_COUNT)
 #undef DEFINE_GET_TYPE_COUNT
-
-#define DEFINE_REMOVE_TYPE(Name) \
-  bool ObjectPool::Remove##Name(const Hash& hash) const{ \
-    ObjectKey key(Type::k##Name, hash);                  \
-    leveldb::WriteOptions options;                 \
-    options.sync = true;         \
-    leveldb::Status status;      \
-    if(!(status = GetIndex()->Delete(options, (const leveldb::Slice&)key)).ok()){ \
-      LOG(WARNING) << "cannot remove " << hash << " from pool: " << status.ToString(); \
-      return false;              \
-    }                            \
-    return true;                 \
-  }
-  FOR_EACH_POOL_TYPE(DEFINE_REMOVE_TYPE)
-#undef DEFINE_REMOVE_TYPE
 
   bool ObjectPool::Accept(PoolVisitor* vis) const{
     leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions());

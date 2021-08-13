@@ -10,6 +10,8 @@
 #include "task_process_output_list.h"
 #include "atomic/linked_list.h"
 
+#include "tasks/task_batch_write.h"
+
 namespace token{
   namespace task{
     typedef leveldb::WriteBatch WriteOperation;
