@@ -18,7 +18,6 @@ namespace token{
     pool_(FLAGS_path + "/pool"),
     server_(this){
     task_engine_.RegisterQueue(task_queue_);
-
     events_.Subscribe("on-test", &on_test_);
   }
 

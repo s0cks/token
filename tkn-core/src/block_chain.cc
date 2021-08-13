@@ -5,7 +5,7 @@
 
 namespace token{
   BlockChain::BlockChain(const std::string& path):
-    path_(path),
+    filename_(path + "/chain"),
     state_(State::kUninitialized),
     index_(nullptr){
     Initialize();
@@ -21,10 +21,10 @@ namespace token{
       return;
     }
 
-    DLOG(INFO) << "loading BlockChain from " << GetPath() << "....";
-    if(!FileExists(GetPath())){
-      if(!CreateDirectory(GetPath())){
-        LOG(FATAL) << "cannot create the BlockChain directory: " << GetPath();
+    DLOG(INFO) << "loading BlockChain from " << GetFilename() << "....";
+    if(!FileExists(GetFilename())){
+      if(!CreateDirectory(GetFilename())){
+        LOG(FATAL) << "cannot create the BlockChain directory: " << GetFilename();
         return;
       }
     }

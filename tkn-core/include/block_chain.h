@@ -56,24 +56,18 @@ namespace token{
       void FindShortSuccessor(std::string* str) const override{}
     };
   protected:
-    std::string path_;
-
     atomic::RelaxedAtomic<State> state_;
     leveldb::DB* index_;
-
-    inline std::string
-    GetPath() const{
-      return path_;
-    }
+    std::string filename_;
 
     inline std::string
     GetDataDirectory() const{
-      return GetPath() + "/data";
+      return GetFilename() + "/data";
     }
 
     inline std::string
     GetIndexFilename() const{
-      return GetPath() + "/index";
+      return GetFilename() + "/index";
     }
 
     inline std::string
@@ -185,6 +179,10 @@ namespace token{
     virtual inline BlockPtr
     GetGenesis() const{
       return GetBlock(GetGenesisHash());
+    }
+
+    std::string GetFilename() const{
+      return filename_;
     }
 
 #define DEFINE_STATE_CHECK(Name) \

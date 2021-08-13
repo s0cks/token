@@ -45,18 +45,12 @@ namespace token{
     uv_loop_t* loop_;
     atomic::RelaxedAtomic<State> state_;
     EventBus events_;
-
-    UUID node_id_;
-
-
-    ProposalState proposal_state_;
     task::TaskQueue task_queue_;
     task::TaskEngine task_engine_;
-
     ObjectPool pool_;
-
+    UUID node_id_;
+    ProposalState proposal_state_;
     node::Server server_;
-
     BlockMiner miner_;
     ProposalTimer timer_;
     Proposer proposer_;

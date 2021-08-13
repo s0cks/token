@@ -1,5 +1,4 @@
 #include <glog/logging.h>
-#include "task/task_engine.h"
 #include "task_process_transaction.h"
 
 namespace token{
@@ -8,9 +7,8 @@ namespace token{
 
     void ProcessTransactionTask::DoWork(){
       DLOG(INFO) << "processing transaction " << hash() << "....";
-//TODO:
-//      ProcessInputs(inputs(), kDefaultChunkSize);
-//      ProcessOutputs(outputs(), kDefaultChunkSize);
+      ProcessInputs(inputs(), kDefaultChunkSize);
+      ProcessOutputs(outputs(), kDefaultChunkSize);
     }
   }
 }

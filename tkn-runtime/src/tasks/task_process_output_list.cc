@@ -32,8 +32,7 @@ namespace token{
 
       DVLOG(2) << "queueing batch (" << batch_.ApproximateSize() << "b)....";
       auto parent = (ProcessTransactionTask*)GetParent();
-      auto& write_queue = parent->GetWriteQueue();
-      write_queue.push_front(&batch_);//TODO: memory-leak
+      //TODO: write_queue.push_front(&batch_);//TODO: memory-leak
     }
   }
 }
