@@ -9,8 +9,7 @@ namespace token{
 #define FOR_EACH_INFO_CONTROLLER_ENDPOINT(V) \
     V(GET, "/info", GetRuntimeInfo)
 
-    class InfoController : public Controller,
-                           public std::enable_shared_from_this<InfoController>{
+    class InfoController : public Controller{
       Runtime* runtime_;
     public:
       explicit InfoController(Runtime* runtime):

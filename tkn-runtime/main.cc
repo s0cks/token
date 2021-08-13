@@ -202,10 +202,6 @@ main(int argc, char **argv){
 
   Runtime runtime;
 
-  // start the health check service
-  http::HealthServiceThread health_service_thread;
-  SilentlyStartService<http::HealthService, http::HealthServiceThread, google::FATAL>(health_service_thread);
-
   // initialize the keychain
   //TODO: SilentlyInitialize<Keychain, google::FATAL>();//TODO: refactor & parallelize
 
@@ -217,15 +213,6 @@ main(int argc, char **argv){
   // start the peer threads & connect to any known peers
   PeerSessionManager::Initialize(&runtime);
 
-  // start the rest service
-  http::RestService rest_service(uv_loop_new(), runtime.GetPool());
-  ServerThread<http::RestService> rest_service_thread(&rest_service);
-  SilentlyStartService<http::RestService, ServerThread<http::RestService>, google::FATAL>(rest_service_thread);
-
   runtime.Run();
-
-//  //TODO: SilentlyWaitForShutdown<PeerSessionManager
-//  SilentlyWaitForShutdown<http::RestService, http::RestServiceThread, google::FATAL>(rest_service_thread);
-  SilentlyWaitForShutdown<http::HealthService, http::HealthServiceThread, google::FATAL>(health_service_thread);
   return EXIT_SUCCESS;
 }

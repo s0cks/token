@@ -4,7 +4,7 @@
 namespace token{
   namespace http{
 #define DEFINE_ENDPOINT_HANDLER(Method, Path, Name) \
-  HTTP_CONTROLLER_ROUTE_HANDLER(HealthController, Name);
+    HTTP_CONTROLLER_ROUTE_HANDLER(HealthController, Name);
 
     FOR_EACH_HEALTH_CONTROLLER_ENDPOINT(DEFINE_ENDPOINT_HANDLER)
 #undef DEFINE_ENDPOINT_HANDLER

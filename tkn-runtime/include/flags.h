@@ -43,6 +43,16 @@ namespace token{
   }
 
   static inline bool
+  IsRestServiceEnabled(){
+    return FLAGS_service_port > 0;
+  }
+
+  static inline bool
+  IsHealthServiceEnabled(){
+    return FLAGS_healthcheck_port > 0;
+  }
+
+  static inline bool
   ValidateFlagPath(const char* ss, const std::string& val){
     return true;
   }

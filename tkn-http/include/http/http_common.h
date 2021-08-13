@@ -25,9 +25,6 @@ namespace token{
     class Response;
     typedef std::shared_ptr<Response> ResponsePtr;
 
-    class Controller;
-    typedef std::shared_ptr<Controller> ControllerPtr;
-
     class Router;
 
 #define FOR_EACH_HTTP_METHOD(V) \

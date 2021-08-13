@@ -12,6 +12,8 @@
 #include "task/task_engine.h"
 #include "consensus/acceptor.h"
 #include "consensus/proposer.h"
+#include "http/http_service_rest.h"
+#include "http/http_service_health.h"
 #include "consensus/proposal_timer.h"
 #include "consensus/proposal_listener.h"
 
@@ -78,6 +80,8 @@ namespace token{
     UUID node_id_;
     ProposalState proposal_state_;
     node::Server server_;
+    http::RestService service_rest_;
+    http::HealthService service_health_;
     BlockMiner miner_;
     ProposalTimer timer_;
     Proposer proposer_;
@@ -145,6 +149,14 @@ namespace token{
 
     node::Server& GetServer(){
       return server_;
+    }
+
+    http::RestService& GetRestService(){
+      return service_rest_;
+    }
+
+    http::HealthService& GetHealthService(){
+      return service_health_;
     }
 
     task::TaskQueue& GetTaskQueue(){

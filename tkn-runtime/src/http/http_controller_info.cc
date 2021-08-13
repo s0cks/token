@@ -14,8 +14,14 @@ namespace token{
 
       json::String body;
       json::Writer writer(body);
-      if(!json::SetField(writer, "data", info))
-        return session->Send(NewInternalServerErrorResponse("cannot get runtime info."));
+      if(!writer.StartObject())
+        return session->Send(NewInternalServerErrorResponse("cannot start json object."));
+      {
+        if(!json::SetField(writer, "data", info))
+          return session->Send(NewInternalServerErrorResponse("cannot get runtime info."));
+      }
+      if(!writer.EndObject())
+        return session->Send(NewInternalServerErrorResponse("cannot end json object."));
       return session->Send(NewOkResponse(body));
     }
   }

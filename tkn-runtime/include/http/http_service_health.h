@@ -6,19 +6,17 @@
 #include "http/http_controller_health.h"
 
 namespace token{
+  class Runtime;
   namespace http{
-    class HealthService;
-    typedef std::unique_ptr<HealthService> HealthServicePtr;
-
     class HealthService : public ServiceBase{
-     protected:
-      HealthControllerPtr controller_;
-     public:
-      explicit HealthService(uv_loop_t* loop=uv_loop_new());
+    protected:
+      HealthController controller_health_;
+    public:
+      explicit HealthService(Runtime* runtime);
       ~HealthService() override = default;
 
-      HealthControllerPtr GetHealthController() const{
-        return controller_;
+      HealthController& GetHealthController(){
+        return controller_health_;
       }
 
       static inline bool
@@ -35,11 +33,7 @@ namespace token{
       GetName(){
         return "http/health";
       }
-
-      static HealthServicePtr NewInstance();
     };
-
-    class HealthServiceThread : public ServiceThread<HealthService>{};
   }
 }
 

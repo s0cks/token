@@ -2,7 +2,7 @@
 #define TOKEN_HTTP_SERVICE_REST_H
 
 #include "http/http_service.h"
-
+#include "http/http_controller_info.h"
 #include "http/http_controller_pool.h"
 
 namespace token{
@@ -11,12 +11,17 @@ namespace token{
     class RestService : public ServiceBase{
      private:
       PoolController controller_pool_;
+      InfoController controller_info_;
      public:
-      RestService(Runtime* runtime);
+      explicit RestService(Runtime* runtime);
       ~RestService() override = default;
 
       PoolController& GetPoolController(){
         return controller_pool_;
+      }
+
+      InfoController& GetInfoController(){
+        return controller_info_;
       }
 
       static inline bool
@@ -34,8 +39,6 @@ namespace token{
         return "http/rest";
       }
     };
-
-    class RestServiceThread : public ServiceThread<RestService>{};
   }
 }
 
