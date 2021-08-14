@@ -14,13 +14,17 @@
 
 namespace token{
   namespace task{
-    typedef leveldb::WriteBatch WriteOperation;
-
     class ProcessTransactionTask : public task::Task{
+      friend class ProcessInputListTask;
+      friend class ProcessOutputListTask;
     public:
       static const size_t kDefaultChunkSize;
     private:
+      ObjectPool& pool_;
+      internal::WriteBatch* batch_;
       IndexedTransactionPtr value_;
+      atomic::RelaxedAtomic<uint64_t> processed_inputs_;
+      atomic::RelaxedAtomic<uint64_t> processed_outputs_;
 
       template<class T, class Processor>
       inline void
@@ -35,7 +39,7 @@ namespace token{
                       ? current + chunk_size //TODO: investigate clang tidy issue
                       : end;
           std::vector<T> chunk(current, next);
-          auto task = new Processor(this, hash(), index, chunk);
+          auto task = new Processor(this, pool_, hash(), index, chunk);
           if(!queue.Push((reinterpret_cast<uword>(task)))){
             LOG(FATAL) << "cannot push new task to task queue.";
             return;//TODO: better error handling
@@ -44,19 +48,20 @@ namespace token{
         }
       }
 
-      inline void
-      ProcessInputs(const std::vector<Input>& list, const size_t& chunk_size){
-        return ProcessParallel<Input, ProcessInputListTask>(list, chunk_size);
-      }
-
-      inline void
-      ProcessOutputs(const std::vector<Output>& list, const size_t& chunk_size){
-        return ProcessParallel<Output, ProcessOutputListTask>(list, chunk_size);
+      template<const size_t& ChunkSize>
+      inline void ProcessOutputs(){
+        DLOG(INFO) << "processing transaction " << hash() << " outputs....";
+        std::vector<Output> outputs;
+        value_->GetOutputs(outputs);
+        return ProcessParallel<Output, ProcessOutputListTask>(outputs, ChunkSize);
       }
     public:
-      explicit ProcessTransactionTask(TaskEngine* engine, const IndexedTransactionPtr& val):
+      explicit ProcessTransactionTask(TaskEngine* engine, ObjectPool& pool, const IndexedTransactionPtr& val):
         task::Task(engine),
-        value_(val){}
+        pool_(pool),
+        value_(val),
+        processed_inputs_(0),
+        processed_outputs_(0){}
       ~ProcessTransactionTask() override = default;
 
       std::string GetName() const override{
@@ -67,12 +72,12 @@ namespace token{
         return value_->hash();
       }
 
-      std::vector<Input> inputs(){
-        return std::vector<Input>{};
+      uint64_t GetNumberOfInputsProcessed() const{
+        return (uint64_t)processed_inputs_;
       }
 
-      std::vector<Output> outputs(){
-        return std::vector<Output>{};
+      uint64_t GetNumberOfOutputsProcessed() const{
+        return (uint64_t)processed_outputs_;
       }
 
       void DoWork() override;

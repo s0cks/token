@@ -1,14 +1,17 @@
 #ifndef TOKEN_KVSTORE_H
 #define TOKEN_KVSTORE_H
 
+#include <mutex>
 #include <memory>
 #include <ostream>
 #include <leveldb/db.h>
 #include <leveldb/slice.h>
 #include <leveldb/status.h>
 #include <leveldb/comparator.h>
+#include <leveldb/write_batch.h>
 #include <glog/logging.h>
 
+#include "hash.h"
 #include "common.h"
 #include "atomic/relaxed_atomic.h"
 

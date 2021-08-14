@@ -5,8 +5,17 @@
 #include "transaction.h"
 
 namespace token{
-class IndexedTransaction : public internal::TransactionBase<internal::proto::IndexedTransaction>{
- public:
+  class IndexedTransactionVisitor{
+  protected:
+    IndexedTransactionVisitor() = default;
+  public:
+    virtual ~IndexedTransactionVisitor() = default;
+    virtual bool Visit(const IndexedTransactionPtr& val) = 0;
+  };
+
+  typedef internal::proto::IndexedTransaction RawIndexedTransaction;
+  class IndexedTransaction : public internal::TransactionBase<RawIndexedTransaction>{
+  public:
   struct IndexComparator {
     bool operator()(const IndexedTransactionPtr &a, const IndexedTransactionPtr &b) {
       return a->index() < b->index();
@@ -15,7 +24,7 @@ class IndexedTransaction : public internal::TransactionBase<internal::proto::Ind
 
   class Builder : public TransactionBuilderBase<IndexedTransaction>{
   public:
-    explicit Builder(internal::proto::IndexedTransaction* raw):
+    explicit Builder(RawIndexedTransaction* raw):
       TransactionBuilderBase<IndexedTransaction>(raw){}
     Builder() = default;
     Builder(const Builder& rhs) = default;
@@ -33,9 +42,9 @@ class IndexedTransaction : public internal::TransactionBase<internal::proto::Ind
   };
  public:
   IndexedTransaction():
-    internal::TransactionBase<internal::proto::IndexedTransaction>(){}
-  explicit IndexedTransaction(internal::proto::IndexedTransaction raw):
-    internal::TransactionBase<internal::proto::IndexedTransaction>(std::move(raw)){}
+    internal::TransactionBase<RawIndexedTransaction>(){}
+  explicit IndexedTransaction(RawIndexedTransaction raw):
+    internal::TransactionBase<RawIndexedTransaction>(std::move(raw)){}
   explicit IndexedTransaction(const internal::BufferPtr& data):
     IndexedTransaction(){
     if(!raw_.ParseFromArray(data->data(), static_cast<int>(data->length())))

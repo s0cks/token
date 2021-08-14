@@ -2,19 +2,22 @@
 
 #include "key.h"
 #include "transaction_unclaimed.h"
-#include "task_process_transaction.h"
-#include "task_process_output_list.h"
+#include "tasks/task_process_transaction.h"
+#include "tasks/task_process_output_list.h"
 
 namespace token{
   namespace task{
-    ProcessOutputListTask::ProcessOutputListTask(ProcessTransactionTask* parent, const Hash& hash, const int64_t& index, std::vector<Output>& outputs):
+    ProcessOutputListTask::ProcessOutputListTask(ProcessTransactionTask* parent, ObjectPool& pool, const Hash& hash, const int64_t& index, std::vector<Output>& outputs):
       task::Task(parent),
+      pool_(pool),
+      batch_(),
+      counter_(parent->processed_outputs_),
       outputs_(outputs),
       transaction_(hash),
       index_(index){}
 
     void ProcessOutputListTask::DoWork(){
-      DVLOG(2) << "processing output list....";
+      DVLOG(2) << "processing output list of size " << outputs_.size() << "....";
       for(auto& it : outputs_){
         UnclaimedTransaction::Builder builder;
         builder.SetTransactionHash(transaction_);
@@ -22,17 +25,15 @@ namespace token{
         builder.SetUser(it.user().ToString());
         builder.SetProduct(it.product().ToString());
 
-        auto val = builder.Build();
-        auto hash = val->hash();
-        DVLOG(2) << "indexing unclaimed transaction " << hash << "....";
-        ObjectKey key(val->type(), hash);
-        BufferPtr data = val->ToBuffer();
-        batch_.Put((const leveldb::Slice&)key, data->AsSlice());
+        auto utxo = builder.Build();
+        auto hash = utxo->hash();
+        batch_.PutUnclaimedTransaction(hash, utxo);
+        counter_ += 1;
       }
 
-      DVLOG(2) << "queueing batch (" << batch_.ApproximateSize() << "b)....";
-      auto parent = (ProcessTransactionTask*)GetParent();
-      //TODO: write_queue.push_front(&batch_);//TODO: memory-leak
+      leveldb::Status status;
+      if(!(status = pool_.Commit(batch_.batch())).ok())
+        LOG(FATAL) << "cannot write batch to pool: " << status.ToString();
     }
   }
 }

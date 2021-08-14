@@ -1,7 +1,7 @@
 #ifndef TKN_TASK_PROCESS_OUTPUT_LIST_H
 #define TKN_TASK_PROCESS_OUTPUT_LIST_H
 
-#include "task/task.h"
+#include "batch.h"
 #include "transaction_output.h"
 
 namespace token{
@@ -9,12 +9,14 @@ namespace token{
     class ProcessTransactionTask;
     class ProcessOutputListTask : public task::Task{
     private:
-      leveldb::WriteBatch batch_;
+      internal::PoolWriteBatch batch_;
+      ObjectPool& pool_;
+      atomic::RelaxedAtomic<uint64_t>& counter_;
       Hash transaction_;
       int64_t index_;
       std::vector<Output> outputs_;
     public:
-      explicit ProcessOutputListTask(ProcessTransactionTask* parent, const Hash& transaction, const int64_t& index, std::vector<Output>& outputs);
+      explicit ProcessOutputListTask(ProcessTransactionTask* parent, ObjectPool& pool, const Hash& transaction, const int64_t& index, std::vector<Output>& outputs);
       ~ProcessOutputListTask() override = default;
 
       std::string GetName() const override{

@@ -20,7 +20,7 @@ namespace token{
   public:
 #ifdef TOKEN_DEBUG
     static const int64_t kMaxBlockSize = 128 * token::internal::kMegabytes;
-    static const int64_t kNumberOfGenesisOutputs = 10000;
+    static const int64_t kNumberOfGenesisOutputs = 100000;
 #else
     static const int64_t kMaxBlockSize = 1 * token::internal::kGigabytes;
     static const int64_t kNumberOfGenesisOutputs = 10000;
@@ -132,6 +132,23 @@ namespace token{
     Hash GetMerkleRoot() const;
     bool Accept(BlockVisitor* vis) const;
     bool Contains(const Hash& hash) const;
+
+    void GetTransactions(IndexedTransactionSet& results){
+      auto transactions = raw_.transactions();
+      std::for_each(transactions.begin(), transactions.end(), [&](internal::proto::IndexedTransaction& val){
+        results.insert(std::make_shared<IndexedTransaction>(val));
+      });
+    }
+
+    bool VisitTransactions(IndexedTransactionVisitor* vis) const{
+      auto transactions = raw_.transactions();
+      for(auto& it : transactions){
+        auto val = std::make_shared<IndexedTransaction>(it);
+        if(!vis->Visit(val))
+          return false;
+      }
+      return true;
+    }
 
     template<typename Callback>
     bool ForEachTransaction(Callback callback){//TODO: remove

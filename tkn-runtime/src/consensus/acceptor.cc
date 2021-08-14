@@ -1,6 +1,7 @@
 #include "runtime.h"
 #include "proposal.h"
 #include "consensus/acceptor.h"
+#include "tasks/task_process_transaction.h"
 
 namespace token{
   Acceptor::Acceptor(Runtime* runtime):
@@ -73,7 +74,31 @@ namespace token{
   }
 
   bool Acceptor::CommitProposal(const UUID& proposal_id, const Hash& hash){
-    //TODO: commit block
+    auto& engine = GetRuntime()->GetTaskEngine();
+    auto& queue = GetRuntime()->GetTaskQueue();
+    auto& pool = GetRuntime()->GetPool();
+
+    auto start = Clock::now();
+    auto blk = Block::Genesis();//TODO: get proposal block
+    IndexedTransactionSet transactions;
+    blk->GetTransactions(transactions);
+    for(auto& it : transactions){
+      auto task = new task::ProcessTransactionTask(&engine, pool, it);
+      if(!queue.Push(reinterpret_cast<uword>(task))){
+        LOG(FATAL) << "cannot submit new task to task queue.";
+        return false;
+      }
+
+      DLOG(INFO) << "waiting for task to finish.";
+      while(!task->IsFinished());//spin
+      DLOG(INFO) << "done waiting.";
+      DLOG(INFO) << "processed " << task->GetNumberOfInputsProcessed() << " inputs.";
+      DLOG(INFO) << "processed " << task->GetNumberOfOutputsProcessed() << " outputs.";
+    }
+
+    auto end = Clock::now();
+    auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    DLOG(INFO) << "processing took " << duration_ms.count() << "ms";
     return true;
   }
 

@@ -271,6 +271,8 @@ namespace token{
     leveldb::DB* index_;
     std::string filename_;
 
+    std::mutex mutex_;
+
     void SetState(const State& state){
       state_ = state;
     }
@@ -339,16 +341,16 @@ namespace token{
     virtual bool Get##Name##s(json::Writer& json) const;                                \
     virtual bool Get##Name##s(HashList& hashes) const;                                  \
     virtual bool Has##Name##s() const;    \
-    virtual int64_t GetNumberOf##Name##s() const;
+    virtual uint64_t GetNumberOf##Name##s() const;
     FOR_EACH_POOL_TYPE(DEFINE_TYPE_METHODS)
 #undef DEFINE_TYPE_METHODS
 
     virtual bool Accept(PoolVisitor* vis) const;
 
     //TODO: refactor
-    int64_t GetNumberOfObjects() const;
+    uint64_t GetNumberOfObjects() const;
     UnclaimedTransactionPtr FindUnclaimedTransaction(const Input& input) const;
-    leveldb::Status Write(const leveldb::WriteBatch& update) const;
+    leveldb::Status Commit(leveldb::WriteBatch* batch);
 
     virtual void GetPoolStats(PoolStats& stats) const;
 

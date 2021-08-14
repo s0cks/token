@@ -13,6 +13,22 @@
 #include "transaction_output.h"
 
 namespace token{
+  class InputVisitor{
+  protected:
+    InputVisitor() = default;
+  public:
+    virtual ~InputVisitor() = default;
+    virtual bool Visit(const Input& val) = 0;
+  };
+
+  class OutputVisitor{
+  protected:
+    OutputVisitor() = default;
+  public:
+    virtual ~OutputVisitor() = default;
+    virtual bool Visit(const Output& val) = 0;
+  };
+
   namespace internal{
     template<class M>
     class TransactionBase : public BinaryObject{
@@ -79,6 +95,35 @@ namespace token{
 
       virtual bool IsSigned() const{
         return false;
+      }
+
+      void GetInputs(std::vector<Input>& results){
+
+      }
+
+      void GetOutputs(std::vector<Output>& results){
+        auto outputs = raw_.outputs();
+        std::for_each(outputs.begin(), outputs.end(), [&](internal::proto::Output& val){
+          results.emplace_back(val);
+        });
+      }
+
+      bool VisitInputs(InputVisitor* vis) const{
+        for(auto& it : raw_.inputs()){
+          Input val(it);
+          if(!vis->Visit(val))
+            return false;
+        }
+        return true;
+      }
+
+      bool VisitOutputs(OutputVisitor* vis) const{
+        for(auto& it : raw_.outputs()){
+          Output val(it);
+          if(!vis->Visit(val))
+            return false;
+        }
+        return true;
       }
 
       TransactionBase& operator=(const TransactionBase& other) = default;

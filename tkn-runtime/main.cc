@@ -8,8 +8,10 @@
 #include "task/task_engine.h"
 #include "http/http_service_rest.h"
 #include "http/http_service_health.h"
-
 #include "peer/peer_session_manager.h"
+
+#include "tasks/task_batch_write.h"
+
 
 /*#ifdef TOKEN_DEBUG
   static const std::vector<token::User> kOwners = {
@@ -201,16 +203,6 @@ main(int argc, char **argv){
   }
 
   Runtime runtime;
-
-  // initialize the keychain
-  //TODO: SilentlyInitialize<Keychain, google::FATAL>();//TODO: refactor & parallelize
-
-  // initialize the wallet manager
-  //TODO: SilentlyInitialize<WalletManager, google::FATAL>();
-
-  // initialize the block chain
-  //TODO: SilentlyInitialize<BlockChain, google::FATAL>();
-  // start the peer threads & connect to any known peers
   PeerSessionManager::Initialize(&runtime);
 
   runtime.Run();

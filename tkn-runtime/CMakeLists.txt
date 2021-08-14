@@ -57,6 +57,8 @@ add_executable(tkn-runtime
 
   include/tasks/task_batch_write.h
 
+  include/batch.h
+  include/block_committer.h src/block_committer.cc
   include/config.h src/config.cc
   include/flags.h src/flags.cc
   include/miner.h src/miner.cc
@@ -64,9 +66,9 @@ add_executable(tkn-runtime
   include/pool.h src/pool.cc
   include/runtime.h src/runtime.cc
 
-  src/tasks/task_process_output_list.h src/tasks/task_process_input_list.cc
-  src/tasks/task_process_input_list.h src/tasks/task_process_output_list.cc
-  src/tasks/task_process_transaction.h src/tasks/task_process_transaction.cc
+  include/tasks/task_process_output_list.h src/tasks/task_process_input_list.cc
+  include/tasks/task_process_input_list.h src/tasks/task_process_output_list.cc
+  include/tasks/task_process_transaction.h src/tasks/task_process_transaction.cc
 
   src/block_builder.h src/block_builder.cc
 

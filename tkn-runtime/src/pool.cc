@@ -9,7 +9,8 @@ namespace token{
   ObjectPool::ObjectPool(const std::string& filename):
     state_(State::kUninitialized),
     index_(nullptr),
-    filename_(filename){
+    filename_(filename),
+    mutex_(){
     leveldb::Status status;
     if(!(status = InitializeIndex(filename)).ok()){
       LOG(FATAL) << "cannot initialize object pool index: " << status.ToString();
@@ -35,14 +36,17 @@ namespace token{
     return leveldb::Status::OK();
   }
 
-  leveldb::Status ObjectPool::Write(const leveldb::WriteBatch& update) const{
+  leveldb::Status ObjectPool::Commit(leveldb::WriteBatch* batch){
+    DLOG(INFO) << "committing batch of size " << batch->ApproximateSize() << "b....";
+
+    std::lock_guard<std::mutex> guard(mutex_);
     leveldb::WriteOptions opts;
     opts.sync = true;
-    return GetIndex()->Write(opts, (leveldb::WriteBatch*)&update);
+    return GetIndex()->Write(opts, batch);
   }
 
-  int64_t ObjectPool::GetNumberOfObjects() const{
-    int64_t count = 0;
+  uint64_t ObjectPool::GetNumberOfObjects() const{
+    uint64_t count = 0;
 
     leveldb::Iterator* it = GetIndex()->NewIterator(leveldb::ReadOptions());
     for(it->SeekToFirst(); it->Valid(); it->Next()){
@@ -146,11 +150,11 @@ namespace token{
 #undef DEFINE_REMOVE_POOL_OBJECT
 
 #define DEFINE_GET_TYPE_COUNT(Name) \
-  int64_t ObjectPool::GetNumberOf##Name##s() const{ \
-    int64_t count = 0;              \
+  uint64_t ObjectPool::GetNumberOf##Name##s() const{ \
+    uint64_t count = 0;              \
     leveldb::Iterator* iter = GetIndex()->NewIterator(leveldb::ReadOptions()); \
     for(iter->SeekToFirst(); iter->Valid(); iter->Next()){                     \
-      ObjectKey key(iter->key()); \
+      ObjectKey key(iter->key());   \
       if(key.type() != Type::k##Name)               \
         continue;                   \
       count++;                      \
