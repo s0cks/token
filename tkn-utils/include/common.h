@@ -62,6 +62,7 @@ namespace token{
   static const size_t kBitsPerWord = sizeof(uintptr_t) * kBitsPerByte;
   static const uintptr_t kUWordOne = 1U;
 
+  typedef intptr_t word;
   typedef uintptr_t uword;
 
   static inline uword

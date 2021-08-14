@@ -47,7 +47,7 @@ namespace token{
         return IndexedTransaction::Builder(raw_->add_transactions());
       }
 
-      BlockPtr Build() const{
+      BlockPtr Build() const override{
         return std::make_shared<Block>(*raw_);
       }
     };
@@ -114,12 +114,12 @@ namespace token{
       return tx_bloom_;
     }
 
-    int64_t GetNumberOfTransactions() const{
+    uint64_t GetNumberOfTransactions() const{
       return raw_.transactions_size();
     }
 
-    IndexedTransactionSet transactions(){
-      return IndexedTransactionSet {};
+    IndexedTransactionPtr GetTransaction(const uint64_t& index) const{
+      return std::make_shared<IndexedTransaction>(raw_.transactions(static_cast<int>(index)));
     }
 
     bool IsGenesis() const{

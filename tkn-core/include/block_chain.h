@@ -82,10 +82,6 @@ namespace token{
       return index_;
     }
 
-    /**
-     * TODO
-     * @param state
-     */
     void SetState(const State& state){
       state_ = state;
     }
@@ -99,10 +95,6 @@ namespace token{
     explicit BlockChain(const std::string& path);
     virtual ~BlockChain();
 
-    /**
-     * TODO
-     * @return
-     */
     BlockChain::State GetState() const{
       return (BlockChain::State)state_;
     }

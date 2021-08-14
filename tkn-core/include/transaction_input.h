@@ -59,6 +59,10 @@ namespace token{
       return User(raw_.user());
     }
 
+    TransactionReference reference() const{
+      return TransactionReference(transaction(), index());
+    }
+
     internal::BufferPtr ToBuffer() const;
 
     /**

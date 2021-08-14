@@ -5,6 +5,7 @@
 
 #include "batch.h"
 #include "eventbus.h"
+#include "atomic/bit_vector.h"
 
 namespace token{
 #define FOR_EACH_BLOCK_COMMITTER_EVENT(V) \
@@ -39,45 +40,15 @@ namespace token{
 #define DEFINE_BLOCK_COMMITTER_EVENT_LISTENER \
   FOR_EACH_BLOCK_COMMITTER_EVENT(DECLARE_BLOCK_COMMITTER_EVENT_HANDLER)
 
-  class BlockCommitter{
-  protected:
-    BlockCommitter() = default;
-  public:
-    virtual ~BlockCommitter() = default;
-    virtual bool Commit(const Hash& hash) = 0;
-  };
-
-  class SyncBlockCommitter : public BlockCommitter,
-                             public IndexedTransactionVisitor,
-                             public InputVisitor,
-                             public OutputVisitor{
-  protected:
-    internal::PoolWriteBatch batch_;
-    Hash block_;
-    IndexedTransactionPtr transaction_;
-  public:
-    SyncBlockCommitter():
-      BlockCommitter(),
-      IndexedTransactionVisitor(),
-      batch_(),
-      block_(),
-      transaction_(){}
-    ~SyncBlockCommitter() override = default;
-
-    bool Visit(const Input& val) override;
-    bool Visit(const Output& val) override;
-    bool Visit(const IndexedTransactionPtr& tx) override;
-    bool Commit(const Hash& hash) override;
-  };
-
-  class AsyncBlockCommitter : public BlockCommitter{
-  public:
-    AsyncBlockCommitter():
-      BlockCommitter(){}
-    ~AsyncBlockCommitter() override = default;
-
-    bool Commit(const Hash& hash) override;
-  };
+  namespace internal{
+    class BlockCommitterBase{
+    protected:
+      BlockCommitterBase() = default;
+    public:
+      virtual ~BlockCommitterBase() = default;
+      virtual bool Commit(const Hash& hash) = 0;
+    };
+  }
 }
 
 #endif//TKN_BLOCK_COMMITTER_H

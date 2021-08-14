@@ -1,7 +1,8 @@
 #include "runtime.h"
 #include "proposal.h"
 #include "consensus/acceptor.h"
-#include "tasks/task_process_transaction.h"
+#include "sync_block_committer.h"
+#include "async_block_committer.h"
 
 namespace token{
   Acceptor::Acceptor(Runtime* runtime):
@@ -74,31 +75,12 @@ namespace token{
   }
 
   bool Acceptor::CommitProposal(const UUID& proposal_id, const Hash& hash){
-    auto& engine = GetRuntime()->GetTaskEngine();
-    auto& queue = GetRuntime()->GetTaskQueue();
-    auto& pool = GetRuntime()->GetPool();
-
-    auto start = Clock::now();
-    auto blk = Block::Genesis();//TODO: get proposal block
-    IndexedTransactionSet transactions;
-    blk->GetTransactions(transactions);
-    for(auto& it : transactions){
-      auto task = new task::ProcessTransactionTask(&engine, pool, it);
-      if(!queue.Push(reinterpret_cast<uword>(task))){
-        LOG(FATAL) << "cannot submit new task to task queue.";
-        return false;
-      }
-
-      DLOG(INFO) << "waiting for task to finish.";
-      while(!task->IsFinished());//spin
-      DLOG(INFO) << "done waiting.";
-      DLOG(INFO) << "processed " << task->GetNumberOfInputsProcessed() << " inputs.";
-      DLOG(INFO) << "processed " << task->GetNumberOfOutputsProcessed() << " outputs.";
+    DLOG_IF(ERROR, IsAsyncEnabled()) << "async commit is not available yet, using synchronous commit.";
+    sync::BlockCommitter committer(GetRuntime()->GetPool());
+    if(!committer.Commit(hash)){
+      LOG(ERROR) << "cannot commit block " << hash << ".";
+      return false;
     }
-
-    auto end = Clock::now();
-    auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    DLOG(INFO) << "processing took " << duration_ms.count() << "ms";
     return true;
   }
 

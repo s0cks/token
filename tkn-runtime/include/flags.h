@@ -10,6 +10,7 @@ DECLARE_int32(num_workers);
 DECLARE_uint64(mining_interval);
 DECLARE_uint64(proposal_timeout);
 DECLARE_bool(reinitialize);
+DECLARE_bool(enable_async);
 
 // server
 DECLARE_string(remote);
@@ -35,6 +36,11 @@ namespace token{
   static inline bool
   IsMiningEnabled(){
     return FLAGS_mining_interval > 0;
+  }
+
+  static inline bool
+  IsAsyncEnabled(){
+    return FLAGS_enable_async;
   }
 
   static inline bool

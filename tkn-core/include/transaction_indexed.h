@@ -66,6 +66,10 @@ namespace token{
     return Hash::ComputeHash<CryptoPP::SHA256>(data->data(), data->length());
   }
 
+  TransactionReference GetReference() const{
+    return TransactionReference(hash(), index());
+  }
+
   internal::BufferPtr ToBuffer() const;
   std::string ToString() const override;
 

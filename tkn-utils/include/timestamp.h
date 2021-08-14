@@ -15,8 +15,8 @@ namespace token{
   typedef Clock::duration Duration;
 
   static inline uint64_t
-  GetElapsedTimeMilliseconds(const Timestamp& start, const Timestamp& stop){
-    return (stop - start).count();
+  GetElapsedTimeMilliseconds(const Timestamp& start, const Timestamp& stop=Clock::now()){
+    return std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
   }
 
   static inline RawTimestamp

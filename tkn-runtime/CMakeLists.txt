@@ -57,8 +57,10 @@ add_executable(tkn-runtime
 
   include/tasks/task_batch_write.h
 
+  src/async_block_committer.h src/async_block_committer.cc
+
   include/batch.h
-  include/block_committer.h src/block_committer.cc
+
   include/config.h src/config.cc
   include/flags.h src/flags.cc
   include/miner.h src/miner.cc
@@ -70,6 +72,13 @@ add_executable(tkn-runtime
   include/tasks/task_process_input_list.h src/tasks/task_process_output_list.cc
   include/tasks/task_process_transaction.h src/tasks/task_process_transaction.cc
 
+  src/block_committer.h
+  src/block_verifier.h
+  src/sync_block_verifier.h src/sync_block_verifier.cc
+  src/sync_block_committer.h src/sync_block_committer.cc
+  src/sync_transaction_committer.h src/sync_transaction_committer.cc
+  src/sync_transaction_verifier.h src/sync_transaction_verifier.cc
+  src/transaction_input_verifier.h src/transaction_input_verifier.cc
   src/block_builder.h src/block_builder.cc
 
   main.cc)
@@ -92,4 +101,5 @@ target_link_libraries(tkn-runtime
   ${ZXING_LIBRARIES} # zxing
   ${UUID_LIBRARIES} # libuuid
 )
+target_include_directories(tkn-runtime PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_include_directories(tkn-runtime PUBLIC ${PROJECT_SOURCE_DIR}/include)

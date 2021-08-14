@@ -6,6 +6,7 @@ DEFINE_int32(num_workers, 4, "Define the number of worker pool threads");
 DEFINE_uint64(mining_interval, 1000 * 60 * 1, "The amount of time between mining blocks in milliseconds.");
 DEFINE_uint64(proposal_timeout, 1000 * 60 * 10, "The proposal timeout in milliseconds");
 DEFINE_bool(reinitialize, false, "Reinitialize the block chain");
+DEFINE_bool(enable_async, false, "Enable async block verification & commit");
 
 // server
 DEFINE_string(remote, "", "The hostname for the remote ledger to join.");
