@@ -7,6 +7,7 @@
 #include <leveldb/db.h>
 #include <glog/logging.h>
 
+#include "batch.h"
 #include "block.h"
 #include "transaction_unsigned.h"
 #include "transaction_unclaimed.h"
@@ -60,14 +61,14 @@ namespace token{
       DeleteObject(const Hash& hash) const{
         leveldb::WriteOptions options;
         SetPoolWriteOptions(options);
-        return index()->Delete(options, (const leveldb::Slice&)hash);
+        return index()->Delete(options, (const leveldb::Slice)hash);
       }
 
       inline leveldb::Status
       GetObject(const Hash& hash, std::string& data) const{
         leveldb::ReadOptions options;
         SetPoolReadOptions(options);
-        return index()->Get(options, (const leveldb::Slice&)hash, &data);
+        return index()->Get(options, (const leveldb::Slice)hash, &data);
       }
 
       leveldb::Status InitializeIndex(){
@@ -120,6 +121,19 @@ namespace token{
 
       State GetState() const{
         return (State)state_;
+      }
+
+      bool Commit(internal::WriteBatch* batch) const{
+        leveldb::WriteOptions options;
+        SetPoolWriteOptions(options);
+
+        leveldb::Status status;
+        if(!(status = index()->Write(options, batch->batch())).ok()){
+          LOG(ERROR) << "cannot commit batch of size " << batch->ToString();
+          return false;
+        }
+        DLOG(INFO) << "committed batch of size " << batch->ToString();
+        return true;
       }
 
 #define DEFINE_STATE_CHECK(Name) \

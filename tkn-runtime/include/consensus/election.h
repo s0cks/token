@@ -99,7 +99,10 @@ namespace token{
 
     static inline uint32_t
     GetElectionRequiredVotes(){
-      return static_cast<uint32_t>(std::ceil((PeerSessionManager::GetNumberOfConnectedPeers()+1) / 2));
+      auto peers = PeerSessionManager::GetNumberOfConnectedPeers();
+      auto votes = static_cast<uint32_t>(std::ceil(peers / 2))+1;
+      DLOG(INFO) << "required_votes := " << votes << " (peers=" << peers << ")";
+      return votes;
     }
   protected:
     Runtime* runtime_;

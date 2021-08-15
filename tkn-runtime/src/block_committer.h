@@ -5,6 +5,7 @@
 
 #include "batch.h"
 #include "eventbus.h"
+#include "object_pool.h"
 #include "atomic/bit_vector.h"
 
 namespace token{
@@ -43,10 +44,31 @@ namespace token{
   namespace internal{
     class BlockCommitterBase{
     protected:
-      BlockCommitterBase() = default;
+      BlockPtr block_;
+      Hash block_hash_;
+      UnclaimedTransactionPool& utxos_;
+
+      BlockCommitterBase(const BlockPtr& blk, UnclaimedTransactionPool& utxos):
+        block_(blk),
+        block_hash_(blk->hash()),
+        utxos_(utxos){}
+
+      inline UnclaimedTransactionPool&
+      utxos() const{
+        return utxos_;
+      }
     public:
       virtual ~BlockCommitterBase() = default;
-      virtual bool Commit(const Hash& hash) = 0;
+
+      BlockPtr GetBlock() const{
+        return block_;
+      }
+
+      Hash GetBlockHash() const{
+        return block_hash_;
+      }
+
+      virtual bool Commit() = 0;
     };
   }
 }

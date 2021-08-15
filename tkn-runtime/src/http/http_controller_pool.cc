@@ -1,4 +1,3 @@
-#include "pool.h"
 #include "http/http_session.h"
 #include "http/http_controller_pool.h"
 

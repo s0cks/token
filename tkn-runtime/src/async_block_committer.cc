@@ -2,7 +2,7 @@
 
 namespace token{
   namespace async{
-    bool BlockCommitter::Commit(const Hash& hash){
+    bool BlockCommitter::Commit(){
       NOT_IMPLEMENTED(FATAL);//TODO: implement
       return false;
     }

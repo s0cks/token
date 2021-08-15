@@ -8,7 +8,6 @@
 
 #include "flags.h"
 #include "hash.h"
-#include "common.h" //TODO: remove this include
 #include "os_thread.h"
 #include "atomic/relaxed_atomic.h"
 #include "consensus/proposal_listener.h"

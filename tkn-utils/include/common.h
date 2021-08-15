@@ -190,21 +190,20 @@ namespace token{
   }
 
   static inline std::string
-  PrettySize(int64_t size){
+  PrettySize(uint64_t nbytes){
     //TODO: optimize using log
     static const char* units[] = { "b", "kb", "mb", "gb", "tb", "pb" };
-
-    std::stringstream ss;
-    if(size == 0)
+    if(nbytes == 0)
       return "0b";
 
     int i = 0;
-    while (size > 1024){
-      size /= 1024;
+    while(nbytes > 1024){
+      nbytes /= 1024;
       i++;
     }
 
-    ss << i << "." << size << units[i];
+    std::stringstream ss;
+    ss << i << "." << nbytes << units[i];
     return ss.str();
   }
 }

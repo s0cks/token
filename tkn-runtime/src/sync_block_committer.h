@@ -8,17 +8,17 @@ namespace token{
   namespace sync{
     class BlockCommitter : public internal::BlockCommitterBase,
                            public IndexedTransactionVisitor{
-    protected:
-      Hash block_;
+    private:
+      internal::WriteBatch batch_;
     public:
-      explicit BlockCommitter():
-        internal::BlockCommitterBase(),
+      explicit BlockCommitter(const BlockPtr& blk, UnclaimedTransactionPool& utxos):
+        internal::BlockCommitterBase(blk, utxos),
         IndexedTransactionVisitor(),
-        block_(){}
+        batch_(){}
       ~BlockCommitter() override = default;
 
       bool Visit(const IndexedTransactionPtr& tx) override;
-      bool Commit(const Hash& hash) override;
+      bool Commit() override;
     };
   }
 }

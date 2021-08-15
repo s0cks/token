@@ -6,6 +6,8 @@
 #include <leveldb/write_batch.h>
 #include "atomic/relaxed_atomic.h"
 
+#include "common.h"
+
 namespace token{
   namespace internal{
     class WriteBatch{
@@ -36,10 +38,6 @@ namespace token{
         return parent_ != nullptr;
       }
 
-      uint64_t GetExpectedSize() const{
-        return (uint64_t)size_;
-      }
-
       void Append(const leveldb::WriteBatch& batch){
         DLOG(INFO) << "appending batch of size: " << batch.ApproximateSize() << "b.....";
         size_ += batch.ApproximateSize();
@@ -54,6 +52,14 @@ namespace token{
         std::lock_guard<std::mutex> guard(mutex_);
         GetParent()->Append(batch_);
         return true;
+      }
+
+      std::string ToString() const{
+        std::stringstream ss;
+        ss << "WriteBatch(";
+        ss << "size=" << PrettySize(batch_.ApproximateSize());
+        ss << ")";
+        return ss.str();
       }
     };
   }

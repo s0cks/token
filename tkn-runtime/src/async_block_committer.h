@@ -7,11 +7,11 @@ namespace token{
   namespace async{
     class BlockCommitter : public internal::BlockCommitterBase{
     public:
-      BlockCommitter():
-        internal::BlockCommitterBase(){}
+      BlockCommitter(const BlockPtr& blk, UnclaimedTransactionPool& utxos):
+        internal::BlockCommitterBase(blk, utxos){}
       ~BlockCommitter() override = default;
 
-      bool Commit(const Hash& hash) override;
+      bool Commit() override;
     };
   }
 }
