@@ -1,4 +1,4 @@
-#include "sync_block_verifier.h"
+#include "block_verifier_sync.h"
 #include "sync_transaction_verifier.h"
 
 namespace token{

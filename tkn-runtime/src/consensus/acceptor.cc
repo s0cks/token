@@ -1,8 +1,8 @@
 #include "runtime.h"
 #include "proposal.h"
 #include "consensus/acceptor.h"
-#include "sync_block_committer.h"
-#include "async_block_committer.h"
+#include "block_committer_sync.h"
+#include "block_committer_async.h"
 
 namespace token{
   Acceptor::Acceptor(Runtime* runtime):

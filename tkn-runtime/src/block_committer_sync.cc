@@ -1,9 +1,32 @@
 #include "block.h"
-#include "sync_block_committer.h"
-#include "sync_transaction_committer.h"
+#include "block_committer_sync.h"
 
 namespace token{
   namespace sync{
+    bool TransactionCommitter::Visit(const Input& val){
+      //TODO: remove inputs
+
+      NOT_IMPLEMENTED(ERROR);//TODO: implement
+      return true;
+    }
+
+    bool TransactionCommitter::Visit(const Output& val){
+      auto index = output_idx_;
+
+      DVLOG(2) << "visiting output #" << index << " " << val.ToString() << "....";
+      UnclaimedTransaction::Builder builder;
+      builder.SetTransactionHash(hash());
+      builder.SetTransactionIndex(index);
+      builder.SetProduct(val.product().ToString());
+      builder.SetUser(val.user().ToString());
+
+      auto utxo = builder.Build();
+      auto utxo_hash = utxo->hash();
+      DVLOG(2) << "created unclaimed transaction " << utxo_hash << " from " << TransactionReference(hash(), index);
+      batch()->Put(utxo_hash, utxo);
+      return true;
+    }
+
     bool BlockCommitter::Visit(const IndexedTransactionPtr& tx){
       auto hash = tx->hash();
       DVLOG(2) << "visiting transaction " << hash << "....";

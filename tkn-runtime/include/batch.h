@@ -14,17 +14,13 @@ namespace token{
     protected:
       WriteBatch* parent_;
       leveldb::WriteBatch batch_;
-      std::mutex mutex_;
-      atomic::RelaxedAtomic<uint64_t> size_;
     public:
       explicit WriteBatch(WriteBatch* parent):
         parent_(parent),
-        batch_(),
-        mutex_(),
-        size_(0){}
+        batch_(){}
       WriteBatch():
         WriteBatch(nullptr){}
-      ~WriteBatch() = default;
+      virtual ~WriteBatch() = default;
 
       WriteBatch* GetParent() const{
         return parent_;
@@ -36,22 +32,6 @@ namespace token{
 
       bool HasParent() const{
         return parent_ != nullptr;
-      }
-
-      void Append(const leveldb::WriteBatch& batch){
-        DLOG(INFO) << "appending batch of size: " << batch.ApproximateSize() << "b.....";
-        size_ += batch.ApproximateSize();
-
-        std::lock_guard<std::mutex> guard(mutex_);
-        batch_.Append(batch);
-      }
-
-      bool AppendToParent(){
-        if(!HasParent())
-          return false;
-        std::lock_guard<std::mutex> guard(mutex_);
-        GetParent()->Append(batch_);
-        return true;
       }
 
       std::string ToString() const{

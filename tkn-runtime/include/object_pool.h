@@ -144,6 +144,21 @@ namespace token{
 
     template<class T>
     class ObjectPool : public PoolBase{
+    public:
+      class WriteBatch : public internal::WriteBatch{
+      public:
+        WriteBatch() = default;
+        ~WriteBatch() override = default;
+
+        void Put(const Hash& hash, const std::shared_ptr<T>& val){
+          auto data = val->ToBuffer();
+          return batch()->Put((const leveldb::Slice)hash, data->AsSlice());
+        }
+
+        void Delete(const Hash& hash){
+          return batch()->Delete((const leveldb::Slice)hash);
+        }
+      };
     protected:
       Type type_;
 

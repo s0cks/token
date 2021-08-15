@@ -55,7 +55,7 @@ add_executable(tkn-runtime
   include/peer/peer_session_manager.h src/peer/peer_session_manager.cc
   include/peer/peer_session_thread.h src/peer/peer_session_thread.cc
 
-  src/async_block_committer.h src/async_block_committer.cc
+  src/block_committer_async.h src/block_committer_async.cc
 
   include/batch.h
 
@@ -67,11 +67,9 @@ add_executable(tkn-runtime
   include/runtime.h src/runtime.cc
   src/block_committer.h
   src/block_verifier.h
-  src/sync_block_verifier.h src/sync_block_verifier.cc
-  src/sync_block_committer.h src/sync_block_committer.cc
-  src/sync_transaction_committer.h src/sync_transaction_committer.cc
+  src/block_verifier_sync.h src/block_verifier_sync.cc
+  src/block_committer_sync.h src/block_committer_sync.cc
   src/sync_transaction_verifier.h src/sync_transaction_verifier.cc
-  src/transaction_input_verifier.h src/transaction_input_verifier.cc
   src/block_builder.h src/block_builder.cc
 
   main.cc)
