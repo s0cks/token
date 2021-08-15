@@ -36,7 +36,7 @@ add_library(tkn-utils STATIC
   include/uuid.h
   include/version.h
   include/builder.h
-  include/eventbus.h src/eventbus.cc)
+  include/eventbus.h src/eventbus.cc include/array.h)
 target_link_libraries(tkn-utils
   tkn-platform
   ${GLOG_LIBRARIES})
