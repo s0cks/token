@@ -7,17 +7,116 @@
 
 namespace token{
   namespace sync{
-    class TransactionVerifier : public InputVisitor,
-                                public OutputVisitor{
+    class TransactionInputVerifier : public InputVisitor{
+    protected:
+      UnclaimedTransactionPool& pool_;
+      uint64_t total_;
+      uint64_t processed_;
+      uint64_t valid_;
+      uint64_t invalid_;
+
+      inline UnclaimedTransactionPool&
+      pool() const{
+        return pool_;
+      }
+
+      bool IsValid(const Input& val);
+    public:
+      TransactionInputVerifier(UnclaimedTransactionPool& pool, const uint64_t& total):
+        InputVisitor(),
+        pool_(pool),
+        total_(total),
+        processed_(0),
+        valid_(0),
+        invalid_(0){}
+      ~TransactionInputVerifier() override = default;
+
+      uint64_t total() const{
+        return total_;
+      }
+
+      uint64_t processed() const{
+        return processed_;
+      }
+
+      uint64_t valid() const{
+        return valid_;
+      }
+
+      uint64_t invalid() const{
+        return invalid_;
+      }
+
+      double GetPercentageValid() const{
+        return GetPercentageOf(total(), valid());
+      }
+
+      double GetPercentageInvalid() const{
+        return GetPercentageOf(total(), invalid());
+      }
+
+      bool Visit(const Input& val) override{
+        processed_++;
+        if(IsValid(val)){
+          valid_++;
+        } else{
+          invalid_++;
+        }
+        return true;
+      }
+    };
+
+    class TransactionOutputVerifier : public OutputVisitor{
+    private:
+      uint64_t total_;
+      uint64_t processed_;
+      uint64_t valid_;
+      uint64_t invalid_;
+    public:
+      explicit TransactionOutputVerifier(const uint64_t& total):
+        OutputVisitor(),
+        total_(total),
+        processed_(0),
+        valid_(0),
+        invalid_(0){}
+      ~TransactionOutputVerifier() override = default;
+
+      uint64_t total() const{
+        return total_;
+      }
+
+      uint64_t processed() const{
+        return processed_;
+      }
+
+      uint64_t valid() const{
+        return valid_;
+      }
+
+      uint64_t invalid() const{
+        return invalid_;
+      }
+
+      double GetPercentageValid() const{
+        return GetPercentageOf(total(), valid());
+      }
+
+      double GetPercentageInvalid() const{
+        return GetPercentageOf(total(), invalid());
+      }
+
+      bool Visit(const Output& val) override;
+    };
+
+    class TransactionVerifier{
     private:
       IndexedTransactionPtr transaction_;
-      UnclaimedTransactionPool& pool_;
-      atomic::BitVector rig_in_;
-      atomic::BitVector rig_out_;
       Hash transaction_hash_;
       uint64_t transaction_idx_;
-      uint64_t input_idx_;
-      uint64_t output_idx_;
+
+      UnclaimedTransactionPool& pool_;
+      TransactionInputVerifier input_verifier_;
+      TransactionOutputVerifier output_verifier_;
 
       inline UnclaimedTransactionPool&
       pool() const{
@@ -25,24 +124,26 @@ namespace token{
       }
     public:
       explicit TransactionVerifier(UnclaimedTransactionPool& pool, const IndexedTransactionPtr& val):
-        InputVisitor(),
-        OutputVisitor(),
         transaction_(val),
         pool_(pool),
-        rig_in_(val->GetNumberOfInputs()),
-        rig_out_(val->GetNumberOfOutputs()),
+        input_verifier_(pool, val->GetNumberOfInputs()),
+        output_verifier_(val->GetNumberOfOutputs()),
         transaction_hash_(val->hash()),
-        transaction_idx_(val->index()),
-        input_idx_(0),
-        output_idx_(0){}
-      ~TransactionVerifier() override = default;
+        transaction_idx_(val->index()){}
+      ~TransactionVerifier() = default;
+
+      TransactionInputVerifier& input_verifier(){
+        return input_verifier_;
+      }
+
+      TransactionOutputVerifier& output_verifier(){
+        return output_verifier_;
+      }
 
       Hash hash() const{
         return transaction_hash_;
       }
 
-      bool Visit(const Input& val) override;
-      bool Visit(const Output& val) override;
       bool Verify();
       bool IsValid();
     };
@@ -52,17 +153,11 @@ namespace token{
     protected:
       BlockPtr block_;
       uint64_t num_transactions_;
-      atomic::BitVector results_;
     public:
       BlockVerifier(const BlockPtr& blk, UnclaimedTransactionPool& utxos):
         internal::BlockVerifierBase(blk, utxos),
-        num_transactions_(blk->GetNumberOfTransactions()),
-        results_(blk->GetNumberOfTransactions()){}
+        num_transactions_(blk->GetNumberOfTransactions()){}
       ~BlockVerifier() override = default;
-
-      atomic::BitVector& GetResults(){
-        return results_;
-      }
 
       bool Visit(const IndexedTransactionPtr& val);
       bool Verify() override;

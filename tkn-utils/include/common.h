@@ -79,6 +79,11 @@ namespace token{
     return x + 1;
   }
 
+  static inline double
+  GetPercentageOf(const uint64_t& total, const uint64_t& current){
+    return (static_cast<double>(current)/static_cast<double>(total))*100.0;
+  }
+
 #define TOKEN_MAGIC 0xFEFE
 
   static bool

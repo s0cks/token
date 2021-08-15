@@ -3,6 +3,6 @@ package token.internal.proto;
 
 message Input{
     string hash = 1;
-    uint64 index = 2;
-    string user = 3;//TODO: remove
+    string transaction = 2;
+    uint64 index = 3;
 }

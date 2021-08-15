@@ -74,9 +74,9 @@ namespace token{
 
         std::for_each(inputs.begin(), inputs.end(), [&](const Input& input){
           auto new_input = raw_.add_inputs();
-          new_input->set_user(input.ToString());
+          new_input->set_hash(input.utxo_hash().HexString());
+          new_input->set_transaction(input.transaction_hash().HexString());
           new_input->set_index(input.index());
-          new_input->set_hash(input.transaction().HexString());
         });
 
         std::for_each(outputs.begin(), outputs.end(), [&](const Output& val){

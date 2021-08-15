@@ -49,7 +49,7 @@ namespace token{
     class BlockCommitter : public internal::BlockCommitterBase,
                            public IndexedTransactionVisitor{
     private:
-      internal::WriteBatch batch_;
+      UnclaimedTransactionPool::WriteBatch batch_;
     public:
       explicit BlockCommitter(const BlockPtr& blk, UnclaimedTransactionPool& utxos):
         internal::BlockCommitterBase(blk, utxos),

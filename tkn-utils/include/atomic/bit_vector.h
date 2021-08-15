@@ -25,19 +25,23 @@ namespace token{
         for(int i = 0; i < asize_; i++) data_[i] = 0x0;
       }
 
-      void Add(uint64_t i){
-        data_[i / kBitsPerWord] |= static_cast<uword>(1 << (i % kBitsPerWord));
+      void Add(const int64_t& i) {
+        data_[i / kBitsPerWord] |= (static_cast<uword>(1) << (i % kBitsPerWord));
       }
 
-      void Remove(uint64_t i){
-        data_[i / kBitsPerWord] &= ~static_cast<uword>(1 << (i % kBitsPerWord));
+      void Remove(const int64_t& i) {
+        data_[i / kBitsPerWord] &= ~(static_cast<uword>(1) << (i % kBitsPerWord));
+      }
+
+      void Set(const int64_t& i, bool value){
+        return value ? Add(i) : Remove(i);
       }
 
       void Intersect(BitVector* other){
         for(int i = 0; i < asize_; i++) data_[i] = data_[i] & other->data_[i];
       }
 
-      bool Contains(uint64_t i) const{
+      bool Contains(const int64_t& i) const{
         uword block = data_[i / kBitsPerWord];
         return (block & static_cast<uword>(1 << (i % kBitsPerWord))) != 0;
       }

@@ -11,16 +11,16 @@
 #include "transaction_reference.h"
 
 namespace token{
-  typedef std::shared_ptr<Input> InputPtr;
 
+  typedef internal::proto::Input RawInput;
   class Input : public Object{
    private:
-    internal::proto::Input raw_;
+    RawInput raw_;
    public:
     Input():
       Object(),
       raw_(){}
-    explicit Input(internal::proto::Input raw):
+    explicit Input(RawInput raw):
       Object(),
       raw_(std::move(raw)){}
     explicit Input(const internal::BufferPtr& data):
@@ -28,16 +28,10 @@ namespace token{
       if(!raw_.ParseFromArray(data->data(), static_cast<int>(data->length())))
         DLOG(FATAL) << "cannot parse Input from buffer.";
     }
-    Input(const Hash& tx, int64_t index, const std::string& user):
+    Input(const Hash& hash, const Hash& tx, const uint64_t& index):
       Input(){
-      raw_.set_user(user);
-      raw_.set_hash(tx.HexString());
-      raw_.set_index(index);
-    }
-    Input(const Hash& tx, int64_t index, const User& user):
-      Input(){
-      raw_.set_user(user.ToString());
-      raw_.set_hash(tx.HexString());
+      raw_.set_hash(hash.HexString());
+      raw_.set_transaction(tx.HexString());
       raw_.set_index(index);
     }
     Input(const Input& other) = default;
@@ -47,20 +41,20 @@ namespace token{
       return Type::kInput;
     }
 
-    Hash transaction() const{
-      return Hash::FromHexString(raw_.hash());
+    Hash utxo_hash() const{
+      return Hash(raw_.hash());
+    }
+
+    Hash transaction_hash() const{
+      return Hash(raw_.transaction());
     }
 
     uint64_t index() const{
       return raw_.index();
     }
 
-    User user() const{//TODO: change to std::string?
-      return User(raw_.user());
-    }
-
     TransactionReference reference() const{
-      return TransactionReference(transaction(), index());
+      return TransactionReference(transaction_hash(), index());
     }
 
     internal::BufferPtr ToBuffer() const;
@@ -76,21 +70,19 @@ namespace token{
     Input& operator=(const Input& other) = default;
 
     friend bool operator==(const Input& a, const Input& b){
-      return a.transaction() == b.transaction()
-          && a.index() == b.index()
-          && a.user() == b.user();
+      return a.utxo_hash() == b.utxo_hash();
     }
 
     friend bool operator!=(const Input& a, const Input& b){
-      return !operator==(a, b);
+      return a.utxo_hash() != b.utxo_hash();
     }
 
     friend bool operator<(const Input& a, const Input& b){
-      return a.transaction() < b.transaction();
+      return a.utxo_hash() < b.utxo_hash();
     }
 
     friend bool operator>(const Input& a, const Input& b){
-      return a.transaction() > b.transaction();
+      return a.utxo_hash() > b.utxo_hash();
     }
 
     friend std::ostream& operator<<(std::ostream& stream, const Input& input){

@@ -9,6 +9,8 @@
 #include "http/http_service_health.h"
 #include "peer/peer_session_manager.h"
 
+#include "verifier/block_verifier_sync.h"
+
 /*#ifdef TOKEN_DEBUG
   static const std::vector<token::User> kOwners = {
     token::User("VenueA"),
@@ -206,6 +208,14 @@ main(int argc, char **argv){
   }
 
   Runtime runtime;
+
+  auto blk = Block::Genesis();
+  sync::BlockVerifier verifier(blk, runtime.GetUnclaimedTransactionPool());
+  if(!verifier.Verify()){
+    LOG(FATAL) << "genesis is an invalid block.";
+    return EXIT_FAILURE;
+  }
+
   PeerSessionManager::Initialize(&runtime);
 
 #ifdef TOKEN_DEBUG

@@ -11,8 +11,7 @@ namespace token{
     }
 
     bool TransactionCommitter::Visit(const Output& val){
-      auto index = output_idx_;
-
+      auto index = output_idx_++;
       DVLOG(2) << "visiting output #" << index << " " << val.ToString() << "....";
       UnclaimedTransaction::Builder builder;
       builder.SetTransactionHash(hash());
@@ -22,7 +21,7 @@ namespace token{
 
       auto utxo = builder.Build();
       auto utxo_hash = utxo->hash();
-      DVLOG(2) << "created unclaimed transaction " << utxo_hash << " from " << TransactionReference(hash(), index);
+      DVLOG(1) << "created unclaimed transaction " << utxo_hash << " from " << TransactionReference(hash(), index);
       batch()->Put(utxo_hash, utxo);
       return true;
     }
@@ -30,7 +29,7 @@ namespace token{
     bool BlockCommitter::Visit(const IndexedTransactionPtr& tx){
       auto hash = tx->hash();
       DVLOG(2) << "visiting transaction " << hash << "....";
-      sync::TransactionCommitter committer(nullptr, hash, tx);
+      sync::TransactionCommitter committer(&batch_, hash, tx);
       if(!tx->VisitInputs(&committer)){
         LOG(ERROR) << "cannot visit transaction inputs.";
         return false;

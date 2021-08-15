@@ -97,10 +97,20 @@ namespace token{
         return session->Send(NewInternalServerErrorResponse("Error"));
       if(!writer.EndObject())
         return session->Send(NewInternalServerErrorResponse("Error"));
+      return session->Send(NewOkResponse(body));
     }
 
     HTTP_CONTROLLER_ENDPOINT_HANDLER(UnclaimedTransactionPoolController, GetStats){
-      return session->Send(NewNoContentResponse("unavailable"));
+
+      json::String body;
+      json::Writer writer(body);
+      if(!writer.StartObject())
+        return session->Send(NewInternalServerErrorResponse("Error"));
+      if(!json::SetField(writer, "data", pool().GetNumberInPool()))
+        return session->Send(NewInternalServerErrorResponse("Error"));
+      if(!writer.EndObject())
+        return session->Send(NewInternalServerErrorResponse("Error"));
+      return session->Send(NewOkResponse(body));
     }
   }
 }

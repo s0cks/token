@@ -101,7 +101,6 @@ namespace token{
     GetElectionRequiredVotes(){
       auto peers = PeerSessionManager::GetNumberOfConnectedPeers();
       auto votes = static_cast<uint32_t>(std::ceil(peers / 2))+1;
-      DLOG(INFO) << "required_votes := " << votes << " (peers=" << peers << ")";
       return votes;
     }
   protected:
