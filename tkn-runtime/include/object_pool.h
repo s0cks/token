@@ -290,10 +290,6 @@ namespace token{
       internal::ObjectPool<UnclaimedTransaction>(Type::kUnclaimedTransaction, filename + "/unclaimed_transactions"){}
     ~UnclaimedTransactionPool() override = default;
     bool Visit(UnclaimedTransactionVisitor* vis) const;
-
-    bool Has(const TransactionReference& reference) const{
-      auto utxo = UnclaimedTransaction()
-    }
   };
 }
 

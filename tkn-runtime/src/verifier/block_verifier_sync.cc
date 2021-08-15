@@ -3,7 +3,7 @@
 namespace token{
   namespace sync{
     bool TransactionVerifier::Visit(const Input& val){
-      
+
     }
 
     bool TransactionVerifier::Visit(const Output& val){
@@ -22,6 +22,11 @@ namespace token{
         return false;
       }
       return IsValid();
+    }
+
+    bool TransactionVerifier::IsValid(){
+      NOT_IMPLEMENTED(FATAL);//TODO: implement
+      return false;
     }
 
     bool BlockVerifier::Visit(const IndexedTransactionPtr& val){
