@@ -37,13 +37,14 @@ namespace token{
 
     class BlockVerifier : public internal::BlockVerifierBase{
     protected:
+      BlockPtr block_;
       uint64_t num_transactions_;
       atomic::BitVector results_;
     public:
-      BlockVerifier(const Hash& hash, const BlockPtr& val):
-        internal::BlockVerifierBase(hash, val),
-        num_transactions_(val->GetNumberOfTransactions()),
-        results_(val->GetNumberOfTransactions()){}
+      BlockVerifier(const BlockPtr& blk, UnclaimedTransactionPool& utxos):
+        internal::BlockVerifierBase(blk, utxos),
+        num_transactions_(blk->GetNumberOfTransactions()),
+        results_(blk->GetNumberOfTransactions()){}
       ~BlockVerifier() override = default;
 
       atomic::BitVector& GetResults(){

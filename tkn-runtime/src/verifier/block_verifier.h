@@ -7,21 +7,28 @@ namespace token{
   namespace internal{
     class BlockVerifierBase{
     protected:
-      BlockPtr blk_;
-      Hash blk_hash_;
+      BlockPtr block_;
+      Hash block_hash_;
+      UnclaimedTransactionPool& utxos_;
 
-      BlockVerifierBase(const Hash& hash, BlockPtr val):
-        blk_(std::move(val)),
-        blk_hash_(hash){}
+      BlockVerifierBase(const BlockPtr& blk, UnclaimedTransactionPool& utxos):
+        block_(blk),
+        block_hash_(blk->hash()),
+        utxos_(utxos){}
+
+      inline UnclaimedTransactionPool&
+      utxos() const{
+        return utxos_;
+      }
     public:
       virtual ~BlockVerifierBase() = default;
 
       BlockPtr block() const{
-        return blk_;
+        return block_;
       }
 
       Hash hash() const{
-        return blk_hash_;
+        return block_hash_;
       }
 
       virtual bool Verify() = 0;
