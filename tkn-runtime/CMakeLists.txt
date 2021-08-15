@@ -33,6 +33,10 @@ find_package(gmock REQUIRED)
 #target_link_libraries(FirstTest gtest gtest_main pthread)
 
 add_executable(tkn-runtime
+  src/commit/block_committer.h
+  src/commit/block_committer_async.h src/commit/block_committer_async.cc
+  src/commit/block_committer_sync.h src/commit/block_committer_sync.cc
+
   include/consensus/proposal_state.h src/consensus/proposal_state.cc
   include/consensus/acceptor.h src/consensus/acceptor.cc
   include/consensus/election.h src/consensus/election.cc
@@ -55,8 +59,6 @@ add_executable(tkn-runtime
   include/peer/peer_session_manager.h src/peer/peer_session_manager.cc
   include/peer/peer_session_thread.h src/peer/peer_session_thread.cc
 
-  src/block_committer_async.h src/block_committer_async.cc
-
   include/batch.h
 
   include/config.h src/config.cc
@@ -65,10 +67,8 @@ add_executable(tkn-runtime
   include/miner_listener.h
   include/object_pool.h src/object_pool.cc
   include/runtime.h src/runtime.cc
-  src/block_committer.h
   src/block_verifier.h
   src/block_verifier_sync.h src/block_verifier_sync.cc
-  src/block_committer_sync.h src/block_committer_sync.cc
   src/sync_transaction_verifier.h src/sync_transaction_verifier.cc
   src/block_builder.h src/block_builder.cc
 
