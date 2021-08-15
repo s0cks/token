@@ -20,13 +20,11 @@ namespace token{
     auto hash = blk->hash();
     SetLastMined(hash);
 
-//TODO:
-//    auto& pool = GetRuntime()->GetPool();
-//    if(!pool.PutBlock(hash, blk)){
-//      DLOG(FATAL) << "cannot put block in pool.";
-//      return;
-//    }
-
+    auto& pool = GetRuntime()->GetBlockPool();
+    if(!pool.Put(hash, blk)){
+      DLOG(FATAL) << "cannot put block in pool.";
+      return;//TODO: better error handling.
+    }
     GetRuntime()->GetEventBus().Publish("mine");
   }
 
