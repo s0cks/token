@@ -1,3 +1,4 @@
+#include "block.h"
 #include "sync_block_committer.h"
 #include "sync_transaction_committer.h"
 
@@ -6,7 +7,7 @@ namespace token{
     bool BlockCommitter::Visit(const IndexedTransactionPtr& tx){
       auto hash = tx->hash();
       DVLOG(2) << "visiting transaction " << hash << "....";
-      sync::TransactionCommitter committer(&batch_, hash, tx);
+      sync::TransactionCommitter committer(nullptr, hash, tx);
       if(!tx->VisitInputs(&committer)){
         LOG(ERROR) << "cannot visit transaction inputs.";
         return false;
@@ -30,11 +31,12 @@ namespace token{
         return false;
       }
 
-      leveldb::Status status;
-      if(!(status = GetObjectPool().Commit(batch_.batch())).ok()){
-        LOG(ERROR) << "cannot commit batch to object pool: " << status.ToString();
-        return false;
-      }
+//TODO:
+//      leveldb::Status status;
+//      if(!(status = GetObjectPool().Commit(batch_.batch())).ok()){
+//        LOG(ERROR) << "cannot commit batch to object pool: " << status.ToString();
+//        return false;
+//      }
 
 #ifdef TOKEN_DEBUG
       DLOG(INFO) << hash << " sync commit has finished, took " << GetElapsedTimeMilliseconds(start) << "ms.";

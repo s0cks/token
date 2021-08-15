@@ -11,6 +11,14 @@
 #include "transaction_reference.h"
 
 namespace token{
+  class UnclaimedTransactionVisitor{
+  protected:
+    UnclaimedTransactionVisitor() = default;
+  public:
+    virtual ~UnclaimedTransactionVisitor() = default;
+    virtual bool Visit(const UnclaimedTransactionPtr& val) const = 0;
+  };
+
   class UnclaimedTransaction: public Object{
   public:
     class Builder : public internal::ProtoBuilder<UnclaimedTransaction, internal::proto::UnclaimedTransaction>{

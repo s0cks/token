@@ -5,77 +5,103 @@
 namespace token{
   namespace http{
 #define DEFINE_HTTP_ENDPOINT_ROUTE_HANDLER(Method, Path, Name) \
-    HTTP_CONTROLLER_ROUTE_HANDLER(PoolController, Name)
-    FOR_EACH_POOL_CONTROLLER_ENDPOINT(DEFINE_HTTP_ENDPOINT_ROUTE_HANDLER)
+    HTTP_CONTROLLER_ROUTE_HANDLER(BlockPoolController, Name)
+    FOR_EACH_BLOCK_POOL_CONTROLLER_ENDPOINT(DEFINE_HTTP_ENDPOINT_ROUTE_HANDLER)
 #undef DEFINE_HTTP_ENDPOINT_ROUTE_HANDLER
 
-    HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetBlock){
-      Hash hash = request->GetHashParameterValue();
-      if(!GetPool().HasBlock(hash))
+    HTTP_CONTROLLER_ENDPOINT_HANDLER(BlockPoolController, Get){
+      auto hash = request->GetHashParameterValue();
+      if(!pool().Has(hash))
         return session->Send(NewNoContentResponse(hash));
-      BlockPtr blk = GetPool().GetBlock(hash);
-      return session->Send(NewOkResponse(blk));
+      auto val = pool().Get(hash);
+      return session->Send(NewOkResponse(val));
     }
 
-    HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetAllBlocks){
-      json::String body;
-      json::Writer writer(body);
-      if(!GetPool().GetBlocks(writer))
-        return session->Send(NewInternalServerErrorResponse("cannot get list of blocks from pool."));
-      return session->Send(NewOkResponse(body));
-    }
-
-    HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetPoolInfo){
-      PoolStats stats;
-      GetPool().GetPoolStats(stats);
+    HTTP_CONTROLLER_ENDPOINT_HANDLER(BlockPoolController, GetAll){
+      HashList hashes;
+      pool().GetAll(hashes);
+      DLOG(INFO) << "found " << hashes.size() << " hashes...";
 
       json::String body;
       json::Writer writer(body);
       if(!writer.StartObject())
-        return session->Send(NewInternalServerErrorResponse("An error has occurred"));
-
-      {
-        if(!json::SetField(writer, "data", stats))
-          return session->Send(NewInternalServerErrorResponse("cannot write stats to json"));
-      }
-
+        return session->Send(NewInternalServerErrorResponse("error"));
+      if(!json::SetField(writer, "data", hashes))
+        return session->Send(NewInternalServerErrorResponse("cannot serialize hash list"));
       if(!writer.EndObject())
-        return session->Send(NewInternalServerErrorResponse("An error has occurred"));
+        return session->Send(NewInternalServerErrorResponse("error"));
 
-      return session->Send(NewOkResponse(body));
+      session->Send(NewOkResponse(body));
     }
 
-    HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetTransaction){
-      Hash hash = request->GetHashParameterValue();
-      if(!GetPool().HasUnsignedTransaction(hash))
+    HTTP_CONTROLLER_ENDPOINT_HANDLER(BlockPoolController, GetStats){
+      NOT_IMPLEMENTED(ERROR);
+      return session->Send(NewNoContentResponse("unavailable"));
+    }
+
+#define DEFINE_HTTP_ENDPOINT_ROUTE_HANDLER(Method, Path, Name) \
+    HTTP_CONTROLLER_ROUTE_HANDLER(UnsignedTransactionPoolController, Name)
+    FOR_EACH_UNSIGNED_TRANSACTION_POOL_CONTROLLER_ENDPOINT(DEFINE_HTTP_ENDPOINT_ROUTE_HANDLER)
+#undef DEFINE_HTTP_ENDPOINT_ROUTE_HANDLER
+
+    HTTP_CONTROLLER_ENDPOINT_HANDLER(UnsignedTransactionPoolController, Get){
+      auto hash = request->GetHashParameterValue();
+      if(!pool().Has(hash))
         return session->Send(NewNoContentResponse(hash));
-      UnsignedTransactionPtr tx = GetPool().GetUnsignedTransaction(hash);
-      return session->Send(NewOkResponse(tx));
+      auto val = pool().Get(hash);
+      return session->Send(NewOkResponse(val));
     }
 
-    HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetTransactions){
-      return session->Send(NewNotImplementedResponse("Not Implemented."));
-    }
+    HTTP_CONTROLLER_ENDPOINT_HANDLER(UnsignedTransactionPoolController, GetAll){
+      HashList hashes;
+      pool().GetAll(hashes);
 
-    HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetUnclaimedTransaction){
-      Hash hash = request->GetHashParameterValue();
-      if(!GetPool().HasUnclaimedTransaction(hash))
-        return session->Send(NewNoContentResponse(hash));
-      UnclaimedTransactionPtr utxo = GetPool().GetUnclaimedTransaction(hash);
-      return session->Send(NewOkResponse(utxo));
-    }
-
-    HTTP_CONTROLLER_ENDPOINT_HANDLER(PoolController, GetUnclaimedTransactions){
       json::String body;
       json::Writer writer(body);
-      writer.StartObject();
-      {
-        writer.Key("data");
-        if(!GetPool().GetUnclaimedTransactions(writer))
-          return session->Send(NewInternalServerErrorResponse("Cannot get the list of unclaimed transactions in the object pool."));
-      }
-      writer.EndObject();
+      //TODO: serialize better
+      if(!writer.StartObject())
+        return session->Send(NewInternalServerErrorResponse("Error"));
+      if(!json::SetField(writer, "data", hashes))
+        return session->Send(NewInternalServerErrorResponse("Error"));
+      if(!writer.EndObject())
+        return session->Send(NewInternalServerErrorResponse("Error"));
       return session->Send(NewOkResponse(body));
+    }
+
+    HTTP_CONTROLLER_ENDPOINT_HANDLER(UnsignedTransactionPoolController, GetStats){
+      return session->Send(NewNoContentResponse("unavailable"));
+    }
+
+#define DEFINE_HTTP_ENDPOINT_ROUTE_HANDLER(Method, Path, Name) \
+    HTTP_CONTROLLER_ROUTE_HANDLER(UnclaimedTransactionPoolController, Name)
+    FOR_EACH_UNCLAIMED_TRANSACTION_POOL_CONTROLLER_ENDPOINT(DEFINE_HTTP_ENDPOINT_ROUTE_HANDLER)
+#undef DEFINE_HTTP_ENDPOINT_ROUTE_HANDLER
+
+    HTTP_CONTROLLER_ENDPOINT_HANDLER(UnclaimedTransactionPoolController, Get){
+      auto hash = request->GetHashParameterValue();
+      if(!pool().Has(hash))
+        return session->Send(NewNoContentResponse(hash));
+      auto val = pool().Get(hash);
+      return session->Send(NewOkResponse(val));
+    }
+
+    HTTP_CONTROLLER_ENDPOINT_HANDLER(UnclaimedTransactionPoolController, GetAll){
+      HashList hashes;
+      pool().GetAll(hashes);
+
+      json::String body;
+      json::Writer writer(body);
+      //TODO: serialize better
+      if(!writer.StartObject())
+        return session->Send(NewInternalServerErrorResponse("Error"));
+      if(!json::SetField(writer, "data", hashes))
+        return session->Send(NewInternalServerErrorResponse("Error"));
+      if(!writer.EndObject())
+        return session->Send(NewInternalServerErrorResponse("Error"));
+    }
+
+    HTTP_CONTROLLER_ENDPOINT_HANDLER(UnclaimedTransactionPoolController, GetStats){
+      return session->Send(NewNoContentResponse("unavailable"));
     }
   }
 }

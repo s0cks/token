@@ -3,10 +3,10 @@
 
 #include <uv.h>
 
-#include "pool.h"
 #include "miner.h"
 #include "config.h"
 #include "eventbus.h"
+#include "object_pool.h"
 #include "miner_listener.h"
 #include "node/node_server.h"
 #include "task/task_engine.h"
@@ -76,7 +76,6 @@ namespace token{
     EventBus events_;
     task::TaskQueue task_queue_;
     task::TaskEngine task_engine_;
-    ObjectPool pool_;
     UUID node_id_;
     ProposalState proposal_state_;
     node::Server server_;
@@ -86,6 +85,11 @@ namespace token{
     ProposalTimer timer_;
     Proposer proposer_;
     Acceptor acceptor_;
+
+    // pools
+    BlockPool pool_blk_;
+    UnsignedTransactionPool pool_txs_unsigned_;
+    UnclaimedTransactionPool pool_txs_unclaimed_;
 
     void SetState(const State& state){
       state_ = state;
@@ -127,8 +131,16 @@ namespace token{
       return (State)state_;
     }
 
-    ObjectPool& GetPool(){
-      return pool_;
+    BlockPool& GetBlockPool() {
+      return pool_blk_;
+    }
+
+    UnclaimedTransactionPool& GetUnclaimedTransactionPool(){
+      return pool_txs_unclaimed_;
+    }
+
+    UnsignedTransactionPool& GetUnsignedTransactionPool(){
+      return pool_txs_unsigned_;
     }
 
     Proposer& GetProposer(){

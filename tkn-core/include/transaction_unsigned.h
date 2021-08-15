@@ -6,6 +6,14 @@
 #include "transaction.h"
 
 namespace token{
+  class UnsignedTransactionVisitor{
+  protected:
+    UnsignedTransactionVisitor() = default;
+  public:
+    virtual ~UnsignedTransactionVisitor() = default;
+    virtual bool Visit(const UnsignedTransactionPtr& val) const = 0;
+  };
+
   class UnsignedTransaction: public internal::TransactionBase<internal::proto::UnsignedTransaction>{
   public:
     struct TimestampComparator{

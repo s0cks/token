@@ -57,19 +57,6 @@ typedef internal::BufferPtr BufferPtr;
 #undef FORWARD_DECLARE
   }
 
-#define FOR_EACH_COMPONENT(V) \
-  V(BlockChain)               \
-  V(WalletManager)            \
-  V(ObjectPool)               \
-  V(ReferenceDatabase)
-
-//TODO: remove FORWARD_DECLARE
-#define FORWARD_DECLARE(Name) \
-  class Name;                 \
-  typedef std::shared_ptr<Name> Name##Ptr;
-  FOR_EACH_COMPONENT(FORWARD_DECLARE)
-#undef FORWARD_DECLARE
-
   enum class Type{
     kUnknown = 0,
 #define DEFINE_TYPE(Name) k##Name,

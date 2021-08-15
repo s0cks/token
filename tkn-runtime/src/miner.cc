@@ -1,4 +1,3 @@
-#include "pool.h"
 #include "miner.h"
 #include "runtime.h"
 #include "block_builder.h"
@@ -21,11 +20,12 @@ namespace token{
     auto hash = blk->hash();
     SetLastMined(hash);
 
-    auto& pool = GetRuntime()->GetPool();
-    if(!pool.PutBlock(hash, blk)){
-      DLOG(FATAL) << "cannot put block in pool.";
-      return;
-    }
+//TODO:
+//    auto& pool = GetRuntime()->GetPool();
+//    if(!pool.PutBlock(hash, blk)){
+//      DLOG(FATAL) << "cannot put block in pool.";
+//      return;
+//    }
 
     GetRuntime()->GetEventBus().Publish("mine");
   }

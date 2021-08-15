@@ -2,9 +2,8 @@
 #define TKN_BATCH_H
 
 #include <mutex>
+#include <glog/logging.h>
 #include <leveldb/write_batch.h>
-
-#include "pool.h"
 #include "atomic/relaxed_atomic.h"
 
 namespace token{
@@ -55,18 +54,6 @@ namespace token{
         std::lock_guard<std::mutex> guard(mutex_);
         GetParent()->Append(batch_);
         return true;
-      }
-    };
-
-    class PoolWriteBatch : public WriteBatch{
-    public:
-      explicit PoolWriteBatch(WriteBatch* parent):
-        WriteBatch(parent){}
-      PoolWriteBatch() = default;
-      ~PoolWriteBatch() = default;
-
-      void PutUnclaimedTransaction(const Hash& k, const std::shared_ptr<UnclaimedTransaction>& val){
-        return ObjectPool::PutUnclaimedTransactionObject(&batch_, k, val);
       }
     };
   }

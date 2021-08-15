@@ -9,6 +9,9 @@ namespace token{
     TestEventListener(loop),
     node_id_(true),
     config_(FLAGS_path + "/config"),
+    pool_blk_(FLAGS_path + "/pool"),
+    pool_txs_unclaimed_(FLAGS_path + "/pool"),
+    pool_txs_unsigned_(FLAGS_path + "/pool"),
     events_(),
     loop_(loop),
     state_(State::kStopped),
@@ -19,7 +22,6 @@ namespace token{
     timer_(this),
     proposer_(this),
     acceptor_(this),
-    pool_(FLAGS_path + "/pool"),
     server_(this),
     service_rest_(this),
     service_health_(this){

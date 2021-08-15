@@ -54,9 +54,9 @@ namespace token{
   BufferPtr Block::ToBuffer() const{
     auto length = raw_.ByteSizeLong();
     auto data = internal::NewBuffer(length);
-    if(!raw_.SerializeToArray(data->data(), static_cast<int>(length))){
-      DLOG(FATAL) << "cannot serialize Block to buffer.";
-      return nullptr;
+    if(!data->PutMessage(raw_)){
+      LOG(FATAL) << "cannot serialize Block to buffer of size " << data->length();
+      return nullptr;//TODO: return empty buffer.
     }
     return data;
   }

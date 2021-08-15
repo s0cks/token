@@ -178,9 +178,7 @@ namespace token{
     BlockVisitor() = default;
   public:
     virtual ~BlockVisitor() = default;
-    virtual bool VisitStart(){ return true; }
-    virtual bool Visit(const IndexedTransactionPtr& tx) = 0;
-    virtual bool VisitEnd(){ return true; }
+    virtual bool Visit(const BlockPtr& val) const = 0;
   };
 
   namespace json{

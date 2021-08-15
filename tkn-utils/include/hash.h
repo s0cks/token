@@ -186,7 +186,7 @@ namespace token{
     }
 
     explicit operator leveldb::Slice() const{
-      return leveldb::Slice((const char*)data(), size()+1);
+      return leveldb::Slice((const char*)data_, kSize);
     }
 
     friend std::ostream& operator<<(std::ostream& stream, const Hash& hash){
@@ -257,8 +257,7 @@ namespace token{
     }
 
     static inline bool
-    SetField(Writer& writer, const char* name, const HashList& val){
-      JSON_KEY(writer, name);
+    Write(Writer& writer, const HashList& val){
       JSON_START_ARRAY(writer);
       {
         for(auto& it : val)
@@ -266,6 +265,12 @@ namespace token{
       }
       JSON_END_ARRAY(writer);
       return true;
+    }
+
+    static inline bool
+    SetField(Writer& writer, const char* name, const HashList& val){
+      JSON_KEY(writer, name);
+      return Write(writer, val);
     }
   }
 }

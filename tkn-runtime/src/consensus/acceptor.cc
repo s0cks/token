@@ -65,18 +65,19 @@ namespace token{
 
   bool Acceptor::IsValidProposal(const UUID& proposal_id, const Hash& hash){
     DVLOG(1) << "validating proposal " << proposal_id << ".....";
-    auto& pool = GetRuntime()->GetPool();
-    if(!pool.HasBlock(hash)){
-      DLOG(ERROR) << "cannot find block " << hash << " in pool.";
-      return false;
-    }
+//TODO:
+//    auto& pool = GetRuntime()->GetPool();
+//    if(!pool.HasBlock(hash)){
+//      DLOG(ERROR) << "cannot find block " << hash << " in pool.";
+//      return false;
+//    }
     //TODO: verify block
     return true;
   }
 
   bool Acceptor::CommitProposal(const UUID& proposal_id, const Hash& hash){
     DLOG_IF(ERROR, IsAsyncEnabled()) << "async commit is not available yet, using synchronous commit.";
-    sync::BlockCommitter committer(GetRuntime()->GetPool());
+    sync::BlockCommitter committer;
     if(!committer.Commit(hash)){
       LOG(ERROR) << "cannot commit block " << hash << ".";
       return false;

@@ -22,8 +22,8 @@ namespace token{
 
       auto utxo = builder.Build();
       auto utxo_hash = utxo->hash();
-      DVLOG(1) << "created unclaimed transaction " << utxo_hash << " from " << TransactionReference(hash(), index);
-      batch_->PutUnclaimedTransaction(utxo_hash, utxo);
+      DVLOG(2) << "created unclaimed transaction " << utxo_hash << " from " << TransactionReference(hash(), index);
+      //TODO: batch_->PutUnclaimedTransaction(utxo_hash, utxo);
       return true;
     }
   }

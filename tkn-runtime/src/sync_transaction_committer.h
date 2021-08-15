@@ -6,6 +6,10 @@
 #include "transaction_indexed.h"
 
 namespace token{
+  namespace internal{
+    class PoolWriteBatch{};
+  }
+
   namespace sync{
     class TransactionCommitter : public InputVisitor,
                                  public OutputVisitor{

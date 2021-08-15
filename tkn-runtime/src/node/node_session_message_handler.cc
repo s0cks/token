@@ -93,10 +93,10 @@ namespace token{
       auto blk = Block::Genesis();//TODO: use message block
       auto hash = blk->hash();
       DLOG(INFO) << "received block: " << hash;
-
-      auto& pool = session->GetServer()->runtime()->GetPool();
-      if(!pool.PutBlock(hash, blk))
-        DLOG(FATAL) << "cannot put block in object pool.";
+//TODO:
+//      auto& pool = session->GetServer()->runtime()->GetPool();
+//      if(!pool.PutBlock(hash, blk))
+//        DLOG(FATAL) << "cannot put block in object pool.";
     }
   }
 }

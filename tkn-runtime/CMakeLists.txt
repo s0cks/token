@@ -55,8 +55,6 @@ add_executable(tkn-runtime
   include/peer/peer_session_manager.h src/peer/peer_session_manager.cc
   include/peer/peer_session_thread.h src/peer/peer_session_thread.cc
 
-  include/tasks/task_batch_write.h
-
   src/async_block_committer.h src/async_block_committer.cc
 
   include/batch.h
@@ -65,13 +63,8 @@ add_executable(tkn-runtime
   include/flags.h src/flags.cc
   include/miner.h src/miner.cc
   include/miner_listener.h
-  include/pool.h src/pool.cc
+  include/object_pool.h src/object_pool.cc
   include/runtime.h src/runtime.cc
-
-  include/tasks/task_process_output_list.h src/tasks/task_process_input_list.cc
-  include/tasks/task_process_input_list.h src/tasks/task_process_output_list.cc
-  include/tasks/task_process_transaction.h src/tasks/task_process_transaction.cc
-
   src/block_committer.h
   src/block_verifier.h
   src/sync_block_verifier.h src/sync_block_verifier.cc

@@ -1,7 +1,6 @@
 #include "flags.h"
 #include "config.h"
 
-#include "pool.h"
 #include "runtime.h"
 
 #include "node/node_server.h"
@@ -9,9 +8,6 @@
 #include "http/http_service_rest.h"
 #include "http/http_service_health.h"
 #include "peer/peer_session_manager.h"
-
-#include "tasks/task_batch_write.h"
-
 
 /*#ifdef TOKEN_DEBUG
   static const std::vector<token::User> kOwners = {
@@ -202,8 +198,24 @@ main(int argc, char **argv){
     }
   }
 
+  if(!FileExists(TOKEN_BLOCKCHAIN_HOME+"/pool")){
+    if(!CreateDirectory(TOKEN_BLOCKCHAIN_HOME+"/pool")){
+      LOG(FATAL) << "cannot create pool directory: " << (TOKEN_BLOCKCHAIN_HOME+"/pool");
+      return EXIT_FAILURE;
+    }
+  }
+
   Runtime runtime;
   PeerSessionManager::Initialize(&runtime);
+
+#ifdef TOKEN_DEBUG
+  auto genesis = Block::Genesis();
+  auto hash = genesis->hash();
+  if(!runtime.GetBlockPool().Put(hash, genesis)){
+    DLOG(FATAL) << "cannot insert genesis block " << hash << " into pool.";
+    return EXIT_FAILURE;
+  }
+#endif//TOKEN_DEBUG
 
   runtime.Run();
   return EXIT_SUCCESS;

@@ -23,6 +23,7 @@
   V(UnclaimedTransaction)
 
 namespace token{
+
   struct PoolStats{
     uint64_t num_blocks;
     uint64_t num_transactions_unsigned;
@@ -91,9 +92,6 @@ namespace token{
     V(Uninitialized)           \
     V(Initializing)            \
     V(Initialized)
-
-  class ObjectPool;
-  typedef std::shared_ptr<ObjectPool> ObjectPoolPtr;
 
   static inline std::string
   GetObjectPoolDirectory(){

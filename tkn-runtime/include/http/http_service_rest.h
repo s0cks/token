@@ -10,18 +10,28 @@ namespace token{
   namespace http{
     class RestService : public ServiceBase{
      private:
-      PoolController controller_pool_;
       InfoController controller_info_;
+      BlockPoolController controller_pool_blk_;
+      UnclaimedTransactionPoolController controller_pool_txs_unclaimed_;
+      UnsignedTransactionPoolController controller_pool_txs_unsigned_;
      public:
       explicit RestService(Runtime* runtime);
       ~RestService() override = default;
 
-      PoolController& GetPoolController(){
-        return controller_pool_;
-      }
-
       InfoController& GetInfoController(){
         return controller_info_;
+      }
+
+      BlockPoolController& GetBlockPoolController(){
+        return controller_pool_blk_;
+      }
+
+      UnclaimedTransactionPoolController& GetUnclaimedTransactionPoolController(){
+        return controller_pool_txs_unclaimed_;
+      }
+
+      UnsignedTransactionPoolController& GetUnsignedTransactionPoolController(){
+        return controller_pool_txs_unsigned_;
       }
 
       static inline bool
