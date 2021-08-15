@@ -49,6 +49,7 @@ add_executable(tkn-runtime
   include/http/http_controller_info.h src/http/http_controller_info.cc
   include/http/http_controller_pool.h src/http/http_controller_pool.cc
   include/http/http_service_rest.h src/http/http_service_rest.cc
+
   include/node/node_session_message_handler.h src/node/node_session_message_handler.cc
   include/node/node_session.h src/node/node_session.cc
   include/node/node_server.h src/node/node_server.cc
@@ -59,6 +60,9 @@ add_executable(tkn-runtime
   include/peer/peer_session_manager.h src/peer/peer_session_manager.cc
   include/peer/peer_session_thread.h src/peer/peer_session_thread.cc
 
+  src/verifier/block_verifier.h
+  src/verifier/block_verifier_sync.h src/verifier/block_verifier_sync.cc
+
   include/batch.h
 
   include/config.h src/config.cc
@@ -67,9 +71,6 @@ add_executable(tkn-runtime
   include/miner_listener.h
   include/object_pool.h src/object_pool.cc
   include/runtime.h src/runtime.cc
-  src/block_verifier.h
-  src/block_verifier_sync.h src/block_verifier_sync.cc
-  src/sync_transaction_verifier.h src/sync_transaction_verifier.cc
   src/block_builder.h src/block_builder.cc
 
   main.cc)

@@ -1,8 +1,17 @@
 #include "block_verifier_sync.h"
-#include "sync_transaction_verifier.h"
 
 namespace token{
   namespace sync{
+    bool TransactionVerifier::Visit(const Input& val){
+      NOT_IMPLEMENTED(FATAL);//TODO: implement
+      return false;
+    }
+
+    bool TransactionVerifier::Visit(const Output& val){
+      NOT_IMPLEMENTED(FATAL);//TODO: implement
+      return false;
+    }
+
     bool BlockVerifier::Verify(){
       DLOG(INFO) << "(sync) verifying block " << hash() << "....";
       auto start = Clock::now();
