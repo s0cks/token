@@ -3,13 +3,31 @@
 namespace token{
   namespace sync{
     bool TransactionVerifier::Visit(const Input& val){
-      NOT_IMPLEMENTED(FATAL);//TODO: implement
-      return false;
+      
     }
 
     bool TransactionVerifier::Visit(const Output& val){
       NOT_IMPLEMENTED(FATAL);//TODO: implement
       return false;
+    }
+
+    bool TransactionVerifier::Verify(){
+      if(!transaction_->VisitInputs(this)){
+        LOG(ERROR) << "cannot visit transaction " << hash() << " inputs.";
+        return false;
+      }
+
+      if(!transaction_->VisitOutputs(this)){
+        LOG(ERROR) << "cannot visit transaction " << hash() << " outputs.";
+        return false;
+      }
+      return IsValid();
+    }
+
+    bool BlockVerifier::Visit(const IndexedTransactionPtr& val){
+      DVLOG(2) << "visiting " << val->ToString() << "....";
+      TransactionVerifier verifier(utxos(), val);
+
     }
 
     bool BlockVerifier::Verify(){

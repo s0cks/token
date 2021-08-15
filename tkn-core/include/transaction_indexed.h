@@ -61,6 +61,14 @@ namespace token{
     return raw_.index();
   }
 
+  uint64_t GetNumberOfInputs() const{
+    return static_cast<uint64_t>(raw_.inputs_size());
+  }
+
+  uint64_t GetNumberOfOutputs() const{
+    return static_cast<uint64_t>(raw_.outputs_size());
+  }
+
   Hash hash() const override{
     auto data = ToBuffer();
     return Hash::ComputeHash<CryptoPP::SHA256>(data->data(), data->length());
