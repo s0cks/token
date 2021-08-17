@@ -5,7 +5,7 @@ namespace token{
   VerifyInputTask::VerifyInputTask(VerifyTransactionInputsTask* parent, const Input& val, UnclaimedTransactionPool& pool):
     task::Task(parent),
     verifier_(pool),
-    value_(val.utxo_hash()){}
+    value_(val.hash()){}
 
   void VerifyInputTask::DoWork(){
     DLOG(INFO) << "verifying input " << value_ << "....";

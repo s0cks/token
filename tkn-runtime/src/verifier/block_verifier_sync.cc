@@ -3,7 +3,7 @@
 namespace token{
   namespace sync{
     bool TransactionInputVerifier::IsValid(const Input& val){
-      auto hash = val.utxo_hash();
+      auto hash = val.hash();
       if(!pool().Has(hash)){
         LOG(ERROR) << "input #" << (processed()+1) << " is not valid, cannot find unclaimed transaction: " << hash << ".";
         return false;

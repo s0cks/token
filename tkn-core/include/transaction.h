@@ -80,9 +80,10 @@ namespace token{
 
         std::for_each(inputs.begin(), inputs.end(), [&](const Input& input){
           auto new_input = raw_.add_inputs();
-          new_input->set_hash(input.utxo_hash().HexString());
-          new_input->set_transaction(input.transaction_hash().HexString());
-          new_input->set_index(input.index());
+          auto source = input.source();
+          new_input->set_hash(input.hash().HexString());
+          new_input->set_transaction(source.transaction().HexString());
+          new_input->set_index(source.index());
         });
 
         std::for_each(outputs.begin(), outputs.end(), [&](const Output& val){

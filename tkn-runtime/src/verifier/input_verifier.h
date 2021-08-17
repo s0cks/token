@@ -17,7 +17,7 @@ namespace token{
     }
 
     bool IsValid(const Input& val) const{
-      return IsValid(val.utxo_hash());
+      return IsValid(val.hash());
     }
 
     bool IsValid(const Hash& hash) const{

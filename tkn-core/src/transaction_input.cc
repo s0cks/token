@@ -2,21 +2,19 @@
 #include "transaction_input.h"
 
 namespace token{
-  std::string Input::ToString() const{
-    std::stringstream ss;
-    ss << "Input(";
-    ss << "hash=" << utxo_hash() << ", ";
-    ss << "transaction=" << transaction_hash() << ", ";
-    ss << "index=" << index();
-    ss << ")";
-    return ss.str();
-  }
-
   internal::BufferPtr Input::ToBuffer() const{
-    auto size = raw_.ByteSizeLong();
-    auto data = internal::NewBuffer(size);
-    if(!raw_.SerializeToArray(data->data(), static_cast<int>(size))){
-      DLOG(FATAL) << "cannot serialize Input to buffer.";
+    RawInput raw;
+    raw.set_hash(hash_.HexString());
+    raw.set_transaction(source_.transaction().HexString());
+    raw.set_index(source_.index());
+    auto length = static_cast<uint64_t>(raw.ByteSizeLong());
+    auto data = internal::NewBuffer(length+sizeof(uint64_t));
+    if(!data->PutUnsignedLong(length)){ // length_
+      LOG(FATAL) << "cannot serialize Input (" << length << "b) to buffer of size: " << data->length();
+      return nullptr;
+    }
+    if(!data->PutMessage(raw)){
+      LOG(FATAL) << "cannot serialize Input (" << length << "b) to buffer of size: " << data->length();
       return nullptr;
     }
     return data;

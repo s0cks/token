@@ -2,116 +2,142 @@
 #define TOKEN_TRANSACTION_INPUT_H
 
 #include <vector>
-
+#include "hash.h"
 #include "input.pb.h"
-
-#include "object.h"
-#include "type/user.h"
-#include "codec/codec.h"
 #include "transaction_reference.h"
 
 namespace token{
-
   typedef internal::proto::Input RawInput;
+
+  class Input;
+  typedef std::shared_ptr<Input> InputPtr;
+
   class Input : public Object{
-   private:
-    RawInput raw_;
+  public:
+    static inline int
+    Compare(const Input& lhs, const Input& rhs){
+      if(lhs.hash() < rhs.hash()){
+        return -1;
+      } else if(lhs.hash() > rhs.hash()){
+        return +1;
+      }
+      return 0;
+    }
+  private:
     Hash hash_;
-   public:
+    TransactionReference source_;
+  public:
     Input():
       Object(),
-      raw_(){}
-    explicit Input(const RawInput& raw):
-      Input(){
-      raw_.CopyFrom(raw);
+      hash_(),
+      source_(){
     }
-    explicit Input(const internal::BufferPtr& data):
-      Input(){
-      if(!raw_.ParseFromArray(data->data(), static_cast<int>(data->length())))
-        DLOG(FATAL) << "cannot parse Input from buffer.";
-    }
-    Input(const Hash& hash, const Hash& tx, const uint64_t& index):
+    Input(const Hash& hash, const TransactionReference& source):
       Object(),
-      raw_(),
-      hash_(hash){
-      raw_.set_hash(hash.HexString());
-      raw_.set_transaction(tx.HexString());
-      raw_.set_index(index);
+      hash_(hash),
+      source_(source){
     }
-    Input(const Input& other):
-      Input(){
-      raw_.CopyFrom(other.raw_);
+    explicit Input(const RawInput& val):
+      Object(),
+      hash_(Hash::FromHexString(val.hash())),
+      source_(Hash::FromHexString(val.transaction()), val.index()){
     }
+    Input(const Input& rhs) = default;
     ~Input() override = default;
 
     Type type() const override{
       return Type::kInput;
     }
 
-    Hash utxo_hash() const{
-      return Hash::FromHexString(raw_.hash());
+    Hash hash() const{
+      return hash_;
     }
 
-    Hash transaction_hash() const{
-      return Hash(raw_.transaction());
+    TransactionReference source() const{
+      return source_;
     }
 
-    uint64_t index() const{
-      return raw_.index();
-    }
-
-    TransactionReference reference() const{
-      return TransactionReference(transaction_hash(), index());
+    std::string ToString() const override{
+      std::stringstream ss;
+      ss << "Input(";
+      ss << "hash=" << hash() << ", ";
+      ss << "source=" << source();
+      ss << ")";
+      return ss.str();
     }
 
     internal::BufferPtr ToBuffer() const;
 
-    /**
-     * Returns the description of this object.
-     *
-     * @see Object::ToString()
-     * @return The ToString() description of this object
-     */
-    std::string ToString() const override;
+    Input& operator=(const Input& rhs) = default;
 
-    Input& operator=(const Input& other){
-      if(&other == this)
-        return *this;
-      raw_.CopyFrom(other.raw_);
+    Input& operator=(const RawInput& rhs){
+      hash_ = Hash::FromHexString(rhs.hash());
+      source_ = TransactionReference(Hash::FromHexString(rhs.transaction()), rhs.index());
       return *this;
     }
 
-    friend bool operator==(const Input& a, const Input& b){
-      return a.utxo_hash() == b.utxo_hash();
+    friend std::ostream& operator<<(std::ostream& stream, const Input& rhs){
+      return stream << rhs.ToString();
     }
 
-    friend bool operator!=(const Input& a, const Input& b){
-      return a.utxo_hash() != b.utxo_hash();
+    friend bool operator==(const Input& lhs, const Input& rhs){
+      return Compare(lhs, rhs) == 0;
     }
 
-    friend bool operator<(const Input& a, const Input& b){
-      return a.utxo_hash() < b.utxo_hash();
+    friend bool operator!=(const Input& lhs, const Input& rhs){
+      return Compare(lhs, rhs) != 0;
     }
 
-    friend bool operator>(const Input& a, const Input& b){
-      return a.utxo_hash() > b.utxo_hash();
+    friend bool operator<(const Input& lhs, const Input& rhs){
+      return Compare(lhs, rhs) < 0;
     }
 
-    friend std::ostream& operator<<(std::ostream& stream, const Input& input){
-      return stream << input.ToString();
+    friend bool operator>(const Input& lhs, const Input& rhs){
+      return Compare(lhs, rhs) > 0;
+    }
+
+    static inline InputPtr
+    NewInstance(const Hash& utxo, const TransactionReference& source){
+      return std::make_shared<Input>(utxo, source);
+    }
+
+    static inline InputPtr
+    From(const RawInput& val){
+      return std::make_shared<Input>(val);
+    }
+
+    static inline InputPtr
+    From(const internal::BufferPtr& val){
+      auto length = val->GetUnsignedLong();
+      DVLOG(2) << "decoded Input length: " << length;
+      RawInput raw;
+      if(!val->GetMessage(raw, length)){
+        LOG(FATAL) << "cannot decode Input (" << length << "b) from buffer of size: " << val->length();
+        return nullptr;
+      }
+      return From(raw);
+    }
+
+    static inline InputPtr
+    CopyFrom(const Input& val){
+      return std::make_shared<Input>(val);
+    }
+
+    static inline InputPtr
+    CopyFrom(const InputPtr& val){
+      return NewInstance(val->hash(), val->source());
     }
   };
 
 namespace json{
     static inline bool
-    Write(Writer& writer, const Input& val){
+    Write(Writer& writer, const Input& val){//TODO: better error handling
       JSON_START_OBJECT(writer);
       {
-//TODO:
-//        if(!json::SetField(writer, "transaction", val.GetReference()))
-//          return false;
-//        if(!json::SetField(writer, "user", val.GetUser()))
-//          return false;
+        if(!json::SetField(writer, "hash", val.hash()))
+          return false;
+        if(!json::SetField(writer, "source", val.source()))
+          return false;
       }
       JSON_END_OBJECT(writer);
       return true;
