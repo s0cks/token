@@ -9,7 +9,6 @@
 #include "timestamp.h"
 #include "transaction_indexed.h"
 #include "block_header.h"
-#include "codec/codec.h"
 
 namespace token{
   class BlockVisitor;
@@ -20,7 +19,7 @@ namespace token{
   public:
 #ifdef TOKEN_DEBUG
     static const int64_t kMaxBlockSize = 128 * token::internal::kMegabytes;
-    static const int64_t kNumberOfGenesisOutputs = 100000;
+    static const int64_t kNumberOfGenesisOutputs = 128;
 #else
     static const int64_t kMaxBlockSize = 1 * token::internal::kGigabytes;
     static const int64_t kNumberOfGenesisOutputs = 10000;

@@ -72,6 +72,10 @@ namespace token{
       TaskEngineQueue* GetQueue(const size_t& qidx);
       TaskEngineWorker* GetWorker(const ThreadId& thread);
 
+      TaskEngineWorker* GetCurrentWorker(){
+        return GetWorker(platform::GetCurrentThreadId());
+      }
+
       inline TaskEngineQueue*
       GetRandomQueue(){
         return GetQueue(GetRandomQueueIndex());

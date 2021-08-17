@@ -241,6 +241,12 @@ namespace token{
   typedef std::vector<Hash> HashList;
   typedef std::set<Hash, Hash::Comparator> HashSet;
 
+  static inline HashList&
+  operator<<(HashList& list, const Hash& val){
+    list.push_back(val);
+    return list;
+  }
+
   template<class T>
   static inline HashList&
   operator<<(HashList& list, const std::shared_ptr<T>& val){

@@ -11,7 +11,7 @@ namespace token{
       std::atomic<T> val_;
      public:
       explicit RelaxedAtomic(const T& init):
-          val_(init){}
+        val_(init){}
       ~RelaxedAtomic() = default;
 
       T fetch_add(T arg, std::memory_order order=std::memory_order_relaxed){

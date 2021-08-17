@@ -4,9 +4,8 @@
 #include <mutex>
 #include <glog/logging.h>
 #include <leveldb/write_batch.h>
-#include "atomic/relaxed_atomic.h"
-
 #include "common.h"
+#include "atomic/relaxed_atomic.h"
 
 namespace token{
   namespace internal{

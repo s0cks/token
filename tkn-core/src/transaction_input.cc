@@ -5,7 +5,9 @@ namespace token{
   std::string Input::ToString() const{
     std::stringstream ss;
     ss << "Input(";
-
+    ss << "hash=" << utxo_hash() << ", ";
+    ss << "transaction=" << transaction_hash() << ", ";
+    ss << "index=" << index();
     ss << ")";
     return ss.str();
   }

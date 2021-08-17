@@ -1,7 +1,7 @@
 #ifndef TKN_BLOCK_VERIFIER_H
 #define TKN_BLOCK_VERIFIER_H
 
-#include "block.h"
+#include "object_pool.h"
 
 namespace token{
   namespace internal{

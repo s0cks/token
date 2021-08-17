@@ -159,7 +159,7 @@ namespace token{
         num_transactions_(blk->GetNumberOfTransactions()){}
       ~BlockVerifier() override = default;
 
-      bool Visit(const IndexedTransactionPtr& val);
+      bool Visit(const IndexedTransactionPtr& val) override;
       bool Verify() override;
     };
   }

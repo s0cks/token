@@ -2,6 +2,7 @@
 #define TKN_TASK_H
 
 #include <iostream>
+#include <glog/logging.h>
 
 #include "atomic/relaxed_atomic.h"
 #include "task/task_queue.h"
@@ -40,7 +41,7 @@ namespace token{
       TaskEngine* engine_;
       Task* parent_;
       atomic::RelaxedAtomic<Status> status_;
-      atomic::RelaxedAtomic<int64_t> unfinished_;
+      atomic::RelaxedAtomic<uint64_t> unfinished_;
 
       Task(TaskEngine* engine, Task* parent):
         engine_(engine),

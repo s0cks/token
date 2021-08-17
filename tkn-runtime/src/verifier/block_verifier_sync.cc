@@ -59,7 +59,7 @@ namespace token{
         DVLOG(1) << "transaction " << verifier.hash() << " is valid.";
       }
 
-      DLOG(INFO) << "(sync) commit block " << hash() << " has finished, took " << GetElapsedTimeMilliseconds(start) << "ms.";
+      DLOG(INFO) << "(sync) verify block " << hash() << " has finished, took " << GetElapsedTimeMilliseconds(start) << "ms.";
       return true;
     }
   }

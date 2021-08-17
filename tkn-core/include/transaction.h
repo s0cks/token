@@ -45,12 +45,11 @@ namespace token{
           ProtoBuilder<T, M>::raw_->set_timestamp(ToUnixTimestamp(val));
         }
 
-        void AddInput(const Hash& hash, const uint64_t& index, const std::string& user, const std::string& product){
+        void AddInput(const Hash& hash, const Hash& transaction, const uint64_t& index){
           auto new_input = ProtoBuilder<T, M>::raw_->add_inputs();
-          new_input->set_hash(hash);
           new_input->set_index(index);
-          new_input->set_user(user);
-          new_input->set_product(product);
+          new_input->set_transaction(transaction.HexString());
+          new_input->set_hash(hash.HexString());
         }
 
         void AddOutput(const std::string& user, const std::string& product){
@@ -66,8 +65,15 @@ namespace token{
         BinaryObject(),
         raw_(){}
       explicit TransactionBase(M raw):
-        BinaryObject(),
-        raw_(std::move(raw)){}
+        TransactionBase(){
+        raw_.CopyFrom(raw);
+      }
+      explicit TransactionBase(const internal::BufferPtr& data):
+        TransactionBase(){
+        auto length = static_cast<int>(data->length());
+        if(!raw_.ParseFromArray(data->data(), length))
+          LOG(FATAL) << "cannot parse from buffer of size: " << length;
+      }
       TransactionBase(const Timestamp& timestamp, const std::vector<Input>& inputs, const std::vector<Output>& outputs):
         TransactionBase(){
         raw_.set_timestamp(ToUnixTimestamp(timestamp));
@@ -109,10 +115,10 @@ namespace token{
       }
 
       bool VisitInputs(InputVisitor* vis) const{
-        for(auto& it : raw_.inputs()){
+        DLOG(INFO) << "visiting " << raw_.inputs_size() << " inputs....";
+        for(auto it : raw_.inputs()){
           Input val(it);
-          if(!vis->Visit(val))
-            return false;
+          DLOG(INFO) << "visiting: " << val;
         }
         return true;
       }

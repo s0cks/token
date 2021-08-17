@@ -16,25 +16,32 @@ namespace token{
   class Input : public Object{
    private:
     RawInput raw_;
+    Hash hash_;
    public:
     Input():
       Object(),
       raw_(){}
-    explicit Input(RawInput raw):
-      Object(),
-      raw_(std::move(raw)){}
+    explicit Input(const RawInput& raw):
+      Input(){
+      raw_.CopyFrom(raw);
+    }
     explicit Input(const internal::BufferPtr& data):
       Input(){
       if(!raw_.ParseFromArray(data->data(), static_cast<int>(data->length())))
         DLOG(FATAL) << "cannot parse Input from buffer.";
     }
     Input(const Hash& hash, const Hash& tx, const uint64_t& index):
-      Input(){
+      Object(),
+      raw_(),
+      hash_(hash){
       raw_.set_hash(hash.HexString());
       raw_.set_transaction(tx.HexString());
       raw_.set_index(index);
     }
-    Input(const Input& other) = default;
+    Input(const Input& other):
+      Input(){
+      raw_.CopyFrom(other.raw_);
+    }
     ~Input() override = default;
 
     Type type() const override{
@@ -42,7 +49,7 @@ namespace token{
     }
 
     Hash utxo_hash() const{
-      return Hash(raw_.hash());
+      return Hash::FromHexString(raw_.hash());
     }
 
     Hash transaction_hash() const{
@@ -67,7 +74,12 @@ namespace token{
      */
     std::string ToString() const override;
 
-    Input& operator=(const Input& other) = default;
+    Input& operator=(const Input& other){
+      if(&other == this)
+        return *this;
+      raw_.CopyFrom(other.raw_);
+      return *this;
+    }
 
     friend bool operator==(const Input& a, const Input& b){
       return a.utxo_hash() == b.utxo_hash();

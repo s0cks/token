@@ -4,9 +4,10 @@
 namespace token{
   namespace task{
     Task* TaskEngineWorker::GetNextTask(){
-      auto next = (Task*)GetTaskQueue().Pop();
+      auto next = reinterpret_cast<Task*>(GetTaskQueue().Pop());
       if(next)
         return next;
+
       auto queue = GetEngine()->GetRandomQueue();
       if(!queue || !queue->queue || platform::ThreadEquals(GetThreadId(), queue->thread)){
         pthread_yield();//TODO: convert to platform agnostic

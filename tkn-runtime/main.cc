@@ -9,7 +9,7 @@
 #include "http/http_service_health.h"
 #include "peer/peer_session_manager.h"
 
-#include "verifier/block_verifier_sync.h"
+#include "verifier/block_verifier_async.h"
 
 /*#ifdef TOKEN_DEBUG
   static const std::vector<token::User> kOwners = {
@@ -208,24 +208,41 @@ main(int argc, char **argv){
   }
 
   Runtime runtime;
+  auto& utxos = runtime.GetUnclaimedTransactionPool();
+  auto tx_hash = Hash::GenerateNonce();
+  Block::Builder block_builder;
+  IndexedTransaction::Builder tx1 = block_builder.AddTransaction();
+  tx1.SetIndex(0);
+  tx1.SetTimestamp(Clock::now());
 
-  auto blk = Block::Genesis();
-  sync::BlockVerifier verifier(blk, runtime.GetUnclaimedTransactionPool());
+  for(uint64_t idx = 0; idx < 100; idx++){
+    UnclaimedTransaction::Builder builder;
+    builder.SetUser("TestUser");
+    builder.SetProduct("TestToken");
+    builder.SetTransactionHash(tx_hash);
+    builder.SetTransactionIndex(idx);
+    auto utxo = builder.Build();
+    auto utxo_hash = utxo->hash();
+    if(!utxos.Put(utxo_hash, utxo))
+      LOG(FATAL) << "cannot put dummy unclaimed transaction in pool.";
+    DLOG(INFO) << "put unclaimed transaction in pool: " << utxo_hash << " (" << tx_hash << "[" << idx << "])";
+    tx1.AddInput(utxo_hash, tx_hash, idx);
+    tx1.AddOutput("TestUser", "TestToken");
+  }
+  auto tx = tx1.Build();
+  DLOG(INFO) << "created transaction: " << tx->hash();
+
+  auto& engine = runtime.GetTaskEngine();
+  auto& queue = runtime.GetTaskQueue();
+
+  auto blk = block_builder.Build();
+  async::BlockVerifier verifier(engine, queue, blk, runtime.GetUnclaimedTransactionPool());
   if(!verifier.Verify()){
     LOG(FATAL) << "genesis is an invalid block.";
     return EXIT_FAILURE;
   }
 
   PeerSessionManager::Initialize(&runtime);
-
-#ifdef TOKEN_DEBUG
-  auto genesis = Block::Genesis();
-  auto hash = genesis->hash();
-  if(!runtime.GetBlockPool().Put(hash, genesis)){
-    DLOG(FATAL) << "cannot insert genesis block " << hash << " into pool.";
-    return EXIT_FAILURE;
-  }
-#endif//TOKEN_DEBUG
 
   runtime.Run();
   return EXIT_SUCCESS;

@@ -46,10 +46,7 @@ namespace token{
   explicit IndexedTransaction(RawIndexedTransaction raw):
     internal::TransactionBase<RawIndexedTransaction>(std::move(raw)){}
   explicit IndexedTransaction(const internal::BufferPtr& data):
-    IndexedTransaction(){
-    if(!raw_.ParseFromArray(data->data(), static_cast<int>(data->length())))
-      DLOG(FATAL) << "cannot parse IndexedTransaction from buffer";
-  }
+    internal::TransactionBase<RawIndexedTransaction>(data){}
   IndexedTransaction(const IndexedTransaction &other) = default;
   ~IndexedTransaction() override = default;
 
@@ -89,6 +86,26 @@ namespace token{
 
   friend bool operator!=(const IndexedTransaction& lhs, const IndexedTransaction& rhs){
     return lhs.hash() != rhs.hash();
+  }
+
+  static inline IndexedTransactionPtr
+  NewInstance(const Timestamp& timestamp, const uint64_t& index){//TODO: use input list & output list
+    return nullptr;
+  }
+
+  static inline IndexedTransactionPtr
+  From(const RawIndexedTransaction& val){
+    return std::make_shared<IndexedTransaction>(val);
+  }
+
+  static inline IndexedTransactionPtr
+  From(const internal::BufferPtr& val){
+    return std::make_shared<IndexedTransaction>(val);
+  }
+
+  static inline IndexedTransactionPtr
+  CopyFrom(const IndexedTransactionPtr& val){
+    return From(val->raw_);//TODO: optimize
   }
 };
 
