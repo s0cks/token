@@ -10,27 +10,38 @@
 #include "type/product.h"
 
 namespace token{
+  typedef internal::proto::Output RawOutput;
+
+  class Output;
+  typedef std::shared_ptr<Output> OutputPtr;
+
   class Output : public Object{
-   private:
-    internal::proto::Output raw_;
-   public:
+  public:
+    static inline int
+    Compare(const Output& lhs, const Output& rhs){
+      NOT_IMPLEMENTED(FATAL);//TODO: implement
+      return 0;
+    }
+  private:
+    User user_;
+    Product product_;
+  public:
     Output():
       Object(),
-      raw_(){}
-    explicit Output(internal::proto::Output raw):
+      user_(),
+      product_(){
+    }
+    Output(const User& user, const Product& product):
       Object(),
-      raw_(std::move(raw)){}
-    explicit Output(const internal::BufferPtr& data):
-      Output(){
-      if(!raw_.ParseFromArray(data->data(), static_cast<int>(data->length())))
-        DLOG(FATAL) << "cannot parse Output from buffer.";
+      user_(user),
+      product_(product){
     }
-    Output(const std::string& user, const std::string& product):
-      Output(){
-      raw_.set_user(user);
-      raw_.set_product(product);
+    explicit Output(const RawOutput& val):
+      Object(),
+      user_(val.user()),
+      product_(val.product()){
     }
-    Output(const Output& other) = default;
+    Output(const Output& rhs) = default;
     ~Output() override = default;
 
     Type type() const override{
@@ -38,52 +49,88 @@ namespace token{
     }
 
     User user() const{
-      return User(raw_.user());
+      return user_;
     }
 
     Product product() const{
-      return Product(raw_.product());
+      return product_;
     }
 
     internal::BufferPtr ToBuffer() const;
 
-    /**
-     * Returns the description of this object.
-     *
-     * @see Object::ToString()
-     * @return The ToString() description of this object
-     */
-    std::string ToString() const override;
-
-    Output& operator=(const Output& other) = default;
-
-    friend bool operator==(const Output& a, const Output& b){
-      return a.user() == b.user()
-          && a.product() == b.product();
+    std::string ToString() const override{
+      std::stringstream ss;
+      ss << "Output(";
+      ss << "user=" << user() << ", ";
+      ss << "product=" << product();
+      ss << ")";
+      return ss.str();
     }
 
-    friend bool operator!=(const Output& a, const Output& b){
-      return !operator==(a, b);
+    Output& operator=(const Output& rhs) = default;
+
+    Output& operator=(const RawOutput& rhs){
+      user_ = User(rhs.user());
+      product_ = Product(rhs.product());
+      return *this;
     }
 
-    friend bool operator<(const Output& a, const Output& b){
-      NOT_IMPLEMENTED(ERROR);
-      return true;
+    friend std::ostream& operator<<(std::ostream& stream, const Output& rhs){
+      return stream << rhs.ToString();
     }
 
-    friend bool operator>(const Output& a, const Output& b){
-      NOT_IMPLEMENTED(ERROR);
-      return true;
+    friend bool operator==(const Output& lhs, const Output& rhs){
+      return Compare(lhs, rhs) == 0;
     }
 
-    friend std::ostream& operator<<(std::ostream& stream, const Output& output){
-      return stream << output.ToString();
+    friend bool operator!=(const Output& lhs, const Output& rhs){
+      return Compare(lhs, rhs) != 0;
+    }
+
+    friend bool operator<(const Output& lhs, const Output& rhs){
+      return Compare(lhs, rhs) < 0;
+    }
+
+    friend bool operator>(const Output& lhs, const Output& rhs){
+      return Compare(lhs, rhs) > 0;
+    }
+
+    static inline OutputPtr
+    NewInstance(const User& user, const Product& product){
+      return std::make_shared<Output>(user, product);
+    }
+
+    static inline OutputPtr
+    From(const RawOutput& val){
+      return std::make_shared<Output>(val);
+    }
+
+    static inline OutputPtr
+    From(const internal::BufferPtr& val){
+      auto length = val->GetUnsignedLong();
+      DVLOG(2) << "decoded Output length: " << length;
+      RawOutput raw;
+      if(!val->GetMessage(raw, length)){
+        LOG(FATAL) << "cannot decode Output (" << length << "b) from buffer of size: " << val->length();
+        return nullptr;
+      }
+      return From(raw);
+    }
+
+    static inline OutputPtr
+    CopyFrom(const Output& val){
+      return std::make_shared<Output>(val);
+    }
+
+    static inline OutputPtr
+    CopyFrom(const OutputPtr& val){
+      return NewInstance(val->user(), val->product());
     }
   };
 
   namespace json{
     static inline bool
-    Write(Writer& writer, const Output& val){
+    Write(Writer& writer, const Output& val){//TODO: better error handling
       JSON_START_OBJECT(writer);
       {
         if(!json::SetField(writer, "user", val.user()))

@@ -52,12 +52,7 @@ namespace token{
   }
 
   BufferPtr Block::ToBuffer() const{
-    auto length = raw_.ByteSizeLong();
-    auto data = internal::NewBuffer(length);
-    if(!data->PutMessage(raw_)){
-      LOG(FATAL) << "cannot serialize Block to buffer of size " << data->length();
-      return nullptr;//TODO: return empty buffer.
-    }
-    return data;
+    NOT_IMPLEMENTED(FATAL);//TODO: implement
+    return nullptr;
   }
 }

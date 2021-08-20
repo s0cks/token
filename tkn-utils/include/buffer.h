@@ -194,17 +194,24 @@ namespace token{
 
       template<class M>
       bool PutMessage(const M& raw){
-        auto nbytes = raw.ByteSizeLong();
+        auto mbytes = raw.ByteSizeLong();
+        auto nbytes = mbytes+sizeof(uint64_t);
         if((wpos_ + nbytes) > length()){
-          DLOG(ERROR) << "not enough bytes remaining in buffer to serialize message of size: " << nbytes << "b " << BUFFER_WRITE_POSITION;
-          return false;
-        }
-        if(!raw.SerializeToArray(&data()[wpos_], nbytes)){
-          DLOG(ERROR) << "cannot serialize message of size " << nbytes << "b to buffer " << BUFFER_WRITE_POSITION;
+          LOG(ERROR) << "not enough bytes remaining in buffer to serialize message (" << nbytes << "b) " << BUFFER_WRITE_POSITION;
           return false;
         }
 
-        DVLOG(2) << "serialized message of size " << nbytes << "b to buffer " << BUFFER_WRITE_POSITION;
+        if(!PutUnsignedLong(mbytes)){
+          LOG(ERROR) << "cannot serialize message length (uint64_t) to buffer " << BUFFER_WRITE_POSITION;
+          return false;
+        }
+
+        if(!raw.SerializeToArray(&data()[wpos_], nbytes)){
+          LOG(ERROR) << "cannot serialize message (" << mbytes << "b) to buffer " << BUFFER_WRITE_POSITION;
+          return false;
+        }
+
+        DVLOG(2) << "serialized message (" << nbytes << "b) to buffer " << BUFFER_WRITE_POSITION;
         wpos_ += nbytes;
         return true;
       }
@@ -316,6 +323,12 @@ namespace token{
     static inline BufferPtr
     NewBuffer(const uint64_t& length){
       return std::make_shared<AllocatedBuffer>(length);
+    }
+
+    template<class M>
+    static inline BufferPtr
+    NewBufferForProto(const M& msg){
+      return NewBuffer(msg.ByteSizeLong()+sizeof(uint64_t));
     }
 
     template<class Encoder>
