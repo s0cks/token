@@ -2,8 +2,8 @@
 
 namespace token{
   namespace sync{
-    bool TransactionInputVerifier::IsValid(const Input& val){
-      auto hash = val.hash();
+    bool TransactionInputVerifier::IsValid(const InputPtr& val){
+      auto hash = val->hash();
       if(!pool().Has(hash)){
         LOG(ERROR) << "input #" << (processed()+1) << " is not valid, cannot find unclaimed transaction: " << hash << ".";
         return false;
@@ -12,7 +12,7 @@ namespace token{
       return true;
     }
 
-    bool TransactionOutputVerifier::Visit(const Output& val){//TODO: implement?
+    bool TransactionOutputVerifier::Visit(const OutputPtr& val){//TODO: implement?
       processed_++;
       valid_++;
       return true;
@@ -47,8 +47,8 @@ namespace token{
       auto start = Clock::now();
 
       uint64_t idx = 0;
-      for(; idx < num_transactions_; idx++){
-        auto tx = block()->GetTransaction(idx);
+      for(auto iter = block_->transactions_begin(); iter != block_->transactions_end(); iter++){
+        auto tx = (*iter);
         TransactionVerifier verifier(utxos(), tx);
         if(!verifier.Verify()){
           LOG(ERROR) << "transaction " << verifier.hash() << " is invalid: ";

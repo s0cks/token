@@ -13,6 +13,13 @@ namespace token{
       task::TaskEngine& engine_;
       task::TaskQueue& queue_;
       std::vector<std::shared_ptr<VerifyTransactionTask>> verify_transactions_;
+
+      inline std::shared_ptr<VerifyTransactionTask>
+      CreateVerifyTransactionTask(const IndexedTransactionPtr& val){
+        auto task = std::make_shared<VerifyTransactionTask>(&engine_, utxos(), val);
+        verify_transactions_.push_back(task);
+        return task;
+      }
     public:
       BlockVerifier(task::TaskEngine& engine, task::TaskQueue& queue, const BlockPtr& blk, UnclaimedTransactionPool& pool):
         internal::BlockVerifierBase(blk, pool),
@@ -33,6 +40,8 @@ namespace token{
 
       bool Visit(const IndexedTransactionPtr& val) override;
       bool Verify() override;
+
+      void PrintStats();
     };
   }
 }

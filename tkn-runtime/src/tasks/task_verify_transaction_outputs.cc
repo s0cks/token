@@ -8,8 +8,8 @@ namespace token{
     internal::VerifyTransactionObjectsTask<Output>(parent, pool, val){
   }
 
-  bool VerifyTransactionOutputsTask::Visit(const Output& val){
-    DVLOG(2) << "visiting " << val.ToString() << "....";
+  bool VerifyTransactionOutputsTask::Visit(const OutputPtr& val){
+    DVLOG(2) << "visiting " << val->ToString() << "....";
     auto& queue = GetEngine()->GetCurrentWorker()->GetTaskQueue();
     auto task = new VerifyOutputTask(this, val, pool());
     if(!queue.Push(reinterpret_cast<uword>(task))){

@@ -9,7 +9,7 @@ namespace token{
       DVLOG(2) << "visiting transaction " << tx_hash << "....";
 
       auto& queue = GetTaskQueue();
-      auto task = std::make_shared<VerifyTransactionTask>(&engine_, utxos(), val);
+      auto task = CreateVerifyTransactionTask(val);
       if(!task->Submit(queue)){
         LOG(ERROR) << "cannot verify transaction " << tx_hash << ".";
         return false;
@@ -18,17 +18,20 @@ namespace token{
       DVLOG(1) << "waiting for task to finish.";
       while(!task->IsFinished());//spin
       DVLOG(1) << "task has finished, took=" << GetElapsedTimeMilliseconds(start) << "ms.";
-
-      auto verify_inputs = task->GetVerifyInputs();
-      auto verify_outputs = task->GetVerifyOutputs();
-      DVLOG(1) << "transaction " << tx_hash << " results:";
-      DVLOG(1) << "inputs: " << verify_inputs->GetStats();
-      DVLOG(1) << "outputs: " << verify_outputs->GetStats();
       return true;
     }
 
     bool BlockVerifier::Verify(){
       return block()->VisitTransactions(this);
+    }
+
+    void BlockVerifier::PrintStats(){
+      for(auto& task : verify_transactions_){
+        auto hash = task->GetTransaction()->hash();
+        DLOG(INFO) << "transaction " << hash << " results:";
+        DLOG(INFO) << "\tinputs: " << task->GetVerifyInputs()->GetStats();
+        DLOG(INFO) << "\toutputs: " << task->GetVerifyOutputs()->GetStats();
+      }
     }
   }
 }

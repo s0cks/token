@@ -19,7 +19,7 @@ namespace token{
       Version version = Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
       Hash nonce = msg->nonce();
       UUID node_id; //TODO: get server node id
-      BlockPtr head = Block::Genesis();//TODO: get head
+      BlockPtr head = Block::NewGenesis();//TODO: get head
 
       Send(rpc::VersionMessage::NewInstance(timestamp, client_type, version, nonce, node_id));
     }
@@ -34,7 +34,7 @@ namespace token{
       Version version = Version(TOKEN_MAJOR_VERSION, TOKEN_MINOR_VERSION, TOKEN_REVISION_VERSION);
       Hash nonce = msg->nonce();
       UUID node_id; //TODO: get server node id
-      BlockPtr head = Block::Genesis();//TODO: get head
+      BlockPtr head = Block::NewGenesis();//TODO: get head
       Send(rpc::VerackMessage::NewInstance(Clock::now(), client_type, version, nonce, node_id));
       //TODO: connect to peer if not connected
     }
@@ -90,7 +90,7 @@ namespace token{
 
     void SessionMessageHandler::OnBlockMessage(const rpc::BlockMessagePtr& msg){
       auto session = (node::Session*)GetSession();
-      auto blk = Block::Genesis();//TODO: use message block
+      auto blk = Block::NewGenesis();//TODO: use message block
       auto hash = blk->hash();
       DLOG(INFO) << "received block: " << hash;
 //TODO:

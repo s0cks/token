@@ -180,7 +180,7 @@ namespace token{
 
         std::shared_ptr<T> Next() const{
           auto data = internal::CopyBufferFrom(iter_->value());
-          auto next = T::Decode(data);
+          auto next = T::From(data);
           iter_->Next();
           return next;
         }
@@ -208,7 +208,7 @@ namespace token{
           return nullptr;
         }
         DVLOG(2) << "found " << hash << " (" << GetPoolType() << ").";
-        return T::Decode(internal::CopyBufferFrom(data));
+        return T::From(internal::CopyBufferFrom(data));
       }
 
       virtual bool Has(const Hash& hash) const{

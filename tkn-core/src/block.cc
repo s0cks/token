@@ -1,58 +1,44 @@
 #include "block.h"
 
 namespace token{
-  std::string Block::ToString() const{
-    std::stringstream stream;
-    stream << "Block(#" << height() << ", " << GetNumberOfTransactions() << " Transactions)";
-    return stream.str();
+  static inline IndexedTransactionPtr
+  CreateGenesisTransaction(const uint64_t& index, const User& user, const Product& product, const uint64_t& nouts){
+    InputList inputs = {};
+    // do we need inputs?
+
+    OutputList outputs = {};
+    for(auto idx = 0; idx < nouts; idx++)
+      outputs << Output(user, product);
+
+    auto timestamp = FromUnixTimestamp(0);
+    return IndexedTransaction::NewInstance(index, timestamp, inputs, outputs);
   }
 
-  BlockPtr Block::Genesis(){
-    Block::Builder builder;
-    builder.SetTimestamp(FromUnixTimestamp(0));
-    builder.SetPreviousHash(Hash());
-    builder.SetHeight(0);
-
-    IndexedTransaction::Builder tx1 = builder.AddTransaction();
-    tx1.SetIndex(0);
-    for(auto idx = 0; idx < Block::kNumberOfGenesisOutputs; idx++)
-      tx1.AddOutput("VenueA", "TestToken");
-
-    IndexedTransaction::Builder tx2 = builder.AddTransaction();
-    tx2.SetIndex(1);
-    for(auto idx = 0; idx < Block::kNumberOfGenesisOutputs; idx++)
-      tx2.AddOutput("VenueB", "TestToken");
-
-    IndexedTransaction::Builder tx3 = builder.AddTransaction();
-    tx3.SetIndex(3);
-    for(auto idx = 0; idx < Block::kNumberOfGenesisOutputs; idx++)
-      tx3.AddOutput("VenueC", "TestToken");
-
-    return builder.Build();
-  }
-
-  bool Block::Accept(BlockVisitor* vis) const{
-    NOT_IMPLEMENTED(ERROR);
-    return false;//TODO: implement
-  }
-
-  bool Block::Contains(const Hash& hash) const{
-    return tx_bloom_.Contains(hash);
+  BlockPtr Block::NewGenesis(){
+    auto height = static_cast<uint64_t>(0);
+    auto previous = Hash();
+    auto timestamp = FromUnixTimestamp(0);
+    IndexedTransactionSet transactions;
+    transactions << CreateGenesisTransaction(0, User("VenueA"), Product("TestToken"), Block::kNumberOfGenesisOutputs);
+    transactions << CreateGenesisTransaction(1, User("VenueB"), Product("TestToken"), Block::kNumberOfGenesisOutputs);
+    transactions << CreateGenesisTransaction(2, User("VenueC"), Product("TestToken"), Block::kNumberOfGenesisOutputs);
+    return Block::NewInstance(height, previous, timestamp, transactions);
   }
 
   Hash Block::GetMerkleRoot() const{
-    /*
-     TODO:MerkleTreeBuilder builder;
-    if(!Accept(&builder)){
-      return Hash();
-    }
-    std::shared_ptr<MerkleTree> tree = builder.Build();
-    return tree->GetRootHash();*/
+    NOT_IMPLEMENTED(FATAL);//TODO: implement
     return Hash();
   }
 
-  BufferPtr Block::ToBuffer() const{
-    NOT_IMPLEMENTED(FATAL);//TODO: implement
-    return nullptr;
+  internal::BufferPtr Block::ToBuffer() const{
+    RawBlock raw;
+    raw << (*this);
+    auto data = internal::NewBufferForProto(raw);
+    if(!data->PutMessage(raw)){
+      LOG(FATAL) << "cannot serialize " << ToString() << " (" << PrettySize(raw.ByteSizeLong()) << ") into " << data->ToString() << ".";
+      return data;
+    }
+    DVLOG(2) << "serialized " << ToString() << " (" << PrettySize(raw.ByteSizeLong()) << ") into " << data->ToString() << ".";
+    return data;
   }
 }

@@ -20,7 +20,7 @@ namespace token{
         return pool_;
       }
 
-      bool IsValid(const Input& val);
+      bool IsValid(const InputPtr& val);
     public:
       TransactionInputVerifier(UnclaimedTransactionPool& pool, const uint64_t& total):
         InputVisitor(),
@@ -55,7 +55,7 @@ namespace token{
         return GetPercentageOf(total(), invalid());
       }
 
-      bool Visit(const Input& val) override{
+      bool Visit(const InputPtr& val) override{
         processed_++;
         if(IsValid(val)){
           valid_++;
@@ -105,7 +105,7 @@ namespace token{
         return GetPercentageOf(total(), invalid());
       }
 
-      bool Visit(const Output& val) override;
+      bool Visit(const OutputPtr& val) override;
     };
 
     class TransactionVerifier{

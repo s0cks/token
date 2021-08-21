@@ -3,21 +3,21 @@
 
 namespace token{
   namespace sync{
-    bool TransactionCommitter::Visit(const Input& val){
+    bool TransactionCommitter::Visit(const InputPtr& val){
       //TODO: remove inputs
 
       NOT_IMPLEMENTED(ERROR);//TODO: implement
       return true;
     }
 
-    bool TransactionCommitter::Visit(const Output& val){
+    bool TransactionCommitter::Visit(const OutputPtr& val){
       auto index = output_idx_++;
-      DVLOG(2) << "visiting output #" << index << " " << val.ToString() << "....";
+      DVLOG(2) << "visiting output #" << index << " " << val->ToString() << "....";
       UnclaimedTransaction::Builder builder;
       builder.SetTransactionHash(hash());
       builder.SetTransactionIndex(index);
-      builder.SetProduct(val.product().ToString());
-      builder.SetUser(val.user().ToString());
+      builder.SetProduct(val->product().ToString());
+      builder.SetUser(val->user().ToString());
 
       auto utxo = builder.Build();
       auto utxo_hash = utxo->hash();

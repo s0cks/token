@@ -10,11 +10,15 @@
 #include "type/product.h"
 
 namespace token{
+  class OutputVisitor{
+  protected:
+    OutputVisitor() = default;
+  public:
+    virtual ~OutputVisitor() = default;
+    virtual bool Visit(const OutputPtr& val) = 0;
+  };
+
   typedef internal::proto::Output RawOutput;
-
-  class Output;
-  typedef std::shared_ptr<Output> OutputPtr;
-
   class Output : public Object{
   public:
     static inline int
@@ -127,6 +131,31 @@ namespace token{
       return NewInstance(val->user(), val->product());
     }
   };
+
+  static inline RawOutput&
+  operator<<(RawOutput& raw, const Output& val){
+    raw.set_user(val.user().data());
+    raw.set_product(val.product().data());
+    return raw;
+  }
+
+  static inline RawOutput&
+  operator<<(RawOutput& raw, const OutputPtr& val){
+    return raw << (*val);
+  }
+
+  typedef std::vector<OutputPtr> OutputList;
+
+  static inline OutputList&
+  operator<<(OutputList& list, const OutputPtr& val){
+    list.push_back(val);
+    return list;
+  }
+
+  static inline OutputList&
+  operator<<(OutputList& list, const Output& val){
+    return list << Output::CopyFrom(val);
+  }
 
   namespace json{
     static inline bool

@@ -117,7 +117,7 @@ namespace token{
       Hash hash = session->GetRuntime()->GetBlockMiner().GetLastMined();
       DLOG(INFO) << "sending discovered block: " << hash;
 
-      auto blk = Block::Genesis();//TODO: fetch from object pool
+      auto blk = Block::NewGenesis();//TODO: fetch from object pool
       session->Send(rpc::BlockMessage::NewInstance(blk));
     }
   }

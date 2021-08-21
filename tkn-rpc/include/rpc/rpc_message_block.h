@@ -25,12 +25,14 @@ namespace token{
       }
 
       BlockPtr value() const{
-        return Block::NewInstance(raw_);
+        return Block::From(raw_);
       }
 
       static inline BlockMessagePtr
       NewInstance(const BlockPtr& data){
-        return std::make_shared<BlockMessage>(data->raw_);
+        RawBlock raw;
+        raw << data;
+        return std::make_shared<BlockMessage>(raw);
       }
 
       static inline BlockMessagePtr

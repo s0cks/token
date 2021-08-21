@@ -20,7 +20,7 @@ namespace token{
     ~GenesisBlockBuilder() override = default;
 
     BlockPtr Build() const override{
-      return Block::Genesis();
+      return Block::NewGenesis();
     }
   };
 }

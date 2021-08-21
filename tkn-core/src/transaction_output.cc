@@ -4,13 +4,13 @@
 namespace token{
   internal::BufferPtr Output::ToBuffer() const{
     RawOutput raw;
-    raw.set_user(user().ToString());
-    raw.set_product(product().ToString());
+    raw << (*this);
     auto data = internal::NewBufferForProto(raw);
-    if(data->PutMessage(raw)){
-      LOG(FATAL) << "cannot serialize Output to buffer of size: " << data->length();
+    if(!data->PutMessage(raw)){
+      LOG(FATAL) << "cannot serialize " << ToString() << " into " << data->ToString() << ".";
       return nullptr;
     }
+    DVLOG(2) << "serialized " << ToString() << " into " << data->ToString();
     return data;
   }
 }

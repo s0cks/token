@@ -11,7 +11,7 @@ namespace token{
     Hash value_;
     InputVerifier verifier_;
   public:
-    VerifyInputTask(VerifyTransactionInputsTask* parent, const Input& val, UnclaimedTransactionPool& pool);
+    VerifyInputTask(VerifyTransactionInputsTask* parent, const InputPtr& val, UnclaimedTransactionPool& pool);
     ~VerifyInputTask() override = default;
 
     std::string GetName() const override{

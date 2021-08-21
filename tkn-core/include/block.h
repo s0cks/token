@@ -11,7 +11,15 @@
 #include "block_header.h"
 
 namespace token{
-  class BlockVisitor;
+  class BlockVisitor{
+  protected:
+    BlockVisitor() = default;
+  public:
+    virtual ~BlockVisitor() = default;
+    virtual bool Visit(const BlockPtr& val) const = 0;
+  };
+
+  typedef internal::proto::Block RawBlock;
   class Block: public BinaryObject{
     //TODO:
     // - validation logic
@@ -25,51 +33,69 @@ namespace token{
     static const int64_t kNumberOfGenesisOutputs = 10000;
 #endif//TOKEN_DEBUG
 
-    class Builder : public internal::ProtoBuilder<Block, internal::proto::Block>{
-    public:
-      Builder() = default;
-      ~Builder() override = default;
+    static inline int
+    CompareHash(const Block& lhs, const Block& rhs){
+      return Hash::Compare(lhs.hash(), rhs.hash());
+    }
 
-      void SetTimestamp(const Timestamp& val){
-        raw_->set_timestamp(ToUnixTimestamp(val));
+    struct HashComparator{
+      bool operator()(const BlockPtr& lhs, const BlockPtr& rhs){
+        return CompareHash(*lhs, *rhs) < 0;
       }
+    };
 
-      void SetPreviousHash(const Hash& val){
-        raw_->set_previous_hash(val.HexString());
+    static inline int
+    CompareHeight(const Block& lhs, const Block& rhs){
+      if(lhs.height() < rhs.height()){
+        return -1;
+      } else if(lhs.height() > rhs.height()){
+        return +1;
       }
+      return 0;
+    }
 
-      void SetHeight(const uint64_t& height){
-        raw_->set_height(height);
+    struct HeightComparator{
+      bool operator()(const BlockPtr& lhs, const BlockPtr& rhs){
+        return CompareHeight(*lhs, *rhs);
       }
+    };
 
-      IndexedTransaction::Builder AddTransaction() const{
-        return IndexedTransaction::Builder(raw_->add_transactions());
+    static inline int
+    CompareTimestamp(const Block& lhs, const Block& rhs){
+      if(lhs.timestamp() < rhs.timestamp()){
+        return -1;
+      } else if(lhs.timestamp() > rhs.timestamp()){
+        return +1;
       }
+      return 0;
+    }
 
-      BlockPtr Build() const override{
-        return std::make_shared<Block>(*raw_);
+    struct TimestampComparator{
+      bool operator()(const BlockPtr& lhs, const BlockPtr& rhs){
+        return CompareTimestamp(*lhs, *rhs);
       }
     };
   private:
-    internal::proto::Block raw_;
-
-    BloomFilter tx_bloom_; // transient
-
-    inline internal::proto::Block&
-    raw(){
-      return raw_;
-    }
+    uint64_t height_;
+    Hash previous_;
+    Timestamp timestamp_;
+    IndexedTransactionSet transactions_;
   public:
     Block():
       BinaryObject(),
-      raw_(){}
-    explicit Block(internal::proto::Block raw):
+      height_(),
+      previous_(),
+      timestamp_(),
+      transactions_(){}
+    Block(const uint64_t& height, const Hash& previous, const Timestamp& timestamp, const IndexedTransactionSet& transactions):
       BinaryObject(),
-      raw_(std::move(raw)){}
-    explicit Block(const internal::BufferPtr& data):
-      Block(){
-      if(!raw_.ParseFromArray(data->data(), static_cast<int>(data->length())))
-        DLOG(FATAL) << "cannot parse Block from buffer.";
+      height_(height),
+      previous_(previous),
+      timestamp_(timestamp),
+      transactions_(transactions.begin(), transactions.end()){}
+    Block(const RawBlock& raw):
+      BinaryObject(){
+      NOT_IMPLEMENTED(ERROR);//TODO: implement
     }
     Block(const Block& other) = default;
     ~Block() override = default;
@@ -78,107 +104,174 @@ namespace token{
       return Type::kBlock;
     }
 
-    Hash hash() const override{
-      auto data = ToBuffer();
-      return Hash::ComputeHash<CryptoPP::SHA256>(data->data(), data->length());
+    uint64_t height() const{
+      return height_;
+    }
+
+    Hash previous() const{
+      return previous_;
     }
 
     Timestamp timestamp() const{
-      return FromUnixTimestamp(raw_.timestamp());
+      return timestamp_;
     }
 
-    uint64_t height() const{
-      return raw_.height();
+    IndexedTransactionSet transactions() const{
+      return transactions_;
     }
 
-    Hash previous_hash() const{
-      return Hash::FromHexString(raw_.previous_hash());
+    IndexedTransactionSet::iterator transactions_begin(){
+      return transactions_.begin();
     }
 
-    BlockHeader GetHeader() const{
-      return BlockHeader(
-          timestamp(),
-          height(),
-          previous_hash(),
-          GetMerkleRoot(),
-          hash()
-      );
+    IndexedTransactionSet::const_iterator transactions_begin() const{
+      return transactions_.begin();
     }
 
-    BloomFilter& GetBloomFilter(){
-      return tx_bloom_;
+    IndexedTransactionSet::iterator transactions_end(){
+      return transactions_.end();
     }
 
-    BloomFilter GetBloomFilter() const{
-      return tx_bloom_;
+    IndexedTransactionSet::const_iterator transactions_end() const{
+      return transactions_.end();
     }
 
     uint64_t GetNumberOfTransactions() const{
-      return raw_.transactions_size();
+      return transactions_.size();
     }
 
-    IndexedTransactionPtr GetTransaction(const uint64_t& index) const{
-      return std::make_shared<IndexedTransaction>(raw_.transactions(static_cast<int>(index)));
+    bool VisitTransactions(IndexedTransactionVisitor* vis){
+      for(auto& it : transactions_){
+        if(!vis->Visit(it))
+          return false;
+      }
+      return true;
     }
 
     bool IsGenesis() const{
       return height() == 0;
     }
 
-    BufferPtr ToBuffer() const;
-    std::string ToString() const override;
-
     Hash GetMerkleRoot() const;
-    bool Accept(BlockVisitor* vis) const;
-    bool Contains(const Hash& hash) const;
 
-    void GetTransactions(IndexedTransactionSet& results){
-      auto transactions = raw_.transactions();
-      std::for_each(transactions.begin(), transactions.end(), [&](internal::proto::IndexedTransaction& val){
-        results.insert(std::make_shared<IndexedTransaction>(val));
-      });
+    Hash hash() const override{
+      auto data = ToBuffer();
+      return Hash::ComputeHash<CryptoPP::SHA256>(data->data(), data->length());
     }
 
-    bool VisitTransactions(IndexedTransactionVisitor* vis) const{
-      auto transactions = raw_.transactions();
-      for(auto& it : transactions){
-        auto val = std::make_shared<IndexedTransaction>(it);
-        if(!vis->Visit(val))
-          return false;
-      }
-      return true;
+    std::string ToString() const override{
+      std::stringstream ss;
+      ss << "Block(";
+      ss << "height=" << height() << ", ";
+      ss << "timestamp=" << FormatTimestampReadable(timestamp()) << ", ";
+      ss << "transactions=" << transactions().size();//TODO: fix
+      ss << ")";
+      return ss.str();
     }
 
-    template<typename Callback>
-    bool ForEachTransaction(Callback callback){//TODO: remove
-      std::for_each(raw_.transactions().begin(), raw_.transactions().end(), callback);
-      return true;
+    internal::BufferPtr ToBuffer() const;
+
+    Block& operator=(const Block& rhs) = default;
+
+    Block& operator=(const RawBlock& rhs){
+      NOT_IMPLEMENTED(ERROR);//TODO: implement
+      return *this;
+    }
+
+    friend std::ostream& operator<<(std::ostream& stream, const Block& val){
+      return stream << val.ToString();
     }
 
     friend bool operator==(const Block& lhs, const Block& rhs){
-      return lhs.hash() == rhs.hash();
+      return CompareHash(lhs, rhs);
+    }
+
+    friend bool operator!=(const Block& lhs, const Block& rhs){
+      return CompareHash(lhs, rhs);
+    }
+
+    friend bool operator<(const Block& lhs, const Block& rhs){
+      return CompareHeight(lhs, rhs);
+    }
+
+    friend bool operator>(const Block& lhs, const Block& rhs){
+      return CompareHeight(lhs, rhs);
     }
 
     static inline BlockPtr
-    NewInstance(internal::proto::Block raw){
-      return std::make_shared<Block>(std::move(raw));
+    NewInstance(const uint64_t& height, const Hash& previous, const Timestamp& timestamp, const IndexedTransactionSet& transactions){
+      return std::make_shared<Block>(height, previous, timestamp, transactions);
     }
 
     static inline BlockPtr
-    Decode(const internal::BufferPtr& data){
-      return std::make_shared<Block>(data);
+    From(const RawBlock& val){
+      return std::make_shared<Block>(val);
     }
 
-    static BlockPtr Genesis();
+    static inline BlockPtr
+    From(const internal::BufferPtr& val){
+      auto length = val->GetUnsignedLong();
+      RawBlock raw;
+      if(!val->GetMessage(raw, length)){
+        LOG(FATAL) << "cannot decoded Block from " << val->ToString() << ".";
+        return nullptr;
+      }
+      return From(raw);
+    }
+
+    static inline BlockPtr
+    CopyFrom(const Block& val){
+      return std::make_shared<Block>(val);
+    }
+
+    static inline BlockPtr
+    CopyFrom(const BlockPtr& val){
+      return std::make_shared<Block>(*val);
+    }
+
+    static BlockPtr NewGenesis();
   };
 
-  class BlockVisitor{
-  protected:
-    BlockVisitor() = default;
-  public:
-    virtual ~BlockVisitor() = default;
-    virtual bool Visit(const BlockPtr& val) const = 0;
-  };
+  static inline RawBlock&
+  operator<<(RawBlock& raw, const Block& val){
+    raw.set_timestamp(ToUnixTimestamp(val.timestamp()));
+    raw.set_height(val.height());
+    for(auto iter = val.transactions_begin(); iter != val.transactions_end(); iter++)
+      (*raw.add_transactions()) << (*iter);
+    return raw;
+  }
+
+  static inline RawBlock&
+  operator<<(RawBlock& raw, const BlockPtr& val){
+    return raw << (*val);
+  }
+
+  typedef std::vector<BlockPtr> BlockList;
+
+  static inline BlockList&
+  operator<<(BlockList& list, const BlockPtr& val){
+    list.push_back(val);
+    return list;
+  }
+
+  static inline BlockList&
+  operator<<(BlockList& list, const Block& val){
+    return list << Block::CopyFrom(val);
+  }
+
+  typedef std::set<BlockPtr, Block::HeightComparator> BlockSet;
+
+  static inline BlockSet&
+  operator<<(BlockSet& set, const BlockPtr& val){
+    if(!set.insert(val).second)
+      LOG(ERROR) << "cannot insert " << val->hash() << " into BlockSet";
+    return set;
+  }
+
+  static inline BlockSet&
+  operator<<(BlockSet& set, const Block& val){
+    return set << Block::CopyFrom(val);
+  }
 
   namespace json{
     static inline bool
@@ -189,28 +282,11 @@ namespace token{
           return false;
         if(!json::SetField(writer, "height", val->height()))
           return false;
-        if(!json::SetField(writer, "previous_hash", val->previous_hash()))
+        if(!json::SetField(writer, "previous", val->previous()))
           return false;
         if(!json::SetField(writer, "merkle_root", val->GetMerkleRoot()))
           return false;
-
-        auto printer = [&](const internal::proto::IndexedTransaction& raw){
-          IndexedTransaction val(raw);
-          DLOG(INFO) << "visiting transaction: " << val.hash();
-          JSON_STRING(writer, val.hash().HexString());
-          return true;
-        };
-
-        if(!json::SetField(writer, "num_transactions", val->GetNumberOfTransactions()))
-          return false;
-
-        JSON_KEY(writer, "transactions");
-        JSON_START_ARRAY(writer);
-        {
-          if(!val->ForEachTransaction(printer))
-            return false;
-        }
-        JSON_END_ARRAY(writer);
+        //TODO: set transactions
       }
       JSON_END_OBJECT(writer);
       return true;

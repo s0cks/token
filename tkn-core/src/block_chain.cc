@@ -90,7 +90,7 @@ namespace token{
     auto filesize = GetFilesize(filename);//TODO: cleanup code
     BufferPtr buffer = internal::NewBufferFromFile(filename, filesize);
 //TODO: BlockPtr block = Block::Decode(buffer, codec::ExpectTypeHint::Encode(true)|codec::ExpectVersionHint::Encode(true));
-    BlockPtr block = Block::Genesis();
+    BlockPtr block = Block::NewGenesis();
     LOG_IF(FATAL, block->hash() != hash) << "expected block hash of " << hash << ", but parsed block was: " << block->ToString();
     return block;
   }
@@ -152,7 +152,7 @@ namespace token{
   bool BlockChain::Append(const BlockPtr& block){
     BlockPtr head = GetHead();
     Hash hash = block->hash();
-    Hash phash = block->previous_hash();
+    Hash phash = block->previous();
 
     LOG(INFO) << "appending new block:";
     if(HasBlock(hash)){
@@ -183,7 +183,7 @@ namespace token{
       BlockPtr blk = GetBlock(current);
       if(!vis->Visit(blk))
         return false;
-      current = blk->previous_hash();
+      current = blk->previous();
     } while(!current.IsNull());
     return true;
   }
@@ -224,7 +224,8 @@ namespace token{
       do{
         std::string hex = current->hash().HexString();
         writer.String(hex.data(), hex.length());
-        current = GetBlock(current->previous_hash());
+        current = GetBlock(current->previous());
+
       } while(current);
     }
     writer.EndArray();

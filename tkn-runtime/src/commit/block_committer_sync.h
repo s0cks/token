@@ -42,8 +42,8 @@ namespace token{
         return transaction_;
       }
 
-      bool Visit(const Input& val) override;
-      bool Visit(const Output& val) override;
+      bool Visit(const InputPtr& val) override;
+      bool Visit(const OutputPtr& val) override;
     };
 
     class BlockCommitter : public internal::BlockCommitterBase,

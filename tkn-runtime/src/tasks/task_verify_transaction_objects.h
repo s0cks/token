@@ -62,9 +62,9 @@ namespace token{
       Timestamp start_;
       Timestamp finished_;
       uint64_t total_;
-      atomic::RelaxedAtomic<uint64_t> processed_;
-      atomic::RelaxedAtomic<uint64_t> valid_;
-      atomic::RelaxedAtomic<uint64_t> invalid_;
+      std::atomic<uint64_t> processed_;
+      std::atomic<uint64_t> valid_;
+      std::atomic<uint64_t> invalid_;
       UnclaimedTransactionPool& pool_;
 
       VerifyTransactionObjectsTask(task::TaskEngine* engine, task::Task* parent, UnclaimedTransactionPool& pool, const IndexedTransactionPtr& val):
@@ -101,15 +101,15 @@ namespace token{
       }
 
       uint64_t processed() const{
-        return (uint64_t)processed_;
+        return processed_.load();
       }
 
       uint64_t valid() const{
-        return (uint64_t)valid_;
+        return valid_.load();
       }
 
       uint64_t invalid() const{
-        return (uint64_t)invalid_;
+        return invalid_.load();
       }
 
       Stats GetStats() const{

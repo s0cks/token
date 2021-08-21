@@ -7,11 +7,15 @@
 #include "transaction_reference.h"
 
 namespace token{
+  class InputVisitor{
+  protected:
+    InputVisitor() = default;
+  public:
+    virtual ~InputVisitor() = default;
+    virtual bool Visit(const InputPtr& val) = 0;
+  };
+
   typedef internal::proto::Input RawInput;
-
-  class Input;
-  typedef std::shared_ptr<Input> InputPtr;
-
   class Input : public Object{
   public:
     static inline int
@@ -129,13 +133,40 @@ namespace token{
     }
   };
 
+  static inline RawInput&
+  operator<<(RawInput& raw, const Input& val){
+    raw.set_hash(val.hash().HexString());
+    auto source = val.source();
+    raw.set_transaction(source.transaction().HexString());
+    raw.set_index(source.index());
+    return raw;
+  }
+
+  static inline RawInput&
+  operator<<(RawInput& raw, const InputPtr& val){
+    return raw << (*val);
+  }
+
+  typedef std::vector<InputPtr> InputList;
+
+  static inline InputList&
+  operator<<(InputList& list, const InputPtr& val){
+    list.push_back(val);
+    return list;
+  }
+
+  static inline InputList&
+  operator<<(InputList& list, const Input& val){
+    return list << Input::CopyFrom(val);
+  }
+
 namespace json{
     static inline bool
     Write(Writer& writer, const Input& val){//TODO: better error handling
       JSON_START_OBJECT(writer);
       {
-        if(!json::SetField(writer, "hash", val.hash()))
-          return false;
+        JSON_KEY(writer, "hash");
+        JSON_STRING(writer, val.hash().HexString());
         if(!json::SetField(writer, "source", val.source()))
           return false;
       }

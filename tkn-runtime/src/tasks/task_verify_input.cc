@@ -2,10 +2,10 @@
 #include "tasks/task_verify_input.h"
 
 namespace token{
-  VerifyInputTask::VerifyInputTask(VerifyTransactionInputsTask* parent, const Input& val, UnclaimedTransactionPool& pool):
+  VerifyInputTask::VerifyInputTask(VerifyTransactionInputsTask* parent, const InputPtr& val, UnclaimedTransactionPool& pool):
     task::Task(parent),
     verifier_(pool),
-    value_(val.hash()){}
+    value_(val->hash()){}
 
   void VerifyInputTask::DoWork(){
     DLOG(INFO) << "verifying input " << value_ << "....";

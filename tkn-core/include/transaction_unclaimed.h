@@ -102,7 +102,7 @@ namespace token{
     }
 
     static inline UnclaimedTransactionPtr
-    Decode(const internal::BufferPtr& data){
+    From(const internal::BufferPtr& data){
       return std::make_shared<UnclaimedTransaction>(data);
     }
   };

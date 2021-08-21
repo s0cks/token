@@ -8,10 +8,10 @@ namespace token{
   class VerifyTransactionOutputsTask;
   class VerifyOutputTask : public task::Task{
   private:
-    Output value_;
+    OutputPtr value_;
     OutputVerifier verifier_;
   public:
-    VerifyOutputTask(VerifyTransactionOutputsTask* parent, const Output& val, UnclaimedTransactionPool& pool);
+    VerifyOutputTask(VerifyTransactionOutputsTask* parent, OutputPtr  val, UnclaimedTransactionPool& pool);
     ~VerifyOutputTask() override = default;
 
     std::string GetName() const override{

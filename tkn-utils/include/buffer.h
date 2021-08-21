@@ -210,8 +210,6 @@ namespace token{
           LOG(ERROR) << "cannot serialize message (" << mbytes << "b) to buffer " << BUFFER_WRITE_POSITION;
           return false;
         }
-
-        DVLOG(2) << "serialized message (" << nbytes << "b) to buffer " << BUFFER_WRITE_POSITION;
         wpos_ += nbytes;
         return true;
       }
@@ -227,11 +225,11 @@ namespace token{
           DLOG(ERROR) << "cannot deserialize message of size " << nbytes << "b from buffer " << BUFFER_READ_POSITION;
           return false;
         }
-
-        DVLOG(2) << "deserialized message of size " << nbytes << "b from buffer " << BUFFER_READ_POSITION;
         rpos_ += nbytes;
         return true;
       }
+
+      virtual std::string ToString() const = 0;
 
       explicit operator leveldb::Slice() const{
         return AsSlice();
@@ -259,7 +257,7 @@ namespace token{
         return Size;
       }
 
-      std::string ToString() const{
+      std::string ToString() const override{
         std::stringstream ss;
         ss << "StackBuffer(";
         ss << "data=" << std::hex << data() << ",";
@@ -308,7 +306,7 @@ namespace token{
         return length_;
       }
 
-      std::string ToString() const{
+      std::string ToString() const override{
         std::stringstream ss;
         ss << "AllocatedBuffer(";
         ss << "data=" << std::hex << data() << ",";

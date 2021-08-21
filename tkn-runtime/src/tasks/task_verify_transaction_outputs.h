@@ -16,7 +16,7 @@ namespace token{
       return "VerifyTransactionOutputsTask()";
     }
 
-    bool Visit(const Output& val) override;
+    bool Visit(const OutputPtr& val) override;
 
     void DoWork() override{
       DVLOG(1) << "verifying transaction " << hash() << " outputs....";

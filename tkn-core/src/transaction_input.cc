@@ -4,14 +4,13 @@
 namespace token{
   internal::BufferPtr Input::ToBuffer() const{
     RawInput raw;
-    raw.set_hash(hash_.HexString());
-    raw.set_transaction(source_.transaction().HexString());
-    raw.set_index(source_.index());
+    raw << (*this);
     auto data = internal::NewBufferForProto(raw);
     if(!data->PutMessage(raw)){
-      LOG(FATAL) << "cannot serialize Input to buffer of size: " << data->length();
+      LOG(FATAL) << "cannot serialize " << ToString() << " (" << PrettySize(raw.ByteSizeLong()) << ") into " << data->ToString() << ".";
       return nullptr;
     }
+    DVLOG(2) << "serialized " << ToString() << " (" << PrettySize(raw.ByteSizeLong()) << ") into " << data->ToString() << ".";
     return data;
   }
 }

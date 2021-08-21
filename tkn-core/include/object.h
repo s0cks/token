@@ -18,16 +18,10 @@ namespace token{
    protected:
     BinaryObject() = default;
 
-    template<class T, class E>
+    template<typename HashFunction>
     static inline Hash
-    ComputeHash(const E& value){
-      E encoder(value, codec::kDefaultEncoderFlags);
-      internal::BufferPtr data = internal::NewBufferFor(encoder);
-      if(!encoder.Encode(data)){
-        LOG(ERROR) << "cannot encoder IndexedTransaction to buffer.";
-        return Hash();
-      }
-      return Hash::ComputeHash<CryptoPP::SHA256>(data->data(), data->GetWritePosition());
+    ComputeHash(const internal::BufferPtr& data){
+      return Hash::ComputeHash<HashFunction>(data->data(), data->GetWritePosition());
     }
    public:
     ~BinaryObject() override = default;

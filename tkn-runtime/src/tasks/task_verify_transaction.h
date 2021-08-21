@@ -31,6 +31,10 @@ namespace token{
       return "VerifyTransactionTask";
     }
 
+    IndexedTransactionPtr GetTransaction() const{
+      return transaction_;
+    }
+
     std::shared_ptr<VerifyTransactionInputsTask>
     GetVerifyInputs() const{
       return verify_inputs_;
