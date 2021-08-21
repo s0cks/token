@@ -5,10 +5,13 @@
 
 namespace token{
   namespace async{
-    class BlockCommitter : public internal::BlockCommitterBase{
+    class BlockCommitter : public internal::BlockCommitterBase,
+                           public IndexedTransactionVisitor{
     public:
       BlockCommitter(const BlockPtr& blk, UnclaimedTransactionPool& utxos):
-        internal::BlockCommitterBase(blk, utxos){}
+        internal::BlockCommitterBase(blk, utxos),
+        IndexedTransactionVisitor(){
+      }
       ~BlockCommitter() override = default;
 
       bool Commit() override;

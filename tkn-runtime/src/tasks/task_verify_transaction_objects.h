@@ -73,7 +73,7 @@ namespace token{
           transaction_(IndexedTransaction::CopyFrom(val)),
           start_(Clock::now()),
           finished_(Clock::now()),
-          total_(val->GetNumberOfOutputs()),
+          total_(val->GetNumberOfOutputs()),//TODO: fix
           processed_(0),
           valid_(0),
           invalid_(0),

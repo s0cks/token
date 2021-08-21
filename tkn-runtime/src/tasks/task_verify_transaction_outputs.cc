@@ -9,7 +9,6 @@ namespace token{
   }
 
   bool VerifyTransactionOutputsTask::Visit(const OutputPtr& val){
-    DVLOG(2) << "visiting " << val->ToString() << "....";
     auto& queue = GetEngine()->GetCurrentWorker()->GetTaskQueue();
     auto task = new VerifyOutputTask(this, val, pool());
     if(!queue.Push(reinterpret_cast<uword>(task))){
