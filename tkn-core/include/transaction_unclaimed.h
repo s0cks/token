@@ -110,7 +110,16 @@ namespace token{
   namespace json{
     static inline bool
     Write(Writer& writer, const UnclaimedTransactionPtr& val){
-      NOT_IMPLEMENTED(FATAL);
+      JSON_START_OBJECT(writer);
+      {
+        if(!json::SetField(writer, "hash", val->hash()))
+          return false;
+        if(!json::SetField(writer, "user", val->user()))
+          return false;
+        if(!json::SetField(writer, "product", val->product()))
+          return false;
+      }
+      JSON_END_OBJECT(writer);
       return true;
     }
 

@@ -23,6 +23,7 @@ namespace token{
     public:
       BlockVerifier(task::TaskEngine& engine, task::TaskQueue& queue, const BlockPtr& blk, UnclaimedTransactionPool& pool):
         internal::BlockVerifierBase(blk, pool),
+        IndexedTransactionVisitor(),
         engine_(engine),
         queue_(queue),
         verify_transactions_(){

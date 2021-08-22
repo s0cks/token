@@ -9,6 +9,7 @@
 #include "http/http_service_health.h"
 #include "peer/peer_session_manager.h"
 
+#include "commit/block_committer_async.h"
 #include "verifier/block_verifier_async.h"
 
 /*#ifdef TOKEN_DEBUG
@@ -211,13 +212,11 @@ main(int argc, char **argv){
   auto blk = Block::NewGenesis();
   auto& engine = runtime.GetTaskEngine();
   auto& queue = runtime.GetTaskQueue();
-  async::BlockVerifier verifier(engine, queue, blk, runtime.GetUnclaimedTransactionPool());
-  if(!verifier.Verify()){
+  async::BlockCommitter committer(engine, queue, blk, runtime.GetUnclaimedTransactionPool());
+  if(!committer.Commit()){
     LOG(FATAL) << "genesis is an invalid block.";
     return EXIT_FAILURE;
   }
-  sleep(15);
-  verifier.PrintStats();
 
   PeerSessionManager::Initialize(&runtime);
 

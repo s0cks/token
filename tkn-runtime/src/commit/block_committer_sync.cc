@@ -29,7 +29,7 @@ namespace token{
     bool BlockCommitter::Visit(const IndexedTransactionPtr& tx){
       auto hash = tx->hash();
       DVLOG(2) << "visiting transaction " << hash << "....";
-      sync::TransactionCommitter committer(&batch_, hash, tx);
+      sync::TransactionCommitter committer(batch_, hash, tx);
       if(!tx->VisitInputs(&committer)){
         LOG(ERROR) << "cannot visit transaction inputs.";
         return false;
@@ -47,12 +47,12 @@ namespace token{
       auto start = Clock::now();
 #endif//TOKEN_DEBUG
 
-      if(!GetBlock()->VisitTransactions(this)){
+      if(!block()->VisitTransactions(this)){
         LOG(ERROR) << "cannot visit block transactions.";
         return false;
       }
 
-      if(!utxos().Commit(&batch_)){
+      if(!utxos().Commit(batch_.get())){
         LOG(ERROR) << "cannot commit batch to pool.";
         return false;
       }

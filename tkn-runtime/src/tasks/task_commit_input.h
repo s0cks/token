@@ -1,6 +1,7 @@
 #ifndef TKN_TASK_COMMIT_INPUT_H
 #define TKN_TASK_COMMIT_INPUT_H
 
+#include "batch.h"
 #include "task/task.h"
 #include "transaction_input.h"
 
@@ -9,8 +10,9 @@ namespace token{
   class CommitInputTask : public task::Task{
   private:
     InputPtr value_;
+    std::shared_ptr<internal::WriteBatch> batch_;
   public:
-    CommitInputTask(CommitTransactionInputsTask* parent, const InputPtr& val);
+    CommitInputTask(CommitTransactionInputsTask* parent, internal::WriteBatchList& batches, InputPtr val);
     ~CommitInputTask() override = default;
 
     std::string GetName() const override{

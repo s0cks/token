@@ -60,7 +60,7 @@ namespace token{
     public:
       virtual ~BlockCommitterBase() = default;
 
-      BlockPtr GetBlock() const{
+      BlockPtr block() const{
         return block_;
       }
 

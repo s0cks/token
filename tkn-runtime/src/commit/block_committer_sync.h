@@ -11,22 +11,22 @@ namespace token{
     class TransactionCommitter : public InputVisitor,
                                  public OutputVisitor{
     private:
-      UnclaimedTransactionPool::WriteBatch* batch_;
+      std::shared_ptr<internal::WriteBatch> batch_;
       uint64_t transaction_idx_;
       Hash transaction_hash_;
       IndexedTransactionPtr transaction_;
       uint64_t input_idx_;
       uint64_t output_idx_;
 
-      inline UnclaimedTransactionPool::WriteBatch*
+      inline std::shared_ptr<internal::WriteBatch>
       batch() const{
         return batch_;
       }
     public:
-      TransactionCommitter(UnclaimedTransactionPool::WriteBatch* batch, const Hash& hash, IndexedTransactionPtr val):
+      TransactionCommitter(std::shared_ptr<internal::WriteBatch> batch, const Hash& hash, IndexedTransactionPtr val):
           InputVisitor(),
           OutputVisitor(),
-          batch_(batch),
+          batch_(std::move(batch)),
           transaction_idx_(val->index()),
           transaction_hash_(hash),
           transaction_(std::move(val)),
@@ -49,12 +49,13 @@ namespace token{
     class BlockCommitter : public internal::BlockCommitterBase,
                            public IndexedTransactionVisitor{
     private:
-      UnclaimedTransactionPool::WriteBatch batch_;
+      std::shared_ptr<internal::WriteBatch> batch_;
     public:
       explicit BlockCommitter(const BlockPtr& blk, UnclaimedTransactionPool& utxos):
         internal::BlockCommitterBase(blk, utxos),
         IndexedTransactionVisitor(),
-        batch_(){}
+        batch_(std::make_shared<internal::WriteBatch>()){
+      }
       ~BlockCommitter() override = default;
 
       bool Visit(const IndexedTransactionPtr& tx) override;

@@ -8,7 +8,7 @@ namespace token{
   class CommitTransactionOutputsTask : public internal::CommitTransactionObjectsTask<Output>,
                                        public OutputVisitor{
   public:
-    CommitTransactionOutputsTask(CommitTransactionTask* parent, UnclaimedTransactionPool& pool, const IndexedTransactionPtr& val);
+    CommitTransactionOutputsTask(CommitTransactionTask* parent, internal::WriteBatchList& batches, const IndexedTransactionPtr& val);
     ~CommitTransactionOutputsTask() override = default;
 
     std::string GetName() const override{
@@ -23,6 +23,11 @@ namespace token{
         LOG(ERROR) << "cannot visit transaction outputs.";
         return;
       }
+    }
+
+    static inline std::shared_ptr<CommitTransactionOutputsTask>
+    NewInstance(CommitTransactionTask* parent, internal::WriteBatchList& batches, const IndexedTransactionPtr& val){
+      return std::make_shared<CommitTransactionOutputsTask>(parent, batches, val);
     }
   };
 }

@@ -1,6 +1,8 @@
 #ifndef TKN_TASK_COMMIT_TRANSACTION_OBJECTS_H
 #define TKN_TASK_COMMIT_TRANSACTION_OBJECTS_H
 
+#include <utility>
+
 #include "task/task.h"
 #include "object_pool.h"
 #include "transaction_indexed.h"
@@ -11,28 +13,24 @@ namespace token{
     class CommitTransactionObjectsTask : public task::Task{
       //TODO: add stats
     protected:
+      internal::WriteBatchList& batches_;
       Hash hash_;
       IndexedTransactionPtr transaction_;
+
       uint64_t total_;
       std::atomic<uint64_t> processed_;
       std::atomic<uint64_t> valid_;
       std::atomic<uint64_t> invalid_;
-      UnclaimedTransactionPool& pool_;
 
-      CommitTransactionObjectsTask(task::Task* parent, UnclaimedTransactionPool& pool, const IndexedTransactionPtr& val):
+      CommitTransactionObjectsTask(task::Task* parent, internal::WriteBatchList& batches, const IndexedTransactionPtr& val):
         task::Task(parent),
+        batches_(batches),
         hash_(val->hash()),
         transaction_(val),
         total_(val->GetNumberOfOutputs()), //TODO: fix
         processed_(0),
         valid_(0),
-        invalid_(0),
-        pool_(pool){
-      }
-
-      inline UnclaimedTransactionPool&
-      pool() const{
-        return pool_;
+        invalid_(0){
       }
     public:
       ~CommitTransactionObjectsTask() override = default;

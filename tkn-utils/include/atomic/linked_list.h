@@ -11,11 +11,12 @@ namespace token{
     public:
       struct Node{
         std::shared_ptr<Node> next;
-        E* data;
+        std::shared_ptr<E> data;
 
-        Node(const std::shared_ptr<Node>& parent, E* val):
+        Node(const std::shared_ptr<Node>& parent, std::shared_ptr<E> val):
           next(parent),
-          data(val){}
+          data(std::move(val)){
+        }
       };
     private:
       std::shared_ptr<Node> head_;
@@ -38,13 +39,13 @@ namespace token{
         return head().get() == nullptr;
       }
 
-      void push_front(E* val){
+      void push_front(const std::shared_ptr<E>& val){
         auto n = std::make_shared<Node>(head(), val);
         std::atomic_store(&head_, n);
         size_ += 1;
       }
 
-      E* pop_front(){
+      std::shared_ptr<E> pop_front(){
         auto n = head();
         std::atomic_store(&head_, n->next);
         size_ -= 1;

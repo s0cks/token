@@ -1,28 +1,25 @@
 #ifndef TKN_TASKS_COMMIT_TRANSACTION_H
 #define TKN_TASKS_COMMIT_TRANSACTION_H
 
+#include "batch.h"
+#include "atomic/linked_list.h"
 #include "tasks/task_commit_transaction_inputs.h"
 #include "tasks/task_commit_transaction_outputs.h"
 
 namespace token{
   class CommitTransactionTask : public task::Task{
   private:
-    UnclaimedTransactionPool& pool_;
+    internal::WriteBatchList& batches_;
     IndexedTransactionPtr transaction_;
     std::shared_ptr<CommitTransactionInputsTask> commit_inputs_;
     std::shared_ptr<CommitTransactionOutputsTask> commit_outputs_;
-
-    inline UnclaimedTransactionPool&
-    pool() const{
-      return pool_;
-    }
   public:
-    CommitTransactionTask(task::TaskEngine* engine, UnclaimedTransactionPool& pool, const IndexedTransactionPtr& val):
+    CommitTransactionTask(task::TaskEngine* engine, internal::WriteBatchList& batches, const IndexedTransactionPtr& val):
       task::Task(engine),
-      pool_(pool),
+      batches_(batches),
       transaction_(val),
-      commit_inputs_(std::make_shared<CommitTransactionInputsTask>(this, pool, val)),
-      commit_outputs_(std::make_shared<CommitTransactionOutputsTask>(this, pool, val)){
+      commit_inputs_(CommitTransactionInputsTask::NewInstance(this, batches_, val)),
+      commit_outputs_(CommitTransactionOutputsTask::NewInstance(this, batches_, val)){
     }
     ~CommitTransactionTask() override = default;
 
