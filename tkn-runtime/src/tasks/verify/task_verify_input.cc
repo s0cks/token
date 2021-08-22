@@ -1,5 +1,5 @@
-#include "tasks/task_verify_transaction.h"
-#include "tasks/task_verify_input.h"
+#include "tasks/verify/task_verify_transaction.h"
+#include "tasks/verify/task_verify_input.h"
 
 namespace token{
   VerifyInputTask::VerifyInputTask(VerifyTransactionInputsTask* parent, const InputPtr& val, UnclaimedTransactionPool& pool):
@@ -18,5 +18,13 @@ namespace token{
     }
     parent->valid_ += 1;
     DLOG(INFO) << value_ << " is valid.";
+  }
+
+  std::string VerifyInputTask::ToString() const{
+    std::stringstream ss;
+    ss << "VerifyInputTask(";
+    ss << "value=" << value_.HexString();
+    ss << ")";
+    return ss.str();
   }
 }

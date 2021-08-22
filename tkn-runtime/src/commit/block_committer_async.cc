@@ -27,7 +27,7 @@ namespace token{
         return false;
       }
 
-      sleep(12);
+      sleep(12);//TODO: remove this should not exist
 
       internal::WriteBatch batch;
       if(!batches_.Compile(batch)){

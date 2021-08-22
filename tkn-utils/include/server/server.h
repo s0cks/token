@@ -71,7 +71,7 @@ namespace token{
     AllocBuffer(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf){
       auto session = (SessionBase*)handle->data;
       DVLOG(1) << "allocating buffer of size " << suggested_size << "b for session: " << session->GetUUID();
-      buf->base = (char*)malloc(suggested_size);
+      buf->base = (char*)malloc(512 * internal::kMegabytes);
       buf->len = suggested_size;
     }
 

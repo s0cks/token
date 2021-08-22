@@ -29,7 +29,7 @@ namespace token{
       TaskEngineQueue& operator=(const TaskEngineQueue& rhs) = default;
     };
 
-    static const int64_t kDefaultTaskEngineQueueSize = 1024;
+    static const uint64_t kDefaultTaskEngineQueueSize = 32000;
     static const int64_t kDefaultTaskEngineWorkers = 2;
     static const int64_t kMaximumTaskEngineWorkers = 128; //TODO: make platform specific
     static const int64_t kMinimumTaskEngineWorkers = 0;
@@ -56,7 +56,7 @@ namespace token{
         queues_.emplace_back(this, thread, queue);
       }
      public:
-      TaskEngine(const int64_t& num_workers, const int64_t& num_queues, const int64_t& max_queue_size);
+      TaskEngine(const int64_t& num_workers, const int64_t& num_queues, const uint64_t& max_queue_size);
       TaskEngine(const int64_t& num_workers, const int64_t& num_queues):
         TaskEngine(num_workers, num_queues, kDefaultTaskEngineQueueSize){}
       TaskEngine(const TaskEngine& other) = delete;

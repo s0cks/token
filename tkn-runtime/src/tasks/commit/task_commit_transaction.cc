@@ -4,14 +4,28 @@
 namespace token{
   void CommitTransactionTask::DoWork(){
     auto& queue = GetEngine()->GetCurrentWorker()->GetTaskQueue();
-    if(!commit_inputs_->Submit(queue)){
+    if(!inputs_->Submit(queue)){
       LOG(ERROR) << "cannot commit transaction inputs.";
       return;
     }
 
-    if(!commit_outputs_->Submit(queue)){
+    if(!outputs_->Submit(queue)){
       LOG(ERROR) << "cannot commit transaction outputs.";
       return;
     }
+  }
+
+#ifdef TOKEN_DEBUG
+  void CommitTransactionTask::PrintStats(){
+    NOT_IMPLEMENTED(ERROR);//TODO: implement
+  }
+#endif//TOKEN_DEBUG
+
+  std::string CommitTransactionTask::ToString() const{
+    std::stringstream ss;
+    ss << "CommitTransactionTask(";
+    ss << "value=" << transaction_->hash();
+    ss << ")";
+    return ss.str();
   }
 }

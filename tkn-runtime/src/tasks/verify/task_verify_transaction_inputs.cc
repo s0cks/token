@@ -1,7 +1,7 @@
 #include "task/task_engine.h"
-#include "tasks/task_verify_input.h"
-#include "tasks/task_verify_transaction.h"
-#include "tasks/task_verify_transaction_inputs.h"
+#include "tasks/verify/task_verify_input.h"
+#include "tasks/verify/task_verify_transaction.h"
+#include "tasks/verify/task_verify_transaction_inputs.h"
 
 namespace token{
   VerifyTransactionInputsTask::VerifyTransactionInputsTask(VerifyTransactionTask* parent, UnclaimedTransactionPool& pool, const IndexedTransactionPtr& val):
@@ -16,5 +16,21 @@ namespace token{
       return false;
     }
     return true;
+  }
+
+  void VerifyTransactionInputsTask::DoWork(){
+    DVLOG(1) << "verifying transaction " << hash() << " inputs....";
+    if(!transaction_->VisitInputs(this)){
+      LOG(ERROR) << "cannot visit transaction inputs.";
+      return;
+    }
+  }
+
+  std::string VerifyTransactionInputsTask::ToString() const{
+    std::stringstream ss;
+    ss << "VerifyTransactionInputsTask(";
+    ss << "value=" << transaction_->hash();
+    ss << ")";
+    return ss.str();
   }
 }

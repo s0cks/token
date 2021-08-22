@@ -15,4 +15,12 @@ namespace token{
     DLOG(INFO) << "creating unclaimed transaction: " << hash;
     batch_->Put(hash, utxo);
   }
+
+  std::string CommitOutputTask::ToString() const{
+    std::stringstream ss;
+    ss << "CommitOutputTask(";
+    ss << "value=" << value_->ToString();
+    ss << ")";
+    return ss.str();
+  }
 }

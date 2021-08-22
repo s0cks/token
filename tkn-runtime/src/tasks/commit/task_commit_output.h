@@ -17,11 +17,7 @@ namespace token{
     CommitOutputTask(CommitTransactionOutputsTask* parent, internal::WriteBatchList& batches, const TransactionReference& source, OutputPtr val);
     ~CommitOutputTask() override = default;
 
-    std::string GetName() const override{
-      return "CommitOutputTask()";
-    }
-
-    void DoWork() override;
+    DECLARE_TASK_TYPE(CommitOutput);
   };
 }
 

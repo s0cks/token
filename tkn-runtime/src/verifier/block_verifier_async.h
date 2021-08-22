@@ -3,7 +3,7 @@
 
 #include "task/task_engine.h"
 #include "verifier/block_verifier.h"
-#include "tasks/task_verify_transaction.h"
+#include "tasks/verify/task_verify_transaction.h"
 
 namespace token{
   namespace async{

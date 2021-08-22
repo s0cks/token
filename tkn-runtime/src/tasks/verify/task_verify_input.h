@@ -13,12 +13,7 @@ namespace token{
   public:
     VerifyInputTask(VerifyTransactionInputsTask* parent, const InputPtr& val, UnclaimedTransactionPool& pool);
     ~VerifyInputTask() override = default;
-
-    std::string GetName() const override{
-      return "VerifyInputTask";
-    }
-
-    void DoWork() override;
+    DECLARE_TASK_TYPE(VerifyInput);
   };
 }
 

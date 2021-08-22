@@ -77,18 +77,20 @@ add_executable(tkn-runtime
   src/verifier/block_verifier_async.cc
   src/verifier/block_verifier_async.h
   src/verifier/input_verifier.h
-  src/tasks/task_verify_input.h
-  src/tasks/task_verify_input.cc
-  src/tasks/task_verify_transaction.cc
-  src/tasks/task_verify_transaction.h
-  src/tasks/task_verify_output.cc
-  src/tasks/task_verify_output.h
   src/verifier/verifier_output.h
-  src/tasks/task_verify_transaction_inputs.cc
-  src/tasks/task_verify_transaction_inputs.h
-  src/tasks/task_verify_transaction_objects.h
-  src/tasks/task_verify_transaction_outputs.cc
-  src/tasks/task_verify_transaction_outputs.h
+
+  src/tasks/verify/task_verify_input.h
+  src/tasks/verify/task_verify_input.cc
+  src/tasks/verify/task_verify_transaction.cc
+  src/tasks/verify/task_verify_transaction.h
+  src/tasks/verify/task_verify_output.cc
+  src/tasks/verify/task_verify_output.h
+  src/tasks/verify/task_verify_transaction_inputs.cc
+  src/tasks/verify/task_verify_transaction_inputs.h
+  src/tasks/verify/task_verify_transaction_objects.h
+  src/tasks/verify/task_verify_transaction_outputs.cc
+  src/tasks/verify/task_verify_transaction_outputs.h
+
   src/tasks/commit/task_commit_input.cc
   src/tasks/commit/task_commit_input.h
   src/tasks/commit/task_commit_output.cc

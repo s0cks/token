@@ -10,7 +10,6 @@ namespace token{
       LOG(FATAL) << "cannot serialize " << ToString() << " (" << PrettySize(raw.ByteSizeLong()) << ") into " << data->ToString() << ".";
       return nullptr;
     }
-    DLOG(INFO) << "serialized " << ToString() << " into " << data->ToString() << ".";
     return data;
   }
 }

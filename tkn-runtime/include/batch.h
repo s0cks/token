@@ -83,7 +83,6 @@ namespace token{
         DLOG(INFO) << "compiling " << GetNumberOfBatches() << " batches....";
         while(!batches_.empty()){
           auto next = batches_.pop_front();
-          DLOG(INFO) << "appending batch of size " << next->size();
           batch.Append(*next);
         }
         return true;

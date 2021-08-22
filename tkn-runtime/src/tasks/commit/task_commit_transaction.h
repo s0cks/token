@@ -11,37 +11,27 @@ namespace token{
   private:
     internal::WriteBatchList& batches_;
     IndexedTransactionPtr transaction_;
-    std::shared_ptr<CommitTransactionInputsTask> commit_inputs_;
-    std::shared_ptr<CommitTransactionOutputsTask> commit_outputs_;
+    CommitTransactionInputsTask* inputs_;
+    CommitTransactionOutputsTask* outputs_;
   public:
     CommitTransactionTask(task::TaskEngine* engine, internal::WriteBatchList& batches, const IndexedTransactionPtr& val):
       task::Task(engine),
       batches_(batches),
       transaction_(val),
-      commit_inputs_(CommitTransactionInputsTask::NewInstance(this, batches_, val)),
-      commit_outputs_(CommitTransactionOutputsTask::NewInstance(this, batches_, val)){
+      inputs_(new CommitTransactionInputsTask(this, batches_, val)),
+      outputs_(new CommitTransactionOutputsTask(this, batches_, val)){
     }
     ~CommitTransactionTask() override = default;
-
-    std::string GetName() const override{
-      return "CommitTransactionTask()";
-    }
 
     IndexedTransactionPtr GetTransaction() const{
       return transaction_;
     }
 
-    std::shared_ptr<CommitTransactionInputsTask>
-    GetCommitInputs() const{
-      return commit_inputs_;
-    }
+#ifdef TOKEN_DEBUG
+    void PrintStats();
+#endif//TOKEN_DEBUG
 
-    std::shared_ptr<CommitTransactionOutputsTask>
-    GetCommitOutputs() const{
-      return commit_outputs_;
-    }
-
-    void DoWork() override;
+    DECLARE_TASK_TYPE(CommitTransaction);
   };
 }
 

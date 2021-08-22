@@ -14,12 +14,7 @@ namespace token{
   public:
     CommitInputTask(CommitTransactionInputsTask* parent, internal::WriteBatchList& batches, InputPtr val);
     ~CommitInputTask() override = default;
-
-    std::string GetName() const override{
-      return "CommitInputTask()";
-    }
-
-    void DoWork() override;
+    DECLARE_TASK_TYPE(CommitInput);
   };
 }
 

@@ -29,18 +29,15 @@ namespace token{
         if(!next)
           continue;
 
-        auto name = next->GetName();
-        VLOG(1) << "task engine worker #" << (worker_id) << " is running " << name << "....";
+        VLOG(1) << "task engine worker #" << (worker_id) << " is running " << next->ToString() << "....";
 
         auto start_ms = platform::Clock::now();
-        if (!next->Run()) {
-          LOG(WARNING) << "couldn't run the " << (name) << " job.";
+        if(!next->Run())
           continue;
-        }
         auto end_ms = platform::Clock::now();
 
         auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_ms - start_ms);
-        VLOG(1) << "task engine worker #" << (worker_id) << " has finished " << (name) << " (" << (duration_ms.count()) << "ms)";
+        VLOG(1) << "task engine worker #" << (worker_id) << " has finished " << (next->ToString()) << " (" << (duration_ms.count()) << "ms)";
       } while (!worker->IsStopping());
       LOG(INFO) << "task engine worker #" << (worker_id) << " is stopping.";
       worker->SetState(State::kStopped);

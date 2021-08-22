@@ -13,12 +13,7 @@ namespace token{
   public:
     VerifyOutputTask(VerifyTransactionOutputsTask* parent, OutputPtr  val, UnclaimedTransactionPool& pool);
     ~VerifyOutputTask() override = default;
-
-    std::string GetName() const override{
-      return "VerifyOutputTask";
-    }
-
-    void DoWork() override;
+    DECLARE_TASK_TYPE(VerifyOutput);
   };
 }
 

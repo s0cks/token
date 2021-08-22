@@ -1,16 +1,17 @@
+#include "common.h"
 #include "task/task_engine.h"
 #include "task/task_engine_worker.h"
 
 namespace token{
   namespace task{
-    TaskEngine::TaskEngine(const int64_t &num_workers, const int64_t& num_queues, const int64_t &max_queue_size):
+    TaskEngine::TaskEngine(const int64_t &num_workers, const int64_t& num_queues, const uint64_t& max_queue_size):
       random_device_(),
       random_engine_(random_device_()),
       workers_(new TaskEngineWorker*[num_workers]),
       workers_size_(num_workers),
       queues_(num_workers+num_queues){
       for(auto idx = 0; idx < num_workers; idx++){
-        auto worker = new TaskEngineWorker(this, idx, max_queue_size);
+        auto worker = new TaskEngineWorker(this, idx, RoundUpPowTwo(max_queue_size));
         workers_[idx] = worker;
         if(!worker->Start()){
           LOG(FATAL) << "cannot start task engine worker #" << (idx + 1);

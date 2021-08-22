@@ -20,4 +20,20 @@ namespace token{
     }
     return true;
   }
+
+  void CommitTransactionOutputsTask::DoWork(){
+    DVLOG(2) << "committing transaction " << hash() << " outputs....";
+    if(!transaction_->VisitOutputs(this)){
+      LOG(ERROR) << "cannot visit transaction outputs.";
+      return;
+    }
+  }
+
+  std::string CommitTransactionOutputsTask::ToString() const{
+    std::stringstream ss;
+    ss << "CommitTransactionOutputsTask(";
+    ss << "value=" << transaction_->hash();
+    ss << ")";
+    return ss.str();
+  }
 }

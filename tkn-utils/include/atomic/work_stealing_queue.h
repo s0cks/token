@@ -3,134 +3,94 @@
 
 #include <atomic>
 #include <vector>
+#include "common.h"
 
 namespace token{
   namespace atomic{
     template<class T>
     class WorkStealingQueue{
-     private:
-      struct Page{
-        int64_t C;
-        int64_t M;
-        std::atomic<T>* S;
-
-        explicit Page(int64_t c):
-            C(c),
-            M(c-1),
-            S(new std::atomic<T>[C]){}
-        ~Page(){
-          delete[] S;
+    private:
+      uint64_t capacity_;
+      std::vector<T> data_;
+      std::atomic<uint64_t> top_;
+      std::atomic<uint64_t> bottom_;
+    public:
+      explicit WorkStealingQueue(const uint64_t& capacity):
+        capacity_(0),
+        data_(),
+        top_(0),
+        bottom_(0){
+        if(capacity > 0){
+          uint64_t new_capacity = RoundUpPowTwo(capacity);
+          capacity_ = new_capacity;
+          data_.resize(new_capacity, 0);
         }
-
-        int64_t GetCapacity() const{
-          return C;
-        }
-
-        void Push(int64_t idx, T val){
-          S[idx & M].store(std::forward<T>(val), std::memory_order_relaxed);
-        }
-
-        T Pop(int64_t idx){
-          return S[idx & M].load(std::memory_order_relaxed);
-        }
-
-        Page* Resize(int64_t bottom, int64_t top){
-          Page* page = new Page(C*2);
-          for(int64_t i = top; i != bottom; i++)
-            page->Push(i, Pop(i));
-          return page;
-        }
-      };
-
-      std::atomic<int64_t> top_;
-      std::atomic<int64_t> bottom_;
-      std::atomic<Page*> data_;
-      std::vector<Page*> garbage_;
-     public:
-      explicit WorkStealingQueue(int64_t cap):
-          top_(),
-          bottom_(),
-          data_(),
-          garbage_(){
-        top_.store(0, std::memory_order_relaxed);
-        bottom_.store(0, std::memory_order_relaxed);
-        data_.store(new Page(cap), std::memory_order_relaxed);
-        garbage_.reserve(32);
       }
-      ~WorkStealingQueue(){
-        for(auto& it : garbage_)
-          delete it;
-        delete data_.load();
-      }
+      ~WorkStealingQueue() = default;
 
-      bool IsEmpty() const{
-        int64_t bottom = bottom_.load(std::memory_order_relaxed);
-        int64_t top = top_.load(std::memory_order_relaxed);
-        return bottom <= top;
-      }
-
-      int64_t GetSize() const{
-        int64_t bottom = bottom_.load(std::memory_order_relaxed);
-        int64_t top = top_.load(std::memory_order_relaxed);
-        return bottom >= top ? bottom - top : 0;
-      }
-
-      template<typename U>
-      bool Push(U&& val){
-        int64_t bottom = bottom_.load(std::memory_order_relaxed);
-        int64_t top = bottom_.load(std::memory_order_acquire);
-        Page* data = data_.load(std::memory_order_relaxed);
-        if(data->GetCapacity() - 1 < (bottom - top)){
-          Page* tmp = data->Resize(bottom, top);
-          garbage_.push_back(data);
-          std::swap(data, tmp);
-          data_.store(data, std::memory_order_relaxed);
+      bool Push(const T& value){
+        uint64_t bottom = bottom_.load(std::memory_order_acquire);
+        if(bottom < data_.size()){
+          data_[bottom % data_.size()] = value;
+          std::atomic_thread_fence(std::memory_order_release);
+          bottom_.store(bottom+1, std::memory_order_release);
+          return true;
         }
-
-        data->Push(bottom, std::forward<U>(val));
-        std::atomic_thread_fence(std::memory_order_release);
-        bottom_.store(bottom + 1, std::memory_order_relaxed);
-        return true;
+        return false;
       }
 
       T Pop(){
-        int64_t bottom = bottom_.load(std::memory_order_relaxed) - 1;
-        Page* data = data_.load(std::memory_order_relaxed);
-        bottom_.store(bottom, std::memory_order_relaxed);
-        std::atomic_thread_fence(std::memory_order_seq_cst);
-        int64_t top = top_.load(std::memory_order_relaxed);
-
-        T item = (T)nullptr;
-        if(top <= bottom){
-          item = data->Pop(bottom);
-          if(top == bottom){
-            if(!top_.compare_exchange_strong(top, top + 1, std::memory_order_seq_cst, std::memory_order_relaxed))
-              item = (T)nullptr;
-            bottom_.store(bottom + 1, std::memory_order_relaxed);
-          }
-        } else{
-          bottom_.store(bottom + 1, std::memory_order_relaxed);
+        uint64_t bottom = bottom_.load(std::memory_order_acquire);
+        if(bottom > 0){
+          bottom -= 1;
+          bottom_.store(bottom, std::memory_order_release);
         }
-        return item;
+
+        std::atomic_thread_fence(std::memory_order_release);
+        uint64_t top = top_.load(std::memory_order_acquire);
+        if(top <= bottom){
+          auto next = data_[bottom % data_.size()];
+          if(top == bottom){
+            uint64_t expected_top = top;
+            uint64_t next_top = top + 1;
+            uint64_t desired_top = next_top;
+            if(!top_.compare_exchange_strong(expected_top, desired_top, std::memory_order_acq_rel)){
+              next = (T)nullptr;
+            }
+            bottom_.store(next_top, std::memory_order_release);
+          }
+          return next;
+        }
+        bottom_.store(top, std::memory_order_release);
+        return (T)nullptr;
       }
 
       T Steal(){
-        int64_t top = top_.load(std::memory_order_acquire);
-        std::atomic_thread_fence(std::memory_order_seq_cst);
-        int64_t bottom = bottom_.load(std::memory_order_acquire);
-
-        T item = (T)nullptr;
+        uint64_t top = top_.load(std::memory_order_acquire);
+        std::atomic_thread_fence(std::memory_order_acquire);
+        uint64_t bottom = bottom_.load(std::memory_order_acquire);
         if(top < bottom){
-          Page* data = data_.load(std::memory_order_consume);
-          item = data->Pop(top);
-          if(!top_.compare_exchange_strong(top, top+1, std::memory_order_seq_cst, std::memory_order_relaxed))
+          auto next = data_[top % data_.size()];
+          uint64_t next_top = top+1;
+          uint64_t desired_top = next_top;
+          if(!top_.compare_exchange_weak(top, desired_top, std::memory_order_acq_rel)){
             return (T)nullptr;
+          }
+          return next;
         }
-        return item;
+        return (T)nullptr;
       }
 
-      int64_t GetCapacity() const{
-        return data_.load(std::memory_order_relaxed)->GetCapacity();
+      uint64_t length() const{
+        return bottom_.load(std::memory_order_seq_cst)-top_.load(std::memory_order_seq_cst);
+      }
+
+      bool empty() const{
+        return length() == 0;
+      }
+
+      uint64_t capacity() const{
+        return capacity_;
       }
     };
   }

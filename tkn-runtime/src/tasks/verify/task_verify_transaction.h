@@ -1,8 +1,8 @@
 #ifndef TKN_TASK_VERIFY_TRANSACTION_H
 #define TKN_TASK_VERIFY_TRANSACTION_H
 
-#include "tasks/task_verify_transaction_inputs.h"
-#include "tasks/task_verify_transaction_outputs.h"
+#include "tasks/verify/task_verify_transaction_inputs.h"
+#include "tasks/verify/task_verify_transaction_outputs.h"
 
 namespace token{
   class VerifyTransactionTask : public task::Task{
@@ -20,16 +20,12 @@ namespace token{
     }
   public:
     explicit VerifyTransactionTask(task::TaskEngine* engine, UnclaimedTransactionPool& pool, const IndexedTransactionPtr& tx):
-        task::Task(engine),
-        pool_(pool),
-        transaction_(IndexedTransaction::CopyFrom(tx)),
-        verify_inputs_(std::make_shared<VerifyTransactionInputsTask>(this, pool, tx)),
-        verify_outputs_(std::make_shared<VerifyTransactionOutputsTask>(this, pool, tx)){}
+      task::Task(engine),
+      pool_(pool),
+      transaction_(IndexedTransaction::CopyFrom(tx)),
+      verify_inputs_(std::make_shared<VerifyTransactionInputsTask>(this, pool, tx)),
+      verify_outputs_(std::make_shared<VerifyTransactionOutputsTask>(this, pool, tx)){}
     ~VerifyTransactionTask() override = default;
-
-    std::string GetName() const override{
-      return "VerifyTransactionTask";
-    }
 
     IndexedTransactionPtr GetTransaction() const{
       return transaction_;
@@ -45,7 +41,7 @@ namespace token{
       return verify_outputs_;
     }
 
-    void DoWork() override;
+    DECLARE_TASK_TYPE(VerifyTransaction);
   };
 }
 

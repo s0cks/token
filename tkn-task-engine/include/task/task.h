@@ -90,7 +90,8 @@ namespace token{
 
       virtual void DoWork() = 0;//TODO: make const?
       virtual void OnFinished() const{}
-      virtual std::string GetName() const = 0;
+      virtual const char* GetName() const = 0;
+      virtual std::string ToString() const = 0;
 
       bool Submit(TaskQueue& queue){
         return queue.Push(reinterpret_cast<uword>(this));
@@ -115,6 +116,12 @@ namespace token{
         return Finish();
       }
     };
+
+#define DECLARE_TASK_TYPE(Name) \
+    public:                     \
+      const char* GetName() const override{ return #Name; } \
+      std::string ToString() const override;                \
+      void DoWork() override;
   }
 }
 

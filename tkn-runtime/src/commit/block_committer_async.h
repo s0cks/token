@@ -2,7 +2,7 @@
 #define TKN_ASYNC_BLOCK_COMMITTER_H
 
 #include "block_committer.h"
-#include "tasks/task_commit_transaction.h"
+#include "tasks/commit/task_commit_transaction.h"
 
 namespace token{
   namespace async{

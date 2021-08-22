@@ -1,7 +1,7 @@
 #ifndef TKN_TASK_VERIFY_TRANSACTION_INPUTS_H
 #define TKN_TASK_VERIFY_TRANSACTION_INPUTS_H
 
-#include "tasks/task_verify_transaction_objects.h"
+#include "tasks/verify/task_verify_transaction_objects.h"
 
 namespace token{
   class VerifyTransactionTask;
@@ -11,20 +11,8 @@ namespace token{
   public:
     VerifyTransactionInputsTask(VerifyTransactionTask* parent, UnclaimedTransactionPool& pool, const IndexedTransactionPtr& val);
     ~VerifyTransactionInputsTask() override = default;
-
-    std::string GetName() const override{
-      return "VerifyTransactionInputsTask()";
-    }
-
     bool Visit(const InputPtr& val) override;
-
-    void DoWork() override{
-      DVLOG(1) << "verifying transaction " << hash() << " inputs....";
-      if(!transaction_->VisitInputs(this)){
-        LOG(ERROR) << "cannot visit transaction inputs.";
-        return;
-      }
-    }
+    DECLARE_TASK_TYPE(VerifyTransactionInputs);
   };
 }
 
