@@ -309,7 +309,7 @@ namespace token{
       std::string ToString() const override{
         std::stringstream ss;
         ss << "AllocatedBuffer(";
-        ss << "data=" << std::hex << data() << ",";
+        ss << "data=" << std::hex << data_ << ",";
         ss << "length=" << length();
         ss << ")";
         return ss.str();

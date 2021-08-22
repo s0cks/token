@@ -1,7 +1,7 @@
 #ifndef TKN_TASK_COMMIT_TRANSACTION_INPUTS_H
 #define TKN_TASK_COMMIT_TRANSACTION_INPUTS_H
 
-#include "tasks/task_commit_transaction_objects.h"
+#include "tasks/commit/task_commit_transaction_objects.h"
 
 namespace token{
   class CommitTransactionInputsTask;

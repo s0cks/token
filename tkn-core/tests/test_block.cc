@@ -7,13 +7,13 @@ namespace token{
     auto height = 0;
     auto previous_hash = Hash::GenerateNonce();
     IndexedTransactionSet transactions = {};
-    Block a(timestamp, height, previous_hash, transactions);
-    LOG(INFO) << "hash: " << a.hash();
+    auto a = Block::NewInstance(height, previous_hash, timestamp, transactions);
+    LOG(INFO) << "hash: " << a->hash();
 
-    auto data = a.ToBuffer();
-    Block b(data);
+    auto data = a->ToBuffer();
+    auto b = Block::From(data);
 
-    ASSERT_EQ(a, b);
+    ASSERT_EQ(a->hash(), b->hash());
     //TODO:
     // - check timestamp
     // - check height

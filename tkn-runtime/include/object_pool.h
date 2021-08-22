@@ -236,6 +236,8 @@ namespace token{
         Iterator iterator(index());
         while(iterator.HasNext()){
           auto next = iterator.Next();
+          if(!next)
+            break;
           DLOG(INFO) << "next: " << next->hash();
           hashes.push_back(next->hash());
         }//TODO: optimize?

@@ -17,12 +17,6 @@ namespace token{
   class BinaryObject : public Object{
    protected:
     BinaryObject() = default;
-
-    template<typename HashFunction>
-    static inline Hash
-    ComputeHash(const internal::BufferPtr& data){
-      return Hash::ComputeHash<HashFunction>(data->data(), data->GetWritePosition());
-    }
    public:
     ~BinaryObject() override = default;
     virtual Hash hash() const = 0;

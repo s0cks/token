@@ -7,6 +7,8 @@ namespace token{
   class CommitTransactionTask;
   class CommitTransactionOutputsTask : public internal::CommitTransactionObjectsTask<Output>,
                                        public OutputVisitor{
+  private:
+    uint64_t current_;
   public:
     CommitTransactionOutputsTask(CommitTransactionTask* parent, internal::WriteBatchList& batches, const IndexedTransactionPtr& val);
     ~CommitTransactionOutputsTask() override = default;

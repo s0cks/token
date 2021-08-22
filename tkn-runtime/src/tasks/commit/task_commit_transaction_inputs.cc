@@ -1,7 +1,7 @@
 #include "task/task_engine.h"
-#include "tasks/task_commit_input.h"
-#include "tasks/task_commit_transaction.h"
-#include "tasks/task_commit_transaction_inputs.h"
+#include "tasks/commit/task_commit_input.h"
+#include "tasks/commit/task_commit_transaction.h"
+#include "tasks/commit/task_commit_transaction_inputs.h"
 
 namespace token{
   CommitTransactionInputsTask::CommitTransactionInputsTask(CommitTransactionTask* parent, internal::WriteBatchList& batches, const IndexedTransactionPtr& val):

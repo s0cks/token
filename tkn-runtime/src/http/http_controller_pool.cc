@@ -101,7 +101,6 @@ namespace token{
     }
 
     HTTP_CONTROLLER_ENDPOINT_HANDLER(UnclaimedTransactionPoolController, GetStats){
-
       json::String body;
       json::Writer writer(body);
       if(!writer.StartObject())

@@ -2,18 +2,15 @@
 #include "transaction_unclaimed.h"
 
 namespace token{
-  std::string UnclaimedTransaction::ToString() const{
-    NOT_IMPLEMENTED(ERROR);//TODO: implement
-    return "UnclaimedTransaction()";
-  }
-
   internal::BufferPtr UnclaimedTransaction::ToBuffer() const{
-    auto length = raw_.ByteSizeLong();
-    auto data = internal::NewBuffer(length);
-    if(!raw_.SerializeToArray(data->data(), static_cast<int>(length))){
-      DLOG(FATAL) << "cannot serialize UnclaimedTransaction to buffer.";
+    RawUnclaimedTransaction raw;
+    raw << (*this);
+    auto data = internal::NewBufferForProto(raw);
+    if(!data->PutMessage(raw)){
+      LOG(FATAL) << "cannot serialize " << ToString() << " (" << PrettySize(raw.ByteSizeLong()) << ") into " << data->ToString() << ".";
       return nullptr;
     }
+    DLOG(INFO) << "serialized " << ToString() << " into " << data->ToString() << ".";
     return data;
   }
 }

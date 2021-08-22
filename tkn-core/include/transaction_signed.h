@@ -59,7 +59,7 @@ namespace token{
 
     Hash hash() const override{
       auto data = ToBuffer();
-      return ComputeHash<CryptoPP::SHA256>(data);
+      return Hash::ComputeHash<CryptoPP::SHA256>(data->data(), data->length());
     }
 
     std::string ToString() const override{

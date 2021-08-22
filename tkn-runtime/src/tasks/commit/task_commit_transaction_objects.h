@@ -1,8 +1,6 @@
 #ifndef TKN_TASK_COMMIT_TRANSACTION_OBJECTS_H
 #define TKN_TASK_COMMIT_TRANSACTION_OBJECTS_H
 
-#include <utility>
-
 #include "task/task.h"
 #include "object_pool.h"
 #include "transaction_indexed.h"

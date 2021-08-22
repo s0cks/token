@@ -11,10 +11,7 @@ find_package(uuid REQUIRED)
 
 add_executable(tkn-core-tests
     test_block.cc
-    test_input.cc
-    test_output.cc
-    test_transaction_indexed.cc
-    test_transaction_unsigned.cc)
+  test_transaction_unclaimed.cc)
 target_link_libraries(tkn-core-tests
     tkn-core
     GTest::GTest

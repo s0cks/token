@@ -3,8 +3,8 @@
 
 #include "batch.h"
 #include "atomic/linked_list.h"
-#include "tasks/task_commit_transaction_inputs.h"
-#include "tasks/task_commit_transaction_outputs.h"
+#include "tasks/commit/task_commit_transaction_inputs.h"
+#include "tasks/commit/task_commit_transaction_outputs.h"
 
 namespace token{
   class CommitTransactionTask : public task::Task{

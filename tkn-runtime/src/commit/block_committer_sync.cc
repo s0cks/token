@@ -13,13 +13,7 @@ namespace token{
     bool TransactionCommitter::Visit(const OutputPtr& val){
       auto index = output_idx_++;
       DVLOG(2) << "visiting output #" << index << " " << val->ToString() << "....";
-      UnclaimedTransaction::Builder builder;
-      builder.SetTransactionHash(hash());
-      builder.SetTransactionIndex(index);
-      builder.SetProduct(val->product().ToString());
-      builder.SetUser(val->user().ToString());
-
-      auto utxo = builder.Build();
+      auto utxo = std::make_shared<UnclaimedTransaction>();//TODO: fixme
       auto utxo_hash = utxo->hash();
       DVLOG(1) << "created unclaimed transaction " << utxo_hash << " from " << TransactionReference(hash(), index);
       batch()->Put(utxo_hash, utxo);
