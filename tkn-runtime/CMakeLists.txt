@@ -71,8 +71,6 @@ add_executable(tkn-runtime
   src/block_builder.h src/block_builder.cc
 
   main.cc
-  src/verifier/verifier_input.h
-  src/verifier/verifier_output.h
 
   src/tasks/verify/task_verify_input.h
   src/tasks/verify/task_verify_input.cc
@@ -96,7 +94,14 @@ add_executable(tkn-runtime
   src/tasks/commit/task_commit_transaction_outputs.cc
   src/tasks/commit/task_commit_transaction_outputs.h
   src/tasks/commit/task_commit_transaction.cc
-  src/tasks/commit/task_commit_transaction.h src/verifier/verifier_transaction_inputs.h src/verifier/verifier_transaction_outputs.h src/verifier/verifier_transaction.h src/verifier/verifier_block.h)
+  src/tasks/commit/task_commit_transaction.h
+
+  src/verifier/verifier_input.h
+  src/verifier/verifier_output.h
+  src/verifier/verifier_transaction_inputs.h
+  src/verifier/verifier_transaction_outputs.h
+  src/verifier/verifier_transaction.h
+  src/verifier/verifier_block.h)
 target_link_libraries(tkn-runtime
   tkn-platform
   tkn-utils
