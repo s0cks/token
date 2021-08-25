@@ -1,7 +1,8 @@
 #ifndef TKN_INPUT_VERIFIER_H
 #define TKN_INPUT_VERIFIER_H
 
-#include "object_pool.h"
+#include "transaction_input.h"
+#include "pool/pool_transaction_unclaimed.h"
 
 namespace token{
   class InputVerifier{

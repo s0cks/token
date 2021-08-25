@@ -1,7 +1,7 @@
 #ifndef TKN_VERIFIER_OUTPUT_H
 #define TKN_VERIFIER_OUTPUT_H
 
-#include "object_pool.h"
+#include "pool/pool_transaction_unclaimed.h"
 
 namespace token{
   class OutputVerifier{

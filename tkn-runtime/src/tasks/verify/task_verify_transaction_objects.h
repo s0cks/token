@@ -2,7 +2,8 @@
 #define TKN_TASK_VERIFY_TRANSACTION_OBJECTS_H
 
 #include "task/task.h"
-#include "object_pool.h"
+#include "transaction_indexed.h"
+#include "pool/pool_transaction_unclaimed.h"
 
 namespace token{
   namespace internal{

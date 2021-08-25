@@ -1,7 +1,10 @@
 #ifndef TOKEN_HTTP_CONTROLLER_POOL_H
 #define TOKEN_HTTP_CONTROLLER_POOL_H
 
-#include "object_pool.h"
+#include "pool/pool_block.h"
+#include "pool/pool_transaction_unsigned.h"
+#include "pool/pool_transaction_unclaimed.h"
+
 #include "http/http_controller.h"
 
 namespace token{

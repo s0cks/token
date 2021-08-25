@@ -1,16 +1,15 @@
-#ifndef TKN_OBJECT_POOL_H
-#define TKN_OBJECT_POOL_H
+#ifndef TKN_POOL_H
+#define TKN_POOL_H
 
-#include <memory>
-#include <string>
 #include <iostream>
 #include <leveldb/db.h>
-#include <glog/logging.h>
+#include <leveldb/slice.h>
+#include <leveldb/comparator.h>
 
+#include "hash.h"
+#include "type.h"
 #include "batch.h"
-#include "block.h"
-#include "transaction_unsigned.h"
-#include "transaction_unclaimed.h"
+#include "buffer.h"
 #include "atomic/relaxed_atomic.h"
 
 namespace token{
@@ -123,7 +122,7 @@ namespace token{
         return (State)state_;
       }
 
-      bool Commit(internal::WriteBatch* batch) const{
+      bool Commit(internal::WriteBatch* batch) const{//TODO: refactor
         leveldb::WriteOptions options;
         SetPoolWriteOptions(options);
 
@@ -253,30 +252,6 @@ namespace token{
       }
     };
   }
-
-  class UnsignedTransactionPool : public internal::ObjectPool<UnsignedTransaction>{
-  public:
-    explicit UnsignedTransactionPool(const std::string& filename):
-      internal::ObjectPool<UnsignedTransaction>(Type::kUnsignedTransaction, filename + "/unsigned_transactions"){}
-    ~UnsignedTransactionPool() override = default;
-    bool Visit(UnsignedTransactionVisitor* vis) const;
-  };
-
-  class BlockPool : public internal::ObjectPool<Block>{
-  public:
-    explicit BlockPool(const std::string& filename):
-      internal::ObjectPool<Block>(Type::kBlock, filename + "/blocks"){}
-    ~BlockPool() override = default;
-    bool Visit(BlockVisitor* vis) const;
-  };
-
-  class UnclaimedTransactionPool : public internal::ObjectPool<UnclaimedTransaction>{
-  public:
-    explicit UnclaimedTransactionPool(const std::string& filename):
-      internal::ObjectPool<UnclaimedTransaction>(Type::kUnclaimedTransaction, filename + "/unclaimed_transactions"){}
-    ~UnclaimedTransactionPool() override = default;
-    bool Visit(UnclaimedTransactionVisitor* vis) const;
-  };
 }
 
-#endif//TKN_OBJECT_POOL_H
+#endif//TKN_POOL_H

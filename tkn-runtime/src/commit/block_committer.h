@@ -5,8 +5,8 @@
 
 #include "batch.h"
 #include "eventbus.h"
-#include "object_pool.h"
 #include "atomic/bit_vector.h"
+#include "pool/pool_transaction_unclaimed.h"
 
 namespace token{
 #define FOR_EACH_BLOCK_COMMITTER_EVENT(V) \

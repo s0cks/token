@@ -6,14 +6,21 @@
 #include "miner.h"
 #include "config.h"
 #include "eventbus.h"
-#include "object_pool.h"
 #include "miner_listener.h"
+
+#include "pool/pool_block.h"
+#include "pool/pool_transaction_unsigned.h"
+#include "pool/pool_transaction_unclaimed.h"
+
 #include "node/node_server.h"
+
 #include "task/task_engine.h"
-#include "consensus/acceptor.h"
-#include "consensus/proposer.h"
+
 #include "http/http_service_rest.h"
 #include "http/http_service_health.h"
+
+#include "consensus/acceptor.h"
+#include "consensus/proposer.h"
 #include "consensus/proposal_timer.h"
 #include "consensus/proposal_listener.h"
 

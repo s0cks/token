@@ -66,7 +66,6 @@ add_executable(tkn-runtime
   include/flags.h src/flags.cc
   include/miner.h src/miner.cc
   include/miner_listener.h
-  include/object_pool.h src/object_pool.cc
   include/runtime.h src/runtime.cc
   src/block_builder.h src/block_builder.cc
 
@@ -101,7 +100,7 @@ add_executable(tkn-runtime
   src/verifier/verifier_transaction_inputs.h
   src/verifier/verifier_transaction_outputs.h
   src/verifier/verifier_transaction.h
-  src/verifier/verifier_block.h)
+  src/verifier/verifier_block.h include/pool/pool.h include/pool/pool_transaction_unsigned.h src/pool/pool_transaction_unsigned.cc include/pool/pool_block.h include/pool/pool_transaction_unclaimed.h src/pool/pool_block.cc src/pool/pool_transaction_unclaimed.cc)
 target_link_libraries(tkn-runtime
   tkn-platform
   tkn-utils
