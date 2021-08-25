@@ -2,7 +2,7 @@
 #define TKN_TASK_VERIFY_INPUT_H
 
 #include "task/task.h"
-#include "verifier/input_verifier.h"
+#include "verifier/verifier_input.h"
 
 namespace token{
   class VerifyTransactionInputsTask;

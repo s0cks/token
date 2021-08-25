@@ -10,7 +10,6 @@
 #include "peer/peer_session_manager.h"
 
 #include "commit/block_committer_async.h"
-#include "verifier/block_verifier_async.h"
 
 /*#ifdef TOKEN_DEBUG
   static const std::vector<token::User> kOwners = {
