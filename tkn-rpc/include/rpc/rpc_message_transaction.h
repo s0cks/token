@@ -1,7 +1,7 @@
 #ifndef TOKEN_RPC_MESSAGE_TRANSACTION_H
 #define TOKEN_RPC_MESSAGE_TRANSACTION_H
 
-#include "transaction_unsigned.h"
+#include "../../../Sources/token/transaction_unsigned.h"
 #include "rpc/rpc_message_object.h"
 
 namespace token{

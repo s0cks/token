@@ -3,7 +3,7 @@
 
 #include "batch.h"
 #include "block_committer.h"
-#include "transaction_indexed.h"
+#include "../../../Sources/token/transaction_indexed.h"
 
 namespace token{
   namespace sync{

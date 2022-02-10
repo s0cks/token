@@ -5,7 +5,7 @@
 
 #include "flags.h"
 #include "common.h"
-#include "proposal.h"
+#include "../../../Sources/token/proposal.h"
 #include "proposal_state.h"
 #include "atomic/relaxed_atomic.h"
 #include "peer/peer_session_manager.h"

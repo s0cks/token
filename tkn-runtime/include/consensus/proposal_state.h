@@ -1,7 +1,7 @@
 #ifndef TKN_PROPOSAL_PHASE_H
 #define TKN_PROPOSAL_PHASE_H
 
-#include "proposal.h"
+#include "../../../Sources/token/proposal.h"
 
 namespace token{
 #define FOR_EACH_PROPOSAL_PHASE(V) \

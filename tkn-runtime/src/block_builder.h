@@ -1,7 +1,7 @@
 #ifndef TKN_BLOCK_BUILDER_H
 #define TKN_BLOCK_BUILDER_H
 
-#include "block.h"
+#include "../../Sources/token/block.h"
 
 namespace token{
   class BlockBuilder{

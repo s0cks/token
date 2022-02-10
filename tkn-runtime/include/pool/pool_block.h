@@ -1,7 +1,7 @@
 #ifndef TKN_BLOCK_POOL_H
 #define TKN_BLOCK_POOL_H
 
-#include "block.h"
+#include "../../../Sources/token/block.h"
 #include "pool/pool.h"
 
 namespace token{

@@ -1,9 +1,0 @@
-syntax = "proto3";
-package token.internal.proto;
-
-message UnclaimedTransaction{
-    string transaction = 1;
-    uint64 index = 2;
-    string user = 3;
-    string product = 4;
-}

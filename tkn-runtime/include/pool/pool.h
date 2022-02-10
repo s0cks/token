@@ -7,7 +7,7 @@
 #include <leveldb/comparator.h>
 
 #include "hash.h"
-#include "type.h"
+#include "../../../Sources/token/type.h"
 #include "batch.h"
 #include "buffer.h"
 #include "atomic/relaxed_atomic.h"

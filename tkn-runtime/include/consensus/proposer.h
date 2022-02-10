@@ -2,7 +2,7 @@
 #define TKN_PROPOSER_H
 
 #include <uv.h>
-#include "proposal.h"
+#include "../../../Sources/token/proposal.h"
 #include "miner_listener.h"
 #include "election.h"
 #include "proposal_listener.h"

@@ -1,5 +1,5 @@
 #include "runtime.h"
-#include "proposal.h"
+#include "../../../Sources/token/proposal.h"
 #include "consensus/acceptor.h"
 #include "commit/block_committer_sync.h"
 #include "commit/block_committer_async.h"

@@ -3,7 +3,7 @@
 
 #include "batch.h"
 #include "task/task.h"
-#include "transaction_input.h"
+#include "../../../../Sources/token/input.h"
 
 namespace token{
   class CommitTransactionInputsTask;

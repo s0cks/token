@@ -1,5 +1,5 @@
 #include "runtime.h"
-#include "proposal.h"
+#include "../../../Sources/token/proposal.h"
 #include "consensus/proposer.h"
 #include "peer/peer_session_manager.h"
 

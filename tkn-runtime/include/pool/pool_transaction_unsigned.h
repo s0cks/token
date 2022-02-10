@@ -2,7 +2,7 @@
 #define TKN_POOL_TRANSACTION_UNSIGNED_H
 
 #include "pool/pool.h"
-#include "transaction_unsigned.h"
+#include "../../../Sources/token/transaction_unsigned.h"
 
 namespace token{
   class UnsignedTransactionPool : public internal::ObjectPool<UnsignedTransaction>{

@@ -1,7 +1,7 @@
 #ifndef TOKEN_RPC_MESSAGE_BLOCK_H
 #define TOKEN_RPC_MESSAGE_BLOCK_H
 
-#include "block.h"
+#include "../../../Sources/token/block.h"
 #include "rpc/rpc_message_object.h"
 
 namespace token{

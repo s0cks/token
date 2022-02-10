@@ -3,8 +3,8 @@
 
 #include "batch.h"
 #include "task/task.h"
-#include "transaction_output.h"
-#include "transaction_reference.h"
+#include "../../../../Sources/token/output.h"
+#include "../../../../Sources/token/transaction_reference.h"
 
 namespace token{
   class CommitTransactionOutputsTask;

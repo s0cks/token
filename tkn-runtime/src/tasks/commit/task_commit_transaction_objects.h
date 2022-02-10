@@ -2,7 +2,7 @@
 #define TKN_TASK_COMMIT_TRANSACTION_OBJECTS_H
 
 #include "task/task.h"
-#include "transaction_indexed.h"
+#include "../../../../Sources/token/transaction_indexed.h"
 #include "pool/pool_transaction_unclaimed.h"
 
 namespace token{

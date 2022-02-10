@@ -3,7 +3,7 @@
 
 #include <utility>
 
-#include "proposal.h"
+#include "../../../Sources/token/proposal.h"
 #include "rpc/rpc_message.h"
 
 namespace token{
