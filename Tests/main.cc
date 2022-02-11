@@ -5,13 +5,13 @@ int main(int argc, char** argv){
   using namespace ::testing;
   using namespace google;
 
-  ParseCommandLineFlags(&argc, &argv, false);
+  InitGoogleTest(&argc, argv);
+  InitGoogleLogging(argv[0]);
 
 #ifdef TOKEN_DEBUG
-  InitGoogleLogging(argv[0]);
   LogToStderr();
 #endif//TOKEN_DEBUG
 
-  InitGoogleTest(&argc, argv);
+  ParseCommandLineFlags(&argc, &argv, true);
   return RUN_ALL_TESTS();
 }

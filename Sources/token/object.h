@@ -1,10 +1,17 @@
 #ifndef TOKEN_OBJECT_H
 #define TOKEN_OBJECT_H
 
-#include "type.h"
 #include "buffer.h"
 
 namespace token{
+ enum Type{
+   kBlock,
+   kInput,
+   kOutput,
+   kTransaction,
+   kIndexedTransaction,
+ };
+
   class Object{
    protected:
     Object() = default;
@@ -21,9 +28,7 @@ namespace token{
     virtual uint64_t GetBufferSize() const = 0;
     virtual bool WriteTo(const BufferPtr& data) const = 0;
 
-    void WriteTo(const std::string& filename) const{
-      NOT_IMPLEMENTED(ERROR);
-    }
+    bool WriteTo(const std::string& filename) const;
 
     BufferPtr ToBuffer() const{
       auto data = NewBuffer(GetBufferSize());

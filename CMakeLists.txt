@@ -5,28 +5,25 @@ set(TOKEN_VERSION "1.0.0")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
-file(GLOB_RECURSE TOKEN_CMAKE_MODULES ${CMAKE_MODULE_PATH}/*.cmake)
-
 option(ENABLE_EXPERIMENTAL "Enables experimental features." OFF)
 
 # Monkey Patching for Debug Mode
-if(CMAKE_BUILD_TYPE MATCHES Debug)
-  message(STATUS "Compiling w/ debug mode.")
-  add_compile_definitions(TOKEN_DEBUG)
-else()
-  message(STATUS "Compiling w/o debug mode.")
-endif()
+if (CMAKE_BUILD_TYPE MATCHES Debug)
+    message(STATUS "Compiling w/ debug mode.")
+    add_compile_definitions(TOKEN_DEBUG)
+else ()
+    message(STATUS "Compiling w/o debug mode.")
+endif ()
 
 # Compile w/ Experimental Features
-if(ENABLE_EXPERIMENTAL)
-  message(STATUS "Compiling w/ Experimental Features.")
-  add_compile_definitions(TOKEN_ENABLE_EXPERIMENTAL)
-endif()
+if (ENABLE_EXPERIMENTAL)
+    message(STATUS "Compiling w/ Experimental Features.")
+    add_compile_definitions(TOKEN_ENABLE_EXPERIMENTAL)
+endif ()
 
 find_package(glog REQUIRED)
 find_package(Threads REQUIRED)
-find_package(cryptopp REQUIRED)
-find_package(Protobuf REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 add_subdirectory(Tests)
 add_subdirectory(Sources)

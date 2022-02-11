@@ -12,7 +12,7 @@ namespace token{
    Block* block_;
   protected:
    void SetUp() override{
-     block_ = new Block(10, Clock::now(), transactions, 2);
+
    }
   public:
    BlockTest() = default;

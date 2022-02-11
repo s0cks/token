@@ -1,9 +1,9 @@
 #ifndef TOKEN_TRANSACTION_H
 #define TOKEN_TRANSACTION_H
 
-#include "token/timestamp.h"
 #include "token/input.h"
 #include "token/output.h"
+#include "token/timestamp.h"
 
 namespace token{
  class Transaction : public SerializableObject{
@@ -112,18 +112,20 @@ namespace token{
      return &outputs_[num_outputs_];
    }
 
-   void VisitInputs(InputVisitor* vis) {
-     auto fn = std::bind(&InputVisitor::Visit, vis, std::placeholders::_1);
-     std::for_each(inputs_begin(), inputs_end(), fn);
+   void VisitInputs(InputVisitor* vis) const{
+     std::for_each(inputs_begin(), inputs_end(), [vis](const Input& val){
+       vis->Visit(val);
+     });
    }
 
-   void VisitOutputs(OutputVisitor* vis){
-     auto fn = std::bind(&OutputVisitor::Visit, vis, std::placeholders::_1);
-     std::for_each(outputs_begin(), outputs_end(), fn);
+   void VisitOutputs(OutputVisitor* vis) const{
+     std::for_each(outputs_begin(), outputs_end(), [vis](const Output& val){
+       vis->Visit(val);
+     });
    }
 
    uint64_t GetBufferSize() const override{
-     auto size = 0;
+     uint64_t size = 0;
      size += sizeof(RawTimestamp);
 
      size += sizeof(uint64_t);
@@ -158,13 +160,11 @@ namespace token{
      timestamp_ = rhs.timestamp();
      num_inputs_ = rhs.GetNumberOfInputs();
 
-     if(inputs_ != nullptr)
-       delete[] inputs_;
+     delete[] inputs_;
      inputs_ = new Input[rhs.GetNumberOfInputs()];
      std::copy(rhs.inputs_begin(), rhs.inputs_end(), inputs_begin());
 
-     if(outputs_ != nullptr)
-       delete[] outputs_;
+     delete[] outputs_;
      outputs_ = new Output[rhs.GetNumberOfOutputs()];
      std::copy(rhs.outputs_begin(), rhs.outputs_end(), outputs_begin());
      return *this;
@@ -235,7 +235,7 @@ namespace token{
    }
 
    uint64_t GetBufferSize() const override{
-     auto size = 0;
+     uint64_t size = 0;
      size += Transaction::GetBufferSize();
      size += sizeof(uint64_t);
      return size;

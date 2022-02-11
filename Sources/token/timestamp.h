@@ -5,10 +5,6 @@
 #include <sstream>
 #include <iomanip>
 
-#ifdef TOKEN_JSON_EXPORT
-#include "json.h"
-#endif//TOKEN_JSON_EXPORT
-
 namespace token{
   typedef uint64_t RawTimestamp;
 
@@ -56,17 +52,6 @@ namespace token{
   FormatTimestampFileSafe(const Timestamp& ts, const std::string& format="%Y%m%d-%H%M%S"){
     return FormatTimestamp(ts, format);
   }
-
-#ifdef TOKEN_JSON_EXPORT
-  namespace json{
-    static inline bool
-    SetField(Writer& writer, const char* name, const Timestamp& val){
-      JSON_KEY(writer, name);
-      JSON_LONG(writer, ToUnixTimestamp(val));
-      return true;
-    }
-  }
-#endif//TOKEN_JSON_EXPORT
 }
 
 #endif//TOKEN_TIMESTAMP_H

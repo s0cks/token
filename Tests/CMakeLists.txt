@@ -1,7 +1,8 @@
 find_package(GTest REQUIRED)
-find_package(gmock REQUIRED)
 
+include_directories(${OPENSSL_INCLUDE_DIR})
 include_directories(${CMAKE_BINARY_DIR}/Sources/) #TODO: Fixme
+
 add_executable(token-tests
     main.cc
     token/test_input.cc
@@ -18,8 +19,4 @@ target_link_libraries(token-tests
     ${GFLAGS_LIBRARIES}
     glog::glog
     GTest::GTest
-    ${GMOCK_LIBRARIES})
-
-enable_testing()
-#gtest_discover_tests(token-tests
-#    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    ${OPENSSL_LIBRARIES})

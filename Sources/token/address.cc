@@ -1,5 +1,4 @@
-#include "address.h"
-#include "string_utils.h"
+#include "token/address.h"
 
 namespace token{
  static inline Address::RawAddress
@@ -41,6 +40,17 @@ namespace token{
    return ss.str();
  }
 
+ static inline void
+ SplitString(const std::string& str, std::vector<std::string>& cont, char delimiter = ' '){
+   if(str.find(delimiter) == std::string::npos){ // delimiter not found, return whole
+     cont.push_back(str);
+     return;
+   }
+   std::stringstream ss(str);
+   std::string token;
+   while(std::getline(ss, token, delimiter)) cont.push_back(token);
+ }
+
  bool AddressResolver::ResolveAddresses(const Hostname& hostname, AddressList& results) const{
    void* ptr;
 
@@ -54,7 +64,7 @@ namespace token{
    std::string address;
    if(hostname.find(':') != std::string::npos){
      std::vector<std::string> parts;
-     utils::SplitString(hostname, parts, ':');
+     SplitString(hostname, parts, ':');
 
      address = parts[0];
      port = strtol(parts[1].data(), nullptr, 10);

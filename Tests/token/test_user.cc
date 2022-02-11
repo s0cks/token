@@ -10,17 +10,18 @@ namespace token{
    UserTest() = default;
    ~UserTest() override = default;
 
-   static constexpr const char* kTestUserName = "TestUser";
+   static constexpr const char* kUser1 = "TestUser";
+   static constexpr const char* kUser2 = "Test";
  };
 
  TEST_F(UserTest, TestEquality){
-   User user(kTestUserName);
-   ASSERT_TRUE(IsUser(user, kTestUserName));
-   ASSERT_FALSE(IsUser(user, "Test"));
+   User user(kUser1);
+   ASSERT_TRUE(IsUser(user, kUser1));
+   ASSERT_FALSE(IsUser(user, kUser2));
  }
 
  TEST_F(UserTest, TestSerialization){
-   User user(kTestUserName);
+   User user(kUser1);
    auto data = NewBuffer(User::kSize);
    ASSERT_TRUE(data->PutUser(user));
    ASSERT_EQ(data->GetUser(), user);

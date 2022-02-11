@@ -133,22 +133,6 @@ namespace token{
       return Compare(lhs, rhs) < 0;
     }
   };
-
-#ifdef TOKEN_JSON_EXPORT
-  namespace json{
-    static inline bool
-    Write(Writer& writer, const User& val){
-      JSON_STRING(writer, val.ToString());
-      return true;
-    }
-
-    static inline bool
-    SetField(Writer& writer, const char* name, const User& val){
-      JSON_KEY(writer, name);
-      return Write(writer, val);
-    }
-  }
-#endif//TOKEN_JSON_EXPORT
 }
 
 #endif//TOKEN_USER_H

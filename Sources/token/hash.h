@@ -3,104 +3,99 @@
 
 #include <set>
 #include <bitset>
+#include <random>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <sstream>
 #include <unordered_set>
+#include <openssl/sha.h>
 #include <leveldb/slice.h>
 
-#include "token/crypto.h"
-
-#ifdef TOKEN_JSON_EXPORT
-#include "token/json.h"
-#endif//TOKEN_JSON_EXPORT
+#include "token/platform.h"
 
 namespace token{
- template<const uint64_t HashSize>
+ using random_bytes_engine = std::independent_bits_engine<std::default_random_engine, CHAR_BIT, uint8_t>;
+
  class BigNumber{
   protected:
-   uint8_t data_[HashSize];
-
-   BigNumber():
-    data_(){
-     SetNull();
-   }
-   constexpr BigNumber(const uint8_t* data, size_t length):
-    data_(){
-     memcpy(data_, data, std::min(length, HashSize));
-   }
+   BigNumber() = default;
   public:
    virtual ~BigNumber() = default;
+   virtual const uint8_t* data() const = 0;
+   virtual uint64_t size() const = 0;
+   virtual void clear() = 0;
 
-   void SetNull(){
+   const uint8_t* const_begin() const{
+     return data();
+   }
+
+   const uint8_t* const_end() const{
+     return data() + size();
+   }
+
+   std::string HexString() const;
+   std::string BinaryString() const;
+ };
+
+ template<uint64_t Size>
+ class Hash : public BigNumber{
+  protected:
+   uint8_t data_[Size];
+
+   constexpr Hash():
+    BigNumber(),
+    data_(){
      memset(data_, 0, sizeof(data_));
    }
-
-   bool IsNull() const{
-     for(int64_t idx = 0; idx < HashSize; idx++){
-       if(data_[idx] != 0){
-         return false;
-       }
-     }
-     return true;
+   constexpr Hash(const uint8_t* data, size_t length):
+    data_(){
+     memset(data_, 0, sizeof(data_));
+     memcpy(data_, data, std::min(Size, static_cast<uint64_t>(length)));
    }
+  public:
+   ~Hash() override = default;
 
-   const uint8_t* data() const{
+   const uint8_t* data() const override{
      return data_;
    }
 
-   uint64_t size() const{
-     return HashSize;
+   uint64_t size() const override{
+     return Size;
    }
 
-   std::string HexString() const{
-     std::string hash;
-     CryptoPP::ArraySource source(data(), size(), true, new CryptoPP::HexEncoder(new CryptoPP::StringSink(hash)));
-     return hash;
-   }
-
-   std::string BinaryString() const{
-     std::stringstream ss;
-     std::bitset<256> bits;
-     for(int idx = 0; idx < HashSize; idx++){
-       uint8_t curr = data_[idx];
-       int offset = idx * CHAR_BIT;
-       for(int bit = 0; bit < CHAR_BIT; bit++){
-         bits[offset] = curr & 1;
-         offset++;
-         curr >>= 1;
-       }
-     }
-     ss << bits;
-     return ss.str();
+   void clear() override{
+     memset(data_, 0, sizeof(data_));
    }
  };
 
 #define UINT256_SIZE (256 / 8)
 
- class uint256 : public BigNumber<UINT256_SIZE>{
+ class uint256 : public Hash<UINT256_SIZE>{
   public:
    static constexpr const uint64_t kSize = UINT256_SIZE;
 
-   typedef CryptoPP::SHA256 HashFunction;
-
    static inline int
    Compare(const uint256& lhs, const uint256& rhs){
-     return memcmp(lhs.data(), rhs.data(), HashFunction ::DIGESTSIZE);
+     return memcmp(lhs.data(), rhs.data(), kSize);
    }
   public:
    uint256() = default;
    constexpr uint256(const uint8_t* data, uint64_t size):
-     BigNumber(data, size){
-   }
-   explicit uint256(const CryptoPP::SecByteBlock& blk):
-     BigNumber(blk.data(), blk.size()){
+    Hash(data, size){
    }
    uint256(const uint256& rhs) = default;
    ~uint256() override = default;
 
    uint256& operator=(const uint256& rhs) = default;
+
+   uint8_t& operator[](uint64_t index){
+     return data_[index];
+   }
+
+   uint8_t operator[](uint64_t index) const{
+     return data_[index];
+   }
 
    friend std::ostream& operator<<(std::ostream& stream, const uint256& val){
      return stream << val.HexString();
@@ -123,54 +118,22 @@ namespace token{
    }
  };
 
- class sha256{
-  public:
-   typedef CryptoPP::SHA256 Function;
-   typedef uint256 Storage;
+ namespace sha256{
+  static const uint64_t kDigestSize = SHA256_DIGEST_LENGTH;
+  static const uint64_t kSize = kDigestSize;
 
-   static const uint64_t kDigestSize;
-   static const uint64_t kSize;
+  static const uint64_t kDefaultNonceSize = 1024;
 
-   static inline uint256
-   Of(const uint8_t* data, size_t length){
-     Function function;
-     CryptoPP::SecByteBlock digest(Function::DIGESTSIZE);
-     CryptoPP::ArraySource source(data, length, true, new CryptoPP::HashFilter(function, new CryptoPP::ArraySink(digest.data(), digest.size())));
-     return uint256(digest);
-   }
+  uint256 Of(const uint8_t* data, size_t length);
+  uint256 Nonce(uint64_t size = kDefaultNonceSize);
+  uint256 Concat(const uint256& lhs, const uint256& rhs);
+  uint256 FromHex(const char* data, size_t length);
 
-   static inline uint256
-   FromHex(const std::string& val){
-     CryptoPP::SecByteBlock digest(Function::DIGESTSIZE);
-     CryptoPP::StringSource source(val, true, new CryptoPP::HexDecoder(new CryptoPP::ArraySink(digest.data(), digest.size())));
-     return uint256(digest);
-   }
-
-   static inline uint256
-   Concat(const uint256& lhs, const uint256& rhs){
-     CryptoPP::SecByteBlock data(lhs.size() + rhs.size());
-     memcpy(&data[0], lhs.data(), lhs.size());
-     memcpy(&data[lhs.size()], rhs.data(), rhs.size());
-
-     CryptoPP::SecByteBlock digest(Function::DIGESTSIZE);
-
-     Function function;
-     CryptoPP::ArraySource source(data.data(), data.size(), true, new CryptoPP::HashFilter(function, new CryptoPP::ArraySink(digest.data(), digest.size())));
-     return uint256(digest);
-   }
-
-   static inline uint256
-   Nonce(uint64_t size = 4096){
-     CryptoPP::SecByteBlock nonce(size);
-     CryptoPP::SecByteBlock digest(Function::DIGESTSIZE);
-
-     CryptoPP::AutoSeededRandomPool prng;
-     prng.GenerateBlock(nonce, size);
-
-     CryptoPP::ArraySource source(nonce, nonce.size(), true, new CryptoPP::HexEncoder(new CryptoPP::ArraySink(digest.data(), digest.size())));
-     return uint256(digest);
-   }
- };
+  static inline uint256
+  FromHex(const std::string& data){
+    return FromHex(data.data(), data.length());
+  }
+ }
 
 // typedef std::vector<Hash> HashList;
 // typedef std::set<Hash, Hash::Comparator> HashSet;
@@ -187,34 +150,6 @@ namespace token{
 //   list.push_back(val->GetHash());
 //   return list;
 // }
-
-#ifdef TOKEN_JSON_EXPORT
- namespace json{
-   static inline bool
-   SetField(Writer& writer, const char* name, const Hash& val){
-     JSON_KEY(writer, name);
-     JSON_STRING(writer, val.HexString());
-     return true;
-   }
-
-   static inline bool
-   Write(Writer& writer, const HashList& val){
-     JSON_START_ARRAY(writer);
-     {
-       for(auto& it : val)
-         JSON_STRING(writer, it.HexString());
-     }
-     JSON_END_ARRAY(writer);
-     return true;
-   }
-
-   static inline bool
-   SetField(Writer& writer, const char* name, const HashList& val){
-     JSON_KEY(writer, name);
-     return Write(writer, val);
-   }
- }
-#endif//TOKEN_JSON_EXPORT
 }
 
 #endif //TOKEN_HASH_H

@@ -52,7 +52,7 @@ namespace token::merkle{
     rchild_(nullptr),
     hash_(hash){
    }
-   Node(const uint256& hash):
+   explicit Node(const uint256& hash):
     Node(nullptr, hash){
    }
    Node(Node* parent, Node* left, Node* right):

@@ -5,8 +5,6 @@
 #include <uuid/uuid.h>
 #include <leveldb/slice.h>
 
-#include "json.h"
-
 namespace token{
   namespace internal{
     static const size_t kMaxUUIDLength = 16;
@@ -28,7 +26,7 @@ namespace token{
     explicit UUID(bool time_safe)://TODO: remove/refactor
       UUID(){
       if(time_safe){
-        uuid_generate_time_safe((unsigned char*)data_);
+        uuid_generate_time((unsigned char*)data_);
       } else{
         uuid_generate((unsigned char*)data_);
       }

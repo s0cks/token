@@ -79,29 +79,6 @@ namespace token{
      return Compare(lhs, rhs) > 0;
    }
  };
-
-#ifdef TOKEN_JSON_EXPORT
- namespace json{
-  static inline bool
-  Write(Writer& writer, const Input& val){//TODO: better error handling
-    JSON_START_OBJECT(writer);
-    {
-      JSON_KEY(writer, "hash");
-      JSON_STRING(writer, val.hash().HexString());
-      if(!json::SetField(writer, "source", val.source()))
-        return false;
-    }
-    JSON_END_OBJECT(writer);
-    return true;
-  }
-
-  static inline bool
-  SetField(Writer& writer, const char* name, const Input& val){
-    JSON_KEY(writer, name);
-    return Write(writer, val);
-  }
- }
-#endif//TOKEN_JSON_EXPORT
 }
 
 #endif//TOKEN_TRANSACTION_INPUT_H

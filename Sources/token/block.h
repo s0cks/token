@@ -57,7 +57,7 @@ namespace token{
    }
 
    uint64_t GetBufferSize() const override{
-     auto size = 0;
+     uint64_t size = 0;
      size += sizeof(uint64_t); // height_
      size += sizeof(uint64_t); // timestamp_
      size += sizeof(uint64_t); // num_transactions_
@@ -83,8 +83,7 @@ namespace token{
      height_ = rhs.height();
      timestamp_ = rhs.timestamp();
 
-     if(transactions_ != nullptr)
-       delete[] transactions_;
+     delete[] transactions_;
      transactions_ = new IndexedTransaction[rhs.GetNumberOfTransactions()];
      std::copy(rhs.transactions_begin(), rhs.transactions_end(), transactions_begin());
      return *this;

@@ -47,9 +47,9 @@ namespace token{
  TEST_F(HeapBufferTest, TestHash){
    auto val = sha256::Nonce(1024);
    auto data = NewBuffer(uint256::kSize);
-   ASSERT_TRUE(data->PutSHA256(val));
+   ASSERT_TRUE(data->PutHash(val));
    ASSERT_EQ(data->length(), sha256::kSize);
-   ASSERT_EQ(data->GetSHA256(), val);
+   ASSERT_EQ(data->GetHash(), val);
  }
 
 #define DEFINE_STACK_BUFFER_TYPE_TEST_CASE(Name) \

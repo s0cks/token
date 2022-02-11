@@ -6,10 +6,33 @@
 
 namespace token{
  class TransactionTest : public ::testing::Test{
+   static const Timestamp kTransaction1Timestamp;
+
+   static const uint256 kTransaction1Input1Hash;
+   static const uint64_t kTransaction1Input1Index;
+
+   static const Input kTransaction1Inputs[];
+
+   static Transaction* kTransaction1;
+  protected:
+   void SetUp() override{
+     kTransaction1 = new Transaction(kTransaction1Timestamp, kTransaction1Inputs, 1, nullptr, 0);
+   }
   public:
    TransactionTest() = default;
    ~TransactionTest() override = default;
  };
+
+ const Timestamp TransactionTest::kTransaction1Timestamp = Clock::now();
+
+ const uint256 TransactionTest::kTransaction1Input1Hash = sha256::Nonce();
+ const uint64_t TransactionTest::kTransaction1Input1Index = 10;
+
+ const Input TransactionTest::kTransaction1Inputs[] = {
+   Input(kTransaction1Input1Hash, kTransaction1Input1Index),
+ };
+
+ Transaction* TransactionTest::kTransaction1 = nullptr;
 
  TEST_F(TransactionTest, TestEquality){
    auto timestamp = Clock::now();

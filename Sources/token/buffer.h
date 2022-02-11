@@ -136,29 +136,11 @@ namespace token{
      return PutBytes(val.data(), val.size());
    }
 
-   template<class H>
-   bool PutHash(const typename H::Storage& val){
-     return PutBytes(val.data(), val.size());
-   }
-
-   inline bool
-   PutSHA256(const uint256& val){
-     return PutHash<sha256>(val);
-   }
-
-   template<class H>
-   typename H::Storage GetHash(){
-     uint8_t data[H::kSize];
-     if(!GetBytes(data, H::kSize))
+   uint256 GetHash(){
+     uint8_t data[uint256::kSize];
+     if(!GetBytes(data, uint256::kSize))
        return {};
-     auto size = H::kSize;
-     typename H::Storage Storage;
-     return {(const uint8_t*)data, size};
-   }
-
-   inline uint256
-   GetSHA256(){
-     return GetHash<sha256>();
+     return { data, uint256::kSize };
    }
 
    bool GetBytes(uint8_t* bytes, const uint64_t& size){
@@ -239,13 +221,13 @@ namespace token{
 
    inline bool
    PutTransactionReference(const TransactionReference& val){
-     return PutSHA256(val.hash())
+     return PutHash(val.hash())
          && PutUnsignedLong(val.index());
    }
 
    inline TransactionReference
    GetTransactionReference(){
-     auto hash = GetSHA256();
+     auto hash = GetHash();
      auto index = GetUnsignedLong();
      return TransactionReference(hash, index);
    }
@@ -412,12 +394,6 @@ namespace token{
  static inline BufferPtr
  CopyBufferFrom(const leveldb::Slice& slice){
    return CopyBufferFrom((uint8_t*) slice.data(), slice.size());
- }
-
- template<const int64_t& Length>
- static inline BufferPtr
- CopyBufferFrom(const StackBuffer<Length>& buffer){
-   return CopyBufferFrom(buffer.data(), buffer.length());
  }
 
  static inline BufferPtr
