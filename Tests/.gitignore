@@ -1,0 +1,15 @@
+# Ignore All the Reports
+/reports/*
+/reports/*/
+
+# Ignore All the Logs
+/logs/*
+/logs/*/
+
+# Don't Ignore These
+!/reports/.gitkeep
+!/logs/.gitkeep
+!/**/*.cc
+!/**/*.h
+!/CMakeLists.txt
+!/*.md

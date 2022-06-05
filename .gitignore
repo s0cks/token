@@ -3,11 +3,10 @@
 /*/
 
 # Except These
-!/cmake/
-!/manifests/
-!/scripts/
-!/.gitignore
+!/build/
+!/jenkins/
+!/Sources/
+!/Tests/
 !/CMakeLists.txt
+!/.gitignore
 !/*.md
-!/*.cc
-!/*.sh

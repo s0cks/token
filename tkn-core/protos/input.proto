@@ -1,8 +1,0 @@
-syntax = "proto3";
-package token.internal.proto;
-
-message Input{
-    string hash = 1;
-    string transaction = 2;
-    uint64 index = 3;
-}

@@ -1,0 +1,7 @@
+# ninja log v5
+0	225	1654405970444479100	Sources/CMakeFiles/token.dir/token/token.cc.o	a87dbded7360cc6f
+226	241	1654405970463003000	Sources/libtoken.a	b3e1d237a1e65ad
+0	351	1654405970570344451	Tests/CMakeFiles/token-tests.dir/main.cc.o	9979aa3d961d6a37
+351	395	1654405970616545278	Tests/token-tests	ea524b1b200541bc
+1	357	1654406010421450234	Tests/CMakeFiles/token-tests.dir/main.cc.o	9979aa3d961d6a37
+357	402	1654406010468452434	Tests/token-tests	ea524b1b200541bc

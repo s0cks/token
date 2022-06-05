@@ -1,0 +1,11 @@
+# Ignore Everything
+/*
+/*/
+
+# Except These
+!/token/
+!/**/*.h
+!/**/*.cc
+!/**/*.md
+!/.gitignore
+!/CMakeLists.txt
