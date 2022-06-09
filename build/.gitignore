@@ -1,0 +1,12 @@
+# Ignore Everything:
+# Debug Builds
+/debug/
+/debug/*/
+
+# Release Builds
+/release/
+/release/*/
+
+# Don't Ignore These:
+!/debug/.gitkeep
+!/release/.gitkeep
