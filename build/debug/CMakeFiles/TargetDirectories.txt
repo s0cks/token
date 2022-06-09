@@ -1,8 +1,0 @@
-/Users/tazz/Projects/token/build/debug/CMakeFiles/edit_cache.dir
-/Users/tazz/Projects/token/build/debug/CMakeFiles/rebuild_cache.dir
-/Users/tazz/Projects/token/build/debug/Sources/CMakeFiles/token.dir
-/Users/tazz/Projects/token/build/debug/Sources/CMakeFiles/edit_cache.dir
-/Users/tazz/Projects/token/build/debug/Sources/CMakeFiles/rebuild_cache.dir
-/Users/tazz/Projects/token/build/debug/Tests/CMakeFiles/token-tests.dir
-/Users/tazz/Projects/token/build/debug/Tests/CMakeFiles/edit_cache.dir
-/Users/tazz/Projects/token/build/debug/Tests/CMakeFiles/rebuild_cache.dir

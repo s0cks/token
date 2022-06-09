@@ -3,7 +3,9 @@
 /*/
 
 # Except These
-!/build/
+!/build/debug/.gitkeep
+!/build/release/.gitkeep
+
 !/jenkins/
 !/Sources/
 !/Tests/
