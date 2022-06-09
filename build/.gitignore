@@ -10,3 +10,4 @@
 # Don't Ignore These:
 !/debug/.gitkeep
 !/release/.gitkeep
+!/.gitignore
