@@ -1,10 +1,10 @@
 # Ignore Everything:
 # Debug Builds
-/debug/
+/debug/*
 /debug/*/
 
 # Release Builds
-/release/
+/release/*
 /release/*/
 
 # Don't Ignore These:
